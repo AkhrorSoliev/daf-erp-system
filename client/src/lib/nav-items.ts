@@ -1,0 +1,21 @@
+import {
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  BookOpen,
+  Building2,
+  CalendarDays,
+  CreditCard,
+  BarChart3,
+} from "lucide-react";
+
+export const navItems = [
+  { title: "Bosh sahifa", url: "/", icon: LayoutDashboard },
+  { title: "Xodimlar", url: "/staff", icon: Users },
+  { title: "O'qituvchilar", url: "/teachers", icon: GraduationCap },
+  { title: "O'quvchilar", url: "/students", icon: BookOpen },
+  { title: "Filiallar", url: "/branches", icon: Building2 },
+  { title: "Dars jadvali", url: "/schedule", icon: CalendarDays },
+  { title: "To'lovlar", url: "/payments", icon: CreditCard },
+  { title: "Hisobotlar", url: "/reports", icon: BarChart3 },
+];
