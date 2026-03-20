@@ -24,7 +24,7 @@ export function AppSidebar() {
       <SidebarHeader className="px-4 py-3">
         <Link href="/" className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
-            ERP
+            DaF ERP System
           </span>
         </Link>
       </SidebarHeader>

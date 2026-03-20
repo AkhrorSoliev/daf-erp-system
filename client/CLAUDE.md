@@ -65,6 +65,22 @@ The system supports **multiple branches** (filials).
 - Use the shadcn/ui `<Tooltip>` component (`<TooltipProvider>`, `<Tooltip>`, `<TooltipTrigger>`, `<TooltipContent>`)
 - Keep tooltip text concise — one short sentence or a few words is enough
 
+### Formatting Conventions
+
+#### Phone Numbers
+
+- Display format: **+998 XX XXX XX XX** (with spaces)
+- All phone inputs must have a **non-editable `+998` prefix** at the start of the field
+- The user only enters the remaining 9 digits in the format `XX XXX XX XX`
+- Use an input addon/prefix pattern (non-editable text before the input area)
+
+#### Prices and Currency
+
+- All monetary values must use **comma as thousands separator**: `000,000`
+- Example: `450,000` (not `450000` or `450 000`)
+- Currency suffix: **so'm**
+- Negative balances: prefix with `-`, e.g. `-50,000 so'm`
+
 ### Code Organization
 
 - Keep files small, focused, and maintainable

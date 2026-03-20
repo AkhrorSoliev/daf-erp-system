@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CreditCard,
   BarChart3,
+  Settings,
 } from "lucide-react";
 
 export const navItems = [
@@ -18,4 +19,5 @@ export const navItems = [
   { title: "Dars jadvali", url: "/schedule", icon: CalendarDays },
   { title: "To'lovlar", url: "/payments", icon: CreditCard },
   { title: "Hisobotlar", url: "/reports", icon: BarChart3 },
+  { title: "Sozlamalar", url: "/settings", icon: Settings },
 ];
