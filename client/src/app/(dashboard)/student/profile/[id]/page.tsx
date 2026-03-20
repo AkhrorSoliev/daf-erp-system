@@ -1,4 +1,5 @@
 import { students } from "@/data/student-model";
+import { StudentProfileClient } from "@/components/students/student-profile-client";
 
 export default async function StudentProfilePage({
   params,
@@ -23,12 +24,7 @@ export default async function StudentProfilePage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight">
-          {student.firstName} {student.lastName}
-        </h1>
-        <p className="text-muted-foreground">ID: {student.id}</p>
-      </div>
+      <StudentProfileClient student={student} />
     </div>
   );
 }

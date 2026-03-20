@@ -38,6 +38,16 @@ export interface Student {
    */
   status: "ungrouped" | "active" | "frozen";
 
+  gender?: "male" | "female";
+  telegram?: string;
+  parentPhone?: string;
+  parentName?: string;
+  placeOfStudy?: string;
+  address?: string;
+  passportSeries?: string;
+  login?: string;
+  password?: string;
+
   /**
    * Future-proof audit info
    * (who added, when added, etc.)
@@ -94,6 +104,15 @@ export const students: Student[] = [
       },
     ],
     status: "active",
+    gender: "male",
+    telegram: "@ali_dev",
+    parentPhone: "+998901112200",
+    parentName: "Karim Valiyev",
+    placeOfStudy: "Toshkent Axborot Texnologiyalari Universiteti",
+    address: "Toshkent sh., Chilonzor tumani, 7-mavze",
+    passportSeries: "AB1234567",
+    login: "ali_valiyev",
+    password: "student123",
     createdBy: { by: "admin", at: "2025-01-12T10:00:00Z" },
   },
   {
@@ -118,6 +137,10 @@ export const students: Student[] = [
     ],
     smsHistory: [],
     status: "active",
+    gender: "male",
+    telegram: "@dev_sardor",
+    login: "sardor_rahimov",
+    password: "sardor2025",
     createdBy: { by: "manager", at: "2025-02-01T09:30:00Z" },
   },
   {
@@ -135,6 +158,10 @@ export const students: Student[] = [
     userComments: [],
     smsHistory: [],
     status: "frozen",
+    gender: "female",
+    parentPhone: "+998935001122",
+    parentName: "Anvar Karimov",
+    placeOfStudy: "65-maktab",
     createdBy: { by: "admin", at: "2025-02-10T14:20:00Z" },
   },
   {
@@ -152,6 +179,12 @@ export const students: Student[] = [
     userComments: [],
     smsHistory: [],
     status: "active",
+    gender: "male",
+    telegram: "@frontend_master",
+    address: "Toshkent sh., Yunusobod tumani, 4-mavze",
+    passportSeries: "AC9876543",
+    login: "jasur_toshmatov",
+    password: "jasur777",
     createdBy: { by: "teacher", at: "2025-03-01T11:15:00Z" },
   },
   {

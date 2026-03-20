@@ -117,7 +117,7 @@ export function StudentsTable({ students }: { students: Student[] }) {
                 <StudentStatusBadge status={student.status} />
               </TableCell>
               <TableCell>
-                <StudentRowActions studentId={student.id} />
+                <StudentRowActions student={student} />
               </TableCell>
             </TableRow>
           ))}

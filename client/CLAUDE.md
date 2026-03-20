@@ -73,6 +73,9 @@ The system supports **multiple branches** (filials).
 - All phone inputs must have a **non-editable `+998` prefix** at the start of the field
 - The user only enters the remaining 9 digits in the format `XX XXX XX XX`
 - Use an input addon/prefix pattern (non-editable text before the input area)
+- **Live formatting:** As the user types, digits must be auto-formatted with spaces in real time (`XX XXX XX XX`). The placeholder must also show this format
+- Use the shared `<PhoneInput>` component from `src/components/ui/phone-input.tsx` — it handles formatting, placeholder, prefix, and `inputMode="numeric"` automatically
+- The component stores **raw 9 digits** (no spaces) in form state while displaying the formatted value. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
 
 #### Prices and Currency
 

@@ -10,6 +10,7 @@ import {
 } from "./students-filters";
 import { StudentsStats } from "./students-stats";
 import { StudentsTable } from "./students-table";
+import { EditStudentDrawer } from "./edit-student-drawer";
 
 const PAGE_SIZE = 10;
 
@@ -97,6 +98,7 @@ export function StudentsClient() {
           </div>
         </div>
       )}
+      <EditStudentDrawer />
     </div>
   );
 }

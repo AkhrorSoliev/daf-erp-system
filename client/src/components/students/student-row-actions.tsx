@@ -13,8 +13,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useEditStudent } from "@/hooks/use-edit-student";
+import type { Student } from "@/data/student-model";
 
-export function StudentRowActions({ studentId }: { studentId: string }) {
+export function StudentRowActions({ student }: { student: Student }) {
+  const { openDrawer } = useEditStudent();
+
   return (
     <DropdownMenu>
       <Tooltip>
@@ -33,7 +37,7 @@ export function StudentRowActions({ studentId }: { studentId: string }) {
         <TooltipContent>Amallar</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => openDrawer(student)}>
           <Pencil className="mr-2 size-4" />
           Tahrirlash
         </DropdownMenuItem>
