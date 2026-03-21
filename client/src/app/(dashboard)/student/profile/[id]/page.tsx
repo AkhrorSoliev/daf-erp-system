@@ -22,9 +22,5 @@ export default async function StudentProfilePage({
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <StudentProfileClient student={student} />
-    </div>
-  );
+  return <StudentProfileClient student={student} />;
 }

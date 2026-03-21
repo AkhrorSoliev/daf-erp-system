@@ -77,6 +77,13 @@ The system supports **multiple branches** (filials).
 - Use the shared `<PhoneInput>` component from `src/components/ui/phone-input.tsx` — it handles formatting, placeholder, prefix, and `inputMode="numeric"` automatically
 - The component stores **raw 9 digits** (no spaces) in form state while displaying the formatted value. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
 
+#### Dates and Times
+
+- Date-only display format: **dd.mm.yyyy** — e.g. `21.03.2026`
+- Date + time display format: **dd.mm.yyyy, hh:mm:ss** — e.g. `21.03.2026, 14:05:30`
+- Use the time variant only when the time component is meaningful in context (e.g. activity logs, audit trails, timestamps)
+- Use `date-fns/format` with the pattern `dd.MM.yyyy` or `dd.MM.yyyy, HH:mm:ss`
+
 #### Prices and Currency
 
 - All monetary values must use **comma as thousands separator**: `000,000`
