@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { teachers } from "@/data/teacher-model";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -17,11 +18,25 @@ import { EditTeacherDrawer } from "./edit-teacher-drawer";
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
 export function TeachersClient() {
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const totalPages = Math.ceil(teachers.length / pageSize);
-  const paginated = teachers.slice((page - 1) * pageSize, page * pageSize);
+  const filtered = useMemo(() => {
+    if (!search.trim()) return teachers;
+    const q = search.toLowerCase();
+    return teachers.filter((t) =>
+      `${t.firstName} ${t.lastName}`.toLowerCase().includes(q)
+    );
+  }, [search]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
 
   const handlePageSizeChange = (value: string) => {
     setPageSize(Number(value));
@@ -30,6 +45,15 @@ export function TeachersClient() {
 
   return (
     <div className="space-y-4">
+      <div className="relative max-w-sm">
+        <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Input
+          placeholder="Ism familiya bo'yicha qidirish..."
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
       <TeachersTable teachers={paginated} />
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
@@ -48,7 +72,7 @@ export function TeachersClient() {
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-sm">
-              Jami: {teachers.length} ta o&apos;qituvchi
+              {`Jami: ${filtered.length} ta o'qituvchi`}
             </p>
           </div>
           <div className="flex items-center gap-2">

@@ -73,10 +73,10 @@ export function StudentsFilters({
         onValueChange={(value) => updateFilter("status", value)}
       >
         <SelectTrigger className="w-full sm:w-48">
-          <SelectValue placeholder="Holat" />
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Barchasi</SelectItem>
+          <SelectItem value="all">Barcha holatlar</SelectItem>
           <SelectItem value="active">Faol</SelectItem>
           <SelectItem value="frozen">Muzlatilgan</SelectItem>
           <SelectItem value="ungrouped">Guruhlashtirilmagan</SelectItem>
@@ -88,10 +88,10 @@ export function StudentsFilters({
         onValueChange={(value) => updateFilter("groupLevel", value)}
       >
         <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder="Guruh darajasi" />
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Barchasi</SelectItem>
+          <SelectItem value="all">Barcha darajalar</SelectItem>
           <SelectItem value="A1">A1</SelectItem>
           <SelectItem value="A2">A2</SelectItem>
           <SelectItem value="B1">B1</SelectItem>

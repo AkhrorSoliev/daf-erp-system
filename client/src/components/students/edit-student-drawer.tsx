@@ -22,6 +22,7 @@ export function EditStudentDrawer() {
       <SheetContent
         side="right"
         className="sm:max-w-lg flex flex-col overflow-hidden p-0"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
