@@ -100,6 +100,16 @@ The system supports **multiple branches** (filials).
 - Use `useState` for `page` and `pageSize` in the client wrapper component (not inside the table component itself).
 - The table component only receives the already-paginated slice of data as a prop — it does not handle pagination logic internally.
 
+### Filter Bars
+
+- **No labels** — filter bars must not use `<Label>` elements above inputs or selects. The UI should be self-explanatory through placeholders and select option text alone.
+- **Text inputs** use a descriptive `placeholder` that explains what they filter, e.g. `"Ism bo'yicha qidirish..."`, `"ID bo'yicha qidirish..."`.
+- **Select filters** must have a descriptive default ("all") option that includes the filter category name, so the user always knows what the select controls — even when no specific filter is chosen:
+  - Correct: `"Barcha holatlar"`, `"Barcha darajalar"`
+  - Wrong: `"Barchasi"` (ambiguous when multiple selects are present)
+- Do **not** use `placeholder` on `<SelectValue>` — use a real `<SelectItem value="all">` as the default option instead.
+- Align filter controls to `items-center` (not `items-end`) since there are no labels to align around.
+
 ### Code Organization
 
 - Keep files small, focused, and maintainable

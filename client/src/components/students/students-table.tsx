@@ -68,7 +68,7 @@ export function StudentsTable({ students }: { students: Student[] }) {
             <TableRow
               key={student.id}
               className="cursor-pointer hover:bg-muted/50"
-              onClick={() => router.push(`/student/profile/${student.id}`)}
+              onClick={() => router.push(`/students/profile/${student.id}`)}
             >
               <TableCell>
                 <Avatar className="size-8">

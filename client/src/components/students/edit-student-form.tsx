@@ -107,6 +107,7 @@ export function EditStudentForm({
                   variant="outline"
                   size="icon-xs"
                   className="absolute -bottom-1 -right-1 rounded-full border-background bg-background shadow-sm"
+                  tabIndex={-1}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Camera className="size-3" />
