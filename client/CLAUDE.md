@@ -65,6 +65,41 @@ The system supports **multiple branches** (filials).
 - Use the shadcn/ui `<Tooltip>` component (`<TooltipProvider>`, `<Tooltip>`, `<TooltipTrigger>`, `<TooltipContent>`)
 - Keep tooltip text concise — one short sentence or a few words is enough
 
+### Formatting Conventions
+
+#### Phone Numbers
+
+- Display format: **+998 XX XXX XX XX** (with spaces)
+- All phone inputs must have a **non-editable `+998` prefix** at the start of the field
+- The user only enters the remaining 9 digits in the format `XX XXX XX XX`
+- Use an input addon/prefix pattern (non-editable text before the input area)
+- **Live formatting:** As the user types, digits must be auto-formatted with spaces in real time (`XX XXX XX XX`). The placeholder must also show this format
+- Use the shared `<PhoneInput>` component from `src/components/ui/phone-input.tsx` — it handles formatting, placeholder, prefix, and `inputMode="numeric"` automatically
+- The component stores **raw 9 digits** (no spaces) in form state while displaying the formatted value. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
+
+#### Dates and Times
+
+- Date-only display format: **dd.mm.yyyy** — e.g. `21.03.2026`
+- Date + time display format: **dd.mm.yyyy, hh:mm:ss** — e.g. `21.03.2026, 14:05:30`
+- Use the time variant only when the time component is meaningful in context (e.g. activity logs, audit trails, timestamps)
+- Use `date-fns/format` with the pattern `dd.MM.yyyy` or `dd.MM.yyyy, HH:mm:ss`
+
+#### Prices and Currency
+
+- All monetary values must use **comma as thousands separator**: `000,000`
+- Example: `450,000` (not `450000` or `450 000`)
+- Currency suffix: **so'm**
+- Negative balances: prefix with `-`, e.g. `-50,000 so'm`
+
+### Tables and Pagination
+
+- All data tables **must default to showing 10 rows per page**.
+- Every table must include a **page size selector** allowing the user to choose from: **10, 20, 30, 40, 50** rows per page.
+- Changing the page size must reset the current page back to 1.
+- Display the total record count and current page / total pages in the pagination controls.
+- Use `useState` for `page` and `pageSize` in the client wrapper component (not inside the table component itself).
+- The table component only receives the already-paginated slice of data as a prop — it does not handle pagination logic internally.
+
 ### Code Organization
 
 - Keep files small, focused, and maintainable
