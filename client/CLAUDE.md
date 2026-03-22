@@ -91,6 +91,15 @@ The system supports **multiple branches** (filials).
 - Currency suffix: **so'm**
 - Negative balances: prefix with `-`, e.g. `-50,000 so'm`
 
+### Tables and Pagination
+
+- All data tables **must default to showing 10 rows per page**.
+- Every table must include a **page size selector** allowing the user to choose from: **10, 20, 30, 40, 50** rows per page.
+- Changing the page size must reset the current page back to 1.
+- Display the total record count and current page / total pages in the pagination controls.
+- Use `useState` for `page` and `pageSize` in the client wrapper component (not inside the table component itself).
+- The table component only receives the already-paginated slice of data as a prop — it does not handle pagination logic internally.
+
 ### Code Organization
 
 - Keep files small, focused, and maintainable

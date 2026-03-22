@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { students } from "@/data/student-model";
+import { teachers } from "@/data/teacher-model";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -11,65 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  StudentsFilters,
-  type StudentFilters,
-} from "./students-filters";
-import { StudentsStats } from "./students-stats";
-import { StudentsTable } from "./students-table";
-import { EditStudentDrawer } from "./edit-student-drawer";
+import { TeachersTable } from "./teachers-table";
+import { EditTeacherDrawer } from "./edit-teacher-drawer";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
-const defaultFilters: StudentFilters = {
-  fullName: "",
-  id: "",
-  status: "all",
-  groupLevel: "all",
-};
-
-export function StudentsClient() {
-  const [filters, setFilters] = useState<StudentFilters>(defaultFilters);
+export function TeachersClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const filteredStudents = useMemo(() => {
-    let result = students;
-
-    if (filters.fullName) {
-      const q = filters.fullName.toLowerCase();
-      result = result.filter((s) =>
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(q)
-      );
-    }
-
-    if (filters.id) {
-      result = result.filter((s) => s.id.includes(filters.id));
-    }
-
-    if (filters.status && filters.status !== "all") {
-      result = result.filter((s) => s.status === filters.status);
-    }
-
-    if (filters.groupLevel && filters.groupLevel !== "all") {
-      result = result.filter((s) =>
-        s.groups.some((g) => g.level === filters.groupLevel)
-      );
-    }
-
-    return result;
-  }, [filters]);
-
-  const totalPages = Math.ceil(filteredStudents.length / pageSize);
-  const paginatedStudents = filteredStudents.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
-
-  const handleFilterChange = (newFilters: StudentFilters) => {
-    setFilters(newFilters);
-    setPage(1);
-  };
+  const totalPages = Math.ceil(teachers.length / pageSize);
+  const paginated = teachers.slice((page - 1) * pageSize, page * pageSize);
 
   const handlePageSizeChange = (value: string) => {
     setPageSize(Number(value));
@@ -78,9 +30,7 @@ export function StudentsClient() {
 
   return (
     <div className="space-y-4">
-      <StudentsStats students={students} />
-      <StudentsFilters filters={filters} onFilterChange={handleFilterChange} />
-      <StudentsTable students={paginatedStudents} />
+      <TeachersTable teachers={paginated} />
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
@@ -98,7 +48,7 @@ export function StudentsClient() {
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-sm">
-              {`Jami: ${filteredStudents.length} ta o'quvchi`}
+              Jami: {teachers.length} ta o&apos;qituvchi
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -126,7 +76,7 @@ export function StudentsClient() {
           </div>
         </div>
       )}
-      <EditStudentDrawer />
+      <EditTeacherDrawer />
     </div>
   );
 }
