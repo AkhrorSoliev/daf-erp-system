@@ -9,6 +9,7 @@ import {
   CreditCard,
   BarChart3,
   Settings,
+  UsersRound,
 } from "lucide-react";
 
 export const navItems = [
@@ -17,6 +18,7 @@ export const navItems = [
   { title: "O'qituvchilar", url: "/teachers", icon: GraduationCap },
   { title: "O'quvchilar", url: "/students", icon: BookOpen },
   { title: "Lidlar", url: "/leads", icon: UserPlus },
+  { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Filiallar", url: "/branches", icon: Building2 },
   { title: "Dars jadvali", url: "/schedule", icon: CalendarDays },
   { title: "To'lovlar", url: "/payments", icon: CreditCard },

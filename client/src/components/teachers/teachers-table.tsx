@@ -71,7 +71,7 @@ export function TeachersTable({ teachers }: { teachers: Teacher[] }) {
                 {formatPhone(teacher.phone)}
               </TableCell>
               <TableCell className="hidden md:table-cell">
-                {teacher.groups}
+                {teacher.groups.length}
               </TableCell>
               <TableCell>
                 <TeacherRowActions teacher={teacher} />
