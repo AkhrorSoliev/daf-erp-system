@@ -1,4 +1,5 @@
 import { teachers } from "@/data/teacher-model";
+import { TeacherProfileClient } from "@/components/teachers/teacher-profile-client";
 
 export default async function TeacherProfilePage({
   params,
@@ -23,12 +24,10 @@ export default async function TeacherProfilePage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight">
-          {teacher.firstName} {teacher.lastName}
-        </h1>
-        <p className="text-muted-foreground">ID: {teacher.id}</p>
-      </div>
+      <h1 className="font-heading text-2xl font-bold tracking-tight">
+        {teacher.firstName} {teacher.lastName}
+      </h1>
+      <TeacherProfileClient teacher={teacher} />
     </div>
   );
 }

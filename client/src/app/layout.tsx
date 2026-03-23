@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const interHeading = Inter({subsets:['latin'],variable:'--font-heading'});
+const interHeading = Inter({ subsets: ["latin"], variable: "--font-heading" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +26,12 @@ export default function RootLayout({
     <html
       lang="uz"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, interHeading.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        interHeading.variable,
+      )}
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider
@@ -35,9 +40,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

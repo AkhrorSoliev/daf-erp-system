@@ -1,3 +1,12 @@
+export interface TeacherGroup {
+  id: string;
+  name: string;
+  level: string;
+  studentCount: number;
+  schedule: string;
+  status: "active" | "completed" | "upcoming";
+}
+
 export interface Teacher {
   id: string; // 6-digit string
   firstName: string;
@@ -5,10 +14,7 @@ export interface Teacher {
   phone: string;
   gender: "male" | "female";
 
-  /**
-   * Group number (0-9)
-   */
-  groups: number;
+  groups: TeacherGroup[];
 
   avatar: string;
 
@@ -21,6 +27,29 @@ export interface Teacher {
   createdBy?: { by: string; at: string };
 }
 
+function generateGroups(count: number, teacherId: string): TeacherGroup[] {
+  if (count === 0) return [];
+
+  const levels = ["A1", "A2", "B1", "B2", "C1"];
+  const schedules = [
+    "Du-Chor-Ju 09:00–10:30",
+    "Se-Pay-Sha 10:00–11:30",
+    "Du-Chor-Ju 14:00–15:30",
+    "Se-Pay-Sha 16:00–17:30",
+    "Du-Chor-Ju 18:00–19:30",
+  ];
+  const statuses: TeacherGroup["status"][] = ["active", "completed", "upcoming"];
+
+  return Array.from({ length: count }, (_, i) => ({
+    id: `g-${teacherId}-${i + 1}`,
+    name: `Guruh ${teacherId.slice(0, 3)}-${i + 1}`,
+    level: levels[i % levels.length],
+    studentCount: 8 + ((i * 3) % 10),
+    schedule: schedules[i % schedules.length],
+    status: i < count - 1 ? "active" : statuses[i % statuses.length],
+  }));
+}
+
 export const teachers: Teacher[] = [
   {
     id: "201394",
@@ -28,7 +57,7 @@ export const teachers: Teacher[] = [
     lastName: "Karimov",
     phone: "+998901112233",
     gender: "male",
-    groups: 3,
+    groups: generateGroups(3, "201394"),
     avatar: "https://picsum.photos/200?random=21",
     specialization: "German A1-A2",
     createdBy: { by: "admin", at: "2025-01-10T09:00:00Z" },
@@ -39,7 +68,7 @@ export const teachers: Teacher[] = [
     lastName: "Yusupova",
     phone: "+998933445566",
     gender: "female",
-    groups: 7,
+    groups: generateGroups(7, "847111"),
     avatar: "https://picsum.photos/200?random=22",
     specialization: "German B1",
     createdBy: { by: "admin", at: "2025-02-05T11:30:00Z" },
@@ -50,7 +79,7 @@ export const teachers: Teacher[] = [
     lastName: "Rahimov",
     phone: "+998911223344",
     gender: "male",
-    groups: 2,
+    groups: generateGroups(2, "556222"),
     avatar: "https://picsum.photos/200?random=23",
     specialization: "German Grammar",
     createdBy: { by: "manager", at: "2025-02-15T14:00:00Z" },
@@ -61,7 +90,7 @@ export const teachers: Teacher[] = [
     lastName: "Akbarova",
     phone: "+998935667788",
     gender: "female",
-    groups: 5,
+    groups: generateGroups(5, "663333"),
     avatar: "https://picsum.photos/200?random=24",
     specialization: "German Listening",
     createdBy: { by: "admin", at: "2025-03-01T10:15:00Z" },
@@ -72,7 +101,7 @@ export const teachers: Teacher[] = [
     lastName: "Toshmatov",
     phone: "+998977001122",
     gender: "male",
-    groups: 8,
+    groups: generateGroups(8, "778444"),
     avatar: "https://picsum.photos/200?random=25",
     specialization: "German C1 Advanced",
     createdBy: { by: "teacher", at: "2025-03-03T08:45:00Z" },
@@ -83,7 +112,7 @@ export const teachers: Teacher[] = [
     lastName: "Ismoilova",
     phone: "+998945551133",
     gender: "female",
-    groups: 4,
+    groups: generateGroups(4, "990555"),
     avatar: "https://picsum.photos/200?random=26",
     specialization: "German Speaking",
     createdBy: { by: "admin", at: "2025-01-28T16:20:00Z" },
@@ -94,7 +123,7 @@ export const teachers: Teacher[] = [
     lastName: "Saidov",
     phone: "+998909998877",
     gender: "male",
-    groups: 1,
+    groups: generateGroups(1, "331666"),
     avatar: "https://picsum.photos/200?random=27",
     specialization: "German B2 Literature",
     createdBy: { by: "manager", at: "2025-02-20T13:40:00Z" },
@@ -105,7 +134,7 @@ export const teachers: Teacher[] = [
     lastName: "Kadirova",
     phone: "+998933112244",
     gender: "female",
-    groups: 6,
+    groups: generateGroups(6, "112777"),
     avatar: "https://picsum.photos/200?random=28",
     specialization: "German Writing",
     createdBy: { by: "admin", at: "2025-03-08T17:10:00Z" },
@@ -116,7 +145,7 @@ export const teachers: Teacher[] = [
     lastName: "Rasulov",
     phone: "+998912224466",
     gender: "male",
-    groups: 9,
+    groups: generateGroups(9, "445888"),
     avatar: "https://picsum.photos/200?random=29",
     specialization: "German Conversation",
     createdBy: { by: "admin", at: "2025-03-12T09:55:00Z" },
@@ -127,7 +156,7 @@ export const teachers: Teacher[] = [
     lastName: "Usmonova",
     phone: "+998935556600",
     gender: "female",
-    groups: 0,
+    groups: [],
     avatar: "https://picsum.photos/200?random=30",
     specialization: "German A1 Basics",
     createdBy: { by: "manager", at: "2025-03-15T11:25:00Z" },
@@ -138,7 +167,7 @@ export const teachers: Teacher[] = [
     lastName: "Abdullayev",
     phone: "+998901234567",
     gender: "male",
-    groups: 4,
+    groups: generateGroups(4, "123456"),
     avatar: "https://picsum.photos/200?random=31",
     specialization: "German Pronunciation",
     createdBy: { by: "admin", at: "2025-03-20T09:15:00Z" },
@@ -149,7 +178,7 @@ export const teachers: Teacher[] = [
     lastName: "Tursunova",
     phone: "+998933445577",
     gender: "female",
-    groups: 2,
+    groups: generateGroups(2, "234567"),
     avatar: "https://picsum.photos/200?random=32",
     specialization: "German Vocabulary",
     createdBy: { by: "manager", at: "2025-03-22T14:30:00Z" },
@@ -160,7 +189,7 @@ export const teachers: Teacher[] = [
     lastName: "Mahmudov",
     phone: "+998911223355",
     gender: "male",
-    groups: 6,
+    groups: generateGroups(6, "345678"),
     avatar: "https://picsum.photos/200?random=33",
     specialization: "German Reading",
     createdBy: { by: "admin", at: "2025-03-25T10:45:00Z" },
@@ -171,7 +200,7 @@ export const teachers: Teacher[] = [
     lastName: "Karimova",
     phone: "+998935667799",
     gender: "female",
-    groups: 8,
+    groups: generateGroups(8, "456789"),
     avatar: "https://picsum.photos/200?random=34",
     specialization: "German Business Language",
     createdBy: { by: "teacher", at: "2025-03-28T16:20:00Z" },
@@ -182,7 +211,7 @@ export const teachers: Teacher[] = [
     lastName: "Rahmatov",
     phone: "+998977001133",
     gender: "male",
-    groups: 1,
+    groups: generateGroups(1, "567890"),
     avatar: "https://picsum.photos/200?random=35",
     specialization: "German Culture",
     createdBy: { by: "admin", at: "2025-04-01T11:00:00Z" },
@@ -193,7 +222,7 @@ export const teachers: Teacher[] = [
     lastName: "Ismatova",
     phone: "+998945551144",
     gender: "female",
-    groups: 3,
+    groups: generateGroups(3, "678901"),
     avatar: "https://picsum.photos/200?random=36",
     specialization: "German Idioms",
     createdBy: { by: "manager", at: "2025-04-03T13:15:00Z" },
@@ -204,7 +233,7 @@ export const teachers: Teacher[] = [
     lastName: "Nazarov",
     phone: "+998909998888",
     gender: "male",
-    groups: 7,
+    groups: generateGroups(7, "789012"),
     avatar: "https://picsum.photos/200?random=37",
     specialization: "German Test Preparation",
     createdBy: { by: "admin", at: "2025-04-05T15:30:00Z" },
@@ -215,7 +244,7 @@ export const teachers: Teacher[] = [
     lastName: "Sultanova",
     phone: "+998933112255",
     gender: "female",
-    groups: 5,
+    groups: generateGroups(5, "890123"),
     avatar: "https://picsum.photos/200?random=38",
     specialization: "German for Children",
     createdBy: { by: "teacher", at: "2025-04-08T09:45:00Z" },
@@ -226,7 +255,7 @@ export const teachers: Teacher[] = [
     lastName: "Yuldashev",
     phone: "+998912224477",
     gender: "male",
-    groups: 9,
+    groups: generateGroups(9, "901234"),
     avatar: "https://picsum.photos/200?random=39",
     specialization: "German Literature",
     createdBy: { by: "manager", at: "2025-04-10T12:00:00Z" },

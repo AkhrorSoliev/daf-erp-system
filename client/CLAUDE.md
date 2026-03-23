@@ -86,10 +86,13 @@ The system supports **multiple branches** (filials).
 
 #### Prices and Currency
 
-- All monetary values must use **comma as thousands separator**: `000,000`
-- Example: `450,000` (not `450000` or `450 000`)
-- Currency suffix: **so'm**
-- Negative balances: prefix with `-`, e.g. `-50,000 so'm`
+- **Display format:** Use comma as thousands separator. Numbers below 1,000 have no separator. Examples:
+  - `500`, `1,000`, `1,500`, `300,000`, `450,000`, `1,500,000`, `2,000,000`
+- **Stored value:** Always store as a plain number without separators (e.g. `200000`, not `"200,000"`)
+- **Currency suffix:** **so'm** — e.g. `1,500,000 so'm`
+- **Negative balances:** prefix with `-`, e.g. `-50,000 so'm`
+- **Formatting function:** Use `price.toLocaleString("en-US")` or a regex replacer `price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")` to convert the stored number to display format
+- **Price inputs:** All price inputs must use the shared `<PriceInput>` component from `src/components/ui/price-input.tsx`. It live-formats digits with commas as the user types (e.g. typing `1500000` shows `1,500,000`), appends a `so'm` suffix addon, and stores raw digits without separators in form state. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
 
 ### Tables and Pagination
 
@@ -109,6 +112,12 @@ The system supports **multiple branches** (filials).
   - Wrong: `"Barchasi"` (ambiguous when multiple selects are present)
 - Do **not** use `placeholder` on `<SelectValue>` — use a real `<SelectItem value="all">` as the default option instead.
 - Align filter controls to `items-center` (not `items-end`) since there are no labels to align around.
+
+### Sidebar Active State
+
+- Sidebar navigation links must use `pathname.startsWith(item.url)` for active state detection — **not** exact match (`pathname === item.url`)
+- This ensures the link stays highlighted when navigating to nested/child routes (e.g. `/settings/courses` stays active on `/settings/courses/1`)
+- Exception: the home route (`/`) must use exact match (`pathname === "/"`) to avoid matching every route
 
 ### Code Organization
 
