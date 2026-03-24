@@ -9,15 +9,15 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useEditEmployee } from "@/hooks/use-edit-employee";
-import { EditEmployeeForm } from "./edit-employee-form";
+import { useEditBranch } from "@/hooks/use-edit-branch";
+import { EditBranchForm } from "./edit-branch-form";
 
-export function EditEmployeeDrawer() {
-  const { open, mode, employee, closeDrawer } = useEditEmployee();
+export function EditBranchDrawer() {
+  const { open, mode, branch, closeDrawer } = useEditBranch();
 
   const isAdd = mode === "add";
 
-  if (!isAdd && !employee) return null;
+  if (!isAdd && !branch) return null;
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && closeDrawer()}>
@@ -28,20 +28,20 @@ export function EditEmployeeDrawer() {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            {isAdd ? "Yangi xodim qo'shish" : "Xodimni tahrirlash"}
+            {isAdd ? "Yangi filial qo'shish" : "Filialni tahrirlash"}
           </SheetTitle>
           <SheetDescription>
             {isAdd
-              ? "Yangi xodim ma'lumotlarini kiriting"
-              : "Xodim ma\u2019lumotlarini o\u2018zgartirish"}
+              ? "Yangi filial ma'lumotlarini kiriting"
+              : "Filial ma\u2019lumotlarini o\u2018zgartirish"}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
-          <EditEmployeeForm
-            employee={employee}
+          <EditBranchForm
+            branch={branch}
             onClose={closeDrawer}
-            formId="edit-employee-form"
+            formId="edit-branch-form"
           />
         </div>
 
@@ -50,7 +50,7 @@ export function EditEmployeeDrawer() {
             <Button type="button" variant="outline" onClick={closeDrawer}>
               Bekor qilish
             </Button>
-            <Button type="submit" form="edit-employee-form">
+            <Button type="submit" form="edit-branch-form">
               {isAdd ? "Qo'shish" : "Saqlash"}
             </Button>
           </div>
