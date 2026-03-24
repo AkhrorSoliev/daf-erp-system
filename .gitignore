@@ -6,3 +6,7 @@ node_modules
 *.tsbuildinfo
 next-env.d.ts
 client/public/*.dmg
+
+# Server
+server/dist
+server/generated

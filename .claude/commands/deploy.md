@@ -1,6 +1,6 @@
-# Deploy to Vercel + Create PR
+# Deploy to Vercel + Railway + Create PR
 
-Automate the full deployment workflow. The user may optionally provide `$ARGUMENTS` as a hint, but the commit message and branch name should always be auto-generated based on the actual changes.
+Automate the full deployment workflow for both frontend (Vercel) and backend (Railway). The user may optionally provide `$ARGUMENTS` as a hint, but the commit message and branch name should always be auto-generated based on the actual changes.
 
 ## Instructions
 
@@ -9,7 +9,14 @@ Execute the following steps **sequentially**. Print each step with its icon befo
 ### 📦 Step 1: Analyze changes
 Run `git status` and `git diff` to understand what has changed. Identify all modified, added, and deleted files. Stage all relevant files (skip `.env*`, credentials, secrets). Use `git add` with specific file names — avoid `git add -A`.
 
+Determine which parts changed:
+- **client/** changes → needs Vercel deploy
+- **server/** changes → needs Railway deploy
+- **both** → deploy both
+- **root files** (docker-compose.yml, .gitignore, etc.) → deploy based on relevance
+
 Print: `📦 Staging changes...`
+Print: `📦 Detected changes in: <client/server/both>`
 
 If there are no meaningful changes to deploy (ignoring `.claude/` directory), print `❌ No changes to deploy.` and stop.
 
@@ -43,24 +50,40 @@ git push -u origin "$BRANCH_NAME"
 ```
 Print: `🚀 Pushing to origin...`
 
-### 🌐 Step 5: Deploy to Vercel
+### 🌐 Step 5: Deploy Frontend (Vercel)
+**Skip this step if no client/ changes were detected.**
+
 ```bash
 cd client && vercel --prod --yes
 ```
 Wait for deployment to complete. Capture the production URL.
 
-Print: `🌐 Deploying to Vercel...`
-After success: `🌐 Deployed → <production-url>`
+Print: `🌐 Deploying frontend to Vercel...`
+After success: `🌐 Frontend deployed → <vercel-url>`
+If skipped: `⏭️ No frontend changes — skipping Vercel deploy`
 
-### 🔗 Step 6: Create Pull Request
+### 🚂 Step 6: Deploy Backend (Railway)
+**Skip this step if no server/ changes were detected.**
+
+```bash
+cd server && railway up --detach
+```
+Wait for deployment to start. If `railway` CLI is not installed, print instructions to install it (`npm i -g @railway/cli && railway login`).
+
+Print: `🚂 Deploying backend to Railway...`
+After success: `🚂 Backend deployed → Railway`
+If skipped: `⏭️ No backend changes — skipping Railway deploy`
+
+### 🔗 Step 7: Create Pull Request
 ```bash
 gh pr create --base main --head "$BRANCH_NAME" --title "<commit message>" --body "$(cat <<'EOF'
 ## Summary
 <brief description of changes>
 
 ## Deploy
-✅ Successfully deployed to Vercel
-🔗 <production-url>
+<Show only relevant deploys below>
+✅ Frontend deployed to Vercel → <vercel-url>
+✅ Backend deployed to Railway
 
 ---
 🤖 Auto-deployed with `/deploy`
@@ -69,7 +92,7 @@ EOF
 ```
 Print: `🔗 PR created → <pr-url>`
 
-### ✅ Step 7: Cleanup
+### ✅ Step 8: Cleanup
 ```bash
 git checkout main
 git pull origin main
@@ -80,10 +103,11 @@ Print: `✅ Done! Switched back to main. Local branch deleted.`
 ## Final Summary
 Print a summary box:
 ```
-┌─────────────────────────────────┐
-│  ✅ Deployment Complete!        │
-│  🔗 PR:     <pr-url>           │
-│  🌐 Deploy: <production-url>   │
-│  🔀 Branch: deleted            │
-└─────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  ✅ Deployment Complete!             │
+│  🔗 PR:       <pr-url>              │
+│  🌐 Frontend: <vercel-url or N/A>   │
+│  🚂 Backend:  <railway or N/A>      │
+│  🔀 Branch:   deleted               │
+└──────────────────────────────────────┘
 ```

@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CEO
+  ADMIN
+  DIRECTOR
+  TEACHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  login     String   @unique
+  password  String
+  role      Role
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee?
+  teacher  Teacher?
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms     Room[]
+  employees Employee[]
+  groups    Group[]
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  name      String
+  capacity  Int?
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Employee {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  phone     String
+  gender    Gender?
+  avatar    String?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Teacher {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  phone     String
+  gender    Gender?
+  avatar    String?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  groups Group[]
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Int
+  duration    Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  groups Group[]
+}
+
+model Student {
+  id             String   @id @default(uuid())
+  firstName      String
+  lastName       String
+  phone          String
+  extraPhone     String?
+  parentPhone    String?
+  parentName     String?
+  telegram       String?
+  gender         Gender?
+  avatar         String?
+  placeOfStudy   String?
+  address        String?
+  passportSeries String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  enrollments Enrollment[]
+}
+
+model Lead {
+  id          String   @id @default(uuid())
+  firstName   String
+  lastName    String
+  phone       String
+  gender      Gender?
+  telegram    String?
+  parentPhone String?
+  parentName  String?
+  status      String   @default("new")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Group {
+  id        String    @id @default(uuid())
+  name      String
+  courseId   String
+  course    Course    @relation(fields: [courseId], references: [id])
+  teacherId String
+  teacher   Teacher   @relation(fields: [teacherId], references: [id])
+  branchId  String
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  startDate DateTime?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, groupId])
+}
+
+model Holiday {
+  id   String   @id @default(uuid())
+  name String
+  date DateTime
+}
