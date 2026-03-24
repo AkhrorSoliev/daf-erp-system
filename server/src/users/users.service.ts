@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role } from '../generated/prisma/enums.js';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
