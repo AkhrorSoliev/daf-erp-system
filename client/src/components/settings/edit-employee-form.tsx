@@ -13,7 +13,7 @@ import {
 import type { Employee } from "@/hooks/use-edit-employee";
 
 interface EditEmployeeFormProps {
-  employee: Employee;
+  employee: Employee | null;
   onClose: () => void;
   formId: string;
 }
@@ -21,11 +21,11 @@ interface EditEmployeeFormProps {
 export function EditEmployeeForm({ employee, onClose, formId }: EditEmployeeFormProps) {
   const form = useForm({
     defaultValues: {
-      fullName: employee.fullName,
-      role: employee.role,
-      phone: employee.phone,
-      branch: employee.branch,
-      status: employee.status,
+      fullName: employee?.fullName ?? "",
+      role: employee?.role ?? "Admin",
+      phone: employee?.phone ?? "",
+      branch: employee?.branch ?? "",
+      status: employee?.status ?? "active" as const,
     },
   });
 

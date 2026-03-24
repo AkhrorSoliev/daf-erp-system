@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { SettingsPageHeader } from "./settings-page-header";
 import { EmployeeRowActions } from "./employee-row-actions";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
+import { useEditEmployee } from "@/hooks/use-edit-employee";
 import type { Employee } from "@/hooks/use-edit-employee";
 
 const mockEmployees: Employee[] = [
@@ -39,6 +40,7 @@ const roleColors: Record<string, "default" | "secondary" | "outline"> = {
 
 export function EmployeesSettingsClient() {
   const [search, setSearch] = useState("");
+  const openAddDrawer = useEditEmployee((s) => s.openAddDrawer);
 
   const filtered = mockEmployees.filter(
     (e) =>
@@ -51,6 +53,17 @@ export function EmployeesSettingsClient() {
       <SettingsPageHeader
         title="Xodimlar"
         description="Tizim xodimlarini boshqarish va rollarni belgilash"
+        action={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="sm" onClick={openAddDrawer}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Yangi xodim
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Yangi xodim qo&apos;shish</TooltipContent>
+          </Tooltip>
+        }
       />
 
       <div className="flex items-center gap-3">
@@ -60,15 +73,6 @@ export function EmployeesSettingsClient() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-1.5 h-4 w-4" />
-              Yangi xodim
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Yangi xodim qo&apos;shish</TooltipContent>
-        </Tooltip>
       </div>
 
       <div className="rounded-md border">
