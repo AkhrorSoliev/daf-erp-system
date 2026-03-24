@@ -6,6 +6,7 @@ import {
   UserMinus,
   Settings,
   Users,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +41,7 @@ export const settingsNavSections: SettingsNavSection[] = [
     items: [
       { title: "Umumiy sozlamalar", url: "/settings/general", icon: Settings },
       { title: "Xodimlar", url: "/settings/employees", icon: Users },
+      { title: "Filiallar", url: "/settings/branches", icon: Building2 },
     ],
   },
 ];
