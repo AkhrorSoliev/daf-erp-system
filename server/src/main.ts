@@ -19,6 +19,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'https://client-brown-ten-36.vercel.app',
+      'https://admin.dafzentrum.uz',
     ],
     credentials: true,
   });
