@@ -20,7 +20,9 @@ export function SettingsLayoutShell({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const isDetail = isDetailPage(pathname);
 
-  if (isDetail) {
+  const isGeneral = pathname.startsWith("/settings/general");
+
+  if (isDetail || isGeneral) {
     return <>{children}</>;
   }
 

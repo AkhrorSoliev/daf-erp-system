@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Building2, Check, ChevronsUpDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -13,11 +14,31 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 export function BranchSwitcher() {
-  const { branches, selectedBranch, selectBranch } = useBranchSwitcher();
-  const activeBranches = branches.filter((b) => b.status === "active");
+  const { user } = useAuth();
+  const { branches, selectedBranch, selectBranch, fetchBranches } =
+    useBranchSwitcher();
+
+  const isCeo = user?.roles.some((r) => r.name === "CEO");
+
+  useEffect(() => {
+    if (isCeo) {
+      fetchBranches();
+    }
+  }, [isCeo, fetchBranches]);
+
+  // CEO bo'lmasa yoki branchlar yuklanmagan bo'lsa, user ning o'z branchlarini ko'rsatamiz
+  const displayBranches = isCeo
+    ? branches
+    : (user?.branches ?? []).map((b) => ({ id: b.id, name: b.name }));
+
+  const selected =
+    selectedBranch ?? (displayBranches.length > 0 ? displayBranches[0] : null);
+
+  if (!selected || displayBranches.length === 0) return null;
 
   return (
     <DropdownMenu>
@@ -29,7 +50,7 @@ export function BranchSwitcher() {
               className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium text-foreground hover:bg-accent transition-colors"
             >
               <Building2 className="size-4 text-muted-foreground" />
-              <span className="max-w-[150px] truncate">{selectedBranch.name}</span>
+              <span className="max-w-[150px] truncate">{selected.name}</span>
               <ChevronsUpDown className="size-3.5 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
@@ -37,7 +58,7 @@ export function BranchSwitcher() {
         <TooltipContent>Filialni tanlash</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start" className="w-56">
-        {activeBranches.map((branch) => (
+        {displayBranches.map((branch) => (
           <DropdownMenuItem
             key={branch.id}
             onClick={() => selectBranch(branch)}
@@ -47,7 +68,7 @@ export function BranchSwitcher() {
               <Building2 className="size-4 text-muted-foreground" />
               <span>{branch.name}</span>
             </div>
-            {selectedBranch.id === branch.id && (
+            {selected.id === branch.id && (
               <Check className={cn("size-4 text-primary")} />
             )}
           </DropdownMenuItem>

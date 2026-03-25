@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { LogOut, MoreHorizontal, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -25,6 +26,7 @@ function getInitials(name: string) {
 export function SidebarUserFooter() {
   const { user, logout } = useAuth();
   const { isMobile } = useSidebar();
+  const router = useRouter();
 
   if (!user) return null;
 
@@ -62,7 +64,7 @@ export function SidebarUserFooter() {
               align="end"
               className="w-48"
             >
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
                 <User className="mr-2 size-4" />
                 Profil
               </DropdownMenuItem>

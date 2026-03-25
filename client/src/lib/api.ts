@@ -35,6 +35,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Login/refresh so'rovlarida interceptor ishlamasin
+    const isAuthRequest = originalRequest.url?.includes("/auth/");
+    if (isAuthRequest) {
+      return Promise.reject(error);
+    }
+
     // 401 va refresh qilish mumkin bo'lsa
     if (error.response?.status === 401 && !originalRequest._retry) {
       const refreshToken = Cookies.get("refreshToken");

@@ -1,84 +1,189 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { TimePicker } from "@/components/ui/time-picker";
 import { SettingsPageHeader } from "./settings-page-header";
+import { GeneralSettingsSidebar } from "./general-settings-sidebar";
+import api from "@/lib/api";
+
+interface CompanyData {
+  id: number;
+  name: string;
+  subdomain: string | null;
+  logo: string | null;
+  phone: string | null;
+  startOfWorkingDay: string | null;
+  endOfWorkingDay: string | null;
+}
+
+interface FormValues {
+  name: string;
+  phone: string;
+  startOfWorkingDay: string;
+  endOfWorkingDay: string;
+}
 
 export function GeneralSettingsClient() {
+  const [company, setCompany] = useState<CompanyData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const form = useForm<FormValues>();
+
+  useEffect(() => {
+    async function fetchCompany() {
+      try {
+        const companyId = localStorage.getItem("companyId");
+        if (!companyId) return;
+        const { data } = await api.get(`/company/${companyId}`);
+        setCompany(data);
+        form.reset({
+          name: data.name ?? "",
+          phone: data.phone ?? "",
+          startOfWorkingDay: data.startOfWorkingDay ?? "",
+          endOfWorkingDay: data.endOfWorkingDay ?? "",
+        });
+      } catch {
+        toast.error("Kompaniya ma'lumotlarini yuklashda xatolik");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCompany();
+  }, [form]);
+
+  async function onSubmit(values: FormValues) {
+    if (!company) return;
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/company/${company.id}`, {
+        name: values.name,
+        phone: values.phone || null,
+        startOfWorkingDay: values.startOfWorkingDay || null,
+        endOfWorkingDay: values.endOfWorkingDay || null,
+      });
+      setCompany(data);
+      toast.success("Kompaniya ma'lumotlari saqlandi");
+    } catch {
+      toast.error("Saqlashda xatolik yuz berdi");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-48 items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <SettingsPageHeader
-        title="Umumiy sozlamalar"
-        description="Tizimning asosiy sozlamalari"
-      />
+    <div className="flex gap-8">
+      <GeneralSettingsSidebar />
+      <div className="flex-1 min-w-0 space-y-6">
+        <SettingsPageHeader
+          title="Kompaniya ma'lumotlari"
+          description="Kompaniya nomi, telefon va boshqa asosiy ma'lumotlar"
+        />
 
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">Kompaniya ma&apos;lumotlari</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Kompaniya nomi</p>
-              <Input defaultValue="DaF Sprachzentrum" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Telefon raqam</p>
-              <Input defaultValue="+998 71 123 45 67" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Elektron pochta</p>
-              <Input defaultValue="info@daf.uz" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Manzil</p>
-              <Input defaultValue="Toshkent, Chilonzor tumani" />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Kompaniya nomi</Label>
+                <Input
+                  id="name"
+                  placeholder="Kompaniya nomi"
+                  {...form.register("name", {
+                    required: "Kompaniya nomi kiritilishi shart",
+                  })}
+                />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="phone">Telefon raqam</Label>
+                <Controller
+                  name="phone"
+                  control={form.control}
+                  render={({ field }) => (
+                    <PhoneInput
+                      id="phone"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+
             </div>
           </div>
-        </div>
 
-        <Separator />
+          <Separator />
 
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">Tizim sozlamalari</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Standart valyuta</p>
-              <Select defaultValue="uzs">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="uzs">UZS (so&apos;m)</SelectItem>
-                  <SelectItem value="usd">USD (dollar)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Vaqt mintaqasi</p>
-              <Select defaultValue="tashkent">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tashkent">Toshkent (UTC+5)</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium">Ish vaqti</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Ish boshlanish vaqti</Label>
+                <Controller
+                  name="startOfWorkingDay"
+                  control={form.control}
+                  render={({ field }) => (
+                    <TimePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Boshlanish vaqti"
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ish tugash vaqti</Label>
+                <Controller
+                  name="endOfWorkingDay"
+                  control={form.control}
+                  render={({ field }) => (
+                    <TimePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Tugash vaqti"
+                    />
+                  )}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <Separator />
+          <Separator />
 
-        <div className="flex justify-end">
-          <Button>Saqlash</Button>
-        </div>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                  Saqlanmoqda...
+                </>
+              ) : (
+                "Saqlash"
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

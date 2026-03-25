@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "react-hot-toast";
 
 const interHeading = Inter({ subsets: ["latin"], variable: "--font-heading" });
 
@@ -43,6 +44,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <TooltipProvider>{children}</TooltipProvider>
+            <Toaster position="top-right" />
           </AuthProvider>
         </ThemeProvider>
       </body>

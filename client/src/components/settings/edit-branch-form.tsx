@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,14 +14,27 @@ import {
 } from "@/components/ui/select";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Branch } from "@/hooks/use-edit-branch";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import api from "@/lib/api";
 
 interface EditBranchFormProps {
   branch: Branch | null;
   onClose: () => void;
+  onSaved?: (branch: Branch) => void;
   formId: string;
+  isAdd?: boolean;
 }
 
-export function EditBranchForm({ branch, onClose, formId }: EditBranchFormProps) {
+export function EditBranchForm({
+  branch,
+  onClose,
+  onSaved,
+  formId,
+  isAdd,
+}: EditBranchFormProps) {
+  const [saving, setSaving] = useState(false);
+  const refetchBranches = useBranchSwitcher((s) => s.refetchBranches);
+
   const form = useForm({
     defaultValues: {
       name: branch?.name ?? "",
@@ -29,8 +44,65 @@ export function EditBranchForm({ branch, onClose, formId }: EditBranchFormProps)
     },
   });
 
-  const onSubmit = () => {
-    onClose();
+  const onSubmit = async (values: {
+    name: string;
+    address: string;
+    phone: string;
+    status: "active" | "inactive";
+  }) => {
+    setSaving(true);
+    try {
+      if (isAdd) {
+        const companyId = localStorage.getItem("companyId");
+        const { data } = await api.post("/branches", {
+          name: values.name,
+          address: values.address || undefined,
+          phone: values.phone || undefined,
+          companyId: companyId ? Number(companyId) : undefined,
+        });
+
+        const created: Branch = {
+          id: String(data.id),
+          name: data.name,
+          address: data.address ?? "",
+          phone: data.phone ?? "",
+          status: data.isActive ? "active" : "inactive",
+        };
+
+        toast.success("Yangi filial muvaffaqiyatli qo'shildi");
+        onSaved?.(created);
+        refetchBranches();
+      } else {
+        if (!branch) return;
+        const { data } = await api.patch(`/branches/${branch.id}`, {
+          name: values.name,
+          address: values.address,
+          phone: values.phone,
+          isActive: values.status === "active",
+        });
+
+        const updated: Branch = {
+          id: String(data.id),
+          name: data.name,
+          address: data.address ?? "",
+          phone: data.phone ?? "",
+          status: data.isActive ? "active" : "inactive",
+        };
+
+        toast.success("Filial muvaffaqiyatli yangilandi");
+        onSaved?.(updated);
+        refetchBranches();
+      }
+      onClose();
+    } catch {
+      toast.error(
+        isAdd
+          ? "Filial qo'shishda xatolik yuz berdi"
+          : "Filialni yangilashda xatolik yuz berdi",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -49,8 +121,15 @@ export function EditBranchForm({ branch, onClose, formId }: EditBranchFormProps)
           <Input
             id="name"
             placeholder="Filial nomi"
-            {...form.register("name")}
+            {...form.register("name", {
+              required: "Filial nomi kiritilishi shart",
+            })}
           />
+          {form.formState.errors.name && (
+            <p className="text-sm text-destructive">
+              {form.formState.errors.name.message}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -62,17 +141,18 @@ export function EditBranchForm({ branch, onClose, formId }: EditBranchFormProps)
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label>Telefon</Label>
-            <Controller
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <PhoneInput value={field.value} onChange={field.onChange} />
-              )}
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label>Telefon</Label>
+          <Controller
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <PhoneInput value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </div>
+
+        {!isAdd && (
           <div className="space-y-1.5">
             <Label>Holati</Label>
             <Select
@@ -90,7 +170,7 @@ export function EditBranchForm({ branch, onClose, formId }: EditBranchFormProps)
               </SelectContent>
             </Select>
           </div>
-        </div>
+        )}
       </section>
     </form>
   );

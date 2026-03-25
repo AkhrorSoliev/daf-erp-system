@@ -11,8 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditBranch } from "@/hooks/use-edit-branch";
 import { EditBranchForm } from "./edit-branch-form";
+import type { Branch } from "@/hooks/use-edit-branch";
 
-export function EditBranchDrawer() {
+interface EditBranchDrawerProps {
+  onSaved?: (branch: Branch) => void;
+}
+
+export function EditBranchDrawer({ onSaved }: EditBranchDrawerProps) {
   const { open, mode, branch, closeDrawer } = useEditBranch();
 
   const isAdd = mode === "add";
@@ -41,7 +46,9 @@ export function EditBranchDrawer() {
           <EditBranchForm
             branch={branch}
             onClose={closeDrawer}
+            onSaved={onSaved}
             formId="edit-branch-form"
+            isAdd={isAdd}
           />
         </div>
 

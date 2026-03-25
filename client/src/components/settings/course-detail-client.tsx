@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, BookOpen, Clock, Users, Banknote, FileText, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEditCourse } from "@/hooks/use-edit-course";
+import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { EditCourseDrawer } from "./edit-course-drawer";
 import type { Course } from "@/data/courses-model";
 
@@ -30,6 +32,11 @@ interface CourseDetailClientProps {
 export function CourseDetailClient({ course }: CourseDetailClientProps) {
   const router = useRouter();
   const openDrawer = useEditCourse((s) => s.openDrawer);
+  const setName = useBreadcrumbName((s) => s.setName);
+
+  useEffect(() => {
+    setName(course.id, course.name);
+  }, [course.id, course.name, setName]);
 
   return (
     <div className="space-y-6">

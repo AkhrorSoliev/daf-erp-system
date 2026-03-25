@@ -49,6 +49,7 @@ export const useAuth = create<AuthState>((set) => ({
     Cookies.set("token", accessToken, { expires: 1 / 24 }); // 1 soat
     Cookies.set("refreshToken", refreshToken, { expires: 1 }); // 24 soat
     Cookies.set("user", JSON.stringify(user), { expires: 1 }); // 24 soat
+    localStorage.setItem("companyId", String(user.companyId));
     set({ user, token: accessToken });
   },
 
@@ -56,6 +57,7 @@ export const useAuth = create<AuthState>((set) => ({
     Cookies.remove("token");
     Cookies.remove("refreshToken");
     Cookies.remove("user");
+    localStorage.removeItem("companyId");
     set({ user: null, token: null });
     window.location.href = "/login";
   },
@@ -66,6 +68,7 @@ export const useAuth = create<AuthState>((set) => ({
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
+        localStorage.setItem("companyId", String(user.companyId));
         set({ user, token });
       } catch {
         Cookies.remove("token");

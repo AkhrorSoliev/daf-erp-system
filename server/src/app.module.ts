@@ -15,6 +15,7 @@ import { GroupsModule } from './groups/groups.module';
 import { EmployeesModule } from './employees/employees.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { CompanyModule } from './company/company.module';
+import { UploadModule } from './upload/upload.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -34,6 +35,7 @@ import { JwtAuthGuard } from './common/guards';
     EmployeesModule,
     HolidaysModule,
     CompanyModule,
+    UploadModule,
   ],
   providers: [
     {
