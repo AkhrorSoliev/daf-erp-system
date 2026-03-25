@@ -2,6 +2,16 @@
 
 Deploy frontend to **Vercel** and backend to **Railway**.
 
+## Domains
+
+| Service | Domain | Platform |
+|---------|--------|----------|
+| Main website | `dafzentrum.uz` | Separate project |
+| Admin panel | `admin.dafzentrum.uz` | Vercel |
+| API | `api.dafzentrum.uz` | Railway |
+
+DNS is managed via **Cloudflare** (Full SSL mode).
+
 ---
 
 ## Frontend — Vercel
@@ -21,7 +31,11 @@ vercel --prod --yes
 
 | Variable | Value |
 |----------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://your-railway-backend.up.railway.app/api` |
+| `NEXT_PUBLIC_API_URL` | `https://api.dafzentrum.uz/api` |
+
+### Custom Domain
+
+`admin.dafzentrum.uz` — configured in Vercel Dashboard → Settings → Domains
 
 ## Backend — Railway
 
@@ -42,10 +56,16 @@ railway up --detach
 |----------|-------|
 | `DATABASE_URL` | Railway PostgreSQL connection string |
 | `JWT_SECRET` | Secure random string |
+| `JWT_EXPIRATION` | `7d` |
 | `REDIS_HOST` | Railway Redis host |
 | `REDIS_PORT` | Railway Redis port |
+| `REDIS_PASSWORD` | Railway Redis password |
 | `PORT` | `4000` (or Railway default) |
 | `NODE_ENV` | `production` |
+
+### Custom Domain
+
+`api.dafzentrum.uz` — CNAME points to `p93259ss.up.railway.app`
 
 ### After First Deploy
 
@@ -56,9 +76,26 @@ railway run npm run db:migrate:deploy
 railway run npm run db:seed
 ```
 
+## CORS
+
+Backend CORS is configured in `server/src/main.ts`:
+
+```typescript
+app.enableCors({
+  origin: [
+    'http://localhost:3000',
+    'https://client-brown-ten-36.vercel.app',
+    'https://admin.dafzentrum.uz',
+  ],
+  credentials: true,
+});
+```
+
+When adding new frontend domains, update this list.
+
 ## Quick Deploy (CLI Skill)
 
-If you have the `/deploy` skill installed, run:
+Run:
 
 ```
 /deploy
@@ -66,11 +103,12 @@ If you have the `/deploy` skill installed, run:
 
 This automatically:
 1. Stages and commits changes
-2. Creates a deploy branch
-3. Pushes to origin
-4. Deploys frontend to Vercel
-5. Deploys backend to Railway
-6. Creates a Pull Request
+2. Updates relevant documentation (CLAUDE.md, docs/)
+3. Creates a deploy branch
+4. Pushes to origin
+5. Deploys frontend to Vercel (if client/ changed)
+6. Deploys backend to Railway (if server/ changed)
+7. Creates a Pull Request and auto-merges it
 
 ## Build Scripts
 
@@ -84,13 +122,13 @@ The server `build` script already includes Prisma generation:
 }
 ```
 
-## CORS
+## Cloudflare DNS
 
-Backend CORS is configured in `server/src/main.ts`. Update the origin when deploying to production:
+DNS records managed at Cloudflare for `dafzentrum.uz`:
 
-```typescript
-app.enableCors({
-  origin: 'https://your-frontend-domain.vercel.app',
-  credentials: true,
-});
-```
+| Type | Name | Content | Proxy |
+|------|------|---------|-------|
+| A | `@` | `216.198.79.1` | Proxied |
+| CNAME | `admin` | Vercel | Proxied |
+| CNAME | `api` | `p93259ss.up.railway.app` | DNS only |
+| CNAME | `www` | Vercel | Proxied |
