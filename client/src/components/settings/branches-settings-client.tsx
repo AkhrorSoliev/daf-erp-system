@@ -162,8 +162,16 @@ export function BranchesSettingsClient() {
       </div>
 
       <EditBranchDrawer
-        onSaved={(created) => {
-          setBranches((prev) => [...prev, created]);
+        onSaved={(saved) => {
+          setBranches((prev) => {
+            const idx = prev.findIndex((b) => b.id === saved.id);
+            if (idx >= 0) {
+              const next = [...prev];
+              next[idx] = saved;
+              return next;
+            }
+            return [...prev, saved];
+          });
         }}
       />
     </div>
