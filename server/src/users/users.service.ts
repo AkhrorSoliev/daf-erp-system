@@ -1,8 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserQueryDto } from './dto/user-query.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { Prisma } from '@prisma/client';
+import { UploadService } from '../upload/upload.service';
 
 const userSelect = {
   id: true,
@@ -31,7 +38,10 @@ function formatUser(user: any) {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private uploadService: UploadService,
+  ) {}
 
   async findAll(query: UserQueryDto) {
     const { user_type, branch_id, company_id, page = 1, per_page = 10 } = query;
@@ -85,6 +95,54 @@ export class UsersService {
 
   async findByLogin(login: string) {
     return this.prisma.user.findUnique({ where: { login } });
+  }
+
+  async updateProfile(id: number, dto: UpdateProfileDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User #${id} topilmadi`);
+    }
+
+    // Yangi rasm yuklangan bo'lsa, eski rasmni R2 dan o'chiramiz
+    if (dto.photo && user.photo && dto.photo !== user.photo) {
+      await this.uploadService.deleteFile(user.photo);
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.photo !== undefined && { photo: dto.photo }),
+      },
+      select: userSelect,
+    });
+
+    return formatUser(updated);
+  }
+
+  async changePassword(id: number, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User #${id} topilmadi`);
+    }
+
+    if (!user.password) {
+      throw new BadRequestException('Parol o\'rnatilmagan');
+    }
+
+    const isValid = await bcrypt.compare(dto.oldPassword, user.password);
+    if (!isValid) {
+      throw new BadRequestException('Joriy parol noto\'g\'ri');
+    }
+
+    const hashed = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hashed },
+    });
+
+    return { message: 'Parol muvaffaqiyatli o\'zgartirildi' };
   }
 
   async create(data: {

@@ -89,10 +89,13 @@ The system supports **multiple branches** (filials).
 
 #### Dates and Times
 
-- Date-only display format: **dd.mm.yyyy** — e.g. `21.03.2026`
-- Date + time display format: **dd.mm.yyyy, hh:mm:ss** — e.g. `21.03.2026, 14:05:30`
+- Date-only display format: **dd.MM.yyyy** — e.g. `21.03.2026`
+- Date + time display format: **dd.MM.yyyy, HH:mm:ss** — e.g. `21.03.2026, 14:05:30`
 - Use the time variant only when the time component is meaningful in context (e.g. activity logs, audit trails, timestamps)
 - Use `date-fns/format` with the pattern `dd.MM.yyyy` or `dd.MM.yyyy, HH:mm:ss`
+- **All date inputs** must use the shared `<DatePicker>` component from `src/components/ui/date-picker.tsx`. It renders a button that opens a calendar popover (built on shadcn/ui `<Calendar>` + `<Popover>`), displays the selected date in `dd.MM.yyyy` format, and returns a `Date` object. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
+- **All time inputs** must use the shared `<TimePicker>` component from `src/components/ui/time-picker.tsx`. It renders a button that opens a popover with a scrollable list of times (30-minute intervals, 00:00–23:30), displays the selected time, and returns a `HH:mm` string. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
+- **Never** use plain text `<Input>` for date or time entry — always use `<DatePicker>` or `<TimePicker>` so users select from a picker
 
 #### Prices and Currency
 
@@ -128,6 +131,34 @@ The system supports **multiple branches** (filials).
 - Sidebar navigation links must use `pathname.startsWith(item.url)` for active state detection — **not** exact match (`pathname === item.url`)
 - This ensures the link stays highlighted when navigating to nested/child routes (e.g. `/settings/courses` stays active on `/settings/courses/1`)
 - Exception: the home route (`/`) must use exact match (`pathname === "/"`) to avoid matching every route
+
+### Toast Notifications
+
+- **Every API mutation** (create, update, delete) **must** show a toast notification for both success and error outcomes using `react-hot-toast`
+- Use `toast.success("message")` after a successful mutation and `toast.error("message")` in the catch block
+- Toast messages must be in **Uzbek**, concise, and describe what happened — e.g. `"Filial muvaffaqiyatli yangilandi"`, `"Saqlashda xatolik yuz berdi"`
+- For error messages from the server, prefer extracting `error?.response?.data?.message` and falling back to a generic Uzbek message
+- The `<Toaster />` component is configured globally in `src/app/layout.tsx` — do **not** add it elsewhere
+- Import: `import toast from "react-hot-toast"`
+
+### UI Reactivity After Mutations
+
+- When a mutation (create, update, delete) modifies data that is displayed elsewhere in the UI, **all affected components must update immediately** — the user should never need to refresh the page to see changes
+- If a Zustand store holds cached data (e.g. branch list in navbar), expose a `refetch` method and call it after relevant mutations
+- Prefer updating shared Zustand stores over local component state when the data is used in multiple places (e.g. branch list appears in both the navbar switcher and settings page)
+- After a successful create/update/delete, update **all** visible representations of that data: tables, dropdowns, sidebars, badges, etc.
+
+### Breadcrumbs
+
+- Breadcrumbs are rendered globally in `DashboardHeader` via the `<AppBreadcrumb>` component (`src/components/app-breadcrumb.tsx`)
+- Static route labels are defined in `src/lib/breadcrumb-routes.ts` — add new entries when creating new routes
+- **Dynamic segments** (IDs) must display the entity **name** instead of the raw ID. Use the `useBreadcrumbName` hook (`src/hooks/use-breadcrumb-name.ts`) in the detail/profile client component:
+  ```tsx
+  const setName = useBreadcrumbName((s) => s.setName);
+  useEffect(() => { setName(id, entity.name); }, [id, entity.name, setName]);
+  ```
+- Example: `/settings/branches/1001` should show `Bosh sahifa > Sozlamalar > Filiallar > Asosiy filial` — **not** `#1001`
+- Every new detail page with a dynamic `[id]` segment **must** call `setName()` after loading the entity data
 
 ### Code Organization
 

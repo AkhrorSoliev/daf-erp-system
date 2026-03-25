@@ -7,7 +7,15 @@ export class UpdateCompanyDto {
 
   @IsOptional()
   @IsString()
+  subdomain?: string;
+
+  @IsOptional()
+  @IsString()
   logo?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
 
   @IsOptional()
   @IsDateString()
