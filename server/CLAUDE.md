@@ -4,7 +4,8 @@
 
 An ERP system for **DaF Sprachzentrum** language school. Backend API serving the frontend client.
 
-> **Roles:** CEO, Admin, Director, Teacher. The system supports **multiple branches** (filials).
+> **Roles:** CEO, Branch Director, Administrator, Teacher, Cashier. The system supports **multiple branches** (filials).
+> Roles are stored in a `Role` table with fixed IDs (1–5), linked to users via `UserRole` join table (many-to-many).
 
 ## Tech Stack
 
@@ -45,7 +46,10 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 
 - All routes require JWT auth by default (global `JwtAuthGuard`)
 - Public routes use `@Public()` decorator to bypass auth
-- Role-based access uses `@Roles(Role.CEO, Role.ADMIN)` decorator with `RolesGuard`
+- Role-based access uses `@Roles('CEO', 'Administrator')` decorator with `RolesGuard` (string-based role names)
+- JWT uses **access token (1h)** + **refresh token (24h)** pair
+- `POST /api/auth/login` returns both tokens + user data
+- `POST /api/auth/refresh` refreshes the token pair
 - Use `@CurrentUser()` decorator to get the authenticated user in controllers
 
 ### Pagination
@@ -84,6 +88,8 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - `npx prisma migrate dev --name <name>` — Create new migration
 - `npx prisma studio` — Open Prisma Studio (DB GUI)
 - `npx prisma generate` — Regenerate Prisma Client
+- `npm run db:migrate:deploy` — Apply pending migrations (production)
+- `npm run db:seed` — Seed database with initial data
 - `docker compose up -d` — Start PostgreSQL + Redis (from project root)
 - `docker compose down` — Stop containers
 
@@ -93,7 +99,6 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL connection string | — |
 | `JWT_SECRET` | Secret for JWT signing | — |
-| `JWT_EXPIRATION` | Token expiration time | `7d` |
 | `REDIS_HOST` | Redis host | `localhost` |
 | `REDIS_PORT` | Redis port | `6379` |
 | `PORT` | Server port | `4000` |

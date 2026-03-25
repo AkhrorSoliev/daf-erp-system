@@ -6,33 +6,60 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  CEO
-  ADMIN
-  DIRECTOR
-  TEACHER
-}
-
 enum Gender {
   MALE
   FEMALE
 }
 
-model User {
-  id        String   @id @default(uuid())
-  login     String   @unique
-  password  String
-  role      Role
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Role {
+  id    Int    @id
+  name  String @unique
 
-  employee Employee?
-  teacher  Teacher?
+  users UserRole[]
+}
+
+model User {
+  id           Int       @id
+  name         String
+  phone        String?
+  photo        String?
+  gender       Gender?
+  balance      Int       @default(0)
+  login        String?   @unique
+  password     String?
+  isActive     Boolean   @default(true)
+  companyId    Int
+  company      Company   @relation(fields: [companyId], references: [id])
+  mainBranch   Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  roles        UserRole[]
+  branches     UserBranch[]
+  groups       Group[]        @relation("StudentGroups")
+  teacherGroups Group[]      @relation("TeacherGroups")
+}
+
+model UserRole {
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model UserBranch {
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
 }
 
 model Branch {
-  id        String   @id @default(uuid())
+  id        Int      @id
   name      String
   address   String?
   phone     String?
@@ -40,8 +67,11 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  users     UserBranch[]
   rooms     Room[]
-  employees Employee[]
   groups    Group[]
 }
 
@@ -49,40 +79,10 @@ model Room {
   id        String   @id @default(uuid())
   name      String
   capacity  Int?
-  branchId  String
+  branchId  Int
   branch    Branch   @relation(fields: [branchId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model Employee {
-  id        String   @id @default(uuid())
-  firstName String
-  lastName  String
-  phone     String
-  gender    Gender?
-  avatar    String?
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  branchId  String
-  branch    Branch   @relation(fields: [branchId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Teacher {
-  id        String   @id @default(uuid())
-  firstName String
-  lastName  String
-  phone     String
-  gender    Gender?
-  avatar    String?
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  groups Group[]
 }
 
 model Course {
@@ -94,6 +94,9 @@ model Course {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
 
   groups Group[]
 }
@@ -138,15 +141,16 @@ model Group {
   name      String
   courseId   String
   course    Course    @relation(fields: [courseId], references: [id])
-  teacherId String
-  teacher   Teacher   @relation(fields: [teacherId], references: [id])
-  branchId  String
+  teacherId Int
+  teacher   User      @relation("TeacherGroups", fields: [teacherId], references: [id])
+  branchId  Int
   branch    Branch    @relation(fields: [branchId], references: [id])
   startDate DateTime?
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
+  students    User[]       @relation("StudentGroups")
   enrollments Enrollment[]
 }
 
@@ -165,4 +169,24 @@ model Holiday {
   id   String   @id @default(uuid())
   name String
   date DateTime
+}
+
+model Company {
+  id                Int       @id
+  name              String
+  subdomain         String?
+  logo              String?
+  phone             String?
+  activatedTill     DateTime?
+  startOfWorkingDay String?
+  endOfWorkingDay   String?
+  customCss         String?
+  customCssLead     String?
+  leadSuccessText   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  users    User[]
+  branches Branch[]
+  courses  Course[]
 }

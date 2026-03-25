@@ -15,15 +15,20 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { currentUser } from "@/lib/mock-data";
+import { useAuth } from "@/hooks/use-auth";
 
-function getInitials(firstName: string, lastName: string) {
-  return `${firstName[0]}${lastName[0]}`.toUpperCase();
+function getInitials(name: string) {
+  const parts = name.split(" ");
+  return parts.map((p) => p[0]).join("").toUpperCase().slice(0, 2);
 }
 
 export function SidebarUserFooter() {
-  const { firstName, lastName, role, avatarUrl } = currentUser;
+  const { user, logout } = useAuth();
   const { isMobile } = useSidebar();
+
+  if (!user) return null;
+
+  const roleName = user.roles[0]?.name ?? "";
 
   return (
     <SidebarFooter>
@@ -36,22 +41,17 @@ export function SidebarUserFooter() {
                 className="data-[state=open]:bg-sidebar-accent"
               >
                 <Avatar className="size-8 shrink-0 rounded-lg">
-                  {avatarUrl && (
-                    <AvatarImage
-                      src={avatarUrl}
-                      alt={`${firstName} ${lastName}`}
-                    />
+                  {user.photo && (
+                    <AvatarImage src={user.photo} alt={user.name} />
                   )}
                   <AvatarFallback className="rounded-lg text-xs">
-                    {getInitials(firstName, lastName)}
+                    {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">
-                    {firstName} {lastName}
-                  </span>
+                  <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {role}
+                    {roleName}
                   </span>
                 </div>
                 <MoreHorizontal className="ml-auto size-4" />
@@ -66,7 +66,7 @@ export function SidebarUserFooter() {
                 <User className="mr-2 size-4" />
                 Profil
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem className="text-destructive" onClick={logout}>
                 <LogOut className="mr-2 size-4" />
                 Chiqish
               </DropdownMenuItem>
