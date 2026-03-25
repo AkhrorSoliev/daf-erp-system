@@ -1,0 +1,77 @@
+import { create } from "zustand";
+import Cookies from "js-cookie";
+
+export interface UserRole {
+  id: number;
+  name: string;
+}
+
+export interface UserBranch {
+  id: number;
+  name: string;
+}
+
+export interface UserCompany {
+  id: number;
+  name: string;
+  subdomain: string | null;
+  logo: string | null;
+  phone: string | null;
+}
+
+export interface AuthUser {
+  id: number;
+  name: string;
+  phone: string | null;
+  photo: string | null;
+  gender: string | null;
+  balance: number;
+  companyId: number;
+  mainBranch: number | null;
+  roles: UserRole[];
+  branches: UserBranch[];
+  company: UserCompany;
+}
+
+interface AuthState {
+  user: AuthUser | null;
+  token: string | null;
+  setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  logout: () => void;
+  hydrate: () => void;
+}
+
+export const useAuth = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+
+  setAuth: (user, accessToken, refreshToken) => {
+    Cookies.set("token", accessToken, { expires: 1 / 24 }); // 1 soat
+    Cookies.set("refreshToken", refreshToken, { expires: 1 }); // 24 soat
+    Cookies.set("user", JSON.stringify(user), { expires: 1 }); // 24 soat
+    set({ user, token: accessToken });
+  },
+
+  logout: () => {
+    Cookies.remove("token");
+    Cookies.remove("refreshToken");
+    Cookies.remove("user");
+    set({ user: null, token: null });
+    window.location.href = "/login";
+  },
+
+  hydrate: () => {
+    const token = Cookies.get("token");
+    const userStr = Cookies.get("user");
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        set({ user, token });
+      } catch {
+        Cookies.remove("token");
+        Cookies.remove("refreshToken");
+        Cookies.remove("user");
+      }
+    }
+  },
+}));

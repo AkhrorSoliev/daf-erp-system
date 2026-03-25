@@ -10,12 +10,15 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BranchSwitcher } from "@/components/branch-switcher";
 
 export function DashboardHeader() {
   return (
     <header className="flex h-14 items-center gap-4 border-b border-border bg-background px-4">
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-6" />
+
+      <BranchSwitcher />
 
       <div className="relative grow">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />

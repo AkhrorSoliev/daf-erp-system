@@ -8,11 +8,12 @@ An ERP system for **DaF Sprachzentrum** language school. Manages branches, staff
 
 ## Roles
 
-- **CEO** — Full system access
-- **Admin** — System administration
-- **Director** — Branch-level management
-- **Teacher** — Teaching and class management
-- More roles may be added in the future
+- **CEO** (id: 1) — Full system access
+- **Branch Director** (id: 2) — Branch-level management
+- **Administrator** (id: 3) — System administration
+- **Teacher** (id: 4) — Teaching and class management
+- **Cashier** (id: 5) — Payment management
+- A user can have **multiple roles** (many-to-many via `UserRole` table)
 
 The system supports **multiple branches** (filials).
 
@@ -41,6 +42,15 @@ The system supports **multiple branches** (filials).
 - **date-fns** — Date formatting and manipulation
 - **react-hot-toast** — Toast notifications
 - **js-cookie** — Cookie management (token storage)
+
+## Authentication
+
+- JWT with **access token (1h)** + **refresh token (24h)**
+- Tokens stored in cookies via `js-cookie`
+- Axios interceptor in `src/lib/api.ts` auto-attaches token and auto-refreshes on 401
+- `src/middleware.ts` redirects unauthenticated users to `/login`
+- Auth state managed by Zustand store in `src/hooks/use-auth.ts`
+- `AuthProvider` in `src/components/providers/auth-provider.tsx` hydrates state from cookies on mount
 
 ## Architecture Rules
 
