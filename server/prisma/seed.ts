@@ -53,56 +53,89 @@ async function main() {
   const users = [
     {
       id: 1001,
-      name: 'Abdulloh Karimov',
+      name: 'CEO',
       login: 'ceo',
-      phone: '901234567',
       companyId: 1001,
-      mainBranch: 1001,
+      mainBranch: null,
       roleIds: [1],
       branchIds: [1001, 1002, 1003],
     },
     {
       id: 1002,
-      name: 'Sardor Aliyev',
+      name: 'Branch Director',
+      login: 'director',
+      companyId: 1001,
+      mainBranch: 1001,
+      roleIds: [2],
+      branchIds: [1001],
+    },
+    {
+      id: 1003,
+      name: 'Administrator',
       login: 'admin',
-      phone: '901234568',
       companyId: 1001,
       mainBranch: 1001,
       roleIds: [3],
       branchIds: [1001],
     },
     {
-      id: 1003,
-      name: 'Dilshod Rahimov',
+      id: 1004,
+      name: 'Teacher',
       login: 'teacher',
-      phone: '901234569',
       companyId: 1001,
-      mainBranch: 1002,
+      mainBranch: 1001,
       roleIds: [4],
-      branchIds: [1002],
+      branchIds: [1001],
+    },
+    {
+      id: 1005,
+      name: 'Cashier',
+      login: 'cashier',
+      companyId: 1001,
+      mainBranch: 1001,
+      roleIds: [5],
+      branchIds: [1001],
     },
   ];
 
   for (const u of users) {
-    const exists = await prisma.user.findUnique({ where: { id: u.id } });
-    if (!exists) {
-      await prisma.user.create({
-        data: {
-          id: u.id,
-          name: u.name,
-          login: u.login,
-          password,
-          phone: u.phone,
-          companyId: u.companyId,
-          mainBranch: u.mainBranch,
-          roles: { create: u.roleIds.map((roleId) => ({ roleId })) },
-          branches: { create: u.branchIds.map((branchId) => ({ branchId })) },
+    await prisma.user.upsert({
+      where: { id: u.id },
+      update: {
+        name: u.name,
+        login: u.login,
+        password,
+        phone: null,
+        photo: null,
+        gender: null,
+        mainBranch: u.mainBranch,
+        companyId: u.companyId,
+        telegramChatId: null,
+        roles: {
+          deleteMany: {},
+          create: u.roleIds.map((roleId) => ({ roleId })),
         },
-      });
-      console.log(`User: ${u.name} (login: ${u.login})`);
-    } else {
-      console.log(`User: ${u.name} — already exists`);
-    }
+        branches: {
+          deleteMany: {},
+          create: u.branchIds.map((branchId) => ({ branchId })),
+        },
+      },
+      create: {
+        id: u.id,
+        name: u.name,
+        login: u.login,
+        password,
+        phone: null,
+        photo: null,
+        gender: null,
+        companyId: u.companyId,
+        mainBranch: u.mainBranch,
+        roles: { create: u.roleIds.map((roleId) => ({ roleId })) },
+        branches: { create: u.branchIds.map((branchId) => ({ branchId })) },
+      },
+    });
+
+    console.log(`User: ${u.name} (login: ${u.login})`);
   }
 }
 

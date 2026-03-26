@@ -12,10 +12,15 @@ import { Button } from "@/components/ui/button";
 import { useEditTeacher } from "@/hooks/use-edit-teacher";
 import { EditTeacherForm } from "./edit-teacher-form";
 
-export function EditTeacherDrawer() {
-  const { open, teacher, closeDrawer } = useEditTeacher();
+interface EditTeacherDrawerProps {
+  onSaved?: () => void;
+}
 
-  if (!teacher) return null;
+export function EditTeacherDrawer({ onSaved }: EditTeacherDrawerProps) {
+  const { open, mode, teacher, closeDrawer } = useEditTeacher();
+  const isAdd = mode === "add";
+
+  if (!isAdd && !teacher) return null;
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && closeDrawer()}>
@@ -26,17 +31,21 @@ export function EditTeacherDrawer() {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            O&apos;qituvchini tahrirlash
+            {isAdd ? "Yangi o'qituvchi qo'shish" : "O'qituvchini tahrirlash"}
           </SheetTitle>
           <SheetDescription>
-            O&apos;qituvchi ma&apos;lumotlarini o&apos;zgartirish
+            {isAdd
+              ? "Yangi o'qituvchi ma'lumotlarini kiriting"
+              : "O'qituvchi ma'lumotlarini o'zgartirish"}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
           <EditTeacherForm
             teacher={teacher}
+            isAdd={isAdd}
             onClose={closeDrawer}
+            onSaved={onSaved}
             formId="edit-teacher-form"
           />
         </div>
@@ -47,7 +56,7 @@ export function EditTeacherDrawer() {
               Bekor qilish
             </Button>
             <Button type="submit" form="edit-teacher-form">
-              Saqlash
+              {isAdd ? "Qo'shish" : "Saqlash"}
             </Button>
           </div>
         </SheetFooter>

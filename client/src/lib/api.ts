@@ -1,5 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import { useAuth } from "@/hooks/use-auth";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -79,9 +80,8 @@ api.interceptors.response.use(
 
         const { accessToken, refreshToken: newRefreshToken, user } = res.data;
 
-        Cookies.set("token", accessToken, { expires: 1 / 24 });
-        Cookies.set("refreshToken", newRefreshToken, { expires: 1 });
-        Cookies.set("user", JSON.stringify(user), { expires: 1 });
+        // Cookie va Zustand store ni yangilash
+        useAuth.getState().setAuth(user, accessToken, newRefreshToken);
 
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         processQueue(null, accessToken);

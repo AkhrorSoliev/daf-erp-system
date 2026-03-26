@@ -110,7 +110,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
               variant="ghost"
               size="sm"
               className="size-8 p-0"
-              onClick={() => openDrawer(teacher)}
+              onClick={() => openDrawer(teacher as unknown as import("@/hooks/use-edit-teacher").TeacherData)}
             >
               <Pencil className="size-4" />
             </Button>

@@ -103,8 +103,8 @@ export class UsersService {
       throw new NotFoundException(`User #${id} topilmadi`);
     }
 
-    // Yangi rasm yuklangan bo'lsa, eski rasmni R2 dan o'chiramiz
-    if (dto.photo && user.photo && dto.photo !== user.photo) {
+    // Rasm o'zgargan yoki o'chirilgan bo'lsa, eski rasmni R2 dan o'chiramiz
+    if (dto.photo !== undefined && user.photo && dto.photo !== user.photo) {
       await this.uploadService.deleteFile(user.photo);
     }
 
@@ -113,7 +113,7 @@ export class UsersService {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
-        ...(dto.photo !== undefined && { photo: dto.photo }),
+        ...(dto.photo !== undefined && { photo: dto.photo || null }),
       },
       select: userSelect,
     });
@@ -146,14 +146,16 @@ export class UsersService {
   }
 
   async create(data: {
-    id: number;
+    id?: number;
     name: string;
     companyId: number;
     login?: string;
     password?: string;
     phone?: string;
+    photo?: string;
     gender?: 'MALE' | 'FEMALE';
     mainBranch?: number;
+    telegramChatId?: string;
     roleIds?: number[];
     branchIds?: number[];
   }) {
@@ -163,12 +165,14 @@ export class UsersService {
 
     const user = await this.prisma.user.create({
       data: {
-        id: data.id,
+        ...(data.id !== undefined && { id: data.id }),
         name: data.name,
         phone: data.phone,
+        photo: data.photo,
         gender: data.gender,
         companyId: data.companyId,
         mainBranch: data.mainBranch,
+        telegramChatId: data.telegramChatId,
         login: data.login,
         password: hashedPassword,
         roles: data.roleIds

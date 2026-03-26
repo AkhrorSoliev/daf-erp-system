@@ -19,25 +19,26 @@ model Role {
 }
 
 model User {
-  id           Int       @id
-  name         String
-  phone        String?
-  photo        String?
-  gender       Gender?
-  balance      Int       @default(0)
-  login        String?   @unique
-  password     String?
-  isActive     Boolean   @default(true)
-  companyId    Int
-  company      Company   @relation(fields: [companyId], references: [id])
-  mainBranch   Int?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             Int       @id @default(autoincrement())
+  name           String
+  phone          String?
+  photo          String?
+  gender         Gender?
+  balance        Int       @default(0)
+  login          String?   @unique
+  password       String?
+  isActive       Boolean   @default(true)
+  telegramChatId String?   @unique
+  companyId      Int
+  company        Company   @relation(fields: [companyId], references: [id])
+  mainBranch     Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  roles        UserRole[]
-  branches     UserBranch[]
-  groups       Group[]        @relation("StudentGroups")
-  teacherGroups Group[]      @relation("TeacherGroups")
+  roles         UserRole[]
+  branches      UserBranch[]
+  groups        Group[]        @relation("StudentGroups")
+  teacherGroups Group[]        @relation("TeacherGroups")
 }
 
 model UserRole {
@@ -110,6 +111,7 @@ model Student {
   parentPhone    String?
   parentName     String?
   telegram       String?
+  telegramChatId String?  @unique
   gender         Gender?
   avatar         String?
   placeOfStudy   String?

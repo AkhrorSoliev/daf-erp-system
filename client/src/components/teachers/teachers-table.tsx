@@ -10,19 +10,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Teacher } from "@/data/teacher-model";
+import type { TeacherData } from "@/hooks/use-edit-teacher";
 import { TeacherRowActions } from "./teacher-row-actions";
 
-function formatPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("998")) {
-    const d = digits.slice(3);
-    return `+998 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7, 9)}`;
+function formatPhone(phone: string | null) {
+  if (!phone) return "—";
+  if (phone.length === 9) {
+    return `+998 ${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)}`;
   }
   return phone;
 }
 
-export function TeachersTable({ teachers }: { teachers: Teacher[] }) {
+interface TeachersTableProps {
+  teachers: TeacherData[];
+  onRefresh?: () => void;
+}
+
+export function TeachersTable({ teachers, onRefresh }: TeachersTableProps) {
   const router = useRouter();
 
   if (teachers.length === 0) {
@@ -41,43 +45,50 @@ export function TeachersTable({ teachers }: { teachers: Teacher[] }) {
             <TableHead className="w-10">Rasm</TableHead>
             <TableHead className="min-w-36">Ism familiya</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">Telefon</TableHead>
-            <TableHead className="hidden md:table-cell">Guruhlar soni</TableHead>
+            <TableHead className="hidden md:table-cell">Login</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {teachers.map((teacher) => (
-            <TableRow
-              key={teacher.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => router.push(`/teachers/profile/${teacher.id}`)}
-            >
-              <TableCell>
-                <Avatar className="size-8">
-                  <AvatarImage
-                    src={teacher.avatar}
-                    alt={`${teacher.firstName} ${teacher.lastName}`}
-                  />
-                  <AvatarFallback className="text-xs">
-                    {teacher.firstName[0]}
-                    {teacher.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-              </TableCell>
-              <TableCell className="font-medium">
-                {teacher.firstName} {teacher.lastName}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell">
-                {formatPhone(teacher.phone)}
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                {teacher.groups.length}
-              </TableCell>
-              <TableCell>
-                <TeacherRowActions teacher={teacher} />
-              </TableCell>
-            </TableRow>
-          ))}
+          {teachers.map((teacher) => {
+            const initials = teacher.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .slice(0, 2);
+
+            return (
+              <TableRow
+                key={teacher.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => router.push(`/teachers/profile/${teacher.id}`)}
+              >
+                <TableCell>
+                  <Avatar className="size-8">
+                    <AvatarImage
+                      src={teacher.photo ?? undefined}
+                      alt={teacher.name}
+                    />
+                    <AvatarFallback className="text-xs">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </TableCell>
+                <TableCell className="font-medium">
+                  {teacher.name}
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  {formatPhone(teacher.phone)}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {teacher.login ?? "—"}
+                </TableCell>
+                <TableCell>
+                  <TeacherRowActions teacher={teacher} onDeleted={onRefresh} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

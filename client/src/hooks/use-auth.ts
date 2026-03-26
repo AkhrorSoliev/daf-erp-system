@@ -64,12 +64,13 @@ export const useAuth = create<AuthState>((set) => ({
 
   hydrate: () => {
     const token = Cookies.get("token");
+    const refreshToken = Cookies.get("refreshToken");
     const userStr = Cookies.get("user");
-    if (token && userStr) {
+    if (userStr && (token || refreshToken)) {
       try {
         const user = JSON.parse(userStr);
         localStorage.setItem("companyId", String(user.companyId));
-        set({ user, token });
+        set({ user, token: token || null });
       } catch {
         Cookies.remove("token");
         Cookies.remove("refreshToken");
