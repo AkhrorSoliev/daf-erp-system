@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { Camera } from "lucide-react";
+import { Camera, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   Sheet,
@@ -44,6 +44,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
@@ -55,7 +56,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
 
   if (!user) return null;
 
-  const displayPhoto = previewPhoto ?? user.photo;
+  const displayPhoto = photoRemoved ? null : (previewPhoto ?? user.photo);
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -64,6 +65,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
     const previewUrl = URL.createObjectURL(file);
     setPreviewPhoto(previewUrl);
 
+    setPhotoRemoved(false);
     setUploading(true);
     try {
       const formData = new FormData();
@@ -78,6 +80,12 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
     }
   }
 
+  function handleRemovePhoto() {
+    setPreviewPhoto(null);
+    setPhotoRemoved(true);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function onSubmit(values: FormValues) {
     setSaving(true);
     try {
@@ -85,8 +93,11 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
 
       if (values.name !== user!.name) payload.name = values.name;
       if (values.phone !== (user!.phone ?? "")) payload.phone = values.phone;
-      if (previewPhoto && previewPhoto !== user!.photo)
+      if (photoRemoved) {
+        payload.photo = "";
+      } else if (previewPhoto && previewPhoto !== user!.photo) {
         payload.photo = previewPhoto;
+      }
 
       if (Object.keys(payload).length === 0) {
         onClose();
@@ -125,6 +136,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
 
   function handleClose() {
     setPreviewPhoto(null);
+    setPhotoRemoved(false);
     form.reset();
     onClose();
   }
@@ -156,10 +168,8 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
               </h3>
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <Avatar className="size-20">
-                    {displayPhoto && (
-                      <AvatarImage src={displayPhoto} alt={user.name} />
-                    )}
+                  <Avatar key={displayPhoto ?? "empty"} className="size-20">
+                    <AvatarImage src={displayPhoto ?? undefined} alt={user.name} />
                     <AvatarFallback className="text-2xl font-semibold">
                       {getInitials(user.name)}
                     </AvatarFallback>
@@ -185,6 +195,16 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                   <p>Maksimal 5 MB</p>
                   {uploading && (
                     <p className="text-primary">Yuklanmoqda...</p>
+                  )}
+                  {displayPhoto && !uploading && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="mt-1 flex items-center gap-1 text-xs text-destructive hover:underline"
+                    >
+                      <Trash2 className="size-3" />
+                      Rasmni o&apos;chirish
+                    </button>
                   )}
                 </div>
               </div>

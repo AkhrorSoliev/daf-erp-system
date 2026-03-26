@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -16,11 +17,13 @@ import { EmployeesModule } from './employees/employees.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { CompanyModule } from './company/company.module';
 import { UploadModule } from './upload/upload.module';
+import { TelegramModule } from './telegram/telegram.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
     AuthModule,
@@ -36,6 +39,7 @@ import { JwtAuthGuard } from './common/guards';
     HolidaysModule,
     CompanyModule,
     UploadModule,
+    TelegramModule,
   ],
   providers: [
     {
