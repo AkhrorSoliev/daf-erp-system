@@ -31,8 +31,8 @@ export function createTeacherRegistrationScene(
   scene.enter(async (ctx) => {
     // Allaqachon ro'yxatdan o'tganini tekshirish
     const chatId = String(ctx.chat!.id);
-    const existing = await prisma.user.findUnique({
-      where: { telegramChatId: chatId },
+    const existing = await prisma.user.findFirst({
+      where: { telegramChatId: chatId, deletedAt: null },
     });
 
     if (existing) {

@@ -9,7 +9,10 @@ export class BranchesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(query: BranchQueryDto) {
-    const where = query.company_id ? { companyId: query.company_id } : {};
+    const where: any = { deletedAt: null };
+    if (query.company_id) {
+      where.companyId = query.company_id;
+    }
 
     return this.prisma.branch.findMany({
       where,
@@ -19,8 +22,8 @@ export class BranchesService {
   }
 
   async findOne(id: number) {
-    const branch = await this.prisma.branch.findUnique({
-      where: { id },
+    const branch = await this.prisma.branch.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!branch) {

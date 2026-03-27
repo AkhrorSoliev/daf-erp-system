@@ -54,6 +54,7 @@ export class TeachersService {
 
     const where: Prisma.UserWhereInput = {
       roles: { some: { roleId: TEACHER_ROLE_ID } },
+      deletedAt: null,
     };
 
     if (search) {
@@ -85,7 +86,7 @@ export class TeachersService {
 
   async findById(id: number) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } } },
+      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
       select: teacherSelect,
     });
 
@@ -99,7 +100,7 @@ export class TeachersService {
   async create(dto: CreateTeacherDto, companyId: number) {
     // Telefon raqam tekshirish
     const existing = await this.prisma.user.findFirst({
-      where: { phone: dto.phone },
+      where: { phone: dto.phone, deletedAt: null },
     });
     if (existing) {
       throw new BadRequestException('Bu telefon raqam allaqachon tizimda mavjud');
@@ -137,7 +138,7 @@ export class TeachersService {
 
   async update(id: number, dto: UpdateTeacherDto) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } } },
+      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
     });
 
     if (!user) {
@@ -160,7 +161,7 @@ export class TeachersService {
 
     // Login uniqueness tekshirish
     if (dto.login && dto.login !== user.login) {
-      const loginTaken = await this.prisma.user.findUnique({ where: { login: dto.login } });
+      const loginTaken = await this.prisma.user.findFirst({ where: { login: dto.login, deletedAt: null } });
       if (loginTaken) {
         throw new BadRequestException('Bu login allaqachon band');
       }
@@ -188,24 +189,20 @@ export class TeachersService {
     return formatTeacher(updated);
   }
 
-  async delete(id: number) {
+  async delete(id: number, deletedById: number) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } } },
+      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
     });
 
     if (!user) {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
-    // Rasmni Cloudflare R2 dan o'chirish
-    if (user.photo) {
-      await this.uploadService.deleteFile(user.photo);
-    }
-
-    // Avval role va branch bog'lanishlarini o'chirish
-    await this.prisma.userRole.deleteMany({ where: { userId: id } });
-    await this.prisma.userBranch.deleteMany({ where: { userId: id } });
-    await this.prisma.user.delete({ where: { id } });
+    // Rasmni O'CHIRMAYMIZ — restore uchun kerak
+    await this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedById },
+    });
 
     return { message: "O'qituvchi muvaffaqiyatli o'chirildi" };
   }

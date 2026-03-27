@@ -49,7 +49,7 @@ export class UsersService {
     const { user_type, search, branch_id, company_id, page = 1, per_page = 10 } = query;
     const skip = (page - 1) * per_page;
 
-    const where: Prisma.UserWhereInput = {};
+    const where: Prisma.UserWhereInput = { deletedAt: null };
 
     if (company_id) {
       where.companyId = company_id;
@@ -87,8 +87,8 @@ export class UsersService {
   }
 
   async findById(id: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+    const user = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
       select: userSelect,
     });
 
@@ -100,7 +100,7 @@ export class UsersService {
   }
 
   async findByLogin(login: string) {
-    return this.prisma.user.findUnique({ where: { login } });
+    return this.prisma.user.findFirst({ where: { login, deletedAt: null } });
   }
 
   async updateProfile(id: number, dto: UpdateProfileDto) {

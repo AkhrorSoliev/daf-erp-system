@@ -18,6 +18,7 @@ import { HolidaysModule } from './holidays/holidays.module';
 import { CompanyModule } from './company/company.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { ArchiveModule } from './archive/archive.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -40,6 +41,7 @@ import { JwtAuthGuard } from './common/guards';
     CompanyModule,
     UploadModule,
     TelegramModule,
+    ArchiveModule,
   ],
   providers: [
     {

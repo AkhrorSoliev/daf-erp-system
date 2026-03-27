@@ -65,6 +65,18 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - **DELETE endpoints** return `{ message: string }` — the frontend uses the ID from the request to remove the entity from local state
 - Exception: **financial data** (balances, payments, salaries) — frontend always refetches these from the server to ensure accuracy
 
+### Soft Delete & Archive
+
+- **DELETE = archive, not destroy.** All DELETE endpoints set `deletedAt` timestamp instead of removing the row. No data is permanently lost.
+- `isActive: false` means **deactivated** (visible in system). `deletedAt IS NOT NULL` means **archived** (invisible to non-CEO roles).
+- Archivable models have 3 fields: `deletedAt DateTime?`, `deletedById Int?`, `deletionBatchId String?`
+- **All queries must include `deletedAt: null`** in their `where` clause to exclude archived records
+- Unique constraints use **partial indexes** (`WHERE "deletedAt" IS NULL`) so archived records don't block new ones
+- **Cascade archiving:** When a parent is archived, children are archived too with the same `deletionBatchId` (UUID). Restore reverses the entire batch.
+- Archive endpoints (`/api/archive/*`) are **CEO-only**: list, detail, restore, permanent delete
+- **Permanent delete** (`DELETE /api/archive/:entityType/:id`) removes the record from DB and deletes associated files from Cloudflare R2
+- Files (photos, avatars) are **NOT deleted** during soft delete — only during permanent delete from archive
+
 ### Error Handling
 
 - Use NestJS built-in exceptions (`NotFoundException`, `ForbiddenException`, `BadRequestException`, etc.)
