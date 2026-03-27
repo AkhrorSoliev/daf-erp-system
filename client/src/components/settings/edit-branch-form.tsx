@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PhoneInput } from "@/components/ui/phone-input";
-import type { Branch } from "@/hooks/use-edit-branch";
+import { useEditBranch, type Branch } from "@/hooks/use-edit-branch";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 
@@ -32,7 +31,7 @@ export function EditBranchForm({
   formId,
   isAdd,
 }: EditBranchFormProps) {
-  const [saving, setSaving] = useState(false);
+  const setSubmitting = useEditBranch((s) => s.setSubmitting);
   const refetchBranches = useBranchSwitcher((s) => s.refetchBranches);
 
   const form = useForm({
@@ -50,7 +49,7 @@ export function EditBranchForm({
     phone: string;
     status: "active" | "inactive";
   }) => {
-    setSaving(true);
+    setSubmitting(true);
     try {
       if (isAdd) {
         const companyId = localStorage.getItem("companyId");
@@ -101,7 +100,7 @@ export function EditBranchForm({
           : "Filialni yangilashda xatolik yuz berdi",
       );
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 

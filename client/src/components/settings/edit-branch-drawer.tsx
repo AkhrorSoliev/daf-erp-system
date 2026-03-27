@@ -18,7 +18,7 @@ interface EditBranchDrawerProps {
 }
 
 export function EditBranchDrawer({ onSaved }: EditBranchDrawerProps) {
-  const { open, mode, branch, closeDrawer } = useEditBranch();
+  const { open, mode, branch, submitting, closeDrawer } = useEditBranch();
 
   const isAdd = mode === "add";
 
@@ -57,8 +57,8 @@ export function EditBranchDrawer({ onSaved }: EditBranchDrawerProps) {
             <Button type="button" variant="outline" onClick={closeDrawer}>
               Bekor qilish
             </Button>
-            <Button type="submit" form="edit-branch-form">
-              {isAdd ? "Qo'shish" : "Saqlash"}
+            <Button type="submit" form="edit-branch-form" disabled={submitting}>
+              {submitting ? "Saqlanmoqda..." : isAdd ? "Qo'shish" : "Saqlash"}
             </Button>
           </div>
         </SheetFooter>

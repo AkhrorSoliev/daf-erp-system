@@ -8,11 +8,11 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
+import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { generateUniqueLogin, generatePassword } from '../telegram/utils/login-generator';
 
 const TEACHER_ROLE_ID = 4;
-const DEFAULT_COMPANY_ID = 1001;
 
 const teacherSelect = {
   id: true,
@@ -21,6 +21,7 @@ const teacherSelect = {
   photo: true,
   gender: true,
   login: true,
+  balance: true,
   isActive: true,
   companyId: true,
   mainBranch: true,
@@ -29,6 +30,7 @@ const teacherSelect = {
   updatedAt: true,
   roles: { include: { role: true } },
   branches: { include: { branch: { select: { id: true, name: true } } } },
+  company: { select: { id: true, name: true } },
 } satisfies Prisma.UserSelect;
 
 function formatTeacher(user: any) {
@@ -94,7 +96,7 @@ export class TeachersService {
     return formatTeacher(user);
   }
 
-  async create(dto: CreateTeacherDto) {
+  async create(dto: CreateTeacherDto, companyId: number) {
     // Telefon raqam tekshirish
     const existing = await this.prisma.user.findFirst({
       where: { phone: dto.phone },
@@ -116,8 +118,12 @@ export class TeachersService {
         gender: dto.gender,
         login,
         password: hashedPassword,
-        companyId: DEFAULT_COMPANY_ID,
+        companyId,
+        mainBranch: dto.branchId ?? null,
         roles: { create: [{ roleId: TEACHER_ROLE_ID }] },
+        branches: dto.branchId
+          ? { create: [{ branchId: dto.branchId }] }
+          : undefined,
       },
       select: teacherSelect,
     });
@@ -127,6 +133,59 @@ export class TeachersService {
       generatedLogin: login,
       generatedPassword: password,
     };
+  }
+
+  async update(id: number, dto: UpdateTeacherDto) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } } },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
+    }
+
+    // Eski rasmni o'chirish (yangi rasm kelsa yoki null bo'lsa)
+    if (dto.photo !== undefined && user.photo && dto.photo !== user.photo) {
+      await this.uploadService.deleteFile(user.photo);
+    }
+
+    const name =
+      dto.firstName && dto.lastName
+        ? `${dto.firstName} ${dto.lastName}`
+        : dto.firstName
+          ? `${dto.firstName} ${user.name.split(' ').slice(1).join(' ')}`
+          : dto.lastName
+            ? `${user.name.split(' ')[0]} ${dto.lastName}`
+            : undefined;
+
+    // Login uniqueness tekshirish
+    if (dto.login && dto.login !== user.login) {
+      const loginTaken = await this.prisma.user.findUnique({ where: { login: dto.login } });
+      if (loginTaken) {
+        throw new BadRequestException('Bu login allaqachon band');
+      }
+    }
+
+    // Parolni hash qilish
+    const hashedPassword = dto.password
+      ? await bcrypt.hash(dto.password, 10)
+      : undefined;
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        ...(name && { name }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.gender !== undefined && { gender: dto.gender }),
+        ...(dto.photo !== undefined && { photo: dto.photo }),
+        ...(dto.login !== undefined && { login: dto.login }),
+        ...(hashedPassword && { password: hashedPassword }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+      },
+      select: teacherSelect,
+    });
+
+    return formatTeacher(updated);
   }
 
   async delete(id: number) {

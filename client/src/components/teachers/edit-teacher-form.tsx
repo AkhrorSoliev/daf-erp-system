@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +20,8 @@ import {
   editTeacherSchema,
   type EditTeacherFormValues,
 } from "@/lib/schemas/teacher-schema";
-import type { TeacherData } from "@/hooks/use-edit-teacher";
+import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher"; // getState() orqali ishlatiladi
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 
@@ -27,13 +29,13 @@ interface EditTeacherFormProps {
   teacher: TeacherData | null;
   isAdd?: boolean;
   onClose: () => void;
-  onSaved?: () => void;
+  onSaved?: (updated: TeacherData) => void;
   formId: string;
 }
 
 function teacherToForm(teacher: TeacherData | null): EditTeacherFormValues {
   if (!teacher) {
-    return { firstName: "", lastName: "", phone: "", gender: "", avatar: "" };
+    return { firstName: "", lastName: "", phone: "", gender: "", avatar: "", login: "", password: "", isActive: true };
   }
   const [firstName = "", ...rest] = teacher.name.split(" ");
   const lastName = rest.join(" ");
@@ -43,6 +45,9 @@ function teacherToForm(teacher: TeacherData | null): EditTeacherFormValues {
     phone: teacher.phone ?? "",
     gender: teacher.gender === "MALE" ? "male" : teacher.gender === "FEMALE" ? "female" : "",
     avatar: teacher.photo ?? "",
+    login: teacher.login ?? "",
+    password: "",
+    isActive: teacher.isActive,
   };
 }
 
@@ -61,7 +66,7 @@ export function EditTeacherForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState(teacher?.photo ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const setSubmitting = useEditTeacher((s) => s.setSubmitting);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,7 +100,7 @@ export function EditTeacherForm({
   };
 
   const onSubmit = async (values: EditTeacherFormValues) => {
-    setIsSubmitting(true);
+    setSubmitting(true);
     try {
       let photoUrl: string | undefined;
       if (avatarFile) {
@@ -103,13 +108,22 @@ export function EditTeacherForm({
       }
 
       const genderMap: Record<string, string> = { male: "MALE", female: "FEMALE" };
-      const payload = {
+      const branchId = useBranchSwitcher.getState().selectedBranch?.id;
+      const payload: Record<string, unknown> = {
         firstName: values.firstName,
         lastName: values.lastName,
         phone: values.phone,
         gender: values.gender ? genderMap[values.gender] : undefined,
         photo: photoRemoved ? null : (photoUrl ?? (teacher?.photo || undefined)),
       };
+      if (isAdd && branchId) {
+        payload.branchId = branchId;
+      }
+      if (!isAdd) {
+        if (values.login) payload.login = values.login;
+        if (values.password) payload.password = values.password;
+        if (values.isActive !== undefined) payload.isActive = values.isActive;
+      }
 
       if (isAdd) {
         const { data } = await api.post("/teachers", payload);
@@ -121,18 +135,18 @@ export function EditTeacherForm({
         } else {
           toast.success("O'qituvchi muvaffaqiyatli qo'shildi");
         }
-      } else {
-        // TODO: update endpoint qo'shilganda
+        onSaved?.(data);
+      } else if (teacher) {
+        const { data } = await api.patch(`/teachers/${teacher.id}`, payload);
         toast.success("O'qituvchi muvaffaqiyatli yangilandi");
+        onSaved?.(data);
       }
-
-      onSaved?.();
       onClose();
     } catch (error: any) {
       const msg = error?.response?.data?.message || "Xatolik yuz berdi";
       toast.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -287,6 +301,59 @@ export function EditTeacherForm({
           </div>
         </div>
       </section>
+
+      {/* Login, Parol, Holat — faqat tahrirlashda */}
+      {!isAdd && (
+        <section className="space-y-5 border-t px-6 py-5">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Tizim ma&apos;lumotlari
+          </h3>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="login">Login</Label>
+            <Input
+              id="login"
+              placeholder="Login"
+              {...form.register("login")}
+            />
+            {form.formState.errors.login && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.login.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Yangi parol</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Bo'sh qoldirilsa o'zgarmaydi"
+              {...form.register("password")}
+            />
+            {form.formState.errors.password && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.password.message}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="isActive">Faol holat</Label>
+            <Controller
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <Switch
+                  id="isActive"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+        </section>
+      )}
     </form>
   );
 }

@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Telegraf, Scenes, session } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
-import { DEEP_LINKS, SCENES } from './constants';
+import { DEEP_LINKS, SCENES, TEACHER_DEEP_LINK_PREFIX } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
@@ -78,8 +78,30 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // /start handler
     this.bot.start(async (ctx) => {
       const payload = ctx.payload;
+      this.logger.log(`Bot /start payload: "${payload}"`);
 
-      if (payload === DEEP_LINKS.TEACHER) {
+      if (payload.startsWith(TEACHER_DEEP_LINK_PREFIX)) {
+        const branchIdStr = payload.slice(TEACHER_DEEP_LINK_PREFIX.length);
+        const branchId = Number(branchIdStr);
+
+        if (!branchIdStr || isNaN(branchId)) {
+          await ctx.reply(
+            "Noto'g'ri havola. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        const branch = await this.prisma.branch.findUnique({
+          where: { id: branchId },
+        });
+        if (!branch) {
+          await ctx.reply(
+            "Filial topilmadi. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        ctx.session.data = { branchId };
         await ctx.scene.enter(SCENES.TEACHER_REGISTRATION);
         return;
       }

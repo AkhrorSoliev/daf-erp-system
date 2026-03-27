@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, Loader2, MapPin, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, Building2, Check, Copy, Link2, Loader2, MapPin, Pencil, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +36,15 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const registrationLink = `https://t.me/dafzentrum_bot?start=teacher_${branchId}`;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(registrationLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     async function fetchBranch() {
@@ -176,6 +185,39 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* O'qituvchi ro'yxatdan o'tish havolasi */}
+      <div className="rounded-lg border bg-card p-6">
+        <h3 className="text-lg font-semibold mb-2">
+          O&apos;qituvchi ro&apos;yxatdan o&apos;tish havolasi
+        </h3>
+        <p className="text-sm text-muted-foreground mb-3">
+          Bu havolani o&apos;qituvchilarga yuboring. Ular Telegram orqali
+          ro&apos;yxatdan o&apos;tadi va avtomatik ravishda ushbu filialga
+          biriktiriladi.
+        </p>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 rounded-md border bg-muted/50 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Link2 className="size-4 shrink-0 text-muted-foreground" />
+              <code className="text-sm break-all">{registrationLink}</code>
+            </div>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="sm" variant="outline" onClick={handleCopy}>
+                {copied ? (
+                  <Check className="mr-1.5 h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="mr-1.5 h-4 w-4" />
+                )}
+                {copied ? "Nusxalandi" : "Nusxalash"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Havolani nusxalash</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

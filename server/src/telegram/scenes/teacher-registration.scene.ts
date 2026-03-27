@@ -44,7 +44,8 @@ export function createTeacherRegistrationScene(
     }
 
     ctx.session.step = 1;
-    ctx.session.data = {};
+    const branchId = ctx.session.data?.branchId;
+    ctx.session.data = { branchId };
     await ctx.reply(
       "Assalomu alaykum! O'qituvchi sifatida ro'yxatdan o'tish.\n\n" +
         "Ismingizni kiriting:",
@@ -276,8 +277,10 @@ export function createTeacherRegistrationScene(
         login,
         password,
         companyId: DEFAULT_COMPANY_ID,
+        mainBranch: data.branchId ?? undefined,
         telegramChatId: chatId,
         roleIds: [TEACHER_ROLE_ID],
+        branchIds: data.branchId ? [data.branchId] : undefined,
       });
 
       await ctx.editMessageText("\u2705 Tasdiqlandi!");
@@ -311,7 +314,8 @@ export function createTeacherRegistrationScene(
     }
 
     ctx.session.step = 1;
-    ctx.session.data = {};
+    const branchId = ctx.session.data?.branchId;
+    ctx.session.data = { branchId };
     await ctx.editMessageText("\uD83D\uDD04 Qayta kiritish tanlandi");
     await ctx.reply("Ismingizni kiriting:");
   });

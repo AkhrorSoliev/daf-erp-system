@@ -141,9 +141,12 @@ The system supports **multiple branches** (filials).
 - The `<Toaster />` component is configured globally in `src/app/layout.tsx` — do **not** add it elsewhere
 - Import: `import toast from "react-hot-toast"`
 
-### UI Reactivity After Mutations
+### UI Reactivity After Mutations (Optimistic Updates)
 
-- When a mutation (create, update, delete) modifies data that is displayed elsewhere in the UI, **all affected components must update immediately** — the user should never need to refresh the page to see changes
+- **All mutations must use optimistic updates** — the UI must reflect the change **instantly** using the API response data, without waiting for a separate refetch. The only exception is **financial data** (balances, payments, salaries) which must always refetch from the server to ensure accuracy.
+- **UPDATE/DELETE pattern:** The API response (or the deleted ID) is used to update local state directly via `setState(prev => ...)`. Never refetch the entire list just to reflect an update or delete.
+- **CREATE pattern:** For paginated lists, a refetch is acceptable (new item may appear on a different page). For non-paginated data, append directly to local state.
+- **Callback convention:** `onSaved(data)` passes the API response to the parent. `onDeleted(id)` passes the deleted entity's ID. Parents use these to update local state instantly.
 - If a Zustand store holds cached data (e.g. branch list in navbar), expose a `refetch` method and call it after relevant mutations
 - Prefer updating shared Zustand stores over local component state when the data is used in multiple places (e.g. branch list appears in both the navbar switcher and settings page)
 - After a successful create/update/delete, update **all** visible representations of that data: tables, dropdowns, sidebars, badges, etc.

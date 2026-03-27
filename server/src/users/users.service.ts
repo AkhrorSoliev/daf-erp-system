@@ -18,9 +18,11 @@ const userSelect = {
   photo: true,
   gender: true,
   balance: true,
+  login: true,
   companyId: true,
   mainBranch: true,
   isActive: true,
+  telegramChatId: true,
   createdAt: true,
   updatedAt: true,
   roles: { include: { role: true } },
@@ -44,7 +46,7 @@ export class UsersService {
   ) {}
 
   async findAll(query: UserQueryDto) {
-    const { user_type, branch_id, company_id, page = 1, per_page = 10 } = query;
+    const { user_type, search, branch_id, company_id, page = 1, per_page = 10 } = query;
     const skip = (page - 1) * per_page;
 
     const where: Prisma.UserWhereInput = {};
@@ -55,6 +57,10 @@ export class UsersService {
 
     if (user_type) {
       where.roles = { some: { role: { name: user_type } } };
+    }
+
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' };
     }
 
     if (branch_id) {

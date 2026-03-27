@@ -1,18 +1,52 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { TeacherProfileCard } from "./teacher-profile-card";
 import { TeacherProfileTabs } from "./teacher-profile-tabs";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
-import type { Teacher } from "@/data/teacher-model";
+import type { TeacherData } from "@/hooks/use-edit-teacher";
+import api from "@/lib/api";
 
-export function TeacherProfileClient({ teacher }: { teacher: Teacher }) {
+export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const setName = useBreadcrumbName((s) => s.setName);
+  const [teacher, setTeacher] = useState<TeacherData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchTeacher = useCallback(async () => {
+    try {
+      const { data } = await api.get(`/teachers/${teacherId}`);
+      setTeacher(data);
+      setName(teacherId, data.name);
+    } catch {
+      setError("O'qituvchi topilmadi");
+    } finally {
+      setLoading(false);
+    }
+  }, [teacherId, setName]);
 
   useEffect(() => {
-    setName(teacher.id, `${teacher.firstName} ${teacher.lastName}`);
-  }, [teacher.id, teacher.firstName, teacher.lastName, setName]);
+    fetchTeacher();
+  }, [fetchTeacher]);
+
+  if (loading) {
+    return (
+      <div className="flex h-60 items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !teacher) {
+    return (
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold">O&apos;qituvchi topilmadi</h1>
+        <p className="text-muted-foreground">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -24,7 +58,12 @@ export function TeacherProfileClient({ teacher }: { teacher: Teacher }) {
           <TeacherProfileTabs teacher={teacher} />
         </div>
       </div>
-      <EditTeacherDrawer />
+      <EditTeacherDrawer
+        onSaved={(updated) => {
+          setTeacher(updated);
+          setName(teacherId, updated.name);
+        }}
+      />
     </>
   );
 }
