@@ -10,10 +10,15 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useEditCourse } from "@/hooks/use-edit-course";
+import type { Course } from "@/hooks/use-edit-course";
 import { EditCourseForm } from "./edit-course-form";
 
-export function EditCourseDrawer() {
-  const { open, mode, course, closeDrawer } = useEditCourse();
+interface EditCourseDrawerProps {
+  onSaved?: (course: Course) => void;
+}
+
+export function EditCourseDrawer({ onSaved }: EditCourseDrawerProps) {
+  const { open, mode, course, submitting, closeDrawer } = useEditCourse();
 
   const isAdd = mode === "add";
 
@@ -41,7 +46,9 @@ export function EditCourseDrawer() {
           <EditCourseForm
             course={course}
             onClose={closeDrawer}
+            onSaved={onSaved}
             formId="edit-course-form"
+            isAdd={isAdd}
           />
         </div>
 
@@ -50,8 +57,12 @@ export function EditCourseDrawer() {
             <Button type="button" variant="outline" onClick={closeDrawer}>
               Bekor qilish
             </Button>
-            <Button type="submit" form="edit-course-form">
-              {isAdd ? "Qo'shish" : "Saqlash"}
+            <Button
+              type="submit"
+              form="edit-course-form"
+              disabled={submitting}
+            >
+              {submitting ? "Saqlanmoqda..." : isAdd ? "Qo'shish" : "Saqlash"}
             </Button>
           </div>
         </SheetFooter>

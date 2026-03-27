@@ -9,13 +9,18 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useEditRoom } from "@/hooks/use-edit-room";
+import { useEditRoom, type Room } from "@/hooks/use-edit-room";
 import { EditRoomForm } from "./edit-room-form";
 
-export function EditRoomDrawer() {
-  const { open, room, closeDrawer } = useEditRoom();
+interface EditRoomDrawerProps {
+  onSaved?: (room: Room) => void;
+}
 
-  if (!room) return null;
+export function EditRoomDrawer({ onSaved }: EditRoomDrawerProps) {
+  const { open, room, isAdd, addBranchId, submitting, closeDrawer } =
+    useEditRoom();
+
+  if (!isAdd && !room) return null;
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && closeDrawer()}>
@@ -26,10 +31,12 @@ export function EditRoomDrawer() {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            Xonani tahrirlash
+            {isAdd ? "Yangi xona qo'shish" : "Xonani tahrirlash"}
           </SheetTitle>
           <SheetDescription>
-            Xona ma&apos;lumotlarini o&apos;zgartirish
+            {isAdd
+              ? "Yangi xona ma'lumotlarini kiriting"
+              : "Xona ma\u2018lumotlarini o\u2018zgartirish"}
           </SheetDescription>
         </SheetHeader>
 
@@ -37,7 +44,10 @@ export function EditRoomDrawer() {
           <EditRoomForm
             room={room}
             onClose={closeDrawer}
+            onSaved={onSaved}
             formId="edit-room-form"
+            isAdd={isAdd}
+            branchId={addBranchId}
           />
         </div>
 
@@ -46,8 +56,8 @@ export function EditRoomDrawer() {
             <Button type="button" variant="outline" onClick={closeDrawer}>
               Bekor qilish
             </Button>
-            <Button type="submit" form="edit-room-form">
-              Saqlash
+            <Button type="submit" form="edit-room-form" disabled={submitting}>
+              {submitting ? "Saqlanmoqda..." : "Saqlash"}
             </Button>
           </div>
         </SheetFooter>

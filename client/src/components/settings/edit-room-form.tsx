@@ -1,35 +1,88 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { Room } from "@/hooks/use-edit-room";
+import { useEditRoom, type Room } from "@/hooks/use-edit-room";
+import api from "@/lib/api";
 
 interface EditRoomFormProps {
-  room: Room;
+  room: Room | null;
   onClose: () => void;
+  onSaved?: (room: Room) => void;
   formId: string;
+  isAdd?: boolean;
+  branchId?: number | null;
 }
 
-export function EditRoomForm({ room, onClose, formId }: EditRoomFormProps) {
+export function EditRoomForm({
+  room,
+  onClose,
+  onSaved,
+  formId,
+  isAdd,
+  branchId,
+}: EditRoomFormProps) {
+  const setSubmitting = useEditRoom((s) => s.setSubmitting);
+
   const form = useForm({
     defaultValues: {
-      name: room.name,
-      capacity: room.capacity,
-      branch: room.branch,
-      status: room.status,
+      name: room?.name ?? "",
+      capacity: room?.capacity ?? ("" as unknown as number),
     },
   });
 
-  const onSubmit = () => {
-    onClose();
+  const onSubmit = async (values: { name: string; capacity: number }) => {
+    setSubmitting(true);
+    try {
+      if (isAdd) {
+        const companyId = localStorage.getItem("companyId");
+        const { data } = await api.post("/rooms", {
+          name: values.name,
+          capacity: values.capacity || undefined,
+          branchId: branchId,
+          companyId: companyId ? Number(companyId) : undefined,
+        });
+
+        const created: Room = {
+          id: data.id,
+          name: data.name,
+          capacity: data.capacity,
+          branchId: data.branchId,
+          branchName: data.branch?.name ?? "",
+        };
+
+        toast.success("Yangi xona muvaffaqiyatli qo'shildi");
+        onSaved?.(created);
+      } else {
+        if (!room) return;
+        const { data } = await api.patch(`/rooms/${room.id}`, {
+          name: values.name,
+          capacity: values.capacity || undefined,
+        });
+
+        const updated: Room = {
+          id: data.id,
+          name: data.name,
+          capacity: data.capacity,
+          branchId: data.branchId,
+          branchName: data.branch?.name ?? "",
+        };
+
+        toast.success("Xona muvaffaqiyatli yangilandi");
+        onSaved?.(updated);
+      }
+      onClose();
+    } catch {
+      toast.error(
+        isAdd
+          ? "Xona qo'shishda xatolik yuz berdi"
+          : "Xonani yangilashda xatolik yuz berdi",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -48,47 +101,26 @@ export function EditRoomForm({ room, onClose, formId }: EditRoomFormProps) {
           <Input
             id="name"
             placeholder="101-xona"
-            {...form.register("name")}
+            {...form.register("name", {
+              required: "Xona nomi kiritilishi shart",
+            })}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="capacity">Sig&apos;imi</Label>
-            <Input
-              id="capacity"
-              type="number"
-              min={1}
-              placeholder="20"
-              {...form.register("capacity", { valueAsNumber: true })}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="branch">Filial</Label>
-            <Input
-              id="branch"
-              placeholder="Asosiy filial"
-              {...form.register("branch")}
-            />
-          </div>
+          {form.formState.errors.name && (
+            <p className="text-sm text-destructive">
+              {form.formState.errors.name.message}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Holati</Label>
-          <Select
-            value={form.watch("status")}
-            onValueChange={(value: "active" | "inactive") =>
-              form.setValue("status", value)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Faol</SelectItem>
-              <SelectItem value="inactive">Nofaol</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label htmlFor="capacity">Sig&apos;imi</Label>
+          <Input
+            id="capacity"
+            type="number"
+            min={1}
+            placeholder="20"
+            {...form.register("capacity", { valueAsNumber: true })}
+          />
         </div>
       </section>
     </form>
