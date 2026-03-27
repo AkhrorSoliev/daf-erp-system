@@ -1,7 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { RotateCcw, Trash2, Archive, MoreHorizontal } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Users,
+  Building2,
+  DoorOpen,
+  BookOpen,
+  GraduationCap,
+  UserPlus,
+  UsersRound,
+  CalendarOff,
+  Link2,
+  Archive,
+  ArrowLeft,
+  RotateCcw,
+  Trash2,
+  Search,
+} from "lucide-react";
+import { format } from "date-fns";
+import toast from "react-hot-toast";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,58 +31,232 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 import { SettingsPageHeader } from "./settings-page-header";
 
-interface ArchivedItem {
-  id: string;
-  name: string;
-  type: "group" | "course" | "student";
-  archivedAt: string;
+interface ArchiveCounts {
+  users: number;
+  branches: number;
+  rooms: number;
+  courses: number;
+  students: number;
+  leads: number;
+  groups: number;
+  enrollments: number;
+  holidays: number;
 }
 
-const mockArchived: ArchivedItem[] = [
-  { id: "1", name: "Deutsch A1 - 15-guruh", type: "group", archivedAt: "15.01.2026" },
-  { id: "2", name: "Deutsch A2 - 8-guruh", type: "group", archivedAt: "20.02.2026" },
-  { id: "3", name: "Ingliz tili boshlang'ich", type: "course", archivedAt: "01.03.2026" },
+interface EntityCategory {
+  key: keyof ArchiveCounts;
+  label: string;
+  icon: React.ElementType;
+}
+
+const categories: EntityCategory[] = [
+  { key: "users", label: "Ustozlar / Xodimlar", icon: Users },
+  { key: "students", label: "O'quvchilar", icon: GraduationCap },
+  { key: "groups", label: "Guruhlar", icon: UsersRound },
+  { key: "courses", label: "Kurslar", icon: BookOpen },
+  { key: "leads", label: "Lidlar", icon: UserPlus },
+  { key: "branches", label: "Filiallar", icon: Building2 },
+  { key: "rooms", label: "Xonalar", icon: DoorOpen },
+  { key: "enrollments", label: "Yozilishlar", icon: Link2 },
+  { key: "holidays", label: "Dam olish kunlari", icon: CalendarOff },
 ];
 
-const typeLabels: Record<ArchivedItem["type"], string> = {
-  group: "Guruh",
-  course: "Kurs",
-  student: "O'quvchi",
-};
-
 export function ArchiveSettingsClient() {
-  const [search, setSearch] = useState("");
+  const [counts, setCounts] = useState<ArchiveCounts | null>(null);
+  const [selected, setSelected] = useState<keyof ArchiveCounts | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = mockArchived.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const fetchCounts = useCallback(async () => {
+    try {
+      const { data } = await api.get("/archive/counts");
+      setCounts(data);
+    } catch {
+      toast.error("Arxiv ma'lumotlarini yuklashda xatolik");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  if (selected) {
+    const category = categories.find((c) => c.key === selected)!;
+    return (
+      <ArchiveList
+        entityType={selected}
+        label={category.label}
+        onBack={() => {
+          setSelected(null);
+          fetchCounts();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
       <SettingsPageHeader
         title="Arxiv"
-        description="Arxivlangan guruhlar, kurslar va o'quvchilar"
+        description="O'chirilgan ma'lumotlar shu yerda saqlanadi. Faqat CEO ko'ra oladi."
       />
 
+      {loading ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-20 animate-pulse rounded-lg border bg-muted/30"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map((cat) => {
+            const count = counts?.[cat.key] ?? 0;
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.key}
+                onClick={() => setSelected(cat.key)}
+                className="flex items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-accent"
+              >
+                <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                  <Icon className="size-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{cat.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {count > 0 ? `${count} ta arxivlangan` : "Bo'sh"}
+                  </p>
+                </div>
+                {count > 0 && (
+                  <span className="flex size-6 items-center justify-center rounded-full bg-destructive/10 text-xs font-medium text-destructive">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ------- Archive List (ichki sahifa) -------
+
+interface ArchiveListProps {
+  entityType: keyof ArchiveCounts;
+  label: string;
+  onBack: () => void;
+}
+
+function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
+  const [items, setItems] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | number | null>(null);
+  const perPage = 10;
+
+  const fetchItems = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, any> = { page, per_page: perPage };
+      if (search.trim()) params.search = search.trim();
+      const { data } = await api.get(`/archive/${entityType}`, { params });
+      setItems(data.data);
+      setTotal(data.total);
+    } catch {
+      toast.error("Ma'lumotlarni yuklashda xatolik");
+    } finally {
+      setLoading(false);
+    }
+  }, [entityType, page, search]);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  const handleRestore = async (id: string | number) => {
+    setActionId(id);
+    try {
+      await api.post(`/archive/${entityType}/${id}/restore`);
+      toast.success("Muvaffaqiyatli tiklandi");
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      setTotal((prev) => Math.max(0, prev - 1));
+    } catch {
+      toast.error("Tiklashda xatolik yuz berdi");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handlePermanentDelete = async (id: string | number) => {
+    setActionId(id);
+    try {
+      await api.delete(`/archive/${entityType}/${id}`);
+      toast.success("Butunlay o'chirildi");
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      setTotal((prev) => Math.max(0, prev - 1));
+    } catch {
+      toast.error("O'chirishda xatolik yuz berdi");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const totalPages = Math.ceil(total / perPage);
+
+  return (
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Arxivga qaytish</TooltipContent>
+        </Tooltip>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">{label}</h2>
+          <p className="text-xs text-muted-foreground">
+            {total} ta arxivlangan
+          </p>
+        </div>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Nomi bo'yicha qidirish..."
+          placeholder="Qidirish..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="pl-9"
         />
       </div>
 
@@ -73,53 +265,125 @@ export function ArchiveSettingsClient() {
           <TableHeader>
             <TableRow>
               <TableHead>Nomi</TableHead>
-              <TableHead>Turi</TableHead>
               <TableHead>Arxivlangan sana</TableHead>
+              <TableHead>Kim tomonidan</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={4}>
+                    <div className="h-5 animate-pulse rounded bg-muted/50" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={4}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   <div className="flex flex-col items-center gap-2">
-                    <Archive className="h-8 w-8 text-muted-foreground/50" />
+                    <Archive className="size-8 text-muted-foreground/50" />
                     Arxivda hech narsa topilmadi
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((item) => (
+              items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{typeLabels[item.type]}</Badge>
+                  <TableCell className="font-medium">
+                    {getDisplayName(entityType, item)}
                   </TableCell>
-                  <TableCell>{item.archivedAt}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {item.deletedAt
+                      ? format(new Date(item.deletedAt), "dd.MM.yyyy, HH:mm")
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {item.deletedBy?.name || "—"}
+                  </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-xs">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Amallar</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>Amallar</TooltipContent>
-                      </Tooltip>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <RotateCcw className="mr-2 size-4" />
-                          Qayta tiklash
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 size-4" />
-                          Butunlay o&apos;chirish
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-1">
+                      <AlertDialog>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                disabled={actionId === item.id}
+                              >
+                                <RotateCcw className="size-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Qayta tiklash</TooltipContent>
+                        </Tooltip>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Qayta tiklash</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              &quot;{getDisplayName(entityType, item)}&quot;
+                              arxivdan tiklanadi va faol holatga qaytadi. Davom
+                              etasizmi?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleRestore(item.id)}
+                            >
+                              Tiklash
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+
+                      <AlertDialog>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                className="text-destructive hover:text-destructive"
+                                disabled={actionId === item.id}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Butunlay o&apos;chirish
+                          </TooltipContent>
+                        </Tooltip>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Butunlay o&apos;chirish
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              &quot;{getDisplayName(entityType, item)}&quot;
+                              butunlay o&apos;chiriladi. Bu amalni qaytarib
+                              bo&apos;lmaydi. Barcha tegishli fayllar ham
+                              o&apos;chiriladi.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handlePermanentDelete(item.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              O&apos;chirish
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -127,6 +391,61 @@ export function ArchiveSettingsClient() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {page} / {totalPages} sahifa ({total} ta)
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Oldingi
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Keyingi
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function getDisplayName(entityType: string, item: any): string {
+  switch (entityType) {
+    case "users":
+      return item.name || "Noma'lum";
+    case "students":
+      return (
+        `${item.firstName || ""} ${item.lastName || ""}`.trim() || "Noma'lum"
+      );
+    case "leads":
+      return (
+        `${item.firstName || ""} ${item.lastName || ""}`.trim() || "Noma'lum"
+      );
+    case "groups":
+      return item.name || "Noma'lum";
+    case "courses":
+      return item.name || "Noma'lum";
+    case "branches":
+      return item.name || "Noma'lum";
+    case "rooms":
+      return item.name || "Noma'lum";
+    case "enrollments":
+      return `${item.student?.firstName || ""} ${item.student?.lastName || ""} → ${item.group?.name || ""}`.trim();
+    case "holidays":
+      return item.name || "Noma'lum";
+    default:
+      return item.name || item.id;
+  }
 }

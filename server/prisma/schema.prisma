@@ -25,20 +25,37 @@ model User {
   photo          String?
   gender         Gender?
   balance        Int       @default(0)
-  login          String?   @unique
+  login          String?
   password       String?
   isActive       Boolean   @default(true)
-  telegramChatId String?   @unique
+  telegramChatId String?
   companyId      Int
   company        Company   @relation(fields: [companyId], references: [id])
   mainBranch     Int?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("DeletedByUser", fields: [deletedById], references: [id])
+  deletedUsers    User[]    @relation("DeletedByUser")
+  deletionBatchId String?
+
   roles         UserRole[]
   branches      UserBranch[]
   groups        Group[]        @relation("StudentGroups")
   teacherGroups Group[]        @relation("TeacherGroups")
+
+  deletedBranches    Branch[]     @relation("BranchDeletedBy")
+  deletedRooms       Room[]       @relation("RoomDeletedBy")
+  deletedCourses     Course[]     @relation("CourseDeletedBy")
+  deletedStudents    Student[]    @relation("StudentDeletedBy")
+  deletedLeads       Lead[]       @relation("LeadDeletedBy")
+  deletedGroups      Group[]      @relation("GroupDeletedBy")
+  deletedEnrollments Enrollment[] @relation("EnrollmentDeletedBy")
+  deletedHolidays    Holiday[]    @relation("HolidayDeletedBy")
+
+  @@index([deletedAt])
 }
 
 model UserRole {
@@ -71,9 +88,16 @@ model Branch {
   companyId Int?
   company   Company? @relation(fields: [companyId], references: [id])
 
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("BranchDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
   users     UserBranch[]
   rooms     Room[]
   groups    Group[]
+
+  @@index([deletedAt])
 }
 
 model Room {
@@ -84,6 +108,13 @@ model Room {
   branch    Branch   @relation(fields: [branchId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("RoomDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([deletedAt])
 }
 
 model Course {
@@ -99,7 +130,14 @@ model Course {
   companyId Int?
   company   Company? @relation(fields: [companyId], references: [id])
 
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("CourseDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
   groups Group[]
+
+  @@index([deletedAt])
 }
 
 model Student {
@@ -111,7 +149,7 @@ model Student {
   parentPhone    String?
   parentName     String?
   telegram       String?
-  telegramChatId String?  @unique
+  telegramChatId String?
   gender         Gender?
   avatar         String?
   placeOfStudy   String?
@@ -121,7 +159,14 @@ model Student {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("StudentDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
   enrollments Enrollment[]
+
+  @@index([deletedAt])
 }
 
 model Lead {
@@ -136,6 +181,13 @@ model Lead {
   status      String   @default("new")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("LeadDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([deletedAt])
 }
 
 model Group {
@@ -152,8 +204,15 @@ model Group {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("GroupDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
   students    User[]       @relation("StudentGroups")
   enrollments Enrollment[]
+
+  @@index([deletedAt])
 }
 
 model Enrollment {
@@ -164,13 +223,25 @@ model Enrollment {
   group     Group    @relation(fields: [groupId], references: [id])
   createdAt DateTime @default(now())
 
-  @@unique([studentId, groupId])
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("EnrollmentDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([deletedAt])
 }
 
 model Holiday {
   id   String   @id @default(uuid())
   name String
   date DateTime
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("HolidayDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([deletedAt])
 }
 
 model Company {

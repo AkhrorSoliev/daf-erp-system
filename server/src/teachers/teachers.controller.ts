@@ -37,7 +37,7 @@ export class TeachersController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Administrator')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.teachersService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @CurrentUser('id') userId: number) {
+    return this.teachersService.delete(id, userId);
   }
 }

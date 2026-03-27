@@ -13,8 +13,8 @@ export class AuthService {
   ) {}
 
   async validateUser(login: string, password: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { login },
+    const user = await this.prisma.user.findFirst({
+      where: { login, deletedAt: null },
       include: {
         roles: { include: { role: true } },
         branches: { include: { branch: { select: { id: true, name: true } } } },
@@ -87,8 +87,8 @@ export class AuthService {
         throw new UnauthorizedException('Noto\'g\'ri token turi');
       }
 
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
+      const user = await this.prisma.user.findFirst({
+        where: { id: payload.sub, deletedAt: null },
         include: {
           roles: { include: { role: true } },
           branches: { include: { branch: { select: { id: true, name: true } } } },

@@ -1,7 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Pencil, Phone } from "lucide-react";
+import toast from "react-hot-toast";
+import { Pencil, Phone, Trash2 } from "lucide-react";
+import api from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +14,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 
 function formatPhone(phone: string): string {
@@ -26,6 +40,14 @@ interface TeacherProfileCardProps {
 
 export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
   const { openDrawer } = useEditTeacher();
+  const router = useRouter();
+  const handleDelete = () => {
+    router.push("/teachers");
+    toast.success("O'qituvchi muvaffaqiyatli o'chirildi");
+    api.delete(`/teachers/${teacher.id}`).catch(() => {
+      toast.error("O'chirishda xatolik yuz berdi");
+    });
+  };
 
   const initials = teacher.name
     .split(" ")
@@ -139,6 +161,42 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
           </TooltipTrigger>
           <TooltipContent>Tahrirlash</TooltipContent>
         </Tooltip>
+
+        <AlertDialog>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-8 p-0 text-destructive hover:text-destructive"
+                  disabled={false}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>O&apos;chirish</TooltipContent>
+          </Tooltip>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>O&apos;qituvchini o&apos;chirish</AlertDialogTitle>
+              <AlertDialogDescription>
+                &quot;{teacher.name}&quot; arxivga o&apos;tkaziladi. Keyinchalik
+                arxivdan tiklash mumkin.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                O&apos;chirish
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

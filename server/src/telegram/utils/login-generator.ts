@@ -64,7 +64,7 @@ export async function generateUniqueLogin(
   }
 
   // Birinchi bazadan tekshirish
-  const exists = await prisma.user.findUnique({ where: { login: base } });
+  const exists = await prisma.user.findFirst({ where: { login: base, deletedAt: null } });
   if (!exists) {
     return base;
   }
@@ -73,7 +73,7 @@ export async function generateUniqueLogin(
   for (let attempt = 0; attempt < 10; attempt++) {
     const suffix = Math.floor(1000 + Math.random() * 9000);
     const login = `${base}${suffix}`;
-    const taken = await prisma.user.findUnique({ where: { login } });
+    const taken = await prisma.user.findFirst({ where: { login, deletedAt: null } });
     if (!taken) {
       return login;
     }
