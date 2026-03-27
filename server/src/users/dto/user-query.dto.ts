@@ -7,6 +7,10 @@ export class UserQueryDto {
   user_type?: string;
 
   @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   branch_id?: number;

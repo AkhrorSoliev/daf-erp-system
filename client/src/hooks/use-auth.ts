@@ -58,6 +58,7 @@ export const useAuth = create<AuthState>((set) => ({
     Cookies.remove("refreshToken");
     Cookies.remove("user");
     localStorage.removeItem("companyId");
+    localStorage.removeItem("branchId");
     set({ user: null, token: null });
     window.location.href = "/login";
   },

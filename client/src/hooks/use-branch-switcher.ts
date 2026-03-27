@@ -27,15 +27,27 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
   selectedBranch: null,
   loaded: false,
 
-  selectBranch: (branch) => set({ selectedBranch: branch }),
+  selectBranch: (branch) => {
+    localStorage.setItem("branchId", String(branch.id));
+    set({ selectedBranch: branch });
+  },
 
   fetchBranches: async () => {
     if (get().loaded) return;
     try {
       const data = await loadBranches();
+      // localStorage dan oldingi tanlangan branch ni restore qilish
+      const savedBranchId = localStorage.getItem("branchId");
+      const savedBranch = savedBranchId
+        ? data.find((b) => b.id === Number(savedBranchId))
+        : null;
+      const selected = savedBranch ?? data[0] ?? null;
+      if (selected) {
+        localStorage.setItem("branchId", String(selected.id));
+      }
       set({
         branches: data,
-        selectedBranch: data[0] ?? null,
+        selectedBranch: selected,
         loaded: true,
       });
     } catch {

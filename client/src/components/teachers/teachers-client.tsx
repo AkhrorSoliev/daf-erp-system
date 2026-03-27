@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -14,6 +19,8 @@ import {
 import { TeachersTable } from "./teachers-table";
 import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
+import { useAuth } from "@/hooks/use-auth";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
@@ -26,13 +33,25 @@ export function TeachersClient() {
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const { openAddDrawer } = useEditTeacher();
+  const user = useAuth((s) => s.user);
+  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const branchLoaded = useBranchSwitcher((s) => s.loaded);
 
   const fetchTeachers = useCallback(async () => {
+    if (!branchLoaded) return;
     setLoading(true);
     try {
-      const params: Record<string, any> = { page, per_page: pageSize };
+      const companyId = localStorage.getItem("companyId");
+      const params: Record<string, any> = {
+        user_type: "Teacher",
+        page,
+        per_page: pageSize,
+      };
+      if (companyId) params.company_id = companyId;
+      if (selectedBranch) params.branch_id = selectedBranch.id;
       if (search.trim()) params.search = search.trim();
-      const { data } = await api.get("/teachers", { params });
+      const { data } = await api.get("/users", { params });
       setTeachers(data.data);
       setTotal(data.total);
     } catch {
@@ -40,7 +59,7 @@ export function TeachersClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search]);
+  }, [page, pageSize, search, selectedBranch, branchLoaded]);
 
   useEffect(() => {
     fetchTeachers();
@@ -70,10 +89,28 @@ export function TeachersClient() {
             className="pl-9"
           />
         </div>
-        <Button onClick={openAddDrawer}>
-          <Plus className="mr-2 size-4" />
-          Yangi o&apos;qituvchi
-        </Button>
+        {isCeo && (
+          selectedBranch ? (
+            <Button onClick={openAddDrawer}>
+              <Plus className="mr-2 size-4" />
+              Yangi o&apos;qituvchi
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button disabled>
+                    <Plus className="mr-2 size-4" />
+                    Yangi o&apos;qituvchi
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Avval filial qo&apos;shing
+              </TooltipContent>
+            </Tooltip>
+          )
+        )}
       </div>
 
       {loading ? (
@@ -81,7 +118,13 @@ export function TeachersClient() {
           Yuklanmoqda...
         </div>
       ) : (
-        <TeachersTable teachers={teachers} onRefresh={fetchTeachers} />
+        <TeachersTable
+          teachers={teachers}
+          onDeleted={(id) => {
+            setTeachers((prev) => prev.filter((t) => t.id !== id));
+            setTotal((prev) => Math.max(0, prev - 1));
+          }}
+        />
       )}
 
       {totalPages > 1 && (
@@ -130,7 +173,20 @@ export function TeachersClient() {
         </div>
       )}
 
-      <EditTeacherDrawer onSaved={fetchTeachers} />
+      <EditTeacherDrawer
+        onSaved={(updated) => {
+          setTeachers((prev) => {
+            const exists = prev.some((t) => t.id === updated.id);
+            if (exists) {
+              // Update — optimistic replace
+              return prev.map((t) => (t.id === updated.id ? updated : t));
+            }
+            // Add — refetch to respect pagination/filters
+            fetchTeachers();
+            return prev;
+          });
+        }}
+      />
     </div>
   );
 }

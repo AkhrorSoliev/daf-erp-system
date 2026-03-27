@@ -51,9 +51,9 @@ export class AuthService {
     };
   }
 
-  private generateTokens(userId: number, roles: string[]) {
+  private generateTokens(userId: number, roles: string[], companyId: number) {
     const secret = this.configService.get<string>('JWT_SECRET')!;
-    const payload = { sub: userId, roles };
+    const payload = { sub: userId, roles, companyId };
 
     const accessToken = this.jwtService.sign(payload, {
       secret,
@@ -70,7 +70,7 @@ export class AuthService {
 
   async login(user: any) {
     const roles = user.roles.map((ur: any) => ur.role.name);
-    const tokens = this.generateTokens(user.id, roles);
+    const tokens = this.generateTokens(user.id, roles, user.companyId);
 
     return {
       ...tokens,
@@ -101,7 +101,7 @@ export class AuthService {
       }
 
       const roles = user.roles.map((ur) => ur.role.name);
-      const tokens = this.generateTokens(user.id, roles);
+      const tokens = this.generateTokens(user.id, roles, user.companyId);
 
       return {
         ...tokens,

@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { Clock, Pencil, Phone, Trash2 } from "lucide-react";
+import { Pencil, Phone } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,98 +11,120 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEditTeacher } from "@/hooks/use-edit-teacher";
-import type { Teacher } from "@/data/teacher-model";
+import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 
 function formatPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("998")) {
-    const d = digits.slice(3);
-    return `+998 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7, 9)}`;
+  if (phone.length === 9) {
+    return `+998 ${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)}`;
   }
   return phone;
 }
 
-function formatDate(iso: string): string {
-  return format(new Date(iso), "dd.MM.yyyy");
-}
-
 interface TeacherProfileCardProps {
-  teacher: Teacher;
+  teacher: TeacherData;
 }
 
 export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
   const { openDrawer } = useEditTeacher();
 
-  const activeGroups = teacher.groups.filter((g) => g.status === "active").length;
+  const initials = teacher.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2);
 
   return (
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
       {/* Avatar + Identity */}
       <div className="flex flex-col items-center gap-3 text-center">
         <Avatar className="size-20">
-          <AvatarImage src={teacher.avatar} alt={teacher.firstName} />
+          <AvatarImage src={teacher.photo ?? undefined} alt={teacher.name} />
           <AvatarFallback className="text-2xl font-semibold">
-            {teacher.firstName[0]}
-            {teacher.lastName[0]}
+            {initials}
           </AvatarFallback>
         </Avatar>
 
         <div>
-          <h2 className="text-xl font-bold">
-            {teacher.firstName} {teacher.lastName}
-          </h2>
+          <h2 className="text-xl font-bold">{teacher.name}</h2>
           <p className="text-sm text-muted-foreground">(id: {teacher.id})</p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-2">
-          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400">
-            Teacher
-          </Badge>
-          {teacher.specialization && (
-            <Badge variant="outline">{teacher.specialization}</Badge>
+          {teacher.roles.map((role) => (
+            <Badge
+              key={role.id}
+              className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
+            >
+              {role.name}
+            </Badge>
+          ))}
+          {!teacher.isActive && (
+            <Badge variant="destructive">Nofaol</Badge>
           )}
         </div>
       </div>
 
       {/* Info */}
       <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <Phone className="size-3.5 text-muted-foreground" />
-          <span className="text-muted-foreground">Telefon:</span>
-          <a
-            href={`tel:${teacher.phone}`}
-            className="text-blue-600 hover:underline dark:text-blue-400"
-          >
-            {formatPhone(teacher.phone)}
-          </a>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Guruhlar:</span>
-          <span className="font-medium">
-            {teacher.groups.length > 0
-              ? `${teacher.groups.length} ta (${activeGroups} faol)`
-              : "Yo'q"}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Jinsi:</span>
-          <span>{teacher.gender === "male" ? "Erkak" : "Ayol"}</span>
-        </div>
-
-        {teacher.createdBy && (
+        {teacher.phone && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Qo&apos;shilgan:</span>
-            <span>{formatDate(teacher.createdBy.at)}</span>
+            <Phone className="size-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Telefon:</span>
+            <a
+              href={`tel:+998${teacher.phone}`}
+              className="text-blue-600 hover:underline dark:text-blue-400"
+            >
+              {formatPhone(teacher.phone)}
+            </a>
           </div>
         )}
+
+        {teacher.gender && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Jinsi:</span>
+            <span>{teacher.gender === "MALE" ? "Erkak" : "Ayol"}</span>
+          </div>
+        )}
+
+        {teacher.login && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Login:</span>
+            <span className="font-medium">{teacher.login}</span>
+          </div>
+        )}
+
+        {teacher.branches.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-muted-foreground">Filiallar:</span>
+            {teacher.branches.map((b) => (
+              <Badge key={b.id} variant="outline" className="text-xs">
+                {b.name}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Qo&apos;shilgan:</span>
+          <span>{format(new Date(teacher.createdAt), "dd.MM.yyyy")}</span>
+        </div>
       </div>
 
       <Separator />
 
-      {/* Icon actions */}
+      {/* Balance */}
+      <div className="text-center">
+        <p className="text-xs text-muted-foreground">Balans</p>
+        <p
+          className={`text-lg font-bold ${teacher.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+        >
+          {teacher.balance.toLocaleString("en-US")} so&apos;m
+        </p>
+      </div>
+
+      <Separator />
+
+      {/* Actions */}
       <div className="flex items-center justify-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -110,34 +132,12 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
               variant="ghost"
               size="sm"
               className="size-8 p-0"
-              onClick={() => openDrawer(teacher as unknown as import("@/hooks/use-edit-teacher").TeacherData)}
+              onClick={() => openDrawer(teacher)}
             >
               <Pencil className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Tahrirlash</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="size-8 p-0 text-destructive hover:text-destructive"
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>O&apos;chirish</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" className="size-8 p-0">
-              <Clock className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Tarix</TooltipContent>
         </Tooltip>
       </div>
     </div>

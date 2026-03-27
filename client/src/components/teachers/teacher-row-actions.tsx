@@ -30,7 +30,7 @@ import api from "@/lib/api";
 
 interface TeacherRowActionsProps {
   teacher: TeacherData;
-  onDeleted?: () => void;
+  onDeleted?: (id: number) => void;
 }
 
 export function TeacherRowActions({ teacher, onDeleted }: TeacherRowActionsProps) {
@@ -40,16 +40,17 @@ export function TeacherRowActions({ teacher, onDeleted }: TeacherRowActionsProps
 
   const handleDelete = async () => {
     setDeleting(true);
+    // Optimistic — darhol UI dan o'chirish
+    setShowDelete(false);
+    onDeleted?.(teacher.id);
     try {
       await api.delete(`/teachers/${teacher.id}`);
       toast.success("O'qituvchi muvaffaqiyatli o'chirildi");
-      onDeleted?.();
     } catch (error: any) {
       const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
       toast.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setDeleting(false);
-      setShowDelete(false);
     }
   };
 

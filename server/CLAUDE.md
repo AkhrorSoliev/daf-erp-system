@@ -59,6 +59,12 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - Return format: `{ data: T[], total: number, page: number, pageSize: number }`
 - Use `PaginationDto` from `src/common/dto/pagination.dto.ts`
 
+### API Response Convention for Mutations
+
+- **All CREATE/UPDATE endpoints must return the full updated entity** in the response body — the frontend uses this for optimistic UI updates and does not refetch after mutations
+- **DELETE endpoints** return `{ message: string }` — the frontend uses the ID from the request to remove the entity from local state
+- Exception: **financial data** (balances, payments, salaries) — frontend always refetches these from the server to ensure accuracy
+
 ### Error Handling
 
 - Use NestJS built-in exceptions (`NotFoundException`, `ForbiddenException`, `BadRequestException`, etc.)

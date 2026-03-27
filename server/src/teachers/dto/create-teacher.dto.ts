@@ -2,9 +2,11 @@ import {
   IsString,
   IsOptional,
   IsEnum,
+  IsInt,
   Matches,
   MinLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { Gender } from '@prisma/client';
 
 export class CreateTeacherDto {
@@ -27,4 +29,9 @@ export class CreateTeacherDto {
   @IsOptional()
   @IsString()
   photo?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  branchId?: number;
 }

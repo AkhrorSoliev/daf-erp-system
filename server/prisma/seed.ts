@@ -7,30 +7,21 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // 1. Company
-  const company = await prisma.company.upsert({
-    where: { id: 1001 },
-    update: {},
-    create: { id: 1001, name: 'DaF Sprachzentrum' },
-  });
-  console.log('Company:', company.name);
+  // 0. Bazani to'liq tozalash
+  console.log('🗑️  Bazani tozalash...');
+  await prisma.enrollment.deleteMany();
+  await prisma.group.deleteMany();
+  await prisma.room.deleteMany();
+  await prisma.userBranch.deleteMany();
+  await prisma.userRole.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.branch.deleteMany();
+  await prisma.course.deleteMany();
+  await prisma.role.deleteMany();
+  await prisma.company.deleteMany();
+  console.log('✅ Baza tozalandi\n');
 
-  // 2. Branches
-  const branches = [
-    { id: 1001, name: "Farg'ona", companyId: 1001 },
-    { id: 1002, name: 'Namangan', companyId: 1001 },
-    { id: 1003, name: 'Qarshi', companyId: 1001 },
-  ];
-  for (const branch of branches) {
-    await prisma.branch.upsert({
-      where: { id: branch.id },
-      update: {},
-      create: branch,
-    });
-    console.log('Branch:', branch.name);
-  }
-
-  // 3. Roles
+  // 1. Rollar
   const roles = [
     { id: 1, name: 'CEO' },
     { id: 2, name: 'Branch Director' },
@@ -47,96 +38,30 @@ async function main() {
     console.log('Role:', role.name);
   }
 
-  // 4. Users
+  // 2. Company
+  const company = await prisma.company.create({
+    data: { id: 1001, name: 'DaF Sprachzentrum' },
+  });
+  console.log('\nCompany:', company.name);
+
+  // 3. CEO user (branchsiz — to'liq nazorat)
   const password = await bcrypt.hash('123456', 10);
-
-  const users = [
-    {
-      id: 1001,
-      name: 'CEO',
+  const ceo = await prisma.user.create({
+    data: {
+      name: 'CEO Admin',
       login: 'ceo',
-      companyId: 1001,
-      mainBranch: null,
-      roleIds: [1],
-      branchIds: [1001, 1002, 1003],
+      password,
+      companyId: company.id,
+      roles: { create: [{ roleId: 1 }] },
     },
-    {
-      id: 1002,
-      name: 'Branch Director',
-      login: 'director',
-      companyId: 1001,
-      mainBranch: 1001,
-      roleIds: [2],
-      branchIds: [1001],
-    },
-    {
-      id: 1003,
-      name: 'Administrator',
-      login: 'admin',
-      companyId: 1001,
-      mainBranch: 1001,
-      roleIds: [3],
-      branchIds: [1001],
-    },
-    {
-      id: 1004,
-      name: 'Teacher',
-      login: 'teacher',
-      companyId: 1001,
-      mainBranch: 1001,
-      roleIds: [4],
-      branchIds: [1001],
-    },
-    {
-      id: 1005,
-      name: 'Cashier',
-      login: 'cashier',
-      companyId: 1001,
-      mainBranch: 1001,
-      roleIds: [5],
-      branchIds: [1001],
-    },
-  ];
+  });
+  console.log(`\nCEO: login=ceo, parol=123456 (id: ${ceo.id})`);
 
-  for (const u of users) {
-    await prisma.user.upsert({
-      where: { id: u.id },
-      update: {
-        name: u.name,
-        login: u.login,
-        password,
-        phone: null,
-        photo: null,
-        gender: null,
-        mainBranch: u.mainBranch,
-        companyId: u.companyId,
-        telegramChatId: null,
-        roles: {
-          deleteMany: {},
-          create: u.roleIds.map((roleId) => ({ roleId })),
-        },
-        branches: {
-          deleteMany: {},
-          create: u.branchIds.map((branchId) => ({ branchId })),
-        },
-      },
-      create: {
-        id: u.id,
-        name: u.name,
-        login: u.login,
-        password,
-        phone: null,
-        photo: null,
-        gender: null,
-        companyId: u.companyId,
-        mainBranch: u.mainBranch,
-        roles: { create: u.roleIds.map((roleId) => ({ roleId })) },
-        branches: { create: u.branchIds.map((branchId) => ({ branchId })) },
-      },
-    });
-
-    console.log(`User: ${u.name} (login: ${u.login})`);
-  }
+  // Sequence larni to'g'rilash
+  await prisma.$executeRawUnsafe(
+    `SELECT setval(pg_get_serial_sequence('"User"', 'id'), (SELECT MAX(id) FROM "User"))`,
+  );
+  console.log('\n✅ Tayyor! CEO login bilan kiring va filiallar qo\'shing.');
 }
 
 main()

@@ -13,11 +13,11 @@ import { useEditTeacher } from "@/hooks/use-edit-teacher";
 import { EditTeacherForm } from "./edit-teacher-form";
 
 interface EditTeacherDrawerProps {
-  onSaved?: () => void;
+  onSaved?: (updated: import("@/hooks/use-edit-teacher").TeacherData) => void;
 }
 
 export function EditTeacherDrawer({ onSaved }: EditTeacherDrawerProps) {
-  const { open, mode, teacher, closeDrawer } = useEditTeacher();
+  const { open, mode, teacher, submitting, closeDrawer } = useEditTeacher();
   const isAdd = mode === "add";
 
   if (!isAdd && !teacher) return null;
@@ -55,8 +55,8 @@ export function EditTeacherDrawer({ onSaved }: EditTeacherDrawerProps) {
             <Button type="button" variant="outline" onClick={closeDrawer}>
               Bekor qilish
             </Button>
-            <Button type="submit" form="edit-teacher-form">
-              {isAdd ? "Qo'shish" : "Saqlash"}
+            <Button type="submit" form="edit-teacher-form" disabled={submitting}>
+              {submitting ? "Saqlanmoqda..." : isAdd ? "Qo'shish" : "Saqlash"}
             </Button>
           </div>
         </SheetFooter>

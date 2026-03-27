@@ -23,10 +23,10 @@ function formatPhone(phone: string | null) {
 
 interface TeachersTableProps {
   teachers: TeacherData[];
-  onRefresh?: () => void;
+  onDeleted?: (id: number) => void;
 }
 
-export function TeachersTable({ teachers, onRefresh }: TeachersTableProps) {
+export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
   const router = useRouter();
 
   if (teachers.length === 0) {
@@ -84,7 +84,7 @@ export function TeachersTable({ teachers, onRefresh }: TeachersTableProps) {
                   {teacher.login ?? "—"}
                 </TableCell>
                 <TableCell>
-                  <TeacherRowActions teacher={teacher} onDeleted={onRefresh} />
+                  <TeacherRowActions teacher={teacher} onDeleted={onDeleted} />
                 </TableCell>
               </TableRow>
             );
