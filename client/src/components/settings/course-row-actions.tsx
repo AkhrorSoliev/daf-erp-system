@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,10 +15,26 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEditCourse } from "@/hooks/use-edit-course";
-import type { Course } from "@/data/courses-model";
+import type { Course } from "@/hooks/use-edit-course";
+import api from "@/lib/api";
 
-export function CourseRowActions({ course }: { course: Course }) {
+interface CourseRowActionsProps {
+  course: Course;
+  onDeleted?: (id: string) => void;
+}
+
+export function CourseRowActions({ course, onDeleted }: CourseRowActionsProps) {
   const { openDrawer } = useEditCourse();
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/courses/${course.id}`);
+      toast.success("Kurs muvaffaqiyatli o'chirildi");
+      onDeleted?.(course.id);
+    } catch {
+      toast.error("Kursni o'chirishda xatolik yuz berdi");
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -41,7 +58,7 @@ export function CourseRowActions({ course }: { course: Course }) {
           <Pencil className="mr-2 size-4" />
           Tahrirlash
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive">
+        <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
           <Trash2 className="mr-2 size-4" />
           O&apos;chirish
         </DropdownMenuItem>

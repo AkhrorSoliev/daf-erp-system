@@ -96,6 +96,7 @@ model Branch {
   users     UserBranch[]
   rooms     Room[]
   groups    Group[]
+  courses   Course[]
 
   @@index([deletedAt])
 }
@@ -106,6 +107,8 @@ model Room {
   capacity  Int?
   branchId  Int
   branch    Branch   @relation(fields: [branchId], references: [id])
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -114,19 +117,24 @@ model Room {
   deletedBy       User?     @relation("RoomDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  groups Group[]
+
   @@index([deletedAt])
 }
 
 model Course {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  price       Int
-  duration    Int?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  price          Int
+  courseDuration Int?
+  lessonDuration Int?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
+  branchId Int?
+  branch   Branch? @relation(fields: [branchId], references: [id])
   companyId Int?
   company   Company? @relation(fields: [companyId], references: [id])
 
@@ -199,6 +207,8 @@ model Group {
   teacher   User      @relation("TeacherGroups", fields: [teacherId], references: [id])
   branchId  Int
   branch    Branch    @relation(fields: [branchId], references: [id])
+  roomId    String?
+  room      Room?     @relation(fields: [roomId], references: [id])
   startDate DateTime?
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
@@ -262,4 +272,5 @@ model Company {
   users    User[]
   branches Branch[]
   courses  Course[]
+  rooms    Room[]
 }

@@ -61,7 +61,11 @@ export function BranchSwitcher() {
         {displayBranches.map((branch) => (
           <DropdownMenuItem
             key={branch.id}
-            onClick={() => selectBranch(branch)}
+            onClick={() => {
+              if (branch.id !== selected.id) {
+                selectBranch(branch);
+              }
+            }}
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-2">
