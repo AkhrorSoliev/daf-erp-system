@@ -66,6 +66,7 @@ export function HolidaysSettingsClient() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Bayram nomi</TableHead>
               <TableHead>Boshlanish sanasi</TableHead>
               <TableHead>Tugash sanasi</TableHead>
@@ -75,7 +76,7 @@ export function HolidaysSettingsClient() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <CalendarOff className="h-8 w-8 text-muted-foreground/50" />
                     Dam olish kunlari topilmadi
@@ -83,8 +84,9 @@ export function HolidaysSettingsClient() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((holiday) => (
+              filtered.map((holiday, index) => (
                 <TableRow key={holiday.id}>
+                  <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
                   <TableCell className="font-medium">{holiday.name}</TableCell>
                   <TableCell>{holiday.startDate}</TableCell>
                   <TableCell>{holiday.endDate}</TableCell>

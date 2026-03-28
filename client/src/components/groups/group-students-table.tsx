@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,12 +12,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { Student } from "@/data/student-model";
-import { StudentStatusBadge } from "./student-status-badge";
-import { StudentRowActions } from "./student-row-actions";
+
+export interface GroupStudent {
+  enrollmentId: string;
+  enrolledAt: string;
+  id: number;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  photo: string | null;
+  balance: number;
+  isActive: boolean;
+}
 
 function formatBalance(balance: number) {
-  const abs = Math.abs(balance).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const abs = Math.abs(balance)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const sign = balance < 0 ? "-" : "";
   return `${sign}${abs} so'm`;
 }
@@ -28,26 +38,22 @@ function formatPhone(phone: string) {
   if (digits.length === 9) {
     return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
   }
-  if (digits.length === 12 && digits.startsWith("998")) {
-    const d = digits.slice(3);
-    return `+998 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7, 9)}`;
-  }
   return phone;
 }
 
-function getStudentStatus(student: Student): "active" | "frozen" | "ungrouped" {
-  if (!student.isActive) return "frozen";
-  if (student.groups.length === 0) return "ungrouped";
-  return "active";
+interface GroupStudentsTableProps {
+  students: GroupStudent[];
 }
 
-export function StudentsTable({ students }: { students: Student[] }) {
+export function GroupStudentsTable({ students }: GroupStudentsTableProps) {
   const router = useRouter();
 
   if (students.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-        O&apos;quvchilar topilmadi
+      <div className="flex h-24 items-center justify-center rounded-md border">
+        <p className="text-sm text-muted-foreground">
+          Bu guruhda o&apos;quvchilar yo&apos;q
+        </p>
       </div>
     );
   }
@@ -57,22 +63,20 @@ export function StudentsTable({ students }: { students: Student[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12 border-r">#</TableHead>
+            <TableHead className="w-8 border-r">#</TableHead>
             <TableHead className="w-10">Rasm</TableHead>
             <TableHead className="min-w-30">Ism familiya</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">
               Telefon
             </TableHead>
-            <TableHead className="hidden md:table-cell">Guruh</TableHead>
             <TableHead className="min-w-28 text-right">Balans</TableHead>
             <TableHead className="hidden sm:table-cell">Holat</TableHead>
-            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {students.map((student, index) => (
             <TableRow
-              key={student.id}
+              key={student.enrollmentId}
               className="cursor-pointer hover:bg-muted/50"
               onClick={() => router.push(`/students/profile/${student.id}`)}
             >
@@ -97,19 +101,6 @@ export function StudentsTable({ students }: { students: Student[] }) {
               <TableCell className="hidden sm:table-cell">
                 {formatPhone(student.phone)}
               </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <div className="flex gap-1">
-                  {student.groups.length > 0 ? (
-                    student.groups.map((g) => (
-                      <Badge key={g.id} variant="secondary">
-                        {g.level ?? g.name}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground text-sm">—</span>
-                  )}
-                </div>
-              </TableCell>
               <TableCell
                 className={cn(
                   "text-right font-medium",
@@ -121,10 +112,9 @@ export function StudentsTable({ students }: { students: Student[] }) {
                 {formatBalance(student.balance)}
               </TableCell>
               <TableCell className="hidden sm:table-cell">
-                <StudentStatusBadge status={getStudentStatus(student)} />
-              </TableCell>
-              <TableCell>
-                <StudentRowActions student={student} />
+                <Badge variant={student.isActive ? "default" : "secondary"}>
+                  {student.isActive ? "Faol" : "Muzlatilgan"}
+                </Badge>
               </TableCell>
             </TableRow>
           ))}

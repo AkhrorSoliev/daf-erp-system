@@ -53,6 +53,11 @@ export class GroupsController {
     return this.groupsService.getNextName(level, Number(branchId));
   }
 
+  @Get(':id/students')
+  findStudentsByGroupId(@Param('id') id: string) {
+    return this.groupsService.findStudentsByGroupId(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.groupsService.findOne(id);

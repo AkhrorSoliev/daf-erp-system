@@ -1,0 +1,460 @@
+import { Scenes, Markup, Telegraf } from 'telegraf';
+import { BotContext } from '../types/context';
+import { SCENES, DEFAULT_COMPANY_ID } from '../constants';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UploadService } from '../../upload/upload.service';
+import { message } from 'telegraf/filters';
+import https from 'https';
+
+async function downloadFile(url: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    });
+  });
+}
+
+/**
+ * Student registration flow:
+ * Step 1: Ustozlar ro'yxati ko'rsatiladi → tanlash
+ * Step 2: Tanlangan ustozning guruhlari ko'rsatiladi → tanlash
+ * Step 3: Ism kiritish
+ * Step 4: Familiya kiritish
+ * Step 5: Telefon raqam yuborish
+ * Step 6: Rasm yuborish
+ * Step 7: Tasdiqlash
+ */
+export function createStudentRegistrationScene(
+  prisma: PrismaService,
+  uploadService: UploadService,
+  bot: Telegraf<BotContext>,
+): Scenes.BaseScene<BotContext> {
+  const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
+
+  // Scene ga kirganda — ustozlar ro'yxatini ko'rsatish
+  scene.enter(async (ctx) => {
+    const branchId = ctx.session.data?.branchId;
+    if (!branchId) {
+      await ctx.reply("Xatolik: filial aniqlanmadi. Qayta urinib ko'ring.");
+      await ctx.scene.leave();
+      return;
+    }
+
+    // Allaqachon ro'yxatdan o'tganini tekshirish
+    const chatId = String(ctx.chat!.id);
+    const existingStudent = await prisma.student.findFirst({
+      where: { telegramChatId: chatId, deletedAt: null },
+    });
+    if (existingStudent) {
+      await ctx.reply(
+        "Siz allaqachon ro'yxatdan o'tgansiz!",
+      );
+      await ctx.scene.leave();
+      return;
+    }
+
+    ctx.session.step = 1;
+    ctx.session.data = { branchId };
+
+    // Ushbu filialda dars beradigan ustozlarni olish
+    const teachers = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        roles: { some: { roleId: 4 } },
+        branches: { some: { branchId } },
+      },
+      select: { id: true, name: true, photo: true },
+      orderBy: { name: 'asc' },
+    });
+
+    if (teachers.length === 0) {
+      await ctx.reply("Hozirda ushbu filialda o'qituvchilar mavjud emas.");
+      await ctx.scene.leave();
+      return;
+    }
+
+    // Ustozlarni inline button sifatida ko'rsatish
+    const buttons = teachers.map((t) => [
+      Markup.button.callback(t.name, `select_teacher_${t.id}`),
+    ]);
+
+    await ctx.reply(
+      "Assalomu alaykum! O'quvchi sifatida ro'yxatdan o'tish.\n\n" +
+        "O'qituvchingizni tanlang:",
+      Markup.inlineKeyboard(buttons),
+    );
+  });
+
+  // Ustoz tanlash
+  scene.action(/^select_teacher_(\d+)$/, async (ctx) => {
+    if (ctx.session.step !== 1) return;
+    await ctx.answerCbQuery();
+
+    const teacherId = Number(ctx.match[1]);
+    const branchId = ctx.session.data.branchId;
+
+    // Ustoz mavjudligini tekshirish
+    const teacher = await prisma.user.findFirst({
+      where: { id: teacherId, deletedAt: null, roles: { some: { roleId: 4 } } },
+      select: { id: true, name: true },
+    });
+    if (!teacher) {
+      await ctx.reply("O'qituvchi topilmadi. Qayta tanlang.");
+      return;
+    }
+
+    ctx.session.data.teacherId = teacherId;
+    ctx.session.data.teacherName = teacher.name;
+
+    // Ushbu ustozning guruhlarini olish
+    const groups = await prisma.group.findMany({
+      where: {
+        deletedAt: null,
+        branchId,
+        teachers: { some: { teacherId } },
+      },
+      select: {
+        id: true,
+        name: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+        days: true,
+        course: { select: { name: true, price: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    if (groups.length === 0) {
+      await ctx.editMessageText(`${teacher.name} — hozirda guruhlari mavjud emas.`);
+      // Qayta ustozlar ro'yxatiga qaytarish
+      ctx.session.step = 1;
+      const teachers = await prisma.user.findMany({
+        where: {
+          deletedAt: null,
+          roles: { some: { roleId: 4 } },
+          branches: { some: { branchId } },
+        },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      });
+      const buttons = teachers.map((t) => [
+        Markup.button.callback(t.name, `select_teacher_${t.id}`),
+      ]);
+      await ctx.reply("Boshqa o'qituvchini tanlang:", Markup.inlineKeyboard(buttons));
+      return;
+    }
+
+    ctx.session.step = 2;
+
+    const daysMap: Record<string, string> = { odd: 'Toq kunlar', even: 'Juft kunlar' };
+
+    const buttons = groups.map((g) => {
+      const time = g.lessonStartTime && g.lessonEndTime
+        ? `${g.lessonStartTime}–${g.lessonEndTime}`
+        : '';
+      const days = g.days ? daysMap[g.days] ?? '' : '';
+      const price = g.course.price.toLocaleString('en-US');
+      const label = `${g.name} | ${days} ${time} | ${price} so'm`;
+      return [Markup.button.callback(label, `select_group_${g.id}`)];
+    });
+
+    buttons.push([Markup.button.callback("⬅️ Orqaga", "back_to_teachers")]);
+
+    await ctx.editMessageText(
+      `👨‍🏫 ${teacher.name}\n\nGuruhni tanlang:`,
+    );
+    await ctx.reply("Quyidagi guruhlardan birini tanlang:", Markup.inlineKeyboard(buttons));
+  });
+
+  // Orqaga — ustozlar ro'yxatiga
+  scene.action('back_to_teachers', async (ctx) => {
+    await ctx.answerCbQuery();
+    ctx.session.step = 1;
+    const branchId = ctx.session.data.branchId;
+
+    const teachers = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        roles: { some: { roleId: 4 } },
+        branches: { some: { branchId } },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+
+    const buttons = teachers.map((t) => [
+      Markup.button.callback(t.name, `select_teacher_${t.id}`),
+    ]);
+
+    await ctx.editMessageText(
+      "O'qituvchingizni tanlang:",
+      Markup.inlineKeyboard(buttons),
+    );
+  });
+
+  // Guruh tanlash
+  scene.action(/^select_group_(.+)$/, async (ctx) => {
+    if (ctx.session.step !== 2) return;
+    await ctx.answerCbQuery();
+
+    const groupId = ctx.match[1];
+
+    const group = await prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!group) {
+      await ctx.reply("Guruh topilmadi. Qayta tanlang.");
+      return;
+    }
+
+    ctx.session.data.groupId = groupId;
+    ctx.session.data.groupName = group.name;
+    ctx.session.step = 3;
+
+    await ctx.editMessageText(
+      `✅ Guruh tanlandi: ${group.name}`,
+    );
+    await ctx.reply("Ismingizni kiriting:");
+  });
+
+  // Text xabarlari
+  scene.on(message('text'), async (ctx) => {
+    const step = ctx.session.step;
+    const text = ctx.message.text.trim();
+
+    if (text === '/cancel') {
+      await ctx.scene.leave();
+      await ctx.reply(
+        "Bekor qilindi. Qayta boshlash uchun /start bosing.",
+        Markup.removeKeyboard(),
+      );
+      return;
+    }
+
+    switch (step) {
+      // Ism
+      case 3: {
+        if (text.length < 2) {
+          await ctx.reply("Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          return;
+        }
+        ctx.session.data.firstName = text;
+        ctx.session.step = 4;
+        await ctx.reply("Familiyangizni kiriting:");
+        break;
+      }
+
+      // Familiya
+      case 4: {
+        if (text.length < 2) {
+          await ctx.reply("Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          return;
+        }
+        ctx.session.data.lastName = text;
+        ctx.session.step = 5;
+        await ctx.reply(
+          "Telefon raqamingizni yuboring:",
+          Markup.keyboard([
+            [Markup.button.contactRequest("📱 Telefon raqamni yuborish")],
+          ]).resize().oneTime(),
+        );
+        break;
+      }
+
+      // Telefon — text yuborilsa
+      case 5: {
+        await ctx.reply(
+          "Iltimos, telefon raqamni quyidagi tugma orqali yuboring:",
+          Markup.keyboard([
+            [Markup.button.contactRequest("📱 Telefon raqamni yuborish")],
+          ]).resize().oneTime(),
+        );
+        break;
+      }
+
+      // Rasm — text yuborilsa
+      case 6: {
+        await ctx.reply("Iltimos, rasmingizni yuboring (foto sifatida).");
+        break;
+      }
+
+      default:
+        break;
+    }
+  });
+
+  // Contact share
+  scene.on(message('contact'), async (ctx) => {
+    if (ctx.session.step !== 5) return;
+
+    const contact = ctx.message.contact;
+    let phone = contact.phone_number;
+
+    phone = phone.replace(/\D/g, '');
+    if (phone.startsWith('998')) {
+      phone = phone.slice(3);
+    }
+
+    if (phone.length !== 9) {
+      await ctx.reply(
+        "Telefon raqam noto'g'ri formatda. Qayta yuboring:",
+        Markup.keyboard([
+          [Markup.button.contactRequest("📱 Telefon raqamni yuborish")],
+        ]).resize().oneTime(),
+      );
+      return;
+    }
+
+    // Bazada tekshirish
+    const existing = await prisma.student.findFirst({
+      where: { phone, deletedAt: null },
+    });
+    if (existing) {
+      await ctx.reply(
+        "Bu telefon raqam allaqachon tizimda ro'yxatdan o'tgan. " +
+          "Muammo bo'lsa administrator bilan bog'laning.",
+        Markup.removeKeyboard(),
+      );
+      await ctx.scene.leave();
+      return;
+    }
+
+    ctx.session.data.phone = phone;
+    ctx.session.step = 6;
+    await ctx.reply(
+      "Rasmingizni yuboring (foto sifatida):",
+      Markup.removeKeyboard(),
+    );
+  });
+
+  // Rasm qabul qilish
+  scene.on(message('photo'), async (ctx) => {
+    if (ctx.session.step !== 6) return;
+
+    const photos = ctx.message.photo;
+    const photo = photos[photos.length - 1];
+
+    try {
+      const fileLink = await ctx.telegram.getFileLink(photo.file_id);
+      const buffer = await downloadFile(fileLink.href);
+
+      const multerFile = {
+        originalname: `student_${ctx.chat!.id}.jpg`,
+        buffer,
+        mimetype: 'image/jpeg',
+      } as Express.Multer.File;
+
+      const photoUrl = await uploadService.uploadFile(multerFile, 'students');
+      ctx.session.data.photo = photoUrl;
+      ctx.session.step = 7;
+
+      const data = ctx.session.data;
+      await ctx.reply(
+        "📋 Ma'lumotlaringizni tekshiring:\n\n" +
+          `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
+          `📚 Guruh: ${data.groupName}\n` +
+          `👤 Ism: ${data.firstName}\n` +
+          `👤 Familiya: ${data.lastName}\n` +
+          `📞 Telefon: +998 ${data.phone}\n` +
+          `🖼 Rasm: yuklandi\n`,
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback("✅ Tasdiqlash", "confirm_student"),
+            Markup.button.callback("🔄 Qayta kiritish", "restart_student"),
+          ],
+        ]),
+      );
+    } catch {
+      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
+    }
+  });
+
+  // Tasdiqlash
+  scene.action('confirm_student', async (ctx) => {
+    if (ctx.session.step !== 7) return;
+    await ctx.answerCbQuery();
+
+    const data = ctx.session.data;
+    const chatId = String(ctx.chat!.id);
+
+    try {
+      // Student yaratish
+      const student = await prisma.student.create({
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          photo: data.photo,
+          telegramChatId: chatId,
+          companyId: DEFAULT_COMPANY_ID,
+          branches: {
+            create: [{ branchId: data.branchId }],
+          },
+        },
+      });
+
+      // Guruhga enrollment qo'shish
+      await prisma.enrollment.create({
+        data: {
+          studentId: student.id,
+          groupId: data.groupId,
+        },
+      });
+
+      await ctx.editMessageText("✅ Tasdiqlandi!");
+      await ctx.reply(
+        "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
+          `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
+          `📚 Guruh: ${data.groupName}\n\n` +
+          "Tez orada sizga darslar haqida xabar beramiz!",
+      );
+
+      await ctx.scene.leave();
+    } catch (error) {
+      await ctx.reply(
+        "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
+      );
+      await ctx.scene.leave();
+    }
+  });
+
+  // Qayta kiritish
+  scene.action('restart_student', async (ctx) => {
+    if (ctx.session.step !== 7) return;
+    await ctx.answerCbQuery();
+
+    // Yuklangan rasmni o'chirish
+    if (ctx.session.data.photo) {
+      await uploadService.deleteFile(ctx.session.data.photo);
+    }
+
+    const branchId = ctx.session.data.branchId;
+    ctx.session.data = { branchId };
+    ctx.session.step = 1;
+
+    await ctx.editMessageText("🔄 Qayta kiritish tanlandi");
+
+    // Ustozlar ro'yxatini qayta ko'rsatish
+    const teachers = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        roles: { some: { roleId: 4 } },
+        branches: { some: { branchId } },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+
+    const buttons = teachers.map((t) => [
+      Markup.button.callback(t.name, `select_teacher_${t.id}`),
+    ]);
+
+    await ctx.reply("O'qituvchingizni tanlang:", Markup.inlineKeyboard(buttons));
+  });
+
+  return scene;
+}

@@ -99,6 +99,7 @@ function BranchListView({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Filial nomi</TableHead>
               <TableHead>Manzil</TableHead>
               <TableHead>Xonalar soni</TableHead>
@@ -108,14 +109,14 @@ function BranchListView({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -125,12 +126,13 @@ function BranchListView({
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((branch) => (
+              filtered.map((branch, index) => (
                 <TableRow
                   key={branch.id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => onSelect(branch)}
                 >
+                  <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
                   <TableCell className="font-medium">{branch.name}</TableCell>
                   <TableCell>{branch.address ?? "—"}</TableCell>
                   <TableCell>
@@ -263,6 +265,7 @@ function BranchRoomsView({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Xona nomi</TableHead>
               <TableHead>Sig&apos;imi</TableHead>
               <TableHead>Guruhlar</TableHead>
@@ -272,14 +275,14 @@ function BranchRoomsView({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -289,12 +292,15 @@ function BranchRoomsView({
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((room) => (
+              filtered.map((room, index) => (
                 <TableRow
                   key={room.id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => router.push(`/settings/rooms/${room.id}`)}
                 >
+                  <TableCell className="border-r text-muted-foreground">
+                    {(page - 1) * pageSize + index + 1}
+                  </TableCell>
                   <TableCell className="font-medium">{room.name}</TableCell>
                   <TableCell>
                     {room.capacity ? `${room.capacity} o'rin` : "—"}

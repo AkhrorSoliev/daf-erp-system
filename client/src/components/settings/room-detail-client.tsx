@@ -163,6 +163,7 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12 border-r">#</TableHead>
                   <TableHead>Guruh nomi</TableHead>
                   <TableHead>Kurs</TableHead>
                   <TableHead>O&apos;qituvchi</TableHead>
@@ -170,8 +171,9 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {room.groups.map((group) => (
+                {room.groups.map((group, index) => (
                   <TableRow key={group.id}>
+                    <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell>{group.course.name}</TableCell>
                     <TableCell>{group.teacher.name}</TableCell>

@@ -1,18 +1,63 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
 import { StudentProfileTabs } from "./student-profile-tabs";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import type { Student } from "@/data/student-model";
+import api from "@/lib/api";
 
-export function StudentProfileClient({ student }: { student: Student }) {
+export function StudentProfileClient({ studentId }: { studentId: string }) {
+  const [student, setStudent] = useState<Student | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const setName = useBreadcrumbName((s) => s.setName);
 
+  const fetchStudent = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get(`/students/${studentId}`);
+      setStudent(data);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [studentId]);
+
   useEffect(() => {
-    setName(student.id, `${student.firstName} ${student.lastName}`);
-  }, [student.id, student.firstName, student.lastName, setName]);
+    fetchStudent();
+  }, [fetchStudent]);
+
+  useEffect(() => {
+    if (student) {
+      setName(String(student.id), `${student.firstName} ${student.lastName}`);
+    }
+  }, [student, setName]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-muted-foreground size-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !student) {
+    return (
+      <div className="space-y-6">
+        <h1 className="font-heading text-2xl font-bold tracking-tight">
+          O&apos;quvchi topilmadi
+        </h1>
+        <p className="text-muted-foreground">
+          ID: {studentId} bo&apos;yicha o&apos;quvchi mavjud emas
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -24,7 +69,9 @@ export function StudentProfileClient({ student }: { student: Student }) {
           <StudentProfileTabs student={student} />
         </div>
       </div>
-      <EditStudentDrawer />
+      <EditStudentDrawer
+        onSaved={(updated) => setStudent(updated)}
+      />
     </>
   );
 }

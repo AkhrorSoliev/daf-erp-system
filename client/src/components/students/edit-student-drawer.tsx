@@ -11,8 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditStudent } from "@/hooks/use-edit-student";
 import { EditStudentForm } from "./edit-student-form";
+import type { Student } from "@/data/student-model";
 
-export function EditStudentDrawer() {
+interface EditStudentDrawerProps {
+  onSaved?: (student: Student) => void;
+}
+
+export function EditStudentDrawer({ onSaved }: EditStudentDrawerProps) {
   const { open, student, closeDrawer } = useEditStudent();
 
   if (!student) return null;
@@ -37,6 +42,7 @@ export function EditStudentDrawer() {
           <EditStudentForm
             student={student}
             onClose={closeDrawer}
+            onSaved={onSaved}
             formId="edit-student-form"
           />
         </div>

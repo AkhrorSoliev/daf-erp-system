@@ -57,6 +57,7 @@ export function LeftStudentsSettingsClient() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Ism familiya</TableHead>
               <TableHead>Guruh</TableHead>
               <TableHead>Ketgan sana</TableHead>
@@ -66,7 +67,7 @@ export function LeftStudentsSettingsClient() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <UserMinus className="h-8 w-8 text-muted-foreground/50" />
                     O&apos;quvchilar topilmadi
@@ -74,8 +75,9 @@ export function LeftStudentsSettingsClient() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((student) => (
+              filtered.map((student, index) => (
                 <TableRow key={student.id}>
+                  <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
                   <TableCell className="font-medium">{student.fullName}</TableCell>
                   <TableCell>{student.group}</TableCell>
                   <TableCell>{student.leftDate}</TableCell>

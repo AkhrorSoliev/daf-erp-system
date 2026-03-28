@@ -264,6 +264,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Nomi</TableHead>
               <TableHead>Arxivlangan sana</TableHead>
               <TableHead>Kim tomonidan</TableHead>
@@ -274,7 +275,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={5}>
                     <div className="h-5 animate-pulse rounded bg-muted/50" />
                   </TableCell>
                 </TableRow>
@@ -282,7 +283,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -292,8 +293,11 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              items.map((item) => (
+              items.map((item, index) => (
                 <TableRow key={item.id}>
+                  <TableCell className="border-r text-muted-foreground">
+                    {(page - 1) * perPage + index + 1}
+                  </TableCell>
                   <TableCell className="font-medium">
                     {getDisplayName(entityType, item)}
                   </TableCell>

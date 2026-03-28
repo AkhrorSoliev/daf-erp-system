@@ -8,8 +8,9 @@ import { ConfigService } from '@nestjs/config';
 import { Telegraf, Scenes, session } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
-import { DEEP_LINKS, SCENES, TEACHER_DEEP_LINK_PREFIX } from './constants';
+import { SCENES, TEACHER_DEEP_LINK_PREFIX, STUDENT_DEEP_LINK_PREFIX } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
+import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
@@ -72,7 +73,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.bot,
     );
 
-    const stage = new Scenes.Stage<BotContext>([teacherScene]);
+    const studentScene = createStudentRegistrationScene(
+      this.prisma,
+      this.uploadService,
+      this.bot,
+    );
+
+    const stage = new Scenes.Stage<BotContext>([teacherScene, studentScene]);
     this.bot.use(stage.middleware());
 
     // /start handler
@@ -106,10 +113,29 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      if (payload === DEEP_LINKS.STUDENT) {
-        await ctx.reply(
-          "Tez orada o'quvchilar uchun ro'yxatdan o'tish imkoniyati ishga tushadi. Kuting!",
-        );
+      if (payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) {
+        const branchIdStr = payload.slice(STUDENT_DEEP_LINK_PREFIX.length);
+        const branchId = Number(branchIdStr);
+
+        if (!branchIdStr || isNaN(branchId)) {
+          await ctx.reply(
+            "Noto'g'ri havola. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        const branch = await this.prisma.branch.findUnique({
+          where: { id: branchId },
+        });
+        if (!branch) {
+          await ctx.reply(
+            "Filial topilmadi. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        ctx.session.data = { branchId };
+        await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
         return;
       }
 

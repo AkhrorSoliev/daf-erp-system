@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
-import { AlertTriangle, ChevronsUpDown, Loader2, Search } from "lucide-react";
+import { AlertTriangle, ChevronsUpDown, Loader2, Search, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -469,43 +469,57 @@ export function EditGroupForm({
               control={form.control}
               render={({ field }) => (
                 <Popover
+                  modal
                   open={teacherPopoverOpen}
                   onOpenChange={(open) => {
                     setTeacherPopoverOpen(open);
                     if (!open) setTeacherSearch("");
                   }}
                 >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      type="button"
-                      className="w-full justify-between font-normal"
-                    >
-                      {selectedTeacher ? (
-                        <span className="flex items-center gap-2">
-                          <Avatar size="sm">
-                            {selectedTeacher.photo && (
-                              <AvatarImage src={selectedTeacher.photo} alt={selectedTeacher.name} />
-                            )}
-                            <AvatarFallback>
-                              {selectedTeacher.name
-                                .split(" ")
-                                .map((w) => w[0])
-                                .join("")
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          {selectedTeacher.name}
-                        </span>
-                      ) : (
-                        "O'qituvchini tanlang"
-                      )}
-                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-0" align="start">
-                    <div className="sticky top-0 z-10 border-b bg-popover p-2">
+                  <div className="flex items-center gap-1.5">
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="min-w-0 flex-1 justify-between font-normal"
+                      >
+                        {selectedTeacher ? (
+                          <span className="flex items-center gap-2">
+                            <Avatar size="sm">
+                              {selectedTeacher.photo && (
+                                <AvatarImage src={selectedTeacher.photo} alt={selectedTeacher.name} />
+                              )}
+                              <AvatarFallback>
+                                {selectedTeacher.name
+                                  .split(" ")
+                                  .map((w) => w[0])
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {selectedTeacher.name}
+                          </span>
+                        ) : (
+                          "O'qituvchini tanlang"
+                        )}
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    {selectedTeacher && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 shrink-0"
+                        onClick={() => field.onChange(undefined)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <PopoverContent className="w-64 gap-0 p-0" align="start">
+                    <div className="border-b p-2">
                       <div className="relative">
                         <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
                         <Input
@@ -516,7 +530,7 @@ export function EditGroupForm({
                         />
                       </div>
                     </div>
-                    <div className="max-h-44 space-y-1 overflow-y-auto p-2">
+                    <div className="max-h-44 space-y-1 overflow-y-auto overscroll-contain p-2">
                       {filteredTeachers.map((t) => {
                         const isSelected = field.value === t.id;
                         const initials = t.name
