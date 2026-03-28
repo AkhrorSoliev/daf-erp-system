@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { PriceInput } from "@/components/ui/price-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
@@ -32,9 +39,11 @@ export function EditCourseForm({
   const form = useForm({
     defaultValues: {
       name: course?.name ?? "",
+      level: course?.level ?? "",
       description: course?.description ?? "",
       courseDuration: course?.courseDuration ?? (3 as number),
       lessonDuration: course?.lessonDuration ?? (36 as number),
+      lessonMinutes: course?.lessonMinutes ?? (90 as number),
       price: course ? String(course.price) : "",
       isActive: course?.isActive ?? true,
     },
@@ -42,9 +51,11 @@ export function EditCourseForm({
 
   const onSubmit = async (values: {
     name: string;
+    level: string;
     description: string;
     courseDuration: number;
     lessonDuration: number;
+    lessonMinutes: number;
     price: string;
     isActive: boolean;
   }) => {
@@ -58,9 +69,11 @@ export function EditCourseForm({
 
         const { data } = await api.post("/courses", {
           name: values.name,
+          level: values.level || undefined,
           description: values.description || undefined,
           courseDuration: values.courseDuration || undefined,
           lessonDuration: values.lessonDuration || undefined,
+          lessonMinutes: values.lessonMinutes || undefined,
           price: priceNum,
           branchId,
           companyId: companyId ? Number(companyId) : undefined,
@@ -69,8 +82,10 @@ export function EditCourseForm({
         const created: Course = {
           id: data.id,
           name: data.name,
+          level: data.level ?? null,
           description: data.description,
           lessonDuration: data.lessonDuration,
+          lessonMinutes: data.lessonMinutes,
           courseDuration: data.courseDuration,
           price: data.price,
           isActive: data.isActive,
@@ -83,9 +98,11 @@ export function EditCourseForm({
         if (!course) return;
         const { data } = await api.patch(`/courses/${course.id}`, {
           name: values.name,
+          level: values.level || undefined,
           description: values.description || undefined,
           courseDuration: values.courseDuration || undefined,
           lessonDuration: values.lessonDuration || undefined,
+          lessonMinutes: values.lessonMinutes || undefined,
           price: priceNum,
           isActive: values.isActive,
         });
@@ -93,8 +110,10 @@ export function EditCourseForm({
         const updated: Course = {
           id: data.id,
           name: data.name,
+          level: data.level ?? null,
           description: data.description,
           lessonDuration: data.lessonDuration,
+          lessonMinutes: data.lessonMinutes,
           courseDuration: data.courseDuration,
           price: data.price,
           isActive: data.isActive,
@@ -144,6 +163,33 @@ export function EditCourseForm({
         </div>
 
         <div className="space-y-1.5">
+          <Label>Daraja</Label>
+          <Controller
+            control={form.control}
+            name="level"
+            render={({ field }) => (
+              <Select
+                value={field.value || "none"}
+                onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Darajani tanlang" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="none">Tanlanmagan</SelectItem>
+                  <SelectItem value="A1">A1</SelectItem>
+                  <SelectItem value="A2">A2</SelectItem>
+                  <SelectItem value="B1">B1</SelectItem>
+                  <SelectItem value="B2">B2</SelectItem>
+                  <SelectItem value="C1">C1</SelectItem>
+                  <SelectItem value="C2">C2</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="description">Tavsif</Label>
           <Textarea
             id="description"
@@ -153,7 +199,7 @@ export function EditCourseForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="courseDuration">Davomiyligi (oy)</Label>
             <Input
@@ -172,6 +218,16 @@ export function EditCourseForm({
               min={1}
               placeholder="36"
               {...form.register("lessonDuration", { valueAsNumber: true })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lessonMinutes">Dars davomiyligi (daq)</Label>
+            <Input
+              id="lessonMinutes"
+              type="number"
+              min={1}
+              placeholder="90"
+              {...form.register("lessonMinutes", { valueAsNumber: true })}
             />
           </div>
         </div>

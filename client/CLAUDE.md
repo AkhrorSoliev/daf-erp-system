@@ -163,6 +163,15 @@ The system supports **multiple branches** (filials).
 - Example: `/settings/branches/1001` should show `Bosh sahifa > Sozlamalar > Filiallar > Asosiy filial` — **not** `#1001`
 - Every new detail page with a dynamic `[id]` segment **must** call `setName()` after loading the entity data
 
+### Loading States for Async Data
+
+- **Every UI that fetches data from the backend must show a loading indicator** while the request is in flight — tables, drawers, forms, detail pages, select dropdowns, etc.
+- Never render an empty or broken UI while data is loading. The user must always see a clear visual signal that content is being fetched.
+- For **drawers/dialogs with forms** that load options (e.g. select lists for courses, rooms, teachers): show a centered spinner or skeleton until all required data has loaded. Disable the form submit button while loading.
+- For **tables**: show a skeleton or spinner in the table body area while rows are loading.
+- For **detail pages**: show a full-page centered spinner or skeleton layout until the entity data is available.
+- Use a simple `Loader2` spinning icon from `lucide-react` with `animate-spin` class as the default loading indicator, or use skeleton components for richer loading states.
+
 ### Code Organization
 
 - Keep files small, focused, and maintainable

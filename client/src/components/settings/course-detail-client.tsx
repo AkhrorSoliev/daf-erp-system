@@ -56,8 +56,10 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
         const c: Course = {
           id: data.id,
           name: data.name,
+          level: data.level ?? null,
           description: data.description,
           lessonDuration: data.lessonDuration,
+          lessonMinutes: data.lessonMinutes ?? null,
           courseDuration: data.courseDuration,
           price: data.price,
           isActive: data.isActive,

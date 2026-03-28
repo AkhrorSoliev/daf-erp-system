@@ -4,6 +4,8 @@ import api from "@/lib/api";
 export interface BranchItem {
   id: number;
   name: string;
+  startOfWorkingDay?: string | null;
+  endOfWorkingDay?: string | null;
 }
 
 interface BranchSwitcherState {

@@ -1,3 +1,5 @@
+import { GroupDetailClient } from "@/components/groups/group-detail-client";
+
 export default async function GroupDetailPage({
   params,
 }: {
@@ -5,11 +7,5 @@ export default async function GroupDetailPage({
 }) {
   const { id } = await params;
 
-  return (
-    <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-bold tracking-tight">
-        Guruh: {id}
-      </h1>
-    </div>
-  );
+  return <GroupDetailClient id={id} />;
 }

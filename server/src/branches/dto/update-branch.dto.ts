@@ -15,6 +15,16 @@ export class UpdateBranchDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Vaqt formati HH:mm bo\'lishi kerak' })
+  startOfWorkingDay?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Vaqt formati HH:mm bo\'lishi kerak' })
+  endOfWorkingDay?: string;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

@@ -54,6 +54,8 @@ export function BranchesSettingsClient() {
             address: b.address ?? "",
             phone: b.phone ?? "",
             status: b.isActive ? "active" : "inactive",
+            startOfWorkingDay: b.startOfWorkingDay ?? "",
+            endOfWorkingDay: b.endOfWorkingDay ?? "",
           })),
         );
       } catch {

@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { groups } from "@/data/groups-model";
+import { useCallback, useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -13,22 +17,58 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GroupsTable } from "./groups-table";
+import { EditGroupDrawer } from "./edit-group-drawer";
+import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
+import { useAuth } from "@/hooks/use-auth";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import api from "@/lib/api";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
 export function GroupsClient() {
+  const [groups, setGroups] = useState<GroupData[]>([]);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const { openAddDrawer } = useEditGroup();
+  const user = useAuth((s) => s.user);
+  const canManage =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const branchLoaded = useBranchSwitcher((s) => s.loaded);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return groups;
-    const q = search.toLowerCase();
-    return groups.filter((g) => g.id.toLowerCase().includes(q));
-  }, [search]);
+  const fetchGroups = useCallback(async () => {
+    if (!branchLoaded || !selectedBranch) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const params: Record<string, any> = {
+        branch_id: selectedBranch.id,
+        page,
+        pageSize,
+      };
+      if (statusFilter !== "all") params.status = Number(statusFilter);
+      if (search.trim()) params.search = search.trim();
+      const { data } = await api.get("/groups", { params });
+      setGroups(data.data);
+      setTotal(data.total);
+    } catch {
+      // xatolik
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize, search, statusFilter, selectedBranch, branchLoaded]);
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -40,18 +80,74 @@ export function GroupsClient() {
     setPage(1);
   };
 
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="relative max-w-sm">
-        <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-        <Input
-          placeholder="ID bo'yicha qidirish..."
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-1 items-center gap-3">
+          <div className="relative max-w-sm flex-1">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              placeholder="Nomi bo'yicha qidirish..."
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha holatlar</SelectItem>
+              <SelectItem value="1">Faol</SelectItem>
+              <SelectItem value="2">Boshlanmagan</SelectItem>
+              <SelectItem value="3">Pauza</SelectItem>
+              <SelectItem value="4">To&apos;xtatilgan</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {canManage &&
+          (selectedBranch ? (
+            <Button onClick={openAddDrawer}>
+              <Plus className="mr-2 size-4" />
+              Yangi guruh
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button disabled>
+                    <Plus className="mr-2 size-4" />
+                    Yangi guruh
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Avval filialni tanlang</TooltipContent>
+            </Tooltip>
+          ))}
       </div>
-      <GroupsTable groups={paginated} />
+
+      {loading ? (
+        <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
+          Yuklanmoqda...
+        </div>
+      ) : (
+        <GroupsTable
+          groups={groups}
+          page={page}
+          pageSize={pageSize}
+          onDeleted={(id) => {
+            setGroups((prev) => prev.filter((g) => g.id !== id));
+            setTotal((prev) => Math.max(0, prev - 1));
+          }}
+        />
+      )}
+
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
@@ -72,7 +168,7 @@ export function GroupsClient() {
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-sm">
-              Jami: {filtered.length} ta guruh
+              Jami: {total} ta guruh
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -100,6 +196,19 @@ export function GroupsClient() {
           </div>
         </div>
       )}
+
+      <EditGroupDrawer
+        onSaved={(updated) => {
+          setGroups((prev) => {
+            const exists = prev.some((g) => g.id === updated.id);
+            if (exists) {
+              return prev.map((g) => (g.id === updated.id ? updated : g));
+            }
+            fetchGroups();
+            return prev;
+          });
+        }}
+      />
     </div>
   );
 }

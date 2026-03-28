@@ -23,14 +23,6 @@ export class UpdateCompanyDto {
 
   @IsOptional()
   @IsString()
-  startOfWorkingDay?: string;
-
-  @IsOptional()
-  @IsString()
-  endOfWorkingDay?: string;
-
-  @IsOptional()
-  @IsString()
   customCss?: string;
 
   @IsOptional()

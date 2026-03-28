@@ -56,6 +56,8 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
           address: data.address ?? "",
           phone: data.phone ?? "",
           status: data.isActive ? ("active" as const) : ("inactive" as const),
+          startOfWorkingDay: data.startOfWorkingDay ?? "",
+          endOfWorkingDay: data.endOfWorkingDay ?? "",
         };
         setBranch(branchData);
         setName(branchId, branchData.name);
