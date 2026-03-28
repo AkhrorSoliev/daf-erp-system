@@ -15,6 +15,11 @@ export class TeachersController {
     return this.teachersService.findAll(query);
   }
 
+  @Get(':id/groups')
+  findGroupsByTeacherId(@Param('id', ParseIntPipe) id: number) {
+    return this.teachersService.findGroupsByTeacherId(id);
+  }
+
   @Get(':id')
   findById(@Param('id', ParseIntPipe) id: number) {
     return this.teachersService.findById(id);

@@ -60,7 +60,7 @@ export class GroupsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   create(
     @Body() dto: CreateGroupDto,
     @CurrentUser('companyId') companyId: number,
@@ -70,14 +70,14 @@ export class GroupsController {
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   update(@Param('id') id: string, @Body() dto: UpdateGroupDto) {
     return this.groupsService.update(id, dto);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   delete(@Param('id') id: string, @CurrentUser('id') userId: number) {
     return this.groupsService.delete(id, userId);
   }

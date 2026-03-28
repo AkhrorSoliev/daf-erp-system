@@ -28,13 +28,19 @@ const userSelect = {
   roles: { include: { role: true } },
   branches: { include: { branch: { select: { id: true, name: true } } } },
   company: { select: { id: true, name: true, subdomain: true, logo: true, phone: true } },
+  groupTeachers: {
+    where: { group: { deletedAt: null } },
+    select: { groupId: true },
+  },
 } satisfies Prisma.UserSelect;
 
 function formatUser(user: any) {
+  const { groupTeachers, ...rest } = user;
   return {
-    ...user,
+    ...rest,
     roles: user.roles.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })),
     branches: user.branches.map((ub: any) => ub.branch),
+    groupCount: groupTeachers?.length ?? 0,
   };
 }
 
