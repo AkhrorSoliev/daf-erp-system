@@ -7,6 +7,11 @@ node_modules
 next-env.d.ts
 client/public/*.dmg
 
+# Credentials / secrets
+*.pem
+credentials.json
+service-account*.json
+
 # Server
 server/dist
 server/generated
