@@ -16,7 +16,7 @@ export class BranchesService {
 
     return this.prisma.branch.findMany({
       where,
-      select: { id: true, name: true, address: true, phone: true, isActive: true },
+      select: { id: true, name: true, address: true, phone: true, isActive: true, startOfWorkingDay: true, endOfWorkingDay: true },
       orderBy: { createdAt: 'asc' },
     });
   }

@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { TimePicker } from "@/components/ui/time-picker";
 import { useEditBranch, type Branch } from "@/hooks/use-edit-branch";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
@@ -40,6 +41,8 @@ export function EditBranchForm({
       address: branch?.address ?? "",
       phone: branch?.phone ?? "",
       status: branch?.status ?? ("active" as const),
+      startOfWorkingDay: branch?.startOfWorkingDay ?? "",
+      endOfWorkingDay: branch?.endOfWorkingDay ?? "",
     },
   });
 
@@ -48,6 +51,8 @@ export function EditBranchForm({
     address: string;
     phone: string;
     status: "active" | "inactive";
+    startOfWorkingDay: string;
+    endOfWorkingDay: string;
   }) => {
     setSubmitting(true);
     try {
@@ -57,6 +62,8 @@ export function EditBranchForm({
           name: values.name,
           address: values.address || undefined,
           phone: values.phone || undefined,
+          startOfWorkingDay: values.startOfWorkingDay || undefined,
+          endOfWorkingDay: values.endOfWorkingDay || undefined,
           companyId: companyId ? Number(companyId) : undefined,
         });
 
@@ -66,6 +73,8 @@ export function EditBranchForm({
           address: data.address ?? "",
           phone: data.phone ?? "",
           status: data.isActive ? "active" : "inactive",
+          startOfWorkingDay: data.startOfWorkingDay ?? "",
+          endOfWorkingDay: data.endOfWorkingDay ?? "",
         };
 
         toast.success("Yangi filial muvaffaqiyatli qo'shildi");
@@ -78,6 +87,8 @@ export function EditBranchForm({
           address: values.address,
           phone: values.phone,
           isActive: values.status === "active",
+          startOfWorkingDay: values.startOfWorkingDay || null,
+          endOfWorkingDay: values.endOfWorkingDay || null,
         });
 
         const updated: Branch = {
@@ -86,6 +97,8 @@ export function EditBranchForm({
           address: data.address ?? "",
           phone: data.phone ?? "",
           status: data.isActive ? "active" : "inactive",
+          startOfWorkingDay: data.startOfWorkingDay ?? "",
+          endOfWorkingDay: data.endOfWorkingDay ?? "",
         };
 
         toast.success("Filial muvaffaqiyatli yangilandi");
@@ -149,6 +162,37 @@ export function EditBranchForm({
               <PhoneInput value={field.value} onChange={field.onChange} />
             )}
           />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Ish boshlanish vaqti</Label>
+            <Controller
+              control={form.control}
+              name="startOfWorkingDay"
+              render={({ field }) => (
+                <TimePicker
+                  value={field.value || undefined}
+                  onChange={field.onChange}
+                  placeholder="Boshlanish vaqti"
+                />
+              )}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Ish tugash vaqti</Label>
+            <Controller
+              control={form.control}
+              name="endOfWorkingDay"
+              render={({ field }) => (
+                <TimePicker
+                  value={field.value || undefined}
+                  onChange={field.onChange}
+                  placeholder="Tugash vaqti"
+                />
+              )}
+            />
+          </div>
         </div>
 
         {!isAdd && (

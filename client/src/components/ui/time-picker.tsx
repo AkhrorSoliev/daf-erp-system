@@ -17,6 +17,8 @@ interface TimePickerProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  minTime?: string;
+  maxTime?: string;
 }
 
 function generateHours() {
@@ -40,9 +42,20 @@ export function TimePicker({
   disabled,
   className,
   id,
+  minTime,
+  maxTime,
 }: TimePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selectedRef = React.useRef<HTMLButtonElement>(null);
+
+  const filteredOptions = React.useMemo(() => {
+    if (!minTime && !maxTime) return timeOptions;
+    return timeOptions.filter((time) => {
+      if (minTime && time < minTime) return false;
+      if (maxTime && time > maxTime) return false;
+      return true;
+    });
+  }, [minTime, maxTime]);
 
   React.useEffect(() => {
     if (open && selectedRef.current) {
@@ -69,7 +82,7 @@ export function TimePicker({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <div className="h-64 overflow-y-auto p-1">
-          {timeOptions.map((time) => (
+          {filteredOptions.map((time) => (
             <button
               key={time}
               ref={time === value ? selectedRef : undefined}

@@ -64,7 +64,11 @@ export class RoomsService {
             id: true,
             name: true,
             course: { select: { name: true } },
-            teacher: { select: { id: true, name: true } },
+            teachers: {
+              include: {
+                teacher: { select: { id: true, name: true } },
+              },
+            },
             isActive: true,
           },
           orderBy: { createdAt: 'asc' },

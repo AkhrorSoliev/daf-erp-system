@@ -6,6 +6,8 @@ export interface Branch {
   address: string;
   phone: string;
   status: "active" | "inactive";
+  startOfWorkingDay: string;
+  endOfWorkingDay: string;
 }
 
 type DrawerMode = "add" | "edit";

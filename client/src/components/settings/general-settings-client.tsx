@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { TimePicker } from "@/components/ui/time-picker";
 import { SettingsPageHeader } from "./settings-page-header";
 import { GeneralSettingsSidebar } from "./general-settings-sidebar";
 import api from "@/lib/api";
@@ -20,15 +19,11 @@ interface CompanyData {
   subdomain: string | null;
   logo: string | null;
   phone: string | null;
-  startOfWorkingDay: string | null;
-  endOfWorkingDay: string | null;
 }
 
 interface FormValues {
   name: string;
   phone: string;
-  startOfWorkingDay: string;
-  endOfWorkingDay: string;
 }
 
 export function GeneralSettingsClient() {
@@ -48,8 +43,6 @@ export function GeneralSettingsClient() {
         form.reset({
           name: data.name ?? "",
           phone: data.phone ?? "",
-          startOfWorkingDay: data.startOfWorkingDay ?? "",
-          endOfWorkingDay: data.endOfWorkingDay ?? "",
         });
       } catch {
         toast.error("Kompaniya ma'lumotlarini yuklashda xatolik");
@@ -67,8 +60,6 @@ export function GeneralSettingsClient() {
       const { data } = await api.patch(`/company/${company.id}`, {
         name: values.name,
         phone: values.phone || null,
-        startOfWorkingDay: values.startOfWorkingDay || null,
-        endOfWorkingDay: values.endOfWorkingDay || null,
       });
       setCompany(data);
       toast.success("Kompaniya ma'lumotlari saqlandi");
@@ -130,42 +121,6 @@ export function GeneralSettingsClient() {
                 />
               </div>
 
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium">Ish vaqti</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Ish boshlanish vaqti</Label>
-                <Controller
-                  name="startOfWorkingDay"
-                  control={form.control}
-                  render={({ field }) => (
-                    <TimePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Boshlanish vaqti"
-                    />
-                  )}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Ish tugash vaqti</Label>
-                <Controller
-                  name="endOfWorkingDay"
-                  control={form.control}
-                  render={({ field }) => (
-                    <TimePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Tugash vaqti"
-                    />
-                  )}
-                />
-              </div>
             </div>
           </div>
 
