@@ -17,6 +17,7 @@ export interface TeacherData {
   roles: { id: number; name: string }[];
   branches: { id: number; name: string }[];
   company: { id: number; name: string };
+  groupCount: number;
 }
 
 interface EditTeacherState {

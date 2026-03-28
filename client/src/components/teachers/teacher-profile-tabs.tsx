@@ -1,9 +1,13 @@
 "use client";
 
-import { format } from "date-fns";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { TeacherGroupsTable } from "./teacher-groups-table";
 import type { TeacherData } from "@/hooks/use-edit-teacher";
+import type { GroupData } from "@/hooks/use-edit-group";
+import { useAuth } from "@/hooks/use-auth";
+import api from "@/lib/api";
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -18,93 +22,71 @@ interface TeacherProfileTabsProps {
 }
 
 export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
-  const [firstName = "", ...rest] = teacher.name.split(" ");
-  const lastName = rest.join(" ");
+  const user = useAuth((s) => s.user);
+  const canSeeSalary =
+    user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+
+  const [groups, setGroups] = useState<GroupData[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const groupsFetched = useRef(false);
+
+  const fetchGroups = useCallback(async () => {
+    if (groupsFetched.current) return;
+    groupsFetched.current = true;
+    setGroupsLoading(true);
+    try {
+      const { data } = await api.get(`/teachers/${teacher.id}/groups`);
+      setGroups(data);
+    } catch {
+      setGroups([]);
+    } finally {
+      setGroupsLoading(false);
+    }
+  }, [teacher.id]);
+
+  // Guruhlar default tab — sahifa ochilganda fetch
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  const handleTabChange = (value: string) => {
+    if (value === "guruhlar") {
+      fetchGroups();
+    }
+  };
 
   return (
-    <Tabs defaultValue="profil" className="w-full">
+    <Tabs defaultValue="guruhlar" className="w-full" onValueChange={handleTabChange}>
       <TabsList className="w-full justify-start overflow-x-auto">
-        <TabsTrigger value="profil">Profil</TabsTrigger>
         <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
-        <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
+        <TabsTrigger value="tarix">Tarix</TabsTrigger>
+        {canSeeSalary && (
+          <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
+        )}
       </TabsList>
-
-      {/* Profil */}
-      <TabsContent value="profil">
-        <div className="rounded-md border p-4 text-sm space-y-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <span className="text-muted-foreground">Ism:</span>{" "}
-              <span className="font-medium">{firstName}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Familiya:</span>{" "}
-              <span className="font-medium">{lastName || "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Jinsi:</span>{" "}
-              <span className="font-medium">
-                {teacher.gender === "MALE"
-                  ? "Erkak"
-                  : teacher.gender === "FEMALE"
-                    ? "Ayol"
-                    : "—"}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Telefon:</span>{" "}
-              <span className="font-medium">
-                {teacher.phone
-                  ? `+998 ${teacher.phone.slice(0, 2)} ${teacher.phone.slice(2, 5)} ${teacher.phone.slice(5, 7)} ${teacher.phone.slice(7, 9)}`
-                  : "—"}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Login:</span>{" "}
-              <span className="font-medium">{teacher.login ?? "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Holati:</span>{" "}
-              <Badge
-                variant={teacher.isActive ? "default" : "destructive"}
-                className="text-xs"
-              >
-                {teacher.isActive ? "Faol" : "Nofaol"}
-              </Badge>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Kompaniya:</span>{" "}
-              <span className="font-medium">{teacher.company.name}</span>
-            </div>
-            {teacher.branches.length > 0 && (
-              <div className="sm:col-span-2">
-                <span className="text-muted-foreground">Filiallar:</span>{" "}
-                {teacher.branches.map((b) => (
-                  <Badge key={b.id} variant="outline" className="ml-1 text-xs">
-                    {b.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-            <div>
-              <span className="text-muted-foreground">Qo&apos;shilgan:</span>{" "}
-              <span className="font-medium">
-                {format(new Date(teacher.createdAt), "dd.MM.yyyy")}
-              </span>
-            </div>
-          </div>
-        </div>
-      </TabsContent>
 
       {/* Guruhlar */}
       <TabsContent value="guruhlar">
-        <EmptyState message="Guruhlar hali ulanmagan" />
+        {groupsLoading ? (
+          <div className="flex h-24 items-center justify-center rounded-md border">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <TeacherGroupsTable groups={groups} />
+        )}
       </TabsContent>
 
-      {/* Ish haqi */}
-      <TabsContent value="ish-haqi">
-        <EmptyState message="Ish haqi ma'lumotlari mavjud emas" />
+      {/* Tarix */}
+      <TabsContent value="tarix">
+        <EmptyState message="Tarix ma'lumotlari mavjud emas" />
       </TabsContent>
+
+      {/* Ish haqi — faqat CEO va Branch Director */}
+      {canSeeSalary && (
+        <TabsContent value="ish-haqi">
+          <EmptyState message="Ish haqi ma'lumotlari mavjud emas" />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

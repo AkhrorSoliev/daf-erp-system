@@ -45,7 +45,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
             <TableHead className="w-10">Rasm</TableHead>
             <TableHead className="min-w-36">Ism familiya</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">Telefon</TableHead>
-            <TableHead className="hidden md:table-cell">Login</TableHead>
+            <TableHead className="hidden md:table-cell">Guruhlar</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -81,7 +81,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                   {formatPhone(teacher.phone)}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {teacher.login ?? "—"}
+                  {teacher.groupCount}
                 </TableCell>
                 <TableCell>
                   <TeacherRowActions teacher={teacher} onDeleted={onDeleted} />

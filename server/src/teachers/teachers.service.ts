@@ -31,13 +31,19 @@ const teacherSelect = {
   roles: { include: { role: true } },
   branches: { include: { branch: { select: { id: true, name: true } } } },
   company: { select: { id: true, name: true } },
+  groupTeachers: {
+    where: { group: { deletedAt: null } },
+    select: { groupId: true },
+  },
 } satisfies Prisma.UserSelect;
 
 function formatTeacher(user: any) {
+  const { groupTeachers, ...rest } = user;
   return {
-    ...user,
+    ...rest,
     roles: user.roles.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })),
     branches: user.branches.map((ub: any) => ub.branch),
+    groupCount: groupTeachers?.length ?? 0,
   };
 }
 
@@ -205,5 +211,67 @@ export class TeachersService {
     });
 
     return { message: "O'qituvchi muvaffaqiyatli o'chirildi" };
+  }
+
+  async findGroupsByTeacherId(teacherId: number) {
+    // Ensure teacher exists
+    const user = await this.prisma.user.findFirst({
+      where: { id: teacherId, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`O'qituvchi #${teacherId} topilmadi`);
+    }
+
+    const groups = await this.prisma.group.findMany({
+      where: {
+        teachers: { some: { teacherId } },
+        deletedAt: null,
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            name: true,
+            level: true,
+            description: true,
+            lessonDuration: true,
+            lessonMinutes: true,
+            courseDuration: true,
+            price: true,
+            isActive: true,
+          },
+        },
+        room: {
+          select: { id: true, name: true, capacity: true },
+        },
+        branch: {
+          select: { id: true, name: true },
+        },
+        teachers: {
+          include: {
+            teacher: {
+              select: { id: true, name: true, phone: true, photo: true },
+            },
+          },
+        },
+        _count: {
+          select: {
+            enrollments: { where: { deletedAt: null } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return groups.map((group) => {
+      const { _count, teachers, ...rest } = group;
+      return {
+        ...rest,
+        teachers: teachers.map((gt: any) => gt.teacher),
+        studentCount: _count?.enrollments ?? 0,
+      };
+    });
   }
 }

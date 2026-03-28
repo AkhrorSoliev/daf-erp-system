@@ -48,6 +48,7 @@ DaF ERP is a full-stack web application built for managing a multi-branch langua
 | [Getting Started](getting-started.md) | Setup guide to run the project locally |
 | [Deployment](deployment.md) | Deploy to Vercel + Railway |
 | [Data Conventions](data-conventions.md) | Phone, price, date formatting standards |
+| [Role Access](role-access.md) | Role-based access control (RBAC) permission matrix |
 
 ---
 

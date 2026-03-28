@@ -52,6 +52,35 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - `POST /api/auth/refresh` refreshes the token pair
 - Use `@CurrentUser()` decorator to get the authenticated user in controllers
 
+### Role-Based Access Control (RBAC) — Backend Rules
+
+> See full permission matrix: `docs/role-access.md`
+
+**Every role-based restriction must be enforced on BOTH backend AND frontend.** Backend rejects unauthorized API calls; frontend hides/disables UI.
+
+#### Role hierarchy
+
+1. **CEO** — full access to everything across all branches
+2. **Branch Director** — full access but **only within their own branch**
+3. **Administrator** — operational access (CRUD for groups, teachers, students, etc.)
+4. **Teacher** and **Cashier** — limited access (details TBD)
+
+#### Backend role-check pattern
+
+Use `@Roles()` decorator with **string role names** + `RolesGuard`:
+
+```typescript
+@UseGuards(RolesGuard)
+@Roles('CEO', 'Branch Director', 'Administrator')
+```
+
+#### Key access rules
+
+- **Salary/financial endpoints** — restrict to `@Roles('CEO', 'Branch Director')` only
+- **Group CRUD** — `@Roles('CEO', 'Branch Director', 'Administrator')`
+- **Branch Director scope** — when a Branch Director makes a request, service-level logic must filter data to **only their branch** (using `@CurrentUser('branches')` or `@CurrentUser('mainBranch')`)
+- When adding a new role-restricted feature: always add the restriction in both the controller (backend) and the component (frontend)
+
 ### Pagination
 
 - Default page size: **10**
@@ -88,6 +117,12 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - Components: **100–300 lines** target
 - Hard maximum: **500 lines**
 - If a file grows too large — split into smaller, focused parts
+
+### Lazy Data Loading for Tabs
+
+- When the frontend uses tabs (e.g. profile pages with "Profil", "Guruhlar", "Ish haqi"), each tab's data is fetched **only when the user switches to that tab** — not all at once on page load
+- Design API endpoints for tab-specific data as **separate routes** (e.g. `GET /api/teachers/:id/groups`) rather than embedding everything in the main entity response
+- This keeps the main entity endpoint fast and avoids loading data the user may never need
 
 ### Code Organization
 

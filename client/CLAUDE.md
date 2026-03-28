@@ -17,6 +17,34 @@ An ERP system for **DaF Sprachzentrum** language school. Manages branches, staff
 
 The system supports **multiple branches** (filials).
 
+### Role-Based Access Control (RBAC) — Frontend Rules
+
+> See full permission matrix: `docs/role-access.md`
+
+**Every role-based restriction must be enforced on BOTH frontend AND backend.** Frontend hides/disables UI; backend rejects unauthorized API calls.
+
+#### Role hierarchy
+
+1. **CEO** — full access to everything across all branches
+2. **Branch Director** — full access but **only within their own branch**
+3. **Administrator** — operational access (CRUD for groups, teachers, students, etc.)
+4. **Teacher** (id: 4) and **Cashier** (id: 5) — limited access (details TBD)
+
+#### Frontend role-check pattern
+
+Use the `useAuth` hook and check roles by **ID** (not name):
+
+```tsx
+const user = useAuth((s) => s.user);
+const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;   // CEO, BD, Admin
+const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;    // CEO, BD only
+```
+
+- **Conditionally render** UI elements (buttons, tabs, columns) based on role — do not just disable them, **hide** them entirely
+- **Salary/financial data** (ish haqi, balans) is visible **only to CEO (1) and Branch Director (2)**
+- **Group create/update/delete** is allowed for **CEO (1), Branch Director (2), Administrator (3)**
+- When adding a new role-restricted feature: always add the restriction in both the component (frontend) and the controller (backend)
+
 ## Tech Stack
 
 ### Backend
@@ -171,6 +199,15 @@ The system supports **multiple branches** (filials).
 - For **tables**: show a skeleton or spinner in the table body area while rows are loading.
 - For **detail pages**: show a full-page centered spinner or skeleton layout until the entity data is available.
 - Use a simple `Loader2` spinning icon from `lucide-react` with `animate-spin` class as the default loading indicator, or use skeleton components for richer loading states.
+
+### Lazy Data Fetching in Tabs
+
+- **Tab-specific data must only be fetched when the user switches to that tab** — not on page mount
+- This avoids unnecessary API requests for tabs the user may never visit
+- Use `onValueChange` on the `<Tabs>` component to detect tab switches, and trigger the fetch on first activation
+- Use a `useRef` flag (e.g. `fetched.current`) to ensure the data is fetched only once per mount — subsequent tab switches should not re-fetch
+- Show a loading spinner inside the tab content while the request is in flight
+- This rule applies to all tabbed UIs across the application (profile pages, detail pages, settings, etc.)
 
 ### Code Organization
 
