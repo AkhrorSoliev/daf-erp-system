@@ -95,10 +95,11 @@ model Branch {
   deletedBy       User?     @relation("BranchDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  users     UserBranch[]
-  rooms     Room[]
-  groups    Group[]
-  courses   Course[]
+  users           UserBranch[]
+  studentBranches StudentBranch[]
+  rooms           Room[]
+  groups          Group[]
+  courses         Course[]
 
   @@index([deletedAt])
 }
@@ -153,7 +154,7 @@ model Course {
 }
 
 model Student {
-  id             String   @id @default(uuid())
+  id             Int      @id @default(autoincrement())
   firstName      String
   lastName       String
   phone          String
@@ -163,7 +164,10 @@ model Student {
   telegram       String?
   telegramChatId String?
   gender         Gender?
-  avatar         String?
+  dateOfBirth    DateTime?
+  photo          String?
+  comment        String?
+  balance        Int       @default(0)
   placeOfStudy   String?
   address        String?
   passportSeries String?
@@ -171,14 +175,27 @@ model Student {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  companyId       Int?
+  company         Company?  @relation(fields: [companyId], references: [id])
+
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("StudentDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
   enrollments Enrollment[]
+  branches    StudentBranch[]
 
   @@index([deletedAt])
+}
+
+model StudentBranch {
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  branchId  Int
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, branchId])
 }
 
 model Lead {
@@ -250,7 +267,7 @@ model GroupTeacher {
 
 model Enrollment {
   id        String   @id @default(uuid())
-  studentId String
+  studentId Int
   student   Student  @relation(fields: [studentId], references: [id])
   groupId   String
   group     Group    @relation(fields: [groupId], references: [id])
@@ -292,6 +309,7 @@ model Company {
 
   users    User[]
   branches Branch[]
+  students Student[]
   courses  Course[]
   rooms    Room[]
   groups   Group[]

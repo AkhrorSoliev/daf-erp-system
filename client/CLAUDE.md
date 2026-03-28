@@ -137,6 +137,21 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 ### Tables and Pagination
 
+#### Row Number Column (`#`)
+
+- **Every data table must have a `#` (tartib raqami) column as the first column.** It displays the sequential row number (1, 2, 3, …).
+- The `#` column must be **visually separated** from other columns with a **right border**: add `border-r` to both the `<TableHead>` and `<TableCell>` of the `#` column.
+- For **paginated** tables, compute the number as `(page - 1) * pageSize + index + 1` so numbering continues across pages.
+- For **non-paginated** tables, simply use `index + 1`.
+- Apply `className="w-12 border-r"` on the `<TableHead>` and `className="border-r text-muted-foreground"` on the `<TableCell>`.
+
+#### Table Header Styling
+
+- Table headers (`<TableHeader>`) must have a **subtle background** to distinguish them from body rows. This is handled globally in the base `<TableHeader>` component (`src/components/ui/table.tsx`) with `bg-muted/40`. **Do not override or remove** this background in individual tables.
+- The background must be visible in **both light and dark modes** — `bg-muted/40` satisfies this requirement with shadcn/ui's CSS variables.
+
+#### Pagination Rules
+
 - All data tables **must default to showing 10 rows per page**.
 - Every table must include a **page size selector** allowing the user to choose from: **10, 20, 30, 40, 50** rows per page.
 - Changing the page size must reset the current page back to 1.

@@ -31,6 +31,9 @@ function formatBalance(balance: number): string {
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
+  if (digits.length === 9) {
+    return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
+  }
   if (digits.length === 12 && digits.startsWith("998")) {
     const d = digits.slice(3);
     return `+998 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7, 9)}`;
@@ -54,7 +57,7 @@ export function StudentProfileCard({ student }: StudentProfileCardProps) {
       {/* Avatar + Identity */}
       <div className="flex flex-col items-center gap-3 text-center">
         <Avatar className="size-20">
-          <AvatarImage src={student.avatar} alt={student.firstName} />
+          <AvatarImage src={student.photo ?? undefined} alt={student.firstName} />
           <AvatarFallback className="text-2xl font-semibold">
             {student.firstName[0]}
             {student.lastName[0]}
@@ -85,17 +88,23 @@ export function StudentProfileCard({ student }: StudentProfileCardProps) {
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Telefon:</span>
           <a
-            href={`tel:${student.phone}`}
+            href={`tel:+998${student.phone}`}
             className="text-blue-600 hover:underline dark:text-blue-400"
           >
             {formatPhone(student.phone)}
           </a>
         </div>
+        {student.date_of_birth && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Tug&apos;ilgan sana:</span>
+            <span>{formatDate(student.date_of_birth)}</span>
+          </div>
+        )}
         <div className="flex items-start gap-2">
           <span className="shrink-0 text-muted-foreground">
-            Talaba qo&apos;shilgan sana:
+            Qo&apos;shilgan sana:
           </span>
-          <span>{formatDate(student.registeredAt)}</span>
+          <span>{formatDate(student.createdAt)}</span>
         </div>
       </div>
 
@@ -171,7 +180,7 @@ export function StudentProfileCard({ student }: StudentProfileCardProps) {
           <span className="text-sm font-medium">Eslatma</span>
         </div>
         <p className="text-sm text-muted-foreground italic">
-          Eslatma mavjud emas
+          {student.comment || "Eslatma mavjud emas"}
         </p>
       </div>
     </div>

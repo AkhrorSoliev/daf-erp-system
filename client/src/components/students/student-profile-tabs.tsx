@@ -1,7 +1,9 @@
 "use client";
 
 import { format } from "date-fns";
-import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CalendarIcon, ClockIcon, UsersIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -11,11 +13,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Student } from "@/data/student-model";
+import type { Student, StudentGroup } from "@/data/student-model";
 
-function formatDate(iso: string): string {
-  return format(new Date(iso), "dd.MM.yyyy");
-}
+const STATUS_MAP: Record<
+  number,
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+> = {
+  1: { label: "Faol", variant: "default" },
+  2: { label: "Boshlanmagan", variant: "secondary" },
+  3: { label: "Pauza", variant: "outline" },
+  4: { label: "To'xtatilgan", variant: "destructive" },
+};
+
+const DAYS_MAP: Record<string, string> = {
+  odd: "Toq kunlar",
+  even: "Juft kunlar",
+};
+
+const WEEKDAY_SHORT: Record<string, string> = {
+  monday: "Du",
+  tuesday: "Se",
+  wednesday: "Cho",
+  thursday: "Pa",
+  friday: "Ju",
+  saturday: "Sha",
+};
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -25,11 +47,76 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+function GroupCard({ group }: { group: StudentGroup }) {
+  const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
+
+  const daysLabel = group.days
+    ? DAYS_MAP[group.days]
+    : group.exactDays.length > 0
+      ? group.exactDays.map((d) => WEEKDAY_SHORT[d] ?? d).join(", ")
+      : null;
+
+  const timeLabel =
+    group.lessonStartTime && group.lessonEndTime
+      ? `${group.lessonStartTime} – ${group.lessonEndTime}`
+      : null;
+
+  return (
+    <Link href={`/groups/${group.id}`}>
+      <div className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
+        {/* Row 1: Name + Status */}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h4 className="font-semibold">{group.name}</h4>
+          <Badge variant={status.variant}>{status.label}</Badge>
+        </div>
+
+        {/* Row 2: Course + Teacher */}
+        <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <span className="text-muted-foreground">
+            {group.course_name ?? "—"}
+            {group.level && ` • ${group.level}`}
+          </span>
+          {group.teachers.length > 0 && (
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <UsersIcon className="size-3.5" />
+              {group.teachers.map((t) => t.name).join(", ")}
+            </span>
+          )}
+        </div>
+
+        {/* Row 3: Schedule + Dates */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          {(daysLabel || timeLabel) && (
+            <span className="flex items-center gap-1">
+              <ClockIcon className="size-3.5" />
+              {[daysLabel, timeLabel].filter(Boolean).join(" • ")}
+            </span>
+          )}
+          {group.startDate && (
+            <span className="flex items-center gap-1">
+              <CalendarIcon className="size-3.5" />
+              {format(new Date(group.startDate), "dd.MM.yyyy")}
+              {group.endDate && ` – ${format(new Date(group.endDate), "dd.MM.yyyy")}`}
+            </span>
+          )}
+        </div>
+
+        {/* Row 4: Enrolled date */}
+        <div className="mt-2 border-t pt-2 text-xs text-muted-foreground">
+          Qo&apos;shilgan: {format(new Date(group.enrolledAt), "dd.MM.yyyy")}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 interface StudentProfileTabsProps {
   student: Student;
 }
 
 export function StudentProfileTabs({ student }: StudentProfileTabsProps) {
+  const isUngrouped = student.isActive && student.groups.length === 0;
+
   return (
     <Tabs defaultValue="guruhlar" className="w-full">
       <TabsList className="w-full justify-start overflow-x-auto">
@@ -43,10 +130,22 @@ export function StudentProfileTabs({ student }: StudentProfileTabsProps) {
 
       {/* Guruhlar */}
       <TabsContent value="guruhlar">
-        {student.status === "ungrouped" && (
+        {isUngrouped && (
           <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
             <AlertTriangle className="size-4 shrink-0" />
             Talaba faol guruhga qo&apos;shilmagan!
+          </div>
+        )}
+
+        {student.groups.length > 0 ? (
+          <div className="mb-6 grid gap-3">
+            {student.groups.map((g) => (
+              <GroupCard key={g.id} group={g} />
+            ))}
+          </div>
+        ) : (
+          <div className="mb-6">
+            <EmptyState message="Guruhlar mavjud emas" />
           </div>
         )}
 
@@ -61,6 +160,7 @@ export function StudentProfileTabs({ student }: StudentProfileTabsProps) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12 border-r">#</TableHead>
                   <TableHead>Sana</TableHead>
                   <TableHead>Turi</TableHead>
                   <TableHead>Miqdor</TableHead>
@@ -71,7 +171,7 @@ export function StudentProfileTabs({ student }: StudentProfileTabsProps) {
               <TableBody>
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="text-center text-muted-foreground"
                   >
                     Ma&apos;lumotlar yo&apos;q
@@ -85,20 +185,7 @@ export function StudentProfileTabs({ student }: StudentProfileTabsProps) {
 
       {/* Izohlar */}
       <TabsContent value="izohlar">
-        {student.userComments.length === 0 ? (
-          <EmptyState message="Izohlar mavjud emas" />
-        ) : (
-          <ul className="space-y-3">
-            {student.userComments.map((comment) => (
-              <li key={comment.id} className="rounded-md border p-3 text-sm">
-                <p>{comment.message}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {comment.createdBy} · {formatDate(comment.createdAt)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <EmptyState message="Izohlar mavjud emas" />
       </TabsContent>
 
       {/* Qo'ng'iroq tarixi */}
@@ -108,38 +195,12 @@ export function StudentProfileTabs({ student }: StudentProfileTabsProps) {
 
       {/* SMS */}
       <TabsContent value="sms">
-        {student.smsHistory.length === 0 ? (
-          <EmptyState message="SMS tarixi mavjud emas" />
-        ) : (
-          <ul className="space-y-3">
-            {student.smsHistory.map((sms) => (
-              <li key={sms.id} className="rounded-md border p-3 text-sm">
-                <p>{sms.message}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatDate(sms.sentAt)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <EmptyState message="SMS tarixi mavjud emas" />
       </TabsContent>
 
       {/* Tarix */}
       <TabsContent value="tarix">
-        {!student.createdBy ? (
-          <EmptyState message="Tarix mavjud emas" />
-        ) : (
-          <div className="rounded-md border p-4 text-sm space-y-1">
-            <p>
-              <span className="text-muted-foreground">Qo&apos;shilgan:</span>{" "}
-              {student.createdBy.by}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Sana:</span>{" "}
-              {formatDate(student.createdBy.at)}
-            </p>
-          </div>
-        )}
+        <EmptyState message="Tarix mavjud emas" />
       </TabsContent>
 
       {/* Lid tarixi */}

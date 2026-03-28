@@ -104,6 +104,7 @@ export function BranchesSettingsClient() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Filial nomi</TableHead>
               <TableHead>Manzil</TableHead>
               <TableHead>Telefon</TableHead>
@@ -114,14 +115,14 @@ export function BranchesSettingsClient() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -131,7 +132,7 @@ export function BranchesSettingsClient() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((branch) => (
+              filtered.map((branch, index) => (
                 <TableRow
                   key={branch.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -139,6 +140,7 @@ export function BranchesSettingsClient() {
                     router.push(`/settings/branches/${branch.id}`)
                   }
                 >
+                  <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
                   <TableCell className="font-medium">{branch.name}</TableCell>
                   <TableCell>{branch.address}</TableCell>
                   <TableCell>

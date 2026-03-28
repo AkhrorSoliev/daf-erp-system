@@ -19,14 +19,14 @@ const stats = [
     label: "Faol",
     icon: UserCheck,
     tooltip: "Faol o'quvchilar",
-    compute: (s: Student[]) => s.filter((x) => x.status === "active").length,
+    compute: (s: Student[]) => s.filter((x) => x.isActive && x.groups.length > 0).length,
   },
   {
     key: "frozen",
     label: "Muzlatilgan",
     icon: UserX,
     tooltip: "Muzlatilgan o'quvchilar",
-    compute: (s: Student[]) => s.filter((x) => x.status === "frozen").length,
+    compute: (s: Student[]) => s.filter((x) => !x.isActive).length,
   },
   {
     key: "debtors",

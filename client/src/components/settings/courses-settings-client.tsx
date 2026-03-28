@@ -147,6 +147,7 @@ export function CoursesSettingsClient() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Kurs nomi</TableHead>
               <TableHead>Davomiyligi</TableHead>
               <TableHead>Darslar soni</TableHead>
@@ -158,14 +159,14 @@ export function CoursesSettingsClient() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -175,7 +176,7 @@ export function CoursesSettingsClient() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((course) => (
+              filtered.map((course, index) => (
                 <TableRow
                   key={course.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -183,6 +184,9 @@ export function CoursesSettingsClient() {
                     router.push(`/settings/courses/${course.id}`)
                   }
                 >
+                  <TableCell className="border-r text-muted-foreground">
+                    {(page - 1) * pageSize + index + 1}
+                  </TableCell>
                   <TableCell className="font-medium">{course.name}</TableCell>
                   <TableCell>
                     {course.courseDuration

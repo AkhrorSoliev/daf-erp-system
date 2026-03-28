@@ -4,10 +4,12 @@ import { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera, Eye, EyeOff, User, UserRound } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Tooltip,
   TooltipContent,
@@ -21,6 +23,7 @@ import {
 } from "@/lib/schemas/student-schema";
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
 function stripPhonePrefix(phone: string): string {
   return phone.replace(/^\+998/, "").replace(/\s/g, "");
@@ -31,29 +34,33 @@ function mapStudentToForm(student: Student): EditStudentFormValues {
     firstName: student.firstName,
     lastName: student.lastName,
     phone: stripPhonePrefix(student.phone),
-    telegram: student.telegram ?? student.telegramId ?? "",
-    gender: student.gender ?? "",
-    avatar: student.avatar ?? "",
-    extraPhone: "",
-    parentPhone: "",
-    parentName: "",
-    placeOfStudy: "",
-    address: "",
-    passportSeries: "",
-    login: student.login ?? "",
-    password: student.password ?? "",
+    telegram: student.telegram ?? "",
+    gender: student.gender === "MALE" ? "male" : student.gender === "FEMALE" ? "female" : "",
+    photo: student.photo ?? "",
+    dateOfBirth: student.date_of_birth ?? "",
+    comment: student.comment ?? "",
+    extraPhone: student.extraPhone ? stripPhonePrefix(student.extraPhone) : "",
+    parentPhone: student.parentPhone ? stripPhonePrefix(student.parentPhone) : "",
+    parentName: student.parentName ?? "",
+    placeOfStudy: student.placeOfStudy ?? "",
+    address: student.address ?? "",
+    passportSeries: student.passportSeries ?? "",
+    login: "",
+    password: "",
   };
 }
 
 interface EditStudentFormProps {
   student: Student;
   onClose: () => void;
+  onSaved?: (student: Student) => void;
   formId: string;
 }
 
 export function EditStudentForm({
   student,
   onClose,
+  onSaved,
   formId,
 }: EditStudentFormProps) {
   const form = useForm<EditStudentFormValues>({
@@ -62,20 +69,48 @@ export function EditStudentForm({
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [avatarPreview, setAvatarPreview] = useState(student.avatar);
+  const [avatarPreview, setAvatarPreview] = useState(student.photo);
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setAvatarPreview(url);
-      form.setValue("avatar", url);
+      form.setValue("photo", url);
     }
   };
 
-  const onSubmit = () => {
-    onClose();
+  const onSubmit = async (values: EditStudentFormValues) => {
+    setSubmitting(true);
+    try {
+      const payload: Record<string, any> = {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phone: values.phone,
+        telegram: values.telegram || null,
+        gender: values.gender === "male" ? "MALE" : values.gender === "female" ? "FEMALE" : null,
+        dateOfBirth: values.dateOfBirth || null,
+        comment: values.comment || null,
+        extraPhone: values.extraPhone || null,
+        parentPhone: values.parentPhone || null,
+        parentName: values.parentName || null,
+        placeOfStudy: values.placeOfStudy || null,
+        address: values.address || null,
+        passportSeries: values.passportSeries || null,
+      };
+
+      const { data } = await api.patch(`/students/${student.id}`, payload);
+      toast.success("O'quvchi muvaffaqiyatli yangilandi");
+      onSaved?.(data);
+      onClose();
+    } catch (err: any) {
+      const message = err?.response?.data?.message || "Saqlashda xatolik yuz berdi";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const initials = student.firstName.charAt(0) + student.lastName.charAt(0);
@@ -87,17 +122,16 @@ export function EditStudentForm({
       onSubmit={form.handleSubmit(onSubmit)}
       className="flex flex-col"
     >
-      {/* ── Asosiy ma'lumotlar ── */}
+      {/* Asosiy ma'lumotlar */}
       <section className="space-y-5 px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Asosiy ma&apos;lumotlar
         </h3>
 
-        {/* Avatar + name display */}
         <div className="flex items-center gap-4">
           <div className="relative">
             <Avatar className="size-16">
-              <AvatarImage src={avatarPreview} alt={student.firstName} />
+              <AvatarImage src={avatarPreview ?? undefined} alt={student.firstName} />
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <Tooltip>
@@ -131,7 +165,6 @@ export function EditStudentForm({
           </div>
         </div>
 
-        {/* First / Last name */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="firstName">Ism</Label>
@@ -161,7 +194,6 @@ export function EditStudentForm({
           </div>
         </div>
 
-        {/* Phone */}
         <div className="space-y-1.5">
           <Label>Telefon raqam</Label>
           <Controller
@@ -182,7 +214,6 @@ export function EditStudentForm({
           )}
         </div>
 
-        {/* Telegram */}
         <div className="space-y-1.5">
           <Label htmlFor="telegram">Telegram</Label>
           <Input
@@ -192,7 +223,20 @@ export function EditStudentForm({
           />
         </div>
 
-        {/* Gender — radio buttons with icons */}
+        <div className="space-y-1.5">
+          <Label>Tug&apos;ilgan sana</Label>
+          <Controller
+            control={form.control}
+            name="dateOfBirth"
+            render={({ field }) => (
+              <DatePicker
+                value={field.value ? new Date(field.value) : undefined}
+                onChange={(date) => field.onChange(date?.toISOString() ?? "")}
+              />
+            )}
+          />
+        </div>
+
         <div className="space-y-1.5">
           <Label>Jinsi</Label>
           <div className="flex gap-3">
@@ -224,9 +268,18 @@ export function EditStudentForm({
             </button>
           </div>
         </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="comment">Izoh</Label>
+          <Input
+            id="comment"
+            placeholder="O'quvchi haqida izoh..."
+            {...form.register("comment")}
+          />
+        </div>
       </section>
 
-      {/* ── Kirish ma'lumotlari ── */}
+      {/* Kirish ma'lumotlari */}
       <section className="space-y-5 border-t px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Kirish ma&apos;lumotlari
@@ -278,7 +331,7 @@ export function EditStudentForm({
         </div>
       </section>
 
-      {/* ── Qo'shimcha ma'lumotlar ── */}
+      {/* Qo'shimcha ma'lumotlar */}
       <section className="space-y-5 border-t px-6 py-5">
         <EditStudentAdditionalFields form={form} />
       </section>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -49,7 +49,7 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: Grou
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-16">#</TableHead>
+            <TableHead className="min-w-16 border-r">#</TableHead>
             <TableHead className="min-w-28">Nomi</TableHead>
             <TableHead className="hidden min-w-24 sm:table-cell">
               Kurs
@@ -57,6 +57,7 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: Grou
             <TableHead className="hidden min-w-28 md:table-cell">
               O&apos;qituvchi
             </TableHead>
+            <TableHead className="hidden md:table-cell">Xona</TableHead>
             <TableHead className="hidden lg:table-cell">Kun / Vaqt</TableHead>
             <TableHead className="min-w-24">Holat</TableHead>
             <TableHead className="hidden sm:table-cell">
@@ -80,7 +81,7 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: Grou
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => router.push(`/groups/${group.id}`)}
               >
-                <TableCell className="font-medium">
+                <TableCell className="border-r font-medium">
                   {(page - 1) * pageSize + index + 1}
                 </TableCell>
                 <TableCell>{group.name}</TableCell>
@@ -88,7 +89,33 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: Grou
                   {group.course.name}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {group.teachers.map((t) => t.name).join(", ") || "—"}
+                  {group.teachers.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {group.teachers.map((t) => {
+                        const initials = t.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .slice(0, 2);
+                        return (
+                          <div key={t.id} className="flex items-center gap-2">
+                            <Avatar className="size-6">
+                              <AvatarImage src={t.photo ?? undefined} alt={t.name} />
+                              <AvatarFallback className="text-[10px]">
+                                {initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{t.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {group.room?.name ?? "—"}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   <div className="flex flex-col text-sm">

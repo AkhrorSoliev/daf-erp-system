@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Plus, Search } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,11 +33,22 @@ export function TeachersClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
   const { openAddDrawer } = useEditTeacher();
   const user = useAuth((s) => s.user);
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
+
+  const handleCopyLink = async () => {
+    if (!selectedBranch) return;
+    const link = `https://t.me/dafzentrum_bot?start=teacher_${selectedBranch.id}`;
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    toast.success("Havola nusxalandi");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const fetchTeachers = useCallback(async () => {
     if (!branchLoaded) return;
@@ -89,28 +101,63 @@ export function TeachersClient() {
             className="pl-9"
           />
         </div>
-        {isCeo && (
-          selectedBranch ? (
-            <Button onClick={openAddDrawer}>
-              <Plus className="mr-2 size-4" />
-              Yangi o&apos;qituvchi
-            </Button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span tabIndex={0}>
-                  <Button disabled>
-                    <Plus className="mr-2 size-4" />
-                    Yangi o&apos;qituvchi
+        <div className="flex items-center gap-2">
+          {canManage && (
+            selectedBranch ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={handleCopyLink}>
+                    {copied ? (
+                      <Check className="mr-2 size-4 text-green-500" />
+                    ) : (
+                      <Copy className="mr-2 size-4" />
+                    )}
+                    {copied ? "Nusxalandi" : "Havola olish"}
                   </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                Avval filial qo&apos;shing
-              </TooltipContent>
-            </Tooltip>
-          )
-        )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  Telegram orqali ro&apos;yxatdan o&apos;tish havolasini nusxalash
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button variant="outline" disabled>
+                      <Copy className="mr-2 size-4" />
+                      Havola olish
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Avval filial tanlang
+                </TooltipContent>
+              </Tooltip>
+            )
+          )}
+          {isCeo && (
+            selectedBranch ? (
+              <Button onClick={openAddDrawer}>
+                <Plus className="mr-2 size-4" />
+                Yangi o&apos;qituvchi
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button disabled>
+                      <Plus className="mr-2 size-4" />
+                      Yangi o&apos;qituvchi
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Avval filial qo&apos;shing
+                </TooltipContent>
+              </Tooltip>
+            )
+          )}
+        </div>
       </div>
 
       {loading ? (

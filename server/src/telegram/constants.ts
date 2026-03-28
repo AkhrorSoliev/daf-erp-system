@@ -9,6 +9,7 @@ export const DEEP_LINKS = {
 } as const;
 
 export const TEACHER_DEEP_LINK_PREFIX = 'teacher_';
+export const STUDENT_DEEP_LINK_PREFIX = 'student_';
 
 export const TEACHER_ROLE_ID = 4;
 export const DEFAULT_COMPANY_ID = 1001;

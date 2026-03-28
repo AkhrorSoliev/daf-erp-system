@@ -133,9 +133,9 @@ export class ArchiveService {
     if (entityType === ArchiveEntityType.USERS && record.photo) {
       await this.uploadService.deleteFile(record.photo);
     }
-    // Student — avatar
-    if (entityType === ArchiveEntityType.STUDENTS && record.avatar) {
-      await this.uploadService.deleteFile(record.avatar);
+    // Student — photo
+    if (entityType === ArchiveEntityType.STUDENTS && record.photo) {
+      await this.uploadService.deleteFile(record.photo);
     }
   }
 
@@ -147,14 +147,14 @@ export class ArchiveService {
     });
     const students = await this.prisma.student.findMany({
       where: { deletionBatchId: batchId },
-      select: { id: true, avatar: true },
+      select: { id: true, photo: true },
     });
 
     for (const u of users) {
       if (u.photo) await this.uploadService.deleteFile(u.photo);
     }
     for (const s of students) {
-      if (s.avatar) await this.uploadService.deleteFile(s.avatar);
+      if (s.photo) await this.uploadService.deleteFile(s.photo);
     }
 
     // DB dan o'chirish (tartib: child → parent)
@@ -269,7 +269,7 @@ export class ArchiveService {
     return { message: "Guruh muvaffaqiyatli o'chirildi" };
   }
 
-  async archiveStudent(id: string, userId: number) {
+  async archiveStudent(id: number, userId: number) {
     const student = await this.prisma.student.findFirst({
       where: { id, deletedAt: null },
     });
@@ -443,8 +443,12 @@ export class ArchiveService {
   }
 
   private parseId(entityType: ArchiveEntityType, id: string | number) {
-    // User va Branch int ID ishlatadi
-    if (entityType === ArchiveEntityType.USERS || entityType === ArchiveEntityType.BRANCHES) {
+    // User, Branch va Student int ID ishlatadi
+    if (
+      entityType === ArchiveEntityType.USERS ||
+      entityType === ArchiveEntityType.BRANCHES ||
+      entityType === ArchiveEntityType.STUDENTS
+    ) {
       const parsed = typeof id === 'number' ? id : parseInt(id, 10);
       if (isNaN(parsed)) {
         throw new BadRequestException(`Noto'g'ri ID: ${id}`);

@@ -79,6 +79,7 @@ export function EmployeesSettingsClient() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Ism familiya</TableHead>
               <TableHead>Lavozimi</TableHead>
               <TableHead>Telefon</TableHead>
@@ -90,7 +91,7 @@ export function EmployeesSettingsClient() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <Users className="h-8 w-8 text-muted-foreground/50" />
                     Xodimlar topilmadi
@@ -98,8 +99,9 @@ export function EmployeesSettingsClient() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((employee) => (
+              filtered.map((employee, index) => (
                 <TableRow key={employee.id}>
+                  <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
                   <TableCell className="font-medium">{employee.fullName}</TableCell>
                   <TableCell>
                     <Badge variant={roleColors[employee.role] || "outline"}>

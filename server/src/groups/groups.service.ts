@@ -148,6 +148,47 @@ export class GroupsService {
     return { nextName: `${level}-${String(nextNumber).padStart(3, '0')}` };
   }
 
+  async findStudentsByGroupId(groupId: string) {
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!group) {
+      throw new NotFoundException(`Guruh #${groupId} topilmadi`);
+    }
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        groupId,
+        deletedAt: null,
+        student: { deletedAt: null },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            photo: true,
+            balance: true,
+            isActive: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return enrollments.map((e) => ({
+      enrollmentId: e.id,
+      enrolledAt: e.createdAt,
+      ...e.student,
+    }));
+  }
+
   async findOne(id: string) {
     const group = await this.prisma.group.findFirst({
       where: { id, deletedAt: null },

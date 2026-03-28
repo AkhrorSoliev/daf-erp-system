@@ -49,7 +49,7 @@ export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-12">#</TableHead>
+            <TableHead className="min-w-12 border-r">#</TableHead>
             <TableHead className="min-w-28">Nomi</TableHead>
             <TableHead className="hidden min-w-24 sm:table-cell">Kurs</TableHead>
             <TableHead className="hidden lg:table-cell">Kun / Vaqt</TableHead>
@@ -72,7 +72,7 @@ export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => router.push(`/groups/${group.id}`)}
               >
-                <TableCell className="font-medium">{index + 1}</TableCell>
+                <TableCell className="border-r font-medium">{index + 1}</TableCell>
                 <TableCell>{group.name}</TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {group.course.name}

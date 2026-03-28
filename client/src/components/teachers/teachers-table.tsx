@@ -42,6 +42,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12 border-r">#</TableHead>
             <TableHead className="w-10">Rasm</TableHead>
             <TableHead className="min-w-36">Ism familiya</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">Telefon</TableHead>
@@ -50,7 +51,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {teachers.map((teacher) => {
+          {teachers.map((teacher, index) => {
             const initials = teacher.name
               .split(" ")
               .map((n) => n[0])
@@ -63,6 +64,9 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => router.push(`/teachers/profile/${teacher.id}`)}
               >
+                <TableCell className="border-r text-muted-foreground">
+                  {index + 1}
+                </TableCell>
                 <TableCell>
                   <Avatar className="size-8">
                     <AvatarImage
