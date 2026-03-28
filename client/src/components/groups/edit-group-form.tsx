@@ -284,6 +284,18 @@ export function EditGroupForm({
   const branchStartTime = selectedBranch?.startOfWorkingDay ?? undefined;
   const branchEndTime = selectedBranch?.endOfWorkingDay ?? undefined;
 
+  // maxTime for start time picker: ensure lesson end doesn't exceed branch closing
+  const startTimeMax = useMemo(() => {
+    if (!branchEndTime) return undefined;
+    if (!selectedCourse?.lessonMinutes) return branchEndTime;
+    const [h, m] = branchEndTime.split(":").map(Number);
+    const totalMin = h * 60 + m - selectedCourse.lessonMinutes;
+    if (totalMin < 0) return branchEndTime;
+    const endH = String(Math.floor(totalMin / 60) % 24).padStart(2, "0");
+    const endM = String(totalMin % 60).padStart(2, "0");
+    return `${endH}:${endM}`;
+  }, [branchEndTime, selectedCourse?.lessonMinutes]);
+
   const onSubmit = async (values: EditGroupFormValues) => {
     setSubmitting(true);
     try {
@@ -653,7 +665,7 @@ export function EditGroupForm({
                 onChange={field.onChange}
                 placeholder="Boshlanish vaqtini tanlang"
                 minTime={branchStartTime}
-                maxTime={branchEndTime}
+                maxTime={startTimeMax}
               />
             )}
           />

@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, Check, Copy, Link2, Loader2, MapPin, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, Building2, Check, CircleDot, Clock, Copy, DoorOpen, GraduationCap, Link2, Loader2, Pencil, Phone, Users, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +33,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
   const openDrawer = useEditBranch((s) => s.openDrawer);
   const setName = useBreadcrumbName((s) => s.setName);
   const [branch, setBranch] = useState<Branch | null>(null);
+  const [stats, setStats] = useState({ groups: 0, students: 0, teachers: 0, rooms: 0, courses: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -60,6 +60,9 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
           endOfWorkingDay: data.endOfWorkingDay ?? "",
         };
         setBranch(branchData);
+        if (data._count) {
+          setStats(data._count);
+        }
         setName(branchId, branchData.name);
       } catch {
         setError(true);
@@ -136,56 +139,98 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
         </Tooltip>
       </div>
 
+      {/* Statistika */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <UsersRound className="size-4" />
+            <p className="text-sm">Guruhlar</p>
+          </div>
+          <p className="mt-1 text-2xl font-bold">{stats.groups}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <GraduationCap className="size-4" />
+            <p className="text-sm">O&apos;quvchilar</p>
+          </div>
+          <p className="mt-1 text-2xl font-bold">{stats.students}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Users className="size-4" />
+            <p className="text-sm">Ustozlar</p>
+          </div>
+          <p className="mt-1 text-2xl font-bold">{stats.teachers}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <DoorOpen className="size-4" />
+            <p className="text-sm">Xonalar</p>
+          </div>
+          <p className="mt-1 text-2xl font-bold">{stats.rooms}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Building2 className="size-4" />
+            <p className="text-sm">Kurslar</p>
+          </div>
+          <p className="mt-1 text-2xl font-bold">{stats.courses}</p>
+        </div>
+      </div>
+
       {/* Ma'lumotlar */}
       <div className="rounded-lg border bg-card p-6">
         <h3 className="text-lg font-semibold mb-4">
           Filial ma&apos;lumotlari
         </h3>
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Building2 className="size-4 shrink-0 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Filial nomi</p>
-              <p className="text-sm font-medium">{branch.name}</p>
+        <div className="grid gap-x-8 gap-y-3 sm:grid-cols-3">
+          <div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Phone className="size-3.5" />
+              <p className="text-sm">Telefon</p>
             </div>
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center gap-3">
-            <MapPin className="size-4 shrink-0 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Manzil</p>
-              <p className="text-sm font-medium">
-                {branch.address || (
-                  <span className="italic text-muted-foreground">
-                    Ko&apos;rsatilmagan
-                  </span>
-                )}
+            {branch.phone ? (
+              <a
+                href={`tel:+998${branch.phone}`}
+                className="mt-0.5 block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                {formatPhone(branch.phone)}
+              </a>
+            ) : (
+              <p className="mt-0.5 text-sm italic text-muted-foreground">
+                Ko&apos;rsatilmagan
               </p>
-            </div>
+            )}
           </div>
 
-          <Separator />
-
-          <div className="flex items-center gap-3">
-            <Phone className="size-4 shrink-0 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Telefon</p>
-              {branch.phone ? (
-                <a
-                  href={`tel:+998${branch.phone}`}
-                  className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  {formatPhone(branch.phone)}
-                </a>
-              ) : (
-                <p className="text-sm italic text-muted-foreground">
-                  Ko&apos;rsatilmagan
-                </p>
-              )}
+          <div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="size-3.5" />
+              <p className="text-sm">Ish vaqti</p>
             </div>
+            {branch.startOfWorkingDay && branch.endOfWorkingDay ? (
+              <p className="mt-0.5 text-sm font-medium">
+                {branch.startOfWorkingDay} — {branch.endOfWorkingDay}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-sm italic text-muted-foreground">
+                Ko&apos;rsatilmagan
+              </p>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <CircleDot className="size-3.5" />
+              <p className="text-sm">Holat</p>
+            </div>
+            <Badge
+              variant={branch.status === "active" ? "default" : "secondary"}
+              className="mt-1"
+            >
+              {branch.status === "active" ? "Faol" : "Nofaol"}
+            </Badge>
           </div>
         </div>
       </div>
