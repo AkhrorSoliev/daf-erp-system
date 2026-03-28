@@ -145,15 +145,6 @@ export function EditBranchForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="address">Manzil</Label>
-          <Input
-            id="address"
-            placeholder="Manzil"
-            {...form.register("address")}
-          />
-        </div>
-
-        <div className="space-y-1.5">
           <Label>Telefon</Label>
           <Controller
             control={form.control}

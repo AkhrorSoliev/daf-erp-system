@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import toast from "react-hot-toast";
 import type { Student } from "@/data/student-model";
 import { Button } from "@/components/ui/button";
@@ -116,7 +117,7 @@ export function StudentsClient() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <StudentsStats students={students} />
+        <StudentsStats students={students} loading={loading} />
         {canManage && (
           selectedBranch ? (
             <Tooltip>
@@ -153,8 +154,33 @@ export function StudentsClient() {
       </div>
       <StudentsFilters filters={filters} onFilterChange={handleFilterChange} />
       {loading ? (
-        <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-          Yuklanmoqda...
+        <div className="overflow-x-auto rounded-md border">
+          <div className="space-y-0">
+            {/* Header skeleton */}
+            <div className="flex items-center gap-4 border-b bg-muted/40 px-4 py-3">
+              <Skeleton className="h-4 w-8" />
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="hidden h-4 w-28 sm:block" />
+              <Skeleton className="hidden h-4 w-16 md:block" />
+              <Skeleton className="ml-auto h-4 w-20" />
+              <Skeleton className="hidden h-4 w-14 sm:block" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+            {/* Row skeletons */}
+            {Array.from({ length: pageSize > 5 ? 5 : pageSize }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 border-b px-4 py-3">
+                <Skeleton className="h-4 w-8" />
+                <Skeleton className="size-8 rounded-full" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="hidden h-4 w-28 sm:block" />
+                <Skeleton className="hidden h-4 w-16 md:block" />
+                <Skeleton className="ml-auto h-4 w-20" />
+                <Skeleton className="hidden h-4 w-14 sm:block" />
+                <Skeleton className="h-4 w-8" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <StudentsTable students={filteredStudents} />

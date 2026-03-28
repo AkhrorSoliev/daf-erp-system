@@ -30,7 +30,44 @@ export class BranchesService {
       throw new NotFoundException(`Branch #${id} topilmadi`);
     }
 
-    return branch;
+    const [groupsCount, studentsCount, teachersCount, roomsCount, coursesCount] =
+      await Promise.all([
+        this.prisma.group.count({
+          where: { branchId: id, deletedAt: null },
+        }),
+        this.prisma.studentBranch.count({
+          where: {
+            branchId: id,
+            student: { deletedAt: null },
+          },
+        }),
+        this.prisma.userBranch.count({
+          where: {
+            branchId: id,
+            user: {
+              deletedAt: null,
+              roles: { some: { roleId: 4 } },
+            },
+          },
+        }),
+        this.prisma.room.count({
+          where: { branchId: id, deletedAt: null },
+        }),
+        this.prisma.course.count({
+          where: { branchId: id, deletedAt: null },
+        }),
+      ]);
+
+    return {
+      ...branch,
+      _count: {
+        groups: groupsCount,
+        students: studentsCount,
+        teachers: teachersCount,
+        rooms: roomsCount,
+        courses: coursesCount,
+      },
+    };
   }
 
   async create(dto: CreateBranchDto) {
