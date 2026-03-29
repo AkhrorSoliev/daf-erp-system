@@ -5,7 +5,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Telegraf, Scenes, session } from 'telegraf';
+import { Telegraf, Scenes, session, Markup } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
 import { SCENES, TEACHER_DEEP_LINK_PREFIX, STUDENT_DEEP_LINK_PREFIX } from './constants';
@@ -140,8 +140,22 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
 
       await ctx.reply(
-        "Assalomu alaykum! Botdan foydalanish uchun maxsus havola kerak.\n\n" +
-          "O'qituvchi bo'lsangiz, administrator sizga havola beradi.",
+        "Assalomu alaykum! DaF Sprachzentrum botiga xush kelibsiz.\n\n" +
+          "Quyidagi imkoniyatlardan birini tanlang:",
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback("📝 Ro'yxatdan o'tish", "menu_registration"),
+            Markup.button.callback("📊 Darajani aniqlash", "menu_level"),
+          ],
+          [
+            Markup.button.callback("🎓 Platformaga kirish", "menu_platform"),
+            Markup.button.callback("💳 To'lovlar", "menu_payments"),
+          ],
+          [
+            Markup.button.callback("👥 Guruhlarga qo'shilish", "menu_groups"),
+            Markup.button.callback("🔐 Parolni tiklash", "menu_password"),
+          ],
+        ]),
       );
     });
 
@@ -150,6 +164,16 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.scene.leave();
       await ctx.reply("Bekor qilindi. Qayta boshlash uchun /start bosing.");
     });
+
+    // Menu action handlers — "Tez kunda" responses
+    this.bot.action(
+      /^menu_(registration|level|platform|payments|groups|password)$/,
+      async (ctx) => {
+        await ctx.answerCbQuery("Bu funksiya tez kunda ishga tushadi! ⏳", {
+          show_alert: true,
+        });
+      },
+    );
 
     // Launch bot (polling mode for development)
     const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');

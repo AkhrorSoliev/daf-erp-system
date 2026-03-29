@@ -59,6 +59,8 @@ export function createStudentRegistrationScene(
     ctx.session.step = 1;
     ctx.session.data = { branchId };
 
+    await ctx.sendChatAction('typing');
+
     // Ushbu filialda dars beradigan ustozlarni olish
     const teachers = await prisma.user.findMany({
       where: {
@@ -95,6 +97,8 @@ export function createStudentRegistrationScene(
 
     const teacherId = Number(ctx.match[1]);
     const branchId = ctx.session.data.branchId;
+
+    await ctx.sendChatAction('typing');
 
     // Ustoz mavjudligini tekshirish
     const teacher = await prisma.user.findFirst({
@@ -331,7 +335,43 @@ export function createStudentRegistrationScene(
     );
   });
 
-  // Rasm qabul qilish
+  // Rasm yuklash umumiy funksiya
+  async function handlePhotoUpload(ctx: BotContext, fileId: string, mimetype: string) {
+    await ctx.sendChatAction('upload_photo');
+
+    const fileLink = await ctx.telegram.getFileLink(fileId);
+    const buffer = await downloadFile(fileLink.href);
+
+    const ext = mimetype === 'image/png' ? '.png' : '.jpg';
+    const multerFile = {
+      originalname: `student_${ctx.chat!.id}${ext}`,
+      buffer,
+      mimetype,
+    } as Express.Multer.File;
+
+    const photoUrl = await uploadService.uploadFile(multerFile, 'students');
+    ctx.session.data.photo = photoUrl;
+    ctx.session.step = 7;
+
+    const data = ctx.session.data;
+    await ctx.replyWithPhoto(photoUrl, {
+      caption:
+        "📋 Ma'lumotlaringizni tekshiring:\n\n" +
+        `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
+        `📚 Guruh: ${data.groupName}\n` +
+        `👤 Ism: ${data.firstName}\n` +
+        `👤 Familiya: ${data.lastName}\n` +
+        `📞 Telefon: +998 ${data.phone}`,
+      ...Markup.inlineKeyboard([
+        [
+          Markup.button.callback("✅ Tasdiqlash", "confirm_student"),
+          Markup.button.callback("🔄 Qayta kiritish", "restart_student"),
+        ],
+      ]),
+    });
+  }
+
+  // Rasm qabul qilish (compressed photo)
   scene.on(message('photo'), async (ctx) => {
     if (ctx.session.step !== 6) return;
 
@@ -339,35 +379,26 @@ export function createStudentRegistrationScene(
     const photo = photos[photos.length - 1];
 
     try {
-      const fileLink = await ctx.telegram.getFileLink(photo.file_id);
-      const buffer = await downloadFile(fileLink.href);
+      await handlePhotoUpload(ctx, photo.file_id, 'image/jpeg');
+    } catch {
+      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
+    }
+  });
 
-      const multerFile = {
-        originalname: `student_${ctx.chat!.id}.jpg`,
-        buffer,
-        mimetype: 'image/jpeg',
-      } as Express.Multer.File;
+  // Rasm qabul qilish (document/fayl sifatida)
+  scene.on(message('document'), async (ctx) => {
+    if (ctx.session.step !== 6) return;
 
-      const photoUrl = await uploadService.uploadFile(multerFile, 'students');
-      ctx.session.data.photo = photoUrl;
-      ctx.session.step = 7;
+    const doc = ctx.message.document;
+    const mime = doc.mime_type || '';
 
-      const data = ctx.session.data;
-      await ctx.reply(
-        "📋 Ma'lumotlaringizni tekshiring:\n\n" +
-          `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
-          `📚 Guruh: ${data.groupName}\n` +
-          `👤 Ism: ${data.firstName}\n` +
-          `👤 Familiya: ${data.lastName}\n` +
-          `📞 Telefon: +998 ${data.phone}\n` +
-          `🖼 Rasm: yuklandi\n`,
-        Markup.inlineKeyboard([
-          [
-            Markup.button.callback("✅ Tasdiqlash", "confirm_student"),
-            Markup.button.callback("🔄 Qayta kiritish", "restart_student"),
-          ],
-        ]),
-      );
+    if (!mime.startsWith('image/')) {
+      await ctx.reply("Iltimos, rasm formatidagi fayl yuboring (JPG, PNG).");
+      return;
+    }
+
+    try {
+      await handlePhotoUpload(ctx, doc.file_id, mime);
     } catch {
       await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
     }
@@ -377,6 +408,7 @@ export function createStudentRegistrationScene(
   scene.action('confirm_student', async (ctx) => {
     if (ctx.session.step !== 7) return;
     await ctx.answerCbQuery();
+    await ctx.sendChatAction('typing');
 
     const data = ctx.session.data;
     const chatId = String(ctx.chat!.id);
@@ -405,13 +437,14 @@ export function createStudentRegistrationScene(
         },
       });
 
-      await ctx.editMessageText("✅ Tasdiqlandi!");
-      await ctx.reply(
-        "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
+      await ctx.editMessageCaption("✅ Tasdiqlandi!");
+      await ctx.replyWithPhoto(data.photo, {
+        caption:
+          "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
           `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
           `📚 Guruh: ${data.groupName}\n\n` +
           "Tez orada sizga darslar haqida xabar beramiz!",
-      );
+      });
 
       await ctx.scene.leave();
     } catch (error) {

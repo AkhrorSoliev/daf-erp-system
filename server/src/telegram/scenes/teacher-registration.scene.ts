@@ -206,48 +206,71 @@ export function createTeacherRegistrationScene(
     await ctx.reply("Rasmingizni yuboring (foto sifatida):");
   });
 
-  // Rasm qabul qilish
+  // Rasm yuklash umumiy funksiya
+  async function handlePhotoUpload(ctx: BotContext, fileId: string, mimetype: string) {
+    await ctx.sendChatAction('upload_photo');
+
+    const fileLink = await ctx.telegram.getFileLink(fileId);
+    const buffer = await downloadFile(fileLink.href);
+
+    const ext = mimetype === 'image/png' ? '.png' : '.jpg';
+    const multerFile = {
+      originalname: `teacher_${ctx.chat!.id}${ext}`,
+      buffer,
+      mimetype,
+    } as Express.Multer.File;
+
+    const photoUrl = await uploadService.uploadFile(multerFile, 'teachers');
+    ctx.session.data.photo = photoUrl;
+    ctx.session.step = 6;
+
+    const data = ctx.session.data;
+    await ctx.replyWithPhoto(photoUrl, {
+      caption:
+        "\uD83D\uDCCB Ma'lumotlaringizni tekshiring:\n\n" +
+        `\uD83D\uDC64 Ism: ${data.firstName}\n` +
+        `\uD83D\uDC64 Familiya: ${data.lastName}\n` +
+        `\uD83D\uDCDE Telefon: +998 ${data.phone}\n` +
+        `\uD83D\uDC65 Jins: ${data.gender === 'MALE' ? 'Erkak' : 'Ayol'}`,
+      ...Markup.inlineKeyboard([
+        [
+          Markup.button.callback("\u2705 Tasdiqlash", "confirm_registration"),
+          Markup.button.callback("\uD83D\uDD04 Qayta kiritish", "restart_registration"),
+        ],
+      ]),
+    });
+  }
+
+  // Rasm qabul qilish (compressed photo)
   scene.on(message('photo'), async (ctx) => {
     if (ctx.session.step !== 5) return;
 
     const photos = ctx.message.photo;
-    // Eng katta o'lchamdagi rasmni olish
     const photo = photos[photos.length - 1];
 
     try {
-      const fileLink = await ctx.telegram.getFileLink(photo.file_id);
-      const buffer = await downloadFile(fileLink.href);
-
-      // Multer-compatible file object yaratish
-      const multerFile = {
-        originalname: `teacher_${ctx.chat!.id}.jpg`,
-        buffer,
-        mimetype: 'image/jpeg',
-      } as Express.Multer.File;
-
-      const photoUrl = await uploadService.uploadFile(multerFile, 'teachers');
-      ctx.session.data.photo = photoUrl;
-      ctx.session.step = 6;
-
-      const data = ctx.session.data;
-      await ctx.reply(
-        "\uD83D\uDCCB Ma'lumotlaringizni tekshiring:\n\n" +
-          `\uD83D\uDC64 Ism: ${data.firstName}\n` +
-          `\uD83D\uDC64 Familiya: ${data.lastName}\n` +
-          `\uD83D\uDCDE Telefon: +998 ${data.phone}\n` +
-          `\uD83D\uDC65 Jins: ${data.gender === 'MALE' ? 'Erkak' : 'Ayol'}\n` +
-          `\uD83D\uDDBC Rasm: yuklandi\n`,
-        Markup.inlineKeyboard([
-          [
-            Markup.button.callback("\u2705 Tasdiqlash", "confirm_registration"),
-            Markup.button.callback("\uD83D\uDD04 Qayta kiritish", "restart_registration"),
-          ],
-        ]),
-      );
+      await handlePhotoUpload(ctx, photo.file_id, 'image/jpeg');
     } catch (error) {
-      await ctx.reply(
-        "Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:",
-      );
+      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
+    }
+  });
+
+  // Rasm qabul qilish (document/fayl sifatida)
+  scene.on(message('document'), async (ctx) => {
+    if (ctx.session.step !== 5) return;
+
+    const doc = ctx.message.document;
+    const mime = doc.mime_type || '';
+
+    if (!mime.startsWith('image/')) {
+      await ctx.reply("Iltimos, rasm formatidagi fayl yuboring (JPG, PNG).");
+      return;
+    }
+
+    try {
+      await handlePhotoUpload(ctx, doc.file_id, mime);
+    } catch (error) {
+      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
     }
   });
 
@@ -255,6 +278,7 @@ export function createTeacherRegistrationScene(
   scene.action('confirm_registration', async (ctx) => {
     if (ctx.session.step !== 6) return;
     await ctx.answerCbQuery();
+    await ctx.sendChatAction('typing');
 
     const data = ctx.session.data;
     const chatId = String(ctx.chat!.id);
@@ -283,16 +307,17 @@ export function createTeacherRegistrationScene(
         branchIds: data.branchId ? [data.branchId] : undefined,
       });
 
-      await ctx.editMessageText("\u2705 Tasdiqlandi!");
-      await ctx.reply(
-        "\u2705 Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
+      await ctx.editMessageCaption("\u2705 Tasdiqlandi!");
+      await ctx.replyWithPhoto(data.photo, {
+        caption:
+          "\u2705 Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
           `\uD83D\uDC64 Sizning login: \`${login}\`\n` +
           `\uD83D\uDD11 Sizning parol: \`${password}\`\n\n` +
           "\u26A0\uFE0F Login va parolni eslab qoling yoki saqlang!\n\n" +
           "Tez orada o'qituvchilar uchun platforma ishga tushadi.\n" +
           "Sizga xabar beramiz!",
-        { parse_mode: 'Markdown' },
-      );
+        parse_mode: 'Markdown',
+      });
 
       await ctx.scene.leave();
     } catch (error) {
