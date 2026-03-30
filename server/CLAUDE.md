@@ -41,6 +41,7 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - Global `ValidationPipe` is configured with `whitelist: true` and `forbidNonWhitelisted: true`
 - Phone numbers: stored as **9-digit strings** (without `+998` prefix)
 - Prices: stored as **integers** (in so'm)
+- **User and Student IDs:** Always **5-digit integers** (starting from 10000). PostgreSQL sequence is set to start at 10000. Never manually assign IDs below 10000.
 
 ### Authentication & Authorization
 

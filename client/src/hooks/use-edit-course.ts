@@ -3,7 +3,6 @@ import { create } from "zustand";
 export interface Course {
   id: string;
   name: string;
-  level: string | null;
   description: string | null;
   lessonDuration: number | null;
   lessonMinutes: number | null;

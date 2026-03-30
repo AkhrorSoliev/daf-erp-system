@@ -23,7 +23,6 @@ export class CoursesService {
         select: {
           id: true,
           name: true,
-          level: true,
           description: true,
           price: true,
           courseDuration: true,
@@ -70,7 +69,6 @@ export class CoursesService {
     return this.prisma.course.create({
       data: {
         name: dto.name,
-        level: dto.level,
         lessonMinutes: dto.lessonMinutes,
         description: dto.description,
         lessonDuration: dto.lessonDuration,

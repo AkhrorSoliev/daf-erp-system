@@ -125,6 +125,11 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **All time inputs** must use the shared `<TimePicker>` component from `src/components/ui/time-picker.tsx`. It renders a button that opens a popover with a scrollable list of times (30-minute intervals, 00:00–23:30), displays the selected time, and returns a `HH:mm` string. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
 - **Never** use plain text `<Input>` for date or time entry — always use `<DatePicker>` or `<TimePicker>` so users select from a picker
 
+#### User and Student IDs
+
+- **User** (teacher, admin, CEO...) and **Student** IDs are always **5-digit integers** (10000+)
+- The backend guarantees this — the frontend should expect and display 5-digit numeric IDs for users and students
+
 #### Prices and Currency
 
 - **Display format:** Use comma as thousands separator. Numbers below 1,000 have no separator. Examples:

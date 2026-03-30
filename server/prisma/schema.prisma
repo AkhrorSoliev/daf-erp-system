@@ -128,7 +128,6 @@ model Room {
 model Course {
   id             String   @id @default(uuid())
   name           String
-  level          String?
   description    String?
   price          Int
   courseDuration Int?
