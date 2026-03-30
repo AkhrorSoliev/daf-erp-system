@@ -134,6 +134,25 @@ Runs on every navigation (server-side, before page renders).
 
 Wraps the app and calls `hydrate()` on mount to restore auth state from cookies. Placed in the root `layout.tsx`.
 
+## Portal System
+
+The login page adapts to the current subdomain. Portal type is detected from the hostname on the server and passed to client components.
+
+**Config:** `lib/portal.ts`
+
+| Portal | Domain | Allowed Roles | UI |
+|--------|--------|---------------|----|
+| Admin | `admin.dafzentrum.uz` | CEO (1), BD (2), Admin (3), Cashier (5) | Default branding |
+| Teacher | `lehrer.dafzentrum.uz` | Teacher (4) | Teacher branding + icon |
+| Student | `student.dafzentrum.uz` | — (not yet) | Student branding + icon |
+
+### Portal-Role Enforcement (Two Layers)
+
+1. **Backend (primary):** Login endpoint checks `Origin` header → returns `403` if role doesn't match portal
+2. **Middleware (secondary):** `middleware.ts` checks cookies for authenticated users → clears session and redirects to `/login` if role doesn't match portal
+
+Localhost has no restriction — all roles can log in from any portal.
+
 ## Login Form
 
 **File:** `app/(auth)/login/login-form.tsx`
@@ -141,5 +160,6 @@ Wraps the app and calls `hydrate()` on mount to restore auth state from cookies.
 - Fields: `login` (text), `password` (with visibility toggle)
 - Submits to `POST /api/auth/login` via the API client
 - On success: calls `setAuth()` and redirects to `/`
-- On error: shows "Login yoki parol noto'g'ri" message
+- On 403 error: shows portal-specific message ("Sizning rolingiz bu portalga kirish huquqiga ega emas")
+- On other errors: shows "Login yoki parol noto'g'ri" message
 - Loading state disables the submit button

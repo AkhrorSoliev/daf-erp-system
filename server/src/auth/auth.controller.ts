@@ -13,7 +13,8 @@ export class AuthController {
   @UseGuards(AuthGuard('local'))
   @Post('login')
   async login(@Request() req, @Body() _loginDto: LoginDto) {
-    return this.authService.login(req.user);
+    const origin = req.headers['origin'] as string | undefined;
+    return this.authService.login(req.user, origin);
   }
 
   @Public()

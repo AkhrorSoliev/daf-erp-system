@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  LogIn,
+  Loader2,
+  GraduationCap,
+  Shield,
+  BookOpen,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipTrigger,
@@ -10,10 +18,24 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
+import { type PortalType, getPortalConfig } from "@/lib/portal";
 
-export function LoginForm() {
+const portalIcons = {
+  shield: Shield,
+  "graduation-cap": GraduationCap,
+  "book-open": BookOpen,
+} as const;
+
+interface LoginFormProps {
+  portal: PortalType;
+}
+
+export function LoginForm({ portal }: LoginFormProps) {
   const router = useRouter();
   const { setAuth } = useAuth();
+  const config = getPortalConfig(portal);
+  const Icon = portalIcons[config.icon];
+
   const [showPassword, setShowPassword] = useState(false);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -29,8 +51,15 @@ export function LoginForm() {
       const res = await api.post("/auth/login", { login, password });
       setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
       router.push("/");
-    } catch {
-      setError("Login yoki parol noto'g'ri");
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setError(
+          err.response.data?.message ||
+            "Sizning rolingiz bu portalga kirish huquqiga ega emas"
+        );
+      } else {
+        setError("Login yoki parol noto'g'ri");
+      }
     } finally {
       setLoading(false);
     }
@@ -39,12 +68,13 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-sm space-y-6">
       <div>
+        {portal !== "admin" && (
+          <Icon className="size-8 text-primary mb-2" />
+        )}
         <h1 className="font-heading text-2xl font-bold tracking-tight">
-          DaF Sprachzentrum
+          {config.title}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Hisobingizga kiring
-        </p>
+        <p className="text-sm text-muted-foreground">{config.subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -90,7 +120,9 @@ export function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                  aria-label={
+                    showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"
+                  }
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? (

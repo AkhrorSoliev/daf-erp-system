@@ -6,15 +6,21 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { type PortalType, getPortalConfig } from "@/lib/portal";
 
-export function LoginFooter() {
+interface LoginFooterProps {
+  portal: PortalType;
+}
+
+export function LoginFooter({ portal }: LoginFooterProps) {
   const currentYear = new Date().getFullYear();
+  const config = getPortalConfig(portal);
 
   return (
     <footer className="border-t px-4 py-4">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 text-center text-xs text-muted-foreground sm:flex-row sm:justify-between">
         <p>
-          &copy; {currentYear} DaF Sprachzentrum. Barcha huquqlar himoyalangan.
+          &copy; {currentYear} {config.footerText}
         </p>
         <Tooltip>
           <TooltipTrigger asChild>

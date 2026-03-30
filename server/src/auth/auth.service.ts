@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { getAllowedRoleIds } from './portal-roles.config';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -68,7 +73,18 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async login(user: any) {
+  async login(user: any, origin?: string) {
+    const allowedRoleIds = getAllowedRoleIds(origin);
+    if (allowedRoleIds !== null) {
+      const userRoleIds: number[] = user.roles.map((ur: any) => ur.role.id);
+      const hasAccess = userRoleIds.some((id) => allowedRoleIds.includes(id));
+      if (!hasAccess) {
+        throw new ForbiddenException(
+          "Sizning rolingiz bu portalga kirish huquqiga ega emas",
+        );
+      }
+    }
+
     const roles = user.roles.map((ur: any) => ur.role.name);
     const tokens = this.generateTokens(user.id, roles, user.companyId);
 
