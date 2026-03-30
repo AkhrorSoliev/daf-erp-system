@@ -179,6 +179,21 @@ getMyId(@CurrentUser('id') userId: number) {
 | 4 | Teacher |
 | 5 | Cashier |
 
+## Portal-Based Login Restriction
+
+The backend enforces which roles can log in from which portal subdomain, based on the `Origin` HTTP header.
+
+**Config:** `src/auth/portal-roles.config.ts`
+
+| Portal | Domain | Allowed Roles |
+|--------|--------|---------------|
+| Admin | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
+| Teacher | `lehrer.dafzentrum.uz` | Teacher (4) |
+| Student | `student.dafzentrum.uz` | — (not yet implemented) |
+| Localhost | `localhost` | All roles (no restriction) |
+
+If a user's roles don't match the portal, the login endpoint returns `403 Forbidden` with message: `"Sizning rolingiz bu portalga kirish huquqiga ega emas"`.
+
 ## Password Hashing
 
 Passwords are hashed with **bcryptjs** (10 salt rounds):

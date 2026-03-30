@@ -4,11 +4,13 @@ Deploy frontend to **Vercel** and backend to **Railway**.
 
 ## Domains
 
-| Service      | Domain                | Platform         |
-| ------------ | --------------------- | ---------------- |
-| Main website | `dafzentrum.uz`       | Separate project |
-| Admin panel  | `admin.dafzentrum.uz` | Vercel           |
-| API          | `api.dafzentrum.uz`   | Railway          |
+| Service         | Domain                  | Platform         |
+| --------------- | ----------------------- | ---------------- |
+| Main website    | `dafzentrum.uz`         | Separate project |
+| Admin panel     | `admin.dafzentrum.uz`   | Vercel           |
+| Teacher portal  | `lehrer.dafzentrum.uz`  | Vercel           |
+| Student portal  | `student.dafzentrum.uz` | Vercel           |
+| API             | `api.dafzentrum.uz`     | Railway          |
 
 DNS is managed via **Cloudflare** (Full SSL mode).
 
@@ -88,6 +90,8 @@ app.enableCors({
     "http://localhost:3000",
     "https://client-brown-ten-36.vercel.app",
     "https://admin.dafzentrum.uz",
+    "https://lehrer.dafzentrum.uz",
+    "https://student.dafzentrum.uz",
   ],
   credentials: true,
 });
@@ -172,9 +176,11 @@ The server `build` script already includes Prisma generation:
 
 DNS records managed at Cloudflare for `dafzentrum.uz`:
 
-| Type  | Name    | Content                   | Proxy    |
-| ----- | ------- | ------------------------- | -------- |
-| A     | `@`     | `216.198.79.1`            | Proxied  |
-| CNAME | `admin` | Vercel                    | Proxied  |
-| CNAME | `api`   | `p93259ss.up.railway.app` | DNS only |
-| CNAME | `www`   | Vercel                    | Proxied  |
+| Type  | Name      | Content                   | Proxy    |
+| ----- | --------- | ------------------------- | -------- |
+| A     | `@`       | `216.198.79.1`            | Proxied  |
+| CNAME | `admin`   | Vercel                    | Proxied  |
+| CNAME | `lehrer`  | Vercel                    | Proxied  |
+| CNAME | `student` | Vercel                    | Proxied  |
+| CNAME | `api`     | `p93259ss.up.railway.app` | DNS only |
+| CNAME | `www`     | Vercel                    | Proxied  |

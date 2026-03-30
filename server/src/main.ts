@@ -20,6 +20,8 @@ async function bootstrap() {
       'http://localhost:3000',
       'https://client-brown-ten-36.vercel.app',
       'https://admin.dafzentrum.uz',
+      'https://lehrer.dafzentrum.uz',
+      'https://student.dafzentrum.uz',
     ],
     credentials: true,
   });
