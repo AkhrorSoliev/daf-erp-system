@@ -158,7 +158,6 @@ async function main() {
   const standartCourse = await prisma.course.create({
     data: {
       name: 'Standart kurs',
-      level: 'A1',
       description: 'Haftasiga 3 kun, 6 oylik nemis tili kursi',
       price: 400000,
       courseDuration: 6,
@@ -172,7 +171,6 @@ async function main() {
   const intensiveCourse = await prisma.course.create({
     data: {
       name: 'Intensiv kurs',
-      level: 'A1',
       description: 'Haftasiga 5 kun, 6 oylik intensiv nemis tili kursi',
       price: 700000,
       courseDuration: 6,
