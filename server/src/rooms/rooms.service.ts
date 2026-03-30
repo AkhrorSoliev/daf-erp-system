@@ -1,13 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { RoomStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { StatusHistoryService } from '../common/status';
 import { RoomQueryDto } from './dto/room-query.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CountByBranchQueryDto } from './dto/count-by-branch-query.dto';
+import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
 
 @Injectable()
 export class RoomsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private statusHistoryService: StatusHistoryService,
+  ) {}
 
   async findAll(query: RoomQueryDto) {
     const where = {
@@ -25,6 +31,7 @@ export class RoomsService {
           id: true,
           name: true,
           capacity: true,
+          status: true,
           branchId: true,
           branch: { select: { name: true } },
           _count: { select: { groups: { where: { deletedAt: null } } } },
@@ -42,6 +49,7 @@ export class RoomsService {
         id: r.id,
         name: r.name,
         capacity: r.capacity,
+        status: r.status,
         branchId: r.branchId,
         branch: r.branch,
         groupCount: r._count.groups,
@@ -144,6 +152,48 @@ export class RoomsService {
     });
   }
 
+  async changeStatus(id: string, dto: ChangeRoomStatusDto, userId: number) {
+    const room = await this.prisma.room.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!room) {
+      throw new NotFoundException(`Xona #${id} topilmadi`);
+    }
+
+    const auditData = await this.statusHistoryService.changeStatus({
+      entityType: 'Room',
+      entityId: id,
+      fromStatus: room.status,
+      toStatus: dto.status,
+      reason: dto.reason,
+      changedById: userId,
+      companyId: room.companyId ?? undefined,
+    });
+
+    return this.prisma.room.update({
+      where: { id },
+      data: {
+        status: dto.status as RoomStatus,
+        ...auditData,
+      },
+      include: { branch: { select: { name: true } } },
+    });
+  }
+
+  async getStatusHistory(id: string) {
+    const room = await this.prisma.room.findFirst({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!room) {
+      throw new NotFoundException(`Xona #${id} topilmadi`);
+    }
+
+    return this.statusHistoryService.getHistory('Room', id);
+  }
+
   async delete(id: string, userId: number) {
     const room = await this.prisma.room.findFirst({
       where: { id, deletedAt: null },
@@ -152,9 +202,26 @@ export class RoomsService {
       throw new NotFoundException(`Xona #${id} topilmadi`);
     }
 
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Room',
+      entityId: id,
+      fromStatus: room.status,
+      toStatus: RoomStatus.ARCHIVED,
+      reason: "O'chirildi",
+      changedById: userId,
+      companyId: room.companyId ?? undefined,
+    });
+
     await this.prisma.room.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedById: userId },
+      data: {
+        status: RoomStatus.ARCHIVED,
+        deletedAt: new Date(),
+        deletedById: userId,
+        statusChangedAt: new Date(),
+        statusChangedById: userId,
+        statusChangeReason: "O'chirildi",
+      },
     });
 
     return { message: "Xona muvaffaqiyatli o'chirildi" };

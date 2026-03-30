@@ -27,7 +27,12 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.isActive || !user.password) {
+    if (!user || !user.password) {
+      return null;
+    }
+
+    // SUSPENDED yoki TERMINATED userlar login qila olmaydi
+    if (user.status !== 'ACTIVE' && user.status !== 'INACTIVE') {
       return null;
     }
 
@@ -112,8 +117,12 @@ export class AuthService {
         },
       });
 
-      if (!user || !user.isActive) {
-        throw new UnauthorizedException('Foydalanuvchi topilmadi yoki bloklangan');
+      if (!user) {
+        throw new UnauthorizedException('Foydalanuvchi topilmadi');
+      }
+
+      if (user.status === 'SUSPENDED' || user.status === 'TERMINATED' || user.status === 'ARCHIVED') {
+        throw new UnauthorizedException('Hisobingiz bloklangan');
       }
 
       const roles = user.roles.map((ur) => ur.role.name);

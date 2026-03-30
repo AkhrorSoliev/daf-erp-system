@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -12,15 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { GroupRowActions } from "./group-row-actions";
 import type { GroupData } from "@/hooks/use-edit-group";
-
-const STATUS_MAP: Record<number, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  1: { label: "Faol", variant: "default" },
-  2: { label: "Boshlanmagan", variant: "secondary" },
-  3: { label: "Pauza", variant: "outline" },
-  4: { label: "To'xtatilgan", variant: "destructive" },
-};
 
 const DAYS_MAP: Record<string, string> = {
   odd: "Toq kunlar",
@@ -32,9 +25,10 @@ interface GroupsTableProps {
   page?: number;
   pageSize?: number;
   onDeleted?: (id: string) => void;
+  onStatusChanged?: (id: string, newStatus: string) => void;
 }
 
-export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: GroupsTableProps) {
+export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStatusChanged }: GroupsTableProps) {
   const router = useRouter();
 
   if (groups.length === 0) {
@@ -69,7 +63,7 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: Grou
         </TableHeader>
         <TableBody>
           {groups.map((group, index) => {
-            const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
+            const groupStatusEnum = group.statusEnum || "FORMING";
             const daysLabel = group.days ? DAYS_MAP[group.days] : null;
             const timeLabel =
               group.lessonStartTime && group.lessonEndTime
@@ -130,13 +124,13 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: Grou
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={status.variant}>{status.label}</Badge>
+                  <StatusBadge entityType="groups" status={groupStatusEnum} />
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {group.studentCount}
                 </TableCell>
                 <TableCell>
-                  <GroupRowActions group={group} onDeleted={onDeleted} />
+                  <GroupRowActions group={group} onDeleted={onDeleted} onStatusChanged={onStatusChanged} />
                 </TableCell>
               </TableRow>
             );

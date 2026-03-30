@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { Prisma } from '@prisma/client';
+import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
+import { Prisma, GroupStatus } from '@prisma/client';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -49,9 +51,30 @@ function formatGroup(group: any) {
   };
 }
 
+// Map integer status to GroupStatus enum
+const INT_TO_GROUP_STATUS: Record<number, GroupStatus> = {
+  1: GroupStatus.ACTIVE,
+  2: GroupStatus.FORMING,
+  3: GroupStatus.PAUSED,
+  4: GroupStatus.CANCELLED,
+};
+
+const GROUP_STATUS_TO_INT: Record<string, number> = {
+  ACTIVE: 1,
+  FORMING: 2,
+  PAUSED: 3,
+  CANCELLED: 4,
+  COMPLETED: 4,
+  ARCHIVED: 4,
+};
+
 @Injectable()
 export class GroupsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private statusHistoryService: StatusHistoryService,
+    private statusCascadeService: StatusCascadeService,
+  ) {}
 
   async findAll(query: GroupQueryDto) {
     const page = query.page ?? 1;
@@ -276,6 +299,7 @@ export class GroupsService {
             lessonStartTime: dto.lessonStartTime,
             lessonEndTime: dto.lessonEndTime,
             status: dto.status ?? 2,
+            statusEnum: INT_TO_GROUP_STATUS[dto.status ?? 2] ?? GroupStatus.FORMING,
             comment: dto.comment,
             startDate: dto.startDate ? new Date(dto.startDate) : undefined,
             endDate,
@@ -365,6 +389,55 @@ export class GroupsService {
     return formatGroup(group);
   }
 
+  async changeStatus(id: string, dto: ChangeGroupStatusDto, userId: number) {
+    const group = await this.prisma.group.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!group) {
+      throw new NotFoundException(`Guruh #${id} topilmadi`);
+    }
+
+    const auditData = await this.statusHistoryService.changeStatus({
+      entityType: 'Group',
+      entityId: id,
+      fromStatus: group.statusEnum,
+      toStatus: dto.status,
+      reason: dto.reason,
+      changedById: userId,
+      companyId: group.companyId ?? undefined,
+    });
+
+    const updated = await this.prisma.group.update({
+      where: { id },
+      data: {
+        statusEnum: dto.status as GroupStatus,
+        status: GROUP_STATUS_TO_INT[dto.status] ?? group.status,
+        isActive: dto.status === GroupStatus.ACTIVE || dto.status === GroupStatus.FORMING,
+        ...auditData,
+      },
+      include: groupInclude,
+    });
+
+    // Cascade: COMPLETED/CANCELLED → enrollment larni yangilash
+    await this.statusCascadeService.cascade('Group', id, dto.status, userId);
+
+    return formatGroup(updated);
+  }
+
+  async getStatusHistory(id: string) {
+    const group = await this.prisma.group.findFirst({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!group) {
+      throw new NotFoundException(`Guruh #${id} topilmadi`);
+    }
+
+    return this.statusHistoryService.getHistory('Group', id);
+  }
+
   async delete(id: string, userId: number) {
     const group = await this.prisma.group.findFirst({
       where: { id, deletedAt: null },
@@ -373,9 +446,27 @@ export class GroupsService {
       throw new NotFoundException(`Guruh #${id} topilmadi`);
     }
 
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Group',
+      entityId: id,
+      fromStatus: group.statusEnum,
+      toStatus: GroupStatus.ARCHIVED,
+      reason: "O'chirildi",
+      changedById: userId,
+      companyId: group.companyId ?? undefined,
+    });
+
     await this.prisma.group.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedById: userId },
+      data: {
+        statusEnum: GroupStatus.ARCHIVED,
+        isActive: false,
+        deletedAt: new Date(),
+        deletedById: userId,
+        statusChangedAt: new Date(),
+        statusChangedById: userId,
+        statusChangeReason: "O'chirildi",
+      },
     });
 
     return { message: "Guruh muvaffaqiyatli o'chirildi" };

@@ -9,6 +9,7 @@ export interface TeacherData {
   login: string | null;
   balance: number;
   isActive: boolean;
+  status: string;
   companyId: number;
   mainBranch: number | null;
   telegramChatId: string | null;

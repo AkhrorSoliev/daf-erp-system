@@ -9,6 +9,7 @@ export interface GroupData {
   lessonStartTime: string | null;
   lessonEndTime: string | null;
   status: number;
+  statusEnum: string;
   comment: string | null;
   startDate: string | null;
   endDate: string | null;
