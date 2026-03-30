@@ -52,7 +52,7 @@ export function StudentsClient() {
 
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
-    const link = `https://t.me/dafzentrum_bot?start=student_${selectedBranch.id}`;
+    const link = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=student_${selectedBranch.id}`;
     await navigator.clipboard.writeText(link);
     setCopied(true);
     toast.success("Havola nusxalandi");

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -99,12 +100,14 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted }: Grou
                           .slice(0, 2);
                         return (
                           <div key={t.id} className="flex items-center gap-2">
-                            <Avatar className="size-6">
-                              <AvatarImage src={t.photo ?? undefined} alt={t.name} />
-                              <AvatarFallback className="text-[10px]">
-                                {initials}
-                              </AvatarFallback>
-                            </Avatar>
+                            <AvatarWithPreview src={t.photo} alt={t.name}>
+                              <Avatar className="size-6">
+                                <AvatarImage src={t.photo ?? undefined} alt={t.name} />
+                                <AvatarFallback className="text-[10px]">
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                            </AvatarWithPreview>
                             <span className="text-sm">{t.name}</span>
                           </div>
                         );

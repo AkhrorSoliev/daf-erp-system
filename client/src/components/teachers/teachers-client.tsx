@@ -1,9 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, Plus, Search } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Plus, QrCode, Search } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -43,7 +51,7 @@ export function TeachersClient() {
 
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
-    const link = `https://t.me/dafzentrum_bot?start=teacher_${selectedBranch.id}`;
+    const link = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=teacher_${selectedBranch.id}`;
     await navigator.clipboard.writeText(link);
     setCopied(true);
     toast.success("Havola nusxalandi");
@@ -104,21 +112,52 @@ export function TeachersClient() {
         <div className="flex items-center gap-2">
           {canManage && (
             selectedBranch ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" onClick={handleCopyLink}>
-                    {copied ? (
-                      <Check className="mr-2 size-4 text-green-500" />
-                    ) : (
-                      <Copy className="mr-2 size-4" />
-                    )}
-                    {copied ? "Nusxalandi" : "Havola olish"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Telegram orqali ro&apos;yxatdan o&apos;tish havolasini nusxalash
-                </TooltipContent>
-              </Tooltip>
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={handleCopyLink}>
+                      {copied ? (
+                        <Check className="mr-2 size-4 text-green-500" />
+                      ) : (
+                        <Copy className="mr-2 size-4" />
+                      )}
+                      {copied ? "Nusxalandi" : "Havola olish"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Telegram orqali ro&apos;yxatdan o&apos;tish havolasini nusxalash
+                  </TooltipContent>
+                </Tooltip>
+                <Dialog>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <QrCode className="size-4" />
+                        </Button>
+                      </DialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>QR kod orqali havola</TooltipContent>
+                  </Tooltip>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>QR kod — O&apos;qituvchi ro&apos;yxatdan o&apos;tish</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center gap-4 py-4">
+                      <div className="rounded-lg border bg-white p-4">
+                        <QRCodeSVG
+                          value={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=teacher_${selectedBranch.id}`}
+                          size={280}
+                          level="M"
+                        />
+                      </div>
+                      <p className="text-muted-foreground text-center text-sm">
+                        Ushbu QR kodni skanerlang va Telegram bot orqali ro&apos;yxatdan o&apos;ting
+                      </p>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </>
             ) : (
               <Tooltip>
                 <TooltipTrigger asChild>

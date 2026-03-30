@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -39,12 +40,14 @@ export function ProfileCard({ user, onEdit }: ProfileCardProps) {
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
       {/* Avatar + Identity */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <Avatar className="size-20">
-          {user.photo && <AvatarImage src={user.photo} alt={user.name} />}
-          <AvatarFallback className="text-2xl font-semibold">
-            {getInitials(user.name)}
-          </AvatarFallback>
-        </Avatar>
+        <AvatarWithPreview src={user.photo} alt={user.name}>
+          <Avatar className="size-20">
+            {user.photo && <AvatarImage src={user.photo} alt={user.name} />}
+            <AvatarFallback className="text-2xl font-semibold">
+              {getInitials(user.name)}
+            </AvatarFallback>
+          </Avatar>
+        </AvatarWithPreview>
 
         <div>
           <h2 className="text-xl font-bold">{user.name}</h2>
