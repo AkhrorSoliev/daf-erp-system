@@ -12,7 +12,6 @@ const groupInclude = {
     select: {
       id: true,
       name: true,
-      level: true,
       description: true,
       lessonDuration: true,
       lessonMinutes: true,
@@ -248,8 +247,7 @@ export class GroupsService {
       endDate.setMonth(endDate.getMonth() + course.courseDuration);
     }
 
-    const level = dto.level || course.level;
-    const prefix = level || course.name;
+    const prefix = dto.level || course.name;
     const teacherData = dto.teacherIds?.length
       ? { create: dto.teacherIds.map((teacherId) => ({ teacherId })) }
       : undefined;

@@ -234,7 +234,6 @@ export class TeachersService {
           select: {
             id: true,
             name: true,
-            level: true,
             description: true,
             lessonDuration: true,
             lessonMinutes: true,

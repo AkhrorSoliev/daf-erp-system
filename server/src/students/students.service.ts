@@ -55,7 +55,7 @@ const studentSelect = {
           lessonEndTime: true,
           startDate: true,
           endDate: true,
-          course: { select: { id: true, name: true, level: true } },
+          course: { select: { id: true, name: true } },
           teachers: {
             include: {
               teacher: { select: { id: true, name: true } },
@@ -92,7 +92,6 @@ function formatStudent(student: any) {
       id: e.group.id,
       name: e.group.name,
       status: e.group.status,
-      level: e.group.course?.level ?? null,
       course_name: e.group.course?.name ?? null,
       days: e.group.days,
       exactDays: e.group.exactDays ?? [],
