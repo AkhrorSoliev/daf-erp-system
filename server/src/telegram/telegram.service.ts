@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Telegraf, Scenes, session, Markup } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
-import { SCENES, TEACHER_DEEP_LINK_PREFIX, STUDENT_DEEP_LINK_PREFIX } from './constants';
+import { SCENES, TEACHER_DEEP_LINK_PREFIX, STUDENT_DEEP_LINK_PREFIX, STUDENT_GROUP_DEEP_LINK_RE } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { PrismaService } from '../prisma/prisma.service';
@@ -110,6 +110,62 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
         ctx.session.data = { branchId };
         await ctx.scene.enter(SCENES.TEACHER_REGISTRATION);
+        return;
+      }
+
+      // student_{branchId}_group_{groupId} — guruhga to'g'ridan-to'g'ri ro'yxatdan o'tish
+      const groupMatch = payload.match(STUDENT_GROUP_DEEP_LINK_RE);
+      if (groupMatch) {
+        const branchId = Number(groupMatch[1]);
+        const groupId = groupMatch[2];
+
+        const branch = await this.prisma.branch.findUnique({
+          where: { id: branchId },
+        });
+        if (!branch) {
+          await ctx.reply(
+            "Filial topilmadi. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        const group = await this.prisma.group.findFirst({
+          where: { id: groupId, branchId, deletedAt: null },
+          select: {
+            id: true,
+            name: true,
+            lessonStartTime: true,
+            lessonEndTime: true,
+            days: true,
+            exactDays: true,
+            room: { select: { name: true } },
+            teachers: {
+              select: { teacher: { select: { id: true, name: true } } },
+              take: 1,
+            },
+          },
+        });
+        if (!group) {
+          await ctx.reply(
+            "Guruh topilmadi. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        const teacher = group.teachers[0]?.teacher;
+        ctx.session.data = {
+          branchId,
+          groupId: group.id,
+          groupName: group.name,
+          teacherId: teacher?.id ?? null,
+          teacherName: teacher?.name ?? '—',
+          lessonStartTime: group.lessonStartTime,
+          lessonEndTime: group.lessonEndTime,
+          days: group.days,
+          exactDays: group.exactDays,
+          roomName: group.room?.name ?? null,
+        };
+        await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
         return;
       }
 

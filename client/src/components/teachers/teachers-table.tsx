@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import {
   Table,
   TableBody,
@@ -68,15 +69,17 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                   {index + 1}
                 </TableCell>
                 <TableCell>
-                  <Avatar className="size-8">
-                    <AvatarImage
-                      src={teacher.photo ?? undefined}
-                      alt={teacher.name}
-                    />
-                    <AvatarFallback className="text-xs">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AvatarWithPreview src={teacher.photo} alt={teacher.name}>
+                    <Avatar className="size-8">
+                      <AvatarImage
+                        src={teacher.photo ?? undefined}
+                        alt={teacher.name}
+                      />
+                      <AvatarFallback className="text-xs">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </AvatarWithPreview>
                 </TableCell>
                 <TableCell className="font-medium">
                   {teacher.name}

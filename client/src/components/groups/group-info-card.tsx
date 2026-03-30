@@ -1,9 +1,17 @@
 "use client";
 
 import { format } from "date-fns";
-import { Pencil } from "lucide-react";
+import { Pencil, QrCode } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
@@ -147,24 +155,56 @@ export function GroupInfoCard({ group }: GroupInfoCardProps) {
         </>
       )}
 
-      {/* Edit action */}
+      {/* Actions */}
       {canManage && (
         <>
           <Separator className="my-3" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => openDrawer(group)}
-              >
-                <Pencil className="mr-1.5 size-3.5" />
-                Tahrirlash
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Guruh ma&apos;lumotlarini tahrirlash</TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => openDrawer(group)}
+                >
+                  <Pencil className="mr-1.5 size-3.5" />
+                  Tahrirlash
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Guruh ma&apos;lumotlarini tahrirlash</TooltipContent>
+            </Tooltip>
+
+            <Dialog>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="size-8 p-0">
+                      <QrCode className="size-4" />
+                    </Button>
+                  </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent>QR kod — guruhga ro&apos;yxatdan o&apos;tish</TooltipContent>
+              </Tooltip>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>QR kod — {group.name}</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center gap-4 py-4">
+                  <div className="rounded-lg border bg-white p-4">
+                    <QRCodeSVG
+                      value={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=student_${group.branchId}_group_${group.id}`}
+                      size={280}
+                      level="M"
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-center text-sm">
+                    Ushbu QR kodni skanerlang va &quot;{group.name}&quot; guruhiga ro&apos;yxatdan o&apos;ting
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -84,16 +85,18 @@ export function GroupStudentsTable({ students }: GroupStudentsTableProps) {
                 {index + 1}
               </TableCell>
               <TableCell>
-                <Avatar className="size-8">
-                  <AvatarImage
-                    src={student.photo ?? undefined}
-                    alt={`${student.firstName} ${student.lastName}`}
-                  />
-                  <AvatarFallback className="text-xs">
-                    {student.firstName[0]}
-                    {student.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
+                  <Avatar className="size-8">
+                    <AvatarImage
+                      src={student.photo ?? undefined}
+                      alt={`${student.firstName} ${student.lastName}`}
+                    />
+                    <AvatarFallback className="text-xs">
+                      {student.firstName[0]}
+                      {student.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </AvatarWithPreview>
               </TableCell>
               <TableCell className="font-medium">
                 {student.firstName} {student.lastName}

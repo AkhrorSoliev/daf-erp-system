@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { Pencil, Phone, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -59,12 +60,14 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
       {/* Avatar + Identity */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <Avatar className="size-20">
-          <AvatarImage src={teacher.photo ?? undefined} alt={teacher.name} />
-          <AvatarFallback className="text-2xl font-semibold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+        <AvatarWithPreview src={teacher.photo} alt={teacher.name}>
+          <Avatar className="size-20">
+            <AvatarImage src={teacher.photo ?? undefined} alt={teacher.name} />
+            <AvatarFallback className="text-2xl font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </AvatarWithPreview>
 
         <div>
           <h2 className="text-xl font-bold">{teacher.name}</h2>

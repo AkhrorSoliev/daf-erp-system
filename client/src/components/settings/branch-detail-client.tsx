@@ -38,7 +38,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const registrationLink = `https://t.me/dafzentrum_bot?start=teacher_${branchId}`;
+  const registrationLink = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=teacher_${branchId}`;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(registrationLink);

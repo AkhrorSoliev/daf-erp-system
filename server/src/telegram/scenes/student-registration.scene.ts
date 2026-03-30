@@ -56,6 +56,31 @@ export function createStudentRegistrationScene(
       return;
     }
 
+    // QR kod orqali guruh bilan kelgan bo'lsa — to'g'ridan-to'g'ri ism kiritishga o'tish
+    if (ctx.session.data.groupId) {
+      ctx.session.step = 3;
+
+      const daysMap: Record<string, string> = { odd: 'Toq kunlar', even: 'Juft kunlar' };
+      const weekdayLabels: Record<string, string> = {
+        monday: 'Du', tuesday: 'Se', wednesday: 'Cho',
+        thursday: 'Pa', friday: 'Ju', saturday: 'Sha',
+      };
+
+      const d = ctx.session.data;
+      const days = d.days ? daysMap[d.days] ?? '' : (d.exactDays?.length ? d.exactDays.map((day: string) => weekdayLabels[day] ?? day).join(', ') : '');
+      const time = d.lessonStartTime && d.lessonEndTime ? `${d.lessonStartTime} – ${d.lessonEndTime}` : '';
+
+      let info = `📚  ${d.groupName}\n`;
+      info += `👨‍🏫  ${d.teacherName}\n`;
+      if (days || time) info += `🕐  ${[days, time].filter(Boolean).join(' | ')}\n`;
+      if (d.roomName) info += `🏫  ${d.roomName}\n`;
+
+      await ctx.reply(
+        `Assalomu alaykum!\nQuyidagi guruhga ro'yxatdan o'tish:\n\n${info}\nIsmingizni kiriting:`,
+      );
+      return;
+    }
+
     ctx.session.step = 1;
     ctx.session.data = { branchId };
 
