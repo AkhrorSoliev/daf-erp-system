@@ -13,6 +13,7 @@ import { GroupsService } from './groups.service';
 import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards/roles.guard';
 
@@ -78,6 +79,24 @@ export class GroupsController {
   @Roles('CEO', 'Branch Director', 'Administrator')
   update(@Param('id') id: string, @Body() dto: UpdateGroupDto) {
     return this.groupsService.update(id, dto);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  changeStatus(
+    @Param('id') id: string,
+    @Body() dto: ChangeGroupStatusDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.groupsService.changeStatus(id, dto, userId);
+  }
+
+  @Get(':id/status-history')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getStatusHistory(@Param('id') id: string) {
+    return this.groupsService.getStatusHistory(id);
   }
 
   @Delete(':id')

@@ -42,7 +42,13 @@ function getStudentStatus(student: Student): "active" | "frozen" | "ungrouped" {
   return "active";
 }
 
-export function StudentsTable({ students }: { students: Student[] }) {
+interface StudentsTableProps {
+  students: Student[];
+  onDeleted?: (id: number) => void;
+  onStatusChanged?: (id: number, newStatus: string) => void;
+}
+
+export function StudentsTable({ students, onDeleted, onStatusChanged }: StudentsTableProps) {
   const router = useRouter();
 
   if (students.length === 0) {
@@ -124,10 +130,14 @@ export function StudentsTable({ students }: { students: Student[] }) {
                 {formatBalance(student.balance)}
               </TableCell>
               <TableCell className="hidden sm:table-cell">
-                <StudentStatusBadge status={getStudentStatus(student)} />
+                <StudentStatusBadge student={student} />
               </TableCell>
               <TableCell>
-                <StudentRowActions student={student} />
+                <StudentRowActions
+                  student={student}
+                  onDeleted={onDeleted}
+                  onStatusChanged={onStatusChanged}
+                />
               </TableCell>
             </TableRow>
           ))}

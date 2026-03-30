@@ -7,13 +7,16 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { RoomQueryDto } from './dto/room-query.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CountByBranchQueryDto } from './dto/count-by-branch-query.dto';
-import { CurrentUser } from '../common/decorators';
+import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
+import { CurrentUser, Roles } from '../common/decorators';
+import { RolesGuard } from '../common/guards';
 
 @Controller('rooms')
 export class RoomsController {
@@ -42,6 +45,24 @@ export class RoomsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateRoomDto) {
     return this.roomsService.update(id, dto);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  changeStatus(
+    @Param('id') id: string,
+    @Body() dto: ChangeRoomStatusDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.roomsService.changeStatus(id, dto, userId);
+  }
+
+  @Get(':id/status-history')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getStatusHistory(@Param('id') id: string) {
+    return this.roomsService.getStatusHistory(id);
   }
 
   @Delete(':id')

@@ -45,6 +45,7 @@ export interface Student {
   address: string | null;
   passportSeries: string | null;
   isActive: boolean;
+  status: string;
   createdAt: string;
   updatedAt: string;
 }

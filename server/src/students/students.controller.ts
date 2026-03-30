@@ -3,6 +3,7 @@ import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
+import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -32,6 +33,24 @@ export class StudentsController {
   @Roles('CEO', 'Branch Director', 'Administrator')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateStudentDto) {
     return this.studentsService.update(id, dto);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  changeStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ChangeStudentStatusDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentsService.changeStatus(id, dto, userId);
+  }
+
+  @Get(':id/status-history')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getStatusHistory(@Param('id', ParseIntPipe) id: number) {
+    return this.studentsService.getStatusHistory(id);
   }
 
   @Delete(':id')

@@ -3,6 +3,7 @@ import { TeachersService } from './teachers.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
+import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -37,6 +38,24 @@ export class TeachersController {
   @Roles('CEO', 'Administrator')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTeacherDto) {
     return this.teachersService.update(id, dto);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Administrator')
+  changeStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ChangeTeacherStatusDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.teachersService.changeStatus(id, dto, userId);
+  }
+
+  @Get(':id/status-history')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Administrator')
+  getStatusHistory(@Param('id', ParseIntPipe) id: number) {
+    return this.teachersService.getStatusHistory(id);
   }
 
   @Delete(':id')

@@ -1,12 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CourseStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { CourseQueryDto } from './dto/course-query.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { ChangeCourseStatusDto } from './dto/change-course-status.dto';
 
 @Injectable()
 export class CoursesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private statusHistoryService: StatusHistoryService,
+    private statusCascadeService: StatusCascadeService,
+  ) {}
 
   async findAll(query: CourseQueryDto) {
     const where = {
@@ -29,6 +36,7 @@ export class CoursesService {
           lessonDuration: true,
           lessonMinutes: true,
           isActive: true,
+          status: true,
           branchId: true,
           createdAt: true,
         },
@@ -94,6 +102,53 @@ export class CoursesService {
     });
   }
 
+  async changeStatus(id: string, dto: ChangeCourseStatusDto, userId: number) {
+    const course = await this.prisma.course.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Kurs #${id} topilmadi`);
+    }
+
+    const auditData = await this.statusHistoryService.changeStatus({
+      entityType: 'Course',
+      entityId: id,
+      fromStatus: course.status,
+      toStatus: dto.status,
+      reason: dto.reason,
+      changedById: userId,
+      companyId: course.companyId ?? undefined,
+    });
+
+    const updated = await this.prisma.course.update({
+      where: { id },
+      data: {
+        status: dto.status as CourseStatus,
+        isActive: dto.status === CourseStatus.ACTIVE,
+        ...auditData,
+      },
+    });
+
+    // Cascade: ARCHIVED → guruhlarni yangilash
+    await this.statusCascadeService.cascade('Course', id, dto.status, userId);
+
+    return updated;
+  }
+
+  async getStatusHistory(id: string) {
+    const course = await this.prisma.course.findFirst({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Kurs #${id} topilmadi`);
+    }
+
+    return this.statusHistoryService.getHistory('Course', id);
+  }
+
   async delete(id: string, userId: number) {
     const course = await this.prisma.course.findFirst({
       where: { id, deletedAt: null },
@@ -102,9 +157,27 @@ export class CoursesService {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
 
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Course',
+      entityId: id,
+      fromStatus: course.status,
+      toStatus: CourseStatus.ARCHIVED,
+      reason: "O'chirildi",
+      changedById: userId,
+      companyId: course.companyId ?? undefined,
+    });
+
     await this.prisma.course.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedById: userId },
+      data: {
+        status: CourseStatus.ARCHIVED,
+        isActive: false,
+        deletedAt: new Date(),
+        deletedById: userId,
+        statusChangedAt: new Date(),
+        statusChangedById: userId,
+        statusChangeReason: "O'chirildi",
+      },
     });
 
     return { message: "Kurs muvaffaqiyatli o'chirildi" };

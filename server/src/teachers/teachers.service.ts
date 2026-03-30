@@ -4,12 +4,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
+import { RedisService } from '../redis/redis.service';
+import { StatusHistoryService } from '../common/status';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
+import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
 import { generateUniqueLogin, generatePassword } from '../telegram/utils/login-generator';
 
 const TEACHER_ROLE_ID = 4;
@@ -23,11 +26,15 @@ const teacherSelect = {
   login: true,
   balance: true,
   isActive: true,
+  status: true,
   companyId: true,
   mainBranch: true,
   telegramChatId: true,
   createdAt: true,
   updatedAt: true,
+  statusChangedAt: true,
+  statusChangedById: true,
+  statusChangeReason: true,
   roles: { include: { role: true } },
   branches: { include: { branch: { select: { id: true, name: true } } } },
   company: { select: { id: true, name: true } },
@@ -52,6 +59,8 @@ export class TeachersService {
   constructor(
     private prisma: PrismaService,
     private uploadService: UploadService,
+    private statusHistoryService: StatusHistoryService,
+    private redis: RedisService,
   ) {}
 
   async findAll(query: TeacherQueryDto) {
@@ -195,6 +204,60 @@ export class TeachersService {
     return formatTeacher(updated);
   }
 
+  async changeStatus(id: number, dto: ChangeTeacherStatusDto, userId: number) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
+    }
+
+    const auditData = await this.statusHistoryService.changeStatus({
+      entityType: 'User',
+      entityId: String(id),
+      fromStatus: user.status,
+      toStatus: dto.status,
+      reason: dto.reason,
+      changedById: userId,
+      companyId: user.companyId,
+    });
+
+    const isActive = dto.status === UserStatus.ACTIVE;
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        status: dto.status as UserStatus,
+        isActive,
+        ...auditData,
+      },
+      select: teacherSelect,
+    });
+
+    // Redis: bloklangan user ni belgilash yoki tiklash
+    if (dto.status === UserStatus.SUSPENDED || dto.status === UserStatus.TERMINATED) {
+      await this.redis.set(`user:blocked:${id}`, '1');
+    } else if (dto.status === UserStatus.ACTIVE) {
+      await this.redis.del(`user:blocked:${id}`);
+    }
+
+    return formatTeacher(updated);
+  }
+
+  async getStatusHistory(id: number) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } } },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
+    }
+
+    return this.statusHistoryService.getHistory('User', String(id));
+  }
+
   async delete(id: number, deletedById: number) {
     const user = await this.prisma.user.findFirst({
       where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
@@ -204,11 +267,32 @@ export class TeachersService {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
+    await this.statusHistoryService.changeStatus({
+      entityType: 'User',
+      entityId: String(id),
+      fromStatus: user.status,
+      toStatus: UserStatus.ARCHIVED,
+      reason: "O'chirildi",
+      changedById: deletedById,
+      companyId: user.companyId,
+    });
+
     // Rasmni O'CHIRMAYMIZ — restore uchun kerak
     await this.prisma.user.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedById },
+      data: {
+        status: UserStatus.ARCHIVED,
+        isActive: false,
+        deletedAt: new Date(),
+        deletedById,
+        statusChangedAt: new Date(),
+        statusChangedById: deletedById,
+        statusChangeReason: "O'chirildi",
+      },
     });
+
+    // Redis: bloklangan user belgilash
+    await this.redis.set(`user:blocked:${id}`, '1');
 
     return { message: "O'qituvchi muvaffaqiyatli o'chirildi" };
   }

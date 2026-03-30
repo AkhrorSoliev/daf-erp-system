@@ -11,6 +11,74 @@ enum Gender {
   FEMALE
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
+  ARCHIVED
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  GRADUATED
+  EXPELLED
+  ARCHIVED
+}
+
+enum GroupStatus {
+  FORMING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+  DEPRECATED
+  ARCHIVED
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum RoomStatus {
+  ACTIVE
+  INACTIVE
+  UNDER_MAINTENANCE
+  ARCHIVED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  TRIAL
+  CONVERTED
+  LOST
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  FROZEN
+  COMPLETED
+  DROPPED
+  TRANSFERRED
+}
+
+enum HolidayStatus {
+  ACTIVE
+  CANCELLED
+}
+
 model Role {
   id    Int    @id
   name  String @unique
@@ -19,21 +87,26 @@ model Role {
 }
 
 model User {
-  id             Int       @id @default(autoincrement())
+  id             Int        @id @default(autoincrement())
   name           String
   phone          String?
   photo          String?
   gender         Gender?
-  balance        Int       @default(0)
+  balance        Int        @default(0)
   login          String?
   password       String?
-  isActive       Boolean   @default(true)
+  isActive       Boolean    @default(true)
+  status         UserStatus @default(ACTIVE)
   telegramChatId String?
   companyId      Int
-  company        Company   @relation(fields: [companyId], references: [id])
+  company        Company    @relation(fields: [companyId], references: [id])
   mainBranch     Int?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -54,8 +127,10 @@ model User {
   deletedGroups      Group[]      @relation("GroupDeletedBy")
   deletedEnrollments Enrollment[] @relation("EnrollmentDeletedBy")
   deletedHolidays    Holiday[]    @relation("HolidayDeletedBy")
+  statusChanges      StatusHistory[] @relation("StatusChangedBy")
 
   @@index([deletedAt])
+  @@index([status])
 }
 
 model UserRole {
@@ -77,15 +152,20 @@ model UserBranch {
 }
 
 model Branch {
-  id        Int      @id
-  name      String
-  address   String?
+  id                Int          @id
+  name              String
+  address           String?
   phone             String?
-  isActive          Boolean  @default(true)
+  isActive          Boolean      @default(true)
+  status            BranchStatus @default(ACTIVE)
   startOfWorkingDay String?
   endOfWorkingDay   String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
 
   companyId Int?
   company   Company? @relation(fields: [companyId], references: [id])
@@ -102,18 +182,24 @@ model Branch {
   courses         Course[]
 
   @@index([deletedAt])
+  @@index([status])
 }
 
 model Room {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   name      String
   capacity  Int?
+  status    RoomStatus @default(ACTIVE)
   branchId  Int
-  branch    Branch   @relation(fields: [branchId], references: [id])
+  branch    Branch     @relation(fields: [branchId], references: [id])
   companyId Int?
-  company   Company? @relation(fields: [companyId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  company   Company?   @relation(fields: [companyId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -123,22 +209,28 @@ model Room {
   groups Group[]
 
   @@index([deletedAt])
+  @@index([status])
 }
 
 model Course {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   name           String
   description    String?
   price          Int
   courseDuration Int?
   lessonDuration Int?
   lessonMinutes  Int?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean      @default(true)
+  status         CourseStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  branchId Int?
-  branch   Branch? @relation(fields: [branchId], references: [id])
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  branchId  Int?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
   companyId Int?
   company   Company? @relation(fields: [companyId], references: [id])
 
@@ -150,10 +242,11 @@ model Course {
   groups Group[]
 
   @@index([deletedAt])
+  @@index([status])
 }
 
 model Student {
-  id             Int      @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   firstName      String
   lastName       String
   phone          String
@@ -166,13 +259,18 @@ model Student {
   dateOfBirth    DateTime?
   photo          String?
   comment        String?
-  balance        Int       @default(0)
+  balance        Int           @default(0)
   placeOfStudy   String?
   address        String?
   passportSeries String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean       @default(true)
+  status         StudentStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
 
   companyId       Int?
   company         Company?  @relation(fields: [companyId], references: [id])
@@ -186,6 +284,7 @@ model Student {
   branches    StudentBranch[]
 
   @@index([deletedAt])
+  @@index([status])
 }
 
 model StudentBranch {
@@ -198,7 +297,7 @@ model StudentBranch {
 }
 
 model Lead {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   firstName   String
   lastName    String
   phone       String
@@ -206,9 +305,14 @@ model Lead {
   telegram    String?
   parentPhone String?
   parentName  String?
-  status      String   @default("new")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String     @default("new")
+  statusEnum  LeadStatus @default(NEW)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -216,31 +320,37 @@ model Lead {
   deletionBatchId String?
 
   @@index([deletedAt])
+  @@index([statusEnum])
 }
 
 model Group {
-  id                 String    @id @default(uuid())
+  id                 String      @id @default(uuid())
   name               String
   groupNumber        Int?
   courseId            String
-  course             Course    @relation(fields: [courseId], references: [id])
+  course             Course      @relation(fields: [courseId], references: [id])
   branchId           Int
-  branch             Branch    @relation(fields: [branchId], references: [id])
+  branch             Branch      @relation(fields: [branchId], references: [id])
   roomId             String?
-  room               Room?     @relation(fields: [roomId], references: [id])
+  room               Room?       @relation(fields: [roomId], references: [id])
   companyId          Int?
-  company            Company?  @relation(fields: [companyId], references: [id])
+  company            Company?    @relation(fields: [companyId], references: [id])
   days               String?
   exactDays          String[]
   lessonStartTime    String?
   lessonEndTime      String?
-  status             Int       @default(2)
+  status             Int         @default(2)
+  statusEnum         GroupStatus @default(FORMING)
   comment            String?
   startDate          DateTime?
   endDate            DateTime?
-  isActive           Boolean   @default(true)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  isActive           Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -253,6 +363,7 @@ model Group {
 
   @@unique([name, branchId])
   @@index([deletedAt])
+  @@index([statusEnum])
 }
 
 model GroupTeacher {
@@ -265,12 +376,18 @@ model GroupTeacher {
 }
 
 model Enrollment {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   studentId Int
-  student   Student  @relation(fields: [studentId], references: [id])
+  student   Student          @relation(fields: [studentId], references: [id])
   groupId   String
-  group     Group    @relation(fields: [groupId], references: [id])
-  createdAt DateTime @default(now())
+  group     Group            @relation(fields: [groupId], references: [id])
+  status    EnrollmentStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+  transferredToId    String?
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -278,12 +395,18 @@ model Enrollment {
   deletionBatchId String?
 
   @@index([deletedAt])
+  @@index([status])
 }
 
 model Holiday {
-  id   String   @id @default(uuid())
-  name String
-  date DateTime
+  id     String        @id @default(uuid())
+  name   String
+  date   DateTime
+  status HolidayStatus @default(ACTIVE)
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -291,6 +414,24 @@ model Holiday {
   deletionBatchId String?
 
   @@index([deletedAt])
+  @@index([status])
+}
+
+model StatusHistory {
+  id          String   @id @default(uuid())
+  entityType  String
+  entityId    String
+  fromStatus  String?
+  toStatus    String
+  reason      String?
+  changedById Int?
+  changedBy   User?    @relation("StatusChangedBy", fields: [changedById], references: [id])
+  companyId   Int?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([companyId])
 }
 
 model Company {

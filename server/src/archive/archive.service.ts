@@ -1,14 +1,44 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import {
+  UserStatus, StudentStatus, GroupStatus, CourseStatus,
+  BranchStatus, RoomStatus, LeadStatus, EnrollmentStatus, HolidayStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
+import { StatusHistoryService } from '../common/status';
 import { ArchiveEntityType, ArchiveQueryDto } from './dto/archive-query.dto';
+
+const ENTITY_DEFAULT_STATUS: Record<string, string> = {
+  [ArchiveEntityType.USERS]: UserStatus.ACTIVE,
+  [ArchiveEntityType.STUDENTS]: StudentStatus.ACTIVE,
+  [ArchiveEntityType.GROUPS]: GroupStatus.FORMING,
+  [ArchiveEntityType.COURSES]: CourseStatus.ACTIVE,
+  [ArchiveEntityType.BRANCHES]: BranchStatus.ACTIVE,
+  [ArchiveEntityType.ROOMS]: RoomStatus.ACTIVE,
+  [ArchiveEntityType.LEADS]: LeadStatus.NEW,
+  [ArchiveEntityType.ENROLLMENTS]: EnrollmentStatus.ACTIVE,
+  [ArchiveEntityType.HOLIDAYS]: HolidayStatus.ACTIVE,
+};
+
+const ENTITY_TYPE_MAP: Record<string, string> = {
+  [ArchiveEntityType.USERS]: 'User',
+  [ArchiveEntityType.STUDENTS]: 'Student',
+  [ArchiveEntityType.GROUPS]: 'Group',
+  [ArchiveEntityType.COURSES]: 'Course',
+  [ArchiveEntityType.BRANCHES]: 'Branch',
+  [ArchiveEntityType.ROOMS]: 'Room',
+  [ArchiveEntityType.LEADS]: 'Lead',
+  [ArchiveEntityType.ENROLLMENTS]: 'Enrollment',
+  [ArchiveEntityType.HOLIDAYS]: 'Holiday',
+};
 
 @Injectable()
 export class ArchiveService {
   constructor(
     private prisma: PrismaService,
     private uploadService: UploadService,
+    private statusHistoryService: StatusHistoryService,
   ) {}
 
   async getCounts() {
@@ -85,13 +115,45 @@ export class ArchiveService {
       throw new NotFoundException(`Arxivda ${entityType}/${id} topilmadi`);
     }
 
+    const statusField = this.getStatusField(entityType);
+    const defaultStatus = ENTITY_DEFAULT_STATUS[entityType];
+    const historyEntityType = ENTITY_TYPE_MAP[entityType];
+
     // Agar deletionBatchId bo'lsa, barcha bog'liq yozuvlarni ham tiklaymiz
     if (record.deletionBatchId) {
-      await this.restoreBatch(record.deletionBatchId);
+      await this.restoreBatch(record.deletionBatchId, userId);
     } else {
+      // StatusHistory yozish
+      if (record[statusField] && historyEntityType) {
+        await this.statusHistoryService.changeStatus({
+          entityType: historyEntityType,
+          entityId: String(parsedId),
+          fromStatus: record[statusField],
+          toStatus: defaultStatus,
+          reason: 'Arxivdan tiklandi',
+          changedById: userId,
+          companyId: record.companyId ?? undefined,
+        });
+      }
+
+      const restoreData: any = {
+        deletedAt: null,
+        deletedById: null,
+        deletionBatchId: null,
+        statusChangedAt: new Date(),
+        statusChangedById: userId,
+        statusChangeReason: 'Arxivdan tiklandi',
+      };
+      restoreData[statusField] = defaultStatus;
+
+      // isActive ni ham restore qilish
+      if ('isActive' in record) {
+        restoreData.isActive = true;
+      }
+
       await delegate.update({
         where: { id: parsedId },
-        data: { deletedAt: null, deletedById: null, deletionBatchId: null },
+        data: restoreData,
       });
     }
 
@@ -188,28 +250,40 @@ export class ArchiveService {
 
     const batchId = randomUUID();
     const now = new Date();
+    const archiveData = {
+      deletedAt: now, deletedById: userId, deletionBatchId: batchId,
+      statusChangedAt: now, statusChangedById: userId,
+      statusChangeReason: `Filial #${id} arxivlandi`,
+    };
 
     await this.prisma.$transaction(async (tx) => {
-      // Enrollment larni arxivlash (branch ga tegishli guruhlar orqali)
       await tx.enrollment.updateMany({
         where: { group: { branchId: id }, deletedAt: null },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: EnrollmentStatus.DROPPED },
       });
-      // Guruhlarni arxivlash
       await tx.group.updateMany({
         where: { branchId: id, deletedAt: null },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, statusEnum: GroupStatus.ARCHIVED, isActive: false },
       });
-      // Xonalarni arxivlash
       await tx.room.updateMany({
         where: { branchId: id, deletedAt: null },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: RoomStatus.ARCHIVED },
       });
-      // Branch ni arxivlash
       await tx.branch.update({
         where: { id },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: BranchStatus.ARCHIVED, isActive: false },
       });
+    });
+
+    // StatusHistory for the branch itself
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Branch',
+      entityId: String(id),
+      fromStatus: branch.status,
+      toStatus: BranchStatus.ARCHIVED,
+      reason: "Arxivlandi",
+      changedById: userId,
+      companyId: branch.companyId ?? undefined,
     });
 
     return { message: "Filial muvaffaqiyatli o'chirildi" };
@@ -225,20 +299,35 @@ export class ArchiveService {
 
     const batchId = randomUUID();
     const now = new Date();
+    const archiveData = {
+      deletedAt: now, deletedById: userId, deletionBatchId: batchId,
+      statusChangedAt: now, statusChangedById: userId,
+      statusChangeReason: `Kurs arxivlandi`,
+    };
 
     await this.prisma.$transaction(async (tx) => {
       await tx.enrollment.updateMany({
         where: { group: { courseId: id }, deletedAt: null },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: EnrollmentStatus.DROPPED },
       });
       await tx.group.updateMany({
         where: { courseId: id, deletedAt: null },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, statusEnum: GroupStatus.ARCHIVED, isActive: false },
       });
       await tx.course.update({
         where: { id },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: CourseStatus.ARCHIVED, isActive: false },
       });
+    });
+
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Course',
+      entityId: id,
+      fromStatus: course.status,
+      toStatus: CourseStatus.ARCHIVED,
+      reason: "Arxivlandi",
+      changedById: userId,
+      companyId: course.companyId ?? undefined,
     });
 
     return { message: "Kurs muvaffaqiyatli o'chirildi" };
@@ -254,16 +343,31 @@ export class ArchiveService {
 
     const batchId = randomUUID();
     const now = new Date();
+    const archiveData = {
+      deletedAt: now, deletedById: userId, deletionBatchId: batchId,
+      statusChangedAt: now, statusChangedById: userId,
+      statusChangeReason: `Guruh arxivlandi`,
+    };
 
     await this.prisma.$transaction(async (tx) => {
       await tx.enrollment.updateMany({
         where: { groupId: id, deletedAt: null },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: EnrollmentStatus.DROPPED },
       });
       await tx.group.update({
         where: { id },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, statusEnum: GroupStatus.ARCHIVED, isActive: false },
       });
+    });
+
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Group',
+      entityId: id,
+      fromStatus: group.statusEnum,
+      toStatus: GroupStatus.ARCHIVED,
+      reason: "Arxivlandi",
+      changedById: userId,
+      companyId: group.companyId ?? undefined,
     });
 
     return { message: "Guruh muvaffaqiyatli o'chirildi" };
@@ -279,16 +383,31 @@ export class ArchiveService {
 
     const batchId = randomUUID();
     const now = new Date();
+    const archiveData = {
+      deletedAt: now, deletedById: userId, deletionBatchId: batchId,
+      statusChangedAt: now, statusChangedById: userId,
+      statusChangeReason: `Talaba arxivlandi`,
+    };
 
     await this.prisma.$transaction(async (tx) => {
       await tx.enrollment.updateMany({
         where: { studentId: id, deletedAt: null },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: EnrollmentStatus.DROPPED },
       });
       await tx.student.update({
         where: { id },
-        data: { deletedAt: now, deletedById: userId, deletionBatchId: batchId },
+        data: { ...archiveData, status: StudentStatus.ARCHIVED, isActive: false },
       });
+    });
+
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Student',
+      entityId: String(id),
+      fromStatus: student.status,
+      toStatus: StudentStatus.ARCHIVED,
+      reason: "Arxivlandi",
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
     });
 
     return { message: "Talaba muvaffaqiyatli o'chirildi" };
@@ -305,53 +424,88 @@ export class ArchiveService {
       throw new NotFoundException(`${entityType}/${id} topilmadi`);
     }
 
+    const statusField = this.getStatusField(entityType);
+    const historyEntityType = ENTITY_TYPE_MAP[entityType];
+    const archivedStatus = this.getArchivedStatus(entityType);
+
+    // StatusHistory yozish
+    if (record[statusField] && historyEntityType) {
+      await this.statusHistoryService.changeStatus({
+        entityType: historyEntityType,
+        entityId: String(parsedId),
+        fromStatus: record[statusField],
+        toStatus: archivedStatus,
+        reason: "Arxivlandi",
+        changedById: userId,
+        companyId: record.companyId ?? undefined,
+      });
+    }
+
+    const data: any = {
+      deletedAt: new Date(),
+      deletedById: userId,
+      statusChangedAt: new Date(),
+      statusChangedById: userId,
+      statusChangeReason: "Arxivlandi",
+    };
+    data[statusField] = archivedStatus;
+
+    if ('isActive' in record) {
+      data.isActive = false;
+    }
+
     await delegate.update({
       where: { id: parsedId },
-      data: { deletedAt: new Date(), deletedById: userId },
+      data,
     });
 
     return { message: `${entityType} muvaffaqiyatli o'chirildi` };
   }
 
-  private async restoreBatch(batchId: string) {
-    const restoreData = { deletedAt: null, deletedById: null, deletionBatchId: null };
+  private async restoreBatch(batchId: string, userId?: number) {
+    const now = new Date();
+    const restoreBase = {
+      deletedAt: null, deletedById: null, deletionBatchId: null,
+      statusChangedAt: now, statusChangedById: userId ?? null,
+      statusChangeReason: 'Arxivdan tiklandi (batch)',
+    };
 
     await this.prisma.$transaction(async (tx) => {
       await tx.enrollment.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, status: EnrollmentStatus.ACTIVE },
       });
       await tx.group.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, statusEnum: GroupStatus.FORMING, isActive: true },
       });
       await tx.room.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, status: RoomStatus.ACTIVE },
       });
       await tx.course.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, status: CourseStatus.ACTIVE, isActive: true },
       });
       await tx.branch.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, status: BranchStatus.ACTIVE, isActive: true },
       });
       await tx.student.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, status: StudentStatus.ACTIVE, isActive: true },
       });
       await tx.lead.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, statusEnum: LeadStatus.NEW },
       });
       await tx.user.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, status: UserStatus.ACTIVE, isActive: true },
       });
       await tx.holiday.updateMany({
         where: { deletionBatchId: batchId },
-        data: restoreData,
+        data: { ...restoreBase, status: HolidayStatus.ACTIVE },
       });
     });
   }
@@ -440,6 +594,27 @@ export class ArchiveService {
       default:
         return {};
     }
+  }
+
+  private getStatusField(entityType: ArchiveEntityType): string {
+    if (entityType === ArchiveEntityType.GROUPS) return 'statusEnum';
+    if (entityType === ArchiveEntityType.LEADS) return 'statusEnum';
+    return 'status';
+  }
+
+  private getArchivedStatus(entityType: ArchiveEntityType): string {
+    const map: Record<string, string> = {
+      [ArchiveEntityType.USERS]: UserStatus.ARCHIVED,
+      [ArchiveEntityType.STUDENTS]: StudentStatus.ARCHIVED,
+      [ArchiveEntityType.GROUPS]: GroupStatus.ARCHIVED,
+      [ArchiveEntityType.COURSES]: CourseStatus.ARCHIVED,
+      [ArchiveEntityType.BRANCHES]: BranchStatus.ARCHIVED,
+      [ArchiveEntityType.ROOMS]: RoomStatus.ARCHIVED,
+      [ArchiveEntityType.LEADS]: LeadStatus.ARCHIVED,
+      [ArchiveEntityType.ENROLLMENTS]: EnrollmentStatus.DROPPED,
+      [ArchiveEntityType.HOLIDAYS]: HolidayStatus.CANCELLED,
+    };
+    return map[entityType] || 'ARCHIVED';
   }
 
   private parseId(entityType: ArchiveEntityType, id: string | number) {

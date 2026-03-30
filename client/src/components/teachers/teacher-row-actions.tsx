@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, RefreshCw, History } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -20,27 +21,33 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
+import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import api from "@/lib/api";
 
 interface TeacherRowActionsProps {
   teacher: TeacherData;
   onDeleted?: (id: number) => void;
+  onStatusChanged?: (id: number, newStatus: string) => void;
 }
 
-export function TeacherRowActions({ teacher, onDeleted }: TeacherRowActionsProps) {
+export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: TeacherRowActionsProps) {
   const { openDrawer } = useEditTeacher();
   const [showDelete, setShowDelete] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
 
   const handleDelete = async () => {
     setDeleting(true);
-    // Optimistic — darhol UI dan o'chirish
     setShowDelete(false);
     onDeleted?.(teacher.id);
     try {
@@ -51,6 +58,7 @@ export function TeacherRowActions({ teacher, onDeleted }: TeacherRowActionsProps
       toast.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setDeleting(false);
+      setDeleteReason("");
     }
   };
 
@@ -77,6 +85,15 @@ export function TeacherRowActions({ teacher, onDeleted }: TeacherRowActionsProps
             <Pencil className="mr-2 size-4" />
             Tahrirlash
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowStatus(true)}>
+            <RefreshCw className="mr-2 size-4" />
+            Status o&apos;zgartirish
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowHistory(true)}>
+            <History className="mr-2 size-4" />
+            Status tarixi
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive"
             onClick={() => setShowDelete(true)}
@@ -92,10 +109,17 @@ export function TeacherRowActions({ teacher, onDeleted }: TeacherRowActionsProps
           <AlertDialogHeader>
             <AlertDialogTitle>O&apos;chirishni tasdiqlang</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{teacher.name}</strong> o&apos;qituvchisini o&apos;chirmoqchimisiz?
-              Bu amalni qaytarib bo&apos;lmaydi.
+              <strong>{teacher.name}</strong> o&apos;qituvchisini arxivga o&apos;tkazilsinmi?
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="px-6 pb-2">
+            <Textarea
+              placeholder="Sabab yozing (ixtiyoriy)..."
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              rows={2}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction
@@ -108,6 +132,24 @@ export function TeacherRowActions({ teacher, onDeleted }: TeacherRowActionsProps
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ChangeStatusDialog
+        open={showStatus}
+        onOpenChange={setShowStatus}
+        entityType="teachers"
+        entityId={teacher.id}
+        entityName={teacher.name}
+        currentStatus={teacher.status || "ACTIVE"}
+        onStatusChanged={(newStatus) => onStatusChanged?.(teacher.id, newStatus)}
+      />
+
+      <StatusHistoryDialog
+        open={showHistory}
+        onOpenChange={setShowHistory}
+        entityType="teachers"
+        entityId={teacher.id}
+        entityName={teacher.name}
+      />
     </>
   );
 }

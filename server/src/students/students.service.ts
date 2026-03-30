@@ -3,12 +3,14 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
+import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
+import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
 
 const studentSelect = {
   id: true,
@@ -29,9 +31,13 @@ const studentSelect = {
   address: true,
   passportSeries: true,
   isActive: true,
+  status: true,
   companyId: true,
   createdAt: true,
   updatedAt: true,
+  statusChangedAt: true,
+  statusChangedById: true,
+  statusChangeReason: true,
   deletedAt: true,
   deletedBy: { select: { id: true, name: true } },
   branches: {
@@ -111,6 +117,8 @@ export class StudentsService {
   constructor(
     private prisma: PrismaService,
     private uploadService: UploadService,
+    private statusHistoryService: StatusHistoryService,
+    private statusCascadeService: StatusCascadeService,
   ) {}
 
   async findAll(query: StudentQueryDto) {
@@ -130,12 +138,12 @@ export class StudentsService {
     }
 
     if (status === 'active') {
-      where.isActive = true;
+      where.status = StudentStatus.ACTIVE;
       where.enrollments = { some: { deletedAt: null } };
     } else if (status === 'frozen') {
-      where.isActive = false;
+      where.status = StudentStatus.INACTIVE;
     } else if (status === 'ungrouped') {
-      where.isActive = true;
+      where.status = StudentStatus.ACTIVE;
       where.enrollments = { none: { deletedAt: null } };
     }
 
@@ -292,6 +300,56 @@ export class StudentsService {
     return formatStudent(updated);
   }
 
+  async changeStatus(id: number, dto: ChangeStudentStatusDto, userId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!student) {
+      throw new NotFoundException(`O'quvchi topilmadi`);
+    }
+
+    const auditData = await this.statusHistoryService.changeStatus({
+      entityType: 'Student',
+      entityId: String(id),
+      fromStatus: student.status,
+      toStatus: dto.status,
+      reason: dto.reason,
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
+    });
+
+    const isActive = dto.status === StudentStatus.ACTIVE;
+
+    const updated = await this.prisma.student.update({
+      where: { id },
+      data: {
+        status: dto.status as StudentStatus,
+        isActive,
+        ...auditData,
+      },
+      select: studentSelect,
+    });
+
+    // Cascade: ARCHIVED/EXPELLED → enrollment larni yangilash
+    await this.statusCascadeService.cascade('Student', String(id), dto.status, userId);
+
+    return formatStudent(updated);
+  }
+
+  async getStatusHistory(id: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!student) {
+      throw new NotFoundException(`O'quvchi topilmadi`);
+    }
+
+    return this.statusHistoryService.getHistory('Student', String(id));
+  }
+
   async delete(id: number, deletedById: number) {
     const student = await this.prisma.student.findFirst({
       where: { id, deletedAt: null },
@@ -301,9 +359,27 @@ export class StudentsService {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 
+    await this.statusHistoryService.changeStatus({
+      entityType: 'Student',
+      entityId: String(id),
+      fromStatus: student.status,
+      toStatus: StudentStatus.ARCHIVED,
+      reason: "O'chirildi",
+      changedById: deletedById,
+      companyId: student.companyId ?? undefined,
+    });
+
     await this.prisma.student.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedById },
+      data: {
+        status: StudentStatus.ARCHIVED,
+        isActive: false,
+        deletedAt: new Date(),
+        deletedById,
+        statusChangedAt: new Date(),
+        statusChangedById: deletedById,
+        statusChangeReason: "O'chirildi",
+      },
     });
 
     return { message: "O'quvchi muvaffaqiyatli o'chirildi" };
