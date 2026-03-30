@@ -62,7 +62,7 @@ All system users (CEO, admins, teachers, etc.) in a single table.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `id` | Int | Primary key (4-digit) |
+| `id` | Int | Primary key (5-digit, starts from 10000) |
 | `name` | String | Full name |
 | `phone` | String? | 9-digit format |
 | `photo` | String? | Avatar URL |
@@ -156,7 +156,7 @@ Cascade delete on both sides.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `id` | UUID | Auto-generated |
+| `id` | Int | Primary key (5-digit, starts from 10000) |
 | `firstName` | String | |
 | `lastName` | String | |
 | `phone` | String | 9-digit format |

@@ -333,12 +333,12 @@ async function main() {
   }
   console.log(`Guruhlar: ${groupConfigs.length} ta yaratildi`);
 
-  // Sequence larni to'g'rilash
+  // Sequence larni to'g'rilash (minimum 10000 — 5 xonali ID)
   await prisma.$executeRawUnsafe(
-    `SELECT setval(pg_get_serial_sequence('"User"', 'id'), (SELECT MAX(id) FROM "User"))`,
+    `SELECT setval(pg_get_serial_sequence('"User"', 'id'), GREATEST((SELECT MAX(id) FROM "User"), 9999))`,
   );
   await prisma.$executeRawUnsafe(
-    `SELECT setval(pg_get_serial_sequence('"Student"', 'id'), COALESCE((SELECT MAX(id) FROM "Student"), 1))`,
+    `SELECT setval(pg_get_serial_sequence('"Student"', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM "Student"), 0), 9999))`,
   );
 
   console.log('\nTayyor! CEO login bilan kiring: login=ceo, parol=123456');

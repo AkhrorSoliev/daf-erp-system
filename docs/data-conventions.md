@@ -45,9 +45,10 @@ Different models use different ID types:
 |-------|---------|---------|
 | Company | Int (4-digit) | `1001` |
 | Branch | Int (4-digit) | `1001` |
-| User | Int (4-digit) | `1001` |
+| User | Int (5-digit, starts from 10000) | `10001` |
+| Student | Int (5-digit, starts from 10000) | `10001` |
 | Role | Int (sequential) | `1` — `5` |
-| Course, Group, Room, Student, Lead, Holiday, Enrollment | UUID | `a1b2c3d4-...` |
+| Course, Group, Room, Lead, Holiday, Enrollment | UUID | `a1b2c3d4-...` |
 
 ## Pagination
 

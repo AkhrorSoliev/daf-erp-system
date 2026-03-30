@@ -1,14 +1,9 @@
-import { IsString, IsOptional, IsInt, IsIn, Min } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateCourseDto {
   @IsString()
   name: string;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'])
-  level?: string;
 
   @IsOptional()
   @IsString()
