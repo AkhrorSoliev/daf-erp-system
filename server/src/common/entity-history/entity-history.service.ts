@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityAction } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeChangedFields, stripSensitiveFields } from './diff.util';
 
@@ -12,7 +13,10 @@ interface BaseHistoryParams {
 
 @Injectable()
 export class EntityHistoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   async recordCreate(
     params: BaseHistoryParams & { newValues: Record<string, any> },
@@ -85,6 +89,16 @@ export class EntityHistoryService {
         companyId: params.companyId,
       },
     });
+
+    this.eventEmitter.emit('entity.status.changed', {
+      entityType: params.entityType,
+      entityId: String(params.entityId),
+      oldStatus: params.oldValues?.status,
+      newStatus: params.newValues?.status,
+      reason: params.newValues?.reason,
+      changedById: params.changedById,
+      companyId: params.companyId,
+    });
   }
 
   async recordRestore(
@@ -109,7 +123,7 @@ export class EntityHistoryService {
     options?: { page?: number; pageSize?: number },
   ) {
     const page = options?.page || 1;
-    const pageSize = options?.pageSize || 20;
+    const pageSize = options?.pageSize || 10;
     const skip = (page - 1) * pageSize;
 
     const [data, total] = await Promise.all([
@@ -119,7 +133,7 @@ export class EntityHistoryService {
         skip,
         take: pageSize,
         include: {
-          changedBy: { select: { id: true, name: true } },
+          changedBy: { select: { id: true, name: true, photo: true } },
         },
       }),
       this.prisma.entityHistory.count({

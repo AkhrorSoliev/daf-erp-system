@@ -237,6 +237,14 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - For **detail pages**: show a full-page skeleton layout that mimics the page structure until the entity data is available.
 - Use a simple `Loader2` spinning icon from `lucide-react` with `animate-spin` class **only** for inline indicators (button loading, small async operations). For page-level or section-level loading, always prefer skeletons.
 
+### Submit Loading State in Drawers and Dialogs
+
+- **Every drawer/dialog that submits data to the backend must show a loading state on the submit button** while the request is in flight
+- Use `Loader2` spinner inside the button with `animate-spin` and disable the button during submission
+- Also disable the cancel/close button during submission to prevent the user from closing the drawer before the request completes
+- Pattern: the form component exposes an `onSubmittingChange?: (submitting: boolean) => void` callback. The parent drawer/dialog tracks this via `useState` and passes it to both the form and the footer buttons
+- Never allow a user to click "Save" / "Submit" multiple times — always disable after the first click until the request resolves
+
 ### Lazy Data Fetching in Tabs
 
 - **Tab-specific data must only be fetched when the user switches to that tab** — not on page mount

@@ -3,15 +3,16 @@ export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
     ACTIVE: ['INACTIVE', 'SUSPENDED', 'TERMINATED'],
     INACTIVE: ['ACTIVE', 'TERMINATED'],
     SUSPENDED: ['ACTIVE', 'TERMINATED'],
-    TERMINATED: ['ARCHIVED'],
+    TERMINATED: [],
     ARCHIVED: ['ACTIVE'],
   },
 
   Student: {
-    ACTIVE: ['INACTIVE', 'GRADUATED', 'EXPELLED'],
-    INACTIVE: ['ACTIVE', 'EXPELLED'],
-    GRADUATED: ['ARCHIVED'],
-    EXPELLED: ['ARCHIVED'],
+    ACTIVE: ['INACTIVE', 'FROZEN', 'GRADUATED', 'EXPELLED'],
+    INACTIVE: ['ACTIVE', 'FROZEN', 'EXPELLED'],
+    FROZEN: ['ACTIVE', 'INACTIVE'],
+    GRADUATED: ['ACTIVE'],
+    EXPELLED: ['ACTIVE'],
     ARCHIVED: ['ACTIVE'],
   },
 
@@ -19,8 +20,8 @@ export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
     FORMING: ['ACTIVE', 'CANCELLED'],
     ACTIVE: ['PAUSED', 'COMPLETED', 'CANCELLED'],
     PAUSED: ['ACTIVE', 'CANCELLED'],
-    COMPLETED: ['ARCHIVED'],
-    CANCELLED: ['ARCHIVED'],
+    COMPLETED: [],
+    CANCELLED: [],
     ARCHIVED: ['FORMING'],
   },
 

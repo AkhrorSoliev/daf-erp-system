@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
 import { StudentProfileTabs } from "./student-profile-tabs";
+import { EnrollToGroupDialog } from "./enroll-to-group-dialog";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
@@ -14,24 +15,36 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [commentKey, setCommentKey] = useState(0);
+  const [enrollOpen, setEnrollOpen] = useState(false);
+  const [groupsRefreshing, setGroupsRefreshing] = useState(false);
   const setName = useBreadcrumbName((s) => s.setName);
 
   const handleCommentChange = useCallback(() => {
     setCommentKey((k) => k + 1);
   }, []);
 
-  const fetchStudent = useCallback(async () => {
-    setLoading(true);
+  const fetchStudent = useCallback(async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const { data } = await api.get(`/students/${studentId}`);
       setStudent(data);
       setError(false);
     } catch {
-      setError(true);
+      if (showLoader) setError(true);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
+      setGroupsRefreshing(false);
     }
   }, [studentId]);
+
+  const refreshStudent = useCallback(() => {
+    fetchStudent(false);
+  }, [fetchStudent]);
+
+  const handleEnrolled = useCallback(() => {
+    setGroupsRefreshing(true);
+    fetchStudent(false);
+  }, [fetchStudent]);
 
   useEffect(() => {
     fetchStudent();
@@ -68,14 +81,31 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
     <>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="w-full lg:w-85 lg:shrink-0">
-          <StudentProfileCard student={student} commentKey={commentKey} />
+          <StudentProfileCard
+            student={student}
+            commentKey={commentKey}
+            onEnrollClick={() => setEnrollOpen(true)}
+          />
         </div>
         <div className="min-w-0 flex-1">
-          <StudentProfileTabs student={student} onCommentChange={handleCommentChange} />
+          <StudentProfileTabs
+            student={student}
+            onCommentChange={handleCommentChange}
+            onEnrollmentChange={refreshStudent}
+            groupsRefreshing={groupsRefreshing}
+          />
         </div>
       </div>
       <EditStudentDrawer
         onSaved={(updated) => setStudent(updated)}
+      />
+      <EnrollToGroupDialog
+        open={enrollOpen}
+        onOpenChange={setEnrollOpen}
+        studentId={student.id}
+        studentName={`${student.firstName} ${student.lastName}`}
+        enrolledGroupIds={student.groups.map((g) => g.id)}
+        onEnrolled={handleEnrolled}
       />
     </>
   );

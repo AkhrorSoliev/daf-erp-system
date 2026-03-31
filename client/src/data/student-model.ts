@@ -5,6 +5,7 @@ export interface StudentBranch {
 
 export interface StudentGroup {
   id: string;
+  enrollmentId: string;
   name: string;
   status: number;
   level: string | null;

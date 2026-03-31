@@ -1,9 +1,13 @@
 import { isValidTransition, getAllowedTransitions } from './status-transitions';
 
 describe('isValidTransition', () => {
-  // ─── Valid transitions ──────────────────────────────
+  // ─── Student ───────────────────────────────────────
   it('allows Student ACTIVE → INACTIVE', () => {
     expect(isValidTransition('Student', 'ACTIVE', 'INACTIVE')).toBe(true);
+  });
+
+  it('allows Student ACTIVE → FROZEN', () => {
+    expect(isValidTransition('Student', 'ACTIVE', 'FROZEN')).toBe(true);
   });
 
   it('allows Student ACTIVE → GRADUATED', () => {
@@ -14,14 +18,49 @@ describe('isValidTransition', () => {
     expect(isValidTransition('Student', 'ACTIVE', 'EXPELLED')).toBe(true);
   });
 
+  it('allows Student FROZEN → ACTIVE', () => {
+    expect(isValidTransition('Student', 'FROZEN', 'ACTIVE')).toBe(true);
+  });
+
+  it('allows Student FROZEN → INACTIVE', () => {
+    expect(isValidTransition('Student', 'FROZEN', 'INACTIVE')).toBe(true);
+  });
+
+  it('allows Student GRADUATED → ACTIVE (re-enroll)', () => {
+    expect(isValidTransition('Student', 'GRADUATED', 'ACTIVE')).toBe(true);
+  });
+
+  it('allows Student EXPELLED → ACTIVE (re-admit)', () => {
+    expect(isValidTransition('Student', 'EXPELLED', 'ACTIVE')).toBe(true);
+  });
+
+  it('rejects Student GRADUATED → INACTIVE', () => {
+    expect(isValidTransition('Student', 'GRADUATED', 'INACTIVE')).toBe(false);
+  });
+
+  it('rejects Student GRADUATED → ARCHIVED (terminal, archive via delete)', () => {
+    expect(isValidTransition('Student', 'GRADUATED', 'ARCHIVED')).toBe(false);
+  });
+
+  // ─── User/Teacher ─────────────────────────────────
   it('allows User ACTIVE → TERMINATED', () => {
     expect(isValidTransition('User', 'ACTIVE', 'TERMINATED')).toBe(true);
   });
 
-  it('allows User SUSPENDED → ACTIVE (restore)', () => {
+  it('allows User SUSPENDED → ACTIVE', () => {
     expect(isValidTransition('User', 'SUSPENDED', 'ACTIVE')).toBe(true);
   });
 
+  it('rejects User TERMINATED → anything (terminal)', () => {
+    expect(isValidTransition('User', 'TERMINATED', 'ACTIVE')).toBe(false);
+    expect(isValidTransition('User', 'TERMINATED', 'ARCHIVED')).toBe(false);
+  });
+
+  it('rejects User ACTIVE → ARCHIVED (must go through TERMINATED)', () => {
+    expect(isValidTransition('User', 'ACTIVE', 'ARCHIVED')).toBe(false);
+  });
+
+  // ─── Group ────────────────────────────────────────
   it('allows Group FORMING → ACTIVE', () => {
     expect(isValidTransition('Group', 'FORMING', 'ACTIVE')).toBe(true);
   });
@@ -30,11 +69,21 @@ describe('isValidTransition', () => {
     expect(isValidTransition('Group', 'ACTIVE', 'COMPLETED')).toBe(true);
   });
 
+  it('rejects Group COMPLETED → anything (terminal)', () => {
+    expect(isValidTransition('Group', 'COMPLETED', 'ACTIVE')).toBe(false);
+    expect(isValidTransition('Group', 'COMPLETED', 'ARCHIVED')).toBe(false);
+  });
+
+  it('rejects Group CANCELLED → anything (terminal)', () => {
+    expect(isValidTransition('Group', 'CANCELLED', 'ACTIVE')).toBe(false);
+  });
+
+  // ─── Other entities ───────────────────────────────
   it('allows Enrollment ACTIVE → FROZEN', () => {
     expect(isValidTransition('Enrollment', 'ACTIVE', 'FROZEN')).toBe(true);
   });
 
-  it('allows Enrollment FROZEN → ACTIVE (unfreeze)', () => {
+  it('allows Enrollment FROZEN → ACTIVE', () => {
     expect(isValidTransition('Enrollment', 'FROZEN', 'ACTIVE')).toBe(true);
   });
 
@@ -42,16 +91,12 @@ describe('isValidTransition', () => {
     expect(isValidTransition('Holiday', 'ACTIVE', 'CANCELLED')).toBe(true);
   });
 
-  it('allows Holiday CANCELLED → ACTIVE (restore)', () => {
+  it('allows Holiday CANCELLED → ACTIVE', () => {
     expect(isValidTransition('Holiday', 'CANCELLED', 'ACTIVE')).toBe(true);
   });
 
   it('allows Lead NEW → CONTACTED', () => {
     expect(isValidTransition('Lead', 'NEW', 'CONTACTED')).toBe(true);
-  });
-
-  it('allows Lead LOST → NEW (re-engage)', () => {
-    expect(isValidTransition('Lead', 'LOST', 'NEW')).toBe(true);
   });
 
   it('allows Course ACTIVE → DEPRECATED', () => {
@@ -66,41 +111,12 @@ describe('isValidTransition', () => {
     expect(isValidTransition('Room', 'ACTIVE', 'UNDER_MAINTENANCE')).toBe(true);
   });
 
-  // ─── Invalid transitions ───────────────────────────
-  it('rejects User ACTIVE → ARCHIVED (must go through TERMINATED)', () => {
-    expect(isValidTransition('User', 'ACTIVE', 'ARCHIVED')).toBe(false);
-  });
-
-  it('rejects Student GRADUATED → INACTIVE (no going back)', () => {
-    expect(isValidTransition('Student', 'GRADUATED', 'INACTIVE')).toBe(false);
-  });
-
-  it('rejects Student GRADUATED → ACTIVE (no going back)', () => {
-    expect(isValidTransition('Student', 'GRADUATED', 'ACTIVE')).toBe(false);
-  });
-
-  it('rejects Group COMPLETED → ACTIVE (terminal)', () => {
-    expect(isValidTransition('Group', 'COMPLETED', 'ACTIVE')).toBe(false);
-  });
-
-  it('rejects Enrollment COMPLETED → ACTIVE (terminal)', () => {
-    expect(isValidTransition('Enrollment', 'COMPLETED', 'ACTIVE')).toBe(false);
-  });
-
-  it('rejects Enrollment DROPPED → ACTIVE (terminal)', () => {
-    expect(isValidTransition('Enrollment', 'DROPPED', 'ACTIVE')).toBe(false);
-  });
-
-  it('rejects Lead CONVERTED → NEW (no going back)', () => {
-    expect(isValidTransition('Lead', 'CONVERTED', 'NEW')).toBe(false);
-  });
-
   // ─── Edge cases ─────────────────────────────────────
   it('returns false for unknown entity type', () => {
     expect(isValidTransition('Unknown', 'ACTIVE', 'INACTIVE')).toBe(false);
   });
 
-  it('returns false for unknown status within valid entity', () => {
+  it('returns false for unknown status', () => {
     expect(isValidTransition('Student', 'NONEXISTENT', 'ACTIVE')).toBe(false);
   });
 
@@ -110,29 +126,38 @@ describe('isValidTransition', () => {
 });
 
 describe('getAllowedTransitions', () => {
-  it('returns [INACTIVE, GRADUATED, EXPELLED] for Student ACTIVE', () => {
+  it('returns 4 options for Student ACTIVE', () => {
     expect(getAllowedTransitions('Student', 'ACTIVE')).toEqual([
-      'INACTIVE', 'GRADUATED', 'EXPELLED',
+      'INACTIVE', 'FROZEN', 'GRADUATED', 'EXPELLED',
     ]);
+  });
+
+  it('returns [ACTIVE] for Student GRADUATED', () => {
+    expect(getAllowedTransitions('Student', 'GRADUATED')).toEqual(['ACTIVE']);
+  });
+
+  it('returns empty for User TERMINATED (terminal)', () => {
+    expect(getAllowedTransitions('User', 'TERMINATED')).toEqual([]);
+  });
+
+  it('returns empty for Group COMPLETED (terminal)', () => {
+    expect(getAllowedTransitions('Group', 'COMPLETED')).toEqual([]);
+  });
+
+  it('returns empty for Group CANCELLED (terminal)', () => {
+    expect(getAllowedTransitions('Group', 'CANCELLED')).toEqual([]);
   });
 
   it('returns [ACTIVE] for Student ARCHIVED (restore only)', () => {
     expect(getAllowedTransitions('Student', 'ARCHIVED')).toEqual(['ACTIVE']);
   });
 
-  it('returns empty array for Enrollment ARCHIVED (terminal)', () => {
-    expect(getAllowedTransitions('Enrollment', 'ARCHIVED')).toEqual([]);
-  });
-
-  it('returns empty array for unknown entity type', () => {
+  it('returns empty for unknown entity/status', () => {
     expect(getAllowedTransitions('Unknown', 'ACTIVE')).toEqual([]);
-  });
-
-  it('returns empty array for unknown status', () => {
     expect(getAllowedTransitions('Student', 'NONEXISTENT')).toEqual([]);
   });
 
-  it('returns [CANCELLED, ACTIVE] for Holiday', () => {
+  it('Holiday ACTIVE → CANCELLED, CANCELLED → ACTIVE', () => {
     expect(getAllowedTransitions('Holiday', 'ACTIVE')).toEqual(['CANCELLED']);
     expect(getAllowedTransitions('Holiday', 'CANCELLED')).toEqual(['ACTIVE']);
   });

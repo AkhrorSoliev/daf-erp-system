@@ -66,7 +66,7 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
   const studentName = `${student.firstName} ${student.lastName}`;
 
   return (
-    <>
+    <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
       <DropdownMenu>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -153,6 +153,6 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
         entityId={student.id}
         entityName={studentName}
       />
-    </>
+    </div>
   );
 }

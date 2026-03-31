@@ -8,7 +8,8 @@ interface StatusConfig {
 // ─── Student ──────────────────────────────────────────
 export const STUDENT_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
-  INACTIVE: { label: "Muzlatilgan", variant: "secondary" },
+  INACTIVE: { label: "Nofaol", variant: "secondary" },
+  FROZEN: { label: "Muzlatilgan", variant: "outline" },
   GRADUATED: { label: "Bitirgan", variant: "outline" },
   EXPELLED: { label: "Chetlatilgan", variant: "destructive" },
   ARCHIVED: { label: "Arxivlangan", variant: "ghost" },
@@ -97,47 +98,43 @@ export const ENTITY_API_PATH: Record<string, string> = {
   holidays: "/holidays",
 };
 
-// ─── Status transitions (frontend da validation uchun) ─
+// ─── Status transitions (backend bilan sinxron) ──────
+// ARCHIVED hech qachon qo'yilmaydi — arxivlash faqat "O'chirish" orqali
 export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   students: {
-    ACTIVE: ["INACTIVE", "GRADUATED", "EXPELLED"],
-    INACTIVE: ["ACTIVE", "EXPELLED"],
-    GRADUATED: ["ARCHIVED"],
-    EXPELLED: ["ARCHIVED"],
-    ARCHIVED: ["ACTIVE"],
+    ACTIVE: ["INACTIVE", "FROZEN", "GRADUATED", "EXPELLED"],
+    INACTIVE: ["ACTIVE", "FROZEN", "EXPELLED"],
+    FROZEN: ["ACTIVE", "INACTIVE"],
+    GRADUATED: ["ACTIVE"],
+    EXPELLED: ["ACTIVE"],
   },
   teachers: {
     ACTIVE: ["INACTIVE", "SUSPENDED", "TERMINATED"],
     INACTIVE: ["ACTIVE", "TERMINATED"],
     SUSPENDED: ["ACTIVE", "TERMINATED"],
-    TERMINATED: ["ARCHIVED"],
-    ARCHIVED: ["ACTIVE"],
+    // TERMINATED — terminal, hech narsaga o'tmaydi
   },
   groups: {
     FORMING: ["ACTIVE", "CANCELLED"],
     ACTIVE: ["PAUSED", "COMPLETED", "CANCELLED"],
     PAUSED: ["ACTIVE", "CANCELLED"],
-    COMPLETED: ["ARCHIVED"],
-    CANCELLED: ["ARCHIVED"],
-    ARCHIVED: ["FORMING"],
+    // COMPLETED — terminal
+    // CANCELLED — terminal
   },
   courses: {
     ACTIVE: ["INACTIVE", "DEPRECATED"],
     INACTIVE: ["ACTIVE", "DEPRECATED"],
-    DEPRECATED: ["ARCHIVED"],
-    ARCHIVED: ["ACTIVE"],
+    // DEPRECATED — terminal (arxiv orqali o'chiriladi)
   },
   branches: {
     ACTIVE: ["INACTIVE", "CLOSED"],
     INACTIVE: ["ACTIVE", "CLOSED"],
-    CLOSED: ["ARCHIVED"],
-    ARCHIVED: ["ACTIVE"],
+    // CLOSED — terminal
   },
   rooms: {
-    ACTIVE: ["INACTIVE", "UNDER_MAINTENANCE", "ARCHIVED"],
-    INACTIVE: ["ACTIVE", "UNDER_MAINTENANCE", "ARCHIVED"],
-    UNDER_MAINTENANCE: ["ACTIVE", "ARCHIVED"],
-    ARCHIVED: ["ACTIVE"],
+    ACTIVE: ["INACTIVE", "UNDER_MAINTENANCE"],
+    INACTIVE: ["ACTIVE", "UNDER_MAINTENANCE"],
+    UNDER_MAINTENANCE: ["ACTIVE"],
   },
   holidays: {
     ACTIVE: ["CANCELLED"],

@@ -51,9 +51,10 @@ function formatDate(iso: string): string {
 interface StudentProfileCardProps {
   student: Student;
   commentKey?: number;
+  onEnrollClick?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const [latestComment, setLatestComment] = useState<{
     content: string;
@@ -132,9 +133,9 @@ export function StudentProfileCard({ student, commentKey }: StudentProfileCardPr
 
       {/* Action buttons */}
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="flex-1">
+        <Button variant="outline" size="sm" className="flex-1" onClick={onEnrollClick}>
           <UserPlus className="mr-1.5 size-4" />
-          Guruhga qo&apos;shish
+          {student.groups.length > 0 ? "Guruhni o'zgartirish" : "Guruhga qo'shish"}
         </Button>
 
         <DropdownMenu>
