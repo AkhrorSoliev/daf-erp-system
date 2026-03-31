@@ -1,15 +1,21 @@
 import { Controller, Get, Post, Patch, Delete, Param, Query, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { StudentsService } from './students.service';
+import { SmsService } from '../sms/sms.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
+import { SendSmsDto } from '../sms/dto/send-sms.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
 @Controller('students')
 export class StudentsController {
-  constructor(private studentsService: StudentsService) {}
+  constructor(
+    private studentsService: StudentsService,
+    private smsService: SmsService,
+  ) {}
 
   @Get()
   findAll(@Query() query: StudentQueryDto) {
@@ -59,6 +65,51 @@ export class StudentsController {
   @Roles('CEO', 'Branch Director', 'Administrator')
   getStatusHistory(@Param('id', ParseIntPipe) id: number) {
     return this.studentsService.getStatusHistory(id);
+  }
+
+  @Post(':id/enroll')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  enrollToGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('groupId') groupId: string,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentsService.enrollToGroup(id, groupId, userId);
+  }
+
+  @Delete(':id/enroll/:enrollmentId')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  removeFromGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('enrollmentId') enrollmentId: string,
+    @Body('reason') reason: string,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentsService.removeFromGroup(id, enrollmentId, userId, reason || "Guruhdan chiqarildi");
+  }
+
+  @Get(':id/sms')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getSmsHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: PaginationDto,
+  ) {
+    return this.smsService.getByStudent(id, query.page, query.pageSize);
+  }
+
+  @Post(':id/sms')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  sendSms(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SendSmsDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.smsService.sendToStudent(id, dto.content, 'MANUAL', userId, companyId);
   }
 
   @Delete(':id')

@@ -27,6 +27,16 @@ enum StudentStatus {
   ARCHIVED
 }
 
+enum SmsMessageType {
+  AUTO
+  MANUAL
+}
+
+enum SmsMessageStatus {
+  SENT
+  FAILED
+}
+
 enum GroupStatus {
   FORMING
   ACTIVE
@@ -154,6 +164,7 @@ model User {
   commentAssignees   CommentAssignee[]  @relation("CommentAssignees")
   notifications      Notification[]     @relation("UserNotifications")
   pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
+  sentSmsMessages    SmsMessage[]       @relation("SmsSender")
 
   @@index([deletedAt])
   @@index([status])
@@ -308,6 +319,7 @@ model Student {
 
   enrollments Enrollment[]
   branches    StudentBranch[]
+  smsMessages SmsMessage[]
 
   @@index([deletedAt])
   @@index([status])
@@ -506,6 +518,7 @@ model Comment {
   entityId     String
   content      String
   isTask       Boolean            @default(false)
+  isSystem     Boolean            @default(false)
   authorId     Int
   author       User               @relation("CommentAuthor", fields: [authorId], references: [id])
   companyId    Int
@@ -567,4 +580,23 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model SmsMessage {
+  id                String           @id @default(uuid())
+  studentId         Int
+  student           Student          @relation(fields: [studentId], references: [id])
+  content           String
+  type              SmsMessageType
+  status            SmsMessageStatus
+  senderUserId      Int?
+  senderUser        User?            @relation("SmsSender", fields: [senderUserId], references: [id])
+  telegramMessageId Int?
+  errorMessage      String?
+  companyId         Int?
+  createdAt         DateTime         @default(now())
+
+  @@index([studentId, createdAt(sort: Desc)])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([status])
 }

@@ -1,14 +1,31 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
-import { AlertTriangle, CalendarIcon, ClockIcon, UsersIcon } from "lucide-react";
+import { AlertTriangle, CalendarIcon, ClockIcon, UsersIcon, UserMinus } from "lucide-react";
 import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import { CommentForm } from "@/components/shared/comment-form";
+import { SmsTab } from "@/components/students/sms-tab";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import toast from "react-hot-toast";
+import api from "@/lib/api";
 import {
   Table,
   TableBody,
@@ -51,7 +68,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-function GroupCard({ group }: { group: StudentGroup }) {
+function GroupCard({ group, onRemove }: { group: StudentGroup; onRemove?: (enrollmentId: string) => void }) {
   const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
 
   const daysLabel = group.days
@@ -105,9 +122,27 @@ function GroupCard({ group }: { group: StudentGroup }) {
           )}
         </div>
 
-        {/* Row 4: Enrolled date */}
-        <div className="mt-2 border-t pt-2 text-xs text-muted-foreground">
-          Qo&apos;shilgan: {format(new Date(group.enrolledAt), "dd.MM.yyyy")}
+        {/* Row 4: Enrolled date + remove */}
+        <div className="mt-2 border-t pt-2 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            Qo&apos;shilgan: {format(new Date(group.enrolledAt), "dd.MM.yyyy")}
+          </span>
+          {onRemove && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                  onClick={(e) => { e.preventDefault(); onRemove(group.enrollmentId); }}
+                >
+                  <UserMinus className="mr-1 size-3" />
+                  Chiqarish
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Guruhdan chiqarish</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
     </Link>
@@ -117,15 +152,36 @@ function GroupCard({ group }: { group: StudentGroup }) {
 interface StudentProfileTabsProps {
   student: Student;
   onCommentChange?: () => void;
+  onEnrollmentChange?: () => void;
+  groupsRefreshing?: boolean;
 }
 
-export function StudentProfileTabs({ student, onCommentChange }: StudentProfileTabsProps) {
-  const isUngrouped = student.isActive && student.groups.length === 0;
+export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChange, groupsRefreshing = false }: StudentProfileTabsProps) {
+  const [localGroups, setLocalGroups] = useState(student.groups);
+  const isUngrouped = student.isActive && localGroups.length === 0;
   const [historyVisible, setHistoryVisible] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [smsVisible, setSmsVisible] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
+  const [smsCount, setSmsCount] = useState<number | null>(null);
+  const [historyCount, setHistoryCount] = useState<number | null>(null);
   const historyShown = useRef(false);
   const commentsShown = useRef(false);
+  const smsShown = useRef(false);
+
+  useEffect(() => {
+    api.get(`/students/${student.id}/sms`, { params: { page: 1, pageSize: 1 } })
+      .then((res) => setSmsCount(res.data.total))
+      .catch(() => {});
+    api.get(`/entity-history/Student/${student.id}`, { params: { page: 1, pageSize: 1 } })
+      .then((res) => setHistoryCount(res.data.total))
+      .catch(() => {});
+  }, [student.id]);
+
+  // Sync local groups when student prop changes (after background refresh)
+  useEffect(() => {
+    setLocalGroups(student.groups);
+  }, [student.groups]);
 
   const handleOptimisticAdd = useCallback((comment: CommentData) => {
     setOptimisticComments((prev) => [comment, ...prev]);
@@ -151,16 +207,60 @@ export function StudentProfileTabs({ student, onCommentChange }: StudentProfileT
       commentsShown.current = true;
       setCommentsVisible(true);
     }
+    if (value === "sms" && !smsShown.current) {
+      smsShown.current = true;
+      setSmsVisible(true);
+    }
   };
 
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [removeEnrollmentId, setRemoveEnrollmentId] = useState<string | null>(null);
+  const [removeReason, setRemoveReason] = useState("");
+  const [removing, setRemoving] = useState(false);
+
+  const openRemoveDialog = (enrollmentId: string) => {
+    setRemoveEnrollmentId(enrollmentId);
+    setRemoveReason("");
+    setRemoveDialogOpen(true);
+  };
+
+  const confirmRemove = async () => {
+    if (!removeEnrollmentId || !removeReason.trim()) return;
+    setRemoving(true);
+    // Instant: remove from UI
+    setLocalGroups((prev) => prev.filter((g) => g.enrollmentId !== removeEnrollmentId));
+    setRemoveDialogOpen(false);
+    try {
+      await api.delete(`/students/${student.id}/enroll/${removeEnrollmentId}`, {
+        data: { reason: removeReason.trim() },
+      });
+      toast.success("O'quvchi guruhdan chiqarildi");
+      onEnrollmentChange?.();
+    } catch (err: any) {
+      setLocalGroups(student.groups);
+      toast.error(err?.response?.data?.message || "Xatolik yuz berdi");
+    } finally {
+      setRemoving(false);
+      setRemoveEnrollmentId(null);
+      setRemoveReason("");
+    }
+  };
+
+  // Called from parent when enrollment dialog confirms
+
   return (
+    <>
     <Tabs defaultValue="guruhlar" className="w-full" onValueChange={handleTabChange}>
       <TabsList className="w-full justify-start overflow-x-auto">
         <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
         <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
         <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
-        <TabsTrigger value="sms">SMS</TabsTrigger>
-        <TabsTrigger value="tarix">Tarix</TabsTrigger>
+        <TabsTrigger value="sms">
+          SMS{smsCount ? ` (${smsCount > 99 ? "99+" : smsCount})` : ""}
+        </TabsTrigger>
+        <TabsTrigger value="tarix">
+          Tarix{historyCount ? ` (${historyCount > 99 ? "99+" : historyCount})` : ""}
+        </TabsTrigger>
         <TabsTrigger value="lid">Lid tarixi</TabsTrigger>
       </TabsList>
 
@@ -173,10 +273,18 @@ export function StudentProfileTabs({ student, onCommentChange }: StudentProfileT
           </div>
         )}
 
-        {student.groups.length > 0 ? (
+        {groupsRefreshing ? (
           <div className="mb-6 grid gap-3">
-            {student.groups.map((g) => (
-              <GroupCard key={g.id} group={g} />
+            <div className="rounded-lg border p-4 space-y-3">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+        ) : localGroups.length > 0 ? (
+          <div className="mb-6 grid gap-3">
+            {localGroups.map((g) => (
+              <GroupCard key={g.id} group={g} onRemove={openRemoveDialog} />
             ))}
           </div>
         ) : (
@@ -249,7 +357,11 @@ export function StudentProfileTabs({ student, onCommentChange }: StudentProfileT
 
       {/* SMS */}
       <TabsContent value="sms">
-        <EmptyState message="SMS tarixi mavjud emas" />
+        {smsVisible ? (
+          <SmsTab studentId={student.id} telegramChatId={student.telegramChatId} />
+        ) : (
+          <EmptyState message="SMS tarixi mavjud emas" />
+        )}
       </TabsContent>
 
       {/* Tarix */}
@@ -266,5 +378,36 @@ export function StudentProfileTabs({ student, onCommentChange }: StudentProfileT
         <EmptyState message="Lid tarixi mavjud emas" />
       </TabsContent>
     </Tabs>
+
+      {/* Guruhdan chiqarish dialog */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Guruhdan chiqarish</AlertDialogTitle>
+            <AlertDialogDescription>
+              O&apos;quvchini guruhdan chiqarish sababini kiriting
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <Textarea
+              placeholder="Sabab yozing..."
+              value={removeReason}
+              onChange={(e) => setRemoveReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemove}
+              disabled={!removeReason.trim() || removing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Chiqarilmoqda..." : "Chiqarish"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

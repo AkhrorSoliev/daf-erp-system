@@ -15,6 +15,7 @@ import {
   Clock,
   CircleDot,
   CircleCheck,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,6 +58,7 @@ export interface CommentData {
   entityId: string;
   content: string;
   isTask: boolean;
+  isSystem?: boolean;
   author: CommentAuthor;
   assignees: CommentAssignee[];
   createdAt: string;
@@ -347,7 +349,8 @@ export function CommentList({ entityType, entityId, optimisticComments, onCommen
       <div className="max-h-125 overflow-y-auto space-y-0 pr-1">
         {allComments.map((comment, index) => {
           const isAuthor = comment.author.id === user?.id;
-          const canEdit = (isAuthor || isCeo) && !comment._pending;
+          const isSystemComment = comment.isSystem;
+          const canEdit = (isAuthor || isCeo) && !comment._pending && !isSystemComment;
           const myAssignee = comment.assignees.find((a) => a.userId === user?.id);
           const isEditing = editingId === comment.id;
           const allDone = comment.isTask && comment.assignees.length > 0 &&
@@ -362,13 +365,19 @@ export function CommentList({ entityType, entityId, optimisticComments, onCommen
                 } ${comment._failed ? "opacity-40" : ""}`}
               >
                 <div className="flex gap-3">
-                  {/* Avatar */}
-                  <Avatar className="size-7 shrink-0 mt-0.5">
-                    {comment.author.photo && <AvatarImage src={comment.author.photo} />}
-                    <AvatarFallback className="text-[10px] font-medium">
-                      {comment.author.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  {/* Avatar / System icon */}
+                  {isSystemComment ? (
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5">
+                      <RefreshCw className="size-3.5 text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <Avatar className="size-7 shrink-0 mt-0.5">
+                      {comment.author.photo && <AvatarImage src={comment.author.photo} />}
+                      <AvatarFallback className="text-[10px] font-medium">
+                        {comment.author.name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
 
                   {/* Body */}
                   <div className="min-w-0 flex-1 space-y-1">
@@ -462,7 +471,9 @@ export function CommentList({ entityType, entityId, optimisticComments, onCommen
                         </div>
                       </div>
                     ) : (
-                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-foreground/90 pr-4">
+                      <p className={`text-[13px] leading-relaxed whitespace-pre-wrap pr-4 ${
+                        isSystemComment ? "text-muted-foreground italic" : "text-foreground/90"
+                      }`}>
                         {comment.content}
                       </p>
                     )}

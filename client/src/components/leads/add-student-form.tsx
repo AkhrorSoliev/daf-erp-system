@@ -19,9 +19,10 @@ interface AddStudentFormProps {
   lead: Lead;
   onClose: () => void;
   formId: string;
+  onSubmittingChange?: (submitting: boolean) => void;
 }
 
-export function AddStudentForm({ lead, onClose, formId }: AddStudentFormProps) {
+export function AddStudentForm({ lead, onClose, formId, onSubmittingChange }: AddStudentFormProps) {
   const { moveLead } = useLeadsBoard();
 
   const form = useForm<AddStudentFromLeadValues>({
@@ -40,10 +41,15 @@ export function AddStudentForm({ lead, onClose, formId }: AddStudentFormProps) {
 
   const selectedGender = form.watch("gender");
 
-  const onSubmit = () => {
-    moveLead(lead.id, "visited");
-    toast.success("O'quvchi muvaffaqiyatli qo'shildi");
-    onClose();
+  const onSubmit = async () => {
+    onSubmittingChange?.(true);
+    try {
+      moveLead(lead.id, "visited");
+      toast.success("O'quvchi muvaffaqiyatli qo'shildi");
+      onClose();
+    } finally {
+      onSubmittingChange?.(false);
+    }
   };
 
   return (

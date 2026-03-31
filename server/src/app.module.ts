@@ -24,6 +24,7 @@ import { StatusHistoryModule } from './common/status';
 import { EntityHistoryModule } from './common/entity-history';
 import { CommentsModule } from './comments/comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SmsModule } from './sms/sms.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -52,6 +53,7 @@ import { JwtAuthGuard } from './common/guards';
     EntityHistoryModule,
     CommentsModule,
     NotificationsModule,
+    SmsModule,
   ],
   providers: [
     {

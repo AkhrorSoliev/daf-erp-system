@@ -12,6 +12,7 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const studentSelect = {
   id: true,
@@ -47,7 +48,7 @@ const studentSelect = {
     },
   },
   enrollments: {
-    where: { deletedAt: null },
+    where: { deletedAt: null, status: 'ACTIVE' },
     select: {
       id: true,
       createdAt: true,
@@ -97,6 +98,7 @@ function formatStudent(student: any) {
     })),
     groups: enrollments.map((e: any) => ({
       id: e.group.id,
+      enrollmentId: e.id,
       name: e.group.name,
       status: e.group.status,
       course_name: e.group.course?.name ?? null,
@@ -121,6 +123,7 @@ export class StudentsService {
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async findAll(query: StudentQueryDto) {
@@ -430,5 +433,149 @@ export class StudentsService {
     });
 
     return { message: "O'quvchi muvaffaqiyatli o'chirildi" };
+  }
+
+  async enrollToGroup(studentId: number, groupId: string, userId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, deletedAt: null },
+    });
+    if (!student) {
+      throw new NotFoundException(`O'quvchi #${studentId} topilmadi`);
+    }
+
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null },
+      include: { course: { select: { name: true } } },
+    });
+    if (!group) {
+      throw new NotFoundException(`Guruh topilmadi`);
+    }
+
+    // Already in this exact group?
+    const sameGroup = await this.prisma.enrollment.findFirst({
+      where: { studentId, groupId, deletedAt: null, status: 'ACTIVE' },
+    });
+    if (sameGroup) {
+      throw new BadRequestException("O'quvchi allaqachon bu guruhda");
+    }
+
+    // Deactivate any existing active enrollment (1 student = 1 group)
+    const currentEnrollment = await this.prisma.enrollment.findFirst({
+      where: { studentId, deletedAt: null, status: 'ACTIVE' },
+    });
+    if (currentEnrollment) {
+      await this.prisma.enrollment.update({
+        where: { id: currentEnrollment.id },
+        data: {
+          status: 'TRANSFERRED',
+          statusChangedAt: new Date(),
+          statusChangedById: userId,
+          statusChangeReason: `Guruh o'zgartirildi`,
+          transferredToId: groupId,
+        },
+      });
+    }
+
+    const enrollment = await this.prisma.enrollment.create({
+      data: {
+        studentId,
+        groupId,
+      },
+    });
+
+    // History: Enrollment entity
+    await this.entityHistoryService.recordCreate({
+      entityType: 'Enrollment',
+      entityId: enrollment.id,
+      newValues: {
+        studentId,
+        groupId,
+        status: 'ACTIVE',
+        previousGroupId: currentEnrollment?.groupId ?? null,
+      },
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
+    });
+
+    // History: Student entity — tarix tab da ko'rinadi
+    if (currentEnrollment) {
+      const oldGroup = await this.prisma.group.findUnique({ where: { id: currentEnrollment.groupId }, select: { name: true } });
+      const newGroup = await this.prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'Student',
+        entityId: studentId,
+        oldValues: { guruh: oldGroup?.name ?? currentEnrollment.groupId, guruhId: currentEnrollment.groupId },
+        newValues: { guruh: newGroup?.name ?? groupId, guruhId: groupId },
+        changedById: userId,
+        companyId: student.companyId ?? undefined,
+      });
+    } else {
+      const newGroup = await this.prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+      await this.entityHistoryService.recordCreate({
+        entityType: 'Student',
+        entityId: studentId,
+        newValues: { guruh: newGroup?.name ?? groupId, guruhId: groupId, action: 'GURUHGA_QOSHILDI' },
+        changedById: userId,
+        companyId: student.companyId ?? undefined,
+      });
+    }
+
+    this.eventEmitter.emit('student.enrolled', {
+      studentId,
+      groupName: group.name,
+      courseName: group.course.name,
+      days: group.days,
+      exactDays: group.exactDays,
+      lessonStartTime: group.lessonStartTime,
+      lessonEndTime: group.lessonEndTime,
+      companyId: student.companyId,
+    });
+
+    return enrollment;
+  }
+
+  async removeFromGroup(_studentId: number, enrollmentId: string, userId: number, reason: string) {
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { id: enrollmentId, deletedAt: null },
+    });
+    if (!enrollment) {
+      throw new NotFoundException('Faol yozuv topilmadi');
+    }
+
+    await this.prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: {
+        status: 'DROPPED',
+        statusChangedAt: new Date(),
+        statusChangedById: userId,
+        statusChangeReason: reason,
+      },
+    });
+
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Enrollment',
+      entityId: enrollmentId,
+      oldValues: { studentId: enrollment.studentId, groupId: enrollment.groupId, status: enrollment.status },
+      changedById: userId,
+    });
+
+    // History: Student entity — tarix tab da ko'rinadi
+    const removedGroup = await this.prisma.group.findUnique({ where: { id: enrollment.groupId }, select: { name: true } });
+    const student = await this.prisma.student.findUnique({ where: { id: enrollment.studentId }, select: { companyId: true } });
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Student',
+      entityId: enrollment.studentId,
+      oldValues: { guruh: removedGroup?.name ?? enrollment.groupId, guruhId: enrollment.groupId, action: 'GURUHDAN_CHIQARILDI', sabab: reason },
+      changedById: userId,
+    });
+
+    this.eventEmitter.emit('student.removed_from_group', {
+      studentId: enrollment.studentId,
+      groupName: removedGroup?.name ?? '',
+      reason,
+      companyId: student?.companyId ?? null,
+    });
+
+    return { message: "O'quvchi guruhdan chiqarildi" };
   }
 }
