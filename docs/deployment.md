@@ -71,7 +71,7 @@ railway up --detach
 
 `api.dafzentrum.uz` — CNAME points to `p93259ss.up.railway.app`
 
-### After First Deploy
+### After First Deploy (or after schema changes)
 
 Run migrations and seed on Railway:
 
@@ -79,6 +79,8 @@ Run migrations and seed on Railway:
 railway run npm run db:migrate:deploy
 railway run npm run db:seed
 ```
+
+> **Note:** The `EntityHistory` table and `EntityAction` enum were added in migration `20260330190834_add_entity_history`. Ensure migrations are applied after deploying schema changes.
 
 ## CORS
 

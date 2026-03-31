@@ -7,6 +7,7 @@ import {
   GroupStudentsTable,
   type GroupStudent,
 } from "./group-students-table";
+import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import type { GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
 
@@ -26,6 +27,8 @@ export function GroupDetailTabs({ group }: GroupDetailTabsProps) {
   const [students, setStudents] = useState<GroupStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const studentsFetched = useRef(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const historyShown = useRef(false);
 
   const fetchStudents = useCallback(async () => {
     if (studentsFetched.current) return;
@@ -48,6 +51,10 @@ export function GroupDetailTabs({ group }: GroupDetailTabsProps) {
 
   const handleTabChange = (value: string) => {
     if (value === "oquvchilar") fetchStudents();
+    if (value === "tarix" && !historyShown.current) {
+      historyShown.current = true;
+      setHistoryVisible(true);
+    }
   };
 
   return (
@@ -93,7 +100,11 @@ export function GroupDetailTabs({ group }: GroupDetailTabsProps) {
 
       {/* Tarix */}
       <TabsContent value="tarix">
-        <EmptyState message="Tarix mavjud emas" />
+        {historyVisible ? (
+          <EntityHistoryTable entityType="Group" entityId={group.id} />
+        ) : (
+          <EmptyState message="Tarix mavjud emas" />
+        )}
       </TabsContent>
 
       {/* Izohlar */}

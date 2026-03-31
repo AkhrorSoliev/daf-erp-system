@@ -70,15 +70,20 @@ export class GroupsController {
   create(
     @Body() dto: CreateGroupDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.groupsService.create(dto, companyId);
+    return this.groupsService.create(dto, companyId, userId);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  update(@Param('id') id: string, @Body() dto: UpdateGroupDto) {
-    return this.groupsService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateGroupDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.groupsService.update(id, dto, userId);
   }
 
   @Patch(':id/status')

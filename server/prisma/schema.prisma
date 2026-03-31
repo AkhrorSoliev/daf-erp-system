@@ -79,6 +79,27 @@ enum HolidayStatus {
   CANCELLED
 }
 
+enum EntityAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  RESTORE
+}
+
+enum AssigneeStatus {
+  PENDING
+  SEEN
+  DONE
+}
+
+enum NotificationType {
+  COMMENT
+  TASK_ASSIGNED
+  TASK_STATUS_CHANGED
+  SYSTEM
+}
+
 model Role {
   id    Int    @id
   name  String @unique
@@ -128,6 +149,11 @@ model User {
   deletedEnrollments Enrollment[] @relation("EnrollmentDeletedBy")
   deletedHolidays    Holiday[]    @relation("HolidayDeletedBy")
   statusChanges      StatusHistory[] @relation("StatusChangedBy")
+  entityChanges      EntityHistory[] @relation("EntityHistoryChangedBy")
+  comments           Comment[]          @relation("CommentAuthor")
+  commentAssignees   CommentAssignee[]  @relation("CommentAssignees")
+  notifications      Notification[]     @relation("UserNotifications")
+  pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
 
   @@index([deletedAt])
   @@index([status])
@@ -434,6 +460,24 @@ model StatusHistory {
   @@index([companyId])
 }
 
+model EntityHistory {
+  id          String       @id @default(uuid())
+  entityType  String
+  entityId    String
+  action      EntityAction
+  oldValues   Json?
+  newValues   Json?
+  changedById Int?
+  changedBy   User?        @relation("EntityHistoryChangedBy", fields: [changedById], references: [id])
+  companyId   Int?
+  createdAt   DateTime     @default(now())
+
+  @@index([entityType, entityId])
+  @@index([changedById])
+  @@index([companyId])
+  @@index([createdAt])
+}
+
 model Company {
   id                Int       @id
   name              String
@@ -453,4 +497,74 @@ model Company {
   courses  Course[]
   rooms    Room[]
   groups   Group[]
+  comments Comment[]
+}
+
+model Comment {
+  id           String             @id @default(uuid())
+  entityType   String
+  entityId     String
+  content      String
+  isTask       Boolean            @default(false)
+  authorId     Int
+  author       User               @relation("CommentAuthor", fields: [authorId], references: [id])
+  companyId    Int
+  company      Company            @relation(fields: [companyId], references: [id])
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  assignees     CommentAssignee[]
+  notifications Notification[]
+
+  @@index([entityType, entityId])
+  @@index([authorId])
+  @@index([companyId])
+  @@index([createdAt])
+}
+
+model CommentAssignee {
+  id         String         @id @default(uuid())
+  commentId  String
+  comment    Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId     Int
+  user       User           @relation("CommentAssignees", fields: [userId], references: [id])
+  status     AssigneeStatus @default(PENDING)
+  seenAt     DateTime?
+  doneAt     DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@unique([commentId, userId])
+  @@index([userId, status])
+}
+
+model Notification {
+  id                String           @id @default(uuid())
+  userId            Int
+  user              User             @relation("UserNotifications", fields: [userId], references: [id])
+  type              NotificationType
+  title             String
+  message           String
+  relatedEntityType String?
+  relatedEntityId   String?
+  commentId         String?
+  comment           Comment?         @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  isRead            Boolean          @default(false)
+  companyId         Int
+  createdAt         DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([companyId])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    Int
+  user      User     @relation("UserPushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

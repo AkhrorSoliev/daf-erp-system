@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CourseStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 import { CourseQueryDto } from './dto/course-query.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -13,6 +14,7 @@ export class CoursesService {
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async findAll(query: CourseQueryDto) {
@@ -66,7 +68,7 @@ export class CoursesService {
     return course;
   }
 
-  async create(dto: CreateCourseDto) {
+  async create(dto: CreateCourseDto, userId?: number) {
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId, deletedAt: null },
     });
@@ -74,7 +76,7 @@ export class CoursesService {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
 
-    return this.prisma.course.create({
+    const course = await this.prisma.course.create({
       data: {
         name: dto.name,
         lessonMinutes: dto.lessonMinutes,
@@ -86,9 +88,19 @@ export class CoursesService {
         companyId: dto.companyId,
       },
     });
+
+    await this.entityHistoryService.recordCreate({
+      entityType: 'Course',
+      entityId: course.id,
+      newValues: course,
+      changedById: userId,
+      companyId: dto.companyId ?? undefined,
+    });
+
+    return course;
   }
 
-  async update(id: string, dto: UpdateCourseDto) {
+  async update(id: string, dto: UpdateCourseDto, userId?: number) {
     const course = await this.prisma.course.findFirst({
       where: { id, deletedAt: null },
     });
@@ -96,10 +108,21 @@ export class CoursesService {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
 
-    return this.prisma.course.update({
+    const updated = await this.prisma.course.update({
       where: { id },
       data: dto,
     });
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'Course',
+      entityId: id,
+      oldValues: course,
+      newValues: updated,
+      changedById: userId,
+      companyId: course.companyId ?? undefined,
+    });
+
+    return updated;
   }
 
   async changeStatus(id: string, dto: ChangeCourseStatusDto, userId: number) {
@@ -128,6 +151,15 @@ export class CoursesService {
         isActive: dto.status === CourseStatus.ACTIVE,
         ...auditData,
       },
+    });
+
+    await this.entityHistoryService.recordStatusChange({
+      entityType: 'Course',
+      entityId: id,
+      oldValues: { status: course.status },
+      newValues: { status: dto.status, reason: dto.reason },
+      changedById: userId,
+      companyId: course.companyId ?? undefined,
     });
 
     // Cascade: ARCHIVED → guruhlarni yangilash
@@ -163,6 +195,14 @@ export class CoursesService {
       fromStatus: course.status,
       toStatus: CourseStatus.ARCHIVED,
       reason: "O'chirildi",
+      changedById: userId,
+      companyId: course.companyId ?? undefined,
+    });
+
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Course',
+      entityId: id,
+      oldValues: course,
       changedById: userId,
       companyId: course.companyId ?? undefined,
     });

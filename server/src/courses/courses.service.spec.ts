@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 
 describe('CoursesService — status methods', () => {
   let service: CoursesService;
@@ -47,6 +48,7 @@ describe('CoursesService — status methods', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: StatusCascadeService, useValue: statusCascadeService },
+        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
       ],
     }).compile();
 

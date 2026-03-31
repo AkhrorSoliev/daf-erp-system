@@ -38,13 +38,17 @@ export class RoomsController {
   }
 
   @Post()
-  create(@Body() dto: CreateRoomDto) {
-    return this.roomsService.create(dto);
+  create(@Body() dto: CreateRoomDto, @CurrentUser('id') userId: number) {
+    return this.roomsService.create(dto, userId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateRoomDto) {
-    return this.roomsService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateRoomDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.roomsService.update(id, dto, userId);
   }
 
   @Patch(':id/status')

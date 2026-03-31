@@ -21,6 +21,8 @@ import {
 import { useEditStudent } from "@/hooks/use-edit-student";
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
 
 function formatBalance(balance: number): string {
   const abs = Math.abs(balance)
@@ -48,10 +50,25 @@ function formatDate(iso: string): string {
 
 interface StudentProfileCardProps {
   student: Student;
+  commentKey?: number;
 }
 
-export function StudentProfileCard({ student }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
+  const [latestComment, setLatestComment] = useState<{
+    content: string;
+    isTask?: boolean;
+    author: { name: string };
+    createdAt: string;
+  } | null>(null);
+
+  useEffect(() => {
+    api.get("/comments/latest", {
+      params: { entityType: "Student", entityId: String(student.id) },
+    })
+      .then(({ data }) => setLatestComment(data || null))
+      .catch(() => {});
+  }, [student.id, commentKey]);
 
   return (
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
@@ -176,15 +193,32 @@ export function StudentProfileCard({ student }: StudentProfileCardProps) {
 
       <Separator />
 
-      {/* Eslatma */}
-      <div className="space-y-1.5">
+      {/* So'nggi izoh */}
+      <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Flag className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Eslatma</span>
+          <span className="text-sm font-medium">So&apos;nggi izoh</span>
         </div>
-        <p className="text-sm text-muted-foreground italic">
-          {student.comment || "Eslatma mavjud emas"}
-        </p>
+        {latestComment ? (
+          <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
+            <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="font-medium">{latestComment.author.name}</span>
+              <span>&middot;</span>
+              <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
+              {latestComment.isTask && (
+                <>
+                  <span>&middot;</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">
+            {student.comment || "Izoh mavjud emas"}
+          </p>
+        )}
       </div>
     </div>
   );

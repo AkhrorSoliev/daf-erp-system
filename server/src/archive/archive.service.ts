@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 import { ArchiveEntityType, ArchiveQueryDto } from './dto/archive-query.dto';
 
 const ENTITY_DEFAULT_STATUS: Record<string, string> = {
@@ -39,6 +40,7 @@ export class ArchiveService {
     private prisma: PrismaService,
     private uploadService: UploadService,
     private statusHistoryService: StatusHistoryService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async getCounts() {
@@ -123,12 +125,13 @@ export class ArchiveService {
     if (record.deletionBatchId) {
       await this.restoreBatch(record.deletionBatchId, userId);
     } else {
-      // StatusHistory yozish
-      if (record[statusField] && historyEntityType) {
+      // StatusHistory yozish (faqat status o'zgarsa)
+      const currentStatus = record[statusField];
+      if (currentStatus && currentStatus !== defaultStatus && historyEntityType) {
         await this.statusHistoryService.changeStatus({
           entityType: historyEntityType,
           entityId: String(parsedId),
-          fromStatus: record[statusField],
+          fromStatus: currentStatus,
           toStatus: defaultStatus,
           reason: 'Arxivdan tiklandi',
           changedById: userId,
@@ -154,6 +157,16 @@ export class ArchiveService {
       await delegate.update({
         where: { id: parsedId },
         data: restoreData,
+      });
+    }
+
+    if (historyEntityType) {
+      await this.entityHistoryService.recordRestore({
+        entityType: historyEntityType,
+        entityId: parsedId,
+        newValues: { status: defaultStatus },
+        changedById: userId,
+        companyId: record.companyId ?? undefined,
       });
     }
 
@@ -286,6 +299,14 @@ export class ArchiveService {
       companyId: branch.companyId ?? undefined,
     });
 
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Branch',
+      entityId: id,
+      oldValues: branch,
+      changedById: userId,
+      companyId: branch.companyId ?? undefined,
+    });
+
     return { message: "Filial muvaffaqiyatli o'chirildi" };
   }
 
@@ -330,6 +351,14 @@ export class ArchiveService {
       companyId: course.companyId ?? undefined,
     });
 
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Course',
+      entityId: id,
+      oldValues: course,
+      changedById: userId,
+      companyId: course.companyId ?? undefined,
+    });
+
     return { message: "Kurs muvaffaqiyatli o'chirildi" };
   }
 
@@ -370,6 +399,14 @@ export class ArchiveService {
       companyId: group.companyId ?? undefined,
     });
 
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Group',
+      entityId: id,
+      oldValues: group,
+      changedById: userId,
+      companyId: group.companyId ?? undefined,
+    });
+
     return { message: "Guruh muvaffaqiyatli o'chirildi" };
   }
 
@@ -406,6 +443,14 @@ export class ArchiveService {
       fromStatus: student.status,
       toStatus: StudentStatus.ARCHIVED,
       reason: "Arxivlandi",
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
+    });
+
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Student',
+      entityId: id,
+      oldValues: student,
       changedById: userId,
       companyId: student.companyId ?? undefined,
     });
@@ -458,6 +503,17 @@ export class ArchiveService {
       where: { id: parsedId },
       data,
     });
+
+    const histEntityType = ENTITY_TYPE_MAP[entityType];
+    if (histEntityType) {
+      await this.entityHistoryService.recordDelete({
+        entityType: histEntityType,
+        entityId: parsedId,
+        oldValues: record,
+        changedById: userId,
+        companyId: record.companyId ?? undefined,
+      });
+    }
 
     return { message: `${entityType} muvaffaqiyatli o'chirildi` };
   }

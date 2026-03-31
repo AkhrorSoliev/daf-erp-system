@@ -13,10 +13,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEditEmployee, type Employee } from "@/hooks/use-edit-employee";
+import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
+import { useAuth } from "@/hooks/use-auth";
 
-export function EmployeeRowActions({ employee }: { employee: Employee }) {
+interface EmployeeRowActionsProps {
+  employee: EmployeeUser;
+  onDelete?: (id: number) => void;
+}
+
+export function EmployeeRowActions({ employee, onDelete }: EmployeeRowActionsProps) {
   const { openDrawer } = useEditEmployee();
+  const user = useAuth((s) => s.user);
+  const canDelete = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   return (
     <DropdownMenu>
@@ -40,10 +48,15 @@ export function EmployeeRowActions({ employee }: { employee: Employee }) {
           <Pencil className="mr-2 size-4" />
           Tahrirlash
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive">
-          <Trash2 className="mr-2 size-4" />
-          O&apos;chirish
-        </DropdownMenuItem>
+        {canDelete && employee.id !== user?.id && (
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => onDelete?.(employee.id)}
+          >
+            <Trash2 className="mr-2 size-4" />
+            O&apos;chirish
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

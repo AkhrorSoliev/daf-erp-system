@@ -24,15 +24,23 @@ export class StudentsController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  create(@Body() dto: CreateStudentDto, @CurrentUser('companyId') companyId: number) {
-    return this.studentsService.create(dto, companyId);
+  create(
+    @Body() dto: CreateStudentDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentsService.create(dto, companyId, userId);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateStudentDto) {
-    return this.studentsService.update(id, dto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateStudentDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentsService.update(id, dto, userId);
   }
 
   @Patch(':id/status')

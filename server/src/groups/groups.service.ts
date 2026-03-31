@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -74,6 +75,7 @@ export class GroupsService {
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async findAll(query: GroupQueryDto) {
@@ -224,7 +226,7 @@ export class GroupsService {
     return formatGroup(group);
   }
 
-  async create(dto: CreateGroupDto, companyId: number) {
+  async create(dto: CreateGroupDto, companyId: number, userId?: number) {
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId, deletedAt: null },
     });
@@ -308,6 +310,14 @@ export class GroupsService {
           include: groupInclude,
         });
 
+        await this.entityHistoryService.recordCreate({
+          entityType: 'Group',
+          entityId: group.id,
+          newValues: group,
+          changedById: userId,
+          companyId,
+        });
+
         return formatGroup(group);
       } catch (error: any) {
         // Unique constraint violation — retry with next number
@@ -319,7 +329,7 @@ export class GroupsService {
     throw new NotFoundException('Guruh nomini generatsiya qilib bo\'lmadi, qayta urinib ko\'ring');
   }
 
-  async update(id: string, dto: UpdateGroupDto) {
+  async update(id: string, dto: UpdateGroupDto, userId?: number) {
     const existing = await this.prisma.group.findFirst({
       where: { id, deletedAt: null },
       include: { course: { select: { courseDuration: true } } },
@@ -386,6 +396,15 @@ export class GroupsService {
       });
     });
 
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'Group',
+      entityId: id,
+      oldValues: existing,
+      newValues: group,
+      changedById: userId,
+      companyId: existing.companyId ?? undefined,
+    });
+
     return formatGroup(group);
   }
 
@@ -417,6 +436,15 @@ export class GroupsService {
         ...auditData,
       },
       include: groupInclude,
+    });
+
+    await this.entityHistoryService.recordStatusChange({
+      entityType: 'Group',
+      entityId: id,
+      oldValues: { status: group.statusEnum },
+      newValues: { status: dto.status, reason: dto.reason },
+      changedById: userId,
+      companyId: group.companyId ?? undefined,
     });
 
     // Cascade: COMPLETED/CANCELLED → enrollment larni yangilash
@@ -452,6 +480,14 @@ export class GroupsService {
       fromStatus: group.statusEnum,
       toStatus: GroupStatus.ARCHIVED,
       reason: "O'chirildi",
+      changedById: userId,
+      companyId: group.companyId ?? undefined,
+    });
+
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Group',
+      entityId: id,
+      oldValues: group,
       changedById: userId,
       companyId: group.companyId ?? undefined,
     });

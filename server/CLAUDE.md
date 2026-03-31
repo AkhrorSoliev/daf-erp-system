@@ -53,6 +53,22 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - `POST /api/auth/refresh` refreshes the token pair
 - Use `@CurrentUser()` decorator to get the authenticated user in controllers
 
+### Portal-Based Role Restriction (Subdomain Routing)
+
+The system uses **subdomain-based portals** — each subdomain restricts login to specific roles:
+
+| Portal | Domain | Allowed Roles |
+|--------|--------|---------------|
+| Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
+| Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
+| Student portal | `student.dafzentrum.uz` | Not yet implemented |
+
+- Configuration: `src/auth/portal-roles.config.ts` — `PORTAL_ROLES` mapping
+- **How it works:** On login, `AuthService.login()` reads the `Origin` header, calls `getAllowedRoleIds(origin)` to get allowed role IDs for that portal, and throws `ForbiddenException` if the user has no matching role
+- **Localhost/dev:** Returns `null` (no restriction) — all roles can log in from localhost
+- **Error message:** "Sizning rolingiz bu portalga kirish huquqiga ega emas" (Uzbek)
+- When adding a new portal subdomain: update `PORTAL_ROLES` in config, add CORS origin in `main.ts`, add DNS record in Cloudflare, configure in Vercel
+
 ### Role-Based Access Control (RBAC) — Backend Rules
 
 > See full permission matrix: `docs/role-access.md`
@@ -107,6 +123,90 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 - **Permanent delete** (`DELETE /api/archive/:entityType/:id`) removes the record from DB and deletes associated files from Cloudflare R2
 - Files (photos, avatars) are **NOT deleted** during soft delete — only during permanent delete from archive
 
+### Entity History (Audit Log)
+
+- A **universal `EntityHistory` table** tracks all changes (CREATE, UPDATE, DELETE, STATUS_CHANGE, RESTORE) for every entity (Student, Branch, Room, Course, Group, User, Lead, Holiday, Enrollment)
+- Every service that performs a mutation **must** record the change via `EntityHistoryService` — this is **not optional**
+- The service is global (`EntityHistoryModule` in `src/common/entity-history/`) and injectable in any service without importing the module
+- Methods: `recordCreate()`, `recordUpdate()`, `recordDelete()`, `recordStatusChange()`, `recordRestore()`
+- For **UPDATE**, pass the full old and new objects — the service auto-computes the diff via `computeChangedFields()` in `diff.util.ts` and only stores changed fields. If nothing actually changed, no history record is created
+- Sensitive fields (`password`) and metadata fields (`updatedAt`, `createdAt`, `deletedAt`, `deletedById`, `deletionBatchId`, `statusChangedAt`, `statusChangedById`, `statusChangeReason`) are automatically excluded from history — see `EXCLUDED_KEYS` in `diff.util.ts`
+- Only **plain values** (strings, numbers, booleans, dates, null) are stored — nested objects and arrays are skipped
+- `StatusHistory` table still exists alongside `EntityHistory` — it handles status transition **validation** (`isValidTransition`). Both tables record status changes, each serving its own purpose
+- Query endpoint: `GET /api/entity-history/:entityType/:entityId?page=1&pageSize=20` — returns paginated history with `changedBy: { id, name }` user info, ordered by `createdAt DESC`
+- Access: restricted to CEO, Branch Director, Administrator
+- **History tabs in the frontend rely on this endpoint** — if a new entity type is added, ensure its CRUD methods call `EntityHistoryService` so the frontend history tab has data to display
+
+#### Controller → Service userId pattern
+
+- **All controllers that perform create/update must pass `@CurrentUser('id') userId` to the service method** — this is required for the audit trail (`changedById` field in `EntityHistory`)
+- Pattern: `create(@Body() dto, @CurrentUser('id') userId: number)` → `this.service.create(dto, userId)`
+- Service methods accept `userId?: number` as an optional parameter and pass it to `EntityHistoryService`
+- This applies to: `BranchesController`, `CoursesController`, `GroupsController`, `RoomsController`, `StudentsController`
+
+#### Archive + EntityHistory integration
+
+- **Soft delete (archive):** `ArchiveService` calls `entityHistoryService.recordDelete()` when permanently deleting entities — records the entity state before deletion
+- **Restore:** `ArchiveService` calls `entityHistoryService.recordRestore()` when restoring archived entities — records the restored status
+- Both operations log the `changedById` (user who performed the action) and `companyId` for multi-tenant filtering
+
+#### Currently tracked entities
+
+| Entity | create | update | statusChange | delete | restore |
+|--------|--------|--------|--------------|--------|---------|
+| Student | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Group | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Branch | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Room | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Course | ✅ | ✅ | ✅ | ✅ | ✅ |
+| User | ✅ | ✅ (profile) | — | — | — |
+| Holiday | — | — | ✅ | — | — |
+
+### Comments & Task Assignment
+
+- `CommentsModule` (`src/comments/`) — izohlar va topshiriqlar tizimi
+- **Comment** jadvali: polymorphic `entityType`/`entityId` (EntityHistory pattern bilan bir xil)
+- **CommentAssignee** jadvali: topshiriq assign qilingan foydalanuvchilar, har birining alohida statusi (PENDING → SEEN → DONE)
+- **Ruxsat**: Oddiy izoh — CEO, BD, Admin. Task izoh — faqat CEO va BD
+- **Endpoints:**
+  - `POST /api/comments` — izoh/topshiriq yaratish
+  - `GET /api/comments?entityType=Student&entityId=12345&page=1&pageSize=20` — entity bo'yicha ro'yxat
+  - `GET /api/comments/latest?entityType=Student&entityId=12345` — eng so'nggi izoh (Eslatma uchun)
+  - `DELETE /api/comments/:id` — muallif yoki CEO o'chira oladi
+  - `PATCH /api/comments/:id/assignee-status` — assign qilingan user o'z statusini o'zgartiradi
+- Comment yaratish/o'chirish `EntityHistoryService` orqali audit log ga yoziladi
+- `@nestjs/event-emitter` orqali event chiqariladi: `comment.created`, `task.assigned`, `task.status.changed`
+
+### Notifications (4 kanal)
+
+- `NotificationsModule` (`src/notifications/`) — bildirishnomalar tizimi
+- **Notification** jadvali: har bir foydalanuvchi uchun bildirishnomalar (userId, type, title, message, isRead)
+- **PushSubscription** jadvali: browser push subscription ma'lumotlari
+- **4 ta yetkazish kanali:**
+  1. **DB** — barcha bildirishnomalar saqlanadi
+  2. **SSE (Server-Sent Events)** — real-time, `GET /api/notifications/stream` (fetch-based, JWT Authorization header bilan)
+  3. **Web Push** — browser yopiq bo'lganda ham, `web-push` kutubxonasi, VAPID kalitlar orqali
+  4. **Telegram** — `TelegramService.getBot().telegram.sendMessage()` orqali, faqat `telegramChatId` mavjud bo'lsa
+- **SSE Gateway** (`notifications.gateway.ts`): userId → Response mapping, 30s heartbeat
+- **Event Listener** (`notification-events.listener.ts`): event larni 4 kanalga fanout qiladi
+- **Endpoints:**
+  - `GET /api/notifications?page=1&pageSize=20` — o'z bildirishnomalar
+  - `GET /api/notifications/unread-count` — badge uchun o'qilmagan soni
+  - `PATCH /api/notifications/:id/read` — o'qilgan deb belgilash
+  - `PATCH /api/notifications/read-all` — barchasini o'qilgan
+  - `GET /api/notifications/stream` — SSE stream
+  - `POST /api/notifications/push/subscribe` — push subscription
+  - `DELETE /api/notifications/push/unsubscribe` — push unsubscribe
+  - `GET /api/notifications/vapid-public-key` — VAPID public key
+
+### Student Search & Filters
+
+- **Unified search** (`?search=`): searches across `firstName`, `lastName`, `phone`, and `id` (numeric) in a single query — the frontend sends one search string for all fields
+- **Status filters** (`?status=`): `active`, `frozen`, `ungrouped`, `graduated`, `expelled` — each maps to specific `where` conditions in the service
+- **Branch filter** (`?branch_id=`): filters students by their enrollment branch
+- `ungrouped` = active students with zero enrollments
+- `graduated` and `expelled` map directly to `StudentStatus.GRADUATED` and `StudentStatus.EXPELLED`
+
 ### Error Handling
 
 - Use NestJS built-in exceptions (`NotFoundException`, `ForbiddenException`, `BadRequestException`, etc.)
@@ -133,6 +233,20 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 - Shared DTOs in `src/common/dto/`
 - Domain modules in `src/<domain>/` (e.g., `src/branches/`, `src/students/`)
 
+### Testing
+
+- **Every meaningful change must include tests.** After adding or modifying a service, write unit tests before considering the work done.
+- Test files live next to the code they test: `<service>.spec.ts` (e.g., `comments.service.spec.ts`)
+- Use `@nestjs/testing` `Test.createTestingModule()` with all dependencies mocked as plain objects (`{ provide: Service, useValue: mockObject }`)
+- Mock `PrismaService` per-model: `prisma = { student: { findFirst: jest.fn(), ... }, ... }`
+- Mock `EntityHistoryService` with all 5 methods: `recordCreate`, `recordUpdate`, `recordDelete`, `recordStatusChange`, `recordRestore`
+- Mock `EventEmitter2` with `{ emit: jest.fn() }`
+- Use `jest.fn().mockResolvedValue()` for async returns
+- Use `expect.objectContaining()` for partial matching
+- Test both success paths **and** error paths (NotFoundException, ForbiddenException, BadRequestException)
+- Run tests: `npm test` (all), `npx jest <path>` (specific file)
+- **Always run the full test suite (`npm test`) after finishing changes** to verify nothing is broken — all tests must pass before the work is considered complete
+
 ## Commands
 
 - `npm run start:dev` — Development with hot reload
@@ -157,3 +271,6 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 | `REDIS_PORT` | Redis port | `6379` |
 | `PORT` | Server port | `4000` |
 | `NODE_ENV` | Environment | `development` |
+| `VAPID_PUBLIC_KEY` | Web Push VAPID public key | — |
+| `VAPID_PRIVATE_KEY` | Web Push VAPID private key | — |
+| `VAPID_EMAIL` | VAPID contact email | `mailto:admin@dafzentrum.uz` |

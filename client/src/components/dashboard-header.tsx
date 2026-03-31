@@ -1,17 +1,13 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function DashboardHeader() {
   return (
@@ -27,17 +23,7 @@ export function DashboardHeader() {
           <Input placeholder="Qidirish..." className="pl-9 max-w-sm" />
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            >
-              <Bell className="size-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Bildirishnomalar</TooltipContent>
-        </Tooltip>
+        <NotificationBell />
 
         <ThemeToggle />
       </div>

@@ -17,6 +17,21 @@ An ERP system for **DaF Sprachzentrum** language school. Manages branches, staff
 
 The system supports **multiple branches** (filials).
 
+### Portal-Based Role Restriction (Subdomain Routing)
+
+The frontend is deployed to multiple subdomains — each portal restricts which roles can log in:
+
+| Portal | Domain | Allowed Roles |
+|--------|--------|---------------|
+| Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
+| Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
+| Student portal | `student.dafzentrum.uz` | Not yet implemented |
+
+- **Restriction is enforced server-side** — the backend checks the `Origin` header on login and rejects users whose roles don't match the portal (see `portal-roles.config.ts`)
+- **Error handling:** If login is rejected due to role mismatch, the API returns `403 Forbidden` with message "Sizning rolingiz bu portalga kirish huquqiga ega emas"
+- **Localhost:** No restriction — all roles can log in during development
+- The same frontend codebase is deployed to all three portals; the backend controls who can access what
+
 ### Role-Based Access Control (RBAC) — Frontend Rules
 
 > See full permission matrix: `docs/role-access.md`
@@ -215,10 +230,12 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 - **Every UI that fetches data from the backend must show a loading indicator** while the request is in flight — tables, drawers, forms, detail pages, select dropdowns, etc.
 - Never render an empty or broken UI while data is loading. The user must always see a clear visual signal that content is being fetched.
+- **Prefer skeleton placeholders over spinners** — skeletons give the user a sense of the content layout before it loads and feel faster. Use the shadcn/ui `<Skeleton>` component (`src/components/ui/skeleton.tsx`).
+- For **lists/feeds** (e.g. comment list, notification list): show 3 skeleton items that mimic the shape of a real item (avatar circle + text lines). Never show a bare spinner for list content.
 - For **drawers/dialogs with forms** that load options (e.g. select lists for courses, rooms, teachers): show a centered spinner or skeleton until all required data has loaded. Disable the form submit button while loading.
-- For **tables**: show a skeleton or spinner in the table body area while rows are loading.
-- For **detail pages**: show a full-page centered spinner or skeleton layout until the entity data is available.
-- Use a simple `Loader2` spinning icon from `lucide-react` with `animate-spin` class as the default loading indicator, or use skeleton components for richer loading states.
+- For **tables**: show skeleton rows in the table body area while rows are loading.
+- For **detail pages**: show a full-page skeleton layout that mimics the page structure until the entity data is available.
+- Use a simple `Loader2` spinning icon from `lucide-react` with `animate-spin` class **only** for inline indicators (button loading, small async operations). For page-level or section-level loading, always prefer skeletons.
 
 ### Lazy Data Fetching in Tabs
 
@@ -228,6 +245,81 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Use a `useRef` flag (e.g. `fetched.current`) to ensure the data is fetched only once per mount — subsequent tab switches should not re-fetch
 - Show a loading spinner inside the tab content while the request is in flight
 - This rule applies to all tabbed UIs across the application (profile pages, detail pages, settings, etc.)
+
+### Entity History in Tabs
+
+- Several detail/profile pages have a **"Tarix" (History) tab** that displays the full change log for that entity
+- Pages with history tabs: **Student Profile**, **Group Detail**, **Teacher Profile** — and any future detail page that needs audit visibility
+- **History data must always come from the backend** — never hardcode, mock, or generate history on the frontend
+- API endpoint: `GET /api/entity-history/:entityType/:entityId?page=1&pageSize=20`
+  - `entityType` values: `Student`, `Group`, `User` (for teachers), `Branch`, `Room`, `Course`, `Lead`, `Holiday`, `Enrollment`
+  - Response: `{ data: [...], total, page, pageSize }` — each entry has `action`, `oldValues`, `newValues`, `changedBy: { id, name }`, `createdAt`
+- **All entity changes are recorded by the backend automatically** — every create, update, delete, status change, and restore is logged in the `EntityHistory` table
+- Follow the **lazy tab loading** pattern: only fetch history when the user switches to the "Tarix" tab (use `onValueChange` + `useRef` flag)
+- Display history as a timeline or table showing: date/time, who made the change, what action (created, updated, deleted, status changed, restored), and what fields changed (old → new values)
+- Use the `dd.MM.yyyy, HH:mm:ss` date format for history timestamps (audit trails require time precision)
+- When adding a new entity detail page with a "Tarix" tab, simply call the same `/api/entity-history/:entityType/:entityId` endpoint with the correct `entityType`
+
+#### Shared `EntityHistoryTable` component
+
+- Located at `src/components/shared/entity-history-table.tsx` — **reusable** across all detail pages
+- Props: `entityType: string` and `entityId: string | number`
+- Handles fetching, pagination (20 per page), loading state, and empty state internally
+- Action badges: "Yaratildi" (green), "Yangilandi" (blue), "O'chirildi" (red), "Status o'zgardi" (gray), "Tiklandi" (green)
+- **CREATE**: shows first 3 new field values + overflow count
+- **DELETE**: shows "Barcha ma'lumotlar arxivlandi"
+- **UPDATE/STATUS_CHANGE**: shows old (red strikethrough) → new (green) for each changed field
+- User column shows `changedBy.name` or "Tizim" (System) if null
+- To add history to a new detail page:
+  ```tsx
+  import { EntityHistoryTable } from "@/components/shared/entity-history-table";
+  // In the "Tarix" tab content:
+  {historyVisible && <EntityHistoryTable entityType="Branch" entityId={branch.id} />}
+  ```
+
+### Student Filters
+
+- **Single search field** for name, phone, and ID — placeholder: "Ism, telefon yoki ID bo'yicha..."
+- Removed separate `id` filter and `groupLevel` filter — all search is now server-side via `?search=` param
+- **Status options**: Barcha holatlar, Faol, Muzlatilgan, Guruhlashtirilmagan, Bitirgan, Chetlatilgan
+- **Branch filtering**: automatically filters by selected branch (`selectedBranch?.id` → `?branch_id=`)
+- Filter changes always reset pagination to page 1
+- No client-side filtering — all filtering is done server-side for consistency and performance
+
+### Comments & Task Assignment (Izohlar)
+
+- **"Izohlar" tab** mavjud: Student Profile, Teacher Profile — comment list + form ko'rsatadi
+- **Shared komponentlar:**
+  - `src/components/shared/comment-list.tsx` — izohlar ro'yxati (oddiy + topshiriq), pagination, assignee status tugmalari
+  - `src/components/shared/comment-form.tsx` — izoh yozish formasi, CEO/BD uchun "Topshiriq sifatida" switch + assignee tanlash
+- **Topshiriq (task)** commentlar sariq border bilan ajralib turadi, assignee badges ko'rsatadi
+- **Assignee tugmalari:** "Ko'rdim" (SEEN) va "Bajarildi" (DONE) — faqat o'ziga assign qilingan comment da ko'rinadi
+- **Eslatma section** (student profile card): `GET /api/comments/latest` dan eng so'nggi izoh ko'rsatadi, fallback: `student.comment`
+- Lazy loading pattern: izohlar faqat "Izohlar" tab ochilganda yuklanadi
+- Yangi entity detail sahifasiga izoh qo'shish uchun:
+  ```tsx
+  import { CommentList } from "@/components/shared/comment-list";
+  import { CommentForm } from "@/components/shared/comment-form";
+  <CommentForm entityType="Student" entityId={id} onCreated={handleRefresh} />
+  <CommentList entityType="Student" entityId={id} refreshKey={key} />
+  ```
+
+### Notifications (Bildirishnomalar)
+
+- **NotificationBell** (`src/components/notifications/notification-bell.tsx`) — navbar dagi qo'ng'iroq icon + badge + dropdown
+- **Zustand store** (`src/hooks/use-notifications.ts`) — notifications, unreadCount, markRead, markAllRead
+- **SSE hook** (`src/hooks/use-sse.ts`) — fetch-based SSE (JWT Authorization header bilan), auto-reconnect
+- **Push hook** (`src/hooks/use-push-notifications.ts`) — service worker registration + push subscription
+- **Service Worker** (`public/sw.js`) — push event handler, notification click → sahifaga navigate
+- **Real-time:** SSE orqali yangi notification kelganda badge soni oshadi va dropdown ga qo'shiladi
+- Notification click → tegishli entity sahifasiga navigate (relatedEntityType/Id asosida)
+
+### Testing
+
+- **After every meaningful frontend change, verify the app builds without errors** by running `npm run build` — a broken build means the work is not done
+- **After every backend change, run the full backend test suite** (`cd server && npm test`) and confirm all tests pass
+- If a backend service was added or modified, corresponding `*.spec.ts` tests **must** be written or updated — do not skip this step
+- When both frontend and backend are changed in the same task, verify both: `npm run build` (client) and `npm test` (server)
 
 ### Code Organization
 

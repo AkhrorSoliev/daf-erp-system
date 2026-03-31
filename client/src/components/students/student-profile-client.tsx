@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
@@ -13,7 +13,12 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [commentKey, setCommentKey] = useState(0);
   const setName = useBreadcrumbName((s) => s.setName);
+
+  const handleCommentChange = useCallback(() => {
+    setCommentKey((k) => k + 1);
+  }, []);
 
   const fetchStudent = useCallback(async () => {
     setLoading(true);
@@ -63,10 +68,10 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
     <>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="w-full lg:w-85 lg:shrink-0">
-          <StudentProfileCard student={student} />
+          <StudentProfileCard student={student} commentKey={commentKey} />
         </div>
         <div className="min-w-0 flex-1">
-          <StudentProfileTabs student={student} />
+          <StudentProfileTabs student={student} onCommentChange={handleCommentChange} />
         </div>
       </div>
       <EditStudentDrawer
