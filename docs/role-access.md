@@ -14,6 +14,20 @@ This document defines the permission model for the DaF ERP system. **Every restr
 
 A user can hold **multiple roles** simultaneously (many-to-many via `UserRole`).
 
+## Portal-Based Access (Subdomain Restriction)
+
+Each subdomain restricts which roles can log in. This is enforced **server-side** during login via `Origin` header check (`portal-roles.config.ts`):
+
+| Portal | Domain | Allowed Roles |
+|--------|--------|---------------|
+| Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
+| Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
+| Student portal | `student.dafzentrum.uz` | Not yet implemented |
+
+- A user with roles that don't match the portal gets `403 Forbidden` on login
+- Localhost bypasses this check (dev mode)
+- To add a new portal: update `PORTAL_ROLES` in `server/src/auth/portal-roles.config.ts`, add CORS origin in `server/src/main.ts`, add DNS + Vercel config
+
 ## Core Principles
 
 1. **CEO sees and does everything** — no restrictions, all branches
@@ -53,6 +67,16 @@ A user can hold **multiple roles** simultaneously (many-to-many via `UserRole`).
 | Create teacher | Yes | Own branch | Yes | No | No |
 | Update teacher | Yes | Own branch | Yes | No | No |
 | Delete teacher | Yes | Own branch | Yes | No | No |
+
+### Comments & Task Assignment
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| Write comment | Yes | Own branch entities | Own branch entities | No | No |
+| Create task (assign) | Yes, anyone | Own branch staff | No | No | No |
+| View comments | Yes | Own branch | Own branch | No | No |
+| Delete comment | Any comment | Own comments | Own comments | — | — |
+| Update assignee status | Own assignments | Own assignments | Own assignments | — | — |
 
 ### Branch Director Scope Filtering
 

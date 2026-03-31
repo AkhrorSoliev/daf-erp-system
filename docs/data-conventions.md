@@ -73,7 +73,16 @@ Stored as enum:
 - `MALE`
 - `FEMALE`
 
-## Boolean Flags
+## Soft Delete & Status
 
-- `isActive` — Soft delete flag. `true` = active, `false` = archived/deleted.
-- Used on: User, Branch, Course, Group, Student.
+- **Soft delete** uses `deletedAt` timestamp (NOT `isActive` boolean). `deletedAt IS NOT NULL` = archived/invisible
+- Each archivable entity has: `deletedAt DateTime?`, `deletedById Int?`, `deletionBatchId String?`
+- **Status enums** control entity lifecycle (e.g. `BranchStatus`, `StudentStatus`, `GroupStatus`) — each entity has its own enum
+- `isActive` field has been **removed** — use status enums and `deletedAt` instead
+
+## Entity History (Audit Log)
+
+- All mutations (create, update, delete, status change, restore) are logged in `EntityHistory` table
+- Each record stores: `entityType`, `entityId`, `action`, `oldValues` (JSON), `newValues` (JSON), `changedById`, `companyId`, `createdAt`
+- Query: `GET /api/entity-history/:entityType/:entityId?page=1&pageSize=20`
+- Access: CEO, Branch Director, Administrator only

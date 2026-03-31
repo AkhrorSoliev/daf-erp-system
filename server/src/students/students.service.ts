@@ -7,6 +7,7 @@ import { Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
@@ -119,6 +120,7 @@ export class StudentsService {
     private uploadService: UploadService,
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async findAll(query: StudentQueryDto) {
@@ -130,11 +132,18 @@ export class StudentsService {
     };
 
     if (search) {
-      where.OR = [
+      const searchConditions: Prisma.StudentWhereInput[] = [
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
       ];
+
+      const searchAsNumber = Number(search);
+      if (!isNaN(searchAsNumber) && Number.isInteger(searchAsNumber)) {
+        searchConditions.push({ id: { equals: searchAsNumber } });
+      }
+
+      where.OR = searchConditions;
     }
 
     if (status === 'active') {
@@ -145,6 +154,10 @@ export class StudentsService {
     } else if (status === 'ungrouped') {
       where.status = StudentStatus.ACTIVE;
       where.enrollments = { none: { deletedAt: null } };
+    } else if (status === 'graduated') {
+      where.status = StudentStatus.GRADUATED;
+    } else if (status === 'expelled') {
+      where.status = StudentStatus.EXPELLED;
     }
 
     if (branch_id) {
@@ -183,7 +196,7 @@ export class StudentsService {
     return formatStudent(student);
   }
 
-  async create(dto: CreateStudentDto, companyId: number) {
+  async create(dto: CreateStudentDto, companyId: number, userId?: number) {
     const existing = await this.prisma.student.findFirst({
       where: { phone: dto.phone, deletedAt: null },
     });
@@ -233,10 +246,18 @@ export class StudentsService {
       return created;
     });
 
+    await this.entityHistoryService.recordCreate({
+      entityType: 'Student',
+      entityId: student.id,
+      newValues: student,
+      changedById: userId,
+      companyId,
+    });
+
     return formatStudent(student);
   }
 
-  async update(id: number, dto: UpdateStudentDto) {
+  async update(id: number, dto: UpdateStudentDto, userId?: number) {
     const student = await this.prisma.student.findFirst({
       where: { id, deletedAt: null },
     });
@@ -297,6 +318,15 @@ export class StudentsService {
       return result;
     });
 
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'Student',
+      entityId: id,
+      oldValues: student,
+      newValues: updated,
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
+    });
+
     return formatStudent(updated);
   }
 
@@ -329,6 +359,15 @@ export class StudentsService {
         ...auditData,
       },
       select: studentSelect,
+    });
+
+    await this.entityHistoryService.recordStatusChange({
+      entityType: 'Student',
+      entityId: id,
+      oldValues: { status: student.status },
+      newValues: { status: dto.status, reason: dto.reason },
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
     });
 
     // Cascade: ARCHIVED/EXPELLED → enrollment larni yangilash
@@ -365,6 +404,14 @@ export class StudentsService {
       fromStatus: student.status,
       toStatus: StudentStatus.ARCHIVED,
       reason: "O'chirildi",
+      changedById: deletedById,
+      companyId: student.companyId ?? undefined,
+    });
+
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Student',
+      entityId: id,
+      oldValues: student,
       changedById: deletedById,
       companyId: student.companyId ?? undefined,
     });

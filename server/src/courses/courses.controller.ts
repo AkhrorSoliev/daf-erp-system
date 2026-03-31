@@ -32,13 +32,17 @@ export class CoursesController {
   }
 
   @Post()
-  create(@Body() dto: CreateCourseDto) {
-    return this.coursesService.create(dto);
+  create(@Body() dto: CreateCourseDto, @CurrentUser('id') userId: number) {
+    return this.coursesService.create(dto, userId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateCourseDto) {
-    return this.coursesService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateCourseDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.coursesService.update(id, dto, userId);
   }
 
   @Patch(':id/status')

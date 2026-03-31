@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { RoomStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 import { RoomQueryDto } from './dto/room-query.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
@@ -13,6 +14,7 @@ export class RoomsService {
   constructor(
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async findAll(query: RoomQueryDto) {
@@ -118,7 +120,7 @@ export class RoomsService {
     }));
   }
 
-  async create(dto: CreateRoomDto) {
+  async create(dto: CreateRoomDto, userId?: number) {
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId, deletedAt: null },
     });
@@ -126,7 +128,7 @@ export class RoomsService {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
 
-    return this.prisma.room.create({
+    const room = await this.prisma.room.create({
       data: {
         name: dto.name,
         capacity: dto.capacity,
@@ -135,9 +137,19 @@ export class RoomsService {
       },
       include: { branch: { select: { name: true } } },
     });
+
+    await this.entityHistoryService.recordCreate({
+      entityType: 'Room',
+      entityId: room.id,
+      newValues: room,
+      changedById: userId,
+      companyId: dto.companyId ?? undefined,
+    });
+
+    return room;
   }
 
-  async update(id: string, dto: UpdateRoomDto) {
+  async update(id: string, dto: UpdateRoomDto, userId?: number) {
     const room = await this.prisma.room.findFirst({
       where: { id, deletedAt: null },
     });
@@ -145,11 +157,22 @@ export class RoomsService {
       throw new NotFoundException(`Xona #${id} topilmadi`);
     }
 
-    return this.prisma.room.update({
+    const updated = await this.prisma.room.update({
       where: { id },
       data: dto,
       include: { branch: { select: { name: true } } },
     });
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'Room',
+      entityId: id,
+      oldValues: room,
+      newValues: updated,
+      changedById: userId,
+      companyId: room.companyId ?? undefined,
+    });
+
+    return updated;
   }
 
   async changeStatus(id: string, dto: ChangeRoomStatusDto, userId: number) {
@@ -171,7 +194,7 @@ export class RoomsService {
       companyId: room.companyId ?? undefined,
     });
 
-    return this.prisma.room.update({
+    const updated = await this.prisma.room.update({
       where: { id },
       data: {
         status: dto.status as RoomStatus,
@@ -179,6 +202,17 @@ export class RoomsService {
       },
       include: { branch: { select: { name: true } } },
     });
+
+    await this.entityHistoryService.recordStatusChange({
+      entityType: 'Room',
+      entityId: id,
+      oldValues: { status: room.status },
+      newValues: { status: dto.status, reason: dto.reason },
+      changedById: userId,
+      companyId: room.companyId ?? undefined,
+    });
+
+    return updated;
   }
 
   async getStatusHistory(id: string) {
@@ -208,6 +242,14 @@ export class RoomsService {
       fromStatus: room.status,
       toStatus: RoomStatus.ARCHIVED,
       reason: "O'chirildi",
+      changedById: userId,
+      companyId: room.companyId ?? undefined,
+    });
+
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Room',
+      entityId: id,
+      oldValues: room,
       changedById: userId,
       companyId: room.companyId ?? undefined,
     });

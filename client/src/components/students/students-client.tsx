@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import toast from "react-hot-toast";
@@ -33,9 +33,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
 const defaultFilters: StudentFilters = {
   fullName: "",
-  id: "",
   status: "all",
-  groupLevel: "all",
 };
 
 export function StudentsClient() {
@@ -68,6 +66,7 @@ export function StudentsClient() {
       };
       if (filters.fullName.trim()) params.search = filters.fullName.trim();
       if (filters.status && filters.status !== "all") params.status = filters.status;
+      if (selectedBranch?.id) params.branch_id = selectedBranch.id;
       const { data } = await api.get("/students", { params });
       setStudents(data.data);
       setTotal(data.total);
@@ -76,37 +75,17 @@ export function StudentsClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters.fullName, filters.status]);
+  }, [page, pageSize, filters.fullName, filters.status, selectedBranch?.id]);
 
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
-  const filteredStudents = useMemo(() => {
-    let result = students;
-
-    if (filters.id) {
-      result = result.filter((s) => String(s.id).includes(filters.id));
-    }
-
-    if (filters.groupLevel && filters.groupLevel !== "all") {
-      result = result.filter((s) =>
-        s.groups.some((g) => g.level === filters.groupLevel)
-      );
-    }
-
-    return result;
-  }, [students, filters.id, filters.groupLevel]);
-
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const handleFilterChange = (newFilters: StudentFilters) => {
-    const searchChanged = newFilters.fullName !== filters.fullName;
-    const statusChanged = newFilters.status !== filters.status;
     setFilters(newFilters);
-    if (searchChanged || statusChanged) {
-      setPage(1);
-    }
+    setPage(1);
   };
 
   const handlePageSizeChange = (value: string) => {
@@ -183,7 +162,7 @@ export function StudentsClient() {
           </div>
         </div>
       ) : (
-        <StudentsTable students={filteredStudents} />
+        <StudentsTable students={students} />
       )}
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">

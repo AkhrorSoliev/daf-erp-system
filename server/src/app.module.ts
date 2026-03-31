@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -20,12 +21,16 @@ import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { ArchiveModule } from './archive/archive.module';
 import { StatusHistoryModule } from './common/status';
+import { EntityHistoryModule } from './common/entity-history';
+import { CommentsModule } from './comments/comments.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     PrismaModule,
     RedisModule,
     AuthModule,
@@ -44,6 +49,9 @@ import { JwtAuthGuard } from './common/guards';
     TelegramModule,
     ArchiveModule,
     StatusHistoryModule,
+    EntityHistoryModule,
+    CommentsModule,
+    NotificationsModule,
   ],
   providers: [
     {

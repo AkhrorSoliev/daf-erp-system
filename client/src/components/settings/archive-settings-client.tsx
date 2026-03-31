@@ -212,20 +212,6 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
     }
   };
 
-  const handlePermanentDelete = async (id: string | number) => {
-    setActionId(id);
-    try {
-      await api.delete(`/archive/${entityType}/${id}`);
-      toast.success("Butunlay o'chirildi");
-      setItems((prev) => prev.filter((item) => item.id !== id));
-      setTotal((prev) => Math.max(0, prev - 1));
-    } catch {
-      toast.error("O'chirishda xatolik yuz berdi");
-    } finally {
-      setActionId(null);
-    }
-  };
-
   const totalPages = Math.ceil(total / perPage);
 
   return (
@@ -346,47 +332,21 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                         </AlertDialogContent>
                       </AlertDialog>
 
-                      <AlertDialog>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                className="text-destructive hover:text-destructive"
-                                disabled={actionId === item.id}
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Butunlay o&apos;chirish
-                          </TooltipContent>
-                        </Tooltip>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Butunlay o&apos;chirish
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              &quot;{getDisplayName(entityType, item)}&quot;
-                              butunlay o&apos;chiriladi. Bu amalni qaytarib
-                              bo&apos;lmaydi. Barcha tegishli fayllar ham
-                              o&apos;chiriladi.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handlePermanentDelete(item.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              O&apos;chirish
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground/40"
+                            disabled
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Hozircha ishlamaydi
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>

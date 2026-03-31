@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeacherGroupsTable } from "./teacher-groups-table";
+import { EntityHistoryTable } from "@/components/shared/entity-history-table";
+import { CommentList, type CommentData } from "@/components/shared/comment-list";
+import { CommentForm } from "@/components/shared/comment-form";
 import type { TeacherData } from "@/hooks/use-edit-teacher";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,6 +32,25 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const groupsFetched = useRef(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [commentsVisible, setCommentsVisible] = useState(false);
+  const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
+  const historyShown = useRef(false);
+  const commentsShown = useRef(false);
+
+  const handleOptimisticAdd = useCallback((comment: CommentData) => {
+    setOptimisticComments((prev) => [comment, ...prev]);
+  }, []);
+
+  const handleConfirmed = useCallback((tempId: string) => {
+    setOptimisticComments((prev) => prev.filter((c) => c.id !== tempId));
+  }, []);
+
+  const handleFailed = useCallback((tempId: string) => {
+    setOptimisticComments((prev) =>
+      prev.map((c) => (c.id === tempId ? { ...c, _pending: false, _failed: true } : c)),
+    );
+  }, []);
 
   const fetchGroups = useCallback(async () => {
     if (groupsFetched.current) return;
@@ -53,12 +75,21 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
     if (value === "guruhlar") {
       fetchGroups();
     }
+    if (value === "tarix" && !historyShown.current) {
+      historyShown.current = true;
+      setHistoryVisible(true);
+    }
+    if (value === "izohlar" && !commentsShown.current) {
+      commentsShown.current = true;
+      setCommentsVisible(true);
+    }
   };
 
   return (
     <Tabs defaultValue="guruhlar" className="w-full" onValueChange={handleTabChange}>
       <TabsList className="w-full justify-start overflow-x-auto">
         <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
+        <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
         <TabsTrigger value="tarix">Tarix</TabsTrigger>
         {canSeeSalary && (
           <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
@@ -76,9 +107,35 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
         )}
       </TabsContent>
 
+      {/* Izohlar */}
+      <TabsContent value="izohlar">
+        {commentsVisible ? (
+          <div className="space-y-4">
+            <CommentForm
+              entityType="User"
+              entityId={teacher.id}
+              onOptimisticAdd={handleOptimisticAdd}
+              onConfirmed={handleConfirmed}
+              onFailed={handleFailed}
+            />
+            <CommentList
+              entityType="User"
+              entityId={teacher.id}
+              optimisticComments={optimisticComments}
+            />
+          </div>
+        ) : (
+          <EmptyState message="Izohlar mavjud emas" />
+        )}
+      </TabsContent>
+
       {/* Tarix */}
       <TabsContent value="tarix">
-        <EmptyState message="Tarix ma'lumotlari mavjud emas" />
+        {historyVisible ? (
+          <EntityHistoryTable entityType="User" entityId={teacher.id} />
+        ) : (
+          <EmptyState message="Tarix ma'lumotlari mavjud emas" />
+        )}
       </TabsContent>
 
       {/* Ish haqi — faqat CEO va Branch Director */}

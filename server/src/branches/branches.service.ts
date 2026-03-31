@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { BranchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 import { BranchQueryDto } from './dto/branch-query.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -13,6 +14,7 @@ export class BranchesService {
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async findAll(query: BranchQueryDto) {
@@ -81,14 +83,14 @@ export class BranchesService {
     };
   }
 
-  async create(dto: CreateBranchDto) {
+  async create(dto: CreateBranchDto, userId?: number) {
     const lastBranch = await this.prisma.branch.findFirst({
       orderBy: { id: 'desc' },
       select: { id: true },
     });
     const nextId = (lastBranch?.id ?? 0) + 1;
 
-    return this.prisma.branch.create({
+    const branch = await this.prisma.branch.create({
       data: {
         id: nextId,
         name: dto.name,
@@ -97,18 +99,39 @@ export class BranchesService {
         companyId: dto.companyId,
       },
     });
+
+    await this.entityHistoryService.recordCreate({
+      entityType: 'Branch',
+      entityId: branch.id,
+      newValues: branch,
+      changedById: userId,
+      companyId: dto.companyId ?? undefined,
+    });
+
+    return branch;
   }
 
-  async update(id: number, dto: UpdateBranchDto) {
+  async update(id: number, dto: UpdateBranchDto, userId?: number) {
     const branch = await this.prisma.branch.findUnique({ where: { id } });
     if (!branch) {
       throw new NotFoundException(`Branch #${id} topilmadi`);
     }
 
-    return this.prisma.branch.update({
+    const updated = await this.prisma.branch.update({
       where: { id },
       data: dto,
     });
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'Branch',
+      entityId: id,
+      oldValues: branch,
+      newValues: updated,
+      changedById: userId,
+      companyId: branch.companyId ?? undefined,
+    });
+
+    return updated;
   }
 
   async changeStatus(id: number, dto: ChangeBranchStatusDto, userId: number) {
@@ -139,6 +162,15 @@ export class BranchesService {
         isActive,
         ...auditData,
       },
+    });
+
+    await this.entityHistoryService.recordStatusChange({
+      entityType: 'Branch',
+      entityId: id,
+      oldValues: { status: branch.status },
+      newValues: { status: dto.status, reason: dto.reason },
+      changedById: userId,
+      companyId: branch.companyId ?? undefined,
     });
 
     // Cascade: CLOSED/INACTIVE → guruhlar, xonalar, enrollmentlar

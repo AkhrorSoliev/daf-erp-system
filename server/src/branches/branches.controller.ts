@@ -22,16 +22,17 @@ export class BranchesController {
   }
 
   @Post()
-  create(@Body() dto: CreateBranchDto) {
-    return this.branchesService.create(dto);
+  create(@Body() dto: CreateBranchDto, @CurrentUser('id') userId: number) {
+    return this.branchesService.create(dto, userId);
   }
 
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateBranchDto,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.branchesService.update(id, dto);
+    return this.branchesService.update(id, dto, userId);
   }
 
   @Patch(':id/status')

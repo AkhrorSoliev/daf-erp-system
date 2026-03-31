@@ -6,10 +6,13 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserQueryDto } from './dto/user-query.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Prisma } from '@prisma/client';
 import { UploadService } from '../upload/upload.service';
+import { EntityHistoryService } from '../common/entity-history';
 
 const userSelect = {
   id: true,
@@ -22,6 +25,7 @@ const userSelect = {
   companyId: true,
   mainBranch: true,
   isActive: true,
+  status: true,
   telegramChatId: true,
   createdAt: true,
   updatedAt: true,
@@ -49,6 +53,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private uploadService: UploadService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async findAll(query: UserQueryDto) {
@@ -62,7 +67,12 @@ export class UsersService {
     }
 
     if (user_type) {
-      where.roles = { some: { role: { name: user_type } } };
+      const types = user_type.split(',').map((t) => t.trim()).filter(Boolean);
+      if (types.length === 1) {
+        where.roles = { some: { role: { name: types[0] } } };
+      } else if (types.length > 1) {
+        where.roles = { some: { role: { name: { in: types } } } };
+      }
     }
 
     if (search) {
@@ -130,6 +140,15 @@ export class UsersService {
       select: userSelect,
     });
 
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'User',
+      entityId: id,
+      oldValues: user,
+      newValues: updated,
+      changedById: id,
+      companyId: user.companyId,
+    });
+
     return formatUser(updated);
   }
 
@@ -171,32 +190,149 @@ export class UsersService {
     roleIds?: number[];
     branchIds?: number[];
   }) {
+    // Validate role IDs exist
+    if (data.roleIds?.length) {
+      const validRoles = await this.prisma.role.findMany({
+        where: { id: { in: data.roleIds } },
+        select: { id: true },
+      });
+      const validIds = validRoles.map((r) => r.id);
+      const invalid = data.roleIds.filter((id) => !validIds.includes(id));
+      if (invalid.length) {
+        throw new BadRequestException(`Noto'g'ri role ID: ${invalid.join(', ')}`);
+      }
+    }
+
     const hashedPassword = data.password
       ? await bcrypt.hash(data.password, 10)
       : undefined;
 
-    const user = await this.prisma.user.create({
-      data: {
-        ...(data.id !== undefined && { id: data.id }),
-        name: data.name,
-        phone: data.phone,
-        photo: data.photo,
-        gender: data.gender,
-        companyId: data.companyId,
-        mainBranch: data.mainBranch,
-        telegramChatId: data.telegramChatId,
-        login: data.login,
-        password: hashedPassword,
-        roles: data.roleIds
-          ? { create: data.roleIds.map((roleId) => ({ roleId })) }
-          : undefined,
-        branches: data.branchIds
-          ? { create: data.branchIds.map((branchId) => ({ branchId })) }
-          : undefined,
-      },
-      select: userSelect,
+    let user: any;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          ...(data.id !== undefined && { id: data.id }),
+          name: data.name,
+          phone: data.phone || null,
+          photo: data.photo || null,
+          gender: data.gender || null,
+          companyId: data.companyId,
+          mainBranch: data.mainBranch || null,
+          telegramChatId: data.telegramChatId || null,
+          login: data.login || null,
+          password: hashedPassword || null,
+          roles: data.roleIds?.length
+            ? { create: data.roleIds.map((roleId) => ({ roleId })) }
+            : undefined,
+          branches: data.branchIds?.length
+            ? { create: data.branchIds.map((branchId) => ({ branchId })) }
+            : undefined,
+        },
+        select: userSelect,
+      });
+    } catch (error: any) {
+      if (error.code === 'P2003') {
+        throw new BadRequestException("Noto'g'ri filial yoki role ID ko'rsatilgan");
+      }
+      if (error.code === 'P2002') {
+        throw new BadRequestException('Bu login allaqachon mavjud');
+      }
+      throw error;
+    }
+
+    await this.entityHistoryService.recordCreate({
+      entityType: 'User',
+      entityId: user.id,
+      newValues: user,
+      companyId: data.companyId,
     });
 
     return formatUser(user);
+  }
+
+  async updateUser(id: number, dto: UpdateUserDto, changedById: number) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
+      select: userSelect,
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Xodim #${id} topilmadi`);
+    }
+
+    const updateData: any = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.phone !== undefined) updateData.phone = dto.phone;
+    if (dto.login !== undefined) updateData.login = dto.login;
+    if (dto.gender !== undefined) updateData.gender = dto.gender;
+    if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
+    if (dto.telegramChatId !== undefined) updateData.telegramChatId = dto.telegramChatId;
+    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.password) {
+      updateData.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Update roles if provided
+      if (dto.roleIds) {
+        await tx.userRole.deleteMany({ where: { userId: id } });
+        await tx.userRole.createMany({
+          data: dto.roleIds.map((roleId) => ({ userId: id, roleId })),
+        });
+      }
+
+      // Update branches if provided
+      if (dto.branchIds) {
+        await tx.userBranch.deleteMany({ where: { userId: id } });
+        await tx.userBranch.createMany({
+          data: dto.branchIds.map((branchId) => ({ userId: id, branchId })),
+        });
+      }
+
+      return tx.user.update({
+        where: { id },
+        data: updateData,
+        select: userSelect,
+      });
+    });
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'User',
+      entityId: id,
+      oldValues: user,
+      newValues: updated,
+      changedById,
+      companyId: user.companyId,
+    });
+
+    return formatUser(updated);
+  }
+
+  async softDelete(id: number, deletedById: number) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Xodim #${id} topilmadi`);
+    }
+
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedById,
+      },
+    });
+
+    await this.entityHistoryService.recordDelete({
+      entityType: 'User',
+      entityId: id,
+      oldValues: user,
+      changedById: deletedById,
+      companyId: user.companyId,
+    });
+
+    return { message: "Xodim muvaffaqiyatli o'chirildi" };
   }
 }
