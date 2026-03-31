@@ -28,7 +28,7 @@ export function usePushNotifications() {
         // Subscribe to push
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(data.key),
+          applicationServerKey: urlBase64ToUint8Array(data.key) as BufferSource,
         });
 
         const json = subscription.toJSON();
