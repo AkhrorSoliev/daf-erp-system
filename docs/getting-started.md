@@ -89,8 +89,8 @@ After seeding, these accounts are available:
 | Login | Password | Role |
 |-------|----------|------|
 | `ceo` | `123456` | CEO |
-| `admin` | `123456` | Administrator |
-| `teacher` | `123456` | Teacher |
+
+The seed also creates 10 teachers with individual logins (e.g. `jamsher_murtazoxonov`, password: `teacher123`), 6 rooms, 2 courses, and ~45 groups with schedule data.
 
 ## Useful Commands
 

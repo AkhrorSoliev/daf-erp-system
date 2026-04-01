@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Trash2, RefreshCw, History } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, RefreshCw, History, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
+import { EnrollToGroupDialog } from "@/components/students/enroll-to-group-dialog";
 import { useEditStudent } from "@/hooks/use-edit-student";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -44,6 +45,7 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
   const [showDelete, setShowDelete] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showEnroll, setShowEnroll] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
 
@@ -83,11 +85,16 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
           </TooltipTrigger>
           <TooltipContent>Amallar</TooltipContent>
         </Tooltip>
-        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onClick={() => openDrawer(student)}>
             <Pencil className="mr-2 size-4" />
             Tahrirlash
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowEnroll(true)}>
+            <UserPlus className="mr-2 size-4" />
+            Guruhga biriktirish
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowStatus(true)}>
             <RefreshCw className="mr-2 size-4" />
             Status o&apos;zgartirish
@@ -152,6 +159,14 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
         entityType="students"
         entityId={student.id}
         entityName={studentName}
+      />
+
+      <EnrollToGroupDialog
+        open={showEnroll}
+        onOpenChange={setShowEnroll}
+        studentId={student.id}
+        studentName={studentName}
+        enrolledGroupIds={student.groups?.map((g) => g.id) ?? []}
       />
     </div>
   );

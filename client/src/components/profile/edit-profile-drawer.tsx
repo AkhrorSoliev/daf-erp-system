@@ -26,7 +26,8 @@ interface EditProfileDrawerProps {
 }
 
 interface FormValues {
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
 }
 
@@ -49,13 +50,15 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
 
   const form = useForm<FormValues>({
     values: {
-      name: user?.name ?? "",
+      firstName: user?.firstName ?? "",
+      lastName: user?.lastName ?? "",
       phone: user?.phone ?? "",
     },
   });
 
   if (!user) return null;
 
+  const fullName = `${user.firstName} ${user.lastName}`;
   const displayPhoto = photoRemoved ? null : (previewPhoto ?? user.photo);
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -91,7 +94,8 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
     try {
       const payload: Record<string, string> = {};
 
-      if (values.name !== user!.name) payload.name = values.name;
+      if (values.firstName !== user!.firstName) payload.firstName = values.firstName;
+      if (values.lastName !== user!.lastName) payload.lastName = values.lastName;
       if (values.phone !== (user!.phone ?? "")) payload.phone = values.phone;
       if (photoRemoved) {
         payload.photo = "";
@@ -169,9 +173,9 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <Avatar key={displayPhoto ?? "empty"} className="size-20">
-                    <AvatarImage src={displayPhoto ?? undefined} alt={user.name} />
+                    <AvatarImage src={displayPhoto ?? undefined} alt={fullName} />
                     <AvatarFallback className="text-2xl font-semibold">
-                      {getInitials(user.name)}
+                      {getInitials(fullName)}
                     </AvatarFallback>
                   </Avatar>
                   <button
@@ -216,20 +220,37 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                 Shaxsiy ma&apos;lumotlar
               </h3>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Ism familiya</Label>
-                <Input
-                  id="name"
-                  placeholder="Ism familiya"
-                  {...form.register("name", {
-                    required: "Ism kiritilishi shart",
-                  })}
-                />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.name.message}
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="firstName">Ism</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="Ism"
+                    {...form.register("firstName", {
+                      required: "Ism kiritilishi shart",
+                    })}
+                  />
+                  {form.formState.errors.firstName && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.firstName.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lastName">Familiya</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Familiya"
+                    {...form.register("lastName", {
+                      required: "Familiya kiritilishi shart",
+                    })}
+                  />
+                  {form.formState.errors.lastName && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.lastName.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1.5">

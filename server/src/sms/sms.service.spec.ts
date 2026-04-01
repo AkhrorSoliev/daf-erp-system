@@ -225,7 +225,7 @@ describe('SmsService', () => {
         skip: 10,
         take: 10,
         include: {
-          senderUser: { select: { id: true, name: true } },
+          senderUser: { select: { id: true, firstName: true, lastName: true } },
         },
       });
     });

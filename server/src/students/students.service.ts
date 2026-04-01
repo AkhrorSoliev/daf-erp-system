@@ -41,7 +41,7 @@ const studentSelect = {
   statusChangedById: true,
   statusChangeReason: true,
   deletedAt: true,
-  deletedBy: { select: { id: true, name: true } },
+  deletedBy: { select: { id: true, firstName: true, lastName: true } },
   branches: {
     select: {
       branch: { select: { id: true, name: true } },
@@ -66,7 +66,7 @@ const studentSelect = {
           course: { select: { id: true, name: true } },
           teachers: {
             include: {
-              teacher: { select: { id: true, name: true } },
+              teacher: { select: { id: true, firstName: true, lastName: true } },
             },
           },
         },
@@ -520,6 +520,19 @@ export class StudentsService {
       });
     }
 
+    // History: Group entity — guruh tarix tabida ko'rinadi
+    await this.entityHistoryService.recordCreate({
+      entityType: 'Group',
+      entityId: groupId,
+      newValues: {
+        action: 'OQUVCHI_QOSHILDI',
+        oquvchi: `${student.firstName} ${student.lastName}`,
+        oquvchiId: studentId,
+      },
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
+    });
+
     this.eventEmitter.emit('student.enrolled', {
       studentId,
       groupName: group.name,
@@ -561,12 +574,26 @@ export class StudentsService {
 
     // History: Student entity — tarix tab da ko'rinadi
     const removedGroup = await this.prisma.group.findUnique({ where: { id: enrollment.groupId }, select: { name: true } });
-    const student = await this.prisma.student.findUnique({ where: { id: enrollment.studentId }, select: { companyId: true } });
+    const student = await this.prisma.student.findUnique({ where: { id: enrollment.studentId }, select: { firstName: true, lastName: true, companyId: true } });
     await this.entityHistoryService.recordDelete({
       entityType: 'Student',
       entityId: enrollment.studentId,
       oldValues: { guruh: removedGroup?.name ?? enrollment.groupId, guruhId: enrollment.groupId, action: 'GURUHDAN_CHIQARILDI', sabab: reason },
       changedById: userId,
+    });
+
+    // History: Group entity — guruh tarix tabida ko'rinadi
+    await this.entityHistoryService.recordDelete({
+      entityType: 'Group',
+      entityId: enrollment.groupId,
+      oldValues: {
+        action: 'OQUVCHI_CHIQARILDI',
+        oquvchi: `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim(),
+        oquvchiId: enrollment.studentId,
+        sabab: reason,
+      },
+      changedById: userId,
+      companyId: student?.companyId ?? undefined,
     });
 
     this.eventEmitter.emit('student.removed_from_group', {

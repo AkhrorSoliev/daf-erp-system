@@ -2,7 +2,8 @@ import { create } from "zustand";
 
 export interface TeacherData {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string | null;
   photo: string | null;
   gender: "MALE" | "FEMALE" | null;
@@ -19,6 +20,7 @@ export interface TeacherData {
   branches: { id: number; name: string }[];
   company: { id: number; name: string };
   groupCount: number;
+  studentCount: number;
 }
 
 interface EditTeacherState {

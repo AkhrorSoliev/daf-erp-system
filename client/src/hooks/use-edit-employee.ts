@@ -2,7 +2,8 @@ import { create } from "zustand";
 
 export interface EmployeeUser {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string | null;
   photo: string | null;
   gender: string | null;

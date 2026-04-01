@@ -14,6 +14,7 @@ import { createStudentRegistrationScene } from './scenes/student-registration.sc
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
+import { EntityHistoryService } from '../common/entity-history';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -26,6 +27,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private prisma: PrismaService,
     private uploadService: UploadService,
     private usersService: UsersService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async onModuleInit() {
@@ -77,6 +79,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.prisma,
       this.uploadService,
       this.bot,
+      this.entityHistoryService,
     );
 
     const stage = new Scenes.Stage<BotContext>([teacherScene, studentScene]);
@@ -140,7 +143,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
             exactDays: true,
             room: { select: { name: true } },
             teachers: {
-              select: { teacher: { select: { id: true, name: true } } },
+              select: { teacher: { select: { id: true, firstName: true, lastName: true } } },
               take: 1,
             },
           },
@@ -158,7 +161,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           groupId: group.id,
           groupName: group.name,
           teacherId: teacher?.id ?? null,
-          teacherName: teacher?.name ?? '—',
+          teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : '—',
           lessonStartTime: group.lessonStartTime,
           lessonEndTime: group.lessonEndTime,
           days: group.days,

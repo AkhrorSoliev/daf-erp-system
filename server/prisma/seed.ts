@@ -57,17 +57,24 @@ const teachers = [
 ];
 
 const rooms = [
-  { name: 'Berlin', capacity: 20 },
-  { name: 'München', capacity: 18 },
-  { name: 'Hamburg', capacity: 22 },
-  { name: 'Frankfurt', capacity: 16 },
-  { name: 'Köln', capacity: 20 },
-  { name: 'Dresden', capacity: 15 },
+  { name: '1-xona', capacity: 20 },
+  { name: '2-xona', capacity: 18 },
+  { name: '3-xona', capacity: 22 },
+  { name: '4-xona', capacity: 16 },
+  { name: '5-xona', capacity: 20 },
+  { name: '6-xona', capacity: 15 },
 ];
 
 async function main() {
   // 0. Bazani tozalash
   console.log('Bazani tozalash...');
+  await prisma.smsMessage.deleteMany();
+  await prisma.pushSubscription.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.commentAssignee.deleteMany();
+  await prisma.comment.deleteMany();
+  await prisma.entityHistory.deleteMany();
+  await prisma.statusHistory.deleteMany();
   await prisma.enrollment.deleteMany();
   await prisma.groupTeacher.deleteMany();
   await prisma.studentBranch.deleteMany();
@@ -79,6 +86,7 @@ async function main() {
   await prisma.student.deleteMany();
   await prisma.branch.deleteMany();
   await prisma.course.deleteMany();
+  await prisma.holiday.deleteMany();
   await prisma.role.deleteMany();
   await prisma.company.deleteMany();
   console.log('Baza tozalandi\n');
@@ -110,7 +118,8 @@ async function main() {
   const hashedPassword = await bcrypt.hash('123456', 10);
   const ceo = await prisma.user.create({
     data: {
-      name: 'CEO Admin',
+      firstName: 'CEO',
+      lastName: 'Admin',
       login: 'ceo',
       password: hashedPassword,
       companyId: company.id,
@@ -202,7 +211,8 @@ async function main() {
 
     const user = await prisma.user.create({
       data: {
-        name: `${t.firstName} ${t.lastName}`,
+        firstName: t.firstName,
+        lastName: t.lastName,
         phone: t.phone,
         photo: photoUrl,
         gender: t.gender,
@@ -214,7 +224,7 @@ async function main() {
         branches: { create: [{ branchId: BRANCH_ID }] },
       },
     });
-    createdTeachers.push({ id: user.id, name: user.name });
+    createdTeachers.push({ id: user.id, name: `${user.firstName} ${user.lastName}` });
   }
   console.log(`O'qituvchilar: ${createdTeachers.length} ta yaratildi`);
 
@@ -322,6 +332,7 @@ async function main() {
         lessonStartTime: slot.start,
         lessonEndTime: slot.end,
         status: 2,
+        statusEnum: 'ACTIVE',
         startDate: new Date('2026-04-01'),
         teachers: {
           create: [{ teacherId: createdTeachers[g.teacherIdx].id }],

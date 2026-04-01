@@ -128,3 +128,11 @@
     @apply font-sans;
   }
 }
+
+a {
+  cursor: pointer;
+}
+
+button {
+  cursor: pointer;
+}

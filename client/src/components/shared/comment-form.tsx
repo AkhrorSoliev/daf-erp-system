@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Send, ListTodo, X } from "lucide-react";
+import { Send, ListTodo, X, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,7 +23,8 @@ import type { CommentData } from "./comment-list";
 
 interface AssignableUser {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   photo: string | null;
 }
 
@@ -38,6 +47,8 @@ export function CommentForm({
   const [content, setContent] = useState("");
   const [isTask, setIsTask] = useState(false);
   const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [priority, setPriority] = useState<string>("");
   const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -55,7 +66,7 @@ export function CommentForm({
         params: { user_type: "Branch Director,Administrator", per_page: 100 },
       });
       const users: AssignableUser[] = (data.data || []).map(
-        (u: any) => ({ id: u.id, name: u.name, photo: u.photo ?? null }),
+        (u: any) => ({ id: u.id, firstName: u.firstName, lastName: u.lastName, photo: u.photo ?? null }),
       );
       setAssignableUsers(users.filter((u) => u.id !== user?.id));
     } catch {
@@ -92,7 +103,8 @@ export function CommentForm({
       isTask: taskMode,
       author: {
         id: user?.id ?? 0,
-        name: user?.name ?? "",
+        firstName: user?.firstName ?? "",
+        lastName: user?.lastName ?? "",
         photo: user?.photo ?? null,
       },
       assignees: [],
@@ -104,17 +116,22 @@ export function CommentForm({
     setContent("");
     setIsTask(false);
     setAssigneeIds([]);
+    setDueDate(undefined);
+    setPriority("");
     setFocused(false);
 
     setSubmitting(true);
     try {
-      const { data } = await api.post("/comments", {
+      const payload: Record<string, any> = {
         entityType,
         entityId: String(entityId),
         content: trimmedContent,
         isTask: taskMode,
-        assigneeIds: selectedIds.length > 0 ? selectedIds : undefined,
-      });
+      };
+      if (selectedIds.length > 0) payload.assigneeIds = selectedIds;
+      if (taskMode && dueDate) payload.dueDate = dueDate.toISOString();
+      if (taskMode && priority) payload.priority = priority;
+      const { data } = await api.post("/comments", payload);
       onConfirmed?.(tempId, data);
     } catch (err: any) {
       onFailed?.(tempId);
@@ -184,6 +201,32 @@ export function CommentForm({
             </div>
           </div>
 
+          {/* Task options: dueDate + priority */}
+          {canAssignTask && isTask && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <CalendarIcon className="size-3 text-muted-foreground" />
+                <DatePicker
+                  value={dueDate}
+                  onChange={setDueDate}
+                  placeholder="Muddat"
+                  className="h-7 text-xs w-36"
+                />
+              </div>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="h-7 text-xs w-32">
+                  <SelectValue placeholder="Ustuvorlik" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LOW">Oddiy</SelectItem>
+                  <SelectItem value="MEDIUM">O&apos;rta</SelectItem>
+                  <SelectItem value="HIGH">Yuqori</SelectItem>
+                  <SelectItem value="URGENT">Shoshilinch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Assignee picker — inline chips */}
           {canAssignTask && isTask && (
             <div className="space-y-1.5">
@@ -214,10 +257,10 @@ export function CommentForm({
                         <Avatar className="size-4">
                           {u.photo && <AvatarImage src={u.photo} />}
                           <AvatarFallback className="text-[8px]">
-                            {u.name.slice(0, 2).toUpperCase()}
+                            {`${u.firstName?.[0] ?? ''}${u.lastName?.[0] ?? ''}`}
                           </AvatarFallback>
                         </Avatar>
-                        {u.name}
+                        {u.firstName} {u.lastName}
                         {selected && <X className="size-3 ml-0.5" />}
                       </button>
                     );

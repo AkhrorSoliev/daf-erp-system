@@ -55,6 +55,10 @@ export const useNotifications = create<NotificationsState>((set, get) => ({
       notifications: [notification, ...state.notifications].slice(0, 50),
       unreadCount: state.unreadCount + 1,
     }));
+    // Notification ovozini chiqarish
+    const audio = new Audio("/message-notification.mp3");
+    audio.volume = 0.5;
+    audio.play().catch(() => {});
   },
 
   markRead: async (id) => {

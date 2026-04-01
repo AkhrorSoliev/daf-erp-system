@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
@@ -19,7 +20,8 @@ const TEACHER_ROLE_ID = 4;
 
 const teacherSelect = {
   id: true,
-  name: true,
+  firstName: true,
+  lastName: true,
   phone: true,
   photo: true,
   gender: true,
@@ -44,13 +46,14 @@ const teacherSelect = {
   },
 } satisfies Prisma.UserSelect;
 
-function formatTeacher(user: any) {
+function formatTeacher(user: any, studentCount = 0) {
   const { groupTeachers, ...rest } = user;
   return {
     ...rest,
     roles: user.roles.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })),
     branches: user.branches.map((ub: any) => ub.branch),
     groupCount: groupTeachers?.length ?? 0,
+    studentCount,
   };
 }
 
@@ -60,6 +63,7 @@ export class TeachersService {
     private prisma: PrismaService,
     private uploadService: UploadService,
     private statusHistoryService: StatusHistoryService,
+    private entityHistoryService: EntityHistoryService,
     private redis: RedisService,
   ) {}
 
@@ -73,7 +77,10 @@ export class TeachersService {
     };
 
     if (search) {
-      where.name = { contains: search, mode: 'insensitive' };
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
     if (branch_id) {
@@ -91,8 +98,34 @@ export class TeachersService {
       this.prisma.user.count({ where }),
     ]);
 
+    // Calculate student counts per teacher
+    const teacherIds = data.map((t: any) => t.id);
+    const studentCountMap = new Map<number, number>();
+
+    if (teacherIds.length > 0) {
+      const gts = await this.prisma.groupTeacher.findMany({
+        where: { teacherId: { in: teacherIds }, group: { deletedAt: null } },
+        select: {
+          teacherId: true,
+          group: {
+            select: {
+              enrollments: {
+                where: { deletedAt: null, status: 'ACTIVE' },
+                select: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      for (const gt of gts) {
+        const prev = studentCountMap.get(gt.teacherId) ?? 0;
+        studentCountMap.set(gt.teacherId, prev + gt.group.enrollments.length);
+      }
+    }
+
     return {
-      data: data.map(formatTeacher),
+      data: data.map((t: any) => formatTeacher(t, studentCountMap.get(t.id) ?? 0)),
       total,
       page,
       per_page,
@@ -109,7 +142,18 @@ export class TeachersService {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
-    return formatTeacher(user);
+    const count = await this.prisma.enrollment.count({
+      where: {
+        deletedAt: null,
+        status: 'ACTIVE',
+        group: {
+          deletedAt: null,
+          teachers: { some: { teacherId: id } },
+        },
+      },
+    });
+
+    return formatTeacher(user, count);
   }
 
   async create(dto: CreateTeacherDto, companyId: number) {
@@ -128,7 +172,8 @@ export class TeachersService {
 
     const user = await this.prisma.user.create({
       data: {
-        name: `${dto.firstName} ${dto.lastName}`,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
         phone: dto.phone,
         photo: dto.photo,
         gender: dto.gender,
@@ -165,15 +210,6 @@ export class TeachersService {
       await this.uploadService.deleteFile(user.photo);
     }
 
-    const name =
-      dto.firstName && dto.lastName
-        ? `${dto.firstName} ${dto.lastName}`
-        : dto.firstName
-          ? `${dto.firstName} ${user.name.split(' ').slice(1).join(' ')}`
-          : dto.lastName
-            ? `${user.name.split(' ')[0]} ${dto.lastName}`
-            : undefined;
-
     // Login uniqueness tekshirish
     if (dto.login && dto.login !== user.login) {
       const loginTaken = await this.prisma.user.findFirst({ where: { login: dto.login, deletedAt: null } });
@@ -190,7 +226,8 @@ export class TeachersService {
     const updated = await this.prisma.user.update({
       where: { id },
       data: {
-        ...(name && { name }),
+        ...(dto.firstName !== undefined && { firstName: dto.firstName }),
+        ...(dto.lastName !== undefined && { lastName: dto.lastName }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
         ...(dto.gender !== undefined && { gender: dto.gender }),
         ...(dto.photo !== undefined && { photo: dto.photo }),
@@ -236,10 +273,14 @@ export class TeachersService {
     });
 
     // Redis: bloklangan user ni belgilash yoki tiklash
-    if (dto.status === UserStatus.SUSPENDED || dto.status === UserStatus.TERMINATED) {
-      await this.redis.set(`user:blocked:${id}`, '1');
-    } else if (dto.status === UserStatus.ACTIVE) {
-      await this.redis.del(`user:blocked:${id}`);
+    try {
+      if (dto.status === UserStatus.SUSPENDED || dto.status === UserStatus.TERMINATED) {
+        await this.redis.set(`user:blocked:${id}`, '1');
+      } else if (dto.status === UserStatus.ACTIVE) {
+        await this.redis.del(`user:blocked:${id}`);
+      }
+    } catch {
+      // Redis ulanmagan bo'lsa ham status o'zgaradi
     }
 
     return formatTeacher(updated);
@@ -267,17 +308,31 @@ export class TeachersService {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
-    await this.statusHistoryService.changeStatus({
-      entityType: 'User',
-      entityId: String(id),
-      fromStatus: user.status,
-      toStatus: UserStatus.ARCHIVED,
-      reason: "O'chirildi",
-      changedById: deletedById,
-      companyId: user.companyId,
+    // Guruhlardan olib tashlash + tarixga yozish
+    const teacherGroups = await this.prisma.groupTeacher.findMany({
+      where: { teacherId: id },
+      include: { group: { select: { id: true, name: true, companyId: true } } },
     });
 
-    // Rasmni O'CHIRMAYMIZ — restore uchun kerak
+    if (teacherGroups.length > 0) {
+      await this.prisma.groupTeacher.deleteMany({ where: { teacherId: id } });
+
+      for (const gt of teacherGroups) {
+        await this.entityHistoryService.recordDelete({
+          entityType: 'Group',
+          entityId: gt.group.id,
+          oldValues: {
+            action: 'USTOZ_OLIB_TASHLANDI',
+            ustoz: `${user.firstName} ${user.lastName}`,
+            sabab: "O'qituvchi arxivlandi",
+          },
+          changedById: deletedById,
+          companyId: gt.group.companyId ?? undefined,
+        });
+      }
+    }
+
+    // Soft delete — status transition emas, arxivlash
     await this.prisma.user.update({
       where: { id },
       data: {
@@ -291,8 +346,12 @@ export class TeachersService {
       },
     });
 
-    // Redis: bloklangan user belgilash
-    await this.redis.set(`user:blocked:${id}`, '1');
+    // Redis: bloklangan user belgilash (xatoni e'tiborsiz qoldirish)
+    try {
+      await this.redis.set(`user:blocked:${id}`, '1');
+    } catch {
+      // Redis ulanmagan bo'lsa ham delete ishlaydi
+    }
 
     return { message: "O'qituvchi muvaffaqiyatli o'chirildi" };
   }
@@ -335,7 +394,7 @@ export class TeachersService {
         teachers: {
           include: {
             teacher: {
-              select: { id: true, name: true, phone: true, photo: true },
+              select: { id: true, firstName: true, lastName: true, phone: true, photo: true },
             },
           },
         },

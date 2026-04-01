@@ -76,7 +76,7 @@ export class RoomsService {
             course: { select: { name: true } },
             teachers: {
               include: {
-                teacher: { select: { id: true, name: true } },
+                teacher: { select: { id: true, firstName: true, lastName: true } },
               },
             },
             isActive: true,

@@ -50,19 +50,16 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
     });
   };
 
-  const initials = teacher.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2);
+  const fullName = `${teacher.firstName} ${teacher.lastName}`;
+  const initials = `${teacher.firstName[0] ?? ''}${teacher.lastName[0] ?? ''}`.toUpperCase();
 
   return (
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
       {/* Avatar + Identity */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <AvatarWithPreview src={teacher.photo} alt={teacher.name}>
+        <AvatarWithPreview src={teacher.photo} alt={fullName}>
           <Avatar className="size-20">
-            <AvatarImage src={teacher.photo ?? undefined} alt={teacher.name} />
+            <AvatarImage src={teacher.photo ?? undefined} alt={fullName} />
             <AvatarFallback className="text-2xl font-semibold">
               {initials}
             </AvatarFallback>
@@ -70,7 +67,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
         </AvatarWithPreview>
 
         <div>
-          <h2 className="text-xl font-bold">{teacher.name}</h2>
+          <h2 className="text-xl font-bold">{fullName}</h2>
           <p className="text-sm text-muted-foreground">(id: {teacher.id})</p>
         </div>
 
@@ -185,7 +182,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
             <AlertDialogHeader>
               <AlertDialogTitle>O&apos;qituvchini o&apos;chirish</AlertDialogTitle>
               <AlertDialogDescription>
-                &quot;{teacher.name}&quot; arxivga o&apos;tkaziladi. Keyinchalik
+                &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
                 arxivdan tiklash mumkin.
               </AlertDialogDescription>
             </AlertDialogHeader>

@@ -19,6 +19,7 @@ export const routeLabels: Record<string, string> = {
   employees: "Xodimlar",
   rooms: "Xonalar",
   holidays: "Dam olish kunlari",
+  tasks: "Topshiriqlar",
   "left-students": "Guruhni tark etganlar",
   archive: "Arxiv",
 };

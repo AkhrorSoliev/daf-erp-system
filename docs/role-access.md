@@ -75,8 +75,27 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Write comment | Yes | Own branch entities | Own branch entities | No | No |
 | Create task (assign) | Yes, anyone | Own branch staff | No | No | No |
 | View comments | Yes | Own branch | Own branch | No | No |
-| Delete comment | Any comment | Own comments | Own comments | — | — |
-| Update assignee status | Own assignments | Own assignments | Own assignments | — | — |
+| Delete comment | Any comment | No | No | — | — |
+| Update comment/task | Yes | Yes | Yes | — | — |
+| Update assignee status | Own assignments | Own assignments | Own assignments | Own assignments | Own assignments |
+
+### Tasks (Topshiriqlar)
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| Create task | Yes | Yes | No | No | No |
+| View own tasks | Yes | Yes | Yes | Yes | Yes |
+| View created tasks | Yes | Yes | No | No | No |
+| Mark task seen/done | Own assignments | Own assignments | Own assignments | Own assignments | Own assignments |
+| Delete task | Yes | No | No | No | No |
+
+### Notifications
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| View own notifications | Yes | Yes | Yes | Yes | Yes |
+| SSE stream | Yes | Yes | Yes | Yes | Yes |
+| Push subscribe | Yes | Yes | Yes | Yes | Yes |
 
 ### Branch Director Scope Filtering
 

@@ -20,7 +20,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
     try {
       const { data } = await api.get(`/users/${employeeId}`);
       setEmployee(data);
-      setName(employeeId, data.name);
+      setName(employeeId, `${data.firstName} ${data.lastName}`);
       setError(false);
     } catch {
       setError(true);
@@ -69,7 +69,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
       </div>
       <EditEmployeeDrawer onSaved={(updated) => {
         setEmployee(updated);
-        setName(employeeId, updated.name);
+        setName(employeeId, `${updated.firstName} ${updated.lastName}`);
       }} />
     </>
   );

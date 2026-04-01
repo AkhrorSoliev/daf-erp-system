@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
-import { AlertTriangle, ChevronsUpDown, Loader2, Search, X } from "lucide-react";
+import { ChevronsUpDown, Loader2, Search, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -28,10 +28,12 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import {
   editGroupSchema,
+  addGroupSchema,
   type EditGroupFormValues,
 } from "@/lib/schemas/group-schema";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useScheduleAvailability } from "@/hooks/use-schedule-availability";
 import api from "@/lib/api";
 
 interface CourseOption {
@@ -43,24 +45,6 @@ interface CourseOption {
   price: number;
 }
 
-interface ConflictGroup {
-  id: string;
-  name: string;
-  lessonStartTime: string;
-  lessonEndTime: string;
-}
-
-interface RoomOption {
-  id: string;
-  name: string;
-  capacity: number | null;
-}
-
-interface TeacherOption {
-  id: number;
-  name: string;
-  photo: string | null;
-}
 
 const WEEKDAYS = [
   { value: "monday", label: "Du" },
@@ -133,12 +117,8 @@ export function EditGroupForm({
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
   const [courses, setCourses] = useState<CourseOption[]>([]);
-  const [rooms, setRooms] = useState<RoomOption[]>([]);
-  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [suggestedName, setSuggestedName] = useState("");
-  const [roomConflicts, setRoomConflicts] = useState<ConflictGroup[]>([]);
-  const [teacherConflicts, setTeacherConflicts] = useState<ConflictGroup[]>([]);
   const [dayPreset, setDayPreset] = useState(() => {
     const days = group?.exactDays ?? [];
     if (!days.length) return "";
@@ -152,7 +132,7 @@ export function EditGroupForm({
   const [teacherSearch, setTeacherSearch] = useState("");
 
   const form = useForm<EditGroupFormValues>({
-    resolver: zodResolver(editGroupSchema),
+    resolver: zodResolver(isAdd ? addGroupSchema : editGroupSchema) as any,
     defaultValues: groupToForm(group),
   });
 
@@ -162,22 +142,8 @@ export function EditGroupForm({
 
     setLoading(true);
     try {
-      const [coursesRes, roomsRes, teachersRes] = await Promise.all([
-        api.get("/courses", { params: { branch_id: branchId, pageSize: 100 } }),
-        api.get("/rooms", { params: { branch_id: branchId, pageSize: 100 } }),
-        api.get("/users", {
-          params: { user_type: "Teacher", branch_id: branchId, per_page: 100 },
-        }),
-      ]);
+      const coursesRes = await api.get("/courses", { params: { branch_id: branchId, pageSize: 100 } });
       setCourses(coursesRes.data.data ?? []);
-      setRooms(roomsRes.data.data ?? []);
-      setTeachers(
-        (teachersRes.data.data ?? []).map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          photo: t.photo ?? null,
-        })),
-      );
     } catch {
       // silent
     } finally {
@@ -201,20 +167,48 @@ export function EditGroupForm({
     [courses, watchedCourseId],
   );
 
+  // Smart availability hook — rooms & teachers filtered by schedule
+  const { rooms: smartRooms, teachers: smartTeachers } = useScheduleAvailability({
+    branchId: selectedBranch?.id,
+    exactDays: watchedExactDays ?? [],
+    startTime: watchedStartTime ?? "",
+    endTime: form.watch("lessonEndTime") ?? "",
+    excludeGroupId: group?.id,
+  });
+
   const selectedTeacher = useMemo(
-    () => teachers.find((t) => t.id === watchedTeacherId),
-    [teachers, watchedTeacherId],
+    () => smartTeachers.find((t) => t.id === watchedTeacherId),
+    [smartTeachers, watchedTeacherId],
   );
 
   const filteredTeachers = useMemo(
     () =>
       teacherSearch.trim()
-        ? teachers.filter((t) =>
-            t.name.toLowerCase().includes(teacherSearch.toLowerCase()),
+        ? smartTeachers.filter((t) =>
+            `${t.firstName} ${t.lastName}`.toLowerCase().includes(teacherSearch.toLowerCase()),
           )
-        : teachers,
-    [teachers, teacherSearch],
+        : smartTeachers,
+    [smartTeachers, teacherSearch],
   );
+
+  // Reset room/teacher if they become unavailable after schedule change
+  useEffect(() => {
+    if (watchedRoomId && smartRooms.length > 0) {
+      const room = smartRooms.find((r) => r.id === watchedRoomId);
+      if (room && !room.available) {
+        form.setValue("roomId", "");
+      }
+    }
+  }, [smartRooms, watchedRoomId, form]);
+
+  useEffect(() => {
+    if (watchedTeacherId && smartTeachers.length > 0) {
+      const teacher = smartTeachers.find((t) => t.id === watchedTeacherId);
+      if (teacher && !teacher.available) {
+        form.setValue("teacherId", undefined);
+      }
+    }
+  }, [smartTeachers, watchedTeacherId, form]);
 
   // Fetch suggested name when level changes
   useEffect(() => {
@@ -238,48 +232,10 @@ export function EditGroupForm({
     }
   }, [watchedStartTime, selectedCourse, form]);
 
-  // Check schedule conflicts (room + teacher, debounced)
-  const watchedEndTime = form.watch("lessonEndTime");
+  // Smart selects prevent conflicts — no need for separate conflict check
   useEffect(() => {
-    if (!watchedStartTime || !watchedEndTime || !watchedExactDays?.length || !selectedBranch?.id) {
-      setRoomConflicts([]);
-      setTeacherConflicts([]);
-      setHasConflict(false);
-      return;
-    }
-    if (!watchedRoomId && !watchedTeacherId) {
-      setRoomConflicts([]);
-      setTeacherConflicts([]);
-      setHasConflict(false);
-      return;
-    }
-    const timer = setTimeout(() => {
-      const params: Record<string, string> = {
-        branchId: String(selectedBranch.id),
-        exactDays: watchedExactDays.join(","),
-        startTime: watchedStartTime,
-        endTime: watchedEndTime,
-      };
-      if (watchedRoomId) params.roomId = watchedRoomId;
-      if (watchedTeacherId) params.teacherId = String(watchedTeacherId);
-
-      api
-        .get("/groups/schedule-conflicts", { params })
-        .then((res) => {
-          const room = res.data?.room ?? [];
-          const teacher = res.data?.teacher ?? [];
-          setRoomConflicts(room);
-          setTeacherConflicts(teacher);
-          setHasConflict(room.length > 0 || teacher.length > 0);
-        })
-        .catch(() => {
-          setRoomConflicts([]);
-          setTeacherConflicts([]);
-          setHasConflict(false);
-        });
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [watchedRoomId, watchedTeacherId, watchedStartTime, watchedEndTime, watchedExactDays, selectedBranch?.id, setHasConflict]);
+    setHasConflict(false);
+  }, [setHasConflict]);
 
   const branchStartTime = selectedBranch?.startOfWorkingDay ?? undefined;
   const branchEndTime = selectedBranch?.endOfWorkingDay ?? undefined;
@@ -434,157 +390,6 @@ export function EditGroupForm({
           )}
         </div>
 
-        {/* Xona select */}
-        <div className="space-y-2">
-          <Label>Xona</Label>
-          {rooms.length === 0 ? (
-            <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-              Hozircha xona yo&apos;q. Keyinroq biriktiriladi
-            </p>
-          ) : (
-            <Controller
-              name="roomId"
-              control={form.control}
-              render={({ field }) => (
-                <Select
-                  value={field.value || "none"}
-                  onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Xonani tanlang" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="w-(--radix-select-trigger-width)">
-                    <SelectItem value="none">Tanlanmagan</SelectItem>
-                    {rooms.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                        {r.capacity ? ` (${r.capacity} o'rin)` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          )}
-        </div>
-
-        {/* O'qituvchi (single select with search + avatar) */}
-        <div className="space-y-2">
-          <Label>O&apos;qituvchi</Label>
-          {teachers.length === 0 ? (
-            <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-              Hozircha o&apos;qituvchi yo&apos;q. Keyinroq biriktiriladi
-            </p>
-          ) : (
-            <Controller
-              name="teacherId"
-              control={form.control}
-              render={({ field }) => (
-                <Popover
-                  modal
-                  open={teacherPopoverOpen}
-                  onOpenChange={(open) => {
-                    setTeacherPopoverOpen(open);
-                    if (!open) setTeacherSearch("");
-                  }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        className="min-w-0 flex-1 justify-between font-normal"
-                      >
-                        {selectedTeacher ? (
-                          <span className="flex items-center gap-2">
-                            <Avatar size="sm">
-                              {selectedTeacher.photo && (
-                                <AvatarImage src={selectedTeacher.photo} alt={selectedTeacher.name} />
-                              )}
-                              <AvatarFallback>
-                                {selectedTeacher.name
-                                  .split(" ")
-                                  .map((w) => w[0])
-                                  .join("")
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            {selectedTeacher.name}
-                          </span>
-                        ) : (
-                          "O'qituvchini tanlang"
-                        )}
-                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    {selectedTeacher && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-9 shrink-0"
-                        onClick={() => field.onChange(undefined)}
-                      >
-                        <X className="size-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <PopoverContent className="w-64 gap-0 p-0" align="start">
-                    <div className="border-b p-2">
-                      <div className="relative">
-                        <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
-                        <Input
-                          placeholder="Qidirish..."
-                          value={teacherSearch}
-                          onChange={(e) => setTeacherSearch(e.target.value)}
-                          className="pl-8"
-                        />
-                      </div>
-                    </div>
-                    <div className="max-h-44 space-y-1 overflow-y-auto overscroll-contain p-2">
-                      {filteredTeachers.map((t) => {
-                        const isSelected = field.value === t.id;
-                        const initials = t.name
-                          .split(" ")
-                          .map((w) => w[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase();
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => {
-                              field.onChange(isSelected ? undefined : t.id);
-                              setTeacherPopoverOpen(false);
-                              setTeacherSearch("");
-                            }}
-                            className={cn(
-                              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-                              isSelected && "bg-accent",
-                            )}
-                          >
-                            <Avatar size="sm">
-                              {t.photo && <AvatarImage src={t.photo} alt={t.name} />}
-                              <AvatarFallback>{initials}</AvatarFallback>
-                            </Avatar>
-                            <span className="truncate">{t.name}</span>
-                          </button>
-                        );
-                      })}
-                      {filteredTeachers.length === 0 && (
-                        <p className="text-muted-foreground px-2 py-1.5 text-sm">
-                          O&apos;qituvchilar topilmadi
-                        </p>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-            />
-          )}
-        </div>
       </div>
 
       {/* Jadval */}
@@ -688,48 +493,156 @@ export function EditGroupForm({
           </div>
         )}
 
-        {/* Schedule conflict warnings */}
-        {roomConflicts.length > 0 && (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm dark:border-red-900 dark:bg-red-950">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-500" />
-            <div>
-              <p className="font-medium text-red-700 dark:text-red-400">
-                Bu vaqtda xona band
-              </p>
-              <ul className="mt-1 space-y-0.5 text-red-600 dark:text-red-300">
-                {roomConflicts.map((c) => (
-                  <li key={c.id}>
-                    &laquo;{c.name}&raquo; guruhi {c.lessonStartTime}–{c.lessonEndTime} da dars o&apos;tadi
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">
-                Boshqa vaqt yoki xona tanlang
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Smart Xona select */}
+        <div className="space-y-2">
+          <Label>Xona</Label>
+          {smartRooms.length === 0 ? (
+            <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
+              Hozircha xona yo&apos;q
+            </p>
+          ) : (
+            <Controller
+              name="roomId"
+              control={form.control}
+              render={({ field }) => (
+                <Select
+                  value={field.value || "none"}
+                  onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Xonani tanlang" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="w-(--radix-select-trigger-width)">
+                    <SelectItem value="none">Tanlanmagan</SelectItem>
+                    {smartRooms.map((r) => (
+                      <SelectItem key={r.id} value={r.id} disabled={!r.available}>
+                        {r.name}
+                        {r.capacity ? ` (${r.capacity})` : ""}
+                        {!r.available && r.busyGroup ? ` — ${r.busyGroup} band` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          )}
+        </div>
 
-        {teacherConflicts.length > 0 && (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm dark:border-red-900 dark:bg-red-950">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-500" />
-            <div>
-              <p className="font-medium text-red-700 dark:text-red-400">
-                Bu vaqtda o&apos;qituvchi band
-              </p>
-              <ul className="mt-1 space-y-0.5 text-red-600 dark:text-red-300">
-                {teacherConflicts.map((c) => (
-                  <li key={c.id}>
-                    &laquo;{c.name}&raquo; guruhida {c.lessonStartTime}–{c.lessonEndTime} da dars o&apos;tadi
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">
-                Boshqa vaqt yoki o&apos;qituvchi tanlang
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Smart O'qituvchi select */}
+        <div className="space-y-2">
+          <Label>O&apos;qituvchi</Label>
+          {smartTeachers.length === 0 ? (
+            <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
+              Hozircha o&apos;qituvchi yo&apos;q
+            </p>
+          ) : (
+            <Controller
+              name="teacherId"
+              control={form.control}
+              render={({ field }) => (
+                <Popover
+                  modal
+                  open={teacherPopoverOpen}
+                  onOpenChange={(open) => {
+                    setTeacherPopoverOpen(open);
+                    if (!open) setTeacherSearch("");
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="min-w-0 flex-1 justify-between font-normal"
+                      >
+                        {selectedTeacher ? (
+                          <span className="flex items-center gap-2">
+                            <Avatar size="sm">
+                              {selectedTeacher.photo && (
+                                <AvatarImage src={selectedTeacher.photo} alt={`${selectedTeacher.firstName} ${selectedTeacher.lastName}`} />
+                              )}
+                              <AvatarFallback>
+                                {`${selectedTeacher.firstName[0] ?? ''}${selectedTeacher.lastName[0] ?? ''}`.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {selectedTeacher.firstName} {selectedTeacher.lastName}
+                          </span>
+                        ) : (
+                          "O'qituvchini tanlang"
+                        )}
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    {selectedTeacher && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 shrink-0"
+                        onClick={() => field.onChange(undefined)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <PopoverContent className="w-72 gap-0 p-0" align="start">
+                    <div className="border-b p-2">
+                      <div className="relative">
+                        <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
+                        <Input
+                          placeholder="Qidirish..."
+                          value={teacherSearch}
+                          onChange={(e) => setTeacherSearch(e.target.value)}
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain p-2">
+                      {filteredTeachers.map((t) => {
+                        const isSelected = field.value === t.id;
+                        const fullName = `${t.firstName} ${t.lastName}`;
+                        const initials = `${t.firstName[0] ?? ''}${t.lastName[0] ?? ''}`.toUpperCase();
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            disabled={!t.available}
+                            onClick={() => {
+                              if (!t.available) return;
+                              field.onChange(isSelected ? undefined : t.id);
+                              setTeacherPopoverOpen(false);
+                              setTeacherSearch("");
+                            }}
+                            className={cn(
+                              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+                              !t.available && "opacity-50 cursor-not-allowed",
+                              t.available && "hover:bg-accent",
+                              isSelected && "bg-accent",
+                            )}
+                          >
+                            <Avatar size="sm">
+                              {t.photo && <AvatarImage src={t.photo} alt={fullName} />}
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <span className="truncate flex-1 text-left">{fullName}</span>
+                            {!t.available && t.busyGroup && (
+                              <span className="text-[10px] text-muted-foreground shrink-0">{t.busyGroup}</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {filteredTeachers.length === 0 && (
+                        <p className="text-muted-foreground px-2 py-1.5 text-sm">
+                          O&apos;qituvchilar topilmadi
+                        </p>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            />
+          )}
+        </div>
       </div>
 
       {/* Sana va holat */}

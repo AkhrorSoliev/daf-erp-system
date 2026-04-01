@@ -80,7 +80,7 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
           </TooltipTrigger>
           <TooltipContent>Amallar</TooltipContent>
         </Tooltip>
-        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onClick={() => openDrawer(teacher)}>
             <Pencil className="mr-2 size-4" />
             Tahrirlash
@@ -109,7 +109,7 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
           <AlertDialogHeader>
             <AlertDialogTitle>O&apos;chirishni tasdiqlang</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{teacher.name}</strong> o&apos;qituvchisini arxivga o&apos;tkazilsinmi?
+              <strong>{`${teacher.firstName} ${teacher.lastName}`}</strong> o&apos;qituvchisini arxivga o&apos;tkazilsinmi?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="px-6 pb-2">
@@ -138,7 +138,7 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
         onOpenChange={setShowStatus}
         entityType="teachers"
         entityId={teacher.id}
-        entityName={teacher.name}
+        entityName={`${teacher.firstName} ${teacher.lastName}`}
         currentStatus={teacher.status || "ACTIVE"}
         onStatusChanged={(newStatus) => onStatusChanged?.(teacher.id, newStatus)}
       />
@@ -148,7 +148,7 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
         onOpenChange={setShowHistory}
         entityType="teachers"
         entityId={teacher.id}
-        entityName={teacher.name}
+        entityName={`${teacher.firstName} ${teacher.lastName}`}
       />
     </>
   );

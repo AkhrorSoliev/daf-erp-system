@@ -84,7 +84,8 @@ List users with filtering and pagination.
   "data": [
     {
       "id": 1003,
-      "name": "Dilshod Rahimov",
+      "firstName": "Dilshod",
+      "lastName": "Rahimov",
       "phone": "901234569",
       "photo": null,
       "gender": null,
@@ -220,19 +221,268 @@ Update company settings.
 
 ---
 
-## Stub Endpoints
+## Groups
 
-The following modules have controllers registered but are not yet fully implemented:
+### GET /groups
 
-| Endpoint | Status |
-|----------|--------|
-| `GET /students` | Stub |
-| `GET /teachers` | Stub |
-| `GET /groups` | Stub |
-| `GET /courses` | Stub |
-| `GET /rooms` | Stub |
-| `GET /leads` | Stub |
-| `GET /holidays` | Stub |
-| `GET /employees` | Stub |
+List groups with filtering and pagination.
 
-These will be implemented as the project progresses.
+**Query Parameters:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `branch_id` | number | — | Filter by branch |
+| `status` | string | — | Filter by status enum |
+| `page` | number | 1 | Page number |
+| `pageSize` | number | 10 | Items per page |
+
+---
+
+### GET /groups/:id
+
+Get a single group with course, branch, room, and teachers.
+
+---
+
+### POST /groups `Roles: CEO, BD, Administrator`
+
+Create a new group.
+
+---
+
+### PATCH /groups/:id `Roles: CEO, BD, Administrator`
+
+Update a group.
+
+---
+
+### DELETE /groups/:id `Roles: CEO, BD, Administrator`
+
+Soft delete (archive) a group.
+
+---
+
+### GET /groups/schedule-conflicts
+
+Check for teacher/room scheduling conflicts.
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `branchId` | number | Yes | Branch ID |
+| `exactDays` | string | Yes | Comma-separated day names (e.g. "monday,wednesday,friday") |
+| `startTime` | string | Yes | e.g. "08:00" |
+| `endTime` | string | Yes | e.g. "09:30" |
+| `roomId` | string | No | Check conflicts for this room |
+| `teacherId` | number | No | Check conflicts for this teacher |
+| `excludeGroupId` | string | No | Exclude this group from conflict check |
+
+**Response:** `200` — Array of conflicting group objects.
+
+---
+
+### GET /groups/available-rooms
+
+Get rooms available for a time slot.
+
+**Query Parameters:** `branchId`, `exactDays`, `startTime`, `endTime`, `excludeGroupId?`
+
+**Response:** `200` — Array of available rooms.
+
+---
+
+### GET /groups/available-teachers
+
+Get teachers available for a time slot.
+
+**Query Parameters:** `branchId`, `exactDays`, `startTime`, `endTime`, `excludeGroupId?`
+
+**Response:** `200` — Array of available teachers.
+
+---
+
+### GET /groups/available-slots
+
+Get available time slots for a room.
+
+**Query Parameters:** `branchId`, `roomId`, `exactDays`, `excludeGroupId?`
+
+**Response:** `200` — Array of available time slot objects.
+
+---
+
+### GET /groups/next-name
+
+Get the next auto-generated group name for a level.
+
+**Query Parameters:** `level` (e.g. "A1"), `branchId`
+
+**Response:** `200` — `{ name: "A1-005" }`
+
+---
+
+### GET /groups/:id/students
+
+Get all students enrolled in a group.
+
+---
+
+### PATCH /groups/:id/status `Roles: CEO, BD, Administrator`
+
+Change group status.
+
+---
+
+### GET /groups/:id/status-history `Roles: CEO, BD, Administrator`
+
+Get group status change history.
+
+---
+
+## Comments & Tasks
+
+### POST /comments `Roles: CEO, BD, Administrator`
+
+Create a comment or task.
+
+**Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `entityType` | string | Yes | e.g. "Student", "Group" |
+| `entityId` | string | Yes | Entity ID |
+| `content` | string | Yes | Comment text |
+| `isTask` | boolean | No | If true, creates a task (CEO/BD only) |
+| `assigneeIds` | number[] | No | User IDs to assign (tasks only) |
+| `dueDate` | string (ISO) | No | Task due date |
+| `priority` | string | No | LOW, MEDIUM, HIGH, or URGENT |
+
+---
+
+### GET /comments `Roles: CEO, BD, Administrator`
+
+List comments for an entity.
+
+**Query Parameters:** `entityType`, `entityId`, `page`, `pageSize`
+
+---
+
+### GET /comments/latest `Roles: CEO, BD, Administrator`
+
+Get the latest comment for an entity.
+
+**Query Parameters:** `entityType`, `entityId`
+
+---
+
+### GET /comments/my-tasks
+
+Get tasks assigned to the current user.
+
+**Query Parameters:** `page`, `pageSize`, `status?` (PENDING, SEEN, DONE)
+
+---
+
+### GET /comments/created-tasks `Roles: CEO, BD`
+
+Get tasks created by the current user.
+
+**Query Parameters:** `page`, `pageSize`
+
+---
+
+### PATCH /comments/:id `Roles: CEO, BD, Administrator`
+
+Update a comment/task (content, dueDate, priority).
+
+---
+
+### DELETE /comments/:id `Roles: CEO`
+
+Delete a comment.
+
+---
+
+### PATCH /comments/:id/assignee-status
+
+Update assignee status on a task.
+
+**Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | string | Yes | SEEN or DONE |
+
+---
+
+## Notifications
+
+### GET /notifications
+
+List current user's notifications with pagination.
+
+**Query Parameters:** `page`, `pageSize`
+
+---
+
+### GET /notifications/unread-count
+
+Get unread notification count for the current user.
+
+---
+
+### PATCH /notifications/:id/read
+
+Mark a notification as read.
+
+---
+
+### PATCH /notifications/read-all
+
+Mark all notifications as read.
+
+---
+
+### GET /notifications/stream
+
+SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Authorization header.
+
+---
+
+### POST /notifications/push/subscribe
+
+Subscribe to web push notifications.
+
+**Body:** `{ endpoint, keys: { p256dh, auth } }`
+
+---
+
+### DELETE /notifications/push/unsubscribe
+
+Unsubscribe from web push.
+
+---
+
+### GET /notifications/vapid-public-key
+
+Get the VAPID public key for push subscription.
+
+---
+
+## Other Endpoints
+
+The following modules have full CRUD implemented:
+
+| Module | Base Endpoint | Notes |
+|--------|--------------|-------|
+| Students | `/students` | Full CRUD + search + filters |
+| Teachers | `/teachers` | Full CRUD + studentCount |
+| Courses | `/courses` | Full CRUD |
+| Rooms | `/rooms` | Full CRUD |
+| Leads | `/leads` | Full CRUD + status management |
+| Holidays | `/holidays` | Full CRUD |
+| Employees | `/employees` | User management (CEO only) |
+| Archive | `/archive` | Soft-deleted entity management (CEO only) |
+| Entity History | `/entity-history` | Audit log queries |
+| SMS | `/sms` | SMS/Telegram message sending |

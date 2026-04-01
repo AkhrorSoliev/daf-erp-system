@@ -21,7 +21,8 @@ export interface UserCompany {
 
 export interface AuthUser {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string | null;
   photo: string | null;
   gender: string | null;

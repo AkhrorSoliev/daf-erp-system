@@ -37,8 +37,8 @@ function teacherToForm(teacher: TeacherData | null): EditTeacherFormValues {
   if (!teacher) {
     return { firstName: "", lastName: "", phone: "", gender: "", avatar: "", login: "", password: "", isActive: true };
   }
-  const [firstName = "", ...rest] = teacher.name.split(" ");
-  const lastName = rest.join(" ");
+  const firstName = teacher.firstName;
+  const lastName = teacher.lastName;
   return {
     firstName,
     lastName,
@@ -152,7 +152,7 @@ export function EditTeacherForm({
 
   const initials = isAdd
     ? "?"
-    : (teacher?.name?.[0] ?? "?");
+    : `${teacher?.firstName?.[0] ?? ''}${teacher?.lastName?.[0] ?? ''}`;
   const selectedGender = form.watch("gender");
 
   return (
@@ -200,7 +200,7 @@ export function EditTeacherForm({
           <div className="flex flex-col gap-1">
             {!isAdd && teacher && (
               <div>
-                <p className="font-medium">{teacher.name}</p>
+                <p className="font-medium">{teacher.firstName} {teacher.lastName}</p>
                 <p className="text-xs text-muted-foreground">ID: {teacher.id}</p>
               </div>
             )}

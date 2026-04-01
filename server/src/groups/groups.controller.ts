@@ -34,6 +34,7 @@ export class GroupsController {
     @Query('endTime') endTime: string,
     @Query('roomId') roomId?: string,
     @Query('teacherId') teacherId?: string,
+    @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
     return this.groupsService.getScheduleConflicts({
@@ -43,6 +44,59 @@ export class GroupsController {
       endTime,
       roomId: roomId || undefined,
       teacherId: teacherId ? Number(teacherId) : undefined,
+      excludeGroupId: excludeGroupId || undefined,
+    });
+  }
+
+  @Get('available-rooms')
+  getAvailableRooms(
+    @Query('branchId') branchId: string,
+    @Query('exactDays') exactDays: string,
+    @Query('startTime') startTime: string,
+    @Query('endTime') endTime: string,
+    @Query('excludeGroupId') excludeGroupId?: string,
+  ) {
+    const days = exactDays ? exactDays.split(',') : [];
+    return this.groupsService.getAvailableRooms({
+      branchId: Number(branchId),
+      exactDays: days,
+      startTime: startTime || '',
+      endTime: endTime || '',
+      excludeGroupId: excludeGroupId || undefined,
+    });
+  }
+
+  @Get('available-teachers')
+  getAvailableTeachers(
+    @Query('branchId') branchId: string,
+    @Query('exactDays') exactDays: string,
+    @Query('startTime') startTime: string,
+    @Query('endTime') endTime: string,
+    @Query('excludeGroupId') excludeGroupId?: string,
+  ) {
+    const days = exactDays ? exactDays.split(',') : [];
+    return this.groupsService.getAvailableTeachers({
+      branchId: Number(branchId),
+      exactDays: days,
+      startTime: startTime || '',
+      endTime: endTime || '',
+      excludeGroupId: excludeGroupId || undefined,
+    });
+  }
+
+  @Get('available-slots')
+  getAvailableSlots(
+    @Query('branchId') branchId: string,
+    @Query('roomId') roomId: string,
+    @Query('exactDays') exactDays: string,
+    @Query('excludeGroupId') excludeGroupId?: string,
+  ) {
+    const days = exactDays ? exactDays.split(',') : [];
+    return this.groupsService.getAvailableSlots({
+      branchId: Number(branchId),
+      roomId,
+      exactDays: days,
+      excludeGroupId: excludeGroupId || undefined,
     });
   }
 

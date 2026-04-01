@@ -43,7 +43,8 @@ const STATUS_OPTIONS = [
 ];
 
 const schema = z.object({
-  name: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+  firstName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+  lastName: z.string().min(2, "Familiya kamida 2 ta belgidan iborat bo'lishi kerak"),
   phone: z
     .string()
     .regex(/^\d{9}$/, "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak")
@@ -80,7 +81,8 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: employee?.name ?? "",
+      firstName: employee?.firstName ?? "",
+      lastName: employee?.lastName ?? "",
       phone: employee?.phone ?? "",
       login: employee?.login ?? "",
       password: "",
@@ -129,7 +131,8 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
     setSubmitting(true);
     try {
       const payload: Record<string, any> = {
-        name: values.name,
+        firstName: values.firstName,
+        lastName: values.lastName,
         roleIds: values.roleIds,
         branchIds: values.branchIds,
       };
@@ -183,16 +186,29 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
           Asosiy ma&apos;lumotlar
         </h3>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Ism familiya *</Label>
-          <Input
-            id="name"
-            placeholder="Ism familiya"
-            {...form.register("name")}
-          />
-          {form.formState.errors.name && (
-            <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-          )}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="firstName">Ism *</Label>
+            <Input
+              id="firstName"
+              placeholder="Ism"
+              {...form.register("firstName")}
+            />
+            {form.formState.errors.firstName && (
+              <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lastName">Familiya *</Label>
+            <Input
+              id="lastName"
+              placeholder="Familiya"
+              {...form.register("lastName")}
+            />
+            {form.formState.errors.lastName && (
+              <p className="text-xs text-destructive">{form.formState.errors.lastName.message}</p>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-3">

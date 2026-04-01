@@ -100,7 +100,7 @@ function GroupCard({ group, onRemove }: { group: StudentGroup; onRemove?: (enrol
           {group.teachers.length > 0 && (
             <span className="flex items-center gap-1 text-muted-foreground">
               <UsersIcon className="size-3.5" />
-              {group.teachers.map((t) => t.name).join(", ")}
+              {group.teachers.map((t) => `${t.firstName} ${t.lastName}`).join(", ")}
             </span>
           )}
         </div>

@@ -35,7 +35,7 @@ interface RoomGroup {
   id: string;
   name: string;
   course: { name: string };
-  teacher: { id: number; name: string };
+  teacher: { id: number; firstName: string; lastName: string };
   isActive: boolean;
 }
 
@@ -176,7 +176,7 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
                     <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell>{group.course.name}</TableCell>
-                    <TableCell>{group.teacher.name}</TableCell>
+                    <TableCell>{group.teacher.firstName} {group.teacher.lastName}</TableCell>
                     <TableCell>
                       <Badge
                         variant={group.isActive ? "default" : "secondary"}

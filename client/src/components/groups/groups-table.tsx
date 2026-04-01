@@ -87,22 +87,19 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
                   {group.teachers.length > 0 ? (
                     <div className="flex flex-col gap-1.5">
                       {group.teachers.map((t) => {
-                        const initials = t.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .slice(0, 2);
+                        const fullName = `${t.firstName} ${t.lastName}`;
+                        const initials = `${t.firstName[0] ?? ''}${t.lastName[0] ?? ''}`.toUpperCase();
                         return (
                           <div key={t.id} className="flex items-center gap-2">
-                            <AvatarWithPreview src={t.photo} alt={t.name}>
+                            <AvatarWithPreview src={t.photo} alt={fullName}>
                               <Avatar className="size-6">
-                                <AvatarImage src={t.photo ?? undefined} alt={t.name} />
+                                <AvatarImage src={t.photo ?? undefined} alt={fullName} />
                                 <AvatarFallback className="text-[10px]">
                                   {initials}
                                 </AvatarFallback>
                               </Avatar>
                             </AvatarWithPreview>
-                            <span className="text-sm">{t.name}</span>
+                            <span className="text-sm">{fullName}</span>
                           </div>
                         );
                       })}

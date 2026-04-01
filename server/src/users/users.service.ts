@@ -16,7 +16,8 @@ import { EntityHistoryService } from '../common/entity-history';
 
 const userSelect = {
   id: true,
-  name: true,
+  firstName: true,
+  lastName: true,
   phone: true,
   photo: true,
   gender: true,
@@ -76,7 +77,10 @@ export class UsersService {
     }
 
     if (search) {
-      where.name = { contains: search, mode: 'insensitive' };
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
     if (branch_id) {
@@ -94,8 +98,39 @@ export class UsersService {
       this.prisma.user.count({ where }),
     ]);
 
+    // Calculate student counts per teacher
+    const teacherIds = data
+      .filter((u: any) => u.roles.some((ur: any) => ur.role.name === 'Teacher'))
+      .map((u: any) => u.id);
+    const studentCountMap = new Map<number, number>();
+
+    if (teacherIds.length > 0) {
+      const gts = await this.prisma.groupTeacher.findMany({
+        where: { teacherId: { in: teacherIds }, group: { deletedAt: null } },
+        select: {
+          teacherId: true,
+          group: {
+            select: {
+              enrollments: {
+                where: { deletedAt: null, status: 'ACTIVE' },
+                select: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      for (const gt of gts) {
+        const prev = studentCountMap.get(gt.teacherId) ?? 0;
+        studentCountMap.set(gt.teacherId, prev + gt.group.enrollments.length);
+      }
+    }
+
     return {
-      data: data.map(formatUser),
+      data: data.map((u: any) => ({
+        ...formatUser(u),
+        studentCount: studentCountMap.get(u.id) ?? 0,
+      })),
       total,
       page,
       per_page,
@@ -133,7 +168,8 @@ export class UsersService {
     const updated = await this.prisma.user.update({
       where: { id },
       data: {
-        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.firstName !== undefined && { firstName: dto.firstName }),
+        ...(dto.lastName !== undefined && { lastName: dto.lastName }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
         ...(dto.photo !== undefined && { photo: dto.photo || null }),
       },
@@ -178,7 +214,8 @@ export class UsersService {
 
   async create(data: {
     id?: number;
-    name: string;
+    firstName: string;
+    lastName: string;
     companyId: number;
     login?: string;
     password?: string;
@@ -212,7 +249,8 @@ export class UsersService {
       user = await this.prisma.user.create({
         data: {
           ...(data.id !== undefined && { id: data.id }),
-          name: data.name,
+          firstName: data.firstName,
+          lastName: data.lastName,
           phone: data.phone || null,
           photo: data.photo || null,
           gender: data.gender || null,
@@ -261,7 +299,8 @@ export class UsersService {
     }
 
     const updateData: any = {};
-    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.firstName !== undefined) updateData.firstName = dto.firstName;
+    if (dto.lastName !== undefined) updateData.lastName = dto.lastName;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.login !== undefined) updateData.login = dto.login;
     if (dto.gender !== undefined) updateData.gender = dto.gender;

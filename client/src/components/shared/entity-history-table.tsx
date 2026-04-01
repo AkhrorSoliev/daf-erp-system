@@ -15,6 +15,7 @@ import {
   UserMinus,
   ArrowRightLeft,
   ChevronsRight,
+  Bot,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ interface HistoryRecord {
   action: "CREATE" | "UPDATE" | "DELETE" | "STATUS_CHANGE" | "RESTORE";
   oldValues: Record<string, unknown> | null;
   newValues: Record<string, unknown> | null;
-  changedBy: { id: number; name: string; photo: string | null } | null;
+  changedBy: { id: number; firstName: string; lastName: string; photo: string | null } | null;
   createdAt: string;
 }
 
@@ -80,8 +81,16 @@ const FIELD_LABELS: Record<string, string | null> = {
   isTask: null,
   commentId: null,
   companyId: null,
+  nomi: "Nomi",
+  kunlar: "Kunlar",
+  vaqt: "Vaqt",
+  boshlanish: "Boshlanish sanasi",
+  oquvchi: "O'quvchi",
+  ustoz: "Ustoz",
+  ustozlar: "Ustozlar",
   previousGroupId: null,
   guruhId: null,
+  oquvchiId: null,
 };
 
 function getFieldLabel(key: string): string | null {
@@ -102,7 +111,9 @@ function getActionInfo(record: HistoryRecord): {
   switch (record.action) {
     case "CREATE":
       if (customAction === "COMMENT_ADDED") return { label: "Izoh qo'shildi", icon: MessageSquare, variant: "secondary" };
+      if (customAction === "TELEGRAM_ROYXATDAN_OTDI") return { label: "Telegram orqali ro'yxatdan o'tdi", icon: Bot, variant: "default" };
       if (customAction === "GURUHGA_QOSHILDI") return { label: "Guruhga qo'shildi", icon: UserPlus, variant: "default" };
+      if (customAction === "OQUVCHI_QOSHILDI") return { label: "O'quvchi qo'shildi", icon: UserPlus, variant: "default" };
       if (customAction === "SMS_YUBORILDI") return { label: "SMS yuborildi", icon: MessageSquare, variant: "default" };
       if (customAction === "SMS_YUBORILMADI") return { label: "SMS yuborilmadi", icon: MessageSquare, variant: "destructive" };
       if (nv?.guruh) return { label: "Guruhga qo'shildi", icon: UserPlus, variant: "default" };
@@ -115,6 +126,8 @@ function getActionInfo(record: HistoryRecord): {
 
     case "DELETE":
       if (customAction === "GURUHDAN_CHIQARILDI" || ov?.guruh) return { label: "Guruhdan chiqarildi", icon: UserMinus, variant: "destructive" };
+      if (customAction === "OQUVCHI_CHIQARILDI") return { label: "O'quvchi chiqarildi", icon: UserMinus, variant: "destructive" };
+      if (customAction === "USTOZ_OLIB_TASHLANDI") return { label: "Ustoz olib tashlandi", icon: UserMinus, variant: "destructive" };
       if (customAction === "COMMENT_DELETED") return { label: "Izoh o'chirildi", icon: Trash2, variant: "destructive" };
       return { label: "Arxivlandi", icon: Trash2, variant: "destructive" };
 
@@ -220,9 +233,12 @@ function ChangedFields({ record }: { record: HistoryRecord }) {
   const getGroupId = (values: Record<string, unknown> | null) =>
     values?.guruhId as string | undefined;
 
-  const renderGroupLink = (text: string, groupId?: string) =>
-    groupId ? (
-      <a href={`/groups/${groupId}`} className="font-medium text-primary underline underline-offset-2 hover:text-primary/80">
+  const getStudentId = (values: Record<string, unknown> | null) =>
+    values?.oquvchiId as number | undefined;
+
+  const renderEntityLink = (text: string, href?: string) =>
+    href ? (
+      <a href={href} className="font-medium text-primary underline underline-offset-2 hover:text-primary/80">
         {text}
       </a>
     ) : (
@@ -237,12 +253,13 @@ function ChangedFields({ record }: { record: HistoryRecord }) {
       const ov = full ? { text: formatValue(oldValues[key]), truncated: false } : truncateValue(oldValues[key]);
 
       if (key === "guruh") {
+        const gid = getGroupId(newValues);
         return (
           <div key={key} className="text-xs">
             <span className="text-muted-foreground">{label}:</span>{" "}
             <span className="text-red-500 line-through">{ov.text}</span>
             {" → "}
-            {renderGroupLink(v.text, getGroupId(newValues))}
+            {renderEntityLink(v.text, gid ? `/groups/${gid}` : undefined)}
           </div>
         );
       }
@@ -258,11 +275,21 @@ function ChangedFields({ record }: { record: HistoryRecord }) {
     }
 
     if (key === "guruh") {
-      const groupId = getGroupId(mode === "delete" ? oldValues : newValues);
+      const gid = getGroupId(mode === "delete" ? oldValues : newValues);
       return (
         <div key={key} className="text-xs">
           <span className="text-muted-foreground">{label}:</span>{" "}
-          {renderGroupLink(v.text, groupId)}
+          {renderEntityLink(v.text, gid ? `/groups/${gid}` : undefined)}
+        </div>
+      );
+    }
+
+    if (key === "oquvchi") {
+      const sid = getStudentId(mode === "delete" ? oldValues : newValues);
+      return (
+        <div key={key} className="text-xs">
+          <span className="text-muted-foreground">{label}:</span>{" "}
+          {renderEntityLink(v.text, sid ? `/students/profile/${sid}` : undefined)}
         </div>
       );
     }
@@ -414,10 +441,10 @@ export function EntityHistoryTable({ entityType, entityId }: EntityHistoryTableP
                             <Avatar className="size-6">
                               {record.changedBy.photo && <AvatarImage src={record.changedBy.photo} />}
                               <AvatarFallback className="text-[8px] font-medium">
-                                {record.changedBy.name.slice(0, 2).toUpperCase()}
+                                {`${record.changedBy.firstName?.[0] ?? ''}${record.changedBy.lastName?.[0] ?? ''}`}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm">{record.changedBy.name}</span>
+                            <span className="text-sm">{record.changedBy.firstName} {record.changedBy.lastName}</span>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>Profilga o&apos;tish</TooltipContent>

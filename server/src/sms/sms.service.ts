@@ -93,7 +93,7 @@ export class SmsService {
         skip,
         take: pageSize,
         include: {
-          senderUser: { select: { id: true, name: true } },
+          senderUser: { select: { id: true, firstName: true, lastName: true } },
         },
       }),
       this.prisma.smsMessage.count({ where: { studentId } }),

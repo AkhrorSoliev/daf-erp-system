@@ -17,7 +17,12 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   const [group, setGroup] = useState<GroupData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [commentKey, setCommentKey] = useState(0);
   const setName = useBreadcrumbName((s) => s.setName);
+
+  const handleCommentChange = useCallback(() => {
+    setCommentKey((k) => k + 1);
+  }, []);
 
   const fetchGroup = useCallback(async () => {
     setLoading(true);
@@ -62,10 +67,10 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
     <>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="w-full lg:w-85 lg:shrink-0">
-          <GroupInfoCard group={group} />
+          <GroupInfoCard group={group} commentKey={commentKey} onCommentChange={handleCommentChange} />
         </div>
         <div className="min-w-0 flex-1">
-          <GroupDetailTabs group={group} />
+          <GroupDetailTabs group={group} onCommentChange={handleCommentChange} />
         </div>
       </div>
       <EditGroupDrawer

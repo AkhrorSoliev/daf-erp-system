@@ -15,7 +15,10 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { useNotifications, type AppNotification } from "@/hooks/use-notifications";
+import {
+  useNotifications,
+  type AppNotification,
+} from "@/hooks/use-notifications";
 import { useSSE } from "@/hooks/use-sse";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 
@@ -52,7 +55,9 @@ function NotificationItem({
         <Icon className="size-4 text-muted-foreground" />
       </div>
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-sm font-medium leading-tight">{notification.title}</p>
+        <p className="text-sm font-medium leading-tight">
+          {notification.title}
+        </p>
         <p className="text-xs text-muted-foreground line-clamp-2">
           {notification.message}
         </p>
@@ -121,7 +126,7 @@ export function NotificationBell() {
             >
               <Bell className="size-4" />
               {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground text-white">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}

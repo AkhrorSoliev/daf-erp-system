@@ -48,7 +48,8 @@ export class AuthService {
   private formatUser(user: any) {
     return {
       id: user.id,
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       phone: user.phone,
       photo: user.photo,
       gender: user.gender,

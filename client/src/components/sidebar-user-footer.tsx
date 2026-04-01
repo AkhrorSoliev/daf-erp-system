@@ -31,6 +31,7 @@ export function SidebarUserFooter() {
   if (!user) return null;
 
   const roleName = user.roles[0]?.name ?? "";
+  const fullName = `${user.firstName} ${user.lastName}`;
 
   return (
     <SidebarFooter>
@@ -44,14 +45,14 @@ export function SidebarUserFooter() {
               >
                 <Avatar className="size-8 shrink-0 rounded-lg">
                   {user.photo && (
-                    <AvatarImage src={user.photo} alt={user.name} />
+                    <AvatarImage src={user.photo} alt={fullName} />
                   )}
                   <AvatarFallback className="rounded-lg text-xs">
-                    {getInitials(user.name)}
+                    {getInitials(fullName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate font-medium">{fullName}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     {roleName}
                   </span>
