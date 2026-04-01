@@ -8,6 +8,7 @@ import {
   BarChart3,
   Settings,
   UsersRound,
+  ListTodo,
 } from "lucide-react";
 
 export const navItems = [
@@ -16,6 +17,7 @@ export const navItems = [
   { title: "O'quvchilar", url: "/students", icon: BookOpen },
   { title: "Lidlar", url: "/leads", icon: UserPlus },
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
+  { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
   { title: "Dars jadvali", url: "/schedule", icon: CalendarDays },
   { title: "To'lovlar", url: "/payments", icon: CreditCard },
   { title: "Hisobotlar", url: "/reports", icon: BarChart3 },

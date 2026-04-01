@@ -120,7 +120,7 @@ describe('StatusHistoryService', () => {
         where: { entityType: 'Student', entityId: '1' },
         orderBy: { createdAt: 'desc' },
         include: {
-          changedBy: { select: { id: true, name: true } },
+          changedBy: { select: { id: true, firstName: true, lastName: true } },
         },
       });
     });

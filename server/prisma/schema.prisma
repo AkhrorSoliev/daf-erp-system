@@ -107,7 +107,17 @@ enum NotificationType {
   COMMENT
   TASK_ASSIGNED
   TASK_STATUS_CHANGED
+  TASK_DELETED
+  TASK_UPDATED
+  TASK_REMINDER
   SYSTEM
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 model Role {
@@ -119,7 +129,8 @@ model Role {
 
 model User {
   id             Int        @id @default(autoincrement())
-  name           String
+  firstName      String
+  lastName       String
   phone          String?
   photo          String?
   gender         Gender?
@@ -519,6 +530,8 @@ model Comment {
   content      String
   isTask       Boolean            @default(false)
   isSystem     Boolean            @default(false)
+  dueDate      DateTime?
+  priority     TaskPriority?
   authorId     Int
   author       User               @relation("CommentAuthor", fields: [authorId], references: [id])
   companyId    Int
@@ -533,6 +546,7 @@ model Comment {
   @@index([authorId])
   @@index([companyId])
   @@index([createdAt])
+  @@index([isTask, dueDate])
 }
 
 model CommentAssignee {
@@ -541,10 +555,11 @@ model CommentAssignee {
   comment    Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
   userId     Int
   user       User           @relation("CommentAssignees", fields: [userId], references: [id])
-  status     AssigneeStatus @default(PENDING)
-  seenAt     DateTime?
-  doneAt     DateTime?
-  createdAt  DateTime       @default(now())
+  status          AssigneeStatus @default(PENDING)
+  seenAt          DateTime?
+  doneAt          DateTime?
+  lastRemindedAt  DateTime?
+  createdAt       DateTime       @default(now())
 
   @@unique([commentId, userId])
   @@index([userId, status])

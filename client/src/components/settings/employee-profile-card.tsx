@@ -41,7 +41,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
   const [latestComment, setLatestComment] = useState<{
     content: string;
     isTask?: boolean;
-    author: { name: string };
+    author: { firstName: string; lastName: string };
     createdAt: string;
   } | null>(null);
 
@@ -53,19 +53,16 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
       .catch(() => {});
   }, [employee.id, commentKey]);
 
-  const initials = employee.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2);
+  const fullName = `${employee.firstName} ${employee.lastName}`;
+  const initials = `${employee.firstName[0] ?? ''}${employee.lastName[0] ?? ''}`.toUpperCase();
 
   return (
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
       {/* Avatar + Identity */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <AvatarWithPreview src={employee.photo} alt={employee.name}>
+        <AvatarWithPreview src={employee.photo} alt={fullName}>
           <Avatar className="size-20">
-            <AvatarImage src={employee.photo ?? undefined} alt={employee.name} />
+            <AvatarImage src={employee.photo ?? undefined} alt={fullName} />
             <AvatarFallback className="text-2xl font-semibold">
               {initials}
             </AvatarFallback>
@@ -73,7 +70,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
         </AvatarWithPreview>
 
         <div>
-          <h2 className="text-xl font-bold">{employee.name}</h2>
+          <h2 className="text-xl font-bold">{fullName}</h2>
           <p className="text-sm text-muted-foreground">(id: {employee.id})</p>
         </div>
 
@@ -169,7 +166,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
           <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
             <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="font-medium">{latestComment.author.name}</span>
+              <span className="font-medium">{latestComment.author.firstName} {latestComment.author.lastName}</span>
               <span>&middot;</span>
               <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
               {latestComment.isTask && (

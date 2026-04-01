@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import {
@@ -29,6 +30,8 @@ interface TeachersTableProps {
 
 export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
   const router = useRouter();
+  const user = useAuth((s) => s.user);
+  const canSeeStudentCount = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   if (teachers.length === 0) {
     return (
@@ -48,16 +51,14 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
             <TableHead className="min-w-36">Ism familiya</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">Telefon</TableHead>
             <TableHead className="hidden md:table-cell">Guruhlar</TableHead>
+            <TableHead className="hidden md:table-cell">O&apos;quvchilar</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {teachers.map((teacher, index) => {
-            const initials = teacher.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2);
+            const fullName = `${teacher.firstName} ${teacher.lastName}`;
+            const initials = `${teacher.firstName[0] ?? ''}${teacher.lastName[0] ?? ''}`.toUpperCase();
 
             return (
               <TableRow
@@ -69,11 +70,11 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                   {index + 1}
                 </TableCell>
                 <TableCell>
-                  <AvatarWithPreview src={teacher.photo} alt={teacher.name}>
+                  <AvatarWithPreview src={teacher.photo} alt={fullName}>
                     <Avatar className="size-8">
                       <AvatarImage
                         src={teacher.photo ?? undefined}
-                        alt={teacher.name}
+                        alt={fullName}
                       />
                       <AvatarFallback className="text-xs">
                         {initials}
@@ -82,13 +83,16 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                   </AvatarWithPreview>
                 </TableCell>
                 <TableCell className="font-medium">
-                  {teacher.name}
+                  {fullName}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {formatPhone(teacher.phone)}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {teacher.groupCount}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {teacher.studentCount ?? 0}
                 </TableCell>
                 <TableCell>
                   <TeacherRowActions teacher={teacher} onDeleted={onDeleted} />

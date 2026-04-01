@@ -45,6 +45,7 @@ client/src/
 │       │   ├── page.tsx
 │       │   └── [id]/page.tsx
 │       ├── leads/page.tsx
+│       ├── tasks/page.tsx                    # Tasks board
 │       ├── schedule/page.tsx
 │       ├── payments/page.tsx
 │       ├── reports/page.tsx
@@ -71,6 +72,9 @@ client/src/
 │   ├── teachers/                          # Teacher-specific components
 │   ├── groups/                            # Group-specific components
 │   ├── leads/                             # Lead-specific components
+│   ├── tasks/                             # Task board components
+│   ├── notifications/                     # Notification bell & dropdown
+│   ├── shared/                            # Reusable (CommentList, CommentForm, EntityHistoryTable)
 │   ├── settings/                          # Settings-specific components
 │   ├── app-sidebar.tsx                    # Main navigation
 │   ├── dashboard-header.tsx               # Top header bar
@@ -124,6 +128,7 @@ Defined in `lib/nav-items.ts`:
 | `/students` | O'quvchilar |
 | `/leads` | Lidlar |
 | `/groups` | Guruhlar |
+| `/tasks` | Topshiriqlar |
 | `/schedule` | Dars jadvali |
 | `/payments` | To'lovlar |
 | `/reports` | Hisobotlar |

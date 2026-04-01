@@ -70,7 +70,8 @@ Called on app mount (via `AuthProvider`). Reads cookies and restores state. If c
 ```typescript
 interface AuthUser {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string | null;
   photo: string | null;
   gender: string | null;
@@ -88,6 +89,8 @@ interface AuthUser {
   };
 }
 ```
+
+> **Note:** User names are split into `firstName` and `lastName`. Display as `${user.firstName} ${user.lastName}`.
 
 ## API Client (Axios)
 

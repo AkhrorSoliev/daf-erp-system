@@ -15,6 +15,6 @@ import { PushService } from './push.service';
     NotificationEventsListener,
     PushService,
   ],
-  exports: [NotificationsService, NotificationsGateway],
+  exports: [NotificationsService, NotificationsGateway, PushService],
 })
 export class NotificationsModule {}

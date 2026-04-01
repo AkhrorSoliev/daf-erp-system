@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
 
 describe('TeachersService — status methods', () => {
   let service: TeachersService;
@@ -14,7 +15,8 @@ describe('TeachersService — status methods', () => {
 
   const mockTeacher = {
     id: 1,
-    name: 'Test Teacher',
+    firstName: 'Test',
+    lastName: 'Teacher',
     status: 'ACTIVE',
     isActive: true,
     companyId: 1001,
@@ -36,6 +38,10 @@ describe('TeachersService — status methods', () => {
         count: jest.fn().mockResolvedValue(1),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      groupTeacher: {
+        findMany: jest.fn().mockResolvedValue([]),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
     };
 
     redis = {
@@ -56,6 +62,7 @@ describe('TeachersService — status methods', () => {
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: RedisService, useValue: redis },
         { provide: StatusHistoryService, useValue: statusHistoryService },
+        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
       ],
     }).compile();
 
@@ -110,11 +117,11 @@ describe('TeachersService — status methods', () => {
   });
 
   describe('delete', () => {
-    it('archives teacher + sets Redis block key', async () => {
+    it('archives teacher, removes from groups, sets Redis block key', async () => {
       await service.delete(1, 2);
 
-      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
-        expect.objectContaining({ toStatus: 'ARCHIVED' }),
+      expect(prisma.groupTeacher.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { teacherId: 1 } }),
       );
 
       expect(prisma.user.update).toHaveBeenCalledWith(

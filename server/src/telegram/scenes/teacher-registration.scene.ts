@@ -294,7 +294,8 @@ export function createTeacherRegistrationScene(
 
       // User yaratish
       await usersService.create({
-        name: `${data.firstName} ${data.lastName}`,
+        firstName: data.firstName,
+        lastName: data.lastName,
         phone: data.phone,
         photo: data.photo,
         gender: data.gender,

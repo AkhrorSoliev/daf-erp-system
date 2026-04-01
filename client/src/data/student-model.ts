@@ -16,7 +16,7 @@ export interface StudentGroup {
   lessonEndTime: string | null;
   startDate: string | null;
   endDate: string | null;
-  teachers: { id: number; name: string }[];
+  teachers: { id: number; firstName: string; lastName: string }[];
   enrolledAt: string;
 }
 

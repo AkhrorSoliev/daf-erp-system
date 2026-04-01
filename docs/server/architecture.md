@@ -19,11 +19,16 @@ server/
 │   ├── courses/                # Course management
 │   ├── groups/                 # Group management
 │   ├── students/               # Student management
-│   ├── teachers/               # Teacher management (stub)
-│   ├── employees/              # Employee management (stub)
-│   ├── leads/                  # Lead tracking (stub)
-│   ├── rooms/                  # Room management (stub)
-│   ├── holidays/               # Holiday management (stub)
+│   ├── teachers/               # Teacher management
+│   ├── employees/              # Employee management
+│   ├── leads/                  # Lead tracking
+│   ├── rooms/                  # Room management
+│   ├── holidays/               # Holiday management
+│   ├── comments/               # Comments & task assignment
+│   ├── notifications/          # Notifications (DB, SSE, Push, Telegram)
+│   ├── sms/                    # SMS/Telegram message sending
+│   ├── telegram/               # Telegram bot integration
+│   ├── archive/                # Soft-deleted entity management
 │   │
 │   ├── common/                 # Shared utilities
 │   │   ├── decorators/         # @Public(), @Roles(), @CurrentUser()
@@ -31,7 +36,9 @@ server/
 │   │   ├── dto/                # PaginationDto
 │   │   ├── filters/            # Exception filters
 │   │   ├── pipes/              # Custom pipes
-│   │   └── interceptors/       # Request/response transforms
+│   │   ├── interceptors/       # Request/response transforms
+│   │   ├── entity-history/     # EntityHistoryService (audit log)
+│   │   └── status/             # StatusHistoryService (status transitions)
 │   │
 │   ├── prisma/                 # Database service (global)
 │   └── redis/                  # Cache service (global)

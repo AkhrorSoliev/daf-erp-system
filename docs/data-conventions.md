@@ -4,6 +4,13 @@ Standard formats used across the entire application.
 
 ---
 
+## User Names
+
+- **Storage format:** Split into `firstName` and `lastName` — two separate fields
+- **Display format:** `${firstName} ${lastName}` — e.g. "Abdulloh Karimov"
+- Both User and Student models use this convention
+- Search queries should search both `firstName` and `lastName` fields (OR condition)
+
 ## Phone Numbers
 
 - **Storage format:** 9-digit string without prefix — `901234567`

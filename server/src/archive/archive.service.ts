@@ -586,36 +586,35 @@ export class ArchiveService {
       [ArchiveEntityType.USERS]: {
         roles: { include: { role: true } },
         branches: { include: { branch: { select: { id: true, name: true } } } },
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
       [ArchiveEntityType.BRANCHES]: {
         company: { select: { id: true, name: true } },
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
       [ArchiveEntityType.GROUPS]: {
         course: { select: { id: true, name: true } },
-        teacher: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
       [ArchiveEntityType.STUDENTS]: {
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
       [ArchiveEntityType.LEADS]: {
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
       [ArchiveEntityType.COURSES]: {
         company: { select: { id: true, name: true } },
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
       [ArchiveEntityType.ROOMS]: {
         branch: { select: { id: true, name: true } },
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
       [ArchiveEntityType.ENROLLMENTS]: {
         student: { select: { id: true, firstName: true, lastName: true } },
         group: { select: { id: true, name: true } },
-        deletedBy: { select: { id: true, name: true } },
+        deletedBy: { select: { id: true, firstName: true, lastName: true } },
       },
     };
     return map[entityType] || null;

@@ -31,7 +31,7 @@ export interface GroupData {
   };
   room: { id: string; name: string; capacity: number | null } | null;
   branch: { id: number; name: string };
-  teachers: { id: number; name: string; phone: string | null; photo: string | null }[];
+  teachers: { id: number; firstName: string; lastName: string; phone: string | null; photo: string | null }[];
   studentCount: number;
 }
 

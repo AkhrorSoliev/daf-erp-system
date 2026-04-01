@@ -8,6 +8,8 @@ import {
   type GroupStudent,
 } from "./group-students-table";
 import { EntityHistoryTable } from "@/components/shared/entity-history-table";
+import { CommentForm } from "@/components/shared/comment-form";
+import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import type { GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
 
@@ -21,14 +23,33 @@ function EmptyState({ message }: { message: string }) {
 
 interface GroupDetailTabsProps {
   group: GroupData;
+  onCommentChange?: () => void;
 }
 
-export function GroupDetailTabs({ group }: GroupDetailTabsProps) {
+export function GroupDetailTabs({ group, onCommentChange }: GroupDetailTabsProps) {
   const [students, setStudents] = useState<GroupStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const studentsFetched = useRef(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const historyShown = useRef(false);
+  const [commentsVisible, setCommentsVisible] = useState(false);
+  const commentsShown = useRef(false);
+  const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
+
+  const handleOptimisticAdd = useCallback((comment: CommentData) => {
+    setOptimisticComments((prev) => [comment, ...prev]);
+  }, []);
+
+  const handleConfirmed = useCallback((tempId: string) => {
+    setOptimisticComments((prev) => prev.filter((c) => c.id !== tempId));
+    onCommentChange?.();
+  }, [onCommentChange]);
+
+  const handleFailed = useCallback((tempId: string) => {
+    setOptimisticComments((prev) =>
+      prev.map((c) => (c.id === tempId ? { ...c, _pending: false, _failed: true } : c)),
+    );
+  }, []);
 
   const fetchStudents = useCallback(async () => {
     if (studentsFetched.current) return;
@@ -54,6 +75,10 @@ export function GroupDetailTabs({ group }: GroupDetailTabsProps) {
     if (value === "tarix" && !historyShown.current) {
       historyShown.current = true;
       setHistoryVisible(true);
+    }
+    if (value === "izohlar" && !commentsShown.current) {
+      commentsShown.current = true;
+      setCommentsVisible(true);
     }
   };
 
@@ -109,7 +134,25 @@ export function GroupDetailTabs({ group }: GroupDetailTabsProps) {
 
       {/* Izohlar */}
       <TabsContent value="izohlar">
-        <EmptyState message="Izohlar mavjud emas" />
+        {commentsVisible ? (
+          <div className="space-y-4">
+            <CommentForm
+              entityType="Group"
+              entityId={group.id}
+              onOptimisticAdd={handleOptimisticAdd}
+              onConfirmed={handleConfirmed}
+              onFailed={handleFailed}
+            />
+            <CommentList
+              entityType="Group"
+              entityId={group.id}
+              optimisticComments={optimisticComments}
+              onCommentChange={onCommentChange}
+            />
+          </div>
+        ) : (
+          <EmptyState message="Izohlar mavjud emas" />
+        )}
       </TabsContent>
     </Tabs>
   );

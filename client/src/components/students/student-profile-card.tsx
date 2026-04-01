@@ -59,7 +59,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick }: Stude
   const [latestComment, setLatestComment] = useState<{
     content: string;
     isTask?: boolean;
-    author: { name: string };
+    author: { firstName: string; lastName: string };
     createdAt: string;
   } | null>(null);
 
@@ -204,7 +204,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick }: Stude
           <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
             <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="font-medium">{latestComment.author.name}</span>
+              <span className="font-medium">{latestComment.author.firstName} {latestComment.author.lastName}</span>
               <span>&middot;</span>
               <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
               {latestComment.isTask && (

@@ -118,6 +118,10 @@ Each feature area has its own folder under `components/`:
 | `students-client.tsx` | List container with filters and pagination |
 | `students-table.tsx` | Data table display |
 | `student-detail-client.tsx` | Profile view |
+| `student-profile-card.tsx` | Student profile info card |
+| `student-profile-tabs.tsx` | Tabs (groups, comments, history) |
+| `student-row-actions.tsx` | Row action dropdown |
+| `enroll-to-group-dialog.tsx` | Enroll student to group dialog |
 | `edit-student-drawer.tsx` | Edit form in a side sheet |
 | `students-filter-bar.tsx` | Search + status filters |
 
@@ -126,8 +130,11 @@ Each feature area has its own folder under `components/`:
 | Component | Description |
 |-----------|-------------|
 | `teachers-client.tsx` | List container |
-| `teachers-table.tsx` | Data table |
-| `edit-teacher-drawer.tsx` | Edit form |
+| `teachers-table.tsx` | Data table (includes studentCount column) |
+| `edit-teacher-form.tsx` | Edit form |
+| `teacher-profile-card.tsx` | Teacher profile info card |
+| `teacher-profile-client.tsx` | Teacher detail page |
+| `teacher-row-actions.tsx` | Row action dropdown |
 
 ### Groups (`components/groups/`)
 
@@ -135,6 +142,31 @@ Each feature area has its own folder under `components/`:
 |-----------|-------------|
 | `groups-client.tsx` | List container |
 | `groups-table.tsx` | Data table |
+| `group-detail-client.tsx` | Group detail view |
+| `group-detail-tabs.tsx` | Tabs (info, students, comments, history) |
+| `group-info-card.tsx` | Group information card |
+| `edit-group-form.tsx` | Group create/edit form with schedule availability |
+
+### Tasks (`components/tasks/`)
+
+| Component | Description |
+|-----------|-------------|
+| `tasks-board-client.tsx` | Task board container |
+| Task board components | Kanban-style task management |
+
+### Notifications (`components/notifications/`)
+
+| Component | Description |
+|-----------|-------------|
+| `notification-bell.tsx` | Navbar bell icon with badge + dropdown |
+
+### Shared (`components/shared/`)
+
+| Component | Description |
+|-----------|-------------|
+| `comment-list.tsx` | Reusable comment list (comments + tasks) |
+| `comment-form.tsx` | Comment/task creation form |
+| `entity-history-table.tsx` | Reusable entity change history table |
 
 ### Leads (`components/leads/`)
 

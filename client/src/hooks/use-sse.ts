@@ -14,7 +14,7 @@ export function useSSE() {
     let mounted = true;
 
     async function connect() {
-      const token = Cookies.get("accessToken");
+      const token = Cookies.get("token");
       if (!token) return;
 
       const controller = new AbortController();

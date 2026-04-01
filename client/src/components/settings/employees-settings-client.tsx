@@ -224,7 +224,7 @@ export function EmployeesSettingsClient() {
                   <TableCell className="border-r text-muted-foreground">
                     {(page - 1) * pageSize + index + 1}
                   </TableCell>
-                  <TableCell className="font-medium">{emp.name}</TableCell>
+                  <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {emp.roles.map((r) => (

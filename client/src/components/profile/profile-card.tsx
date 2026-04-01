@@ -36,21 +36,23 @@ interface ProfileCardProps {
 }
 
 export function ProfileCard({ user, onEdit }: ProfileCardProps) {
+  const fullName = `${user.firstName} ${user.lastName}`;
+
   return (
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
       {/* Avatar + Identity */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <AvatarWithPreview src={user.photo} alt={user.name}>
+        <AvatarWithPreview src={user.photo} alt={fullName}>
           <Avatar className="size-20">
-            {user.photo && <AvatarImage src={user.photo} alt={user.name} />}
+            {user.photo && <AvatarImage src={user.photo} alt={fullName} />}
             <AvatarFallback className="text-2xl font-semibold">
-              {getInitials(user.name)}
+              {getInitials(fullName)}
             </AvatarFallback>
           </Avatar>
         </AvatarWithPreview>
 
         <div>
-          <h2 className="text-xl font-bold">{user.name}</h2>
+          <h2 className="text-xl font-bold">{fullName}</h2>
           <p className="text-sm text-muted-foreground">(id: {user.id})</p>
         </div>
 

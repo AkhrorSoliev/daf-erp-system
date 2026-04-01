@@ -4,6 +4,8 @@ import {
   IsBoolean,
   IsArray,
   IsInt,
+  IsIn,
+  IsDateString,
   MinLength,
 } from 'class-validator';
 
@@ -26,4 +28,12 @@ export class CreateCommentDto {
   @IsArray()
   @IsInt({ each: true })
   assigneeIds?: number[];
+
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+
+  @IsOptional()
+  @IsIn(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 }

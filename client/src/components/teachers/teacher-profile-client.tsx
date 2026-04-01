@@ -19,7 +19,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
     try {
       const { data } = await api.get(`/teachers/${teacherId}`);
       setTeacher(data);
-      setName(teacherId, data.name);
+      setName(teacherId, `${data.firstName} ${data.lastName}`);
     } catch {
       setError("O'qituvchi topilmadi");
     } finally {
@@ -61,7 +61,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
       <EditTeacherDrawer
         onSaved={(updated) => {
           setTeacher(updated);
-          setName(teacherId, updated.name);
+          setName(teacherId, `${updated.firstName} ${updated.lastName}`);
         }}
       />
     </>

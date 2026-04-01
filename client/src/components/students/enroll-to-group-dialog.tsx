@@ -26,7 +26,8 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 interface GroupTeacher {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   photo: string | null;
 }
 
@@ -307,13 +308,13 @@ export function EnrollToGroupDialog({
                               <Avatar key={t.id} className="size-5 border-2 border-background">
                                 {t.photo && <AvatarImage src={t.photo} />}
                                 <AvatarFallback className="text-[7px] font-medium">
-                                  {t.name.slice(0, 2).toUpperCase()}
+                                  {`${t.firstName?.[0] ?? ''}${t.lastName?.[0] ?? ''}`}
                                 </AvatarFallback>
                               </Avatar>
                             ))}
                           </div>
                           <span className="text-xs text-muted-foreground truncate">
-                            {group.teachers.map((t) => t.name).join(", ")}
+                            {group.teachers.map((t) => `${t.firstName} ${t.lastName}`).join(", ")}
                           </span>
                         </div>
                       ) : (

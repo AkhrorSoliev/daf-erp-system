@@ -78,7 +78,7 @@ export class StatusHistoryService {
       orderBy: { createdAt: 'desc' },
       include: {
         changedBy: {
-          select: { id: true, name: true },
+          select: { id: true, firstName: true, lastName: true },
         },
       },
     });

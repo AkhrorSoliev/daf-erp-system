@@ -11,11 +11,12 @@ import { EntityHistoryService } from '../common/entity-history';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { CommentQueryDto, LatestCommentQueryDto } from './dto/comment-query.dto';
+import { TaskQueryDto } from './dto/task-query.dto';
 
 const commentInclude = {
-  author: { select: { id: true, name: true, photo: true } },
+  author: { select: { id: true, firstName: true, lastName: true, photo: true } },
   assignees: {
-    include: { user: { select: { id: true, name: true } } },
+    include: { user: { select: { id: true, firstName: true, lastName: true } } },
     orderBy: { createdAt: 'asc' as const },
   },
 };
@@ -41,6 +42,8 @@ export class CommentsService {
         entityId: String(dto.entityId),
         content: dto.content,
         isTask: dto.isTask ?? false,
+        dueDate: dto.isTask && dto.dueDate ? new Date(dto.dueDate) : null,
+        priority: dto.isTask && dto.priority ? dto.priority : null,
         authorId: userId,
         companyId,
         assignees: dto.isTask && dto.assigneeIds
@@ -134,9 +137,14 @@ export class CommentsService {
       );
     }
 
+    const updateData: any = {};
+    if (dto.content !== undefined) updateData.content = dto.content;
+    if (dto.dueDate !== undefined) updateData.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+    if (dto.priority !== undefined) updateData.priority = dto.priority || null;
+
     const updated = await this.prisma.comment.update({
       where: { id },
-      data: { content: dto.content },
+      data: updateData,
       include: commentInclude,
     });
 
@@ -149,6 +157,14 @@ export class CommentsService {
       companyId: comment.companyId,
     });
 
+    // Topshiriq yangilanganda assignee larga xabar berish
+    if (comment.isTask && comment.assignees.length > 0) {
+      this.eventEmitter.emit('task.updated', {
+        comment: updated,
+        assigneeIds: comment.assignees.map((a: any) => a.userId),
+      });
+    }
+
     return updated;
   }
 
@@ -160,6 +176,14 @@ export class CommentsService {
 
     if (!comment) {
       throw new NotFoundException('Izoh topilmadi');
+    }
+
+    // Topshiriq o'chirilganda assignee larga xabar berish
+    if (comment.isTask && comment.assignees.length > 0) {
+      this.eventEmitter.emit('task.deleted', {
+        comment,
+        assigneeIds: comment.assignees.map((a: any) => a.userId),
+      });
     }
 
     await this.prisma.comment.delete({ where: { id } });
@@ -179,6 +203,75 @@ export class CommentsService {
     return { message: "Izoh muvaffaqiyatli o'chirildi" };
   }
 
+  async getMyTasks(userId: number, query: TaskQueryDto) {
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 50;
+    const skip = (page - 1) * pageSize;
+
+    const statusFilter = query.status
+      ? query.status.split(',').map((s) => s.trim()) as AssigneeStatus[]
+      : undefined;
+
+    const where: any = {
+      userId,
+      comment: { isTask: true },
+    };
+    if (statusFilter) where.status = { in: statusFilter };
+
+    const [data, total] = await Promise.all([
+      this.prisma.commentAssignee.findMany({
+        where,
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true } },
+          comment: {
+            include: {
+              author: { select: { id: true, firstName: true, lastName: true, photo: true } },
+              assignees: {
+                include: { user: { select: { id: true, firstName: true, lastName: true } } },
+                orderBy: { createdAt: 'asc' },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.commentAssignee.count({ where }),
+    ]);
+
+    return { data, total, page, pageSize };
+  }
+
+  async getCreatedTasks(userId: number, query: TaskQueryDto) {
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 50;
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {
+      authorId: userId,
+      isTask: true,
+    };
+
+    if (query.status) {
+      const statuses = query.status.split(',').map((s) => s.trim());
+      where.assignees = { some: { status: { in: statuses } } };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.comment.findMany({
+        where,
+        include: commentInclude,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.comment.count({ where }),
+    ]);
+
+    return { data, total, page, pageSize };
+  }
+
   async updateAssigneeStatus(
     commentId: string,
     userId: number,
@@ -188,7 +281,7 @@ export class CommentsService {
       where: { commentId, userId },
       include: {
         comment: {
-          include: { author: { select: { id: true, name: true } } },
+          include: { author: { select: { id: true, firstName: true, lastName: true } } },
         },
       },
     });
@@ -215,7 +308,7 @@ export class CommentsService {
     const updated = await this.prisma.commentAssignee.update({
       where: { id: assignee.id },
       data: updateData,
-      include: { user: { select: { id: true, name: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true } } },
     });
 
     this.eventEmitter.emit('task.status.changed', {

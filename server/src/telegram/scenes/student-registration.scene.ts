@@ -3,6 +3,7 @@ import { BotContext } from '../types/context';
 import { SCENES, DEFAULT_COMPANY_ID } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
+import { EntityHistoryService } from '../../common/entity-history';
 import { message } from 'telegraf/filters';
 import https from 'https';
 
@@ -31,6 +32,7 @@ export function createStudentRegistrationScene(
   prisma: PrismaService,
   uploadService: UploadService,
   bot: Telegraf<BotContext>,
+  entityHistoryService: EntityHistoryService,
 ): Scenes.BaseScene<BotContext> {
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
 
@@ -93,8 +95,8 @@ export function createStudentRegistrationScene(
         roles: { some: { roleId: 4 } },
         branches: { some: { branchId } },
       },
-      select: { id: true, name: true, photo: true },
-      orderBy: { name: 'asc' },
+      select: { id: true, firstName: true, lastName: true, photo: true },
+      orderBy: { firstName: 'asc' },
     });
 
     if (teachers.length === 0) {
@@ -105,7 +107,7 @@ export function createStudentRegistrationScene(
 
     // Ustozlarni inline button sifatida ko'rsatish
     const buttons = teachers.map((t) => [
-      Markup.button.callback(t.name, `select_teacher_${t.id}`),
+      Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
     ]);
 
     await ctx.reply(
@@ -128,7 +130,7 @@ export function createStudentRegistrationScene(
     // Ustoz mavjudligini tekshirish
     const teacher = await prisma.user.findFirst({
       where: { id: teacherId, deletedAt: null, roles: { some: { roleId: 4 } } },
-      select: { id: true, name: true },
+      select: { id: true, firstName: true, lastName: true },
     });
     if (!teacher) {
       await ctx.reply("O'qituvchi topilmadi. Qayta tanlang.");
@@ -136,7 +138,7 @@ export function createStudentRegistrationScene(
     }
 
     ctx.session.data.teacherId = teacherId;
-    ctx.session.data.teacherName = teacher.name;
+    ctx.session.data.teacherName = `${teacher.firstName} ${teacher.lastName}`;
 
     // Ushbu ustozning guruhlarini olish
     const groups = await prisma.group.findMany({
@@ -157,7 +159,7 @@ export function createStudentRegistrationScene(
     });
 
     if (groups.length === 0) {
-      await ctx.editMessageText(`${teacher.name} — hozirda guruhlari mavjud emas.`);
+      await ctx.editMessageText(`${teacher.firstName} ${teacher.lastName} — hozirda guruhlari mavjud emas.`);
       // Qayta ustozlar ro'yxatiga qaytarish
       ctx.session.step = 1;
       const teachers = await prisma.user.findMany({
@@ -166,11 +168,11 @@ export function createStudentRegistrationScene(
           roles: { some: { roleId: 4 } },
           branches: { some: { branchId } },
         },
-        select: { id: true, name: true },
-        orderBy: { name: 'asc' },
+        select: { id: true, firstName: true, lastName: true },
+        orderBy: { firstName: 'asc' },
       });
       const buttons = teachers.map((t) => [
-        Markup.button.callback(t.name, `select_teacher_${t.id}`),
+        Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
       ]);
       await ctx.reply("Boshqa o'qituvchini tanlang:", Markup.inlineKeyboard(buttons));
       return;
@@ -193,7 +195,7 @@ export function createStudentRegistrationScene(
     buttons.push([Markup.button.callback("⬅️ Orqaga", "back_to_teachers")]);
 
     await ctx.editMessageText(
-      `👨‍🏫 ${teacher.name}\n\nGuruhni tanlang:`,
+      `👨‍🏫 ${teacher.firstName} ${teacher.lastName}\n\nGuruhni tanlang:`,
     );
     await ctx.reply("Quyidagi guruhlardan birini tanlang:", Markup.inlineKeyboard(buttons));
   });
@@ -210,12 +212,12 @@ export function createStudentRegistrationScene(
         roles: { some: { roleId: 4 } },
         branches: { some: { branchId } },
       },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: { firstName: 'asc' },
     });
 
     const buttons = teachers.map((t) => [
-      Markup.button.callback(t.name, `select_teacher_${t.id}`),
+      Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
     ]);
 
     await ctx.editMessageText(
@@ -454,12 +456,61 @@ export function createStudentRegistrationScene(
         },
       });
 
+      // Tarix: O'quvchi yaratildi (Telegram bot orqali)
+      await entityHistoryService.recordCreate({
+        entityType: 'Student',
+        entityId: student.id,
+        newValues: {
+          ism: data.firstName,
+          familiya: data.lastName,
+          telefon: data.phone,
+          action: 'TELEGRAM_ROYXATDAN_OTDI',
+        },
+        companyId: DEFAULT_COMPANY_ID,
+      });
+
       // Guruhga enrollment qo'shish
-      await prisma.enrollment.create({
+      const enrollment = await prisma.enrollment.create({
         data: {
           studentId: student.id,
           groupId: data.groupId,
         },
+      });
+
+      // Tarix: Guruhga qo'shildi (Telegram bot orqali)
+      await entityHistoryService.recordCreate({
+        entityType: 'Student',
+        entityId: student.id,
+        newValues: {
+          guruh: data.groupName,
+          guruhId: data.groupId,
+          action: 'GURUHGA_QOSHILDI',
+        },
+        companyId: DEFAULT_COMPANY_ID,
+      });
+
+      // Tarix: Enrollment yaratildi
+      await entityHistoryService.recordCreate({
+        entityType: 'Enrollment',
+        entityId: enrollment.id,
+        newValues: {
+          studentId: student.id,
+          groupId: data.groupId,
+          status: 'ACTIVE',
+        },
+        companyId: DEFAULT_COMPANY_ID,
+      });
+
+      // Tarix: Group entity — guruh tarix tabida ko'rinadi
+      await entityHistoryService.recordCreate({
+        entityType: 'Group',
+        entityId: data.groupId,
+        newValues: {
+          action: 'OQUVCHI_QOSHILDI',
+          oquvchi: `${data.firstName} ${data.lastName}`,
+          oquvchiId: student.id,
+        },
+        companyId: DEFAULT_COMPANY_ID,
       });
 
       await ctx.editMessageCaption("✅ Tasdiqlandi!");
@@ -503,12 +554,12 @@ export function createStudentRegistrationScene(
         roles: { some: { roleId: 4 } },
         branches: { some: { branchId } },
       },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: { firstName: 'asc' },
     });
 
     const buttons = teachers.map((t) => [
-      Markup.button.callback(t.name, `select_teacher_${t.id}`),
+      Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
     ]);
 
     await ctx.reply("O'qituvchingizni tanlang:", Markup.inlineKeyboard(buttons));

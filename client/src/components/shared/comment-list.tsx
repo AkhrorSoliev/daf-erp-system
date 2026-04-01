@@ -39,14 +39,15 @@ import { useAuth } from "@/hooks/use-auth";
 
 interface CommentAuthor {
   id: number;
-  name: string;
+  firstName: string;
+  lastName: string;
   photo: string | null;
 }
 
 interface CommentAssignee {
   id: string;
   userId: number;
-  user: { id: number; name: string };
+  user: { id: number; firstName: string; lastName: string };
   status: "PENDING" | "SEEN" | "DONE";
   seenAt: string | null;
   doneAt: string | null;
@@ -153,7 +154,7 @@ function AssigneeChip({ assignee }: { assignee: CommentAssignee }) {
           className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
         >
           <Icon className="size-3" />
-          {assignee.user.name}
+          {assignee.user.firstName} {assignee.user.lastName}
         </div>
       </TooltipTrigger>
       <TooltipContent side="top" className="text-xs">
@@ -374,7 +375,7 @@ export function CommentList({ entityType, entityId, optimisticComments, onCommen
                     <Avatar className="size-7 shrink-0 mt-0.5">
                       {comment.author.photo && <AvatarImage src={comment.author.photo} />}
                       <AvatarFallback className="text-[10px] font-medium">
-                        {comment.author.name.slice(0, 2).toUpperCase()}
+                        {`${comment.author.firstName?.[0] ?? ''}${comment.author.lastName?.[0] ?? ''}`}
                       </AvatarFallback>
                     </Avatar>
                   )}
@@ -384,7 +385,7 @@ export function CommentList({ entityType, entityId, optimisticComments, onCommen
                     {/* Author line */}
                     <div className="flex items-center gap-2">
                       <span className="text-[13px] font-semibold leading-none">
-                        {comment.author.name}
+                        {comment.author.firstName} {comment.author.lastName}
                       </span>
                       <RelativeTime date={comment.createdAt} />
                       <SendStatus pending={comment._pending} failed={comment._failed} />

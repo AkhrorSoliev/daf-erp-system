@@ -25,7 +25,7 @@ export class NotificationEventsListener {
     assigneeIds: number[];
   }) {
     const { comment, assigneeIds } = payload;
-    const authorName = comment.author?.name || 'Noma\'lum';
+    const authorName = comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Noma\'lum';
 
     // Determine entity label for notification message
     const entityLabel = this.getEntityLabel(comment.entityType, comment.entityId);
@@ -70,6 +70,83 @@ export class NotificationEventsListener {
     }
   }
 
+  @OnEvent('task.deleted')
+  async handleTaskDeleted(payload: {
+    comment: any;
+    assigneeIds: number[];
+  }) {
+    const { comment, assigneeIds } = payload;
+    const authorName = comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Noma\'lum';
+
+    for (const assigneeId of assigneeIds) {
+      try {
+        const title = 'Topshiriq o\'chirildi';
+        const message = `${authorName} topshiriqni o'chirdi: "${this.truncate(comment.content, 80)}"`;
+
+        const notification = await this.notificationsService.create({
+          userId: assigneeId,
+          type: NotificationType.TASK_DELETED,
+          title,
+          message,
+          relatedEntityType: comment.entityType,
+          relatedEntityId: comment.entityId,
+          companyId: comment.companyId,
+        });
+
+        this.gateway.sendToUser(assigneeId, { type: 'notification', notification });
+
+        await this.pushService.sendToUser(assigneeId, {
+          title,
+          body: message,
+          url: this.getEntityUrl(comment.entityType, comment.entityId),
+        });
+
+        await this.sendTelegram(assigneeId, title, message);
+      } catch (error) {
+        this.logger.error(`Failed to notify assignee ${assigneeId} about task deletion: ${error.message}`);
+      }
+    }
+  }
+
+  @OnEvent('task.updated')
+  async handleTaskUpdated(payload: {
+    comment: any;
+    assigneeIds: number[];
+  }) {
+    const { comment, assigneeIds } = payload;
+    const authorName = comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Noma\'lum';
+
+    for (const assigneeId of assigneeIds) {
+      try {
+        const title = 'Topshiriq yangilandi';
+        const message = `${authorName} topshiriqni yangiladi: "${this.truncate(comment.content, 80)}"`;
+
+        const notification = await this.notificationsService.create({
+          userId: assigneeId,
+          type: NotificationType.TASK_UPDATED,
+          title,
+          message,
+          relatedEntityType: comment.entityType,
+          relatedEntityId: comment.entityId,
+          commentId: comment.id,
+          companyId: comment.companyId,
+        });
+
+        this.gateway.sendToUser(assigneeId, { type: 'notification', notification });
+
+        await this.pushService.sendToUser(assigneeId, {
+          title,
+          body: message,
+          url: this.getEntityUrl(comment.entityType, comment.entityId),
+        });
+
+        await this.sendTelegram(assigneeId, title, message);
+      } catch (error) {
+        this.logger.error(`Failed to notify assignee ${assigneeId} about task update: ${error.message}`);
+      }
+    }
+  }
+
   @OnEvent('task.status.changed')
   async handleTaskStatusChanged(payload: {
     comment: any;
@@ -79,7 +156,7 @@ export class NotificationEventsListener {
     const { comment, assignee, newStatus } = payload;
     const statusLabel =
       newStatus === 'SEEN' ? "ko'rdi" : newStatus === 'DONE' ? 'bajardi' : newStatus;
-    const assigneeName = assignee.user?.name || 'Noma\'lum';
+    const assigneeName = assignee.user ? `${assignee.user.firstName} ${assignee.user.lastName}` : 'Noma\'lum';
 
     const title = 'Topshiriq yangilandi';
     const message = `${assigneeName} topshiriqni ${statusLabel}: "${this.truncate(comment.content, 60)}"`;
