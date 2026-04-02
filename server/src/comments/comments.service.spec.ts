@@ -374,15 +374,78 @@ describe('CommentsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw if already DONE', async () => {
+    it('should throw if status is the same', async () => {
       prisma.commentAssignee.findFirst.mockResolvedValue({
         ...mockAssignee,
-        status: AssigneeStatus.DONE,
+        status: AssigneeStatus.SEEN,
       });
 
       await expect(
         service.updateAssigneeStatus('comment-uuid-2', 10001, AssigneeStatus.SEEN),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow moving from DONE back to SEEN', async () => {
+      prisma.commentAssignee.findFirst.mockResolvedValue({
+        ...mockAssignee,
+        status: AssigneeStatus.DONE,
+        seenAt: new Date(),
+        doneAt: new Date(),
+      });
+      prisma.commentAssignee.update.mockResolvedValue({
+        ...mockAssignee,
+        status: AssigneeStatus.SEEN,
+        seenAt: expect.any(Date),
+        doneAt: null,
+        user: { id: 10001, name: 'Admin 1' },
+      });
+
+      const result = await service.updateAssigneeStatus(
+        'comment-uuid-2',
+        10001,
+        AssigneeStatus.SEEN,
+      );
+
+      expect(prisma.commentAssignee.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: AssigneeStatus.SEEN,
+            seenAt: expect.any(Date),
+            doneAt: null,
+          }),
+        }),
+      );
+    });
+
+    it('should allow moving from SEEN back to PENDING', async () => {
+      prisma.commentAssignee.findFirst.mockResolvedValue({
+        ...mockAssignee,
+        status: AssigneeStatus.SEEN,
+        seenAt: new Date(),
+      });
+      prisma.commentAssignee.update.mockResolvedValue({
+        ...mockAssignee,
+        status: AssigneeStatus.PENDING,
+        seenAt: null,
+        doneAt: null,
+        user: { id: 10001, name: 'Admin 1' },
+      });
+
+      await service.updateAssigneeStatus(
+        'comment-uuid-2',
+        10001,
+        AssigneeStatus.PENDING,
+      );
+
+      expect(prisma.commentAssignee.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: AssigneeStatus.PENDING,
+            seenAt: null,
+            doneAt: null,
+          }),
+        }),
+      );
     });
   });
 });

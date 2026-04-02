@@ -54,7 +54,7 @@ export class NotificationEventsListener {
         await this.pushService.sendToUser(assigneeId, {
           title,
           body: message,
-          url: this.getEntityUrl(comment.entityType, comment.entityId),
+          url: '/tasks',
         });
 
         // 4. Telegram
@@ -95,7 +95,7 @@ export class NotificationEventsListener {
         await this.pushService.sendToUser(assigneeId, {
           title,
           body: message,
-          url: this.getEntityUrl(comment.entityType, comment.entityId),
+          url: '/tasks',
         });
 
         await this.sendTelegram(assigneeId, title, message);
@@ -134,7 +134,7 @@ export class NotificationEventsListener {
         await this.pushService.sendToUser(assigneeId, {
           title,
           body: message,
-          url: this.getEntityUrl(comment.entityType, comment.entityId),
+          url: '/tasks',
         });
 
         await this.sendTelegram(assigneeId, title, message);
@@ -179,7 +179,7 @@ export class NotificationEventsListener {
       await this.pushService.sendToUser(comment.authorId, {
         title,
         body: message,
-        url: this.getEntityUrl(comment.entityType, comment.entityId),
+        url: '/tasks',
       });
 
       await this.sendTelegram(comment.authorId, title, message);

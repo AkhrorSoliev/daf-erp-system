@@ -9,23 +9,43 @@ export function usePushNotifications() {
     registered.current = true;
 
     async function register() {
-      // Check browser support
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        console.warn("[Push] Browser does not support push notifications");
+        return;
+      }
 
       try {
-        // Get VAPID public key from server
         const { data } = await api.get("/notifications/vapid-public-key");
-        if (!data.key) return;
+        if (!data.key) {
+          console.warn("[Push] No VAPID key from server");
+          return;
+        }
 
-        // Register service worker
         const registration = await navigator.serviceWorker.register("/sw.js");
         await navigator.serviceWorker.ready;
 
-        // Check/request notification permission
+        // If already subscribed, no need to re-subscribe
+        const existing = await registration.pushManager.getSubscription();
+        if (existing) {
+          console.info("[Push] Already subscribed");
+          return;
+        }
+
+        console.info("[Push] Current permission:", Notification.permission);
+
+        // If denied, user must manually allow in browser settings
+        if (Notification.permission === "denied") {
+          console.warn(
+            "[Push] Notifications blocked. User must allow in browser settings: " +
+            "Chrome → Settings → Privacy → Site Settings → Notifications"
+          );
+          return;
+        }
+
         const permission = await Notification.requestPermission();
+        console.info("[Push] Permission result:", permission);
         if (permission !== "granted") return;
 
-        // Subscribe to push
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(data.key) as BufferSource,
@@ -34,14 +54,15 @@ export function usePushNotifications() {
         const json = subscription.toJSON();
         if (!json.endpoint || !json.keys) return;
 
-        // Send subscription to backend
         await api.post("/notifications/push/subscribe", {
           endpoint: json.endpoint,
           p256dh: json.keys.p256dh,
           auth: json.keys.auth,
         });
-      } catch {
-        // Push registration is optional — don't block app
+
+        console.info("[Push] Successfully subscribed");
+      } catch (err) {
+        console.error("[Push] Registration failed:", err);
       }
     }
 
