@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import toast from "react-hot-toast";
 import api from "@/lib/api";
 
 export type TaskStatus = "PENDING" | "SEEN" | "DONE";
@@ -39,6 +40,12 @@ export const TASK_COLUMNS: {
   { id: "SEEN", label: "Ko'rildi", color: "bg-blue-500" },
   { id: "DONE", label: "Bajarildi", color: "bg-green-500" },
 ];
+
+export const STATUS_LABELS: Record<TaskStatus, string> = {
+  PENDING: "Kutilmoqda",
+  SEEN: "Ko'rildi",
+  DONE: "Bajarildi",
+};
 
 interface TasksBoardState {
   tasks: TaskItem[];
@@ -201,9 +208,13 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
       await api.patch(`/comments/${task.commentId}/assignee-status`, {
         status: newStatus,
       });
-    } catch {
+    } catch (error) {
       // Revert on error
       set({ tasks });
+      const msg =
+        (error as any)?.response?.data?.message ||
+        "Status o'zgartirishda xatolik";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
     }
   },
 }));

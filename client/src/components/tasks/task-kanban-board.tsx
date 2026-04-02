@@ -13,23 +13,35 @@ import {
 } from "@dnd-kit/core";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   useTasksBoard,
   TASK_COLUMNS,
+  STATUS_LABELS,
   type TaskItem,
   type TaskStatus,
 } from "@/hooks/use-tasks-board";
 import { TaskColumn } from "./task-column";
 import { TaskCard } from "./task-card";
 
-const STATUS_ORDER: Record<TaskStatus, number> = {
-  PENDING: 0,
-  SEEN: 1,
-  DONE: 2,
-};
-
 interface TaskKanbanBoardProps {
   loading: boolean;
   isDragDisabled: boolean;
+}
+
+interface PendingMove {
+  taskId: string;
+  fromStatus: TaskStatus;
+  toStatus: TaskStatus;
+  content: string;
 }
 
 export function TaskKanbanBoard({
@@ -41,6 +53,7 @@ export function TaskKanbanBoard({
   const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(
     new Set()
   );
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
 
   function toggleColumn(columnId: string) {
     setCollapsedColumns((prev) => {
@@ -97,10 +110,26 @@ export function TaskKanbanBoard({
 
     if (!targetStatus || targetStatus === task.status) return;
 
-    // Only allow forward transitions
-    if (STATUS_ORDER[targetStatus] <= STATUS_ORDER[task.status]) return;
+    const content =
+      task.content.length > 50 ? task.content.slice(0, 50) + "…" : task.content;
 
-    moveTask(activeId, targetStatus);
+    setPendingMove({
+      taskId: activeId,
+      fromStatus: task.status,
+      toStatus: targetStatus,
+      content,
+    });
+  }
+
+  function handleConfirm() {
+    if (pendingMove) {
+      moveTask(pendingMove.taskId, pendingMove.toStatus);
+    }
+    setPendingMove(null);
+  }
+
+  function handleCancel() {
+    setPendingMove(null);
   }
 
   if (loading) {
@@ -127,35 +156,60 @@ export function TaskKanbanBoard({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {TASK_COLUMNS.map((col) => {
-          const columnTasks = tasks.filter((t) => t.status === col.id);
-          return (
-            <TaskColumn
-              key={col.id}
-              status={col.id}
-              label={col.label}
-              color={col.color}
-              tasks={columnTasks}
-              collapsed={collapsedColumns.has(col.id)}
-              onToggle={() => toggleColumn(col.id)}
-              isDragDisabled={isDragDisabled}
-            />
-          );
-        })}
-      </div>
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {TASK_COLUMNS.map((col) => {
+            const columnTasks = tasks.filter((t) => t.status === col.id);
+            return (
+              <TaskColumn
+                key={col.id}
+                status={col.id}
+                label={col.label}
+                color={col.color}
+                tasks={columnTasks}
+                collapsed={collapsedColumns.has(col.id)}
+                onToggle={() => toggleColumn(col.id)}
+                isDragDisabled={isDragDisabled}
+              />
+            );
+          })}
+        </div>
 
-      <DragOverlay>
-        {activeTask ? (
-          <TaskCard task={activeTask} isOverlay isDragDisabled={false} />
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activeTask ? (
+            <TaskCard task={activeTask} isOverlay isDragDisabled={false} />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      <AlertDialog open={!!pendingMove} onOpenChange={(open) => !open && handleCancel()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Statusni o&apos;zgartirish</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{pendingMove?.content}&quot; topshiriq statusini{" "}
+              <strong>{pendingMove ? STATUS_LABELS[pendingMove.fromStatus] : ""}</strong>
+              {" "}dan{" "}
+              <strong>{pendingMove ? STATUS_LABELS[pendingMove.toStatus] : ""}</strong>
+              {" "}ga o&apos;zgartirmoqchimisiz?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancel}>
+              Bekor qilish
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm}>
+              Tasdiqlash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

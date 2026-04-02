@@ -290,17 +290,18 @@ export class CommentsService {
       throw new NotFoundException('Sizga bu topshiriq berilmagan');
     }
 
-    if (
-      assignee.status === AssigneeStatus.DONE ||
-      (assignee.status === AssigneeStatus.SEEN &&
-        status === AssigneeStatus.PENDING)
-    ) {
-      throw new BadRequestException("Bu status o'tkazib bo'lmaydi");
+    if (assignee.status === status) {
+      throw new BadRequestException('Status allaqachon belgilangan');
     }
 
     const updateData: any = { status };
-    if (status === AssigneeStatus.SEEN) updateData.seenAt = new Date();
-    if (status === AssigneeStatus.DONE) {
+    if (status === AssigneeStatus.PENDING) {
+      updateData.seenAt = null;
+      updateData.doneAt = null;
+    } else if (status === AssigneeStatus.SEEN) {
+      updateData.seenAt = new Date();
+      updateData.doneAt = null;
+    } else if (status === AssigneeStatus.DONE) {
       updateData.doneAt = new Date();
       if (!assignee.seenAt) updateData.seenAt = new Date();
     }
