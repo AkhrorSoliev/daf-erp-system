@@ -37,21 +37,23 @@ export function GroupsClient() {
   const user = useAuth((s) => s.user);
   const canManage =
     user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const isTeacherOnly =
+    (user?.roles.some((r) => r.id === 4) && !canManage) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
 
   const fetchGroups = useCallback(async () => {
-    if (!branchLoaded || !selectedBranch) {
+    if (!isTeacherOnly && (!branchLoaded || !selectedBranch)) {
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
       const params: Record<string, any> = {
-        branch_id: selectedBranch.id,
         page,
         pageSize,
       };
+      if (selectedBranch) params.branch_id = selectedBranch.id;
       if (statusFilter !== "all") params.status = Number(statusFilter);
       if (search.trim()) params.search = search.trim();
       const { data } = await api.get("/groups", { params });
@@ -62,7 +64,7 @@ export function GroupsClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, statusFilter, selectedBranch, branchLoaded]);
+  }, [page, pageSize, search, statusFilter, selectedBranch, branchLoaded, isTeacherOnly]);
 
   useEffect(() => {
     fetchGroups();

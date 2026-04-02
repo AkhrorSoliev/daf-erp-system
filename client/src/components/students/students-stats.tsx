@@ -7,7 +7,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Student } from "@/data/student-model";
 
-const stats = [
+const allStats = [
   {
     key: "total",
     label: "Jami",
@@ -41,11 +41,16 @@ const stats = [
 interface StudentsStatsProps {
   students: Student[];
   loading?: boolean;
+  isTeacher?: boolean;
 }
 
-export function StudentsStats({ students, loading }: StudentsStatsProps) {
+export function StudentsStats({ students, loading, isTeacher }: StudentsStatsProps) {
+  const stats = isTeacher
+    ? allStats.filter((s) => s.key === "total")
+    : allStats;
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className={`grid gap-3 ${isTeacher ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
       {stats.map(({ key, label, icon: Icon, tooltip }) => (
         <Tooltip key={key}>
           <TooltipTrigger asChild>
@@ -57,7 +62,7 @@ export function StudentsStats({ students, loading }: StudentsStatsProps) {
                   <Skeleton className="mt-1 h-6 w-10" />
                 ) : (
                   <p className="text-lg font-semibold">
-                    {stats.find((s) => s.key === key)!.compute(students)}
+                    {allStats.find((s) => s.key === key)!.compute(students)}
                   </p>
                 )}
               </div>

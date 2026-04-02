@@ -29,15 +29,17 @@ const defaultFilters: StudentFilters = {
 interface StudentsFiltersProps {
   filters: StudentFilters;
   onFilterChange: (filters: StudentFilters) => void;
+  isTeacher?: boolean;
 }
 
 export function StudentsFilters({
   filters,
   onFilterChange,
+  isTeacher,
 }: StudentsFiltersProps) {
   const hasActiveFilters =
     filters.fullName !== "" ||
-    filters.status !== "all";
+    (!isTeacher && filters.status !== "all");
 
   const updateFilter = (key: keyof StudentFilters, value: string) => {
     onFilterChange({ ...filters, [key]: value });
@@ -55,22 +57,24 @@ export function StudentsFilters({
         />
       </div>
 
-      <Select
-        value={filters.status}
-        onValueChange={(value) => updateFilter("status", value)}
-      >
-        <SelectTrigger className="w-full sm:w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha holatlar</SelectItem>
-          <SelectItem value="active">Faol</SelectItem>
-          <SelectItem value="frozen">Muzlatilgan</SelectItem>
-          <SelectItem value="ungrouped">Guruhlashtirilmagan</SelectItem>
-          <SelectItem value="graduated">Bitirgan</SelectItem>
-          <SelectItem value="expelled">Chetlatilgan</SelectItem>
-        </SelectContent>
-      </Select>
+      {!isTeacher && (
+        <Select
+          value={filters.status}
+          onValueChange={(value) => updateFilter("status", value)}
+        >
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha holatlar</SelectItem>
+            <SelectItem value="active">Faol</SelectItem>
+            <SelectItem value="frozen">Muzlatilgan</SelectItem>
+            <SelectItem value="ungrouped">Guruhlashtirilmagan</SelectItem>
+            <SelectItem value="graduated">Bitirgan</SelectItem>
+            <SelectItem value="expelled">Chetlatilgan</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
 
       {hasActiveFilters && (
         <Tooltip>

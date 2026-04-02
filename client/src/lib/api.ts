@@ -42,6 +42,15 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // 403 — ruxsat yo'q
+    if (error.response?.status === 403) {
+      const { default: toast } = await import("react-hot-toast");
+      const msg = error.response?.data?.message;
+      const message = Array.isArray(msg) ? msg[0] : msg;
+      toast.error(message || "Sizga bu amalni bajarishga ruxsat yo'q");
+      return Promise.reject(error);
+    }
+
     // 401 va refresh qilish mumkin bo'lsa
     if (error.response?.status === 401 && !originalRequest._retry) {
       const refreshToken = Cookies.get("refreshToken");

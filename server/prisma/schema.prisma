@@ -89,6 +89,13 @@ enum HolidayStatus {
   CANCELLED
 }
 
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
 enum EntityAction {
   CREATE
   UPDATE
@@ -176,6 +183,7 @@ model User {
   notifications      Notification[]     @relation("UserNotifications")
   pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
   sentSmsMessages    SmsMessage[]       @relation("SmsSender")
+  markedAttendances  Attendance[]       @relation("AttendanceMarkedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -331,6 +339,7 @@ model Student {
   enrollments Enrollment[]
   branches    StudentBranch[]
   smsMessages SmsMessage[]
+  attendances Attendance[]
 
   @@index([deletedAt])
   @@index([status])
@@ -409,6 +418,7 @@ model Group {
   teachers    GroupTeacher[]
   students    User[]       @relation("StudentGroups")
   enrollments Enrollment[]
+  attendances Attendance[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -514,13 +524,14 @@ model Company {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  users    User[]
-  branches Branch[]
-  students Student[]
-  courses  Course[]
-  rooms    Room[]
-  groups   Group[]
-  comments Comment[]
+  users       User[]
+  branches    Branch[]
+  students    Student[]
+  courses     Course[]
+  rooms       Room[]
+  groups      Group[]
+  comments    Comment[]
+  attendances Attendance[]
 }
 
 model Comment {
@@ -614,4 +625,26 @@ model SmsMessage {
   @@index([studentId, createdAt(sort: Desc)])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([status])
+}
+
+model Attendance {
+  id         String           @id @default(uuid())
+  groupId    String
+  group      Group            @relation(fields: [groupId], references: [id])
+  studentId  Int
+  student    Student          @relation(fields: [studentId], references: [id])
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  note       String?
+  markedById Int?
+  markedBy   User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  companyId  Int?
+  company    Company?         @relation(fields: [companyId], references: [id])
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([groupId, studentId, date])
+  @@index([groupId, date])
+  @@index([studentId])
+  @@index([companyId])
 }

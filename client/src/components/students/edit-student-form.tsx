@@ -71,7 +71,6 @@ export function EditStudentForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState(student.photo);
   const [showPassword, setShowPassword] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,7 +82,6 @@ export function EditStudentForm({
   };
 
   const onSubmit = async (values: EditStudentFormValues) => {
-    setSubmitting(true);
     try {
       const payload: Record<string, any> = {
         firstName: values.firstName,
@@ -108,8 +106,6 @@ export function EditStudentForm({
     } catch (err: any) {
       const message = err?.response?.data?.message || "Saqlashda xatolik yuz berdi";
       toast.error(message);
-    } finally {
-      setSubmitting(false);
     }
   };
 

@@ -83,9 +83,12 @@ export class GroupsService {
     const pageSize = query.pageSize ?? 10;
 
     const where: Prisma.GroupWhereInput = {
-      branchId: query.branch_id,
       deletedAt: null,
     };
+
+    if (query.branch_id) {
+      where.branchId = query.branch_id;
+    }
 
     if (query.status) {
       where.status = query.status;
@@ -93,6 +96,10 @@ export class GroupsService {
 
     if (query.search?.trim()) {
       where.name = { contains: query.search.trim(), mode: 'insensitive' };
+    }
+
+    if (query.teacher_id) {
+      where.teachers = { some: { teacherId: query.teacher_id } };
     }
 
     const [data, total] = await Promise.all([

@@ -10,13 +10,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export interface SettingsNavItem {
+interface SettingsNavItem {
   title: string;
   url: string;
   icon: LucideIcon;
 }
 
-export interface SettingsNavSection {
+interface SettingsNavSection {
   title: string;
   items: SettingsNavItem[];
 }

@@ -25,7 +25,7 @@ function getInitials(name: string) {
 
 export function SidebarUserFooter() {
   const { user, logout } = useAuth();
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenLock } = useSidebar();
   const router = useRouter();
 
   if (!user) return null;
@@ -37,7 +37,7 @@ export function SidebarUserFooter() {
     <SidebarFooter>
       <SidebarMenu>
         <SidebarMenuItem>
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={(open) => setOpenLock(open)}>
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"

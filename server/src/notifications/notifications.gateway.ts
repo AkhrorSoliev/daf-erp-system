@@ -58,7 +58,4 @@ export class NotificationsGateway {
     }
   }
 
-  getConnectedUserIds(): number[] {
-    return Array.from(this.clients.keys());
-  }
 }

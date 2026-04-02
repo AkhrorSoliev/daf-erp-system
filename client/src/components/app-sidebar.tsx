@@ -15,9 +15,18 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarUserFooter } from "@/components/sidebar-user-footer";
 import { navItems } from "@/lib/nav-items";
+import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const user = useAuth((s) => s.user);
+  const isTeacherOnly =
+    (user?.roles.some((r) => r.id === 4) &&
+      !user?.roles.some((r) => [1, 2, 3].includes(r.id))) ??
+    false;
+  const filteredItems = isTeacherOnly
+    ? navItems.filter((item) => !item.hideForTeacher)
+    : navItems;
 
   return (
     <Sidebar collapsible="icon">
@@ -34,7 +43,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Asosiy</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     asChild

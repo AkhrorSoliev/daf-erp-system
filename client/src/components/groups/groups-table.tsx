@@ -14,6 +14,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { GroupRowActions } from "./group-row-actions";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { useAuth } from "@/hooks/use-auth";
 
 const DAYS_MAP: Record<string, string> = {
   odd: "Toq kunlar",
@@ -30,6 +31,9 @@ interface GroupsTableProps {
 
 export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStatusChanged }: GroupsTableProps) {
   const router = useRouter();
+  const user = useAuth((s) => s.user);
+  const canManage =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
 
   if (groups.length === 0) {
     return (
@@ -58,7 +62,7 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
             <TableHead className="hidden sm:table-cell">
               O&apos;quvchilar
             </TableHead>
-            <TableHead className="w-10" />
+            {canManage && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -126,9 +130,11 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
                 <TableCell className="hidden sm:table-cell">
                   {group.studentCount}
                 </TableCell>
-                <TableCell>
-                  <GroupRowActions group={group} onDeleted={onDeleted} onStatusChanged={onStatusChanged} />
-                </TableCell>
+                {canManage && (
+                  <TableCell>
+                    <GroupRowActions group={group} onDeleted={onDeleted} onStatusChanged={onStatusChanged} />
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

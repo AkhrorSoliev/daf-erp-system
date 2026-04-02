@@ -3,9 +3,10 @@ import { Type } from 'class-transformer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class GroupQueryDto extends PaginationDto {
+  @IsOptional()
   @IsInt()
   @Type(() => Number)
-  branch_id: number;
+  branch_id?: number;
 
   @IsOptional()
   @IsInt()
@@ -15,4 +16,9 @@ export class GroupQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  teacher_id?: number;
 }

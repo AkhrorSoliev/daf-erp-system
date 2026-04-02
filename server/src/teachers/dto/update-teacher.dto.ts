@@ -2,7 +2,6 @@ import {
   IsString,
   IsOptional,
   IsEnum,
-  IsBoolean,
   Matches,
   MinLength,
 } from 'class-validator';
@@ -42,7 +41,4 @@ export class UpdateTeacherDto {
   @MinLength(6)
   password?: string;
 
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
 }

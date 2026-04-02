@@ -26,4 +26,9 @@ export class StudentQueryDto {
   @IsInt()
   @Type(() => Number)
   branch_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  teacher_id?: number;
 }

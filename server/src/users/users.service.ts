@@ -150,10 +150,6 @@ export class UsersService {
     return formatUser(user);
   }
 
-  async findByLogin(login: string) {
-    return this.prisma.user.findFirst({ where: { login, deletedAt: null } });
-  }
-
   async updateProfile(id: number, dto: UpdateProfileDto) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
