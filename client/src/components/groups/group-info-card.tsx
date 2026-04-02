@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Pencil, QrCode, MessageSquare } from "lucide-react";
+import { Pencil, QrCode, MessageSquare, PenLine } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CommentForm } from "@/components/shared/comment-form";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
@@ -55,10 +54,10 @@ function formatPrice(price: number) {
 interface GroupInfoCardProps {
   group: GroupData;
   commentKey?: number;
-  onCommentChange?: () => void;
+  onWriteComment?: () => void;
 }
 
-export function GroupInfoCard({ group, commentKey, onCommentChange }: GroupInfoCardProps) {
+export function GroupInfoCard({ group, commentKey, onWriteComment }: GroupInfoCardProps) {
   const { openDrawer } = useEditGroup();
   const user = useAuth((s) => s.user);
 
@@ -69,15 +68,17 @@ export function GroupInfoCard({ group, commentKey, onCommentChange }: GroupInfoC
     createdAt: string;
   } | null>(null);
 
+  const canManage =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+
   useEffect(() => {
+    if (!canManage) return;
     api.get("/comments/latest", {
       params: { entityType: "Group", entityId: group.id },
     })
       .then(({ data }) => setLatestComment(data || null))
       .catch(() => {});
-  }, [group.id, commentKey]);
-  const canManage =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  }, [group.id, commentKey, canManage]);
 
   const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
 
@@ -175,37 +176,47 @@ export function GroupInfoCard({ group, commentKey, onCommentChange }: GroupInfoC
         </>
       )}
 
-      {/* So'nggi izoh + Izoh qo'shish */}
-      <Separator className="my-3" />
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="size-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">So&apos;nggi izoh</span>
-        </div>
-        {latestComment ? (
-          <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
-            <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="font-medium">{latestComment.author.firstName} {latestComment.author.lastName}</span>
-              <span>&middot;</span>
-              <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
-              {latestComment.isTask && (
-                <>
-                  <span>&middot;</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
-                </>
-              )}
+      {/* So'nggi izoh (faqat CEO, BD, Admin) */}
+      {canManage && (
+        <>
+          <Separator className="my-3" />
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="size-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">So&apos;nggi izoh</span>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onWriteComment}>
+                    <PenLine className="mr-1 size-3" />
+                    Izoh yozish
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Izohlar bo&apos;limiga o&apos;tib izoh yozish</TooltipContent>
+              </Tooltip>
             </div>
+            {latestComment ? (
+              <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
+                <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className="font-medium">{latestComment.author.firstName} {latestComment.author.lastName}</span>
+                  <span>&middot;</span>
+                  <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
+                  {latestComment.isTask && (
+                    <>
+                      <span>&middot;</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Izohlar yo&apos;q</p>
+            )}
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground italic">Izohlar yo&apos;q</p>
-        )}
-        <CommentForm
-          entityType="Group"
-          entityId={group.id}
-          onConfirmed={() => onCommentChange?.()}
-        />
-      </div>
+        </>
+      )}
 
       {/* Actions */}
       {canManage && (

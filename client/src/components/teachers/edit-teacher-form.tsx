@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -35,7 +34,7 @@ interface EditTeacherFormProps {
 
 function teacherToForm(teacher: TeacherData | null): EditTeacherFormValues {
   if (!teacher) {
-    return { firstName: "", lastName: "", phone: "", gender: "", avatar: "", login: "", password: "", isActive: true };
+    return { firstName: "", lastName: "", phone: "", gender: "", avatar: "", login: "", password: "" };
   }
   const firstName = teacher.firstName;
   const lastName = teacher.lastName;
@@ -47,7 +46,6 @@ function teacherToForm(teacher: TeacherData | null): EditTeacherFormValues {
     avatar: teacher.photo ?? "",
     login: teacher.login ?? "",
     password: "",
-    isActive: teacher.isActive,
   };
 }
 
@@ -122,7 +120,6 @@ export function EditTeacherForm({
       if (!isAdd) {
         if (values.login) payload.login = values.login;
         if (values.password) payload.password = values.password;
-        if (values.isActive !== undefined) payload.isActive = values.isActive;
       }
 
       if (isAdd) {
@@ -338,20 +335,6 @@ export function EditTeacherForm({
             )}
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="isActive">Faol holat</Label>
-            <Controller
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <Switch
-                  id="isActive"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-          </div>
         </section>
       )}
     </form>

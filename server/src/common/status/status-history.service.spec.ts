@@ -92,26 +92,6 @@ describe('StatusHistoryService', () => {
     });
   });
 
-  describe('recordInitialStatus', () => {
-    it('creates a record with fromStatus: null and reason "Yaratildi"', async () => {
-      await service.recordInitialStatus({
-        entityType: 'Student',
-        entityId: '1',
-        status: 'ACTIVE',
-        changedById: 1,
-        companyId: 1001,
-      });
-
-      expect(prisma.statusHistory.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          fromStatus: null,
-          toStatus: 'ACTIVE',
-          reason: 'Yaratildi',
-        }),
-      });
-    });
-  });
-
   describe('getHistory', () => {
     it('queries by entityType + entityId, orders by createdAt desc', async () => {
       await service.getHistory('Student', '1');

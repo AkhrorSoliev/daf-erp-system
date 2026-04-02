@@ -49,26 +49,6 @@ export class StatusHistoryService {
     };
   }
 
-  async recordInitialStatus(params: {
-    entityType: string;
-    entityId: string;
-    status: string;
-    changedById?: number;
-    companyId?: number;
-  }) {
-    await this.prisma.statusHistory.create({
-      data: {
-        entityType: params.entityType,
-        entityId: String(params.entityId),
-        fromStatus: null,
-        toStatus: params.status,
-        reason: 'Yaratildi',
-        changedById: params.changedById,
-        companyId: params.companyId,
-      },
-    });
-  }
-
   async getHistory(entityType: string, entityId: string) {
     return this.prisma.statusHistory.findMany({
       where: {

@@ -73,7 +73,14 @@ The system uses **subdomain-based portals** — each subdomain restricts login t
 
 > See full permission matrix: `docs/role-access.md`
 
-**Every role-based restriction must be enforced on BOTH backend AND frontend.** Backend rejects unauthorized API calls; frontend hides/disables UI.
+**CRITICAL: The backend is the real security boundary.** Frontend UI restrictions (hidden pages, disabled buttons) can be bypassed by calling the API directly. Every feature that is restricted to specific roles **must** have a `@Roles()` guard on its backend endpoint — this is non-negotiable.
+
+**When restricting access for any role:**
+1. **Backend:** Add `@Roles()` + `@UseGuards(RolesGuard)` on the controller endpoint so the API returns `403 Forbidden` for unauthorized roles
+2. **Frontend:** Hide the corresponding page/route, sidebar link, button, tab, or UI element entirely
+3. **Both layers must always be in sync** — if a page is hidden on the frontend, the backend endpoint must also reject the request, and vice versa
+
+This applies to **all roles** — not just teachers. Whenever a role should not access a feature, protect it on both sides.
 
 #### Role hierarchy
 
@@ -95,8 +102,9 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 
 - **Salary/financial endpoints** — restrict to `@Roles('CEO', 'Branch Director')` only
 - **Group CRUD** — `@Roles('CEO', 'Branch Director', 'Administrator')`
+- **Settings/configuration endpoints** — restrict to `@Roles('CEO', 'Branch Director', 'Administrator')` — roles like Teacher and Cashier must not access these
 - **Branch Director scope** — when a Branch Director makes a request, service-level logic must filter data to **only their branch** (using `@CurrentUser('branches')` or `@CurrentUser('mainBranch')`)
-- When adding a new role-restricted feature: always add the restriction in both the controller (backend) and the component (frontend)
+- When adding a new role-restricted feature: always add the restriction in both the controller (backend) and the component (frontend). **Never** add a frontend-only restriction without a corresponding backend `@Roles()` guard
 
 ### Pagination
 
@@ -235,8 +243,10 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 
 ### Testing
 
-- **Every meaningful change must include tests.** After adding or modifying a service, write unit tests before considering the work done.
-- Test files live next to the code they test: `<service>.spec.ts` (e.g., `comments.service.spec.ts`)
+- **Every change must be tested before the work is considered complete.** No exceptions — untested code is unfinished code.
+- After adding or modifying a service, write unit tests before considering the work done
+- **Controller guard tests are mandatory** — when adding or modifying `@Roles()` guards on controller endpoints, write `*.controller.spec.ts` tests that verify the role metadata exists and that `RolesGuard` allows/denies the correct roles (see existing controller spec files for the pattern)
+- Test files live next to the code they test: `<service>.spec.ts`, `<controller>.spec.ts` (e.g., `comments.service.spec.ts`, `branches.controller.spec.ts`)
 - Use `@nestjs/testing` `Test.createTestingModule()` with all dependencies mocked as plain objects (`{ provide: Service, useValue: mockObject }`)
 - Mock `PrismaService` per-model: `prisma = { student: { findFirst: jest.fn(), ... }, ... }`
 - Mock `EntityHistoryService` with all 5 methods: `recordCreate`, `recordUpdate`, `recordDelete`, `recordStatusChange`, `recordRestore`

@@ -38,11 +38,15 @@ export class RoomsController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   create(@Body() dto: CreateRoomDto, @CurrentUser('id') userId: number) {
     return this.roomsService.create(dto, userId);
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateRoomDto,
@@ -70,6 +74,8 @@ export class RoomsController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   delete(@Param('id') id: string, @CurrentUser('id') userId: number) {
     return this.roomsService.delete(id, userId);
   }

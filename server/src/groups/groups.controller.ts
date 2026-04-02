@@ -22,7 +22,14 @@ export class GroupsController {
   constructor(private groupsService: GroupsService) {}
 
   @Get()
-  findAll(@Query() query: GroupQueryDto) {
+  findAll(@Query() query: GroupQueryDto, @CurrentUser() currentUser: any) {
+    const roles: string[] = currentUser.roles ?? [];
+    const isTeacherOnly =
+      roles.includes('Teacher') &&
+      !roles.some((r) => ['CEO', 'Branch Director', 'Administrator'].includes(r));
+    if (isTeacherOnly) {
+      query.teacher_id = currentUser.id;
+    }
     return this.groupsService.findAll(query);
   }
 

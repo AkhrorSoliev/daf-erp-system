@@ -1,17 +1,17 @@
 import { create } from "zustand";
 import Cookies from "js-cookie";
 
-export interface UserRole {
+interface UserRole {
   id: number;
   name: string;
 }
 
-export interface UserBranch {
+interface UserBranch {
   id: number;
   name: string;
 }
 
-export interface UserCompany {
+interface UserCompany {
   id: number;
   name: string;
   subdomain: string | null;

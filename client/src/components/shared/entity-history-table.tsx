@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import {
-  Loader2,
   Plus,
   Pencil,
   Trash2,
@@ -172,22 +171,6 @@ function HistorySkeleton() {
       ))}
     </>
   );
-}
-
-// --- Render entries helper ---
-function renderEntries(
-  entries: [string, unknown][],
-  mode: "create" | "delete" | "restore" | "diff",
-  oldValues?: Record<string, unknown> | null,
-) {
-  const hasLong = entries.some(([, val]) => {
-    if (mode === "diff" && oldValues) {
-      return formatValue(val).length > VALUE_MAX_LENGTH || formatValue(oldValues[entries.find(([k]) => k)?.[0] ?? ""] ?? null).length > VALUE_MAX_LENGTH;
-    }
-    return formatValue(val).length > VALUE_MAX_LENGTH;
-  });
-
-  return { hasLong, entries };
 }
 
 // --- Changed fields display ---

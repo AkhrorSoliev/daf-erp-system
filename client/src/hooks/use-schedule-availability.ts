@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
 
-export interface AvailableRoom {
+interface AvailableRoom {
   id: string;
   name: string;
   capacity: number | null;
@@ -9,7 +9,7 @@ export interface AvailableRoom {
   busyGroup: string | null;
 }
 
-export interface AvailableTeacher {
+interface AvailableTeacher {
   id: number;
   firstName: string;
   lastName: string;

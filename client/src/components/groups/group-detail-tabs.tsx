@@ -10,7 +10,9 @@ import {
 import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentForm } from "@/components/shared/comment-form";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
+import { AttendanceTab } from "./attendance/attendance-tab";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
 
 function EmptyState({ message }: { message: string }) {
@@ -24,12 +26,21 @@ function EmptyState({ message }: { message: string }) {
 interface GroupDetailTabsProps {
   group: GroupData;
   onCommentChange?: () => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+  commentFocusKey?: number;
 }
 
-export function GroupDetailTabs({ group, onCommentChange }: GroupDetailTabsProps) {
+export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange, commentFocusKey }: GroupDetailTabsProps) {
+  const user = useAuth((s) => s.user);
+  const canManage =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+
   const [students, setStudents] = useState<GroupStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const studentsFetched = useRef(false);
+  const [attendanceVisible, setAttendanceVisible] = useState(false);
+  const attendanceShown = useRef(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const historyShown = useRef(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
@@ -70,8 +81,21 @@ export function GroupDetailTabs({ group, onCommentChange }: GroupDetailTabsProps
     fetchStudents();
   }, [fetchStudents]);
 
+  // Handle external tab switches (e.g. "Izoh yozish" button in info card)
+  useEffect(() => {
+    if (activeTab === "izohlar" && !commentsShown.current) {
+      commentsShown.current = true;
+      setCommentsVisible(true);
+    }
+  }, [activeTab]);
+
   const handleTabChange = (value: string) => {
+    onTabChange?.(value);
     if (value === "oquvchilar") fetchStudents();
+    if (value === "davomat" && !attendanceShown.current) {
+      attendanceShown.current = true;
+      setAttendanceVisible(true);
+    }
     if (value === "tarix" && !historyShown.current) {
       historyShown.current = true;
       setHistoryVisible(true);
@@ -84,7 +108,7 @@ export function GroupDetailTabs({ group, onCommentChange }: GroupDetailTabsProps
 
   return (
     <Tabs
-      defaultValue="oquvchilar"
+      value={activeTab ?? "oquvchilar"}
       className="w-full"
       onValueChange={handleTabChange}
     >
@@ -93,8 +117,8 @@ export function GroupDetailTabs({ group, onCommentChange }: GroupDetailTabsProps
         <TabsTrigger value="davomat">Davomat</TabsTrigger>
         <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
         <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
-        <TabsTrigger value="tarix">Tarix</TabsTrigger>
-        <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
+        {canManage && <TabsTrigger value="tarix">Tarix</TabsTrigger>}
+        {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
       </TabsList>
 
       {/* O'quvchilar */}
@@ -110,7 +134,11 @@ export function GroupDetailTabs({ group, onCommentChange }: GroupDetailTabsProps
 
       {/* Davomat */}
       <TabsContent value="davomat">
-        <EmptyState message="Davomat ma'lumotlari mavjud emas" />
+        {attendanceVisible ? (
+          <AttendanceTab group={group} />
+        ) : (
+          <EmptyState message="Davomat ma'lumotlari mavjud emas" />
+        )}
       </TabsContent>
 
       {/* Materiallar */}
@@ -123,37 +151,42 @@ export function GroupDetailTabs({ group, onCommentChange }: GroupDetailTabsProps
         <EmptyState message="Imtihonlar mavjud emas" />
       </TabsContent>
 
-      {/* Tarix */}
-      <TabsContent value="tarix">
-        {historyVisible ? (
-          <EntityHistoryTable entityType="Group" entityId={group.id} />
-        ) : (
-          <EmptyState message="Tarix mavjud emas" />
-        )}
-      </TabsContent>
+      {/* Tarix (faqat CEO, BD, Admin) */}
+      {canManage && (
+        <TabsContent value="tarix">
+          {historyVisible ? (
+            <EntityHistoryTable entityType="Group" entityId={group.id} />
+          ) : (
+            <EmptyState message="Tarix mavjud emas" />
+          )}
+        </TabsContent>
+      )}
 
-      {/* Izohlar */}
-      <TabsContent value="izohlar">
-        {commentsVisible ? (
-          <div className="space-y-4">
-            <CommentForm
-              entityType="Group"
-              entityId={group.id}
-              onOptimisticAdd={handleOptimisticAdd}
-              onConfirmed={handleConfirmed}
-              onFailed={handleFailed}
-            />
-            <CommentList
-              entityType="Group"
-              entityId={group.id}
-              optimisticComments={optimisticComments}
-              onCommentChange={onCommentChange}
-            />
-          </div>
-        ) : (
-          <EmptyState message="Izohlar mavjud emas" />
-        )}
-      </TabsContent>
+      {/* Izohlar (faqat CEO, BD, Admin) */}
+      {canManage && (
+        <TabsContent value="izohlar">
+          {commentsVisible ? (
+            <div className="space-y-4">
+              <CommentForm
+                entityType="Group"
+                entityId={group.id}
+                onOptimisticAdd={handleOptimisticAdd}
+                onConfirmed={handleConfirmed}
+                onFailed={handleFailed}
+                focusKey={commentFocusKey}
+              />
+              <CommentList
+                entityType="Group"
+                entityId={group.id}
+                optimisticComments={optimisticComments}
+                onCommentChange={onCommentChange}
+              />
+            </div>
+          ) : (
+            <EmptyState message="Izohlar mavjud emas" />
+          )}
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

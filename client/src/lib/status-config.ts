@@ -6,7 +6,7 @@ interface StatusConfig {
 }
 
 // ─── Student ──────────────────────────────────────────
-export const STUDENT_STATUS: Record<string, StatusConfig> = {
+const STUDENT_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
   INACTIVE: { label: "Nofaol", variant: "secondary" },
   FROZEN: { label: "Muzlatilgan", variant: "outline" },
@@ -16,7 +16,7 @@ export const STUDENT_STATUS: Record<string, StatusConfig> = {
 };
 
 // ─── User / Teacher ──────────────────────────────────
-export const USER_STATUS: Record<string, StatusConfig> = {
+const USER_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
   INACTIVE: { label: "Nofaol", variant: "secondary" },
   SUSPENDED: { label: "To'xtatilgan", variant: "destructive" },
@@ -25,7 +25,7 @@ export const USER_STATUS: Record<string, StatusConfig> = {
 };
 
 // ─── Group ────────────────────────────────────────────
-export const GROUP_STATUS: Record<string, StatusConfig> = {
+const GROUP_STATUS: Record<string, StatusConfig> = {
   FORMING: { label: "Boshlanmagan", variant: "secondary" },
   ACTIVE: { label: "Faol", variant: "default" },
   PAUSED: { label: "Pauza", variant: "outline" },
@@ -35,7 +35,7 @@ export const GROUP_STATUS: Record<string, StatusConfig> = {
 };
 
 // ─── Course ───────────────────────────────────────────
-export const COURSE_STATUS: Record<string, StatusConfig> = {
+const COURSE_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
   INACTIVE: { label: "Nofaol", variant: "secondary" },
   DEPRECATED: { label: "Eskirgan", variant: "outline" },
@@ -43,7 +43,7 @@ export const COURSE_STATUS: Record<string, StatusConfig> = {
 };
 
 // ─── Branch ───────────────────────────────────────────
-export const BRANCH_STATUS: Record<string, StatusConfig> = {
+const BRANCH_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
   INACTIVE: { label: "Nofaol", variant: "secondary" },
   CLOSED: { label: "Yopilgan", variant: "destructive" },
@@ -51,7 +51,7 @@ export const BRANCH_STATUS: Record<string, StatusConfig> = {
 };
 
 // ─── Room ─────────────────────────────────────────────
-export const ROOM_STATUS: Record<string, StatusConfig> = {
+const ROOM_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
   INACTIVE: { label: "Nofaol", variant: "secondary" },
   UNDER_MAINTENANCE: { label: "Ta'mirda", variant: "outline" },
@@ -59,7 +59,7 @@ export const ROOM_STATUS: Record<string, StatusConfig> = {
 };
 
 // ─── Enrollment ───────────────────────────────────────
-export const ENROLLMENT_STATUS: Record<string, StatusConfig> = {
+const ENROLLMENT_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
   FROZEN: { label: "Muzlatilgan", variant: "secondary" },
   COMPLETED: { label: "Tugallangan", variant: "outline" },
@@ -68,13 +68,13 @@ export const ENROLLMENT_STATUS: Record<string, StatusConfig> = {
 };
 
 // ─── Holiday ──────────────────────────────────────────
-export const HOLIDAY_STATUS: Record<string, StatusConfig> = {
+const HOLIDAY_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
   CANCELLED: { label: "Bekor qilingan", variant: "destructive" },
 };
 
 // ─── Entity type → status config mapping ──────────────
-export const ENTITY_STATUS_MAP: Record<string, Record<string, StatusConfig>> = {
+const ENTITY_STATUS_MAP: Record<string, Record<string, StatusConfig>> = {
   students: STUDENT_STATUS,
   teachers: USER_STATUS,
   users: USER_STATUS,
@@ -100,7 +100,7 @@ export const ENTITY_API_PATH: Record<string, string> = {
 
 // ─── Status transitions (backend bilan sinxron) ──────
 // ARCHIVED hech qachon qo'yilmaydi — arxivlash faqat "O'chirish" orqali
-export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
+const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   students: {
     ACTIVE: ["INACTIVE", "FROZEN", "GRADUATED", "EXPELLED"],
     INACTIVE: ["ACTIVE", "FROZEN", "EXPELLED"],
@@ -141,11 +141,6 @@ export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
     CANCELLED: ["ACTIVE"],
   },
 };
-
-// Sabab majburiy bo'lgan statuslar
-export const REASON_REQUIRED_STATUSES = [
-  "EXPELLED", "TERMINATED", "CANCELLED", "CLOSED", "SUSPENDED",
-];
 
 export function getStatusConfig(entityType: string, status: string): StatusConfig {
   const map = ENTITY_STATUS_MAP[entityType];

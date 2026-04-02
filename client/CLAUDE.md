@@ -36,7 +36,14 @@ The frontend is deployed to multiple subdomains — each portal restricts which 
 
 > See full permission matrix: `docs/role-access.md`
 
-**Every role-based restriction must be enforced on BOTH frontend AND backend.** Frontend hides/disables UI; backend rejects unauthorized API calls.
+**CRITICAL: Hiding a page or UI element on the frontend is NOT sufficient security.** Every role-based restriction must be enforced on **BOTH frontend AND backend**. Frontend hides/disables UI; backend rejects unauthorized API calls. A user can bypass any frontend restriction by calling the API directly — the backend is the only real security boundary.
+
+**When restricting access for any role:**
+1. **Frontend:** Hide the page/route, sidebar link, button, tab, or UI element entirely (not just disable — remove from DOM)
+2. **Backend:** Add `@Roles()` guard on the corresponding controller endpoint so the API returns `403 Forbidden` for unauthorized roles
+3. **Both layers must always be in sync** — if a feature is hidden on the frontend, the backend must also reject the request, and vice versa
+
+This applies to **all roles** — not just teachers. Whenever a role should not have access to a page, feature, or action, enforce it on both sides.
 
 #### Role hierarchy
 
@@ -58,7 +65,8 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **Conditionally render** UI elements (buttons, tabs, columns) based on role — do not just disable them, **hide** them entirely
 - **Salary/financial data** (ish haqi, balans) is visible **only to CEO (1) and Branch Director (2)**
 - **Group create/update/delete** is allowed for **CEO (1), Branch Director (2), Administrator (3)**
-- When adding a new role-restricted feature: always add the restriction in both the component (frontend) and the controller (backend)
+- Navigation items use `hideForTeacher` flag in `src/lib/nav-items.ts` — filtered in `AppSidebar` based on user roles
+- When adding a new role-restricted feature: always add the restriction in both the component (frontend) and the controller (backend). **Never** add a frontend-only restriction without a corresponding backend guard
 
 ## Tech Stack
 
@@ -200,9 +208,21 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **Every API mutation** (create, update, delete) **must** show a toast notification for both success and error outcomes using `react-hot-toast`
 - Use `toast.success("message")` after a successful mutation and `toast.error("message")` in the catch block
 - Toast messages must be in **Uzbek**, concise, and describe what happened — e.g. `"Filial muvaffaqiyatli yangilandi"`, `"Saqlashda xatolik yuz berdi"`
-- For error messages from the server, prefer extracting `error?.response?.data?.message` and falling back to a generic Uzbek message
+- **Error messages must never be technical or in English** — always show user-friendly Uzbek text. The backend returns Uzbek messages in `error.response.data.message` — use them when available, fall back to a context-specific Uzbek string
 - The `<Toaster />` component is configured globally in `src/app/layout.tsx` — do **not** add it elsewhere
 - Import: `import toast from "react-hot-toast"`
+
+#### Error Message Extraction
+
+- Use the shared `getErrorMessage` utility from `src/lib/get-error-message.ts` to extract error messages from API responses:
+  ```tsx
+  import { getErrorMessage } from "@/lib/get-error-message";
+  toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+  ```
+- The utility handles both string and array messages (validation errors return `string[]`) and provides a fallback
+- **403 errors (permission denied) are handled globally** in the axios interceptor (`src/lib/api.ts`) — the interceptor shows a toast with the server's Uzbek message (e.g. `"Sizga bu amalni bajarishga ruxsat yo'q"`). Components do **not** need to handle 403 separately
+- **401 errors (unauthenticated) are handled globally** in the axios interceptor — auto-refreshes the token or redirects to `/login`
+- For all other errors (400, 404, 500, etc.), handle in the component's catch block with a context-specific Uzbek fallback message
 
 ### UI Reactivity After Mutations (Optimistic Updates)
 
@@ -324,9 +344,11 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 ### Testing
 
+- **Every change must be tested before the work is considered complete.** No exceptions — untested code is unfinished code.
 - **After every meaningful frontend change, verify the app builds without errors** by running `npm run build` — a broken build means the work is not done
 - **After every backend change, run the full backend test suite** (`cd server && npm test`) and confirm all tests pass
-- If a backend service was added or modified, corresponding `*.spec.ts` tests **must** be written or updated — do not skip this step
+- If a backend service or controller was added or modified, corresponding `*.spec.ts` tests **must** be written or updated — do not skip this step
+- **Controller guard tests are mandatory** — when adding or modifying `@Roles()` guards on controller endpoints, write tests that verify the role metadata and that `RolesGuard` allows/denies the correct roles
 - When both frontend and backend are changed in the same task, verify both: `npm run build` (client) and `npm test` (server)
 
 ### Code Organization

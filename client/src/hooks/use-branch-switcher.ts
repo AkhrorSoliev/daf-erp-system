@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import api from "@/lib/api";
 
-export interface BranchItem {
+interface BranchItem {
   id: number;
   name: string;
   startOfWorkingDay?: string | null;

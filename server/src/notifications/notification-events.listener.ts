@@ -27,9 +27,6 @@ export class NotificationEventsListener {
     const { comment, assigneeIds } = payload;
     const authorName = comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Noma\'lum';
 
-    // Determine entity label for notification message
-    const entityLabel = this.getEntityLabel(comment.entityType, comment.entityId);
-
     for (const assigneeId of assigneeIds) {
       try {
         const title = 'Yangi topshiriq';
@@ -216,10 +213,6 @@ export class NotificationEventsListener {
 
   private truncate(text: string, maxLen: number): string {
     return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
-  }
-
-  private getEntityLabel(entityType: string, entityId: string): string {
-    return `${entityType} #${entityId}`;
   }
 
   private getEntityUrl(entityType: string, entityId: string): string {

@@ -233,7 +233,6 @@ export class TeachersService {
         ...(dto.photo !== undefined && { photo: dto.photo }),
         ...(dto.login !== undefined && { login: dto.login }),
         ...(hashedPassword && { password: hashedPassword }),
-        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
       select: teacherSelect,
     });

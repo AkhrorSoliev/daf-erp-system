@@ -6,11 +6,13 @@ import {
   Body,
   Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Roles } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards';
 
 @Controller('company')
 export class CompanyController {
@@ -27,6 +29,7 @@ export class CompanyController {
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
   @Roles('CEO', 'Administrator')
   update(
     @Param('id', ParseIntPipe) id: number,

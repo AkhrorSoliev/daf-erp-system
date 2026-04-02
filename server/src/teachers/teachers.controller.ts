@@ -12,6 +12,8 @@ export class TeachersController {
   constructor(private teachersService: TeachersService) {}
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   findAll(@Query() query: TeacherQueryDto) {
     return this.teachersService.findAll(query);
   }

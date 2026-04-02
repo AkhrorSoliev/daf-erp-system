@@ -18,10 +18,17 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [commentKey, setCommentKey] = useState(0);
+  const [activeTab, setActiveTab] = useState("oquvchilar");
+  const [commentFocusKey, setCommentFocusKey] = useState(0);
   const setName = useBreadcrumbName((s) => s.setName);
 
   const handleCommentChange = useCallback(() => {
     setCommentKey((k) => k + 1);
+  }, []);
+
+  const handleWriteComment = useCallback(() => {
+    setActiveTab("izohlar");
+    setCommentFocusKey((k) => k + 1);
   }, []);
 
   const fetchGroup = useCallback(async () => {
@@ -67,10 +74,16 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
     <>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="w-full lg:w-85 lg:shrink-0">
-          <GroupInfoCard group={group} commentKey={commentKey} onCommentChange={handleCommentChange} />
+          <GroupInfoCard group={group} commentKey={commentKey} onWriteComment={handleWriteComment} />
         </div>
         <div className="min-w-0 flex-1">
-          <GroupDetailTabs group={group} onCommentChange={handleCommentChange} />
+          <GroupDetailTabs
+            group={group}
+            onCommentChange={handleCommentChange}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            commentFocusKey={commentFocusKey}
+          />
         </div>
       </div>
       <EditGroupDrawer

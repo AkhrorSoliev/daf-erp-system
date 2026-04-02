@@ -1,8 +1,10 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 import { SettingsSidebar } from "./settings-sidebar";
+import { useAuth } from "@/hooks/use-auth";
 
 /**
  * Checks if the current path is a detail page (has an ID segment).
@@ -11,15 +13,29 @@ import { SettingsSidebar } from "./settings-sidebar";
  */
 function isDetailPage(pathname: string): boolean {
   const segments = pathname.replace(/\/$/, "").split("/").filter(Boolean);
-  // /settings/courses → ["settings", "courses"] = 2 segments (list)
-  // /settings/courses/1 → ["settings", "courses", "1"] = 3+ segments (detail)
   return segments.length > 2;
 }
 
 export function SettingsLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isDetail = isDetailPage(pathname);
+  const router = useRouter();
+  const user = useAuth((s) => s.user);
+  const isTeacherOnly =
+    (user?.roles.some((r) => r.id === 4) &&
+      !user?.roles.some((r) => [1, 2, 3].includes(r.id))) ??
+    false;
 
+  useEffect(() => {
+    if (isTeacherOnly) {
+      router.replace("/");
+    }
+  }, [isTeacherOnly, router]);
+
+  if (isTeacherOnly) {
+    return null;
+  }
+
+  const isDetail = isDetailPage(pathname);
   const isGeneral = pathname.startsWith("/settings/general");
 
   if (isDetail || isGeneral) {

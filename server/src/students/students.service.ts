@@ -163,6 +163,31 @@ export class StudentsService {
       where.status = StudentStatus.EXPELLED;
     }
 
+    if (query.teacher_id) {
+      const teacherEnrollmentFilter: Prisma.StudentWhereInput = {
+        enrollments: {
+          some: {
+            deletedAt: null,
+            group: {
+              deletedAt: null,
+              teachers: { some: { teacherId: query.teacher_id } },
+            },
+          },
+        },
+      };
+
+      if (where.enrollments) {
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          { enrollments: where.enrollments },
+          teacherEnrollmentFilter,
+        ];
+        delete where.enrollments;
+      } else {
+        Object.assign(where, teacherEnrollmentFilter);
+      }
+    }
+
     if (branch_id) {
       where.branches = { some: { branchId: branch_id } };
     }

@@ -1,4 +1,4 @@
-export interface StudentBranch {
+interface StudentBranch {
   id: number;
   name: string;
 }

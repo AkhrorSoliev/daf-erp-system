@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Send, ListTodo, X, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +34,7 @@ interface CommentFormProps {
   onOptimisticAdd?: (comment: CommentData) => void;
   onConfirmed?: (tempId: string, real: CommentData) => void;
   onFailed?: (tempId: string) => void;
+  focusKey?: number;
 }
 
 export function CommentForm({
@@ -42,8 +43,10 @@ export function CommentForm({
   onOptimisticAdd,
   onConfirmed,
   onFailed,
+  focusKey,
 }: CommentFormProps) {
   const user = useAuth((s) => s.user);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState("");
   const [isTask, setIsTask] = useState(false);
   const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
@@ -54,8 +57,16 @@ export function CommentForm({
   const [submitting, setSubmitting] = useState(false);
   const [focused, setFocused] = useState(false);
 
-  const canAssignTask =
-    user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canAssignTask = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+
+  useEffect(() => {
+    if (focusKey && focusKey > 0) {
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        setFocused(true);
+      }, 100);
+    }
+  }, [focusKey]);
 
   // Fetch assignable users on mount (not on task toggle)
   const fetchAssignableUsers = useCallback(async () => {
@@ -65,9 +76,12 @@ export function CommentForm({
       const { data } = await api.get("/users", {
         params: { user_type: "Branch Director,Administrator", per_page: 100 },
       });
-      const users: AssignableUser[] = (data.data || []).map(
-        (u: any) => ({ id: u.id, firstName: u.firstName, lastName: u.lastName, photo: u.photo ?? null }),
-      );
+      const users: AssignableUser[] = (data.data || []).map((u: any) => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        photo: u.photo ?? null,
+      }));
       setAssignableUsers(users.filter((u) => u.id !== user?.id));
     } catch {
       setAssignableUsers([]);
@@ -154,13 +168,14 @@ export function CommentForm({
     <div className="rounded-xl border bg-card shadow-sm">
       <div className="p-3">
         <Textarea
+          ref={textareaRef}
           placeholder="Izoh yozing..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onFocus={() => setFocused(true)}
           onKeyDown={handleKeyDown}
           rows={isExpanded ? 3 : 1}
-          className="resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-sm placeholder:text-muted-foreground/60"
+          className="resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm placeholder:text-muted-foreground/60 p-2"
         />
       </div>
 
@@ -177,7 +192,10 @@ export function CommentForm({
                     onCheckedChange={setIsTask}
                     className="scale-90"
                   />
-                  <Label htmlFor="task-toggle" className="text-xs cursor-pointer text-muted-foreground">
+                  <Label
+                    htmlFor="task-toggle"
+                    className="text-xs cursor-pointer text-muted-foreground"
+                  >
                     <ListTodo className="mr-0.5 inline size-3" />
                     Topshiriq
                   </Label>
@@ -193,7 +211,11 @@ export function CommentForm({
                 size="sm"
                 className="h-7 text-xs px-3"
                 onClick={handleSubmit}
-                disabled={!content.trim() || submitting || (isTask && assigneeIds.length === 0)}
+                disabled={
+                  !content.trim() ||
+                  submitting ||
+                  (isTask && assigneeIds.length === 0)
+                }
               >
                 <Send className="mr-1 size-3" />
                 {submitting ? "..." : "Yuborish"}
@@ -257,7 +279,7 @@ export function CommentForm({
                         <Avatar className="size-4">
                           {u.photo && <AvatarImage src={u.photo} />}
                           <AvatarFallback className="text-[8px]">
-                            {`${u.firstName?.[0] ?? ''}${u.lastName?.[0] ?? ''}`}
+                            {`${u.firstName?.[0] ?? ""}${u.lastName?.[0] ?? ""}`}
                           </AvatarFallback>
                         </Avatar>
                         {u.firstName} {u.lastName}

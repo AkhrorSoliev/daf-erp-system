@@ -46,6 +46,7 @@ export function StudentsClient() {
   const [copied, setCopied] = useState(false);
   const user = useAuth((s) => s.user);
   const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
   const handleCopyLink = async () => {
@@ -96,7 +97,7 @@ export function StudentsClient() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <StudentsStats students={students} loading={loading} />
+        <StudentsStats students={students} loading={loading} isTeacher={isTeacher} />
         {canManage && (
           selectedBranch ? (
             <Tooltip>
@@ -131,7 +132,7 @@ export function StudentsClient() {
           )
         )}
       </div>
-      <StudentsFilters filters={filters} onFilterChange={handleFilterChange} />
+      <StudentsFilters filters={filters} onFilterChange={handleFilterChange} isTeacher={isTeacher} />
       {loading ? (
         <div className="overflow-x-auto rounded-md border">
           <div className="space-y-0">

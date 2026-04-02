@@ -18,7 +18,14 @@ export class StudentsController {
   ) {}
 
   @Get()
-  findAll(@Query() query: StudentQueryDto) {
+  findAll(@Query() query: StudentQueryDto, @CurrentUser() currentUser: any) {
+    const roles: string[] = currentUser.roles ?? [];
+    const isTeacherOnly =
+      roles.includes('Teacher') &&
+      !roles.some((r) => ['CEO', 'Branch Director', 'Administrator'].includes(r));
+    if (isTeacherOnly) {
+      query.teacher_id = currentUser.id;
+    }
     return this.studentsService.findAll(query);
   }
 

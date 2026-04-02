@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { Student } from "@/data/student-model";
+import { useAuth } from "@/hooks/use-auth";
 import { StudentStatusBadge } from "./student-status-badge";
 import { StudentRowActions } from "./student-row-actions";
 
@@ -36,12 +36,6 @@ function formatPhone(phone: string) {
   return phone;
 }
 
-function getStudentStatus(student: Student): "active" | "frozen" | "ungrouped" {
-  if (!student.isActive) return "frozen";
-  if (student.groups.length === 0) return "ungrouped";
-  return "active";
-}
-
 interface StudentsTableProps {
   students: Student[];
   onDeleted?: (id: number) => void;
@@ -50,6 +44,8 @@ interface StudentsTableProps {
 
 export function StudentsTable({ students, onDeleted, onStatusChanged }: StudentsTableProps) {
   const router = useRouter();
+  const user = useAuth((s) => s.user);
+  const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
 
   if (students.length === 0) {
     return (
@@ -73,7 +69,7 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
             <TableHead className="hidden md:table-cell">Guruh</TableHead>
             <TableHead className="min-w-28 text-right">Balans</TableHead>
             <TableHead className="hidden sm:table-cell">Holat</TableHead>
-            <TableHead className="w-10" />
+            {!isTeacher && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -132,13 +128,15 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
               <TableCell className="hidden sm:table-cell">
                 <StudentStatusBadge student={student} />
               </TableCell>
-              <TableCell>
-                <StudentRowActions
-                  student={student}
-                  onDeleted={onDeleted}
-                  onStatusChanged={onStatusChanged}
-                />
-              </TableCell>
+              {!isTeacher && (
+                <TableCell>
+                  <StudentRowActions
+                    student={student}
+                    onDeleted={onDeleted}
+                    onStatusChanged={onStatusChanged}
+                  />
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

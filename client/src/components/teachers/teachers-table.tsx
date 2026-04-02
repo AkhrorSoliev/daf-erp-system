@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import {
@@ -30,8 +29,6 @@ interface TeachersTableProps {
 
 export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
   const router = useRouter();
-  const user = useAuth((s) => s.user);
-  const canSeeStudentCount = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   if (teachers.length === 0) {
     return (

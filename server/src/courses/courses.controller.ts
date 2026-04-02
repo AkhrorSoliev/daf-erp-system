@@ -32,11 +32,15 @@ export class CoursesController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   create(@Body() dto: CreateCourseDto, @CurrentUser('id') userId: number) {
     return this.coursesService.create(dto, userId);
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateCourseDto,
@@ -64,6 +68,8 @@ export class CoursesController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   delete(@Param('id') id: string, @CurrentUser('id') userId: number) {
     return this.coursesService.delete(id, userId);
   }
