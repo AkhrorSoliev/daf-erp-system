@@ -6,11 +6,14 @@ import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { TeacherProfileCard } from "./teacher-profile-card";
 import { TeacherProfileTabs } from "./teacher-profile-tabs";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { useAuth } from "@/hooks/use-auth";
 import type { TeacherData } from "@/hooks/use-edit-teacher";
 import api from "@/lib/api";
 
 export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const setName = useBreadcrumbName((s) => s.setName);
+  const authUser = useAuth((s) => s.user);
+  const canManageTeachers = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const [teacher, setTeacher] = useState<TeacherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,12 +61,14 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
           <TeacherProfileTabs teacher={teacher} />
         </div>
       </div>
-      <EditTeacherDrawer
-        onSaved={(updated) => {
-          setTeacher(updated);
-          setName(teacherId, `${updated.firstName} ${updated.lastName}`);
-        }}
-      />
+      {canManageTeachers && (
+        <EditTeacherDrawer
+          onSaved={(updated) => {
+            setTeacher(updated);
+            setName(teacherId, `${updated.firstName} ${updated.lastName}`);
+          }}
+        />
+      )}
     </>
   );
 }

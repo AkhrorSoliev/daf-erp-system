@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { SettingsPageHeader } from "./settings-page-header";
 import { GeneralSettingsSidebar } from "./general-settings-sidebar";
+import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
 
 interface CompanyData {
@@ -30,6 +31,8 @@ export function GeneralSettingsClient() {
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const authUser = useAuth((s) => s.user);
+  const canEdit = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   const form = useForm<FormValues>();
 
@@ -95,6 +98,7 @@ export function GeneralSettingsClient() {
                 <Input
                   id="name"
                   placeholder="Kompaniya nomi"
+                  disabled={!canEdit}
                   {...form.register("name", {
                     required: "Kompaniya nomi kiritilishi shart",
                   })}
@@ -116,6 +120,7 @@ export function GeneralSettingsClient() {
                       id="phone"
                       value={field.value}
                       onChange={field.onChange}
+                      disabled={!canEdit}
                     />
                   )}
                 />
@@ -126,18 +131,20 @@ export function GeneralSettingsClient() {
 
           <Separator />
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-1.5 size-4 animate-spin" />
-                  Saqlanmoqda...
-                </>
-              ) : (
-                "Saqlash"
-              )}
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex justify-end">
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-1.5 size-4 animate-spin" />
+                    Saqlanmoqda...
+                  </>
+                ) : (
+                  "Saqlash"
+                )}
+              </Button>
+            </div>
+          )}
         </form>
       </div>
     </div>

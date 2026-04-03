@@ -24,14 +24,23 @@ export function SettingsLayoutShell({ children }: { children: React.ReactNode })
     (user?.roles.some((r) => r.id === 4) &&
       !user?.roles.some((r) => [1, 2, 3].includes(r.id))) ??
     false;
+  const isAdminOnly =
+    (user?.roles.some((r) => r.id === 3) &&
+      !user?.roles.some((r) => [1, 2].includes(r.id))) ??
+    false;
+  const isAdminRestricted =
+    pathname.startsWith("/settings/employees") ||
+    pathname.startsWith("/settings/branches");
 
   useEffect(() => {
     if (isTeacherOnly) {
       router.replace("/");
+    } else if (isAdminOnly && isAdminRestricted) {
+      router.replace("/settings");
     }
-  }, [isTeacherOnly, router]);
+  }, [isTeacherOnly, isAdminOnly, isAdminRestricted, router]);
 
-  if (isTeacherOnly) {
+  if (isTeacherOnly || (isAdminOnly && isAdminRestricted)) {
     return null;
   }
 

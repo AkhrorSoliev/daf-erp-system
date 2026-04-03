@@ -44,9 +44,9 @@ describe('BranchesController — role guards', () => {
   }
 
   describe('create()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
     });
 
     it('should allow CEO to create', () => {
@@ -59,9 +59,9 @@ describe('BranchesController — role guards', () => {
       expect(guard.canActivate(ctx)).toBe(true);
     });
 
-    it('should allow Administrator to create', () => {
+    it('should deny Administrator from creating', () => {
       const ctx = mockExecutionContext(controller.create, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 
     it('should deny Teacher from creating', () => {
@@ -76,14 +76,24 @@ describe('BranchesController — role guards', () => {
   });
 
   describe('update()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
     });
 
     it('should allow CEO to update', () => {
       const ctx = mockExecutionContext(controller.update, ['CEO']);
       expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should allow Branch Director to update', () => {
+      const ctx = mockExecutionContext(controller.update, ['Branch Director']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Administrator from updating', () => {
+      const ctx = mockExecutionContext(controller.update, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 
     it('should deny Teacher from updating', () => {

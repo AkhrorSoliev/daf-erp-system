@@ -3,12 +3,12 @@
  *
  * admin.dafzentrum.uz  → CEO (1), Branch Director (2), Administrator (3), Cashier (5)
  * lehrer.dafzentrum.uz → Teacher (4)
- * student.dafzentrum.uz → hozircha hech kim (Student auth alohida implement qilinadi)
+ * student.dafzentrum.uz → Student (6)
  */
 const PORTAL_ROLES: Record<string, number[]> = {
   'admin.dafzentrum.uz': [1, 2, 3, 5],
   'lehrer.dafzentrum.uz': [4],
-  'student.dafzentrum.uz': [],
+  'student.dafzentrum.uz': [6],
 };
 
 /**

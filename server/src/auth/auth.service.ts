@@ -45,7 +45,7 @@ export class AuthService {
     return result;
   }
 
-  private formatUser(user: any) {
+  private formatUser(user: any, studentId?: number) {
     return {
       id: user.id,
       firstName: user.firstName,
@@ -59,12 +59,14 @@ export class AuthService {
       roles: user.roles.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })),
       branches: user.branches.map((ub: any) => ub.branch),
       company: user.company,
+      ...(studentId !== undefined && { studentId }),
     };
   }
 
-  private generateTokens(userId: number, roles: string[], companyId: number) {
+  private generateTokens(userId: number, roles: string[], companyId: number, studentId?: number) {
     const secret = this.configService.get<string>('JWT_SECRET')!;
-    const payload = { sub: userId, roles, companyId };
+    const payload: Record<string, any> = { sub: userId, roles, companyId };
+    if (studentId) payload.studentId = studentId;
 
     const accessToken = this.jwtService.sign(payload, {
       secret,
@@ -92,11 +94,23 @@ export class AuthService {
     }
 
     const roles = user.roles.map((ur: any) => ur.role.name);
-    const tokens = this.generateTokens(user.id, roles, user.companyId);
+    const roleIds: number[] = user.roles.map((ur: any) => ur.role.id);
+
+    // Student role bo'lsa, studentId ni topish
+    let studentId: number | undefined;
+    if (roleIds.includes(6)) {
+      const student = await this.prisma.student.findFirst({
+        where: { userId: user.id, deletedAt: null },
+        select: { id: true },
+      });
+      studentId = student?.id;
+    }
+
+    const tokens = this.generateTokens(user.id, roles, user.companyId, studentId);
 
     return {
       ...tokens,
-      user: this.formatUser(user),
+      user: this.formatUser(user, studentId),
     };
   }
 
@@ -127,11 +141,22 @@ export class AuthService {
       }
 
       const roles = user.roles.map((ur) => ur.role.name);
-      const tokens = this.generateTokens(user.id, roles, user.companyId);
+      const roleIds: number[] = user.roles.map((ur) => ur.role.id);
+
+      let studentId: number | undefined;
+      if (roleIds.includes(6)) {
+        const student = await this.prisma.student.findFirst({
+          where: { userId: user.id, deletedAt: null },
+          select: { id: true },
+        });
+        studentId = student?.id;
+      }
+
+      const tokens = this.generateTokens(user.id, roles, user.companyId, studentId);
 
       return {
         ...tokens,
-        user: this.formatUser(user),
+        user: this.formatUser(user, studentId),
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;

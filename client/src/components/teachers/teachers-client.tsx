@@ -44,8 +44,7 @@ export function TeachersClient() {
   const [copied, setCopied] = useState(false);
   const { openAddDrawer } = useEditTeacher();
   const user = useAuth((s) => s.user);
-  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
-  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
 
@@ -110,7 +109,7 @@ export function TeachersClient() {
           />
         </div>
         <div className="flex items-center gap-2">
-          {canManage && (
+          {canManageTeachers && (
             selectedBranch ? (
               <>
                 <Tooltip>
@@ -174,7 +173,7 @@ export function TeachersClient() {
               </Tooltip>
             )
           )}
-          {isCeo && (
+          {canManageTeachers && (
             selectedBranch ? (
               <Button onClick={openAddDrawer}>
                 <Plus className="mr-2 size-4" />
@@ -259,20 +258,22 @@ export function TeachersClient() {
         </div>
       )}
 
-      <EditTeacherDrawer
-        onSaved={(updated) => {
-          setTeachers((prev) => {
-            const exists = prev.some((t) => t.id === updated.id);
-            if (exists) {
-              // Update — optimistic replace
-              return prev.map((t) => (t.id === updated.id ? updated : t));
-            }
-            // Add — refetch to respect pagination/filters
-            fetchTeachers();
-            return prev;
-          });
-        }}
-      />
+      {canManageTeachers && (
+        <EditTeacherDrawer
+          onSaved={(updated) => {
+            setTeachers((prev) => {
+              const exists = prev.some((t) => t.id === updated.id);
+              if (exists) {
+                // Update — optimistic replace
+                return prev.map((t) => (t.id === updated.id ? updated : t));
+              }
+              // Add — refetch to respect pagination/filters
+              fetchTeachers();
+              return prev;
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

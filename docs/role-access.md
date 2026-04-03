@@ -63,10 +63,10 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| View teachers | Yes | Own branch | Yes | No | No |
-| Create teacher | Yes | Own branch | Yes | No | No |
-| Update teacher | Yes | Own branch | Yes | No | No |
-| Delete teacher | Yes | Own branch | Yes | No | No |
+| View teachers | Yes | Own branch | View only | No | No |
+| Create teacher | Yes | Own branch | No | No | No |
+| Update teacher | Yes | Own branch | No | No | No |
+| Delete teacher | Yes | Own branch | No | No | No |
 
 ### Comments & Task Assignment
 
@@ -96,6 +96,27 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | View own notifications | Yes | Yes | Yes | Yes | Yes |
 | SSE stream | Yes | Yes | Yes | Yes | Yes |
 | Push subscribe | Yes | Yes | Yes | Yes | Yes |
+
+### Reports
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| View reports | Yes | Yes | No | No | No |
+
+### Settings — General (Company Info)
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| View settings | Yes | Yes | View only | No | No |
+| Edit settings | Yes | No | No | No | No |
+
+### Settings — Employees & Branches
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| View/manage employees | Yes | Yes | No | No | No |
+| Create/update branches | Yes | Own branch | No | No | No |
+| Change branch status | Yes | Own branch | No | No | No |
 
 ### Branch Director Scope Filtering
 
@@ -128,9 +149,10 @@ Cashier = 5
 ### Common frontend patterns
 
 ```tsx
-// CEO + Branch Director only (e.g. salary)
+// CEO + Branch Director only (e.g. salary, teacher management, reports)
 const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
-// CEO + Branch Director + Administrator (e.g. group management)
+// CEO + Branch Director + Administrator (e.g. group/student management)
 const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
 ```

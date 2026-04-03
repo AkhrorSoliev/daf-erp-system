@@ -155,7 +155,16 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       {canManage && (
         <TabsContent value="tarix">
           {historyVisible ? (
-            <EntityHistoryTable entityType="Group" entityId={group.id} />
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Davomat tarixi</h3>
+                <EntityHistoryTable entityType="GroupAttendance" entityId={group.id} />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Guruh o'zgarishlari</h3>
+                <EntityHistoryTable entityType="Group" entityId={group.id} />
+              </div>
+            </div>
           ) : (
             <EmptyState message="Tarix mavjud emas" />
           )}

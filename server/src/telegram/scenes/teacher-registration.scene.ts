@@ -37,7 +37,10 @@ export function createTeacherRegistrationScene(
 
     if (existing) {
       await ctx.reply(
-        "Siz allaqachon ro'yxatdan o'tgansiz! Platformaga kirish uchun login va parolingizdan foydalaning.",
+        "Siz allaqachon ro'yxatdan o'tgansiz\\!\n\n" +
+          "Platformaga kirish uchun login va parolingizdan foydalaning:\n" +
+          "[lehrer\\.dafzentrum\\.uz](https://lehrer.dafzentrum.uz)",
+        { parse_mode: 'MarkdownV2' },
       );
       await ctx.scene.leave();
       return;
@@ -314,9 +317,9 @@ export function createTeacherRegistrationScene(
           "\u2705 Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
           `\uD83D\uDC64 Sizning login: \`${login}\`\n` +
           `\uD83D\uDD11 Sizning parol: \`${password}\`\n\n` +
-          "\u26A0\uFE0F Login va parolni eslab qoling yoki saqlang!\n\n" +
-          "Tez orada o'qituvchilar uchun platforma ishga tushadi.\n" +
-          "Sizga xabar beramiz!",
+          "\uD83C\uDF10 Platformaga kirish:\n" +
+          "[lehrer.dafzentrum.uz](https://lehrer.dafzentrum.uz)\n\n" +
+          "\u26A0\uFE0F Login va parolni eslab qoling yoki saqlang!",
         parse_mode: 'Markdown',
       });
 

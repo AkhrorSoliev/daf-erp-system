@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { settingsNavSections } from "@/lib/settings-nav";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Collapsible,
   CollapsibleContent,
@@ -13,11 +14,20 @@ import {
 
 export function SettingsSidebar() {
   const pathname = usePathname();
+  const user = useAuth((s) => s.user);
+  const userRoleIds = user?.roles.map((r) => r.id) ?? [];
 
   return (
     <nav className="w-64 shrink-0 space-y-1">
       {settingsNavSections.map((section) => {
-        const isSectionActive = section.items.some((item) =>
+        const visibleItems = section.items.filter((item) => {
+          if (!item.visibleForRoles) return true;
+          return item.visibleForRoles.some((id) => userRoleIds.includes(id));
+        });
+
+        if (visibleItems.length === 0) return null;
+
+        const isSectionActive = visibleItems.some((item) =>
           pathname.startsWith(item.url)
         );
 
@@ -29,7 +39,7 @@ export function SettingsSidebar() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="ml-1 space-y-0.5 py-1">
-                {section.items.map((item) => {
+                {visibleItems.map((item) => {
                   const isActive = pathname.startsWith(item.url);
                   return (
                     <Link

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import type { TeacherData } from "@/hooks/use-edit-teacher";
 import { TeacherRowActions } from "./teacher-row-actions";
+import { useAuth } from "@/hooks/use-auth";
 
 function formatPhone(phone: string | null) {
   if (!phone) return "—";
@@ -29,6 +30,8 @@ interface TeachersTableProps {
 
 export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
   const router = useRouter();
+  const user = useAuth((s) => s.user);
+  const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   if (teachers.length === 0) {
     return (
@@ -49,7 +52,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
             <TableHead className="hidden min-w-32 sm:table-cell">Telefon</TableHead>
             <TableHead className="hidden md:table-cell">Guruhlar</TableHead>
             <TableHead className="hidden md:table-cell">O&apos;quvchilar</TableHead>
-            <TableHead className="w-10" />
+            {canManageTeachers && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -91,9 +94,11 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                 <TableCell className="hidden md:table-cell">
                   {teacher.studentCount ?? 0}
                 </TableCell>
-                <TableCell>
-                  <TeacherRowActions teacher={teacher} onDeleted={onDeleted} />
-                </TableCell>
+                {canManageTeachers && (
+                  <TableCell>
+                    <TeacherRowActions teacher={teacher} onDeleted={onDeleted} />
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

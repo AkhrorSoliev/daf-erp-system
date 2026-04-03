@@ -47,10 +47,15 @@ export function LoginForm({ portal }: LoginFormProps) {
     setError("");
     setLoading(true);
 
+    // Student portalda faqat 9 raqamli telefon yuboriladi
+    const loginValue = portal === "student" ? login.replace(/\D/g, "").slice(-9) : login;
+
     try {
-      const res = await api.post("/auth/login", { login, password });
+      const res = await api.post("/auth/login", { login: loginValue, password });
       setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
-      router.push("/");
+      // Student portal foydalanuvchilarini /portal ga yo'naltirish
+      const isStudent = res.data.user?.roles?.some((r: any) => r.id === 6);
+      router.push(portal === "student" || isStudent ? "/portal" : "/");
     } catch (err: any) {
       if (err?.response?.status === 403) {
         setError(
@@ -86,18 +91,41 @@ export function LoginForm({ portal }: LoginFormProps) {
 
         <div className="space-y-2">
           <label htmlFor="login" className="text-sm font-medium">
-            Login
+            {portal === "student" ? "Telefon raqam" : "Login"}
           </label>
-          <input
-            id="login"
-            type="text"
-            autoComplete="username"
-            required
-            value={login}
-            onChange={(e) => setLogin(e.target.value)}
-            placeholder="Loginingizni kiriting"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          />
+          {portal === "student" ? (
+            <div className="flex">
+              <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                +998
+              </span>
+              <input
+                id="login"
+                type="text"
+                autoComplete="username"
+                required
+                value={login}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                  setLogin(digits);
+                }}
+                placeholder="XX XXX XX XX"
+                inputMode="numeric"
+                maxLength={9}
+                className="flex h-10 w-full rounded-r-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+          ) : (
+            <input
+              id="login"
+              type="text"
+              autoComplete="username"
+              required
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="Loginingizni kiriting"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          )}
         </div>
 
         <div className="space-y-2">

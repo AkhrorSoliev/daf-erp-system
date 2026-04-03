@@ -27,8 +27,24 @@ export function BranchSwitcher() {
   useEffect(() => {
     if (isCeo) {
       fetchBranches();
+    } else if (user) {
+      // Non-CEO rollar uchun user.branches dan loaded holatini o'rnatish
+      const userBranches = (user.branches ?? []).map((b) => ({ id: b.id, name: b.name }));
+      const savedBranchId = localStorage.getItem("branchId");
+      const savedBranch = savedBranchId
+        ? userBranches.find((b) => b.id === Number(savedBranchId))
+        : null;
+      const selected = savedBranch ?? userBranches[0] ?? null;
+      if (selected) {
+        localStorage.setItem("branchId", String(selected.id));
+      }
+      useBranchSwitcher.setState({
+        branches: userBranches,
+        selectedBranch: useBranchSwitcher.getState().selectedBranch ?? selected,
+        loaded: true,
+      });
     }
-  }, [isCeo, fetchBranches]);
+  }, [isCeo, user, fetchBranches]);
 
   // CEO bo'lmasa yoki branchlar yuklanmagan bo'lsa, user ning o'z branchlarini ko'rsatamiz
   const displayBranches = isCeo

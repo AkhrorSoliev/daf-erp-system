@@ -271,6 +271,52 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 - `docker compose up -d` — Start PostgreSQL + Redis (from project root)
 - `docker compose down` — Stop containers
 
+## Available Skills
+
+Skills are specialized knowledge modules that **must** be activated when working on related tasks. Before starting any task, identify which skills are relevant and invoke them.
+
+### Slash Commands (`.claude/commands/`)
+
+| Command | When to use |
+|---------|-------------|
+| `/deploy` | Vercel + Railway + Auto-Merge deploy qilish |
+| `/restart` | Dev serverlarni qayta ishga tushirish |
+| `/team-deploy` | Xavfsiz jamoa deploy |
+| `/team-merge` | Xavfsiz PR merge |
+
+### Context7 Skills (auto-triggered)
+
+| Skill | When to use |
+|-------|-------------|
+| `nestjs-best-practices` | NestJS module, DI, security, architecture patterns |
+| `typescript-expert` | TypeScript type-level programming, performance, migration |
+| `prisma-cli` | Prisma CLI: migrate, generate, seed, studio |
+| `prisma-client-api` | Prisma query, filter, CRUD, client configuration |
+| `prisma-database-setup` | Prisma + PostgreSQL/MySQL/SQLite ulanish va sozlash |
+| `prisma-postgres` | Prisma Postgres provisioning va management |
+| `docker-expert` | Docker containerization, multi-stage builds, orchestration |
+| `redis-development` | Redis data structures, performance, caching |
+| `use-railway` | Railway deploy, services, databases, domains |
+
+### Agent Skills (`.agents/skills/`)
+
+| Skill | When to use |
+|-------|-------------|
+| `documentation-writer` | Texnik hujjatlar yozish |
+
+### Skill Usage Rule
+
+**Har bir task boshlanishida tegishli skillni aniqlash va faollashtirish shart:**
+
+1. **NestJS module/service/controller** → `nestjs-best-practices`
+2. **Prisma schema, migration** → `prisma-cli` + `prisma-database-setup`
+3. **Prisma query yozish** → `prisma-client-api`
+4. **TypeScript xatolik yoki murakkab tiplar** → `typescript-expert`
+5. **Docker sozlash** → `docker-expert`
+6. **Redis caching** → `redis-development`
+7. **Deploy qilish** → `/deploy` yoki `use-railway`
+8. **Test yozish** → `nestjs-best-practices` (testing patterns)
+
 ## Environment Variables
 
 | Variable | Description | Default |

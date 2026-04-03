@@ -356,3 +356,46 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Keep files small, focused, and maintainable
 - Colocate related files (component + its types + its utils)
 - Shared utilities go in `src/lib/`, shared components in `src/components/`
+
+## Available Skills
+
+Skills are specialized knowledge modules that **must** be activated when working on related tasks. Before starting any task, identify which skills are relevant and invoke them.
+
+### Slash Commands (`.claude/commands/`)
+
+| Command | When to use |
+|---------|-------------|
+| `/deploy` | Vercel + Railway + Auto-Merge deploy qilish |
+| `/restart` | Dev serverlarni qayta ishga tushirish |
+| `/team-deploy` | Xavfsiz jamoa deploy |
+| `/team-merge` | Xavfsiz PR merge |
+
+### Agent Skills (`.agents/skills/`)
+
+| Skill | When to use |
+|-------|-------------|
+| `frontend-design` | UI dizayn, layout, styling ishlari |
+| `web-design-guidelines` | Web dizayn qoidalari va best practices |
+| `vercel-react-best-practices` | React performance, rendering, async, bundle optimization |
+| `vercel-composition-patterns` | Compound components, state management, React 19 patterns |
+| `deploy-to-vercel` | Vercel ga deploy qilish |
+| `documentation-writer` | Texnik hujjatlar yozish |
+
+### Context7 Skills (auto-triggered)
+
+| Skill | When to use |
+|-------|-------------|
+| `typescript-expert` | TypeScript type-level programming, performance, migration |
+| `docker-expert` | Docker containerization, multi-stage builds |
+| `prisma-client-api` | Prisma query, filter, CRUD operations (frontend types uchun ham) |
+
+### Skill Usage Rule
+
+**Har bir task boshlanishida tegishli skillni aniqlash va faollashtirish shart:**
+
+1. **UI komponent yaratish/o'zgartirish** → `frontend-design` + `vercel-react-best-practices`
+2. **Component architecture** → `vercel-composition-patterns`
+3. **TypeScript xatolik yoki murakkab tiplar** → `typescript-expert`
+4. **Deploy qilish** → `/deploy` yoki `deploy-to-vercel`
+5. **Prisma modellar bilan ishlash** → `prisma-client-api`
+6. **Docker bilan ishlash** → `docker-expert`

@@ -41,9 +41,9 @@ describe('CompanyController — role guards', () => {
   }
 
   describe('update()', () => {
-    it('should have @Roles(CEO, Administrator) metadata', () => {
+    it('should have @Roles(CEO) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
-      expect(roles).toEqual(['CEO', 'Administrator']);
+      expect(roles).toEqual(['CEO']);
     });
 
     it('should allow CEO to update', () => {
@@ -51,18 +51,18 @@ describe('CompanyController — role guards', () => {
       expect(guard.canActivate(ctx)).toBe(true);
     });
 
-    it('should allow Administrator to update', () => {
+    it('should deny Administrator from updating', () => {
       const ctx = mockExecutionContext(controller.update, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from updating', () => {
-      const ctx = mockExecutionContext(controller.update, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 
     it('should deny Branch Director from updating', () => {
       const ctx = mockExecutionContext(controller.update, ['Branch Director']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('should deny Teacher from updating', () => {
+      const ctx = mockExecutionContext(controller.update, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 

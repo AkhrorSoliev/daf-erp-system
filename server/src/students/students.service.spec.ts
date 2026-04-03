@@ -63,6 +63,9 @@ describe('StudentsService — status methods', () => {
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      user: {
+        create: jest.fn().mockResolvedValue({ id: 10001 }),
+      },
     };
 
     statusHistoryService = {
@@ -189,6 +192,34 @@ describe('StudentsService — status methods', () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
       await expect(service.getStatusHistory(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createStudentUser', () => {
+    it('creates a User with Student role and links to student', async () => {
+      const result = await service.createStudentUser(1, '901234567', 'Ali', 'Valiyev', 1001);
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            login: '901234567',
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            phone: '901234567',
+            companyId: 1001,
+            roles: { create: [{ roleId: 6 }] },
+          }),
+        }),
+      );
+
+      expect(prisma.student.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { userId: 10001 },
+      });
+
+      expect(result.userId).toBe(10001);
+      expect(result.plainPassword).toBeDefined();
+      expect(result.plainPassword.length).toBe(8);
     });
   });
 });
