@@ -23,14 +23,14 @@ export class BranchesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   create(@Body() dto: CreateBranchDto, @CurrentUser('id') userId: number) {
     return this.branchesService.create(dto, userId);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateBranchDto,

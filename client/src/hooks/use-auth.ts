@@ -32,6 +32,7 @@ export interface AuthUser {
   roles: UserRole[];
   branches: UserBranch[];
   company: UserCompany;
+  studentId?: number;
 }
 
 interface AuthState {

@@ -30,7 +30,7 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
     footerText:
       "DaF Sprachzentrum — Talaba portali. Barcha huquqlar himoyalangan.",
     icon: "book-open",
-    allowedRoleIds: [], // hozircha hech kim
+    allowedRoleIds: [6], // Student
   },
 };
 

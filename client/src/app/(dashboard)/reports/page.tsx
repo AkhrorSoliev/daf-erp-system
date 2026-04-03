@@ -1,4 +1,24 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+
 export default function ReportsPage() {
+  const router = useRouter();
+  const user = useAuth((s) => s.user);
+  const canViewReports = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+
+  useEffect(() => {
+    if (user && !canViewReports) {
+      router.replace("/");
+    }
+  }, [user, canViewReports, router]);
+
+  if (!canViewReports) {
+    return null;
+  }
+
   return (
     <div className="space-y-6">
       <div>

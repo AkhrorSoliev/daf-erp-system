@@ -6,6 +6,18 @@ import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
 import { message } from 'telegraf/filters';
 import https from 'https';
+import * as bcrypt from 'bcryptjs';
+
+const STUDENT_ROLE_ID = 6;
+
+function generatePassword(length = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
 
 async function downloadFile(url: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -513,12 +525,37 @@ export function createStudentRegistrationScene(
         companyId: DEFAULT_COMPANY_ID,
       });
 
+      // Student uchun User yaratish (login/parol)
+      const plainPassword = generatePassword();
+      const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+      const user = await prisma.user.create({
+        data: {
+          login: data.phone,
+          password: hashedPassword,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          companyId: DEFAULT_COMPANY_ID,
+          roles: { create: [{ roleId: STUDENT_ROLE_ID }] },
+        },
+      });
+
+      await prisma.student.update({
+        where: { id: student.id },
+        data: { userId: user.id },
+      });
+
       await ctx.editMessageCaption("✅ Tasdiqlandi!");
       await ctx.replyWithPhoto(data.photo, {
         caption:
           "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
           `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
           `📚 Guruh: ${data.groupName}\n\n` +
+          `🔐 Shaxsiy kabinetingiz:\n` +
+          `🌐 student.dafzentrum.uz\n` +
+          `📱 Login: ${data.phone}\n` +
+          `🔑 Parol: ${plainPassword}\n\n` +
           "Tez orada sizga darslar haqida xabar beramiz!",
       });
 

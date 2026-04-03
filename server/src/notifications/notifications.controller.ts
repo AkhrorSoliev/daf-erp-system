@@ -17,6 +17,7 @@ import { PushService } from './push.service';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { PushSubscriptionDto } from './dto/push-subscription.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -39,6 +40,7 @@ export class NotificationsController {
     return this.notificationsService.getUnreadCount(userId);
   }
 
+  @Public()
   @Get('vapid-public-key')
   getVapidPublicKey() {
     return { key: this.pushService.getVapidPublicKey() };

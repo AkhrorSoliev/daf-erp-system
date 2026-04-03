@@ -30,7 +30,7 @@ export class CompanyController {
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCompanyDto,

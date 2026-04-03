@@ -30,21 +30,21 @@ export class TeachersController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   create(@Body() dto: CreateTeacherDto, @CurrentUser('companyId') companyId: number) {
     return this.teachersService.create(dto, companyId);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTeacherDto) {
     return this.teachersService.update(id, dto);
   }
 
   @Patch(':id/status')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeTeacherStatusDto,
@@ -55,14 +55,14 @@ export class TeachersController {
 
   @Get(':id/status-history')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getStatusHistory(@Param('id', ParseIntPipe) id: number) {
     return this.teachersService.getStatusHistory(id);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   delete(@Param('id', ParseIntPipe) id: number, @CurrentUser('id') userId: number) {
     return this.teachersService.delete(id, userId);
   }

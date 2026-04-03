@@ -15,6 +15,7 @@ import {
   ArrowRightLeft,
   ChevronsRight,
   Bot,
+  ClipboardCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,13 @@ const FIELD_LABELS: Record<string, string | null> = {
   previousGroupId: null,
   guruhId: null,
   oquvchiId: null,
+  // Davomat tarixi field lari
+  sana: "Sana",
+  jami: "Jami",
+  keldi: "Keldi",
+  kelmadi: "Kelmadi",
+  kechikdi: "Kechikdi",
+  sababli: "Sababli",
 };
 
 function getFieldLabel(key: string): string | null {
@@ -109,6 +117,7 @@ function getActionInfo(record: HistoryRecord): {
 
   switch (record.action) {
     case "CREATE":
+      if (customAction === "DAVOMAT_OLINDI") return { label: "Davomat olindi", icon: ClipboardCheck, variant: "default" };
       if (customAction === "COMMENT_ADDED") return { label: "Izoh qo'shildi", icon: MessageSquare, variant: "secondary" };
       if (customAction === "TELEGRAM_ROYXATDAN_OTDI") return { label: "Telegram orqali ro'yxatdan o'tdi", icon: Bot, variant: "default" };
       if (customAction === "GURUHGA_QOSHILDI") return { label: "Guruhga qo'shildi", icon: UserPlus, variant: "default" };
@@ -119,6 +128,7 @@ function getActionInfo(record: HistoryRecord): {
       return { label: "Yaratildi", icon: Plus, variant: "default" };
 
     case "UPDATE":
+      if (customAction === "DAVOMAT_YANGILANDI") return { label: "Davomat yangilandi", icon: ClipboardCheck, variant: "secondary" };
       if (customAction === "COMMENT_DELETED") return { label: "Izoh o'chirildi", icon: Trash2, variant: "destructive" };
       if (nv && ov && "guruh" in (nv as object)) return { label: "Guruh o'zgartirildi", icon: ArrowRightLeft, variant: "secondary" };
       return { label: "Yangilandi", icon: Pencil, variant: "secondary" };

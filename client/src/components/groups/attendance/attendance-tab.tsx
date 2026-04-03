@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AttendanceDateList } from "./attendance-date-list";
+import { AttendanceCycleDashboard } from "./attendance-cycle-dashboard";
 import { AttendanceForm } from "./attendance-form";
 import { AttendanceStats } from "./attendance-stats";
 import type { GroupData } from "@/hooks/use-edit-group";
@@ -11,7 +11,7 @@ interface AttendanceTabProps {
 }
 
 export function AttendanceTab({ group }: AttendanceTabProps) {
-  const [view, setView] = useState<"dates" | "form" | "stats">("dates");
+  const [view, setView] = useState<"cycle" | "form" | "stats">("cycle");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const handleDateSelect = (date: string) => {
@@ -21,11 +21,11 @@ export function AttendanceTab({ group }: AttendanceTabProps) {
 
   const handleBack = () => {
     setSelectedDate(null);
-    setView("dates");
+    setView("cycle");
   };
 
   if (view === "stats") {
-    return <AttendanceStats group={group} onBack={() => setView("dates")} />;
+    return <AttendanceStats group={group} onBack={() => setView("cycle")} />;
   }
 
   if (view === "form" && selectedDate) {
@@ -40,7 +40,7 @@ export function AttendanceTab({ group }: AttendanceTabProps) {
   }
 
   return (
-    <AttendanceDateList
+    <AttendanceCycleDashboard
       group={group}
       onSelectDate={handleDateSelect}
       onShowStats={() => setView("stats")}

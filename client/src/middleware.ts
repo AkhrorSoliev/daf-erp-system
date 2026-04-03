@@ -9,8 +9,21 @@ export function middleware(request: NextRequest) {
 
   const isAuthenticated = token || refreshToken;
 
-  // Login sahifasida token bor — portal-role mosligini tekshirish
+  // Login sahifasida token bor — tegishli portalga yo'naltirish
   if (pathname === "/login" && isAuthenticated) {
+    // Student rolini tekshirish — /portal ga yo'naltirish
+    const userStr = request.cookies.get("user")?.value;
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const isStudent =
+          user.roles?.some((r: any) => r.id === 6) &&
+          !user.roles?.some((r: any) => [1, 2, 3, 4, 5].includes(r.id));
+        if (isStudent) {
+          return NextResponse.redirect(new URL("/portal", request.url));
+        }
+      } catch {}
+    }
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -26,8 +39,49 @@ export function middleware(request: NextRequest) {
       request.headers.get("host") ||
       "";
 
-    // Localhost da cheklov yo'q
-    if (!host.includes("localhost") && !host.includes("127.0.0.1")) {
+    const isLocalhost =
+      host.includes("localhost") || host.includes("127.0.0.1");
+
+    // Localhost da student foydalanuvchini /portal ga yo'naltirish
+    if (isLocalhost && !pathname.startsWith("/portal")) {
+      const userStr = request.cookies.get("user")?.value;
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const isStudentOnly =
+            user.roles?.some((r: any) => r.id === 6) &&
+            !user.roles?.some((r: any) => [1, 2, 3, 4, 5].includes(r.id));
+          if (isStudentOnly) {
+            return NextResponse.redirect(new URL("/portal", request.url));
+          }
+        } catch {}
+      }
+    }
+
+    // Student portal routing: student.dafzentrum.uz -> /portal
+    if (!isLocalhost) {
+      const portal = getPortalType(host);
+
+      if (portal === "student") {
+        // Student portal foydalanuvchilari /portal ga yo'naltiriladi
+        if (
+          pathname !== "/login" &&
+          !pathname.startsWith("/portal") &&
+          !pathname.startsWith("/_next") &&
+          !pathname.startsWith("/api")
+        ) {
+          return NextResponse.redirect(new URL("/portal", request.url));
+        }
+      } else {
+        // Admin/Teacher portallar /portal ga kirishi mumkin emas
+        if (pathname.startsWith("/portal")) {
+          return NextResponse.redirect(new URL("/", request.url));
+        }
+      }
+    }
+
+    // Portal-role mismatch tekshiruvi
+    if (!isLocalhost) {
       const userStr = request.cookies.get("user")?.value;
       if (userStr) {
         try {

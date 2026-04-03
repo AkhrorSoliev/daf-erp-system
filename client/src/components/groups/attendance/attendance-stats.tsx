@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { format } from "date-fns";
+import { ArrowLeft, ChevronDown, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -13,10 +14,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
+
+interface AttendanceNote {
+  date: string;
+  status: string;
+  note: string;
+  markedBy: string;
+}
 
 interface StudentStat {
   id: number;
@@ -28,6 +38,7 @@ interface StudentStat {
   late: number;
   excused: number;
   percentage: number;
+  notes: AttendanceNote[];
 }
 
 interface StatsResponse {
@@ -53,6 +64,15 @@ function getPercentageColor(pct: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  PRESENT: { label: "Keldi", color: "text-green-600 dark:text-green-400" },
+  ABSENT: { label: "Kelmadi", color: "text-red-600 dark:text-red-400" },
+  LATE: { label: "Kechikdi", color: "text-amber-600 dark:text-amber-400" },
+  EXCUSED: { label: "Sababli", color: "text-blue-600 dark:text-blue-400" },
+};
+
+const COL_COUNT = 9;
+
 export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
   const now = new Date();
   const defaultStart = group.startDate
@@ -63,6 +83,11 @@ export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
   const [endDate, setEndDate] = useState<Date>(now);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const user = useAuth((s) => s.user);
+  const isAdmin =
+    user?.roles.some((r: { id: number }) => [1, 2, 3].includes(r.id)) ?? false;
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -154,51 +179,117 @@ export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
                 <TableHead className="w-16 text-center">Kechikdi</TableHead>
                 <TableHead className="w-16 text-center">Sababli</TableHead>
                 <TableHead className="w-16 text-center">Foiz</TableHead>
+                {isAdmin && <TableHead className="w-12 text-center">Izoh</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stats.students.map((student, index) => (
-                <TableRow key={student.id}>
-                  <TableCell className="border-r text-muted-foreground">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>
-                    <Avatar className="size-8">
-                      <AvatarImage
-                        src={student.photo ?? undefined}
-                        alt={`${student.firstName} ${student.lastName}`}
-                      />
-                      <AvatarFallback className="text-xs">
-                        {student.firstName[0]}
-                        {student.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {student.firstName} {student.lastName}
-                  </TableCell>
-                  <TableCell className="text-center text-green-600 dark:text-green-400">
-                    {student.present}
-                  </TableCell>
-                  <TableCell className="text-center text-red-600 dark:text-red-400">
-                    {student.absent}
-                  </TableCell>
-                  <TableCell className="text-center text-amber-600 dark:text-amber-400">
-                    {student.late}
-                  </TableCell>
-                  <TableCell className="text-center text-blue-600 dark:text-blue-400">
-                    {student.excused}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "text-center font-semibold",
-                      getPercentageColor(student.percentage),
+              {stats.students.map((student, index) => {
+                const hasNotes = isAdmin && student.notes.length > 0;
+                const isExpanded = expandedId === student.id;
+
+                return (
+                  <>
+                    <TableRow
+                      key={student.id}
+                      className={cn(
+                        hasNotes && "cursor-pointer hover:bg-muted/60",
+                        isExpanded && "bg-muted/40",
+                      )}
+                      onClick={() => {
+                        if (hasNotes) setExpandedId(isExpanded ? null : student.id);
+                      }}
+                    >
+                      <TableCell className="border-r text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <Avatar className="size-8">
+                          <AvatarImage
+                            src={student.photo ?? undefined}
+                            alt={`${student.firstName} ${student.lastName}`}
+                          />
+                          <AvatarFallback className="text-xs">
+                            {student.firstName[0]}
+                            {student.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {student.firstName} {student.lastName}
+                      </TableCell>
+                      <TableCell className="text-center text-green-600 dark:text-green-400">
+                        {student.present}
+                      </TableCell>
+                      <TableCell className="text-center text-red-600 dark:text-red-400">
+                        {student.absent}
+                      </TableCell>
+                      <TableCell className="text-center text-amber-600 dark:text-amber-400">
+                        {student.late}
+                      </TableCell>
+                      <TableCell className="text-center text-blue-600 dark:text-blue-400">
+                        {student.excused}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-center font-semibold",
+                          getPercentageColor(student.percentage),
+                        )}
+                      >
+                        {student.percentage}%
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-center">
+                          {hasNotes ? (
+                            <div className="flex items-center justify-center gap-0.5">
+                              <Badge variant="secondary" className="gap-0.5 px-1.5 text-[11px] text-purple-600 dark:text-purple-400">
+                                <MessageSquareText className="size-3" />
+                                {student.notes.length}
+                              </Badge>
+                              <ChevronDown
+                                className={cn(
+                                  "size-3.5 text-muted-foreground transition-transform",
+                                  isExpanded && "rotate-180",
+                                )}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+
+                    {/* Expanded notes row */}
+                    {hasNotes && isExpanded && (
+                      <TableRow key={`${student.id}-notes`} className="bg-purple-50/50 dark:bg-purple-950/20 hover:bg-purple-50/50 dark:hover:bg-purple-950/20">
+                        <TableCell colSpan={isAdmin ? COL_COUNT : COL_COUNT - 1} className="px-4 py-3">
+                          <div className="space-y-2 pl-8">
+                            {student.notes.map((n, i) => {
+                              const sl = STATUS_LABELS[n.status];
+                              return (
+                                <div key={i} className="flex items-start gap-3 text-xs">
+                                  <span className="shrink-0 font-medium text-muted-foreground">
+                                    {format(new Date(n.date + "T00:00:00"), "dd.MM.yyyy")}
+                                  </span>
+                                  <span className={cn("shrink-0 font-medium", sl?.color)}>
+                                    {sl?.label ?? n.status}
+                                  </span>
+                                  <span className="text-purple-700 dark:text-purple-300">
+                                    {n.note}
+                                  </span>
+                                  <span className="ml-auto shrink-0 text-muted-foreground">
+                                    — {n.markedBy}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  >
-                    {student.percentage}%
-                  </TableCell>
-                </TableRow>
-              ))}
+                  </>
+                );
+              })}
               {/* JAMI row */}
               <TableRow className="bg-muted/40 font-medium">
                 <TableCell className="border-r" />
@@ -224,6 +315,7 @@ export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
                 >
                   {overallPercentage}%
                 </TableCell>
+                {isAdmin && <TableCell />}
               </TableRow>
             </TableBody>
           </Table>

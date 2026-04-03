@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Prisma, StudentStatus } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -13,6 +14,17 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+
+const STUDENT_ROLE_ID = 6;
+
+function generatePassword(length = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
 
 const studentSelect = {
   id: true,
@@ -282,7 +294,17 @@ export class StudentsService {
       companyId,
     });
 
-    return formatStudent(student);
+    // Avtomatik User yaratish (login/parol)
+    const { plainPassword } = await this.createStudentUser(
+      student.id,
+      dto.phone,
+      dto.firstName,
+      dto.lastName,
+      companyId,
+    );
+
+    const formatted = formatStudent(student);
+    return { ...formatted, generatedPassword: plainPassword };
   }
 
   async update(id: number, dto: UpdateStudentDto, userId?: number) {
@@ -458,6 +480,40 @@ export class StudentsService {
     });
 
     return { message: "O'quvchi muvaffaqiyatli o'chirildi" };
+  }
+
+  /**
+   * Student uchun User yaratadi (login = telefon, parol = random).
+   * Telegram bot va admin create dan chaqiriladi.
+   */
+  async createStudentUser(
+    studentId: number,
+    phone: string,
+    firstName: string,
+    lastName: string,
+    companyId: number,
+  ): Promise<{ userId: number; plainPassword: string }> {
+    const plainPassword = generatePassword();
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        login: phone,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        phone,
+        companyId,
+        roles: { create: [{ roleId: STUDENT_ROLE_ID }] },
+      },
+    });
+
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data: { userId: user.id },
+    });
+
+    return { userId: user.id, plainPassword };
   }
 
   async enrollToGroup(studentId: number, groupId: string, userId: number) {

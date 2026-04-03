@@ -10,10 +10,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-interface SettingsNavItem {
+export interface SettingsNavItem {
   title: string;
   url: string;
   icon: LucideIcon;
+  /** When set, only users with at least one matching role ID see the item. Omit to show to all. */
+  visibleForRoles?: number[];
 }
 
 interface SettingsNavSection {
@@ -39,9 +41,9 @@ export const settingsNavSections: SettingsNavSection[] = [
   {
     title: "CEO",
     items: [
-      { title: "Umumiy sozlamalar", url: "/settings/general", icon: Settings },
-      { title: "Xodimlar", url: "/settings/employees", icon: Users },
-      { title: "Filiallar", url: "/settings/branches", icon: Building2 },
+      { title: "Umumiy sozlamalar", url: "/settings/general", icon: Settings, visibleForRoles: [1, 2, 3] },
+      { title: "Xodimlar", url: "/settings/employees", icon: Users, visibleForRoles: [1, 2] },
+      { title: "Filiallar", url: "/settings/branches", icon: Building2, visibleForRoles: [1, 2] },
     ],
   },
 ];

@@ -184,6 +184,7 @@ model User {
   pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
   sentSmsMessages    SmsMessage[]       @relation("SmsSender")
   markedAttendances  Attendance[]       @relation("AttendanceMarkedBy")
+  student            Student?           @relation("StudentUser")
 
   @@index([deletedAt])
   @@index([status])
@@ -335,6 +336,9 @@ model Student {
   deletedById     Int?
   deletedBy       User?     @relation("StudentDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
+
+  userId      Int?          @unique
+  user        User?         @relation("StudentUser", fields: [userId], references: [id])
 
   enrollments Enrollment[]
   branches    StudentBranch[]

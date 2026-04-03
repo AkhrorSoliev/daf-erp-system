@@ -73,30 +73,72 @@ describe('TeachersController — role guards', () => {
   });
 
   describe('create()', () => {
-    it('should have @Roles(CEO, Administrator) metadata', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Administrator']);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
+    });
+
+    it('should allow CEO to create', () => {
+      const ctx = mockExecutionContext(controller.create, ['CEO']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should allow Branch Director to create', () => {
+      const ctx = mockExecutionContext(controller.create, ['Branch Director']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Administrator from creating', () => {
+      const ctx = mockExecutionContext(controller.create, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 
     it('should deny Teacher from creating', () => {
       const ctx = mockExecutionContext(controller.create, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
-
-    it('should deny Branch Director from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Branch Director']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
   });
 
   describe('update()', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
+    });
+
+    it('should deny Administrator from updating', () => {
+      const ctx = mockExecutionContext(controller.update, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
     it('should deny Teacher from updating', () => {
       const ctx = mockExecutionContext(controller.update, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 
+  describe('changeStatus()', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.changeStatus);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
+    });
+
+    it('should deny Administrator from changing status', () => {
+      const ctx = mockExecutionContext(controller.changeStatus, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
   describe('delete()', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.delete);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
+    });
+
+    it('should deny Administrator from deleting', () => {
+      const ctx = mockExecutionContext(controller.delete, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
     it('should deny Teacher from deleting', () => {
       const ctx = mockExecutionContext(controller.delete, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);

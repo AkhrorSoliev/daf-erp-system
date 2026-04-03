@@ -1,69 +1,13 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import * as bcrypt from 'bcryptjs';
-import * as fs from 'fs';
-import * as path from 'path';
-import { randomUUID } from 'crypto';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: process.env.R2_ENDPOINT!,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
-const R2_BUCKET = process.env.R2_BUCKET_NAME!;
-const R2_PUBLIC = process.env.R2_PUBLIC_URL!;
-
-async function uploadPhoto(filePath: string): Promise<string> {
-  const ext = path.extname(filePath);
-  const key = `photos/${randomUUID()}${ext}`;
-  const body = fs.readFileSync(filePath);
-  const mime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: R2_BUCKET,
-      Key: key,
-      Body: body,
-      ContentType: mime,
-    }),
-  );
-
-  return `${R2_PUBLIC}/${key}`;
-}
-
 const COMPANY_ID = 1001;
 const BRANCH_ID = 1;
-const TEACHER_ROLE_ID = 4;
-
-const teachers = [
-  { firstName: 'Jamsher', lastName: 'Murtazoxonov', gender: 'MALE' as const, photo: 'herr-jamsher.png', phone: '901001001' },
-  { firstName: 'Eldor', lastName: 'Xaydaraliyev', gender: 'MALE' as const, photo: 'herr-eldor.png', phone: '901001002' },
-  { firstName: 'Ulug\'bek', lastName: 'Ahmadjonov', gender: 'MALE' as const, photo: 'herr-ulugbek.png', phone: '901001003' },
-  { firstName: 'Feruza', lastName: 'Mamazulinova', gender: 'FEMALE' as const, photo: 'frau-feruza.png', phone: '901001004' },
-  { firstName: 'Iroda', lastName: 'Qurbonova', gender: 'FEMALE' as const, photo: 'frau-iroda.png', phone: '901001005' },
-  { firstName: 'Saida', lastName: 'Mustafoyeva', gender: 'FEMALE' as const, photo: 'frau-saida.png', phone: '901001006' },
-  { firstName: 'Musinjon', lastName: 'Umarov', gender: 'MALE' as const, photo: 'herr-musinjon.png', phone: '901001007' },
-  { firstName: 'Dostonjon', lastName: 'Ruzimatov', gender: 'MALE' as const, photo: 'herr-doston.jpg', phone: '901001008' },
-  { firstName: 'Sakina', lastName: 'Nomozova', gender: 'FEMALE' as const, photo: 'frau-sakina.jpg', phone: '901001009' },
-  { firstName: 'Yoqutxon', lastName: 'Rustamova', gender: 'FEMALE' as const, photo: 'frau-yoqutxon.png', phone: '901001010' },
-];
-
-const rooms = [
-  { name: '1-xona', capacity: 20 },
-  { name: '2-xona', capacity: 18 },
-  { name: '3-xona', capacity: 22 },
-  { name: '4-xona', capacity: 16 },
-  { name: '5-xona', capacity: 20 },
-  { name: '6-xona', capacity: 15 },
-];
 
 async function main() {
   // 0. Bazani tozalash
@@ -75,6 +19,7 @@ async function main() {
   await prisma.comment.deleteMany();
   await prisma.entityHistory.deleteMany();
   await prisma.statusHistory.deleteMany();
+  await prisma.attendance.deleteMany();
   await prisma.enrollment.deleteMany();
   await prisma.groupTeacher.deleteMany();
   await prisma.studentBranch.deleteMany();
@@ -98,6 +43,7 @@ async function main() {
     { id: 3, name: 'Administrator' },
     { id: 4, name: 'Teacher' },
     { id: 5, name: 'Cashier' },
+    { id: 6, name: 'Student' },
   ];
   for (const role of roles) {
     await prisma.role.upsert({
@@ -114,233 +60,240 @@ async function main() {
   });
   console.log('Company:', company.name);
 
-  // 3. CEO
+  // 3. Farg'ona filiali
+  await prisma.branch.create({
+    data: {
+      id: BRANCH_ID,
+      name: "Farg'ona filiali",
+      address: "Farg'ona sh., Mustaqillik ko'chasi 15",
+      phone: '912345678',
+      companyId: COMPANY_ID,
+      startOfWorkingDay: '08:00',
+      endOfWorkingDay: '18:00',
+    },
+  });
+  console.log("Filial: Farg'ona filiali");
+
+  // 4. Xonalar (6 ta)
+  const roomIds: string[] = [];
+  for (let i = 1; i <= 6; i++) {
+    const room = await prisma.room.create({
+      data: {
+        id: `room-${i}`,
+        name: `${i}-xona`,
+        capacity: 15,
+        branchId: BRANCH_ID,
+        companyId: COMPANY_ID,
+      },
+    });
+    roomIds.push(room.id);
+  }
+  console.log('Xonalar: 1-xona ... 6-xona');
+
+  // 5. Kurslar
+  const courseIntensiv = await prisma.course.create({
+    data: {
+      id: 'course-intensiv',
+      name: 'Intensiv Deutsch',
+      description: 'Kundalik intensiv nemis tili kursi',
+      price: 800000,
+      courseDuration: 3,
+      lessonDuration: 90,
+      lessonMinutes: 90,
+      branchId: BRANCH_ID,
+      companyId: COMPANY_ID,
+    },
+  });
+  const courseStandart = await prisma.course.create({
+    data: {
+      id: 'course-standart',
+      name: 'Standart Deutsch',
+      description: 'Standart nemis tili kursi',
+      price: 500000,
+      courseDuration: 4,
+      lessonDuration: 60,
+      lessonMinutes: 60,
+      branchId: BRANCH_ID,
+      companyId: COMPANY_ID,
+    },
+  });
+  console.log('Kurslar: Intensiv Deutsch, Standart Deutsch');
+
+  // 6. CEO
   const hashedPassword = await bcrypt.hash('123456', 10);
+
   const ceo = await prisma.user.create({
     data: {
       firstName: 'CEO',
       lastName: 'Admin',
       login: 'ceo',
       password: hashedPassword,
-      companyId: company.id,
-      mainBranch: BRANCH_ID,
+      companyId: COMPANY_ID,
       roles: { create: [{ roleId: 1 }] },
+      branches: { create: [{ branchId: BRANCH_ID }] },
     },
   });
   console.log(`CEO: login=ceo, parol=123456 (id: ${ceo.id})`);
 
-  // 4. Branch — Farg'ona
-  await prisma.branch.create({
+  // 7. Administrator
+  const admin = await prisma.user.create({
     data: {
-      id: BRANCH_ID,
-      name: "Farg'ona filiali",
-      address: "Farg'ona shahri, Mustaqillik ko'chasi 15",
-      phone: '732001234',
+      firstName: 'Sardor',
+      lastName: 'Nurmatov',
+      phone: '901001010',
+      gender: 'MALE',
+      login: 'admin',
+      password: hashedPassword,
       companyId: COMPANY_ID,
-      startOfWorkingDay: '08:00',
-      endOfWorkingDay: '20:00',
+      mainBranch: BRANCH_ID,
+      roles: { create: [{ roleId: 3 }] },
+      branches: { create: [{ branchId: BRANCH_ID }] },
     },
   });
+  console.log(`Admin: login=admin, parol=123456 (id: ${admin.id})`);
 
-  // CEO ni branchga biriktirish
-  await prisma.userBranch.create({
-    data: { userId: ceo.id, branchId: BRANCH_ID },
-  });
-  console.log("Branch: Farg'ona filiali (id: 1)");
+  // 8. Ustozlar (5 ta)
+  const teachersData = [
+    { firstName: 'Aziz', lastName: 'Karimov', login: 'aziz', phone: '901112233' },
+    { firstName: 'Dilnoza', lastName: 'Rahimova', login: 'dilnoza', phone: '902223344', gender: 'FEMALE' as const },
+    { firstName: 'Jasur', lastName: 'Toshmatov', login: 'jasur', phone: '903334455' },
+    { firstName: 'Madina', lastName: 'Usmonova', login: 'madina', phone: '904445566', gender: 'FEMALE' as const },
+    { firstName: 'Bekzod', lastName: 'Aliyev', login: 'bekzod', phone: '905556677' },
+  ];
 
-  // 5. Xonalar
-  const createdRooms: { id: string; name: string }[] = [];
-  for (const room of rooms) {
-    const r = await prisma.room.create({
-      data: {
-        name: room.name,
-        capacity: room.capacity,
-        branchId: BRANCH_ID,
-        companyId: COMPANY_ID,
-      },
-    });
-    createdRooms.push({ id: r.id, name: r.name });
-  }
-  console.log(`Xonalar: ${createdRooms.map((r) => r.name).join(', ')}`);
-
-  // 6. Kurslar
-  const standartCourse = await prisma.course.create({
-    data: {
-      name: 'Standart kurs',
-      description: 'Haftasiga 3 kun, 6 oylik nemis tili kursi',
-      price: 400000,
-      courseDuration: 6,
-      lessonDuration: 2,
-      lessonMinutes: 90,
-      branchId: BRANCH_ID,
-      companyId: COMPANY_ID,
-    },
-  });
-
-  const intensiveCourse = await prisma.course.create({
-    data: {
-      name: 'Intensiv kurs',
-      description: 'Haftasiga 5 kun, 6 oylik intensiv nemis tili kursi',
-      price: 700000,
-      courseDuration: 6,
-      lessonDuration: 2,
-      lessonMinutes: 90,
-      branchId: BRANCH_ID,
-      companyId: COMPANY_ID,
-    },
-  });
-  console.log(`Kurslar: Standart (400,000), Intensiv (700,000)`);
-
-  // 7. O'qituvchilar — rasmlarni R2 ga yuklash
-  const photosDir = path.resolve(__dirname, '../../teachers');
-  const createdTeachers: { id: number; name: string }[] = [];
-
-  for (const t of teachers) {
-    const photoPath = path.join(photosDir, t.photo);
-    let photoUrl: string | undefined;
-
-    if (fs.existsSync(photoPath)) {
-      photoUrl = await uploadPhoto(photoPath);
-      console.log(`  Rasm yuklandi: ${t.firstName} ${t.lastName}`);
-    } else {
-      console.log(`  Rasm topilmadi: ${photoPath}`);
-    }
-
-    const teacherPassword = await bcrypt.hash('teacher123', 10);
-    const login = `${t.firstName.toLowerCase().replace(/'/g, '')}_${t.lastName.toLowerCase().replace(/'/g, '')}`.slice(0, 20);
-
-    const user = await prisma.user.create({
+  const teachers: { id: number; firstName: string; lastName: string; login: string }[] = [];
+  for (const t of teachersData) {
+    const teacher = await prisma.user.create({
       data: {
         firstName: t.firstName,
         lastName: t.lastName,
         phone: t.phone,
-        photo: photoUrl,
-        gender: t.gender,
-        login,
-        password: teacherPassword,
+        gender: t.gender ?? 'MALE',
+        login: t.login,
+        password: hashedPassword,
         companyId: COMPANY_ID,
         mainBranch: BRANCH_ID,
-        roles: { create: [{ roleId: TEACHER_ROLE_ID }] },
+        roles: { create: [{ roleId: 4 }] },
         branches: { create: [{ branchId: BRANCH_ID }] },
       },
     });
-    createdTeachers.push({ id: user.id, name: `${user.firstName} ${user.lastName}` });
+    teachers.push({ id: teacher.id, firstName: t.firstName, lastName: t.lastName, login: t.login });
   }
-  console.log(`O'qituvchilar: ${createdTeachers.length} ta yaratildi`);
+  console.log('\nUstozlar:');
+  teachers.forEach((t) => console.log(`  ${t.firstName} ${t.lastName}: login=${t.login}, parol=123456 (id: ${t.id})`));
 
-  // 8. Guruhlar — har bir ustozga 4-5 ta guruh
-  // Vaqt slotlari
-  const timeSlots = [
-    { start: '08:00', end: '09:30' },
-    { start: '10:00', end: '11:30' },
-    { start: '14:00', end: '15:30' },
-    { start: '16:00', end: '17:30' },
-    { start: '18:00', end: '19:30' },
+  // 9. Guruhlar (8 ta — har bir ustoz kamida 1 ta, bugun va ertaga darslari bor)
+  // Bugun: 2026-04-03 (friday) → toq kunlar (odd: mon/wed/fri)
+  // Ertaga: 2026-04-04 (saturday) → juft kunlar (even: tue/thu/sat)
+  const ODD_DAYS = ['monday', 'wednesday', 'friday'];
+  const EVEN_DAYS = ['tuesday', 'thursday', 'saturday'];
+
+  const groupsData = [
+    // Aziz — 2 guruh (intensiv toq + standart juft)
+    { id: 'group-1', name: 'DE-101', courseId: courseIntensiv.id, roomId: roomIds[0], teacherId: teachers[0].id, days: ODD_DAYS, start: '08:00', end: '09:30' },
+    { id: 'group-2', name: 'DE-102', courseId: courseStandart.id, roomId: roomIds[1], teacherId: teachers[0].id, days: EVEN_DAYS, start: '08:00', end: '09:00' },
+    // Dilnoza — 2 guruh (standart toq + intensiv juft)
+    { id: 'group-3', name: 'DE-103', courseId: courseStandart.id, roomId: roomIds[0], teacherId: teachers[1].id, days: ODD_DAYS, start: '10:00', end: '11:00' },
+    { id: 'group-4', name: 'DE-104', courseId: courseIntensiv.id, roomId: roomIds[2], teacherId: teachers[1].id, days: EVEN_DAYS, start: '10:00', end: '11:30' },
+    // Jasur — 2 guruh (intensiv toq + standart juft)
+    { id: 'group-5', name: 'DE-105', courseId: courseIntensiv.id, roomId: roomIds[3], teacherId: teachers[2].id, days: ODD_DAYS, start: '14:00', end: '15:30' },
+    { id: 'group-6', name: 'DE-106', courseId: courseStandart.id, roomId: roomIds[4], teacherId: teachers[2].id, days: EVEN_DAYS, start: '14:00', end: '15:00' },
+    // Madina — 1 guruh (standart juft)
+    { id: 'group-7', name: 'DE-107', courseId: courseStandart.id, roomId: roomIds[1], teacherId: teachers[3].id, days: EVEN_DAYS, start: '10:00', end: '11:00' },
+    // Bekzod — 1 guruh (intensiv toq)
+    { id: 'group-8', name: 'DE-108', courseId: courseIntensiv.id, roomId: roomIds[5], teacherId: teachers[4].id, days: ODD_DAYS, start: '16:00', end: '17:30' },
   ];
 
-  const oddDays = ['monday', 'wednesday', 'friday'];
-  const evenDays = ['tuesday', 'thursday', 'saturday'];
-  const weekDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-
-  // Level counter — auto-naming uchun: A1-001, A1-002, ...
-  const levelCounter: Record<string, number> = {};
-  function nextGroupName(level: string) {
-    levelCounter[level] = (levelCounter[level] ?? 0) + 1;
-    return `${level}-${String(levelCounter[level]).padStart(3, '0')}`;
-  }
-
-  // Har bir ustozga 4-5 ta guruh (standart + intensiv aralash)
-  const groupConfigs = [
-    // Ustoz 0 — Jamsher (5 guruh)
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 0, roomIdx: 0, days: 'odd', exactDays: oddDays, time: 0 },
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 0, roomIdx: 0, days: 'even', exactDays: evenDays, time: 1 },
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 0, roomIdx: 0, days: 'odd', exactDays: oddDays, time: 2 },
-    { level: 'A1', courseId: intensiveCourse.id, teacherIdx: 0, roomIdx: 0, days: 'odd', exactDays: weekDays, time: 3 },
-    { level: 'B1', courseId: standartCourse.id, teacherIdx: 0, roomIdx: 0, days: 'even', exactDays: evenDays, time: 4 },
-
-    // Ustoz 1 — Eldor (5 guruh)
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 1, roomIdx: 1, days: 'odd', exactDays: oddDays, time: 0 },
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 1, roomIdx: 1, days: 'even', exactDays: evenDays, time: 1 },
-    { level: 'A2', courseId: intensiveCourse.id, teacherIdx: 1, roomIdx: 1, days: 'odd', exactDays: weekDays, time: 2 },
-    { level: 'B1', courseId: standartCourse.id, teacherIdx: 1, roomIdx: 1, days: 'odd', exactDays: oddDays, time: 3 },
-    { level: 'B2', courseId: standartCourse.id, teacherIdx: 1, roomIdx: 1, days: 'even', exactDays: evenDays, time: 4 },
-
-    // Ustoz 2 — Ulug'bek (4 guruh)
-    { level: 'A1', courseId: intensiveCourse.id, teacherIdx: 2, roomIdx: 2, days: 'odd', exactDays: weekDays, time: 0 },
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 2, roomIdx: 2, days: 'even', exactDays: evenDays, time: 1 },
-    { level: 'B1', courseId: standartCourse.id, teacherIdx: 2, roomIdx: 2, days: 'odd', exactDays: oddDays, time: 2 },
-    { level: 'B1', courseId: intensiveCourse.id, teacherIdx: 2, roomIdx: 2, days: 'odd', exactDays: weekDays, time: 3 },
-
-    // Ustoz 3 — Feruza (5 guruh)
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 3, roomIdx: 3, days: 'even', exactDays: evenDays, time: 0 },
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 3, roomIdx: 3, days: 'odd', exactDays: oddDays, time: 1 },
-    { level: 'A2', courseId: intensiveCourse.id, teacherIdx: 3, roomIdx: 3, days: 'odd', exactDays: weekDays, time: 2 },
-    { level: 'B2', courseId: standartCourse.id, teacherIdx: 3, roomIdx: 3, days: 'even', exactDays: evenDays, time: 3 },
-    { level: 'B2', courseId: intensiveCourse.id, teacherIdx: 3, roomIdx: 3, days: 'odd', exactDays: weekDays, time: 4 },
-
-    // Ustoz 4 — Iroda (4 guruh)
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 4, roomIdx: 4, days: 'odd', exactDays: oddDays, time: 0 },
-    { level: 'B1', courseId: standartCourse.id, teacherIdx: 4, roomIdx: 4, days: 'even', exactDays: evenDays, time: 1 },
-    { level: 'B1', courseId: intensiveCourse.id, teacherIdx: 4, roomIdx: 4, days: 'odd', exactDays: weekDays, time: 2 },
-    { level: 'B2', courseId: standartCourse.id, teacherIdx: 4, roomIdx: 4, days: 'odd', exactDays: oddDays, time: 3 },
-
-    // Ustoz 5 — Saida (5 guruh)
-    { level: 'A1', courseId: intensiveCourse.id, teacherIdx: 5, roomIdx: 5, days: 'odd', exactDays: weekDays, time: 0 },
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 5, roomIdx: 5, days: 'odd', exactDays: oddDays, time: 1 },
-    { level: 'B1', courseId: standartCourse.id, teacherIdx: 5, roomIdx: 5, days: 'even', exactDays: evenDays, time: 2 },
-    { level: 'B2', courseId: standartCourse.id, teacherIdx: 5, roomIdx: 5, days: 'odd', exactDays: oddDays, time: 3 },
-    { level: 'C1', courseId: standartCourse.id, teacherIdx: 5, roomIdx: 5, days: 'even', exactDays: evenDays, time: 4 },
-
-    // Ustoz 6 — Musinjon (4 guruh)
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 6, roomIdx: 0, days: 'even', exactDays: evenDays, time: 0 },
-    { level: 'A2', courseId: intensiveCourse.id, teacherIdx: 6, roomIdx: 1, days: 'odd', exactDays: weekDays, time: 1 },
-    { level: 'B2', courseId: standartCourse.id, teacherIdx: 6, roomIdx: 2, days: 'odd', exactDays: oddDays, time: 2 },
-    { level: 'C1', courseId: standartCourse.id, teacherIdx: 6, roomIdx: 3, days: 'even', exactDays: evenDays, time: 3 },
-
-    // Ustoz 7 — Dostonjon (5 guruh)
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 7, roomIdx: 4, days: 'odd', exactDays: oddDays, time: 0 },
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 7, roomIdx: 5, days: 'even', exactDays: evenDays, time: 1 },
-    { level: 'B1', courseId: standartCourse.id, teacherIdx: 7, roomIdx: 4, days: 'odd', exactDays: oddDays, time: 2 },
-    { level: 'B2', courseId: intensiveCourse.id, teacherIdx: 7, roomIdx: 5, days: 'odd', exactDays: weekDays, time: 3 },
-    { level: 'C1', courseId: intensiveCourse.id, teacherIdx: 7, roomIdx: 4, days: 'odd', exactDays: weekDays, time: 4 },
-
-    // Ustoz 8 — Sakina (4 guruh)
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 8, roomIdx: 0, days: 'odd', exactDays: oddDays, time: 0 },
-    { level: 'B1', courseId: standartCourse.id, teacherIdx: 8, roomIdx: 1, days: 'even', exactDays: evenDays, time: 1 },
-    { level: 'B2', courseId: standartCourse.id, teacherIdx: 8, roomIdx: 2, days: 'odd', exactDays: oddDays, time: 2 },
-    { level: 'C1', courseId: standartCourse.id, teacherIdx: 8, roomIdx: 3, days: 'even', exactDays: evenDays, time: 3 },
-
-    // Ustoz 9 — Yoqutxon (4 guruh)
-    { level: 'A1', courseId: standartCourse.id, teacherIdx: 9, roomIdx: 4, days: 'even', exactDays: evenDays, time: 0 },
-    { level: 'A2', courseId: standartCourse.id, teacherIdx: 9, roomIdx: 5, days: 'odd', exactDays: oddDays, time: 1 },
-    { level: 'B1', courseId: intensiveCourse.id, teacherIdx: 9, roomIdx: 4, days: 'odd', exactDays: weekDays, time: 2 },
-    { level: 'B2', courseId: standartCourse.id, teacherIdx: 9, roomIdx: 5, days: 'even', exactDays: evenDays, time: 3 },
-  ];
-
-  for (const g of groupConfigs) {
-    const slot = timeSlots[g.time];
+  for (const g of groupsData) {
     await prisma.group.create({
       data: {
-        name: nextGroupName(g.level),
-        groupNumber: levelCounter[g.level],
+        id: g.id,
+        name: g.name,
         courseId: g.courseId,
         branchId: BRANCH_ID,
+        roomId: g.roomId,
         companyId: COMPANY_ID,
-        roomId: createdRooms[g.roomIdx].id,
-        days: g.days,
-        exactDays: g.exactDays,
-        lessonStartTime: slot.start,
-        lessonEndTime: slot.end,
-        status: 2,
+        exactDays: g.days,
+        days: g.days === ODD_DAYS ? 'odd' : 'even',
+        lessonStartTime: g.start,
+        lessonEndTime: g.end,
         statusEnum: 'ACTIVE',
-        startDate: new Date('2026-04-01'),
-        teachers: {
-          create: [{ teacherId: createdTeachers[g.teacherIdx].id }],
-        },
+        startDate: new Date('2026-03-01'),
+        teachers: { create: [{ teacherId: g.teacherId }] },
       },
     });
   }
-  console.log(`Guruhlar: ${groupConfigs.length} ta yaratildi`);
+  console.log('\nGuruhlar:');
+  groupsData.forEach((g) => {
+    const teacher = teachers.find((t) => t.id === g.teacherId);
+    const type = g.courseId === courseIntensiv.id ? 'Intensiv' : 'Standart';
+    const dayLabel = g.days === ODD_DAYS ? 'Toq (Du/Chor/Ju)' : 'Juft (Se/Pay/Sha)';
+    console.log(`  ${g.name} — ${type}, ${dayLabel}, ${g.start}-${g.end}, Ustoz: ${teacher?.firstName}`);
+  });
+
+  // 10. Talabalar (15 ta) va enrollment
+  const studentsData = [
+    { firstName: 'Asilbek', lastName: 'Qodirov', phone: '911001001' },
+    { firstName: 'Barno', lastName: 'Sodiqova', phone: '911002002', gender: 'FEMALE' as const },
+    { firstName: 'Davron', lastName: 'Xolmatov', phone: '911003003' },
+    { firstName: 'Ezoza', lastName: 'Tursunova', phone: '911004004', gender: 'FEMALE' as const },
+    { firstName: 'Farrux', lastName: 'Abdullayev', phone: '911005005' },
+    { firstName: 'Gulnora', lastName: 'Kamalova', phone: '911006006', gender: 'FEMALE' as const },
+    { firstName: 'Husan', lastName: 'Mirzayev', phone: '911007007' },
+    { firstName: 'Iroda', lastName: 'Nazarova', phone: '911008008', gender: 'FEMALE' as const },
+    { firstName: 'Javohir', lastName: 'Rahmonov', phone: '911009009' },
+    { firstName: 'Kamola', lastName: 'Ergasheva', phone: '911010010', gender: 'FEMALE' as const },
+    { firstName: 'Laziz', lastName: 'Sobirov', phone: '911011011' },
+    { firstName: 'Mohira', lastName: 'Jumayeva', phone: '911012012', gender: 'FEMALE' as const },
+    { firstName: 'Nodir', lastName: 'Temirov', phone: '911013013' },
+    { firstName: 'Ozoda', lastName: 'Valiyeva', phone: '911014014', gender: 'FEMALE' as const },
+    { firstName: 'Pulat', lastName: 'Ismoilov', phone: '911015015' },
+  ];
+
+  const studentIds: number[] = [];
+  for (const s of studentsData) {
+    const student = await prisma.student.create({
+      data: {
+        firstName: s.firstName,
+        lastName: s.lastName,
+        phone: s.phone,
+        gender: s.gender ?? 'MALE',
+        companyId: COMPANY_ID,
+        branches: { create: [{ branchId: BRANCH_ID }] },
+      },
+    });
+    studentIds.push(student.id);
+  }
+  console.log(`\nTalabalar: ${studentIds.length} ta yaratildi (id: ${studentIds[0]}...${studentIds[studentIds.length - 1]})`);
+
+  // Har bir guruhga 3-4 talaba enrollment qilish
+  const enrollments = [
+    // group-1: 3 talaba
+    { groupId: 'group-1', studentIds: [studentIds[0], studentIds[1], studentIds[2]] },
+    // group-2: 3 talaba
+    { groupId: 'group-2', studentIds: [studentIds[3], studentIds[4], studentIds[5]] },
+    // group-3: 3 talaba
+    { groupId: 'group-3', studentIds: [studentIds[6], studentIds[7], studentIds[8]] },
+    // group-4: 3 talaba
+    { groupId: 'group-4', studentIds: [studentIds[9], studentIds[10], studentIds[11]] },
+    // group-5: 3 talaba
+    { groupId: 'group-5', studentIds: [studentIds[0], studentIds[12], studentIds[13]] },
+    // group-6: 3 talaba
+    { groupId: 'group-6', studentIds: [studentIds[1], studentIds[14], studentIds[6]] },
+    // group-7: 3 talaba
+    { groupId: 'group-7', studentIds: [studentIds[2], studentIds[3], studentIds[9]] },
+    // group-8: 3 talaba
+    { groupId: 'group-8', studentIds: [studentIds[4], studentIds[7], studentIds[11]] },
+  ];
+
+  for (const e of enrollments) {
+    for (const sId of e.studentIds) {
+      await prisma.enrollment.create({
+        data: { studentId: sId, groupId: e.groupId },
+      });
+    }
+  }
+  console.log('Enrollment: har bir guruhga 3 talaba biriktirildi');
 
   // Sequence larni to'g'rilash (minimum 10000 — 5 xonali ID)
   await prisma.$executeRawUnsafe(
@@ -350,7 +303,11 @@ async function main() {
     `SELECT setval(pg_get_serial_sequence('"Student"', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM "Student"), 0), 9999))`,
   );
 
-  console.log('\nTayyor! CEO login bilan kiring: login=ceo, parol=123456');
+  console.log('\n✅ Tayyor! Test ma\'lumotlar yaratildi.');
+  console.log('\nLogin ma\'lumotlari (parol: 123456):');
+  console.log('  CEO:   login=ceo');
+  console.log('  Admin: login=admin');
+  teachers.forEach((t) => console.log(`  Ustoz: login=${t.login} (${t.firstName} ${t.lastName})`));
 }
 
 main()

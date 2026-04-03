@@ -281,57 +281,70 @@ export class AttendanceService {
       existingRecords.map((r) => [r.studentId, r]),
     );
 
-    const results = await this.prisma.$transaction(
-      dto.entries.map((entry) => {
-        // Teacher can't write notes
-        const note = isTeacherOnly ? undefined : entry.note;
-        return this.prisma.attendance.upsert({
-          where: {
-            groupId_studentId_date: {
-              groupId,
-              studentId: entry.studentId,
-              date: parsedDate,
-            },
-          },
-          create: {
+    const results: Awaited<ReturnType<typeof this.prisma.attendance.upsert>>[] = [];
+    for (const entry of dto.entries) {
+      // Teacher can't write notes
+      const note = isTeacherOnly ? undefined : entry.note;
+      const result = await this.prisma.attendance.upsert({
+        where: {
+          groupId_studentId_date: {
             groupId,
             studentId: entry.studentId,
             date: parsedDate,
-            status: entry.status,
-            note: note ?? null,
-            markedById: userId,
-            companyId: effectiveCompanyId,
           },
-          update: {
-            status: entry.status,
-            ...(note !== undefined && { note: note ?? null }),
-            markedById: userId,
-          },
-        });
-      }),
-    );
+        },
+        create: {
+          groupId,
+          studentId: entry.studentId,
+          date: parsedDate,
+          status: entry.status,
+          note: note ?? null,
+          markedById: userId,
+          companyId: effectiveCompanyId,
+        },
+        update: {
+          status: entry.status,
+          ...(note !== undefined && { note: note ?? null }),
+          markedById: userId,
+        },
+      });
+      results.push(result);
+    }
 
-    // Record entity history
-    for (const result of results) {
-      const existing = existingMap.get(result.studentId);
-      if (existing) {
-        await this.entityHistoryService.recordUpdate({
-          entityType: 'Attendance',
-          entityId: result.id,
-          oldValues: existing,
-          newValues: result,
-          changedById: userId,
-          companyId: effectiveCompanyId,
-        });
-      } else {
-        await this.entityHistoryService.recordCreate({
-          entityType: 'Attendance',
-          entityId: result.id,
-          newValues: result,
-          changedById: userId,
-          companyId: effectiveCompanyId,
-        });
-      }
+    // Record a single history entry per save action
+    const buildSummary = (
+      entries: { status: string }[],
+      actionLabel: string,
+    ) => ({
+      action: actionLabel,
+      sana: date,
+      jami: entries.length,
+      keldi: entries.filter((e) => e.status === 'PRESENT').length,
+      kelmadi: entries.filter((e) => e.status === 'ABSENT').length,
+      kechikdi: entries.filter((e) => e.status === 'LATE').length,
+      sababli: entries.filter((e) => e.status === 'EXCUSED').length,
+    });
+
+    const isUpdate = existingMap.size > 0;
+
+    if (isUpdate) {
+      const oldEntries = Array.from(existingMap.values());
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'GroupAttendance',
+        entityId: groupId,
+        oldValues: buildSummary(oldEntries, 'DAVOMAT_YANGILANDI'),
+        newValues: buildSummary(dto.entries, 'DAVOMAT_YANGILANDI'),
+        changedById: userId,
+        companyId: effectiveCompanyId,
+      });
+    } else {
+      await this.entityHistoryService.recordCreate({
+        entityType: 'GroupAttendance',
+        entityId: groupId,
+        newValues: buildSummary(dto.entries, 'DAVOMAT_OLINDI'),
+        changedById: userId,
+        companyId: effectiveCompanyId,
+      });
     }
 
     return { message: 'Davomat muvaffaqiyatli saqlandi', count: results.length };
@@ -426,6 +439,42 @@ export class AttendanceService {
       }
     }
 
+    // Get attendance notes (non-null) in the date range
+    const attendanceNotes = await this.prisma.attendance.findMany({
+      where: {
+        groupId,
+        date: { gte: rangeStart, lte: rangeEnd },
+        note: { not: null },
+      },
+      select: {
+        studentId: true,
+        date: true,
+        status: true,
+        note: true,
+        markedBy: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const notesMap: Record<
+      number,
+      { date: string; status: string; note: string; markedBy: string }[]
+    > = {};
+    for (const n of attendanceNotes) {
+      if (!n.note) continue;
+      if (!notesMap[n.studentId]) notesMap[n.studentId] = [];
+      notesMap[n.studentId].push({
+        date: n.date.toISOString().split('T')[0],
+        status: n.status,
+        note: n.note,
+        markedBy: n.markedBy
+          ? `${n.markedBy.firstName} ${n.markedBy.lastName}`
+          : 'Tizim',
+      });
+    }
+
     // Get enrolled students
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
@@ -466,6 +515,7 @@ export class AttendanceService {
         late: s.late,
         excused: s.excused,
         percentage,
+        notes: notesMap[e.student.id] ?? [],
       };
     });
 

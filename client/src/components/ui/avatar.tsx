@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "radix-ui"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -27,17 +28,31 @@ function Avatar({
 
 function AvatarImage({
   className,
+  onLoadingStatusChange,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+  const [loading, setLoading] = React.useState(false)
+
   return (
-    <AvatarPrimitive.Image
-      data-slot="avatar-image"
-      className={cn(
-        "aspect-square size-full rounded-full object-cover",
-        className
+    <>
+      {loading && (
+        <span className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-muted">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        </span>
       )}
-      {...props}
-    />
+      <AvatarPrimitive.Image
+        data-slot="avatar-image"
+        className={cn(
+          "aspect-square size-full rounded-full object-cover",
+          className
+        )}
+        onLoadingStatusChange={(s) => {
+          setLoading(s === "loading")
+          onLoadingStatusChange?.(s)
+        }}
+        {...props}
+      />
+    </>
   )
 }
 

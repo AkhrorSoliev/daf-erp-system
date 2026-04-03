@@ -20,13 +20,11 @@ import { useAuth } from "@/hooks/use-auth";
 export function AppSidebar() {
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
-  const isTeacherOnly =
-    (user?.roles.some((r) => r.id === 4) &&
-      !user?.roles.some((r) => [1, 2, 3].includes(r.id))) ??
-    false;
-  const filteredItems = isTeacherOnly
-    ? navItems.filter((item) => !item.hideForTeacher)
-    : navItems;
+  const userRoleIds = user?.roles.map((r) => r.id) ?? [];
+  const filteredItems = navItems.filter((item) => {
+    if (!item.visibleForRoles) return true;
+    return item.visibleForRoles.some((id) => userRoleIds.includes(id));
+  });
 
   return (
     <Sidebar collapsible="icon">
