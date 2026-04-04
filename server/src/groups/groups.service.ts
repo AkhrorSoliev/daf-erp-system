@@ -363,12 +363,13 @@ export class GroupsService {
     }));
   }
 
-  async getNextName(level: string, branchId: number) {
-    const count = await this.prisma.group.count({
-      where: { branchId, name: { startsWith: `${level}-` }, deletedAt: null },
+  async getNextName(branchId: number) {
+    const maxGroupNumber = await this.prisma.group.aggregate({
+      where: { branchId, name: { startsWith: '#' }, deletedAt: null },
+      _max: { groupNumber: true },
     });
-    const nextNumber = count + 1;
-    return { nextName: `${level}-${String(nextNumber).padStart(3, '0')}` };
+    const nextNumber = (maxGroupNumber._max?.groupNumber ?? 0) + 1;
+    return { nextName: `#${String(nextNumber).padStart(3, '0')}` };
   }
 
   async findStudentsByGroupId(groupId: string) {
@@ -472,20 +473,19 @@ export class GroupsService {
       endDate.setMonth(endDate.getMonth() + course.courseDuration);
     }
 
-    const prefix = dto.level || course.name;
     const teacherData = dto.teacherIds?.length
       ? { create: dto.teacherIds.map((teacherId) => ({ teacherId })) }
       : undefined;
 
     // Retry loop to handle race conditions on unique name
     for (let attempt = 0; attempt < 5; attempt++) {
-      const nameWhere = { branchId: dto.branchId, name: { startsWith: `${prefix}-` }, deletedAt: null };
+      const nameWhere = { branchId: dto.branchId, name: { startsWith: '#' }, deletedAt: null };
       const maxGroupNumber = await this.prisma.group.aggregate({
         where: nameWhere,
         _max: { groupNumber: true },
       });
       const groupNumber = (maxGroupNumber._max?.groupNumber ?? 0) + 1;
-      const autoName = dto.name || `${prefix}-${String(groupNumber).padStart(3, '0')}`;
+      const autoName = dto.name || `#${String(groupNumber).padStart(3, '0')}`;
 
       try {
         const group = await this.prisma.group.create({

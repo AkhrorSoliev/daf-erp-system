@@ -22,9 +22,13 @@ const STATUS_MAP: Record<
   4: { label: "To'xtatilgan", variant: "destructive" },
 };
 
-const DAYS_MAP: Record<string, string> = {
-  odd: "Toq kunlar",
-  even: "Juft kunlar",
+const WEEKDAY_SHORT: Record<string, string> = {
+  monday: "Du",
+  tuesday: "Se",
+  wednesday: "Chor",
+  thursday: "Pay",
+  friday: "Ju",
+  saturday: "Sha",
 };
 
 interface TeacherGroupsTableProps {
@@ -60,7 +64,9 @@ export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
         <TableBody>
           {groups.map((group, index) => {
             const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
-            const daysLabel = group.days ? DAYS_MAP[group.days] : null;
+            const daysLabel = group.exactDays?.length > 0
+              ? group.exactDays.map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ")
+              : null;
             const timeLabel =
               group.lessonStartTime && group.lessonEndTime
                 ? `${group.lessonStartTime}–${group.lessonEndTime}`

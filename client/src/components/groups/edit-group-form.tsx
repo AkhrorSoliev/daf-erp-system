@@ -210,19 +210,19 @@ export function EditGroupForm({
     }
   }, [smartTeachers, watchedTeacherId, form]);
 
-  // Fetch suggested name when level changes
+  // Fetch suggested name when branch is selected
   useEffect(() => {
-    if (!watchedLevel || !selectedBranch?.id) {
+    if (!selectedBranch?.id) {
       setSuggestedName("");
       return;
     }
     api
       .get("/groups/next-name", {
-        params: { level: watchedLevel, branchId: selectedBranch.id },
+        params: { branchId: selectedBranch.id },
       })
       .then((res) => setSuggestedName(res.data.nextName))
       .catch(() => setSuggestedName(""));
-  }, [watchedLevel, selectedBranch?.id]);
+  }, [selectedBranch?.id]);
 
   // Auto-calculate endTime using lessonMinutes
   useEffect(() => {
