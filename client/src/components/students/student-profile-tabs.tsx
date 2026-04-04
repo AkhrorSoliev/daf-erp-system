@@ -46,16 +46,11 @@ const STATUS_MAP: Record<
   4: { label: "To'xtatilgan", variant: "destructive" },
 };
 
-const DAYS_MAP: Record<string, string> = {
-  odd: "Toq kunlar",
-  even: "Juft kunlar",
-};
-
 const WEEKDAY_SHORT: Record<string, string> = {
   monday: "Du",
   tuesday: "Se",
-  wednesday: "Cho",
-  thursday: "Pa",
+  wednesday: "Chor",
+  thursday: "Pay",
   friday: "Ju",
   saturday: "Sha",
 };
@@ -71,11 +66,9 @@ function EmptyState({ message }: { message: string }) {
 function GroupCard({ group, onRemove }: { group: StudentGroup; onRemove?: (enrollmentId: string) => void }) {
   const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
 
-  const daysLabel = group.days
-    ? DAYS_MAP[group.days]
-    : group.exactDays.length > 0
-      ? group.exactDays.map((d) => WEEKDAY_SHORT[d] ?? d).join(", ")
-      : null;
+  const daysLabel = group.exactDays?.length > 0
+    ? group.exactDays.map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ")
+    : null;
 
   const timeLabel =
     group.lessonStartTime && group.lessonEndTime

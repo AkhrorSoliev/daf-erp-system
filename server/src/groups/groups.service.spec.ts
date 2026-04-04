@@ -134,4 +134,121 @@ describe('GroupsService — status methods', () => {
       );
     });
   });
+
+  describe('getNextName', () => {
+    it('returns #001 when no groups exist', async () => {
+      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: null } });
+
+      const result = await service.getNextName(1);
+
+      expect(result).toEqual({ nextName: '#001' });
+      expect(prisma.group.aggregate).toHaveBeenCalledWith({
+        where: { branchId: 1, name: { startsWith: '#' }, deletedAt: null },
+        _max: { groupNumber: true },
+      });
+    });
+
+    it('returns #004 when max groupNumber is 3', async () => {
+      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 3 } });
+
+      const result = await service.getNextName(1);
+
+      expect(result).toEqual({ nextName: '#004' });
+    });
+
+    it('returns #1000 when max groupNumber is 999', async () => {
+      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 999 } });
+
+      const result = await service.getNextName(1);
+
+      expect(result).toEqual({ nextName: '#1000' });
+    });
+  });
+
+  describe('create', () => {
+    const createDto = {
+      courseId: 'course-1',
+      branchId: 1,
+      level: 'A1',
+      exactDays: ['Mon', 'Wed', 'Fri'],
+      lessonStartTime: '09:00',
+      lessonEndTime: '10:30',
+    };
+
+    it('generates name in #001 format', async () => {
+      prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
+      prisma.course.findFirst.mockResolvedValue({ id: 'course-1', name: 'Deutsch', deletedAt: null });
+      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: null } });
+      prisma.group.create.mockResolvedValue({
+        ...mockGroup,
+        name: '#001',
+        groupNumber: 1,
+        course: { id: 'course-1', name: 'Deutsch' },
+        room: null,
+        branch: { id: 1, name: 'Branch' },
+        teachers: [],
+        _count: { enrollments: 0 },
+      });
+
+      await service.create(createDto as any, 1001, 1);
+
+      expect(prisma.group.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: '#001',
+            groupNumber: 1,
+          }),
+        }),
+      );
+    });
+
+    it('uses custom name when dto.name is provided', async () => {
+      prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
+      prisma.course.findFirst.mockResolvedValue({ id: 'course-1', name: 'Deutsch', deletedAt: null });
+      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 5 } });
+      prisma.group.create.mockResolvedValue({
+        ...mockGroup,
+        name: 'Custom Group',
+        groupNumber: 6,
+        course: { id: 'course-1', name: 'Deutsch' },
+        room: null,
+        branch: { id: 1, name: 'Branch' },
+        teachers: [],
+        _count: { enrollments: 0 },
+      });
+
+      await service.create({ ...createDto, name: 'Custom Group' } as any, 1001, 1);
+
+      expect(prisma.group.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: 'Custom Group',
+          }),
+        }),
+      );
+    });
+
+    it('queries aggregate with startsWith # (not level prefix)', async () => {
+      prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
+      prisma.course.findFirst.mockResolvedValue({ id: 'course-1', name: 'Deutsch', deletedAt: null });
+      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 10 } });
+      prisma.group.create.mockResolvedValue({
+        ...mockGroup,
+        name: '#011',
+        groupNumber: 11,
+        course: { id: 'course-1', name: 'Deutsch' },
+        room: null,
+        branch: { id: 1, name: 'Branch' },
+        teachers: [],
+        _count: { enrollments: 0 },
+      });
+
+      await service.create(createDto as any, 1001, 1);
+
+      expect(prisma.group.aggregate).toHaveBeenCalledWith({
+        where: { branchId: 1, name: { startsWith: '#' }, deletedAt: null },
+        _max: { groupNumber: true },
+      });
+    });
+  });
 });

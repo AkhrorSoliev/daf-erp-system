@@ -109,10 +109,9 @@ export class GroupsController {
 
   @Get('next-name')
   getNextName(
-    @Query('level') level: string,
     @Query('branchId') branchId: string,
   ) {
-    return this.groupsService.getNextName(level, Number(branchId));
+    return this.groupsService.getNextName(Number(branchId));
   }
 
   @Get(':id/students')
