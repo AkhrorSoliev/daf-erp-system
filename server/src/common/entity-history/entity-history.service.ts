@@ -133,7 +133,15 @@ export class EntityHistoryService {
         skip,
         take: pageSize,
         include: {
-          changedBy: { select: { id: true, firstName: true, lastName: true, photo: true } },
+          changedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              photo: true,
+              roles: { select: { role: { select: { id: true } } } },
+            },
+          },
         },
       }),
       this.prisma.entityHistory.count({

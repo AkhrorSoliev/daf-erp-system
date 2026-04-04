@@ -9,8 +9,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
+import { QrAttendanceService } from './qr-attendance.service';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 import { AttendanceDatesQueryDto, AttendanceStatsQueryDto } from './dto/attendance-query.dto';
+import {
+  StartQrSessionDto,
+  RotateQrTokenDto,
+  StopQrSessionDto,
+} from './dto/qr-session.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,6 +25,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AttendanceController {
   constructor(
     private attendanceService: AttendanceService,
+    private qrAttendanceService: QrAttendanceService,
     private prisma: PrismaService,
   ) {}
 
@@ -109,6 +116,63 @@ export class AttendanceController {
       groupId,
       query.startDate,
       query.endDate,
+    );
+  }
+
+  // ── QR Davomat ──
+
+  @Post(':groupId/qr-session/start')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  async startQrSession(
+    @Param('groupId') groupId: string,
+    @Body() dto: StartQrSessionDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    await this.verifyTeacherAccess(groupId, roles, userId);
+    return this.qrAttendanceService.startSession(
+      groupId,
+      dto.date,
+      userId,
+      companyId,
+    );
+  }
+
+  @Post(':groupId/qr-session/rotate')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  async rotateQrToken(
+    @Param('groupId') groupId: string,
+    @Body() dto: RotateQrTokenDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    await this.verifyTeacherAccess(groupId, roles, userId);
+    return this.qrAttendanceService.rotateToken(
+      groupId,
+      dto.date,
+      dto.sessionId,
+      userId,
+    );
+  }
+
+  @Post(':groupId/qr-session/stop')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  async stopQrSession(
+    @Param('groupId') groupId: string,
+    @Body() dto: StopQrSessionDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    await this.verifyTeacherAccess(groupId, roles, userId);
+    return this.qrAttendanceService.stopSession(
+      groupId,
+      dto.date,
+      dto.sessionId,
+      userId,
     );
   }
 }

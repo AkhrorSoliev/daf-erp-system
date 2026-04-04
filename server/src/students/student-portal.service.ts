@@ -85,14 +85,30 @@ export class StudentPortalService {
 
     const { enrollments, branches, dateOfBirth, userId, ...rest } = student;
 
-    // Login ni User jadvalidan olish
+    // User ma'lumotlarini olish va sync qilish
     let login: string | null = null;
     if (userId) {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { login: true },
+        select: { login: true, photo: true, firstName: true, lastName: true },
       });
       login = user?.login ?? null;
+
+      // Student va User ma'lumotlarini sync (history da avatar/ism to'g'ri chiqishi uchun)
+      if (
+        user?.photo !== rest.photo ||
+        user?.firstName !== rest.firstName ||
+        user?.lastName !== rest.lastName
+      ) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: {
+            photo: rest.photo,
+            firstName: rest.firstName,
+            lastName: rest.lastName,
+          },
+        });
+      }
     }
 
     return {
@@ -173,6 +189,69 @@ export class StudentPortalService {
     }));
   }
 
+  async getAttendanceHistory(studentId: number) {
+    // O'quvchining barcha guruhlarini olish
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { studentId, deletedAt: null },
+      select: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+            exactDays: true,
+            lessonStartTime: true,
+            lessonEndTime: true,
+            course: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const groups = enrollments.map((e) => e.group);
+
+    // Har bir guruh uchun davomat yozuvlarini olish
+    const result: any[] = [];
+    for (const group of groups) {
+      const records = await this.prisma.attendance.findMany({
+        where: { studentId, groupId: group.id },
+        orderBy: { date: 'desc' },
+        select: {
+          date: true,
+          status: true,
+          note: true,
+        },
+      });
+
+      // Statistika
+      let present = 0, absent = 0, late = 0, excused = 0;
+      for (const r of records) {
+        if (r.status === 'PRESENT') present++;
+        else if (r.status === 'ABSENT') absent++;
+        else if (r.status === 'LATE') late++;
+        else if (r.status === 'EXCUSED') excused++;
+      }
+      const total = records.length;
+      const percentage = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+
+      result.push({
+        groupId: group.id,
+        groupName: group.name,
+        courseName: group.course?.name ?? null,
+        lessonTime: group.lessonStartTime && group.lessonEndTime
+          ? `${group.lessonStartTime} – ${group.lessonEndTime}`
+          : null,
+        stats: { total, present, absent, late, excused, percentage },
+        records: records.map((r) => ({
+          date: r.date.toISOString().split('T')[0],
+          status: r.status,
+          note: r.note,
+        })),
+      });
+    }
+
+    return result;
+  }
+
   async getAttendanceStats(studentId: number) {
     const grouped = await this.prisma.attendance.groupBy({
       by: ['status'],
@@ -213,7 +292,7 @@ export class StudentPortalService {
   async updateName(studentId: number, dto: UpdatePortalNameDto, userId: number) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, deletedAt: null },
-      select: { id: true, firstName: true, lastName: true, companyId: true },
+      select: { id: true, firstName: true, lastName: true, companyId: true, userId: true },
     });
 
     if (!student) {
@@ -226,13 +305,21 @@ export class StudentPortalService {
       select: { id: true, firstName: true, lastName: true },
     });
 
+    // User jadvalini ham yangilash (history da to'g'ri ism chiqishi uchun)
+    if (student.userId) {
+      await this.prisma.user.update({
+        where: { id: student.userId },
+        data: { firstName: dto.firstName, lastName: dto.lastName },
+      });
+    }
+
     await this.entityHistoryService.recordUpdate({
       entityType: 'Student',
       entityId: studentId,
       oldValues: { firstName: student.firstName, lastName: student.lastName },
       newValues: { firstName: dto.firstName, lastName: dto.lastName },
       changedById: userId,
-      companyId: student.companyId,
+      companyId: student.companyId ?? undefined,
     });
 
     return updated;
@@ -270,7 +357,7 @@ export class StudentPortalService {
         oldValues: { parol: '***' },
         newValues: { parol: 'o\'zgartirildi' },
         changedById: userId,
-        companyId: student?.companyId,
+        companyId: student?.companyId ?? undefined,
       });
     }
 
@@ -284,7 +371,7 @@ export class StudentPortalService {
 
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, deletedAt: null },
-      select: { id: true, photo: true, companyId: true },
+      select: { id: true, photo: true, companyId: true, userId: true },
     });
 
     if (!student) {
@@ -302,13 +389,21 @@ export class StudentPortalService {
       data: { photo: photoUrl },
     });
 
+    // User jadvalini ham yangilash
+    if (student.userId) {
+      await this.prisma.user.update({
+        where: { id: student.userId },
+        data: { photo: photoUrl },
+      });
+    }
+
     await this.entityHistoryService.recordUpdate({
       entityType: 'Student',
       entityId: studentId,
-      oldValues: { photo: student.photo },
-      newValues: { photo: photoUrl },
+      oldValues: { rasm: 'eski rasm' },
+      newValues: { rasm: 'yangi rasm yuklandi' },
       changedById: userId,
-      companyId: student.companyId,
+      companyId: student.companyId ?? undefined,
     });
 
     return { photo: photoUrl };

@@ -1,8 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import api from "@/lib/api";
-import { CheckCircle2, CalendarClock } from "lucide-react";
+import { CheckCircle2, CalendarClock, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface QuickStatsProps {
@@ -15,24 +16,30 @@ export function StudentQuickStats({ nextClass }: QuickStatsProps) {
     queryFn: () => api.get("/student-portal/attendance/stats").then((r) => r.data),
   });
 
-  const items = [
-    { label: "Davomat", value: isLoading ? null : stats ? `${stats.percentage}%` : "—", icon: CheckCircle2 },
-    { label: "Keyingi dars", value: nextClass ?? "—", icon: CalendarClock },
-  ];
-
   return (
     <div className="rounded-lg border bg-card divide-y">
-      {items.map((item) => (
-        <div key={item.label} className="flex items-center gap-3 px-4 py-3">
-          <item.icon className="size-4 text-muted-foreground shrink-0" />
-          <span className="text-sm text-muted-foreground flex-1">{item.label}</span>
-          {item.value === null ? (
-            <Skeleton className="h-4 w-8" />
-          ) : (
-            <span className="text-sm font-semibold">{item.value}</span>
-          )}
-        </div>
-      ))}
+      <Link
+        href="/portal/attendance"
+        className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+      >
+        <CheckCircle2 className="size-4 text-muted-foreground shrink-0" />
+        <span className="text-sm text-muted-foreground flex-1">Davomat</span>
+        {isLoading ? (
+          <Skeleton className="h-4 w-8" />
+        ) : (
+          <span className="text-sm font-semibold">{stats ? `${stats.percentage}%` : "—"}</span>
+        )}
+        <ChevronRight className="size-4 text-muted-foreground" />
+      </Link>
+      <Link
+        href="/portal/schedule"
+        className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+      >
+        <CalendarClock className="size-4 text-muted-foreground shrink-0" />
+        <span className="text-sm text-muted-foreground flex-1">Keyingi dars</span>
+        <span className="text-sm font-semibold">{nextClass ?? "—"}</span>
+        <ChevronRight className="size-4 text-muted-foreground" />
+      </Link>
     </div>
   );
 }

@@ -48,7 +48,7 @@ interface HistoryRecord {
   action: "CREATE" | "UPDATE" | "DELETE" | "STATUS_CHANGE" | "RESTORE";
   oldValues: Record<string, unknown> | null;
   newValues: Record<string, unknown> | null;
-  changedBy: { id: number; firstName: string; lastName: string; photo: string | null } | null;
+  changedBy: { id: number; firstName: string; lastName: string; photo: string | null; roles?: { role: { id: number } }[] } | null;
   createdAt: string;
 }
 
@@ -421,28 +421,39 @@ export function EntityHistoryTable({ entityType, entityId }: EntityHistoryTableP
                     {(page - 1) * pageSize + index + 1}
                   </TableCell>
 
-                  {/* Kim — avatar + ism, clickable */}
+                  {/* Kim — avatar + ism */}
                   <TableCell>
-                    {record.changedBy ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            className="flex items-center gap-2 hover:underline text-left"
-                            onClick={() => router.push(`/settings/employees/${record.changedBy!.id}`)}
-                          >
-                            <Avatar className="size-6">
-                              {record.changedBy.photo && <AvatarImage src={record.changedBy.photo} />}
-                              <AvatarFallback className="text-[8px] font-medium">
-                                {`${record.changedBy.firstName?.[0] ?? ''}${record.changedBy.lastName?.[0] ?? ''}`}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">{record.changedBy.firstName} {record.changedBy.lastName}</span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Profilga o&apos;tish</TooltipContent>
-                      </Tooltip>
-                    ) : (
+                    {record.changedBy ? (() => {
+                      const isStudent = record.changedBy!.roles?.some((r) => r.role.id === 6);
+                      const content = (
+                        <span className="flex items-center gap-2 text-left">
+                          <Avatar className="size-6">
+                            {record.changedBy!.photo && <AvatarImage src={record.changedBy!.photo} />}
+                            <AvatarFallback className="text-[8px] font-medium">
+                              {`${record.changedBy!.firstName?.[0] ?? ''}${record.changedBy!.lastName?.[0] ?? ''}`}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            {record.changedBy!.firstName} {record.changedBy!.lastName}
+                            {isStudent && <span className="text-xs text-muted-foreground ml-1">(o'quvchi)</span>}
+                          </span>
+                        </span>
+                      );
+                      return isStudent ? content : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex items-center gap-2 hover:underline text-left"
+                              onClick={() => router.push(`/settings/employees/${record.changedBy!.id}`)}
+                            >
+                              {content}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Profilga o&apos;tish</TooltipContent>
+                        </Tooltip>
+                      );
+                    })() : (
                       <span className="text-sm text-muted-foreground">Tizim</span>
                     )}
                   </TableCell>

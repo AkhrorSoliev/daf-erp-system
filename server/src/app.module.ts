@@ -26,6 +26,7 @@ import { CommentsModule } from './comments/comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { AiModule } from './ai/ai.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -35,6 +36,7 @@ import { JwtAuthGuard } from './common/guards';
     EventEmitterModule.forRoot(),
     PrismaModule,
     RedisModule,
+    AiModule,
     AuthModule,
     UsersModule,
     BranchesModule,

@@ -1,0 +1,331 @@
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { EntityHistoryService } from '../common/entity-history';
+import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
+
+interface QrSession {
+  sessionId: string;
+  teacherId: number;
+  companyId: number;
+  currentToken: string;
+  createdAt: string;
+}
+
+interface QrToken {
+  groupId: string;
+  date: string;
+  sessionId: string;
+  teacherId: number;
+  companyId: number;
+}
+
+const SESSION_TTL = 7200; // 2 soat
+const TOKEN_TTL = 50; // 50 soniya (45s + 5s grace)
+
+@Injectable()
+export class QrAttendanceService {
+  constructor(
+    private prisma: PrismaService,
+    private redis: RedisService,
+    private notificationsGateway: NotificationsGateway,
+    private entityHistoryService: EntityHistoryService,
+  ) {}
+
+  async startSession(
+    groupId: string,
+    date: string,
+    teacherId: number,
+    companyId: number,
+  ) {
+    // Guruhni tekshirish
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!group) {
+      throw new BadRequestException('Guruh topilmadi');
+    }
+
+    // Mavjud sessiyani tekshirish
+    const sessionKey = `qr-session:${groupId}:${date}`;
+    const existingSession = await this.redis.get(sessionKey);
+    if (existingSession) {
+      const parsed: QrSession = JSON.parse(existingSession);
+      // Agar boshqa teacher boshlagan bo'lsa
+      if (parsed.teacherId !== teacherId) {
+        throw new BadRequestException(
+          'Bu sana uchun boshqa o\'qituvchi allaqachon QR sessiya boshlagan',
+        );
+      }
+      // Agar o'sha teacher qayta boshlasa — eski tokenni o'chirib, yangi sessiya
+      await this.redis.del(`qr-token:${parsed.currentToken}`);
+    }
+
+    const sessionId = randomUUID();
+    const token = randomUUID();
+
+    // Jami o'quvchilar soni
+    const totalStudents = await this.prisma.enrollment.count({
+      where: {
+        groupId,
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+        student: { deletedAt: null },
+      },
+    });
+
+    // Sessiyani Redis ga yozish
+    const session: QrSession = {
+      sessionId,
+      teacherId,
+      companyId,
+      currentToken: token,
+      createdAt: new Date().toISOString(),
+    };
+    await this.redis.set(sessionKey, JSON.stringify(session), 'EX', SESSION_TTL);
+
+    // Tokenni Redis ga yozish
+    const tokenData: QrToken = {
+      groupId,
+      date,
+      sessionId,
+      teacherId,
+      companyId,
+    };
+    await this.redis.set(
+      `qr-token:${token}`,
+      JSON.stringify(tokenData),
+      'EX',
+      TOKEN_TTL,
+    );
+
+    return { sessionId, token, expiresIn: 45, totalStudents };
+  }
+
+  async rotateToken(
+    groupId: string,
+    date: string,
+    sessionId: string,
+    teacherId: number,
+  ) {
+    const sessionKey = `qr-session:${groupId}:${date}`;
+    const raw = await this.redis.get(sessionKey);
+    if (!raw) {
+      throw new BadRequestException('QR sessiya topilmadi yoki muddati tugagan');
+    }
+
+    const session: QrSession = JSON.parse(raw);
+    if (session.sessionId !== sessionId) {
+      throw new BadRequestException('Sessiya mos kelmadi');
+    }
+    if (session.teacherId !== teacherId) {
+      throw new ForbiddenException('Faqat sessiya egasi tokenni yangilashi mumkin');
+    }
+
+    // Eski tokenni o'chirish
+    await this.redis.del(`qr-token:${session.currentToken}`);
+
+    // Yangi token
+    const newToken = randomUUID();
+    session.currentToken = newToken;
+    await this.redis.set(sessionKey, JSON.stringify(session), 'EX', SESSION_TTL);
+
+    const tokenData: QrToken = {
+      groupId,
+      date,
+      sessionId,
+      teacherId: session.teacherId,
+      companyId: session.companyId,
+    };
+    await this.redis.set(
+      `qr-token:${newToken}`,
+      JSON.stringify(tokenData),
+      'EX',
+      TOKEN_TTL,
+    );
+
+    return { token: newToken, expiresIn: 45 };
+  }
+
+  async stopSession(
+    groupId: string,
+    date: string,
+    sessionId: string,
+    teacherId: number,
+  ) {
+    const sessionKey = `qr-session:${groupId}:${date}`;
+    const raw = await this.redis.get(sessionKey);
+    if (!raw) {
+      return { message: 'Sessiya allaqachon tugatilgan' };
+    }
+
+    const session: QrSession = JSON.parse(raw);
+    if (session.sessionId !== sessionId || session.teacherId !== teacherId) {
+      throw new ForbiddenException('Faqat sessiya egasi tugatishi mumkin');
+    }
+
+    // Tokenni va sessiyani o'chirish
+    await this.redis.del(`qr-token:${session.currentToken}`);
+    await this.redis.del(sessionKey);
+
+    return { message: 'QR sessiya tugatildi' };
+  }
+
+  async scanQr(
+    token: string,
+    studentId: number,
+    userId: number,
+    companyId: number,
+  ) {
+    // Tokenni Redis dan olish
+    const raw = await this.redis.get(`qr-token:${token}`);
+    if (!raw) {
+      throw new BadRequestException("QR kod eskirgan yoki noto'g'ri");
+    }
+
+    const tokenData: QrToken = JSON.parse(raw);
+    const { groupId, date, teacherId } = tokenData;
+
+    // O'quvchining guruhga yozilganligini tekshirish
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId,
+        groupId,
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+      },
+    });
+    if (!enrollment) {
+      throw new BadRequestException('Siz bu guruhga yozilmagansiz');
+    }
+
+    // Allaqachon belgilangan bo'lsa
+    const existing = await this.prisma.attendance.findUnique({
+      where: {
+        groupId_studentId_date: {
+          groupId,
+          studentId,
+          date: new Date(date),
+        },
+      },
+    });
+    // Guruh ma'lumotlarini olish
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { name: true, exactDays: true, startDate: true },
+    });
+
+    // Dars raqamini hisoblash
+    let lessonNumber: number | null = null;
+    if (group?.startDate && group.exactDays?.length) {
+      const dayNameToJs: Record<string, number> = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+        thursday: 4, friday: 5, saturday: 6,
+      };
+      const allowedDays = new Set(
+        group.exactDays.map((d) => dayNameToJs[d.toLowerCase()]),
+      );
+      const start = new Date(group.startDate);
+      const target = new Date(date);
+      let count = 0;
+      const current = new Date(start);
+      while (current <= target) {
+        if (allowedDays.has(current.getDay())) {
+          count++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      lessonNumber = count;
+    }
+
+    if (existing && existing.status === AttendanceStatus.PRESENT) {
+      return {
+        message: 'Davomat allaqachon belgilangan',
+        alreadyMarked: true,
+        status: AttendanceStatus.PRESENT,
+        groupName: group?.name,
+        lessonNumber,
+      };
+    }
+
+    // Davomat yozish (upsert)
+    const oldValues = existing ? { ...existing } : null;
+    const attendance = await this.prisma.attendance.upsert({
+      where: {
+        groupId_studentId_date: {
+          groupId,
+          studentId,
+          date: new Date(date),
+        },
+      },
+      create: {
+        groupId,
+        studentId,
+        date: new Date(date),
+        status: AttendanceStatus.PRESENT,
+        markedById: userId,
+        companyId,
+      },
+      update: {
+        status: AttendanceStatus.PRESENT,
+        markedById: userId,
+      },
+    });
+
+    // Entity history
+    if (oldValues) {
+      this.entityHistoryService.recordUpdate({
+        entityType: 'Attendance',
+        entityId: attendance.id,
+        oldValues,
+        newValues: attendance,
+        changedById: userId,
+        companyId,
+      });
+    } else {
+      this.entityHistoryService.recordCreate({
+        entityType: 'Attendance',
+        entityId: attendance.id,
+        newValues: attendance,
+        changedById: userId,
+        companyId,
+      });
+    }
+
+    // O'quvchi ma'lumotlarini olish
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: { firstName: true, lastName: true, photo: true },
+    });
+
+    // Teacher ga SSE orqali real-time xabar yuborish
+    this.notificationsGateway.sendToUser(teacherId, {
+      type: 'qr-attendance',
+      groupId,
+      date,
+      studentId,
+      status: AttendanceStatus.PRESENT,
+      student: {
+        firstName: student?.firstName,
+        lastName: student?.lastName,
+        photo: student?.photo,
+      },
+      scannedAt: new Date().toISOString(),
+    });
+
+    return {
+      message: 'Davomat muvaffaqiyatli belgilandi',
+      status: AttendanceStatus.PRESENT,
+      alreadyMarked: false,
+      groupName: group?.name,
+      lessonNumber,
+    };
+  }
+}

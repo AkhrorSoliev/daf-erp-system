@@ -11,6 +11,7 @@ import {
   X,
   AlarmClock,
   ShieldCheck,
+  QrCode,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import toast from "react-hot-toast";
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { QrAttendanceDialog } from "./qr-attendance-dialog";
 
 type Status = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -115,6 +117,7 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
   // Format date for display
   const [y, m, d] = date.split("-");
@@ -273,22 +276,41 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
       {/* Quick actions */}
       {!loading && students.length > 0 && (
         <div className="flex items-center justify-between">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={markAllPresent}
-                className="text-green-700 dark:text-green-400"
-              >
-                <UserCheck className="mr-1.5 size-4" />
-                Barchasiga — Keldi
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Barcha o&apos;quvchilarni &quot;Keldi&quot; deb belgilash
-            </TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={markAllPresent}
+                  className="text-green-700 dark:text-green-400"
+                >
+                  <UserCheck className="mr-1.5 size-4" />
+                  Barchasiga — Keldi
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Barcha o&apos;quvchilarni &quot;Keldi&quot; deb belgilash
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQrDialogOpen(true)}
+                  className="text-primary"
+                >
+                  <QrCode className="mr-1.5 size-4" />
+                  QR davomat
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                QR kod orqali davomat olish
+              </TooltipContent>
+            </Tooltip>
+          </div>
 
           {/* Status legend */}
           <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
@@ -474,6 +496,16 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
           </Button>
         </div>
       )}
+
+      {/* QR Davomat Dialog */}
+      <QrAttendanceDialog
+        groupId={group.id}
+        groupName={group.name}
+        date={date}
+        open={qrDialogOpen}
+        onOpenChange={setQrDialogOpen}
+        onClose={fetchAttendance}
+      />
     </div>
   );
 }
