@@ -55,7 +55,7 @@ export function EmployeeProfileTabs({ employee, onCommentChange }: EmployeeProfi
 
   return (
     <Tabs defaultValue="izohlar" className="w-full" onValueChange={handleTabChange}>
-      <TabsList className="w-full justify-start overflow-x-auto">
+      <TabsList className="w-full justify-start overflow-x-auto sticky top-0 z-10 bg-background md:static">
         <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
         <TabsTrigger value="tarix">Tarix</TabsTrigger>
       </TabsList>

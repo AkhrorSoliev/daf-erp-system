@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
+import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -23,13 +24,6 @@ const ROLE_LABELS: Record<string, string> = {
   Teacher: "O'qituvchi",
   Cashier: "Kassir",
 };
-
-function formatPhone(phone: string): string {
-  if (phone.length === 9) {
-    return `+998 ${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7)}`;
-  }
-  return phone;
-}
 
 interface EmployeeProfileCardProps {
   employee: EmployeeUser;

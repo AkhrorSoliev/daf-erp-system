@@ -97,7 +97,14 @@ export function StudentsClient() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <StudentsStats students={students} loading={loading} isTeacher={isTeacher} />
+        <div>
+          <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
+            O&apos;quvchilar
+          </h1>
+          <p className="text-muted-foreground">
+            Barcha o&apos;quvchilar ro&apos;yxati
+          </p>
+        </div>
         {canManage && (
           selectedBranch ? (
             <Tooltip>
@@ -132,6 +139,7 @@ export function StudentsClient() {
           )
         )}
       </div>
+      <StudentsStats students={students} loading={loading} isTeacher={isTeacher} />
       <StudentsFilters filters={filters} onFilterChange={handleFilterChange} isTeacher={isTeacher} />
       {loading ? (
         <div className="overflow-x-auto rounded-md border">

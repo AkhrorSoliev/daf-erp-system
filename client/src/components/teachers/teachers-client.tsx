@@ -98,8 +98,8 @@ export function TeachersClient() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative max-w-sm flex-1">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Ism bo'yicha qidirish..."
@@ -108,19 +108,19 @@ export function TeachersClient() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           {canManageTeachers && (
             selectedBranch ? (
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={handleCopyLink}>
+                    <Button variant="outline" size="icon" className="sm:size-auto sm:px-4" onClick={handleCopyLink}>
                       {copied ? (
-                        <Check className="mr-2 size-4 text-green-500" />
+                        <Check className="size-4 text-green-500 sm:mr-2" />
                       ) : (
-                        <Copy className="mr-2 size-4" />
+                        <Copy className="size-4 sm:mr-2" />
                       )}
-                      {copied ? "Nusxalandi" : "Havola olish"}
+                      <span className="hidden sm:inline">{copied ? "Nusxalandi" : "Havola olish"}</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -161,9 +161,9 @@ export function TeachersClient() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span tabIndex={0}>
-                    <Button variant="outline" disabled>
-                      <Copy className="mr-2 size-4" />
-                      Havola olish
+                    <Button variant="outline" size="icon" className="sm:size-auto sm:px-4" disabled>
+                      <Copy className="size-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Havola olish</span>
                     </Button>
                   </span>
                 </TooltipTrigger>
@@ -175,17 +175,22 @@ export function TeachersClient() {
           )}
           {canManageTeachers && (
             selectedBranch ? (
-              <Button onClick={openAddDrawer}>
-                <Plus className="mr-2 size-4" />
-                Yangi o&apos;qituvchi
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={openAddDrawer} size="icon" className="sm:size-auto sm:px-4">
+                    <Plus className="size-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Yangi o&apos;qituvchi</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="sm:hidden">Yangi o&apos;qituvchi</TooltipContent>
+              </Tooltip>
             ) : (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span tabIndex={0}>
-                    <Button disabled>
-                      <Plus className="mr-2 size-4" />
-                      Yangi o&apos;qituvchi
+                    <Button disabled size="icon" className="sm:size-auto sm:px-4">
+                      <Plus className="size-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Yangi o&apos;qituvchi</span>
                     </Button>
                   </span>
                 </TooltipTrigger>

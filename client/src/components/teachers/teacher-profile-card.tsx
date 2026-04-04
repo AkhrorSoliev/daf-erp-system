@@ -28,13 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useAuth } from "@/hooks/use-auth";
-
-function formatPhone(phone: string): string {
-  if (phone.length === 9) {
-    return `+998 ${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)}`;
-  }
-  return phone;
-}
+import { formatPhone } from "@/lib/format-utils";
 
 interface TeacherProfileCardProps {
   teacher: TeacherData;

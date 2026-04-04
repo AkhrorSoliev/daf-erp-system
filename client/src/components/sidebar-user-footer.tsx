@@ -25,13 +25,18 @@ function getInitials(name: string) {
 
 export function SidebarUserFooter() {
   const { user, logout } = useAuth();
-  const { isMobile, setOpenLock } = useSidebar();
+  const { isMobile, setOpenLock, setOpenMobile } = useSidebar();
   const router = useRouter();
 
   if (!user) return null;
 
   const roleName = user.roles[0]?.name ?? "";
   const fullName = `${user.firstName} ${user.lastName}`;
+
+  const handleNavigate = (path: string) => {
+    if (isMobile) setOpenMobile(false);
+    router.push(path);
+  };
 
   return (
     <SidebarFooter>
@@ -65,7 +70,7 @@ export function SidebarUserFooter() {
               align="end"
               className="w-48"
             >
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
+              <DropdownMenuItem onClick={() => handleNavigate("/profile")}>
                 <User className="mr-2 size-4" />
                 Profil
               </DropdownMenuItem>
