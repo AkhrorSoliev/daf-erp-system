@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { Loader2 } from "lucide-react";
+import { Building2, ChevronRight, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { SettingsPageHeader } from "./settings-page-header";
 import { GeneralSettingsSidebar } from "./general-settings-sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
 
 interface CompanyData {
@@ -31,6 +32,8 @@ export function GeneralSettingsClient() {
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [mobileView, setMobileView] = useState<"menu" | "form">("menu");
+  const isMobile = useIsMobile();
   const authUser = useAuth((s) => s.user);
   const canEdit = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
@@ -81,72 +84,111 @@ export function GeneralSettingsClient() {
     );
   }
 
+  // Mobile: menu → form drill-down
+  if (isMobile && mobileView === "menu") {
+    return (
+      <div className="space-y-4">
+        <SettingsPageHeader
+          title="Umumiy sozlamalar"
+          description="Kompaniya va tizim sozlamalari"
+        />
+        <div className="rounded-lg border bg-card divide-y">
+          <button
+            type="button"
+            onClick={() => setMobileView("form")}
+            className="flex w-full items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50 rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <Building2 className="size-5 text-muted-foreground" />
+              <span className="text-sm font-medium">Kompaniya ma&apos;lumotlari</span>
+            </div>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const companyForm = (
+    <div className="flex-1 min-w-0 space-y-6">
+      <SettingsPageHeader
+        title="Kompaniya ma'lumotlari"
+        description="Kompaniya nomi, telefon va boshqa asosiy ma'lumotlar"
+      />
+
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Kompaniya nomi</Label>
+              <Input
+                id="name"
+                placeholder="Kompaniya nomi"
+                disabled={!canEdit}
+                {...form.register("name", {
+                  required: "Kompaniya nomi kiritilishi shart",
+                })}
+              />
+              {form.formState.errors.name && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.name.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Telefon raqam</Label>
+              <Controller
+                name="phone"
+                control={form.control}
+                render={({ field }) => (
+                  <PhoneInput
+                    id="phone"
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={!canEdit}
+                  />
+                )}
+              />
+            </div>
+
+          </div>
+        </div>
+
+        <Separator />
+
+        {canEdit && (
+          <div className="flex justify-end">
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                  Saqlanmoqda...
+                </>
+              ) : (
+                "Saqlash"
+              )}
+            </Button>
+          </div>
+        )}
+      </form>
+    </div>
+  );
+
+  // Mobile: form view (back button is in DashboardHeader)
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {companyForm}
+      </div>
+    );
+  }
+
+  // Desktop: sidebar + form
   return (
     <div className="flex gap-8">
       <GeneralSettingsSidebar />
-      <div className="flex-1 min-w-0 space-y-6">
-        <SettingsPageHeader
-          title="Kompaniya ma'lumotlari"
-          description="Kompaniya nomi, telefon va boshqa asosiy ma'lumotlar"
-        />
-
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Kompaniya nomi</Label>
-                <Input
-                  id="name"
-                  placeholder="Kompaniya nomi"
-                  disabled={!canEdit}
-                  {...form.register("name", {
-                    required: "Kompaniya nomi kiritilishi shart",
-                  })}
-                />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">Telefon raqam</Label>
-                <Controller
-                  name="phone"
-                  control={form.control}
-                  render={({ field }) => (
-                    <PhoneInput
-                      id="phone"
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={!canEdit}
-                    />
-                  )}
-                />
-              </div>
-
-            </div>
-          </div>
-
-          <Separator />
-
-          {canEdit && (
-            <div className="flex justify-end">
-              <Button type="submit" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-1.5 size-4 animate-spin" />
-                    Saqlanmoqda...
-                  </>
-                ) : (
-                  "Saqlash"
-                )}
-              </Button>
-            </div>
-          )}
-        </form>
-      </div>
+      {companyForm}
     </div>
   );
 }

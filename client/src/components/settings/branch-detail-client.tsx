@@ -103,7 +103,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 hidden sm:inline-flex"
               onClick={() => router.push("/settings/branches")}
             >
               <ArrowLeft className="h-4 w-4" />

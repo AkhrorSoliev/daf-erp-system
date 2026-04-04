@@ -96,7 +96,7 @@ export function BranchesSettingsClient() {
           placeholder="Filial nomi yoki manzil bo'yicha qidirish..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
       </div>
 
