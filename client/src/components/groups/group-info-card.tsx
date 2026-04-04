@@ -33,14 +33,7 @@ const STATUS_MAP: Record<
   4: { label: "To'xtatilgan", variant: "destructive" },
 };
 
-const WEEKDAY_LABELS: Record<string, string> = {
-  monday: "Du",
-  tuesday: "Se",
-  wednesday: "Chor",
-  thursday: "Pay",
-  friday: "Ju",
-  saturday: "Sha",
-};
+import { formatWeekdays } from "@/lib/weekdays";
 
 function formatPrice(price: number) {
   return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -78,7 +71,7 @@ export function GroupInfoCard({ group, commentKey, onWriteComment }: GroupInfoCa
   const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
 
   const daysLabel = group.exactDays?.length > 0
-    ? group.exactDays.map((d: string) => WEEKDAY_LABELS[d] ?? d).join(", ")
+    ? formatWeekdays(group.exactDays)
     : null;
 
   const timeLabel =

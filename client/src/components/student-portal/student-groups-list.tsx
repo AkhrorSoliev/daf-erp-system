@@ -10,15 +10,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-const WEEKDAY_SHORT: Record<string, string> = {
-  MONDAY: "Du",
-  TUESDAY: "Se",
-  WEDNESDAY: "Chor",
-  THURSDAY: "Pay",
-  FRIDAY: "Ju",
-  SATURDAY: "Sha",
-  SUNDAY: "Ya",
-};
+import { formatWeekdays } from "@/lib/weekdays";
 
 interface GroupInfo {
   id: number;
@@ -52,7 +44,7 @@ function GroupCard({ group }: { group: GroupInfo }) {
         {group.exactDays.length > 0 && (
           <span className="flex items-center gap-1">
             <CalendarDays className="size-3 shrink-0" />
-            {group.exactDays.map((d) => WEEKDAY_SHORT[d] ?? d).join(", ")}
+            {formatWeekdays(group.exactDays)}
           </span>
         )}
         {group.lessonStartTime && group.lessonEndTime && (

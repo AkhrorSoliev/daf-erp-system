@@ -16,14 +16,7 @@ import { GroupRowActions } from "./group-row-actions";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 
-const WEEKDAY_SHORT: Record<string, string> = {
-  monday: "Du",
-  tuesday: "Se",
-  wednesday: "Chor",
-  thursday: "Pay",
-  friday: "Ju",
-  saturday: "Sha",
-};
+import { formatWeekdays } from "@/lib/weekdays";
 
 interface GroupsTableProps {
   groups: GroupData[];
@@ -73,7 +66,7 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
           {groups.map((group, index) => {
             const groupStatusEnum = group.statusEnum || "FORMING";
             const daysLabel = group.exactDays?.length > 0
-              ? group.exactDays.map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ")
+              ? formatWeekdays(group.exactDays)
               : null;
             const timeLabel =
               group.lessonStartTime && group.lessonEndTime
