@@ -52,17 +52,10 @@ function isIntensive(courseName: string): boolean {
 const ODD_DAYS = ["monday", "wednesday", "friday"];
 const EVEN_DAYS = ["tuesday", "thursday", "saturday"];
 
-const WEEKDAY_SHORT: Record<string, string> = {
-  monday: "Du",
-  tuesday: "Se",
-  wednesday: "Cho",
-  thursday: "Pa",
-  friday: "Ju",
-  saturday: "Sha",
-};
+import { sortWeekdays, WEEKDAY_SHORT } from "@/lib/weekdays";
 
 function getDaysList(days: string | null, exactDays: string[]): string[] {
-  if (exactDays.length > 0) return exactDays;
+  if (exactDays.length > 0) return sortWeekdays(exactDays);
   if (days === "odd") return ODD_DAYS;
   if (days === "even") return EVEN_DAYS;
   return [];
