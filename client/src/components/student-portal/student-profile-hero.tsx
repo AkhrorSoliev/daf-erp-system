@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Calendar, MapPin } from "lucide-react";
+import { Phone, Calendar, MapPin, Wallet } from "lucide-react";
 import { format } from "date-fns";
 
 interface StudentProfile {
@@ -105,17 +107,25 @@ export function StudentProfileHero({ student }: { student: StudentProfile }) {
 
       <Separator className="my-4" />
 
-      <div>
-        <p className="text-xs text-muted-foreground">Balans</p>
-        <p
-          className={`text-lg font-bold ${
-            isPositive
-              ? "text-green-600 dark:text-green-400"
-              : "text-red-600 dark:text-red-400"
-          }`}
-        >
-          {isPositive ? "" : "-"}{formatBalance(Math.abs(student.balance))} so'm
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground">Balans</p>
+          <p
+            className={`text-lg font-bold ${
+              isPositive
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+            }`}
+          >
+            {isPositive ? "" : "-"}{formatBalance(Math.abs(student.balance))} so&apos;m
+          </p>
+        </div>
+        <Button asChild size="sm">
+          <Link href="/portal/payments">
+            <Wallet className="mr-1.5 size-4" />
+            To&apos;ldirish
+          </Link>
+        </Button>
       </div>
     </div>
   );

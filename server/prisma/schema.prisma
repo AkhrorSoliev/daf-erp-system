@@ -127,6 +127,13 @@ enum TaskPriority {
   URGENT
 }
 
+enum AiUseCaseType {
+  STUDENT_CHAT
+  STATISTICS
+  VOCABULARY
+  TEST_GENERATION
+}
+
 model Role {
   id    Int    @id
   name  String @unique
@@ -185,6 +192,7 @@ model User {
   sentSmsMessages    SmsMessage[]       @relation("SmsSender")
   markedAttendances  Attendance[]       @relation("AttendanceMarkedBy")
   student            Student?           @relation("StudentUser")
+  aiConversations    AiConversation[]   @relation("UserAiConversations")
 
   @@index([deletedAt])
   @@index([status])
@@ -340,10 +348,11 @@ model Student {
   userId      Int?          @unique
   user        User?         @relation("StudentUser", fields: [userId], references: [id])
 
-  enrollments Enrollment[]
-  branches    StudentBranch[]
-  smsMessages SmsMessage[]
-  attendances Attendance[]
+  enrollments     Enrollment[]
+  branches        StudentBranch[]
+  smsMessages     SmsMessage[]
+  attendances     Attendance[]
+  aiConversations AiConversation[] @relation("StudentAiConversations")
 
   @@index([deletedAt])
   @@index([status])
@@ -651,4 +660,37 @@ model Attendance {
   @@index([groupId, date])
   @@index([studentId])
   @@index([companyId])
+}
+
+model AiConversation {
+  id          String          @id @default(uuid())
+  userId      Int
+  user        User            @relation("UserAiConversations", fields: [userId], references: [id])
+  studentId   Int?
+  student     Student?        @relation("StudentAiConversations", fields: [studentId], references: [id])
+  useCase     AiUseCaseType
+  title       String?
+  model       String          @default("gpt-4o-mini")
+  totalTokens Int             @default(0)
+  messages    AiChatMessage[]
+  companyId   Int?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([studentId])
+  @@index([useCase])
+}
+
+model AiChatMessage {
+  id               String         @id @default(uuid())
+  conversationId   String
+  conversation     AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             String
+  content          String
+  promptTokens     Int?
+  completionTokens Int?
+  createdAt        DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
 }

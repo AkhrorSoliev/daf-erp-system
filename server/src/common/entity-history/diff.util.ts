@@ -40,8 +40,13 @@ export function computeChangedFields(
     if (!isPlainValue(oldObj[key])) continue;
 
     if (!valuesEqual(oldObj[key], newObj[key])) {
-      oldValues[key] = oldObj[key] ?? null;
-      newValues[key] = newObj[key] ?? null;
+      if (key === 'photo') {
+        oldValues[key] = oldObj[key] ? 'eski rasm' : null;
+        newValues[key] = newObj[key] ? 'yangi rasm' : null;
+      } else {
+        oldValues[key] = oldObj[key] ?? null;
+        newValues[key] = newObj[key] ?? null;
+      }
       hasChanges = true;
     }
   }

@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { StudentPortalController } from './student-portal.controller';
 import { StudentPortalService } from './student-portal.service';
+import { QrAttendanceService } from '../attendance/qr-attendance.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -15,9 +16,14 @@ describe('StudentPortalController — role guards', () => {
     getProfile: jest.fn().mockResolvedValue({}),
     getSchedule: jest.fn().mockResolvedValue([]),
     getAttendanceStats: jest.fn().mockResolvedValue({}),
+    getAttendanceHistory: jest.fn().mockResolvedValue([]),
     updateName: jest.fn().mockResolvedValue({}),
     changePassword: jest.fn().mockResolvedValue({}),
     updatePhoto: jest.fn().mockResolvedValue({}),
+  };
+
+  const mockQrService = {
+    scanQr: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -25,6 +31,7 @@ describe('StudentPortalController — role guards', () => {
       controllers: [StudentPortalController],
       providers: [
         { provide: StudentPortalService, useValue: mockService },
+        { provide: QrAttendanceService, useValue: mockQrService },
       ],
     }).compile();
 
@@ -139,6 +146,28 @@ describe('StudentPortalController — role guards', () => {
     });
   });
 
+  describe('getAttendanceHistory()', () => {
+    it('should have @Roles(Student) metadata', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.getAttendanceHistory);
+      expect(roles).toEqual(['Student']);
+    });
+
+    it('should allow Student to access', () => {
+      const ctx = mockExecutionContext(controller.getAttendanceHistory, ['Student']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny CEO from accessing', () => {
+      const ctx = mockExecutionContext(controller.getAttendanceHistory, ['CEO']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('should deny Teacher from accessing', () => {
+      const ctx = mockExecutionContext(controller.getAttendanceHistory, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
   describe('updateName()', () => {
     it('should have @Roles(Student) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.updateName);
@@ -196,6 +225,28 @@ describe('StudentPortalController — role guards', () => {
 
     it('should deny Teacher from accessing', () => {
       const ctx = mockExecutionContext(controller.updatePhoto, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('scanQr()', () => {
+    it('should have @Roles(Student) metadata', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.scanQr);
+      expect(roles).toEqual(['Student']);
+    });
+
+    it('should allow Student to access', () => {
+      const ctx = mockExecutionContext(controller.scanQr, ['Student']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny CEO from accessing', () => {
+      const ctx = mockExecutionContext(controller.scanQr, ['CEO']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('should deny Teacher from accessing', () => {
+      const ctx = mockExecutionContext(controller.scanQr, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
