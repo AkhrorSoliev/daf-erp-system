@@ -89,43 +89,46 @@ export function GroupsClient() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="relative max-w-sm flex-1">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input
-              placeholder="Nomi bo'yicha qidirish..."
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha holatlar</SelectItem>
-              <SelectItem value="1">Faol</SelectItem>
-              <SelectItem value="2">Boshlanmagan</SelectItem>
-              <SelectItem value="3">Pauza</SelectItem>
-              <SelectItem value="4">To&apos;xtatilgan</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            placeholder="Nomi bo'yicha qidirish..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
+        <Select value={statusFilter} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-[calc(100%-3rem)] sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha holatlar</SelectItem>
+            <SelectItem value="1">Faol</SelectItem>
+            <SelectItem value="2">Boshlanmagan</SelectItem>
+            <SelectItem value="3">Pauza</SelectItem>
+            <SelectItem value="4">To&apos;xtatilgan</SelectItem>
+          </SelectContent>
+        </Select>
         {canManage &&
           (selectedBranch ? (
-            <Button onClick={openAddDrawer}>
-              <Plus className="mr-2 size-4" />
-              Yangi guruh
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={openAddDrawer} size="icon" className="sm:size-auto sm:px-4 shrink-0">
+                  <Plus className="size-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Yangi guruh</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="sm:hidden">Yangi guruh</TooltipContent>
+            </Tooltip>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span tabIndex={0}>
-                  <Button disabled>
-                    <Plus className="mr-2 size-4" />
-                    Yangi guruh
+                  <Button disabled size="icon" className="sm:size-auto sm:px-4 shrink-0">
+                    <Plus className="size-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Yangi guruh</span>
                   </Button>
                 </span>
               </TooltipTrigger>

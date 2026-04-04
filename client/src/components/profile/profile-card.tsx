@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { AuthUser } from "@/hooks/use-auth";
+import { formatBalance } from "@/lib/format-utils";
 
 function getInitials(name: string) {
   return name
@@ -20,14 +21,6 @@ function getInitials(name: string) {
     .join("")
     .toUpperCase()
     .slice(0, 2);
-}
-
-function formatBalance(balance: number): string {
-  const abs = Math.abs(balance)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  if (balance < 0) return `-${abs} so'm`;
-  return `${abs} so'm`;
 }
 
 interface ProfileCardProps {
