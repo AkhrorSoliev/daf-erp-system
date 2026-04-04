@@ -210,9 +210,9 @@ export function EditGroupForm({
     }
   }, [smartTeachers, watchedTeacherId, form]);
 
-  // Fetch suggested name when branch is selected
+  // Fetch suggested name only when adding a new group
   useEffect(() => {
-    if (!selectedBranch?.id) {
+    if (!isAdd || !selectedBranch?.id) {
       setSuggestedName("");
       return;
     }
@@ -222,7 +222,7 @@ export function EditGroupForm({
       })
       .then((res) => setSuggestedName(res.data.nextName))
       .catch(() => setSuggestedName(""));
-  }, [selectedBranch?.id]);
+  }, [isAdd, selectedBranch?.id]);
 
   // Auto-calculate endTime using lessonMinutes
   useEffect(() => {
@@ -260,7 +260,7 @@ export function EditGroupForm({
         branchId: selectedBranch?.id,
       };
       if (values.name) payload.name = values.name;
-      if (values.level) payload.level = values.level;
+      if (isAdd && values.level) payload.level = values.level;
       if (values.teacherId) payload.teacherIds = [values.teacherId];
       if (values.roomId) payload.roomId = values.roomId;
       if (values.exactDays?.length) payload.exactDays = values.exactDays;
