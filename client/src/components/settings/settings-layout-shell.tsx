@@ -4,7 +4,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 import { SettingsSidebar } from "./settings-sidebar";
+import { SettingsMobileMenu } from "./settings-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Checks if the current path is a detail page (has an ID segment).
@@ -19,6 +21,7 @@ function isDetailPage(pathname: string): boolean {
 export function SettingsLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const user = useAuth((s) => s.user);
   const isTeacherOnly =
     (user?.roles.some((r) => r.id === 4) &&
@@ -47,10 +50,42 @@ export function SettingsLayoutShell({ children }: { children: React.ReactNode })
   const isDetail = isDetailPage(pathname);
   const isGeneral = pathname.startsWith("/settings/general");
 
-  if (isDetail || isGeneral) {
+  // Detail pages va desktopda general → sidebar/layout yo'q
+  // Mobileda general o'zi back button boshqaradi
+  if (isDetail || (isGeneral && !isMobile) || (isGeneral && isMobile)) {
     return <>{children}</>;
   }
 
+  const isSettingsRoot = pathname === "/settings" || pathname === "/settings/";
+
+  // Mobile layout: drill-down pattern
+  if (isMobile) {
+    // /settings root → menu ro'yxati
+    if (isSettingsRoot) {
+      return (
+        <div className="space-y-4">
+          <div>
+            <h1 className="font-heading text-xl font-bold tracking-tight">
+              Sozlamalar
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Tizim sozlamalari va boshqaruv
+            </p>
+          </div>
+          <SettingsMobileMenu />
+        </div>
+      );
+    }
+
+    // Sub-page → content only (back button is in DashboardHeader)
+    return (
+      <div className="space-y-4">
+        {children}
+      </div>
+    );
+  }
+
+  // Desktop layout: sidebar + content
   return (
     <div className="space-y-6">
       <div>

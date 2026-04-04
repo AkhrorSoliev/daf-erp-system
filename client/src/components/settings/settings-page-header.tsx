@@ -12,10 +12,10 @@ export function SettingsPageHeader({
   action,
 }: SettingsPageHeaderProps) {
   return (
-    <div className="mb-6 flex items-start justify-between">
+    <div className="mb-4 sm:mb-6 flex flex-wrap items-start justify-between gap-2">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h2 className="text-base sm:text-lg font-semibold tracking-tight">{title}</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
       </div>
       {action}
     </div>

@@ -27,11 +27,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SettingsPageHeader } from "./settings-page-header";
 import { EmployeeRowActions } from "./employee-row-actions";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -76,6 +78,7 @@ export function EmployeesSettingsClient() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
+  const isMobile = useIsMobile();
   const openAddDrawer = useEditEmployee((s) => s.openAddDrawer);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
@@ -178,82 +181,151 @@ export function EmployeesSettingsClient() {
         </Select>
       </div>
 
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Ism familiya</TableHead>
-              <TableHead>Lavozimi</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead>Filial</TableHead>
-              <TableHead>Holati</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell className="border-r"><Skeleton className="h-4 w-6" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="size-6 rounded" /></TableCell>
-                </TableRow>
-              ))
-            ) : employees.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <Users className="h-8 w-8 text-muted-foreground/50" />
-                    Xodimlar topilmadi
+      {/* Mobile: card list */}
+      {isMobile ? (
+        <div className="space-y-2">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-lg border bg-card p-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-10 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              employees.map((emp, index) => (
-                <TableRow
+                </div>
+              </div>
+            ))
+          ) : employees.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+              <Users className="size-8 text-muted-foreground/50" />
+              Xodimlar topilmadi
+            </div>
+          ) : (
+            employees.map((emp) => {
+              const fullName = `${emp.firstName} ${emp.lastName}`;
+              const initials = `${emp.firstName[0] ?? ""}${emp.lastName[0] ?? ""}`.toUpperCase();
+              return (
+                <div
                   key={emp.id}
-                  className="cursor-pointer"
+                  className="rounded-lg border bg-card p-3 active:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => router.push(getEmployeeProfileUrl(emp))}
                 >
-                  <TableCell className="border-r text-muted-foreground">
-                    {(page - 1) * pageSize + index + 1}
-                  </TableCell>
-                  <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {emp.roles.map((r) => (
-                        <Badge key={r.id} variant={ROLE_VARIANTS[r.name] || "outline"}>
-                          {ROLE_LABELS[r.name] || r.name}
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-10 shrink-0">
+                      {emp.photo && <AvatarImage src={emp.photo} alt={fullName} />}
+                      <AvatarFallback className="text-xs font-medium">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">{fullName}</p>
+                        <Badge
+                          variant={emp.status === "ACTIVE" ? "default" : "secondary"}
+                          className="text-[10px] px-1.5 py-0 shrink-0"
+                        >
+                          {emp.status === "ACTIVE" ? "Faol" : "Nofaol"}
                         </Badge>
-                      ))}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {emp.roles.map((r) => (
+                          <span key={r.id} className="text-xs text-muted-foreground">
+                            {ROLE_LABELS[r.name] || r.name}
+                          </span>
+                        ))}
+                      </div>
+                      {emp.phone && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatPhone(emp.phone)}
+                        </p>
+                      )}
+                    </div>
+                    <EmployeeRowActions employee={emp} onDelete={handleDeleted} />
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        /* Desktop: table */
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12 border-r">#</TableHead>
+                <TableHead>Ism familiya</TableHead>
+                <TableHead>Lavozimi</TableHead>
+                <TableHead>Telefon</TableHead>
+                <TableHead>Filial</TableHead>
+                <TableHead>Holati</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="border-r"><Skeleton className="h-4 w-6" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="size-6 rounded" /></TableCell>
+                  </TableRow>
+                ))
+              ) : employees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <Users className="h-8 w-8 text-muted-foreground/50" />
+                      Xodimlar topilmadi
                     </div>
                   </TableCell>
-                  <TableCell>{formatPhone(emp.phone)}</TableCell>
-                  <TableCell>
-                    {emp.branches.length > 0
-                      ? emp.branches.map((b) => b.name).join(", ")
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={emp.status === "ACTIVE" ? "default" : "secondary"}>
-                      {emp.status === "ACTIVE" ? "Faol" : "Nofaol"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <EmployeeRowActions employee={emp} onDelete={handleDeleted} />
-                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                employees.map((emp, index) => (
+                  <TableRow
+                    key={emp.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(getEmployeeProfileUrl(emp))}
+                  >
+                    <TableCell className="border-r text-muted-foreground">
+                      {(page - 1) * pageSize + index + 1}
+                    </TableCell>
+                    <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {emp.roles.map((r) => (
+                          <Badge key={r.id} variant={ROLE_VARIANTS[r.name] || "outline"}>
+                            {ROLE_LABELS[r.name] || r.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatPhone(emp.phone)}</TableCell>
+                    <TableCell>
+                      {emp.branches.length > 0
+                        ? emp.branches.map((b) => b.name).join(", ")
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={emp.status === "ACTIVE" ? "default" : "secondary"}>
+                        {emp.status === "ACTIVE" ? "Faol" : "Nofaol"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <EmployeeRowActions employee={emp} onDelete={handleDeleted} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Pagination */}
       {totalPages > 0 && !loading && (

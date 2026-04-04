@@ -49,7 +49,7 @@ export function HolidaysSettingsClient() {
           placeholder="Bayram nomi bo'yicha qidirish..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
         <Tooltip>
           <TooltipTrigger asChild>
