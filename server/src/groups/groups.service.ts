@@ -491,6 +491,7 @@ export class GroupsService {
         const group = await this.prisma.group.create({
           data: {
             name: autoName,
+            level: dto.level,
             courseId: dto.courseId,
             branchId: dto.branchId,
             roomId: dto.roomId,

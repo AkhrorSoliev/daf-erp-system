@@ -398,6 +398,7 @@ model Group {
   id                 String      @id @default(uuid())
   name               String
   groupNumber        Int?
+  level              String?
   courseId            String
   course             Course      @relation(fields: [courseId], references: [id])
   branchId           Int

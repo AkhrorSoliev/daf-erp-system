@@ -4,6 +4,7 @@ export interface GroupData {
   id: string;
   name: string;
   groupNumber: number | null;
+  level: string | null;
   days: string | null;
   exactDays: string[];
   lessonStartTime: string | null;
