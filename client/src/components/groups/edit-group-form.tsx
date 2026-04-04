@@ -93,7 +93,7 @@ function groupToForm(group: GroupData | null): EditGroupFormValues {
   }
   return {
     name: group.name,
-    level: group.course.level ?? "",
+    level: group.level ?? "",
     courseId: group.course.id,
     roomId: group.room?.id ?? "",
     exactDays: group.exactDays ?? [],
@@ -260,7 +260,7 @@ export function EditGroupForm({
         branchId: selectedBranch?.id,
       };
       if (values.name) payload.name = values.name;
-      if (isAdd && values.level) payload.level = values.level;
+      if (values.level) payload.level = values.level;
       if (values.teacherId) payload.teacherIds = [values.teacherId];
       if (values.roomId) payload.roomId = values.roomId;
       if (values.exactDays?.length) payload.exactDays = values.exactDays;
