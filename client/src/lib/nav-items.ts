@@ -4,7 +4,7 @@ import {
   BookOpen,
   UserPlus,
   CalendarDays,
-  CreditCard,
+  DollarSign,
   BarChart3,
   Settings,
   UsersRound,
@@ -28,7 +28,7 @@ export const navItems: NavItem[] = [
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
   { title: "Dars jadvali", url: "/schedule", icon: CalendarDays },
-  { title: "To'lovlar", url: "/payments", icon: CreditCard, visibleForRoles: [1, 2, 3, 5] },
+  { title: "Moliya", url: "/payments", icon: DollarSign, visibleForRoles: [1, 2, 3, 5] },
   { title: "Hisobotlar", url: "/reports", icon: BarChart3, visibleForRoles: [1, 2] },
   { title: "Sozlamalar", url: "/settings", icon: Settings, visibleForRoles: [1, 2, 3] },
 ];
