@@ -55,91 +55,164 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12 border-r">#</TableHead>
-            <TableHead className="w-10">Rasm</TableHead>
-            <TableHead className="min-w-30">Ism familiya</TableHead>
-            <TableHead className="hidden min-w-32 sm:table-cell">
-              Telefon
-            </TableHead>
-            <TableHead className="hidden md:table-cell">Guruh</TableHead>
-            <TableHead className="min-w-28 text-right">Balans</TableHead>
-            <TableHead className="hidden sm:table-cell">Holat</TableHead>
-            {!isTeacher && <TableHead className="w-10" />}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {students.map((student, index) => (
-            <TableRow
-              key={student.id}
-              className="relative cursor-pointer hover:bg-muted/50"
-            >
-              <TableCell className="border-r text-muted-foreground">
-                {index + 1}
-              </TableCell>
-              <TableCell>
-                <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
-                  <Avatar className="size-8">
-                    <AvatarImage
-                      src={student.photo ?? undefined}
-                      alt={`${student.firstName} ${student.lastName}`}
-                    />
-                    <AvatarFallback className="text-xs">
-                      {student.firstName[0]}
-                      {student.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                </AvatarWithPreview>
-              </TableCell>
-              <TableCell className="font-medium">
-                <Link href={`/students/profile/${student.id}`} className="absolute inset-0" />
-                {student.firstName} {student.lastName}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell">
+    <>
+      {/* Mobile: Card layout */}
+      <div className="flex flex-col gap-3 sm:hidden">
+        {students.map((student, index) => (
+          <Link
+            key={student.id}
+            href={`/students/profile/${student.id}`}
+            className="relative flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+          >
+            <div className="text-muted-foreground mt-1 w-5 shrink-0 text-xs">
+              {index + 1}
+            </div>
+            <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
+              <Avatar className="size-10 shrink-0">
+                <AvatarImage
+                  src={student.photo ?? undefined}
+                  alt={`${student.firstName} ${student.lastName}`}
+                />
+                <AvatarFallback className="text-xs">
+                  {student.firstName[0]}
+                  {student.lastName[0]}
+                </AvatarFallback>
+              </Avatar>
+            </AvatarWithPreview>
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-medium">
+                  {student.firstName} {student.lastName}
+                </span>
+                <StudentStatusBadge student={student} />
+              </div>
+              <div className="text-muted-foreground text-sm">
                 {formatPhone(student.phone)}
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <div className="flex gap-1">
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1">
                   {student.groups.length > 0 ? (
                     student.groups.map((g) => (
-                      <Badge key={g.id} variant="secondary">
+                      <Badge key={g.id} variant="secondary" className="text-xs">
                         {g.level ?? g.name}
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-muted-foreground text-sm">—</span>
+                    <span className="text-muted-foreground text-xs">Guruhsiz</span>
                   )}
                 </div>
-              </TableCell>
-              <TableCell
-                className={cn(
-                  "text-right font-medium",
-                  student.balance < 0
-                    ? "text-destructive"
-                    : "text-green-600 dark:text-green-400"
-                )}
-              >
-                {formatBalance(student.balance)}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell">
-                <StudentStatusBadge student={student} />
-              </TableCell>
-              {!isTeacher && (
-                <TableCell className="relative z-10">
-                  <StudentRowActions
-                    student={student}
-                    onDeleted={onDeleted}
-                    onStatusChanged={onStatusChanged}
-                  />
-                </TableCell>
-              )}
+                <span
+                  className={cn(
+                    "shrink-0 text-sm font-medium",
+                    student.balance < 0
+                      ? "text-destructive"
+                      : "text-green-600 dark:text-green-400"
+                  )}
+                >
+                  {formatBalance(student.balance)}
+                </span>
+              </div>
+            </div>
+            {!isTeacher && (
+              <div className="relative z-10 shrink-0" onClick={(e) => e.preventDefault()}>
+                <StudentRowActions
+                  student={student}
+                  onDeleted={onDeleted}
+                  onStatusChanged={onStatusChanged}
+                />
+              </div>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {/* Desktop: Table layout */}
+      <div className="hidden overflow-x-auto rounded-md border sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
+              <TableHead className="w-10">Rasm</TableHead>
+              <TableHead className="min-w-30">Ism familiya</TableHead>
+              <TableHead className="min-w-32">
+                Telefon
+              </TableHead>
+              <TableHead className="hidden md:table-cell">Guruh</TableHead>
+              <TableHead className="min-w-28 text-right">Balans</TableHead>
+              <TableHead>Holat</TableHead>
+              {!isTeacher && <TableHead className="w-10" />}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {students.map((student, index) => (
+              <TableRow
+                key={student.id}
+                className="relative cursor-pointer hover:bg-muted/50"
+              >
+                <TableCell className="border-r text-muted-foreground">
+                  {index + 1}
+                </TableCell>
+                <TableCell>
+                  <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
+                    <Avatar className="size-8">
+                      <AvatarImage
+                        src={student.photo ?? undefined}
+                        alt={`${student.firstName} ${student.lastName}`}
+                      />
+                      <AvatarFallback className="text-xs">
+                        {student.firstName[0]}
+                        {student.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </AvatarWithPreview>
+                </TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/students/profile/${student.id}`} className="absolute inset-0" />
+                  {student.firstName} {student.lastName}
+                </TableCell>
+                <TableCell>
+                  {formatPhone(student.phone)}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <div className="flex gap-1">
+                    {student.groups.length > 0 ? (
+                      student.groups.map((g) => (
+                        <Badge key={g.id} variant="secondary">
+                          {g.level ?? g.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    "text-right font-medium",
+                    student.balance < 0
+                      ? "text-destructive"
+                      : "text-green-600 dark:text-green-400"
+                  )}
+                >
+                  {formatBalance(student.balance)}
+                </TableCell>
+                <TableCell>
+                  <StudentStatusBadge student={student} />
+                </TableCell>
+                {!isTeacher && (
+                  <TableCell className="relative z-10">
+                    <StudentRowActions
+                      student={student}
+                      onDeleted={onDeleted}
+                      onStatusChanged={onStatusChanged}
+                    />
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }
