@@ -21,12 +21,20 @@ export function AppBreadcrumb() {
 
   if (segments.length === 0) return null;
 
-  const crumbs = segments.map((segment, index) => {
-    const url = "/" + segments.slice(0, index + 1).join("/");
-    const label = routeLabels[segment] ?? names[segment] ?? segment;
-    const isLast = index === segments.length - 1;
+  // "profile" segment ni o'tkazib yuborish — /students/profile/123 → Bosh sahifa > O'quvchilar > [Ism]
+  const filtered = segments.filter((s) => s !== "profile");
 
-    return { url, label, isLast };
+  const crumbs = filtered.map((segment, index) => {
+    const url = "/" + segments.slice(0, segments.indexOf(segment) + 1).join("/");
+    const label = routeLabels[segment] ?? names[segment] ?? segment;
+    const isLast = index === filtered.length - 1;
+
+    // profile dan keyingi segment uchun to'liq URL berish
+    const actualUrl = isLast && segments.includes("profile")
+      ? "/" + segments.join("/")
+      : url;
+
+    return { url: actualUrl, label, isLast };
   });
 
   return (

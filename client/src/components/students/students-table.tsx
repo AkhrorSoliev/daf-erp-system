@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,6 @@ interface StudentsTableProps {
 }
 
 export function StudentsTable({ students, onDeleted, onStatusChanged }: StudentsTableProps) {
-  const router = useRouter();
   const user = useAuth((s) => s.user);
   const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
 
@@ -76,8 +75,7 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
           {students.map((student, index) => (
             <TableRow
               key={student.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => router.push(`/students/profile/${student.id}`)}
+              className="relative cursor-pointer hover:bg-muted/50"
             >
               <TableCell className="border-r text-muted-foreground">
                 {index + 1}
@@ -97,6 +95,7 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
                 </AvatarWithPreview>
               </TableCell>
               <TableCell className="font-medium">
+                <Link href={`/students/profile/${student.id}`} className="absolute inset-0" />
                 {student.firstName} {student.lastName}
               </TableCell>
               <TableCell className="hidden sm:table-cell">
@@ -129,7 +128,7 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
                 <StudentStatusBadge student={student} />
               </TableCell>
               {!isTeacher && (
-                <TableCell>
+                <TableCell className="relative z-10">
                   <StudentRowActions
                     student={student}
                     onDeleted={onDeleted}

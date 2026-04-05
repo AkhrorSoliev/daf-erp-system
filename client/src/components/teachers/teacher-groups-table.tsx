@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -29,7 +29,6 @@ interface TeacherGroupsTableProps {
 }
 
 export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
-  const router = useRouter();
 
   if (groups.length === 0) {
     return (
@@ -68,11 +67,13 @@ export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
             return (
               <TableRow
                 key={group.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/groups/${group.id}`)}
+                className="relative cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="border-r font-medium">{index + 1}</TableCell>
-                <TableCell>{group.name}</TableCell>
+                <TableCell>
+                  <Link href={`/groups/${group.id}`} className="absolute inset-0" />
+                  {group.name}
+                </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {group.course.name}
                 </TableCell>

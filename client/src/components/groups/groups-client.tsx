@@ -35,8 +35,7 @@ export function GroupsClient() {
   const [loading, setLoading] = useState(true);
   const { openAddDrawer } = useEditGroup();
   const user = useAuth((s) => s.user);
-  const canManage =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const isTeacherOnly =
     (user?.roles.some((r) => r.id === 4) && !canManage) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
@@ -64,7 +63,15 @@ export function GroupsClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, statusFilter, selectedBranch, branchLoaded, isTeacherOnly]);
+  }, [
+    page,
+    pageSize,
+    search,
+    statusFilter,
+    selectedBranch,
+    branchLoaded,
+    isTeacherOnly,
+  ]);
 
   useEffect(() => {
     fetchGroups();
@@ -115,7 +122,10 @@ export function GroupsClient() {
           (selectedBranch ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={openAddDrawer} size="icon" className="sm:size-auto sm:px-4 shrink-0">
+                <Button
+                  onClick={openAddDrawer}
+                  className="size-9 sm:size-auto sm:h-9 sm:px-4 shrink-0"
+                >
                   <Plus className="size-4 sm:mr-2" />
                   <span className="hidden sm:inline">Yangi guruh</span>
                 </Button>
@@ -126,7 +136,11 @@ export function GroupsClient() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span tabIndex={0}>
-                  <Button disabled size="icon" className="sm:size-auto sm:px-4 shrink-0">
+                  <Button
+                    disabled
+                    size="icon"
+                    className="sm:size-auto sm:px-4 shrink-0"
+                  >
                     <Plus className="size-4 sm:mr-2" />
                     <span className="hidden sm:inline">Yangi guruh</span>
                   </Button>

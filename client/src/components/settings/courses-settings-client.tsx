@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { BookOpen, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,6 @@ function formatPrice(price: number): string {
 }
 
 export function CoursesSettingsClient() {
-  const router = useRouter();
   const openAddDrawer = useEditCourse((s) => s.openAddDrawer);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
@@ -179,15 +178,15 @@ export function CoursesSettingsClient() {
               filtered.map((course, index) => (
                 <TableRow
                   key={course.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() =>
-                    router.push(`/settings/courses/${course.id}`)
-                  }
+                  className="relative cursor-pointer hover:bg-muted/50"
                 >
                   <TableCell className="border-r text-muted-foreground">
                     {(page - 1) * pageSize + index + 1}
                   </TableCell>
-                  <TableCell className="font-medium">{course.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/settings/courses/${course.id}`} className="absolute inset-0" />
+                    {course.name}
+                  </TableCell>
                   <TableCell>
                     {course.courseDuration
                       ? `${course.courseDuration} oy`

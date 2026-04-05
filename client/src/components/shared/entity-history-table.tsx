@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { format } from "date-fns";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Plus,
   Pencil,
@@ -332,7 +332,6 @@ function ChangedFields({ record }: { record: HistoryRecord }) {
 
 // --- Main component ---
 export function EntityHistoryTable({ entityType, entityId }: EntityHistoryTableProps) {
-  const router = useRouter();
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -442,13 +441,12 @@ export function EntityHistoryTable({ entityType, entityId }: EntityHistoryTableP
                       return isStudent ? content : (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
-                              type="button"
+                            <Link
+                              href={`/settings/employees/${record.changedBy!.id}`}
                               className="flex items-center gap-2 hover:underline text-left"
-                              onClick={() => router.push(`/settings/employees/${record.changedBy!.id}`)}
                             >
                               {content}
-                            </button>
+                            </Link>
                           </TooltipTrigger>
                           <TooltipContent>Profilga o&apos;tish</TooltipContent>
                         </Tooltip>

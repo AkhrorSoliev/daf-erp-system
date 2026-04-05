@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Plus,
   DoorOpen,
@@ -163,7 +163,7 @@ function BranchRoomsView({
   branch: BranchWithCount;
   onBack: () => void;
 }) {
-  const router = useRouter();
+
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -295,13 +295,15 @@ function BranchRoomsView({
               filtered.map((room, index) => (
                 <TableRow
                   key={room.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/settings/rooms/${room.id}`)}
+                  className="relative cursor-pointer hover:bg-muted/50"
                 >
                   <TableCell className="border-r text-muted-foreground">
                     {(page - 1) * pageSize + index + 1}
                   </TableCell>
-                  <TableCell className="font-medium">{room.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/settings/rooms/${room.id}`} className="absolute inset-0" />
+                    {room.name}
+                  </TableCell>
                   <TableCell>
                     {room.capacity ? `${room.capacity} o'rin` : "—"}
                   </TableCell>

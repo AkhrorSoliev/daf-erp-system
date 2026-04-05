@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import {
@@ -29,7 +29,6 @@ interface TeachersTableProps {
 }
 
 export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
-  const router = useRouter();
   const user = useAuth((s) => s.user);
   const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
@@ -63,8 +62,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
             return (
               <TableRow
                 key={teacher.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/teachers/profile/${teacher.id}`)}
+                className="relative cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="border-r text-muted-foreground">
                   {index + 1}
@@ -83,6 +81,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                   </AvatarWithPreview>
                 </TableCell>
                 <TableCell className="font-medium">
+                  <Link href={`/teachers/profile/${teacher.id}`} className="absolute inset-0" />
                   {fullName}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
@@ -95,7 +94,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                   {teacher.studentCount ?? 0}
                 </TableCell>
                 {canManageTeachers && (
-                  <TableCell>
+                  <TableCell className="relative z-10">
                     <TeacherRowActions teacher={teacher} onDeleted={onDeleted} />
                   </TableCell>
                 )}
