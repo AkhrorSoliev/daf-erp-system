@@ -114,7 +114,7 @@ export function TeachersClient() {
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="sm:size-auto sm:px-4" onClick={handleCopyLink}>
+                    <Button variant="outline" className="size-9 sm:size-auto sm:h-9 sm:px-4" onClick={handleCopyLink}>
                       {copied ? (
                         <Check className="size-4 text-green-500 sm:mr-2" />
                       ) : (
@@ -143,10 +143,10 @@ export function TeachersClient() {
                       <DialogTitle>QR kod — O&apos;qituvchi ro&apos;yxatdan o&apos;tish</DialogTitle>
                     </DialogHeader>
                     <div className="flex flex-col items-center gap-4 py-4">
-                      <div className="rounded-lg border bg-white p-4">
+                      <div className="w-full max-w-70 rounded-lg border bg-white p-4">
                         <QRCodeSVG
                           value={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=teacher_${selectedBranch.id}`}
-                          size={280}
+                          className="h-auto w-full"
                           level="M"
                         />
                       </div>
@@ -161,7 +161,7 @@ export function TeachersClient() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span tabIndex={0}>
-                    <Button variant="outline" size="icon" className="sm:size-auto sm:px-4" disabled>
+                    <Button variant="outline" className="size-9 sm:size-auto sm:h-9 sm:px-4" disabled>
                       <Copy className="size-4 sm:mr-2" />
                       <span className="hidden sm:inline">Havola olish</span>
                     </Button>
@@ -177,7 +177,7 @@ export function TeachersClient() {
             selectedBranch ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={openAddDrawer} size="icon" className="sm:size-auto sm:px-4">
+                  <Button onClick={openAddDrawer} className="size-9 sm:size-auto sm:h-9 sm:px-4">
                     <Plus className="size-4 sm:mr-2" />
                     <span className="hidden sm:inline">Yangi o&apos;qituvchi</span>
                   </Button>
@@ -188,7 +188,7 @@ export function TeachersClient() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span tabIndex={0}>
-                    <Button disabled size="icon" className="sm:size-auto sm:px-4">
+                    <Button disabled className="size-9 sm:size-auto sm:h-9 sm:px-4">
                       <Plus className="size-4 sm:mr-2" />
                       <span className="hidden sm:inline">Yangi o&apos;qituvchi</span>
                     </Button>

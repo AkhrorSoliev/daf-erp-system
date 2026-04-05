@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +69,6 @@ function getEmployeeProfileUrl(emp: EmployeeUser): string {
 }
 
 export function EmployeesSettingsClient() {
-  const router = useRouter();
   const [employees, setEmployees] = useState<EmployeeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -206,10 +205,10 @@ export function EmployeesSettingsClient() {
               const fullName = `${emp.firstName} ${emp.lastName}`;
               const initials = `${emp.firstName[0] ?? ""}${emp.lastName[0] ?? ""}`.toUpperCase();
               return (
-                <div
+                <Link
                   key={emp.id}
-                  className="rounded-lg border bg-card p-3 active:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => router.push(getEmployeeProfileUrl(emp))}
+                  href={getEmployeeProfileUrl(emp)}
+                  className="block rounded-lg border bg-card p-3 active:bg-muted/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="size-10 shrink-0">
@@ -243,7 +242,7 @@ export function EmployeesSettingsClient() {
                     </div>
                     <EmployeeRowActions employee={emp} onDelete={handleDeleted} />
                   </div>
-                </div>
+                </Link>
               );
             })
           )}
@@ -289,13 +288,15 @@ export function EmployeesSettingsClient() {
                 employees.map((emp, index) => (
                   <TableRow
                     key={emp.id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(getEmployeeProfileUrl(emp))}
+                    className="relative cursor-pointer"
                   >
                     <TableCell className="border-r text-muted-foreground">
                       {(page - 1) * pageSize + index + 1}
                     </TableCell>
-                    <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={getEmployeeProfileUrl(emp)} className="absolute inset-0" />
+                      {emp.firstName} {emp.lastName}
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {emp.roles.map((r) => (
@@ -316,7 +317,7 @@ export function EmployeesSettingsClient() {
                         {emp.status === "ACTIVE" ? "Faol" : "Nofaol"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="relative z-10">
                       <EmployeeRowActions employee={emp} onDelete={handleDeleted} />
                     </TableCell>
                   </TableRow>

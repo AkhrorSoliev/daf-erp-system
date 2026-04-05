@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowLeft, Search } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -20,9 +21,15 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
 
   // Oxirgi segmentni olib tashlash → parent path
   segments.pop();
-  const parentPath = "/" + segments.join("/");
 
-  // Oxirgi segment dan label olish
+  // "profile" segment ni ham o'tkazib yuborish — /students/profile → /students
+  if (segments[segments.length - 1] === "profile") {
+    segments.pop();
+  }
+
+  if (segments.length === 0) return { path: "/", label: routeLabels[""] ?? "Bosh sahifa" };
+
+  const parentPath = "/" + segments.join("/");
   const lastSegment = segments[segments.length - 1];
   const label = routeLabels[lastSegment];
   if (label) return { path: parentPath, label };
@@ -32,7 +39,6 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
 
 export function DashboardHeader() {
   const pathname = usePathname();
-  const router = useRouter();
   const isMobile = useIsMobile();
   const parentRoute = isMobile ? getParentRoute(pathname) : null;
 
@@ -61,14 +67,13 @@ export function DashboardHeader() {
 
       <div className="px-3 sm:px-4 pb-2">
         {isMobile && parentRoute ? (
-          <button
-            type="button"
-            onClick={() => router.push(parentRoute.path)}
+          <Link
+            href={parentRoute.path}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="size-4" />
             {parentRoute.label}
-          </button>
+          </Link>
         ) : (
           <AppBreadcrumb />
         )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Plus, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ function formatPhone(phone: string): string {
 }
 
 export function BranchesSettingsClient() {
-  const router = useRouter();
+
   const [search, setSearch] = useState("");
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,13 +135,13 @@ export function BranchesSettingsClient() {
               filtered.map((branch, index) => (
                 <TableRow
                   key={branch.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() =>
-                    router.push(`/settings/branches/${branch.id}`)
-                  }
+                  className="relative cursor-pointer hover:bg-muted/50"
                 >
                   <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell className="font-medium">{branch.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/settings/branches/${branch.id}`} className="absolute inset-0" />
+                    {branch.name}
+                  </TableCell>
                   <TableCell>{branch.address}</TableCell>
                   <TableCell>
                     {branch.phone ? formatPhone(branch.phone) : "—"}

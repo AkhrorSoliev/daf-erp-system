@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import {
@@ -27,7 +27,6 @@ interface GroupsTableProps {
 }
 
 export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStatusChanged }: GroupsTableProps) {
-  const router = useRouter();
   const user = useAuth((s) => s.user);
   const canManage =
     user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
@@ -76,13 +75,15 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
             return (
               <TableRow
                 key={group.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/groups/${group.id}`)}
+                className="relative cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="border-r font-medium">
                   {(page - 1) * pageSize + index + 1}
                 </TableCell>
-                <TableCell>{group.name}</TableCell>
+                <TableCell>
+                  <Link href={`/groups/${group.id}`} className="absolute inset-0" />
+                  {group.name}
+                </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {group.course.name}
                 </TableCell>
@@ -130,7 +131,7 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
                   {group.studentCount}
                 </TableCell>
                 {canManage && (
-                  <TableCell>
+                  <TableCell className="relative z-10">
                     <GroupRowActions group={group} onDeleted={onDeleted} onStatusChanged={onStatusChanged} />
                   </TableCell>
                 )}
