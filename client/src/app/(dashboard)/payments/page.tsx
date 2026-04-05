@@ -3,10 +3,10 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-          To&apos;lovlar
+          Moliya
         </h1>
         <p className="text-muted-foreground">
-          O&apos;quvchilar to&apos;lovlarini boshqarish
+          Moliyaviy operatsiyalarni boshqarish
         </p>
       </div>
     </div>

@@ -9,7 +9,7 @@ export const routeLabels: Record<string, string> = {
   leads: "Lidlar",
   groups: "Guruhlar",
   schedule: "Dars jadvali",
-  payments: "To'lovlar",
+  payments: "Moliya",
   reports: "Hisobotlar",
   profile: "Profil",
   settings: "Sozlamalar",
