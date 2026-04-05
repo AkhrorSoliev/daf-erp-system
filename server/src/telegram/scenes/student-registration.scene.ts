@@ -270,11 +270,23 @@ export function createStudentRegistrationScene(
     const text = ctx.message.text.trim();
 
     if (text === '/cancel') {
+      if (ctx.session.data?.photo) {
+        await uploadService.deleteFile(ctx.session.data.photo);
+      }
       await ctx.scene.leave();
       await ctx.reply(
         "Bekor qilindi. Qayta boshlash uchun /start bosing.",
         Markup.removeKeyboard(),
       );
+      return;
+    }
+
+    // /start buyrug'i — scene'dan chiqib, boshidan boshlash
+    if (text.startsWith('/start')) {
+      if (ctx.session.data?.photo) {
+        await uploadService.deleteFile(ctx.session.data.photo);
+      }
+      await ctx.scene.reenter();
       return;
     }
 
