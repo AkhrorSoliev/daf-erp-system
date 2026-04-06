@@ -22,6 +22,11 @@ export const routeLabels: Record<string, string> = {
   tasks: "Topshiriqlar",
   "left-students": "Guruhni tark etganlar",
   archive: "Arxiv",
+  overview: "Umumiy ma'lumotlar",
+  pending: "Kutilyotgan to'lovlar",
+  expenses: "Xarajatlar",
+  salary: "Ish haqi",
+  debtors: "Qarzdorlar",
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",
 };
