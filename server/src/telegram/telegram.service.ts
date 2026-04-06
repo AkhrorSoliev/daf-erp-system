@@ -67,6 +67,26 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }),
     );
 
+    // /start kelganda scene state ni tozalash — shunda bot.start() har doim ishlaydi
+    // (chat o'chirilganda Redis session'da eski scene qolib ketadi)
+    this.bot.use(async (ctx, next) => {
+      const text = (ctx.message as any)?.text as string | undefined;
+      if (text && text.startsWith('/start')) {
+        // Agar yuklangan rasm bo'lsa, o'chirish
+        if (ctx.session?.data?.photo) {
+          try {
+            await this.uploadService.deleteFile(ctx.session.data.photo);
+          } catch {
+            // rasm o'chirilmasa ham davom etamiz
+          }
+        }
+        ctx.session.__scenes = {};
+        ctx.session.step = 0;
+        ctx.session.data = {};
+      }
+      return next();
+    });
+
     // Scenes
     const teacherScene = createTeacherRegistrationScene(
       this.prisma,
