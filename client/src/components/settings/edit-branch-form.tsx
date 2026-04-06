@@ -84,11 +84,11 @@ export function EditBranchForm({
         if (!branch) return;
         const { data } = await api.patch(`/branches/${branch.id}`, {
           name: values.name,
-          address: values.address,
-          phone: values.phone,
+          address: values.address || undefined,
+          phone: values.phone || undefined,
           isActive: values.status === "active",
-          startOfWorkingDay: values.startOfWorkingDay || null,
-          endOfWorkingDay: values.endOfWorkingDay || null,
+          startOfWorkingDay: values.startOfWorkingDay || undefined,
+          endOfWorkingDay: values.endOfWorkingDay || undefined,
         });
 
         const updated: Branch = {
