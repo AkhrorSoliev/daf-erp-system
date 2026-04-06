@@ -17,7 +17,12 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
   if (pathname === "/") return null;
 
   const segments = pathname.replace(/\/$/, "").split("/").filter(Boolean);
-  if (segments.length <= 1) return null;
+  if (segments.length === 0) return null;
+
+  // Top-level sahifalar uchun → Bosh sahifa ga qaytish
+  if (segments.length === 1) {
+    return { path: "/", label: routeLabels[""] ?? "Bosh sahifa" };
+  }
 
   // Oxirgi segmentni olib tashlash → parent path
   segments.pop();
