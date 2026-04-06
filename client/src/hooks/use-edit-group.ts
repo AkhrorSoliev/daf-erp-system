@@ -9,6 +9,7 @@ export interface GroupData {
   exactDays: string[];
   lessonStartTime: string | null;
   lessonEndTime: string | null;
+  lessonMinutes: number | null;
   status: number;
   statusEnum: string;
   comment: string | null;

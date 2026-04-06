@@ -85,6 +85,7 @@ function groupToForm(group: GroupData | null): EditGroupFormValues {
       exactDays: [],
       lessonStartTime: "",
       lessonEndTime: "",
+      lessonMinutes: undefined,
       status: 2,
       startDate: undefined,
       comment: "",
@@ -99,6 +100,7 @@ function groupToForm(group: GroupData | null): EditGroupFormValues {
     exactDays: group.exactDays ?? [],
     lessonStartTime: group.lessonStartTime ?? "",
     lessonEndTime: group.lessonEndTime ?? "",
+    lessonMinutes: group.lessonMinutes ?? undefined,
     status: group.status,
     startDate: group.startDate ? new Date(group.startDate) : undefined,
     comment: group.comment ?? "",
@@ -128,6 +130,8 @@ export function EditGroupForm({
     if (sorted === [...EVERY_DAY].sort().join(",")) return "every";
     return "custom";
   });
+  const [roomPopoverOpen, setRoomPopoverOpen] = useState(false);
+  const [roomSearch, setRoomSearch] = useState("");
   const [teacherPopoverOpen, setTeacherPopoverOpen] = useState(false);
   const [teacherSearch, setTeacherSearch] = useState("");
 
@@ -175,6 +179,21 @@ export function EditGroupForm({
     endTime: form.watch("lessonEndTime") ?? "",
     excludeGroupId: group?.id,
   });
+
+  const selectedRoom = useMemo(
+    () => smartRooms.find((r) => r.id === watchedRoomId),
+    [smartRooms, watchedRoomId],
+  );
+
+  const filteredRooms = useMemo(
+    () =>
+      roomSearch.trim()
+        ? smartRooms.filter((r) =>
+            r.name.toLowerCase().includes(roomSearch.toLowerCase()),
+          )
+        : smartRooms,
+    [smartRooms, roomSearch],
+  );
 
   const selectedTeacher = useMemo(
     () => smartTeachers.find((t) => t.id === watchedTeacherId),
@@ -224,13 +243,16 @@ export function EditGroupForm({
       .catch(() => setSuggestedName(""));
   }, [isAdd, selectedBranch?.id]);
 
-  // Auto-calculate endTime using lessonMinutes
+  const watchedLessonMinutes = form.watch("lessonMinutes");
+  const effectiveLessonMinutes = watchedLessonMinutes ?? selectedCourse?.lessonMinutes ?? null;
+
+  // Auto-calculate endTime using effectiveLessonMinutes
   useEffect(() => {
-    if (watchedStartTime && selectedCourse?.lessonMinutes) {
-      const endTime = calcEndTime(watchedStartTime, selectedCourse.lessonMinutes);
+    if (watchedStartTime && effectiveLessonMinutes) {
+      const endTime = calcEndTime(watchedStartTime, effectiveLessonMinutes);
       form.setValue("lessonEndTime", endTime);
     }
-  }, [watchedStartTime, selectedCourse, form]);
+  }, [watchedStartTime, effectiveLessonMinutes, form]);
 
   // Smart selects prevent conflicts — no need for separate conflict check
   useEffect(() => {
@@ -243,14 +265,14 @@ export function EditGroupForm({
   // maxTime for start time picker: ensure lesson end doesn't exceed branch closing
   const startTimeMax = useMemo(() => {
     if (!branchEndTime) return undefined;
-    if (!selectedCourse?.lessonMinutes) return branchEndTime;
+    if (!effectiveLessonMinutes) return branchEndTime;
     const [h, m] = branchEndTime.split(":").map(Number);
-    const totalMin = h * 60 + m - selectedCourse.lessonMinutes;
+    const totalMin = h * 60 + m - effectiveLessonMinutes;
     if (totalMin < 0) return branchEndTime;
     const endH = String(Math.floor(totalMin / 60) % 24).padStart(2, "0");
     const endM = String(totalMin % 60).padStart(2, "0");
     return `${endH}:${endM}`;
-  }, [branchEndTime, selectedCourse?.lessonMinutes]);
+  }, [branchEndTime, effectiveLessonMinutes]);
 
   const onSubmit = async (values: EditGroupFormValues) => {
     setSubmitting(true);
@@ -266,6 +288,7 @@ export function EditGroupForm({
       if (values.exactDays?.length) payload.exactDays = values.exactDays;
       if (values.lessonStartTime) payload.lessonStartTime = values.lessonStartTime;
       if (values.lessonEndTime) payload.lessonEndTime = values.lessonEndTime;
+      payload.lessonMinutes = values.lessonMinutes ?? null;
       if (values.status) payload.status = values.status;
       if (values.startDate) payload.startDate = values.startDate.toISOString();
       if (values.comment) payload.comment = values.comment;
@@ -390,6 +413,38 @@ export function EditGroupForm({
           )}
         </div>
 
+        {/* Dars davomiyligi */}
+        {selectedCourse && (
+          <div className="space-y-2">
+            <Label>Dars davomiyligi</Label>
+            <Controller
+              name="lessonMinutes"
+              control={form.control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ? String(field.value) : "default"}
+                  onValueChange={(v) => {
+                    field.onChange(v === "default" ? undefined : Number(v));
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="w-(--radix-select-trigger-width)">
+                    <SelectItem value="default">
+                      Kurs bo&apos;yicha ({selectedCourse.lessonMinutes ?? 90} daq)
+                    </SelectItem>
+                    <SelectItem value="60">60 daqiqa (1 soat)</SelectItem>
+                    <SelectItem value="90">90 daqiqa (1.5 soat)</SelectItem>
+                    <SelectItem value="120">120 daqiqa (2 soat)</SelectItem>
+                    <SelectItem value="150">150 daqiqa (2.5 soat)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+        )}
+
       </div>
 
       {/* Jadval */}
@@ -481,13 +536,13 @@ export function EditGroupForm({
           )}
         </div>
 
-        {watchedStartTime && selectedCourse?.lessonMinutes && (
+        {watchedStartTime && effectiveLessonMinutes && (
           <div className="space-y-2">
             <Label>Tugash vaqti</Label>
             <div className="bg-muted text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm">
-              {calcEndTime(watchedStartTime, selectedCourse.lessonMinutes)}
+              {calcEndTime(watchedStartTime, effectiveLessonMinutes)}
               <span className="ml-2 text-xs">
-                (avtomatik — {selectedCourse.lessonMinutes} daqiqa)
+                (avtomatik — {effectiveLessonMinutes} daqiqa)
               </span>
             </div>
           </div>
@@ -505,24 +560,95 @@ export function EditGroupForm({
               name="roomId"
               control={form.control}
               render={({ field }) => (
-                <Select
-                  value={field.value || "none"}
-                  onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                <Popover
+                  modal
+                  open={roomPopoverOpen}
+                  onOpenChange={(open) => {
+                    setRoomPopoverOpen(open);
+                    if (!open) setRoomSearch("");
+                  }}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Xonani tanlang" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="w-(--radix-select-trigger-width)">
-                    <SelectItem value="none">Tanlanmagan</SelectItem>
-                    {smartRooms.map((r) => (
-                      <SelectItem key={r.id} value={r.id} disabled={!r.available}>
-                        {r.name}
-                        {r.capacity ? ` (${r.capacity})` : ""}
-                        {!r.available && r.busyGroup ? ` — ${r.busyGroup} band` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="flex items-center gap-1.5">
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="min-w-0 flex-1 justify-between font-normal"
+                      >
+                        {selectedRoom ? (
+                          <span>
+                            {selectedRoom.name}
+                            {selectedRoom.capacity ? ` (${selectedRoom.capacity})` : ""}
+                          </span>
+                        ) : (
+                          "Xonani tanlang"
+                        )}
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    {selectedRoom && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 shrink-0"
+                        onClick={() => field.onChange("")}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <PopoverContent className="w-72 gap-0 p-0" align="start">
+                    <div className="border-b p-2">
+                      <div className="relative">
+                        <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
+                        <Input
+                          placeholder="Qidirish..."
+                          value={roomSearch}
+                          onChange={(e) => setRoomSearch(e.target.value)}
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-40 space-y-1 overflow-y-auto overscroll-contain p-2">
+                      {filteredRooms.map((r) => {
+                        const isSelected = field.value === r.id;
+                        return (
+                          <button
+                            key={r.id}
+                            type="button"
+                            disabled={!r.available}
+                            onClick={() => {
+                              if (!r.available) return;
+                              field.onChange(isSelected ? "" : r.id);
+                              setRoomPopoverOpen(false);
+                              setRoomSearch("");
+                            }}
+                            className={cn(
+                              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+                              !r.available && "opacity-50 cursor-not-allowed",
+                              r.available && "hover:bg-accent",
+                              isSelected && "bg-accent",
+                            )}
+                          >
+                            <span className="truncate flex-1 text-left">
+                              {r.name}
+                              {r.capacity ? ` (${r.capacity})` : ""}
+                            </span>
+                            {!r.available && r.busyGroup && (
+                              <span className="text-[10px] text-muted-foreground shrink-0">{r.busyGroup} band</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {filteredRooms.length === 0 && (
+                        <p className="text-muted-foreground px-2 py-1.5 text-sm">
+                          Xonalar topilmadi
+                        </p>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             />
           )}

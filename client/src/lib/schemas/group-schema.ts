@@ -8,6 +8,7 @@ const baseGroupSchema = z.object({
   exactDays: z.array(z.string()).optional().default([]),
   lessonStartTime: z.string().optional().or(z.literal("")),
   lessonEndTime: z.string().optional().or(z.literal("")),
+  lessonMinutes: z.number().min(15).max(300).optional().nullable(),
   status: z.number().min(1).max(4).optional(),
   startDate: z.date().optional().or(z.literal(undefined)),
   comment: z.string().optional().or(z.literal("")),

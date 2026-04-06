@@ -501,6 +501,7 @@ export class GroupsService {
             exactDays: dto.exactDays ?? [],
             lessonStartTime: dto.lessonStartTime,
             lessonEndTime: dto.lessonEndTime,
+            lessonMinutes: dto.lessonMinutes,
             status: dto.status ?? 2,
             statusEnum: INT_TO_GROUP_STATUS[dto.status ?? 2] ?? GroupStatus.FORMING,
             comment: dto.comment,

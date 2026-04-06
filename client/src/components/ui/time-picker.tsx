@@ -64,7 +64,7 @@ export function TimePicker({
   }, [open]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -81,7 +81,7 @@ export function TimePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <div className="h-64 overflow-y-auto p-1">
+        <div className="max-h-52 space-y-0.5 overflow-y-auto overscroll-contain p-1">
           {filteredOptions.map((time) => (
             <button
               key={time}
