@@ -59,6 +59,13 @@ export class UpdateGroupDto {
 
   @IsOptional()
   @IsInt()
+  @Min(15)
+  @Max(300)
+  @Type(() => Number)
+  lessonMinutes?: number;
+
+  @IsOptional()
+  @IsInt()
   @Min(1)
   @Max(4)
   @Type(() => Number)

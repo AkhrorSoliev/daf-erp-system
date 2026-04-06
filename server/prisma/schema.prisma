@@ -411,6 +411,7 @@ model Group {
   exactDays          String[]
   lessonStartTime    String?
   lessonEndTime      String?
+  lessonMinutes      Int?
   status             Int         @default(2)
   statusEnum         GroupStatus @default(FORMING)
   comment            String?

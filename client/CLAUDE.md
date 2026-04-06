@@ -146,6 +146,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Use `date-fns/format` with the pattern `dd.MM.yyyy` or `dd.MM.yyyy, HH:mm:ss`
 - **All date inputs** must use the shared `<DatePicker>` component from `src/components/ui/date-picker.tsx`. It renders a button that opens a calendar popover (built on shadcn/ui `<Calendar>` + `<Popover>`), displays the selected date in `dd.MM.yyyy` format, and returns a `Date` object. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
 - **All time inputs** must use the shared `<TimePicker>` component from `src/components/ui/time-picker.tsx`. It renders a button that opens a popover with a scrollable list of times (30-minute intervals, 00:00–23:30), displays the selected time, and returns a `HH:mm` string. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
+- **TimePicker scroll fix:** The component uses `modal` prop on `<Popover>` + `overscroll-contain` on the scroll container to ensure touchpad scrolling works correctly inside the Radix Popover (same pattern as teacher select in the group form). Do **not** remove `modal` — without it, touchpad scroll does not work
 - **Never** use plain text `<Input>` for date or time entry — always use `<DatePicker>` or `<TimePicker>` so users select from a picker
 
 #### User and Student IDs

@@ -51,6 +51,7 @@ export function DatePicker({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
+          weekStartsOn={1}
           selected={value ?? undefined}
           onSelect={(date) => {
             onChange?.(date);
