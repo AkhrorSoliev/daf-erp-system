@@ -10,6 +10,8 @@ export class TelegramController {
   @Post('webhook')
   async webhook(@Req() req: any, @Res() res: any) {
     await this.telegramService.handleWebhook(req, res);
-    res.status(200).send('ok');
+    if (!res.headersSent) {
+      res.status(200).send('ok');
+    }
   }
 }
