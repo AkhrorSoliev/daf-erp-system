@@ -19,6 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 
 interface LessonDate {
@@ -46,6 +47,12 @@ const DAY_SHORT: Record<string, string> = {
   Juma: "Ju",
   Shanba: "Sh",
   Yakshanba: "Ya",
+};
+
+const MONTH_NAMES: Record<number, string> = {
+  1: "Yanvar", 2: "Fevral", 3: "Mart", 4: "Aprel",
+  5: "May", 6: "Iyun", 7: "Iyul", 8: "Avgust",
+  9: "Sentabr", 10: "Oktabr", 11: "Noyabr", 12: "Dekabr",
 };
 
 function getCycleSize(courseName: string): number {
@@ -81,6 +88,9 @@ export function AttendanceCycleDashboard({
   onSelectDate,
   onShowStats,
 }: AttendanceCycleDashboardProps) {
+  const user = useAuth((s) => s.user);
+  const isAdmin = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+
   const [allLessons, setAllLessons] = useState<LessonDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentCycleIndex, setCurrentCycleIndex] = useState(-1);
@@ -139,26 +149,55 @@ export function AttendanceCycleDashboard({
     return result;
   }, [allLessons, cycleSize]);
 
-  // Auto-detect current cycle on first load
+  // Month-based grouping for teacher view
+  const monthGroups = useMemo(() => {
+    if (isAdmin) return [];
+    const map = new Map<string, LessonDate[]>();
+    for (const lesson of allLessons) {
+      const key = lesson.date.slice(0, 7); // "YYYY-MM"
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(lesson);
+    }
+    return Array.from(map.entries()).map(([key, lessons]) => {
+      const [y, m] = key.split("-").map(Number);
+      return { label: `${MONTH_NAMES[m]} ${y}`, month: m, year: y, lessons };
+    });
+  }, [allLessons, isAdmin]);
+
+  // Auto-detect current cycle/month on first load
   useEffect(() => {
-    if (cycles.length === 0 || currentCycleIndex >= 0) return;
-    const idx = cycles.findIndex((cycle) =>
-      cycle.some((l) => l.date >= todayStr),
-    );
-    setCurrentCycleIndex(idx >= 0 ? idx : cycles.length - 1);
-  }, [cycles, currentCycleIndex, todayStr]);
+    if (currentCycleIndex >= 0) return;
+    if (isAdmin) {
+      if (cycles.length === 0) return;
+      const idx = cycles.findIndex((cycle) =>
+        cycle.some((l) => l.date >= todayStr),
+      );
+      setCurrentCycleIndex(idx >= 0 ? idx : cycles.length - 1);
+    } else {
+      if (monthGroups.length === 0) return;
+      const todayMonth = now.getMonth() + 1;
+      const todayYear = now.getFullYear();
+      const idx = monthGroups.findIndex(
+        (mg) => mg.month === todayMonth && mg.year === todayYear,
+      );
+      setCurrentCycleIndex(idx >= 0 ? idx : monthGroups.length - 1);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cycles, monthGroups, currentCycleIndex, todayStr, isAdmin]);
 
-  const currentCycle = cycles[currentCycleIndex] ?? [];
-  const totalCycles = cycles.length;
+  const currentLessons = isAdmin
+    ? (cycles[currentCycleIndex] ?? [])
+    : (monthGroups[currentCycleIndex]?.lessons ?? []);
+  const totalItems = isAdmin ? cycles.length : monthGroups.length;
 
-  // Cycle summary
+  // Cycle/month summary
   const summary = useMemo(() => {
     let taken = 0;
     let missed = 0;
     let future = 0;
     let today = 0;
 
-    for (const lesson of currentCycle) {
+    for (const lesson of currentLessons) {
       if (lesson.date === todayStr) {
         today++;
         if (lesson.hasAttendance) taken++;
@@ -171,7 +210,7 @@ export function AttendanceCycleDashboard({
       }
     }
     return { taken, missed, future, today };
-  }, [currentCycle, todayStr]);
+  }, [currentLessons, todayStr]);
 
   // Get lesson status
   const getLessonStatus = (lesson: LessonDate) => {
@@ -181,8 +220,8 @@ export function AttendanceCycleDashboard({
     return "future";
   };
 
-  // Today's lesson
-  const todayLesson = currentCycle.find((l) => l.date === todayStr);
+  // Today's lesson (check all lessons, not just current view)
+  const todayLesson = allLessons.find((l) => l.date === todayStr);
   const isLessonTime = (() => {
     if (!todayLesson || !group.lessonStartTime || !group.lessonEndTime)
       return false;
@@ -193,18 +232,21 @@ export function AttendanceCycleDashboard({
   })();
 
   // Missed lessons (max 3)
-  const missedLessons = currentCycle
+  const missedLessons = currentLessons
     .filter((l) => !l.hasAttendance && l.date < todayStr && l.date !== todayStr)
     .slice(0, 3);
 
-  // Global lesson number offset
-  const globalOffset = currentCycleIndex * cycleSize;
+  // Global lesson number offset (admin only)
+  const globalOffset = isAdmin ? currentCycleIndex * cycleSize : 0;
 
   // Progress percentage
   const progressPct =
-    currentCycle.length > 0
-      ? Math.round((summary.taken / currentCycle.length) * 100)
+    currentLessons.length > 0
+      ? Math.round((summary.taken / currentLessons.length) * 100)
       : 0;
+
+  // Check if today has a lesson in this group at all
+  const hasTodayLesson = allLessons.some((l) => l.date === todayStr);
 
   if (loading) {
     return (
@@ -299,6 +341,25 @@ export function AttendanceCycleDashboard({
         </div>
       )}
 
+      {/* No lesson today message */}
+      {!hasTodayLesson && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
+            <Circle className="size-4 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              Bugun bu guruhda dars yo&apos;q
+            </p>
+            {group.exactDays?.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Dars kunlari: {group.exactDays.map((d: string) => DAY_SHORT[d.charAt(0).toUpperCase() + d.slice(1)] ?? d).join(", ")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Cycle navigation + stats button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -312,14 +373,15 @@ export function AttendanceCycleDashboard({
             <ChevronLeft className="size-4" />
           </Button>
           <span className="min-w-44 text-center text-sm font-medium">
-            Sikl {currentCycleIndex + 1} ({globalOffset + 1}-
-            {globalOffset + currentCycle.length} darslar)
+            {isAdmin
+              ? `Sikl ${currentCycleIndex + 1} (${globalOffset + 1}-${globalOffset + currentLessons.length} darslar)`
+              : monthGroups[currentCycleIndex]?.label ?? ""}
           </span>
           <Button
             variant="outline"
             size="icon"
             onClick={() => setCurrentCycleIndex((i) => i + 1)}
-            disabled={currentCycleIndex >= totalCycles - 1}
+            disabled={currentCycleIndex >= totalItems - 1}
             className="size-8"
           >
             <ChevronRight className="size-4" />
@@ -337,127 +399,137 @@ export function AttendanceCycleDashboard({
       </div>
 
       {/* Cycle summary + progress bar */}
-      <div className="space-y-2 rounded-lg border p-3">
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          <span className="text-green-600 dark:text-green-400">
-            Olingan: {summary.taken}/{currentCycle.length}
-          </span>
-          {summary.missed > 0 && (
-            <span className="text-amber-600 dark:text-amber-400">
-              Olinmagan: {summary.missed}
+      {isAdmin ? (
+        <div className="space-y-2 rounded-lg border p-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <span className="text-green-600 dark:text-green-400">
+              Olingan: {summary.taken}/{currentLessons.length}
             </span>
-          )}
-          <span className="text-muted-foreground">
-            Kelgusi: {summary.future + summary.today}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-green-500 transition-all"
-              style={{ width: `${progressPct}%` }}
-            />
+            {summary.missed > 0 && (
+              <span className="text-amber-600 dark:text-amber-400">
+                Olinmagan: {summary.missed}
+              </span>
+            )}
+            <span className="text-muted-foreground">
+              Kelgusi: {summary.future + summary.today}
+            </span>
           </div>
-          <span className="text-xs font-medium text-muted-foreground">
-            {progressPct}%
+          <div className="flex items-center gap-2">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-green-500 transition-all"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">
+              {progressPct}%
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border p-3">
+          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+            O&apos;tilgan: {progressPct}%
           </span>
         </div>
-      </div>
+      )}
 
-      {/* Lesson circles */}
-      <div
-        className={cn(
-          "grid gap-2",
-          cycleSize === 20
-            ? "grid-cols-5 sm:grid-cols-10"
-            : "grid-cols-6 sm:grid-cols-12",
-        )}
-      >
-        {currentCycle.map((lesson, index) => {
-          const status = getLessonStatus(lesson);
-          return (
-            <button
-              key={lesson.date}
-              onClick={() => onSelectDate(lesson.date)}
-              className="group flex flex-col items-center gap-1 rounded-lg p-1 transition-colors hover:bg-muted/60"
-            >
-              {/* Circle */}
-              <div
-                className={cn(
-                  "relative flex size-10 items-center justify-center rounded-full text-sm font-semibold transition-all sm:size-11",
-                  status === "taken" &&
-                    "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
-                  status === "missed" &&
-                    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
-                  status === "today" &&
-                    "bg-blue-100 text-blue-700 ring-2 ring-blue-400 dark:bg-blue-900/40 dark:text-blue-400 dark:ring-blue-500",
-                  status === "future" &&
-                    "bg-muted text-muted-foreground",
-                )}
-              >
-                {status === "taken" ? (
-                  <Check className="size-4" />
-                ) : status === "missed" ? (
-                  <AlertTriangle className="size-4" />
-                ) : status === "today" ? (
-                  <span className="relative flex size-2.5">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-blue-400 opacity-75" />
-                    <span className="relative inline-flex size-2.5 rounded-full bg-blue-500" />
-                  </span>
-                ) : (
-                  <Circle className="size-4 opacity-40" />
-                )}
-              </div>
-
-              {/* Lesson number */}
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {index + 1}-dars
-              </span>
-
-              {/* Date */}
-              <span className="text-[10px] text-muted-foreground">
-                {formatShortDate(lesson.date)}
-              </span>
-
-              {/* Day abbreviation */}
-              <span className="text-[10px] text-muted-foreground/70">
-                {DAY_SHORT[lesson.dayName] ?? lesson.dayName.slice(0, 2)}
-              </span>
-            </button>
-          );
-        })}
-
-        {/* Empty placeholders for incomplete cycle */}
-        {currentCycle.length < cycleSize &&
-          Array.from({ length: cycleSize - currentCycle.length }).map(
-            (_, i) => (
-              <div
-                key={`empty-${i}`}
-                className="flex flex-col items-center gap-1 p-1 opacity-30"
-              >
-                <div className="flex size-10 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 sm:size-11">
-                  <span className="text-xs text-muted-foreground">
-                    {currentCycle.length + i + 1}
-                  </span>
-                </div>
-                <span className="text-[10px] text-muted-foreground">
-                  {currentCycle.length + i + 1}-dars
-                </span>
-                <span className="text-[10px] text-muted-foreground">—</span>
-                <span className="text-[10px] text-muted-foreground/70">—</span>
-              </div>
-            ),
+      {/* Lesson circles (admin only) */}
+      {isAdmin && (
+        <div
+          className={cn(
+            "grid gap-2",
+            cycleSize === 20
+              ? "grid-cols-5 sm:grid-cols-10"
+              : "grid-cols-6 sm:grid-cols-12",
           )}
-      </div>
+        >
+          {currentLessons.map((lesson, index) => {
+            const status = getLessonStatus(lesson);
+            return (
+              <button
+                key={lesson.date}
+                onClick={() => onSelectDate(lesson.date)}
+                className="group flex flex-col items-center gap-1 rounded-lg p-1 transition-colors hover:bg-muted/60"
+              >
+                {/* Circle */}
+                <div
+                  className={cn(
+                    "relative flex size-10 items-center justify-center rounded-full text-sm font-semibold transition-all sm:size-11",
+                    status === "taken" &&
+                      "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+                    status === "missed" &&
+                      "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+                    status === "today" &&
+                      "bg-blue-100 text-blue-700 ring-2 ring-blue-400 dark:bg-blue-900/40 dark:text-blue-400 dark:ring-blue-500",
+                    status === "future" &&
+                      "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {status === "taken" ? (
+                    <Check className="size-4" />
+                  ) : status === "missed" ? (
+                    <AlertTriangle className="size-4" />
+                  ) : status === "today" ? (
+                    <span className="relative flex size-2.5">
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                      <span className="relative inline-flex size-2.5 rounded-full bg-blue-500" />
+                    </span>
+                  ) : (
+                    <Circle className="size-4 opacity-40" />
+                  )}
+                </div>
 
-      {/* Missed lessons alert cards */}
-      {missedLessons.length > 0 && (
+                {/* Lesson number */}
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {index + 1}-dars
+                </span>
+
+                {/* Date */}
+                <span className="text-[10px] text-muted-foreground">
+                  {formatShortDate(lesson.date)}
+                </span>
+
+                {/* Day abbreviation */}
+                <span className="text-[10px] text-muted-foreground/70">
+                  {DAY_SHORT[lesson.dayName] ?? lesson.dayName.slice(0, 2)}
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Empty placeholders for incomplete cycle */}
+          {currentLessons.length < cycleSize &&
+            Array.from({ length: cycleSize - currentLessons.length }).map(
+              (_, i) => (
+                <div
+                  key={`empty-${i}`}
+                  className="flex flex-col items-center gap-1 p-1 opacity-30"
+                >
+                  <div className="flex size-10 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 sm:size-11">
+                    <span className="text-xs text-muted-foreground">
+                      {currentLessons.length + i + 1}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {currentLessons.length + i + 1}-dars
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">—</span>
+                  <span className="text-[10px] text-muted-foreground/70">—</span>
+                </div>
+              ),
+            )}
+        </div>
+      )}
+
+      {/* Missed lessons alert cards (admin only) */}
+      {isAdmin && missedLessons.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
             Davomat olinmagan darslar:
           </p>
           {missedLessons.map((lesson) => {
-            const lessonIndex = currentCycle.indexOf(lesson);
+            const lessonIndex = currentLessons.indexOf(lesson);
             return (
               <button
                 key={lesson.date}
