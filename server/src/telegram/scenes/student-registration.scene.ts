@@ -573,6 +573,7 @@ export function createStudentRegistrationScene(
 
       await ctx.scene.leave();
     } catch (error) {
+      console.error('[StudentRegistration] Ro\'yxatdan o\'tishda xatolik:', error);
       await ctx.reply(
         "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
       );
