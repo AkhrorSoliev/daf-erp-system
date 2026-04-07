@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Users,
   Building2,
@@ -47,6 +47,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SettingsPageHeader } from "./settings-page-header";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 
 interface ArchiveCounts {
   users: number;
@@ -78,10 +80,19 @@ const categories: EntityCategory[] = [
   { key: "holidays", label: "Dam olish kunlari", icon: CalendarOff },
 ];
 
+const archiveSchema = {
+  type: { type: "string" as const, defaultValue: "" },
+};
+
 export function ArchiveSettingsClient() {
   const [counts, setCounts] = useState<ArchiveCounts | null>(null);
-  const [selected, setSelected] = useState<keyof ArchiveCounts | null>(null);
+  const { filters: archiveFilters, setFilter: setArchiveFilter, resetFilters } = useUrlFilters(archiveSchema);
   const [loading, setLoading] = useState(true);
+
+  const selected = useMemo(() => {
+    const t = archiveFilters.type;
+    return t && categories.some((c) => c.key === t) ? (t as keyof ArchiveCounts) : null;
+  }, [archiveFilters.type]);
 
   const fetchCounts = useCallback(async () => {
     try {
@@ -105,7 +116,7 @@ export function ArchiveSettingsClient() {
         entityType={selected}
         label={category.label}
         onBack={() => {
-          setSelected(null);
+          resetFilters();
           fetchCounts();
         }}
       />
@@ -136,7 +147,7 @@ export function ArchiveSettingsClient() {
             return (
               <button
                 key={cat.key}
-                onClick={() => setSelected(cat.key)}
+                onClick={() => setArchiveFilter("type", cat.key)}
                 className="flex items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-accent"
               >
                 <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
@@ -170,20 +181,30 @@ interface ArchiveListProps {
   onBack: () => void;
 }
 
+const archiveListSchema = {
+  type: { type: "string" as const, defaultValue: "" },
+  search: { type: "string" as const, defaultValue: "" },
+  page: { type: "number" as const, defaultValue: 1 },
+};
+
 function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(archiveListSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | number | null>(null);
   const perPage = 10;
 
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setUrlFilters({ search: value, page: 1 });
+  }, 300);
+
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, any> = { page, per_page: perPage };
-      if (search.trim()) params.search = search.trim();
+      const params: Record<string, any> = { page: filters.page, per_page: perPage };
+      if (filters.search.trim()) params.search = filters.search.trim();
       const { data } = await api.get(`/archive/${entityType}`, { params });
       setItems(data.data);
       setTotal(data.total);
@@ -192,7 +213,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
     } finally {
       setLoading(false);
     }
-  }, [entityType, page, search]);
+  }, [entityType, filters.page, filters.search]);
 
   useEffect(() => {
     fetchItems();
@@ -237,10 +258,10 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Qidirish..."
-          value={search}
+          value={searchInput}
           onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
+            setSearchInput(e.target.value);
+            debouncedSetSearch(e.target.value);
           }}
           className="pl-9"
         />
@@ -282,7 +303,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
               items.map((item, index) => (
                 <TableRow key={item.id}>
                   <TableCell className="border-r text-muted-foreground">
-                    {(page - 1) * perPage + index + 1}
+                    {(filters.page - 1) * perPage + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {getDisplayName(entityType, item)}
@@ -359,22 +380,22 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            {page} / {totalPages} sahifa ({total} ta)
+            {filters.page} / {totalPages} sahifa ({total} ta)
           </span>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
+              disabled={filters.page <= 1}
+              onClick={() => setFilter("page", filters.page - 1)}
             >
               Oldingi
             </Button>
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
+              disabled={filters.page >= totalPages}
+              onClick={() => setFilter("page", filters.page + 1)}
             >
               Keyingi
             </Button>

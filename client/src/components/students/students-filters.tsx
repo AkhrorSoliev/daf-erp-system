@@ -48,12 +48,14 @@ interface Teacher {
 interface StudentsFiltersProps {
   filters: StudentFilters;
   onFilterChange: (filters: StudentFilters) => void;
+  onClear?: () => void;
   isTeacher?: boolean;
 }
 
 export function StudentsFilters({
   filters,
   onFilterChange,
+  onClear,
   isTeacher,
 }: StudentsFiltersProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -139,46 +141,33 @@ export function StudentsFilters({
             if (!open) setTeacherSearch("");
           }}
         >
-          <div className="flex items-center gap-1.5">
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                type="button"
-                className="h-9 w-full min-w-0 justify-between font-normal sm:w-52"
-              >
-                {selectedTeacher ? (
-                  <span className="flex items-center gap-2">
-                    <Avatar size="sm">
-                      {selectedTeacher.photo && (
-                        <AvatarImage
-                          src={selectedTeacher.photo}
-                          alt={`${selectedTeacher.firstName} ${selectedTeacher.lastName}`}
-                        />
-                      )}
-                      <AvatarFallback>
-                        {`${selectedTeacher.firstName[0] ?? ""}${selectedTeacher.lastName[0] ?? ""}`.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {selectedTeacher.firstName} {selectedTeacher.lastName}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">Barcha o&apos;qituvchilar</span>
-                )}
-                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            {selectedTeacher && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-9 shrink-0"
-                onClick={() => updateFilter("teacherId", "all")}
-              >
-                <X className="size-4" />
-              </Button>
-            )}
-          </div>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              type="button"
+              className="h-9 w-full min-w-0 justify-between font-normal sm:w-52"
+            >
+              {selectedTeacher ? (
+                <span className="flex items-center gap-2">
+                  <Avatar size="sm">
+                    {selectedTeacher.photo && (
+                      <AvatarImage
+                        src={selectedTeacher.photo}
+                        alt={`${selectedTeacher.firstName} ${selectedTeacher.lastName}`}
+                      />
+                    )}
+                    <AvatarFallback>
+                      {`${selectedTeacher.firstName[0] ?? ""}${selectedTeacher.lastName[0] ?? ""}`.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {selectedTeacher.firstName} {selectedTeacher.lastName}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Barcha o&apos;qituvchilar</span>
+              )}
+              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent className="w-72 gap-0 p-0" align="start">
             <div className="border-b p-2">
               <div className="relative">
@@ -234,7 +223,7 @@ export function StudentsFilters({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onFilterChange(defaultFilters)}
+              onClick={() => onClear ? onClear() : onFilterChange(defaultFilters)}
             >
               <X className="mr-1 size-4" />
               Tozalash

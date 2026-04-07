@@ -37,7 +37,16 @@ import { RoomRowActions } from "./room-row-actions";
 import { EditRoomDrawer } from "./edit-room-drawer";
 import { useEditRoom } from "@/hooks/use-edit-room";
 import type { Room } from "@/hooks/use-edit-room";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+
+const roomsSchema = {
+  branch: { type: "string" as const, defaultValue: "" },
+  search: { type: "string" as const, defaultValue: "" },
+  page: { type: "number" as const, defaultValue: 1 },
+  pageSize: { type: "number" as const, defaultValue: 10 },
+};
 
 interface BranchWithCount {
   id: number;
@@ -50,12 +59,15 @@ interface BranchWithCount {
 // ——— Branch list view ———
 function BranchListView({
   onSelect,
+  search,
+  onSearchChange,
 }: {
   onSelect: (branch: BranchWithCount) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
 }) {
   const [branches, setBranches] = useState<BranchWithCount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
 
   useEffect(() => {
     async function fetch() {
@@ -90,7 +102,7 @@ function BranchListView({
         <Input
           placeholder="Filial nomi bo'yicha qidirish..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="w-full sm:max-w-sm"
         />
       </div>
@@ -155,20 +167,28 @@ function BranchListView({
   );
 }
 
+type RoomsFilters = ReturnType<typeof useUrlFilters<typeof roomsSchema>>;
+
 // ——— Rooms table for a selected branch ———
 function BranchRoomsView({
   branch,
   onBack,
+  filters,
+  setFilter,
+  setUrlFilters,
+  searchInput,
+  onSearchChange,
 }: {
   branch: BranchWithCount;
   onBack: () => void;
+  filters: RoomsFilters["filters"];
+  setFilter: RoomsFilters["setFilter"];
+  setUrlFilters: RoomsFilters["setFilters"];
+  searchInput: string;
+  onSearchChange: (value: string) => void;
 }) {
-
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const openAddDrawer = useEditRoom((s) => s.openAddDrawer);
 
@@ -176,7 +196,7 @@ function BranchRoomsView({
     setLoading(true);
     try {
       const { data } = await api.get("/rooms", {
-        params: { branch_id: branch.id, page, pageSize },
+        params: { branch_id: branch.id, page: filters.page, pageSize: filters.pageSize },
       });
       setRooms(
         data.data.map((r: any) => ({
@@ -194,17 +214,17 @@ function BranchRoomsView({
     } finally {
       setLoading(false);
     }
-  }, [branch.id, page, pageSize]);
+  }, [branch.id, filters.page, filters.pageSize]);
 
   useEffect(() => {
     fetchRooms();
   }, [fetchRooms]);
 
   const filtered = rooms.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase()),
+    r.name.toLowerCase().includes(filters.search.toLowerCase()),
   );
 
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = Math.ceil(total / filters.pageSize);
 
   const handleSaved = (saved: Room) => {
     setRooms((prev) => {
@@ -255,8 +275,8 @@ function BranchRoomsView({
         </Tooltip>
         <Input
           placeholder="Xona nomi bo'yicha qidirish..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="w-full sm:max-w-sm"
         />
       </div>
@@ -298,7 +318,7 @@ function BranchRoomsView({
                   className="relative cursor-pointer hover:bg-muted/50"
                 >
                   <TableCell className="border-r text-muted-foreground">
-                    {(page - 1) * pageSize + index + 1}
+                    {(filters.page - 1) * filters.pageSize + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     <Link href={`/settings/rooms/${room.id}`} className="absolute inset-0" />
@@ -328,10 +348,9 @@ function BranchRoomsView({
           </p>
           <div className="flex items-center gap-3">
             <Select
-              value={String(pageSize)}
+              value={String(filters.pageSize)}
               onValueChange={(v) => {
-                setPageSize(Number(v));
-                setPage(1);
+                setUrlFilters({ pageSize: Number(v), page: 1 });
               }}
             >
               <SelectTrigger className="w-20">
@@ -349,19 +368,19 @@ function BranchRoomsView({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
+                disabled={filters.page <= 1}
+                onClick={() => setFilter("page", filters.page - 1)}
               >
                 Oldingi
               </Button>
               <span className="px-2 text-sm text-muted-foreground">
-                {page} / {totalPages}
+                {filters.page} / {totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                disabled={filters.page >= totalPages}
+                onClick={() => setFilter("page", filters.page + 1)}
               >
                 Keyingi
               </Button>
@@ -377,17 +396,43 @@ function BranchRoomsView({
 
 // ——— Main component ———
 export function RoomsSettingsClient() {
+  const { filters, setFilter, setFilters: setUrlFilters, resetFilters } = useUrlFilters(roomsSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
   const [selectedBranch, setSelectedBranch] =
     useState<BranchWithCount | null>(null);
 
-  if (selectedBranch) {
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setUrlFilters({ search: value, page: 1 });
+  }, 300);
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  if (selectedBranch || filters.branch) {
     return (
       <BranchRoomsView
-        branch={selectedBranch}
-        onBack={() => setSelectedBranch(null)}
+        branch={selectedBranch!}
+        onBack={() => { setSelectedBranch(null); resetFilters(); setSearchInput(""); }}
+        filters={filters}
+        setFilter={setFilter}
+        setUrlFilters={setUrlFilters}
+        searchInput={searchInput}
+        onSearchChange={handleSearchChange}
       />
     );
   }
 
-  return <BranchListView onSelect={setSelectedBranch} />;
+  return (
+    <BranchListView
+      onSelect={(branch) => {
+        setSelectedBranch(branch);
+        setSearchInput("");
+        setUrlFilters({ branch: String(branch.id), search: "", page: 1, pageSize: 10 });
+      }}
+      search={searchInput}
+      onSearchChange={handleSearchChange}
+    />
+  );
 }

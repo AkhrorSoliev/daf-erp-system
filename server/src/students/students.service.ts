@@ -142,7 +142,8 @@ export class StudentsService {
     const { page = 1, per_page = 10, search, status, branch_id } = query;
     const skip = (page - 1) * per_page;
 
-    const where: Prisma.StudentWhereInput = {
+    // Base where: search + teacher + branch (without status filter)
+    const baseWhere: Prisma.StudentWhereInput = {
       deletedAt: null,
     };
 
@@ -158,68 +159,106 @@ export class StudentsService {
         searchConditions.push({ id: { equals: searchAsNumber } });
       }
 
-      where.OR = searchConditions;
+      baseWhere.OR = searchConditions;
     }
+
+    if (query.teacher_id) {
+      baseWhere.enrollments = {
+        some: {
+          deletedAt: null,
+          group: {
+            deletedAt: null,
+            teachers: { some: { teacherId: query.teacher_id } },
+          },
+        },
+      };
+    }
+
+    if (branch_id) {
+      baseWhere.branches = { some: { branchId: branch_id } };
+    }
+
+    // Full where: base + status filter (for main query)
+    const where: Prisma.StudentWhereInput = { ...baseWhere };
 
     if (status === 'active') {
       where.status = StudentStatus.ACTIVE;
-      where.enrollments = { some: { deletedAt: null } };
+      const activeEnrollmentFilter = { enrollments: { some: { deletedAt: null } } };
+      if (where.enrollments) {
+        where.AND = [
+          { enrollments: where.enrollments },
+          activeEnrollmentFilter,
+        ];
+        delete where.enrollments;
+      } else {
+        where.enrollments = activeEnrollmentFilter.enrollments;
+      }
     } else if (status === 'frozen') {
       where.status = StudentStatus.INACTIVE;
     } else if (status === 'ungrouped') {
       where.status = StudentStatus.ACTIVE;
-      where.enrollments = { none: { deletedAt: null } };
+      const noEnrollmentFilter = { enrollments: { none: { deletedAt: null } } };
+      if (where.enrollments) {
+        where.AND = [
+          { enrollments: where.enrollments },
+          noEnrollmentFilter,
+        ];
+        delete where.enrollments;
+      } else {
+        where.enrollments = noEnrollmentFilter.enrollments;
+      }
     } else if (status === 'graduated') {
       where.status = StudentStatus.GRADUATED;
     } else if (status === 'expelled') {
       where.status = StudentStatus.EXPELLED;
     }
 
-    if (query.teacher_id) {
-      const teacherEnrollmentFilter: Prisma.StudentWhereInput = {
-        enrollments: {
-          some: {
-            deletedAt: null,
-            group: {
-              deletedAt: null,
-              teachers: { some: { teacherId: query.teacher_id } },
-            },
-          },
-        },
-      };
-
-      if (where.enrollments) {
-        where.AND = [
-          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
-          { enrollments: where.enrollments },
-          teacherEnrollmentFilter,
-        ];
-        delete where.enrollments;
-      } else {
-        Object.assign(where, teacherEnrollmentFilter);
-      }
+    // Stats queries use baseWhere (no status filter) so they reflect the full filtered set
+    const activeStatsWhere: Prisma.StudentWhereInput = {
+      ...baseWhere,
+      isActive: true,
+    };
+    if (baseWhere.enrollments) {
+      activeStatsWhere.AND = [
+        { enrollments: baseWhere.enrollments },
+        { enrollments: { some: { deletedAt: null } } },
+      ];
+      delete activeStatsWhere.enrollments;
+    } else {
+      activeStatsWhere.enrollments = { some: { deletedAt: null } };
     }
 
-    if (branch_id) {
-      where.branches = { some: { branchId: branch_id } };
-    }
-
-    const [data, total] = await Promise.all([
-      this.prisma.student.findMany({
-        where,
-        skip,
-        take: per_page,
-        select: studentSelect,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.student.count({ where }),
-    ]);
+    const [data, total, statsTotal, activeCount, frozenCount, debtorCount] =
+      await Promise.all([
+        this.prisma.student.findMany({
+          where,
+          skip,
+          take: per_page,
+          select: studentSelect,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.student.count({ where }),
+        this.prisma.student.count({ where: baseWhere }),
+        this.prisma.student.count({ where: activeStatsWhere }),
+        this.prisma.student.count({
+          where: { ...baseWhere, isActive: false },
+        }),
+        this.prisma.student.count({
+          where: { ...baseWhere, balance: { lt: 0 } },
+        }),
+      ]);
 
     return {
       data: data.map(formatStudent),
       total,
       page,
       per_page,
+      stats: {
+        total: statsTotal,
+        active: activeCount,
+        frozen: frozenCount,
+        debtors: debtorCount,
+      },
     };
   }
 

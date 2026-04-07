@@ -29,6 +29,8 @@ import {
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { SettingsPageHeader } from "./settings-page-header";
 import { CourseRowActions } from "./course-row-actions";
 import { EditCourseDrawer } from "./edit-course-drawer";
@@ -38,6 +40,12 @@ function formatPrice(price: number): string {
   return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " so'm";
 }
 
+const coursesSchema = {
+  search: { type: "string" as const, defaultValue: "" },
+  page: { type: "number" as const, defaultValue: 1 },
+  pageSize: { type: "number" as const, defaultValue: 10 },
+};
+
 export function CoursesSettingsClient() {
   const openAddDrawer = useEditCourse((s) => s.openAddDrawer);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
@@ -45,17 +53,20 @@ export function CoursesSettingsClient() {
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(coursesSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
   const [total, setTotal] = useState(0);
+
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setUrlFilters({ search: value, page: 1 });
+  }, 300);
 
   const fetchCourses = useCallback(async () => {
     if (!branchLoaded || !selectedBranch) return;
     setLoading(true);
     try {
       const { data } = await api.get("/courses", {
-        params: { branch_id: selectedBranch.id, page, pageSize },
+        params: { branch_id: selectedBranch.id, page: filters.page, pageSize: filters.pageSize },
       });
       setCourses(data.data);
       setTotal(data.total);
@@ -64,7 +75,7 @@ export function CoursesSettingsClient() {
     } finally {
       setLoading(false);
     }
-  }, [selectedBranch, branchLoaded, page, pageSize]);
+  }, [selectedBranch, branchLoaded, filters.page, filters.pageSize]);
 
   useEffect(() => {
     fetchCourses();
@@ -72,14 +83,14 @@ export function CoursesSettingsClient() {
 
   // Branch o'zgarganda page ni reset qilish
   useEffect(() => {
-    setPage(1);
+    setFilter("page", 1);
   }, [selectedBranch]);
 
   const filtered = courses.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()),
+    c.name.toLowerCase().includes(filters.search.toLowerCase()),
   );
 
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = Math.ceil(total / filters.pageSize);
 
   const handleSaved = (saved: Course) => {
     setCourses((prev) => {
@@ -136,8 +147,8 @@ export function CoursesSettingsClient() {
       <div className="flex items-center gap-3">
         <Input
           placeholder="Kurs nomi bo'yicha qidirish..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => { setSearchInput(e.target.value); debouncedSetSearch(e.target.value); }}
           className="w-full sm:max-w-sm"
         />
       </div>
@@ -181,7 +192,7 @@ export function CoursesSettingsClient() {
                   className="relative cursor-pointer hover:bg-muted/50"
                 >
                   <TableCell className="border-r text-muted-foreground">
-                    {(page - 1) * pageSize + index + 1}
+                    {(filters.page - 1) * filters.pageSize + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     <Link href={`/settings/courses/${course.id}`} className="absolute inset-0" />
@@ -226,10 +237,9 @@ export function CoursesSettingsClient() {
           </p>
           <div className="flex items-center gap-3">
             <Select
-              value={String(pageSize)}
+              value={String(filters.pageSize)}
               onValueChange={(v) => {
-                setPageSize(Number(v));
-                setPage(1);
+                setUrlFilters({ pageSize: Number(v), page: 1 });
               }}
             >
               <SelectTrigger className="w-20">
@@ -247,19 +257,19 @@ export function CoursesSettingsClient() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
+                disabled={filters.page <= 1}
+                onClick={() => setFilter("page", filters.page - 1)}
               >
                 Oldingi
               </Button>
               <span className="px-2 text-sm text-muted-foreground">
-                {page} / {totalPages}
+                {filters.page} / {totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                disabled={filters.page >= totalPages}
+                onClick={() => setFilter("page", filters.page + 1)}
               >
                 Keyingi
               </Button>

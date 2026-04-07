@@ -24,7 +24,13 @@ import { BranchRowActions } from "./branch-row-actions";
 import { EditBranchDrawer } from "./edit-branch-drawer";
 import { useEditBranch } from "@/hooks/use-edit-branch";
 import type { Branch } from "@/hooks/use-edit-branch";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+
+const branchesSchema = {
+  search: { type: "string" as const, defaultValue: "" },
+};
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -35,11 +41,15 @@ function formatPhone(phone: string): string {
 }
 
 export function BranchesSettingsClient() {
-
-  const [search, setSearch] = useState("");
+  const { filters, setFilter } = useUrlFilters(branchesSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const openAddDrawer = useEditBranch((s) => s.openAddDrawer);
+
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setFilter("search", value);
+  }, 300);
 
   useEffect(() => {
     async function fetchBranches() {
@@ -69,8 +79,8 @@ export function BranchesSettingsClient() {
 
   const filtered = branches.filter(
     (b) =>
-      b.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.address.toLowerCase().includes(search.toLowerCase()),
+      b.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+      b.address.toLowerCase().includes(filters.search.toLowerCase()),
   );
 
   return (
@@ -94,8 +104,8 @@ export function BranchesSettingsClient() {
       <div className="flex items-center gap-3">
         <Input
           placeholder="Filial nomi yoki manzil bo'yicha qidirish..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => { setSearchInput(e.target.value); debouncedSetSearch(e.target.value); }}
           className="w-full sm:max-w-sm"
         />
       </div>
