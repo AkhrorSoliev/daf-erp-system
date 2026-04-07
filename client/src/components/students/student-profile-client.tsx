@@ -17,6 +17,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [commentKey, setCommentKey] = useState(0);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [groupsRefreshing, setGroupsRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState("guruhlar");
   const setName = useBreadcrumbName((s) => s.setName);
 
   const handleCommentChange = useCallback(() => {
@@ -85,6 +86,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             student={student}
             commentKey={commentKey}
             onEnrollClick={() => setEnrollOpen(true)}
+            onHistoryClick={() => setActiveTab("tarix")}
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -93,6 +95,8 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             onCommentChange={handleCommentChange}
             onEnrollmentChange={refreshStudent}
             groupsRefreshing={groupsRefreshing}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
         </div>
       </div>
