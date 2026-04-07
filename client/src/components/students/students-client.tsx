@@ -22,33 +22,41 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { StudentsStats } from "./students-stats";
+import { StudentsStats, type StudentsStatsData } from "./students-stats";
 import { StudentsTable } from "./students-table";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
-const defaultFilters: StudentFilters = {
-  fullName: "",
-  status: "all",
-  teacherId: "all",
+const filtersSchema = {
+  search: { type: "string" as const, defaultValue: "" },
+  status: { type: "string" as const, defaultValue: "all" },
+  teacherId: { type: "string" as const, defaultValue: "all" },
+  page: { type: "number" as const, defaultValue: 1 },
+  pageSize: { type: "number" as const, defaultValue: 10 },
 };
 
 export function StudentsClient() {
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState<StudentFilters>(defaultFilters);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [stats, setStats] = useState<StudentsStatsData>({ total: 0, active: 0, frozen: 0, debtors: 0 });
+  const { filters, setFilter, setFilters: setUrlFilters, resetFilters } = useUrlFilters(filtersSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const user = useAuth((s) => s.user);
   const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setUrlFilters({ search: value, page: 1 });
+  }, 300);
 
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
@@ -63,37 +71,42 @@ export function StudentsClient() {
     setLoading(true);
     try {
       const params: Record<string, any> = {
-        page,
-        per_page: pageSize,
+        page: filters.page,
+        per_page: filters.pageSize,
       };
-      if (filters.fullName.trim()) params.search = filters.fullName.trim();
+      if (filters.search.trim()) params.search = filters.search.trim();
       if (filters.status && filters.status !== "all") params.status = filters.status;
       if (filters.teacherId && filters.teacherId !== "all") params.teacher_id = filters.teacherId;
       if (selectedBranch?.id) params.branch_id = selectedBranch.id;
       const { data } = await api.get("/students", { params });
       setStudents(data.data);
       setTotal(data.total);
+      setStats(data.stats ?? { total: 0, active: 0, frozen: 0, debtors: 0 });
     } catch {
       // xatolik
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters.fullName, filters.status, filters.teacherId, selectedBranch?.id]);
+  }, [filters.page, filters.pageSize, filters.search, filters.status, filters.teacherId, selectedBranch?.id]);
 
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
   const handleFilterChange = (newFilters: StudentFilters) => {
-    setFilters(newFilters);
-    setPage(1);
+    if (newFilters.fullName !== searchInput) {
+      setSearchInput(newFilters.fullName);
+      debouncedSetSearch(newFilters.fullName);
+    }
+    if (newFilters.status !== filters.status || newFilters.teacherId !== filters.teacherId) {
+      setUrlFilters({ status: newFilters.status, teacherId: newFilters.teacherId, page: 1 });
+    }
   };
 
   const handlePageSizeChange = (value: string) => {
-    setPageSize(Number(value));
-    setPage(1);
+    setUrlFilters({ pageSize: Number(value), page: 1 });
   };
 
   return (
@@ -141,8 +154,22 @@ export function StudentsClient() {
           )
         )}
       </div>
-      <StudentsStats students={students} loading={loading} isTeacher={isTeacher} />
-      <StudentsFilters filters={filters} onFilterChange={handleFilterChange} isTeacher={isTeacher} />
+      <StudentsStats
+        stats={filters.status !== "all" ? { ...stats, total } : stats}
+        loading={loading}
+        isTeacher={isTeacher}
+        activeStatus={filters.status}
+        onStatusClick={(status) => {
+          const newStatus = status === filters.status ? "all" : status;
+          setUrlFilters({ status: newStatus, page: 1 });
+        }}
+      />
+      <StudentsFilters
+        filters={{ fullName: searchInput, status: filters.status, teacherId: filters.teacherId }}
+        onFilterChange={handleFilterChange}
+        onClear={() => { setSearchInput(""); resetFilters(); }}
+        isTeacher={isTeacher}
+      />
       {loading ? (
         <div className="overflow-x-auto rounded-md border">
           <div className="space-y-0">
@@ -158,7 +185,7 @@ export function StudentsClient() {
               <Skeleton className="h-4 w-8" />
             </div>
             {/* Row skeletons */}
-            {Array.from({ length: pageSize > 5 ? 5 : pageSize }).map((_, i) => (
+            {Array.from({ length: filters.pageSize > 5 ? 5 : filters.pageSize }).map((_, i) => (
               <div key={i} className="flex items-center gap-4 border-b px-4 py-3">
                 <Skeleton className="h-4 w-8" />
                 <Skeleton className="size-8 rounded-full" />
@@ -179,7 +206,7 @@ export function StudentsClient() {
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Sahifada:</span>
-            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+            <Select value={String(filters.pageSize)} onValueChange={handlePageSizeChange}>
               <SelectTrigger className="h-8 w-20">
                 <SelectValue />
               </SelectTrigger>
@@ -199,20 +226,20 @@ export function StudentsClient() {
             <Button
               variant="outline"
               size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
+              disabled={filters.page <= 1}
+              onClick={() => setFilter("page", filters.page - 1)}
             >
               <ChevronLeft className="mr-1 size-4" />
               Oldingi
             </Button>
             <span className="text-sm">
-              {page} / {totalPages}
+              {filters.page} / {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
+              disabled={filters.page >= totalPages}
+              onClick={() => setFilter("page", filters.page + 1)}
             >
               Keyingi
               <ChevronRight className="ml-1 size-4" />

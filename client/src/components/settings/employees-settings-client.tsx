@@ -34,6 +34,8 @@ import { EditEmployeeDrawer } from "./edit-employee-drawer";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -55,6 +57,13 @@ const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
+const filtersSchema = {
+  search: { type: "string" as const, defaultValue: "" },
+  role: { type: "string" as const, defaultValue: "all" },
+  page: { type: "number" as const, defaultValue: 1 },
+  pageSize: { type: "number" as const, defaultValue: 10 },
+};
+
 function formatPhone(phone: string | null): string {
   if (!phone) return "—";
   const d = phone.replace(/\D/g, "");
@@ -72,27 +81,29 @@ export function EmployeesSettingsClient() {
   const [employees, setEmployees] = useState<EmployeeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(filtersSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
 
   const isMobile = useIsMobile();
   const openAddDrawer = useEditEmployee((s) => s.openAddDrawer);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
 
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setUrlFilters({ search: value, page: 1 });
+  }, 300);
+
   const fetchEmployees = useCallback(async () => {
     if (!branchLoaded || !selectedBranch) return;
     setLoading(true);
     try {
       const params: Record<string, any> = {
-        page,
-        per_page: pageSize,
+        page: filters.page,
+        per_page: filters.pageSize,
         branch_id: selectedBranch.id,
       };
-      if (search.trim()) params.search = search.trim();
-      if (roleFilter !== "all") params.user_type = roleFilter;
+      if (filters.search.trim()) params.search = filters.search.trim();
+      if (filters.role !== "all") params.user_type = filters.role;
       const { data } = await api.get("/users", { params });
       setEmployees(data.data);
       setTotal(data.total);
@@ -102,7 +113,7 @@ export function EmployeesSettingsClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, roleFilter, selectedBranch?.id, branchLoaded]);
+  }, [filters.page, filters.pageSize, filters.search, filters.role, selectedBranch?.id, branchLoaded]);
 
   useEffect(() => {
     fetchEmployees();
@@ -128,11 +139,10 @@ export function EmployeesSettingsClient() {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
   const handlePageSizeChange = (value: string) => {
-    setPageSize(Number(value));
-    setPage(1);
+    setUrlFilters({ pageSize: Number(value), page: 1 });
   };
 
   return (
@@ -159,13 +169,13 @@ export function EmployeesSettingsClient() {
           <Search className="text-muted-foreground absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
           <Input
             placeholder="Ism bo'yicha qidirish..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            value={searchInput}
+            onChange={(e) => { setSearchInput(e.target.value); debouncedSetSearch(e.target.value); }}
             className="w-full pl-9 sm:w-64"
           />
         </div>
 
-        <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
+        <Select value={filters.role} onValueChange={(v) => { setUrlFilters({ role: v, page: 1 }); }}>
           <SelectTrigger className="w-full sm:w-44">
             <SelectValue />
           </SelectTrigger>
@@ -291,7 +301,7 @@ export function EmployeesSettingsClient() {
                     className="relative cursor-pointer"
                   >
                     <TableCell className="border-r text-muted-foreground">
-                      {(page - 1) * pageSize + index + 1}
+                      {(filters.page - 1) * filters.pageSize + index + 1}
                     </TableCell>
                     <TableCell className="font-medium">
                       <Link href={getEmployeeProfileUrl(emp)} className="absolute inset-0" />
@@ -333,7 +343,7 @@ export function EmployeesSettingsClient() {
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Jami: {total}</span>
-            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+            <Select value={String(filters.pageSize)} onValueChange={handlePageSizeChange}>
               <SelectTrigger className="h-8 w-20">
                 <SelectValue />
               </SelectTrigger>
@@ -345,11 +355,11 @@ export function EmployeesSettingsClient() {
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="size-8" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <Button variant="outline" size="icon" className="size-8" disabled={filters.page <= 1} onClick={() => setFilter("page", filters.page - 1)}>
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-            <Button variant="outline" size="icon" className="size-8" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+            <span className="text-sm text-muted-foreground">{filters.page} / {totalPages}</span>
+            <Button variant="outline" size="icon" className="size-8" disabled={filters.page >= totalPages} onClick={() => setFilter("page", filters.page + 1)}>
               <ChevronRight className="size-4" />
             </Button>
           </div>

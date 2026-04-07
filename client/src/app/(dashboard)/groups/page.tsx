@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { GroupsClient } from "@/components/groups/groups-client";
 
 export default function GroupsPage() {
@@ -11,7 +12,9 @@ export default function GroupsPage() {
           Barcha guruhlarni boshqarish
         </p>
       </div>
-      <GroupsClient />
+      <Suspense>
+        <GroupsClient />
+      </Suspense>
     </div>
   );
 }

@@ -30,16 +30,23 @@ import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
+const filtersSchema = {
+  search: { type: "string" as const, defaultValue: "" },
+  page: { type: "number" as const, defaultValue: 1 },
+  pageSize: { type: "number" as const, defaultValue: 10 },
+};
+
 export function TeachersClient() {
   const [teachers, setTeachers] = useState<TeacherData[]>([]);
   const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(filtersSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const { openAddDrawer } = useEditTeacher();
@@ -47,6 +54,10 @@ export function TeachersClient() {
   const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
+
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setUrlFilters({ search: value, page: 1 });
+  }, 300);
 
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
@@ -64,12 +75,12 @@ export function TeachersClient() {
       const companyId = localStorage.getItem("companyId");
       const params: Record<string, any> = {
         user_type: "Teacher",
-        page,
-        per_page: pageSize,
+        page: filters.page,
+        per_page: filters.pageSize,
       };
       if (companyId) params.company_id = companyId;
       if (selectedBranch) params.branch_id = selectedBranch.id;
-      if (search.trim()) params.search = search.trim();
+      if (filters.search.trim()) params.search = filters.search.trim();
       const { data } = await api.get("/users", { params });
       setTeachers(data.data);
       setTotal(data.total);
@@ -78,22 +89,21 @@ export function TeachersClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, selectedBranch, branchLoaded]);
+  }, [filters.page, filters.pageSize, filters.search, selectedBranch, branchLoaded]);
 
   useEffect(() => {
     fetchTeachers();
   }, [fetchTeachers]);
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
   const handleSearch = (value: string) => {
-    setSearch(value);
-    setPage(1);
+    setSearchInput(value);
+    debouncedSetSearch(value);
   };
 
   const handlePageSizeChange = (value: string) => {
-    setPageSize(Number(value));
-    setPage(1);
+    setUrlFilters({ pageSize: Number(value), page: 1 });
   };
 
   return (
@@ -103,7 +113,7 @@ export function TeachersClient() {
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Ism bo'yicha qidirish..."
-            value={search}
+            value={searchInput}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
           />
@@ -221,7 +231,7 @@ export function TeachersClient() {
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Sahifada:</span>
-            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+            <Select value={String(filters.pageSize)} onValueChange={handlePageSizeChange}>
               <SelectTrigger className="h-8 w-20">
                 <SelectValue />
               </SelectTrigger>
@@ -241,20 +251,20 @@ export function TeachersClient() {
             <Button
               variant="outline"
               size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
+              disabled={filters.page <= 1}
+              onClick={() => setFilter("page", filters.page - 1)}
             >
               <ChevronLeft className="mr-1 size-4" />
               Oldingi
             </Button>
             <span className="text-sm">
-              {page} / {totalPages}
+              {filters.page} / {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
+              disabled={filters.page >= totalPages}
+              onClick={() => setFilter("page", filters.page + 1)}
             >
               Keyingi
               <ChevronRight className="ml-1 size-4" />

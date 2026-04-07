@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { TeachersClient } from "@/components/teachers/teachers-client";
 
 export default function TeachersPage() {
@@ -9,7 +10,9 @@ export default function TeachersPage() {
         </h1>
         <p className="text-muted-foreground">Barcha o&apos;qituvchilar ro&apos;yxati</p>
       </div>
-      <TeachersClient />
+      <Suspense>
+        <TeachersClient />
+      </Suspense>
     </div>
   );
 }
