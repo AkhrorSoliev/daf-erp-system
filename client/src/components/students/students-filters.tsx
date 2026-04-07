@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronsUpDown, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,20 +12,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import api from "@/lib/api";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 export interface StudentFilters {
   fullName: string;
   status: string;
+  teacherId: string;
 }
 
 const defaultFilters: StudentFilters = {
   fullName: "",
   status: "all",
+  teacherId: "all",
 };
+
+interface Teacher {
+  id: number;
+  firstName: string;
+  lastName: string;
+  photo?: string | null;
+}
 
 interface StudentsFiltersProps {
   filters: StudentFilters;
@@ -37,9 +56,44 @@ export function StudentsFilters({
   onFilterChange,
   isTeacher,
 }: StudentsFiltersProps) {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teacherPopoverOpen, setTeacherPopoverOpen] = useState(false);
+  const [teacherSearch, setTeacherSearch] = useState("");
+  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+
+  const fetchTeachers = useCallback(async () => {
+    try {
+      const params: Record<string, any> = { user_type: "Teacher", per_page: 100 };
+      if (selectedBranch?.id) params.branch_id = selectedBranch.id;
+      const { data } = await api.get("/users", { params });
+      setTeachers(data.data);
+    } catch {
+      // xatolik
+    }
+  }, [selectedBranch?.id]);
+
+  useEffect(() => {
+    if (!isTeacher) fetchTeachers();
+  }, [fetchTeachers, isTeacher]);
+
+  const selectedTeacher = useMemo(
+    () => teachers.find((t) => String(t.id) === filters.teacherId),
+    [teachers, filters.teacherId],
+  );
+
+  const filteredTeachers = useMemo(
+    () =>
+      teacherSearch.trim()
+        ? teachers.filter((t) =>
+            `${t.firstName} ${t.lastName}`.toLowerCase().includes(teacherSearch.toLowerCase()),
+          )
+        : teachers,
+    [teachers, teacherSearch],
+  );
+
   const hasActiveFilters =
     filters.fullName !== "" ||
-    (!isTeacher && filters.status !== "all");
+    (!isTeacher && (filters.status !== "all" || filters.teacherId !== "all"));
 
   const updateFilter = (key: keyof StudentFilters, value: string) => {
     onFilterChange({ ...filters, [key]: value });
@@ -74,6 +128,104 @@ export function StudentsFilters({
             <SelectItem value="expelled">Chetlatilgan</SelectItem>
           </SelectContent>
         </Select>
+      )}
+
+      {!isTeacher && (
+        <Popover
+          modal
+          open={teacherPopoverOpen}
+          onOpenChange={(open) => {
+            setTeacherPopoverOpen(open);
+            if (!open) setTeacherSearch("");
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                type="button"
+                className="h-9 w-full min-w-0 justify-between font-normal sm:w-52"
+              >
+                {selectedTeacher ? (
+                  <span className="flex items-center gap-2">
+                    <Avatar size="sm">
+                      {selectedTeacher.photo && (
+                        <AvatarImage
+                          src={selectedTeacher.photo}
+                          alt={`${selectedTeacher.firstName} ${selectedTeacher.lastName}`}
+                        />
+                      )}
+                      <AvatarFallback>
+                        {`${selectedTeacher.firstName[0] ?? ""}${selectedTeacher.lastName[0] ?? ""}`.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {selectedTeacher.firstName} {selectedTeacher.lastName}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Barcha o&apos;qituvchilar</span>
+                )}
+                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            {selectedTeacher && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0"
+                onClick={() => updateFilter("teacherId", "all")}
+              >
+                <X className="size-4" />
+              </Button>
+            )}
+          </div>
+          <PopoverContent className="w-72 gap-0 p-0" align="start">
+            <div className="border-b p-2">
+              <div className="relative">
+                <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
+                <Input
+                  placeholder="Qidirish..."
+                  value={teacherSearch}
+                  onChange={(e) => setTeacherSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain p-2">
+              {filteredTeachers.map((t) => {
+                const isSelected = filters.teacherId === String(t.id);
+                const fullName = `${t.firstName} ${t.lastName}`;
+                const initials = `${t.firstName[0] ?? ""}${t.lastName[0] ?? ""}`.toUpperCase();
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      updateFilter("teacherId", isSelected ? "all" : String(t.id));
+                      setTeacherPopoverOpen(false);
+                      setTeacherSearch("");
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
+                      isSelected && "bg-accent",
+                    )}
+                  >
+                    <Avatar size="sm">
+                      {t.photo && <AvatarImage src={t.photo} alt={fullName} />}
+                      <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate flex-1 text-left">{fullName}</span>
+                  </button>
+                );
+              })}
+              {filteredTeachers.length === 0 && (
+                <p className="text-muted-foreground px-2 py-1.5 text-sm">
+                  O&apos;qituvchilar topilmadi
+                </p>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
 
       {hasActiveFilters && (
