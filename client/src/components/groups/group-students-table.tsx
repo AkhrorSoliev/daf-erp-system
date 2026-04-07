@@ -12,7 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { StudentRowActions } from "@/components/students/student-row-actions";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import type { Student } from "@/data/student-model";
 
 export interface GroupStudent {
   enrollmentId: string;
@@ -24,6 +27,39 @@ export interface GroupStudent {
   photo: string | null;
   balance: number;
   isActive: boolean;
+}
+
+/** Map GroupStudent to minimal Student for StudentRowActions */
+function toStudent(gs: GroupStudent): Student {
+  return {
+    id: gs.id,
+    firstName: gs.firstName,
+    lastName: gs.lastName,
+    phone: gs.phone,
+    photo: gs.photo,
+    balance: gs.balance,
+    isActive: gs.isActive,
+    gender: null,
+    date_of_birth: null,
+    company_id: null,
+    deleted_at: null,
+    destroyer: null,
+    comment: null,
+    branches: [],
+    groups: [],
+    balance_on_period: null,
+    extraPhone: null,
+    parentPhone: null,
+    parentName: null,
+    telegram: null,
+    telegramChatId: null,
+    placeOfStudy: null,
+    address: null,
+    passportSeries: null,
+    status: gs.isActive ? "ACTIVE" : "FROZEN",
+    createdAt: "",
+    updatedAt: "",
+  };
 }
 
 function formatBalance(balance: number) {
@@ -44,9 +80,13 @@ function formatPhone(phone: string) {
 
 interface GroupStudentsTableProps {
   students: GroupStudent[];
+  onStudentDeleted?: (id: number) => void;
 }
 
-export function GroupStudentsTable({ students }: GroupStudentsTableProps) {
+export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudentsTableProps) {
+  const user = useAuth((s) => s.user);
+  const canManage =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
 
   if (students.length === 0) {
     return (
@@ -71,6 +111,7 @@ export function GroupStudentsTable({ students }: GroupStudentsTableProps) {
             </TableHead>
             <TableHead className="min-w-28 text-right">Balans</TableHead>
             <TableHead className="hidden sm:table-cell">Holat</TableHead>
+            {canManage && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -118,6 +159,14 @@ export function GroupStudentsTable({ students }: GroupStudentsTableProps) {
                   {student.isActive ? "Faol" : "Muzlatilgan"}
                 </Badge>
               </TableCell>
+              {canManage && (
+                <TableCell className="relative z-10">
+                  <StudentRowActions
+                    student={toStudent(student)}
+                    onDeleted={onStudentDeleted}
+                  />
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
