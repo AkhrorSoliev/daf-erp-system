@@ -88,6 +88,19 @@ const FIELD_LABELS: Record<string, string | null> = {
   oquvchi: "O'quvchi",
   ustoz: "Ustoz",
   ustozlar: "Ustozlar",
+  startDate: "Boshlanish sanasi",
+  endDate: "Tugash sanasi",
+  lessonStartTime: "Dars boshlanishi",
+  lessonEndTime: "Dars tugashi",
+  lessonMinutes: "Dars davomiyligi (daq)",
+  level: "Daraja",
+  days: "Kunlar",
+  exactDays: null,
+  roomId: null,
+  courseId: null,
+  branchId: null,
+  groupNumber: null,
+  statusEnum: null,
   previousGroupId: null,
   guruhId: null,
   oquvchiId: null,
@@ -154,9 +167,17 @@ function getActionInfo(record: HistoryRecord): {
 // --- Value formatter ---
 const VALUE_MAX_LENGTH = 80;
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Ha" : "Yo'q";
+  if (typeof value === "string" && ISO_DATE_RE.test(value)) {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+    }
+  }
   return String(value);
 }
 

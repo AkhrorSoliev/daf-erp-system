@@ -11,6 +11,7 @@ import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentForm } from "@/components/shared/comment-form";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import { AttendanceTab } from "./attendance/attendance-tab";
+import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
@@ -106,7 +107,14 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     }
   };
 
+  const handleStudentSaved = useCallback(() => {
+    studentsFetched.current = false;
+    fetchStudents();
+  }, [fetchStudents]);
+
   return (
+    <>
+    <EditStudentDrawer onSaved={handleStudentSaved} />
     <Tabs
       value={activeTab ?? "oquvchilar"}
       className="w-full"
@@ -128,7 +136,10 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
             <Loader2 className="text-muted-foreground size-6 animate-spin" />
           </div>
         ) : (
-          <GroupStudentsTable students={students} />
+          <GroupStudentsTable
+            students={students}
+            onStudentDeleted={(id) => setStudents((prev) => prev.filter((s) => s.id !== id))}
+          />
         )}
       </TabsContent>
 
@@ -197,5 +208,6 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         </TabsContent>
       )}
     </Tabs>
+    </>
   );
 }
