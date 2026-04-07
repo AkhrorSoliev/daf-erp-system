@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { format } from "date-fns";
+import { uz } from "date-fns/locale/uz";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           weekStartsOn={1}
+          locale={uz}
           selected={value ?? undefined}
           onSelect={(date) => {
             onChange?.(date);
