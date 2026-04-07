@@ -18,11 +18,24 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useEditStudent } from "@/hooks/use-edit-student";
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import toast from "react-hot-toast";
 
 function formatBalance(balance: number): string {
   const abs = Math.abs(balance)
@@ -52,10 +65,32 @@ interface StudentProfileCardProps {
   student: Student;
   commentKey?: number;
   onEnrollClick?: () => void;
+  onHistoryClick?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey, onEnrollClick }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
+  const router = useRouter();
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setShowDelete(false);
+    try {
+      await api.delete(`/students/${student.id}`);
+      toast.success("O'quvchi muvaffaqiyatli o'chirildi");
+      router.push("/students");
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setDeleting(false);
+      setDeleteReason("");
+    }
+  };
+
   const [latestComment, setLatestComment] = useState<{
     content: string;
     isTask?: boolean;
@@ -174,23 +209,60 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick }: Stude
             <Button
               variant="ghost"
               size="sm"
+              className="size-8 p-0"
+              onClick={onHistoryClick}
+            >
+              <Clock className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Tarix</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
               className="size-8 p-0 text-destructive hover:text-destructive"
+              onClick={() => setShowDelete(true)}
             >
               <Trash2 className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>O&apos;chirish</TooltipContent>
         </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" className="size-8 p-0">
-              <Clock className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Tarix</TooltipContent>
-        </Tooltip>
       </div>
+
+      {/* Dialogs */}
+      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>O&apos;chirishni tasdiqlang</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{student.firstName} {student.lastName}</strong> arxivga o&apos;tkazilsinmi?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-6 pb-2">
+            <Textarea
+              placeholder="Sabab yozing (ixtiyoriy)..."
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "O'chirilmoqda..." : "O'chirish"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <Separator />
 

@@ -133,7 +133,7 @@ export function ChangeStatusDialog({
 
   const allowedStatuses = getAllowedTransitions(entityType, currentStatus);
   const apiPath = ENTITY_API_PATH[entityType];
-  const isReasonRequired = true;
+  const isReasonRequired = selectedStatus !== "GRADUATED" && selectedStatus !== "COMPLETED";
 
   const handleSubmit = async () => {
     if (!selectedStatus) return;

@@ -140,9 +140,11 @@ interface StudentProfileTabsProps {
   onCommentChange?: () => void;
   onEnrollmentChange?: () => void;
   groupsRefreshing?: boolean;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChange, groupsRefreshing = false }: StudentProfileTabsProps) {
+export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChange, groupsRefreshing = false, activeTab, onTabChange }: StudentProfileTabsProps) {
   const [localGroups, setLocalGroups] = useState(student.groups);
   const isUngrouped = student.isActive && localGroups.length === 0;
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -236,7 +238,7 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
 
   return (
     <>
-    <Tabs defaultValue="guruhlar" className="w-full" onValueChange={handleTabChange}>
+    <Tabs value={activeTab ?? "guruhlar"} className="w-full" onValueChange={(v) => { onTabChange?.(v); handleTabChange(v); }}>
       <TabsList className="w-full justify-start overflow-x-auto">
         <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
         <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
