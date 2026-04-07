@@ -35,6 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Student, StudentGroup } from "@/data/student-model";
+import { useAuth } from "@/hooks/use-auth";
 
 const STATUS_MAP: Record<
   number,
@@ -145,6 +146,8 @@ interface StudentProfileTabsProps {
 }
 
 export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChange, groupsRefreshing = false, activeTab, onTabChange }: StudentProfileTabsProps) {
+  const user = useAuth((s) => s.user);
+  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const [localGroups, setLocalGroups] = useState(student.groups);
   const isUngrouped = student.isActive && localGroups.length === 0;
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -158,13 +161,14 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
   const smsShown = useRef(false);
 
   useEffect(() => {
+    if (!canManage) return;
     api.get(`/students/${student.id}/sms`, { params: { page: 1, pageSize: 1 } })
       .then((res) => setSmsCount(res.data.total))
       .catch(() => {});
     api.get(`/entity-history/Student/${student.id}`, { params: { page: 1, pageSize: 1 } })
       .then((res) => setHistoryCount(res.data.total))
       .catch(() => {});
-  }, [student.id]);
+  }, [student.id, canManage]);
 
   // Sync local groups when student prop changes (after background refresh)
   useEffect(() => {
@@ -241,15 +245,19 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
     <Tabs value={activeTab ?? "guruhlar"} className="w-full" onValueChange={(v) => { onTabChange?.(v); handleTabChange(v); }}>
       <TabsList className="w-full justify-start overflow-x-auto">
         <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
-        <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
-        <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
-        <TabsTrigger value="sms">
-          SMS{smsCount ? ` (${smsCount > 99 ? "99+" : smsCount})` : ""}
-        </TabsTrigger>
-        <TabsTrigger value="tarix">
-          Tarix{historyCount ? ` (${historyCount > 99 ? "99+" : historyCount})` : ""}
-        </TabsTrigger>
-        <TabsTrigger value="lid">Lid tarixi</TabsTrigger>
+        {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
+        {canManage && <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>}
+        {canManage && (
+          <TabsTrigger value="sms">
+            SMS{smsCount ? ` (${smsCount > 99 ? "99+" : smsCount})` : ""}
+          </TabsTrigger>
+        )}
+        {canManage && (
+          <TabsTrigger value="tarix">
+            Tarix{historyCount ? ` (${historyCount > 99 ? "99+" : historyCount})` : ""}
+          </TabsTrigger>
+        )}
+        {canManage && <TabsTrigger value="lid">Lid tarixi</TabsTrigger>}
       </TabsList>
 
       {/* Guruhlar */}
