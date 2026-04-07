@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useEditStudent } from "@/hooks/use-edit-student";
+import { useAuth } from "@/hooks/use-auth";
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -71,6 +72,8 @@ interface StudentProfileCardProps {
 export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const router = useRouter();
+  const authUser = useAuth((s) => s.user);
+  const canManage = authUser?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
@@ -99,12 +102,13 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
   } | null>(null);
 
   useEffect(() => {
+    if (!canManage) return;
     api.get("/comments/latest", {
       params: { entityType: "Student", entityId: String(student.id) },
     })
       .then(({ data }) => setLatestComment(data || null))
       .catch(() => {});
-  }, [student.id, commentKey]);
+  }, [student.id, commentKey, canManage]);
 
   return (
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
@@ -164,74 +168,78 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
         </div>
       </div>
 
-      <Separator />
+      {canManage && (
+        <>
+          <Separator />
 
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="flex-1" onClick={onEnrollClick}>
-          <UserPlus className="mr-1.5 size-4" />
-          {student.groups.length > 0 ? "Guruhni o'zgartirish" : "Guruhga qo'shish"}
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="flex-1">
-              <CreditCard className="mr-1.5 size-4" />
-              To&apos;lov
-              <ChevronDown className="ml-1.5 size-4" />
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="flex-1" onClick={onEnrollClick}>
+              <UserPlus className="mr-1.5 size-4" />
+              {student.groups.length > 0 ? "Guruhni o'zgartirish" : "Guruhga qo'shish"}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>To&apos;lov qo&apos;shish</DropdownMenuItem>
-            <DropdownMenuItem>To&apos;lov tarixi</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
 
-      {/* Icon actions */}
-      <div className="flex items-center justify-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="size-8 p-0"
-              onClick={() => openDrawer(student)}
-            >
-              <Pencil className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Tahrirlash</TooltipContent>
-        </Tooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1">
+                  <CreditCard className="mr-1.5 size-4" />
+                  To&apos;lov
+                  <ChevronDown className="ml-1.5 size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>To&apos;lov qo&apos;shish</DropdownMenuItem>
+                <DropdownMenuItem>To&apos;lov tarixi</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="size-8 p-0"
-              onClick={onHistoryClick}
-            >
-              <Clock className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Tarix</TooltipContent>
-        </Tooltip>
+          {/* Icon actions */}
+          <div className="flex items-center justify-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-8 p-0"
+                  onClick={() => openDrawer(student)}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Tahrirlash</TooltipContent>
+            </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="size-8 p-0 text-destructive hover:text-destructive"
-              onClick={() => setShowDelete(true)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>O&apos;chirish</TooltipContent>
-        </Tooltip>
-      </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-8 p-0"
+                  onClick={onHistoryClick}
+                >
+                  <Clock className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Tarix</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-8 p-0 text-destructive hover:text-destructive"
+                  onClick={() => setShowDelete(true)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>O&apos;chirish</TooltipContent>
+            </Tooltip>
+          </div>
+        </>
+      )}
 
       {/* Dialogs */}
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
@@ -264,35 +272,39 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
       </AlertDialog>
 
 
-      <Separator />
+      {canManage && (
+        <>
+          <Separator />
 
-      {/* So'nggi izoh */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Flag className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium">So&apos;nggi izoh</span>
-        </div>
-        {latestComment ? (
-          <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
-            <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="font-medium">{latestComment.author.firstName} {latestComment.author.lastName}</span>
-              <span>&middot;</span>
-              <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
-              {latestComment.isTask && (
-                <>
-                  <span>&middot;</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
-                </>
-              )}
+          {/* So'nggi izoh */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Flag className="size-4 text-muted-foreground" />
+              <span className="text-sm font-medium">So&apos;nggi izoh</span>
             </div>
+            {latestComment ? (
+              <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
+                <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className="font-medium">{latestComment.author.firstName} {latestComment.author.lastName}</span>
+                  <span>&middot;</span>
+                  <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
+                  {latestComment.isTask && (
+                    <>
+                      <span>&middot;</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                {student.comment || "Izoh mavjud emas"}
+              </p>
+            )}
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground italic">
-            {student.comment || "Izoh mavjud emas"}
-          </p>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
