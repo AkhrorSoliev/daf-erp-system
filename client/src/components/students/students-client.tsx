@@ -34,6 +34,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 const defaultFilters: StudentFilters = {
   fullName: "",
   status: "all",
+  teacherId: "all",
 };
 
 export function StudentsClient() {
@@ -67,6 +68,7 @@ export function StudentsClient() {
       };
       if (filters.fullName.trim()) params.search = filters.fullName.trim();
       if (filters.status && filters.status !== "all") params.status = filters.status;
+      if (filters.teacherId && filters.teacherId !== "all") params.teacher_id = filters.teacherId;
       if (selectedBranch?.id) params.branch_id = selectedBranch.id;
       const { data } = await api.get("/students", { params });
       setStudents(data.data);
@@ -76,7 +78,7 @@ export function StudentsClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters.fullName, filters.status, selectedBranch?.id]);
+  }, [page, pageSize, filters.fullName, filters.status, filters.teacherId, selectedBranch?.id]);
 
   useEffect(() => {
     fetchStudents();
