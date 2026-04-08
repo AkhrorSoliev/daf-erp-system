@@ -72,6 +72,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.use(async (ctx, next) => {
       const text = (ctx.message as any)?.text as string | undefined;
       if (text && text.startsWith('/start')) {
+        // Agar boshqa /start jarayonda bo'lsa — bu /start ni e'tiborsiz qoldiramiz
+        if (ctx.session?.processing) {
+          return;
+        }
         // Agar yuklangan rasm bo'lsa, o'chirish
         if (ctx.session?.data?.photo) {
           try {
@@ -111,10 +115,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`Bot /start payload: "${payload}"`);
 
       if (payload.startsWith(TEACHER_DEEP_LINK_PREFIX)) {
+        ctx.session.processing = true;
         const branchIdStr = payload.slice(TEACHER_DEEP_LINK_PREFIX.length);
         const branchId = Number(branchIdStr);
 
         if (!branchIdStr || isNaN(branchId)) {
+          ctx.session.processing = false;
           await ctx.reply(
             "Noto'g'ri havola. Administrator bilan bog'laning.",
           );
@@ -125,6 +131,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           where: { id: branchId },
         });
         if (!branch) {
+          ctx.session.processing = false;
           await ctx.reply(
             "Filial topilmadi. Administrator bilan bog'laning.",
           );
@@ -132,6 +139,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         }
 
         ctx.session.data = { branchId };
+        ctx.session.processing = false;
         await ctx.scene.enter(SCENES.TEACHER_REGISTRATION);
         return;
       }
@@ -139,6 +147,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       // student_{branchId}_group_{groupId} — guruhga to'g'ridan-to'g'ri ro'yxatdan o'tish
       const groupMatch = payload.match(STUDENT_GROUP_DEEP_LINK_RE);
       if (groupMatch) {
+        ctx.session.processing = true;
         const branchId = Number(groupMatch[1]);
         const groupId = groupMatch[2];
 
@@ -146,6 +155,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           where: { id: branchId },
         });
         if (!branch) {
+          ctx.session.processing = false;
           await ctx.reply(
             "Filial topilmadi. Administrator bilan bog'laning.",
           );
@@ -169,6 +179,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           },
         });
         if (!group) {
+          ctx.session.processing = false;
           await ctx.reply(
             "Guruh topilmadi. Administrator bilan bog'laning.",
           );
@@ -188,15 +199,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           exactDays: group.exactDays,
           roomName: group.room?.name ?? null,
         };
+        ctx.session.processing = false;
         await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
         return;
       }
 
       if (payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) {
+        ctx.session.processing = true;
         const branchIdStr = payload.slice(STUDENT_DEEP_LINK_PREFIX.length);
         const branchId = Number(branchIdStr);
 
         if (!branchIdStr || isNaN(branchId)) {
+          ctx.session.processing = false;
           await ctx.reply(
             "Noto'g'ri havola. Administrator bilan bog'laning.",
           );
@@ -207,6 +221,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           where: { id: branchId },
         });
         if (!branch) {
+          ctx.session.processing = false;
           await ctx.reply(
             "Filial topilmadi. Administrator bilan bog'laning.",
           );
@@ -214,6 +229,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         }
 
         ctx.session.data = { branchId };
+        ctx.session.processing = false;
         await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
         return;
       }
