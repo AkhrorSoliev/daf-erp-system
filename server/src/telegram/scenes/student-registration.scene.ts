@@ -574,10 +574,27 @@ export function createStudentRegistrationScene(
       await ctx.scene.leave();
     } catch (error) {
       console.error('[StudentRegistration] Ro\'yxatdan o\'tishda xatolik:', error);
+
+      // Duplicate phone/login xatoligi
+      if (error?.code === 'P2002') {
+        await ctx.reply(
+          "Bu ma'lumotlar allaqachon tizimda mavjud. Administrator bilan bog'laning.",
+        );
+        await ctx.scene.leave();
+        return;
+      }
+
+      // Boshqa xatolikda — qayta urinish imkoni
+      ctx.session.step = 7;
       await ctx.reply(
-        "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
+        "Ro'yxatdan o'tishda xatolik yuz berdi. Qayta tasdiqlang yoki administrator bilan bog'laning.",
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback("✅ Qayta tasdiqlash", "confirm_student"),
+            Markup.button.callback("🔄 Qayta kiritish", "restart_student"),
+          ],
+        ]),
       );
-      await ctx.scene.leave();
     }
   });
 
@@ -595,7 +612,7 @@ export function createStudentRegistrationScene(
     ctx.session.data = { branchId };
     ctx.session.step = 1;
 
-    await ctx.editMessageText("🔄 Qayta kiritish tanlandi");
+    await ctx.editMessageCaption("🔄 Qayta kiritish tanlandi");
 
     // Ustozlar ro'yxatini qayta ko'rsatish
     const teachers = await prisma.user.findMany({
