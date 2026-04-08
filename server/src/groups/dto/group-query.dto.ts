@@ -21,4 +21,8 @@ export class GroupQueryDto extends PaginationDto {
   @IsInt()
   @Type(() => Number)
   teacher_id?: number;
+
+  @IsOptional()
+  @IsString()
+  room_id?: string;
 }

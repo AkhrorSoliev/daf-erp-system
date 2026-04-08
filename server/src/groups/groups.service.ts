@@ -102,6 +102,10 @@ export class GroupsService {
       where.teachers = { some: { teacherId: query.teacher_id } };
     }
 
+    if (query.room_id) {
+      where.roomId = query.room_id;
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.group.findMany({
         where,
