@@ -8,6 +8,7 @@ import {
   Check,
   AlertTriangle,
   Circle,
+  Clock,
   ChevronRight as GoIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -231,6 +232,92 @@ export function AttendanceCycleDashboard({
     return nowMinutes >= sh * 60 + sm && nowMinutes <= eh * 60 + em;
   })();
 
+  // Countdown to lesson start / end
+  const [countdown, setCountdown] = useState("");
+  const [countdownLabel, setCountdownLabel] = useState("");
+  useEffect(() => {
+    if (!todayLesson || !group.lessonStartTime || !group.lessonEndTime)
+      return;
+
+    const [sh, sm] = group.lessonStartTime.split(":").map(Number);
+    const [eh, em] = group.lessonEndTime.split(":").map(Number);
+    const startMins = sh * 60 + sm;
+    const endMins = eh * 60 + em;
+
+    const tick = () => {
+      const n = new Date();
+      const nowTotalSecs = n.getHours() * 3600 + n.getMinutes() * 60 + n.getSeconds();
+      const startTotalSecs = startMins * 60;
+      const endTotalSecs = endMins * 60;
+
+      let diffSecs: number;
+      let label: string;
+
+      if (nowTotalSecs < startTotalSecs) {
+        // Before lesson — count down to start
+        diffSecs = startTotalSecs - nowTotalSecs;
+        label = "Darsgacha";
+      } else if (nowTotalSecs < endTotalSecs) {
+        // During lesson — count down to end
+        diffSecs = endTotalSecs - nowTotalSecs;
+        label = "Dars tugashiga";
+      } else {
+        // After lesson
+        setCountdown("");
+        setCountdownLabel("");
+        return;
+      }
+
+      const h = Math.floor(diffSecs / 3600);
+      const m = Math.floor((diffSecs % 3600) / 60);
+      const s = diffSecs % 60;
+
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setCountdown(`${pad(h)}:${pad(m)}:${pad(s)}`);
+      setCountdownLabel(label);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [todayLesson, group.lessonStartTime, group.lessonEndTime]);
+
+  // Countdown to next lesson (when no lesson today)
+  const nextLessonDate = useMemo(
+    () => (!todayLesson ? allLessons.find((l) => l.date > todayStr) : null),
+    [todayLesson, allLessons, todayStr],
+  );
+  const [nextLessonCountdown, setNextLessonCountdown] = useState("");
+  useEffect(() => {
+    if (!nextLessonDate || !group.lessonStartTime) return;
+
+    const [sh, sm] = group.lessonStartTime.split(":").map(Number);
+    const target = new Date(nextLessonDate.date);
+    target.setHours(sh, sm, 0, 0);
+
+    const tick = () => {
+      const diffSecs = Math.floor((target.getTime() - Date.now()) / 1000);
+      if (diffSecs <= 0) {
+        setNextLessonCountdown("");
+        return;
+      }
+      const d = Math.floor(diffSecs / 86400);
+      const h = Math.floor((diffSecs % 86400) / 3600);
+      const m = Math.floor((diffSecs % 3600) / 60);
+      const s = diffSecs % 60;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      if (d > 0) {
+        setNextLessonCountdown(`${d} kun ${pad(h)}:${pad(m)}:${pad(s)} qoldi`);
+      } else {
+        setNextLessonCountdown(`${pad(h)}:${pad(m)}:${pad(s)} qoldi`);
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [nextLessonDate, group.lessonStartTime]);
+
   // Missed lessons (max 3)
   const missedLessons = currentLessons
     .filter((l) => !l.hasAttendance && l.date < todayStr && l.date !== todayStr)
@@ -308,6 +395,12 @@ export function AttendanceCycleDashboard({
               {!isLessonTime &&
                 " · Dars vaqti tugagan yoki hali boshlanmagan"}
             </p>
+            {countdown && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                <Clock className="size-3.5" />
+                {countdownLabel}: {countdown}
+              </p>
+            )}
           </div>
           <Button
             size="sm"
@@ -330,6 +423,12 @@ export function AttendanceCycleDashboard({
               Davomat olingan: {todayLesson.presentCount}/
               {todayLesson.totalStudents} keldi
             </p>
+            {countdown && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                <Clock className="size-3.5" />
+                {countdownLabel}: {countdown}
+              </p>
+            )}
           </div>
           <Button
             size="sm"
@@ -343,20 +442,22 @@ export function AttendanceCycleDashboard({
 
       {/* No lesson today message */}
       {!hasTodayLesson && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
-            <Circle className="size-4 text-blue-500" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">
-              Bugun bu guruhda dars yo&apos;q
+        <div className="flex flex-col items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 py-6 dark:border-blue-800 dark:bg-blue-950/30">
+          <span className="text-4xl">🤷</span>
+          <p className="text-base font-semibold">
+            Bugun bu guruhda dars yo&apos;q
+          </p>
+          {group.exactDays?.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Dars kunlari: {group.exactDays.map((d: string) => DAY_SHORT[d.charAt(0).toUpperCase() + d.slice(1)] ?? d).join(", ")}
             </p>
-            {group.exactDays?.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Dars kunlari: {group.exactDays.map((d: string) => DAY_SHORT[d.charAt(0).toUpperCase() + d.slice(1)] ?? d).join(", ")}
-              </p>
-            )}
-          </div>
+          )}
+          {nextLessonDate && nextLessonCountdown && (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400">
+              <Clock className="size-4" />
+              Keyingi dars: {nextLessonDate.dayName}, {formatShortDate(nextLessonDate.date)}, {nextLessonCountdown}
+            </p>
+          )}
         </div>
       )}
 
