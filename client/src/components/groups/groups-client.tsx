@@ -27,9 +27,22 @@ import api from "@/lib/api";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
+interface RoomOption {
+  id: number;
+  name: string;
+}
+
+interface TeacherOption {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
+
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
   status: { type: "string" as const, defaultValue: "all" },
+  room: { type: "string" as const, defaultValue: "all" },
+  teacher: { type: "string" as const, defaultValue: "all" },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
@@ -47,10 +60,30 @@ export function GroupsClient() {
     (user?.roles.some((r) => r.id === 4) && !canManage) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setUrlFilters({ search: value, page: 1 });
   }, 300);
+
+  const fetchFilterOptions = useCallback(async () => {
+    if (!selectedBranch) return;
+    try {
+      const [roomsRes, teachersRes] = await Promise.all([
+        api.get("/rooms", { params: { branch_id: selectedBranch.id, page: 1, pageSize: 100 } }),
+        api.get("/users", { params: { branch_id: selectedBranch.id, user_type: "Teacher", per_page: 100 } }),
+      ]);
+      setRooms(roomsRes.data.data.map((r: any) => ({ id: r.id, name: r.name })));
+      setTeachers(teachersRes.data.data.map((t: any) => ({ id: t.id, firstName: t.firstName, lastName: t.lastName })));
+    } catch {
+      // xatolik
+    }
+  }, [selectedBranch]);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, [fetchFilterOptions]);
 
   const fetchGroups = useCallback(async () => {
     if (!isTeacherOnly && (!branchLoaded || !selectedBranch)) {
@@ -66,6 +99,8 @@ export function GroupsClient() {
       if (selectedBranch) params.branch_id = selectedBranch.id;
       if (filters.status !== "all") params.status = Number(filters.status);
       if (filters.search.trim()) params.search = filters.search.trim();
+      if (filters.room !== "all") params.room_id = filters.room;
+      if (filters.teacher !== "all") params.teacher_id = Number(filters.teacher);
       const { data } = await api.get("/groups", { params });
       setGroups(data.data);
       setTotal(data.total);
@@ -79,6 +114,8 @@ export function GroupsClient() {
     filters.pageSize,
     filters.search,
     filters.status,
+    filters.room,
+    filters.teacher,
     selectedBranch,
     branchLoaded,
     isTeacherOnly,
@@ -101,6 +138,14 @@ export function GroupsClient() {
 
   const handleStatusChange = (value: string) => {
     setUrlFilters({ status: value, page: 1 });
+  };
+
+  const handleRoomChange = (value: string) => {
+    setUrlFilters({ room: value, page: 1 });
+  };
+
+  const handleTeacherChange = (value: string) => {
+    setUrlFilters({ teacher: value, page: 1 });
   };
 
   return (
@@ -127,6 +172,34 @@ export function GroupsClient() {
             <SelectItem value="4">To&apos;xtatilgan</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={filters.room} onValueChange={handleRoomChange}>
+          <SelectTrigger className="w-[calc(100%-3rem)] sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha xonalar</SelectItem>
+            {rooms.map((room) => (
+              <SelectItem key={room.id} value={String(room.id)}>
+                {room.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {!isTeacherOnly && (
+          <Select value={filters.teacher} onValueChange={handleTeacherChange}>
+            <SelectTrigger className="w-[calc(100%-3rem)] sm:w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha o&apos;qituvchilar</SelectItem>
+              {teachers.map((teacher) => (
+                <SelectItem key={teacher.id} value={String(teacher.id)}>
+                  {teacher.lastName} {teacher.firstName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {canManage &&
           (selectedBranch ? (
             <Tooltip>
