@@ -1,9 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { MoreHorizontal, UserMinus, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -12,10 +37,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StudentRowActions } from "@/components/students/student-row-actions";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import type { Student } from "@/data/student-model";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 
 export interface GroupStudent {
   enrollmentId: string;
@@ -29,38 +54,6 @@ export interface GroupStudent {
   isActive: boolean;
 }
 
-/** Map GroupStudent to minimal Student for StudentRowActions */
-function toStudent(gs: GroupStudent): Student {
-  return {
-    id: gs.id,
-    firstName: gs.firstName,
-    lastName: gs.lastName,
-    phone: gs.phone,
-    photo: gs.photo,
-    balance: gs.balance,
-    isActive: gs.isActive,
-    gender: null,
-    date_of_birth: null,
-    company_id: null,
-    deleted_at: null,
-    destroyer: null,
-    comment: null,
-    branches: [],
-    groups: [],
-    balance_on_period: null,
-    extraPhone: null,
-    parentPhone: null,
-    parentName: null,
-    telegram: null,
-    telegramChatId: null,
-    placeOfStudy: null,
-    address: null,
-    passportSeries: null,
-    status: gs.isActive ? "ACTIVE" : "FROZEN",
-    createdAt: "",
-    updatedAt: "",
-  };
-}
 
 function formatBalance(balance: number) {
   const abs = Math.abs(balance)
@@ -87,6 +80,28 @@ export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudents
   const user = useAuth((s) => s.user);
   const canManage =
     user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const [removeTarget, setRemoveTarget] = useState<GroupStudent | null>(null);
+  const [removeReason, setRemoveReason] = useState("");
+  const [removing, setRemoving] = useState(false);
+
+  const handleRemove = async () => {
+    if (!removeTarget || !removeReason.trim()) return;
+    setRemoving(true);
+    const { id, enrollmentId } = removeTarget;
+    setRemoveTarget(null);
+    onStudentDeleted?.(id);
+    try {
+      await api.delete(`/students/${id}/enroll/${enrollmentId}`, {
+        data: { reason: removeReason.trim() },
+      });
+      toast.success("O'quvchi guruhdan chiqarildi");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Xatolik yuz berdi");
+    } finally {
+      setRemoving(false);
+      setRemoveReason("");
+    }
+  };
 
   if (students.length === 0) {
     return (
@@ -160,17 +175,67 @@ export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudents
                 </Badge>
               </TableCell>
               {canManage && (
-                <TableCell className="relative z-10">
-                  <StudentRowActions
-                    student={toStudent(student)}
-                    onDeleted={onStudentDeleted}
-                  />
+                <TableCell className="relative z-10" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon-xs">
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Amallar</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Amallar</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => {
+                          setRemoveReason("");
+                          setRemoveTarget(student);
+                        }}
+                      >
+                        <UserMinus className="mr-2 size-4" />
+                        Guruhdan chiqarish
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               )}
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      <AlertDialog open={!!removeTarget} onOpenChange={(open) => { if (!open) setRemoveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Guruhdan chiqarishni tasdiqlang</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{removeTarget?.firstName} {removeTarget?.lastName}</strong> guruhdan chiqarilsinmi?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-6 pb-2">
+            <Textarea
+              placeholder="Sabab yozing (majburiy)..."
+              value={removeReason}
+              onChange={(e) => setRemoveReason(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemove}
+              disabled={removing || !removeReason.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Chiqarilmoqda..." : "Chiqarish"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
