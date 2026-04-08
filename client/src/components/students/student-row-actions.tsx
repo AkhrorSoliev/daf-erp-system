@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Trash2, RefreshCw, History, UserPlus } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, RefreshCw, History, UserPlus, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -36,11 +36,13 @@ import type { Student } from "@/data/student-model";
 
 interface StudentRowActionsProps {
   student: Student;
+  /** When set, shows "Guruhdan chiqarish" instead of "O'chirish" */
+  enrollmentId?: string;
   onDeleted?: (id: number) => void;
   onStatusChanged?: (id: number, newStatus: string) => void;
 }
 
-export function StudentRowActions({ student, onDeleted, onStatusChanged }: StudentRowActionsProps) {
+export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusChanged }: StudentRowActionsProps) {
   const { openDrawer } = useEditStudent();
   const [showDelete, setShowDelete] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -54,8 +56,15 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
     setShowDelete(false);
     onDeleted?.(student.id);
     try {
-      await api.delete(`/students/${student.id}`);
-      toast.success("O'quvchi muvaffaqiyatli o'chirildi");
+      if (enrollmentId) {
+        await api.delete(`/students/${student.id}/enroll/${enrollmentId}`, {
+          data: { reason: deleteReason.trim() || "Guruhdan chiqarildi" },
+        });
+        toast.success("O'quvchi guruhdan chiqarildi");
+      } else {
+        await api.delete(`/students/${student.id}`);
+        toast.success("O'quvchi muvaffaqiyatli o'chirildi");
+      }
     } catch (error: any) {
       const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
       toast.error(Array.isArray(msg) ? msg[0] : msg);
@@ -108,8 +117,11 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
             className="text-destructive"
             onClick={() => setShowDelete(true)}
           >
-            <Trash2 className="mr-2 size-4" />
-            O&apos;chirish
+            {enrollmentId ? (
+              <><UserMinus className="mr-2 size-4" />Guruhdan chiqarish</>
+            ) : (
+              <><Trash2 className="mr-2 size-4" />O&apos;chirish</>
+            )}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -117,9 +129,9 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>O&apos;chirishni tasdiqlang</AlertDialogTitle>
+            <AlertDialogTitle>{enrollmentId ? "Guruhdan chiqarishni tasdiqlang" : "O'chirishni tasdiqlang"}</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{studentName}</strong> arxivga o&apos;tkazilsinmi?
+              <strong>{studentName}</strong> {enrollmentId ? "guruhdan chiqarilsinmi?" : "arxivga o'tkazilsinmi?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="px-6 pb-2">
@@ -137,7 +149,9 @@ export function StudentRowActions({ student, onDeleted, onStatusChanged }: Stude
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "O'chirilmoqda..." : "O'chirish"}
+              {deleting
+                ? (enrollmentId ? "Chiqarilmoqda..." : "O'chirilmoqda...")
+                : (enrollmentId ? "Chiqarish" : "O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
