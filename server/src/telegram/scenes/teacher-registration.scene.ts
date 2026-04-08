@@ -27,6 +27,11 @@ export function createTeacherRegistrationScene(
 ): Scenes.BaseScene<BotContext> {
   const scene = new Scenes.BaseScene<BotContext>(SCENES.TEACHER_REGISTRATION);
 
+  // Loading button bosilganda — hech narsa qilmaslik
+  scene.action('noop', async (ctx) => {
+    await ctx.answerCbQuery("Iltimos, kuting...");
+  });
+
   // Scene ga kirganda
   scene.enter(async (ctx) => {
     // Allaqachon ro'yxatdan o'tganini tekshirish
@@ -57,6 +62,7 @@ export function createTeacherRegistrationScene(
 
   // Barcha text xabarlari
   scene.on(message('text'), async (ctx) => {
+    if (ctx.session.processing) return;
     const step = ctx.session.step;
     const text = ctx.message.text.trim();
 
@@ -151,6 +157,7 @@ export function createTeacherRegistrationScene(
   // Contact share
   scene.on(message('contact'), async (ctx) => {
     if (ctx.session.step !== 3) return;
+    if (ctx.session.processing) return;
 
     const contact = ctx.message.contact;
     let phone = contact.phone_number;
@@ -259,6 +266,7 @@ export function createTeacherRegistrationScene(
   // Rasm qabul qilish (compressed photo)
   scene.on(message('photo'), async (ctx) => {
     if (ctx.session.step !== 5) return;
+    if (ctx.session.processing) return;
 
     const photos = ctx.message.photo;
     const photo = photos[photos.length - 1];
@@ -273,6 +281,7 @@ export function createTeacherRegistrationScene(
   // Rasm qabul qilish (document/fayl sifatida)
   scene.on(message('document'), async (ctx) => {
     if (ctx.session.step !== 5) return;
+    if (ctx.session.processing) return;
 
     const doc = ctx.message.document;
     const mime = doc.mime_type || '';
@@ -292,7 +301,21 @@ export function createTeacherRegistrationScene(
   // Tasdiqlash
   scene.action('confirm_registration', async (ctx) => {
     if (ctx.session.step !== 6) return;
+    if (ctx.session.processing) return;
+    ctx.session.processing = true;
     await ctx.answerCbQuery();
+
+    // Buttonlarni loading holatiga o'zgartirish
+    try {
+      await ctx.editMessageCaption(
+        (ctx.callbackQuery.message as any)?.caption ?? '',
+        Markup.inlineKeyboard([
+          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+        ]),
+      );
+    } catch {
+      // editMessage xatosi bo'lsa davom etamiz
+    }
     await ctx.sendChatAction('typing');
 
     const data = ctx.session.data;
@@ -323,6 +346,7 @@ export function createTeacherRegistrationScene(
         branchIds: data.branchId ? [data.branchId] : undefined,
       });
 
+      ctx.session.processing = false;
       await ctx.editMessageCaption("\u2705 Tasdiqlandi!");
       await ctx.replyWithPhoto(data.photo, {
         caption:
@@ -337,6 +361,7 @@ export function createTeacherRegistrationScene(
 
       await ctx.scene.leave();
     } catch (error) {
+      ctx.session.processing = false;
       await ctx.reply(
         "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
       );
@@ -347,7 +372,21 @@ export function createTeacherRegistrationScene(
   // Qayta kiritish
   scene.action('restart_registration', async (ctx) => {
     if (ctx.session.step !== 6) return;
+    if (ctx.session.processing) return;
+    ctx.session.processing = true;
     await ctx.answerCbQuery();
+
+    // Buttonlarni loading holatiga o'zgartirish
+    try {
+      await ctx.editMessageCaption(
+        (ctx.callbackQuery.message as any)?.caption ?? '',
+        Markup.inlineKeyboard([
+          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+        ]),
+      );
+    } catch {
+      // editMessage xatosi bo'lsa davom etamiz
+    }
 
     // Yuklangan rasmni o'chirish
     if (ctx.session.data.photo) {
@@ -357,7 +396,8 @@ export function createTeacherRegistrationScene(
     ctx.session.step = 1;
     const branchId = ctx.session.data?.branchId;
     ctx.session.data = { branchId };
-    await ctx.editMessageText("\uD83D\uDD04 Qayta kiritish tanlandi");
+    ctx.session.processing = false;
+    await ctx.editMessageCaption("\uD83D\uDD04 Qayta kiritish tanlandi");
     await ctx.reply("Ismingizni kiriting:");
   });
 

@@ -48,6 +48,11 @@ export function createStudentRegistrationScene(
 ): Scenes.BaseScene<BotContext> {
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
 
+  // Loading button bosilganda — hech narsa qilmaslik
+  scene.action('noop', async (ctx) => {
+    await ctx.answerCbQuery("Iltimos, kuting...");
+  });
+
   // Scene ga kirganda — ustozlar ro'yxatini ko'rsatish
   scene.enter(async (ctx) => {
     const branchId = ctx.session.data?.branchId;
@@ -132,6 +137,8 @@ export function createStudentRegistrationScene(
   // Ustoz tanlash
   scene.action(/^select_teacher_(\d+)$/, async (ctx) => {
     if (ctx.session.step !== 1) return;
+    if (ctx.session.processing) return;
+    ctx.session.processing = true;
     await ctx.answerCbQuery();
 
     const teacherId = Number(ctx.match[1]);
@@ -145,6 +152,7 @@ export function createStudentRegistrationScene(
       select: { id: true, firstName: true, lastName: true },
     });
     if (!teacher) {
+      ctx.session.processing = false;
       await ctx.reply("O'qituvchi topilmadi. Qayta tanlang.");
       return;
     }
@@ -171,6 +179,7 @@ export function createStudentRegistrationScene(
     });
 
     if (groups.length === 0) {
+      ctx.session.processing = false;
       await ctx.editMessageText(`${teacher.firstName} ${teacher.lastName} — hozirda guruhlari mavjud emas.`);
       // Qayta ustozlar ro'yxatiga qaytarish
       ctx.session.step = 1;
@@ -191,6 +200,7 @@ export function createStudentRegistrationScene(
     }
 
     ctx.session.step = 2;
+    ctx.session.processing = false;
 
     const daysMap: Record<string, string> = { odd: 'Toq kunlar', even: 'Juft kunlar' };
 
@@ -266,6 +276,7 @@ export function createStudentRegistrationScene(
 
   // Text xabarlari
   scene.on(message('text'), async (ctx) => {
+    if (ctx.session.processing) return;
     const step = ctx.session.step;
     const text = ctx.message.text.trim();
 
@@ -345,6 +356,7 @@ export function createStudentRegistrationScene(
   // Contact share
   scene.on(message('contact'), async (ctx) => {
     if (ctx.session.step !== 5) return;
+    if (ctx.session.processing) return;
 
     const contact = ctx.message.contact;
     let phone = contact.phone_number;
@@ -425,6 +437,7 @@ export function createStudentRegistrationScene(
   // Rasm qabul qilish (compressed photo)
   scene.on(message('photo'), async (ctx) => {
     if (ctx.session.step !== 6) return;
+    if (ctx.session.processing) return;
 
     const photos = ctx.message.photo;
     const photo = photos[photos.length - 1];
@@ -439,6 +452,7 @@ export function createStudentRegistrationScene(
   // Rasm qabul qilish (document/fayl sifatida)
   scene.on(message('document'), async (ctx) => {
     if (ctx.session.step !== 6) return;
+    if (ctx.session.processing) return;
 
     const doc = ctx.message.document;
     const mime = doc.mime_type || '';
@@ -458,7 +472,21 @@ export function createStudentRegistrationScene(
   // Tasdiqlash
   scene.action('confirm_student', async (ctx) => {
     if (ctx.session.step !== 7) return;
+    if (ctx.session.processing) return;
+    ctx.session.processing = true;
     await ctx.answerCbQuery();
+
+    // Buttonlarni loading holatiga o'zgartirish
+    try {
+      await ctx.editMessageCaption(
+        (ctx.callbackQuery.message as any)?.caption ?? '',
+        Markup.inlineKeyboard([
+          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+        ]),
+      );
+    } catch {
+      // editMessage xatosi bo'lsa davom etamiz
+    }
     await ctx.sendChatAction('typing');
 
     const data = ctx.session.data;
@@ -558,6 +586,7 @@ export function createStudentRegistrationScene(
         data: { userId: user.id },
       });
 
+      ctx.session.processing = false;
       await ctx.editMessageCaption("✅ Tasdiqlandi!");
       await ctx.replyWithPhoto(data.photo, {
         caption:
@@ -573,6 +602,7 @@ export function createStudentRegistrationScene(
 
       await ctx.scene.leave();
     } catch (error) {
+      ctx.session.processing = false;
       console.error('[StudentRegistration] Ro\'yxatdan o\'tishda xatolik:', error);
 
       // Duplicate phone/login xatoligi
@@ -601,7 +631,21 @@ export function createStudentRegistrationScene(
   // Qayta kiritish
   scene.action('restart_student', async (ctx) => {
     if (ctx.session.step !== 7) return;
+    if (ctx.session.processing) return;
+    ctx.session.processing = true;
     await ctx.answerCbQuery();
+
+    // Buttonlarni loading holatiga o'zgartirish
+    try {
+      await ctx.editMessageCaption(
+        (ctx.callbackQuery.message as any)?.caption ?? '',
+        Markup.inlineKeyboard([
+          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+        ]),
+      );
+    } catch {
+      // editMessage xatosi bo'lsa davom etamiz
+    }
 
     // Yuklangan rasmni o'chirish
     if (ctx.session.data.photo) {
@@ -611,6 +655,7 @@ export function createStudentRegistrationScene(
     const branchId = ctx.session.data.branchId;
     ctx.session.data = { branchId };
     ctx.session.step = 1;
+    ctx.session.processing = false;
 
     await ctx.editMessageCaption("🔄 Qayta kiritish tanlandi");
 
