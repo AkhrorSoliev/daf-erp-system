@@ -15,6 +15,10 @@ export class GroupQueryDto extends PaginationDto {
 
   @IsOptional()
   @IsString()
+  statusEnum?: string;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 
   @IsOptional()

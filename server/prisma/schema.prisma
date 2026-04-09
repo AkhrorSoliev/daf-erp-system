@@ -22,6 +22,7 @@ enum UserStatus {
 enum StudentStatus {
   ACTIVE
   INACTIVE
+  FROZEN
   GRADUATED
   EXPELLED
   ARCHIVED

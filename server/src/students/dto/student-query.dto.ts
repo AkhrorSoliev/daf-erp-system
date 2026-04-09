@@ -31,4 +31,8 @@ export class StudentQueryDto {
   @IsInt()
   @Type(() => Number)
   teacher_id?: number;
+
+  @IsOptional()
+  @IsString()
+  group_id?: string;
 }

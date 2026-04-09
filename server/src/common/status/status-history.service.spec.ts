@@ -30,7 +30,7 @@ describe('StatusHistoryService', () => {
       entityType: 'Student',
       entityId: '1',
       fromStatus: 'ACTIVE',
-      toStatus: 'INACTIVE',
+      toStatus: 'FROZEN',
       reason: 'Test sabab',
       changedById: 1,
       companyId: 1001,
@@ -44,7 +44,7 @@ describe('StatusHistoryService', () => {
           entityType: 'Student',
           entityId: '1',
           fromStatus: 'ACTIVE',
-          toStatus: 'INACTIVE',
+          toStatus: 'FROZEN',
           reason: 'Test sabab',
           changedById: 1,
           companyId: 1001,
@@ -64,7 +64,7 @@ describe('StatusHistoryService', () => {
 
     it('throws BadRequestException for invalid transition', async () => {
       await expect(
-        service.changeStatus({ ...validParams, toStatus: 'ARCHIVED' }),
+        service.changeStatus({ ...validParams, fromStatus: 'GRADUATED', toStatus: 'INACTIVE' }),
       ).rejects.toThrow(BadRequestException);
 
       expect(prisma.statusHistory.create).not.toHaveBeenCalled();
@@ -83,7 +83,7 @@ describe('StatusHistoryService', () => {
         entityType: 'Student',
         entityId: '1',
         fromStatus: 'ACTIVE',
-        toStatus: 'INACTIVE',
+        toStatus: 'FROZEN',
       });
 
       const createCall = prisma.statusHistory.create.mock.calls[0][0];

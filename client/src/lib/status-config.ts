@@ -8,7 +8,7 @@ interface StatusConfig {
 // ─── Student ──────────────────────────────────────────
 const STUDENT_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: "Faol", variant: "default" },
-  INACTIVE: { label: "Nofaol", variant: "secondary" },
+  INACTIVE: { label: "Muzlatilgan", variant: "outline" }, // legacy — FROZEN bilan bir xil
   FROZEN: { label: "Muzlatilgan", variant: "outline" },
   GRADUATED: { label: "Bitirgan", variant: "outline" },
   EXPELLED: { label: "Chetlatilgan", variant: "destructive" },
@@ -102,9 +102,9 @@ export const ENTITY_API_PATH: Record<string, string> = {
 // ARCHIVED hech qachon qo'yilmaydi — arxivlash faqat "O'chirish" orqali
 const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   students: {
-    ACTIVE: ["INACTIVE", "FROZEN", "GRADUATED", "EXPELLED"],
-    INACTIVE: ["ACTIVE", "FROZEN", "EXPELLED"],
-    FROZEN: ["ACTIVE", "INACTIVE"],
+    ACTIVE: ["FROZEN", "EXPELLED"],    // GRADUATED avtomatik — guruh tugaganda
+    INACTIVE: ["ACTIVE", "FROZEN"],     // legacy
+    FROZEN: ["ACTIVE"],
     GRADUATED: ["ACTIVE"],
     EXPELLED: ["ACTIVE"],
   },

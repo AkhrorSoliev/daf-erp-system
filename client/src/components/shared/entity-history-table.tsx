@@ -76,11 +76,21 @@ const FIELD_LABELS: Record<string, string | null> = {
   photo: "Rasm",
   comment: "Izoh",
   dateOfBirth: "Tug'ilgan sana",
+  address: "Manzil",
+  telegram: "Telegram",
+  extraPhone: "Qo'shimcha telefon",
+  parentName: "Ota-ona ismi",
+  parentPhone: "Ota-ona telefoni",
+  placeOfStudy: "O'qish joyi",
+  passportSeries: "Pasport seriyasi",
   // Yashiriladigan texnik field lar
+  id: null,
   action: null,
   isTask: null,
   commentId: null,
   companyId: null,
+  userId: null,
+  telegramChatId: null,
   nomi: "Nomi",
   kunlar: "Kunlar",
   vaqt: "Vaqt",
@@ -115,7 +125,7 @@ const FIELD_LABELS: Record<string, string | null> = {
 
 function getFieldLabel(key: string): string | null {
   if (key in FIELD_LABELS) return FIELD_LABELS[key];
-  return key;
+  return null;
 }
 
 // --- Kontekstli action aniqlash ---
@@ -169,14 +179,45 @@ const VALUE_MAX_LENGTH = 80;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
+const VALUE_TRANSLATIONS: Record<string, string> = {
+  // Group statuses
+  FORMING: "Boshlanmagan",
+  ACTIVE: "Faol",
+  PAUSED: "Pauza",
+  COMPLETED: "Tugallangan",
+  CANCELLED: "To'xtatilgan",
+  ARCHIVED: "Arxivlangan",
+  // Student statuses
+  FROZEN: "Muzlatilgan",
+  INACTIVE: "Muzlatilgan",
+  GRADUATED: "Bitirgan",
+  EXPELLED: "Chetlatilgan",
+  // User statuses
+  SUSPENDED: "To'xtatilgan",
+  TERMINATED: "Ishdan bo'shatilgan",
+  // Gender
+  MALE: "Erkak",
+  FEMALE: "Ayol",
+  // Enrollment statuses
+  DROPPED: "Chiqdi",
+  TRANSFERRED: "O'tkazildi",
+  // Room statuses
+  UNDER_MAINTENANCE: "Ta'mirda",
+  // Course statuses
+  DEPRECATED: "Eskirgan",
+};
+
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Ha" : "Yo'q";
-  if (typeof value === "string" && ISO_DATE_RE.test(value)) {
-    const d = new Date(value);
-    if (!isNaN(d.getTime())) {
-      return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+  if (typeof value === "string") {
+    if (ISO_DATE_RE.test(value)) {
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) {
+        return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+      }
     }
+    if (value in VALUE_TRANSLATIONS) return VALUE_TRANSLATIONS[value];
   }
   return String(value);
 }
@@ -214,7 +255,9 @@ function ChangedFields({ record }: { record: HistoryRecord }) {
   let hasLongValue = false;
 
   if (action === "CREATE" && newValues) {
-    entries = Object.entries(newValues).filter(([key]) => getFieldLabel(key) !== null);
+    entries = Object.entries(newValues).filter(
+      ([key, val]) => getFieldLabel(key) !== null && val !== null && val !== undefined && val !== "",
+    );
     mode = "create";
   } else if (action === "DELETE" && oldValues) {
     entries = Object.entries(oldValues).filter(([key]) => getFieldLabel(key) !== null);

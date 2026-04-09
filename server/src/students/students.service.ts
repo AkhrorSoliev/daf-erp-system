@@ -162,16 +162,23 @@ export class StudentsService {
       baseWhere.OR = searchConditions;
     }
 
+    const enrollmentConditions: Prisma.EnrollmentWhereInput[] = [{ deletedAt: null }];
+
     if (query.teacher_id) {
-      baseWhere.enrollments = {
-        some: {
+      enrollmentConditions.push({
+        group: {
           deletedAt: null,
-          group: {
-            deletedAt: null,
-            teachers: { some: { teacherId: query.teacher_id } },
-          },
+          teachers: { some: { teacherId: query.teacher_id } },
         },
-      };
+      });
+    }
+
+    if (query.group_id) {
+      enrollmentConditions.push({ groupId: query.group_id });
+    }
+
+    if (enrollmentConditions.length > 1) {
+      baseWhere.enrollments = { some: { AND: enrollmentConditions } };
     }
 
     if (branch_id) {
@@ -194,7 +201,7 @@ export class StudentsService {
         where.enrollments = activeEnrollmentFilter.enrollments;
       }
     } else if (status === 'frozen') {
-      where.status = StudentStatus.INACTIVE;
+      where.status = StudentStatus.FROZEN;
     } else if (status === 'ungrouped') {
       where.status = StudentStatus.ACTIVE;
       const noEnrollmentFilter = { enrollments: { none: { deletedAt: null } } };
@@ -241,7 +248,7 @@ export class StudentsService {
         this.prisma.student.count({ where: baseWhere }),
         this.prisma.student.count({ where: activeStatsWhere }),
         this.prisma.student.count({
-          where: { ...baseWhere, isActive: false },
+          where: { ...baseWhere, status: StudentStatus.FROZEN },
         }),
         this.prisma.student.count({
           where: { ...baseWhere, balance: { lt: 0 } },
@@ -264,7 +271,7 @@ export class StudentsService {
 
   async findById(id: number) {
     const student = await this.prisma.student.findFirst({
-      where: { id, deletedAt: null },
+      where: { id },
       select: studentSelect,
     });
 
@@ -428,6 +435,18 @@ export class StudentsService {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 
+    // GRADUATED: faqat faol enrollment-i yo'q o'quvchiga ruxsat
+    if (dto.status === StudentStatus.GRADUATED) {
+      const activeCount = await this.prisma.enrollment.count({
+        where: { studentId: id, deletedAt: null, status: 'ACTIVE' },
+      });
+      if (activeCount > 0) {
+        throw new BadRequestException(
+          "Faol guruhlari bor o'quvchini bitirgan deb belgilab bo'lmaydi",
+        );
+      }
+    }
+
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'Student',
       entityId: String(id),
@@ -518,6 +537,9 @@ export class StudentsService {
       },
     });
 
+    // Cascade: ACTIVE + FROZEN enrollment → DROPPED
+    await this.statusCascadeService.cascade('Student', String(id), 'ARCHIVED', deletedById);
+
     return { message: "O'quvchi muvaffaqiyatli o'chirildi" };
   }
 
@@ -563,12 +585,25 @@ export class StudentsService {
       throw new NotFoundException(`O'quvchi #${studentId} topilmadi`);
     }
 
+    if (student.status !== StudentStatus.ACTIVE) {
+      throw new BadRequestException(
+        "Faqat faol o'quvchilarni guruhga qo'shish mumkin",
+      );
+    }
+
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },
       include: { course: { select: { name: true } } },
     });
     if (!group) {
       throw new NotFoundException(`Guruh topilmadi`);
+    }
+
+    const ENROLLABLE_STATUSES = ['ACTIVE', 'FORMING', 'PAUSED'];
+    if (!ENROLLABLE_STATUSES.includes(group.statusEnum)) {
+      throw new BadRequestException(
+        "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
+      );
     }
 
     // Already in this exact group?

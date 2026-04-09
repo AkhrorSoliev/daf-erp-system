@@ -1,4 +1,4 @@
-import { TrendingDown, UserCheck, UserX, Users } from "lucide-react";
+import { CheckCircle, CircleDot, CircleCheck, Layers, PauseCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -7,60 +7,63 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-export interface StudentsStatsData {
+export interface GroupsStatsData {
   total: number;
   active: number;
-  frozen: number;
-  debtors: number;
+  forming: number;
+  paused: number;
+  completed: number;
 }
 
-const allStats = [
+const statItems = [
   {
     key: "total" as const,
     statusValue: "all",
     label: "Jami",
-    icon: Users,
-    tooltip: "Barcha o'quvchilar soni",
+    icon: Layers,
+    tooltip: "Barcha guruhlar soni",
   },
   {
     key: "active" as const,
-    statusValue: "active",
+    statusValue: "ACTIVE",
     label: "Faol",
-    icon: UserCheck,
-    tooltip: "Faol o'quvchilar",
+    icon: CheckCircle,
+    tooltip: "Faol guruhlar",
   },
   {
-    key: "frozen" as const,
-    statusValue: "frozen",
-    label: "Muzlatilgan",
-    icon: UserX,
-    tooltip: "Muzlatilgan o'quvchilar",
+    key: "forming" as const,
+    statusValue: "FORMING",
+    label: "Boshlanmagan",
+    icon: CircleDot,
+    tooltip: "Shakllanayotgan guruhlar",
   },
   {
-    key: "debtors" as const,
-    statusValue: "debtors",
-    label: "Qarzdorlar",
-    icon: TrendingDown,
-    tooltip: "Balansi manfiy bo'lgan o'quvchilar",
+    key: "paused" as const,
+    statusValue: "PAUSED",
+    label: "Pauza",
+    icon: PauseCircle,
+    tooltip: "To'xtatilgan guruhlar",
+  },
+  {
+    key: "completed" as const,
+    statusValue: "COMPLETED",
+    label: "Tugallangan",
+    icon: CircleCheck,
+    tooltip: "Tugallangan guruhlar",
   },
 ];
 
-interface StudentsStatsProps {
-  stats: StudentsStatsData;
+interface GroupsStatsProps {
+  stats: GroupsStatsData;
   loading?: boolean;
-  isTeacher?: boolean;
   activeStatus?: string;
   onStatusClick?: (status: string) => void;
 }
 
-export function StudentsStats({ stats, loading, isTeacher, activeStatus, onStatusClick }: StudentsStatsProps) {
-  const items = isTeacher
-    ? allStats.filter((s) => ["total", "active", "frozen"].includes(s.key))
-    : allStats;
-
+export function GroupsStats({ stats, loading, activeStatus, onStatusClick }: GroupsStatsProps) {
   return (
-    <div className={`grid gap-2 sm:gap-3 ${isTeacher ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
-      {items.map(({ key, statusValue, label, icon: Icon, tooltip }) => {
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
+      {statItems.map(({ key, statusValue, label, icon: Icon, tooltip }) => {
         const isActive = activeStatus === statusValue || (activeStatus === "all" && statusValue === "all");
         return (
           <Tooltip key={key}>
