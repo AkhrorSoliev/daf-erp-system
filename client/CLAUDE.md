@@ -284,6 +284,10 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
   - `entityType` values: `Student`, `Group`, `User` (for teachers), `Branch`, `Room`, `Course`, `Lead`, `Holiday`, `Enrollment`
   - Response: `{ data: [...], total, page, pageSize }` — each entry has `action`, `oldValues`, `newValues`, `changedBy: { id, name }`, `createdAt`
 - **All entity changes are recorded by the backend automatically** — every create, update, delete, status change, and restore is logged in the `EntityHistory` table
+- **Cross-entity history is mandatory** — when a change on one entity affects another, history must be recorded on **both** entities:
+  - **Group history** must record every group-related change: teacher assigned/removed, schedule (time, days) updated, room changed, student added/removed/frozen/unfrozen/expelled/deleted. Any operation that affects a group's composition or configuration must appear in that group's "Tarix" tab
+  - **Student history** must record every student-related change: enrolled to group, removed from group, status changed (manual or automatic), group completed, transferred between groups. Any operation that affects a student's enrollment or status must appear in that student's "Tarix" tab
+  - This applies to **cascade operations** as well — if a student is frozen and their enrollment is frozen, the group must see "O'quvchi muzlatildi" in its history; if a group is completed and a student auto-graduates, the student must see "Avtomatik: guruh tugallanganligi sababli GRADUATED" in their history
 - Follow the **lazy tab loading** pattern: only fetch history when the user switches to the "Tarix" tab (use `onValueChange` + `useRef` flag)
 - Display history as a timeline or table showing: date/time, who made the change, what action (created, updated, deleted, status changed, restored), and what fields changed (old → new values)
 - Use the `dd.MM.yyyy, HH:mm:ss` date format for history timestamps (audit trails require time precision)
@@ -317,15 +321,15 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 ### Comments & Task Assignment (Izohlar)
 
-- **"Izohlar" tab** mavjud: Student Profile, Teacher Profile — comment list + form ko'rsatadi
-- **Shared komponentlar:**
-  - `src/components/shared/comment-list.tsx` — izohlar ro'yxati (oddiy + topshiriq), pagination, assignee status tugmalari
-  - `src/components/shared/comment-form.tsx` — izoh yozish formasi, CEO/BD uchun "Topshiriq sifatida" switch + assignee tanlash
-- **Topshiriq (task)** commentlar sariq border bilan ajralib turadi, assignee badges ko'rsatadi
-- **Assignee tugmalari:** "Ko'rdim" (SEEN) va "Bajarildi" (DONE) — faqat o'ziga assign qilingan comment da ko'rinadi
-- **Eslatma section** (student profile card): `GET /api/comments/latest` dan eng so'nggi izoh ko'rsatadi, fallback: `student.comment`
-- Lazy loading pattern: izohlar faqat "Izohlar" tab ochilganda yuklanadi
-- Yangi entity detail sahifasiga izoh qo'shish uchun:
+- **"Izohlar" tab** exists on: Student Profile, Teacher Profile — displays comment list + form
+- **Shared components:**
+  - `src/components/shared/comment-list.tsx` — comment list (regular + task), pagination, assignee status buttons
+  - `src/components/shared/comment-form.tsx` — comment form, CEO/BD get "As task" switch + assignee selection
+- **Task comments** are highlighted with a yellow border and show assignee badges
+- **Assignee buttons:** "Ko'rdim" (SEEN) and "Bajarildi" (DONE) — only visible on comments assigned to the current user
+- **Eslatma section** (student profile card): shows the latest comment from `GET /api/comments/latest`, fallback: `student.comment`
+- Lazy loading pattern: comments are only fetched when the "Izohlar" tab is opened
+- To add comments to a new entity detail page:
   ```tsx
   import { CommentList } from "@/components/shared/comment-list";
   import { CommentForm } from "@/components/shared/comment-form";
@@ -335,13 +339,13 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 ### Notifications (Bildirishnomalar)
 
-- **NotificationBell** (`src/components/notifications/notification-bell.tsx`) — navbar dagi qo'ng'iroq icon + badge + dropdown
+- **NotificationBell** (`src/components/notifications/notification-bell.tsx`) — bell icon + badge + dropdown in navbar
 - **Zustand store** (`src/hooks/use-notifications.ts`) — notifications, unreadCount, markRead, markAllRead
-- **SSE hook** (`src/hooks/use-sse.ts`) — fetch-based SSE (JWT Authorization header bilan), auto-reconnect
+- **SSE hook** (`src/hooks/use-sse.ts`) — fetch-based SSE (with JWT Authorization header), auto-reconnect
 - **Push hook** (`src/hooks/use-push-notifications.ts`) — service worker registration + push subscription
-- **Service Worker** (`public/sw.js`) — push event handler, notification click → sahifaga navigate
-- **Real-time:** SSE orqali yangi notification kelganda badge soni oshadi va dropdown ga qo'shiladi
-- Notification click → tegishli entity sahifasiga navigate (relatedEntityType/Id asosida)
+- **Service Worker** (`public/sw.js`) — push event handler, notification click → navigates to page
+- **Real-time:** When a new notification arrives via SSE, badge count increments and it's added to the dropdown
+- Notification click → navigates to the related entity page (based on relatedEntityType/Id)
 
 ### Testing
 
@@ -358,6 +362,12 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Colocate related files (component + its types + its utils)
 - Shared utilities go in `src/lib/`, shared components in `src/components/`
 
+### CLAUDE.md Language Policy
+
+- **This file (CLAUDE.md) must be written entirely in English.** All section headings, descriptions, rules, and comments must use English only.
+- Uzbek text is acceptable **only** when quoting exact UI strings, error messages, or placeholder text that appears in the application (e.g. `"Barcha holatlar"`, `"Saqlashda xatolik yuz berdi"`).
+- When adding new sections or editing existing ones, always write in English.
+
 ## Available Skills
 
 Skills are specialized knowledge modules that **must** be activated when working on related tasks. Before starting any task, identify which skills are relevant and invoke them.
@@ -366,21 +376,21 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 | Command | When to use |
 |---------|-------------|
-| `/deploy` | Vercel + Railway + Auto-Merge deploy qilish |
-| `/restart` | Dev serverlarni qayta ishga tushirish |
-| `/team-deploy` | Xavfsiz jamoa deploy |
-| `/team-merge` | Xavfsiz PR merge |
+| `/deploy` | Deploy to Vercel + Railway + Auto-Merge |
+| `/restart` | Restart dev servers |
+| `/team-deploy` | Safe team deployment |
+| `/team-merge` | Safe PR merge |
 
 ### Agent Skills (`.agents/skills/`)
 
 | Skill | When to use |
 |-------|-------------|
-| `frontend-design` | UI dizayn, layout, styling ishlari |
-| `web-design-guidelines` | Web dizayn qoidalari va best practices |
+| `frontend-design` | UI design, layout, styling tasks |
+| `web-design-guidelines` | Web design rules and best practices |
 | `vercel-react-best-practices` | React performance, rendering, async, bundle optimization |
 | `vercel-composition-patterns` | Compound components, state management, React 19 patterns |
-| `deploy-to-vercel` | Vercel ga deploy qilish |
-| `documentation-writer` | Texnik hujjatlar yozish |
+| `deploy-to-vercel` | Deploy to Vercel |
+| `documentation-writer` | Writing technical documentation |
 
 ### Context7 Skills (auto-triggered)
 
@@ -388,15 +398,15 @@ Skills are specialized knowledge modules that **must** be activated when working
 |-------|-------------|
 | `typescript-expert` | TypeScript type-level programming, performance, migration |
 | `docker-expert` | Docker containerization, multi-stage builds |
-| `prisma-client-api` | Prisma query, filter, CRUD operations (frontend types uchun ham) |
+| `prisma-client-api` | Prisma query, filter, CRUD operations (including frontend types) |
 
 ### Skill Usage Rule
 
-**Har bir task boshlanishida tegishli skillni aniqlash va faollashtirish shart:**
+**Identify and activate the relevant skill at the start of each task:**
 
-1. **UI komponent yaratish/o'zgartirish** → `frontend-design` + `vercel-react-best-practices`
+1. **Creating/modifying UI components** → `frontend-design` + `vercel-react-best-practices`
 2. **Component architecture** → `vercel-composition-patterns`
-3. **TypeScript xatolik yoki murakkab tiplar** → `typescript-expert`
-4. **Deploy qilish** → `/deploy` yoki `deploy-to-vercel`
-5. **Prisma modellar bilan ishlash** → `prisma-client-api`
-6. **Docker bilan ishlash** → `docker-expert`
+3. **TypeScript errors or complex types** → `typescript-expert`
+4. **Deploying** → `/deploy` or `deploy-to-vercel`
+5. **Working with Prisma models** → `prisma-client-api`
+6. **Working with Docker** → `docker-expert`

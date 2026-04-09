@@ -96,10 +96,10 @@ export function EnrollToGroupDialog({
       };
       if (search.trim()) params.search = search.trim();
       const { data } = await api.get("/groups", { params });
-      const activeGroups = (data.data || []).filter(
-        (g: any) => g.statusEnum === "ACTIVE" || g.statusEnum === "FORMING",
+      const enrollableGroups = (data.data || []).filter(
+        (g: any) => g.statusEnum === "ACTIVE" || g.statusEnum === "FORMING" || g.statusEnum === "PAUSED",
       );
-      setGroups(activeGroups);
+      setGroups(enrollableGroups);
     } catch {
       setGroups([]);
     } finally {

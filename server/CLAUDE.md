@@ -135,6 +135,12 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 
 - A **universal `EntityHistory` table** tracks all changes (CREATE, UPDATE, DELETE, STATUS_CHANGE, RESTORE) for every entity (Student, Branch, Room, Course, Group, User, Lead, Holiday, Enrollment)
 - Every service that performs a mutation **must** record the change via `EntityHistoryService` — this is **not optional**
+- **Cross-entity history is mandatory** — when a mutation on entity A cascades to entity B, history must be recorded on **both** entities. Examples:
+  - Student status change (FROZEN/EXPELLED/ARCHIVED) cascades to enrollments → record in **Group** history (e.g. `OQUVCHI_MUZLATILDI`, `OQUVCHI_CHETLATILDI`)
+  - Group COMPLETED auto-graduates students → record in **Student** history
+  - Any operation affecting group composition (student add/remove/freeze/unfreeze) must appear in that group's history
+  - Any operation affecting a student's enrollment or status must appear in that student's history
+- **Cascade services must record history** — `StatusCascadeService` injects `EntityHistoryService` and records cross-entity history for all cascade operations. When adding new cascade logic, always include corresponding history records
 - The service is global (`EntityHistoryModule` in `src/common/entity-history/`) and injectable in any service without importing the module
 - Methods: `recordCreate()`, `recordUpdate()`, `recordDelete()`, `recordStatusChange()`, `recordRestore()`
 - For **UPDATE**, pass the full old and new objects — the service auto-computes the diff via `computeChangedFields()` in `diff.util.ts` and only stores changed fields. If nothing actually changed, no history record is created
@@ -172,36 +178,36 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 
 ### Comments & Task Assignment
 
-- `CommentsModule` (`src/comments/`) — izohlar va topshiriqlar tizimi
-- **Comment** jadvali: polymorphic `entityType`/`entityId` (EntityHistory pattern bilan bir xil)
-- **CommentAssignee** jadvali: topshiriq assign qilingan foydalanuvchilar, har birining alohida statusi (PENDING → SEEN → DONE)
-- **Ruxsat**: Oddiy izoh — CEO, BD, Admin. Task izoh — faqat CEO va BD
+- `CommentsModule` (`src/comments/`) — comments and task assignment system
+- **Comment** table: polymorphic `entityType`/`entityId` (same pattern as EntityHistory)
+- **CommentAssignee** table: users assigned to a task, each with their own status (PENDING → SEEN → DONE)
+- **Permissions**: Regular comments — CEO, BD, Admin. Task comments — CEO and BD only
 - **Endpoints:**
-  - `POST /api/comments` — izoh/topshiriq yaratish
-  - `GET /api/comments?entityType=Student&entityId=12345&page=1&pageSize=20` — entity bo'yicha ro'yxat
-  - `GET /api/comments/latest?entityType=Student&entityId=12345` — eng so'nggi izoh (Eslatma uchun)
-  - `DELETE /api/comments/:id` — muallif yoki CEO o'chira oladi
-  - `PATCH /api/comments/:id/assignee-status` — assign qilingan user o'z statusini o'zgartiradi
-- Comment yaratish/o'chirish `EntityHistoryService` orqali audit log ga yoziladi
-- `@nestjs/event-emitter` orqali event chiqariladi: `comment.created`, `task.assigned`, `task.status.changed`
+  - `POST /api/comments` — create comment/task
+  - `GET /api/comments?entityType=Student&entityId=12345&page=1&pageSize=20` — list by entity
+  - `GET /api/comments/latest?entityType=Student&entityId=12345` — latest comment (for Eslatma/reminder section)
+  - `DELETE /api/comments/:id` — author or CEO can delete
+  - `PATCH /api/comments/:id/assignee-status` — assigned user updates their own status
+- Comment creation/deletion is recorded in the audit log via `EntityHistoryService`
+- Events are emitted via `@nestjs/event-emitter`: `comment.created`, `task.assigned`, `task.status.changed`
 
-### Notifications (4 kanal)
+### Notifications (4 channels)
 
-- `NotificationsModule` (`src/notifications/`) — bildirishnomalar tizimi
-- **Notification** jadvali: har bir foydalanuvchi uchun bildirishnomalar (userId, type, title, message, isRead)
-- **PushSubscription** jadvali: browser push subscription ma'lumotlari
-- **4 ta yetkazish kanali:**
-  1. **DB** — barcha bildirishnomalar saqlanadi
-  2. **SSE (Server-Sent Events)** — real-time, `GET /api/notifications/stream` (fetch-based, JWT Authorization header bilan)
-  3. **Web Push** — browser yopiq bo'lganda ham, `web-push` kutubxonasi, VAPID kalitlar orqali
-  4. **Telegram** — `TelegramService.getBot().telegram.sendMessage()` orqali, faqat `telegramChatId` mavjud bo'lsa
+- `NotificationsModule` (`src/notifications/`) — notification system
+- **Notification** table: per-user notifications (userId, type, title, message, isRead)
+- **PushSubscription** table: browser push subscription data
+- **4 delivery channels:**
+  1. **DB** — all notifications are persisted
+  2. **SSE (Server-Sent Events)** — real-time, `GET /api/notifications/stream` (fetch-based, with JWT Authorization header)
+  3. **Web Push** — works even when browser is closed, via `web-push` library and VAPID keys
+  4. **Telegram** — via `TelegramService.getBot().telegram.sendMessage()`, only if user has `telegramChatId`
 - **SSE Gateway** (`notifications.gateway.ts`): userId → Response mapping, 30s heartbeat
-- **Event Listener** (`notification-events.listener.ts`): event larni 4 kanalga fanout qiladi
+- **Event Listener** (`notification-events.listener.ts`): fans out events to all 4 channels
 - **Endpoints:**
-  - `GET /api/notifications?page=1&pageSize=20` — o'z bildirishnomalar
-  - `GET /api/notifications/unread-count` — badge uchun o'qilmagan soni
-  - `PATCH /api/notifications/:id/read` — o'qilgan deb belgilash
-  - `PATCH /api/notifications/read-all` — barchasini o'qilgan
+  - `GET /api/notifications?page=1&pageSize=20` — current user's notifications
+  - `GET /api/notifications/unread-count` — unread count for badge
+  - `PATCH /api/notifications/:id/read` — mark as read
+  - `PATCH /api/notifications/read-all` — mark all as read
   - `GET /api/notifications/stream` — SSE stream
   - `POST /api/notifications/push/subscribe` — push subscription
   - `DELETE /api/notifications/push/unsubscribe` — push unsubscribe
@@ -232,6 +238,13 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 - When the frontend uses tabs (e.g. profile pages with "Profil", "Guruhlar", "Ish haqi"), each tab's data is fetched **only when the user switches to that tab** — not all at once on page load
 - Design API endpoints for tab-specific data as **separate routes** (e.g. `GET /api/teachers/:id/groups`) rather than embedding everything in the main entity response
 - This keeps the main entity endpoint fast and avoids loading data the user may never need
+
+### Future-Proof Design
+
+- **Every backend change must anticipate future use cases** — do not write code that only solves the immediate problem. Consider what related features, status changes, cascade effects, or edge cases may arise and design the solution to handle them naturally
+- **Status changes must cascade correctly** — when an entity's status changes, all dependent entities must be updated accordingly, and history must be recorded for every affected entity. Never add a status without defining its full cascade behavior
+- **Validation must be comprehensive** — when adding a new operation, validate all preconditions rather than assuming the caller will only send valid data
+- **Think in entity relationships** — a change to a Student affects Enrollments, which affect Groups. A change to a Group affects Enrollments, which affect Students. Always trace the full chain of effects and ensure each link is handled
 
 ### Code Organization
 
@@ -271,6 +284,12 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 - `docker compose up -d` — Start PostgreSQL + Redis (from project root)
 - `docker compose down` — Stop containers
 
+### CLAUDE.md Language Policy
+
+- **This file (CLAUDE.md) must be written entirely in English.** All section headings, descriptions, rules, and comments must use English only.
+- Uzbek text is acceptable **only** when quoting exact UI strings, error messages, or API response messages that appear in the application.
+- When adding new sections or editing existing ones, always write in English.
+
 ## Available Skills
 
 Skills are specialized knowledge modules that **must** be activated when working on related tasks. Before starting any task, identify which skills are relevant and invoke them.
@@ -279,10 +298,10 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 | Command | When to use |
 |---------|-------------|
-| `/deploy` | Vercel + Railway + Auto-Merge deploy qilish |
-| `/restart` | Dev serverlarni qayta ishga tushirish |
-| `/team-deploy` | Xavfsiz jamoa deploy |
-| `/team-merge` | Xavfsiz PR merge |
+| `/deploy` | Deploy to Vercel + Railway + Auto-Merge |
+| `/restart` | Restart dev servers |
+| `/team-deploy` | Safe team deployment |
+| `/team-merge` | Safe PR merge |
 
 ### Context7 Skills (auto-triggered)
 
@@ -292,8 +311,8 @@ Skills are specialized knowledge modules that **must** be activated when working
 | `typescript-expert` | TypeScript type-level programming, performance, migration |
 | `prisma-cli` | Prisma CLI: migrate, generate, seed, studio |
 | `prisma-client-api` | Prisma query, filter, CRUD, client configuration |
-| `prisma-database-setup` | Prisma + PostgreSQL/MySQL/SQLite ulanish va sozlash |
-| `prisma-postgres` | Prisma Postgres provisioning va management |
+| `prisma-database-setup` | Prisma + PostgreSQL/MySQL/SQLite connection and setup |
+| `prisma-postgres` | Prisma Postgres provisioning and management |
 | `docker-expert` | Docker containerization, multi-stage builds, orchestration |
 | `redis-development` | Redis data structures, performance, caching |
 | `use-railway` | Railway deploy, services, databases, domains |
@@ -302,20 +321,20 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 | Skill | When to use |
 |-------|-------------|
-| `documentation-writer` | Texnik hujjatlar yozish |
+| `documentation-writer` | Writing technical documentation |
 
 ### Skill Usage Rule
 
-**Har bir task boshlanishida tegishli skillni aniqlash va faollashtirish shart:**
+**Identify and activate the relevant skill at the start of each task:**
 
 1. **NestJS module/service/controller** → `nestjs-best-practices`
 2. **Prisma schema, migration** → `prisma-cli` + `prisma-database-setup`
-3. **Prisma query yozish** → `prisma-client-api`
-4. **TypeScript xatolik yoki murakkab tiplar** → `typescript-expert`
-5. **Docker sozlash** → `docker-expert`
+3. **Writing Prisma queries** → `prisma-client-api`
+4. **TypeScript errors or complex types** → `typescript-expert`
+5. **Docker setup** → `docker-expert`
 6. **Redis caching** → `redis-development`
-7. **Deploy qilish** → `/deploy` yoki `use-railway`
-8. **Test yozish** → `nestjs-best-practices` (testing patterns)
+7. **Deploying** → `/deploy` or `use-railway`
+8. **Writing tests** → `nestjs-best-practices` (testing patterns)
 
 ## Environment Variables
 

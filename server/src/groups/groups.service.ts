@@ -90,7 +90,9 @@ export class GroupsService {
       where.branchId = query.branch_id;
     }
 
-    if (query.status) {
+    if (query.statusEnum) {
+      where.statusEnum = query.statusEnum as any;
+    } else if (query.status) {
       where.status = query.status;
     }
 
@@ -106,22 +108,40 @@ export class GroupsService {
       where.roomId = query.room_id;
     }
 
-    const [data, total] = await Promise.all([
-      this.prisma.group.findMany({
-        where,
-        include: groupInclude,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.group.count({ where }),
-    ]);
+    // baseWhere = filters without status (for stats)
+    const baseWhere: Prisma.GroupWhereInput = { ...where };
+    delete baseWhere.status;
+    delete baseWhere.statusEnum;
+
+    const [data, total, statsTotal, activeCount, formingCount, pausedCount, completedCount] =
+      await Promise.all([
+        this.prisma.group.findMany({
+          where,
+          include: groupInclude,
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.group.count({ where }),
+        this.prisma.group.count({ where: baseWhere }),
+        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'ACTIVE' } }),
+        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'FORMING' } }),
+        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'PAUSED' } }),
+        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'COMPLETED' } }),
+      ]);
 
     return {
       data: data.map(formatGroup),
       total,
       page,
       pageSize,
+      stats: {
+        total: statsTotal,
+        active: activeCount,
+        forming: formingCount,
+        paused: pausedCount,
+        completed: completedCount,
+      },
     };
   }
 

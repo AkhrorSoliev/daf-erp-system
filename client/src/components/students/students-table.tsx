@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
@@ -48,8 +49,9 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
 
   if (students.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-        O&apos;quvchilar topilmadi
+      <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-md border">
+        <Users className="text-muted-foreground/50 size-8" />
+        <p className="text-muted-foreground text-sm">O&apos;quvchilar topilmadi</p>
       </div>
     );
   }
@@ -65,7 +67,7 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
             className="relative flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
           >
             <div className="text-muted-foreground mt-1 w-5 shrink-0 text-xs">
-              {index + 1}
+              {isTeacher ? `#${student.id}` : index + 1}
             </div>
             <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
               <Avatar className="size-10 shrink-0">
@@ -87,7 +89,9 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
                 <StudentStatusBadge student={student} />
               </div>
               <div className="text-muted-foreground text-sm">
-                {formatPhone(student.phone)}
+                <a href={`tel:+998${student.phone}`} className="relative z-10 hover:underline" onClick={(e) => e.stopPropagation()}>
+                  {formatPhone(student.phone)}
+                </a>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-1">
@@ -150,7 +154,7 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
                 className="relative cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="border-r text-muted-foreground">
-                  {index + 1}
+                  {isTeacher ? `#${student.id}` : index + 1}
                 </TableCell>
                 <TableCell>
                   <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
@@ -171,7 +175,9 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
                   {student.firstName} {student.lastName}
                 </TableCell>
                 <TableCell>
-                  {formatPhone(student.phone)}
+                  <a href={`tel:+998${student.phone}`} className="relative z-10 hover:underline" onClick={(e) => e.stopPropagation()}>
+                    {formatPhone(student.phone)}
+                  </a>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <div className="flex gap-1">

@@ -37,6 +37,7 @@ const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
   status: { type: "string" as const, defaultValue: "all" },
   teacherId: { type: "string" as const, defaultValue: "all" },
+  groupId: { type: "string" as const, defaultValue: "all" },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
@@ -48,6 +49,7 @@ export function StudentsClient() {
   const { filters, setFilter, setFilters: setUrlFilters, resetFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
+  const [teacherGroups, setTeacherGroups] = useState<{ id: string; name: string }[]>([]);
   const [copied, setCopied] = useState(false);
   const user = useAuth((s) => s.user);
   const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
@@ -74,9 +76,12 @@ export function StudentsClient() {
         page: filters.page,
         per_page: filters.pageSize,
       };
-      if (filters.search.trim()) params.search = filters.search.trim();
+      const searchValue = filters.search.trim();
+      const cleanSearch = searchValue.startsWith('#') ? searchValue.slice(1).trim() : searchValue;
+      if (cleanSearch) params.search = cleanSearch;
       if (filters.status && filters.status !== "all") params.status = filters.status;
       if (filters.teacherId && filters.teacherId !== "all") params.teacher_id = filters.teacherId;
+      if (filters.groupId && filters.groupId !== "all") params.group_id = filters.groupId;
       if (selectedBranch?.id) params.branch_id = selectedBranch.id;
       const { data } = await api.get("/students", { params });
       setStudents(data.data);
@@ -87,11 +92,24 @@ export function StudentsClient() {
     } finally {
       setLoading(false);
     }
-  }, [filters.page, filters.pageSize, filters.search, filters.status, filters.teacherId, selectedBranch?.id]);
+  }, [filters.page, filters.pageSize, filters.search, filters.status, filters.teacherId, filters.groupId, selectedBranch?.id]);
 
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
+
+  useEffect(() => {
+    if (!isTeacher) return;
+    const fetchTeacherGroups = async () => {
+      try {
+        const { data } = await api.get("/groups", { params: { per_page: 100 } });
+        setTeacherGroups((data.data ?? []).map((g: any) => ({ id: g.id, name: g.name })));
+      } catch {
+        // xatolik
+      }
+    };
+    fetchTeacherGroups();
+  }, [isTeacher]);
 
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
@@ -100,8 +118,8 @@ export function StudentsClient() {
       setSearchInput(newFilters.fullName);
       debouncedSetSearch(newFilters.fullName);
     }
-    if (newFilters.status !== filters.status || newFilters.teacherId !== filters.teacherId) {
-      setUrlFilters({ status: newFilters.status, teacherId: newFilters.teacherId, page: 1 });
+    if (newFilters.status !== filters.status || newFilters.teacherId !== filters.teacherId || newFilters.groupId !== filters.groupId) {
+      setUrlFilters({ status: newFilters.status, teacherId: newFilters.teacherId, groupId: newFilters.groupId, page: 1 });
     }
   };
 
@@ -117,7 +135,7 @@ export function StudentsClient() {
             O&apos;quvchilar
           </h1>
           <p className="text-muted-foreground">
-            Barcha o&apos;quvchilar ro&apos;yxati
+            {isTeacher ? "Sizning guruhlaringizdagi o\u2018quvchilar" : "Barcha o\u2018quvchilar ro\u2018yxati"}
           </p>
         </div>
         {canManage && (
@@ -165,10 +183,11 @@ export function StudentsClient() {
         }}
       />
       <StudentsFilters
-        filters={{ fullName: searchInput, status: filters.status, teacherId: filters.teacherId }}
+        filters={{ fullName: searchInput, status: filters.status, teacherId: filters.teacherId, groupId: filters.groupId }}
         onFilterChange={handleFilterChange}
         onClear={() => { setSearchInput(""); resetFilters(); }}
         isTeacher={isTeacher}
+        groups={teacherGroups}
       />
       {loading ? (
         <div className="overflow-x-auto rounded-md border">
@@ -200,7 +219,16 @@ export function StudentsClient() {
           </div>
         </div>
       ) : (
-        <StudentsTable students={students} />
+        <StudentsTable
+          students={students}
+          onDeleted={(id) => {
+            setStudents((prev) => prev.filter((s) => s.id !== id));
+            setTotal((prev) => Math.max(0, prev - 1));
+          }}
+          onStatusChanged={() => {
+            fetchStudents();
+          }}
+        />
       )}
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">

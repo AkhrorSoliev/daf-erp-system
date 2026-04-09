@@ -8,11 +8,11 @@ export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   },
 
   Student: {
-    ACTIVE: ['INACTIVE', 'FROZEN', 'GRADUATED', 'EXPELLED'],
-    INACTIVE: ['ACTIVE', 'FROZEN', 'EXPELLED'],
-    FROZEN: ['ACTIVE', 'INACTIVE'],
-    GRADUATED: ['ACTIVE'],
-    EXPELLED: ['ACTIVE'],
+    ACTIVE: ['FROZEN', 'GRADUATED', 'EXPELLED', 'ARCHIVED'],
+    INACTIVE: ['ACTIVE', 'FROZEN', 'ARCHIVED'], // legacy — faqat chiqish, kirish yo'q
+    FROZEN: ['ACTIVE', 'ARCHIVED'],
+    GRADUATED: ['ACTIVE', 'ARCHIVED'],
+    EXPELLED: ['ACTIVE', 'ARCHIVED'],
     ARCHIVED: ['ACTIVE'],
   },
 

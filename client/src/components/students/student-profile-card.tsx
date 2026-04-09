@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { StudentStatusBadge } from "./student-status-badge";
 import {
   Tooltip,
   TooltipContent,
@@ -130,6 +131,8 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           </h2>
           <p className="text-sm text-muted-foreground">(id: {student.id})</p>
         </div>
+
+        <StudentStatusBadge student={student} />
 
         <Badge
           className={cn(

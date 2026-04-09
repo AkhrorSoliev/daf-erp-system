@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GroupsTable } from "./groups-table";
+import { GroupsStats, type GroupsStatsData } from "./groups-stats";
 import { EditGroupDrawer } from "./edit-group-drawer";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
@@ -50,6 +51,7 @@ const filtersSchema = {
 export function GroupsClient() {
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<GroupsStatsData>({ total: 0, active: 0, forming: 0, paused: 0, completed: 0 });
   const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
@@ -97,13 +99,16 @@ export function GroupsClient() {
         pageSize: filters.pageSize,
       };
       if (selectedBranch) params.branch_id = selectedBranch.id;
-      if (filters.status !== "all") params.status = Number(filters.status);
+      if (filters.status !== "all") {
+        params.statusEnum = filters.status;
+      }
       if (filters.search.trim()) params.search = filters.search.trim();
       if (filters.room !== "all") params.room_id = filters.room;
       if (filters.teacher !== "all") params.teacher_id = Number(filters.teacher);
       const { data } = await api.get("/groups", { params });
       setGroups(data.data);
       setTotal(data.total);
+      if (data.stats) setStats(data.stats);
     } catch {
       // xatolik
     } finally {
@@ -136,9 +141,6 @@ export function GroupsClient() {
     setUrlFilters({ pageSize: Number(value), page: 1 });
   };
 
-  const handleStatusChange = (value: string) => {
-    setUrlFilters({ status: value, page: 1 });
-  };
 
   const handleRoomChange = (value: string) => {
     setUrlFilters({ room: value, page: 1 });
@@ -150,6 +152,15 @@ export function GroupsClient() {
 
   return (
     <div className="space-y-4">
+      <GroupsStats
+        stats={filters.status !== "all" ? { ...stats, total } : stats}
+        loading={loading}
+        activeStatus={filters.status}
+        onStatusClick={(status) => {
+          const newStatus = status === filters.status ? "all" : status;
+          setUrlFilters({ status: newStatus, page: 1 });
+        }}
+      />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -160,18 +171,6 @@ export function GroupsClient() {
             className="pl-9"
           />
         </div>
-        <Select value={filters.status} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[calc(100%-3rem)] sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha holatlar</SelectItem>
-            <SelectItem value="1">Faol</SelectItem>
-            <SelectItem value="2">Boshlanmagan</SelectItem>
-            <SelectItem value="3">Pauza</SelectItem>
-            <SelectItem value="4">To&apos;xtatilgan</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={filters.room} onValueChange={handleRoomChange}>
           <SelectTrigger className="w-[calc(100%-3rem)] sm:w-44">
             <SelectValue />

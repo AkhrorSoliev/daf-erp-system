@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "StudentStatus" ADD VALUE 'FROZEN' BEFORE 'GRADUATED';

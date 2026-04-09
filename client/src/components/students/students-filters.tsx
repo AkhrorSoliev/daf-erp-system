@@ -30,12 +30,14 @@ export interface StudentFilters {
   fullName: string;
   status: string;
   teacherId: string;
+  groupId: string;
 }
 
 const defaultFilters: StudentFilters = {
   fullName: "",
   status: "all",
   teacherId: "all",
+  groupId: "all",
 };
 
 interface Teacher {
@@ -45,11 +47,17 @@ interface Teacher {
   photo?: string | null;
 }
 
+interface GroupOption {
+  id: string;
+  name: string;
+}
+
 interface StudentsFiltersProps {
   filters: StudentFilters;
   onFilterChange: (filters: StudentFilters) => void;
   onClear?: () => void;
   isTeacher?: boolean;
+  groups?: GroupOption[];
 }
 
 export function StudentsFilters({
@@ -57,6 +65,7 @@ export function StudentsFilters({
   onFilterChange,
   onClear,
   isTeacher,
+  groups,
 }: StudentsFiltersProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacherPopoverOpen, setTeacherPopoverOpen] = useState(false);
@@ -95,6 +104,7 @@ export function StudentsFilters({
 
   const hasActiveFilters =
     filters.fullName !== "" ||
+    filters.groupId !== "all" ||
     (!isTeacher && (filters.status !== "all" || filters.teacherId !== "all"));
 
   const updateFilter = (key: keyof StudentFilters, value: string) => {
@@ -106,12 +116,29 @@ export function StudentsFilters({
       <div className="relative w-full sm:w-auto">
         <Search className="text-muted-foreground absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
         <Input
-          placeholder="Ism, telefon yoki ID bo'yicha..."
+          placeholder="Ism, telefon yoki #ID bo'yicha..."
           value={filters.fullName}
           onChange={(e) => updateFilter("fullName", e.target.value)}
           className="w-full pl-9 sm:w-64"
         />
       </div>
+
+      {isTeacher && groups && groups.length > 0 && (
+        <Select
+          value={filters.groupId}
+          onValueChange={(value) => updateFilter("groupId", value)}
+        >
+          <SelectTrigger className="w-full sm:w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha guruhlar</SelectItem>
+            {groups.map((g) => (
+              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {!isTeacher && (
         <Select

@@ -2,8 +2,8 @@ import { isValidTransition, getAllowedTransitions } from './status-transitions';
 
 describe('isValidTransition', () => {
   // ─── Student ───────────────────────────────────────
-  it('allows Student ACTIVE → INACTIVE', () => {
-    expect(isValidTransition('Student', 'ACTIVE', 'INACTIVE')).toBe(true);
+  it('rejects Student ACTIVE → INACTIVE (removed)', () => {
+    expect(isValidTransition('Student', 'ACTIVE', 'INACTIVE')).toBe(false);
   });
 
   it('allows Student ACTIVE → FROZEN', () => {
@@ -22,8 +22,8 @@ describe('isValidTransition', () => {
     expect(isValidTransition('Student', 'FROZEN', 'ACTIVE')).toBe(true);
   });
 
-  it('allows Student FROZEN → INACTIVE', () => {
-    expect(isValidTransition('Student', 'FROZEN', 'INACTIVE')).toBe(true);
+  it('rejects Student FROZEN → INACTIVE (removed)', () => {
+    expect(isValidTransition('Student', 'FROZEN', 'INACTIVE')).toBe(false);
   });
 
   it('allows Student GRADUATED → ACTIVE (re-enroll)', () => {
@@ -38,8 +38,8 @@ describe('isValidTransition', () => {
     expect(isValidTransition('Student', 'GRADUATED', 'INACTIVE')).toBe(false);
   });
 
-  it('rejects Student GRADUATED → ARCHIVED (terminal, archive via delete)', () => {
-    expect(isValidTransition('Student', 'GRADUATED', 'ARCHIVED')).toBe(false);
+  it('allows Student GRADUATED → ARCHIVED (via delete)', () => {
+    expect(isValidTransition('Student', 'GRADUATED', 'ARCHIVED')).toBe(true);
   });
 
   // ─── User/Teacher ─────────────────────────────────
@@ -128,12 +128,12 @@ describe('isValidTransition', () => {
 describe('getAllowedTransitions', () => {
   it('returns 4 options for Student ACTIVE', () => {
     expect(getAllowedTransitions('Student', 'ACTIVE')).toEqual([
-      'INACTIVE', 'FROZEN', 'GRADUATED', 'EXPELLED',
+      'FROZEN', 'GRADUATED', 'EXPELLED', 'ARCHIVED',
     ]);
   });
 
-  it('returns [ACTIVE] for Student GRADUATED', () => {
-    expect(getAllowedTransitions('Student', 'GRADUATED')).toEqual(['ACTIVE']);
+  it('returns [ACTIVE, ARCHIVED] for Student GRADUATED', () => {
+    expect(getAllowedTransitions('Student', 'GRADUATED')).toEqual(['ACTIVE', 'ARCHIVED']);
   });
 
   it('returns empty for User TERMINATED (terminal)', () => {
