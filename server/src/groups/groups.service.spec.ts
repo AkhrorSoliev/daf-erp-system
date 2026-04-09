@@ -51,6 +51,7 @@ describe('GroupsService — status methods', () => {
       room: { findFirst: jest.fn() },
       user: { count: jest.fn() },
       groupTeacher: { deleteMany: jest.fn(), createMany: jest.fn() },
+      statusHistory: { create: jest.fn() },
       $transaction: jest.fn((fn) => fn(prisma)),
     };
 

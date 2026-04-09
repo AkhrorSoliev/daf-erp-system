@@ -76,7 +76,7 @@ export function TeachersClient() {
       const params: Record<string, any> = {
         user_type: "Teacher",
         page: filters.page,
-        per_page: filters.pageSize,
+        pageSize: filters.pageSize,
       };
       if (companyId) params.company_id = companyId;
       if (selectedBranch) params.branch_id = selectedBranch.id;

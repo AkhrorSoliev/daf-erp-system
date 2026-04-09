@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronsUpDown, Plus, Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -114,7 +115,7 @@ export function GroupsClient() {
     try {
       const [roomsRes, teachersRes] = await Promise.all([
         api.get("/rooms", { params: { branch_id: selectedBranch.id, page: 1, pageSize: 100 } }),
-        api.get("/users", { params: { branch_id: selectedBranch.id, user_type: "Teacher", per_page: 100 } }),
+        api.get("/users", { params: { branch_id: selectedBranch.id, user_type: "Teacher", pageSize: 100 } }),
       ]);
       setRooms(roomsRes.data.data.map((r: any) => ({ id: r.id, name: r.name })));
       setTeachers(teachersRes.data.data.map((t: any) => ({ id: t.id, firstName: t.firstName, lastName: t.lastName })));
@@ -192,15 +193,7 @@ export function GroupsClient() {
 
   return (
     <div className="space-y-4">
-      <GroupsStats
-        stats={filters.status !== "all" ? { ...stats, total } : stats}
-        loading={loading}
-        activeStatus={filters.status}
-        onStatusClick={(status) => {
-          const newStatus = status === filters.status ? "all" : status;
-          setUrlFilters({ status: newStatus, page: 1 });
-        }}
-      />
+      <GroupsStats stats={stats} loading={loading} />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -211,6 +204,21 @@ export function GroupsClient() {
             className="pl-9"
           />
         </div>
+        <Select
+          value={filters.status}
+          onValueChange={(value) => setUrlFilters({ status: value, page: 1 })}
+        >
+          <SelectTrigger className="h-9 w-[calc(100%-3rem)] sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha holatlar</SelectItem>
+            <SelectItem value="ACTIVE">Faol</SelectItem>
+            <SelectItem value="FORMING">Boshlanmagan</SelectItem>
+            <SelectItem value="PAUSED">Pauza</SelectItem>
+            <SelectItem value="COMPLETED">Tugallangan</SelectItem>
+          </SelectContent>
+        </Select>
         <Popover
           modal
           open={roomPopoverOpen}
@@ -400,8 +408,29 @@ export function GroupsClient() {
       </div>
 
       {loading ? (
-        <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-          Yuklanmoqda...
+        <div className="overflow-x-auto rounded-md border">
+          <div className="space-y-0">
+            <div className="flex items-center gap-4 border-b bg-muted/40 px-4 py-3">
+              <Skeleton className="h-4 w-8" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="hidden h-4 w-20 sm:block" />
+              <Skeleton className="hidden h-4 w-20 md:block" />
+              <Skeleton className="hidden h-4 w-16 md:block" />
+              <Skeleton className="ml-auto h-4 w-16" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+            {Array.from({ length: filters.pageSize > 5 ? 5 : filters.pageSize }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 border-b px-4 py-3">
+                <Skeleton className="h-4 w-8" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="hidden h-4 w-20 sm:block" />
+                <Skeleton className="hidden h-4 w-20 md:block" />
+                <Skeleton className="hidden h-4 w-16 md:block" />
+                <Skeleton className="ml-auto h-4 w-16" />
+                <Skeleton className="h-4 w-8" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <GroupsTable
@@ -411,6 +440,13 @@ export function GroupsClient() {
           onDeleted={(id) => {
             setGroups((prev) => prev.filter((g) => g.id !== id));
             setTotal((prev) => Math.max(0, prev - 1));
+          }}
+          onStatusChanged={(id, newStatus) => {
+            setGroups((prev) =>
+              prev.map((g) =>
+                g.id === id ? { ...g, statusEnum: newStatus } : g,
+              ),
+            );
           }}
         />
       )}

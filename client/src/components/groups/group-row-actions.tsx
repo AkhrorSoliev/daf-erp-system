@@ -48,11 +48,11 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
 
   const handleDelete = async () => {
     setDeleting(true);
-    setShowDelete(false);
-    onDeleted?.(group.id);
     try {
       await api.delete(`/groups/${group.id}`);
       toast.success("Guruh muvaffaqiyatli o'chirildi");
+      setShowDelete(false);
+      onDeleted?.(group.id);
     } catch (error: any) {
       const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
       toast.error(Array.isArray(msg) ? msg[0] : msg);
@@ -123,7 +123,10 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

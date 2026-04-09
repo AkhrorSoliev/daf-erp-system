@@ -321,11 +321,12 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 | Skill | When to use |
 |-------|-------------|
+| `telegram-bot-builder` | Telegram bot development, scenes, handlers, middlewares |
 | `documentation-writer` | Writing technical documentation |
 
 ### Skill Usage Rule
 
-**Identify and activate the relevant skill at the start of each task:**
+**Identify and activate the relevant skill at the start of each task — this is mandatory, not optional:**
 
 1. **NestJS module/service/controller** → `nestjs-best-practices`
 2. **Prisma schema, migration** → `prisma-cli` + `prisma-database-setup`
@@ -335,6 +336,11 @@ Skills are specialized knowledge modules that **must** be activated when working
 6. **Redis caching** → `redis-development`
 7. **Deploying** → `/deploy` or `use-railway`
 8. **Writing tests** → `nestjs-best-practices` (testing patterns)
+9. **Telegram bot (scenes, handlers, webhooks)** → `telegram-bot-builder`
+
+### Unused but Available Modules
+
+- **AiModule** (`src/ai/`) — fully implemented OpenAI integration (chat completion + streaming), registered as `@Global()` but not yet exposed via controller or injected anywhere. Ready for future AI features.
 
 ## Environment Variables
 

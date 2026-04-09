@@ -69,33 +69,44 @@ const STATUS_CONFIG: {
     value: "PRESENT",
     label: "Keldi",
     icon: Check,
-    color: "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30",
-    activeColor: "border-green-500 bg-green-500 text-white dark:border-green-500 dark:bg-green-600",
+    color:
+      "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30",
+    activeColor:
+      "border-green-500 bg-green-500 text-white dark:border-green-500 dark:bg-green-600",
     activeBg: "",
   },
   {
     value: "ABSENT",
     label: "Kelmadi",
     icon: X,
-    color: "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30",
-    activeColor: "border-red-500 bg-red-500 text-white dark:border-red-500 dark:bg-red-600",
-    activeBg: "border-red-100 bg-red-50/60 dark:border-red-900/40 dark:bg-red-950/20",
+    color:
+      "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30",
+    activeColor:
+      "border-red-500 bg-red-500 text-white dark:border-red-500 dark:bg-red-600",
+    activeBg:
+      "border-red-100 bg-red-50/60 dark:border-red-900/40 dark:bg-red-950/20",
   },
   {
     value: "LATE",
     label: "Kechikdi",
     icon: AlarmClock,
-    color: "border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30",
-    activeColor: "border-amber-500 bg-amber-500 text-white dark:border-amber-500 dark:bg-amber-600",
-    activeBg: "border-amber-100 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20",
+    color:
+      "border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30",
+    activeColor:
+      "border-amber-500 bg-amber-500 text-white dark:border-amber-500 dark:bg-amber-600",
+    activeBg:
+      "border-amber-100 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20",
   },
   {
     value: "EXCUSED",
     label: "Sababli",
     icon: ShieldCheck,
-    color: "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30",
-    activeColor: "border-blue-500 bg-blue-500 text-white dark:border-blue-500 dark:bg-blue-600",
-    activeBg: "border-blue-100 bg-blue-50/60 dark:border-blue-900/40 dark:bg-blue-950/20",
+    color:
+      "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30",
+    activeColor:
+      "border-blue-500 bg-blue-500 text-white dark:border-blue-500 dark:bg-blue-600",
+    activeBg:
+      "border-blue-100 bg-blue-50/60 dark:border-blue-900/40 dark:bg-blue-950/20",
   },
 ];
 
@@ -106,14 +117,22 @@ interface AttendanceFormProps {
   onSaved: () => void;
 }
 
-export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormProps) {
+export function AttendanceForm({
+  group,
+  date,
+  onBack,
+  onSaved,
+}: AttendanceFormProps) {
   const user = useAuth((s) => s.user);
-  const isAdmin = user?.roles.some((r: { id: number }) => [1, 2, 3].includes(r.id)) ?? false;
+  const isAdmin =
+    user?.roles.some((r: { id: number }) => [1, 2, 3].includes(r.id)) ?? false;
 
   const statusOptions = isAdmin ? STATUS_CONFIG : STATUS_CONFIG.slice(0, 2);
 
   const [students, setStudents] = useState<StudentAttendance[]>([]);
-  const [entries, setEntries] = useState<Map<number, AttendanceEntry>>(new Map());
+  const [entries, setEntries] = useState<Map<number, AttendanceEntry>>(
+    new Map(),
+  );
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
@@ -138,9 +157,20 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
     const start = sh * 60 + sm;
     const end = eh * 60 + em;
 
-    if (nowMinutes < start) return { status: "before" as const, message: `Dars ${group.lessonStartTime} da boshlanadi` };
-    if (nowMinutes > end) return { status: "after" as const, message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime})` };
-    return { status: "during" as const, message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime})` };
+    if (nowMinutes < start)
+      return {
+        status: "before" as const,
+        message: `Dars ${group.lessonStartTime} da boshlanadi`,
+      };
+    if (nowMinutes > end)
+      return {
+        status: "after" as const,
+        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime})`,
+      };
+    return {
+      status: "during" as const,
+      message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime})`,
+    };
   })();
 
   const fetchAttendance = useCallback(async () => {
@@ -193,7 +223,11 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
       const next = new Map(prev);
       for (const student of students) {
         const existing = next.get(student.studentId);
-        next.set(student.studentId, { ...existing!, studentId: student.studentId, status: "PRESENT" });
+        next.set(student.studentId, {
+          ...existing!,
+          studentId: student.studentId,
+          status: "PRESENT",
+        });
       }
       return next;
     });
@@ -211,7 +245,9 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
       toast.success("Davomat muvaffaqiyatli saqlandi");
       onSaved();
     } catch (err: unknown) {
-      const message = (err as any)?.response?.data?.message || "Davomatni saqlashda xatolik yuz berdi";
+      const message =
+        (err as any)?.response?.data?.message ||
+        "Davomatni saqlashda xatolik yuz berdi";
       toast.error(Array.isArray(message) ? message[0] : message);
     } finally {
       setSubmitting(false);
@@ -231,7 +267,12 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={onBack} disabled={submitting}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onBack}
+            disabled={submitting}
+          >
             <ArrowLeft className="mr-1.5 size-4" />
             Orqaga
           </Button>
@@ -263,9 +304,12 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
         <div
           className={cn(
             "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm",
-            lessonTimeInfo.status === "during" && "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400",
-            lessonTimeInfo.status === "before" && "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400",
-            lessonTimeInfo.status === "after" && "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400",
+            lessonTimeInfo.status === "during" &&
+              "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400",
+            lessonTimeInfo.status === "before" &&
+              "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400",
+            lessonTimeInfo.status === "after" &&
+              "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400",
           )}
         >
           <Clock className="size-4 shrink-0" />
@@ -306,9 +350,7 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
                   QR davomat
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                QR kod orqali davomat olish
-              </TooltipContent>
+              <TooltipContent>QR kod orqali davomat olish</TooltipContent>
             </Tooltip>
           </div>
 
@@ -336,7 +378,10 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-lg border p-3"
+            >
               <Skeleton className="size-4 rounded" />
               <Skeleton className="size-10 rounded-full" />
               <Skeleton className="h-4 w-32" />
@@ -357,7 +402,9 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
         <div className="space-y-1.5">
           {students.map((student, index) => {
             const entry = entries.get(student.studentId);
-            const statusCfg = STATUS_CONFIG.find((s) => s.value === entry?.status);
+            const statusCfg = STATUS_CONFIG.find(
+              (s) => s.value === entry?.status,
+            );
             const rowBg = statusCfg?.activeBg ?? "";
 
             return (
@@ -392,11 +439,13 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
                     <p className="truncate text-sm font-medium">
                       {student.firstName} {student.lastName}
                     </p>
-                    {isAdmin && entry?.note && expandedNote !== student.studentId && (
-                      <p className="truncate text-[11px] text-purple-600 dark:text-purple-400">
-                        {entry.note}
-                      </p>
-                    )}
+                    {isAdmin &&
+                      entry?.note &&
+                      expandedNote !== student.studentId && (
+                        <p className="truncate text-[11px] text-purple-600 dark:text-purple-400">
+                          {entry.note}
+                        </p>
+                      )}
                   </div>
 
                   {/* Status buttons */}
@@ -406,7 +455,9 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
                         <TooltipTrigger asChild>
                           <button
                             type="button"
-                            onClick={() => setStatus(student.studentId, opt.value)}
+                            onClick={() =>
+                              setStatus(student.studentId, opt.value)
+                            }
                             className={cn(
                               "flex items-center justify-center rounded-lg border p-2 transition-all sm:p-2.5",
                               entry?.status === opt.value
@@ -470,7 +521,9 @@ export function AttendanceForm({ group, date, onBack, onSaved }: AttendanceFormP
                     <Input
                       placeholder="Izoh yozing..."
                       value={entry?.note ?? ""}
-                      onChange={(e) => setNote(student.studentId, e.target.value)}
+                      onChange={(e) =>
+                        setNote(student.studentId, e.target.value)
+                      }
                       className="h-8 text-xs"
                       autoFocus
                     />

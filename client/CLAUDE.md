@@ -385,11 +385,11 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 | Skill | When to use |
 |-------|-------------|
-| `frontend-design` | UI design, layout, styling tasks |
-| `web-design-guidelines` | Web design rules and best practices |
-| `vercel-react-best-practices` | React performance, rendering, async, bundle optimization |
+| `frontend-design` | UI design, layout, styling, color, spacing, responsive tasks |
+| `web-design-guidelines` | Web design rules, accessibility, UX best practices |
+| `vercel-react-best-practices` | React performance, rendering, async patterns, bundle optimization |
 | `vercel-composition-patterns` | Compound components, state management, React 19 patterns |
-| `deploy-to-vercel` | Deploy to Vercel |
+| `shadcn` | shadcn/ui component usage, customization, theming |
 | `documentation-writer` | Writing technical documentation |
 
 ### Context7 Skills (auto-triggered)
@@ -402,11 +402,13 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 ### Skill Usage Rule
 
-**Identify and activate the relevant skill at the start of each task:**
+**Identify and activate the relevant skill at the start of each task — this is mandatory, not optional:**
 
-1. **Creating/modifying UI components** → `frontend-design` + `vercel-react-best-practices`
-2. **Component architecture** → `vercel-composition-patterns`
-3. **TypeScript errors or complex types** → `typescript-expert`
-4. **Deploying** → `/deploy` or `deploy-to-vercel`
-5. **Working with Prisma models** → `prisma-client-api`
-6. **Working with Docker** → `docker-expert`
+1. **Creating/modifying UI components** → `frontend-design` + `vercel-react-best-practices` + `shadcn`
+2. **Component architecture / composition** → `vercel-composition-patterns`
+3. **Layout, spacing, responsive design** → `web-design-guidelines` + `frontend-design`
+4. **shadcn/ui components (Button, Dialog, Table, etc.)** → `shadcn`
+5. **TypeScript errors or complex types** → `typescript-expert`
+6. **Deploying** → `/deploy`
+7. **Working with Prisma models (frontend types)** → `prisma-client-api`
+8. **Working with Docker** → `docker-expert`

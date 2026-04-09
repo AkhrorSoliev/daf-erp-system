@@ -4,31 +4,12 @@ import { SCENES, DEFAULT_COMPANY_ID } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
+import { generatePassword } from '../../common/utils/password.util';
+import { downloadFile } from '../utils/download.util';
 import { message } from 'telegraf/filters';
-import https from 'https';
 import * as bcrypt from 'bcryptjs';
 
 const STUDENT_ROLE_ID = 6;
-
-function generatePassword(length = 8): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
-}
-
-async function downloadFile(url: string): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      const chunks: Buffer[] = [];
-      res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
-      res.on('error', reject);
-    });
-  });
-}
 
 /**
  * Student registration flow:

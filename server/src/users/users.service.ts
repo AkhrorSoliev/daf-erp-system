@@ -58,8 +58,8 @@ export class UsersService {
   ) {}
 
   async findAll(query: UserQueryDto) {
-    const { user_type, search, branch_id, company_id, page = 1, per_page = 10 } = query;
-    const skip = (page - 1) * per_page;
+    const { user_type, search, branch_id, company_id, page = 1, pageSize = 10 } = query;
+    const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = { deletedAt: null };
 
@@ -91,7 +91,7 @@ export class UsersService {
       this.prisma.user.findMany({
         where,
         skip,
-        take: per_page,
+        take: pageSize,
         select: userSelect,
         orderBy: { createdAt: 'desc' },
       }),
@@ -133,7 +133,7 @@ export class UsersService {
       })),
       total,
       page,
-      per_page,
+      pageSize,
     };
   }
 

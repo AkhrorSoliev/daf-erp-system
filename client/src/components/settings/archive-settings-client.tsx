@@ -203,7 +203,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, any> = { page: filters.page, per_page: perPage };
+      const params: Record<string, any> = { page: filters.page, pageSize: perPage };
       if (filters.search.trim()) params.search = filters.search.trim();
       const { data } = await api.get(`/archive/${entityType}`, { params });
       setItems(data.data);

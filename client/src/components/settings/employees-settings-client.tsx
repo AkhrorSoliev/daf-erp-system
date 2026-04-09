@@ -99,7 +99,7 @@ export function EmployeesSettingsClient() {
     try {
       const params: Record<string, any> = {
         page: filters.page,
-        per_page: filters.pageSize,
+        pageSize: filters.pageSize,
         branch_id: selectedBranch.id,
       };
       if (filters.search.trim()) params.search = filters.search.trim();

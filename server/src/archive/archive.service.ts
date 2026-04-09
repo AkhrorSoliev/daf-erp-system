@@ -61,8 +61,8 @@ export class ArchiveService {
   }
 
   async findAll(entityType: ArchiveEntityType, query: ArchiveQueryDto) {
-    const { page = 1, per_page = 10, search } = query;
-    const skip = (page - 1) * per_page;
+    const { page = 1, pageSize = 10, search } = query;
+    const skip = (page - 1) * pageSize;
 
     const delegate = this.getDelegate(entityType);
     const where: any = { deletedAt: { not: null } };
@@ -78,14 +78,14 @@ export class ArchiveService {
       delegate.findMany({
         where,
         skip,
-        take: per_page,
+        take: pageSize,
         orderBy: { deletedAt: 'desc' },
         ...(include && { include }),
       }),
       delegate.count({ where }),
     ]);
 
-    return { data, total, page, per_page };
+    return { data, total, page, pageSize };
   }
 
   async findOne(entityType: ArchiveEntityType, id: string | number) {

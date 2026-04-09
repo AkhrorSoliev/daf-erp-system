@@ -39,11 +39,13 @@ function formatPhone(phone: string) {
 
 interface StudentsTableProps {
   students: Student[];
+  page?: number;
+  pageSize?: number;
   onDeleted?: (id: number) => void;
   onStatusChanged?: (id: number, newStatus: string) => void;
 }
 
-export function StudentsTable({ students, onDeleted, onStatusChanged }: StudentsTableProps) {
+export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, onStatusChanged }: StudentsTableProps) {
   const user = useAuth((s) => s.user);
   const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
 
@@ -154,7 +156,7 @@ export function StudentsTable({ students, onDeleted, onStatusChanged }: Students
                 className="relative cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="border-r text-muted-foreground">
-                  {isTeacher ? `#${student.id}` : index + 1}
+                  {isTeacher ? `#${student.id}` : (page - 1) * pageSize + index + 1}
                 </TableCell>
                 <TableCell>
                   <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>

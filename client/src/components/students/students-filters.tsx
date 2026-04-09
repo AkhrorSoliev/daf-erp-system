@@ -74,7 +74,7 @@ export function StudentsFilters({
 
   const fetchTeachers = useCallback(async () => {
     try {
-      const params: Record<string, any> = { user_type: "Teacher", per_page: 100 };
+      const params: Record<string, any> = { user_type: "Teacher", pageSize: 100 };
       if (selectedBranch?.id) params.branch_id = selectedBranch.id;
       const { data } = await api.get("/users", { params });
       setTeachers(data.data);

@@ -83,28 +83,5 @@ export async function generateUniqueLogin(
   return `${base}${Date.now().toString().slice(-6)}`;
 }
 
-/**
- * 8 belgili random parol generatsiya qiladi (katta/kichik harflar + raqamlar).
- */
-export function generatePassword(): string {
-  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lower = 'abcdefghjkmnpqrstuvwxyz';
-  const digits = '23456789';
-  const all = upper + lower + digits;
-
-  // Kamida 1 katta, 1 kichik, 1 raqam
-  let password = '';
-  password += upper[Math.floor(Math.random() * upper.length)];
-  password += lower[Math.floor(Math.random() * lower.length)];
-  password += digits[Math.floor(Math.random() * digits.length)];
-
-  for (let i = 3; i < 8; i++) {
-    password += all[Math.floor(Math.random() * all.length)];
-  }
-
-  // Aralashtirib yuborish
-  return password
-    .split('')
-    .sort(() => Math.random() - 0.5)
-    .join('');
-}
+// Re-export from shared utility
+export { generatePassword } from '../../common/utils/password.util';
