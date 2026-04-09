@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Param, Query, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { StudentsService } from './students.service';
+import { StudentEnrollmentService } from './student-enrollment.service';
 import { SmsService } from '../sms/sms.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -14,6 +15,7 @@ import { RolesGuard } from '../common/guards';
 export class StudentsController {
   constructor(
     private studentsService: StudentsService,
+    private studentEnrollmentService: StudentEnrollmentService,
     private smsService: SmsService,
   ) {}
 
@@ -82,7 +84,7 @@ export class StudentsController {
     @Body('groupId') groupId: string,
     @CurrentUser('id') userId: number,
   ) {
-    return this.studentsService.enrollToGroup(id, groupId, userId);
+    return this.studentEnrollmentService.enrollToGroup(id, groupId, userId);
   }
 
   @Delete(':id/enroll/:enrollmentId')
@@ -94,7 +96,7 @@ export class StudentsController {
     @Body('reason') reason: string,
     @CurrentUser('id') userId: number,
   ) {
-    return this.studentsService.removeFromGroup(id, enrollmentId, userId, reason || "Guruhdan chiqarildi");
+    return this.studentEnrollmentService.removeFromGroup(id, enrollmentId, userId, reason || "Guruhdan chiqarildi");
   }
 
   @Get(':id/sms')

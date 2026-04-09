@@ -74,7 +74,7 @@ export function CommentForm({
     setUsersLoading(true);
     try {
       const { data } = await api.get("/users", {
-        params: { user_type: "Branch Director,Administrator", per_page: 100 },
+        params: { user_type: "Branch Director,Administrator", pageSize: 100 },
       });
       const users: AssignableUser[] = (data.data || []).map((u: any) => ({
         id: u.id,

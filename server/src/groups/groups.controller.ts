@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
+import { GroupScheduleService } from './group-schedule.service';
 import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -19,7 +20,10 @@ import { RolesGuard } from '../common/guards/roles.guard';
 
 @Controller('groups')
 export class GroupsController {
-  constructor(private groupsService: GroupsService) {}
+  constructor(
+    private groupsService: GroupsService,
+    private groupScheduleService: GroupScheduleService,
+  ) {}
 
   @Get()
   findAll(@Query() query: GroupQueryDto, @CurrentUser() currentUser: any) {
@@ -44,7 +48,7 @@ export class GroupsController {
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
-    return this.groupsService.getScheduleConflicts({
+    return this.groupScheduleService.getScheduleConflicts({
       branchId: Number(branchId),
       exactDays: days,
       startTime,
@@ -64,7 +68,7 @@ export class GroupsController {
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
-    return this.groupsService.getAvailableRooms({
+    return this.groupScheduleService.getAvailableRooms({
       branchId: Number(branchId),
       exactDays: days,
       startTime: startTime || '',
@@ -82,7 +86,7 @@ export class GroupsController {
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
-    return this.groupsService.getAvailableTeachers({
+    return this.groupScheduleService.getAvailableTeachers({
       branchId: Number(branchId),
       exactDays: days,
       startTime: startTime || '',
@@ -99,7 +103,7 @@ export class GroupsController {
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
-    return this.groupsService.getAvailableSlots({
+    return this.groupScheduleService.getAvailableSlots({
       branchId: Number(branchId),
       roomId,
       exactDays: days,

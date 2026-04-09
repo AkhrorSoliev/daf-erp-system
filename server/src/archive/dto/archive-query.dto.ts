@@ -1,5 +1,5 @@
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional } from 'class-validator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export enum ArchiveEntityType {
   USERS = 'users',
@@ -13,20 +13,7 @@ export enum ArchiveEntityType {
   HOLIDAYS = 'holidays',
 }
 
-export class ArchiveQueryDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(50)
-  per_page?: number = 10;
-
+export class ArchiveQueryDto extends PaginationDto {
   @IsOptional()
   search?: string;
 }

@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
+import { GroupScheduleService } from './group-schedule.service';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -32,6 +33,12 @@ describe('GroupsController — role guards', () => {
       controllers: [GroupsController],
       providers: [
         { provide: GroupsService, useValue: mockService },
+        { provide: GroupScheduleService, useValue: {
+          getScheduleConflicts: jest.fn().mockResolvedValue([]),
+          getAvailableRooms: jest.fn().mockResolvedValue([]),
+          getAvailableTeachers: jest.fn().mockResolvedValue([]),
+          getAvailableSlots: jest.fn().mockResolvedValue([]),
+        } },
       ],
     }).compile();
 

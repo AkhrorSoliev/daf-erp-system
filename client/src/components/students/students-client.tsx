@@ -74,7 +74,7 @@ export function StudentsClient() {
     try {
       const params: Record<string, any> = {
         page: filters.page,
-        per_page: filters.pageSize,
+        pageSize: filters.pageSize,
       };
       const searchValue = filters.search.trim();
       const cleanSearch = searchValue.startsWith('#') ? searchValue.slice(1).trim() : searchValue;
@@ -102,7 +102,7 @@ export function StudentsClient() {
     if (!isTeacher) return;
     const fetchTeacherGroups = async () => {
       try {
-        const { data } = await api.get("/groups", { params: { per_page: 100 } });
+        const { data } = await api.get("/groups", { params: { pageSize: 100 } });
         setTeacherGroups((data.data ?? []).map((g: any) => ({ id: g.id, name: g.name })));
       } catch {
         // xatolik
@@ -176,11 +176,6 @@ export function StudentsClient() {
         stats={filters.status !== "all" ? { ...stats, total } : stats}
         loading={loading}
         isTeacher={isTeacher}
-        activeStatus={filters.status}
-        onStatusClick={(status) => {
-          const newStatus = status === filters.status ? "all" : status;
-          setUrlFilters({ status: newStatus, page: 1 });
-        }}
       />
       <StudentsFilters
         filters={{ fullName: searchInput, status: filters.status, teacherId: filters.teacherId, groupId: filters.groupId }}
@@ -221,6 +216,8 @@ export function StudentsClient() {
       ) : (
         <StudentsTable
           students={students}
+          page={filters.page}
+          pageSize={filters.pageSize}
           onDeleted={(id) => {
             setStudents((prev) => prev.filter((s) => s.id !== id));
             setTotal((prev) => Math.max(0, prev - 1));

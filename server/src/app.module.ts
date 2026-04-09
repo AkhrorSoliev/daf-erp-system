@@ -12,9 +12,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { CoursesModule } from './courses/courses.module';
 import { TeachersModule } from './teachers/teachers.module';
 import { StudentsModule } from './students/students.module';
-import { LeadsModule } from './leads/leads.module';
 import { GroupsModule } from './groups/groups.module';
-import { EmployeesModule } from './employees/employees.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { CompanyModule } from './company/company.module';
 import { UploadModule } from './upload/upload.module';
@@ -44,9 +42,7 @@ import { JwtAuthGuard } from './common/guards';
     CoursesModule,
     TeachersModule,
     StudentsModule,
-    LeadsModule,
     GroupsModule,
-    EmployeesModule,
     HolidaysModule,
     CompanyModule,
     UploadModule,

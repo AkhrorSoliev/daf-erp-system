@@ -68,8 +68,8 @@ export class TeachersService {
   ) {}
 
   async findAll(query: TeacherQueryDto) {
-    const { page = 1, per_page = 10, search, branch_id } = query;
-    const skip = (page - 1) * per_page;
+    const { page = 1, pageSize = 10, search, branch_id } = query;
+    const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = {
       roles: { some: { roleId: TEACHER_ROLE_ID } },
@@ -91,7 +91,7 @@ export class TeachersService {
       this.prisma.user.findMany({
         where,
         skip,
-        take: per_page,
+        take: pageSize,
         select: teacherSelect,
         orderBy: { createdAt: 'desc' },
       }),
@@ -128,7 +128,7 @@ export class TeachersService {
       data: data.map((t: any) => formatTeacher(t, studentCountMap.get(t.id) ?? 0)),
       total,
       page,
-      per_page,
+      pageSize,
     };
   }
 

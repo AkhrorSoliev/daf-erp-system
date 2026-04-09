@@ -2,22 +2,11 @@ import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
 import { SCENES, TEACHER_ROLE_ID, DEFAULT_COMPANY_ID } from '../constants';
 import { generateUniqueLogin, generatePassword } from '../utils/login-generator';
+import { downloadFile } from '../utils/download.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { UsersService } from '../../users/users.service';
 import { message } from 'telegraf/filters';
-import https from 'https';
-
-async function downloadFile(url: string): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      const chunks: Buffer[] = [];
-      res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
-      res.on('error', reject);
-    });
-  });
-}
 
 export function createTeacherRegistrationScene(
   prisma: PrismaService,
