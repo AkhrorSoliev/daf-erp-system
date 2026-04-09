@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { moliyaNavItems } from "@/lib/moliya-nav";
+import { paymentsNavItems } from "@/lib/payments-nav";
 import { useAuth } from "@/hooks/use-auth";
 
-export function MoliyaMobileMenu() {
+export function PaymentsMobileMenu() {
   const user = useAuth((s) => s.user);
   const userRoleIds = user?.roles.map((r) => r.id) ?? [];
 
-  const visibleItems = moliyaNavItems.filter((item) => {
+  const visibleItems = paymentsNavItems.filter((item) => {
     if (!item.visibleForRoles) return true;
     return item.visibleForRoles.some((id) => userRoleIds.includes(id));
   });
