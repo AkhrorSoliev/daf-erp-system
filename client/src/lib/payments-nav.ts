@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export interface MoliyaNavItem {
+export interface PaymentsNavItem {
   title: string;
   url: string;
   icon: LucideIcon;
@@ -15,7 +15,7 @@ export interface MoliyaNavItem {
   visibleForRoles?: number[];
 }
 
-export const moliyaNavItems: MoliyaNavItem[] = [
+export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Umumiy ma'lumotlar", url: "/payments/overview", icon: BarChart3 },
   { title: "Kutilyotgan to'lovlar", url: "/payments/pending", icon: Clock },
   { title: "Xarajatlar", url: "/payments/expenses", icon: Receipt },

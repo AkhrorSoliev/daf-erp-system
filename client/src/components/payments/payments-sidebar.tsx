@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { moliyaNavItems } from "@/lib/moliya-nav";
+import { paymentsNavItems } from "@/lib/payments-nav";
 import { useAuth } from "@/hooks/use-auth";
 
-export function MoliyaSidebar() {
+export function PaymentsSidebar() {
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
   const userRoleIds = user?.roles.map((r) => r.id) ?? [];
 
-  const visibleItems = moliyaNavItems.filter((item) => {
+  const visibleItems = paymentsNavItems.filter((item) => {
     if (!item.visibleForRoles) return true;
     return item.visibleForRoles.some((id) => userRoleIds.includes(id));
   });

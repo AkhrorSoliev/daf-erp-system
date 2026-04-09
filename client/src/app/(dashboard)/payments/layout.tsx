@@ -1,9 +1,9 @@
-import { MoliyaLayoutShell } from "@/components/moliya/moliya-layout-shell";
+import { PaymentsLayoutShell } from "@/components/payments/payments-layout-shell";
 
 export default function PaymentsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <MoliyaLayoutShell>{children}</MoliyaLayoutShell>;
+  return <PaymentsLayoutShell>{children}</PaymentsLayoutShell>;
 }
