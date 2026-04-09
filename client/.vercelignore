@@ -1,1 +1,4 @@
 public/*.dmg
+public/*.exe
+public/*.pkg
+public/*.zip
