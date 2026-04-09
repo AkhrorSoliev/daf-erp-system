@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { format, parseISO } from "date-fns";
 import { UserPlus, Phone, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -61,10 +62,12 @@ export function LeadCard({ lead, isOverlay }: LeadCardProps) {
       )}
     >
       <div className="flex items-start gap-3">
-        <Avatar className="size-10 shrink-0">
-          <AvatarImage src={lead.avatar} alt={lead.firstName} />
-          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-        </Avatar>
+        <AvatarWithPreview src={lead.avatar} alt={`${lead.firstName} ${lead.lastName}`}>
+          <Avatar className="size-10 shrink-0">
+            <AvatarImage src={lead.avatar} alt={lead.firstName} />
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+        </AvatarWithPreview>
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">

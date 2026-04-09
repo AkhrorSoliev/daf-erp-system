@@ -1,16 +1,46 @@
 import { create } from "zustand";
-import type { Teacher } from "@/data/teacher-model";
+
+export interface TeacherData {
+  id: number;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  photo: string | null;
+  gender: "MALE" | "FEMALE" | null;
+  login: string | null;
+  balance: number;
+  isActive: boolean;
+  status: string;
+  companyId: number;
+  mainBranch: number | null;
+  telegramChatId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  roles: { id: number; name: string }[];
+  branches: { id: number; name: string }[];
+  company: { id: number; name: string };
+  groupCount: number;
+  studentCount: number;
+}
 
 interface EditTeacherState {
   open: boolean;
-  teacher: Teacher | null;
-  openDrawer: (teacher: Teacher) => void;
+  mode: "add" | "edit";
+  teacher: TeacherData | null;
+  submitting: boolean;
+  openDrawer: (teacher: TeacherData) => void;
+  openAddDrawer: () => void;
   closeDrawer: () => void;
+  setSubmitting: (v: boolean) => void;
 }
 
 export const useEditTeacher = create<EditTeacherState>((set) => ({
   open: false,
+  mode: "edit",
   teacher: null,
-  openDrawer: (teacher) => set({ open: true, teacher }),
-  closeDrawer: () => set({ open: false, teacher: null }),
+  submitting: false,
+  openDrawer: (teacher) => set({ open: true, mode: "edit", teacher }),
+  openAddDrawer: () => set({ open: true, mode: "add", teacher: null }),
+  closeDrawer: () => set({ open: false, teacher: null, submitting: false }),
+  setSubmitting: (v) => set({ submitting: v }),
 }));

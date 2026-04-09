@@ -13,8 +13,8 @@ export const editTeacherSchema = z.object({
     .regex(/^\d{9}$/, "Faqat raqamlar kiritilishi mumkin"),
   gender: z.enum(["male", "female", ""]).optional(),
   avatar: z.string().optional().or(z.literal("")),
-  login: z.string().optional().or(z.literal("")),
-  password: z.string().optional().or(z.literal("")),
+  login: z.string().min(3, "Login kamida 3 ta belgi").optional().or(z.literal("")),
+  password: z.string().min(6, "Parol kamida 6 ta belgi").optional().or(z.literal("")),
 });
 
 export type EditTeacherFormValues = z.infer<typeof editTeacherSchema>;

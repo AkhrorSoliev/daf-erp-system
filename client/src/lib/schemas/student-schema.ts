@@ -18,7 +18,9 @@ export const editStudentSchema = z.object({
     .regex(/^\d{9}$/, "Faqat raqamlar kiritilishi mumkin"),
   telegram: z.string().optional().or(z.literal("")),
   gender: z.enum(["male", "female", ""]).optional(),
-  avatar: z.string().optional().or(z.literal("")),
+  photo: z.string().optional().or(z.literal("")),
+  dateOfBirth: z.string().optional().or(z.literal("")),
+  comment: z.string().optional().or(z.literal("")),
 
   // Qo'shimcha aloqa ma'lumotlari
   extraPhone: phoneDigits.optional(),

@@ -1,17 +1,21 @@
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import type { Student } from "@/data/student-model";
 
-const statusConfig = {
-  active: { label: "Faol", variant: "default" as const },
-  frozen: { label: "Muzlatilgan", variant: "secondary" as const },
-  ungrouped: { label: "Guruhlashtirilmagan", variant: "outline" as const },
-};
+/**
+ * Student uchun status badge.
+ * Backend dan kelgan `status` field ishlatadi (ACTIVE, INACTIVE, GRADUATED, EXPELLED, ARCHIVED).
+ * Eski `getStudentStatus` logikasi orqali ham ishlaydi (backward compat).
+ */
+export function StudentStatusBadge({ student }: { student: Student }) {
+  // Yangi enum status mavjud bo'lsa — uni ishlatamiz
+  if (student.status) {
+    return <StatusBadge entityType="students" status={student.status} />;
+  }
 
-export function StudentStatusBadge({
-  status,
-}: {
-  status: "active" | "frozen" | "ungrouped";
-}) {
-  const config = statusConfig[status];
+  // Fallback: eski logika
+  const legacyStatus = student.isActive
+    ? student.groups?.length > 0 ? "ACTIVE" : "ACTIVE"
+    : "INACTIVE";
 
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return <StatusBadge entityType="students" status={legacyStatus} />;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,6 +16,7 @@ import { AddStudentForm } from "./add-student-form";
 
 export function AddStudentDrawer() {
   const { open, lead, closeDrawer } = useAddStudentFromLead();
+  const [submitting, setSubmitting] = useState(false);
 
   if (!lead) return null;
 
@@ -37,15 +40,17 @@ export function AddStudentDrawer() {
             lead={lead}
             onClose={closeDrawer}
             formId="add-student-from-lead"
+            onSubmittingChange={setSubmitting}
           />
         </div>
 
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
-            <Button type="button" variant="outline" onClick={closeDrawer}>
+            <Button type="button" variant="outline" onClick={closeDrawer} disabled={submitting}>
               Bekor qilish
             </Button>
-            <Button type="submit" form="add-student-from-lead">
+            <Button type="submit" form="add-student-from-lead" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Saqlash
             </Button>
           </div>

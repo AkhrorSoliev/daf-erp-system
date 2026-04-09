@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, Eye, EyeOff, User, UserRound } from "lucide-react";
+import { Camera, Trash2, User, UserRound } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,59 +19,137 @@ import {
   editTeacherSchema,
   type EditTeacherFormValues,
 } from "@/lib/schemas/teacher-schema";
-import type { Teacher } from "@/data/teacher-model";
+import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher"; // getState() orqali ishlatiladi
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
-function stripPhonePrefix(phone: string): string {
-  return phone.replace(/^\+998/, "").replace(/\s/g, "");
+interface EditTeacherFormProps {
+  teacher: TeacherData | null;
+  isAdd?: boolean;
+  onClose: () => void;
+  onSaved?: (updated: TeacherData) => void;
+  formId: string;
 }
 
-function mapTeacherToForm(teacher: Teacher): EditTeacherFormValues {
+function teacherToForm(teacher: TeacherData | null): EditTeacherFormValues {
+  if (!teacher) {
+    return { firstName: "", lastName: "", phone: "", gender: "", avatar: "", login: "", password: "" };
+  }
+  const firstName = teacher.firstName;
+  const lastName = teacher.lastName;
   return {
-    firstName: teacher.firstName,
-    lastName: teacher.lastName,
-    phone: stripPhonePrefix(teacher.phone),
-    gender: teacher.gender,
-    avatar: teacher.avatar ?? "",
-    login: "",
+    firstName,
+    lastName,
+    phone: teacher.phone ?? "",
+    gender: teacher.gender === "MALE" ? "male" : teacher.gender === "FEMALE" ? "female" : "",
+    avatar: teacher.photo ?? "",
+    login: teacher.login ?? "",
     password: "",
   };
 }
 
-interface EditTeacherFormProps {
-  teacher: Teacher;
-  onClose: () => void;
-  formId: string;
-}
-
 export function EditTeacherForm({
   teacher,
+  isAdd = false,
   onClose,
+  onSaved,
   formId,
 }: EditTeacherFormProps) {
   const form = useForm<EditTeacherFormValues>({
     resolver: zodResolver(editTeacherSchema),
-    defaultValues: mapTeacherToForm(teacher),
+    defaultValues: teacherToForm(teacher),
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [avatarPreview, setAvatarPreview] = useState(teacher.avatar);
-  const [showPassword, setShowPassword] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(teacher?.photo ?? "");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const setSubmitting = useEditTeacher((s) => s.setSubmitting);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setAvatarPreview(url);
+      setAvatarFile(file);
       form.setValue("avatar", url);
+      setPhotoRemoved(false);
     }
   };
 
-  const onSubmit = () => {
-    onClose();
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+
+  const handleRemovePhoto = () => {
+    setAvatarPreview("");
+    setAvatarFile(null);
+    setPhotoRemoved(true);
+    form.setValue("avatar", "");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const initials = teacher.firstName.charAt(0) + teacher.lastName.charAt(0);
+  const uploadAvatar = async (): Promise<string | undefined> => {
+    if (!avatarFile) return undefined;
+    const formData = new FormData();
+    formData.append("file", avatarFile);
+    const { data } = await api.post("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data.url;
+  };
+
+  const onSubmit = async (values: EditTeacherFormValues) => {
+    setSubmitting(true);
+    try {
+      let photoUrl: string | undefined;
+      if (avatarFile) {
+        photoUrl = await uploadAvatar();
+      }
+
+      const genderMap: Record<string, string> = { male: "MALE", female: "FEMALE" };
+      const branchId = useBranchSwitcher.getState().selectedBranch?.id;
+      const payload: Record<string, unknown> = {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phone: values.phone,
+        gender: values.gender ? genderMap[values.gender] : undefined,
+        photo: photoRemoved ? null : (photoUrl ?? (teacher?.photo || undefined)),
+      };
+      if (isAdd && branchId) {
+        payload.branchId = branchId;
+      }
+      if (!isAdd) {
+        if (values.login) payload.login = values.login;
+        if (values.password) payload.password = values.password;
+      }
+
+      if (isAdd) {
+        const { data } = await api.post("/teachers", payload);
+        if (data.generatedLogin && data.generatedPassword) {
+          toast.success(
+            `O'qituvchi qo'shildi!\nLogin: ${data.generatedLogin}\nParol: ${data.generatedPassword}`,
+            { duration: 8000 },
+          );
+        } else {
+          toast.success("O'qituvchi muvaffaqiyatli qo'shildi");
+        }
+        onSaved?.(data);
+      } else if (teacher) {
+        const { data } = await api.patch(`/teachers/${teacher.id}`, payload);
+        toast.success("O'qituvchi muvaffaqiyatli yangilandi");
+        onSaved?.(data);
+      }
+      onClose();
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "Xatolik yuz berdi";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const initials = isAdd
+    ? "?"
+    : `${teacher?.firstName?.[0] ?? ''}${teacher?.lastName?.[0] ?? ''}`;
   const selectedGender = form.watch("gender");
 
   return (
@@ -79,17 +158,17 @@ export function EditTeacherForm({
       onSubmit={form.handleSubmit(onSubmit)}
       className="flex flex-col"
     >
-      {/* ── Asosiy ma'lumotlar ── */}
+      {/* Asosiy ma'lumotlar */}
       <section className="space-y-5 px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Asosiy ma&apos;lumotlar
         </h3>
 
-        {/* Avatar + name display */}
+        {/* Avatar */}
         <div className="flex items-center gap-4">
           <div className="relative">
             <Avatar className="size-16">
-              <AvatarImage src={avatarPreview} alt={teacher.firstName} />
+              <AvatarImage src={avatarPreview} alt="Avatar" />
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <Tooltip>
@@ -99,6 +178,7 @@ export function EditTeacherForm({
                   variant="outline"
                   size="icon-xs"
                   className="absolute -bottom-1 -right-1 rounded-full border-background bg-background shadow-sm"
+                  tabIndex={-1}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Camera className="size-3" />
@@ -114,15 +194,27 @@ export function EditTeacherForm({
               onChange={handleAvatarChange}
             />
           </div>
-          <div>
-            <p className="font-medium">
-              {teacher.firstName} {teacher.lastName}
-            </p>
-            <p className="text-xs text-muted-foreground">ID: {teacher.id}</p>
+          <div className="flex flex-col gap-1">
+            {!isAdd && teacher && (
+              <div>
+                <p className="font-medium">{teacher.firstName} {teacher.lastName}</p>
+                <p className="text-xs text-muted-foreground">ID: {teacher.id}</p>
+              </div>
+            )}
+            {avatarPreview && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                className="flex items-center gap-1 text-xs text-destructive hover:underline"
+              >
+                <Trash2 className="size-3" />
+                Rasmni o&apos;chirish
+              </button>
+            )}
           </div>
         </div>
 
-        {/* First / Last name */}
+        {/* Ism / Familiya */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="firstName">Ism</Label>
@@ -152,7 +244,7 @@ export function EditTeacherForm({
           </div>
         </div>
 
-        {/* Phone */}
+        {/* Telefon */}
         <div className="space-y-1.5">
           <Label>Telefon raqam</Label>
           <Controller
@@ -173,7 +265,7 @@ export function EditTeacherForm({
           )}
         </div>
 
-        {/* Gender */}
+        {/* Jins */}
         <div className="space-y-1.5">
           <Label>Jinsi</Label>
           <div className="flex gap-3">
@@ -207,13 +299,13 @@ export function EditTeacherForm({
         </div>
       </section>
 
-      {/* ── Kirish ma'lumotlari ── */}
-      <section className="space-y-5 border-t px-6 py-5">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Kirish ma&apos;lumotlari
-        </h3>
+      {/* Login, Parol, Holat — faqat tahrirlashda */}
+      {!isAdd && (
+        <section className="space-y-5 border-t px-6 py-5">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Tizim ma&apos;lumotlari
+          </h3>
 
-        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="login">Login</Label>
             <Input
@@ -221,41 +313,30 @@ export function EditTeacherForm({
               placeholder="Login"
               {...form.register("login")}
             />
+            {form.formState.errors.login && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.login.message}
+              </p>
+            )}
           </div>
+
           <div className="space-y-1.5">
-            <Label htmlFor="password">Parol</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Parol"
-                className="pr-9"
-                {...form.register("password")}
-              />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    className="absolute top-1/2 right-1.5 -translate-y-1/2"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            <Label htmlFor="password">Yangi parol</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Bo'sh qoldirilsa o'zgarmaydi"
+              {...form.register("password")}
+            />
+            {form.formState.errors.password && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.password.message}
+              </p>
+            )}
           </div>
-        </div>
-      </section>
+
+        </section>
+      )}
     </form>
   );
 }

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "skills": {
+    "docker-expert": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "51defa57449d1e7a3e51ae6444c111c4424cd47ed1fb96a3eb1dba0c17971c0d"
+    },
+    "nestjs-best-practices": {
+      "source": "kadajett/agent-nestjs-skills",
+      "sourceType": "github",
+      "computedHash": "1b6f82e889d19d305e38e35594de08eca0242321f353cafa4cf5e61dd3aa1a73"
+    },
+    "prisma-cli": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "computedHash": "500f80cfb0bebbaf7ef60645b43eb126e6489d6a1a2a592983c37a3ef8a789b5"
+    },
+    "prisma-client-api": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "computedHash": "ea94a5efcd3240e45c389bcdadd4613643245d226ffe1318c396e3b3edeb72ee"
+    },
+    "prisma-database-setup": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "computedHash": "b05e88d284c4a754d3624697c2f749e21f7da3fc1f4319b6658df318e84b0dd9"
+    },
+    "prisma-postgres": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "computedHash": "7cf11f4b74c616f1e154c6f00735411b4edbe46e9e968d7c420177b8fa5b1518"
+    },
+    "redis-development": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "computedHash": "d27174128aebe583d5ca15747389c84e286daed589bfa2b99847392a012719b5"
+    },
+    "typescript-expert": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "f0f625132cf53116cb27725926e2c99f142861b9063d459938dd85fbf8e2bf61"
+    },
+    "use-railway": {
+      "source": "railwayapp/railway-skills",
+      "sourceType": "github",
+      "computedHash": "c1a12a7b4914878399c0d634c49498fdb3bff1d91ef2c125932491bde3a4190a"
+    }
+  }
+}

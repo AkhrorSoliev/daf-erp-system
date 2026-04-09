@@ -1,0 +1,699 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
+  ARCHIVED
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  FROZEN
+  GRADUATED
+  EXPELLED
+  ARCHIVED
+}
+
+enum SmsMessageType {
+  AUTO
+  MANUAL
+}
+
+enum SmsMessageStatus {
+  SENT
+  FAILED
+}
+
+enum GroupStatus {
+  FORMING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+  DEPRECATED
+  ARCHIVED
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum RoomStatus {
+  ACTIVE
+  INACTIVE
+  UNDER_MAINTENANCE
+  ARCHIVED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  TRIAL
+  CONVERTED
+  LOST
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  FROZEN
+  COMPLETED
+  DROPPED
+  TRANSFERRED
+}
+
+enum HolidayStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum EntityAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  RESTORE
+}
+
+enum AssigneeStatus {
+  PENDING
+  SEEN
+  DONE
+}
+
+enum NotificationType {
+  COMMENT
+  TASK_ASSIGNED
+  TASK_STATUS_CHANGED
+  TASK_DELETED
+  TASK_UPDATED
+  TASK_REMINDER
+  SYSTEM
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AiUseCaseType {
+  STUDENT_CHAT
+  STATISTICS
+  VOCABULARY
+  TEST_GENERATION
+}
+
+model Role {
+  id    Int    @id
+  name  String @unique
+
+  users UserRole[]
+}
+
+model User {
+  id             Int        @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  phone          String?
+  photo          String?
+  gender         Gender?
+  balance        Int        @default(0)
+  login          String?
+  password       String?
+  isActive       Boolean    @default(true)
+  status         UserStatus @default(ACTIVE)
+  telegramChatId String?
+  companyId      Int
+  company        Company    @relation(fields: [companyId], references: [id])
+  mainBranch     Int?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("DeletedByUser", fields: [deletedById], references: [id])
+  deletedUsers    User[]    @relation("DeletedByUser")
+  deletionBatchId String?
+
+  roles         UserRole[]
+  branches      UserBranch[]
+  groups        Group[]        @relation("StudentGroups")
+  groupTeachers GroupTeacher[] @relation("GroupTeachers")
+
+  deletedBranches    Branch[]     @relation("BranchDeletedBy")
+  deletedRooms       Room[]       @relation("RoomDeletedBy")
+  deletedCourses     Course[]     @relation("CourseDeletedBy")
+  deletedStudents    Student[]    @relation("StudentDeletedBy")
+  deletedLeads       Lead[]       @relation("LeadDeletedBy")
+  deletedGroups      Group[]      @relation("GroupDeletedBy")
+  deletedEnrollments Enrollment[] @relation("EnrollmentDeletedBy")
+  deletedHolidays    Holiday[]    @relation("HolidayDeletedBy")
+  statusChanges      StatusHistory[] @relation("StatusChangedBy")
+  entityChanges      EntityHistory[] @relation("EntityHistoryChangedBy")
+  comments           Comment[]          @relation("CommentAuthor")
+  commentAssignees   CommentAssignee[]  @relation("CommentAssignees")
+  notifications      Notification[]     @relation("UserNotifications")
+  pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
+  sentSmsMessages    SmsMessage[]       @relation("SmsSender")
+  markedAttendances  Attendance[]       @relation("AttendanceMarkedBy")
+  student            Student?           @relation("StudentUser")
+  aiConversations    AiConversation[]   @relation("UserAiConversations")
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model UserRole {
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model UserBranch {
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
+}
+
+model Branch {
+  id                Int          @id
+  name              String
+  address           String?
+  phone             String?
+  isActive          Boolean      @default(true)
+  status            BranchStatus @default(ACTIVE)
+  startOfWorkingDay String?
+  endOfWorkingDay   String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("BranchDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  users           UserBranch[]
+  studentBranches StudentBranch[]
+  rooms           Room[]
+  groups          Group[]
+  courses         Course[]
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model Room {
+  id        String     @id @default(uuid())
+  name      String
+  capacity  Int?
+  status    RoomStatus @default(ACTIVE)
+  branchId  Int
+  branch    Branch     @relation(fields: [branchId], references: [id])
+  companyId Int?
+  company   Company?   @relation(fields: [companyId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("RoomDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  groups Group[]
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model Course {
+  id             String       @id @default(uuid())
+  name           String
+  description    String?
+  price          Int
+  courseDuration Int?
+  lessonDuration Int?
+  lessonMinutes  Int?
+  isActive       Boolean      @default(true)
+  status         CourseStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  branchId  Int?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("CourseDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  groups Group[]
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model Student {
+  id             Int           @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  phone          String
+  extraPhone     String?
+  parentPhone    String?
+  parentName     String?
+  telegram       String?
+  telegramChatId String?
+  gender         Gender?
+  dateOfBirth    DateTime?
+  photo          String?
+  comment        String?
+  balance        Int           @default(0)
+  placeOfStudy   String?
+  address        String?
+  passportSeries String?
+  isActive       Boolean       @default(true)
+  status         StudentStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  companyId       Int?
+  company         Company?  @relation(fields: [companyId], references: [id])
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("StudentDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  userId      Int?          @unique
+  user        User?         @relation("StudentUser", fields: [userId], references: [id])
+
+  enrollments     Enrollment[]
+  branches        StudentBranch[]
+  smsMessages     SmsMessage[]
+  attendances     Attendance[]
+  aiConversations AiConversation[] @relation("StudentAiConversations")
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model StudentBranch {
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  branchId  Int
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, branchId])
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  firstName   String
+  lastName    String
+  phone       String
+  gender      Gender?
+  telegram    String?
+  parentPhone String?
+  parentName  String?
+  status      String     @default("new")
+  statusEnum  LeadStatus @default(NEW)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("LeadDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([deletedAt])
+  @@index([statusEnum])
+}
+
+model Group {
+  id                 String      @id @default(uuid())
+  name               String
+  groupNumber        Int?
+  level              String?
+  courseId            String
+  course             Course      @relation(fields: [courseId], references: [id])
+  branchId           Int
+  branch             Branch      @relation(fields: [branchId], references: [id])
+  roomId             String?
+  room               Room?       @relation(fields: [roomId], references: [id])
+  companyId          Int?
+  company            Company?    @relation(fields: [companyId], references: [id])
+  days               String?
+  exactDays          String[]
+  lessonStartTime    String?
+  lessonEndTime      String?
+  lessonMinutes      Int?
+  status             Int         @default(2)
+  statusEnum         GroupStatus @default(FORMING)
+  comment            String?
+  startDate          DateTime?
+  endDate            DateTime?
+  isActive           Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("GroupDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  teachers    GroupTeacher[]
+  students    User[]       @relation("StudentGroups")
+  enrollments Enrollment[]
+  attendances Attendance[]
+
+  @@unique([name, branchId])
+  @@index([deletedAt])
+  @@index([statusEnum])
+}
+
+model GroupTeacher {
+  groupId   String
+  group     Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacherId Int
+  teacher   User   @relation("GroupTeachers", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, teacherId])
+}
+
+model Enrollment {
+  id        String           @id @default(uuid())
+  studentId Int
+  student   Student          @relation(fields: [studentId], references: [id])
+  groupId   String
+  group     Group            @relation(fields: [groupId], references: [id])
+  status    EnrollmentStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+  transferredToId    String?
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("EnrollmentDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model Holiday {
+  id     String        @id @default(uuid())
+  name   String
+  date   DateTime
+  status HolidayStatus @default(ACTIVE)
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("HolidayDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model StatusHistory {
+  id          String   @id @default(uuid())
+  entityType  String
+  entityId    String
+  fromStatus  String?
+  toStatus    String
+  reason      String?
+  changedById Int?
+  changedBy   User?    @relation("StatusChangedBy", fields: [changedById], references: [id])
+  companyId   Int?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([companyId])
+}
+
+model EntityHistory {
+  id          String       @id @default(uuid())
+  entityType  String
+  entityId    String
+  action      EntityAction
+  oldValues   Json?
+  newValues   Json?
+  changedById Int?
+  changedBy   User?        @relation("EntityHistoryChangedBy", fields: [changedById], references: [id])
+  companyId   Int?
+  createdAt   DateTime     @default(now())
+
+  @@index([entityType, entityId])
+  @@index([changedById])
+  @@index([companyId])
+  @@index([createdAt])
+}
+
+model Company {
+  id                Int       @id
+  name              String
+  subdomain         String?
+  logo              String?
+  phone             String?
+  activatedTill     DateTime?
+  customCss         String?
+  customCssLead     String?
+  leadSuccessText   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  users       User[]
+  branches    Branch[]
+  students    Student[]
+  courses     Course[]
+  rooms       Room[]
+  groups      Group[]
+  comments    Comment[]
+  attendances Attendance[]
+}
+
+model Comment {
+  id           String             @id @default(uuid())
+  entityType   String
+  entityId     String
+  content      String
+  isTask       Boolean            @default(false)
+  isSystem     Boolean            @default(false)
+  dueDate      DateTime?
+  priority     TaskPriority?
+  authorId     Int
+  author       User               @relation("CommentAuthor", fields: [authorId], references: [id])
+  companyId    Int
+  company      Company            @relation(fields: [companyId], references: [id])
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  assignees     CommentAssignee[]
+  notifications Notification[]
+
+  @@index([entityType, entityId])
+  @@index([authorId])
+  @@index([companyId])
+  @@index([createdAt])
+  @@index([isTask, dueDate])
+}
+
+model CommentAssignee {
+  id         String         @id @default(uuid())
+  commentId  String
+  comment    Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId     Int
+  user       User           @relation("CommentAssignees", fields: [userId], references: [id])
+  status          AssigneeStatus @default(PENDING)
+  seenAt          DateTime?
+  doneAt          DateTime?
+  lastRemindedAt  DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@unique([commentId, userId])
+  @@index([userId, status])
+}
+
+model Notification {
+  id                String           @id @default(uuid())
+  userId            Int
+  user              User             @relation("UserNotifications", fields: [userId], references: [id])
+  type              NotificationType
+  title             String
+  message           String
+  relatedEntityType String?
+  relatedEntityId   String?
+  commentId         String?
+  comment           Comment?         @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  isRead            Boolean          @default(false)
+  companyId         Int
+  createdAt         DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([companyId])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    Int
+  user      User     @relation("UserPushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model SmsMessage {
+  id                String           @id @default(uuid())
+  studentId         Int
+  student           Student          @relation(fields: [studentId], references: [id])
+  content           String
+  type              SmsMessageType
+  status            SmsMessageStatus
+  senderUserId      Int?
+  senderUser        User?            @relation("SmsSender", fields: [senderUserId], references: [id])
+  telegramMessageId Int?
+  errorMessage      String?
+  companyId         Int?
+  createdAt         DateTime         @default(now())
+
+  @@index([studentId, createdAt(sort: Desc)])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([status])
+}
+
+model Attendance {
+  id         String           @id @default(uuid())
+  groupId    String
+  group      Group            @relation(fields: [groupId], references: [id])
+  studentId  Int
+  student    Student          @relation(fields: [studentId], references: [id])
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  note       String?
+  markedById Int?
+  markedBy   User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  companyId  Int?
+  company    Company?         @relation(fields: [companyId], references: [id])
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([groupId, studentId, date])
+  @@index([groupId, date])
+  @@index([studentId])
+  @@index([companyId])
+}
+
+model AiConversation {
+  id          String          @id @default(uuid())
+  userId      Int
+  user        User            @relation("UserAiConversations", fields: [userId], references: [id])
+  studentId   Int?
+  student     Student?        @relation("StudentAiConversations", fields: [studentId], references: [id])
+  useCase     AiUseCaseType
+  title       String?
+  model       String          @default("gpt-4o-mini")
+  totalTokens Int             @default(0)
+  messages    AiChatMessage[]
+  companyId   Int?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([studentId])
+  @@index([useCase])
+}
+
+model AiChatMessage {
+  id               String         @id @default(uuid())
+  conversationId   String
+  conversation     AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             String
+  content          String
+  promptTokens     Int?
+  completionTokens Int?
+  createdAt        DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+}

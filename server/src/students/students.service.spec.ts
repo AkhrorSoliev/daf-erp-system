@@ -1,0 +1,339 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { StudentsService } from './students.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { UploadService } from '../upload/upload.service';
+import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { EntityHistoryService } from '../common/entity-history';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
+describe('StudentsService — status methods', () => {
+  let service: StudentsService;
+  let prisma: any;
+  let statusHistoryService: any;
+  let statusCascadeService: any;
+
+  const mockStudent = {
+    id: 1,
+    firstName: 'Ali',
+    lastName: 'Valiyev',
+    phone: '901234567',
+    status: 'ACTIVE',
+    isActive: true,
+    companyId: 1001,
+    photo: null,
+    deletedAt: null,
+  };
+
+  const auditData = {
+    statusChangedAt: new Date(),
+    statusChangedById: 1,
+    statusChangeReason: null,
+  };
+
+  const mockStudentSelect = {
+    ...mockStudent,
+    enrollments: [],
+    branches: [],
+    deletedBy: null,
+    gender: null,
+    dateOfBirth: null,
+    comment: null,
+    balance: 0,
+    extraPhone: null,
+    parentPhone: null,
+    parentName: null,
+    telegram: null,
+    telegramChatId: null,
+    placeOfStudy: null,
+    address: null,
+    passportSeries: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    statusChangedAt: null,
+    statusChangedById: null,
+    statusChangeReason: null,
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      student: {
+        findFirst: jest.fn().mockResolvedValue(mockStudent),
+        update: jest.fn().mockResolvedValue(mockStudentSelect),
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      user: {
+        create: jest.fn().mockResolvedValue({ id: 10001 }),
+      },
+      enrollment: {
+        count: jest.fn().mockResolvedValue(0),
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'enroll-1', studentId: 1, groupId: 'group-1' }),
+      },
+      group: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'ACTIVE',
+          course: { name: 'Deutsch A1' },
+          days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
+          startDate: null, endDate: null,
+        }),
+        findUnique: jest.fn().mockResolvedValue({ name: 'A1' }),
+      },
+    };
+
+    statusHistoryService = {
+      changeStatus: jest.fn().mockResolvedValue(auditData),
+      getHistory: jest.fn().mockResolvedValue([]),
+    };
+
+    statusCascadeService = {
+      cascade: jest.fn().mockResolvedValue([]),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        StudentsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: StatusHistoryService, useValue: statusHistoryService },
+        { provide: StatusCascadeService, useValue: statusCascadeService },
+        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get(StudentsService);
+  });
+
+  describe('changeStatus', () => {
+    it('calls statusHistoryService, updates student, and cascades', async () => {
+      await service.changeStatus(1, { status: 'FROZEN' as any }, 2);
+
+      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Student',
+          entityId: '1',
+          fromStatus: 'ACTIVE',
+          toStatus: 'FROZEN',
+        }),
+      );
+
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 1 },
+          data: expect.objectContaining({
+            status: 'FROZEN',
+            isActive: false,
+          }),
+        }),
+      );
+
+      expect(statusCascadeService.cascade).toHaveBeenCalledWith(
+        'Student', '1', 'FROZEN', 2,
+      );
+    });
+
+    it('sets isActive=true only when status is ACTIVE', async () => {
+      await service.changeStatus(1, { status: 'ACTIVE' as any }, 2);
+
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isActive: true }),
+        }),
+      );
+    });
+
+    it('sets isActive=false for non-ACTIVE statuses', async () => {
+      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2);
+
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isActive: false }),
+        }),
+      );
+    });
+
+    it('throws NotFoundException when student not found', async () => {
+      prisma.student.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.changeStatus(999, { status: 'FROZEN' as any }, 1),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException for GRADUATED when student has active enrollments', async () => {
+      prisma.enrollment.count.mockResolvedValue(2);
+
+      await expect(
+        service.changeStatus(1, { status: 'GRADUATED' as any }, 2),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.student.update).not.toHaveBeenCalled();
+    });
+
+    it('allows GRADUATED when student has no active enrollments', async () => {
+      prisma.enrollment.count.mockResolvedValue(0);
+
+      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2);
+
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'GRADUATED', isActive: false }),
+        }),
+      );
+    });
+  });
+
+  describe('delete', () => {
+    it('archives student: status ARCHIVED + deletedAt + statusHistory + cascade', async () => {
+      await service.delete(1, 2);
+
+      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Student',
+          toStatus: 'ARCHIVED',
+        }),
+      );
+
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'ARCHIVED',
+            isActive: false,
+            deletedAt: expect.any(Date),
+            deletedById: 2,
+          }),
+        }),
+      );
+
+      expect(statusCascadeService.cascade).toHaveBeenCalledWith(
+        'Student', '1', 'ARCHIVED', 2,
+      );
+    });
+
+    it('throws NotFoundException when student not found', async () => {
+      prisma.student.findFirst.mockResolvedValue(null);
+
+      await expect(service.delete(999, 1)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('enrollToGroup', () => {
+    it('throws BadRequestException for non-ACTIVE student', async () => {
+      prisma.student.findFirst.mockResolvedValue({ ...mockStudent, status: 'FROZEN' });
+
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException for GRADUATED student', async () => {
+      prisma.student.findFirst.mockResolvedValue({ ...mockStudent, status: 'GRADUATED' });
+
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException for EXPELLED student', async () => {
+      prisma.student.findFirst.mockResolvedValue({ ...mockStudent, status: 'EXPELLED' });
+
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException for COMPLETED group', async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'COMPLETED',
+        course: { name: 'Deutsch A1' },
+      });
+
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException for CANCELLED group', async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'CANCELLED',
+        course: { name: 'Deutsch A1' },
+      });
+
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('allows enrollment to FORMING group', async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'FORMING',
+        course: { name: 'Deutsch A1' },
+        days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
+        startDate: null, endDate: null,
+      });
+
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).resolves.not.toThrow();
+    });
+
+    it('allows enrollment to PAUSED group', async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'PAUSED',
+        course: { name: 'Deutsch A1' },
+        days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
+        startDate: null, endDate: null,
+      });
+
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).resolves.not.toThrow();
+    });
+  });
+
+  describe('getStatusHistory', () => {
+    it('delegates to statusHistoryService.getHistory', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 1 });
+
+      await service.getStatusHistory(1);
+
+      expect(statusHistoryService.getHistory).toHaveBeenCalledWith('Student', '1');
+    });
+
+    it('throws NotFoundException when student not found', async () => {
+      prisma.student.findFirst.mockResolvedValue(null);
+
+      await expect(service.getStatusHistory(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createStudentUser', () => {
+    it('creates a User with Student role and links to student', async () => {
+      const result = await service.createStudentUser(1, '901234567', 'Ali', 'Valiyev', 1001);
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            login: '901234567',
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            phone: '901234567',
+            companyId: 1001,
+            roles: { create: [{ roleId: 6 }] },
+          }),
+        }),
+      );
+
+      expect(prisma.student.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { userId: 10001 },
+      });
+
+      expect(result.userId).toBe(10001);
+      expect(result.plainPassword).toBeDefined();
+      expect(result.plainPassword.length).toBe(8);
+    });
+  });
+});
