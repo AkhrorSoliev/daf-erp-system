@@ -25,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AiModule } from './ai/ai.module';
+import { SearchModule } from './search/search.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -54,6 +55,7 @@ import { JwtAuthGuard } from './common/guards';
     NotificationsModule,
     SmsModule,
     AttendanceModule,
+    SearchModule,
   ],
   providers: [
     {

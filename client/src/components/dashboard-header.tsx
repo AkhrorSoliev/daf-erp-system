@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SearchDropdown } from "@/components/global-search/search-dropdown";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -57,10 +57,7 @@ export function DashboardHeader() {
           <BranchSwitcher />
         </div>
 
-        <div className="relative grow hidden sm:block">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input placeholder="Qidirish..." className="pl-9 max-w-sm" />
-        </div>
+        <SearchDropdown />
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <NotificationBell />
