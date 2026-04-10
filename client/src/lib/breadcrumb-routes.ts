@@ -29,4 +29,5 @@ export const routeLabels: Record<string, string> = {
   debtors: "Qarzdorlar",
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",
+  search: "Qidiruv natijalari",
 };
