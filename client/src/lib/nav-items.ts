@@ -23,7 +23,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { title: "Bosh sahifa", url: "/", icon: LayoutDashboard },
   { title: "O'qituvchilar", url: "/teachers", icon: GraduationCap, visibleForRoles: [1, 2, 3] },
-  { title: "O'quvchilar", url: "/students", icon: BookOpen },
+  { title: "O'quvchilar", url: "/students", icon: BookOpen, visibleForRoles: [1, 2, 3] },
   { title: "Lidlar", url: "/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },

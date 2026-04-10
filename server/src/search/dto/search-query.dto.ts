@@ -3,7 +3,7 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class SearchQueryDto extends PaginationDto {
   @IsString()
-  @MinLength(1)
+  @MinLength(2)
   @MaxLength(100)
   search: string;
 
