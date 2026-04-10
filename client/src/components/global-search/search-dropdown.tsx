@@ -200,16 +200,17 @@ export function SearchDropdown() {
   return (
     <Popover open={showDropdown} onOpenChange={setIsOpen}>
       <PopoverAnchor asChild>
-        <div className="relative grow hidden sm:block">
+        <div className="relative hidden sm:block">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setIsOpen(true)}
+            onClick={() => setIsOpen(true)}
             onKeyDown={handleInputKeyDown}
             placeholder="Qidirish..."
-            className="pl-9 pr-16 max-w-sm"
+            className="pl-9 pr-16 w-full max-w-md"
           />
           <KbdShortcut />
         </div>
@@ -282,6 +283,7 @@ export function SearchDropdown() {
                           item={item}
                           showAvatar={showAvatar}
                           showId={showAvatar}
+                          isStudent={cat.key === "students"}
                           isActive={idx === activeIndex}
                           onClick={() =>
                             navigateTo(entityRoutes[cat.key](item.id))
@@ -466,12 +468,14 @@ function EntityResultItem({
   item,
   showAvatar,
   showId,
+  isStudent,
   isActive,
   onClick,
 }: {
   item: SearchItem;
   showAvatar: boolean;
   showId: boolean;
+  isStudent?: boolean;
   isActive: boolean;
   onClick: () => void;
 }) {
@@ -497,13 +501,38 @@ function EntityResultItem({
           <span className="truncate font-medium">{item.label}</span>
           {showId && (
             <span className="text-xs text-muted-foreground shrink-0">
-              #{item.id}
+              ID: {item.id}
             </span>
           )}
         </div>
         {(phone || item.sublabel) && (
           <div className="text-xs text-muted-foreground truncate">
             {phone || item.sublabel}
+          </div>
+        )}
+        {isStudent && (
+          <div className="text-xs truncate flex items-center gap-1">
+            {item.groupName ? (
+              <span className="text-muted-foreground">Guruh: {item.groupName}</span>
+            ) : (
+              <span className="text-orange-500">Guruhsiz</span>
+            )}
+            {item.teacherName && (
+              <>
+                <span className="text-muted-foreground/50">·</span>
+                <span className="text-muted-foreground">Ustoz: {item.teacherName}</span>
+              </>
+            )}
+            <span className="text-muted-foreground/50">·</span>
+            {item.balance != null && item.balance < 0 ? (
+              <span className="text-destructive font-medium">
+                {item.balance.toLocaleString("en-US")} so&#39;m
+              </span>
+            ) : (
+              <span className="text-emerald-500 font-medium">
+                Balans: {(item.balance ?? 0).toLocaleString("en-US")} so&#39;m
+              </span>
+            )}
           </div>
         )}
       </div>

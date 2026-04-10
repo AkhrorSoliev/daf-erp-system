@@ -11,6 +11,7 @@ import { BranchSwitcher } from "@/components/branch-switcher";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/use-auth";
 import { routeLabels } from "@/lib/breadcrumb-routes";
 
 function getParentRoute(pathname: string): { path: string; label: string } | null {
@@ -45,6 +46,8 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
 export function DashboardHeader() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
+  const user = useAuth((s) => s.user);
+  const canSearch = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const parentRoute = isMobile ? getParentRoute(pathname) : null;
 
   return (
@@ -57,9 +60,11 @@ export function DashboardHeader() {
           <BranchSwitcher />
         </div>
 
-        <SearchDropdown />
+        <div className="flex-1 flex justify-center">
+          {canSearch && <SearchDropdown />}
+        </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <NotificationBell />
           <div className="hidden sm:block">
             <ThemeToggle />

@@ -32,6 +32,8 @@ export class StudentsController {
   }
 
   @Get(':id')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   findById(@Param('id', ParseIntPipe) id: number) {
     return this.studentsService.findById(id);
   }

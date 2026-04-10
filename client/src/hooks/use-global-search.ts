@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { filterPages, type SearchablePage } from "@/data/searchable-pages";
 import api from "@/lib/api";
@@ -12,6 +12,9 @@ export interface SearchItem {
   id: number | string;
   label: string;
   sublabel?: string | null;
+  groupName?: string | null;
+  teacherName?: string | null;
+  balance?: number | null;
   photo?: string | null;
   phone?: string | null;
 }
@@ -89,8 +92,13 @@ export function useGlobalSearch() {
     saveRecentSearches([]);
   }, []);
 
+  const latestQuery = useRef("");
+
   const fetchResults = useDebouncedCallback(async (q: string) => {
-    if (q.trim().length < 2) {
+    const trimmed = q.trim();
+    latestQuery.current = trimmed;
+
+    if (trimmed.length < 2) {
       setResults(emptyResult);
       setIsLoading(false);
       return;
@@ -98,13 +106,20 @@ export function useGlobalSearch() {
 
     try {
       const { data } = await api.get<QuickSearchResult>("/search/quick", {
-        params: { search: q.trim() },
+        params: { search: trimmed },
       });
-      setResults(data);
-    } catch {
-      setResults(emptyResult);
+      if (latestQuery.current === trimmed) {
+        setResults(data);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      if (latestQuery.current === trimmed) {
+        setResults(emptyResult);
+      }
     } finally {
-      setIsLoading(false);
+      if (latestQuery.current === trimmed) {
+        setIsLoading(false);
+      }
     }
   }, 300);
 

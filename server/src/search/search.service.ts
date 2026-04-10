@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, EnrollmentStatus } from '@prisma/client';
 
 export interface SearchItem {
   id: number | string;
@@ -8,6 +8,9 @@ export interface SearchItem {
   sublabel?: string | null;
   photo?: string | null;
   phone?: string | null;
+  groupName?: string | null;
+  teacherName?: string | null;
+  balance?: number | null;
 }
 
 interface CategoryResult {
@@ -82,13 +85,7 @@ export class SearchService {
         const [items, count] = await Promise.all([
           this.prisma.student.findMany({
             where,
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              phone: true,
-              photo: true,
-            },
+            select: this.studentSelect,
             skip,
             take: pageSize,
             orderBy: { firstName: 'asc' },
@@ -96,12 +93,7 @@ export class SearchService {
           this.prisma.student.count({ where }),
         ]);
         data = this.sortByRelevance(
-          items.map((s) => ({
-            id: s.id,
-            label: `${s.firstName} ${s.lastName}`,
-            phone: s.phone,
-            photo: s.photo,
-          })),
+          items.map((s) => this.mapStudent(s)),
           trimmed,
         );
         total = count;
@@ -319,6 +311,64 @@ export class SearchService {
 
   // --- Search methods ---
 
+  private readonly studentSelect = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    phone: true,
+    photo: true,
+    balance: true,
+    enrollments: {
+      where: { status: EnrollmentStatus.ACTIVE },
+      take: 1,
+      select: {
+        group: {
+          select: {
+            name: true,
+            teachers: {
+              take: 1,
+              select: {
+                teacher: {
+                  select: { firstName: true, lastName: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  private mapStudent(s: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    photo: string | null;
+    balance: number;
+    enrollments: {
+      group: {
+        name: string;
+        teachers: { teacher: { firstName: string; lastName: string } }[];
+      };
+    }[];
+  }): SearchItem {
+    const enrollment = s.enrollments?.[0];
+    const group = enrollment?.group;
+    const teacher = group?.teachers?.[0]?.teacher;
+    return {
+      id: s.id,
+      label: `${s.firstName} ${s.lastName}`,
+      phone: s.phone,
+      photo: s.photo,
+      groupName: group?.name ?? null,
+      teacherName: teacher
+        ? `${teacher.firstName} ${teacher.lastName}`
+        : null,
+      balance: s.balance ?? 0,
+    };
+  }
+
   private async searchStudents(
     search: string,
     companyId: number,
@@ -330,13 +380,7 @@ export class SearchService {
     const [items, total] = await Promise.all([
       this.prisma.student.findMany({
         where,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          photo: true,
-        },
+        select: this.studentSelect,
         take,
         orderBy: { firstName: 'asc' },
       }),
@@ -344,15 +388,7 @@ export class SearchService {
     ]);
 
     return {
-      items: this.sortByRelevance(
-        items.map((s) => ({
-          id: s.id,
-          label: `${s.firstName} ${s.lastName}`,
-          phone: s.phone,
-          photo: s.photo,
-        })),
-        search,
-      ),
+      items: this.sortByRelevance(items.map((s) => this.mapStudent(s)), search),
       total,
     };
   }

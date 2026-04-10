@@ -67,6 +67,17 @@ describe('SearchService', () => {
           lastName: 'Valiyev',
           phone: '901234567',
           photo: null,
+          balance: -50000,
+          enrollments: [
+            {
+              group: {
+                name: 'B2-Gruppe',
+                teachers: [
+                  { teacher: { firstName: 'Max', lastName: 'Müller' } },
+                ],
+              },
+            },
+          ],
         },
       ]);
       prisma.student.count.mockResolvedValue(1);
@@ -79,8 +90,32 @@ describe('SearchService', () => {
         label: 'Ali Valiyev',
         phone: '901234567',
         photo: null,
+        groupName: 'B2-Gruppe',
+        teacherName: 'Max Müller',
+        balance: -50000,  // negative = debt
       });
       expect(result.students.total).toBe(1);
+    });
+
+    it('should return null balance for non-debtor students', async () => {
+      prisma.student.findMany.mockResolvedValue([
+        {
+          id: 10001,
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          phone: '901234567',
+          photo: null,
+          balance: 100000,
+          enrollments: [],
+        },
+      ]);
+      prisma.student.count.mockResolvedValue(1);
+
+      const result = await service.quickSearch('ali', ceoCtx);
+
+      expect(result.students.items[0].balance).toBe(100000);
+      expect(result.students.items[0].groupName).toBeNull();
+      expect(result.students.items[0].teacherName).toBeNull();
     });
 
     it('should search by full name (multi-word query)', async () => {
@@ -91,6 +126,8 @@ describe('SearchService', () => {
           lastName: 'Valiyev',
           phone: '901234567',
           photo: null,
+          balance: 0,
+          enrollments: [],
         },
       ]);
       prisma.student.count.mockResolvedValue(1);
@@ -120,6 +157,8 @@ describe('SearchService', () => {
           lastName: 'Student',
           phone: '901111111',
           photo: null,
+          balance: 0,
+          enrollments: [],
         },
       ]);
       prisma.student.count.mockResolvedValue(1);
@@ -271,9 +310,9 @@ describe('SearchService', () => {
   describe('relevance sorting', () => {
     it('should sort exact match first, then starts-with, then contains', async () => {
       prisma.student.findMany.mockResolvedValue([
-        { id: 1, firstName: 'Alisher', lastName: 'K', phone: null, photo: null },
-        { id: 2, firstName: 'Ali', lastName: 'V', phone: null, photo: null },
-        { id: 3, firstName: 'Salim', lastName: 'Ali', phone: null, photo: null },
+        { id: 1, firstName: 'Alisher', lastName: 'K', phone: null, photo: null, balance: 0, enrollments: [] },
+        { id: 2, firstName: 'Ali', lastName: 'V', phone: null, photo: null, balance: 0, enrollments: [] },
+        { id: 3, firstName: 'Salim', lastName: 'Ali', phone: null, photo: null, balance: 0, enrollments: [] },
       ]);
       prisma.student.count.mockResolvedValue(3);
 
@@ -285,7 +324,7 @@ describe('SearchService', () => {
   });
 
   describe('fullSearch()', () => {
-    it('should return paginated student results', async () => {
+    it('should return paginated student results with group and balance', async () => {
       prisma.student.findMany.mockResolvedValue([
         {
           id: 10001,
@@ -293,6 +332,17 @@ describe('SearchService', () => {
           lastName: 'Karimov',
           phone: '901234567',
           photo: null,
+          balance: -30000,
+          enrollments: [
+            {
+              group: {
+                name: 'A1-Gruppe',
+                teachers: [
+                  { teacher: { firstName: 'Anna', lastName: 'Schmidt' } },
+                ],
+              },
+            },
+          ],
         },
       ]);
       prisma.student.count.mockResolvedValue(1);
@@ -312,6 +362,9 @@ describe('SearchService', () => {
             label: 'Ali Karimov',
             phone: '901234567',
             photo: null,
+            groupName: 'A1-Gruppe',
+            teacherName: 'Anna Schmidt',
+            balance: -30000,
           },
         ],
         total: 1,
