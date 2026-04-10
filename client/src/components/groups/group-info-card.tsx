@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Pencil, QrCode, MessageSquare, PenLine } from "lucide-react";
+import { Pencil, QrCode, MessageSquare, PenLine, Copy, Check } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -254,8 +254,36 @@ export function GroupInfoCard({ group, commentKey, onWriteComment }: GroupInfoCa
             </div>
           </DialogContent>
         </Dialog>
+
+        <CopyLinkButton group={group} />
       </div>
     </div>
+  );
+}
+
+function CopyLinkButton({ group }: { group: GroupData }) {
+  const [copied, setCopied] = useState(false);
+  const link = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=student_${group.branchId}_group_${group.id}`;
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="outline" size="sm" className="size-8 p-0" onClick={copyLink}>
+          {copied ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <Copy className="size-4" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{copied ? "Nusxalandi!" : "Havolani nusxalash"}</TooltipContent>
+    </Tooltip>
   );
 }
 
