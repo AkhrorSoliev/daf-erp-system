@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { GroupInfoCard } from "./group-info-card";
 import { GroupDetailTabs } from "./group-detail-tabs";
@@ -18,9 +19,25 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [commentKey, setCommentKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("oquvchilar");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tabFromUrl = searchParams.get("tab") ?? "davomat";
+  const [activeTab, setActiveTabState] = useState(tabFromUrl);
   const [commentFocusKey, setCommentFocusKey] = useState(0);
   const setName = useBreadcrumbName((s) => s.setName);
+
+  const setActiveTab = useCallback((tab: string) => {
+    setActiveTabState(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "davomat") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tab);
+    }
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [searchParams, router, pathname]);
 
   const handleCommentChange = useCallback(() => {
     setCommentKey((k) => k + 1);

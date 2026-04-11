@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
-import { ArrowLeft, ChevronDown, MessageSquareText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, Info, MessageSquareText } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Table,
@@ -48,7 +47,6 @@ interface StatsResponse {
 
 interface AttendanceStatsProps {
   group: GroupData;
-  onBack: () => void;
 }
 
 function formatDateParam(date: Date): string {
@@ -73,7 +71,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 const COL_COUNT = 9;
 
-export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
+const GROUP_STATUS_LABELS: Record<string, string> = {
+  FORMING: "Shakllanmoqda",
+  PAUSED: "To'xtatilgan",
+  COMPLETED: "Tugallangan",
+  CANCELLED: "Bekor qilingan",
+  ARCHIVED: "Arxivlangan",
+};
+
+export function AttendanceStats({ group }: AttendanceStatsProps) {
   const now = new Date();
   const defaultStart = group.startDate
     ? new Date(group.startDate)
@@ -129,10 +135,6 @@ export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" size="sm" onClick={onBack}>
-          <ArrowLeft className="mr-1.5 size-4" />
-          Kunlar
-        </Button>
         <div className="flex items-center gap-2">
           <DatePicker
             value={startDate}
@@ -153,6 +155,14 @@ export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
         )}
       </div>
 
+      {/* Guruh faol emas banner */}
+      {group.statusEnum !== "ACTIVE" && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+          <Info className="size-4 shrink-0" />
+          Guruh faol emas ({GROUP_STATUS_LABELS[group.statusEnum] ?? group.statusEnum})
+        </div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="space-y-2">
@@ -163,7 +173,11 @@ export function AttendanceStats({ group, onBack }: AttendanceStatsProps) {
       ) : !stats || stats.students.length === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-md border">
           <p className="text-sm text-muted-foreground">
-            Davomat ma&apos;lumotlari mavjud emas
+            {group.statusEnum !== "ACTIVE" && stats?.totalLessons === 0
+              ? "Guruh hali boshlanmagan. Davomat ma\u2019lumotlari mavjud emas"
+              : stats?.totalLessons === 0
+                ? "Hali davomat olinmagan"
+                : "Davomat ma\u2019lumotlari mavjud emas"}
           </p>
         </div>
       ) : (

@@ -1,10 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { QrAttendanceService } from './qr-attendance.service';
+import { AttendanceService } from './attendance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
+
+const validatedGroup = {
+  id: 'group-1',
+  companyId: 1,
+  exactDays: ['monday', 'wednesday', 'friday'],
+  startDate: new Date('2026-03-01'),
+  endDate: new Date('2026-06-30'),
+  statusEnum: 'ACTIVE',
+};
 
 describe('QrAttendanceService', () => {
   let service: QrAttendanceService;
@@ -12,11 +22,17 @@ describe('QrAttendanceService', () => {
   let redis: any;
   let gateway: any;
   let entityHistory: any;
+  let attendanceService: any;
 
   beforeEach(async () => {
     prisma = {
       group: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'group-1', name: 'A1-1' }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'group-1',
+          name: 'A1-1',
+          exactDays: ['monday', 'wednesday', 'friday'],
+          startDate: new Date('2026-03-01'),
+        }),
         findUnique: jest.fn().mockResolvedValue({ name: 'A1-1' }),
       },
       enrollment: {
@@ -42,12 +58,16 @@ describe('QrAttendanceService', () => {
           photo: null,
         }),
       },
+      holiday: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
 
     redis = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue('OK'),
       del: jest.fn().mockResolvedValue(1),
+      ttl: jest.fn().mockResolvedValue(3600), // 1 soat qolgan
     };
 
     gateway = {
@@ -62,6 +82,13 @@ describe('QrAttendanceService', () => {
       recordRestore: jest.fn(),
     };
 
+    attendanceService = {
+      validateLessonDate: jest.fn().mockResolvedValue({
+        group: validatedGroup,
+        parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QrAttendanceService,
@@ -69,6 +96,7 @@ describe('QrAttendanceService', () => {
         { provide: RedisService, useValue: redis },
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EntityHistoryService, useValue: entityHistory },
+        { provide: AttendanceService, useValue: attendanceService },
       ],
     }).compile();
 
@@ -76,6 +104,27 @@ describe('QrAttendanceService', () => {
   });
 
   describe('startSession', () => {
+    it('should call validateLessonDate before creating session', async () => {
+      await service.startSession('group-1', '2026-04-03', 1, 1, ['Teacher']);
+
+      expect(attendanceService.validateLessonDate).toHaveBeenCalledWith(
+        'group-1',
+        '2026-04-03',
+        1,
+        ['Teacher'],
+      );
+    });
+
+    it('should throw when validateLessonDate rejects (holiday/non-lesson/inactive)', async () => {
+      attendanceService.validateLessonDate.mockRejectedValue(
+        new BadRequestException('Bu sana bayram kuni: Navro\'z'),
+      );
+
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('should create a new QR session and return token', async () => {
       const result = await service.startSession('group-1', '2026-04-03', 1, 1);
 
@@ -86,12 +135,17 @@ describe('QrAttendanceService', () => {
       expect(redis.set).toHaveBeenCalledTimes(2); // session + token
     });
 
-    it('should throw BadRequestException when group not found', async () => {
-      prisma.group.findFirst.mockResolvedValue(null);
+    it('should store lessonNumber in Redis session data', async () => {
+      await service.startSession('group-1', '2026-04-03', 1, 1);
 
-      await expect(
-        service.startSession('non-existent', '2026-04-03', 1, 1),
-      ).rejects.toThrow(BadRequestException);
+      // Find the session set call (first redis.set call is session)
+      const sessionSetCall = redis.set.mock.calls.find(
+        (call: any[]) => call[0].startsWith('qr-session:'),
+      );
+      expect(sessionSetCall).toBeDefined();
+      const sessionData = JSON.parse(sessionSetCall[1]);
+      expect(sessionData).toHaveProperty('lessonNumber');
+      expect(typeof sessionData.lessonNumber === 'number' || sessionData.lessonNumber === null).toBe(true);
     });
 
     it('should reject if another teacher already has an active session', async () => {
@@ -102,6 +156,7 @@ describe('QrAttendanceService', () => {
           companyId: 1,
           currentToken: 'old-token',
           createdAt: new Date().toISOString(),
+          lessonNumber: null,
         }),
       );
 
@@ -118,6 +173,7 @@ describe('QrAttendanceService', () => {
           companyId: 1,
           currentToken: 'old-token',
           createdAt: new Date().toISOString(),
+          lessonNumber: null,
         }),
       );
 
@@ -138,6 +194,7 @@ describe('QrAttendanceService', () => {
           companyId: 1,
           currentToken: 'old-token',
           createdAt: new Date().toISOString(),
+          lessonNumber: 5,
         }),
       );
 
@@ -146,6 +203,47 @@ describe('QrAttendanceService', () => {
       expect(result.token).toBeDefined();
       expect(result.expiresIn).toBe(45);
       expect(redis.del).toHaveBeenCalledWith('qr-token:old-token');
+    });
+
+    it('should preserve remaining TTL instead of resetting to SESSION_TTL', async () => {
+      redis.get.mockResolvedValue(
+        JSON.stringify({
+          sessionId: 'session-1',
+          teacherId: 1,
+          companyId: 1,
+          currentToken: 'old-token',
+          createdAt: new Date().toISOString(),
+          lessonNumber: 5,
+        }),
+      );
+      redis.ttl.mockResolvedValue(1200); // 20 daqiqa qolgan
+
+      await service.rotateToken('group-1', '2026-04-03', 'session-1', 1);
+
+      // Session set should use remaining TTL (1200), not SESSION_TTL (7200)
+      const sessionSetCall = redis.set.mock.calls.find(
+        (call: any[]) => call[0].startsWith('qr-session:'),
+      );
+      expect(sessionSetCall).toBeDefined();
+      expect(sessionSetCall[3]).toBe(1200); // 'EX' value = remaining TTL
+    });
+
+    it('should throw BadRequestException when session TTL has expired', async () => {
+      redis.get.mockResolvedValue(
+        JSON.stringify({
+          sessionId: 'session-1',
+          teacherId: 1,
+          companyId: 1,
+          currentToken: 'old-token',
+          createdAt: new Date().toISOString(),
+          lessonNumber: 5,
+        }),
+      );
+      redis.ttl.mockResolvedValue(0); // TTL tugagan
+
+      await expect(
+        service.rotateToken('group-1', '2026-04-03', 'session-1', 1),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw if session not found', async () => {
@@ -162,6 +260,7 @@ describe('QrAttendanceService', () => {
           companyId: 1,
           currentToken: 'old-token',
           createdAt: new Date().toISOString(),
+          lessonNumber: 5,
         }),
       );
 
@@ -178,6 +277,7 @@ describe('QrAttendanceService', () => {
           companyId: 1,
           currentToken: 'old-token',
           createdAt: new Date().toISOString(),
+          lessonNumber: 5,
         }),
       );
 
@@ -196,6 +296,7 @@ describe('QrAttendanceService', () => {
           companyId: 1,
           currentToken: 'active-token',
           createdAt: new Date().toISOString(),
+          lessonNumber: 5,
         }),
       );
 
@@ -219,6 +320,7 @@ describe('QrAttendanceService', () => {
           companyId: 1,
           currentToken: 'active-token',
           createdAt: new Date().toISOString(),
+          lessonNumber: 5,
         }),
       );
 
@@ -237,15 +339,32 @@ describe('QrAttendanceService', () => {
       companyId: 1,
     });
 
+    const sessionData = JSON.stringify({
+      sessionId: 'session-1',
+      teacherId: 1,
+      companyId: 1,
+      currentToken: 'valid-token',
+      createdAt: new Date().toISOString(),
+      lessonNumber: 15,
+    });
+
     it('should mark attendance as PRESENT and notify teacher', async () => {
-      redis.get.mockResolvedValue(tokenData);
+      redis.get
+        .mockResolvedValueOnce(tokenData) // token lookup
+        .mockResolvedValueOnce(sessionData); // session lookup for lessonNumber
 
       const result = await service.scanQr('valid-token', 10001, 20001, 1);
 
       expect(result.status).toBe('PRESENT');
       expect(result.alreadyMarked).toBe(false);
       expect(result.groupName).toBe('A1-1');
-      expect(prisma.attendance.upsert).toHaveBeenCalled();
+      // Verify markedMethod is QR for QR attendance
+      expect(prisma.attendance.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ markedMethod: 'QR' }),
+          update: expect.objectContaining({ markedMethod: 'QR' }),
+        }),
+      );
       expect(gateway.sendToUser).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
@@ -257,6 +376,28 @@ describe('QrAttendanceService', () => {
       expect(entityHistory.recordCreate).toHaveBeenCalled();
     });
 
+    it('should read lessonNumber from Redis session instead of computing', async () => {
+      redis.get
+        .mockResolvedValueOnce(tokenData) // token lookup
+        .mockResolvedValueOnce(sessionData); // session lookup
+
+      const result = await service.scanQr('valid-token', 10001, 20001, 1);
+
+      expect(result.lessonNumber).toBe(15);
+      // Verify session was read
+      expect(redis.get).toHaveBeenCalledWith('qr-session:group-1:2026-04-03');
+    });
+
+    it('should return null lessonNumber when session not found in Redis', async () => {
+      redis.get
+        .mockResolvedValueOnce(tokenData) // token lookup
+        .mockResolvedValueOnce(null); // session not found
+
+      const result = await service.scanQr('valid-token', 10001, 20001, 1);
+
+      expect(result.lessonNumber).toBeNull();
+    });
+
     it('should throw BadRequestException for expired/invalid token', async () => {
       redis.get.mockResolvedValue(null);
 
@@ -266,7 +407,9 @@ describe('QrAttendanceService', () => {
     });
 
     it('should throw BadRequestException if student not enrolled', async () => {
-      redis.get.mockResolvedValue(tokenData);
+      redis.get
+        .mockResolvedValueOnce(tokenData)
+        .mockResolvedValueOnce(sessionData);
       prisma.enrollment.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -275,7 +418,9 @@ describe('QrAttendanceService', () => {
     });
 
     it('should return alreadyMarked if already present', async () => {
-      redis.get.mockResolvedValue(tokenData);
+      redis.get
+        .mockResolvedValueOnce(tokenData)
+        .mockResolvedValueOnce(sessionData);
       prisma.attendance.findUnique.mockResolvedValue({
         id: 'att-1',
         status: 'PRESENT',
@@ -288,7 +433,9 @@ describe('QrAttendanceService', () => {
     });
 
     it('should record update history when overwriting existing attendance', async () => {
-      redis.get.mockResolvedValue(tokenData);
+      redis.get
+        .mockResolvedValueOnce(tokenData)
+        .mockResolvedValueOnce(sessionData);
       prisma.attendance.findUnique.mockResolvedValue({
         id: 'att-1',
         status: 'ABSENT',

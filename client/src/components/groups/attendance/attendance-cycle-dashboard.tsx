@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  BarChart3,
   Check,
   AlertTriangle,
   Circle,
@@ -37,7 +36,6 @@ interface LessonDate {
 interface AttendanceCycleDashboardProps {
   group: GroupData;
   onSelectDate: (date: string) => void;
-  onShowStats: () => void;
 }
 
 const DAY_SHORT: Record<string, string> = {
@@ -87,7 +85,6 @@ function getMonthRange(
 export function AttendanceCycleDashboard({
   group,
   onSelectDate,
-  onShowStats,
 }: AttendanceCycleDashboardProps) {
   const user = useAuth((s) => s.user);
   const isAdmin = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
@@ -352,23 +349,10 @@ export function AttendanceCycleDashboard({
 
   if (allLessons.length === 0) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-end">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={onShowStats}>
-                <BarChart3 className="mr-1.5 size-4" />
-                Statistika
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Davr bo&apos;yicha davomat statistikasi</TooltipContent>
-          </Tooltip>
-        </div>
-        <div className="flex h-24 items-center justify-center rounded-md border">
-          <p className="text-sm text-muted-foreground">
-            Dars kunlari mavjud emas
-          </p>
-        </div>
+      <div className="flex h-24 items-center justify-center rounded-md border">
+        <p className="text-sm text-muted-foreground">
+          Dars kunlari mavjud emas
+        </p>
       </div>
     );
   }
@@ -488,15 +472,6 @@ export function AttendanceCycleDashboard({
             <ChevronRight className="size-4" />
           </Button>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size="sm" onClick={onShowStats}>
-              <BarChart3 className="mr-1.5 size-4" />
-              Statistika
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Davr bo&apos;yicha davomat statistikasi</TooltipContent>
-        </Tooltip>
       </div>
 
       {/* Cycle summary + progress bar */}

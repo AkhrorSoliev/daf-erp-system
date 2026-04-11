@@ -58,12 +58,14 @@ export class AttendanceController {
     @Query() query: AttendanceDatesQueryDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
   ) {
     await this.verifyTeacherAccess(groupId, roles, userId);
     return this.attendanceService.getLessonDates(
       groupId,
       query.month,
       query.year,
+      companyId,
     );
   }
 
@@ -75,9 +77,10 @@ export class AttendanceController {
     @Param('date') date: string,
     @CurrentUser('id') userId: number,
     @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
   ) {
     await this.verifyTeacherAccess(groupId, roles, userId);
-    return this.attendanceService.getByDate(groupId, date);
+    return this.attendanceService.getByDate(groupId, date, companyId);
   }
 
   @Post(':groupId/date/:date')
@@ -110,12 +113,14 @@ export class AttendanceController {
     @Query() query: AttendanceStatsQueryDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
   ) {
     await this.verifyTeacherAccess(groupId, roles, userId);
     return this.attendanceService.getStats(
       groupId,
       query.startDate,
       query.endDate,
+      companyId,
     );
   }
 
@@ -137,6 +142,7 @@ export class AttendanceController {
       dto.date,
       userId,
       companyId,
+      roles,
     );
   }
 

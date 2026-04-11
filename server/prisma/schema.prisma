@@ -97,6 +97,11 @@ enum AttendanceStatus {
   EXCUSED
 }
 
+enum AttendanceMethod {
+  MANUAL
+  QR
+}
+
 enum EntityAction {
   CREATE
   UPDATE
@@ -651,9 +656,10 @@ model Attendance {
   student    Student          @relation(fields: [studentId], references: [id])
   date       DateTime         @db.Date
   status     AttendanceStatus
-  note       String?
-  markedById Int?
-  markedBy   User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  note         String?
+  markedById   Int?
+  markedBy     User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  markedMethod AttendanceMethod @default(MANUAL)
   companyId  Int?
   company    Company?         @relation(fields: [companyId], references: [id])
   createdAt  DateTime         @default(now())
