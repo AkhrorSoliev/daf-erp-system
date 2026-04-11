@@ -176,6 +176,48 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 | User | ✅ | ✅ (profile) | — | — | — |
 | Holiday | — | — | ✅ | — | — |
 
+### Attendance (Davomat)
+
+- `AttendanceModule` (`src/attendance/`) — manual + QR-based attendance system
+- **Two flows:**
+  1. **Manual** — teacher/admin marks students via `POST /api/attendance/:groupId/date/:date` with batch entries
+  2. **QR** — teacher starts Redis-backed session, students scan QR code, marked as PRESENT in real-time via SSE
+
+#### Date & Time Validation (`validateLessonDate`)
+
+Every attendance write (manual `save()` and QR `startSession()`) passes through `AttendanceService.validateLessonDate()` which enforces:
+1. Date format (YYYY-MM-DD)
+2. Group existence + multi-tenant `companyId` filter
+3. Group status must be `ACTIVE`
+4. Date within group `startDate`–`endDate` range
+5. Day-of-week matches group `exactDays` schedule
+6. Date is not a holiday (`Holiday` table)
+7. **Lesson time check** (server-side `new Date()`, not client time):
+   - **Teacher** — can only take attendance from 10 minutes before `lessonStartTime` until `lessonEndTime`
+   - **CEO, Branch Director, Administrator** — bypass time restriction (can take attendance anytime)
+   - Time check only applies to today's date — past dates are not time-restricted
+
+#### QR Session
+
+- Redis-backed session with token rotation every 45 seconds
+- Session TTL = `min(remainingTimeUntilLessonEnd, 2 hours)` — auto-expires when lesson ends
+- `rotateToken()` preserves remaining TTL instead of resetting to 2 hours
+- Lesson number is computed once in `startSession()` and cached in Redis — `scanQr()` reads from cache
+
+#### Concurrency
+
+- `save()` wraps enrollment validation + existing record reads + upserts in `prisma.$transaction()` to prevent race conditions
+
+#### Attendance Method Tracking (`markedMethod`)
+
+- `AttendanceMethod` enum: `MANUAL` | `QR` — stored in `Attendance.markedMethod` field
+- `save()` sets `markedMethod = MANUAL`, `scanQr()` sets `markedMethod = QR`
+- Existing records default to `MANUAL` (Prisma `@default(MANUAL)`)
+- **Future statistics:** combine `markedMethod` + `markedBy` user roles to compute:
+  - **QR Code** — `markedMethod = QR`
+  - **Teacher (manual)** — `markedMethod = MANUAL` + `markedBy.roles` contains only Teacher
+  - **Admin** — `markedMethod = MANUAL` + `markedBy.roles` contains CEO/BD/Administrator
+
 ### Comments & Task Assignment
 
 - `CommentsModule` (`src/comments/`) — comments and task assignment system

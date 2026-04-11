@@ -11,6 +11,7 @@ import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentForm } from "@/components/shared/comment-form";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import { AttendanceTab } from "./attendance/attendance-tab";
+import { AttendanceStats } from "./attendance/attendance-stats";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
@@ -42,6 +43,8 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
   const studentsFetched = useRef(false);
   const [attendanceVisible, setAttendanceVisible] = useState(false);
   const attendanceShown = useRef(false);
+  const [statsVisible, setStatsVisible] = useState(false);
+  const statsShown = useRef(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const historyShown = useRef(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
@@ -77,10 +80,13 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     }
   }, [group.id]);
 
-  // O'quvchilar is the default tab — fetch on mount
+  // Davomat is the default tab — show on mount
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    if (!attendanceShown.current) {
+      attendanceShown.current = true;
+      setAttendanceVisible(true);
+    }
+  }, []);
 
   // Handle external tab switches (e.g. "Izoh yozish" button in info card)
   useEffect(() => {
@@ -96,6 +102,10 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     if (value === "davomat" && !attendanceShown.current) {
       attendanceShown.current = true;
       setAttendanceVisible(true);
+    }
+    if (value === "statistika" && !statsShown.current) {
+      statsShown.current = true;
+      setStatsVisible(true);
     }
     if (value === "tarix" && !historyShown.current) {
       historyShown.current = true;
@@ -116,18 +126,28 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     <>
     <EditStudentDrawer onSaved={handleStudentSaved} />
     <Tabs
-      value={activeTab ?? "oquvchilar"}
+      value={activeTab ?? "davomat"}
       className="w-full"
       onValueChange={handleTabChange}
     >
       <TabsList className="w-full justify-start overflow-x-auto">
-        <TabsTrigger value="oquvchilar">O&apos;quvchilar</TabsTrigger>
         <TabsTrigger value="davomat">Davomat</TabsTrigger>
+        <TabsTrigger value="oquvchilar">O&apos;quvchilar</TabsTrigger>
         <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
         <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
         {canManage && <TabsTrigger value="tarix">Tarix</TabsTrigger>}
         {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
+        <TabsTrigger value="statistika">Statistika</TabsTrigger>
       </TabsList>
+
+      {/* Davomat */}
+      <TabsContent value="davomat">
+        {attendanceVisible ? (
+          <AttendanceTab group={group} />
+        ) : (
+          <EmptyState message="Davomat ma'lumotlari mavjud emas" />
+        )}
+      </TabsContent>
 
       {/* O'quvchilar */}
       <TabsContent value="oquvchilar">
@@ -140,15 +160,6 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
             students={students}
             onStudentDeleted={(id) => setStudents((prev) => prev.filter((s) => s.id !== id))}
           />
-        )}
-      </TabsContent>
-
-      {/* Davomat */}
-      <TabsContent value="davomat">
-        {attendanceVisible ? (
-          <AttendanceTab group={group} />
-        ) : (
-          <EmptyState message="Davomat ma'lumotlari mavjud emas" />
         )}
       </TabsContent>
 
@@ -207,6 +218,15 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
           )}
         </TabsContent>
       )}
+
+      {/* Statistika */}
+      <TabsContent value="statistika">
+        {statsVisible ? (
+          <AttendanceStats group={group} />
+        ) : (
+          <EmptyState message="Statistika mavjud emas" />
+        )}
+      </TabsContent>
     </Tabs>
     </>
   );

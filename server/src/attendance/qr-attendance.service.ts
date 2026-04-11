@@ -8,7 +8,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
-import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
+import { AttendanceMethod, AttendanceStatus, EnrollmentStatus, HolidayStatus } from '@prisma/client';
+import { AttendanceService } from './attendance.service';
 
 interface QrSession {
   sessionId: string;
@@ -16,6 +17,7 @@ interface QrSession {
   companyId: number;
   currentToken: string;
   createdAt: string;
+  lessonNumber: number | null;
 }
 
 interface QrToken {
@@ -36,6 +38,7 @@ export class QrAttendanceService {
     private redis: RedisService,
     private notificationsGateway: NotificationsGateway,
     private entityHistoryService: EntityHistoryService,
+    private attendanceService: AttendanceService,
   ) {}
 
   async startSession(
@@ -43,15 +46,16 @@ export class QrAttendanceService {
     date: string,
     teacherId: number,
     companyId: number,
+    roles?: string[],
   ) {
-    // Guruhni tekshirish
+    // Validate date is a valid lesson date (includes time check for teachers)
+    const { group: validatedGroup, parsedDate } =
+      await this.attendanceService.validateLessonDate(groupId, date, companyId, roles);
+
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },
-      select: { id: true, name: true },
+      select: { id: true, name: true, exactDays: true, startDate: true },
     });
-    if (!group) {
-      throw new BadRequestException('Guruh topilmadi');
-    }
 
     // Mavjud sessiyani tekshirish
     const sessionKey = `qr-session:${groupId}:${date}`;
@@ -81,6 +85,60 @@ export class QrAttendanceService {
       },
     });
 
+    // Dars raqamini hisoblash
+    let lessonNumber: number | null = null;
+    if (group?.startDate && group.exactDays?.length) {
+      const dayNameToJs: Record<string, number> = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+        thursday: 4, friday: 5, saturday: 6,
+      };
+      const allowedDays = new Set(
+        group.exactDays.map((d) => dayNameToJs[d.toLowerCase()]),
+      );
+      // Get holidays in range for accurate lesson count
+      const holidays = await this.prisma.holiday.findMany({
+        where: {
+          status: HolidayStatus.ACTIVE,
+          deletedAt: null,
+          date: { gte: group.startDate, lte: parsedDate },
+        },
+        select: { date: true },
+      });
+      const holidaySet = new Set(
+        holidays.map((h) => {
+          const y = h.date.getFullYear();
+          const m = String(h.date.getMonth() + 1).padStart(2, '0');
+          const d = String(h.date.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }),
+      );
+      let count = 0;
+      const current = new Date(group.startDate);
+      while (current <= parsedDate) {
+        const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+        if (allowedDays.has(current.getDay()) && !holidaySet.has(dateStr)) {
+          count++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      lessonNumber = count;
+    }
+
+    // Sessiya TTL: dars tugashigacha yoki maksimum SESSION_TTL
+    let sessionTtl = SESSION_TTL;
+    if (validatedGroup.lessonEndTime) {
+      const now = new Date();
+      const [endH, endM] = validatedGroup.lessonEndTime.split(':').map(Number);
+      const lessonEndToday = new Date(now);
+      lessonEndToday.setHours(endH, endM, 0, 0);
+      const remainingSeconds = Math.floor(
+        (lessonEndToday.getTime() - now.getTime()) / 1000,
+      );
+      if (remainingSeconds > 0) {
+        sessionTtl = Math.min(remainingSeconds, SESSION_TTL);
+      }
+    }
+
     // Sessiyani Redis ga yozish
     const session: QrSession = {
       sessionId,
@@ -88,8 +146,9 @@ export class QrAttendanceService {
       companyId,
       currentToken: token,
       createdAt: new Date().toISOString(),
+      lessonNumber,
     };
-    await this.redis.set(sessionKey, JSON.stringify(session), 'EX', SESSION_TTL);
+    await this.redis.set(sessionKey, JSON.stringify(session), 'EX', sessionTtl);
 
     // Tokenni Redis ga yozish
     const tokenData: QrToken = {
@@ -132,10 +191,16 @@ export class QrAttendanceService {
     // Eski tokenni o'chirish
     await this.redis.del(`qr-token:${session.currentToken}`);
 
+    // Sessiyaning qolgan TTL ini olish (qayta tiklamaslik uchun)
+    const remainingTtl = await this.redis.ttl(sessionKey);
+    if (remainingTtl <= 0) {
+      throw new BadRequestException('QR sessiya muddati tugagan');
+    }
+
     // Yangi token
     const newToken = randomUUID();
     session.currentToken = newToken;
-    await this.redis.set(sessionKey, JSON.stringify(session), 'EX', SESSION_TTL);
+    await this.redis.set(sessionKey, JSON.stringify(session), 'EX', remainingTtl);
 
     const tokenData: QrToken = {
       groupId,
@@ -216,33 +281,20 @@ export class QrAttendanceService {
         },
       },
     });
-    // Guruh ma'lumotlarini olish
+
+    // Guruh nomi va dars raqamini olish (sessiyadan)
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
-      select: { name: true, exactDays: true, startDate: true },
+      select: { name: true },
     });
 
-    // Dars raqamini hisoblash
+    // Dars raqamini Redis sessiyadan o'qish (startSession da hisoblangan)
     let lessonNumber: number | null = null;
-    if (group?.startDate && group.exactDays?.length) {
-      const dayNameToJs: Record<string, number> = {
-        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-        thursday: 4, friday: 5, saturday: 6,
-      };
-      const allowedDays = new Set(
-        group.exactDays.map((d) => dayNameToJs[d.toLowerCase()]),
-      );
-      const start = new Date(group.startDate);
-      const target = new Date(date);
-      let count = 0;
-      const current = new Date(start);
-      while (current <= target) {
-        if (allowedDays.has(current.getDay())) {
-          count++;
-        }
-        current.setDate(current.getDate() + 1);
-      }
-      lessonNumber = count;
+    const sessionKey = `qr-session:${groupId}:${date}`;
+    const sessionRaw = await this.redis.get(sessionKey);
+    if (sessionRaw) {
+      const sessionData: QrSession = JSON.parse(sessionRaw);
+      lessonNumber = sessionData.lessonNumber;
     }
 
     if (existing && existing.status === AttendanceStatus.PRESENT) {
@@ -271,11 +323,13 @@ export class QrAttendanceService {
         date: new Date(date),
         status: AttendanceStatus.PRESENT,
         markedById: userId,
+        markedMethod: AttendanceMethod.QR,
         companyId,
       },
       update: {
         status: AttendanceStatus.PRESENT,
         markedById: userId,
+        markedMethod: AttendanceMethod.QR,
       },
     });
 

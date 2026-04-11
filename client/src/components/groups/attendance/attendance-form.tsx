@@ -157,21 +157,30 @@ export function AttendanceForm({
     const start = sh * 60 + sm;
     const end = eh * 60 + em;
 
-    if (nowMinutes < start)
+    // Dars boshlanishidan 10 daqiqa oldin ochiladi
+    const windowStart = start - 10;
+
+    if (nowMinutes < windowStart)
       return {
         status: "before" as const,
-        message: `Dars ${group.lessonStartTime} da boshlanadi`,
+        message: `Dars ${group.lessonStartTime} da boshlanadi. Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
       };
     if (nowMinutes > end)
       return {
         status: "after" as const,
-        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime})`,
+        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime}). Davomat olish yopilgan`,
       };
     return {
       status: "during" as const,
       message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime})`,
     };
   })();
+
+  // Teacher uchun dars vaqtidan tashqarida formani bloklash
+  const isLocked =
+    !isAdmin &&
+    lessonTimeInfo != null &&
+    lessonTimeInfo.status !== "during";
 
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
@@ -327,6 +336,7 @@ export function AttendanceForm({
                   variant="outline"
                   size="sm"
                   onClick={markAllPresent}
+                  disabled={isLocked}
                   className="text-green-700 dark:text-green-400"
                 >
                   <UserCheck className="mr-1.5 size-4" />
@@ -344,6 +354,7 @@ export function AttendanceForm({
                   variant="outline"
                   size="sm"
                   onClick={() => setQrDialogOpen(true)}
+                  disabled={isLocked}
                   className="text-primary"
                 >
                   <QrCode className="mr-1.5 size-4" />
@@ -455,11 +466,13 @@ export function AttendanceForm({
                         <TooltipTrigger asChild>
                           <button
                             type="button"
+                            disabled={isLocked}
                             onClick={() =>
                               setStatus(student.studentId, opt.value)
                             }
                             className={cn(
                               "flex items-center justify-center rounded-lg border p-2 transition-all sm:p-2.5",
+                              isLocked && "cursor-not-allowed opacity-50",
                               entry?.status === opt.value
                                 ? opt.activeColor
                                 : entry?.status === null
@@ -540,7 +553,7 @@ export function AttendanceForm({
         <div className="sticky bottom-4 flex justify-end pt-2">
           <Button
             onClick={handleSave}
-            disabled={submitting}
+            disabled={submitting || isLocked}
             size="lg"
             className="min-w-36 shadow-lg"
           >

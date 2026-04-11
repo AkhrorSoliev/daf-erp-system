@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsInt, IsOptional, Matches, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AttendanceDatesQueryDto {
@@ -17,8 +17,10 @@ export class AttendanceDatesQueryDto {
 
 export class AttendanceStatsQueryDto {
   @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "startDate YYYY-MM-DD formatda bo'lishi kerak" })
   startDate?: string;
 
   @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "endDate YYYY-MM-DD formatda bo'lishi kerak" })
   endDate?: string;
 }

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { AttendanceStatus, EnrollmentStatus, HolidayStatus } from '@prisma/client';
+import { AttendanceMethod, AttendanceStatus, EnrollmentStatus, GroupStatus, HolidayStatus } from '@prisma/client';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 
 const DAY_NAME_TO_JS: Record<string, number> = {
@@ -17,6 +17,14 @@ const DAY_NAME_TO_JS: Record<string, number> = {
   friday: 5,
   saturday: 6,
 };
+
+/** Format a Date as YYYY-MM-DD using LOCAL time (avoids UTC shift from toISOString). */
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 const JS_TO_DAY_NAME: Record<number, string> = {
   0: 'Yakshanba',
@@ -35,13 +43,130 @@ export class AttendanceService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
+  /** Roles that bypass lesson time restriction */
+  private static readonly TIME_BYPASS_ROLES = new Set([
+    'CEO',
+    'Branch Director',
+    'Administrator',
+  ]);
+
+  /**
+   * Validate that a date is a valid lesson date for the given group.
+   * Checks: date format, group existence, group status, date range, schedule, holidays, lesson time.
+   */
+  async validateLessonDate(
+    groupId: string,
+    date: string,
+    companyId?: number,
+    roles?: string[],
+  ) {
+    // 1. Date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new BadRequestException("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
+    }
+    const parsedDate = new Date(date + 'T00:00:00.000Z');
+    if (isNaN(parsedDate.getTime())) {
+      throw new BadRequestException("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
+    }
+
+    // 2. Group existence + multi-tenant
+    const group = await this.prisma.group.findFirst({
+      where: {
+        id: groupId,
+        deletedAt: null,
+        ...(companyId && { companyId }),
+      },
+      select: {
+        id: true,
+        companyId: true,
+        exactDays: true,
+        startDate: true,
+        endDate: true,
+        statusEnum: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+      },
+    });
+    if (!group) throw new NotFoundException('Guruh topilmadi');
+
+    // 3. Group must be ACTIVE
+    if (group.statusEnum !== GroupStatus.ACTIVE) {
+      throw new BadRequestException(
+        `Guruh faol emas. Joriy holat: ${group.statusEnum}`,
+      );
+    }
+
+    // 4. Date within group range
+    if (group.startDate && parsedDate < group.startDate) {
+      throw new BadRequestException("Bu sana guruh faoliyat muddatiga kirmaydi");
+    }
+    if (group.endDate && parsedDate > group.endDate) {
+      throw new BadRequestException("Bu sana guruh faoliyat muddatiga kirmaydi");
+    }
+
+    // 5. Day matches schedule
+    const scheduleDays = group.exactDays
+      .map((d) => DAY_NAME_TO_JS[d])
+      .filter((d) => d !== undefined);
+    if (!scheduleDays.includes(parsedDate.getUTCDay())) {
+      throw new BadRequestException("Bu kunda dars rejalashtirilmagan");
+    }
+
+    // 6. Not a holiday
+    const holiday = await this.prisma.holiday.findFirst({
+      where: {
+        status: HolidayStatus.ACTIVE,
+        deletedAt: null,
+        date: parsedDate,
+      },
+      select: { name: true },
+    });
+    if (holiday) {
+      throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
+    }
+
+    // 7. Lesson time check (server time, only for Teacher/Cashier)
+    const canBypassTime = roles?.some((r) =>
+      AttendanceService.TIME_BYPASS_ROLES.has(r),
+    );
+    if (!canBypassTime && group.lessonStartTime && group.lessonEndTime) {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      // Vaqt tekshiruvi faqat bugungi sana uchun amal qiladi
+      if (date === todayStr) {
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const [startH, startM] = group.lessonStartTime.split(':').map(Number);
+        const [endH, endM] = group.lessonEndTime.split(':').map(Number);
+        const lessonStart = startH * 60 + startM;
+        const lessonEnd = endH * 60 + endM;
+
+        // 10 daqiqa oldin ochiladi
+        const windowStart = lessonStart - 10;
+
+        if (currentMinutes < windowStart) {
+          throw new BadRequestException(
+            `Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (${group.lessonStartTime})`,
+          );
+        }
+        if (currentMinutes > lessonEnd) {
+          throw new BadRequestException(
+            `Dars vaqti tugagan (${group.lessonEndTime}). Davomat olish yopilgan`,
+          );
+        }
+      }
+    }
+
+    return { group, parsedDate };
+  }
+
   /**
    * Get lesson dates for a group in a given month/year,
    * including attendance summary per date.
    */
-  async getLessonDates(groupId: string, month?: number, year?: number) {
+  async getLessonDates(groupId: string, month?: number, year?: number, companyId?: number) {
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
+      where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: {
         id: true,
         name: true,
@@ -94,7 +219,7 @@ export class AttendanceService {
       select: { date: true },
     });
     const holidaySet = new Set(
-      holidays.map((h) => h.date.toISOString().split('T')[0]),
+      holidays.map((h) => toLocalDateStr(h.date)),
     );
 
     // Generate lesson dates
@@ -103,7 +228,7 @@ export class AttendanceService {
     while (cursor <= rangeEnd) {
       if (
         scheduleDays.includes(cursor.getDay()) &&
-        !holidaySet.has(cursor.toISOString().split('T')[0])
+        !holidaySet.has(toLocalDateStr(cursor))
       ) {
         lessonDates.push(new Date(cursor));
       }
@@ -129,7 +254,7 @@ export class AttendanceService {
     > = {};
 
     for (const row of attendanceCounts) {
-      const dateStr = row.date.toISOString().split('T')[0];
+      const dateStr = toLocalDateStr(row.date);
       if (!countMap[dateStr]) {
         countMap[dateStr] = { present: 0, absent: 0, late: 0, excused: 0, total: 0 };
       }
@@ -154,7 +279,7 @@ export class AttendanceService {
     const totalStudents = group._count.enrollments;
 
     return lessonDates.map((date) => {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toLocalDateStr(date);
       const counts = countMap[dateStr];
       return {
         date: dateStr,
@@ -173,9 +298,13 @@ export class AttendanceService {
    * Get attendance for a group on a specific date.
    * Returns all active enrolled students with their attendance status.
    */
-  async getByDate(groupId: string, date: string) {
+  async getByDate(groupId: string, date: string, companyId?: number) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) {
+      throw new BadRequestException("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
+    }
+
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
+      where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: { id: true },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
@@ -241,77 +370,78 @@ export class AttendanceService {
     roles: string[],
     companyId?: number,
   ) {
-    const group = await this.prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
-      select: { id: true, companyId: true },
-    });
-    if (!group) throw new NotFoundException('Guruh topilmadi');
-
-    const parsedDate = new Date(date + 'T00:00:00.000Z');
+    const { group, parsedDate } = await this.validateLessonDate(groupId, date, companyId, roles);
     const effectiveCompanyId = companyId ?? group.companyId ?? undefined;
-
-    // Validate all students are enrolled in this group
-    const enrolledStudentIds = await this.prisma.enrollment
-      .findMany({
-        where: {
-          groupId,
-          deletedAt: null,
-          status: EnrollmentStatus.ACTIVE,
-        },
-        select: { studentId: true },
-      })
-      .then((rows) => new Set(rows.map((r) => r.studentId)));
 
     const isTeacherOnly =
       roles.length > 0 && roles.every((r) => r === 'Teacher');
 
-    for (const entry of dto.entries) {
-      if (!enrolledStudentIds.has(entry.studentId)) {
-        throw new BadRequestException(
-          `O'quvchi #${entry.studentId} bu guruhga yozilmagan`,
-        );
+    // Tranzaksiya ichida: enrollment tekshiruvi, mavjud yozuvlar, upsertlar
+    const results = await this.prisma.$transaction(async (tx) => {
+      // Validate all students are enrolled in this group
+      const enrolledStudentIds = await tx.enrollment
+        .findMany({
+          where: {
+            groupId,
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+          },
+          select: { studentId: true },
+        })
+        .then((rows) => new Set(rows.map((r) => r.studentId)));
+
+      for (const entry of dto.entries) {
+        if (!enrolledStudentIds.has(entry.studentId)) {
+          throw new BadRequestException(
+            `O'quvchi #${entry.studentId} bu guruhga yozilmagan`,
+          );
+        }
       }
-    }
 
-    // Get existing records for history
-    const existingRecords = await this.prisma.attendance.findMany({
-      where: { groupId, date: parsedDate },
-    });
-    const existingMap = new Map(
-      existingRecords.map((r) => [r.studentId, r]),
-    );
+      // Get existing records for history
+      const existingRecords = await tx.attendance.findMany({
+        where: { groupId, date: parsedDate },
+      });
+      const existingMap = new Map(
+        existingRecords.map((r) => [r.studentId, r]),
+      );
 
-    const results: Awaited<ReturnType<typeof this.prisma.attendance.upsert>>[] = [];
-    for (const entry of dto.entries) {
-      // Teacher can't write notes
-      const note = isTeacherOnly ? undefined : entry.note;
-      const result = await this.prisma.attendance.upsert({
-        where: {
-          groupId_studentId_date: {
+      const upsertResults: Awaited<ReturnType<typeof tx.attendance.upsert>>[] = [];
+      for (const entry of dto.entries) {
+        // Teacher can't write notes
+        const note = isTeacherOnly ? undefined : entry.note;
+        const result = await tx.attendance.upsert({
+          where: {
+            groupId_studentId_date: {
+              groupId,
+              studentId: entry.studentId,
+              date: parsedDate,
+            },
+          },
+          create: {
             groupId,
             studentId: entry.studentId,
             date: parsedDate,
+            status: entry.status,
+            note: note ?? null,
+            markedById: userId,
+            markedMethod: AttendanceMethod.MANUAL,
+            companyId: effectiveCompanyId,
           },
-        },
-        create: {
-          groupId,
-          studentId: entry.studentId,
-          date: parsedDate,
-          status: entry.status,
-          note: note ?? null,
-          markedById: userId,
-          companyId: effectiveCompanyId,
-        },
-        update: {
-          status: entry.status,
-          ...(note !== undefined && { note: note ?? null }),
-          markedById: userId,
-        },
-      });
-      results.push(result);
-    }
+          update: {
+            status: entry.status,
+            ...(note !== undefined && { note: note ?? null }),
+            markedById: userId,
+            markedMethod: AttendanceMethod.MANUAL,
+          },
+        });
+        upsertResults.push(result);
+      }
 
-    // Record a single history entry per save action
+      return { upsertResults, existingMap };
+    });
+
+    // Record a single history entry per save action (outside transaction)
     const buildSummary = (
       entries: { status: string }[],
       actionLabel: string,
@@ -325,10 +455,10 @@ export class AttendanceService {
       sababli: entries.filter((e) => e.status === 'EXCUSED').length,
     });
 
-    const isUpdate = existingMap.size > 0;
+    const isUpdate = results.existingMap.size > 0;
 
     if (isUpdate) {
-      const oldEntries = Array.from(existingMap.values());
+      const oldEntries = Array.from(results.existingMap.values());
       await this.entityHistoryService.recordUpdate({
         entityType: 'GroupAttendance',
         entityId: groupId,
@@ -347,15 +477,15 @@ export class AttendanceService {
       });
     }
 
-    return { message: 'Davomat muvaffaqiyatli saqlandi', count: results.length };
+    return { message: 'Davomat muvaffaqiyatli saqlandi', count: results.upsertResults.length };
   }
 
   /**
    * Get attendance statistics for a group within a date range.
    */
-  async getStats(groupId: string, startDate?: string, endDate?: string) {
+  async getStats(groupId: string, startDate?: string, endDate?: string, companyId?: number) {
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
+      where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: {
         id: true,
         exactDays: true,
@@ -388,7 +518,7 @@ export class AttendanceService {
       select: { date: true },
     });
     const holidaySet = new Set(
-      holidays.map((h) => h.date.toISOString().split('T')[0]),
+      holidays.map((h) => toLocalDateStr(h.date)),
     );
 
     let totalLessons = 0;
@@ -396,7 +526,7 @@ export class AttendanceService {
     while (cursor <= rangeEnd) {
       if (
         scheduleDays.includes(cursor.getDay()) &&
-        !holidaySet.has(cursor.toISOString().split('T')[0])
+        !holidaySet.has(toLocalDateStr(cursor))
       ) {
         totalLessons++;
       }
@@ -466,7 +596,7 @@ export class AttendanceService {
       if (!n.note) continue;
       if (!notesMap[n.studentId]) notesMap[n.studentId] = [];
       notesMap[n.studentId].push({
-        date: n.date.toISOString().split('T')[0],
+        date: toLocalDateStr(n.date),
         status: n.status,
         note: n.note,
         markedBy: n.markedBy

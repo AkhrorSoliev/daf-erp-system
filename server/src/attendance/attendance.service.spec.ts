@@ -10,7 +10,10 @@ const mockGroup = {
   exactDays: ['monday', 'wednesday', 'friday'],
   startDate: new Date('2026-03-01'),
   endDate: new Date('2026-06-30'),
+  statusEnum: 'ACTIVE',
   companyId: 1,
+  lessonStartTime: '09:00',
+  lessonEndTime: '11:00',
   _count: { enrollments: 2 },
 };
 
@@ -47,6 +50,7 @@ describe('AttendanceService', () => {
       },
       holiday: {
         findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
       attendance: {
         groupBy: jest.fn().mockResolvedValue([]),
@@ -56,7 +60,8 @@ describe('AttendanceService', () => {
       enrollment: {
         findMany: jest.fn().mockResolvedValue(mockEnrollments),
       },
-      $transaction: jest.fn(),
+      // Interactive transaction: callback gets prisma itself as tx
+      $transaction: jest.fn((cb) => cb(prisma)),
     };
 
     entityHistoryService = {
@@ -78,6 +83,201 @@ describe('AttendanceService', () => {
     service = module.get<AttendanceService>(AttendanceService);
   });
 
+  describe('validateLessonDate', () => {
+    it('should throw BadRequestException for invalid date format', async () => {
+      await expect(
+        service.validateLessonDate('group-uuid-1', 'not-a-date'),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.validateLessonDate('group-uuid-1', '20260401'),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.validateLessonDate('group-uuid-1', '2026-13-45'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException when group not found', async () => {
+      prisma.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.validateLessonDate('non-existent', '2026-04-01'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when group is not ACTIVE', async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        ...mockGroup,
+        statusEnum: 'FORMING',
+      });
+
+      await expect(
+        service.validateLessonDate('group-uuid-1', '2026-04-01'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when date is before group startDate', async () => {
+      await expect(
+        service.validateLessonDate('group-uuid-1', '2026-02-15'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when date is after group endDate', async () => {
+      await expect(
+        service.validateLessonDate('group-uuid-1', '2026-07-15'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when date is not a scheduled lesson day', async () => {
+      // 2026-04-02 is Thursday — not in [monday, wednesday, friday]
+      await expect(
+        service.validateLessonDate('group-uuid-1', '2026-04-02'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when date is a holiday', async () => {
+      prisma.holiday.findFirst.mockResolvedValue({ name: 'Navro\'z' });
+
+      // 2026-04-01 is Wednesday — a scheduled day but a holiday
+      await expect(
+        service.validateLessonDate('group-uuid-1', '2026-04-01'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException when companyId does not match', async () => {
+      prisma.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.validateLessonDate('group-uuid-1', '2026-04-01', 999),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prisma.group.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 999 }),
+        }),
+      );
+    });
+
+    it('should pass validation for a valid lesson date', async () => {
+      // 2026-04-01 is Wednesday — scheduled day, within range, no holiday
+      const result = await service.validateLessonDate('group-uuid-1', '2026-04-01');
+
+      expect(result.group.id).toBe('group-uuid-1');
+      expect(result.parsedDate).toEqual(new Date('2026-04-01T00:00:00.000Z'));
+    });
+
+    describe('lesson time check', () => {
+      // Today's date string for time tests
+      const getTodayStr = () => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      };
+
+      // Mock group that matches today's day-of-week
+      const getTodayMockGroup = () => {
+        const now = new Date();
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        return {
+          ...mockGroup,
+          exactDays: [dayNames[now.getDay()]],
+          startDate: new Date(now.getFullYear(), 0, 1),
+          endDate: new Date(now.getFullYear(), 11, 31),
+        };
+      };
+
+      it('should throw when current time is before lesson start (Teacher)', async () => {
+        const todayGroup = {
+          ...getTodayMockGroup(),
+          lessonStartTime: '23:50',
+          lessonEndTime: '23:59',
+        };
+        prisma.group.findFirst.mockResolvedValue(todayGroup);
+
+        await expect(
+          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, ['Teacher']),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should throw when current time is after lesson end (Teacher)', async () => {
+        const todayGroup = {
+          ...getTodayMockGroup(),
+          lessonStartTime: '00:00',
+          lessonEndTime: '00:01',
+        };
+        prisma.group.findFirst.mockResolvedValue(todayGroup);
+
+        await expect(
+          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, ['Teacher']),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should bypass time check for CEO', async () => {
+        const todayGroup = {
+          ...getTodayMockGroup(),
+          lessonStartTime: '23:50',
+          lessonEndTime: '23:59',
+        };
+        prisma.group.findFirst.mockResolvedValue(todayGroup);
+
+        const result = await service.validateLessonDate(
+          'group-uuid-1', getTodayStr(), undefined, ['CEO'],
+        );
+        expect(result.group.id).toBe('group-uuid-1');
+      });
+
+      it('should bypass time check for Administrator', async () => {
+        const todayGroup = {
+          ...getTodayMockGroup(),
+          lessonStartTime: '23:50',
+          lessonEndTime: '23:59',
+        };
+        prisma.group.findFirst.mockResolvedValue(todayGroup);
+
+        const result = await service.validateLessonDate(
+          'group-uuid-1', getTodayStr(), undefined, ['Administrator'],
+        );
+        expect(result.group.id).toBe('group-uuid-1');
+      });
+
+      it('should bypass time check for Branch Director', async () => {
+        const todayGroup = {
+          ...getTodayMockGroup(),
+          lessonStartTime: '23:50',
+          lessonEndTime: '23:59',
+        };
+        prisma.group.findFirst.mockResolvedValue(todayGroup);
+
+        const result = await service.validateLessonDate(
+          'group-uuid-1', getTodayStr(), undefined, ['Branch Director'],
+        );
+        expect(result.group.id).toBe('group-uuid-1');
+      });
+
+      it('should skip time check for past dates (not today)', async () => {
+        // Non-today date: time check doesn't apply
+        const result = await service.validateLessonDate(
+          'group-uuid-1', '2026-04-01', undefined, ['Teacher'],
+        );
+        expect(result.group.id).toBe('group-uuid-1');
+      });
+
+      it('should skip time check when group has no lesson times set', async () => {
+        const todayGroup = {
+          ...getTodayMockGroup(),
+          lessonStartTime: null,
+          lessonEndTime: null,
+        };
+        prisma.group.findFirst.mockResolvedValue(todayGroup);
+
+        const result = await service.validateLessonDate(
+          'group-uuid-1', getTodayStr(), undefined, ['Teacher'],
+        );
+        expect(result.group.id).toBe('group-uuid-1');
+      });
+    });
+  });
+
   describe('getLessonDates', () => {
     it('should return lesson dates for a month', async () => {
       // April 2026: Dushanba=6,13,20,27; Chorshanba=1,8,15,22,29; Juma=3,10,17,24
@@ -93,6 +293,16 @@ describe('AttendanceService', () => {
       for (const item of result) {
         expect(['Dushanba', 'Chorshanba', 'Juma']).toContain(item.dayName); // monday=Dushanba, wednesday=Chorshanba, friday=Juma
       }
+    });
+
+    it('should pass companyId to group query', async () => {
+      await service.getLessonDates('group-uuid-1', 4, 2026, 1);
+
+      expect(prisma.group.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 1 }),
+        }),
+      );
     });
 
     it('should throw NotFoundException when group not found', async () => {
@@ -179,6 +389,24 @@ describe('AttendanceService', () => {
         service.getByDate('non-existent', '2026-04-01'),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('should throw BadRequestException for invalid date format', async () => {
+      await expect(
+        service.getByDate('group-uuid-1', 'invalid-date'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should pass companyId to group query', async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      await service.getByDate('group-uuid-1', '2026-04-01', 1);
+
+      expect(prisma.group.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 1 }),
+        }),
+      );
+    });
   });
 
   describe('save', () => {
@@ -217,6 +445,7 @@ describe('AttendanceService', () => {
         ],
       };
 
+      // 2026-04-01 is Wednesday — valid lesson day
       const result = await service.save(
         'group-uuid-1',
         '2026-04-01',
@@ -228,6 +457,13 @@ describe('AttendanceService', () => {
 
       expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
       expect(result.count).toBe(2);
+      // Verify markedMethod is MANUAL for manual attendance
+      expect(prisma.attendance.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ markedMethod: 'MANUAL' }),
+          update: expect.objectContaining({ markedMethod: 'MANUAL' }),
+        }),
+      );
       expect(entityHistoryService.recordCreate).toHaveBeenCalledTimes(1);
       expect(entityHistoryService.recordCreate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -353,6 +589,44 @@ describe('AttendanceService', () => {
         service.save('non-existent', '2026-04-01', dto, 1, ['CEO'], 1),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('should throw BadRequestException when group is not ACTIVE', async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        ...mockGroup,
+        statusEnum: 'COMPLETED',
+      });
+
+      const dto = {
+        entries: [{ studentId: 10001, status: 'PRESENT' }],
+      };
+
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when date is a holiday', async () => {
+      prisma.holiday.findFirst.mockResolvedValue({ name: 'Navro\'z' });
+
+      const dto = {
+        entries: [{ studentId: 10001, status: 'PRESENT' }],
+      };
+
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when date is not a lesson day', async () => {
+      const dto = {
+        entries: [{ studentId: 10001, status: 'PRESENT' }],
+      };
+
+      // 2026-04-02 is Thursday — not in schedule
+      await expect(
+        service.save('group-uuid-1', '2026-04-02', dto, 1, ['CEO'], 1),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('getStats', () => {
@@ -405,6 +679,20 @@ describe('AttendanceService', () => {
 
       await expect(service.getStats('non-existent')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should pass companyId to group query', async () => {
+      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.getStats('group-uuid-1', undefined, undefined, 1);
+
+      expect(prisma.group.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 1 }),
+        }),
       );
     });
   });

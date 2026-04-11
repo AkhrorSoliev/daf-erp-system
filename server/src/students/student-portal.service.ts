@@ -66,7 +66,7 @@ export class StudentPortalService {
                 course: { select: { id: true, name: true } },
                 room: { select: { id: true, name: true } },
                 teachers: {
-                  include: {
+                  select: {
                     teacher: {
                       select: { id: true, firstName: true, lastName: true },
                     },
@@ -163,7 +163,7 @@ export class StudentPortalService {
             course: { select: { id: true, name: true } },
             room: { select: { id: true, name: true } },
             teachers: {
-              include: {
+              select: {
                 teacher: {
                   select: { id: true, firstName: true, lastName: true },
                 },
