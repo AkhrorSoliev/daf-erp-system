@@ -21,6 +21,7 @@ interface DashboardRoomOccupancyProps {
   rooms: Room[];
   workingHours: { start: string; end: string };
   isTeacher?: boolean;
+  isToday?: boolean;
 }
 
 function timeToMinutes(time: string): number {
@@ -49,6 +50,7 @@ export function DashboardRoomOccupancy({
   rooms,
   workingHours,
   isTeacher,
+  isToday = true,
 }: DashboardRoomOccupancyProps) {
   const busyRooms = useMemo(() => {
     const busyIds = new Set(
@@ -87,6 +89,7 @@ export function DashboardRoomOccupancy({
   });
 
   useEffect(() => {
+    if (!isToday) return;
     const interval = setInterval(() => {
       const d = new Date();
       setNow(
@@ -94,7 +97,7 @@ export function DashboardRoomOccupancy({
       );
     }, 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isToday]);
 
   const lessonsByRoom = useMemo(() => {
     const map = new Map<string, DashboardLesson[]>();
@@ -203,12 +206,13 @@ export function DashboardRoomOccupancy({
                   const lStart = timeToMinutes(lesson.startTime);
                   const lEnd = timeToMinutes(lesson.endTime);
 
-                  const status =
-                    now >= lesson.endTime
+                  const status = isToday
+                    ? now >= lesson.endTime
                       ? "past"
                       : now >= lesson.startTime
                         ? "current"
-                        : "upcoming";
+                        : "upcoming"
+                    : "upcoming";
 
                   const bgClass =
                     status === "current"

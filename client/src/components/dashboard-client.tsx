@@ -1,21 +1,23 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format, isToday } from "date-fns";
 import {
-  Building2,
   CalendarDays,
   CalendarX,
   DoorOpen,
   GraduationCap,
+  RotateCcw,
   Users,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
@@ -46,12 +48,16 @@ export function DashboardClient() {
     user?.roles.some((r) => r.id === 4) &&
     !user?.roles.some((r) => [1, 2, 3].includes(r.id));
 
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const isTodaySelected = isToday(selectedDate);
+  const dateParam = format(selectedDate, "yyyy-MM-dd");
+
   const { data, isLoading } = useQuery({
-    queryKey: ["dashboard", "today-schedule", selectedBranch?.id],
+    queryKey: ["dashboard", "today-schedule", selectedBranch?.id, dateParam],
     queryFn: () =>
       api
         .get<TodayScheduleResponse>("/dashboard/today-schedule", {
-          params: { branchId: selectedBranch!.id },
+          params: { branchId: selectedBranch!.id, date: dateParam },
         })
         .then((r) => r.data),
     enabled: !!selectedBranch,
@@ -91,31 +97,27 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight">
-          Bosh sahifa
-        </h1>
-        <p className="text-muted-foreground">
-          {isTeacher && user
-            ? `Assalomu alaykum, ${user.firstName} ${user.lastName}`
-            : "DaF Sprachzentrum ERP tizimiga xush kelibsiz"}
-        </p>
+      <div className="flex items-center gap-2">
+        {!isTodaySelected && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSelectedDate(new Date())}
+              >
+                <RotateCcw className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Bugunga qaytish</TooltipContent>
+          </Tooltip>
+        )}
+        <DatePicker
+          value={selectedDate}
+          onChange={(d) => d && setSelectedDate(d)}
+          className="w-auto"
+        />
       </div>
-
-      {selectedBranch && (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center gap-3">
-            <Building2 className="size-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Joriy filial</p>
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{selectedBranch.name}</p>
-                <Badge variant="outline">ID: {selectedBranch.id}</Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isLoading && <DashboardScheduleSkeleton />}
 
@@ -125,7 +127,9 @@ export function DashboardClient() {
             <CalendarX className="size-5 text-orange-600 dark:text-orange-400" />
             <div>
               <p className="font-medium text-orange-800 dark:text-orange-300">
-                Bugun dam olish kuni
+                {isTodaySelected
+                  ? "Bugun dam olish kuni"
+                  : `${format(selectedDate, "dd.MM.yyyy")} — dam olish kuni`}
               </p>
               {data.holidayName && (
                 <p className="text-sm text-orange-600 dark:text-orange-400">
@@ -149,7 +153,7 @@ export function DashboardClient() {
                   <CalendarDays className="text-muted-foreground size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-muted-foreground text-xs truncate">
-                      {isTeacher ? "Bugungi darslarim" : "Bugungi darslar"}
+                      {isTeacher ? "Darslarim" : "Darslar"}
                     </p>
                     <p className="text-base sm:text-lg font-semibold">
                       {stats.lessonsCount}
@@ -159,8 +163,8 @@ export function DashboardClient() {
               </TooltipTrigger>
               <TooltipContent>
                 {isTeacher
-                  ? "Bugun sizning darslaringiz soni"
-                  : "Bugun bo'lib o'tadigan darslar soni"}
+                  ? "Tanlangan kundagi darslaringiz soni"
+                  : "Tanlangan kundagi darslar soni"}
               </TooltipContent>
             </Tooltip>
 
@@ -180,8 +184,8 @@ export function DashboardClient() {
               </TooltipTrigger>
               <TooltipContent>
                 {isTeacher
-                  ? "Bugungi darslaringizdagi jami o'quvchilar"
-                  : "Bugungi darslardagi jami o'quvchilar"}
+                  ? "Tanlangan kundagi darslaringizdagi jami o'quvchilar"
+                  : "Tanlangan kundagi darslardagi jami o'quvchilar"}
               </TooltipContent>
             </Tooltip>
 
@@ -221,7 +225,7 @@ export function DashboardClient() {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Bugun dars beruvchi o&apos;qituvchilar soni
+                    Tanlangan kunda dars beruvchi o&apos;qituvchilar soni
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -229,7 +233,15 @@ export function DashboardClient() {
           </div>
 
           {/* Daily schedule — teacher sees only their lessons */}
-          <DashboardDailySchedule lessons={myLessons} />
+          <DashboardDailySchedule
+            lessons={myLessons}
+            dateLabel={
+              isTodaySelected
+                ? "Bugungi darslar"
+                : `${format(selectedDate, "dd.MM.yyyy")} darslar`
+            }
+            isToday={isTodaySelected}
+          />
 
           {/* Room occupancy — teacher sees only their lessons */}
           <DashboardRoomOccupancy
@@ -237,6 +249,7 @@ export function DashboardClient() {
             rooms={data.rooms}
             workingHours={data.workingHours}
             isTeacher={isTeacher}
+            isToday={isTodaySelected}
           />
         </>
       )}

@@ -62,10 +62,14 @@ function getLessonProgress(startTime: string, endTime: string, now: string): num
 
 interface DashboardDailyScheduleProps {
   lessons: DashboardLesson[];
+  dateLabel?: string;
+  isToday?: boolean;
 }
 
 export function DashboardDailySchedule({
   lessons,
+  dateLabel,
+  isToday = true,
 }: DashboardDailyScheduleProps) {
   const [now, setNow] = useState(() => {
     const d = new Date();
@@ -73,6 +77,7 @@ export function DashboardDailySchedule({
   });
 
   useEffect(() => {
+    if (!isToday) return;
     const interval = setInterval(() => {
       const d = new Date();
       setNow(
@@ -80,20 +85,23 @@ export function DashboardDailySchedule({
       );
     }, 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isToday]);
+
+  // O'tgan kun — barcha darslar "Tugagan"; kelajak kun — barcha "Kutilmoqda"
+  const effectiveNow = isToday ? now : "00:00";
 
   if (lessons.length === 0) {
     return (
       <div>
         <h2 className="flex items-center gap-2 text-sm font-semibold mb-3">
           <CalendarDays className="size-4 text-muted-foreground" />
-          Bugungi darslar
+          {dateLabel ?? "Bugungi darslar"}
         </h2>
         <div className="rounded-lg border bg-card p-8 text-center">
           <CalendarX className="size-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm font-medium">Bugun darslar yo&apos;q</p>
+          <p className="text-sm font-medium">Darslar yo&apos;q</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Bugun uchun hech qanday dars rejalashtirilmagan
+            Tanlangan kun uchun hech qanday dars rejalashtirilmagan
           </p>
         </div>
       </div>
@@ -126,14 +134,12 @@ export function DashboardDailySchedule({
             </TableHeader>
             <TableBody>
               {lessons.map((lesson, index) => {
-                const status = getLessonStatus(
-                  lesson.startTime,
-                  lesson.endTime,
-                  now
-                );
+                const status = isToday
+                  ? getLessonStatus(lesson.startTime, lesson.endTime, effectiveNow)
+                  : null;
                 const progress =
                   status === "current"
-                    ? getLessonProgress(lesson.startTime, lesson.endTime, now)
+                    ? getLessonProgress(lesson.startTime, lesson.endTime, effectiveNow)
                     : 0;
                 return (
                   <TableRow
@@ -211,6 +217,9 @@ export function DashboardDailySchedule({
                         <span className="inline-block rounded-full bg-muted text-muted-foreground text-[11px] font-medium px-2 py-0.5">
                           Kutilmoqda
                         </span>
+                      )}
+                      {status === null && (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   </TableRow>

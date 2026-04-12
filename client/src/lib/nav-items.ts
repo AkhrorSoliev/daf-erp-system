@@ -3,7 +3,7 @@ import {
   GraduationCap,
   BookOpen,
   UserPlus,
-  CalendarDays,
+
   DollarSign,
   BarChart3,
   Settings,
@@ -27,7 +27,7 @@ export const navItems: NavItem[] = [
   { title: "Lidlar", url: "/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
-  { title: "Dars jadvali", url: "/schedule", icon: CalendarDays },
+
   { title: "Moliya", url: "/payments", icon: DollarSign, visibleForRoles: [1, 2, 3, 5] },
   { title: "Hisobotlar", url: "/reports", icon: BarChart3, visibleForRoles: [1, 2] },
   { title: "Sozlamalar", url: "/settings", icon: Settings, visibleForRoles: [1, 2, 3] },
