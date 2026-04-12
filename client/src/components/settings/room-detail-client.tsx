@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  CalendarDays,
-  DoorOpen,
   Loader2,
   Pencil,
   Users,
@@ -27,15 +25,25 @@ import {
 } from "@/components/ui/tooltip";
 import { useEditRoom } from "@/hooks/use-edit-room";
 import { EditRoomDrawer } from "./edit-room-drawer";
+import { RoomWeeklySchedule } from "./room-weekly-schedule";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import api from "@/lib/api";
+
+interface Teacher {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
 
 interface RoomGroup {
   id: string;
   name: string;
+  exactDays: string[];
+  lessonStartTime: string | null;
+  lessonEndTime: string | null;
+  statusEnum: string;
   course: { name: string };
-  teacher: { id: number; firstName: string; lastName: string };
-  isActive: boolean;
+  teachers: { teacher: Teacher }[];
 }
 
 interface RoomDetail {
@@ -43,9 +51,23 @@ interface RoomDetail {
   name: string;
   capacity: number | null;
   branchId: number;
-  branch: { name: string };
+  branch: {
+    name: string;
+    startOfWorkingDay: string | null;
+    endOfWorkingDay: string | null;
+  };
   groups: RoomGroup[];
 }
+
+const DAY_LABELS: Record<string, string> = {
+  monday: "Du",
+  tuesday: "Se",
+  wednesday: "Cho",
+  thursday: "Pay",
+  friday: "Ju",
+  saturday: "Sha",
+  sunday: "Ya",
+};
 
 export function RoomDetailClient({ roomId }: { roomId: string }) {
   const router = useRouter();
@@ -90,6 +112,19 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
       </div>
     );
   }
+
+  // Flatten teachers for display
+  const scheduleGroups = room.groups
+    .filter((g) => g.lessonStartTime && g.lessonEndTime && g.exactDays.length > 0)
+    .map((g) => ({
+      id: g.id,
+      name: g.name,
+      exactDays: g.exactDays,
+      lessonStartTime: g.lessonStartTime,
+      lessonEndTime: g.lessonEndTime,
+      courseName: g.course?.name ?? null,
+      teachers: g.teachers.map((gt) => gt.teacher),
+    }));
 
   return (
     <div className="space-y-6">
@@ -142,6 +177,15 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
         </Tooltip>
       </div>
 
+      {/* Dars jadvali */}
+      <RoomWeeklySchedule
+        groups={scheduleGroups}
+        workingHours={{
+          start: room.branch.startOfWorkingDay ?? "08:00",
+          end: room.branch.endOfWorkingDay ?? "20:00",
+        }}
+      />
+
       {/* Biriktirilgan guruhlar */}
       <div className="rounded-lg border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -166,21 +210,52 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
                   <TableHead>Guruh nomi</TableHead>
                   <TableHead>Kurs</TableHead>
                   <TableHead>O&apos;qituvchi</TableHead>
+                  <TableHead>Kunlar</TableHead>
+                  <TableHead>Vaqt</TableHead>
                   <TableHead>Holati</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {room.groups.map((group, index) => (
                   <TableRow key={group.id}>
-                    <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
+                    <TableCell className="border-r text-muted-foreground">
+                      {index + 1}
+                    </TableCell>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell>{group.course.name}</TableCell>
-                    <TableCell>{group.teacher.firstName} {group.teacher.lastName}</TableCell>
+                    <TableCell>
+                      {group.teachers.length > 0
+                        ? group.teachers
+                            .map(
+                              (gt) =>
+                                `${gt.teacher.firstName} ${gt.teacher.lastName}`
+                            )
+                            .join(", ")
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {group.exactDays.length > 0
+                        ? group.exactDays
+                            .map((d) => DAY_LABELS[d] ?? d)
+                            .join(", ")
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-xs tabular-nums whitespace-nowrap">
+                      {group.lessonStartTime && group.lessonEndTime
+                        ? `${group.lessonStartTime} – ${group.lessonEndTime}`
+                        : "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge
-                        variant={group.isActive ? "default" : "secondary"}
+                        variant={
+                          group.statusEnum === "ACTIVE" ? "default" : "secondary"
+                        }
                       >
-                        {group.isActive ? "Faol" : "Nofaol"}
+                        {group.statusEnum === "ACTIVE"
+                          ? "Faol"
+                          : group.statusEnum === "FORMING"
+                            ? "Shakllanmoqda"
+                            : group.statusEnum}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -189,18 +264,6 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
             </Table>
           </div>
         )}
-      </div>
-
-      {/* Dars jadvali placeholder */}
-      <div className="rounded-lg border bg-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <CalendarDays className="size-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Dars jadvali</h3>
-        </div>
-        <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-          <DoorOpen className="h-8 w-8 text-muted-foreground/50" />
-          <p className="text-sm">Hozircha darslar mavjud emas</p>
-        </div>
       </div>
 
       <EditRoomDrawer
@@ -212,7 +275,7 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
                   name: updated.name,
                   capacity: updated.capacity,
                 }
-              : prev,
+              : prev
           )
         }
       />
