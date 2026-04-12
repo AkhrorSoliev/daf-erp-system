@@ -266,24 +266,16 @@ async function main() {
   }
   console.log(`\nTalabalar: ${studentIds.length} ta yaratildi (id: ${studentIds[0]}...${studentIds[studentIds.length - 1]})`);
 
-  // Har bir guruhga 3-4 talaba enrollment qilish
+  // Har bir guruhga 2 ta talaba enrollment qilish (har bir talaba faqat 1 guruhda)
   const enrollments = [
-    // group-1: 3 talaba
-    { groupId: 'group-1', studentIds: [studentIds[0], studentIds[1], studentIds[2]] },
-    // group-2: 3 talaba
-    { groupId: 'group-2', studentIds: [studentIds[3], studentIds[4], studentIds[5]] },
-    // group-3: 3 talaba
-    { groupId: 'group-3', studentIds: [studentIds[6], studentIds[7], studentIds[8]] },
-    // group-4: 3 talaba
-    { groupId: 'group-4', studentIds: [studentIds[9], studentIds[10], studentIds[11]] },
-    // group-5: 3 talaba
-    { groupId: 'group-5', studentIds: [studentIds[0], studentIds[12], studentIds[13]] },
-    // group-6: 3 talaba
-    { groupId: 'group-6', studentIds: [studentIds[1], studentIds[14], studentIds[6]] },
-    // group-7: 3 talaba
-    { groupId: 'group-7', studentIds: [studentIds[2], studentIds[3], studentIds[9]] },
-    // group-8: 3 talaba
-    { groupId: 'group-8', studentIds: [studentIds[4], studentIds[7], studentIds[11]] },
+    { groupId: 'group-1', studentIds: [studentIds[0], studentIds[1]] },
+    { groupId: 'group-2', studentIds: [studentIds[2], studentIds[3]] },
+    { groupId: 'group-3', studentIds: [studentIds[4], studentIds[5]] },
+    { groupId: 'group-4', studentIds: [studentIds[6], studentIds[7]] },
+    { groupId: 'group-5', studentIds: [studentIds[8], studentIds[9]] },
+    { groupId: 'group-6', studentIds: [studentIds[10], studentIds[11]] },
+    { groupId: 'group-7', studentIds: [studentIds[12], studentIds[13]] },
+    { groupId: 'group-8', studentIds: [studentIds[14]] },
   ];
 
   for (const e of enrollments) {
@@ -293,7 +285,7 @@ async function main() {
       });
     }
   }
-  console.log('Enrollment: har bir guruhga 3 talaba biriktirildi');
+  console.log('Enrollment: har bir guruhga 2 talaba biriktirildi');
 
   // Sequence larni to'g'rilash (minimum 10000 — 5 xonali ID)
   await prisma.$executeRawUnsafe(

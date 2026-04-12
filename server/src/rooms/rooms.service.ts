@@ -66,22 +66,37 @@ export class RoomsService {
   async findOne(id: string) {
     const room = await this.prisma.room.findFirst({
       where: { id, deletedAt: null },
-      include: {
-        branch: { select: { name: true } },
+      select: {
+        id: true,
+        name: true,
+        capacity: true,
+        branchId: true,
+        branch: {
+          select: {
+            name: true,
+            startOfWorkingDay: true,
+            endOfWorkingDay: true,
+          },
+        },
         groups: {
-          where: { deletedAt: null },
+          where: { deletedAt: null, statusEnum: { in: ['ACTIVE', 'FORMING'] } },
           select: {
             id: true,
             name: true,
+            exactDays: true,
+            lessonStartTime: true,
+            lessonEndTime: true,
+            statusEnum: true,
             course: { select: { name: true } },
             teachers: {
-              include: {
-                teacher: { select: { id: true, firstName: true, lastName: true } },
+              select: {
+                teacher: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
               },
             },
-            isActive: true,
           },
-          orderBy: { createdAt: 'asc' },
+          orderBy: { lessonStartTime: 'asc' },
         },
       },
     });

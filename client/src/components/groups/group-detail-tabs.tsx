@@ -80,21 +80,25 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     }
   }, [group.id]);
 
-  // Davomat is the default tab — show on mount
+  // On mount (or when activeTab changes externally), activate the correct tab's data
   useEffect(() => {
-    if (!attendanceShown.current) {
+    const tab = activeTab ?? "davomat";
+    if (tab === "davomat" && !attendanceShown.current) {
       attendanceShown.current = true;
       setAttendanceVisible(true);
-    }
-  }, []);
-
-  // Handle external tab switches (e.g. "Izoh yozish" button in info card)
-  useEffect(() => {
-    if (activeTab === "izohlar" && !commentsShown.current) {
+    } else if (tab === "oquvchilar") {
+      fetchStudents();
+    } else if (tab === "statistika" && !statsShown.current) {
+      statsShown.current = true;
+      setStatsVisible(true);
+    } else if (tab === "tarix" && !historyShown.current) {
+      historyShown.current = true;
+      setHistoryVisible(true);
+    } else if (tab === "izohlar" && !commentsShown.current) {
       commentsShown.current = true;
       setCommentsVisible(true);
     }
-  }, [activeTab]);
+  }, [activeTab, fetchStudents]);
 
   const handleTabChange = (value: string) => {
     onTabChange?.(value);
