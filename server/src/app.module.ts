@@ -27,6 +27,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ReportsModule } from './reports/reports.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -58,6 +59,7 @@ import { JwtAuthGuard } from './common/guards';
     AttendanceModule,
     SearchModule,
     DashboardModule,
+    ReportsModule,
   ],
   providers: [
     {

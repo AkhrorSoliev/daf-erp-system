@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { ReportsClient } from "@/components/reports/reports-client";
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function ReportsPage() {
           Tizim hisobotlari va statistika
         </p>
       </div>
+      <ReportsClient />
     </div>
   );
 }
