@@ -109,9 +109,14 @@ const FIELD_LABELS: Record<string, string | null> = {
   roomId: null,
   courseId: null,
   branchId: null,
-  groupNumber: null,
-  statusEnum: null,
+  groupNumber: "Guruh raqami",
+  statusEnum: "Status",
   previousGroupId: null,
+  maxStudents: "Maks. o'quvchilar",
+  monthlyPayment: "Oylik to'lov",
+  capacity: "Sig'imi",
+  price: "Narxi",
+  description: "Tavsif",
   guruhId: null,
   oquvchiId: null,
   // Davomat tarixi field lari
@@ -125,7 +130,8 @@ const FIELD_LABELS: Record<string, string | null> = {
 
 function getFieldLabel(key: string): string | null {
   if (key in FIELD_LABELS) return FIELD_LABELS[key];
-  return null;
+  // FIELD_LABELS da aniq belgilanmagan maydonlarni kalit nomi bilan ko'rsatish
+  return key;
 }
 
 // --- Kontekstli action aniqlash ---
