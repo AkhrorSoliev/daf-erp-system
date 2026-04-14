@@ -255,9 +255,17 @@ export function DashboardRoomOccupancy({
                                 />
                               )}
                               <div className="relative">
-                                <p className="text-[11px] font-medium truncate leading-tight">
-                                  {lesson.groupName}
-                                </p>
+                                <div className="flex items-center gap-1">
+                                  {status === "current" && (
+                                    <span className="relative flex size-2 shrink-0">
+                                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                                      <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                                    </span>
+                                  )}
+                                  <p className="text-[11px] font-medium truncate leading-tight">
+                                    {lesson.groupName}
+                                  </p>
+                                </div>
                                 {status === "past" && (
                                   <p className="text-[10px] font-medium text-green-600 dark:text-green-400 leading-tight">
                                     Tugagan
