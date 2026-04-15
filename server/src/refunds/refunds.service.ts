@@ -8,6 +8,10 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { AttendanceStatus, ContractStatus, Prisma, RefundStatus } from '@prisma/client';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
+import {
+  assertValidTransition,
+  REFUND_TRANSITIONS,
+} from '../common/finance/status-transitions';
 
 @Injectable()
 export class RefundsService {
@@ -160,6 +164,7 @@ export class RefundsService {
     if (!refund) throw new NotFoundException('Refund topilmadi');
 
     if (dto.status === RefundStatus.REJECTED) {
+      assertValidTransition('Refund', REFUND_TRANSITIONS, refund.status, RefundStatus.REJECTED);
       return this.prisma.refund.update({
         where: { id },
         data: {
@@ -172,9 +177,7 @@ export class RefundsService {
     }
 
     if (dto.status === RefundStatus.COMPLETED) {
-      if (refund.status !== RefundStatus.REQUESTED && refund.status !== RefundStatus.APPROVED) {
-        throw new BadRequestException('Bu refundni qayta ishlash mumkin emas');
-      }
+      assertValidTransition('Refund', REFUND_TRANSITIONS, refund.status, RefundStatus.COMPLETED);
 
       const approvedAmount = dto.approvedAmount ?? refund.requestedAmount;
 
@@ -219,7 +222,8 @@ export class RefundsService {
       );
     }
 
-    // For APPROVED status
+    // For APPROVED/PROCESSING status
+    assertValidTransition('Refund', REFUND_TRANSITIONS, refund.status, dto.status);
     return this.prisma.refund.update({
       where: { id },
       data: {
