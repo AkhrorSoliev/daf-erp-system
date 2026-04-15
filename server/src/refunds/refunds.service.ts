@@ -250,4 +250,75 @@ export class RefundsService {
       },
     });
   }
+
+  /**
+   * Reverse a COMPLETED refund — posted-row-immutable rule: we don't edit
+   * the Refund row, we walk back the ledger entry and restore the contract
+   * state it mutated. Intended for "we approved by mistake" scenarios.
+   *
+   * Guardrails:
+   *   - Refund must belong to caller's company
+   *   - Refund must be COMPLETED (no-op on earlier states)
+   *   - Underlying REFUND Transaction must exist and not already be reversed
+   */
+  async reverse(
+    id: string,
+    params: { reason?: string; performedById: number; companyId: number },
+  ) {
+    const refund = await this.prisma.refund.findFirst({
+      where: { id, companyId: params.companyId },
+      select: {
+        id: true,
+        studentId: true,
+        contractId: true,
+        approvedAmount: true,
+        status: true,
+      },
+    });
+    if (!refund) throw new NotFoundException('Refund topilmadi');
+    if (refund.status !== RefundStatus.COMPLETED) {
+      throw new BadRequestException(
+        "Faqat yakunlangan refundni bekor qilish mumkin",
+      );
+    }
+
+    const ledgerEntry = await this.prisma.transaction.findFirst({
+      where: {
+        refundId: id,
+        type: 'REFUND',
+        reversedTransactionId: null,
+      },
+      select: { id: true },
+    });
+    if (!ledgerEntry) {
+      throw new BadRequestException(
+        'Refund ledger yozuvi topilmadi yoki avvalroq bekor qilingan',
+      );
+    }
+
+    const approvedAmount = refund.approvedAmount ?? 0;
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        await this.transactionsService.reverseTransaction(
+          ledgerEntry.id,
+          { performedById: params.performedById, reason: params.reason ?? 'Refund bekor qilindi' },
+          tx,
+        );
+
+        // Undo the contract paidAmount decrement done by the original
+        // refund. Contract status stays REFUNDED — operators change it
+        // explicitly if they want to reopen the contract.
+        if (approvedAmount > 0) {
+          await tx.contract.update({
+            where: { id: refund.contractId },
+            data: { paidAmount: { increment: approvedAmount } },
+          });
+        }
+
+        return { reversedRefundId: id, amount: approvedAmount };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
 }

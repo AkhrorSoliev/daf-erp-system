@@ -43,4 +43,24 @@ export class RefundsController {
   ) {
     return this.refundsService.process(id, dto, userId, companyId);
   }
+
+  /**
+   * Reverse a COMPLETED refund. CEO-only: unwinds a payout that has
+   * already moved money out of the center. Ledger-first — the Refund
+   * row stays, a reversal Transaction is written.
+   */
+  @Post(':id/reverse')
+  @Roles('CEO')
+  reverse(
+    @Param('id') id: string,
+    @Body('reason') reason: string | undefined,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.refundsService.reverse(id, {
+      reason,
+      performedById: userId,
+      companyId,
+    });
+  }
 }

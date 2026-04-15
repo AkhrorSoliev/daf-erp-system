@@ -98,6 +98,80 @@ export class PaymentsService {
   }
 
   /**
+   * Reverse a posted payment — the "posted row immutable" rule in action.
+   * Instead of editing the Payment row, we write a reversal of its ledger
+   * entry and undo the contract.paidAmount increment in the same tx. The
+   * Payment row itself stays for audit; the ledger is the source of truth
+   * for whether it counted.
+   *
+   * Guardrails:
+   *   - Payment must belong to caller's company (multi-tenant scope)
+   *   - Payment must have a matching PAYMENT Transaction (legacy rows
+   *     without one can't be reversed via this path)
+   *   - Transaction must not already be reversed
+   */
+  async reverse(
+    id: string,
+    params: { reason?: string; performedById: number; companyId: number },
+  ) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { id, companyId: params.companyId },
+      select: {
+        id: true,
+        studentId: true,
+        amount: true,
+        contractId: true,
+        status: true,
+      },
+    });
+    if (!payment) throw new NotFoundException("To'lov topilmadi");
+
+    const ledgerEntry = await this.prisma.transaction.findFirst({
+      where: {
+        paymentId: id,
+        type: 'PAYMENT',
+        reversedTransactionId: null,
+      },
+      select: { id: true },
+    });
+    if (!ledgerEntry) {
+      throw new BadRequestException(
+        "To'lovning ledger yozuvi topilmadi — bu yozuv avvalroq bekor qilingan yoki yaratilmagan",
+      );
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        await this.transactionsService.reverseTransaction(
+          ledgerEntry.id,
+          { performedById: params.performedById, reason: params.reason ?? "To'lov bekor qilindi" },
+          tx,
+        );
+
+        if (payment.contractId) {
+          await tx.contract.update({
+            where: { id: payment.contractId },
+            data: { paidAmount: { decrement: payment.amount } },
+          });
+        }
+
+        await this.entityHistoryService.recordStatusChange({
+          entityType: 'Payment',
+          entityId: id,
+          oldValues: { status: payment.status },
+          newValues: { status: 'REVERSED', reason: params.reason ?? null },
+          changedById: params.performedById,
+          companyId: params.companyId,
+          tx,
+        });
+
+        return { reversedPaymentId: id, amount: payment.amount };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
+  /**
    * Create a Payment from a verified gateway webhook or an admin attach-external
    * action. The idempotency guard is the @@unique (method, externalId, companyId)
    * on Payment — duplicate webhook retries fail on insert, not on balance math.

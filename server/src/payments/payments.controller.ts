@@ -37,6 +37,26 @@ export class PaymentsController {
    * it here to bind the real payment to the student's balance. Idempotent via
    * Payment.(method, externalId, companyId) unique.
    */
+  /**
+   * Reverse a posted payment. CEO-only because it unwinds cash that has
+   * already been recorded. Follows the append-only ledger rule: a reversal
+   * Transaction is written rather than editing the Payment row.
+   */
+  @Post(':id/reverse')
+  @Roles('CEO')
+  reverse(
+    @Param('id') id: string,
+    @Body('reason') reason: string | undefined,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.paymentsService.reverse(id, {
+      reason,
+      performedById: userId,
+      companyId,
+    });
+  }
+
   @Post('attach-external')
   attachExternal(
     @Body() dto: AttachExternalPaymentDto,
