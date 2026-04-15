@@ -590,7 +590,24 @@ export class AttendanceService {
         this.logger.error(`Cycle deduction check failed for student ${entry.studentId}`, err);
       }
 
-      // 2. Salary accrual for each teacher (per lesson, per student)
+      // 2. Coverage lookup for accrual: only earn for paid lessons (B.1).
+      const coverage = await this.prisma.transaction.findFirst({
+        where: {
+          studentId: entry.studentId,
+          enrollmentId,
+          type: 'LESSON_DEDUCTION',
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+      if (!coverage) {
+        this.logger.warn(
+          `Skipping salary accrual: student ${entry.studentId} has no payment coverage in group ${groupId}`,
+        );
+        continue;
+      }
+
+      // 3. Salary accrual for each teacher (per lesson, per student)
       for (const teacher of group.teachers) {
         try {
           await this.salaryService.createAccrual({
@@ -601,6 +618,7 @@ export class AttendanceService {
             lessonDate: parsedDate,
             perLessonCost,
             companyId,
+            deductionTransactionId: coverage.id,
           });
         } catch (err) {
           this.logger.error(`Salary accrual failed for teacher ${teacher.teacherId}`, err);

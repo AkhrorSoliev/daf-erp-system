@@ -57,27 +57,46 @@ export class RefundsService {
     }
 
     const totalLessons = contract.course.lessonPaymentCount;
-    const perLessonCost = Math.round(contract.course.price / totalLessons);
+    // Per-lesson cost from the contract's negotiated total (honors discounts),
+    // not the course list price (B.2).
+    const perLessonCost = Math.round(contract.totalAmount / totalLessons);
+
+    // Subtract refunds already approved/in-progress on this contract so
+    // a second refund request can't reclaim what was previously refunded (B.2).
+    const priorRefunds = await this.prisma.refund.aggregate({
+      where: {
+        contractId: contract.id,
+        status: {
+          in: [RefundStatus.APPROVED, RefundStatus.PROCESSING, RefundStatus.COMPLETED],
+        },
+      },
+      _sum: { approvedAmount: true },
+    });
+    const previousRefundsTotal = priorRefunds._sum.approvedAmount ?? 0;
 
     // Check refund eligibility
     let requestedAmount: number;
 
     if (!contract.startDate || (contract.startDate > new Date())) {
-      // Kurs boshlanmagan — 100% qaytarish
-      requestedAmount = contract.paidAmount;
+      // Kurs boshlanmagan — 100% qaytarish (minus oldingi refundlar)
+      requestedAmount = Math.max(0, contract.paidAmount - previousRefundsTotal);
     } else if (lessonsCompleted / totalLessons >= 0.5) {
       // 50% dan ko'pi o'tilgan — qaytarilMAYDI
       throw new BadRequestException(
         "Kursning 50% dan ortiq qismi o'tilgan. Pul qaytarilmaydi",
       );
     } else {
-      // Hisob-kitob: o'tilgan darslar narxini ushlab qolish
+      // Hisob-kitob: o'tilgan darslar narxini va oldingi refundlarni ushlab qolish
       const lessonDeduction = lessonsCompleted * perLessonCost;
-      requestedAmount = Math.max(0, contract.paidAmount - lessonDeduction);
+      requestedAmount = Math.max(
+        0,
+        contract.paidAmount - lessonDeduction - previousRefundsTotal,
+      );
     }
 
     const deductions = {
       lessons: lessonsCompleted * perLessonCost,
+      previousRefunds: previousRefundsTotal,
       tax: 0,
       bankFee: 0,
     };

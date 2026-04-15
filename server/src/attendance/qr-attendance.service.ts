@@ -420,17 +420,34 @@ export class QrAttendanceService {
           });
         }
 
-        // Salary accrual for teachers (per lesson, per student)
-        for (const teacher of groupData.teachers) {
-          await this.salaryService.createAccrual({
-            teacherId: teacher.teacherId,
+        // Coverage lookup for accrual: only earn for paid lessons (B.1).
+        const coverage = await this.prisma.transaction.findFirst({
+          where: {
             studentId,
-            groupId,
-            attendanceId: attendance.id,
-            lessonDate: parsedLessonDate,
-            perLessonCost,
-            companyId,
-          });
+            enrollmentId: enrollment.id,
+            type: 'LESSON_DEDUCTION',
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true },
+        });
+
+        if (coverage) {
+          for (const teacher of groupData.teachers) {
+            await this.salaryService.createAccrual({
+              teacherId: teacher.teacherId,
+              studentId,
+              groupId,
+              attendanceId: attendance.id,
+              lessonDate: parsedLessonDate,
+              perLessonCost,
+              companyId,
+              deductionTransactionId: coverage.id,
+            });
+          }
+        } else {
+          this.logger.warn(
+            `Skipping salary accrual: student ${studentId} has no payment coverage in group ${groupId}`,
+          );
         }
       }
     } catch (err) {
