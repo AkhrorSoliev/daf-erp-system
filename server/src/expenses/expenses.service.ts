@@ -155,10 +155,34 @@ export class ExpensesService {
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
 
-    await this.prisma.expense.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedById: userId },
+    // Find the associated EXPENSE ledger entry so we can reverse it.
+    const ledgerEntry = await this.prisma.transaction.findFirst({
+      where: {
+        expenseId: id,
+        type: 'EXPENSE',
+        reversedTransactionId: null,
+      },
+      select: { id: true },
     });
+
+    // Atomic: reverse the ledger entry and soft-delete the expense together.
+    await this.prisma.$transaction(
+      async (tx) => {
+        if (ledgerEntry) {
+          await this.transactionsService.reverseTransaction(
+            ledgerEntry.id,
+            { performedById: userId, reason: "Xarajat o'chirildi" },
+            tx,
+          );
+        }
+
+        await tx.expense.update({
+          where: { id },
+          data: { deletedAt: new Date(), deletedById: userId },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return { message: "Xarajat o'chirildi" };
   }
