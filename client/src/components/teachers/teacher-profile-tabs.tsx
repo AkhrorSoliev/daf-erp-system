@@ -34,9 +34,20 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
   const groupsFetched = useRef(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [salaryVisible, setSalaryVisible] = useState(false);
+  const [salaryLoading, setSalaryLoading] = useState(false);
+  const [salarySummary, setSalarySummary] = useState<{
+    expectedMonthly: number;
+    actualEarned: number;
+    accrualCount: number;
+    paidTotal: number;
+    groups: { groupName: string; activeStudents: number; salaryType: string | null; salaryValue: number; expectedMonthly: number }[];
+    hasConfig: boolean;
+  } | null>(null);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
   const historyShown = useRef(false);
   const commentsShown = useRef(false);
+  const salaryShown = useRef(false);
 
   const handleOptimisticAdd = useCallback((comment: CommentData) => {
     setOptimisticComments((prev) => [comment, ...prev]);
@@ -82,6 +93,15 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
     if (value === "izohlar" && !commentsShown.current) {
       commentsShown.current = true;
       setCommentsVisible(true);
+    }
+    if (value === "ish-haqi" && !salaryShown.current) {
+      salaryShown.current = true;
+      setSalaryVisible(true);
+      setSalaryLoading(true);
+      api.get(`/teachers/${teacher.id}/salary-summary`)
+        .then((res) => setSalarySummary(res.data))
+        .catch(() => {})
+        .finally(() => setSalaryLoading(false));
     }
   };
 
@@ -141,7 +161,68 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
       {/* Ish haqi — faqat CEO va Branch Director */}
       {canSeeSalary && (
         <TabsContent value="ish-haqi">
-          <EmptyState message="Ish haqi ma'lumotlari mavjud emas" />
+          {salaryLoading ? (
+            <div className="flex h-24 items-center justify-center rounded-md border">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : salarySummary && salaryVisible ? (
+            <div className="space-y-4">
+              {/* Summary cards */}
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Kutilayotgan (oylik)</p>
+                  <p className="text-lg font-bold text-amber-600">
+                    {salarySummary.expectedMonthly.toLocaleString("en-US")} so&apos;m
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Haqiqiy yig&apos;ilgan</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {salarySummary.actualEarned.toLocaleString("en-US")} so&apos;m
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Dars-o&apos;quvchi soni</p>
+                  <p className="text-lg font-bold">{salarySummary.accrualCount}</p>
+                </div>
+                <div className="rounded-lg border p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Jami to&apos;langan</p>
+                  <p className="text-lg font-bold">{salarySummary.paidTotal.toLocaleString("en-US")} so&apos;m</p>
+                </div>
+              </div>
+
+              {/* Per-group breakdown */}
+              {salarySummary.groups.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Guruhlar bo&apos;yicha</h4>
+                  <div className="space-y-2">
+                    {salarySummary.groups.map((g) => (
+                      <div key={g.groupName} className="flex items-center justify-between rounded-md border p-3 text-sm">
+                        <div>
+                          <p className="font-medium">{g.groupName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {g.activeStudents} o&apos;quvchi
+                            {g.salaryType ? ` · ${g.salaryType === "PERCENTAGE" ? `${g.salaryValue}%` : `${g.salaryValue.toLocaleString("en-US")} so'm`}` : ""}
+                          </p>
+                        </div>
+                        <p className="font-medium text-amber-600">
+                          ~{g.expectedMonthly.toLocaleString("en-US")} so&apos;m/oy
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!salarySummary.hasConfig && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                  Bu ustoz uchun oylik konfiguratsiyasi belgilanmagan. Moliya bo&apos;limidan sozlang.
+                </div>
+              )}
+            </div>
+          ) : (
+            <EmptyState message="Ish haqi ma'lumotlari mavjud emas" />
+          )}
         </TabsContent>
       )}
     </Tabs>

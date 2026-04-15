@@ -408,4 +408,37 @@ export class StudentPortalService {
 
     return { photo: photoUrl };
   }
+
+  async getPaymentHistory(studentId: number) {
+    const [payments, transactions] = await Promise.all([
+      this.prisma.payment.findMany({
+        where: { studentId },
+        select: {
+          id: true,
+          amount: true,
+          method: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+      this.prisma.transaction.findMany({
+        where: { studentId },
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          balanceBefore: true,
+          balanceAfter: true,
+          description: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+    ]);
+
+    return { payments, transactions };
+  }
 }

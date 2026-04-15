@@ -1,0 +1,94 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
+import { SalaryService } from './salary.service';
+import { CreateSalaryConfigDto, GlobalSalaryConfigDto, UpdateSalaryConfigDto } from './dto/salary-config.dto';
+import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
+import { CurrentUser, Roles } from '../common/decorators';
+import { RolesGuard } from '../common/guards';
+
+@Controller('salary')
+@UseGuards(RolesGuard)
+@Roles('CEO', 'Branch Director')
+export class SalaryController {
+  constructor(private salaryService: SalaryService) {}
+
+  // ===== CONFIG =====
+
+  @Get('config/:teacherId')
+  getConfig(@Param('teacherId', ParseIntPipe) teacherId: number) {
+    return this.salaryService.getConfig(teacherId);
+  }
+
+  @Post('config')
+  createConfig(
+    @Body() dto: CreateSalaryConfigDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.createConfig(dto, companyId);
+  }
+
+  @Post('config/global')
+  applyGlobalConfig(
+    @Body() dto: GlobalSalaryConfigDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.applyGlobalConfig(dto, companyId);
+  }
+
+  @Patch('config/:id')
+  updateConfig(
+    @Param('id') id: string,
+    @Body() dto: UpdateSalaryConfigDto,
+  ) {
+    return this.salaryService.updateConfig(id, dto);
+  }
+
+  // ===== ACCRUALS =====
+
+  @Get('accruals/:teacherId')
+  getAccruals(
+    @Param('teacherId', ParseIntPipe) teacherId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getAccruals(teacherId, companyId);
+  }
+
+  // ===== PAYMENTS =====
+
+  @Get('payments')
+  findPayments(
+    @Query() query: SalaryPaymentQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.findPayments(query, companyId);
+  }
+
+  @Post('calculate')
+  @Roles('CEO')
+  calculateSalaries(@CurrentUser('companyId') companyId: number) {
+    return this.salaryService.calculateMonthlySalaries(companyId);
+  }
+
+  @Patch('payments/:id/approve')
+  @Roles('CEO')
+  approvePayment(@Param('id') id: string) {
+    return this.salaryService.approvePayment(id);
+  }
+
+  @Post('payments/:id/pay')
+  payPayment(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.salaryService.payPayment(id, userId);
+  }
+}

@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { TeachersController } from './teachers.controller';
 import { TeachersService } from './teachers.service';
+import { SalaryService } from '../salary/salary.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -27,6 +28,7 @@ describe('TeachersController — role guards', () => {
       controllers: [TeachersController],
       providers: [
         { provide: TeachersService, useValue: mockService },
+        { provide: SalaryService, useValue: { getTeacherSalarySummary: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
 

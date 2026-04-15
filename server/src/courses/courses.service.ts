@@ -34,6 +34,7 @@ export class CoursesService {
           name: true,
           description: true,
           price: true,
+          lessonPaymentCount: true,
           courseDuration: true,
           lessonDuration: true,
           lessonMinutes: true,

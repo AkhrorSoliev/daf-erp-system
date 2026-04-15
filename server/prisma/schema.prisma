@@ -140,6 +140,71 @@ enum AiUseCaseType {
   TEST_GENERATION
 }
 
+// ===== FINANCIAL SYSTEM ENUMS =====
+
+enum PaymentMethod {
+  CASH
+  PAYME
+  CLICK
+  UZUM
+  TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum TransactionType {
+  PAYMENT
+  LESSON_DEDUCTION
+  REFUND
+  SALARY_ACCRUAL
+  SALARY_PAYMENT
+  EXPENSE
+  ADJUSTMENT
+  TAX
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum SalaryType {
+  PERCENTAGE
+  FIXED_PER_STUDENT
+}
+
+enum SalaryPaymentStatus {
+  CALCULATED
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum ExpenseCategory {
+  RENT
+  UTILITIES
+  SUPPLIES
+  MARKETING
+  OTHER
+}
+
 model Role {
   id    Int    @id
   name  String @unique
@@ -199,6 +264,21 @@ model User {
   markedAttendances  Attendance[]       @relation("AttendanceMarkedBy")
   student            Student?           @relation("StudentUser")
   aiConversations    AiConversation[]   @relation("UserAiConversations")
+
+  // Financial relations (teacher)
+  teacherSalaryConfigs  TeacherSalaryConfig[] @relation("TeacherSalaryConfigs")
+  teacherSalaryPayments SalaryPayment[]       @relation("TeacherSalaryPayments")
+  teacherSalaryAccruals SalaryAccrual[]       @relation("TeacherSalaryAccruals")
+  teacherTransactions   Transaction[]         @relation("TeacherTransactions")
+
+  // Financial relations (operator)
+  receivedPayments      Payment[]             @relation("PaymentReceivedBy")
+  performedTransactions Transaction[]         @relation("TransactionPerformedBy")
+  processedRefunds      Refund[]              @relation("RefundProcessedBy")
+  paidSalaries          SalaryPayment[]       @relation("SalaryPaidBy")
+  createdExpenses       Expense[]             @relation("ExpenseCreatedBy")
+  deletedExpenses       Expense[]             @relation("ExpenseDeletedBy")
+  deletedContracts      Contract[]            @relation("ContractDeletedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -284,17 +364,18 @@ model Room {
 }
 
 model Course {
-  id             String       @id @default(uuid())
-  name           String
-  description    String?
-  price          Int
-  courseDuration Int?
-  lessonDuration Int?
-  lessonMinutes  Int?
-  isActive       Boolean      @default(true)
-  status         CourseStatus @default(ACTIVE)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                 String       @id @default(uuid())
+  name               String
+  description        String?
+  price              Int
+  lessonPaymentCount Int          @default(12)
+  courseDuration     Int?
+  lessonDuration     Int?
+  lessonMinutes      Int?
+  isActive           Boolean      @default(true)
+  status             CourseStatus @default(ACTIVE)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -310,7 +391,8 @@ model Course {
   deletedBy       User?     @relation("CourseDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  groups Group[]
+  groups    Group[]
+  contracts Contract[]
 
   @@index([deletedAt])
   @@index([status])
@@ -359,6 +441,12 @@ model Student {
   smsMessages     SmsMessage[]
   attendances     Attendance[]
   aiConversations AiConversation[] @relation("StudentAiConversations")
+
+  // Financial relations
+  payments     Payment[]
+  transactions Transaction[]  @relation("StudentTransactions")
+  contracts    Contract[]
+  refunds      Refund[]
 
   @@index([deletedAt])
   @@index([status])
@@ -440,6 +528,10 @@ model Group {
   students    User[]       @relation("StudentGroups")
   enrollments Enrollment[]
   attendances Attendance[]
+
+  // Financial relations
+  contracts            Contract[]
+  teacherSalaryConfigs TeacherSalaryConfig[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -702,4 +794,228 @@ model AiChatMessage {
   createdAt        DateTime       @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// ===== FINANCIAL SYSTEM MODELS =====
+
+model Payment {
+  id                 String        @id @default(uuid())
+  studentId          Int
+  student            Student       @relation(fields: [studentId], references: [id])
+  contractId         String?
+  contract           Contract?     @relation(fields: [contractId], references: [id])
+  amount             Int
+  method             PaymentMethod
+  status             PaymentStatus @default(COMPLETED)
+  externalId         String?
+  providerFee        Int?
+  providerFeePercent Float?
+  receiptNumber      String?
+  note               String?
+  receivedById       Int?
+  receivedBy         User?         @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  branchId           Int?
+  companyId          Int
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  transactions Transaction[]
+
+  @@index([studentId])
+  @@index([companyId, createdAt])
+  @@index([status])
+  @@index([method])
+}
+
+model Transaction {
+  id              String          @id @default(uuid())
+  type            TransactionType
+  amount          Int
+  balanceBefore   Int
+  balanceAfter    Int
+  description     String?
+
+  studentId       Int?
+  student         Student?        @relation("StudentTransactions", fields: [studentId], references: [id])
+  teacherId       Int?
+  teacher         User?           @relation("TeacherTransactions", fields: [teacherId], references: [id])
+
+  paymentId       String?
+  payment         Payment?        @relation(fields: [paymentId], references: [id])
+  attendanceId    String?
+  salaryPaymentId String?
+  salaryPayment   SalaryPayment?  @relation(fields: [salaryPaymentId], references: [id])
+  refundId        String?
+  refund          Refund?         @relation(fields: [refundId], references: [id])
+  enrollmentId    String?
+
+  performedById   Int?
+  performedBy     User?           @relation("TransactionPerformedBy", fields: [performedById], references: [id])
+  branchId        Int?
+  companyId       Int
+  createdAt       DateTime        @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([teacherId, createdAt])
+  @@index([type])
+  @@index([companyId, createdAt])
+  @@index([branchId])
+}
+
+model Contract {
+  id              String         @id @default(uuid())
+  contractNumber  String         @unique
+  studentId       Int
+  student         Student        @relation(fields: [studentId], references: [id])
+  courseId         String
+  course          Course         @relation(fields: [courseId], references: [id])
+  groupId         String?
+  group           Group?         @relation(fields: [groupId], references: [id])
+  branchId        Int
+
+  totalAmount     Int
+  paidAmount      Int            @default(0)
+  startDate       DateTime?
+  endDate         DateTime?
+  status          ContractStatus @default(DRAFT)
+
+  statusChangedAt    DateTime?
+  statusChangedById  Int?
+  statusChangeReason String?
+
+  signedAt        DateTime?
+  signedDocUrl    String?
+
+  companyId       Int
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?          @relation("ContractDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  payments Payment[]
+  refunds  Refund[]
+
+  @@index([studentId])
+  @@index([companyId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model TeacherSalaryConfig {
+  id          String     @id @default(uuid())
+  teacherId   Int
+  teacher     User       @relation("TeacherSalaryConfigs", fields: [teacherId], references: [id])
+  groupId     String?
+  group       Group?     @relation(fields: [groupId], references: [id])
+  salaryType  SalaryType
+  value       Int
+  isActive    Boolean    @default(true)
+  companyId   Int
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([teacherId, groupId])
+  @@index([teacherId])
+  @@index([companyId])
+}
+
+model SalaryAccrual {
+  id              String         @id @default(uuid())
+  teacherId       Int
+  teacher         User           @relation("TeacherSalaryAccruals", fields: [teacherId], references: [id])
+  studentId       Int
+  groupId         String
+  attendanceId    String
+  lessonDate      DateTime       @db.Date
+  amount          Int
+  salaryPaymentId String?
+  salaryPayment   SalaryPayment? @relation(fields: [salaryPaymentId], references: [id])
+  companyId       Int
+  createdAt       DateTime       @default(now())
+
+  @@unique([teacherId, studentId, groupId, lessonDate])
+  @@index([teacherId, salaryPaymentId])
+  @@index([companyId])
+}
+
+model SalaryPayment {
+  id              String              @id @default(uuid())
+  teacherId       Int
+  teacher         User                @relation("TeacherSalaryPayments", fields: [teacherId], references: [id])
+  periodStart     DateTime
+  periodEnd       DateTime
+  grossAmount     Int
+  taxAmount       Int                 @default(0)
+  netAmount       Int
+  status          SalaryPaymentStatus @default(CALCULATED)
+  paidAt          DateTime?
+  paidById        Int?
+  paidBy          User?               @relation("SalaryPaidBy", fields: [paidById], references: [id])
+  note            String?
+  companyId       Int
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  transactions Transaction[]
+  accruals     SalaryAccrual[]
+
+  @@index([teacherId])
+  @@index([companyId, periodEnd])
+  @@index([status])
+}
+
+model Refund {
+  id               String       @id @default(uuid())
+  studentId        Int
+  student          Student      @relation(fields: [studentId], references: [id])
+  contractId       String
+  contract         Contract     @relation(fields: [contractId], references: [id])
+  requestedAmount  Int
+  approvedAmount   Int?
+  lessonsCompleted Int
+  totalLessons     Int
+  deductions       Json?
+  status           RefundStatus @default(REQUESTED)
+  reason           String?
+  processedById    Int?
+  processedBy      User?        @relation("RefundProcessedBy", fields: [processedById], references: [id])
+  processedAt      DateTime?
+  dueDate          DateTime?
+  companyId        Int
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  transactions Transaction[]
+
+  @@index([studentId])
+  @@index([contractId])
+  @@index([companyId])
+  @@index([status])
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  category    ExpenseCategory
+  amount      Int
+  description String
+  date        DateTime        @db.Date
+  branchId    Int?
+  receiptUrl  String?
+  createdById Int
+  createdBy   User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  companyId   Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?       @relation("ExpenseDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  @@index([companyId, date])
+  @@index([category])
+  @@index([deletedAt])
 }

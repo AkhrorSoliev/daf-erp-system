@@ -3,6 +3,8 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsService } from '../transactions/transactions.service';
+import { SalaryService } from '../salary/salary.service';
 
 const mockGroup = {
   id: 'group-uuid-1',
@@ -47,6 +49,12 @@ describe('AttendanceService', () => {
     prisma = {
       group: {
         findFirst: jest.fn().mockResolvedValue(mockGroup),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'group-uuid-1',
+          branchId: 1,
+          course: { price: 800000, lessonPaymentCount: 12 },
+          teachers: [{ teacherId: 20001 }],
+        }),
       },
       holiday: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -77,6 +85,8 @@ describe('AttendanceService', () => {
         AttendanceService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
+        { provide: TransactionsService, useValue: { deductLessonFee: jest.fn(), recordPayment: jest.fn() } },
+        { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
       ],
     }).compile();
 

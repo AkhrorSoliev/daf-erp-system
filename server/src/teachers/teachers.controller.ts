@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Param, Query, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { TeachersService } from './teachers.service';
+import { SalaryService } from '../salary/salary.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
@@ -9,7 +10,10 @@ import { RolesGuard } from '../common/guards';
 
 @Controller('teachers')
 export class TeachersController {
-  constructor(private teachersService: TeachersService) {}
+  constructor(
+    private teachersService: TeachersService,
+    private salaryService: SalaryService,
+  ) {}
 
   @Get()
   @UseGuards(RolesGuard)
@@ -51,6 +55,16 @@ export class TeachersController {
     @CurrentUser('id') userId: number,
   ) {
     return this.teachersService.changeStatus(id, dto, userId);
+  }
+
+  @Get(':id/salary-summary')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director')
+  getSalarySummary(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getTeacherSalarySummary(id, companyId);
   }
 
   @Get(':id/status-history')

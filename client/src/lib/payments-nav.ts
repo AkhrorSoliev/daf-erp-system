@@ -4,6 +4,7 @@ import {
   Receipt,
   Banknote,
   UserMinus,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,4 +22,5 @@ export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Xarajatlar", url: "/payments/expenses", icon: Receipt },
   { title: "Ish haqi", url: "/payments/salary", icon: Banknote, visibleForRoles: [1, 2] },
   { title: "Qarzdorlar", url: "/payments/debtors", icon: UserMinus },
+  { title: "Shartnomalar", url: "/payments/contracts", icon: FileText },
 ];

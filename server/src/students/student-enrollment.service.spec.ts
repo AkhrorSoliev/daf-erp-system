@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsService } from '../transactions/transactions.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('StudentEnrollmentService', () => {
@@ -34,10 +35,14 @@ describe('StudentEnrollmentService', () => {
       group: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'ACTIVE',
+          courseId: 'course-1', branchId: 1,
           course: { name: 'Deutsch A1' },
           days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
         }),
         findUnique: jest.fn().mockResolvedValue({ name: 'A1' }),
+      },
+      course: {
+        findUnique: jest.fn().mockResolvedValue({ price: 800000, lessonPaymentCount: 12 }),
       },
     };
 
@@ -46,6 +51,7 @@ describe('StudentEnrollmentService', () => {
         StudentEnrollmentService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        { provide: TransactionsService, useValue: { deductLessonFee: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();

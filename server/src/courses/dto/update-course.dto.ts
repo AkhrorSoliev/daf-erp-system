@@ -35,6 +35,12 @@ export class UpdateCourseDto {
   price?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  lessonPaymentCount?: number;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

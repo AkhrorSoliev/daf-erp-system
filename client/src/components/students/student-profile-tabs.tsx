@@ -153,6 +153,11 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
   const [historyVisible, setHistoryVisible] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [smsVisible, setSmsVisible] = useState(false);
+  const [paymentsVisible, setPaymentsVisible] = useState(false);
+  const paymentsShown = useRef(false);
+  const [payments, setPayments] = useState<{ id: string; amount: number; method: string; createdAt: string; receivedBy: { firstName: string; lastName: string } | null }[]>([]);
+  const [transactions, setTransactions] = useState<{ id: string; type: string; amount: number; balanceBefore: number; balanceAfter: number; description: string | null; createdAt: string }[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
   const [smsCount, setSmsCount] = useState<number | null>(null);
   const [historyCount, setHistoryCount] = useState<number | null>(null);
@@ -203,6 +208,18 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
       smsShown.current = true;
       setSmsVisible(true);
     }
+    if (value === "tolovlar" && !paymentsShown.current) {
+      paymentsShown.current = true;
+      setPaymentsVisible(true);
+      setPaymentsLoading(true);
+      Promise.all([
+        api.get(`/payments/student/${student.id}`, { params: { pageSize: 20 } }),
+        api.get(`/transactions/student/${student.id}`, { params: { pageSize: 20 } }),
+      ]).then(([pRes, tRes]) => {
+        setPayments(pRes.data.data);
+        setTransactions(tRes.data.data);
+      }).catch(() => {}).finally(() => setPaymentsLoading(false));
+    }
   };
 
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
@@ -245,6 +262,7 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
     <Tabs value={activeTab ?? "guruhlar"} className="w-full" onValueChange={(v) => { onTabChange?.(v); handleTabChange(v); }}>
       <TabsList className="w-full justify-start overflow-x-auto">
         <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
+        {canManage && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
         {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
         {canManage && <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>}
         {canManage && (
@@ -321,6 +339,107 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
             </Table>
           </div>
         </div>
+      </TabsContent>
+
+      {/* To'lovlar */}
+      <TabsContent value="tolovlar">
+        {paymentsLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 rounded" />
+            ))}
+          </div>
+        ) : paymentsVisible ? (
+          <div className="space-y-6">
+            {/* Balans */}
+            <div className="rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">Joriy balans</p>
+              <p className={`text-2xl font-bold ${student.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {student.balance.toLocaleString("en-US")} so&apos;m
+              </p>
+            </div>
+
+            {/* To'lov tarixi */}
+            {payments.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">To&apos;lov tarixi</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12 border-r">#</TableHead>
+                      <TableHead>Summa</TableHead>
+                      <TableHead>Usul</TableHead>
+                      <TableHead>Qabul qildi</TableHead>
+                      <TableHead>Sana</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((p, i) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-green-600 font-medium">
+                          +{p.amount.toLocaleString("en-US")} so&apos;m
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{p.method}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {p.receivedBy ? `${p.receivedBy.firstName} ${p.receivedBy.lastName}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(p.createdAt), "dd.MM.yyyy, HH:mm")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* Balans tarixi */}
+            {transactions.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Balans tarixi</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12 border-r">#</TableHead>
+                      <TableHead>Turi</TableHead>
+                      <TableHead>Summa</TableHead>
+                      <TableHead>Balans</TableHead>
+                      <TableHead>Sana</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((t, i) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-sm">{t.description || t.type}</TableCell>
+                        <TableCell className={`font-medium ${t.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {t.amount >= 0 ? "+" : ""}{t.amount.toLocaleString("en-US")} so&apos;m
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {t.balanceAfter.toLocaleString("en-US")} so&apos;m
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {payments.length === 0 && transactions.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Hali to&apos;lov yoki tranzaksiya mavjud emas
+              </p>
+            )}
+          </div>
+        ) : (
+          <EmptyState message="To'lov ma'lumotlari mavjud emas" />
+        )}
       </TabsContent>
 
       {/* Izohlar */}
