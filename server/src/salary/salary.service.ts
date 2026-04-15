@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -16,6 +17,8 @@ import {
 
 @Injectable()
 export class SalaryService {
+  private readonly logger = new Logger(SalaryService.name);
+
   constructor(
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
@@ -161,6 +164,28 @@ export class SalaryService {
   }) {
     if (!params.deductionTransactionId) {
       // Student has no active payment cycle — teacher does not earn for this lesson.
+      return null;
+    }
+
+    // Period-closed policy (audit #17): if the lesson date falls inside a
+    // SalaryPayment period that is already APPROVED or PAID for this teacher,
+    // the period is closed and a new accrual would never be picked up by
+    // any salary run. Refuse to write and log — admins should use an
+    // explicit correction flow instead of silently leaving orphan rows.
+    const closedPeriod = await this.prisma.salaryPayment.findFirst({
+      where: {
+        userId: params.teacherId,
+        companyId: params.companyId,
+        status: { in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID] },
+        periodStart: { lte: params.lessonDate },
+        periodEnd: { gte: params.lessonDate },
+      },
+      select: { id: true, status: true },
+    });
+    if (closedPeriod) {
+      this.logger.warn(
+        `Refusing accrual for closed period: teacher ${params.teacherId}, lessonDate ${params.lessonDate.toISOString()} (SalaryPayment ${closedPeriod.id} is ${closedPeriod.status})`,
+      );
       return null;
     }
 

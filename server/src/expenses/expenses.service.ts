@@ -62,18 +62,19 @@ export class ExpensesService {
           tx,
         );
 
+        await this.entityHistoryService.recordCreate({
+          entityType: 'Expense',
+          entityId: expense.id,
+          newValues: expense,
+          changedById: userId,
+          companyId,
+          tx,
+        });
+
         return expense;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-
-    await this.entityHistoryService.recordCreate({
-      entityType: 'Expense',
-      entityId: expense.id,
-      newValues: expense,
-      changedById: userId,
-      companyId,
-    });
 
     return expense;
   }
@@ -185,19 +186,20 @@ export class ExpensesService {
           );
         }
 
+        await this.entityHistoryService.recordUpdate({
+          entityType: 'Expense',
+          entityId: id,
+          oldValues: existing,
+          newValues: updated,
+          changedById: userId,
+          companyId: existing.companyId,
+          tx,
+        });
+
         return updated;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-
-    await this.entityHistoryService.recordUpdate({
-      entityType: 'Expense',
-      entityId: id,
-      oldValues: existing,
-      newValues: expense,
-      changedById: userId,
-      companyId: existing.companyId,
-    });
 
     return expense;
   }

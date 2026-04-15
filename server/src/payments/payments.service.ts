@@ -78,19 +78,21 @@ export class PaymentsService {
           select: { balance: true },
         });
 
+        // Audit write inside tx so it can't drift from the payment it
+        // describes — if history insert fails, the whole payment rolls back.
+        await this.entityHistoryService.recordCreate({
+          entityType: 'Payment',
+          entityId: payment.id,
+          newValues: payment,
+          changedById: userId,
+          companyId,
+          tx,
+        });
+
         return { payment, studentBalance: updatedStudent?.balance };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-
-    // Audit trail (outside tx — not critical to payment atomicity)
-    await this.entityHistoryService.recordCreate({
-      entityType: 'Payment',
-      entityId: payment.id,
-      newValues: payment,
-      changedById: userId,
-      companyId,
-    });
 
     return { ...payment, studentBalance };
   }
