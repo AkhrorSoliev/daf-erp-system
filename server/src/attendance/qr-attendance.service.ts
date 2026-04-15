@@ -410,14 +410,28 @@ export class QrAttendanceService {
         });
 
         if (cyclesPaid > cyclesDeducted) {
-          await this.transactionsService.deductLessonFee({
-            studentId,
-            amount: price,
-            attendanceId: attendance.id,
-            enrollmentId: enrollment.id,
-            companyId,
-            branchId: groupData.branchId,
+          // Prepaid guard — same rule as manual attendance. QR already
+          // blocks scans for balance < 0 upstream, but we repeat the check
+          // here because the block allows balance = 0 (fully consumed
+          // prepaid) through, and that case can't cover a new cycle.
+          const studentRow = await this.prisma.student.findUnique({
+            where: { id: studentId },
+            select: { balance: true },
           });
+          if ((studentRow?.balance ?? 0) >= price) {
+            await this.transactionsService.deductLessonFee({
+              studentId,
+              amount: price,
+              attendanceId: attendance.id,
+              enrollmentId: enrollment.id,
+              companyId,
+              branchId: groupData.branchId,
+            });
+          } else {
+            this.logger.warn(
+              `Skipping cycle deduction: student ${studentId} balance (${studentRow?.balance ?? 0}) insufficient for cycle fee (${price}) in group ${groupId}`,
+            );
+          }
         }
 
         // Coverage lookup for accrual: only earn for paid lessons (B.1).

@@ -86,32 +86,10 @@ export class StudentEnrollmentService {
       },
     });
 
-    // Deduct first payment cycle from student balance
-    const course = await this.prisma.course.findUnique({
-      where: { id: group.courseId },
-      select: { price: true, lessonPaymentCount: true },
-    });
-    if (course && course.price > 0) {
-      try {
-        await this.transactionsService.deductLessonFee({
-          studentId,
-          amount: course.price,
-          attendanceId: enrollment.id,
-          enrollmentId: enrollment.id,
-          companyId: student.companyId,
-          branchId: group.branchId,
-        });
-        this.logger.log(
-          `First cycle deducted: student ${studentId}, amount ${course.price}, group ${groupId}`,
-        );
-      } catch (err) {
-        // Enrollment yaratildi lekin balans yechilmadi — admin xabardor qilinadi
-        this.logger.error(
-          `OGOHLANTIRISH: Enrollment yaratildi (${enrollment.id}) lekin birinchi sikl to'lovi yechilmadi! Student: ${studentId}, Group: ${groupId}, Amount: ${course.price}`,
-          err,
-        );
-      }
-    }
+    // Prepaid model (post-audit): do NOT deduct a cycle at enrollment.
+    // Deduction only happens in attendance when the student actually has
+    // the balance to cover the cycle. This prevents fake coverage entries
+    // that made teachers accrue salary for students who never paid.
 
     await this.entityHistoryService.recordCreate({
       entityType: 'Enrollment',
