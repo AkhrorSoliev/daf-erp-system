@@ -23,9 +23,9 @@ export class SalaryController {
 
   // ===== CONFIG =====
 
-  @Get('config/:teacherId')
-  getConfig(@Param('teacherId', ParseIntPipe) teacherId: number) {
-    return this.salaryService.getConfig(teacherId);
+  @Get('config/:userId')
+  getConfig(@Param('userId', ParseIntPipe) userId: number) {
+    return this.salaryService.getConfig(userId);
   }
 
   @Post('config')
@@ -54,12 +54,12 @@ export class SalaryController {
 
   // ===== ACCRUALS =====
 
-  @Get('accruals/:teacherId')
+  @Get('accruals/:userId')
   getAccruals(
-    @Param('teacherId', ParseIntPipe) teacherId: number,
+    @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.getAccruals(teacherId, companyId);
+    return this.salaryService.getAccruals(userId, companyId);
   }
 
   // ===== PAYMENTS =====

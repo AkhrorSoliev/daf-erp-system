@@ -18,9 +18,9 @@ export class SalaryService {
 
   // ===== SALARY CONFIG =====
 
-  async getConfig(teacherId: number) {
-    return this.prisma.teacherSalaryConfig.findMany({
-      where: { teacherId, isActive: true },
+  async getConfig(userId: number) {
+    return this.prisma.employeeSalaryConfig.findMany({
+      where: { userId, isActive: true },
       select: {
         id: true,
         salaryType: true,
@@ -35,17 +35,22 @@ export class SalaryService {
   }
 
   async createConfig(dto: CreateSalaryConfigDto, companyId: number) {
-    // Prisma unique constraint with nullable field needs findFirst + create/update
-    const existing = await this.prisma.teacherSalaryConfig.findFirst({
+    if (dto.salaryType === SalaryType.FIXED_MONTHLY && dto.groupId) {
+      throw new BadRequestException(
+        "FIXED_MONTHLY oylik turi guruh bilan bog'lab bo'lmaydi",
+      );
+    }
+
+    const existing = await this.prisma.employeeSalaryConfig.findFirst({
       where: {
-        teacherId: dto.teacherId,
+        userId: dto.userId,
         groupId: dto.groupId ?? null,
         companyId,
       },
     });
 
     if (existing) {
-      return this.prisma.teacherSalaryConfig.update({
+      return this.prisma.employeeSalaryConfig.update({
         where: { id: existing.id },
         data: {
           salaryType: dto.salaryType,
@@ -55,9 +60,9 @@ export class SalaryService {
       });
     }
 
-    return this.prisma.teacherSalaryConfig.create({
+    return this.prisma.employeeSalaryConfig.create({
       data: {
-        teacherId: dto.teacherId,
+        userId: dto.userId,
         groupId: dto.groupId ?? null,
         salaryType: dto.salaryType,
         value: dto.value,
@@ -67,7 +72,12 @@ export class SalaryService {
   }
 
   async applyGlobalConfig(dto: GlobalSalaryConfigDto, companyId: number) {
-    // Get all active teachers
+    if (dto.salaryType === SalaryType.FIXED_MONTHLY) {
+      throw new BadRequestException(
+        "FIXED_MONTHLY oylik turini global qo'llab bo'lmaydi — har xodim uchun alohida belgilang",
+      );
+    }
+
     const teachers = await this.prisma.groupTeacher.findMany({
       where: {
         group: { deletedAt: null, companyId },
@@ -78,18 +88,18 @@ export class SalaryService {
 
     const results = await Promise.all(
       teachers.map(async (t) => {
-        const existing = await this.prisma.teacherSalaryConfig.findFirst({
-          where: { teacherId: t.teacherId, groupId: null, companyId },
+        const existing = await this.prisma.employeeSalaryConfig.findFirst({
+          where: { userId: t.teacherId, groupId: null, companyId },
         });
         if (existing) {
-          return this.prisma.teacherSalaryConfig.update({
+          return this.prisma.employeeSalaryConfig.update({
             where: { id: existing.id },
             data: { salaryType: dto.salaryType, value: dto.value, isActive: true },
           });
         }
-        return this.prisma.teacherSalaryConfig.create({
+        return this.prisma.employeeSalaryConfig.create({
           data: {
-            teacherId: t.teacherId,
+            userId: t.teacherId,
             groupId: null,
             salaryType: dto.salaryType,
             value: dto.value,
@@ -103,12 +113,18 @@ export class SalaryService {
   }
 
   async updateConfig(id: string, dto: UpdateSalaryConfigDto) {
-    const existing = await this.prisma.teacherSalaryConfig.findUnique({
+    const existing = await this.prisma.employeeSalaryConfig.findUnique({
       where: { id },
     });
     if (!existing) throw new NotFoundException('Salary config topilmadi');
 
-    return this.prisma.teacherSalaryConfig.update({
+    if (dto.salaryType === SalaryType.FIXED_MONTHLY && existing.groupId) {
+      throw new BadRequestException(
+        "FIXED_MONTHLY oylik turi guruh bilan bog'lab bo'lmaydi",
+      );
+    }
+
+    return this.prisma.employeeSalaryConfig.update({
       where: { id },
       data: {
         ...(dto.salaryType && { salaryType: dto.salaryType }),
@@ -118,7 +134,7 @@ export class SalaryService {
     });
   }
 
-  // ===== SALARY ACCRUAL (called from attendance) =====
+  // ===== SALARY ACCRUAL (called from attendance — teacher-only) =====
 
   async createAccrual(params: {
     teacherId: number;
@@ -129,11 +145,11 @@ export class SalaryService {
     perLessonCost: number;
     companyId: number;
   }) {
-    // Get salary config for this teacher (group-specific or default)
-    const config = await this.prisma.teacherSalaryConfig.findFirst({
+    const config = await this.prisma.employeeSalaryConfig.findFirst({
       where: {
-        teacherId: params.teacherId,
+        userId: params.teacherId,
         isActive: true,
+        salaryType: { in: [SalaryType.PERCENTAGE, SalaryType.FIXED_PER_STUDENT] },
         OR: [
           { groupId: params.groupId },
           { groupId: null },
@@ -142,7 +158,7 @@ export class SalaryService {
       orderBy: { groupId: 'desc' }, // group-specific takes priority (non-null first)
     });
 
-    if (!config) return null; // No salary config = no accrual
+    if (!config) return null;
 
     let amount: number;
     if (config.salaryType === SalaryType.PERCENTAGE) {
@@ -151,18 +167,17 @@ export class SalaryService {
       amount = config.value;
     }
 
-    // Upsert to handle idempotency
     return this.prisma.salaryAccrual.upsert({
       where: {
-        teacherId_studentId_groupId_lessonDate: {
-          teacherId: params.teacherId,
+        userId_studentId_groupId_lessonDate: {
+          userId: params.teacherId,
           studentId: params.studentId,
           groupId: params.groupId,
           lessonDate: params.lessonDate,
         },
       },
       create: {
-        teacherId: params.teacherId,
+        userId: params.teacherId,
         studentId: params.studentId,
         groupId: params.groupId,
         attendanceId: params.attendanceId,
@@ -177,19 +192,11 @@ export class SalaryService {
     });
   }
 
-  // ===== TEACHER SALARY SUMMARY =====
+  // ===== TEACHER SALARY SUMMARY (profile page) =====
 
-  /**
-   * Get teacher salary summary for profile page:
-   * - expectedSalary: based on active students × config (max possible per month)
-   * - actualEarned: sum of unpaid accruals (real earnings so far)
-   * - paidTotal: sum of all paid salary payments
-   * - studentsBreakdown: per-group student counts and expected earnings
-   */
   async getTeacherSalarySummary(teacherId: number, companyId: number) {
-    // Get salary configs
-    const configs = await this.prisma.teacherSalaryConfig.findMany({
-      where: { teacherId, isActive: true, companyId },
+    const configs = await this.prisma.employeeSalaryConfig.findMany({
+      where: { userId: teacherId, isActive: true, companyId },
       select: {
         salaryType: true,
         value: true,
@@ -211,7 +218,6 @@ export class SalaryService {
       },
     });
 
-    // Get all groups this teacher is assigned to
     const teacherGroups = await this.prisma.groupTeacher.findMany({
       where: { teacherId },
       select: {
@@ -234,10 +240,8 @@ export class SalaryService {
       },
     });
 
-    // Default config (groupId = null)
     const defaultConfig = configs.find((c) => !c.groupId);
 
-    // Calculate expected salary per group
     const groupsBreakdown = teacherGroups
       .filter((tg) => tg.group.statusEnum === 'ACTIVE')
       .map((tg) => {
@@ -245,12 +249,10 @@ export class SalaryService {
         const activeStudents = tg.group._count.enrollments;
         const lessonPaymentCount = tg.group.course.lessonPaymentCount || 12;
         const perLessonCost = Math.round(tg.group.course.price / lessonPaymentCount);
-
-        // Lessons per month (approximate: exactDays.length * 4 weeks)
         const lessonsPerMonth = tg.group.exactDays.length * 4;
 
         let expectedPerStudentPerLesson = 0;
-        if (groupConfig) {
+        if (groupConfig && groupConfig.salaryType !== SalaryType.FIXED_MONTHLY) {
           if (groupConfig.salaryType === SalaryType.PERCENTAGE) {
             expectedPerStudentPerLesson = Math.round(perLessonCost * groupConfig.value / 100);
           } else {
@@ -272,20 +274,21 @@ export class SalaryService {
         };
       });
 
-    // Actual earned (unpaid accruals)
     const unpaidAccruals = await this.prisma.salaryAccrual.aggregate({
-      where: { teacherId, companyId, salaryPaymentId: null },
+      where: { userId: teacherId, companyId, salaryPaymentId: null },
       _sum: { amount: true },
       _count: true,
     });
 
-    // Total paid
     const paidTotal = await this.prisma.salaryPayment.aggregate({
-      where: { teacherId, companyId, status: 'PAID' },
+      where: { userId: teacherId, companyId, status: 'PAID' },
       _sum: { netAmount: true },
     });
 
-    const expectedMonthlyTotal = groupsBreakdown.reduce((sum, g) => sum + g.expectedMonthly, 0);
+    const fixedMonthlyConfig = configs.find((c) => c.salaryType === SalaryType.FIXED_MONTHLY);
+    const expectedMonthlyTotal = fixedMonthlyConfig
+      ? fixedMonthlyConfig.value
+      : groupsBreakdown.reduce((sum, g) => sum + g.expectedMonthly, 0);
 
     return {
       expectedMonthly: expectedMonthlyTotal,
@@ -294,17 +297,18 @@ export class SalaryService {
       paidTotal: paidTotal._sum.netAmount ?? 0,
       groups: groupsBreakdown,
       hasConfig: configs.length > 0,
+      isFixedMonthly: !!fixedMonthlyConfig,
     };
   }
 
   // ===== SALARY ACCRUALS QUERY =====
 
-  async getAccruals(teacherId: number, companyId: number) {
+  async getAccruals(userId: number, companyId: number) {
     return this.prisma.salaryAccrual.findMany({
       where: {
-        teacherId,
+        userId,
         companyId,
-        salaryPaymentId: null, // only unpaid accruals
+        salaryPaymentId: null,
       },
       select: {
         id: true,
@@ -322,12 +326,14 @@ export class SalaryService {
 
   async calculateMonthlySalaries(companyId: number) {
     const now = new Date();
-    // Cutoff: 7th of current month
+    // Cutoff: 7th of current month.
     const cutoffDate = new Date(now.getFullYear(), now.getMonth(), 7, 23, 59, 59);
-    // Period start: 8th of previous month
+    // Period start: 8th of previous month.
     const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 8);
 
-    // Get all unpaid accruals up to cutoff
+    const results: { userId: number; grossAmount: number; netAmount: number; kind: 'ACCRUAL' | 'FIXED_MONTHLY' }[] = [];
+
+    // === ACCRUAL-BASED (teachers) ===
     const accruals = await this.prisma.salaryAccrual.findMany({
       where: {
         companyId,
@@ -336,30 +342,27 @@ export class SalaryService {
       },
       select: {
         id: true,
-        teacherId: true,
+        userId: true,
         amount: true,
       },
     });
 
-    // Group by teacher
-    const byTeacher = new Map<number, { ids: string[]; total: number }>();
+    const byUser = new Map<number, { ids: string[]; total: number }>();
     for (const a of accruals) {
-      const entry = byTeacher.get(a.teacherId) ?? { ids: [], total: 0 };
+      const entry = byUser.get(a.userId) ?? { ids: [], total: 0 };
       entry.ids.push(a.id);
       entry.total += a.amount;
-      byTeacher.set(a.teacherId, entry);
+      byUser.set(a.userId, entry);
     }
 
-    const results: { teacherId: number; grossAmount: number; netAmount: number }[] = [];
-
-    for (const [teacherId, { ids, total }] of byTeacher) {
+    for (const [userId, { ids, total }] of byUser) {
       const grossAmount = total;
-      const taxAmount = 0; // Tax config TBD
+      const taxAmount = 0;
       const netAmount = grossAmount - taxAmount;
 
       const salaryPayment = await this.prisma.salaryPayment.create({
         data: {
-          teacherId,
+          userId,
           periodStart,
           periodEnd: cutoffDate,
           grossAmount,
@@ -370,13 +373,56 @@ export class SalaryService {
         },
       });
 
-      // Link accruals to this payment
       await this.prisma.salaryAccrual.updateMany({
         where: { id: { in: ids } },
         data: { salaryPaymentId: salaryPayment.id },
       });
 
-      results.push({ teacherId, grossAmount, netAmount });
+      results.push({ userId, grossAmount, netAmount, kind: 'ACCRUAL' });
+    }
+
+    // === FIXED MONTHLY (admins, cashiers, branch directors, or teachers on fixed salary) ===
+    const fixedMonthlyConfigs = await this.prisma.employeeSalaryConfig.findMany({
+      where: {
+        companyId,
+        salaryType: SalaryType.FIXED_MONTHLY,
+        isActive: true,
+        groupId: null,
+      },
+      select: { userId: true, value: true },
+    });
+
+    for (const config of fixedMonthlyConfigs) {
+      // Skip if a payment already exists for this exact period (idempotent cron).
+      const existing = await this.prisma.salaryPayment.findFirst({
+        where: {
+          userId: config.userId,
+          companyId,
+          periodStart,
+          periodEnd: cutoffDate,
+        },
+        select: { id: true },
+      });
+      if (existing) continue;
+
+      const grossAmount = config.value;
+      const taxAmount = 0;
+      const netAmount = grossAmount - taxAmount;
+
+      await this.prisma.salaryPayment.create({
+        data: {
+          userId: config.userId,
+          periodStart,
+          periodEnd: cutoffDate,
+          grossAmount,
+          taxAmount,
+          netAmount,
+          status: SalaryPaymentStatus.CALCULATED,
+          companyId,
+        },
+      });
+
+      results.push({ userId: config.userId, grossAmount, netAmount, kind: 'FIXED_MONTHLY' });
     }
 
     return { calculated: results.length, details: results };
@@ -390,7 +436,7 @@ export class SalaryService {
 
     const where: Prisma.SalaryPaymentWhereInput = {
       companyId,
-      ...(query.teacherId && { teacherId: query.teacherId }),
+      ...(query.userId && { userId: query.userId }),
       ...(query.status && { status: query.status }),
     };
 
@@ -407,7 +453,14 @@ export class SalaryService {
           periodEnd: true,
           paidAt: true,
           createdAt: true,
-          teacher: { select: { id: true, firstName: true, lastName: true } },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              roles: { select: { role: { select: { id: true, name: true } } } },
+            },
+          },
           paidBy: { select: { id: true, firstName: true, lastName: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -435,7 +488,7 @@ export class SalaryService {
     });
   }
 
-  async payPayment(id: string, userId: number) {
+  async payPayment(id: string, performedById: number) {
     const payment = await this.prisma.salaryPayment.findUnique({
       where: { id },
     });
@@ -444,13 +497,12 @@ export class SalaryService {
       throw new BadRequestException("Faqat APPROVED statusdagi oylikni to'lash mumkin");
     }
 
-    // Record transaction
     await this.transactionsService.recordSalaryPayment({
-      teacherId: payment.teacherId,
+      userId: payment.userId,
       amount: payment.netAmount,
       salaryPaymentId: payment.id,
       companyId: payment.companyId,
-      performedById: userId,
+      performedById,
     });
 
     return this.prisma.salaryPayment.update({
@@ -458,7 +510,7 @@ export class SalaryService {
       data: {
         status: SalaryPaymentStatus.PAID,
         paidAt: new Date(),
-        paidById: userId,
+        paidById: performedById,
       },
     });
   }

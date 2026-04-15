@@ -19,6 +19,10 @@ import {
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 
+function getErrorMessage(err: unknown, fallback: string): string {
+  return (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
+}
+
 interface SalaryPayment {
   id: string;
   grossAmount: number;
@@ -29,7 +33,12 @@ interface SalaryPayment {
   periodEnd: string;
   paidAt: string | null;
   createdAt: string;
-  teacher: { id: number; firstName: string; lastName: string };
+  user: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    roles: { role: { id: number; name: string } }[];
+  };
   paidBy: { id: number; firstName: string; lastName: string } | null;
 }
 
@@ -50,6 +59,20 @@ const statusColors: Record<string, string> = {
   PAID: "bg-green-100 text-green-800",
   CANCELLED: "bg-red-100 text-red-800",
 };
+
+const roleLabels: Record<number, string> = {
+  1: "Direktor",
+  2: "Filial direktori",
+  3: "Administrator",
+  4: "O'qituvchi",
+  5: "Kassir",
+};
+
+function primaryRoleLabel(roles: { role: { id: number } }[]): string {
+  if (!roles.length) return "—";
+  const ids = roles.map((r) => r.role.id).sort((a, b) => a - b);
+  return roleLabels[ids[0]] ?? "—";
+}
 
 export function SalaryClient() {
   const user = useAuth((s) => s.user);
@@ -72,10 +95,10 @@ export function SalaryClient() {
     setCalculating(true);
     try {
       const { data } = await api.post("/salary/calculate");
-      toast.success(`${data.calculated} ta ustoz oyligi hisoblandi`);
+      toast.success(`${data.calculated} ta xodim oyligi hisoblandi`);
       setRefreshKey((k) => k + 1);
-    } catch (err: unknown) {
-      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Hisoblashda xatolik");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Hisoblashda xatolik"));
     } finally {
       setCalculating(false);
     }
@@ -87,8 +110,8 @@ export function SalaryClient() {
       await api.patch(`/salary/payments/${id}/approve`);
       toast.success("Oylik tasdiqlandi");
       setRefreshKey((k) => k + 1);
-    } catch (err: unknown) {
-      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Tasdiqlashda xatolik");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Tasdiqlashda xatolik"));
     } finally {
       setProcessingId(null);
     }
@@ -100,8 +123,8 @@ export function SalaryClient() {
       await api.post(`/salary/payments/${id}/pay`);
       toast.success("Oylik to'landi");
       setRefreshKey((k) => k + 1);
-    } catch (err: unknown) {
-      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "To'lashda xatolik");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "To'lashda xatolik"));
     } finally {
       setProcessingId(null);
     }
@@ -141,7 +164,8 @@ export function SalaryClient() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Ustoz</TableHead>
+              <TableHead>Xodim</TableHead>
+              <TableHead>Lavozim</TableHead>
               <TableHead>Davr</TableHead>
               <TableHead>Brutto</TableHead>
               <TableHead>Netto</TableHead>
@@ -156,7 +180,10 @@ export function SalaryClient() {
                   {i + 1}
                 </TableCell>
                 <TableCell className="font-medium">
-                  #{sp.teacher.id} {sp.teacher.firstName} {sp.teacher.lastName}
+                  #{sp.user.id} {sp.user.firstName} {sp.user.lastName}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {primaryRoleLabel(sp.user.roles)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {format(new Date(sp.periodStart), "dd.MM")} —{" "}

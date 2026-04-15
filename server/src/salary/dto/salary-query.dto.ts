@@ -7,7 +7,7 @@ export class SalaryPaymentQueryDto extends PaginationDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  teacherId?: number;
+  userId?: number;
 
   @IsOptional()
   @IsEnum(SalaryPaymentStatus)
