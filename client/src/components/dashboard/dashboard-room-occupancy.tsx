@@ -2,13 +2,34 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LayoutGrid, Users } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, LayoutGrid, Users } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { DashboardLesson } from "./dashboard-daily-schedule";
+import type { AttendanceStatus, DashboardLesson } from "./dashboard-daily-schedule";
+
+const attendanceLabel: Record<AttendanceStatus, string> = {
+  TAKEN: "Davomat olindi",
+  NOT_TAKEN: "Davomat olinmagan",
+  MISSED: "O'tkazib yuborilgan",
+  PENDING: "Kutilmoqda",
+};
+
+const attendanceBadgeClass: Record<AttendanceStatus, string> = {
+  TAKEN: "bg-green-500 text-white",
+  NOT_TAKEN: "bg-red-500 text-white animate-pulse",
+  MISSED: "bg-orange-500 text-white",
+  PENDING: "bg-muted-foreground/40 text-white",
+};
+
+const attendanceIconMap: Record<AttendanceStatus, typeof CheckCircle2> = {
+  TAKEN: CheckCircle2,
+  NOT_TAKEN: AlertCircle,
+  MISSED: AlertCircle,
+  PENDING: Clock,
+};
 
 interface Room {
   id: string;
@@ -236,6 +257,17 @@ export function DashboardRoomOccupancy({
                       );
                     }
 
+                    const att = lesson.attendanceStatus;
+                    const AttIcon = att ? attendanceIconMap[att] : null;
+
+                    // Border tint for NOT_TAKEN / MISSED to grab attention
+                    const borderClass =
+                      att === "NOT_TAKEN"
+                        ? "border-red-400 dark:border-red-600"
+                        : att === "MISSED"
+                          ? "border-orange-400 dark:border-orange-600"
+                          : bgClass;
+
                     return (
                       <td
                         key={room.id}
@@ -246,7 +278,7 @@ export function DashboardRoomOccupancy({
                           <TooltipTrigger asChild>
                             <Link
                               href={`/groups/${lesson.groupId}`}
-                              className={`block h-full relative ${bgClass} border rounded-sm mx-0.5 my-0.5 px-1.5 py-0.5 hover:opacity-80 transition-opacity overflow-hidden`}
+                              className={`block h-full relative ${bgClass} ${borderClass} border rounded-sm mx-0.5 my-0.5 px-1.5 py-0.5 hover:opacity-80 transition-opacity overflow-hidden`}
                             >
                               {status === "current" && (
                                 <div
@@ -254,7 +286,22 @@ export function DashboardRoomOccupancy({
                                   style={{ width: `${progress}%` }}
                                 />
                               )}
-                              <div className="relative">
+                              {/* Attendance status badge — top-right corner */}
+                              {att && AttIcon && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className={`absolute top-0.5 right-0.5 z-10 inline-flex items-center justify-center rounded-full size-4 ${attendanceBadgeClass[att]}`}
+                                    >
+                                      <AttIcon className="size-2.5" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {attendanceLabel[att]}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              <div className="relative pr-4">
                                 <div className="flex items-center gap-1">
                                   {status === "current" && (
                                     <span className="relative flex size-2 shrink-0">
@@ -266,11 +313,6 @@ export function DashboardRoomOccupancy({
                                     {lesson.groupName}
                                   </p>
                                 </div>
-                                {status === "past" && (
-                                  <p className="text-[10px] font-medium text-green-600 dark:text-green-400 leading-tight">
-                                    Tugagan
-                                  </p>
-                                )}
                                 {teacherName && (
                                   <p className="text-[10px] text-muted-foreground truncate leading-tight">
                                     {teacherName}
@@ -301,9 +343,24 @@ export function DashboardRoomOccupancy({
                                 </p>
                               )}
                               <p className="text-xs">
-                                Davomat: {lesson.presentCount}/
+                                Keldi: {lesson.presentCount}/
                                 {lesson.studentCount} ta
                               </p>
+                              {att && (
+                                <p
+                                  className={`text-xs font-medium ${
+                                    att === "TAKEN"
+                                      ? "text-green-500"
+                                      : att === "NOT_TAKEN"
+                                        ? "text-red-500"
+                                        : att === "MISSED"
+                                          ? "text-orange-500"
+                                          : "text-muted-foreground"
+                                  }`}
+                                >
+                                  Holat: {attendanceLabel[att]}
+                                </p>
+                              )}
                             </div>
                           </TooltipContent>
                         </Tooltip>

@@ -55,7 +55,11 @@ describe('DashboardService', () => {
       },
       room: { findMany: jest.fn().mockResolvedValue(mockRooms) },
       group: { findMany: jest.fn().mockResolvedValue(mockGroups) },
-      attendance: { groupBy: jest.fn().mockResolvedValue(mockAttendanceCounts) },
+      attendance: {
+        // groupBy is called twice per getTodaySchedule (PRESENT + total).
+        // Use mockResolvedValue so both calls return the same shape by default.
+        groupBy: jest.fn().mockResolvedValue(mockAttendanceCounts),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -88,6 +92,7 @@ describe('DashboardService', () => {
         teachers: [{ id: 10001, firstName: 'Ali', lastName: 'Valiyev' }],
         studentCount: 3,
         presentCount: 2,
+        attendanceStatus: expect.stringMatching(/^(TAKEN|NOT_TAKEN|MISSED|PENDING)$/),
       });
       expect(result.lessons[1].studentCount).toBe(2);
       expect(result.lessons[1].presentCount).toBe(0);

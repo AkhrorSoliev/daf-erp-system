@@ -70,40 +70,85 @@ export class DashboardService {
       }),
     ]);
 
-    // Fetch today's attendance counts per group
+    // Fetch today's attendance counts per group (PRESENT only — for UI display)
     const groupIds = groups.map((g) => g.id);
-    const attendanceCounts = groupIds.length
-      ? await this.prisma.attendance.groupBy({
-          by: ['groupId'],
-          where: {
-            groupId: { in: groupIds },
-            date: dateOnly,
-            status: 'PRESENT',
-          },
-          _count: { id: true },
-        })
-      : [];
+    const [presentCounts, totalCounts] = groupIds.length
+      ? await Promise.all([
+          this.prisma.attendance.groupBy({
+            by: ['groupId'],
+            where: {
+              groupId: { in: groupIds },
+              date: dateOnly,
+              status: 'PRESENT',
+            },
+            _count: { id: true },
+          }),
+          // Any attendance record (any status) — used to determine if attendance was "taken"
+          this.prisma.attendance.groupBy({
+            by: ['groupId'],
+            where: {
+              groupId: { in: groupIds },
+              date: dateOnly,
+            },
+            _count: { id: true },
+          }),
+        ])
+      : [[], []];
 
-    const attendanceMap = new Map(
-      attendanceCounts.map((a) => [a.groupId, a._count.id]),
-    );
+    const presentMap = new Map(presentCounts.map((a) => [a.groupId, a._count.id]));
+    const totalAttendanceMap = new Map(totalCounts.map((a) => [a.groupId, a._count.id]));
 
-    const lessons = groups.map((g) => ({
-      groupId: g.id,
-      groupName: g.name,
-      courseName: g.course?.name ?? null,
-      startTime: g.lessonStartTime!,
-      endTime: g.lessonEndTime!,
-      roomId: g.roomId,
-      roomName: g.room?.name ?? null,
-      teachers: g.teachers.map((gt) => ({
-        id: gt.teacher.id,
-        firstName: gt.teacher.firstName,
-        lastName: gt.teacher.lastName,
-      })),
-      studentCount: g.enrollments.length,
-      presentCount: attendanceMap.get(g.id) ?? 0,
-    }));
+    // Current server time (Tashkent) — used to determine lesson phase
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const targetStr = targetDate.toISOString().split('T')[0];
+    const isToday = todayStr === targetStr;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    function phaseOf(startTime: string, endTime: string): 'PAST' | 'CURRENT' | 'UPCOMING' {
+      if (!isToday) return 'PAST';
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      const start = sh * 60 + sm;
+      const end = eh * 60 + em;
+      if (nowMinutes < start) return 'UPCOMING';
+      if (nowMinutes > end) return 'PAST';
+      return 'CURRENT';
+    }
+
+    const lessons = groups.map((g) => {
+      const hasAnyAttendance = (totalAttendanceMap.get(g.id) ?? 0) > 0;
+      const phase = phaseOf(g.lessonStartTime!, g.lessonEndTime!);
+
+      // attendanceStatus:
+      //   TAKEN     — davomat olingan (yozuvlar mavjud)
+      //   NOT_TAKEN — dars davom etmoqda lekin davomat olinmagan
+      //   MISSED    — dars tugagan lekin davomat olinmagan
+      //   PENDING   — dars hali boshlanmagan
+      let attendanceStatus: 'TAKEN' | 'NOT_TAKEN' | 'MISSED' | 'PENDING';
+      if (hasAnyAttendance) attendanceStatus = 'TAKEN';
+      else if (phase === 'CURRENT') attendanceStatus = 'NOT_TAKEN';
+      else if (phase === 'PAST') attendanceStatus = 'MISSED';
+      else attendanceStatus = 'PENDING';
+
+      return {
+        groupId: g.id,
+        groupName: g.name,
+        courseName: g.course?.name ?? null,
+        startTime: g.lessonStartTime!,
+        endTime: g.lessonEndTime!,
+        roomId: g.roomId,
+        roomName: g.room?.name ?? null,
+        teachers: g.teachers.map((gt) => ({
+          id: gt.teacher.id,
+          firstName: gt.teacher.firstName,
+          lastName: gt.teacher.lastName,
+        })),
+        studentCount: g.enrollments.length,
+        presentCount: presentMap.get(g.id) ?? 0,
+        attendanceStatus,
+      };
+    });
 
     return {
       lessons,

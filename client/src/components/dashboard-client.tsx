@@ -232,7 +232,7 @@ export function DashboardClient() {
             )}
           </div>
 
-          {/* Daily schedule — teacher sees only their lessons */}
+          {/* Daily schedule + Room occupancy (single card) */}
           <DashboardDailySchedule
             lessons={myLessons}
             dateLabel={
@@ -241,15 +241,15 @@ export function DashboardClient() {
                 : `${format(selectedDate, "dd.MM.yyyy")} darslar`
             }
             isToday={isTodaySelected}
-          />
-
-          {/* Room occupancy — teacher sees only their lessons */}
-          <DashboardRoomOccupancy
-            lessons={myLessons}
-            rooms={data.rooms}
-            workingHours={data.workingHours}
-            isTeacher={isTeacher}
-            isToday={isTodaySelected}
+            roomOccupancy={
+              <DashboardRoomOccupancy
+                lessons={myLessons}
+                rooms={data.rooms}
+                workingHours={data.workingHours}
+                isTeacher={isTeacher}
+                isToday={isTodaySelected}
+              />
+            }
           />
         </>
       )}
