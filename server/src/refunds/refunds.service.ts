@@ -230,6 +230,7 @@ export class RefundsService {
               processedById: userId,
               processedAt: new Date(),
               dueDate,
+              ...(dto.refundMethod && { refundMethod: dto.refundMethod }),
             },
           });
         },

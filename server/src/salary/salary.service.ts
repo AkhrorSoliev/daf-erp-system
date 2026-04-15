@@ -396,27 +396,46 @@ export class SalaryService {
       const grossAmount = total;
       const { taxAmount, netAmount } = calculateTax(grossAmount, taxRate);
 
-      const salaryPayment = await this.prisma.salaryPayment.create({
-        data: {
-          userId,
-          periodStart,
-          periodEnd: cutoffDate,
-          grossAmount,
-          taxAmount,
-          netAmount,
-          status: SalaryPaymentStatus.CALCULATED,
-          companyId,
+      // Atomic: SalaryPayment + accrual link + TAX ledger entry are
+      // all-or-nothing. Previously each was a separate await, so a crash
+      // mid-way could leave accruals orphaned or miss the tax entry.
+      await this.prisma.$transaction(
+        async (tx) => {
+          const salaryPayment = await tx.salaryPayment.create({
+            data: {
+              userId,
+              periodStart,
+              periodEnd: cutoffDate,
+              grossAmount,
+              taxAmount,
+              netAmount,
+              status: SalaryPaymentStatus.CALCULATED,
+              companyId,
+            },
+          });
+
+          await tx.salaryAccrual.updateMany({
+            where: { id: { in: ids } },
+            data: { salaryPaymentId: salaryPayment.id },
+          });
+
+          if (taxAmount > 0) {
+            await tx.transaction.create({
+              data: {
+                type: TransactionType.TAX,
+                amount: -taxAmount,
+                balanceBefore: 0,
+                balanceAfter: 0,
+                teacherId: userId,
+                salaryPaymentId: salaryPayment.id,
+                companyId,
+                description: 'Oylik soliqi',
+              },
+            });
+          }
         },
-      });
-
-      await this.prisma.salaryAccrual.updateMany({
-        where: { id: { in: ids } },
-        data: { salaryPaymentId: salaryPayment.id },
-      });
-
-      if (taxAmount > 0) {
-        await this.writeTaxLedgerEntry(userId, taxAmount, salaryPayment.id, companyId);
-      }
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
 
       results.push({ userId, grossAmount, taxAmount, netAmount, kind: 'ACCRUAL' });
     }
@@ -448,22 +467,39 @@ export class SalaryService {
       const grossAmount = config.value;
       const { taxAmount, netAmount } = calculateTax(grossAmount, taxRate);
 
-      const salaryPayment = await this.prisma.salaryPayment.create({
-        data: {
-          userId: config.userId,
-          periodStart,
-          periodEnd: cutoffDate,
-          grossAmount,
-          taxAmount,
-          netAmount,
-          status: SalaryPaymentStatus.CALCULATED,
-          companyId,
-        },
-      });
+      // Atomic for the same reasons as the accrual branch above.
+      await this.prisma.$transaction(
+        async (tx) => {
+          const salaryPayment = await tx.salaryPayment.create({
+            data: {
+              userId: config.userId,
+              periodStart,
+              periodEnd: cutoffDate,
+              grossAmount,
+              taxAmount,
+              netAmount,
+              status: SalaryPaymentStatus.CALCULATED,
+              companyId,
+            },
+          });
 
-      if (taxAmount > 0) {
-        await this.writeTaxLedgerEntry(config.userId, taxAmount, salaryPayment.id, companyId);
-      }
+          if (taxAmount > 0) {
+            await tx.transaction.create({
+              data: {
+                type: TransactionType.TAX,
+                amount: -taxAmount,
+                balanceBefore: 0,
+                balanceAfter: 0,
+                teacherId: config.userId,
+                salaryPaymentId: salaryPayment.id,
+                companyId,
+                description: 'Oylik soliqi',
+              },
+            });
+          }
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
 
       results.push({ userId: config.userId, grossAmount, taxAmount, netAmount, kind: 'FIXED_MONTHLY' });
     }
@@ -482,30 +518,6 @@ export class SalaryService {
     });
     if (!config || !config.isActive) return DEFAULT_SALARY_TAX_RATE;
     return config.salaryTaxRate;
-  }
-
-  /**
-   * Write a TAX ledger entry alongside the SalaryPayment so cash-flow reports
-   * can sum company tax liability directly from Transaction.
-   */
-  private async writeTaxLedgerEntry(
-    userId: number,
-    taxAmount: number,
-    salaryPaymentId: string,
-    companyId: number,
-  ) {
-    await this.prisma.transaction.create({
-      data: {
-        type: TransactionType.TAX,
-        amount: -taxAmount,
-        balanceBefore: 0,
-        balanceAfter: 0,
-        teacherId: userId,
-        salaryPaymentId,
-        companyId,
-        description: 'Oylik soliqi',
-      },
-    });
   }
 
   // ===== SALARY PAYMENTS =====

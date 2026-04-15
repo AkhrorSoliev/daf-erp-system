@@ -1003,25 +1003,26 @@ model SalaryPayment {
 }
 
 model Refund {
-  id               String       @id @default(uuid())
+  id               String         @id @default(uuid())
   studentId        Int
-  student          Student      @relation(fields: [studentId], references: [id])
+  student          Student        @relation(fields: [studentId], references: [id])
   contractId       String
-  contract         Contract     @relation(fields: [contractId], references: [id])
+  contract         Contract       @relation(fields: [contractId], references: [id])
   requestedAmount  Int
   approvedAmount   Int?
   lessonsCompleted Int
   totalLessons     Int
   deductions       Json?
-  status           RefundStatus @default(REQUESTED)
+  status           RefundStatus   @default(REQUESTED)
+  refundMethod     PaymentMethod?
   reason           String?
   processedById    Int?
-  processedBy      User?        @relation("RefundProcessedBy", fields: [processedById], references: [id])
+  processedBy      User?          @relation("RefundProcessedBy", fields: [processedById], references: [id])
   processedAt      DateTime?
   dueDate          DateTime?
   companyId        Int
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   transactions Transaction[]
 
