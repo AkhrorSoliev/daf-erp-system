@@ -36,6 +36,16 @@ interface FinancialOverview {
     paymentCount: number;
     byMethod: { method: string; amount: number; count: number }[];
   };
+  /**
+   * Forecast and receivables (D.2). `expected` above is kept as an alias for
+   * `recognizedRevenueForecast` for backward compat; new clients should
+   * read from here.
+   */
+  forecast: {
+    recognizedRevenueForecast: number;
+    outstandingReceivable: number;
+    debtorExposure: { count: number; avgDebt: number };
+  };
   salary: { paid: number; pending: number };
   expenses: number;
   netProfit: number;
@@ -90,8 +100,8 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
             <Skeleton key={i} className="h-22 rounded-xl" />
           ))}
         </div>
-        <div className="grid gap-3 grid-cols-1 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-36 rounded-xl" />
           ))}
         </div>
@@ -101,6 +111,11 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
 
   const empty: FinancialOverview = {
     income: { expected: 0, actual: 0, paymentCount: 0, byMethod: [] },
+    forecast: {
+      recognizedRevenueForecast: 0,
+      outstandingReceivable: 0,
+      debtorExposure: { count: 0, avgDebt: 0 },
+    },
     salary: { paid: 0, pending: 0 },
     expenses: 0,
     netProfit: 0,
@@ -118,8 +133,8 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
   const d = data ?? empty;
 
   const incomePercent =
-    d.income.expected > 0
-      ? Math.round((d.income.actual / d.income.expected) * 100)
+    d.forecast.recognizedRevenueForecast > 0
+      ? Math.round((d.income.actual / d.forecast.recognizedRevenueForecast) * 100)
       : 0;
 
   return (
@@ -204,21 +219,21 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
         />
       </div>
 
-      {/* ===== Pastki qator: Kutilayotgan vs Haqiqiy, Oyliklar, To'lov usullari ===== */}
-      <div className="grid gap-3 grid-cols-1 lg:grid-cols-3">
-        {/* Kutilayotgan vs Haqiqiy */}
+      {/* ===== Pastki qator: Prognoz, Oyliklar, Qarzdorlik, To'lov usullari ===== */}
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
+        {/* Prognoz vs Haqiqiy — backend D.2: income.expected is now cycle-based forecast */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <p className="text-sm font-medium text-muted-foreground">
-            Kutilayotgan vs Haqiqiy tushum
+            Prognoz vs Haqiqiy tushum
           </p>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
                 <ArrowDownRight className="size-3 text-amber-500" />
-                Kutilayotgan
+                Prognoz (oylik)
               </span>
               <span className="font-medium">
-                {fmt(d.income.expected)} so&apos;m
+                {fmt(d.forecast.recognizedRevenueForecast)} so&apos;m
               </span>
             </div>
             <div className="flex justify-between text-sm">
@@ -264,10 +279,31 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
               </span>
             </div>
           </div>
-          <div className="pt-1 flex items-center gap-2 text-sm">
+        </div>
+
+        {/* Qarzdorlik majmui — backend forecast.outstandingReceivable + debtorExposure */}
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
             <UserMinus className="size-3 text-red-500" />
-            <span className="text-muted-foreground">Qarzdorlar:</span>
-            <span className="font-medium text-red-600">{d.debtorCount} ta</span>
+            Qarzdorlik majmui
+          </p>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Jami qarz</span>
+              <span className="font-medium text-red-600">
+                {fmt(d.forecast.outstandingReceivable)} so&apos;m
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Qarzdor o&apos;quvchilar</span>
+              <span className="font-medium">{d.forecast.debtorExposure.count} ta</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">O&apos;rtacha qarz</span>
+              <span className="font-medium">
+                {fmt(d.forecast.debtorExposure.avgDebt)} so&apos;m
+              </span>
+            </div>
           </div>
         </div>
 
