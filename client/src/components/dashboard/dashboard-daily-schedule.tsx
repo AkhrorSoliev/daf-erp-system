@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, CalendarX, Users } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarDays,
+  CalendarX,
+  CheckCircle2,
+  Clock,
+  Users,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -23,6 +30,8 @@ interface Teacher {
   lastName: string;
 }
 
+export type AttendanceStatus = "TAKEN" | "NOT_TAKEN" | "MISSED" | "PENDING";
+
 export interface DashboardLesson {
   groupId: string;
   groupName: string;
@@ -34,6 +43,7 @@ export interface DashboardLesson {
   teachers: Teacher[];
   studentCount: number;
   presentCount: number;
+  attendanceStatus?: AttendanceStatus;
 }
 
 function timeToMinutes(time: string): number {
@@ -64,12 +74,43 @@ interface DashboardDailyScheduleProps {
   lessons: DashboardLesson[];
   dateLabel?: string;
   isToday?: boolean;
+  roomOccupancy?: React.ReactNode;
 }
+
+const attendanceBadge: Record<
+  AttendanceStatus,
+  { label: string; className: string; icon: typeof CheckCircle2 }
+> = {
+  TAKEN: {
+    label: "Davomat olindi",
+    className:
+      "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+    icon: CheckCircle2,
+  },
+  NOT_TAKEN: {
+    label: "Davomat olinmagan",
+    className:
+      "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+    icon: AlertCircle,
+  },
+  MISSED: {
+    label: "O'tkazib yuborilgan",
+    className:
+      "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
+    icon: AlertCircle,
+  },
+  PENDING: {
+    label: "Kutilmoqda",
+    className: "bg-muted text-muted-foreground",
+    icon: Clock,
+  },
+};
 
 export function DashboardDailySchedule({
   lessons,
   dateLabel,
   isToday = true,
+  roomOccupancy,
 }: DashboardDailyScheduleProps) {
   const [now, setNow] = useState(() => {
     const d = new Date();
@@ -104,6 +145,9 @@ export function DashboardDailySchedule({
             Tanlangan kun uchun hech qanday dars rejalashtirilmagan
           </p>
         </div>
+        {roomOccupancy && (
+          <div className="mt-4 rounded-lg border bg-card p-3">{roomOccupancy}</div>
+        )}
       </div>
     );
   }
@@ -118,6 +162,9 @@ export function DashboardDailySchedule({
         </span>
       </h2>
       <div className="rounded-lg border bg-card overflow-hidden">
+        {roomOccupancy && (
+          <div className="border-b p-3">{roomOccupancy}</div>
+        )}
         <div className="max-h-100 overflow-y-auto">
           <Table>
             <TableHeader>
@@ -128,7 +175,8 @@ export function DashboardDailySchedule({
                 <TableHead className="hidden sm:table-cell">Kurs</TableHead>
                 <TableHead>Ustoz</TableHead>
                 <TableHead className="hidden sm:table-cell">Xona</TableHead>
-                <TableHead className="w-20 text-center">Davomat</TableHead>
+                <TableHead className="w-20 text-center">Keldi</TableHead>
+                <TableHead className="w-40 text-center">Davomat</TableHead>
                 <TableHead className="w-24 text-center">Holat</TableHead>
               </TableRow>
             </TableHeader>
@@ -197,6 +245,34 @@ export function DashboardDailySchedule({
                           ta jami
                         </TooltipContent>
                       </Tooltip>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {(() => {
+                        const att = lesson.attendanceStatus;
+                        if (!att) return <span className="text-xs text-muted-foreground">—</span>;
+                        const cfg = attendanceBadge[att];
+                        const Icon = cfg.icon;
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full text-[11px] font-medium px-2 py-0.5 ${cfg.className}`}
+                              >
+                                <Icon className="size-3" />
+                                {cfg.label}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {att === "NOT_TAKEN" &&
+                                "Dars davom etmoqda, ustoz hali davomat olmagan"}
+                              {att === "MISSED" &&
+                                "Dars tugagan, lekin davomat olinmagan"}
+                              {att === "TAKEN" && "Davomat muvaffaqiyatli olingan"}
+                              {att === "PENDING" && "Dars hali boshlanmagan"}
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-center">
                       {status === "past" && (
