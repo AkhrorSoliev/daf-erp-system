@@ -62,15 +62,19 @@ export class PaymentsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.paymentsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.paymentsService.findOne(id, companyId);
   }
 
   @Get('student/:studentId')
   findByStudent(
     @Param('studentId', ParseIntPipe) studentId: number,
     @Query() query: PaymentQueryDto,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.paymentsService.findByStudent(studentId, query);
+    return this.paymentsService.findByStudent(studentId, query, companyId);
   }
 }

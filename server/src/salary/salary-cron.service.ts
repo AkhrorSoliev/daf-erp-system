@@ -29,7 +29,7 @@ export class SalaryCronService {
       try {
         const result = await this.salaryService.calculateMonthlySalaries(company.id);
         this.logger.log(
-          `Company ${company.id}: calculated ${result.calculated} teacher salaries`,
+          `Company ${company.id}: calculated ${result.calculated} employee salaries`,
         );
       } catch (error) {
         this.logger.error(

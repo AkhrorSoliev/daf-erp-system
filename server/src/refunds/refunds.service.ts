@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
-import { AttendanceStatus, ContractStatus, RefundStatus } from '@prisma/client';
+import { AttendanceStatus, ContractStatus, Prisma, RefundStatus } from '@prisma/client';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 
@@ -126,9 +126,9 @@ export class RefundsService {
   /**
    * Approve or reject a refund request, then process the actual refund.
    */
-  async process(id: string, dto: ProcessRefundDto, userId: number) {
-    const refund = await this.prisma.refund.findUnique({
-      where: { id },
+  async process(id: string, dto: ProcessRefundDto, userId: number, companyId: number) {
+    const refund = await this.prisma.refund.findFirst({
+      where: { id, companyId },
       select: {
         id: true,
         studentId: true,
@@ -159,38 +159,45 @@ export class RefundsService {
 
       const approvedAmount = dto.approvedAmount ?? refund.requestedAmount;
 
-      // Record refund transaction (deduct from student balance)
-      await this.transactionsService.recordRefund({
-        studentId: refund.studentId,
-        amount: approvedAmount,
-        refundId: refund.id,
-        companyId: refund.companyId,
-        performedById: userId,
-      });
-
-      // Update contract status
-      await this.prisma.contract.update({
-        where: { id: refund.contractId },
-        data: {
-          status: ContractStatus.REFUNDED,
-          paidAmount: { decrement: approvedAmount },
-        },
-      });
-
       // Calculate due date (15 business days from now)
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 21); // ~15 business days
 
-      return this.prisma.refund.update({
-        where: { id },
-        data: {
-          status: RefundStatus.COMPLETED,
-          approvedAmount,
-          processedById: userId,
-          processedAt: new Date(),
-          dueDate,
+      // Atomic: balance deduction + contract update + refund update all-or-nothing
+      return this.prisma.$transaction(
+        async (tx) => {
+          await this.transactionsService.recordRefund(
+            {
+              studentId: refund.studentId,
+              amount: approvedAmount,
+              refundId: refund.id,
+              companyId: refund.companyId,
+              performedById: userId,
+            },
+            tx,
+          );
+
+          await tx.contract.update({
+            where: { id: refund.contractId },
+            data: {
+              status: ContractStatus.REFUNDED,
+              paidAmount: { decrement: approvedAmount },
+            },
+          });
+
+          return tx.refund.update({
+            where: { id },
+            data: {
+              status: RefundStatus.COMPLETED,
+              approvedAmount,
+              processedById: userId,
+              processedAt: new Date(),
+              dueDate,
+            },
+          });
         },
-      });
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     }
 
     // For APPROVED status

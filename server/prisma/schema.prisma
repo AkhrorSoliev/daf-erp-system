@@ -180,6 +180,7 @@ enum ContractStatus {
 enum SalaryType {
   PERCENTAGE
   FIXED_PER_STUDENT
+  FIXED_MONTHLY
 }
 
 enum SalaryPaymentStatus {
@@ -206,8 +207,8 @@ enum ExpenseCategory {
 }
 
 model Role {
-  id    Int    @id
-  name  String @unique
+  id   Int    @id
+  name String @unique
 
   users UserRole[]
 }
@@ -246,16 +247,16 @@ model User {
   groups        Group[]        @relation("StudentGroups")
   groupTeachers GroupTeacher[] @relation("GroupTeachers")
 
-  deletedBranches    Branch[]     @relation("BranchDeletedBy")
-  deletedRooms       Room[]       @relation("RoomDeletedBy")
-  deletedCourses     Course[]     @relation("CourseDeletedBy")
-  deletedStudents    Student[]    @relation("StudentDeletedBy")
-  deletedLeads       Lead[]       @relation("LeadDeletedBy")
-  deletedGroups      Group[]      @relation("GroupDeletedBy")
-  deletedEnrollments Enrollment[] @relation("EnrollmentDeletedBy")
-  deletedHolidays    Holiday[]    @relation("HolidayDeletedBy")
-  statusChanges      StatusHistory[] @relation("StatusChangedBy")
-  entityChanges      EntityHistory[] @relation("EntityHistoryChangedBy")
+  deletedBranches    Branch[]           @relation("BranchDeletedBy")
+  deletedRooms       Room[]             @relation("RoomDeletedBy")
+  deletedCourses     Course[]           @relation("CourseDeletedBy")
+  deletedStudents    Student[]          @relation("StudentDeletedBy")
+  deletedLeads       Lead[]             @relation("LeadDeletedBy")
+  deletedGroups      Group[]            @relation("GroupDeletedBy")
+  deletedEnrollments Enrollment[]       @relation("EnrollmentDeletedBy")
+  deletedHolidays    Holiday[]          @relation("HolidayDeletedBy")
+  statusChanges      StatusHistory[]    @relation("StatusChangedBy")
+  entityChanges      EntityHistory[]    @relation("EntityHistoryChangedBy")
   comments           Comment[]          @relation("CommentAuthor")
   commentAssignees   CommentAssignee[]  @relation("CommentAssignees")
   notifications      Notification[]     @relation("UserNotifications")
@@ -265,20 +266,20 @@ model User {
   student            Student?           @relation("StudentUser")
   aiConversations    AiConversation[]   @relation("UserAiConversations")
 
-  // Financial relations (teacher)
-  teacherSalaryConfigs  TeacherSalaryConfig[] @relation("TeacherSalaryConfigs")
-  teacherSalaryPayments SalaryPayment[]       @relation("TeacherSalaryPayments")
-  teacherSalaryAccruals SalaryAccrual[]       @relation("TeacherSalaryAccruals")
-  teacherTransactions   Transaction[]         @relation("TeacherTransactions")
+  // Financial relations (employee salary — works for all roles)
+  salaryConfigs       EmployeeSalaryConfig[] @relation("UserSalaryConfigs")
+  salaryPayments      SalaryPayment[]        @relation("UserSalaryPayments")
+  salaryAccruals      SalaryAccrual[]        @relation("UserSalaryAccruals")
+  teacherTransactions Transaction[]          @relation("TeacherTransactions")
 
   // Financial relations (operator)
-  receivedPayments      Payment[]             @relation("PaymentReceivedBy")
-  performedTransactions Transaction[]         @relation("TransactionPerformedBy")
-  processedRefunds      Refund[]              @relation("RefundProcessedBy")
-  paidSalaries          SalaryPayment[]       @relation("SalaryPaidBy")
-  createdExpenses       Expense[]             @relation("ExpenseCreatedBy")
-  deletedExpenses       Expense[]             @relation("ExpenseDeletedBy")
-  deletedContracts      Contract[]            @relation("ContractDeletedBy")
+  receivedPayments      Payment[]       @relation("PaymentReceivedBy")
+  performedTransactions Transaction[]   @relation("TransactionPerformedBy")
+  processedRefunds      Refund[]        @relation("RefundProcessedBy")
+  paidSalaries          SalaryPayment[] @relation("SalaryPaidBy")
+  createdExpenses       Expense[]       @relation("ExpenseCreatedBy")
+  deletedExpenses       Expense[]       @relation("ExpenseDeletedBy")
+  deletedContracts      Contract[]      @relation("ContractDeletedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -425,16 +426,16 @@ model Student {
   statusChangedById  Int?
   statusChangeReason String?
 
-  companyId       Int?
-  company         Company?  @relation(fields: [companyId], references: [id])
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
 
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("StudentDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  userId      Int?          @unique
-  user        User?         @relation("StudentUser", fields: [userId], references: [id])
+  userId Int?  @unique
+  user   User? @relation("StudentUser", fields: [userId], references: [id])
 
   enrollments     Enrollment[]
   branches        StudentBranch[]
@@ -444,7 +445,7 @@ model Student {
 
   // Financial relations
   payments     Payment[]
-  transactions Transaction[]  @relation("StudentTransactions")
+  transactions Transaction[] @relation("StudentTransactions")
   contracts    Contract[]
   refunds      Refund[]
 
@@ -489,31 +490,31 @@ model Lead {
 }
 
 model Group {
-  id                 String      @id @default(uuid())
-  name               String
-  groupNumber        Int?
-  level              String?
-  courseId            String
-  course             Course      @relation(fields: [courseId], references: [id])
-  branchId           Int
-  branch             Branch      @relation(fields: [branchId], references: [id])
-  roomId             String?
-  room               Room?       @relation(fields: [roomId], references: [id])
-  companyId          Int?
-  company            Company?    @relation(fields: [companyId], references: [id])
-  days               String?
-  exactDays          String[]
-  lessonStartTime    String?
-  lessonEndTime      String?
-  lessonMinutes      Int?
-  status             Int         @default(2)
-  statusEnum         GroupStatus @default(FORMING)
-  comment            String?
-  startDate          DateTime?
-  endDate            DateTime?
-  isActive           Boolean     @default(true)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  id              String      @id @default(uuid())
+  name            String
+  groupNumber     Int?
+  level           String?
+  courseId        String
+  course          Course      @relation(fields: [courseId], references: [id])
+  branchId        Int
+  branch          Branch      @relation(fields: [branchId], references: [id])
+  roomId          String?
+  room            Room?       @relation(fields: [roomId], references: [id])
+  companyId       Int?
+  company         Company?    @relation(fields: [companyId], references: [id])
+  days            String?
+  exactDays       String[]
+  lessonStartTime String?
+  lessonEndTime   String?
+  lessonMinutes   Int?
+  status          Int         @default(2)
+  statusEnum      GroupStatus @default(FORMING)
+  comment         String?
+  startDate       DateTime?
+  endDate         DateTime?
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -525,13 +526,13 @@ model Group {
   deletionBatchId String?
 
   teachers    GroupTeacher[]
-  students    User[]       @relation("StudentGroups")
+  students    User[]         @relation("StudentGroups")
   enrollments Enrollment[]
   attendances Attendance[]
 
   // Financial relations
-  contracts            Contract[]
-  teacherSalaryConfigs TeacherSalaryConfig[]
+  contracts     Contract[]
+  salaryConfigs EmployeeSalaryConfig[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -625,17 +626,17 @@ model EntityHistory {
 }
 
 model Company {
-  id                Int       @id
-  name              String
-  subdomain         String?
-  logo              String?
-  phone             String?
-  activatedTill     DateTime?
-  customCss         String?
-  customCssLead     String?
-  leadSuccessText   String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id              Int       @id
+  name            String
+  subdomain       String?
+  logo            String?
+  phone           String?
+  activatedTill   DateTime?
+  customCss       String?
+  customCssLead   String?
+  leadSuccessText String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   users       User[]
   branches    Branch[]
@@ -648,20 +649,20 @@ model Company {
 }
 
 model Comment {
-  id           String             @id @default(uuid())
-  entityType   String
-  entityId     String
-  content      String
-  isTask       Boolean            @default(false)
-  isSystem     Boolean            @default(false)
-  dueDate      DateTime?
-  priority     TaskPriority?
-  authorId     Int
-  author       User               @relation("CommentAuthor", fields: [authorId], references: [id])
-  companyId    Int
-  company      Company            @relation(fields: [companyId], references: [id])
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id         String        @id @default(uuid())
+  entityType String
+  entityId   String
+  content    String
+  isTask     Boolean       @default(false)
+  isSystem   Boolean       @default(false)
+  dueDate    DateTime?
+  priority   TaskPriority?
+  authorId   Int
+  author     User          @relation("CommentAuthor", fields: [authorId], references: [id])
+  companyId  Int
+  company    Company       @relation(fields: [companyId], references: [id])
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
   assignees     CommentAssignee[]
   notifications Notification[]
@@ -674,16 +675,16 @@ model Comment {
 }
 
 model CommentAssignee {
-  id         String         @id @default(uuid())
-  commentId  String
-  comment    Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  userId     Int
-  user       User           @relation("CommentAssignees", fields: [userId], references: [id])
-  status          AssigneeStatus @default(PENDING)
-  seenAt          DateTime?
-  doneAt          DateTime?
-  lastRemindedAt  DateTime?
-  createdAt       DateTime       @default(now())
+  id             String         @id @default(uuid())
+  commentId      String
+  comment        Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId         Int
+  user           User           @relation("CommentAssignees", fields: [userId], references: [id])
+  status         AssigneeStatus @default(PENDING)
+  seenAt         DateTime?
+  doneAt         DateTime?
+  lastRemindedAt DateTime?
+  createdAt      DateTime       @default(now())
 
   @@unique([commentId, userId])
   @@index([userId, status])
@@ -741,21 +742,21 @@ model SmsMessage {
 }
 
 model Attendance {
-  id         String           @id @default(uuid())
-  groupId    String
-  group      Group            @relation(fields: [groupId], references: [id])
-  studentId  Int
-  student    Student          @relation(fields: [studentId], references: [id])
-  date       DateTime         @db.Date
-  status     AttendanceStatus
+  id           String           @id @default(uuid())
+  groupId      String
+  group        Group            @relation(fields: [groupId], references: [id])
+  studentId    Int
+  student      Student          @relation(fields: [studentId], references: [id])
+  date         DateTime         @db.Date
+  status       AttendanceStatus
   note         String?
   markedById   Int?
   markedBy     User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
   markedMethod AttendanceMethod @default(MANUAL)
-  companyId  Int?
-  company    Company?         @relation(fields: [companyId], references: [id])
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  companyId    Int?
+  company      Company?         @relation(fields: [companyId], references: [id])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@unique([groupId, studentId, date])
   @@index([groupId, date])
@@ -828,32 +829,32 @@ model Payment {
 }
 
 model Transaction {
-  id              String          @id @default(uuid())
-  type            TransactionType
-  amount          Int
-  balanceBefore   Int
-  balanceAfter    Int
-  description     String?
+  id            String          @id @default(uuid())
+  type          TransactionType
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+  description   String?
 
-  studentId       Int?
-  student         Student?        @relation("StudentTransactions", fields: [studentId], references: [id])
-  teacherId       Int?
-  teacher         User?           @relation("TeacherTransactions", fields: [teacherId], references: [id])
+  studentId Int?
+  student   Student? @relation("StudentTransactions", fields: [studentId], references: [id])
+  teacherId Int?
+  teacher   User?    @relation("TeacherTransactions", fields: [teacherId], references: [id])
 
   paymentId       String?
-  payment         Payment?        @relation(fields: [paymentId], references: [id])
+  payment         Payment?       @relation(fields: [paymentId], references: [id])
   attendanceId    String?
   salaryPaymentId String?
-  salaryPayment   SalaryPayment?  @relation(fields: [salaryPaymentId], references: [id])
+  salaryPayment   SalaryPayment? @relation(fields: [salaryPaymentId], references: [id])
   refundId        String?
-  refund          Refund?         @relation(fields: [refundId], references: [id])
+  refund          Refund?        @relation(fields: [refundId], references: [id])
   enrollmentId    String?
 
-  performedById   Int?
-  performedBy     User?           @relation("TransactionPerformedBy", fields: [performedById], references: [id])
-  branchId        Int?
-  companyId       Int
-  createdAt       DateTime        @default(now())
+  performedById Int?
+  performedBy   User?    @relation("TransactionPerformedBy", fields: [performedById], references: [id])
+  branchId      Int?
+  companyId     Int
+  createdAt     DateTime @default(now())
 
   @@index([studentId, createdAt])
   @@index([teacherId, createdAt])
@@ -863,36 +864,36 @@ model Transaction {
 }
 
 model Contract {
-  id              String         @id @default(uuid())
-  contractNumber  String         @unique
-  studentId       Int
-  student         Student        @relation(fields: [studentId], references: [id])
-  courseId         String
-  course          Course         @relation(fields: [courseId], references: [id])
-  groupId         String?
-  group           Group?         @relation(fields: [groupId], references: [id])
-  branchId        Int
+  id             String  @id @default(uuid())
+  contractNumber String  @unique
+  studentId      Int
+  student        Student @relation(fields: [studentId], references: [id])
+  courseId       String
+  course         Course  @relation(fields: [courseId], references: [id])
+  groupId        String?
+  group          Group?  @relation(fields: [groupId], references: [id])
+  branchId       Int
 
-  totalAmount     Int
-  paidAmount      Int            @default(0)
-  startDate       DateTime?
-  endDate         DateTime?
-  status          ContractStatus @default(DRAFT)
+  totalAmount Int
+  paidAmount  Int            @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  status      ContractStatus @default(DRAFT)
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
   statusChangeReason String?
 
-  signedAt        DateTime?
-  signedDocUrl    String?
+  signedAt     DateTime?
+  signedDocUrl String?
 
-  companyId       Int
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  companyId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   deletedAt       DateTime?
   deletedById     Int?
-  deletedBy       User?          @relation("ContractDeletedBy", fields: [deletedById], references: [id])
+  deletedBy       User?     @relation("ContractDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
   payments Payment[]
@@ -904,28 +905,28 @@ model Contract {
   @@index([deletedAt])
 }
 
-model TeacherSalaryConfig {
-  id          String     @id @default(uuid())
-  teacherId   Int
-  teacher     User       @relation("TeacherSalaryConfigs", fields: [teacherId], references: [id])
-  groupId     String?
-  group       Group?     @relation(fields: [groupId], references: [id])
-  salaryType  SalaryType
-  value       Int
-  isActive    Boolean    @default(true)
-  companyId   Int
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+model EmployeeSalaryConfig {
+  id         String     @id @default(uuid())
+  userId     Int
+  user       User       @relation("UserSalaryConfigs", fields: [userId], references: [id])
+  groupId    String?
+  group      Group?     @relation(fields: [groupId], references: [id])
+  salaryType SalaryType
+  value      Int
+  isActive   Boolean    @default(true)
+  companyId  Int
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  @@unique([teacherId, groupId])
-  @@index([teacherId])
+  @@unique([userId, groupId])
+  @@index([userId])
   @@index([companyId])
 }
 
 model SalaryAccrual {
   id              String         @id @default(uuid())
-  teacherId       Int
-  teacher         User           @relation("TeacherSalaryAccruals", fields: [teacherId], references: [id])
+  userId          Int
+  user            User           @relation("UserSalaryAccruals", fields: [userId], references: [id])
   studentId       Int
   groupId         String
   attendanceId    String
@@ -936,33 +937,33 @@ model SalaryAccrual {
   companyId       Int
   createdAt       DateTime       @default(now())
 
-  @@unique([teacherId, studentId, groupId, lessonDate])
-  @@index([teacherId, salaryPaymentId])
+  @@unique([userId, studentId, groupId, lessonDate])
+  @@index([userId, salaryPaymentId])
   @@index([companyId])
 }
 
 model SalaryPayment {
-  id              String              @id @default(uuid())
-  teacherId       Int
-  teacher         User                @relation("TeacherSalaryPayments", fields: [teacherId], references: [id])
-  periodStart     DateTime
-  periodEnd       DateTime
-  grossAmount     Int
-  taxAmount       Int                 @default(0)
-  netAmount       Int
-  status          SalaryPaymentStatus @default(CALCULATED)
-  paidAt          DateTime?
-  paidById        Int?
-  paidBy          User?               @relation("SalaryPaidBy", fields: [paidById], references: [id])
-  note            String?
-  companyId       Int
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id          String              @id @default(uuid())
+  userId      Int
+  user        User                @relation("UserSalaryPayments", fields: [userId], references: [id])
+  periodStart DateTime
+  periodEnd   DateTime
+  grossAmount Int
+  taxAmount   Int                 @default(0)
+  netAmount   Int
+  status      SalaryPaymentStatus @default(CALCULATED)
+  paidAt      DateTime?
+  paidById    Int?
+  paidBy      User?               @relation("SalaryPaidBy", fields: [paidById], references: [id])
+  note        String?
+  companyId   Int
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   transactions Transaction[]
   accruals     SalaryAccrual[]
 
-  @@index([teacherId])
+  @@index([userId])
   @@index([companyId, periodEnd])
   @@index([status])
 }
@@ -1012,7 +1013,7 @@ model Expense {
 
   deletedAt       DateTime?
   deletedById     Int?
-  deletedBy       User?       @relation("ExpenseDeletedBy", fields: [deletedById], references: [id])
+  deletedBy       User?     @relation("ExpenseDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
   @@index([companyId, date])

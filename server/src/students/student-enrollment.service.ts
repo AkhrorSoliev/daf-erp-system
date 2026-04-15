@@ -35,6 +35,12 @@ export class StudentEnrollmentService {
       );
     }
 
+    if (student.companyId == null) {
+      throw new BadRequestException(
+        "O'quvchining kompaniyasi aniqlanmagan — ma'lumotni to'g'rilang",
+      );
+    }
+
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },
       include: { course: { select: { name: true } } },
@@ -92,7 +98,7 @@ export class StudentEnrollmentService {
           amount: course.price,
           attendanceId: enrollment.id,
           enrollmentId: enrollment.id,
-          companyId: student.companyId ?? 0,
+          companyId: student.companyId,
           branchId: group.branchId,
         });
         this.logger.log(

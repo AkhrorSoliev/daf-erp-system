@@ -4,7 +4,7 @@ import { SalaryType } from '@prisma/client';
 export class CreateSalaryConfigDto {
   @IsInt()
   @IsNotEmpty()
-  teacherId: number;
+  userId: number;
 
   @IsOptional()
   @IsString()
