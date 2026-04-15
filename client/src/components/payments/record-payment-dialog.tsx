@@ -57,8 +57,16 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("CASH");
   const [note, setNote] = useState("");
+  const [externalId, setExternalId] = useState("");
+  const [providerFee, setProviderFee] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [searching, setSearching] = useState(false);
+
+  // External transaction binding (Payme/Click/Uzum) is only meaningful for
+  // non-cash methods. Keep the field hidden for CASH.
+  const isOnlineMethod = method !== "CASH";
+  const hasExternalId = externalId.trim().length > 0;
+  const rawProviderFee = parseInt(providerFee.replace(/\D/g, ""), 10) || 0;
 
   const searchStudents = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -91,12 +99,26 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
     if (!selectedStudent || rawAmount < 1000) return;
     setSubmitting(true);
     try {
-      await api.post("/payments", {
-        studentId: selectedStudent.id,
-        amount: rawAmount,
-        method,
-        note: note || undefined,
-      });
+      // If the operator pasted an external transaction id, go through the
+      // idempotent attach-external route (backed by the unique constraint on
+      // Payment so duplicate binds fail cleanly).
+      if (hasExternalId && isOnlineMethod) {
+        await api.post("/payments/attach-external", {
+          studentId: selectedStudent.id,
+          amount: rawAmount,
+          method,
+          externalId: externalId.trim(),
+          ...(rawProviderFee > 0 && { providerFee: rawProviderFee }),
+          note: note || undefined,
+        });
+      } else {
+        await api.post("/payments", {
+          studentId: selectedStudent.id,
+          amount: rawAmount,
+          method,
+          note: note || undefined,
+        });
+      }
       toast.success(
         `${formatPrice(rawAmount)} so'm to'lov qayd qilindi`
       );
@@ -120,6 +142,8 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
     setAmount("");
     setMethod("CASH");
     setNote("");
+    setExternalId("");
+    setProviderFee("");
   };
 
   const handleAmountChange = (val: string) => {
@@ -240,7 +264,16 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
           {/* Method */}
           <div className="space-y-2">
             <Label>To&apos;lov usuli</Label>
-            <Select value={method} onValueChange={setMethod}>
+            <Select
+              value={method}
+              onValueChange={(v) => {
+                setMethod(v);
+                if (v === "CASH") {
+                  setExternalId("");
+                  setProviderFee("");
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -253,6 +286,52 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
               </SelectContent>
             </Select>
           </div>
+
+          {/* External transaction binding — only for non-cash methods.
+              Filling externalId routes to POST /payments/attach-external,
+              which has server-side idempotency via a unique constraint. */}
+          {isOnlineMethod && (
+            <div className="rounded-md border border-dashed p-3 space-y-3">
+              <div className="flex items-baseline justify-between">
+                <p className="text-sm font-medium">Tranzaksiyani biriktirish</p>
+                <p className="text-[11px] text-muted-foreground">ixtiyoriy</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Tranzaksiya raqami (externalId)</Label>
+                <Input
+                  placeholder="Payme/Click/Uzum hisobotidan"
+                  value={externalId}
+                  onChange={(e) => setExternalId(e.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Agar to&apos;ldirilsa, ushbu tranzaksiya o&apos;quvchiga biriktiriladi
+                  va keyinchalik takroriy biriktirib bo&apos;lmaydi
+                </p>
+              </div>
+              {hasExternalId && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Provayder komissiyasi</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="0"
+                      value={providerFee}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "");
+                        setProviderFee(
+                          digits ? parseInt(digits, 10).toLocaleString("en-US") : "",
+                        );
+                      }}
+                      inputMode="numeric"
+                      className="pr-12"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      so&apos;m
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Note */}
           <div className="space-y-2">

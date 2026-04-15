@@ -38,9 +38,14 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
   const [salaryLoading, setSalaryLoading] = useState(false);
   const [salarySummary, setSalarySummary] = useState<{
     expectedMonthly: number;
+    expectedTax: number;
+    expectedNet: number;
     actualEarned: number;
+    actualEarnedTax: number;
+    actualEarnedNet: number;
     accrualCount: number;
     paidTotal: number;
+    taxRate: number;
     groups: { groupName: string; activeStudents: number; salaryType: string | null; salaryValue: number; expectedMonthly: number }[];
     hasConfig: boolean;
   } | null>(null);
@@ -167,27 +172,43 @@ export function TeacherProfileTabs({ teacher }: TeacherProfileTabsProps) {
             </div>
           ) : salarySummary && salaryVisible ? (
             <div className="space-y-4">
-              {/* Summary cards */}
+              {/* Summary cards — gross yuqorida, soliqdan keyin pastda */}
               <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-lg border p-3 space-y-1">
                   <p className="text-xs text-muted-foreground">Kutilayotgan (oylik)</p>
                   <p className="text-lg font-bold text-amber-600">
                     {salarySummary.expectedMonthly.toLocaleString("en-US")} so&apos;m
                   </p>
+                  {salarySummary.expectedTax > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Soliqdan keyin: <span className="font-medium text-foreground">{salarySummary.expectedNet.toLocaleString("en-US")} so&apos;m</span>
+                    </p>
+                  )}
                 </div>
                 <div className="rounded-lg border p-3 space-y-1">
                   <p className="text-xs text-muted-foreground">Haqiqiy yig&apos;ilgan</p>
                   <p className="text-lg font-bold text-green-600">
                     {salarySummary.actualEarned.toLocaleString("en-US")} so&apos;m
                   </p>
+                  {salarySummary.actualEarnedTax > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Qo&apos;lga tegadigan: <span className="font-medium text-foreground">{salarySummary.actualEarnedNet.toLocaleString("en-US")} so&apos;m</span>
+                    </p>
+                  )}
                 </div>
                 <div className="rounded-lg border p-3 space-y-1">
                   <p className="text-xs text-muted-foreground">Dars-o&apos;quvchi soni</p>
                   <p className="text-lg font-bold">{salarySummary.accrualCount}</p>
+                  {salarySummary.taxRate > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Soliq stavkasi: <span className="font-medium text-foreground">{salarySummary.taxRate}%</span>
+                    </p>
+                  )}
                 </div>
                 <div className="rounded-lg border p-3 space-y-1">
                   <p className="text-xs text-muted-foreground">Jami to&apos;langan</p>
                   <p className="text-lg font-bold">{salarySummary.paidTotal.toLocaleString("en-US")} so&apos;m</p>
+                  <p className="text-[11px] text-muted-foreground">Soliqdan keyin summa</p>
                 </div>
               </div>
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Loader2, Wallet } from "lucide-react";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -77,9 +93,12 @@ function primaryRoleLabel(roles: { role: { id: number } }[]): string {
 export function SalaryClient() {
   const user = useAuth((s) => s.user);
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  const canPay = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const [refreshKey, setRefreshKey] = useState(0);
   const [calculating, setCalculating] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [batchPaying, setBatchPaying] = useState(false);
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["salary-payments", refreshKey],
@@ -90,6 +109,18 @@ export function SalaryClient() {
         })
         .then((r) => r.data),
   });
+
+  const approvedCount = useMemo(
+    () => data?.data.filter((sp) => sp.status === "APPROVED").length ?? 0,
+    [data],
+  );
+  const approvedTotal = useMemo(
+    () =>
+      data?.data
+        .filter((sp) => sp.status === "APPROVED")
+        .reduce((sum, sp) => sum + sp.netAmount, 0) ?? 0,
+    [data],
+  );
 
   const handleCalculate = async () => {
     setCalculating(true);
@@ -130,9 +161,33 @@ export function SalaryClient() {
     }
   };
 
+  const handleBatchPay = async () => {
+    setBatchConfirmOpen(false);
+    setBatchPaying(true);
+    try {
+      const { data: result } = await api.post<{
+        total: number;
+        paid: number;
+        failed: number;
+      }>("/salary/payments/batch-pay");
+      if (result.failed === 0) {
+        toast.success(`${result.paid} ta oylik to'landi`);
+      } else {
+        toast.success(
+          `${result.paid} ta oylik to'landi, ${result.failed} ta xatolik`,
+        );
+      }
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Batch to'lashda xatolik"));
+    } finally {
+      setBatchPaying(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="font-heading text-lg font-semibold tracking-tight">
             Ish haqi
@@ -141,13 +196,61 @@ export function SalaryClient() {
             Xodimlar ish haqini boshqarish
           </p>
         </div>
-        {isCeo && (
-          <Button onClick={handleCalculate} disabled={calculating}>
-            {calculating && <Loader2 className="size-4 animate-spin mr-2" />}
-            Oylikni hisoblash
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {canPay && approvedCount > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    onClick={() => setBatchConfirmOpen(true)}
+                    disabled={batchPaying}
+                  >
+                    {batchPaying ? (
+                      <Loader2 className="size-4 animate-spin mr-2" />
+                    ) : (
+                      <Wallet className="size-4 mr-2" />
+                    )}
+                    Hammasini to&apos;lash ({approvedCount})
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Barcha tasdiqlangan oyliklarni bir martada to&apos;lash (odatda oyning 10-sanasida)
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {isCeo && (
+            <Button
+              variant="outline"
+              onClick={handleCalculate}
+              disabled={calculating}
+            >
+              {calculating && <Loader2 className="size-4 animate-spin mr-2" />}
+              Oylikni hisoblash
+            </Button>
+          )}
+        </div>
       </div>
+
+      <AlertDialog open={batchConfirmOpen} onOpenChange={setBatchConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Barcha tasdiqlangan oyliklarni to&apos;lash</AlertDialogTitle>
+            <AlertDialogDescription>
+              {approvedCount} ta xodimning oyligi to&apos;lanadi. Jami summa:{" "}
+              <strong>{formatPrice(approvedTotal)} so&apos;m</strong>. Bu amal
+              bekor qilib bo&apos;lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={batchPaying}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBatchPay} disabled={batchPaying}>
+              Ha, to&apos;lash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {isLoading ? (
         <div className="space-y-2">
@@ -168,6 +271,7 @@ export function SalaryClient() {
               <TableHead>Lavozim</TableHead>
               <TableHead>Davr</TableHead>
               <TableHead>Brutto</TableHead>
+              <TableHead>Soliq</TableHead>
               <TableHead>Netto</TableHead>
               <TableHead>Holat</TableHead>
               <TableHead>Amallar</TableHead>
@@ -190,6 +294,9 @@ export function SalaryClient() {
                   {format(new Date(sp.periodEnd), "dd.MM.yyyy")}
                 </TableCell>
                 <TableCell>{formatPrice(sp.grossAmount)} so&apos;m</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {sp.taxAmount > 0 ? `−${formatPrice(sp.taxAmount)} so'm` : "—"}
+                </TableCell>
                 <TableCell className="font-medium">
                   {formatPrice(sp.netAmount)} so&apos;m
                 </TableCell>
