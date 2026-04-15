@@ -198,6 +198,46 @@ export class TransactionsService {
   }
 
   /**
+   * Record a center expense in the universal ledger.
+   *
+   * Expenses don't hit a balance column (center cash is not yet modelled as an
+   * account), so balanceBefore/balanceAfter are both 0. The entry exists so
+   * cash-flow reports and audits can reconstruct every outflow.
+   *
+   * For TEACHER_ADVANCE, pass relatedUserId — it populates teacherId so the
+   * advance shows up on the employee's transaction history.
+   */
+  async recordExpense(
+    params: {
+      expenseId: string;
+      amount: number;
+      companyId: number;
+      branchId?: number;
+      performedById?: number;
+      relatedUserId?: number;
+      description?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      return client.transaction.create({
+        data: {
+          type: TransactionType.EXPENSE,
+          amount: -params.amount,
+          balanceBefore: 0,
+          balanceAfter: 0,
+          teacherId: params.relatedUserId,
+          expenseId: params.expenseId,
+          companyId: params.companyId,
+          branchId: params.branchId,
+          performedById: params.performedById,
+          description: params.description ?? 'Xarajat',
+        },
+      });
+    }, tx);
+  }
+
+  /**
    * Manual balance adjustment (correction by admin).
    */
   async createAdjustment(
