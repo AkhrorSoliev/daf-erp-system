@@ -833,7 +833,10 @@ export class ReportsService {
       _count: true,
     });
 
-    // Expected income = active students × course price per cycle
+    // Recognized revenue forecast (D.2): for each active enrollment, estimate
+    // how much we'll recognize this month based on the group's weekly cadence
+    // and per-lesson cost. Replaces the old "sum of full course prices" which
+    // wildly overstated expected income for short reporting windows.
     const activeEnrollments = await this.prisma.enrollment.findMany({
       where: {
         status: 'ACTIVE',
@@ -848,12 +851,37 @@ export class ReportsService {
       select: {
         group: {
           select: {
-            course: { select: { price: true } },
+            exactDays: true,
+            course: { select: { price: true, lessonPaymentCount: true } },
           },
         },
       },
     });
-    const expectedIncome = activeEnrollments.reduce((sum, e) => sum + e.group.course.price, 0);
+    const recognizedRevenueForecast = activeEnrollments.reduce((sum, e) => {
+      const lpc = e.group.course.lessonPaymentCount || 12;
+      const perLesson = Math.round(e.group.course.price / lpc);
+      const lessonsPerMonth = (e.group.exactDays?.length ?? 0) * 4;
+      return sum + perLesson * lessonsPerMonth;
+    }, 0);
+    // Keep `expectedIncome` as an alias for backward compatibility with
+    // existing dashboard clients.
+    const expectedIncome = recognizedRevenueForecast;
+
+    // Outstanding receivable (D.2): total unpaid balance across active
+    // debtors. Not a forecast — it's what the center is actually owed today.
+    const receivables = await this.prisma.student.aggregate({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: 'ACTIVE',
+        balance: { lt: 0 },
+      },
+      _sum: { balance: true },
+      _count: true,
+    });
+    const outstandingReceivable = Math.abs(receivables._sum.balance ?? 0);
+    const debtorCount = receivables._count;
+    const avgDebt = debtorCount > 0 ? Math.round(outstandingReceivable / debtorCount) : 0;
 
     // Salary: paid + pending
     const [salaryPaid, salaryPending] = await Promise.all([
@@ -948,6 +976,11 @@ export class ReportsService {
           amount: m._sum.amount ?? 0,
           count: m._count,
         })),
+      },
+      forecast: {
+        recognizedRevenueForecast,
+        outstandingReceivable,
+        debtorExposure: { count: debtorCount, avgDebt },
       },
       salary: {
         paid: totalSalaryPaid,
