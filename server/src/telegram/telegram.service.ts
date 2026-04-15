@@ -1,6 +1,9 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
+  NotFoundException,
   OnModuleInit,
   OnModuleDestroy,
 } from '@nestjs/common';
@@ -8,9 +11,18 @@ import { ConfigService } from '@nestjs/config';
 import { Telegraf, Scenes, session, Markup } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
-import { SCENES, TEACHER_DEEP_LINK_PREFIX, STUDENT_DEEP_LINK_PREFIX, STUDENT_GROUP_DEEP_LINK_RE } from './constants';
+import {
+  SCENES,
+  TEACHER_DEEP_LINK_PREFIX,
+  STUDENT_DEEP_LINK_PREFIX,
+  STUDENT_GROUP_DEEP_LINK_RE,
+  EMPLOYEE_DEEP_LINK_RE,
+  VALID_ROLE_IDS,
+} from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
+import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
+import { signEmployeePayload, verifyEmployeePayload } from './utils/signed-link.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
@@ -106,7 +118,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.entityHistoryService,
     );
 
-    const stage = new Scenes.Stage<BotContext>([teacherScene, studentScene]);
+    const employeeScene = createEmployeeRegistrationScene(
+      this.prisma,
+      this.uploadService,
+      this.usersService,
+      this.bot,
+    );
+
+    const stage = new Scenes.Stage<BotContext>([teacherScene, studentScene, employeeScene]);
     this.bot.use(stage.middleware());
 
     // /start handler
@@ -141,6 +160,43 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         ctx.session.data = { branchId };
         ctx.session.processing = false;
         await ctx.scene.enter(SCENES.TEACHER_REGISTRATION);
+        return;
+      }
+
+      // employee_{branchId}_roles_{id1,id2,...}_sig_{hmac} — xodim sifatida ro'yxatdan o'tish
+      const employeeMatch = payload.match(EMPLOYEE_DEEP_LINK_RE);
+      if (employeeMatch) {
+        ctx.session.processing = true;
+        const branchId = Number(employeeMatch[1]);
+        const rawRoleIds = employeeMatch[2]
+          .split(',')
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && (VALID_ROLE_IDS as readonly number[]).includes(id));
+        const providedSig = employeeMatch[3];
+
+        if (rawRoleIds.length === 0 || !verifyEmployeePayload(branchId, rawRoleIds, providedSig)) {
+          ctx.session.processing = false;
+          this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
+          await ctx.reply(
+            "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        const branch = await this.prisma.branch.findUnique({
+          where: { id: branchId },
+        });
+        if (!branch) {
+          ctx.session.processing = false;
+          await ctx.reply(
+            "Filial topilmadi. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+
+        ctx.session.data = { branchId, roleIds: rawRoleIds };
+        ctx.session.processing = false;
+        await ctx.scene.enter(SCENES.EMPLOYEE_REGISTRATION);
         return;
       }
 
@@ -297,5 +353,52 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (this.bot) {
       await this.bot.handleUpdate(req.body, res);
     }
+  }
+
+  async generateEmployeeLinkPayload(
+    branchId: number,
+    roleIds: number[],
+    requestedBy: { id: number; roles: string[] },
+  ): Promise<string> {
+    const unique = Array.from(new Set(roleIds));
+    if (unique.length === 0) {
+      throw new BadRequestException('Kamida bitta lavozim tanlang');
+    }
+    const invalid = unique.filter(
+      (id) => !(VALID_ROLE_IDS as readonly number[]).includes(id),
+    );
+    if (invalid.length > 0) {
+      throw new BadRequestException(`Noto'g'ri lavozim ID: ${invalid.join(', ')}`);
+    }
+
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!branch) {
+      throw new NotFoundException('Filial topilmadi');
+    }
+
+    const isCEO = requestedBy.roles.includes('CEO');
+    if (!isCEO) {
+      const caller = await this.prisma.user.findFirst({
+        where: { id: requestedBy.id, deletedAt: null },
+        select: {
+          mainBranch: true,
+          branches: { select: { branchId: true } },
+        },
+      });
+      const allowedBranchIds = new Set<number>([
+        ...(caller?.branches.map((b) => b.branchId) ?? []),
+        ...(caller?.mainBranch ? [caller.mainBranch] : []),
+      ]);
+      if (!allowedBranchIds.has(branchId)) {
+        throw new ForbiddenException(
+          "Siz faqat o'z filialingiz uchun havola yarata olasiz",
+        );
+      }
+    }
+
+    return signEmployeePayload(branchId, unique);
   }
 }
