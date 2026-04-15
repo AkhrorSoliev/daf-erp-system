@@ -136,6 +136,14 @@ export class SalaryService {
 
   // ===== SALARY ACCRUAL (called from attendance — teacher-only) =====
 
+  /**
+   * Write a salary accrual for one teacher on one lesson for one student.
+   *
+   * Coverage rule (Phase B.1): the lesson must be backed by a paid
+   * LESSON_DEDUCTION transaction. Callers pass `deductionTransactionId` of the
+   * cycle deduction the student is currently consuming. Without it, no accrual
+   * is written — teachers don't earn for unpaid lessons.
+   */
   async createAccrual(params: {
     teacherId: number;
     studentId: number;
@@ -144,7 +152,13 @@ export class SalaryService {
     lessonDate: Date;
     perLessonCost: number;
     companyId: number;
+    deductionTransactionId?: string | null;
   }) {
+    if (!params.deductionTransactionId) {
+      // Student has no active payment cycle — teacher does not earn for this lesson.
+      return null;
+    }
+
     const config = await this.prisma.employeeSalaryConfig.findFirst({
       where: {
         userId: params.teacherId,
@@ -184,10 +198,12 @@ export class SalaryService {
         lessonDate: params.lessonDate,
         amount,
         companyId: params.companyId,
+        deductionTransactionId: params.deductionTransactionId,
       },
       update: {
         amount,
         attendanceId: params.attendanceId,
+        deductionTransactionId: params.deductionTransactionId,
       },
     });
   }
