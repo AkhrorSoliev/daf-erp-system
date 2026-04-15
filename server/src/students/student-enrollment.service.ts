@@ -2,17 +2,22 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsService } from '../transactions/transactions.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class StudentEnrollmentService {
+  private readonly logger = new Logger(StudentEnrollmentService.name);
+
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
+    private transactionsService: TransactionsService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -74,6 +79,33 @@ export class StudentEnrollmentService {
         groupId,
       },
     });
+
+    // Deduct first payment cycle from student balance
+    const course = await this.prisma.course.findUnique({
+      where: { id: group.courseId },
+      select: { price: true, lessonPaymentCount: true },
+    });
+    if (course && course.price > 0) {
+      try {
+        await this.transactionsService.deductLessonFee({
+          studentId,
+          amount: course.price,
+          attendanceId: enrollment.id,
+          enrollmentId: enrollment.id,
+          companyId: student.companyId ?? 0,
+          branchId: group.branchId,
+        });
+        this.logger.log(
+          `First cycle deducted: student ${studentId}, amount ${course.price}, group ${groupId}`,
+        );
+      } catch (err) {
+        // Enrollment yaratildi lekin balans yechilmadi — admin xabardor qilinadi
+        this.logger.error(
+          `OGOHLANTIRISH: Enrollment yaratildi (${enrollment.id}) lekin birinchi sikl to'lovi yechilmadi! Student: ${studentId}, Group: ${groupId}, Amount: ${course.price}`,
+          err,
+        );
+      }
+    }
 
     await this.entityHistoryService.recordCreate({
       entityType: 'Enrollment',

@@ -54,4 +54,24 @@ export class ReportsController {
   getLeadAnalytics(@Query() query: ReportsQueryDto) {
     return this.reportsService.getLeadAnalytics(query);
   }
+
+  @Get('financial-trend')
+  getFinancialTrend(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getFinancialTrend(companyId, query.branchId);
+  }
+
+  @Get('financial-overview')
+  getFinancialOverview(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getFinancialOverview(companyId, {
+      branchId: query.branchId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
 }

@@ -2,9 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsService } from '../transactions/transactions.service';
+import { SalaryService } from '../salary/salary.service';
 import { AttendanceMethod, AttendanceStatus, EnrollmentStatus, GroupStatus, HolidayStatus } from '@prisma/client';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 
@@ -38,9 +41,13 @@ const JS_TO_DAY_NAME: Record<number, string> = {
 
 @Injectable()
 export class AttendanceService {
+  private readonly logger = new Logger(AttendanceService.name);
+
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
+    private transactionsService: TransactionsService,
+    private salaryService: SalaryService,
   ) {}
 
   /** Roles that bypass lesson time restriction */
@@ -477,7 +484,129 @@ export class AttendanceService {
       });
     }
 
+    // === FINANCIAL INTEGRATION: Balance deduction + Salary accrual ===
+    await this.processFinancialEffects(groupId, date, dto.entries, effectiveCompanyId);
+
     return { message: 'Davomat muvaffaqiyatli saqlandi', count: results.upsertResults.length };
+  }
+
+  /**
+   * Process financial effects of attendance:
+   * 1. Check if student crossed a payment cycle boundary → deduct full cycle fee
+   * 2. Create salary accrual for group teachers (per lesson, per student)
+   *
+   * Payment model: student pays for N lessons (lessonPaymentCount) at once.
+   * When their attended lessons cross a cycle boundary, the next cycle fee is auto-deducted.
+   * Example: course.price=800k, lessonPaymentCount=12
+   *   Lesson 1-12: already paid (deducted at enrollment)
+   *   Lesson 13: crosses boundary → deduct 800k for lessons 13-24
+   */
+  private async processFinancialEffects(
+    groupId: string,
+    date: string,
+    entries: { studentId: number; status: AttendanceStatus }[],
+    companyId?: number,
+  ) {
+    const billableEntries = entries.filter(
+      (e) => e.status === AttendanceStatus.PRESENT || e.status === AttendanceStatus.LATE,
+    );
+    if (billableEntries.length === 0) return;
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: {
+        id: true,
+        branchId: true,
+        course: { select: { price: true, lessonPaymentCount: true } },
+        teachers: { select: { teacherId: true } },
+      },
+    });
+    if (!group) return;
+
+    const { price, lessonPaymentCount: rawLPC } = group.course;
+    const lessonPaymentCount = rawLPC || 12;
+    const perLessonCost = Math.round(price / lessonPaymentCount);
+    const parsedDate = new Date(date + 'T00:00:00.000Z');
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        groupId,
+        studentId: { in: billableEntries.map((e) => e.studentId) },
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+      },
+      select: { id: true, studentId: true },
+    });
+    const enrollmentMap = new Map(enrollments.map((e) => [e.studentId, e.id]));
+
+    const attendances = await this.prisma.attendance.findMany({
+      where: {
+        groupId,
+        date: parsedDate,
+        studentId: { in: billableEntries.map((e) => e.studentId) },
+      },
+      select: { id: true, studentId: true },
+    });
+    const attendanceMap = new Map(attendances.map((a) => [a.studentId, a.id]));
+
+    for (const entry of billableEntries) {
+      const enrollmentId = enrollmentMap.get(entry.studentId);
+      const attendanceId = attendanceMap.get(entry.studentId);
+      if (!enrollmentId || !attendanceId) continue;
+
+      // 1. Check cycle boundary → deduct full cycle fee if crossed
+      try {
+        const totalAttended = await this.prisma.attendance.count({
+          where: {
+            groupId,
+            studentId: entry.studentId,
+            status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
+          },
+        });
+
+        // Cycle boundary: lessonPaymentCount, 2*lessonPaymentCount, etc.
+        // First cycle (lessons 1-N) is deducted at enrollment.
+        // When totalAttended crosses N, 2N, 3N... → deduct next cycle.
+        const cyclesPaid = Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
+        const cyclesDeducted = await this.prisma.transaction.count({
+          where: {
+            studentId: entry.studentId,
+            enrollmentId,
+            type: 'LESSON_DEDUCTION',
+          },
+        });
+
+        if (cyclesPaid > cyclesDeducted) {
+          await this.transactionsService.deductLessonFee({
+            studentId: entry.studentId,
+            amount: price,
+            attendanceId,
+            enrollmentId,
+            companyId: companyId ?? 0,
+            branchId: group.branchId,
+          });
+        }
+      } catch (err) {
+        this.logger.error(`Cycle deduction check failed for student ${entry.studentId}`, err);
+      }
+
+      // 2. Salary accrual for each teacher (per lesson, per student)
+      for (const teacher of group.teachers) {
+        try {
+          await this.salaryService.createAccrual({
+            teacherId: teacher.teacherId,
+            studentId: entry.studentId,
+            groupId,
+            attendanceId,
+            lessonDate: parsedDate,
+            perLessonCost,
+            companyId: companyId ?? 0,
+          });
+        } catch (err) {
+          this.logger.error(`Salary accrual failed for teacher ${teacher.teacherId}`, err);
+        }
+      }
+    }
   }
 
   /**

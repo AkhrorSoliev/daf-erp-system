@@ -6,6 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsService } from '../transactions/transactions.service';
+import { SalaryService } from '../salary/salary.service';
 
 const validatedGroup = {
   id: 'group-1',
@@ -56,6 +58,7 @@ describe('QrAttendanceService', () => {
           firstName: 'Ahmad',
           lastName: 'Karimov',
           photo: null,
+          balance: 500000,
         }),
       },
       holiday: {
@@ -97,6 +100,8 @@ describe('QrAttendanceService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EntityHistoryService, useValue: entityHistory },
         { provide: AttendanceService, useValue: attendanceService },
+        { provide: TransactionsService, useValue: { deductLessonFee: jest.fn() } },
+        { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
       ],
     }).compile();
 

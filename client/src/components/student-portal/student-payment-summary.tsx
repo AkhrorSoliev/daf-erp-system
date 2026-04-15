@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -180,18 +182,7 @@ export function StudentPaymentSummary() {
 
       <Separator />
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground">
-          To&apos;lov tarixi
-        </h3>
-        <div className="rounded-lg border border-dashed bg-muted/40 p-8 text-center">
-          <Clock className="size-6 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm font-medium">Tez orada qo&apos;shiladi</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            To&apos;lov tarixi tez orada bu yerda ko&apos;rsatiladi
-          </p>
-        </div>
-      </div>
+      <PaymentHistory />
 
       {/* Summa kiritish dialog */}
       <Dialog
@@ -308,6 +299,92 @@ export function StudentPaymentSummary() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+const methodLabels: Record<string, string> = {
+  CASH: "Naqd",
+  PAYME: "Payme",
+  CLICK: "Click",
+  UZUM: "Uzum",
+  TRANSFER: "O'tkazma",
+};
+
+const typeLabels: Record<string, string> = {
+  PAYMENT: "To'lov",
+  LESSON_DEDUCTION: "Dars uchun",
+  REFUND: "Qaytarildi",
+  ADJUSTMENT: "Tuzatish",
+};
+
+function PaymentHistory() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["student-portal", "payments"],
+    queryFn: () => api.get("/student-portal/payments").then((r) => r.data),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-16 rounded-lg" />
+        <Skeleton className="h-16 rounded-lg" />
+      </div>
+    );
+  }
+
+  const transactions = data?.transactions ?? [];
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-muted-foreground">
+        Balans tarixi
+      </h3>
+      {transactions.length === 0 ? (
+        <div className="rounded-lg border border-dashed bg-muted/40 p-8 text-center">
+          <Clock className="size-6 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm font-medium">Hali tranzaksiya yo&apos;q</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {transactions.map(
+            (t: {
+              id: string;
+              type: string;
+              amount: number;
+              balanceAfter: number;
+              description: string | null;
+              createdAt: string;
+            }) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between rounded-lg border bg-card p-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">
+                    {t.description || typeLabels[t.type] || t.type}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p
+                    className={`text-sm font-bold ${t.amount >= 0 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {t.amount >= 0 ? "+" : ""}
+                    {t.amount.toLocaleString("en-US")} so&apos;m
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.balanceAfter.toLocaleString("en-US")} so&apos;m
+                  </p>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      )}
     </div>
   );
 }

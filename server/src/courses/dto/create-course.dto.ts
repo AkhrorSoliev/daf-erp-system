@@ -32,6 +32,12 @@ export class CreateCourseDto {
   @Type(() => Number)
   price: number;
 
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  lessonPaymentCount?: number;
+
   @IsInt()
   @Type(() => Number)
   branchId: number;

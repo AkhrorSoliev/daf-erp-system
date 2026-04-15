@@ -7,9 +7,10 @@ import { StudentPortalService } from './student-portal.service';
 import { UploadModule } from '../upload/upload.module';
 import { SmsModule } from '../sms/sms.module';
 import { AttendanceModule } from '../attendance/attendance.module';
+import { TransactionsModule } from '../transactions/transactions.module';
 
 @Module({
-  imports: [UploadModule, SmsModule, AttendanceModule],
+  imports: [UploadModule, SmsModule, AttendanceModule, TransactionsModule],
   controllers: [StudentsController, StudentPortalController],
   providers: [StudentsService, StudentEnrollmentService, StudentPortalService],
   exports: [StudentsService, StudentEnrollmentService],

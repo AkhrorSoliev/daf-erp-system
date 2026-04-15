@@ -2,12 +2,15 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsService } from '../transactions/transactions.service';
+import { SalaryService } from '../salary/salary.service';
 import { AttendanceMethod, AttendanceStatus, EnrollmentStatus, HolidayStatus } from '@prisma/client';
 import { AttendanceService } from './attendance.service';
 
@@ -33,12 +36,16 @@ const TOKEN_TTL = 50; // 50 soniya (45s + 5s grace)
 
 @Injectable()
 export class QrAttendanceService {
+  private readonly logger = new Logger(QrAttendanceService.name);
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
     private notificationsGateway: NotificationsGateway,
     private entityHistoryService: EntityHistoryService,
     private attendanceService: AttendanceService,
+    private transactionsService: TransactionsService,
+    private salaryService: SalaryService,
   ) {}
 
   async startSession(
@@ -271,6 +278,20 @@ export class QrAttendanceService {
       throw new BadRequestException('Siz bu guruhga yozilmagansiz');
     }
 
+    // BALANS TEKSHIRUVI: balance < 0 bo'lsa bloklash (0 = to'liq to'langan)
+    const studentBalance = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: { balance: true },
+    });
+    if (studentBalance && studentBalance.balance < 0) {
+      return {
+        success: false,
+        balanceInsufficient: true,
+        message: "Balans yetarli emas. Iltimos, ma'muriyatga murojaat qiling",
+        balance: studentBalance.balance,
+      };
+    }
+
     // Allaqachon belgilangan bo'lsa
     const existing = await this.prisma.attendance.findUnique({
       where: {
@@ -353,8 +374,71 @@ export class QrAttendanceService {
       });
     }
 
+    // CYCLE DEDUCTION + SALARY ACCRUAL
+    try {
+      const groupData = await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: {
+          branchId: true,
+          course: { select: { price: true, lessonPaymentCount: true } },
+          teachers: { select: { teacherId: true } },
+        },
+      });
+
+      if (groupData) {
+        const { price, lessonPaymentCount: rawLPC } = groupData.course;
+        const lessonPaymentCount = rawLPC || 12;
+        const perLessonCost = Math.round(price / lessonPaymentCount);
+        const parsedLessonDate = new Date(date + 'T00:00:00.000Z');
+
+        // Check cycle boundary → deduct full cycle if crossed
+        const totalAttended = await this.prisma.attendance.count({
+          where: {
+            groupId,
+            studentId,
+            status: { in: ['PRESENT', 'LATE'] },
+          },
+        });
+
+        const cyclesPaid = Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
+        const cyclesDeducted = await this.prisma.transaction.count({
+          where: {
+            studentId,
+            enrollmentId: enrollment.id,
+            type: 'LESSON_DEDUCTION',
+          },
+        });
+
+        if (cyclesPaid > cyclesDeducted) {
+          await this.transactionsService.deductLessonFee({
+            studentId,
+            amount: price,
+            attendanceId: attendance.id,
+            enrollmentId: enrollment.id,
+            companyId,
+            branchId: groupData.branchId,
+          });
+        }
+
+        // Salary accrual for teachers (per lesson, per student)
+        for (const teacher of groupData.teachers) {
+          await this.salaryService.createAccrual({
+            teacherId: teacher.teacherId,
+            studentId,
+            groupId,
+            attendanceId: attendance.id,
+            lessonDate: parsedLessonDate,
+            perLessonCost,
+            companyId,
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Financial processing failed for QR scan: student ${studentId}, group ${groupId}`, err);
+    }
+
     // O'quvchi ma'lumotlarini olish
-    const student = await this.prisma.student.findUnique({
+    const studentData = await this.prisma.student.findUnique({
       where: { id: studentId },
       select: { firstName: true, lastName: true, photo: true },
     });
@@ -367,9 +451,9 @@ export class QrAttendanceService {
       studentId,
       status: AttendanceStatus.PRESENT,
       student: {
-        firstName: student?.firstName,
-        lastName: student?.lastName,
-        photo: student?.photo,
+        firstName: studentData?.firstName,
+        lastName: studentData?.lastName,
+        photo: studentData?.photo,
       },
       scannedAt: new Date().toISOString(),
     });

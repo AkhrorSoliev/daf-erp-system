@@ -28,6 +28,12 @@ import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ContractsModule } from './contracts/contracts.module';
+import { SalaryModule } from './salary/salary.module';
+import { RefundsModule } from './refunds/refunds.module';
+import { ExpensesModule } from './expenses/expenses.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -60,6 +66,12 @@ import { JwtAuthGuard } from './common/guards';
     SearchModule,
     DashboardModule,
     ReportsModule,
+    TransactionsModule,
+    PaymentsModule,
+    ContractsModule,
+    SalaryModule,
+    RefundsModule,
+    ExpensesModule,
   ],
   providers: [
     {

@@ -93,6 +93,14 @@ export class StudentPortalController {
     return this.studentPortalService.updatePhoto(studentId, file, userId);
   }
 
+  @Get('payments')
+  @UseGuards(RolesGuard)
+  @Roles('Student')
+  getPayments(@CurrentUser('studentId') studentId: number) {
+    if (!studentId) throw new NotFoundException('Talaba topilmadi');
+    return this.studentPortalService.getPaymentHistory(studentId);
+  }
+
   @Post('attendance/scan')
   @UseGuards(RolesGuard)
   @Roles('Student')
