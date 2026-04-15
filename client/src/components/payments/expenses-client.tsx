@@ -270,9 +270,8 @@ export function ExpensesClient() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Avans xodim transaction tarixida qayd qilinadi. Avtomatik
-                  oylikdan ushlab qolish hali yoqilmagan — payroll hisobida
-                  qo&apos;lda tekshiring
+                  Avans keyingi oylik hisobida ushbu xodimning oyligidan
+                  avtomatik ushlab qolinadi
                 </p>
               </div>
             )}
