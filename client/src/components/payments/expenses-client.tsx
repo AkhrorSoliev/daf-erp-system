@@ -43,8 +43,15 @@ interface Expense {
   description: string;
   date: string;
   branchId: number | null;
+  relatedUserId?: number | null;
   createdAt: string;
   createdBy: { id: number; firstName: string; lastName: string };
+}
+
+interface EmployeeOption {
+  id: number;
+  firstName: string;
+  lastName: string;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -52,6 +59,7 @@ const categoryLabels: Record<string, string> = {
   UTILITIES: "Kommunal",
   SUPPLIES: "Ta'minot",
   MARKETING: "Marketing",
+  TEACHER_ADVANCE: "Ustozga avans",
   OTHER: "Boshqa",
 };
 
@@ -69,6 +77,9 @@ export function ExpensesClient() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | null>(new Date());
+  const [relatedUserId, setRelatedUserId] = useState<string>("");
+
+  const isTeacherAdvance = category === "TEACHER_ADVANCE";
 
   const { data, isLoading } = useQuery({
     queryKey: ["expenses", refreshKey],
@@ -80,10 +91,24 @@ export function ExpensesClient() {
         .then((r) => r.data),
   });
 
+  // Fetch employees only when the advance category is selected — avoids
+  // hitting /users on every expense dialog open.
+  const { data: employees } = useQuery({
+    queryKey: ["expense-employees"],
+    queryFn: () =>
+      api
+        .get<{ data: EmployeeOption[]; total: number }>("/users", {
+          params: { pageSize: 200 },
+        })
+        .then((r) => r.data.data),
+    enabled: isTeacherAdvance,
+  });
+
   const rawAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
 
   const handleSubmit = async () => {
     if (rawAmount < 1 || !description.trim() || !date) return;
+    if (isTeacherAdvance && !relatedUserId) return;
     setSubmitting(true);
     try {
       await api.post("/expenses", {
@@ -91,6 +116,7 @@ export function ExpensesClient() {
         amount: rawAmount,
         description: description.trim(),
         date: format(date, "yyyy-MM-dd"),
+        ...(isTeacherAdvance && { relatedUserId: parseInt(relatedUserId, 10) }),
       });
       toast.success("Xarajat qayd qilindi");
       setDialogOpen(false);
@@ -98,6 +124,7 @@ export function ExpensesClient() {
       setDescription("");
       setCategory("OTHER");
       setDate(new Date());
+      setRelatedUserId("");
       setRefreshKey((k) => k + 1);
     } catch (err: unknown) {
       toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Xarajatni saqlashda xatolik");
@@ -208,7 +235,13 @@ export function ExpensesClient() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Kategoriya</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select
+                value={category}
+                onValueChange={(v) => {
+                  setCategory(v);
+                  if (v !== "TEACHER_ADVANCE") setRelatedUserId("");
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -221,6 +254,26 @@ export function ExpensesClient() {
                 </SelectContent>
               </Select>
             </div>
+            {isTeacherAdvance && (
+              <div className="space-y-2">
+                <Label>Xodim</Label>
+                <Select value={relatedUserId} onValueChange={setRelatedUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Avans oluvchi xodimni tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(employees ?? []).map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)}>
+                        #{u.id} {u.firstName} {u.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Avans keyingi oylik hisobida ushbu xodimdan ushlab qolinadi
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Summa</Label>
               <div className="relative">
@@ -258,7 +311,16 @@ export function ExpensesClient() {
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
               Bekor qilish
             </Button>
-            <Button onClick={handleSubmit} disabled={rawAmount < 1 || !description.trim() || !date || submitting}>
+            <Button
+              onClick={handleSubmit}
+              disabled={
+                rawAmount < 1 ||
+                !description.trim() ||
+                !date ||
+                (isTeacherAdvance && !relatedUserId) ||
+                submitting
+              }
+            >
               {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
               Saqlash
             </Button>
