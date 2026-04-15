@@ -125,17 +125,70 @@ export class ExpensesService {
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
 
-    const expense = await this.prisma.expense.update({
-      where: { id },
-      data: {
-        ...(dto.category && { category: dto.category }),
-        ...(dto.amount !== undefined && { amount: dto.amount }),
-        ...(dto.description && { description: dto.description }),
-        ...(dto.date && { date: new Date(dto.date) }),
-        ...(dto.branchId !== undefined && { branchId: dto.branchId }),
-        ...(dto.receiptUrl !== undefined && { receiptUrl: dto.receiptUrl }),
+    // Detect if the change touches financial fields. Description/date/branch/
+    // receiptUrl edits do not require a ledger correction; amount or category
+    // changes must be reflected in Transaction or cash-flow reports drift.
+    const amountChanged = dto.amount !== undefined && dto.amount !== existing.amount;
+    const categoryChanged = dto.category !== undefined && dto.category !== existing.category;
+    const relatedUserChanged =
+      dto.relatedUserId !== undefined && dto.relatedUserId !== existing.relatedUserId;
+    const financialFieldChanged = amountChanged || categoryChanged || relatedUserChanged;
+
+    const expense = await this.prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.expense.update({
+          where: { id },
+          data: {
+            ...(dto.category && { category: dto.category }),
+            ...(dto.amount !== undefined && { amount: dto.amount }),
+            ...(dto.description && { description: dto.description }),
+            ...(dto.date && { date: new Date(dto.date) }),
+            ...(dto.branchId !== undefined && { branchId: dto.branchId }),
+            ...(dto.receiptUrl !== undefined && { receiptUrl: dto.receiptUrl }),
+            ...(dto.relatedUserId !== undefined && { relatedUserId: dto.relatedUserId }),
+          },
+        });
+
+        if (financialFieldChanged) {
+          // Ledger is append-only (F.2): reverse the original entry and post
+          // a new one with the updated figures instead of mutating the old
+          // Transaction row. Legacy expenses without a ledger entry
+          // (pre-C.2) get the new entry only — nothing to reverse.
+          const originalEntry = await tx.transaction.findFirst({
+            where: {
+              expenseId: id,
+              type: 'EXPENSE',
+              reversedTransactionId: null,
+            },
+            select: { id: true },
+          });
+
+          if (originalEntry) {
+            await this.transactionsService.reverseTransaction(
+              originalEntry.id,
+              { performedById: userId, reason: "Xarajat yangilandi" },
+              tx,
+            );
+          }
+
+          await this.transactionsService.recordExpense(
+            {
+              expenseId: updated.id,
+              amount: updated.amount,
+              companyId: updated.companyId,
+              branchId: updated.branchId ?? undefined,
+              performedById: userId,
+              relatedUserId: updated.relatedUserId ?? undefined,
+              description: updated.description,
+            },
+            tx,
+          );
+        }
+
+        return updated;
       },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'Expense',

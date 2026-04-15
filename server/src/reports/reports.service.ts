@@ -882,17 +882,30 @@ export class ReportsService {
     const debtorCount = receivables._count;
     const avgDebt = debtorCount > 0 ? Math.round(outstandingReceivable / debtorCount) : 0;
 
-    // Salary: paid + pending
-    const [salaryPaid, salaryPending] = await Promise.all([
+    // Salary: paid + pending. Both are reported on the same basis — net of
+    // tax — so the dashboard number reflects what actually leaves (or will
+    // leave) the center. Previously paid was net and pending was gross,
+    // which made the two rows incomparable and overstated pending.
+    const [salaryPaid, salaryPending, companyTax] = await Promise.all([
       this.prisma.salaryPayment.aggregate({
         where: { companyId, status: 'PAID', paidAt: dateFilter },
-        _sum: { netAmount: true },
+        _sum: { netAmount: true, grossAmount: true, taxAmount: true },
       }),
       this.prisma.salaryAccrual.aggregate({
         where: { companyId, salaryPaymentId: null },
         _sum: { amount: true },
       }),
+      this.prisma.companyTaxConfig.findUnique({
+        where: { companyId },
+        select: { salaryTaxRate: true, isActive: true },
+      }),
     ]);
+
+    const salaryTaxRate =
+      companyTax && companyTax.isActive ? companyTax.salaryTaxRate : 12.0;
+    const pendingGross = salaryPending._sum.amount ?? 0;
+    const pendingTax = Math.round((pendingGross * salaryTaxRate) / 100);
+    const pendingNet = pendingGross - pendingTax;
 
     // Expenses
     const expenses = await this.prisma.expense.aggregate({
@@ -983,7 +996,11 @@ export class ReportsService {
       },
       salary: {
         paid: totalSalaryPaid,
-        pending: salaryPending._sum.amount ?? 0,
+        paidGross: salaryPaid._sum.grossAmount ?? 0,
+        paidTax: salaryPaid._sum.taxAmount ?? 0,
+        pending: pendingNet,
+        pendingGross,
+        pendingTax,
       },
       expenses: totalExpenseAmount,
       netProfit: totalIncome - totalExpenses,
