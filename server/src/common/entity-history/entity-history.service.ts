@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { EntityAction } from '@prisma/client';
+import { EntityAction, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeChangedFields, stripSensitiveFields } from './diff.util';
@@ -9,6 +9,10 @@ interface BaseHistoryParams {
   entityId: string | number;
   changedById?: number;
   companyId?: number;
+  // Optional existing transaction client — when a finance flow wraps state
+  // writes in a $transaction, passing tx here keeps the audit row atomic
+  // with the change it describes. No tx → uses the default Prisma client.
+  tx?: Prisma.TransactionClient;
 }
 
 @Injectable()
@@ -18,10 +22,14 @@ export class EntityHistoryService {
     private eventEmitter: EventEmitter2,
   ) {}
 
+  private client(tx?: Prisma.TransactionClient): Prisma.TransactionClient {
+    return tx ?? (this.prisma as unknown as Prisma.TransactionClient);
+  }
+
   async recordCreate(
     params: BaseHistoryParams & { newValues: Record<string, any> },
   ) {
-    await this.prisma.entityHistory.create({
+    await this.client(params.tx).entityHistory.create({
       data: {
         entityType: params.entityType,
         entityId: String(params.entityId),
@@ -43,7 +51,7 @@ export class EntityHistoryService {
     const diff = computeChangedFields(params.oldValues, params.newValues);
     if (!diff) return;
 
-    await this.prisma.entityHistory.create({
+    await this.client(params.tx).entityHistory.create({
       data: {
         entityType: params.entityType,
         entityId: String(params.entityId),
@@ -59,7 +67,7 @@ export class EntityHistoryService {
   async recordDelete(
     params: BaseHistoryParams & { oldValues: Record<string, any> },
   ) {
-    await this.prisma.entityHistory.create({
+    await this.client(params.tx).entityHistory.create({
       data: {
         entityType: params.entityType,
         entityId: String(params.entityId),
