@@ -203,7 +203,15 @@ enum ExpenseCategory {
   UTILITIES
   SUPPLIES
   MARKETING
+  TEACHER_ADVANCE
   OTHER
+}
+
+enum PaymentSource {
+  ADMIN_MANUAL
+  STUDENT_PORTAL
+  GATEWAY_WEBHOOK
+  MANUAL_ATTACH
 }
 
 model Role {
@@ -279,6 +287,7 @@ model User {
   paidSalaries          SalaryPayment[] @relation("SalaryPaidBy")
   createdExpenses       Expense[]       @relation("ExpenseCreatedBy")
   deletedExpenses       Expense[]       @relation("ExpenseDeletedBy")
+  relatedExpenses       Expense[]       @relation("ExpenseRelatedUser")
   deletedContracts      Contract[]      @relation("ContractDeletedBy")
 
   @@index([deletedAt])
@@ -800,28 +809,30 @@ model AiChatMessage {
 // ===== FINANCIAL SYSTEM MODELS =====
 
 model Payment {
-  id                 String        @id @default(uuid())
+  id                 String         @id @default(uuid())
   studentId          Int
-  student            Student       @relation(fields: [studentId], references: [id])
+  student            Student        @relation(fields: [studentId], references: [id])
   contractId         String?
-  contract           Contract?     @relation(fields: [contractId], references: [id])
+  contract           Contract?      @relation(fields: [contractId], references: [id])
   amount             Int
   method             PaymentMethod
-  status             PaymentStatus @default(COMPLETED)
+  status             PaymentStatus  @default(COMPLETED)
+  source             PaymentSource  @default(ADMIN_MANUAL)
   externalId         String?
   providerFee        Int?
   providerFeePercent Float?
   receiptNumber      String?
   note               String?
   receivedById       Int?
-  receivedBy         User?         @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  receivedBy         User?          @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
   branchId           Int?
   companyId          Int
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
   transactions Transaction[]
 
+  @@unique([method, externalId, companyId], name: "unique_external_payment")
   @@index([studentId])
   @@index([companyId, createdAt])
   @@index([status])
@@ -849,6 +860,18 @@ model Transaction {
   refundId        String?
   refund          Refund?        @relation(fields: [refundId], references: [id])
   enrollmentId    String?
+  contractId      String?
+  contract        Contract?      @relation(fields: [contractId], references: [id])
+  expenseId       String?
+  expense         Expense?       @relation(fields: [expenseId], references: [id])
+
+  // Reversal link: points to the original transaction this one reverses.
+  reversedTransactionId String?
+  reversedTransaction   Transaction?  @relation("TransactionReversal", fields: [reversedTransactionId], references: [id])
+  reversalEntries       Transaction[] @relation("TransactionReversal")
+
+  // Linked salary accruals (coverage guard — B.1).
+  accruals SalaryAccrual[] @relation("AccrualDeduction")
 
   performedById Int?
   performedBy   User?    @relation("TransactionPerformedBy", fields: [performedById], references: [id])
@@ -861,6 +884,9 @@ model Transaction {
   @@index([type])
   @@index([companyId, createdAt])
   @@index([branchId])
+  @@index([contractId])
+  @@index([expenseId])
+  @@index([reversedTransactionId])
 }
 
 model Contract {
@@ -896,8 +922,9 @@ model Contract {
   deletedBy       User?     @relation("ContractDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  payments Payment[]
-  refunds  Refund[]
+  payments     Payment[]
+  refunds      Refund[]
+  transactions Transaction[]
 
   @@index([studentId])
   @@index([companyId])
@@ -934,12 +961,19 @@ model SalaryAccrual {
   amount          Int
   salaryPaymentId String?
   salaryPayment   SalaryPayment? @relation(fields: [salaryPaymentId], references: [id])
-  companyId       Int
-  createdAt       DateTime       @default(now())
+
+  // Coverage link: accrual is only written when the corresponding lesson
+  // deduction transaction exists (B.1). Null until backfilled or for legacy rows.
+  deductionTransactionId String?
+  deductionTransaction   Transaction? @relation("AccrualDeduction", fields: [deductionTransactionId], references: [id])
+
+  companyId Int
+  createdAt DateTime @default(now())
 
   @@unique([userId, studentId, groupId, lessonDate])
   @@index([userId, salaryPaymentId])
   @@index([companyId])
+  @@index([deductionTransactionId])
 }
 
 model SalaryPayment {
@@ -1007,16 +1041,62 @@ model Expense {
   receiptUrl  String?
   createdById Int
   createdBy   User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
-  companyId   Int
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+
+  // Optional link to an employee — used by TEACHER_ADVANCE to bind the
+  // advance to the recipient so it can be netted against future salary.
+  relatedUserId Int?
+  relatedUser   User? @relation("ExpenseRelatedUser", fields: [relatedUserId], references: [id])
+
+  companyId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("ExpenseDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  transactions Transaction[]
+
   @@index([companyId, date])
   @@index([category])
   @@index([deletedAt])
+  @@index([relatedUserId])
+}
+
+// ===== TAX CONFIGURATION =====
+
+// Per-company tax rates applied during salary calculation and refund processing.
+// Default 12% reflects Uzbekistan ASOT (Aholidan Soliq Olishning Oliy Tartibi).
+model CompanyTaxConfig {
+  id            String   @id @default(cuid())
+  companyId     Int      @unique
+  salaryTaxRate Float    @default(12.0)
+  refundTaxRate Float    @default(0.0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ===== PAYMENT GATEWAY EVENT LOG =====
+
+// Raw webhook payload log for Payme/Click/Uzum. Written before any payment
+// processing so we can debug, dispute, replay or detect duplicates regardless
+// of whether the payload was eventually accepted.
+model PaymentGatewayEvent {
+  id             String        @id @default(uuid())
+  companyId      Int
+  provider       PaymentMethod
+  externalId     String
+  eventType      String
+  payload        Json
+  signatureValid Boolean       @default(false)
+  processed      Boolean       @default(false)
+  processedAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime      @default(now())
+
+  @@index([companyId, provider, createdAt])
+  @@index([externalId])
+  @@index([processed])
 }
