@@ -44,8 +44,9 @@ export class ExpensesController {
     @Param('id') id: string,
     @Body() dto: Partial<CreateExpenseDto>,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.expensesService.update(id, dto, userId);
+    return this.expensesService.update(id, dto, userId, companyId);
   }
 
   @Delete(':id')
@@ -53,7 +54,8 @@ export class ExpensesController {
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.expensesService.remove(id, userId);
+    return this.expensesService.remove(id, userId, companyId);
   }
 }
