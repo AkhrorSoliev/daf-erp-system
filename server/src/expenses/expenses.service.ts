@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { Prisma } from '@prisma/client';
+import { ExpenseCategory, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 
@@ -9,22 +10,62 @@ import { ExpenseQueryDto } from './dto/expense-query.dto';
 export class ExpensesService {
   constructor(
     private prisma: PrismaService,
+    private transactionsService: TransactionsService,
     private entityHistoryService: EntityHistoryService,
   ) {}
 
   async create(dto: CreateExpenseDto, userId: number, companyId: number) {
-    const expense = await this.prisma.expense.create({
-      data: {
-        category: dto.category,
-        amount: dto.amount,
-        description: dto.description,
-        date: new Date(dto.date),
-        branchId: dto.branchId,
-        receiptUrl: dto.receiptUrl,
-        createdById: userId,
-        companyId,
+    // TEACHER_ADVANCE must name the recipient employee, and that employee
+    // must belong to this company.
+    if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
+      if (!dto.relatedUserId) {
+        throw new BadRequestException(
+          "TEACHER_ADVANCE xarajati uchun xodim (relatedUserId) ko'rsatilishi shart",
+        );
+      }
+      const user = await this.prisma.user.findFirst({
+        where: { id: dto.relatedUserId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!user) {
+        throw new BadRequestException('Xodim topilmadi');
+      }
+    }
+
+    // Atomic: expense row + ledger entry are all-or-nothing.
+    const expense = await this.prisma.$transaction(
+      async (tx) => {
+        const expense = await tx.expense.create({
+          data: {
+            category: dto.category,
+            amount: dto.amount,
+            description: dto.description,
+            date: new Date(dto.date),
+            branchId: dto.branchId,
+            receiptUrl: dto.receiptUrl,
+            relatedUserId: dto.relatedUserId,
+            createdById: userId,
+            companyId,
+          },
+        });
+
+        await this.transactionsService.recordExpense(
+          {
+            expenseId: expense.id,
+            amount: dto.amount,
+            companyId,
+            branchId: dto.branchId,
+            performedById: userId,
+            relatedUserId: dto.relatedUserId,
+            description: dto.description,
+          },
+          tx,
+        );
+
+        return expense;
       },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     await this.entityHistoryService.recordCreate({
       entityType: 'Expense',
@@ -114,10 +155,34 @@ export class ExpensesService {
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
 
-    await this.prisma.expense.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedById: userId },
+    // Find the associated EXPENSE ledger entry so we can reverse it.
+    const ledgerEntry = await this.prisma.transaction.findFirst({
+      where: {
+        expenseId: id,
+        type: 'EXPENSE',
+        reversedTransactionId: null,
+      },
+      select: { id: true },
     });
+
+    // Atomic: reverse the ledger entry and soft-delete the expense together.
+    await this.prisma.$transaction(
+      async (tx) => {
+        if (ledgerEntry) {
+          await this.transactionsService.reverseTransaction(
+            ledgerEntry.id,
+            { performedById: userId, reason: "Xarajat o'chirildi" },
+            tx,
+          );
+        }
+
+        await tx.expense.update({
+          where: { id },
+          data: { deletedAt: new Date(), deletedById: userId },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return { message: "Xarajat o'chirildi" };
   }

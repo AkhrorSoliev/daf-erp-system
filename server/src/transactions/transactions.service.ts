@@ -198,6 +198,133 @@ export class TransactionsService {
   }
 
   /**
+   * Write a reversal entry that cancels a posted Transaction.
+   *
+   * Posted finance rows (PAID salary, COMPLETED refund, recorded expense etc.)
+   * must not be destructively edited — the ledger is append-only. This helper
+   * writes the inverse transaction, links it to the original via
+   * `reversedTransactionId`, and restores the relevant balance.
+   */
+  async reverseTransaction(
+    originalId: string,
+    params: { performedById?: number; reason?: string },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const original = await client.transaction.findUnique({
+        where: { id: originalId },
+      });
+      if (!original) {
+        throw new Error(`Transaction ${originalId} topilmadi`);
+      }
+      if (original.reversedTransactionId) {
+        throw new Error(`Transaction ${originalId} allaqachon qaytarilgan`);
+      }
+      // Reject reversing a reversal (keeps the chain flat).
+      const alreadyReversed = await client.transaction.findFirst({
+        where: { reversedTransactionId: originalId },
+        select: { id: true },
+      });
+      if (alreadyReversed) {
+        throw new Error(`Transaction ${originalId} uchun reversal allaqachon mavjud`);
+      }
+
+      const reversalAmount = -original.amount;
+      let balanceBefore = 0;
+      let balanceAfter = 0;
+
+      // Restore student balance for student-scoped transactions.
+      if (original.studentId) {
+        const student = await this.lockStudent(client, original.studentId);
+        balanceBefore = student.balance;
+        balanceAfter = balanceBefore + reversalAmount;
+        await client.student.update({
+          where: { id: original.studentId },
+          data: { balance: balanceAfter },
+        });
+      } else if (original.teacherId && original.type === TransactionType.SALARY_PAYMENT) {
+        // SALARY_PAYMENT touches user balance — reverse it.
+        const users = await client.$queryRaw<{ id: number; balance: number }[]>`
+          SELECT id, balance FROM "User" WHERE id = ${original.teacherId} FOR UPDATE
+        `;
+        if (users.length) {
+          balanceBefore = users[0].balance;
+          balanceAfter = balanceBefore + reversalAmount;
+          await client.user.update({
+            where: { id: original.teacherId },
+            data: { balance: balanceAfter },
+          });
+        }
+      }
+
+      return client.transaction.create({
+        data: {
+          type: original.type,
+          amount: reversalAmount,
+          balanceBefore,
+          balanceAfter,
+          studentId: original.studentId,
+          teacherId: original.teacherId,
+          paymentId: original.paymentId,
+          attendanceId: original.attendanceId,
+          enrollmentId: original.enrollmentId,
+          contractId: original.contractId,
+          expenseId: original.expenseId,
+          salaryPaymentId: original.salaryPaymentId,
+          refundId: original.refundId,
+          branchId: original.branchId,
+          companyId: original.companyId,
+          performedById: params.performedById,
+          reversedTransactionId: original.id,
+          description: params.reason
+            ? `Bekor qilindi: ${params.reason}`
+            : `Bekor qilindi (${original.id})`,
+        },
+      });
+    }, tx);
+  }
+
+  /**
+   * Record a center expense in the universal ledger.
+   *
+   * Expenses don't hit a balance column (center cash is not yet modelled as an
+   * account), so balanceBefore/balanceAfter are both 0. The entry exists so
+   * cash-flow reports and audits can reconstruct every outflow.
+   *
+   * For TEACHER_ADVANCE, pass relatedUserId — it populates teacherId so the
+   * advance shows up on the employee's transaction history.
+   */
+  async recordExpense(
+    params: {
+      expenseId: string;
+      amount: number;
+      companyId: number;
+      branchId?: number;
+      performedById?: number;
+      relatedUserId?: number;
+      description?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      return client.transaction.create({
+        data: {
+          type: TransactionType.EXPENSE,
+          amount: -params.amount,
+          balanceBefore: 0,
+          balanceAfter: 0,
+          teacherId: params.relatedUserId,
+          expenseId: params.expenseId,
+          companyId: params.companyId,
+          branchId: params.branchId,
+          performedById: params.performedById,
+          description: params.description ?? 'Xarajat',
+        },
+      });
+    }, tx);
+  }
+
+  /**
    * Manual balance adjustment (correction by admin).
    */
   async createAdjustment(

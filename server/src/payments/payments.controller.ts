@@ -11,8 +11,10 @@ import {
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
+import { AttachExternalPaymentDto } from './dto/attach-external.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import { PaymentSource } from '@prisma/client';
 
 @Controller('payments')
 @UseGuards(RolesGuard)
@@ -27,6 +29,33 @@ export class PaymentsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.paymentsService.create(dto, userId, companyId);
+  }
+
+  /**
+   * Admin "attach external transaction" flow: operator looks up a Payme/Click
+   * transaction in the provider's dashboard (or scans a receipt QR) and posts
+   * it here to bind the real payment to the student's balance. Idempotent via
+   * Payment.(method, externalId, companyId) unique.
+   */
+  @Post('attach-external')
+  attachExternal(
+    @Body() dto: AttachExternalPaymentDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.paymentsService.createFromExternal({
+      studentId: dto.studentId,
+      contractId: dto.contractId,
+      amount: dto.amount,
+      method: dto.method,
+      externalId: dto.externalId,
+      source: PaymentSource.MANUAL_ATTACH,
+      providerFee: dto.providerFee,
+      companyId,
+      branchId: dto.branchId,
+      performedById: userId,
+      note: dto.note,
+    });
   }
 
   @Get()

@@ -8,12 +8,14 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
+  NotImplementedException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentPortalService } from './student-portal.service';
 import { QrAttendanceService } from '../attendance/qr-attendance.service';
 import { ChangePortalPasswordDto } from './dto/change-portal-password.dto';
 import { UpdatePortalNameDto } from './dto/update-portal-name.dto';
+import { InitPaymentDto } from './dto/init-payment.dto';
 import { ScanQrDto } from '../attendance/dto/qr-session.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
@@ -99,6 +101,25 @@ export class StudentPortalController {
   getPayments(@CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.getPaymentHistory(studentId);
+  }
+
+  /**
+   * Initiate an online payment via Payme/Click/Uzum.
+   * Skeleton: the real integration needs per-provider SDK wiring. For now
+   * responds 501 so the frontend can wire the UI and env-level config (merchant
+   * IDs, return URLs, checkout endpoints) can be staged.
+   */
+  @Post('payments/init')
+  @UseGuards(RolesGuard)
+  @Roles('Student')
+  initPayment(
+    @CurrentUser('studentId') studentId: number,
+    @Body() _dto: InitPaymentDto,
+  ) {
+    if (!studentId) throw new NotFoundException('Talaba topilmadi');
+    throw new NotImplementedException(
+      "Online to'lov oqimi hali ulanmagan — tez orada Payme/Click/Uzum integratsiyasi qo'shiladi",
+    );
   }
 
   @Post('attendance/scan')

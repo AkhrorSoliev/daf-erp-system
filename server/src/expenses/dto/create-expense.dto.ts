@@ -24,4 +24,9 @@ export class CreateExpenseDto {
   @IsOptional()
   @IsString()
   receiptUrl?: string;
+
+  // Required when category = TEACHER_ADVANCE: the recipient employee's user id.
+  @IsOptional()
+  @IsInt()
+  relatedUserId?: number;
 }

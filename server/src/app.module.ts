@@ -34,6 +34,7 @@ import { ContractsModule } from './contracts/contracts.module';
 import { SalaryModule } from './salary/salary.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -72,6 +73,7 @@ import { JwtAuthGuard } from './common/guards';
     SalaryModule,
     RefundsModule,
     ExpensesModule,
+    PaymentGatewaysModule,
   ],
   providers: [
     {
