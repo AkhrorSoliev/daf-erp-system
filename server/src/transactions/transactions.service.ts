@@ -29,6 +29,7 @@ export class TransactionsService {
       studentId: number;
       amount: number;
       paymentId: string;
+      contractId?: string;
       branchId?: number;
       companyId: number;
       performedById?: number;
@@ -48,6 +49,7 @@ export class TransactionsService {
           balanceAfter,
           studentId: params.studentId,
           paymentId: params.paymentId,
+          contractId: params.contractId,
           branchId: params.branchId,
           companyId: params.companyId,
           performedById: params.performedById,
@@ -74,6 +76,7 @@ export class TransactionsService {
       amount: number;
       attendanceId: string;
       enrollmentId: string;
+      contractId?: string;
       companyId: number;
       branchId?: number;
     },
@@ -93,6 +96,7 @@ export class TransactionsService {
           studentId: params.studentId,
           attendanceId: params.attendanceId,
           enrollmentId: params.enrollmentId,
+          contractId: params.contractId,
           branchId: params.branchId,
           companyId: params.companyId,
           description: 'Dars uchun yechildi',
@@ -116,6 +120,7 @@ export class TransactionsService {
       studentId: number;
       amount: number;
       refundId: string;
+      contractId?: string;
       companyId: number;
       performedById?: number;
     },
@@ -134,6 +139,7 @@ export class TransactionsService {
           balanceAfter,
           studentId: params.studentId,
           refundId: params.refundId,
+          contractId: params.contractId,
           companyId: params.companyId,
           performedById: params.performedById,
           description: 'Pul qaytarildi',

@@ -833,34 +833,33 @@ export class ReportsService {
       _count: true,
     });
 
-    // Recognized revenue forecast (D.2): for each active enrollment, estimate
-    // how much we'll recognize this month based on the group's weekly cadence
-    // and per-lesson cost. Replaces the old "sum of full course prices" which
-    // wildly overstated expected income for short reporting windows.
-    const activeEnrollments = await this.prisma.enrollment.findMany({
+    // Recognized revenue forecast: for each active contract in scope,
+    // estimate monthly recognition from the negotiated contract amount
+    // (honors discounts) and the group's weekly cadence. Using contracts
+    // instead of enrollments means chegirmali shartnomalar are priced
+    // correctly and students without an active contract (test enrollments,
+    // incomplete setup) don't inflate the forecast.
+    const activeContracts = await this.prisma.contract.findMany({
       where: {
         status: 'ACTIVE',
         deletedAt: null,
+        companyId,
+        ...(query.branchId && { branchId: query.branchId }),
         group: {
           deletedAt: null,
-          companyId,
           statusEnum: 'ACTIVE',
-          ...(query.branchId && { branchId: query.branchId }),
         },
       },
       select: {
-        group: {
-          select: {
-            exactDays: true,
-            course: { select: { price: true, lessonPaymentCount: true } },
-          },
-        },
+        totalAmount: true,
+        course: { select: { lessonPaymentCount: true } },
+        group: { select: { exactDays: true } },
       },
     });
-    const recognizedRevenueForecast = activeEnrollments.reduce((sum, e) => {
-      const lpc = e.group.course.lessonPaymentCount || 12;
-      const perLesson = Math.round(e.group.course.price / lpc);
-      const lessonsPerMonth = (e.group.exactDays?.length ?? 0) * 4;
+    const recognizedRevenueForecast = activeContracts.reduce((sum, c) => {
+      const lpc = c.course.lessonPaymentCount || 12;
+      const perLesson = Math.round(c.totalAmount / lpc);
+      const lessonsPerMonth = (c.group?.exactDays?.length ?? 0) * 4;
       return sum + perLesson * lessonsPerMonth;
     }, 0);
     // Keep `expectedIncome` as an alias for backward compatibility with

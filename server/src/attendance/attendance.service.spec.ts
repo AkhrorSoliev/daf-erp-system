@@ -68,6 +68,9 @@ describe('AttendanceService', () => {
       enrollment: {
         findMany: jest.fn().mockResolvedValue(mockEnrollments),
       },
+      contract: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       // Interactive transaction: callback gets prisma itself as tx
       $transaction: jest.fn((cb) => cb(prisma)),
     };

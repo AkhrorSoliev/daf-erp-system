@@ -539,6 +539,20 @@ export class AttendanceService {
     });
     const enrollmentMap = new Map(enrollments.map((e) => [e.studentId, e.id]));
 
+    // Resolve each student's active contract once per batch so LESSON_DEDUCTION
+    // rows carry contractId — downstream refund and forecast math reads
+    // consumption from the ledger directly instead of recounting attendance.
+    const contracts = await this.prisma.contract.findMany({
+      where: {
+        groupId,
+        studentId: { in: billableEntries.map((e) => e.studentId) },
+        status: 'ACTIVE',
+        deletedAt: null,
+      },
+      select: { id: true, studentId: true },
+    });
+    const contractMap = new Map(contracts.map((c) => [c.studentId, c.id]));
+
     const attendances = await this.prisma.attendance.findMany({
       where: {
         groupId,
@@ -593,6 +607,7 @@ export class AttendanceService {
               amount: price,
               attendanceId,
               enrollmentId,
+              contractId: contractMap.get(entry.studentId),
               companyId,
               branchId: group.branchId,
             });

@@ -48,7 +48,8 @@ export class RefundsService {
       throw new BadRequestException('Faqat faol shartnomadan refund so\'rash mumkin');
     }
 
-    // Count completed lessons (PRESENT or LATE)
+    // Count completed lessons (PRESENT or LATE) — kept for the 50% gate,
+    // which remains policy-driven. Not used for consumed-amount math anymore.
     let lessonsCompleted = 0;
     if (contract.groupId) {
       lessonsCompleted = await this.prisma.attendance.count({
@@ -61,12 +62,24 @@ export class RefundsService {
     }
 
     const totalLessons = contract.course.lessonPaymentCount;
-    // Per-lesson cost from the contract's negotiated total (honors discounts),
-    // not the course list price (B.2).
     const perLessonCost = Math.round(contract.totalAmount / totalLessons);
 
-    // Subtract refunds already approved/in-progress on this contract so
-    // a second refund request can't reclaim what was previously refunded (B.2).
+    // Contract-level consumption from the ledger — source of truth for how
+    // much of the paid amount has already been spent on delivered lessons
+    // (Phase C.1 populated Transaction.contractId for LESSON_DEDUCTION). The
+    // amount is negative in the ledger, so we negate the sum.
+    const consumed = await this.prisma.transaction.aggregate({
+      where: {
+        contractId: contract.id,
+        type: 'LESSON_DEDUCTION',
+        reversedTransactionId: null,
+      },
+      _sum: { amount: true },
+    });
+    const consumedAmount = Math.abs(consumed._sum.amount ?? 0);
+
+    // Prior refunds on the same contract — prevents a second request from
+    // reclaiming an amount that was already refunded.
     const priorRefunds = await this.prisma.refund.aggregate({
       where: {
         contractId: contract.id,
@@ -90,16 +103,17 @@ export class RefundsService {
         "Kursning 50% dan ortiq qismi o'tilgan. Pul qaytarilmaydi",
       );
     } else {
-      // Hisob-kitob: o'tilgan darslar narxini va oldingi refundlarni ushlab qolish
-      const lessonDeduction = lessonsCompleted * perLessonCost;
+      // refundableAmount = paidAmount - consumedAmount (from ledger) - previousRefunds
       requestedAmount = Math.max(
         0,
-        contract.paidAmount - lessonDeduction - previousRefundsTotal,
+        contract.paidAmount - consumedAmount - previousRefundsTotal,
       );
     }
 
     const deductions = {
-      lessons: lessonsCompleted * perLessonCost,
+      consumedFromLedger: consumedAmount,
+      lessonsObserved: lessonsCompleted,
+      perLessonCost,
       previousRefunds: previousRefundsTotal,
       tax: 0,
       bankFee: 0,
@@ -122,7 +136,7 @@ export class RefundsService {
     return {
       ...refund,
       perLessonCost,
-      lessonDeduction: deductions.lessons,
+      consumedAmount: deductions.consumedFromLedger,
     };
   }
 
@@ -193,6 +207,7 @@ export class RefundsService {
               studentId: refund.studentId,
               amount: approvedAmount,
               refundId: refund.id,
+              contractId: refund.contractId,
               companyId: refund.companyId,
               performedById: userId,
             },
