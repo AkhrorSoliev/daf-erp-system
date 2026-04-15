@@ -600,4 +600,59 @@ export class SalaryService {
       },
     });
   }
+
+  /**
+   * Pay out a batch of salary payments in one click — intended for the 10th of
+   * the month, after cron has calculated and CEO has approved the current
+   * period. Accepts an optional filter so a branch director or cashier can
+   * pay only their scope.
+   *
+   * Only APPROVED payments are processed; CALCULATED ones are skipped (they
+   * need to be approved first). Each payment is wrapped in its own transaction
+   * so a failure on one doesn't roll back the others — the caller sees per-
+   * payment success/error.
+   */
+  async batchPay(
+    params: {
+      companyId: number;
+      branchId?: number;
+      userIds?: number[];
+      statuses?: SalaryPaymentStatus[];
+    },
+    performedById: number,
+  ) {
+    const statuses = params.statuses ?? [SalaryPaymentStatus.APPROVED];
+
+    const eligible = await this.prisma.salaryPayment.findMany({
+      where: {
+        companyId: params.companyId,
+        status: { in: statuses },
+        ...(params.userIds && params.userIds.length > 0 && { userId: { in: params.userIds } }),
+      },
+      select: { id: true, userId: true, netAmount: true },
+    });
+
+    const results: { id: string; userId: number; status: 'PAID' | 'FAILED'; error?: string }[] = [];
+
+    for (const payment of eligible) {
+      try {
+        await this.payPayment(payment.id, performedById, params.companyId);
+        results.push({ id: payment.id, userId: payment.userId, status: 'PAID' });
+      } catch (err) {
+        results.push({
+          id: payment.id,
+          userId: payment.userId,
+          status: 'FAILED',
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    return {
+      total: eligible.length,
+      paid: results.filter((r) => r.status === 'PAID').length,
+      failed: results.filter((r) => r.status === 'FAILED').length,
+      results,
+    };
+  }
 }
