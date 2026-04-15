@@ -5,9 +5,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
-import { SalaryPaymentStatus, SalaryType, Prisma } from '@prisma/client';
+import { SalaryPaymentStatus, SalaryType, TransactionType, Prisma } from '@prisma/client';
 import { CreateSalaryConfigDto, GlobalSalaryConfigDto, UpdateSalaryConfigDto } from './dto/salary-config.dto';
 import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
+import { calculateTax, DEFAULT_SALARY_TAX_RATE } from './tax.helper';
 
 @Injectable()
 export class SalaryService {
@@ -306,11 +307,24 @@ export class SalaryService {
       ? fixedMonthlyConfig.value
       : groupsBreakdown.reduce((sum, g) => sum + g.expectedMonthly, 0);
 
+    // Show the teacher what they'd actually take home after tax, not just gross.
+    const taxRate = await this.getSalaryTaxRate(companyId);
+    const actualEarnedGross = unpaidAccruals._sum.amount ?? 0;
+    const expectedTax = calculateTax(expectedMonthlyTotal, taxRate).taxAmount;
+    const expectedNet = expectedMonthlyTotal - expectedTax;
+    const actualEarnedTax = calculateTax(actualEarnedGross, taxRate).taxAmount;
+    const actualEarnedNet = actualEarnedGross - actualEarnedTax;
+
     return {
       expectedMonthly: expectedMonthlyTotal,
-      actualEarned: unpaidAccruals._sum.amount ?? 0,
+      expectedTax,
+      expectedNet,
+      actualEarned: actualEarnedGross,
+      actualEarnedTax,
+      actualEarnedNet,
       accrualCount: unpaidAccruals._count,
       paidTotal: paidTotal._sum.netAmount ?? 0,
+      taxRate,
       groups: groupsBreakdown,
       hasConfig: configs.length > 0,
       isFixedMonthly: !!fixedMonthlyConfig,
@@ -347,7 +361,10 @@ export class SalaryService {
     // Period start: 8th of previous month.
     const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 8);
 
-    const results: { userId: number; grossAmount: number; netAmount: number; kind: 'ACCRUAL' | 'FIXED_MONTHLY' }[] = [];
+    // Per-company tax rate (default 12% ASOT if not configured).
+    const taxRate = await this.getSalaryTaxRate(companyId);
+
+    const results: { userId: number; grossAmount: number; taxAmount: number; netAmount: number; kind: 'ACCRUAL' | 'FIXED_MONTHLY' }[] = [];
 
     // === ACCRUAL-BASED (teachers) ===
     const accruals = await this.prisma.salaryAccrual.findMany({
@@ -373,8 +390,7 @@ export class SalaryService {
 
     for (const [userId, { ids, total }] of byUser) {
       const grossAmount = total;
-      const taxAmount = 0;
-      const netAmount = grossAmount - taxAmount;
+      const { taxAmount, netAmount } = calculateTax(grossAmount, taxRate);
 
       const salaryPayment = await this.prisma.salaryPayment.create({
         data: {
@@ -394,7 +410,11 @@ export class SalaryService {
         data: { salaryPaymentId: salaryPayment.id },
       });
 
-      results.push({ userId, grossAmount, netAmount, kind: 'ACCRUAL' });
+      if (taxAmount > 0) {
+        await this.writeTaxLedgerEntry(userId, taxAmount, salaryPayment.id, companyId);
+      }
+
+      results.push({ userId, grossAmount, taxAmount, netAmount, kind: 'ACCRUAL' });
     }
 
     // === FIXED MONTHLY (admins, cashiers, branch directors, or teachers on fixed salary) ===
@@ -422,10 +442,9 @@ export class SalaryService {
       if (existing) continue;
 
       const grossAmount = config.value;
-      const taxAmount = 0;
-      const netAmount = grossAmount - taxAmount;
+      const { taxAmount, netAmount } = calculateTax(grossAmount, taxRate);
 
-      await this.prisma.salaryPayment.create({
+      const salaryPayment = await this.prisma.salaryPayment.create({
         data: {
           userId: config.userId,
           periodStart,
@@ -438,10 +457,51 @@ export class SalaryService {
         },
       });
 
-      results.push({ userId: config.userId, grossAmount, netAmount, kind: 'FIXED_MONTHLY' });
+      if (taxAmount > 0) {
+        await this.writeTaxLedgerEntry(config.userId, taxAmount, salaryPayment.id, companyId);
+      }
+
+      results.push({ userId: config.userId, grossAmount, taxAmount, netAmount, kind: 'FIXED_MONTHLY' });
     }
 
     return { calculated: results.length, details: results };
+  }
+
+  /**
+   * Fetch per-company salary tax rate, falling back to the Uzbekistan default
+   * (12% ASOT) when no config row exists.
+   */
+  private async getSalaryTaxRate(companyId: number): Promise<number> {
+    const config = await this.prisma.companyTaxConfig.findUnique({
+      where: { companyId },
+      select: { salaryTaxRate: true, isActive: true },
+    });
+    if (!config || !config.isActive) return DEFAULT_SALARY_TAX_RATE;
+    return config.salaryTaxRate;
+  }
+
+  /**
+   * Write a TAX ledger entry alongside the SalaryPayment so cash-flow reports
+   * can sum company tax liability directly from Transaction.
+   */
+  private async writeTaxLedgerEntry(
+    userId: number,
+    taxAmount: number,
+    salaryPaymentId: string,
+    companyId: number,
+  ) {
+    await this.prisma.transaction.create({
+      data: {
+        type: TransactionType.TAX,
+        amount: -taxAmount,
+        balanceBefore: 0,
+        balanceAfter: 0,
+        teacherId: userId,
+        salaryPaymentId,
+        companyId,
+        description: 'Oylik soliqi',
+      },
+    });
   }
 
   // ===== SALARY PAYMENTS =====
