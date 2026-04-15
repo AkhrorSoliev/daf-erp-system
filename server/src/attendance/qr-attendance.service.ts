@@ -419,11 +419,21 @@ export class QrAttendanceService {
             select: { balance: true },
           });
           if ((studentRow?.balance ?? 0) >= price) {
+            const activeContract = await this.prisma.contract.findFirst({
+              where: {
+                studentId,
+                groupId,
+                status: 'ACTIVE',
+                deletedAt: null,
+              },
+              select: { id: true },
+            });
             await this.transactionsService.deductLessonFee({
               studentId,
               amount: price,
               attendanceId: attendance.id,
               enrollmentId: enrollment.id,
+              contractId: activeContract?.id,
               companyId,
               branchId: groupData.branchId,
             });
