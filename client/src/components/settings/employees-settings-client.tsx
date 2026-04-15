@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus, Search, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, Send, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SettingsPageHeader } from "./settings-page-header";
 import { EmployeeRowActions } from "./employee-row-actions";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
+import { TelegramLinkDialog } from "./telegram-link-dialog";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -81,6 +82,7 @@ export function EmployeesSettingsClient() {
   const [employees, setEmployees] = useState<EmployeeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
   const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
 
@@ -151,15 +153,37 @@ export function EmployeesSettingsClient() {
         title="Xodimlar"
         description="Tizim xodimlarini boshqarish va rollarni belgilash"
         action={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="sm" onClick={openAddDrawer}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                Yangi xodim
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Yangi xodim qo&apos;shish</TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={selectedBranch ? -1 : 0}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!selectedBranch}
+                    onClick={() => setTelegramDialogOpen(true)}
+                  >
+                    <Send className="mr-1.5 h-4 w-4" />
+                    Telegram havola
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {selectedBranch
+                  ? "Telegram orqali ro'yxatdan o'tish havolasi"
+                  : "Avval filial tanlang"}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" onClick={openAddDrawer}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Yangi xodim
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Yangi xodim qo&apos;shish</TooltipContent>
+            </Tooltip>
+          </div>
         }
       />
 
@@ -367,6 +391,10 @@ export function EmployeesSettingsClient() {
       )}
 
       <EditEmployeeDrawer onSaved={handleSaved} />
+      <TelegramLinkDialog
+        open={telegramDialogOpen}
+        onOpenChange={setTelegramDialogOpen}
+      />
     </div>
   );
 }
