@@ -9,6 +9,10 @@ import { SalaryPaymentStatus, SalaryType, TransactionType, Prisma } from '@prism
 import { CreateSalaryConfigDto, GlobalSalaryConfigDto, UpdateSalaryConfigDto } from './dto/salary-config.dto';
 import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
 import { calculateTax, DEFAULT_SALARY_TAX_RATE } from './tax.helper';
+import {
+  assertValidTransition,
+  SALARY_PAYMENT_TRANSITIONS,
+} from '../common/finance/status-transitions';
 
 @Injectable()
 export class SalaryService {
@@ -554,9 +558,12 @@ export class SalaryService {
       where: { id, companyId },
     });
     if (!payment) throw new NotFoundException('Oylik topilmadi');
-    if (payment.status !== SalaryPaymentStatus.CALCULATED) {
-      throw new BadRequestException('Faqat CALCULATED statusdagi oylikni tasdiqlash mumkin');
-    }
+    assertValidTransition(
+      'SalaryPayment',
+      SALARY_PAYMENT_TRANSITIONS,
+      payment.status,
+      SalaryPaymentStatus.APPROVED,
+    );
 
     return this.prisma.salaryPayment.update({
       where: { id },
@@ -569,9 +576,12 @@ export class SalaryService {
       where: { id, companyId },
     });
     if (!payment) throw new NotFoundException('Oylik topilmadi');
-    if (payment.status !== SalaryPaymentStatus.APPROVED) {
-      throw new BadRequestException("Faqat APPROVED statusdagi oylikni to'lash mumkin");
-    }
+    assertValidTransition(
+      'SalaryPayment',
+      SALARY_PAYMENT_TRANSITIONS,
+      payment.status,
+      SalaryPaymentStatus.PAID,
+    );
 
     await this.transactionsService.recordSalaryPayment({
       userId: payment.userId,
