@@ -368,7 +368,7 @@ export class SalaryService {
     // Per-company tax rate (default 12% ASOT if not configured).
     const taxRate = await this.getSalaryTaxRate(companyId);
 
-    const results: { userId: number; grossAmount: number; taxAmount: number; netAmount: number; kind: 'ACCRUAL' | 'FIXED_MONTHLY' }[] = [];
+    const results: { userId: number; grossAmount: number; taxAmount: number; netAmount: number; advanceDeducted: number; kind: 'ACCRUAL' | 'FIXED_MONTHLY' }[] = [];
 
     // === ACCRUAL-BASED (teachers) ===
     const accruals = await this.prisma.salaryAccrual.findMany({
@@ -394,12 +394,13 @@ export class SalaryService {
 
     for (const [userId, { ids, total }] of byUser) {
       const grossAmount = total;
-      const { taxAmount, netAmount } = calculateTax(grossAmount, taxRate);
+      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(grossAmount, taxRate);
 
-      // Atomic: SalaryPayment + accrual link + TAX ledger entry are
-      // all-or-nothing. Previously each was a separate await, so a crash
-      // mid-way could leave accruals orphaned or miss the tax entry.
-      await this.prisma.$transaction(
+      // Atomic: SalaryPayment + accrual link + TAX ledger entry + advance
+      // settlement are all-or-nothing. Previously each was a separate
+      // await, so a crash mid-way could leave accruals orphaned or miss
+      // the tax entry.
+      const { finalNet, advanceDeducted } = await this.prisma.$transaction(
         async (tx) => {
           const salaryPayment = await tx.salaryPayment.create({
             data: {
@@ -408,7 +409,7 @@ export class SalaryService {
               periodEnd: cutoffDate,
               grossAmount,
               taxAmount,
-              netAmount,
+              netAmount: netBeforeAdvance,
               status: SalaryPaymentStatus.CALCULATED,
               companyId,
             },
@@ -433,11 +434,26 @@ export class SalaryService {
               },
             });
           }
+
+          const advanceDeducted = await this.applyPendingAdvances(
+            tx,
+            { id: salaryPayment.id, netAmount: netBeforeAdvance },
+            userId,
+            companyId,
+          );
+          return { finalNet: netBeforeAdvance - advanceDeducted, advanceDeducted };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
-      results.push({ userId, grossAmount, taxAmount, netAmount, kind: 'ACCRUAL' });
+      results.push({
+        userId,
+        grossAmount,
+        taxAmount,
+        netAmount: finalNet,
+        advanceDeducted,
+        kind: 'ACCRUAL',
+      });
     }
 
     // === FIXED MONTHLY (admins, cashiers, branch directors, or teachers on fixed salary) ===
@@ -465,10 +481,10 @@ export class SalaryService {
       if (existing) continue;
 
       const grossAmount = config.value;
-      const { taxAmount, netAmount } = calculateTax(grossAmount, taxRate);
+      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(grossAmount, taxRate);
 
       // Atomic for the same reasons as the accrual branch above.
-      await this.prisma.$transaction(
+      const { finalNet, advanceDeducted } = await this.prisma.$transaction(
         async (tx) => {
           const salaryPayment = await tx.salaryPayment.create({
             data: {
@@ -477,7 +493,7 @@ export class SalaryService {
               periodEnd: cutoffDate,
               grossAmount,
               taxAmount,
-              netAmount,
+              netAmount: netBeforeAdvance,
               status: SalaryPaymentStatus.CALCULATED,
               companyId,
             },
@@ -497,14 +513,79 @@ export class SalaryService {
               },
             });
           }
+
+          const advanceDeducted = await this.applyPendingAdvances(
+            tx,
+            { id: salaryPayment.id, netAmount: netBeforeAdvance },
+            config.userId,
+            companyId,
+          );
+          return { finalNet: netBeforeAdvance - advanceDeducted, advanceDeducted };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
-      results.push({ userId: config.userId, grossAmount, taxAmount, netAmount, kind: 'FIXED_MONTHLY' });
+      results.push({
+        userId: config.userId,
+        grossAmount,
+        taxAmount,
+        netAmount: finalNet,
+        advanceDeducted,
+        kind: 'FIXED_MONTHLY',
+      });
     }
 
     return { calculated: results.length, details: results };
+  }
+
+  /**
+   * Net outstanding TEACHER_ADVANCE expenses out of a freshly-created salary
+   * payment. Walks the advances in createdAt order and settles as many as
+   * fit inside the available net — remaining advances stay unsettled and
+   * roll to the next cycle. Returns the total amount deducted so the caller
+   * can update the SalaryPayment.netAmount accordingly.
+   *
+   * Must be called inside the same transaction that created the SalaryPayment
+   * so settlement and the updated net stay consistent.
+   */
+  private async applyPendingAdvances(
+    tx: Prisma.TransactionClient,
+    salaryPayment: { id: string; netAmount: number },
+    userId: number,
+    companyId: number,
+  ): Promise<number> {
+    const pending = await tx.expense.findMany({
+      where: {
+        category: 'TEACHER_ADVANCE',
+        relatedUserId: userId,
+        companyId,
+        settledBySalaryPaymentId: null,
+        deletedAt: null,
+      },
+      select: { id: true, amount: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (pending.length === 0) return 0;
+
+    const toSettle: string[] = [];
+    let deducted = 0;
+    for (const exp of pending) {
+      if (deducted + exp.amount > salaryPayment.netAmount) break;
+      toSettle.push(exp.id);
+      deducted += exp.amount;
+    }
+    if (toSettle.length === 0) return 0;
+
+    await tx.expense.updateMany({
+      where: { id: { in: toSettle } },
+      data: { settledBySalaryPaymentId: salaryPayment.id },
+    });
+    await tx.salaryPayment.update({
+      where: { id: salaryPayment.id },
+      data: { netAmount: salaryPayment.netAmount - deducted },
+    });
+
+    return deducted;
   }
 
   /**

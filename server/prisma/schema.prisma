@@ -994,8 +994,9 @@ model SalaryPayment {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  transactions Transaction[]
-  accruals     SalaryAccrual[]
+  transactions     Transaction[]
+  accruals         SalaryAccrual[]
+  settledExpenses  Expense[]       @relation("ExpenseSettledBy")
 
   @@index([userId])
   @@index([companyId, periodEnd])
@@ -1047,6 +1048,12 @@ model Expense {
   // advance to the recipient so it can be netted against future salary.
   relatedUserId Int?
   relatedUser   User? @relation("ExpenseRelatedUser", fields: [relatedUserId], references: [id])
+
+  // Settlement link: when a TEACHER_ADVANCE is netted out of a salary run,
+  // this points at the SalaryPayment that absorbed it so the next run
+  // skips it. NULL means "still outstanding."
+  settledBySalaryPaymentId String?
+  settledBySalaryPayment   SalaryPayment? @relation("ExpenseSettledBy", fields: [settledBySalaryPaymentId], references: [id])
 
   companyId Int
   createdAt DateTime @default(now())
