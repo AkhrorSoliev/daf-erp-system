@@ -577,14 +577,30 @@ export class AttendanceService {
         });
 
         if (cyclesPaid > cyclesDeducted) {
-          await this.transactionsService.deductLessonFee({
-            studentId: entry.studentId,
-            amount: price,
-            attendanceId,
-            enrollmentId,
-            companyId,
-            branchId: group.branchId,
+          // Prepaid guard: only debit the balance when the student has
+          // actually prepaid enough to cover this cycle. Otherwise the
+          // attendance is recorded, but no deduction runs — and since B.1
+          // ties accrual to LESSON_DEDUCTION, the teacher does not accrue
+          // salary for this lesson either. This is the core "teachers earn
+          // only on paid lessons" business rule.
+          const student = await this.prisma.student.findUnique({
+            where: { id: entry.studentId },
+            select: { balance: true },
           });
+          if ((student?.balance ?? 0) >= price) {
+            await this.transactionsService.deductLessonFee({
+              studentId: entry.studentId,
+              amount: price,
+              attendanceId,
+              enrollmentId,
+              companyId,
+              branchId: group.branchId,
+            });
+          } else {
+            this.logger.warn(
+              `Skipping cycle deduction: student ${entry.studentId} balance (${student?.balance ?? 0}) insufficient for cycle fee (${price}) in group ${groupId}`,
+            );
+          }
         }
       } catch (err) {
         this.logger.error(`Cycle deduction check failed for student ${entry.studentId}`, err);
