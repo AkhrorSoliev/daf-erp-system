@@ -623,11 +623,31 @@ export class SalaryService {
   ) {
     const statuses = params.statuses ?? [SalaryPaymentStatus.APPROVED];
 
+    // Enforce branch scope server-side: non-CEO operators (e.g. Branch
+    // Directors) are restricted to their own mainBranch regardless of the
+    // branchId they passed. JWT does not carry mainBranch, so fetch it.
+    const caller = await this.prisma.user.findUnique({
+      where: { id: performedById },
+      select: {
+        mainBranch: true,
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    const isCeo = caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
+    const effectiveBranchId = isCeo
+      ? params.branchId
+      : (caller?.mainBranch ?? undefined);
+
     const eligible = await this.prisma.salaryPayment.findMany({
       where: {
         companyId: params.companyId,
         status: { in: statuses },
         ...(params.userIds && params.userIds.length > 0 && { userId: { in: params.userIds } }),
+        // Branch scope: SalaryPayment has no branchId directly, so scope via
+        // the employee's mainBranch.
+        ...(effectiveBranchId !== undefined && {
+          user: { mainBranch: effectiveBranchId },
+        }),
       },
       select: { id: true, userId: true, netAmount: true },
     });

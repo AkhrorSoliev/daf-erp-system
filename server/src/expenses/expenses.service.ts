@@ -119,9 +119,9 @@ export class ExpensesService {
     return { data, total, page, pageSize };
   }
 
-  async update(id: string, dto: Partial<CreateExpenseDto>, userId: number) {
+  async update(id: string, dto: Partial<CreateExpenseDto>, userId: number, companyId: number) {
     const existing = await this.prisma.expense.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
 
@@ -149,9 +149,9 @@ export class ExpensesService {
     return expense;
   }
 
-  async remove(id: string, userId: number) {
+  async remove(id: string, userId: number, companyId: number) {
     const existing = await this.prisma.expense.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
 
