@@ -39,7 +39,8 @@ export class RefundsController {
     @Param('id') id: string,
     @Body() dto: ProcessRefundDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.refundsService.process(id, dto, userId);
+    return this.refundsService.process(id, dto, userId, companyId);
   }
 }

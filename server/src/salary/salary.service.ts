@@ -112,9 +112,9 @@ export class SalaryService {
     return { updated: results.length };
   }
 
-  async updateConfig(id: string, dto: UpdateSalaryConfigDto) {
-    const existing = await this.prisma.employeeSalaryConfig.findUnique({
-      where: { id },
+  async updateConfig(id: string, dto: UpdateSalaryConfigDto, companyId: number) {
+    const existing = await this.prisma.employeeSalaryConfig.findFirst({
+      where: { id, companyId },
     });
     if (!existing) throw new NotFoundException('Salary config topilmadi');
 
@@ -473,9 +473,9 @@ export class SalaryService {
     return { data, total, page, pageSize };
   }
 
-  async approvePayment(id: string) {
-    const payment = await this.prisma.salaryPayment.findUnique({
-      where: { id },
+  async approvePayment(id: string, companyId: number) {
+    const payment = await this.prisma.salaryPayment.findFirst({
+      where: { id, companyId },
     });
     if (!payment) throw new NotFoundException('Oylik topilmadi');
     if (payment.status !== SalaryPaymentStatus.CALCULATED) {
@@ -488,9 +488,9 @@ export class SalaryService {
     });
   }
 
-  async payPayment(id: string, performedById: number) {
-    const payment = await this.prisma.salaryPayment.findUnique({
-      where: { id },
+  async payPayment(id: string, performedById: number, companyId: number) {
+    const payment = await this.prisma.salaryPayment.findFirst({
+      where: { id, companyId },
     });
     if (!payment) throw new NotFoundException('Oylik topilmadi');
     if (payment.status !== SalaryPaymentStatus.APPROVED) {

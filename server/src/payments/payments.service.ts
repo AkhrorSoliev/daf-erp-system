@@ -15,50 +15,74 @@ export class PaymentsService {
   ) {}
 
   async create(dto: CreatePaymentDto, userId: number, companyId: number) {
-    // Verify student exists
+    // Verify student belongs to this company
     const student = await this.prisma.student.findFirst({
-      where: { id: dto.studentId, deletedAt: null },
+      where: { id: dto.studentId, deletedAt: null, companyId },
       select: { id: true, firstName: true, lastName: true },
     });
     if (!student) {
       throw new NotFoundException("O'quvchi topilmadi");
     }
 
-    // Create payment record
-    const payment = await this.prisma.payment.create({
-      data: {
-        studentId: dto.studentId,
-        contractId: dto.contractId,
-        amount: dto.amount,
-        method: dto.method,
-        status: PaymentStatus.COMPLETED,
-        receiptNumber: dto.receiptNumber,
-        note: dto.note,
-        receivedById: userId,
-        branchId: dto.branchId,
-        companyId,
-      },
-    });
-
-    // Update student balance via TransactionsService
-    await this.transactionsService.recordPayment({
-      studentId: dto.studentId,
-      amount: dto.amount,
-      paymentId: payment.id,
-      branchId: dto.branchId,
-      companyId,
-      performedById: userId,
-    });
-
-    // Update contract paidAmount if linked
+    // Verify contract belongs to this company (if provided)
     if (dto.contractId) {
-      await this.prisma.contract.update({
-        where: { id: dto.contractId },
-        data: { paidAmount: { increment: dto.amount } },
+      const contract = await this.prisma.contract.findFirst({
+        where: { id: dto.contractId, deletedAt: null, companyId },
+        select: { id: true },
       });
+      if (!contract) {
+        throw new NotFoundException('Shartnoma topilmadi');
+      }
     }
 
-    // Record entity history
+    // Atomic: payment + balance transaction + contract update are all-or-nothing.
+    const { payment, studentBalance } = await this.prisma.$transaction(
+      async (tx) => {
+        const payment = await tx.payment.create({
+          data: {
+            studentId: dto.studentId,
+            contractId: dto.contractId,
+            amount: dto.amount,
+            method: dto.method,
+            status: PaymentStatus.COMPLETED,
+            receiptNumber: dto.receiptNumber,
+            note: dto.note,
+            receivedById: userId,
+            branchId: dto.branchId,
+            companyId,
+          },
+        });
+
+        await this.transactionsService.recordPayment(
+          {
+            studentId: dto.studentId,
+            amount: dto.amount,
+            paymentId: payment.id,
+            branchId: dto.branchId,
+            companyId,
+            performedById: userId,
+          },
+          tx,
+        );
+
+        if (dto.contractId) {
+          await tx.contract.update({
+            where: { id: dto.contractId },
+            data: { paidAmount: { increment: dto.amount } },
+          });
+        }
+
+        const updatedStudent = await tx.student.findUnique({
+          where: { id: dto.studentId },
+          select: { balance: true },
+        });
+
+        return { payment, studentBalance: updatedStudent?.balance };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    // Audit trail (outside tx — not critical to payment atomicity)
     await this.entityHistoryService.recordCreate({
       entityType: 'Payment',
       entityId: payment.id,
@@ -67,13 +91,7 @@ export class PaymentsService {
       companyId,
     });
 
-    // Return payment with updated student balance
-    const updatedStudent = await this.prisma.student.findUnique({
-      where: { id: dto.studentId },
-      select: { balance: true },
-    });
-
-    return { ...payment, studentBalance: updatedStudent?.balance };
+    return { ...payment, studentBalance };
   }
 
   async findAll(query: PaymentQueryDto, companyId: number) {
@@ -119,9 +137,9 @@ export class PaymentsService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(id: string) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id },
+  async findOne(id: string, companyId: number) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { id, companyId },
       select: {
         id: true,
         amount: true,
@@ -146,12 +164,13 @@ export class PaymentsService {
     return payment;
   }
 
-  async findByStudent(studentId: number, query: PaymentQueryDto) {
+  async findByStudent(studentId: number, query: PaymentQueryDto, companyId: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
     const where: Prisma.PaymentWhereInput = {
       studentId,
+      companyId,
       ...(query.method && { method: query.method }),
       ...(query.status && { status: query.status }),
       ...(query.startDate && query.endDate && {

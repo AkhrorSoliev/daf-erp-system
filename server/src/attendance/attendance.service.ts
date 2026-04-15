@@ -375,10 +375,10 @@ export class AttendanceService {
     dto: SaveAttendanceDto,
     userId: number,
     roles: string[],
-    companyId?: number,
+    companyId: number,
   ) {
     const { group, parsedDate } = await this.validateLessonDate(groupId, date, companyId, roles);
-    const effectiveCompanyId = companyId ?? group.companyId ?? undefined;
+    const effectiveCompanyId = companyId;
 
     const isTeacherOnly =
       roles.length > 0 && roles.every((r) => r === 'Teacher');
@@ -505,7 +505,7 @@ export class AttendanceService {
     groupId: string,
     date: string,
     entries: { studentId: number; status: AttendanceStatus }[],
-    companyId?: number,
+    companyId: number,
   ) {
     const billableEntries = entries.filter(
       (e) => e.status === AttendanceStatus.PRESENT || e.status === AttendanceStatus.LATE,
@@ -582,7 +582,7 @@ export class AttendanceService {
             amount: price,
             attendanceId,
             enrollmentId,
-            companyId: companyId ?? 0,
+            companyId,
             branchId: group.branchId,
           });
         }
@@ -600,7 +600,7 @@ export class AttendanceService {
             attendanceId,
             lessonDate: parsedDate,
             perLessonCost,
-            companyId: companyId ?? 0,
+            companyId,
           });
         } catch (err) {
           this.logger.error(`Salary accrual failed for teacher ${teacher.teacherId}`, err);

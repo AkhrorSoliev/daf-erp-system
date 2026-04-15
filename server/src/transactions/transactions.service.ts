@@ -8,23 +8,39 @@ export class TransactionsService {
   constructor(private prisma: PrismaService) {}
 
   /**
+   * Run a callback inside the given transaction client, or open a new one with Serializable isolation.
+   */
+  private runInTx<T>(
+    callback: (client: Prisma.TransactionClient) => Promise<T>,
+    tx?: Prisma.TransactionClient,
+  ): Promise<T> {
+    if (tx) return callback(tx);
+    return this.prisma.$transaction(callback, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    });
+  }
+
+  /**
    * Record a student payment (money in).
    * Atomically increments student balance and creates a Transaction record.
    */
-  async recordPayment(params: {
-    studentId: number;
-    amount: number;
-    paymentId: string;
-    branchId?: number;
-    companyId: number;
-    performedById?: number;
-  }) {
-    return this.prisma.$transaction(async (tx) => {
-      const student = await this.lockStudent(tx, params.studentId);
+  async recordPayment(
+    params: {
+      studentId: number;
+      amount: number;
+      paymentId: string;
+      branchId?: number;
+      companyId: number;
+      performedById?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;
 
-      const transaction = await tx.transaction.create({
+      const transaction = await client.transaction.create({
         data: {
           type: TransactionType.PAYMENT,
           amount: params.amount,
@@ -39,33 +55,36 @@ export class TransactionsService {
         },
       });
 
-      await tx.student.update({
+      await client.student.update({
         where: { id: params.studentId },
         data: { balance: balanceAfter },
       });
 
       return transaction;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, tx);
   }
 
   /**
    * Deduct per-lesson fee from student balance on attendance.
    * Balance CAN go negative (deduction always succeeds).
    */
-  async deductLessonFee(params: {
-    studentId: number;
-    amount: number;
-    attendanceId: string;
-    enrollmentId: string;
-    companyId: number;
-    branchId?: number;
-  }) {
-    return this.prisma.$transaction(async (tx) => {
-      const student = await this.lockStudent(tx, params.studentId);
+  async deductLessonFee(
+    params: {
+      studentId: number;
+      amount: number;
+      attendanceId: string;
+      enrollmentId: string;
+      companyId: number;
+      branchId?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore - params.amount;
 
-      const transaction = await tx.transaction.create({
+      const transaction = await client.transaction.create({
         data: {
           type: TransactionType.LESSON_DEDUCTION,
           amount: -params.amount,
@@ -80,31 +99,34 @@ export class TransactionsService {
         },
       });
 
-      await tx.student.update({
+      await client.student.update({
         where: { id: params.studentId },
         data: { balance: balanceAfter },
       });
 
       return transaction;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, tx);
   }
 
   /**
    * Record a refund (money out to student).
    */
-  async recordRefund(params: {
-    studentId: number;
-    amount: number;
-    refundId: string;
-    companyId: number;
-    performedById?: number;
-  }) {
-    return this.prisma.$transaction(async (tx) => {
-      const student = await this.lockStudent(tx, params.studentId);
+  async recordRefund(
+    params: {
+      studentId: number;
+      amount: number;
+      refundId: string;
+      companyId: number;
+      performedById?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore - params.amount;
 
-      const transaction = await tx.transaction.create({
+      const transaction = await client.transaction.create({
         data: {
           type: TransactionType.REFUND,
           amount: -params.amount,
@@ -118,43 +140,47 @@ export class TransactionsService {
         },
       });
 
-      await tx.student.update({
+      await client.student.update({
         where: { id: params.studentId },
         data: { balance: balanceAfter },
       });
 
       return transaction;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, tx);
   }
 
   /**
-   * Record teacher salary payment (money out from center).
+   * Record employee salary payment (money out from center).
+   * Works for any employee role — teacher, admin, cashier, branch director.
    */
-  async recordSalaryPayment(params: {
-    teacherId: number;
-    amount: number;
-    salaryPaymentId: string;
-    companyId: number;
-    performedById?: number;
-  }) {
-    return this.prisma.$transaction(async (tx) => {
-      const teachers = await tx.$queryRaw<{ id: number; balance: number }[]>`
-        SELECT id, balance FROM "User" WHERE id = ${params.teacherId} FOR UPDATE
+  async recordSalaryPayment(
+    params: {
+      userId: number;
+      amount: number;
+      salaryPaymentId: string;
+      companyId: number;
+      performedById?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const users = await client.$queryRaw<{ id: number; balance: number }[]>`
+        SELECT id, balance FROM "User" WHERE id = ${params.userId} FOR UPDATE
       `;
-      if (!teachers.length) {
-        throw new Error(`Teacher ${params.teacherId} topilmadi`);
+      if (!users.length) {
+        throw new Error(`User ${params.userId} topilmadi`);
       }
-      const teacher = teachers[0];
-      const balanceBefore = teacher.balance;
+      const user = users[0];
+      const balanceBefore = user.balance;
       const balanceAfter = balanceBefore - params.amount;
 
-      const transaction = await tx.transaction.create({
+      const transaction = await client.transaction.create({
         data: {
           type: TransactionType.SALARY_PAYMENT,
           amount: -params.amount,
           balanceBefore,
           balanceAfter,
-          teacherId: params.teacherId,
+          teacherId: params.userId,
           salaryPaymentId: params.salaryPaymentId,
           companyId: params.companyId,
           performedById: params.performedById,
@@ -162,32 +188,35 @@ export class TransactionsService {
         },
       });
 
-      await tx.user.update({
-        where: { id: params.teacherId },
+      await client.user.update({
+        where: { id: params.userId },
         data: { balance: balanceAfter },
       });
 
       return transaction;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, tx);
   }
 
   /**
    * Manual balance adjustment (correction by admin).
    */
-  async createAdjustment(params: {
-    studentId: number;
-    amount: number;
-    description: string;
-    branchId?: number;
-    companyId: number;
-    performedById: number;
-  }) {
-    return this.prisma.$transaction(async (tx) => {
-      const student = await this.lockStudent(tx, params.studentId);
+  async createAdjustment(
+    params: {
+      studentId: number;
+      amount: number;
+      description: string;
+      branchId?: number;
+      companyId: number;
+      performedById: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;
 
-      const transaction = await tx.transaction.create({
+      const transaction = await client.transaction.create({
         data: {
           type: TransactionType.ADJUSTMENT,
           amount: params.amount,
@@ -201,25 +230,25 @@ export class TransactionsService {
         },
       });
 
-      await tx.student.update({
+      await client.student.update({
         where: { id: params.studentId },
         data: { balance: balanceAfter },
       });
 
       return transaction;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, tx);
   }
 
   /**
    * Get paginated transaction history for a student.
    */
-  async findByStudent(studentId: number, query: TransactionQueryDto, companyId?: number) {
+  async findByStudent(studentId: number, query: TransactionQueryDto, companyId: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
     const where: Prisma.TransactionWhereInput = {
       studentId,
-      ...(companyId && { companyId }),
+      companyId,
       ...(query.type && { type: query.type }),
       ...(query.startDate && query.endDate && {
         createdAt: {
@@ -258,13 +287,13 @@ export class TransactionsService {
   /**
    * Get paginated transaction history for a teacher.
    */
-  async findByTeacher(teacherId: number, query: TransactionQueryDto, companyId?: number) {
+  async findByTeacher(teacherId: number, query: TransactionQueryDto, companyId: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
     const where: Prisma.TransactionWhereInput = {
       teacherId,
-      ...(companyId && { companyId }),
+      companyId,
       ...(query.type && { type: query.type }),
       ...(query.startDate && query.endDate && {
         createdAt: {
