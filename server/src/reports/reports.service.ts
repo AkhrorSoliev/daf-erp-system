@@ -935,15 +935,26 @@ export class ReportsService {
       _sum: { balance: true },
     });
 
-    // LTV: total all-time income / total unique students who ever paid
-    const allTimeIncome = await this.prisma.payment.aggregate({
-      where: { companyId, status: 'COMPLETED' },
-      _sum: { amount: true },
-    });
-    const uniquePayers = await this.prisma.payment.groupBy({
-      by: ['studentId'],
-      where: { companyId, status: 'COMPLETED' },
-    });
+    // Active LTV: period revenue / unique payers in that period.
+    // Includes any student who paid during the selected date range,
+    // regardless of their current status — a student who was active
+    // last month but graduated today still counts when viewing last month.
+    const periodPayerFilter = {
+      companyId,
+      status: 'COMPLETED' as const,
+      createdAt: dateFilter,
+      ...(query.branchId && { branchId: query.branchId }),
+    };
+    const [periodPayerIncome, periodUniquePayers] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: periodPayerFilter,
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.groupBy({
+        by: ['studentId'],
+        where: periodPayerFilter,
+      }),
+    ]);
 
     // Marketing expenses (for CAC calculation)
     const marketingExpenses = await this.prisma.expense.aggregate({
@@ -974,8 +985,8 @@ export class ReportsService {
     const totalSalaryPaid = salaryPaid._sum.netAmount ?? 0;
     const totalExpenses = totalExpenseAmount + totalSalaryPaid;
     const marketingTotal = marketingExpenses._sum.amount ?? 0;
-    const allTimeTotal = allTimeIncome._sum.amount ?? 0;
-    const payerCount = uniquePayers.length || 1;
+    const periodPayerTotal = periodPayerIncome._sum.amount ?? 0;
+    const periodPayerCount = periodUniquePayers.length || 1;
     const activeCount = activeStudents._count || 1;
 
     return {
@@ -1007,8 +1018,9 @@ export class ReportsService {
       debtorCount: debtors,
       activeBalance: activeStudents._sum.balance ?? 0,
       activeStudentCount: activeStudents._count,
-      // LTV = jami tushum / to'lov qilgan o'quvchilar soni
-      ltv: Math.round(allTimeTotal / payerCount),
+      // Aktiv LTV = tanlangan davrdagi tushum / shu davrdagi noyob to'lovchilar
+      ltv: Math.round(periodPayerTotal / periodPayerCount),
+      ltvPayerCount: periodUniquePayers.length,
       // CAC = marketing xarajati / yangi o'quvchilar soni
       cac: newStudents > 0 ? Math.round(marketingTotal / newStudents) : 0,
       // Marketing ROI = (tushum - marketing xarajat) / marketing xarajat × 100

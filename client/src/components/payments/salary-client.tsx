@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
+import { SalaryConfigDialog } from "./salary-config-dialog";
 
 function getErrorMessage(err: unknown, fallback: string): string {
   return (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -99,6 +100,7 @@ export function SalaryClient() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [batchPaying, setBatchPaying] = useState(false);
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["salary-payments", refreshKey],
@@ -219,6 +221,14 @@ export function SalaryClient() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          )}
+          {isCeo && (
+            <Button
+              variant="outline"
+              onClick={() => setConfigDialogOpen(true)}
+            >
+              Oylik belgilash
+            </Button>
           )}
           {isCeo && (
             <Button
@@ -345,6 +355,11 @@ export function SalaryClient() {
           </TableBody>
         </Table>
       )}
+      <SalaryConfigDialog
+        open={configDialogOpen}
+        onOpenChange={setConfigDialogOpen}
+        onSaved={() => setRefreshKey((k) => k + 1)}
+      />
     </div>
   );
 }

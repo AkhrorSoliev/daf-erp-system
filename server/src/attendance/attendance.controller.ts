@@ -80,7 +80,7 @@ export class AttendanceController {
     @CurrentUser('companyId') companyId: number,
   ) {
     await this.verifyTeacherAccess(groupId, roles, userId);
-    return this.attendanceService.getByDate(groupId, date, companyId);
+    return this.attendanceService.getByDate(groupId, date, companyId, roles);
   }
 
   @Post(':groupId/date/:date')

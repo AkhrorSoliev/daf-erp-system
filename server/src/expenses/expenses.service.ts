@@ -73,7 +73,7 @@ export class ExpensesService {
 
         return expense;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
     );
 
     return expense;
@@ -198,7 +198,7 @@ export class ExpensesService {
 
         return updated;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
     );
 
     return expense;
@@ -236,7 +236,7 @@ export class ExpensesService {
           data: { deletedAt: new Date(), deletedById: userId },
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
     );
 
     return { message: "Xarajat o'chirildi" };

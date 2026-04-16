@@ -307,38 +307,6 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
           </div>
         )}
 
-        <div className="mb-6">
-          <h3 className="mb-2 text-sm font-semibold">Oylik balans xolati</h3>
-          <EmptyState message="Ko'rsatiladigan ma'lumotlar yo'q" />
-        </div>
-
-        <div>
-          <h3 className="mb-2 text-sm font-semibold">To&apos;lovlar</h3>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Sana</TableHead>
-                  <TableHead>Turi</TableHead>
-                  <TableHead>Miqdor</TableHead>
-                  <TableHead>Izoh</TableHead>
-                  <TableHead>Xodim</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-muted-foreground"
-                  >
-                    Ma&apos;lumotlar yo&apos;q
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </div>
       </TabsContent>
 
       {/* To'lovlar */}
@@ -362,7 +330,7 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
             {/* To'lov tarixi */}
             {payments.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium mb-2">To&apos;lov tarixi</h4>
+                <h4 className="text-sm font-medium mb-2">Kirim tarixi</h4>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -399,7 +367,7 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
             {/* Balans tarixi */}
             {transactions.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium mb-2">Balans tarixi</h4>
+                <h4 className="text-sm font-medium mb-2">Barcha operatsiyalar</h4>
                 <Table>
                   <TableHeader>
                     <TableRow>

@@ -27,6 +27,7 @@ const mockEnrollments = [
       firstName: 'Ahmad',
       lastName: 'Karimov',
       photo: null,
+      balance: 500000,
     },
   },
   {
@@ -36,6 +37,7 @@ const mockEnrollments = [
       firstName: 'Dilnoza',
       lastName: 'Rashidova',
       photo: null,
+      balance: 0,
     },
   },
 ];
@@ -521,7 +523,7 @@ describe('AttendanceService', () => {
       };
 
       prisma.enrollment.findMany.mockResolvedValue([
-        { studentId: 10001 },
+        { studentId: 10001, student: { balance: 500000 } },
       ]);
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert.mockResolvedValue(mockResult);

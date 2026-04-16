@@ -305,7 +305,7 @@ export class AttendanceService {
    * Get attendance for a group on a specific date.
    * Returns all active enrolled students with their attendance status.
    */
-  async getByDate(groupId: string, date: string, companyId?: number) {
+  async getByDate(groupId: string, date: string, companyId?: number, roles?: string[]) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) {
       throw new BadRequestException("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
     }
@@ -318,12 +318,19 @@ export class AttendanceService {
 
     const parsedDate = new Date(date + 'T00:00:00.000Z');
 
+    // Teacher sees only students with non-negative balance — students who
+    // haven't prepaid are invisible to the teacher so they can't be marked
+    // present by accident. Admin/CEO see everyone regardless of balance.
+    const isTeacherOnly =
+      roles && roles.length > 0 && roles.every((r) => r === 'Teacher');
+
     // Get active enrollments
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         groupId,
         deletedAt: null,
         status: EnrollmentStatus.ACTIVE,
+        ...(isTeacherOnly && { student: { balance: { gte: 0 } } }),
       },
       select: {
         studentId: true,
@@ -385,22 +392,36 @@ export class AttendanceService {
 
     // Tranzaksiya ichida: enrollment tekshiruvi, mavjud yozuvlar, upsertlar
     const results = await this.prisma.$transaction(async (tx) => {
-      // Validate all students are enrolled in this group
-      const enrolledStudentIds = await tx.enrollment
+      // Validate all students are enrolled in this group. Teacher role
+      // additionally requires non-negative balance — prevents marking a
+      // student whose balance went negative between the getByDate call
+      // and the save call.
+      const enrolledStudents = await tx.enrollment
         .findMany({
           where: {
             groupId,
             deletedAt: null,
             status: EnrollmentStatus.ACTIVE,
           },
-          select: { studentId: true },
-        })
-        .then((rows) => new Set(rows.map((r) => r.studentId)));
+          select: {
+            studentId: true,
+            student: { select: { balance: true } },
+          },
+        });
+      const enrolledStudentIds = new Set(enrolledStudents.map((r) => r.studentId));
+      const negativeBalanceIds = isTeacherOnly
+        ? new Set(enrolledStudents.filter((r) => r.student.balance < 0).map((r) => r.studentId))
+        : new Set<number>();
 
       for (const entry of dto.entries) {
         if (!enrolledStudentIds.has(entry.studentId)) {
           throw new BadRequestException(
             `O'quvchi #${entry.studentId} bu guruhga yozilmagan`,
+          );
+        }
+        if (negativeBalanceIds.has(entry.studentId)) {
+          throw new BadRequestException(
+            `O'quvchi #${entry.studentId} balansi manfiy — davomat olish mumkin emas`,
           );
         }
       }
