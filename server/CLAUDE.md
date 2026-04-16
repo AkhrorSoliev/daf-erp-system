@@ -236,6 +236,7 @@ The financial system is built on an **append-only ledger** principle — financi
 | `Expense` | Company outflows | `category`, `amount`, `branchId?`, `relatedUserId?` (for TEACHER_ADVANCE), `settledBySalaryPaymentId?` |
 | `CompanyTaxConfig` | Tax rates per company | `salaryTaxRate` (default 12%), `refundTaxRate` (default 0%) |
 | `PaymentGatewayEvent` | Webhook audit log | `provider`, `externalId`, `eventType`, `payload` (JSON), `signatureValid`, `processed` |
+| `PaymeTransaction` | Payme-specific transaction lifecycle | `paymeId`, `amount` (tiyin), `amountInSom`, `state` (1/2/-1/-2), `studentId`, `createTime`, `performTime`, `cancelTime`, `paymentId?` |
 
 #### Financial Enums
 
@@ -331,6 +332,39 @@ The financial system is built on an **append-only ledger** principle — financi
 - **Financial overview** calculates: income (actual vs forecast), salary (paid + pending with tax), expenses, net profit, LTV, CAC, marketing ROI, avg payment, debtors
 - Income filters by `status: COMPLETED` — REVERSED payments excluded automatically
 - All queries support `branchId` and `startDate/endDate` filters
+
+#### Payme (Paycom) Merchant API (`src/payment-gateways/payme/`)
+
+Full integration with Paycom's JSON-RPC 2.0 Merchant API. Paycom sends requests to our webhook endpoint; we validate and respond.
+
+- **Webhook endpoint**: `POST /api/gateways/payme/webhook?companyId=<id>` (public, no JWT — authenticated via Basic Auth)
+- **Authentication**: `Authorization: Basic base64("Paycom:<MERCHANT_KEY>")` — verified with `crypto.timingSafeEqual()`
+- **Account field**: `student_id` — identifies the paying student
+- **Amount**: Paycom sends amounts in **tiyin** (1 so'm = 100 tiyin); we store both `amount` (tiyin) and `amountInSom` in `PaymeTransaction`
+- **Files**:
+  - `payme.service.ts` — JSON-RPC dispatcher + Basic Auth verification
+  - `payme-methods.service.ts` — 6 required RPC methods
+  - `payme-errors.ts` — error codes with tri-lingual messages (uz/ru/en)
+  - `payme.types.ts` — TypeScript interfaces for request/response
+  - `payme-cron.service.ts` — cancels expired transactions (state=1 older than 12h) every 30 minutes
+
+**6 RPC Methods**:
+
+| Method | Purpose | Key Logic |
+|--------|---------|-----------|
+| `CheckPerformTransaction` | Validate if payment is possible | Checks student exists + amount > 0 |
+| `CreateTransaction` | Create pending transaction (state=1) | Idempotent by `paymeId`; cancels existing pending txns for same student |
+| `PerformTransaction` | Complete payment (state=2) | Calls `PaymentsService.createFromExternal()` to credit student balance |
+| `CancelTransaction` | Cancel transaction | state=1→-1 (no financial impact); state=2→error -31007 (use admin panel) |
+| `CheckTransaction` | Get transaction status | Returns full state |
+| `GetStatement` | List transactions in time range | For Paycom reconciliation |
+
+**Transaction states**: 1=created, 2=performed, -1=cancelled, -2=refunded
+
+**Student Portal checkout** (`POST /api/student-portal/payments/init`):
+- Student selects Payme + enters amount → backend generates checkout URL → frontend redirects to Payme
+- Checkout URL format: `https://checkout.paycom.uz/{base64(params)}` (production) or `https://test.paycom.uz/{base64(params)}` (test)
+- After payment, Paycom calls our webhook with the 6 RPC methods above
 
 #### Attendance → Finance Integration
 
@@ -538,3 +572,6 @@ Skills are specialized knowledge modules that **must** be activated when working
 | `VAPID_PUBLIC_KEY` | Web Push VAPID public key | — |
 | `VAPID_PRIVATE_KEY` | Web Push VAPID private key | — |
 | `VAPID_EMAIL` | VAPID contact email | `mailto:admin@dafzentrum.uz` |
+| `PAYME_MERCHANT_ID` | Paycom merchant/kassa ID | — |
+| `PAYME_MERCHANT_KEY` | Paycom production secret key | — |
+| `PAYME_MERCHANT_KEY_TEST` | Paycom test/sandbox secret key | — |

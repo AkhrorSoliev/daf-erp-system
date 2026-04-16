@@ -464,14 +464,112 @@ Oylik hisoblashda (calculateMonthlySalaries):
 
 ---
 
-## 8. Gateway integratsiya (hozirgi holat)
+## 8. Gateway integratsiya
 
-**Status:** Skeleton implementatsiya. `PaymentGatewayEvent` jadvali tayyor — webhook loglarni saqlaydi. Payme JSON-RPC metodlari TODO.
+### 8.1 Payme (Paycom) Merchant API — ✅ Tayyor
 
-**Tayyor bo'lganda:**
-- Payme/Click/Uzum webhook qabul qilinadi
-- `PaymentsService.createFromExternal()` orqali to'lov yaratiladi
-- `providerFee` va `providerFeePercent` saqlanadi
+**Joylashuv:** `server/src/payment-gateways/payme/`
+
+**Arxitektura:** Paycom JSON-RPC 2.0 so'rovlarni bizning webhook endpointga yuboradi. Biz 6 ta metodni bajaramiz va JSON-RPC javob qaytaramiz.
+
+**Webhook endpoint:** `POST /api/gateways/payme/webhook?companyId=1001` (Public — JWT kerak emas)
+
+**Autentifikatsiya:** `Authorization: Basic base64("Paycom:<MERCHANT_KEY>")` — `crypto.timingSafeEqual()` bilan tekshiriladi.
+
+**Account field:** `student_id` — talaba ID raqami (5 xonali, masalan 10042)
+
+**Summalar:** Paycom **tiyinda** yuboradi (1 so'm = 100 tiyin). `PaymeTransaction` da ikkala qiymat saqlanadi: `amount` (tiyin) va `amountInSom` (so'm).
+
+#### 6 ta RPC metod
+
+| Metod | Vazifasi | Asosiy logika |
+|-------|---------|---------------|
+| `CheckPerformTransaction` | To'lov mumkinmi? | Talaba mavjud + summa > 0 → `{ allow: true }` |
+| `CreateTransaction` | Tranzaksiya yaratish (state=1) | Idempotent (`paymeId` bo'yicha); eski pending bekor qilinadi |
+| `PerformTransaction` | To'lovni bajarish (state=2) | `PaymentsService.createFromExternal()` → talaba balansini oshiradi |
+| `CancelTransaction` | Bekor qilish | state=1→-1 (moliyaviy o'zgarmaydi); state=2→xato -31007 |
+| `CheckTransaction` | Holatni tekshirish | To'liq state qaytaradi |
+| `GetStatement` | Vaqt oraligi ro'yxati | Paycom mutanosiblik uchun |
+
+#### Tranzaksiya holatlari
+
+| State | Ma'nosi |
+|-------|---------|
+| `1` | Yaratildi (kutilmoqda) |
+| `2` | Bajarildi (to'lov amalga oshdi) |
+| `-1` | Bekor qilindi (to'lov qilinmagan) |
+| `-2` | Qaytarildi (to'lov bajarilgandan so'ng bekor) |
+
+#### Xato kodlari
+
+| Kod | Ma'nosi |
+|-----|---------|
+| `-32504` | Avtorizatsiya xatosi |
+| `-32601` | Metod topilmadi |
+| `-31001` | Noto'g'ri summa |
+| `-31003` | Tranzaksiya topilmadi |
+| `-31007` | Bekor qilib bo'lmaydi (bajarilgan) |
+| `-31008` | Amalni bajarib bo'lmaydi |
+| `-31050` | Talaba topilmadi |
+
+#### Timeout
+
+- Payme tranzaksiyalar 12 soat ichida bajarilmasa auto-cancel bo'ladi
+- `PaymeCronService` har 30 daqiqada `state=1` va `createTime` 12 soatdan eski bo'lgan tranzaksiyalarni `state=-1, reason=4` qiladi
+
+#### Student Portal to'lov oqimi
+
+```
+Talaba student portalga kiradi
+    ↓
+Payme tanlaydi, summani kiritadi, "To'lash" bosadi
+    ↓
+Frontend: POST /student-portal/payments/init { amount, method: "PAYME" }
+    ↓
+Backend: Payme checkout URL generatsiya qiladi
+    ↓
+Frontend: window.location.href = checkoutUrl
+    ↓
+Talaba Payme sahifasida to'laydi
+    ↓
+Paycom bizning webhookga JSON-RPC yuboradi:
+  CheckPerformTransaction → CreateTransaction → PerformTransaction
+    ↓
+Talaba balansiga pul tushadi
+```
+
+#### Env variables
+
+| Variable | Tavsif |
+|----------|--------|
+| `PAYME_MERCHANT_ID` | Paycom kassa ID |
+| `PAYME_MERCHANT_KEY` | Production kalit |
+| `PAYME_MERCHANT_KEY_TEST` | Test/sandbox kalit |
+
+#### Fayllar
+
+| Fayl | Vazifasi |
+|------|---------|
+| `payme.service.ts` | Dispatcher + Basic Auth (~130 qator) |
+| `payme-methods.service.ts` | 6 ta RPC metod (~270 qator) |
+| `payme-errors.ts` | Xato kodlari + helper (~95 qator) |
+| `payme.types.ts` | TypeScript interfeyslari (~110 qator) |
+| `payme-cron.service.ts` | Timeout tozalash (~30 qator) |
+| `payme.service.spec.ts` | 20 ta test (auth + dispatch) |
+| `payme-methods.service.spec.ts` | 24 ta test (6 metod) |
+
+### 8.2 Click — ❌ Hali tayyor emas
+
+Skeleton implementatsiya mavjud (`click.service.ts`).
+
+### 8.3 Uzum — ❌ Hali tayyor emas
+
+Skeleton implementatsiya mavjud (`uzum.service.ts`).
+
+### Umumiy infra
+
+- `PaymentGatewayEvent` jadvali — barcha webhook payloadlar log qilinadi (debug/replay uchun)
+- `PaymentsService.createFromExternal()` — gateway to'lov yaratish (idempotent: `@@unique([method, externalId, companyId])`)
 - Dublikat webhook `P2002` xatosi bilan rad etiladi
 
 ---
@@ -481,6 +579,8 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Modul | Fayl | Testlar |
 |-------|------|---------|
 | Payments | `payments.service.spec.ts` | 29 ta (create, reverse, findAll, branch validation, contract-student check) |
+| Payme Dispatcher | `payme.service.spec.ts` | 20 ta (auth, dispatch, event logging) |
+| Payme Methods | `payme-methods.service.spec.ts` | 24 ta (6 metod, idempotentlik, timeout, xatolar) |
 | Salary | Hozircha yo'q | — |
 | Transactions | Hozircha yo'q | — |
 | Refunds | Hozircha yo'q | — |
@@ -489,7 +589,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 
 ## 10. Kelajak rejalari
 
-- [ ] Payme integratsiya (Merchant API)
+- [x] Payme integratsiya (Merchant API)
 - [ ] Click integratsiya
 - [ ] Uzum integratsiya
 - [ ] `providerFee` ni P&L hisobotiga kiritish

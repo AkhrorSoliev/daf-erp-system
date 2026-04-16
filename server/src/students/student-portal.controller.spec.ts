@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { StudentPortalController } from './student-portal.controller';
 import { StudentPortalService } from './student-portal.service';
@@ -32,6 +33,7 @@ describe('StudentPortalController — role guards', () => {
       providers: [
         { provide: StudentPortalService, useValue: mockService },
         { provide: QrAttendanceService, useValue: mockQrService },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
       ],
     }).compile();
 

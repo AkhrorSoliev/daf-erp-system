@@ -1109,3 +1109,36 @@ model PaymentGatewayEvent {
   @@index([externalId])
   @@index([processed])
 }
+
+// ===== PAYME TRANSACTION =====
+
+// Stores Payme-specific transaction lifecycle state. A PaymeTransaction is
+// created on CreateTransaction (state=1) and linked to an ERP Payment only
+// when PerformTransaction succeeds (state=2). Cancelled/refunded transactions
+// are kept for audit and GetStatement reconciliation.
+model PaymeTransaction {
+  id              String   @id @default(uuid())
+  paymeId         String                          // 24-char Paycom transaction ID
+  paymeTime       BigInt                          // Paycom-sent creation timestamp (ms)
+  amount          Int                             // amount in tiyin (Paycom native)
+  amountInSom     Int                             // amount / 100 — for ERP use
+  state           Int      @default(1)            // 1=created, 2=performed, -1=cancelled, -2=refunded
+  reason          Int?                            // cancellation reason (1-6)
+
+  studentId       Int                             // paying student
+
+  createTime      BigInt                          // our creation timestamp (ms)
+  performTime     BigInt?                         // when PerformTransaction was called (ms)
+  cancelTime      BigInt?                         // when CancelTransaction was called (ms)
+
+  paymentId       String?  @unique                // FK to Payment.id (set on state=2)
+
+  companyId       Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([paymeId, companyId], name: "unique_payme_transaction")
+  @@index([companyId, createTime])
+  @@index([studentId])
+  @@index([state])
+}

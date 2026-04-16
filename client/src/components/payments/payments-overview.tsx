@@ -134,7 +134,13 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     marketingExpenses: 0,
   };
 
-  const d = data ?? empty;
+  const d = {
+    ...empty,
+    ...data,
+    income: { ...empty.income, ...data?.income },
+    forecast: { ...empty.forecast, ...data?.forecast, debtorExposure: { ...empty.forecast.debtorExposure, ...data?.forecast?.debtorExposure } },
+    salary: { ...empty.salary, ...data?.salary },
+  };
 
   const incomePercent =
     d.forecast.recognizedRevenueForecast > 0

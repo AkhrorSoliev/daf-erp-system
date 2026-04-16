@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import toast from "react-hot-toast";
+import axios from "axios";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +16,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Wallet, Clock, BookOpen, CreditCard, ArrowRight } from "lucide-react";
+import {
+  Wallet,
+  Clock,
+  BookOpen,
+  CreditCard,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
 
 function formatBalance(balance: number) {
   return balance.toLocaleString("en-US");
@@ -54,7 +62,7 @@ export function StudentPaymentSummary() {
 
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
-  const [showComingSoon, setShowComingSoon] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const selectedInfo = PAYMENT_METHODS.find((m) => m.id === selectedMethod);
 
@@ -70,14 +78,31 @@ export function StudentPaymentSummary() {
     setAmount(String(val));
   };
 
-  const handleProceed = () => {
-    setShowComingSoon(true);
+  const handleProceed = async () => {
+    if (!selectedMethod || !amount || Number(amount) < 1000) return;
+
+    setIsRedirecting(true);
+    try {
+      const { data } = await api.post("/student-portal/payments/init", {
+        amount: Number(amount),
+        method: selectedMethod.toUpperCase(),
+        returnUrl: `${window.location.origin}/payment/result`,
+      });
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      const msg =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "To'lov tizimida xatolik yuz berdi";
+      toast.error(msg);
+      setIsRedirecting(false);
+    }
   };
 
   const handleClose = () => {
     setSelectedMethod(null);
     setAmount("");
-    setShowComingSoon(false);
+    setIsRedirecting(false);
   };
 
   if (isLoading) {
@@ -166,7 +191,7 @@ export function StudentPaymentSummary() {
               onClick={() => {
                 setSelectedMethod(method.id);
                 setAmount("");
-                setShowComingSoon(false);
+                setIsRedirecting(false);
               }}
               className="h-15 flex items-center justify-center rounded-lg border bg-white p-1 transition-colors hover:bg-gray-50 active:scale-95"
             >
@@ -188,115 +213,89 @@ export function StudentPaymentSummary() {
       <Dialog
         open={!!selectedMethod}
         onOpenChange={(open) => {
-          if (!open) handleClose();
+          if (!open && !isRedirecting) handleClose();
         }}
       >
         <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-sm">
-          {!showComingSoon ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>To&apos;lov summasi</DialogTitle>
-                <DialogDescription>
-                  {selectedInfo?.name} orqali to&apos;lanadigan summani kiriting
-                </DialogDescription>
-              </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>To&apos;lov summasi</DialogTitle>
+            <DialogDescription>
+              {selectedInfo?.name} orqali to&apos;lanadigan summani kiriting
+            </DialogDescription>
+          </DialogHeader>
 
-              <div className="space-y-4 overflow-hidden">
-                {/* Logo */}
-                <div className="flex justify-center">
-                  {selectedInfo && (
-                    <div className="rounded-lg bg-white p-2">
-                      <img
-                        src={selectedInfo.logo}
-                        alt={selectedInfo.name}
-                        className="h-10 w-28 object-cover max-w-full"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Summa input */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={displayAmount}
-                    onChange={(e) => handleAmountChange(e.target.value)}
-                    placeholder="Summani kiriting"
-                    className="box-border w-full rounded-lg border bg-background px-4 py-3 text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    autoFocus
+          <div className="space-y-4 overflow-hidden">
+            {/* Logo */}
+            <div className="flex justify-center">
+              {selectedInfo && (
+                <div className="rounded-lg bg-white p-2">
+                  <img
+                    src={selectedInfo.logo}
+                    alt={selectedInfo.name}
+                    className="h-10 w-28 object-cover max-w-full"
                   />
-                  {amount && (
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground py-20">
-                      so&apos;m
-                    </span>
-                  )}
                 </div>
+              )}
+            </div>
 
-                {/* Tezkor summalar */}
-                <div className="flex gap-2 overflow-x-auto pb-4 -mx-1 px-1">
-                  {QUICK_AMOUNTS.map((val) => (
-                    <button
-                      key={val}
-                      onClick={() => handleQuickAmount(val)}
-                      className="shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-muted/50 active:scale-95"
-                    >
-                      {formatBalance(val)}
-                    </button>
-                  ))}
-                </div>
+            {/* Summa input */}
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={displayAmount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                placeholder="Summani kiriting"
+                className="box-border w-full rounded-lg border bg-background px-4 py-3 text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                disabled={isRedirecting}
+                autoFocus
+              />
+              {amount && (
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground py-20">
+                  so&apos;m
+                </span>
+              )}
+            </div>
 
-                {/* Davom etish */}
-                <Button
-                  onClick={handleProceed}
-                  disabled={!amount || Number(amount) < 1000}
-                  className="w-full"
+            {/* Tezkor summalar */}
+            <div className="flex gap-2 overflow-x-auto pb-4 -mx-1 px-1">
+              {QUICK_AMOUNTS.map((val) => (
+                <button
+                  key={val}
+                  onClick={() => handleQuickAmount(val)}
+                  disabled={isRedirecting}
+                  className="shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-muted/50 active:scale-95"
                 >
-                  Davom etish
+                  {formatBalance(val)}
+                </button>
+              ))}
+            </div>
+
+            {/* To'lash */}
+            <Button
+              onClick={handleProceed}
+              disabled={!amount || Number(amount) < 1000 || isRedirecting}
+              className="w-full"
+            >
+              {isRedirecting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  To&apos;lov sahifasiga o&apos;tkazilmoqda...
+                </>
+              ) : (
+                <>
+                  To&apos;lash
                   <ArrowRight className="ml-2 size-4" />
-                </Button>
+                </>
+              )}
+            </Button>
 
-                {Number(amount) > 0 && Number(amount) < 1000 && (
-                  <p className="text-xs text-center text-red-500">
-                    Minimal summa: 1,000 so&apos;m
-                  </p>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-center">
-                  Tez orada ishga tushiriladi
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-4 text-center py-4">
-                {selectedInfo && (
-                  <div className="inline-block rounded-lg bg-white p-2 mx-auto">
-                    <img
-                      src={selectedInfo.logo}
-                      alt={selectedInfo.name}
-                      className="h-10 w-auto object-contain"
-                    />
-                  </div>
-                )}
-                <p className="text-2xl font-bold">{displayAmount} so&apos;m</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedInfo?.name} orqali online to&apos;lov tizimi tez
-                  orada ishga tushiriladi. Iltimos, hozircha kassaga murojaat
-                  qiling.
-                </p>
-                <Button
-                  onClick={handleClose}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Yopish
-                </Button>
-              </div>
-            </>
-          )}
+            {Number(amount) > 0 && Number(amount) < 1000 && (
+              <p className="text-xs text-center text-red-500">
+                Minimal summa: 1,000 so&apos;m
+              </p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
