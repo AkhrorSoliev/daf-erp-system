@@ -37,15 +37,32 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 ## Permission Matrix
 
-### Financial Data (Salary, Balance, Payments)
+### Financial Data (Payments, Salary, Expenses, Refunds)
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| View salary (ish haqi) | All staff | Own branch staff + self | No | No | No |
+| View salary (ish haqi) | All staff | Own branch staff | No | No | No |
 | View balance | All staff | Own branch staff | No | No | No |
+| Create payment | Yes | Yes | Yes | No | Yes |
+| Reverse payment | Yes | No | No | No | No |
+| Set salary config | Yes | Yes | No | No | No |
+| Calculate salary | Yes | No | No | No | No |
+| Approve salary | Yes | No | No | No | No |
+| Pay salary | Yes | Own branch | No | No | No |
+| Batch pay salary | Yes | Own branch | No | No | No |
+| Create refund | Yes | Yes | Yes | No | No |
+| Process refund | Yes | Yes | No | No | No |
+| Reverse refund | Yes | No | No | No | No |
+| Create expense | Yes | Yes | Yes | No | No |
+| Update/delete expense | Yes | Yes | No | No | No |
+| View financial reports | Yes | Own branch | No | No | No |
+| View transactions | Yes | Own branch | No | No | No |
+| Manual adjustment | Yes | Yes | No | No | No |
 
 - **Frontend**: Check `user.roles.some(r => [1, 2].includes(r.id))` before rendering salary/balance UI
-- **Backend**: Use `@Roles('CEO', 'Branch Director')` on salary endpoints
+- **Backend**: Use `@Roles('CEO', 'Branch Director')` on salary/reports endpoints; `@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')` on payment endpoints
+- **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
+- Full details: see `docs/financial-system.md`
 
 ### Groups
 

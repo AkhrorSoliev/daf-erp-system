@@ -337,6 +337,35 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
   <CommentList entityType="Student" entityId={id} refreshKey={key} />
   ```
 
+### Financial UI (Moliya bo'limi)
+
+The financial section lives under `/payments/*` with these sub-pages:
+
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `/payments/overview` | `overview-client.tsx` → `PaymentsOverview` | Dashboard: KPI cards (income, expenses, profit, LTV, CAC, ROI), date range picker, recent payments |
+| `/payments/salary` | `salary-client.tsx` | Salary payments table + "Oylik belgilash" config dialog + batch pay |
+| `/payments/expenses` | `expenses-client.tsx` | Expense list + create dialog |
+| `/payments/contracts` | `contracts-client.tsx` | Contract list + create |
+| `/payments/debtors` | — | Students with negative balance |
+
+#### Key Components
+
+- **`salary-config-dialog.tsx`** — CEO assigns salary to any employee: select employee → choose type (FIXED_MONTHLY / PERCENTAGE / FIXED_PER_STUDENT) → enter value → save. Shows existing config if present. PERCENTAGE and FIXED_PER_STUDENT only shown for teachers (role id 4).
+- **`record-payment-dialog.tsx`** — Manual payment entry: student select, amount, method, contract (optional), receipt number
+- **`payments-overview.tsx`** — KPI cards fetching from `GET /reports/financial-overview`. Uses `staleTime: 0` to always show fresh data.
+
+#### Financial UI Rules
+
+- **Branch context**: All financial mutations (payment create, expense create) must send `branchId: selectedBranch?.id` from `useBranchSwitcher()`. Without it, records won't appear in branch-filtered reports.
+- **Cache invalidation**: When creating/deleting expenses, call `queryClient.invalidateQueries({ queryKey: ["financial-overview"] })` to update the overview dashboard.
+- **Financial data always refetches** — never use optimistic updates for balances, payments, or salary data. Always refetch from server after mutations.
+- **Salary role labels**: `{ 1: "Direktor", 2: "Filial direktori", 3: "Administrator", 4: "O'qituvchi", 5: "Kassir" }`
+- **Payment status labels**: `{ CALCULATED: "Hisoblangan", APPROVED: "Tasdiqlangan", PAID: "To'langan", CANCELLED: "Bekor qilingan", REVERSED: "Bekor qilingan" }`
+- **Salary actions by role**:
+  - CEO: "Oylik belgilash" + "Oylikni hisoblash" + "Tasdiqlash"
+  - CEO + BD: "To'lash" + "Hammasini to'lash"
+
 ### Notifications (Bildirishnomalar)
 
 - **NotificationBell** (`src/components/notifications/notification-bell.tsx`) — bell icon + badge + dropdown in navbar
