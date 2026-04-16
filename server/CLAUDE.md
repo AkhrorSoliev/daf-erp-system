@@ -218,6 +218,147 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
   - **Teacher (manual)** — `markedMethod = MANUAL` + `markedBy.roles` contains only Teacher
   - **Admin** — `markedMethod = MANUAL` + `markedBy.roles` contains CEO/BD/Administrator
 
+### Financial System
+
+The financial system is built on an **append-only ledger** principle — financial rows are never destructively edited. Corrections are written as reversal entries linked via `reversedTransactionId`.
+
+#### Core Models
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Payment` | Student payments (money in) | `studentId`, `contractId?`, `amount`, `method`, `status`, `source`, `externalId?`, `providerFee?`, `branchId?` |
+| `Transaction` | Universal ledger (all money movement) | `type`, `amount` (signed), `balanceBefore`, `balanceAfter`, `reversedTransactionId?` |
+| `Contract` | Student-course agreement | `contractNumber` (DAF-YYYY-#####), `totalAmount`, `paidAmount`, `status` |
+| `EmployeeSalaryConfig` | Salary configuration per employee | `userId`, `groupId?`, `salaryType`, `value`, `isActive` |
+| `SalaryAccrual` | Per-lesson teacher earnings | `userId`, `studentId`, `groupId`, `lessonDate`, `amount`, `deductionTransactionId?` |
+| `SalaryPayment` | Monthly salary run | `userId`, `periodStart/End`, `grossAmount`, `taxAmount`, `netAmount`, `status` |
+| `Refund` | Student refund request/processing | `studentId`, `contractId`, `requestedAmount`, `approvedAmount?`, `deductions` (JSON), `status` |
+| `Expense` | Company outflows | `category`, `amount`, `branchId?`, `relatedUserId?` (for TEACHER_ADVANCE), `settledBySalaryPaymentId?` |
+| `CompanyTaxConfig` | Tax rates per company | `salaryTaxRate` (default 12%), `refundTaxRate` (default 0%) |
+| `PaymentGatewayEvent` | Webhook audit log | `provider`, `externalId`, `eventType`, `payload` (JSON), `signatureValid`, `processed` |
+
+#### Financial Enums
+
+- **PaymentMethod**: `CASH`, `PAYME`, `CLICK`, `UZUM`, `TRANSFER`
+- **PaymentStatus**: `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`, `CANCELLED`, `REVERSED`
+- **PaymentSource**: `ADMIN_MANUAL`, `STUDENT_PORTAL`, `GATEWAY_WEBHOOK`, `MANUAL_ATTACH`
+- **TransactionType**: `PAYMENT`, `LESSON_DEDUCTION`, `REFUND`, `SALARY_ACCRUAL`, `SALARY_PAYMENT`, `EXPENSE`, `ADJUSTMENT`, `TAX`
+- **ContractStatus**: `DRAFT`, `ACTIVE`, `COMPLETED`, `CANCELLED`, `REFUNDED`
+- **SalaryType**: `PERCENTAGE`, `FIXED_PER_STUDENT`, `FIXED_MONTHLY`
+- **SalaryPaymentStatus**: `CALCULATED`, `APPROVED`, `PAID`, `CANCELLED`
+- **RefundStatus**: `REQUESTED`, `APPROVED`, `PROCESSING`, `COMPLETED`, `REJECTED`
+- **ExpenseCategory**: `RENT`, `UTILITIES`, `SUPPLIES`, `MARKETING`, `TEACHER_ADVANCE`, `OTHER`
+
+#### Payment Module (`src/payments/`)
+
+- **Endpoints**: `POST /payments` (create), `POST /payments/attach-external` (gateway attach), `POST /payments/:id/reverse` (CEO-only), `GET /payments`, `GET /payments/:id`, `GET /payments/student/:studentId`, `GET /payments/debtors`, `GET /payments/pending-students`
+- **Roles**: CEO, BD, Admin, Cashier — except reverse (CEO-only)
+- **Key rules**:
+  - Payment create atomically: creates Payment → records Transaction (PAYMENT) → increments Student.balance → increments Contract.paidAmount
+  - Contract-student ownership validated: `contractId` must belong to `studentId`
+  - Branch validation: if `contractId` provided, payment `branchId` resolved from contract; mismatch throws `BadRequestException`
+  - External payments idempotent via `@@unique([method, externalId, companyId])`
+  - Reversed payments excluded from list by default (`status: { not: REVERSED }`); can be queried explicitly with `?status=REVERSED`
+  - `source` field returned in all read endpoints for audit
+  - Reverse writes Student entity history (`TO'LOV_BEKOR_QILINDI`)
+  - `getPending()` uses `balance: { lt: 0 }` (strictly negative, not `lte`)
+
+#### Salary Module (`src/salary/`)
+
+- **Endpoints**: `GET/POST /salary/config`, `POST /salary/config/global`, `PATCH /salary/config/:id`, `GET /salary/accruals/:userId`, `GET /salary/payments`, `POST /salary/calculate` (CEO-only), `PATCH /salary/payments/:id/approve` (CEO-only), `POST /salary/payments/:id/pay`, `POST /salary/payments/batch-pay`
+- **Roles**: CEO, BD
+- **Salary types**:
+  - `PERCENTAGE` — teacher earns % of per-lesson cost (e.g., 30% of 20,000 = 6,000 per student per lesson)
+  - `FIXED_PER_STUDENT` — fixed amount per student per lesson
+  - `FIXED_MONTHLY` — flat monthly salary (no accruals, no group dependency) — used for Admin, Cashier, BD
+- **Config lookup**: group-specific config takes priority over global (`groupId DESC` — non-null first)
+- **FIXED_MONTHLY** cannot be group-scoped (validated on create/update)
+- **Accrual coverage rule (B.1)**: `createAccrual()` only writes if `deductionTransactionId` is provided — teachers don't earn for lessons where the student didn't have a paid cycle
+- **Period-closed guard**: refuses accrual if lesson date falls inside an APPROVED/PAID SalaryPayment period
+- **Monthly calculation** (`calculateMonthlySalaries()`):
+  - Cutoff: 7th of current month; Period: 8th previous month → 7th current
+  - Accrual-based: sums unpaid accruals ≤ cutoff
+  - Fixed-monthly: creates payment from config.value (idempotent — skips if exists)
+  - Tax applied per `CompanyTaxConfig.salaryTaxRate` (default 12% ASOT)
+  - TEACHER_ADVANCE expenses settled against salary in `createdAt` order
+  - Atomic per user: SalaryPayment + accrual links + TAX transaction + advance settlement
+- **Cron**: `0 2 8 * *` (8th of month at 2:00 AM Tashkent) — iterates all companies
+- **Batch pay**: pays multiple APPROVED salaries; Branch Directors scoped to their `mainBranch`
+
+#### Transactions Module (`src/transactions/`) — Universal Ledger
+
+- **Endpoints**: `GET /transactions` (CEO, BD), `GET /transactions/student/:studentId`, `GET /transactions/teacher/:teacherId`, `POST /transactions/adjustment` (CEO, BD)
+- **Append-only rules**:
+  - All balance changes create Transaction rows — never edit existing rows
+  - Reversals create inverse entries linked via `reversedTransactionId`
+  - Cannot reverse a reversal (chain kept flat)
+  - `SELECT FOR UPDATE` row locking prevents concurrent balance mutations
+  - `Serializable` isolation level on all financial transactions
+  - `maxWait: 10000, timeout: 15000` configured for Neon serverless cold-start tolerance
+- **Methods**: `recordPayment()`, `deductLessonFee()`, `recordRefund()`, `recordSalaryPayment()`, `recordExpense()`, `reverseTransaction()`, `createAdjustment()`
+
+#### Contracts Module (`src/contracts/`)
+
+- **Endpoints**: `POST /contracts`, `GET /contracts`, `GET /contracts/:id`, `GET /contracts/student/:studentId`, `PATCH /contracts/:id`, `PATCH /contracts/:id/status`
+- **Roles**: CEO, BD, Admin — status change CEO/BD only
+- `contractNumber` auto-generated: `DAF-YYYY-#####` (atomic sequence per year)
+- `paidAmount` auto-updated by payment create/reverse and refund process/reverse
+- **Status transitions**: `DRAFT → [ACTIVE, CANCELLED]`, `ACTIVE → [COMPLETED, CANCELLED, REFUNDED]`
+
+#### Refunds Module (`src/refunds/`)
+
+- **Endpoints**: `POST /refunds`, `GET /refunds`, `PATCH /refunds/:id/process`, `POST /refunds/:id/reverse` (CEO-only)
+- **Eligibility policy**:
+  - Course not started → 100% refund (minus prior refunds)
+  - 50%+ lessons completed → 0% (no refund)
+  - <50% completed → `paidAmount - consumedFromLedger - priorRefunds`
+- `consumedFromLedger` = sum of LESSON_DEDUCTION transactions for the contract (ledger is source of truth)
+- **Status transitions**: `REQUESTED → [APPROVED, REJECTED]`, `APPROVED → [PROCESSING, COMPLETED]`, `PROCESSING → COMPLETED`
+- Reverse CEO-only; contract stays REFUNDED (manual re-open if needed)
+
+#### Expenses Module (`src/expenses/`)
+
+- **Endpoints**: `POST /expenses`, `GET /expenses`, `PATCH /expenses/:id`, `DELETE /expenses/:id`
+- **Roles**: CEO, BD, Admin (create); CEO, BD (update/delete)
+- **TEACHER_ADVANCE** category: requires `relatedUserId`; settled against future salary in `SalaryService.applyPendingAdvances()`
+- Financial field changes (amount, category, relatedUserId) trigger ledger reversal + re-post
+- Soft delete cascades ledger reversal
+
+#### Reports Module (`src/reports/`)
+
+- **Endpoints**: `GET /reports/financial-overview`, `GET /reports/financial-trend`, `GET /reports/kpis`, and more
+- **Roles**: CEO, BD
+- **Financial overview** calculates: income (actual vs forecast), salary (paid + pending with tax), expenses, net profit, LTV, CAC, marketing ROI, avg payment, debtors
+- Income filters by `status: COMPLETED` — REVERSED payments excluded automatically
+- All queries support `branchId` and `startDate/endDate` filters
+
+#### Attendance → Finance Integration
+
+When attendance is marked:
+1. `deductLessonFee()` creates LESSON_DEDUCTION transaction, decrements Student.balance
+2. `createAccrual()` writes SalaryAccrual for each teacher (only if coverage transaction exists — B.1 rule)
+3. FIXED_MONTHLY teachers: no accrual needed, salary calculated directly from config
+
+#### Status Transitions (centralized in `src/common/finance/status-transitions.ts`)
+
+- `assertValidTransition(entityType, map, fromStatus, toStatus)` — throws `BadRequestException` if invalid
+- Used across: payments (reverse), refunds (process), salary (approve/pay), contracts (status change)
+
+#### RBAC for Financial Features
+
+| Feature | CEO | BD | Admin | Cashier | Teacher |
+|---------|:---:|:--:|:-----:|:-------:|:-------:|
+| Create payment | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Reverse payment | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Salary config | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Calculate salary | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Approve salary | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Pay salary | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Create refund | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Reverse refund | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Create expense | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Financial reports | ✅ | ✅ | ❌ | ❌ | ❌ |
+
 ### Comments & Task Assignment
 
 - `CommentsModule` (`src/comments/`) — comments and task assignment system
