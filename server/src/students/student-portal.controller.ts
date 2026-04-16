@@ -8,8 +8,9 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
-  NotImplementedException,
+  BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentPortalService } from './student-portal.service';
 import { QrAttendanceService } from '../attendance/qr-attendance.service';
@@ -25,6 +26,7 @@ export class StudentPortalController {
   constructor(
     private studentPortalService: StudentPortalService,
     private qrAttendanceService: QrAttendanceService,
+    private config: ConfigService,
   ) {}
 
   @Get('profile')
@@ -104,22 +106,45 @@ export class StudentPortalController {
   }
 
   /**
-   * Initiate an online payment via Payme/Click/Uzum.
-   * Skeleton: the real integration needs per-provider SDK wiring. For now
-   * responds 501 so the frontend can wire the UI and env-level config (merchant
-   * IDs, return URLs, checkout endpoints) can be staged.
+   * Generate a Payme checkout URL for the student to pay online.
+   * Returns the checkout URL — the frontend redirects the student there.
    */
   @Post('payments/init')
   @UseGuards(RolesGuard)
   @Roles('Student')
   initPayment(
     @CurrentUser('studentId') studentId: number,
-    @Body() _dto: InitPaymentDto,
+    @Body() dto: InitPaymentDto,
   ) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
-    throw new NotImplementedException(
-      "Online to'lov oqimi hali ulanmagan — tez orada Payme/Click/Uzum integratsiyasi qo'shiladi",
-    );
+
+    if (dto.method !== 'PAYME') {
+      throw new BadRequestException(
+        "Hozirda faqat Payme orqali to'lov qilish mumkin",
+      );
+    }
+
+    const merchantId = this.config.get<string>('PAYME_MERCHANT_ID');
+    if (!merchantId) {
+      throw new BadRequestException("To'lov tizimi sozlanmagan");
+    }
+
+    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
+    const checkoutBase = isProduction
+      ? 'https://checkout.paycom.uz'
+      : 'https://test.paycom.uz';
+
+    const params = Buffer.from(
+      JSON.stringify({
+        m: merchantId,
+        ac: { student_id: studentId },
+        a: dto.amount * 100, // so'm → tiyin
+        l: 'uz',
+        c: dto.returnUrl || 'https://student.dafzentrum.uz/payment/result',
+      }),
+    ).toString('base64');
+
+    return { checkoutUrl: `${checkoutBase}/${params}` };
   }
 
   @Post('attendance/scan')

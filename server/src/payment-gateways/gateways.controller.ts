@@ -1,6 +1,6 @@
 import { Body, Controller, Headers, Post, Query } from '@nestjs/common';
 import { Public } from '../common/decorators';
-import { PaymeService } from './payme.service';
+import { PaymeService } from './payme/payme.service';
 import { ClickService } from './click.service';
 import { UzumService } from './uzum.service';
 
@@ -20,6 +20,10 @@ export class GatewaysController {
     private uzum: UzumService,
   ) {}
 
+  /**
+   * Paycom Merchant API endpoint (JSON-RPC 2.0).
+   * Always returns HTTP 200 — errors are encoded in the JSON-RPC response body.
+   */
   @Public()
   @Post('payme/webhook')
   paymeWebhook(

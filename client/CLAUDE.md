@@ -366,6 +366,32 @@ The financial section lives under `/payments/*` with these sub-pages:
   - CEO: "Oylik belgilash" + "Oylikni hisoblash" + "Tasdiqlash"
   - CEO + BD: "To'lash" + "Hammasini to'lash"
 
+### Student Portal (`src/components/student-portal/`)
+
+Student-facing portal at `student.dafzentrum.uz` — students can view their profile, schedule, attendance, and make payments.
+
+**Key components:**
+- `student-portal-layout.tsx` — layout wrapper with bottom nav
+- `student-home-page.tsx` — dashboard with greeting, quick stats, schedule
+- `student-payment-summary.tsx` — balance display, payment methods, payment history
+- `student-groups-list.tsx` — enrolled groups
+- `student-schedule-view.tsx` — weekly schedule
+- `student-attendance-history.tsx` — attendance records
+- `student-settings-page.tsx` — profile and password settings
+- `qr-scanner.tsx` / `qr-scan-dialog.tsx` — QR attendance scanning
+
+#### Online Payment (Payme Integration)
+
+- **Component**: `student-payment-summary.tsx`
+- **Flow**: Student selects Payme → enters amount → clicks "To'lash" → `POST /student-portal/payments/init` → backend returns `checkoutUrl` → `window.location.href` redirects to Payme checkout page
+- **Payment methods**: Payme (active), Click and Uzum (configured in UI, backend returns error "Hozirda faqat Payme orqali to'lov qilish mumkin")
+- **Quick amounts**: 100K, 200K, 300K, 400K, 500K, 600K, 700K so'm
+- **Minimum**: 1,000 so'm
+- **Loading state**: "To'lov sahifasiga o'tkazilmoqda..." spinner on button during redirect
+- **Callback**: After payment, Payme redirects to `/payment/result`
+- **Balance display**: Shows current balance (green if positive, red if negative/debt)
+- **Payment history**: Fetched from `GET /student-portal/payments` — shows transaction list with amounts and timestamps
+
 ### Notifications (Bildirishnomalar)
 
 - **NotificationBell** (`src/components/notifications/notification-bell.tsx`) — bell icon + badge + dropdown in navbar

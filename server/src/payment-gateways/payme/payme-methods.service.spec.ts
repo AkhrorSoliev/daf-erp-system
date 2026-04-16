@@ -1,0 +1,393 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { PaymeMethodsService } from './payme-methods.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PaymentsService } from '../../payments/payments.service';
+import {
+  CANNOT_CANCEL,
+  CANNOT_PERFORM,
+  INVALID_AMOUNT,
+  STUDENT_NOT_FOUND,
+  TRANSACTION_NOT_FOUND,
+} from './payme-errors';
+
+describe('PaymeMethodsService', () => {
+  let service: PaymeMethodsService;
+  let prisma: any;
+  let payments: any;
+
+  const COMPANY_ID = 1;
+  const STUDENT_ID = 10042;
+  const PAYME_ID = '5ef74e7a17cebc3c0eace0d8';
+
+  const mockTxn = (overrides = {}) => ({
+    id: 'txn-uuid',
+    paymeId: PAYME_ID,
+    paymeTime: BigInt(1714000000000),
+    amount: 50000000,
+    amountInSom: 500000,
+    state: 1,
+    reason: null,
+    studentId: STUDENT_ID,
+    createTime: BigInt(Date.now()),
+    performTime: null,
+    cancelTime: null,
+    paymentId: null,
+    companyId: COMPANY_ID,
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    prisma = {
+      student: {
+        findFirst: jest.fn().mockResolvedValue({ id: STUDENT_ID }),
+      },
+      paymeTransaction: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn().mockImplementation(({ data }) => ({
+          id: 'txn-uuid',
+          ...data,
+          createTime: data.createTime ?? BigInt(Date.now()),
+        })),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+
+    payments = {
+      createFromExternal: jest.fn().mockResolvedValue({
+        id: 'payment-uuid',
+        studentBalance: 500000,
+      }),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        PaymeMethodsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: PaymentsService, useValue: payments },
+      ],
+    }).compile();
+
+    service = module.get(PaymeMethodsService);
+  });
+
+  // ─── CheckPerformTransaction ────────────────────────────────
+
+  describe('CheckPerformTransaction', () => {
+    const params = { amount: 50000000, account: { student_id: STUDENT_ID } };
+
+    it('should return allow: true for valid student and amount', async () => {
+      const result = await service.checkPerformTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ result: { allow: true } });
+    });
+
+    it('should return STUDENT_NOT_FOUND when student does not exist', async () => {
+      prisma.student.findFirst.mockResolvedValue(null);
+      const result = await service.checkPerformTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: STUDENT_NOT_FOUND } });
+    });
+
+    it('should return INVALID_AMOUNT for zero amount', async () => {
+      const result = await service.checkPerformTransaction(
+        { amount: 0, account: { student_id: STUDENT_ID } } as any,
+        COMPANY_ID,
+        1,
+      );
+      expect(result).toMatchObject({ error: { code: INVALID_AMOUNT } });
+    });
+
+    it('should return INVALID_AMOUNT for negative amount', async () => {
+      const result = await service.checkPerformTransaction(
+        { amount: -100, account: { student_id: STUDENT_ID } } as any,
+        COMPANY_ID,
+        1,
+      );
+      expect(result).toMatchObject({ error: { code: INVALID_AMOUNT } });
+    });
+
+    it('should return STUDENT_NOT_FOUND when student_id is missing', async () => {
+      const result = await service.checkPerformTransaction(
+        { amount: 100, account: {} } as any,
+        COMPANY_ID,
+        1,
+      );
+      expect(result).toMatchObject({ error: { code: STUDENT_NOT_FOUND } });
+    });
+  });
+
+  // ─── CreateTransaction ──────────────────────────────────────
+
+  describe('CreateTransaction', () => {
+    const params = {
+      id: PAYME_ID,
+      time: 1714000000000,
+      amount: 50000000,
+      account: { student_id: STUDENT_ID },
+    };
+
+    it('should create a new transaction with state 1', async () => {
+      const result = await service.createTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({
+        result: { transaction: 'txn-uuid', state: 1 },
+      });
+      expect(prisma.paymeTransaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            paymeId: PAYME_ID,
+            amount: 50000000,
+            amountInSom: 500000,
+            state: 1,
+            studentId: STUDENT_ID,
+            companyId: COMPANY_ID,
+          }),
+        }),
+      );
+    });
+
+    it('should return existing transaction for idempotent call (same account + amount)', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      const result = await service.createTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({
+        result: { transaction: 'txn-uuid', state: 1 },
+      });
+      expect(prisma.paymeTransaction.create).not.toHaveBeenCalled();
+    });
+
+    it('should return CANNOT_PERFORM for same paymeId with different account', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(
+        mockTxn({ studentId: 99999 }),
+      );
+      const result = await service.createTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: CANNOT_PERFORM } });
+    });
+
+    it('should return CANNOT_PERFORM for same paymeId with different amount', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(
+        mockTxn({ amount: 99999 }),
+      );
+      const result = await service.createTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: CANNOT_PERFORM } });
+    });
+
+    it('should cancel existing pending transactions for same student', async () => {
+      await service.createTransaction(params as any, COMPANY_ID, 1);
+      expect(prisma.paymeTransaction.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { studentId: STUDENT_ID, companyId: COMPANY_ID, state: 1 },
+        }),
+      );
+    });
+
+    it('should auto-cancel expired existing transaction', async () => {
+      const expired = mockTxn({
+        createTime: BigInt(Date.now() - 13 * 60 * 60 * 1000),
+      });
+      prisma.paymeTransaction.findUnique.mockResolvedValue(expired);
+      const result = await service.createTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: CANNOT_PERFORM } });
+      expect(prisma.paymeTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: expired.id },
+          data: expect.objectContaining({ state: -1, reason: 4 }),
+        }),
+      );
+    });
+  });
+
+  // ─── PerformTransaction ─────────────────────────────────────
+
+  describe('PerformTransaction', () => {
+    const params = { id: PAYME_ID };
+
+    it('should perform transaction and create ERP payment', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      const result = await service.performTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({
+        result: { transaction: 'txn-uuid', state: 2 },
+      });
+      expect(payments.createFromExternal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: STUDENT_ID,
+          amount: 500000,
+          method: 'PAYME',
+          source: 'GATEWAY_WEBHOOK',
+          externalId: PAYME_ID,
+          companyId: COMPANY_ID,
+        }),
+      );
+    });
+
+    it('should return idempotent result for already performed transaction', async () => {
+      const performed = mockTxn({
+        state: 2,
+        performTime: BigInt(Date.now()),
+      });
+      prisma.paymeTransaction.findUnique.mockResolvedValue(performed);
+      const result = await service.performTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ result: { state: 2 } });
+      expect(payments.createFromExternal).not.toHaveBeenCalled();
+    });
+
+    it('should return TRANSACTION_NOT_FOUND when transaction does not exist', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(null);
+      const result = await service.performTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: TRANSACTION_NOT_FOUND } });
+    });
+
+    it('should return CANNOT_PERFORM for cancelled transaction', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn({ state: -1 }));
+      const result = await service.performTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: CANNOT_PERFORM } });
+    });
+
+    it('should auto-cancel and return CANNOT_PERFORM for expired transaction', async () => {
+      const expired = mockTxn({
+        createTime: BigInt(Date.now() - 13 * 60 * 60 * 1000),
+      });
+      prisma.paymeTransaction.findUnique.mockResolvedValue(expired);
+      const result = await service.performTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: CANNOT_PERFORM } });
+      expect(prisma.paymeTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ state: -1, reason: 4 }),
+        }),
+      );
+    });
+
+    it('should update PaymeTransaction state to 2 with paymentId', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      await service.performTransaction(params as any, COMPANY_ID, 1);
+      expect(prisma.paymeTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'txn-uuid' },
+          data: expect.objectContaining({
+            state: 2,
+            paymentId: 'payment-uuid',
+          }),
+        }),
+      );
+    });
+  });
+
+  // ─── CancelTransaction ─────────────────────────────────────
+
+  describe('CancelTransaction', () => {
+    const params = { id: PAYME_ID, reason: 3 };
+
+    it('should cancel pending transaction (state 1 → -1)', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      const result = await service.cancelTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ result: { state: -1 } });
+      expect(prisma.paymeTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ state: -1, reason: 3 }),
+        }),
+      );
+    });
+
+    it('should return CANNOT_CANCEL for performed transaction (state 2)', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn({ state: 2 }));
+      const result = await service.cancelTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: CANNOT_CANCEL } });
+    });
+
+    it('should return idempotent result for already cancelled transaction', async () => {
+      const cancelled = mockTxn({
+        state: -1,
+        cancelTime: BigInt(Date.now()),
+      });
+      prisma.paymeTransaction.findUnique.mockResolvedValue(cancelled);
+      const result = await service.cancelTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ result: { state: -1 } });
+      expect(prisma.paymeTransaction.update).not.toHaveBeenCalled();
+    });
+
+    it('should return TRANSACTION_NOT_FOUND when transaction does not exist', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(null);
+      const result = await service.cancelTransaction(params as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: TRANSACTION_NOT_FOUND } });
+    });
+  });
+
+  // ─── CheckTransaction ──────────────────────────────────────
+
+  describe('CheckTransaction', () => {
+    it('should return full transaction state', async () => {
+      const txn = mockTxn({ state: 2, performTime: BigInt(1714000060000) });
+      prisma.paymeTransaction.findUnique.mockResolvedValue(txn);
+      const result = await service.checkTransaction({ id: PAYME_ID } as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({
+        result: {
+          transaction: 'txn-uuid',
+          state: 2,
+          perform_time: 1714000060000,
+          reason: null,
+        },
+      });
+    });
+
+    it('should return TRANSACTION_NOT_FOUND when not found', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(null);
+      const result = await service.checkTransaction({ id: PAYME_ID } as any, COMPANY_ID, 1);
+      expect(result).toMatchObject({ error: { code: TRANSACTION_NOT_FOUND } });
+    });
+  });
+
+  // ─── GetStatement ──────────────────────────────────────────
+
+  describe('GetStatement', () => {
+    it('should return transactions in time range', async () => {
+      const txn = mockTxn({ state: 2, performTime: BigInt(1714000060000) });
+      prisma.paymeTransaction.findMany.mockResolvedValue([txn]);
+      const result = await service.getStatement(
+        { from: 1713900000000, to: 1714100000000 } as any,
+        COMPANY_ID,
+        1,
+      );
+      expect(result).toMatchObject({
+        result: {
+          transactions: [
+            expect.objectContaining({
+              id: PAYME_ID,
+              transaction: 'txn-uuid',
+              state: 2,
+              amount: 50000000,
+              account: { student_id: STUDENT_ID },
+            }),
+          ],
+        },
+      });
+    });
+
+    it('should return empty transactions for empty range', async () => {
+      prisma.paymeTransaction.findMany.mockResolvedValue([]);
+      const result = await service.getStatement(
+        { from: 0, to: 1000 } as any,
+        COMPANY_ID,
+        1,
+      );
+      expect(result).toMatchObject({ result: { transactions: [] } });
+    });
+
+    it('should query with correct time range', async () => {
+      await service.getStatement(
+        { from: 1713900000000, to: 1714100000000 } as any,
+        COMPANY_ID,
+        1,
+      );
+      expect(prisma.paymeTransaction.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            companyId: COMPANY_ID,
+            createTime: {
+              gte: BigInt(1713900000000),
+              lte: BigInt(1714100000000),
+            },
+          },
+          orderBy: { createTime: 'asc' },
+        }),
+      );
+    });
+  });
+});
