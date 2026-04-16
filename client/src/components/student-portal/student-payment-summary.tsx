@@ -35,18 +35,21 @@ const PAYMENT_METHODS = [
     name: "Payme",
     logo: "/payme-logo.png",
     imgClass: "h-7 w-30 object-cover",
+    available: true,
   },
   {
     id: "click",
     name: "Click",
     logo: "/click-logo.png",
     imgClass: "h-25 w-30 object-contain",
+    available: false,
   },
   {
     id: "uzum",
     name: "Uzum Bank",
     logo: "/uzum-bank.svg",
     imgClass: "h-10 w-auto object-contain",
+    available: false,
   },
 ] as const;
 
@@ -189,17 +192,30 @@ export function StudentPaymentSummary() {
             <button
               key={method.id}
               onClick={() => {
+                if (!method.available) {
+                  toast("Tez kunda ishga tushiriladi", { icon: "🔜" });
+                  return;
+                }
                 setSelectedMethod(method.id);
                 setAmount("");
                 setIsRedirecting(false);
               }}
-              className="h-15 flex items-center justify-center rounded-lg border bg-white p-1 transition-colors hover:bg-gray-50 active:scale-95"
+              className={`relative h-15 flex items-center justify-center rounded-lg border bg-white p-1 transition-colors active:scale-95 ${
+                method.available
+                  ? "hover:bg-gray-50"
+                  : "opacity-50 grayscale"
+              }`}
             >
               <img
                 src={method.logo}
                 alt={method.name}
                 className={method.imgClass}
               />
+              {!method.available && (
+                <span className="absolute -top-2 -right-2 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground border">
+                  Tez kunda
+                </span>
+              )}
             </button>
           ))}
         </div>
