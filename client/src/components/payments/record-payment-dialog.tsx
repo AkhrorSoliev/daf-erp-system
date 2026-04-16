@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,8 @@ function formatPrice(n: number) {
 }
 
 export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
+  const queryClient = useQueryClient();
+  const { selectedBranch } = useBranchSwitcher();
   const [studentSearch, setStudentSearch] = useState("");
   const [students, setStudents] = useState<
     { id: number; firstName: string; lastName: string; balance: number }[]
@@ -109,6 +113,7 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
           method,
           externalId: externalId.trim(),
           ...(rawProviderFee > 0 && { providerFee: rawProviderFee }),
+          branchId: selectedBranch?.id,
           note: note || undefined,
         });
       } else {
@@ -116,6 +121,7 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
           studentId: selectedStudent.id,
           amount: rawAmount,
           method,
+          branchId: selectedBranch?.id,
           note: note || undefined,
         });
       }
@@ -125,6 +131,8 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
       onOpenChange(false);
       resetForm();
       onSuccess?.();
+      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-payments"] });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data

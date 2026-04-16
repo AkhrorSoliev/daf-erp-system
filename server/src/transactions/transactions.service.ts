@@ -17,6 +17,8 @@ export class TransactionsService {
     if (tx) return callback(tx);
     return this.prisma.$transaction(callback, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 10000,
+      timeout: 15000,
     });
   }
 

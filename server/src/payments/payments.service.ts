@@ -15,7 +15,6 @@ export class PaymentsService {
   ) {}
 
   async create(dto: CreatePaymentDto, userId: number, companyId: number) {
-    // Verify student belongs to this company
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, deletedAt: null, companyId },
       select: { id: true, firstName: true, lastName: true },
@@ -24,18 +23,24 @@ export class PaymentsService {
       throw new NotFoundException("O'quvchi topilmadi");
     }
 
-    // Verify contract belongs to this company (if provided)
+    let resolvedBranchId = dto.branchId;
+
     if (dto.contractId) {
       const contract = await this.prisma.contract.findFirst({
-        where: { id: dto.contractId, deletedAt: null, companyId },
-        select: { id: true },
+        where: { id: dto.contractId, studentId: dto.studentId, deletedAt: null, companyId },
+        select: { id: true, branchId: true },
       });
       if (!contract) {
-        throw new NotFoundException('Shartnoma topilmadi');
+        throw new NotFoundException("Shartnoma topilmadi yoki bu o'quvchiga tegishli emas");
       }
+      if (dto.branchId && contract.branchId !== dto.branchId) {
+        throw new BadRequestException(
+          "To'lov filiali shartnoma filialiga mos kelmaydi",
+        );
+      }
+      resolvedBranchId = contract.branchId;
     }
 
-    // Atomic: payment + balance transaction + contract update are all-or-nothing.
     const { payment, studentBalance } = await this.prisma.$transaction(
       async (tx) => {
         const payment = await tx.payment.create({
@@ -48,7 +53,7 @@ export class PaymentsService {
             receiptNumber: dto.receiptNumber,
             note: dto.note,
             receivedById: userId,
-            branchId: dto.branchId,
+            branchId: resolvedBranchId,
             companyId,
           },
         });
@@ -59,7 +64,7 @@ export class PaymentsService {
             amount: dto.amount,
             paymentId: payment.id,
             contractId: dto.contractId,
-            branchId: dto.branchId,
+            branchId: resolvedBranchId,
             companyId,
             performedById: userId,
           },
@@ -78,8 +83,6 @@ export class PaymentsService {
           select: { balance: true },
         });
 
-        // Audit write inside tx so it can't drift from the payment it
-        // describes — if history insert fails, the whole payment rolls back.
         await this.entityHistoryService.recordCreate({
           entityType: 'Payment',
           entityId: payment.id,
@@ -89,27 +92,32 @@ export class PaymentsService {
           tx,
         });
 
+        const methodLabel: Record<string, string> = {
+          CASH: 'Naqd', PAYME: 'Payme', CLICK: 'Click', UZUM: 'Uzum', TRANSFER: "Bank o'tkazmasi",
+        };
+        await this.entityHistoryService.recordStatusChange({
+          entityType: 'Student',
+          entityId: dto.studentId,
+          oldValues: { balans: updatedStudent!.balance - dto.amount },
+          newValues: {
+            balans: updatedStudent!.balance,
+            summa: dto.amount,
+            usul: methodLabel[dto.method] ?? dto.method,
+            status: "TO'LOV_QABUL_QILINDI",
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+
         return { payment, studentBalance: updatedStudent?.balance };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
     );
 
     return { ...payment, studentBalance };
   }
 
-  /**
-   * Reverse a posted payment — the "posted row immutable" rule in action.
-   * Instead of editing the Payment row, we write a reversal of its ledger
-   * entry and undo the contract.paidAmount increment in the same tx. The
-   * Payment row itself stays for audit; the ledger is the source of truth
-   * for whether it counted.
-   *
-   * Guardrails:
-   *   - Payment must belong to caller's company (multi-tenant scope)
-   *   - Payment must have a matching PAYMENT Transaction (legacy rows
-   *     without one can't be reversed via this path)
-   *   - Transaction must not already be reversed
-   */
   async reverse(
     id: string,
     params: { reason?: string; performedById: number; companyId: number },
@@ -125,6 +133,10 @@ export class PaymentsService {
       },
     });
     if (!payment) throw new NotFoundException("To'lov topilmadi");
+
+    if (payment.status === PaymentStatus.REVERSED) {
+      throw new BadRequestException("Bu to'lov allaqachon bekor qilingan");
+    }
 
     const ledgerEntry = await this.prisma.transaction.findFirst({
       where: {
@@ -155,11 +167,38 @@ export class PaymentsService {
           });
         }
 
+        await tx.payment.update({
+          where: { id },
+          data: { status: PaymentStatus.REVERSED },
+        });
+
         await this.entityHistoryService.recordStatusChange({
           entityType: 'Payment',
           entityId: id,
           oldValues: { status: payment.status },
-          newValues: { status: 'REVERSED', reason: params.reason ?? null },
+          newValues: { status: PaymentStatus.REVERSED, reason: params.reason ?? null },
+          changedById: params.performedById,
+          companyId: params.companyId,
+          tx,
+        });
+
+        const updatedStudent = await tx.student.findUnique({
+          where: { id: payment.studentId },
+          select: { balance: true },
+        });
+
+        const methodLabel: Record<string, string> = {
+          CASH: 'Naqd', PAYME: 'Payme', CLICK: 'Click', UZUM: 'Uzum', TRANSFER: "Bank o'tkazmasi",
+        };
+        await this.entityHistoryService.recordStatusChange({
+          entityType: 'Student',
+          entityId: payment.studentId,
+          oldValues: { balans: (updatedStudent?.balance ?? 0) + payment.amount },
+          newValues: {
+            balans: updatedStudent?.balance ?? 0,
+            summa: -payment.amount,
+            status: "TO'LOV_BEKOR_QILINDI",
+          },
           changedById: params.performedById,
           companyId: params.companyId,
           tx,
@@ -167,19 +206,10 @@ export class PaymentsService {
 
         return { reversedPaymentId: id, amount: payment.amount };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
     );
   }
 
-  /**
-   * Create a Payment from a verified gateway webhook or an admin attach-external
-   * action. The idempotency guard is the @@unique (method, externalId, companyId)
-   * on Payment — duplicate webhook retries fail on insert, not on balance math.
-   *
-   * Used by:
-   *   - PaymentGatewaysModule (source = GATEWAY_WEBHOOK)
-   *   - PaymentsController.attachExternal (source = MANUAL_ATTACH)
-   */
   async createFromExternal(
     params: {
       studentId: number;
@@ -196,19 +226,28 @@ export class PaymentsService {
       note?: string;
     },
   ) {
-    // Verify scope before touching DB.
     const student = await this.prisma.student.findFirst({
       where: { id: params.studentId, deletedAt: null, companyId: params.companyId },
       select: { id: true },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
 
+    let resolvedBranchId = params.branchId;
+
     if (params.contractId) {
       const contract = await this.prisma.contract.findFirst({
-        where: { id: params.contractId, deletedAt: null, companyId: params.companyId },
-        select: { id: true },
+        where: { id: params.contractId, studentId: params.studentId, deletedAt: null, companyId: params.companyId },
+        select: { id: true, branchId: true },
       });
-      if (!contract) throw new NotFoundException('Shartnoma topilmadi');
+      if (!contract) {
+        throw new NotFoundException("Shartnoma topilmadi yoki bu o'quvchiga tegishli emas");
+      }
+      if (params.branchId && contract.branchId !== params.branchId) {
+        throw new BadRequestException(
+          "To'lov filiali shartnoma filialiga mos kelmaydi",
+        );
+      }
+      resolvedBranchId = contract.branchId;
     }
 
     try {
@@ -227,7 +266,7 @@ export class PaymentsService {
               providerFeePercent: params.providerFeePercent,
               note: params.note,
               receivedById: params.performedById,
-              branchId: params.branchId,
+              branchId: resolvedBranchId,
               companyId: params.companyId,
             },
           });
@@ -238,7 +277,7 @@ export class PaymentsService {
               amount: params.amount,
               paymentId: payment.id,
               contractId: params.contractId,
-              branchId: params.branchId,
+              branchId: resolvedBranchId,
               companyId: params.companyId,
               performedById: params.performedById,
             },
@@ -257,16 +296,31 @@ export class PaymentsService {
             select: { balance: true },
           });
 
+          const methodLabel: Record<string, string> = {
+            CASH: 'Naqd', PAYME: 'Payme', CLICK: 'Click', UZUM: 'Uzum', TRANSFER: "Bank o'tkazmasi",
+          };
+          await this.entityHistoryService.recordStatusChange({
+            entityType: 'Student',
+            entityId: params.studentId,
+            oldValues: { balans: updatedStudent!.balance - params.amount },
+            newValues: {
+              balans: updatedStudent!.balance,
+              summa: params.amount,
+              usul: methodLabel[params.method] ?? params.method,
+              status: "TO'LOV_QABUL_QILINDI",
+            },
+            changedById: params.performedById,
+            companyId: params.companyId,
+            tx,
+          });
+
           return { payment, studentBalance: updatedStudent?.balance };
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
       );
 
       return { ...payment, studentBalance };
     } catch (err) {
-      // Unique (method, externalId, companyId) collision → duplicate webhook /
-      // re-attach. Surface a deterministic error so the caller can decide what
-      // to return upstream without re-creating the row.
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
@@ -287,7 +341,9 @@ export class PaymentsService {
       companyId,
       ...(query.studentId && { studentId: query.studentId }),
       ...(query.method && { method: query.method }),
-      ...(query.status && { status: query.status }),
+      ...(query.status
+        ? { status: query.status }
+        : { status: { not: PaymentStatus.REVERSED } }),
       ...(query.branchId && { branchId: query.branchId }),
       ...(query.startDate && query.endDate && {
         createdAt: {
@@ -305,6 +361,7 @@ export class PaymentsService {
           amount: true,
           method: true,
           status: true,
+          source: true,
           receiptNumber: true,
           note: true,
           branchId: true,
@@ -330,6 +387,7 @@ export class PaymentsService {
         amount: true,
         method: true,
         status: true,
+        source: true,
         externalId: true,
         providerFee: true,
         providerFeePercent: true,
@@ -357,7 +415,9 @@ export class PaymentsService {
       studentId,
       companyId,
       ...(query.method && { method: query.method }),
-      ...(query.status && { status: query.status }),
+      ...(query.status
+        ? { status: query.status }
+        : { status: { not: PaymentStatus.REVERSED } }),
       ...(query.startDate && query.endDate && {
         createdAt: {
           gte: new Date(query.startDate),
@@ -374,6 +434,7 @@ export class PaymentsService {
           amount: true,
           method: true,
           status: true,
+          source: true,
           receiptNumber: true,
           note: true,
           createdAt: true,
@@ -390,9 +451,6 @@ export class PaymentsService {
     return { data, total, page, pageSize };
   }
 
-  /**
-   * Get students with negative balance (debtors).
-   */
   async getDebtors(companyId: number, query: { branchId?: number; page?: number; pageSize?: number }) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
@@ -438,9 +496,6 @@ export class PaymentsService {
     return { data, total, page, pageSize };
   }
 
-  /**
-   * Get students with low balance (pending payments - will need payment soon).
-   */
   async getPending(companyId: number, query: { branchId?: number; page?: number; pageSize?: number }) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
@@ -449,7 +504,7 @@ export class PaymentsService {
       companyId,
       deletedAt: null,
       status: StudentStatus.ACTIVE,
-      balance: { lte: 0 },
+      balance: { lt: 0 },
       enrollments: {
         some: { status: 'ACTIVE', deletedAt: null },
       },

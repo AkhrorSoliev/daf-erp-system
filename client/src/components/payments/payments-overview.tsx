@@ -53,6 +53,7 @@ interface FinancialOverview {
   activeBalance: number;
   activeStudentCount: number;
   ltv: number;
+  ltvPayerCount: number;
   cac: number;
   marketingRoi: number;
   avgPayment: number;
@@ -75,19 +76,21 @@ function fmt(n: number) {
 interface PaymentsOverviewProps {
   startDate: string;
   endDate: string;
+  refreshKey?: number;
 }
 
-export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) {
+export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOverviewProps) {
   const { selectedBranch } = useBranchSwitcher();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["financial-overview", selectedBranch?.id, startDate, endDate],
+    queryKey: ["financial-overview", selectedBranch?.id, startDate, endDate, refreshKey],
     queryFn: () =>
       api
         .get<FinancialOverview>("/reports/financial-overview", {
           params: { branchId: selectedBranch?.id, startDate, endDate },
         })
         .then((r) => r.data),
+    staleTime: 0,
   });
 
   const [chartKey, setChartKey] = useState<KpiKey | null>(null);
@@ -123,6 +126,7 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
     activeBalance: 0,
     activeStudentCount: 0,
     ltv: 0,
+    ltvPayerCount: 0,
     cac: 0,
     marketingRoi: 0,
     avgPayment: 0,
@@ -168,14 +172,14 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
           tooltip="Tushumlar - Chiqimlar (xarajatlar + oyliklar)"
           onClick={() => setChartKey("profit")}
         />
-        {/* 4. Aktiv balans */}
+        {/* 4. To'lov qilganlar */}
         <KpiCard
-          icon={DollarSign}
-          label="Aktiv balans"
-          value={`${fmt(d.activeBalance)} so'm`}
-          color={d.activeBalance >= 0 ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"}
-          tooltip={`${d.activeStudentCount} ta faol o'quvchining umumiy balansi`}
-          onClick={() => setChartKey("activeBalance")}
+          icon={Users}
+          label="To'lov qilganlar"
+          value={`${d.ltvPayerCount ?? 0} ta`}
+          color="text-blue-600 dark:text-blue-400"
+          tooltip="Tanlangan davrda kamida 1 marta to'lov qilgan o'quvchilar soni"
+          subtitle="Davrda aktiv"
         />
         {/* 5. LTV */}
         <KpiCard
@@ -183,8 +187,8 @@ export function PaymentsOverview({ startDate, endDate }: PaymentsOverviewProps) 
           label="LTV"
           value={`${fmt(d.ltv)} so'm`}
           color="text-violet-600 dark:text-violet-400"
-          tooltip="O'quvchi qiymati — bir o'quvchidan olinadigan umumiy daromad"
-          subtitle="O'quvchi qiymati"
+          tooltip="Tanlangan davrdagi o'rtacha o'quvchi qiymati — shu davrda to'lov qilgan o'quvchilardan o'rtacha daromad"
+          subtitle="Davriy o'quvchi qiymati"
           onClick={() => setChartKey("ltv")}
         />
         {/* 6. CAC */}

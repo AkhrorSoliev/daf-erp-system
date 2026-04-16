@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, subDays } from "date-fns";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const presets = [
 ];
 
 export function OverviewClient() {
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -104,7 +106,7 @@ export function OverviewClient() {
         </div>
       </div>
 
-      <PaymentsOverview startDate={startStr} endDate={endStr} />
+      <PaymentsOverview startDate={startStr} endDate={endStr} refreshKey={refreshKey} />
 
       <div>
         <h3 className="font-heading text-base font-semibold mb-3">
@@ -116,7 +118,10 @@ export function OverviewClient() {
       <RecordPaymentDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSuccess={() => setRefreshKey((k) => k + 1)}
+        onSuccess={() => {
+          setRefreshKey((k) => k + 1);
+          queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
+        }}
       />
     </div>
   );

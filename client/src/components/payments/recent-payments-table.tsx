@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -112,7 +113,12 @@ export function RecentPaymentsTable({ refreshKey, startDate, endDate }: Props) {
               {i + 1}
             </TableCell>
             <TableCell className="font-medium">
-              #{p.student.id} {p.student.firstName} {p.student.lastName}
+              <Link
+                href={`/students/profile/${p.student.id}`}
+                className="hover:underline hover:text-primary transition-colors"
+              >
+                #{p.student.id} {p.student.firstName} {p.student.lastName}
+              </Link>
             </TableCell>
             <TableCell className="text-green-600 font-medium">
               +{formatPrice(p.amount)} so&apos;m

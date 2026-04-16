@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -35,6 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 interface Expense {
   id: string;
@@ -68,6 +69,8 @@ function formatPrice(n: number) {
 }
 
 export function ExpensesClient() {
+  const queryClient = useQueryClient();
+  const { selectedBranch } = useBranchSwitcher();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -82,11 +85,11 @@ export function ExpensesClient() {
   const isTeacherAdvance = category === "TEACHER_ADVANCE";
 
   const { data, isLoading } = useQuery({
-    queryKey: ["expenses", refreshKey],
+    queryKey: ["expenses", selectedBranch?.id, refreshKey],
     queryFn: () =>
       api
         .get<{ data: Expense[]; total: number }>("/expenses", {
-          params: { pageSize: 50 },
+          params: { pageSize: 50, branchId: selectedBranch?.id },
         })
         .then((r) => r.data),
   });
@@ -116,6 +119,7 @@ export function ExpensesClient() {
         amount: rawAmount,
         description: description.trim(),
         date: format(date, "yyyy-MM-dd"),
+        branchId: selectedBranch?.id,
         ...(isTeacherAdvance && { relatedUserId: parseInt(relatedUserId, 10) }),
       });
       toast.success("Xarajat qayd qilindi");
@@ -126,6 +130,7 @@ export function ExpensesClient() {
       setDate(new Date());
       setRelatedUserId("");
       setRefreshKey((k) => k + 1);
+      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
     } catch (err: unknown) {
       toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Xarajatni saqlashda xatolik");
     } finally {
@@ -138,6 +143,7 @@ export function ExpensesClient() {
       await api.delete(`/expenses/${id}`);
       toast.success("Xarajat o'chirildi");
       setRefreshKey((k) => k + 1);
+      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
     } catch (err: unknown) {
       toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "O'chirishda xatolik");
     }
