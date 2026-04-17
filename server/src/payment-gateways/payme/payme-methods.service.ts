@@ -3,6 +3,7 @@ import { PaymentMethod, PaymentSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
 import {
+  ACCOUNT_BUSY,
   CANNOT_CANCEL,
   CANNOT_PERFORM,
   INVALID_AMOUNT,
@@ -138,11 +139,19 @@ export class PaymeMethodsService {
     const studentId = Number(p.account.student_id);
     const now = BigInt(Date.now());
 
-    // Cancel any existing pending transaction for this student
-    await this.prisma.paymeTransaction.updateMany({
+    // Reject if another pending transaction exists for this student
+    const pendingTxn = await this.prisma.paymeTransaction.findFirst({
       where: { studentId, companyId, state: 1 },
-      data: { state: -1, cancelTime: now, reason: 4 },
     });
+
+    if (pendingTxn) {
+      // If expired, cancel it and allow new one; otherwise reject
+      if (this.isExpired(pendingTxn.createTime)) {
+        await this.cancelExpired(pendingTxn.id);
+      } else {
+        return paymeError(rpcId, ACCOUNT_BUSY);
+      }
+    }
 
     // Create new PaymeTransaction
     const txn = await this.prisma.paymeTransaction.create({
@@ -291,9 +300,33 @@ export class PaymeMethodsService {
       });
     }
 
-    // Performed (state=2) → cannot cancel via API (use admin panel)
+    // Performed (state=2) → cancel with reversal (state=-2)
     if (txn.state === 2) {
-      return paymeError(rpcId, CANNOT_CANCEL);
+      await this.prisma.paymeTransaction.update({
+        where: { id: txn.id },
+        data: { state: -2, cancelTime: now, reason: p.reason },
+      });
+
+      // Reverse the ERP payment if it was linked
+      if (txn.paymentId) {
+        try {
+          await this.payments.reverse(txn.paymentId, {
+            reason: 'Payme CancelTransaction',
+            performedById: 0,
+            companyId,
+          });
+        } catch (err) {
+          this.logger.warn(
+            `Failed to reverse ERP payment ${txn.paymentId} for Payme cancel: ${err}`,
+          );
+        }
+      }
+
+      return paymeSuccess(rpcId, {
+        transaction: txn.id,
+        cancel_time: Number(now),
+        state: -2,
+      });
     }
 
     return paymeError(rpcId, CANNOT_PERFORM);
@@ -318,11 +351,11 @@ export class PaymeMethodsService {
 
     return paymeSuccess(rpcId, {
       create_time: Number(txn.createTime),
-      perform_time: Number(txn.performTime ?? 0),
-      cancel_time: Number(txn.cancelTime ?? 0),
+      perform_time: txn.performTime ? Number(txn.performTime) : 0,
+      cancel_time: txn.cancelTime ? Number(txn.cancelTime) : 0,
       transaction: txn.id,
       state: txn.state,
-      reason: txn.reason,
+      reason: txn.reason ?? null,
     });
   }
 
@@ -352,11 +385,11 @@ export class PaymeMethodsService {
       amount: txn.amount,
       account: { student_id: txn.studentId },
       create_time: Number(txn.createTime),
-      perform_time: Number(txn.performTime ?? 0),
-      cancel_time: Number(txn.cancelTime ?? 0),
+      perform_time: txn.performTime ? Number(txn.performTime) : 0,
+      cancel_time: txn.cancelTime ? Number(txn.cancelTime) : 0,
       transaction: txn.id,
       state: txn.state,
-      reason: txn.reason,
+      reason: txn.reason ?? null,
     }));
 
     return paymeSuccess(rpcId, { transactions });
