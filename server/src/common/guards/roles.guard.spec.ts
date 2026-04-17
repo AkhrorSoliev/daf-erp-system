@@ -38,14 +38,19 @@ describe('RolesGuard', () => {
   });
 
   it('should allow access when user has one of multiple required roles', () => {
-    const ctx = mockContext(['CEO', 'Branch Director', 'Administrator'], ['Branch Director']);
+    const ctx = mockContext(
+      ['CEO', 'Branch Director', 'Administrator'],
+      ['Branch Director'],
+    );
     expect(guard.canActivate(ctx)).toBe(true);
   });
 
   it('should throw ForbiddenException with Uzbek message when user lacks required role', () => {
     const ctx = mockContext(['CEO', 'Administrator'], ['Teacher']);
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    expect(() => guard.canActivate(ctx)).toThrow("Sizga bu amalni bajarishga ruxsat yo'q");
+    expect(() => guard.canActivate(ctx)).toThrow(
+      "Sizga bu amalni bajarishga ruxsat yo'q",
+    );
   });
 
   it('should throw ForbiddenException when user has no roles property', () => {
@@ -59,7 +64,10 @@ describe('RolesGuard', () => {
   });
 
   it('should throw ForbiddenException for Cashier on admin-only endpoint', () => {
-    const ctx = mockContext(['CEO', 'Branch Director', 'Administrator'], ['Cashier']);
+    const ctx = mockContext(
+      ['CEO', 'Branch Director', 'Administrator'],
+      ['Cashier'],
+    );
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
   });
 });

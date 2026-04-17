@@ -20,12 +20,11 @@ export class NotificationEventsListener {
   ) {}
 
   @OnEvent('task.assigned')
-  async handleTaskAssigned(payload: {
-    comment: any;
-    assigneeIds: number[];
-  }) {
+  async handleTaskAssigned(payload: { comment: any; assigneeIds: number[] }) {
     const { comment, assigneeIds } = payload;
-    const authorName = comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Noma\'lum';
+    const authorName = comment.author
+      ? `${comment.author.firstName} ${comment.author.lastName}`
+      : "Noma'lum";
 
     for (const assigneeId of assigneeIds) {
       try {
@@ -68,16 +67,15 @@ export class NotificationEventsListener {
   }
 
   @OnEvent('task.deleted')
-  async handleTaskDeleted(payload: {
-    comment: any;
-    assigneeIds: number[];
-  }) {
+  async handleTaskDeleted(payload: { comment: any; assigneeIds: number[] }) {
     const { comment, assigneeIds } = payload;
-    const authorName = comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Noma\'lum';
+    const authorName = comment.author
+      ? `${comment.author.firstName} ${comment.author.lastName}`
+      : "Noma'lum";
 
     for (const assigneeId of assigneeIds) {
       try {
-        const title = 'Topshiriq o\'chirildi';
+        const title = "Topshiriq o'chirildi";
         const message = `${authorName} topshiriqni o'chirdi: "${this.truncate(comment.content, 80)}"`;
 
         const notification = await this.notificationsService.create({
@@ -90,7 +88,10 @@ export class NotificationEventsListener {
           companyId: comment.companyId,
         });
 
-        this.gateway.sendToUser(assigneeId, { type: 'notification', notification });
+        this.gateway.sendToUser(assigneeId, {
+          type: 'notification',
+          notification,
+        });
 
         await this.pushService.sendToUser(assigneeId, {
           title,
@@ -100,18 +101,19 @@ export class NotificationEventsListener {
 
         await this.sendTelegram(assigneeId, title, message);
       } catch (error) {
-        this.logger.error(`Failed to notify assignee ${assigneeId} about task deletion: ${error.message}`);
+        this.logger.error(
+          `Failed to notify assignee ${assigneeId} about task deletion: ${error.message}`,
+        );
       }
     }
   }
 
   @OnEvent('task.updated')
-  async handleTaskUpdated(payload: {
-    comment: any;
-    assigneeIds: number[];
-  }) {
+  async handleTaskUpdated(payload: { comment: any; assigneeIds: number[] }) {
     const { comment, assigneeIds } = payload;
-    const authorName = comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Noma\'lum';
+    const authorName = comment.author
+      ? `${comment.author.firstName} ${comment.author.lastName}`
+      : "Noma'lum";
 
     for (const assigneeId of assigneeIds) {
       try {
@@ -129,7 +131,10 @@ export class NotificationEventsListener {
           companyId: comment.companyId,
         });
 
-        this.gateway.sendToUser(assigneeId, { type: 'notification', notification });
+        this.gateway.sendToUser(assigneeId, {
+          type: 'notification',
+          notification,
+        });
 
         await this.pushService.sendToUser(assigneeId, {
           title,
@@ -139,7 +144,9 @@ export class NotificationEventsListener {
 
         await this.sendTelegram(assigneeId, title, message);
       } catch (error) {
-        this.logger.error(`Failed to notify assignee ${assigneeId} about task update: ${error.message}`);
+        this.logger.error(
+          `Failed to notify assignee ${assigneeId} about task update: ${error.message}`,
+        );
       }
     }
   }
@@ -152,8 +159,14 @@ export class NotificationEventsListener {
   }) {
     const { comment, assignee, newStatus } = payload;
     const statusLabel =
-      newStatus === 'SEEN' ? "ko'rdi" : newStatus === 'DONE' ? 'bajardi' : newStatus;
-    const assigneeName = assignee.user ? `${assignee.user.firstName} ${assignee.user.lastName}` : 'Noma\'lum';
+      newStatus === 'SEEN'
+        ? "ko'rdi"
+        : newStatus === 'DONE'
+          ? 'bajardi'
+          : newStatus;
+    const assigneeName = assignee.user
+      ? `${assignee.user.firstName} ${assignee.user.lastName}`
+      : "Noma'lum";
 
     const title = 'Topshiriq yangilandi';
     const message = `${assigneeName} topshiriqni ${statusLabel}: "${this.truncate(comment.content, 60)}"`;
@@ -207,7 +220,9 @@ export class NotificationEventsListener {
         parse_mode: 'HTML',
       });
     } catch (error) {
-      this.logger.warn(`Telegram send failed for user ${userId}: ${error.message}`);
+      this.logger.warn(
+        `Telegram send failed for user ${userId}: ${error.message}`,
+      );
     }
   }
 

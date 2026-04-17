@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsIn, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsIn,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class SearchQueryDto extends PaginationDto {

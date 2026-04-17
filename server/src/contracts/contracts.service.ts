@@ -118,8 +118,23 @@ export class ContractsService {
         branchId: true,
         companyId: true,
         createdAt: true,
-        student: { select: { id: true, firstName: true, lastName: true, phone: true, passportSeries: true } },
-        course: { select: { id: true, name: true, price: true, lessonPaymentCount: true } },
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            passportSeries: true,
+          },
+        },
+        course: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            lessonPaymentCount: true,
+          },
+        },
         group: { select: { id: true, name: true } },
         payments: {
           select: { id: true, amount: true, method: true, createdAt: true },
@@ -180,7 +195,9 @@ export class ContractsService {
         ...(dto.totalAmount !== undefined && { totalAmount: dto.totalAmount }),
         ...(dto.startDate && { startDate: new Date(dto.startDate) }),
         ...(dto.endDate && { endDate: new Date(dto.endDate) }),
-        ...(dto.signedDocUrl !== undefined && { signedDocUrl: dto.signedDocUrl }),
+        ...(dto.signedDocUrl !== undefined && {
+          signedDocUrl: dto.signedDocUrl,
+        }),
       },
     });
 
@@ -196,11 +213,7 @@ export class ContractsService {
     return contract;
   }
 
-  async changeStatus(
-    id: string,
-    dto: ChangeContractStatusDto,
-    userId: number,
-  ) {
+  async changeStatus(id: string, dto: ChangeContractStatusDto, userId: number) {
     const existing = await this.prisma.contract.findFirst({
       where: { id, deletedAt: null },
     });
@@ -232,7 +245,10 @@ export class ContractsService {
     return contract;
   }
 
-  private async generateContractNumber(companyId: number, tx?: Prisma.TransactionClient): Promise<string> {
+  private async generateContractNumber(
+    companyId: number,
+    tx?: Prisma.TransactionClient,
+  ): Promise<string> {
     const db = tx ?? this.prisma;
     const year = new Date().getFullYear();
     const prefix = `DAF-${year}-`;
@@ -248,7 +264,10 @@ export class ContractsService {
 
     let nextNum = 1;
     if (lastContract) {
-      const lastNum = parseInt(lastContract.contractNumber.replace(prefix, ''), 10);
+      const lastNum = parseInt(
+        lastContract.contractNumber.replace(prefix, ''),
+        10,
+      );
       nextNum = lastNum + 1;
     }
 

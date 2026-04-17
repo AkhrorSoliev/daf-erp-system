@@ -29,20 +29,33 @@ describe('StudentEnrollmentService', () => {
       },
       enrollment: {
         findFirst: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockResolvedValue({ id: 'enroll-1', studentId: 1, groupId: 'group-1' }),
+        create: jest.fn().mockResolvedValue({
+          id: 'enroll-1',
+          studentId: 1,
+          groupId: 'group-1',
+        }),
         update: jest.fn(),
       },
       group: {
         findFirst: jest.fn().mockResolvedValue({
-          id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'ACTIVE',
-          courseId: 'course-1', branchId: 1,
+          id: 'group-1',
+          name: 'A1',
+          deletedAt: null,
+          statusEnum: 'ACTIVE',
+          courseId: 'course-1',
+          branchId: 1,
           course: { name: 'Deutsch A1' },
-          days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
+          days: 'ODD',
+          exactDays: [],
+          lessonStartTime: '09:00',
+          lessonEndTime: '10:30',
         }),
         findUnique: jest.fn().mockResolvedValue({ name: 'A1' }),
       },
       course: {
-        findUnique: jest.fn().mockResolvedValue({ price: 800000, lessonPaymentCount: 12 }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ price: 800000, lessonPaymentCount: 12 }),
       },
     };
 
@@ -50,8 +63,20 @@ describe('StudentEnrollmentService', () => {
       providers: [
         StudentEnrollmentService,
         { provide: PrismaService, useValue: prisma },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
-        { provide: TransactionsService, useValue: { deductLessonFee: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
+        {
+          provide: TransactionsService,
+          useValue: { deductLessonFee: jest.fn() },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
@@ -61,47 +86,83 @@ describe('StudentEnrollmentService', () => {
 
   describe('enrollToGroup', () => {
     it('throws BadRequestException for non-ACTIVE student', async () => {
-      prisma.student.findFirst.mockResolvedValue({ ...mockStudent, status: 'FROZEN' });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(BadRequestException);
+      prisma.student.findFirst.mockResolvedValue({
+        ...mockStudent,
+        status: 'FROZEN',
+      });
+      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException for GRADUATED student', async () => {
-      prisma.student.findFirst.mockResolvedValue({ ...mockStudent, status: 'GRADUATED' });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(BadRequestException);
+      prisma.student.findFirst.mockResolvedValue({
+        ...mockStudent,
+        status: 'GRADUATED',
+      });
+      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException for COMPLETED group', async () => {
       prisma.group.findFirst.mockResolvedValue({
-        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'COMPLETED',
+        id: 'group-1',
+        name: 'A1',
+        deletedAt: null,
+        statusEnum: 'COMPLETED',
         course: { name: 'Deutsch A1' },
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(BadRequestException);
+      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException for CANCELLED group', async () => {
       prisma.group.findFirst.mockResolvedValue({
-        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'CANCELLED',
+        id: 'group-1',
+        name: 'A1',
+        deletedAt: null,
+        statusEnum: 'CANCELLED',
         course: { name: 'Deutsch A1' },
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(BadRequestException);
+      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('allows enrollment to FORMING group', async () => {
       prisma.group.findFirst.mockResolvedValue({
-        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'FORMING',
+        id: 'group-1',
+        name: 'A1',
+        deletedAt: null,
+        statusEnum: 'FORMING',
         course: { name: 'Deutsch A1' },
-        days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
+        days: 'ODD',
+        exactDays: [],
+        lessonStartTime: '09:00',
+        lessonEndTime: '10:30',
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).resolves.not.toThrow();
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).resolves.not.toThrow();
     });
 
     it('allows enrollment to PAUSED group', async () => {
       prisma.group.findFirst.mockResolvedValue({
-        id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'PAUSED',
+        id: 'group-1',
+        name: 'A1',
+        deletedAt: null,
+        statusEnum: 'PAUSED',
         course: { name: 'Deutsch A1' },
-        days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
+        days: 'ODD',
+        exactDays: [],
+        lessonStartTime: '09:00',
+        lessonEndTime: '10:30',
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).resolves.not.toThrow();
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2),
+      ).resolves.not.toThrow();
     });
   });
 });

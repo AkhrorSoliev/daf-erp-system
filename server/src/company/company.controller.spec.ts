@@ -20,9 +20,7 @@ describe('CompanyController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CompanyController],
-      providers: [
-        { provide: CompanyService, useValue: mockService },
-      ],
+      providers: [{ provide: CompanyService, useValue: mockService }],
     }).compile();
 
     controller = module.get(CompanyController);

@@ -218,9 +218,7 @@ export class SearchService {
    * CEO sees all branches; Branch Director sees only their branches.
    * Returns null for CEO (no branch filter needed).
    */
-  private async getUserBranchIds(
-    ctx: SearchContext,
-  ): Promise<number[] | null> {
+  private async getUserBranchIds(ctx: SearchContext): Promise<number[] | null> {
     if (ctx.roles.includes('CEO')) return null;
 
     const userBranches = await this.prisma.userBranch.findMany({
@@ -362,9 +360,7 @@ export class SearchService {
       phone: s.phone,
       photo: s.photo,
       groupName: group?.name ?? null,
-      teacherName: teacher
-        ? `${teacher.firstName} ${teacher.lastName}`
-        : null,
+      teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : null,
       balance: s.balance ?? 0,
     };
   }
@@ -388,7 +384,10 @@ export class SearchService {
     ]);
 
     return {
-      items: this.sortByRelevance(items.map((s) => this.mapStudent(s)), search),
+      items: this.sortByRelevance(
+        items.map((s) => this.mapStudent(s)),
+        search,
+      ),
       total,
     };
   }
@@ -554,10 +553,7 @@ export class SearchService {
       ];
     } else {
       const nameConditions = this.buildNameConditions(search);
-      where.OR = [
-        ...nameConditions,
-        { phone: { contains: search } },
-      ];
+      where.OR = [...nameConditions, { phone: { contains: search } }];
     }
 
     return where;

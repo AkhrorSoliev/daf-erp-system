@@ -90,7 +90,10 @@ describe('AttendanceService', () => {
         AttendanceService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
-        { provide: TransactionsService, useValue: { deductLessonFee: jest.fn(), recordPayment: jest.fn() } },
+        {
+          provide: TransactionsService,
+          useValue: { deductLessonFee: jest.fn(), recordPayment: jest.fn() },
+        },
         { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
       ],
     }).compile();
@@ -152,7 +155,7 @@ describe('AttendanceService', () => {
     });
 
     it('should throw BadRequestException when date is a holiday', async () => {
-      prisma.holiday.findFirst.mockResolvedValue({ name: 'Navro\'z' });
+      prisma.holiday.findFirst.mockResolvedValue({ name: "Navro'z" });
 
       // 2026-04-01 is Wednesday — a scheduled day but a holiday
       await expect(
@@ -176,7 +179,10 @@ describe('AttendanceService', () => {
 
     it('should pass validation for a valid lesson date', async () => {
       // 2026-04-01 is Wednesday — scheduled day, within range, no holiday
-      const result = await service.validateLessonDate('group-uuid-1', '2026-04-01');
+      const result = await service.validateLessonDate(
+        'group-uuid-1',
+        '2026-04-01',
+      );
 
       expect(result.group.id).toBe('group-uuid-1');
       expect(result.parsedDate).toEqual(new Date('2026-04-01T00:00:00.000Z'));
@@ -192,7 +198,15 @@ describe('AttendanceService', () => {
       // Mock group that matches today's day-of-week
       const getTodayMockGroup = () => {
         const now = new Date();
-        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayNames = [
+          'sunday',
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+        ];
         return {
           ...mockGroup,
           exactDays: [dayNames[now.getDay()]],
@@ -210,7 +224,9 @@ describe('AttendanceService', () => {
         prisma.group.findFirst.mockResolvedValue(todayGroup);
 
         await expect(
-          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, ['Teacher']),
+          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
+            'Teacher',
+          ]),
         ).rejects.toThrow(BadRequestException);
       });
 
@@ -223,7 +239,9 @@ describe('AttendanceService', () => {
         prisma.group.findFirst.mockResolvedValue(todayGroup);
 
         await expect(
-          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, ['Teacher']),
+          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
+            'Teacher',
+          ]),
         ).rejects.toThrow(BadRequestException);
       });
 
@@ -236,7 +254,10 @@ describe('AttendanceService', () => {
         prisma.group.findFirst.mockResolvedValue(todayGroup);
 
         const result = await service.validateLessonDate(
-          'group-uuid-1', getTodayStr(), undefined, ['CEO'],
+          'group-uuid-1',
+          getTodayStr(),
+          undefined,
+          ['CEO'],
         );
         expect(result.group.id).toBe('group-uuid-1');
       });
@@ -250,7 +271,10 @@ describe('AttendanceService', () => {
         prisma.group.findFirst.mockResolvedValue(todayGroup);
 
         const result = await service.validateLessonDate(
-          'group-uuid-1', getTodayStr(), undefined, ['Administrator'],
+          'group-uuid-1',
+          getTodayStr(),
+          undefined,
+          ['Administrator'],
         );
         expect(result.group.id).toBe('group-uuid-1');
       });
@@ -264,7 +288,10 @@ describe('AttendanceService', () => {
         prisma.group.findFirst.mockResolvedValue(todayGroup);
 
         const result = await service.validateLessonDate(
-          'group-uuid-1', getTodayStr(), undefined, ['Branch Director'],
+          'group-uuid-1',
+          getTodayStr(),
+          undefined,
+          ['Branch Director'],
         );
         expect(result.group.id).toBe('group-uuid-1');
       });
@@ -272,7 +299,10 @@ describe('AttendanceService', () => {
       it('should skip time check for past dates (not today)', async () => {
         // Non-today date: time check doesn't apply
         const result = await service.validateLessonDate(
-          'group-uuid-1', '2026-04-01', undefined, ['Teacher'],
+          'group-uuid-1',
+          '2026-04-01',
+          undefined,
+          ['Teacher'],
         );
         expect(result.group.id).toBe('group-uuid-1');
       });
@@ -286,7 +316,10 @@ describe('AttendanceService', () => {
         prisma.group.findFirst.mockResolvedValue(todayGroup);
 
         const result = await service.validateLessonDate(
-          'group-uuid-1', getTodayStr(), undefined, ['Teacher'],
+          'group-uuid-1',
+          getTodayStr(),
+          undefined,
+          ['Teacher'],
         );
         expect(result.group.id).toBe('group-uuid-1');
       });
@@ -497,14 +530,10 @@ describe('AttendanceService', () => {
     });
 
     it('should throw BadRequestException for unenrolled student', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([
-        { studentId: 10001 },
-      ]);
+      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
 
       const dto = {
-        entries: [
-          { studentId: 99999, status: 'PRESENT' },
-        ],
+        entries: [{ studentId: 99999, status: 'PRESENT' }],
       };
 
       await expect(
@@ -538,14 +567,7 @@ describe('AttendanceService', () => {
         ],
       };
 
-      await service.save(
-        'group-uuid-1',
-        '2026-04-01',
-        dto,
-        1,
-        ['Teacher'],
-        1,
-      );
+      await service.save('group-uuid-1', '2026-04-01', dto, 1, ['Teacher'], 1);
 
       // Verify upsert was called with note stripped for Teacher
       expect(prisma.attendance.upsert).toHaveBeenCalledWith(
@@ -560,7 +582,14 @@ describe('AttendanceService', () => {
         { id: 'att-1', studentId: 10001, status: 'PRESENT', note: null },
       ];
       const mockResults = [
-        { id: 'att-1', groupId: 'group-uuid-1', studentId: 10001, date: new Date('2026-04-01'), status: 'LATE', note: null },
+        {
+          id: 'att-1',
+          groupId: 'group-uuid-1',
+          studentId: 10001,
+          date: new Date('2026-04-01'),
+          status: 'LATE',
+          note: null,
+        },
       ];
 
       prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
@@ -595,9 +624,7 @@ describe('AttendanceService', () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
       const dto = {
-        entries: [
-          { studentId: 10001, status: 'PRESENT' },
-        ],
+        entries: [{ studentId: 10001, status: 'PRESENT' }],
       };
 
       await expect(
@@ -621,7 +648,7 @@ describe('AttendanceService', () => {
     });
 
     it('should throw BadRequestException when date is a holiday', async () => {
-      prisma.holiday.findFirst.mockResolvedValue({ name: 'Navro\'z' });
+      prisma.holiday.findFirst.mockResolvedValue({ name: "Navro'z" });
 
       const dto = {
         entries: [{ studentId: 10001, status: 'PRESENT' }],

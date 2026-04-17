@@ -234,7 +234,9 @@ export class TransactionsService {
         select: { id: true },
       });
       if (alreadyReversed) {
-        throw new Error(`Transaction ${originalId} uchun reversal allaqachon mavjud`);
+        throw new Error(
+          `Transaction ${originalId} uchun reversal allaqachon mavjud`,
+        );
       }
 
       const reversalAmount = -original.amount;
@@ -250,7 +252,10 @@ export class TransactionsService {
           where: { id: original.studentId },
           data: { balance: balanceAfter },
         });
-      } else if (original.teacherId && original.type === TransactionType.SALARY_PAYMENT) {
+      } else if (
+        original.teacherId &&
+        original.type === TransactionType.SALARY_PAYMENT
+      ) {
         // SALARY_PAYMENT touches user balance — reverse it.
         const users = await client.$queryRaw<{ id: number; balance: number }[]>`
           SELECT id, balance FROM "User" WHERE id = ${original.teacherId} FOR UPDATE
@@ -377,7 +382,11 @@ export class TransactionsService {
   /**
    * Get paginated transaction history for a student.
    */
-  async findByStudent(studentId: number, query: TransactionQueryDto, companyId: number) {
+  async findByStudent(
+    studentId: number,
+    query: TransactionQueryDto,
+    companyId: number,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
@@ -385,12 +394,13 @@ export class TransactionsService {
       studentId,
       companyId,
       ...(query.type && { type: query.type }),
-      ...(query.startDate && query.endDate && {
-        createdAt: {
-          gte: new Date(query.startDate),
-          lte: new Date(query.endDate + 'T23:59:59.999Z'),
-        },
-      }),
+      ...(query.startDate &&
+        query.endDate && {
+          createdAt: {
+            gte: new Date(query.startDate),
+            lte: new Date(query.endDate + 'T23:59:59.999Z'),
+          },
+        }),
     };
 
     const [data, total] = await Promise.all([
@@ -406,7 +416,9 @@ export class TransactionsService {
           paymentId: true,
           attendanceId: true,
           enrollmentId: true,
-          performedBy: { select: { id: true, firstName: true, lastName: true } },
+          performedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -422,7 +434,11 @@ export class TransactionsService {
   /**
    * Get paginated transaction history for a teacher.
    */
-  async findByTeacher(teacherId: number, query: TransactionQueryDto, companyId: number) {
+  async findByTeacher(
+    teacherId: number,
+    query: TransactionQueryDto,
+    companyId: number,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
@@ -430,12 +446,13 @@ export class TransactionsService {
       teacherId,
       companyId,
       ...(query.type && { type: query.type }),
-      ...(query.startDate && query.endDate && {
-        createdAt: {
-          gte: new Date(query.startDate),
-          lte: new Date(query.endDate + 'T23:59:59.999Z'),
-        },
-      }),
+      ...(query.startDate &&
+        query.endDate && {
+          createdAt: {
+            gte: new Date(query.startDate),
+            lte: new Date(query.endDate + 'T23:59:59.999Z'),
+          },
+        }),
     };
 
     const [data, total] = await Promise.all([
@@ -449,7 +466,9 @@ export class TransactionsService {
           balanceAfter: true,
           description: true,
           salaryPaymentId: true,
-          performedBy: { select: { id: true, firstName: true, lastName: true } },
+          performedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -475,12 +494,13 @@ export class TransactionsService {
       ...(query.teacherId && { teacherId: query.teacherId }),
       ...(query.type && { type: query.type }),
       ...(query.branchId && { branchId: query.branchId }),
-      ...(query.startDate && query.endDate && {
-        createdAt: {
-          gte: new Date(query.startDate),
-          lte: new Date(query.endDate + 'T23:59:59.999Z'),
-        },
-      }),
+      ...(query.startDate &&
+        query.endDate && {
+          createdAt: {
+            gte: new Date(query.startDate),
+            lte: new Date(query.endDate + 'T23:59:59.999Z'),
+          },
+        }),
     };
 
     const [data, total] = await Promise.all([
@@ -495,7 +515,9 @@ export class TransactionsService {
           description: true,
           student: { select: { id: true, firstName: true, lastName: true } },
           teacher: { select: { id: true, firstName: true, lastName: true } },
-          performedBy: { select: { id: true, firstName: true, lastName: true } },
+          performedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
           branchId: true,
           createdAt: true,
         },

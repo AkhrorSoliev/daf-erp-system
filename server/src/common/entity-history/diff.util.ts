@@ -54,7 +54,9 @@ export function computeChangedFields(
   return hasChanges ? { oldValues, newValues } : null;
 }
 
-export function stripSensitiveFields(obj: Record<string, any>): Record<string, any> {
+export function stripSensitiveFields(
+  obj: Record<string, any>,
+): Record<string, any> {
   const result: Record<string, any> = {};
   for (const key of Object.keys(obj)) {
     if (EXCLUDED_KEYS.has(key)) continue;

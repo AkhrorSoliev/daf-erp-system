@@ -26,9 +26,14 @@ export class BranchesService {
     return this.prisma.branch.findMany({
       where,
       select: {
-        id: true, name: true, address: true, phone: true,
-        isActive: true, status: true,
-        startOfWorkingDay: true, endOfWorkingDay: true,
+        id: true,
+        name: true,
+        address: true,
+        phone: true,
+        isActive: true,
+        status: true,
+        startOfWorkingDay: true,
+        endOfWorkingDay: true,
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -43,33 +48,38 @@ export class BranchesService {
       throw new NotFoundException(`Branch #${id} topilmadi`);
     }
 
-    const [groupsCount, studentsCount, teachersCount, roomsCount, coursesCount] =
-      await Promise.all([
-        this.prisma.group.count({
-          where: { branchId: id, deletedAt: null },
-        }),
-        this.prisma.studentBranch.count({
-          where: {
-            branchId: id,
-            student: { deletedAt: null },
+    const [
+      groupsCount,
+      studentsCount,
+      teachersCount,
+      roomsCount,
+      coursesCount,
+    ] = await Promise.all([
+      this.prisma.group.count({
+        where: { branchId: id, deletedAt: null },
+      }),
+      this.prisma.studentBranch.count({
+        where: {
+          branchId: id,
+          student: { deletedAt: null },
+        },
+      }),
+      this.prisma.userBranch.count({
+        where: {
+          branchId: id,
+          user: {
+            deletedAt: null,
+            roles: { some: { roleId: 4 } },
           },
-        }),
-        this.prisma.userBranch.count({
-          where: {
-            branchId: id,
-            user: {
-              deletedAt: null,
-              roles: { some: { roleId: 4 } },
-            },
-          },
-        }),
-        this.prisma.room.count({
-          where: { branchId: id, deletedAt: null },
-        }),
-        this.prisma.course.count({
-          where: { branchId: id, deletedAt: null },
-        }),
-      ]);
+        },
+      }),
+      this.prisma.room.count({
+        where: { branchId: id, deletedAt: null },
+      }),
+      this.prisma.course.count({
+        where: { branchId: id, deletedAt: null },
+      }),
+    ]);
 
     return {
       ...branch,
@@ -158,7 +168,7 @@ export class BranchesService {
     const updated = await this.prisma.branch.update({
       where: { id },
       data: {
-        status: dto.status as BranchStatus,
+        status: dto.status,
         isActive,
         ...auditData,
       },
@@ -174,7 +184,12 @@ export class BranchesService {
     });
 
     // Cascade: CLOSED/INACTIVE → guruhlar, xonalar, enrollmentlar
-    await this.statusCascadeService.cascade('Branch', String(id), dto.status, userId);
+    await this.statusCascadeService.cascade(
+      'Branch',
+      String(id),
+      dto.status,
+      userId,
+    );
 
     return updated;
   }

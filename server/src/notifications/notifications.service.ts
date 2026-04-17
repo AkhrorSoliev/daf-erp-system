@@ -74,7 +74,12 @@ export class NotificationsService {
     return { message: "Barcha bildirishnomalar o'qilgan deb belgilandi" };
   }
 
-  async registerPush(userId: number, endpoint: string, p256dh: string, auth: string) {
+  async registerPush(
+    userId: number,
+    endpoint: string,
+    p256dh: string,
+    auth: string,
+  ) {
     return this.prisma.pushSubscription.upsert({
       where: { endpoint },
       update: { userId, p256dh, auth },

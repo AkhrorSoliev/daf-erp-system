@@ -455,6 +455,8 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Cron | Vaqt | Tavsif |
 |------|------|--------|
 | Oylik hisoblash | `0 2 8 * *` (8-sana, 02:00 Toshkent) | Barcha xodimlar oyligi avtomatik hisoblanadi |
+| Payme timeout | `0 */30 * * * *` (har 30 daqiqa) | 12 soatdan eski Payme pending tranzaksiyalarni bekor qiladi |
+| Click timeout | `0 */10 * * * *` (har 10 daqiqa) | 30 daqiqadan eski Click prepared tranzaksiyalarni bekor qiladi |
 
 - Cutoff: 7-sanagacha bo'lgan accrual lar joriy oyga kiritiladi
 - 8-sanadan keyingi accrual lar keyingi oyga o'tadi
@@ -558,9 +560,116 @@ Talaba balansiga pul tushadi
 | `payme.service.spec.ts` | 20 ta test (auth + dispatch) |
 | `payme-methods.service.spec.ts` | 24 ta test (6 metod) |
 
-### 8.2 Click — ❌ Hali tayyor emas
+### 8.2 Click SHOP-API — ✅ Tayyor
 
-Skeleton implementatsiya mavjud (`click.service.ts`).
+**Joylashuv:** `server/src/payment-gateways/click/`
+
+**Arxitektura:** Click ikki bosqichli SHOP-API (Prepare + Complete) orqali ishlaydi. Click bizning webhook endpointga POST so'rov yuboradi, biz MD5 imzo tekshirib javob qaytaramiz.
+
+**Webhook endpoint:** `POST /api/gateways/click/webhook?companyId=1001` (Public — JWT kerak emas)
+
+**Autentifikatsiya:** MD5 hash — `md5(click_trans_id + service_id + SECRET_KEY + merchant_trans_id + [merchant_prepare_id] + amount + action + sign_time)` — `crypto.timingSafeEqual()` bilan tekshiriladi.
+
+**Account field:** `merchant_trans_id` = `studentId` — talaba ID raqami
+
+**Summalar:** Click **so'mda** yuboradi (Payme tiyinda yuboradi). `ClickTransaction` da `amount` (Float, Click formati) va `amountInSom` (Int, ERP uchun) saqlanadi.
+
+#### Ikki bosqichli webhook oqimi
+
+| Bosqich | Action | Vazifasi | Logika |
+|---------|--------|---------|--------|
+| **Prepare** | `0` | Tasdiqlash va rezerv | Talaba mavjud + summa > 0 → `ClickTransaction` yaratish (status=1) |
+| **Complete** | `1` | To'lovni bajarish | `PaymentsService.createFromExternal()` → talaba balansini oshiradi (status=2) |
+
+#### Prepare (action=0) so'rov parametrlari
+
+| # | Parametr | Turi | Tavsif |
+|---|----------|------|--------|
+| 1 | `click_trans_id` | bigint | Click tizimidagi tranzaksiya ID |
+| 2 | `service_id` | int | Xizmat identifikatori |
+| 3 | `click_paydoc_id` | bigint | SMS da ko'rinadigan to'lov raqami |
+| 4 | `merchant_trans_id` | varchar | Bizning tizimda `studentId` |
+| 5 | `amount` | float | To'lov summasi (so'mda) |
+| 6 | `action` | int | `0` = Prepare |
+| 7 | `error` | int | 0 = muvaffaqiyatli |
+| 8 | `sign_time` | varchar | `"YYYY-MM-DD HH:mm:ss"` |
+| 9 | `sign_string` | varchar | MD5 hash |
+
+**Prepare javob:** `{ click_trans_id, merchant_trans_id, merchant_prepare_id, error, error_note }`
+
+#### Complete (action=1) so'rov parametrlari
+
+Prepare bilan bir xil + `merchant_prepare_id` (Prepare javobidan olingan UUID).
+
+**Complete javob:** `{ click_trans_id, merchant_trans_id, merchant_confirm_id, error, error_note }`
+
+#### Xato kodlari (biz qaytaramiz)
+
+| Kod | Ma'nosi |
+|-----|---------|
+| `0` | Muvaffaqiyatli |
+| `-1` | Imzo tekshiruvi xato (SIGN CHECK FAILED) |
+| `-2` | Noto'g'ri summa |
+| `-4` | Allaqachon to'langan |
+| `-5` | Foydalanuvchi topilmadi |
+| `-6` | Tranzaksiya topilmadi |
+| `-9` | Tranzaksiya bekor qilingan |
+
+#### Tranzaksiya holatlari
+
+| Status | Ma'nosi |
+|--------|---------|
+| `0` | Pending (kutilmoqda) |
+| `1` | Prepared (tayyorlangan) |
+| `2` | Completed (bajarildi) |
+| `-1` | Cancelled (bekor qilindi) |
+
+#### Timeout
+
+- Click tranzaksiyalar 30 daqiqa ichida bajarilmasa auto-cancel bo'ladi
+- `ClickCronService` har 10 daqiqada `status=1` va `prepareTime` 30 daqiqadan eski bo'lgan tranzaksiyalarni `status=-1` qiladi
+
+#### Student Portal to'lov oqimi
+
+```
+Talaba student portalga kiradi
+    ↓
+Click tanlaydi, summani kiritadi, "To'lash" bosadi
+    ↓
+Frontend: POST /student-portal/payments/init { amount, method: "CLICK" }
+    ↓
+Backend: Click redirect URL generatsiya qiladi:
+  https://my.click.uz/services/pay?service_id=X&merchant_id=X&amount=X&transaction_param=studentId&return_url=X
+    ↓
+Frontend: window.location.href = checkoutUrl
+    ↓
+Talaba Click sahifasida/ilovasida to'laydi
+    ↓
+Click bizning webhookga POST yuboradi:
+  Prepare (action=0) → Complete (action=1)
+    ↓
+Talaba balansiga pul tushadi
+```
+
+#### Env variables
+
+| Variable | Tavsif |
+|----------|--------|
+| `CLICK_MERCHANT_ID` | Click merchant ID |
+| `CLICK_SERVICE_ID` | Click service ID |
+| `CLICK_SECRET_KEY` | MD5 imzo tekshiruvi uchun maxfiy kalit |
+
+#### Fayllar
+
+| Fayl | Vazifasi |
+|------|---------|
+| `click.service.ts` | Dispatcher + MD5 imzo tekshiruvi (~120 qator) |
+| `click-methods.service.ts` | Prepare + Complete logika (~180 qator) |
+| `click-errors.ts` | Xato kodlari + helper (~90 qator) |
+| `click.types.ts` | TypeScript interfeyslari (~50 qator) |
+| `click-cron.service.ts` | Timeout tozalash (~30 qator) |
+| `click.service.spec.ts` | 12 ta test (signature + dispatch) |
+| `click-methods.service.spec.ts` | 16 ta test (prepare + complete) |
 
 ### 8.3 Uzum — ❌ Hali tayyor emas
 
@@ -581,6 +690,8 @@ Skeleton implementatsiya mavjud (`uzum.service.ts`).
 | Payments | `payments.service.spec.ts` | 29 ta (create, reverse, findAll, branch validation, contract-student check) |
 | Payme Dispatcher | `payme.service.spec.ts` | 20 ta (auth, dispatch, event logging) |
 | Payme Methods | `payme-methods.service.spec.ts` | 24 ta (6 metod, idempotentlik, timeout, xatolar) |
+| Click Dispatcher | `click.service.spec.ts` | 12 ta (MD5 signature, dispatch, event logging) |
+| Click Methods | `click-methods.service.spec.ts` | 16 ta (prepare, complete, idempotentlik, xatolar) |
 | Salary | Hozircha yo'q | — |
 | Transactions | Hozircha yo'q | — |
 | Refunds | Hozircha yo'q | — |
@@ -590,7 +701,7 @@ Skeleton implementatsiya mavjud (`uzum.service.ts`).
 ## 10. Kelajak rejalari
 
 - [x] Payme integratsiya (Merchant API)
-- [ ] Click integratsiya
+- [x] Click integratsiya (SHOP-API)
 - [ ] Uzum integratsiya
 - [ ] `providerFee` ni P&L hisobotiga kiritish
 - [ ] Check/kvitansiya chiqarish tizimi

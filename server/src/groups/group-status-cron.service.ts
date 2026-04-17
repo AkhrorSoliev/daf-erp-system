@@ -48,7 +48,9 @@ export class GroupStatusCronService {
 
     if (groups.length === 0) return;
 
-    this.logger.log(`${groups.length} ta guruh FORMING → ACTIVE ga o'tkazilmoqda`);
+    this.logger.log(
+      `${groups.length} ta guruh FORMING → ACTIVE ga o'tkazilmoqda`,
+    );
 
     for (const group of groups) {
       try {
@@ -58,7 +60,9 @@ export class GroupStatusCronService {
           'Avtomatik: guruh boshlanish sanasi keldi',
         );
       } catch (error) {
-        this.logger.error(`FORMING→ACTIVE xatolik, guruh ${group.id}: ${error.message}`);
+        this.logger.error(
+          `FORMING→ACTIVE xatolik, guruh ${group.id}: ${error.message}`,
+        );
       }
     }
   }
@@ -77,20 +81,29 @@ export class GroupStatusCronService {
 
     if (groups.length === 0) return;
 
-    this.logger.log(`${groups.length} ta guruh ACTIVE → COMPLETED ga o'tkazilmoqda`);
+    this.logger.log(
+      `${groups.length} ta guruh ACTIVE → COMPLETED ga o'tkazilmoqda`,
+    );
 
     for (const group of groups) {
       try {
         await this.changeGroupStatus(
           group,
           GroupStatus.COMPLETED,
-          'Avtomatik: guruh tugash sanasi o\'tdi',
+          "Avtomatik: guruh tugash sanasi o'tdi",
         );
 
         // COMPLETED → enrollment va studentlarni cascade qilish
-        await this.statusCascadeService.cascade('Group', group.id, GroupStatus.COMPLETED, 0);
+        await this.statusCascadeService.cascade(
+          'Group',
+          group.id,
+          GroupStatus.COMPLETED,
+          0,
+        );
       } catch (error) {
-        this.logger.error(`ACTIVE→COMPLETED xatolik, guruh ${group.id}: ${error.message}`);
+        this.logger.error(
+          `ACTIVE→COMPLETED xatolik, guruh ${group.id}: ${error.message}`,
+        );
       }
     }
   }
@@ -115,7 +128,8 @@ export class GroupStatusCronService {
       data: {
         statusEnum: toStatus,
         status: GROUP_STATUS_TO_INT[toStatus] ?? 2,
-        isActive: toStatus === GroupStatus.ACTIVE || toStatus === GroupStatus.FORMING,
+        isActive:
+          toStatus === GroupStatus.ACTIVE || toStatus === GroupStatus.FORMING,
         ...auditData,
       },
     });

@@ -22,7 +22,10 @@ import {
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
-import { signEmployeePayload, verifyEmployeePayload } from './utils/signed-link.util';
+import {
+  signEmployeePayload,
+  verifyEmployeePayload,
+} from './utils/signed-link.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
@@ -125,7 +128,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.bot,
     );
 
-    const stage = new Scenes.Stage<BotContext>([teacherScene, studentScene, employeeScene]);
+    const stage = new Scenes.Stage<BotContext>([
+      teacherScene,
+      studentScene,
+      employeeScene,
+    ]);
     this.bot.use(stage.middleware());
 
     // /start handler
@@ -140,9 +147,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
         if (!branchIdStr || isNaN(branchId)) {
           ctx.session.processing = false;
-          await ctx.reply(
-            "Noto'g'ri havola. Administrator bilan bog'laning.",
-          );
+          await ctx.reply("Noto'g'ri havola. Administrator bilan bog'laning.");
           return;
         }
 
@@ -151,9 +156,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         });
         if (!branch) {
           ctx.session.processing = false;
-          await ctx.reply(
-            "Filial topilmadi. Administrator bilan bog'laning.",
-          );
+          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
           return;
         }
 
@@ -171,10 +174,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         const rawRoleIds = employeeMatch[2]
           .split(',')
           .map((id) => Number(id))
-          .filter((id) => Number.isInteger(id) && (VALID_ROLE_IDS as readonly number[]).includes(id));
+          .filter(
+            (id) =>
+              Number.isInteger(id) &&
+              (VALID_ROLE_IDS as readonly number[]).includes(id),
+          );
         const providedSig = employeeMatch[3];
 
-        if (rawRoleIds.length === 0 || !verifyEmployeePayload(branchId, rawRoleIds, providedSig)) {
+        if (
+          rawRoleIds.length === 0 ||
+          !verifyEmployeePayload(branchId, rawRoleIds, providedSig)
+        ) {
           ctx.session.processing = false;
           this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
           await ctx.reply(
@@ -188,9 +198,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         });
         if (!branch) {
           ctx.session.processing = false;
-          await ctx.reply(
-            "Filial topilmadi. Administrator bilan bog'laning.",
-          );
+          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
           return;
         }
 
@@ -212,9 +220,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         });
         if (!branch) {
           ctx.session.processing = false;
-          await ctx.reply(
-            "Filial topilmadi. Administrator bilan bog'laning.",
-          );
+          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
           return;
         }
 
@@ -229,16 +235,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
             exactDays: true,
             room: { select: { name: true } },
             teachers: {
-              select: { teacher: { select: { id: true, firstName: true, lastName: true } } },
+              select: {
+                teacher: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
               take: 1,
             },
           },
         });
         if (!group) {
           ctx.session.processing = false;
-          await ctx.reply(
-            "Guruh topilmadi. Administrator bilan bog'laning.",
-          );
+          await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
           return;
         }
 
@@ -248,7 +256,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           groupId: group.id,
           groupName: group.name,
           teacherId: teacher?.id ?? null,
-          teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : '—',
+          teacherName: teacher
+            ? `${teacher.firstName} ${teacher.lastName}`
+            : '—',
           lessonStartTime: group.lessonStartTime,
           lessonEndTime: group.lessonEndTime,
           days: group.days,
@@ -267,9 +277,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
         if (!branchIdStr || isNaN(branchId)) {
           ctx.session.processing = false;
-          await ctx.reply(
-            "Noto'g'ri havola. Administrator bilan bog'laning.",
-          );
+          await ctx.reply("Noto'g'ri havola. Administrator bilan bog'laning.");
           return;
         }
 
@@ -278,9 +286,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         });
         if (!branch) {
           ctx.session.processing = false;
-          await ctx.reply(
-            "Filial topilmadi. Administrator bilan bog'laning.",
-          );
+          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
           return;
         }
 
@@ -291,20 +297,20 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
 
       await ctx.reply(
-        "Assalomu alaykum! DaF Sprachzentrum botiga xush kelibsiz.\n\n" +
-          "Quyidagi imkoniyatlardan birini tanlang:",
+        'Assalomu alaykum! DaF Sprachzentrum botiga xush kelibsiz.\n\n' +
+          'Quyidagi imkoniyatlardan birini tanlang:',
         Markup.inlineKeyboard([
           [
-            Markup.button.callback("📝 Ro'yxatdan o'tish", "menu_registration"),
-            Markup.button.callback("📊 Darajani aniqlash", "menu_level"),
+            Markup.button.callback("📝 Ro'yxatdan o'tish", 'menu_registration'),
+            Markup.button.callback('📊 Darajani aniqlash', 'menu_level'),
           ],
           [
-            Markup.button.callback("🎓 Platformaga kirish", "menu_platform"),
-            Markup.button.callback("💳 To'lovlar", "menu_payments"),
+            Markup.button.callback('🎓 Platformaga kirish', 'menu_platform'),
+            Markup.button.callback("💳 To'lovlar", 'menu_payments'),
           ],
           [
-            Markup.button.callback("👥 Guruhlarga qo'shilish", "menu_groups"),
-            Markup.button.callback("🔐 Parolni tiklash", "menu_password"),
+            Markup.button.callback("👥 Guruhlarga qo'shilish", 'menu_groups'),
+            Markup.button.callback('🔐 Parolni tiklash', 'menu_password'),
           ],
         ]),
       );
@@ -313,14 +319,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // /cancel handler
     this.bot.command('cancel', async (ctx) => {
       await ctx.scene.leave();
-      await ctx.reply("Bekor qilindi. Qayta boshlash uchun /start bosing.");
+      await ctx.reply('Bekor qilindi. Qayta boshlash uchun /start bosing.');
     });
 
     // Menu action handlers — "Tez kunda" responses
     this.bot.action(
       /^menu_(registration|level|platform|payments|groups|password)$/,
       async (ctx) => {
-        await ctx.answerCbQuery("Bu funksiya tez kunda ishga tushadi! ⏳", {
+        await ctx.answerCbQuery('Bu funksiya tez kunda ishga tushadi! ⏳', {
           show_alert: true,
         });
       },
@@ -368,7 +374,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       (id) => !(VALID_ROLE_IDS as readonly number[]).includes(id),
     );
     if (invalid.length > 0) {
-      throw new BadRequestException(`Noto'g'ri lavozim ID: ${invalid.join(', ')}`);
+      throw new BadRequestException(
+        `Noto'g'ri lavozim ID: ${invalid.join(', ')}`,
+      );
     }
 
     const branch = await this.prisma.branch.findFirst({

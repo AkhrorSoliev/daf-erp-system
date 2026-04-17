@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -73,7 +77,11 @@ export class ExpensesService {
 
         return expense;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 15000,
+      },
     );
 
     return expense;
@@ -88,12 +96,13 @@ export class ExpensesService {
       deletedAt: null,
       ...(query.category && { category: query.category }),
       ...(query.branchId && { branchId: query.branchId }),
-      ...(query.startDate && query.endDate && {
-        date: {
-          gte: new Date(query.startDate),
-          lte: new Date(query.endDate),
-        },
-      }),
+      ...(query.startDate &&
+        query.endDate && {
+          date: {
+            gte: new Date(query.startDate),
+            lte: new Date(query.endDate),
+          },
+        }),
     };
 
     const [data, total] = await Promise.all([
@@ -120,7 +129,12 @@ export class ExpensesService {
     return { data, total, page, pageSize };
   }
 
-  async update(id: string, dto: Partial<CreateExpenseDto>, userId: number, companyId: number) {
+  async update(
+    id: string,
+    dto: Partial<CreateExpenseDto>,
+    userId: number,
+    companyId: number,
+  ) {
     const existing = await this.prisma.expense.findFirst({
       where: { id, deletedAt: null, companyId },
     });
@@ -129,11 +143,15 @@ export class ExpensesService {
     // Detect if the change touches financial fields. Description/date/branch/
     // receiptUrl edits do not require a ledger correction; amount or category
     // changes must be reflected in Transaction or cash-flow reports drift.
-    const amountChanged = dto.amount !== undefined && dto.amount !== existing.amount;
-    const categoryChanged = dto.category !== undefined && dto.category !== existing.category;
+    const amountChanged =
+      dto.amount !== undefined && dto.amount !== existing.amount;
+    const categoryChanged =
+      dto.category !== undefined && dto.category !== existing.category;
     const relatedUserChanged =
-      dto.relatedUserId !== undefined && dto.relatedUserId !== existing.relatedUserId;
-    const financialFieldChanged = amountChanged || categoryChanged || relatedUserChanged;
+      dto.relatedUserId !== undefined &&
+      dto.relatedUserId !== existing.relatedUserId;
+    const financialFieldChanged =
+      amountChanged || categoryChanged || relatedUserChanged;
 
     const expense = await this.prisma.$transaction(
       async (tx) => {
@@ -146,7 +164,9 @@ export class ExpensesService {
             ...(dto.date && { date: new Date(dto.date) }),
             ...(dto.branchId !== undefined && { branchId: dto.branchId }),
             ...(dto.receiptUrl !== undefined && { receiptUrl: dto.receiptUrl }),
-            ...(dto.relatedUserId !== undefined && { relatedUserId: dto.relatedUserId }),
+            ...(dto.relatedUserId !== undefined && {
+              relatedUserId: dto.relatedUserId,
+            }),
           },
         });
 
@@ -167,7 +187,7 @@ export class ExpensesService {
           if (originalEntry) {
             await this.transactionsService.reverseTransaction(
               originalEntry.id,
-              { performedById: userId, reason: "Xarajat yangilandi" },
+              { performedById: userId, reason: 'Xarajat yangilandi' },
               tx,
             );
           }
@@ -198,7 +218,11 @@ export class ExpensesService {
 
         return updated;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 15000,
+      },
     );
 
     return expense;
@@ -236,7 +260,11 @@ export class ExpensesService {
           data: { deletedAt: new Date(), deletedById: userId },
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 15000,
+      },
     );
 
     return { message: "Xarajat o'chirildi" };

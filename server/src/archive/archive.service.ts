@@ -1,8 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
-  UserStatus, StudentStatus, GroupStatus, CourseStatus,
-  BranchStatus, RoomStatus, LeadStatus, EnrollmentStatus, HolidayStatus,
+  UserStatus,
+  StudentStatus,
+  GroupStatus,
+  CourseStatus,
+  BranchStatus,
+  RoomStatus,
+  LeadStatus,
+  EnrollmentStatus,
+  HolidayStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
@@ -45,19 +56,38 @@ export class ArchiveService {
 
   async getCounts() {
     const deletedFilter = { deletedAt: { not: null } };
-    const [users, branches, rooms, courses, students, leads, groups, enrollments, holidays] =
-      await Promise.all([
-        this.prisma.user.count({ where: deletedFilter }),
-        this.prisma.branch.count({ where: deletedFilter }),
-        this.prisma.room.count({ where: deletedFilter }),
-        this.prisma.course.count({ where: deletedFilter }),
-        this.prisma.student.count({ where: deletedFilter }),
-        this.prisma.lead.count({ where: deletedFilter }),
-        this.prisma.group.count({ where: deletedFilter }),
-        this.prisma.enrollment.count({ where: deletedFilter }),
-        this.prisma.holiday.count({ where: deletedFilter }),
-      ]);
-    return { users, branches, rooms, courses, students, leads, groups, enrollments, holidays };
+    const [
+      users,
+      branches,
+      rooms,
+      courses,
+      students,
+      leads,
+      groups,
+      enrollments,
+      holidays,
+    ] = await Promise.all([
+      this.prisma.user.count({ where: deletedFilter }),
+      this.prisma.branch.count({ where: deletedFilter }),
+      this.prisma.room.count({ where: deletedFilter }),
+      this.prisma.course.count({ where: deletedFilter }),
+      this.prisma.student.count({ where: deletedFilter }),
+      this.prisma.lead.count({ where: deletedFilter }),
+      this.prisma.group.count({ where: deletedFilter }),
+      this.prisma.enrollment.count({ where: deletedFilter }),
+      this.prisma.holiday.count({ where: deletedFilter }),
+    ]);
+    return {
+      users,
+      branches,
+      rooms,
+      courses,
+      students,
+      leads,
+      groups,
+      enrollments,
+      holidays,
+    };
   }
 
   async findAll(entityType: ArchiveEntityType, query: ArchiveQueryDto) {
@@ -105,7 +135,11 @@ export class ArchiveService {
     return record;
   }
 
-  async restore(entityType: ArchiveEntityType, id: string | number, userId: number) {
+  async restore(
+    entityType: ArchiveEntityType,
+    id: string | number,
+    userId: number,
+  ) {
     const delegate = this.getDelegate(entityType);
     const parsedId = this.parseId(entityType, id);
 
@@ -127,7 +161,11 @@ export class ArchiveService {
     } else {
       // StatusHistory yozish (faqat status o'zgarsa)
       const currentStatus = record[statusField];
-      if (currentStatus && currentStatus !== defaultStatus && historyEntityType) {
+      if (
+        currentStatus &&
+        currentStatus !== defaultStatus &&
+        historyEntityType
+      ) {
         await this.statusHistoryService.changeStatus({
           entityType: historyEntityType,
           entityId: String(parsedId),
@@ -194,8 +232,12 @@ export class ArchiveService {
     } else {
       // Cascade bog'liqliklarni o'chirish (UserRole, UserBranch, etc.)
       if (entityType === ArchiveEntityType.USERS) {
-        await this.prisma.userRole.deleteMany({ where: { userId: parsedId as number } });
-        await this.prisma.userBranch.deleteMany({ where: { userId: parsedId as number } });
+        await this.prisma.userRole.deleteMany({
+          where: { userId: parsedId as number },
+        });
+        await this.prisma.userBranch.deleteMany({
+          where: { userId: parsedId as number },
+        });
       }
       await delegate.delete({ where: { id: parsedId } });
     }
@@ -256,8 +298,11 @@ export class ArchiveService {
   private async restoreBatch(batchId: string, userId?: number) {
     const now = new Date();
     const restoreBase = {
-      deletedAt: null, deletedById: null, deletionBatchId: null,
-      statusChangedAt: now, statusChangedById: userId ?? null,
+      deletedAt: null,
+      deletedById: null,
+      deletionBatchId: null,
+      statusChangedAt: now,
+      statusChangedById: userId ?? null,
       statusChangeReason: 'Arxivdan tiklandi (batch)',
     };
 
@@ -268,7 +313,11 @@ export class ArchiveService {
       });
       await tx.group.updateMany({
         where: { deletionBatchId: batchId },
-        data: { ...restoreBase, statusEnum: GroupStatus.FORMING, isActive: true },
+        data: {
+          ...restoreBase,
+          statusEnum: GroupStatus.FORMING,
+          isActive: true,
+        },
       });
       await tx.room.updateMany({
         where: { deletionBatchId: batchId },

@@ -212,7 +212,7 @@ export class RoomsService {
     const updated = await this.prisma.room.update({
       where: { id },
       data: {
-        status: dto.status as RoomStatus,
+        status: dto.status,
         ...auditData,
       },
       include: { branch: { select: { name: true } } },

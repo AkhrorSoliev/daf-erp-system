@@ -8,9 +8,10 @@ import { UploadModule } from '../upload/upload.module';
 import { SmsModule } from '../sms/sms.module';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { PaymentGatewaysModule } from '../payment-gateways/payment-gateways.module';
 
 @Module({
-  imports: [UploadModule, SmsModule, AttendanceModule, TransactionsModule],
+  imports: [UploadModule, SmsModule, AttendanceModule, TransactionsModule, PaymentGatewaysModule],
   controllers: [StudentsController, StudentPortalController],
   providers: [StudentsService, StudentEnrollmentService, StudentPortalService],
   exports: [StudentsService, StudentEnrollmentService],

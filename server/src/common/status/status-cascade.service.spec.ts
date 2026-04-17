@@ -61,7 +61,10 @@ describe('StatusCascadeService', () => {
       expect(prisma.group.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ branchId: 1 }),
-          data: expect.objectContaining({ statusEnum: 'CANCELLED', isActive: false }),
+          data: expect.objectContaining({
+            statusEnum: 'CANCELLED',
+            isActive: false,
+          }),
         }),
       );
 
@@ -82,7 +85,10 @@ describe('StatusCascadeService', () => {
       expect(results).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ entity: 'Group', toStatus: 'CANCELLED' }),
-          expect.objectContaining({ entity: 'Enrollment', toStatus: 'DROPPED' }),
+          expect.objectContaining({
+            entity: 'Enrollment',
+            toStatus: 'DROPPED',
+          }),
           expect.objectContaining({ entity: 'Room', toStatus: 'ARCHIVED' }),
         ]),
       );
@@ -123,7 +129,12 @@ describe('StatusCascadeService', () => {
   // ─── Course cascades ───────────────────────────────
   describe('Course cascades', () => {
     it('ARCHIVED: cancels groups and drops enrollments', async () => {
-      const results = await service.cascade('Course', 'course-1', 'ARCHIVED', 1);
+      const results = await service.cascade(
+        'Course',
+        'course-1',
+        'ARCHIVED',
+        1,
+      );
 
       expect(prisma.group.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -160,7 +171,10 @@ describe('StatusCascadeService', () => {
       );
 
       expect(results).toHaveLength(1);
-      expect(results[0]).toMatchObject({ entity: 'Enrollment', toStatus: 'DROPPED' });
+      expect(results[0]).toMatchObject({
+        entity: 'Enrollment',
+        toStatus: 'DROPPED',
+      });
     });
 
     it('COMPLETED: completes enrollments', async () => {
@@ -176,7 +190,10 @@ describe('StatusCascadeService', () => {
 
       expect(results).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ entity: 'Enrollment', toStatus: 'COMPLETED' }),
+          expect.objectContaining({
+            entity: 'Enrollment',
+            toStatus: 'COMPLETED',
+          }),
         ]),
       );
     });
@@ -187,13 +204,20 @@ describe('StatusCascadeService', () => {
         { studentId: 101 },
       ]);
       prisma.enrollment.count.mockResolvedValue(0);
-      prisma.student.findFirst.mockResolvedValue({ id: 100, status: 'ACTIVE', companyId: 1 });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 100,
+        status: 'ACTIVE',
+        companyId: 1,
+      });
 
       const results = await service.cascade('Group', 'group-1', 'COMPLETED', 1);
 
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: 'GRADUATED', isActive: false }),
+          data: expect.objectContaining({
+            status: 'GRADUATED',
+            isActive: false,
+          }),
         }),
       );
 
@@ -208,7 +232,9 @@ describe('StatusCascadeService', () => {
         }),
       );
 
-      const graduatedResults = results.filter(r => r.entity === 'Student' && r.toStatus === 'GRADUATED');
+      const graduatedResults = results.filter(
+        (r) => r.entity === 'Student' && r.toStatus === 'GRADUATED',
+      );
       expect(graduatedResults.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -259,7 +285,10 @@ describe('StatusCascadeService', () => {
       );
 
       expect(results).toHaveLength(1);
-      expect(results[0]).toMatchObject({ entity: 'Enrollment', toStatus: 'FROZEN' });
+      expect(results[0]).toMatchObject({
+        entity: 'Enrollment',
+        toStatus: 'FROZEN',
+      });
     });
 
     it('ACTIVE: restores FROZEN enrollments and records group history (add)', async () => {
@@ -284,7 +313,10 @@ describe('StatusCascadeService', () => {
       );
 
       expect(results).toHaveLength(1);
-      expect(results[0]).toMatchObject({ entity: 'Enrollment', toStatus: 'ACTIVE' });
+      expect(results[0]).toMatchObject({
+        entity: 'Enrollment',
+        toStatus: 'ACTIVE',
+      });
     });
 
     it('EXPELLED: drops ACTIVE+FROZEN enrollments and records group history (delete)', async () => {
@@ -356,7 +388,11 @@ describe('StatusCascadeService', () => {
     it('sets statusChangedAt, statusChangedById, statusChangeReason on all updates', async () => {
       await service.cascade('Branch', '1', 'CLOSED', 42);
 
-      for (const mock of [prisma.group.updateMany, prisma.enrollment.updateMany, prisma.room.updateMany]) {
+      for (const mock of [
+        prisma.group.updateMany,
+        prisma.enrollment.updateMany,
+        prisma.room.updateMany,
+      ]) {
         const call = mock.mock.calls[0][0];
         expect(call.data).toHaveProperty('statusChangedAt');
         expect(call.data.statusChangedById).toBe(42);

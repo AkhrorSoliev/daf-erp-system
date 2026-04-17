@@ -24,9 +24,7 @@ describe('CoursesController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CoursesController],
-      providers: [
-        { provide: CoursesService, useValue: mockService },
-      ],
+      providers: [{ provide: CoursesService, useValue: mockService }],
     }).compile();
 
     controller = module.get(CoursesController);

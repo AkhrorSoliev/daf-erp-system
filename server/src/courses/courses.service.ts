@@ -148,7 +148,7 @@ export class CoursesService {
     const updated = await this.prisma.course.update({
       where: { id },
       data: {
-        status: dto.status as CourseStatus,
+        status: dto.status,
         isActive: dto.status === CourseStatus.ACTIVE,
         ...auditData,
       },

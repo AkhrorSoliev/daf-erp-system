@@ -1,7 +1,10 @@
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
 import { SCENES, DEFAULT_COMPANY_ID } from '../constants';
-import { generateUniqueLogin, generatePassword } from '../utils/login-generator';
+import {
+  generateUniqueLogin,
+  generatePassword,
+} from '../utils/login-generator';
 import { downloadFile } from '../utils/download.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
@@ -72,7 +75,7 @@ export function createEmployeeRegistrationScene(
       }
       await ctx.scene.leave();
       await ctx.reply(
-        "Bekor qilindi. Qayta boshlash uchun /start bosing.",
+        'Bekor qilindi. Qayta boshlash uchun /start bosing.',
         Markup.removeKeyboard(),
       );
       return;
@@ -89,7 +92,9 @@ export function createEmployeeRegistrationScene(
     switch (step) {
       case 1: {
         if (text.length < 2) {
-          await ctx.reply("Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          await ctx.reply(
+            "Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
+          );
           return;
         }
         ctx.session.data.firstName = text;
@@ -100,7 +105,9 @@ export function createEmployeeRegistrationScene(
 
       case 2: {
         if (text.length < 2) {
-          await ctx.reply("Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          await ctx.reply(
+            "Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
+          );
           return;
         }
         ctx.session.data.lastName = text;
@@ -108,8 +115,14 @@ export function createEmployeeRegistrationScene(
         await ctx.reply(
           'Telefon raqamingizni yuboring:',
           Markup.keyboard([
-            [Markup.button.contactRequest('\uD83D\uDCF1 Telefon raqamni yuborish')],
-          ]).resize().oneTime(),
+            [
+              Markup.button.contactRequest(
+                '\uD83D\uDCF1 Telefon raqamni yuborish',
+              ),
+            ],
+          ])
+            .resize()
+            .oneTime(),
         );
         break;
       }
@@ -118,8 +131,14 @@ export function createEmployeeRegistrationScene(
         await ctx.reply(
           'Iltimos, telefon raqamni quyidagi tugma orqali yuboring:',
           Markup.keyboard([
-            [Markup.button.contactRequest('\uD83D\uDCF1 Telefon raqamni yuborish')],
-          ]).resize().oneTime(),
+            [
+              Markup.button.contactRequest(
+                '\uD83D\uDCF1 Telefon raqamni yuborish',
+              ),
+            ],
+          ])
+            .resize()
+            .oneTime(),
         );
         break;
       }
@@ -163,8 +182,14 @@ export function createEmployeeRegistrationScene(
       await ctx.reply(
         "Telefon raqam noto'g'ri formatda. Qayta yuboring:",
         Markup.keyboard([
-          [Markup.button.contactRequest('\uD83D\uDCF1 Telefon raqamni yuborish')],
-        ]).resize().oneTime(),
+          [
+            Markup.button.contactRequest(
+              '\uD83D\uDCF1 Telefon raqamni yuborish',
+            ),
+          ],
+        ])
+          .resize()
+          .oneTime(),
       );
       return;
     }
@@ -212,7 +237,11 @@ export function createEmployeeRegistrationScene(
     await ctx.reply('Rasmingizni yuboring (foto sifatida):');
   });
 
-  async function handlePhotoUpload(ctx: BotContext, fileId: string, mimetype: string) {
+  async function handlePhotoUpload(
+    ctx: BotContext,
+    fileId: string,
+    mimetype: string,
+  ) {
     await ctx.sendChatAction('upload_photo');
 
     const fileLink = await ctx.telegram.getFileLink(fileId);
@@ -241,7 +270,10 @@ export function createEmployeeRegistrationScene(
       ...Markup.inlineKeyboard([
         [
           Markup.button.callback('\u2705 Tasdiqlash', 'confirm_registration'),
-          Markup.button.callback('\uD83D\uDD04 Qayta kiritish', 'restart_registration'),
+          Markup.button.callback(
+            '\uD83D\uDD04 Qayta kiritish',
+            'restart_registration',
+          ),
         ],
       ]),
     });
@@ -300,15 +332,14 @@ export function createEmployeeRegistrationScene(
 
     const data = ctx.session.data;
     const chatId = String(ctx.chat!.id);
-    const roleIds: number[] = Array.isArray(data.roleIds) && data.roleIds.length > 0
-      ? data.roleIds
-      : [];
+    const roleIds: number[] =
+      Array.isArray(data.roleIds) && data.roleIds.length > 0
+        ? data.roleIds
+        : [];
 
     if (roleIds.length === 0) {
       ctx.session.processing = false;
-      await ctx.reply(
-        "Lavozim belgilanmagan. Administrator bilan bog'laning.",
-      );
+      await ctx.reply("Lavozim belgilanmagan. Administrator bilan bog'laning.");
       await ctx.scene.leave();
       return;
     }

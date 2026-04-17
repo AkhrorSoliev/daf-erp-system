@@ -1,4 +1,12 @@
-import { IsInt, IsNotEmpty, IsEnum, IsOptional, IsString, IsBoolean, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsBoolean,
+  Min,
+} from 'class-validator';
 import { SalaryType } from '@prisma/client';
 
 export class CreateSalaryConfigDto {

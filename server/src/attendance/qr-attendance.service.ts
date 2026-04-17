@@ -11,7 +11,12 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryService } from '../salary/salary.service';
-import { AttendanceMethod, AttendanceStatus, EnrollmentStatus, HolidayStatus } from '@prisma/client';
+import {
+  AttendanceMethod,
+  AttendanceStatus,
+  EnrollmentStatus,
+  HolidayStatus,
+} from '@prisma/client';
 import { AttendanceService } from './attendance.service';
 
 interface QrSession {
@@ -57,7 +62,12 @@ export class QrAttendanceService {
   ) {
     // Validate date is a valid lesson date (includes time check for teachers)
     const { group: validatedGroup, parsedDate } =
-      await this.attendanceService.validateLessonDate(groupId, date, companyId, roles);
+      await this.attendanceService.validateLessonDate(
+        groupId,
+        date,
+        companyId,
+        roles,
+      );
 
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },
@@ -72,7 +82,7 @@ export class QrAttendanceService {
       // Agar boshqa teacher boshlagan bo'lsa
       if (parsed.teacherId !== teacherId) {
         throw new BadRequestException(
-          'Bu sana uchun boshqa o\'qituvchi allaqachon QR sessiya boshlagan',
+          "Bu sana uchun boshqa o'qituvchi allaqachon QR sessiya boshlagan",
         );
       }
       // Agar o'sha teacher qayta boshlasa — eski tokenni o'chirib, yangi sessiya
@@ -96,8 +106,13 @@ export class QrAttendanceService {
     let lessonNumber: number | null = null;
     if (group?.startDate && group.exactDays?.length) {
       const dayNameToJs: Record<string, number> = {
-        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-        thursday: 4, friday: 5, saturday: 6,
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
       };
       const allowedDays = new Set(
         group.exactDays.map((d) => dayNameToJs[d.toLowerCase()]),
@@ -184,7 +199,9 @@ export class QrAttendanceService {
     const sessionKey = `qr-session:${groupId}:${date}`;
     const raw = await this.redis.get(sessionKey);
     if (!raw) {
-      throw new BadRequestException('QR sessiya topilmadi yoki muddati tugagan');
+      throw new BadRequestException(
+        'QR sessiya topilmadi yoki muddati tugagan',
+      );
     }
 
     const session: QrSession = JSON.parse(raw);
@@ -192,7 +209,9 @@ export class QrAttendanceService {
       throw new BadRequestException('Sessiya mos kelmadi');
     }
     if (session.teacherId !== teacherId) {
-      throw new ForbiddenException('Faqat sessiya egasi tokenni yangilashi mumkin');
+      throw new ForbiddenException(
+        'Faqat sessiya egasi tokenni yangilashi mumkin',
+      );
     }
 
     // Eski tokenni o'chirish
@@ -207,7 +226,12 @@ export class QrAttendanceService {
     // Yangi token
     const newToken = randomUUID();
     session.currentToken = newToken;
-    await this.redis.set(sessionKey, JSON.stringify(session), 'EX', remainingTtl);
+    await this.redis.set(
+      sessionKey,
+      JSON.stringify(session),
+      'EX',
+      remainingTtl,
+    );
 
     const tokenData: QrToken = {
       groupId,
@@ -400,7 +424,8 @@ export class QrAttendanceService {
           },
         });
 
-        const cyclesPaid = Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
+        const cyclesPaid =
+          Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
         const cyclesDeducted = await this.prisma.transaction.count({
           where: {
             studentId,
@@ -475,7 +500,10 @@ export class QrAttendanceService {
         }
       }
     } catch (err) {
-      this.logger.error(`Financial processing failed for QR scan: student ${studentId}, group ${groupId}`, err);
+      this.logger.error(
+        `Financial processing failed for QR scan: student ${studentId}, group ${groupId}`,
+        err,
+      );
     }
 
     // O'quvchi ma'lumotlarini olish

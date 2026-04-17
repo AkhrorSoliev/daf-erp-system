@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PaymentMethod, PaymentSource } from '@prisma/client';
+import { PaymentMethod, PaymentSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
 import {
@@ -25,6 +25,9 @@ import type {
 /** Payme auto-cancels after 12 hours */
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
+/** Minimum payment amount: 1000 so'm = 100_000 tiyin */
+const MIN_AMOUNT_TIYIN = 100_000;
+
 /**
  * Implements the 6 required Paycom Merchant API methods.
  *
@@ -49,8 +52,8 @@ export class PaymeMethodsService {
   ): Promise<PaymeRpcResponse> {
     const p = params as unknown as CheckPerformParams;
 
-    // Validate amount
-    if (!p.amount || p.amount <= 0) {
+    // Validate amount (minimum 1000 so'm = 100_000 tiyin)
+    if (!p.amount || p.amount < MIN_AMOUNT_TIYIN) {
       return paymeError(rpcId, INVALID_AMOUNT);
     }
 
@@ -67,6 +70,22 @@ export class PaymeMethodsService {
 
     if (!student) {
       return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');
+    }
+
+    // Verify amount matches a live payment intent (if any exists)
+    const intent = await this.prisma.paymentIntent.findFirst({
+      where: {
+        studentId,
+        companyId,
+        provider: 'PAYME',
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (intent && intent.amountTiyin !== p.amount) {
+      return paymeError(rpcId, INVALID_AMOUNT);
     }
 
     return paymeSuccess(rpcId, { allow: true });
@@ -88,7 +107,10 @@ export class PaymeMethodsService {
 
     if (existing) {
       // Idempotent: same account + amount → return existing
-      if (existing.studentId === p.account?.student_id && existing.amount === p.amount) {
+      if (
+        existing.studentId === p.account?.student_id &&
+        existing.amount === p.amount
+      ) {
         // Check if expired
         if (existing.state === 1 && this.isExpired(existing.createTime)) {
           await this.cancelExpired(existing.id);
@@ -105,7 +127,11 @@ export class PaymeMethodsService {
     }
 
     // Validate via CheckPerformTransaction logic
-    const checkResult = await this.checkPerformTransaction(params, companyId, rpcId);
+    const checkResult = await this.checkPerformTransaction(
+      params,
+      companyId,
+      rpcId,
+    );
     if ('error' in checkResult) return checkResult;
 
     const studentId = p.account.student_id;
@@ -179,23 +205,37 @@ export class PaymeMethodsService {
     const now = BigInt(Date.now());
 
     try {
-      const erpPayment = await this.payments.createFromExternal({
-        studentId: txn.studentId,
-        amount: txn.amountInSom,
-        method: PaymentMethod.PAYME,
-        externalId: txn.paymeId,
-        source: PaymentSource.GATEWAY_WEBHOOK,
-        companyId,
-      });
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          const erpPayment = await this.payments.createFromExternal(
+            {
+              studentId: txn.studentId,
+              amount: txn.amountInSom,
+              method: PaymentMethod.PAYME,
+              externalId: txn.paymeId,
+              source: PaymentSource.GATEWAY_WEBHOOK,
+              companyId,
+            },
+            tx,
+          );
 
-      await this.prisma.paymeTransaction.update({
-        where: { id: txn.id },
-        data: {
-          state: 2,
-          performTime: now,
-          paymentId: erpPayment.id,
+          await tx.paymeTransaction.update({
+            where: { id: txn.id },
+            data: {
+              state: 2,
+              performTime: now,
+              paymentId: erpPayment.id,
+            },
+          });
+
+          return erpPayment;
         },
-      });
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10000,
+          timeout: 15000,
+        },
+      );
 
       return paymeSuccess(rpcId, {
         transaction: txn.id,

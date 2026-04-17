@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import {
-  GroupStatus, EnrollmentStatus, RoomStatus, BranchStatus, CourseStatus,
+  GroupStatus,
+  EnrollmentStatus,
+  RoomStatus,
+  BranchStatus,
+  CourseStatus,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -39,7 +43,7 @@ export class StatusCascadeService {
       },
     });
 
-    const values = (e: typeof enrollments[0]) => ({
+    const values = (e: (typeof enrollments)[0]) => ({
       action,
       oquvchi: `${e.student.firstName} ${e.student.lastName}`,
       oquvchiId: studentId,
@@ -54,9 +58,15 @@ export class StatusCascadeService {
       };
 
       if (type === 'add') {
-        await this.entityHistoryService.recordCreate({ ...common, newValues: values(enrollment) });
+        await this.entityHistoryService.recordCreate({
+          ...common,
+          newValues: values(enrollment),
+        });
       } else {
-        await this.entityHistoryService.recordDelete({ ...common, oldValues: values(enrollment) });
+        await this.entityHistoryService.recordDelete({
+          ...common,
+          oldValues: values(enrollment),
+        });
       }
     }
   }
@@ -80,34 +90,69 @@ export class StatusCascadeService {
     if (entityType === 'Branch') {
       const branchId = Number(entityId);
 
-      if (newStatus === BranchStatus.CLOSED || newStatus === BranchStatus.ARCHIVED) {
+      if (
+        newStatus === BranchStatus.CLOSED ||
+        newStatus === BranchStatus.ARCHIVED
+      ) {
         // Guruhlar → CANCELLED
         const groupResult = await this.prisma.group.updateMany({
-          where: { branchId, deletedAt: null, statusEnum: { not: GroupStatus.ARCHIVED } },
-          data: { statusEnum: GroupStatus.CANCELLED, isActive: false, ...auditFields },
+          where: {
+            branchId,
+            deletedAt: null,
+            statusEnum: { not: GroupStatus.ARCHIVED },
+          },
+          data: {
+            statusEnum: GroupStatus.CANCELLED,
+            isActive: false,
+            ...auditFields,
+          },
         });
-        results.push({ entity: 'Group', count: groupResult.count, toStatus: 'CANCELLED' });
+        results.push({
+          entity: 'Group',
+          count: groupResult.count,
+          toStatus: 'CANCELLED',
+        });
 
         // Enrollmentlar → DROPPED
         const enrollResult = await this.prisma.enrollment.updateMany({
-          where: { group: { branchId }, deletedAt: null, status: EnrollmentStatus.ACTIVE },
+          where: {
+            group: { branchId },
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+          },
           data: { status: EnrollmentStatus.DROPPED, ...auditFields },
         });
-        results.push({ entity: 'Enrollment', count: enrollResult.count, toStatus: 'DROPPED' });
+        results.push({
+          entity: 'Enrollment',
+          count: enrollResult.count,
+          toStatus: 'DROPPED',
+        });
 
         // Xonalar → ARCHIVED
         const roomResult = await this.prisma.room.updateMany({
-          where: { branchId, deletedAt: null, status: { not: RoomStatus.ARCHIVED } },
+          where: {
+            branchId,
+            deletedAt: null,
+            status: { not: RoomStatus.ARCHIVED },
+          },
           data: { status: RoomStatus.ARCHIVED, ...auditFields },
         });
-        results.push({ entity: 'Room', count: roomResult.count, toStatus: 'ARCHIVED' });
+        results.push({
+          entity: 'Room',
+          count: roomResult.count,
+          toStatus: 'ARCHIVED',
+        });
       } else if (newStatus === BranchStatus.INACTIVE) {
         // Guruhlar → PAUSED
         const groupResult = await this.prisma.group.updateMany({
           where: { branchId, deletedAt: null, statusEnum: GroupStatus.ACTIVE },
           data: { statusEnum: GroupStatus.PAUSED, ...auditFields },
         });
-        results.push({ entity: 'Group', count: groupResult.count, toStatus: 'PAUSED' });
+        results.push({
+          entity: 'Group',
+          count: groupResult.count,
+          toStatus: 'PAUSED',
+        });
       }
     }
 
@@ -115,45 +160,94 @@ export class StatusCascadeService {
       if (newStatus === CourseStatus.ARCHIVED) {
         // Guruhlar → CANCELLED
         const groupResult = await this.prisma.group.updateMany({
-          where: { courseId: entityId, deletedAt: null, statusEnum: { not: GroupStatus.ARCHIVED } },
-          data: { statusEnum: GroupStatus.CANCELLED, isActive: false, ...auditFields },
+          where: {
+            courseId: entityId,
+            deletedAt: null,
+            statusEnum: { not: GroupStatus.ARCHIVED },
+          },
+          data: {
+            statusEnum: GroupStatus.CANCELLED,
+            isActive: false,
+            ...auditFields,
+          },
         });
-        results.push({ entity: 'Group', count: groupResult.count, toStatus: 'CANCELLED' });
+        results.push({
+          entity: 'Group',
+          count: groupResult.count,
+          toStatus: 'CANCELLED',
+        });
 
         // Enrollmentlar → DROPPED
         const enrollResult = await this.prisma.enrollment.updateMany({
-          where: { group: { courseId: entityId }, deletedAt: null, status: EnrollmentStatus.ACTIVE },
+          where: {
+            group: { courseId: entityId },
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+          },
           data: { status: EnrollmentStatus.DROPPED, ...auditFields },
         });
-        results.push({ entity: 'Enrollment', count: enrollResult.count, toStatus: 'DROPPED' });
+        results.push({
+          entity: 'Enrollment',
+          count: enrollResult.count,
+          toStatus: 'DROPPED',
+        });
       }
     }
 
     if (entityType === 'Group') {
-      if (newStatus === GroupStatus.CANCELLED || newStatus === GroupStatus.ARCHIVED) {
+      if (
+        newStatus === GroupStatus.CANCELLED ||
+        newStatus === GroupStatus.ARCHIVED
+      ) {
         const enrollResult = await this.prisma.enrollment.updateMany({
-          where: { groupId: entityId, deletedAt: null, status: EnrollmentStatus.ACTIVE },
+          where: {
+            groupId: entityId,
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+          },
           data: { status: EnrollmentStatus.DROPPED, ...auditFields },
         });
-        results.push({ entity: 'Enrollment', count: enrollResult.count, toStatus: 'DROPPED' });
+        results.push({
+          entity: 'Enrollment',
+          count: enrollResult.count,
+          toStatus: 'DROPPED',
+        });
       } else if (newStatus === GroupStatus.COMPLETED) {
         // 1) ACTIVE enrollment → COMPLETED
         const enrollResult = await this.prisma.enrollment.updateMany({
-          where: { groupId: entityId, deletedAt: null, status: EnrollmentStatus.ACTIVE },
+          where: {
+            groupId: entityId,
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+          },
           data: { status: EnrollmentStatus.COMPLETED, ...auditFields },
         });
-        results.push({ entity: 'Enrollment', count: enrollResult.count, toStatus: 'COMPLETED' });
+        results.push({
+          entity: 'Enrollment',
+          count: enrollResult.count,
+          toStatus: 'COMPLETED',
+        });
 
         // 2) Avtomatik graduation: boshqa faol enrollment-i yo'q o'quvchilarni GRADUATED qilish
         const completedEnrollments = await this.prisma.enrollment.findMany({
-          where: { groupId: entityId, deletedAt: null, status: EnrollmentStatus.COMPLETED },
+          where: {
+            groupId: entityId,
+            deletedAt: null,
+            status: EnrollmentStatus.COMPLETED,
+          },
           select: { studentId: true },
         });
-        const studentIds = [...new Set(completedEnrollments.map(e => e.studentId))];
+        const studentIds = [
+          ...new Set(completedEnrollments.map((e) => e.studentId)),
+        ];
 
         for (const studentId of studentIds) {
           const activeEnrollmentCount = await this.prisma.enrollment.count({
-            where: { studentId, deletedAt: null, status: EnrollmentStatus.ACTIVE },
+            where: {
+              studentId,
+              deletedAt: null,
+              status: EnrollmentStatus.ACTIVE,
+            },
           });
           if (activeEnrollmentCount > 0) continue;
 
@@ -178,7 +272,10 @@ export class StatusCascadeService {
             entityType: 'Student',
             entityId: studentId,
             oldValues: { status: 'ACTIVE' },
-            newValues: { status: 'GRADUATED', reason: 'Avtomatik: guruh tugallanganligi sababli' },
+            newValues: {
+              status: 'GRADUATED',
+              reason: 'Avtomatik: guruh tugallanganligi sababli',
+            },
             changedById: userId,
             companyId: student.companyId ?? undefined,
           });
@@ -201,13 +298,26 @@ export class StatusCascadeService {
       const studentId = Number(entityId);
 
       if (newStatus === 'FROZEN') {
-        const filter = { studentId, deletedAt: null, status: EnrollmentStatus.ACTIVE };
-        await this.recordGroupHistoryForStudentCascade(studentId, filter, 'OQUVCHI_MUZLATILDI', userId);
+        const filter = {
+          studentId,
+          deletedAt: null,
+          status: EnrollmentStatus.ACTIVE,
+        };
+        await this.recordGroupHistoryForStudentCascade(
+          studentId,
+          filter,
+          'OQUVCHI_MUZLATILDI',
+          userId,
+        );
         const enrollResult = await this.prisma.enrollment.updateMany({
           where: filter,
           data: { status: EnrollmentStatus.FROZEN, ...auditFields },
         });
-        results.push({ entity: 'Enrollment', count: enrollResult.count, toStatus: 'FROZEN' });
+        results.push({
+          entity: 'Enrollment',
+          count: enrollResult.count,
+          toStatus: 'FROZEN',
+        });
       }
 
       if (newStatus === 'ACTIVE') {
@@ -217,27 +327,51 @@ export class StatusCascadeService {
           status: EnrollmentStatus.FROZEN,
           group: { deletedAt: null, statusEnum: GroupStatus.ACTIVE },
         };
-        await this.recordGroupHistoryForStudentCascade(studentId, filter, 'OQUVCHI_QAYTDI', userId, 'add');
+        await this.recordGroupHistoryForStudentCascade(
+          studentId,
+          filter,
+          'OQUVCHI_QAYTDI',
+          userId,
+          'add',
+        );
         const enrollResult = await this.prisma.enrollment.updateMany({
           where: filter,
           data: { status: EnrollmentStatus.ACTIVE, ...auditFields },
         });
-        results.push({ entity: 'Enrollment', count: enrollResult.count, toStatus: 'ACTIVE' });
+        results.push({
+          entity: 'Enrollment',
+          count: enrollResult.count,
+          toStatus: 'ACTIVE',
+        });
       }
 
       if (newStatus === 'ARCHIVED' || newStatus === 'EXPELLED') {
-        const action = newStatus === 'EXPELLED' ? 'OQUVCHI_CHETLATILDI' : 'OQUVCHI_OCHIRILDI';
+        const action =
+          newStatus === 'EXPELLED'
+            ? 'OQUVCHI_CHETLATILDI'
+            : 'OQUVCHI_OCHIRILDI';
         const filter = {
           studentId,
           deletedAt: null,
-          status: { in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN] } as any,
+          status: {
+            in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN],
+          } as any,
         };
-        await this.recordGroupHistoryForStudentCascade(studentId, filter, action, userId);
+        await this.recordGroupHistoryForStudentCascade(
+          studentId,
+          filter,
+          action,
+          userId,
+        );
         const enrollResult = await this.prisma.enrollment.updateMany({
           where: filter,
           data: { status: EnrollmentStatus.DROPPED, ...auditFields },
         });
-        results.push({ entity: 'Enrollment', count: enrollResult.count, toStatus: 'DROPPED' });
+        results.push({
+          entity: 'Enrollment',
+          count: enrollResult.count,
+          toStatus: 'DROPPED',
+        });
       }
     }
 

@@ -14,18 +14,25 @@ export class PushService {
   ) {
     const publicKey = this.configService.get<string>('VAPID_PUBLIC_KEY');
     const privateKey = this.configService.get<string>('VAPID_PRIVATE_KEY');
-    const email = this.configService.get<string>('VAPID_EMAIL') || 'mailto:admin@dafzentrum.uz';
+    const email =
+      this.configService.get<string>('VAPID_EMAIL') ||
+      'mailto:admin@dafzentrum.uz';
 
     if (publicKey && privateKey) {
       webpush.setVapidDetails(email, publicKey, privateKey);
       this.initialized = true;
       this.logger.log('Web Push VAPID keys configured');
     } else {
-      this.logger.warn('VAPID keys not configured — push notifications disabled');
+      this.logger.warn(
+        'VAPID keys not configured — push notifications disabled',
+      );
     }
   }
 
-  async sendToUser(userId: number, payload: { title: string; body: string; url?: string }) {
+  async sendToUser(
+    userId: number,
+    payload: { title: string; body: string; url?: string },
+  ) {
     if (!this.initialized) return;
 
     const subscriptions = await this.prisma.pushSubscription.findMany({
@@ -44,10 +51,14 @@ export class PushService {
       } catch (error: any) {
         if (error.statusCode === 410 || error.statusCode === 404) {
           // Subscription expired — remove it
-          await this.prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+          await this.prisma.pushSubscription
+            .delete({ where: { id: sub.id } })
+            .catch(() => {});
           this.logger.debug(`Removed expired push subscription: ${sub.id}`);
         } else {
-          this.logger.error(`Push send failed for sub ${sub.id}: ${error.message}`);
+          this.logger.error(
+            `Push send failed for sub ${sub.id}: ${error.message}`,
+          );
         }
       }
     }

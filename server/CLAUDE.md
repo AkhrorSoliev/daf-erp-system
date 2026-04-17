@@ -366,6 +366,47 @@ Full integration with Paycom's JSON-RPC 2.0 Merchant API. Paycom sends requests 
 - Checkout URL format: `https://checkout.paycom.uz/{base64(params)}` (production) or `https://test.paycom.uz/{base64(params)}` (test)
 - After payment, Paycom calls our webhook with the 6 RPC methods above
 
+#### Click SHOP-API (`src/payment-gateways/click/`)
+
+Full integration with Click's two-phase SHOP-API. Click sends POST requests to our webhook endpoint with Prepare (action=0) and Complete (action=1) phases.
+
+- **Webhook endpoint**: `POST /api/gateways/click/webhook?companyId=<id>` (public, no JWT — authenticated via MD5 signature)
+- **Authentication**: MD5 hash of `click_trans_id + service_id + SECRET_KEY + merchant_trans_id + [merchant_prepare_id] + amount + action + sign_time` — verified with `crypto.timingSafeEqual()`
+- **Account field**: `merchant_trans_id` = `studentId` — identifies the paying student
+- **Amount**: Click sends amounts in **so'm** (not tiyin like Payme); stored as `amount` (Float) and `amountInSom` (Int) in `ClickTransaction`
+- **Files**:
+  - `click.service.ts` — MD5 signature verifier + action dispatcher
+  - `click-methods.service.ts` — Prepare and Complete business logic
+  - `click-errors.ts` — error codes (-1 to -9) with tri-lingual messages (uz/ru/en)
+  - `click.types.ts` — TypeScript interfaces for request/response
+  - `click-cron.service.ts` — cancels expired transactions (status=1 older than 30min) every 10 minutes
+
+**Two-phase webhook flow**:
+
+| Phase | Action | Purpose | Key Logic |
+|-------|--------|---------|-----------|
+| `Prepare` | 0 | Validate and reserve | Checks student exists + amount > 0; creates `ClickTransaction` (status=1) |
+| `Complete` | 1 | Confirm and finalize | Calls `PaymentsService.createFromExternal()` to credit student balance; updates status=2 |
+
+**Error codes** (returned by us):
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| -1 | SIGN CHECK FAILED (invalid MD5 signature) |
+| -2 | Incorrect parameter amount |
+| -4 | Already paid |
+| -5 | User does not exist |
+| -6 | Transaction does not exist |
+| -9 | Transaction cancelled |
+
+**Transaction states**: 0=pending, 1=prepared, 2=completed, -1=cancelled
+
+**Student Portal checkout** (`POST /api/student-portal/payments/init` with `method: "CLICK"`):
+- Student selects Click + enters amount → backend generates redirect URL → frontend redirects to Click
+- Redirect URL: `https://my.click.uz/services/pay?service_id=X&merchant_id=X&amount=X&transaction_param=studentId&return_url=X`
+- After payment, Click calls our webhook with Prepare then Complete
+
 #### Attendance → Finance Integration
 
 When attendance is marked:
@@ -575,3 +616,6 @@ Skills are specialized knowledge modules that **must** be activated when working
 | `PAYME_MERCHANT_ID` | Paycom merchant/kassa ID | — |
 | `PAYME_MERCHANT_KEY` | Paycom production secret key | — |
 | `PAYME_MERCHANT_KEY_TEST` | Paycom test/sandbox secret key | — |
+| `CLICK_MERCHANT_ID` | Click merchant ID | — |
+| `CLICK_SERVICE_ID` | Click service ID | — |
+| `CLICK_SECRET_KEY` | Click secret key for MD5 signature verification | — |

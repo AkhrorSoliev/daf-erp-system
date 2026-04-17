@@ -168,7 +168,13 @@ describe('SmsService', () => {
         telegramChatId: '123456',
       });
 
-      await service.sendToStudent(10001, '<b>Test</b> message', 'AUTO', undefined, 1);
+      await service.sendToStudent(
+        10001,
+        '<b>Test</b> message',
+        'AUTO',
+        undefined,
+        1,
+      );
 
       expect(entityHistoryService.recordCreate).toHaveBeenCalledWith({
         entityType: 'Student',

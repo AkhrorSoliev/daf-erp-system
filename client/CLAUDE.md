@@ -380,15 +380,18 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - `student-settings-page.tsx` — profile and password settings
 - `qr-scanner.tsx` / `qr-scan-dialog.tsx` — QR attendance scanning
 
-#### Online Payment (Payme Integration)
+#### Online Payment (Payme + Click Integration)
 
 - **Component**: `student-payment-summary.tsx`
-- **Flow**: Student selects Payme → enters amount → clicks "To'lash" → `POST /student-portal/payments/init` → backend returns `checkoutUrl` → `window.location.href` redirects to Payme checkout page
-- **Payment methods**: Payme (active), Click and Uzum (configured in UI, backend returns error "Hozirda faqat Payme orqali to'lov qilish mumkin")
+- **Flow**: Student selects payment method → enters amount → clicks "To'lash" → `POST /student-portal/payments/init` → backend returns `checkoutUrl` → `window.location.href` redirects to provider's checkout page
+- **Payment methods**: Payme (active), Click (active), Uzum (coming soon — `available: false`)
+- **Payme flow**: Backend generates base64-encoded checkout URL → redirects to `checkout.paycom.uz` → Paycom calls our JSON-RPC webhook
+- **Click flow**: Backend generates redirect URL → redirects to `my.click.uz/services/pay?...` → Click calls our SHOP-API webhook (Prepare + Complete)
+- **Key difference**: Payme sends amounts in tiyin (×100), Click sends amounts in so'm (as-is)
 - **Quick amounts**: 100K, 200K, 300K, 400K, 500K, 600K, 700K so'm
 - **Minimum**: 1,000 so'm
 - **Loading state**: "To'lov sahifasiga o'tkazilmoqda..." spinner on button during redirect
-- **Callback**: After payment, Payme redirects to `/payment/result`
+- **Callback**: After payment, both providers redirect to `/payment/result`
 - **Balance display**: Shows current balance (green if positive, red if negative/debt)
 - **Payment history**: Fetched from `GET /student-portal/payments` — shows transaction list with amounts and timestamps
 

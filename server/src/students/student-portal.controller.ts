@@ -14,12 +14,14 @@ import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentPortalService } from './student-portal.service';
 import { QrAttendanceService } from '../attendance/qr-attendance.service';
+import { GatewayConfigService } from '../payment-gateways/gateway-config.service';
 import { ChangePortalPasswordDto } from './dto/change-portal-password.dto';
 import { UpdatePortalNameDto } from './dto/update-portal-name.dto';
 import { InitPaymentDto } from './dto/init-payment.dto';
 import { ScanQrDto } from '../attendance/dto/qr-session.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import { PaymentMethod } from '@prisma/client';
 
 @Controller('student-portal')
 export class StudentPortalController {
@@ -27,6 +29,7 @@ export class StudentPortalController {
     private studentPortalService: StudentPortalService,
     private qrAttendanceService: QrAttendanceService,
     private config: ConfigService,
+    private gatewayConfig: GatewayConfigService,
   ) {}
 
   @Get('profile')
@@ -112,39 +115,77 @@ export class StudentPortalController {
   @Post('payments/init')
   @UseGuards(RolesGuard)
   @Roles('Student')
-  initPayment(
+  async initPayment(
     @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
     @Body() dto: InitPaymentDto,
   ) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
 
-    if (dto.method !== 'PAYME') {
-      throw new BadRequestException(
-        "Hozirda faqat Payme orqali to'lov qilish mumkin",
+    const returnUrl =
+      dto.returnUrl || 'https://student.dafzentrum.uz/portal/payments/result';
+
+    // Record payment intent so webhook can verify expected amount
+    const provider =
+      dto.method === 'PAYME' ? PaymentMethod.PAYME : PaymentMethod.CLICK;
+    await this.studentPortalService.createPaymentIntent({
+      studentId,
+      companyId,
+      provider,
+      amountSom: dto.amount,
+    });
+
+    // ─── Payme ─────────────────────────────────────────────────
+    if (dto.method === 'PAYME') {
+      const cfg = await this.gatewayConfig.getConfig(
+        companyId,
+        PaymentMethod.PAYME,
       );
+      if (!cfg) {
+        throw new BadRequestException("To'lov tizimi sozlanmagan");
+      }
+
+      const isProduction = this.config.get<string>('NODE_ENV') === 'production';
+      const checkoutBase = isProduction
+        ? 'https://checkout.paycom.uz'
+        : 'https://test.paycom.uz';
+
+      const params = Buffer.from(
+        JSON.stringify({
+          m: cfg.merchantId,
+          ac: { student_id: studentId },
+          a: dto.amount * 100, // so'm → tiyin
+          l: 'uz',
+          c: returnUrl,
+        }),
+      ).toString('base64');
+
+      return { checkoutUrl: `${checkoutBase}/${params}` };
     }
 
-    const merchantId = this.config.get<string>('PAYME_MERCHANT_ID');
-    if (!merchantId) {
-      throw new BadRequestException("To'lov tizimi sozlanmagan");
+    // ─── Click ─────────────────────────────────────────────────
+    if (dto.method === 'CLICK') {
+      const cfg = await this.gatewayConfig.getConfig(
+        companyId,
+        PaymentMethod.CLICK,
+      );
+      if (!cfg) {
+        throw new BadRequestException("Click to'lov tizimi sozlanmagan");
+      }
+
+      // For Click, merchantId stores merchant_id and secretKey stores service_id in env fallback
+      const clickServiceId =
+        this.config.get<string>('CLICK_SERVICE_ID') ?? cfg.secretKey;
+      const clickMerchantId = cfg.merchantId;
+
+      const checkoutUrl = `https://my.click.uz/services/pay?service_id=${clickServiceId}&merchant_id=${clickMerchantId}&amount=${dto.amount}&transaction_param=${studentId}&return_url=${encodeURIComponent(returnUrl)}`;
+
+      return { checkoutUrl };
     }
 
-    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
-    const checkoutBase = isProduction
-      ? 'https://checkout.paycom.uz'
-      : 'https://test.paycom.uz';
-
-    const params = Buffer.from(
-      JSON.stringify({
-        m: merchantId,
-        ac: { student_id: studentId },
-        a: dto.amount * 100, // so'm → tiyin
-        l: 'uz',
-        c: dto.returnUrl || 'https://student.dafzentrum.uz/payment/result',
-      }),
-    ).toString('base64');
-
-    return { checkoutUrl: `${checkoutBase}/${params}` };
+    throw new BadRequestException(
+      "Hozirda faqat Payme va Click orqali to'lov qilish mumkin",
+    );
   }
 
   @Post('attendance/scan')

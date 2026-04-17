@@ -10,7 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SalaryService } from './salary.service';
-import { CreateSalaryConfigDto, GlobalSalaryConfigDto, UpdateSalaryConfigDto } from './dto/salary-config.dto';
+import {
+  CreateSalaryConfigDto,
+  GlobalSalaryConfigDto,
+  UpdateSalaryConfigDto,
+} from './dto/salary-config.dto';
 import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
 import { BatchPayDto } from './dto/batch-pay.dto';
 import { CurrentUser, Roles } from '../common/decorators';

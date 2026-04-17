@@ -27,7 +27,9 @@ const weekdayMap: Record<string, string> = {
   sunday: 'Yakshanba',
 };
 
-export function buildEnrollmentMessage(payload: EnrollmentMessagePayload): string {
+export function buildEnrollmentMessage(
+  payload: EnrollmentMessagePayload,
+): string {
   const daysLabel = payload.days
     ? (daysMap[payload.days] ?? payload.days)
     : payload.exactDays.map((d) => weekdayMap[d] ?? d).join(', ');
@@ -38,7 +40,7 @@ export function buildEnrollmentMessage(payload: EnrollmentMessagePayload): strin
       : '';
 
   return [
-    '✅ <b>Guruhga qo\'shildingiz</b>',
+    "✅ <b>Guruhga qo'shildingiz</b>",
     '',
     `📚 Guruh: <b>${payload.groupName}</b>`,
     `🎯 Kurs: ${payload.courseName}`,

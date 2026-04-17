@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsIn, IsDateString, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsIn,
+  IsDateString,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateCommentDto {
   @IsOptional()

@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AssigneeStatus } from '@prisma/client';
 import { CommentsService } from './comments.service';
@@ -10,7 +14,7 @@ const mockComment = {
   id: 'comment-uuid-1',
   entityType: 'Student',
   entityId: '10001',
-  content: 'Bu talaba hujjatlari to\'liq emas',
+  content: "Bu talaba hujjatlari to'liq emas",
   isTask: false,
   authorId: 1,
   companyId: 1001,
@@ -107,7 +111,10 @@ describe('CommentsService', () => {
         }),
       );
       expect(entityHistoryService.recordCreate).toHaveBeenCalled();
-      expect(eventEmitter.emit).toHaveBeenCalledWith('comment.created', expect.any(Object));
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'comment.created',
+        expect.any(Object),
+      );
       expect(result).toEqual(mockComment);
     });
 
@@ -130,15 +137,21 @@ describe('CommentsService', () => {
             isTask: true,
             assignees: expect.objectContaining({
               create: expect.arrayContaining([
-                expect.objectContaining({ userId: 10001, status: AssigneeStatus.PENDING }),
+                expect.objectContaining({
+                  userId: 10001,
+                  status: AssigneeStatus.PENDING,
+                }),
               ]),
             }),
           }),
         }),
       );
-      expect(eventEmitter.emit).toHaveBeenCalledWith('task.assigned', expect.objectContaining({
-        assigneeIds: [10001],
-      }));
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'task.assigned',
+        expect.objectContaining({
+          assigneeIds: [10001],
+        }),
+      );
     });
 
     it('should throw if task has no assignees', async () => {
@@ -150,7 +163,9 @@ describe('CommentsService', () => {
         assigneeIds: [],
       };
 
-      await expect(service.create(dto, 1, 1001)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto, 1, 1001)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -234,7 +249,10 @@ describe('CommentsService', () => {
     });
 
     it('should allow CEO to update any comment', async () => {
-      prisma.comment.findUnique.mockResolvedValue({ ...mockComment, authorId: 999 });
+      prisma.comment.findUnique.mockResolvedValue({
+        ...mockComment,
+        authorId: 999,
+      });
       prisma.comment.update = jest.fn().mockResolvedValue({
         ...mockComment,
         authorId: 999,
@@ -252,10 +270,15 @@ describe('CommentsService', () => {
     });
 
     it('should throw if non-author non-CEO tries to update', async () => {
-      prisma.comment.findUnique.mockResolvedValue({ ...mockComment, authorId: 999 });
+      prisma.comment.findUnique.mockResolvedValue({
+        ...mockComment,
+        authorId: 999,
+      });
 
       await expect(
-        service.update('comment-uuid-1', { content: 'test' }, 10001, ['Administrator']),
+        service.update('comment-uuid-1', { content: 'test' }, 10001, [
+          'Administrator',
+        ]),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -284,9 +307,9 @@ describe('CommentsService', () => {
     it('should throw if comment not found', async () => {
       prisma.comment.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.delete('nonexistent'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.delete('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -370,7 +393,11 @@ describe('CommentsService', () => {
       prisma.commentAssignee.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.updateAssigneeStatus('comment-uuid-2', 99999, AssigneeStatus.SEEN),
+        service.updateAssigneeStatus(
+          'comment-uuid-2',
+          99999,
+          AssigneeStatus.SEEN,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -381,7 +408,11 @@ describe('CommentsService', () => {
       });
 
       await expect(
-        service.updateAssigneeStatus('comment-uuid-2', 10001, AssigneeStatus.SEEN),
+        service.updateAssigneeStatus(
+          'comment-uuid-2',
+          10001,
+          AssigneeStatus.SEEN,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 

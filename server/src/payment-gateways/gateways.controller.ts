@@ -1,7 +1,7 @@
 import { Body, Controller, Headers, Post, Query } from '@nestjs/common';
 import { Public } from '../common/decorators';
 import { PaymeService } from './payme/payme.service';
-import { ClickService } from './click.service';
+import { ClickService } from './click/click.service';
 import { UzumService } from './uzum.service';
 
 /**

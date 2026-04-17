@@ -104,9 +104,7 @@ export class ReportsService {
         where: {
           companyId,
           date: { gte: firstOfMonth },
-          ...(query.branchId
-            ? { group: { branchId: query.branchId } }
-            : {}),
+          ...(query.branchId ? { group: { branchId: query.branchId } } : {}),
         },
         _count: { id: true },
       }),
@@ -146,9 +144,7 @@ export class ReportsService {
         : 0;
 
     const leadConversionRate =
-      totalLeads > 0
-        ? Math.round((convertedLeads / totalLeads) * 100)
-        : 0;
+      totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
     return {
       activeStudents: { current: activeStudents, trend },
@@ -252,7 +248,8 @@ export class ReportsService {
         averageFillRate: this.avg(roomStats.map((r) => r.fillRate)),
         mostUtilized:
           roomStats.reduce(
-            (max, r) => ((r.hoursPerWeek || 0) > (max?.hoursPerWeek || 0) ? r : max),
+            (max, r) =>
+              (r.hoursPerWeek || 0) > (max?.hoursPerWeek || 0) ? r : max,
             roomStats[0],
           )?.name ?? null,
         leastUtilized:
@@ -351,9 +348,7 @@ export class ReportsService {
     }
 
     // Get attendance for all relevant groups
-    const allGroupIds = [
-      ...new Set(groupTeachers.map((gt) => gt.groupId)),
-    ];
+    const allGroupIds = [...new Set(groupTeachers.map((gt) => gt.groupId))];
 
     const dateFilter = this.buildDateFilter(query);
     const attendanceByGroup =
@@ -370,10 +365,7 @@ export class ReportsService {
         : [];
 
     // Build attendance map: groupId -> { total, presentLate }
-    const attMap = new Map<
-      string,
-      { total: number; presentLate: number }
-    >();
+    const attMap = new Map<string, { total: number; presentLate: number }>();
     for (const a of attendanceByGroup) {
       const entry = attMap.get(a.groupId) || { total: 0, presentLate: 0 };
       entry.total += a._count.id;
@@ -565,9 +557,7 @@ export class ReportsService {
   // ─── GROUP ANALYTICS ──────────────────────────────────────────────
 
   async getGroupAnalytics(companyId: number, query: ReportsQueryDto) {
-    const branchFilter = query.branchId
-      ? { branchId: query.branchId }
-      : {};
+    const branchFilter = query.branchId ? { branchId: query.branchId } : {};
 
     const [statusDistribution, groups] = await Promise.all([
       this.prisma.group.groupBy({
@@ -617,8 +607,7 @@ export class ReportsService {
     fillRates.sort((a, b) => (a.fillRate ?? 0) - (b.fillRate ?? 0));
 
     const formingGroups = fillRates.filter(
-      (g) =>
-        groups.find((gr) => gr.id === g.groupId)?.statusEnum === 'FORMING',
+      (g) => groups.find((gr) => gr.id === g.groupId)?.statusEnum === 'FORMING',
     );
 
     return {
@@ -638,9 +627,7 @@ export class ReportsService {
     if (query.startDate) dateFilter.gte = new Date(query.startDate);
     if (query.endDate) dateFilter.lte = new Date(query.endDate);
     const createdAtFilter =
-      Object.keys(dateFilter).length > 0
-        ? { createdAt: dateFilter }
-        : {};
+      Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
 
     const [funnel, convertedLeads] = await Promise.all([
       this.prisma.lead.groupBy({
@@ -708,9 +695,7 @@ export class ReportsService {
       .map(([month, data]) => ({
         month,
         rate:
-          data.total > 0
-            ? Math.round((data.converted / data.total) * 100)
-            : 0,
+          data.total > 0 ? Math.round((data.converted / data.total) * 100) : 0,
         total: data.total,
         converted: data.converted,
       }));
@@ -797,11 +782,18 @@ export class ReportsService {
   /**
    * Financial overview: expected vs actual income, salary, expenses.
    */
-  async getFinancialOverview(companyId: number, query: { branchId?: number; startDate?: string; endDate?: string }) {
+  async getFinancialOverview(
+    companyId: number,
+    query: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
     // Default to current month
     const now = new Date();
-    const start = query.startDate ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-    const end = query.endDate ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+    const start =
+      query.startDate ??
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const end =
+      query.endDate ??
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
 
     const dateFilter = {
       gte: new Date(start),
@@ -880,7 +872,8 @@ export class ReportsService {
     });
     const outstandingReceivable = Math.abs(receivables._sum.balance ?? 0);
     const debtorCount = receivables._count;
-    const avgDebt = debtorCount > 0 ? Math.round(outstandingReceivable / debtorCount) : 0;
+    const avgDebt =
+      debtorCount > 0 ? Math.round(outstandingReceivable / debtorCount) : 0;
 
     // Salary: paid + pending. Both are reported on the same basis — net of
     // tax — so the dashboard number reflects what actually leaves (or will
@@ -1024,9 +1017,15 @@ export class ReportsService {
       // CAC = marketing xarajati / yangi o'quvchilar soni
       cac: newStudents > 0 ? Math.round(marketingTotal / newStudents) : 0,
       // Marketing ROI = (tushum - marketing xarajat) / marketing xarajat × 100
-      marketingRoi: marketingTotal > 0 ? Math.round(((totalIncome - marketingTotal) / marketingTotal) * 100) : 0,
+      marketingRoi:
+        marketingTotal > 0
+          ? Math.round(((totalIncome - marketingTotal) / marketingTotal) * 100)
+          : 0,
       // O'rtacha to'lov = jami tushum / to'lovlar soni
-      avgPayment: actualIncome._count > 0 ? Math.round(totalIncome / actualIncome._count) : 0,
+      avgPayment:
+        actualIncome._count > 0
+          ? Math.round(totalIncome / actualIncome._count)
+          : 0,
       newStudentCount: newStudents,
       marketingExpenses: marketingTotal,
     };
@@ -1042,7 +1041,15 @@ export class ReportsService {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      const end = new Date(
+        d.getFullYear(),
+        d.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
       const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
       months.push({ label, start, end });
     }
@@ -1053,14 +1060,31 @@ export class ReportsService {
       months.map(async (m) => {
         const dateFilter = { gte: m.start, lte: m.end };
 
-        const [income, expenseAgg, salaryAgg, marketing, newStudents, payerCount] = await Promise.all([
+        const [
+          income,
+          expenseAgg,
+          salaryAgg,
+          marketing,
+          newStudents,
+          payerCount,
+        ] = await Promise.all([
           this.prisma.payment.aggregate({
-            where: { companyId, status: 'COMPLETED', createdAt: dateFilter, ...branchFilter },
+            where: {
+              companyId,
+              status: 'COMPLETED',
+              createdAt: dateFilter,
+              ...branchFilter,
+            },
             _sum: { amount: true },
             _count: true,
           }),
           this.prisma.expense.aggregate({
-            where: { companyId, deletedAt: null, date: { gte: m.start, lte: m.end }, ...branchFilter },
+            where: {
+              companyId,
+              deletedAt: null,
+              date: { gte: m.start, lte: m.end },
+              ...branchFilter,
+            },
             _sum: { amount: true },
           }),
           this.prisma.salaryPayment.aggregate({
@@ -1068,7 +1092,13 @@ export class ReportsService {
             _sum: { netAmount: true },
           }),
           this.prisma.expense.aggregate({
-            where: { companyId, deletedAt: null, category: 'MARKETING', date: { gte: m.start, lte: m.end }, ...branchFilter },
+            where: {
+              companyId,
+              deletedAt: null,
+              category: 'MARKETING',
+              date: { gte: m.start, lte: m.end },
+              ...branchFilter,
+            },
             _sum: { amount: true },
           }),
           this.prisma.student.count({
@@ -1092,10 +1122,19 @@ export class ReportsService {
           expenses: expenseTotal + salaryTotal,
           profit: incomeTotal - expenseTotal - salaryTotal,
           activeBalance: 0, // snapshot not available per month
-          ltv: payerCount.length > 0 ? Math.round(incomeTotal / payerCount.length) : 0,
+          ltv:
+            payerCount.length > 0
+              ? Math.round(incomeTotal / payerCount.length)
+              : 0,
           cac: newStudents > 0 ? Math.round(marketingTotal / newStudents) : 0,
-          marketingRoi: marketingTotal > 0 ? Math.round(((incomeTotal - marketingTotal) / marketingTotal) * 100) : 0,
-          avgPayment: paymentCount > 0 ? Math.round(incomeTotal / paymentCount) : 0,
+          marketingRoi:
+            marketingTotal > 0
+              ? Math.round(
+                  ((incomeTotal - marketingTotal) / marketingTotal) * 100,
+                )
+              : 0,
+          avgPayment:
+            paymentCount > 0 ? Math.round(incomeTotal / paymentCount) : 0,
         };
       }),
     );

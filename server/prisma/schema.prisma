@@ -1142,3 +1142,75 @@ model PaymeTransaction {
   @@index([studentId])
   @@index([state])
 }
+
+// ===== CLICK TRANSACTION =====
+
+// Stores Click-specific two-phase transaction lifecycle state. A ClickTransaction
+// is created on Prepare (status=1) and linked to an ERP Payment only when
+// Complete succeeds (status=2). Cancelled transactions are kept for audit.
+model ClickTransaction {
+  id              String    @id @default(uuid())
+  clickTransId    BigInt                          // click_trans_id from Click
+  clickPaydocId   BigInt                          // click_paydoc_id (payment number in SMS)
+  amount          Float                           // amount in so'm (N.NN format from Click)
+  amountInSom     Int                             // truncated integer for ERP use
+  status          Int       @default(0)           // 0=pending, 1=prepared, 2=completed, -1=cancelled
+  error           Int       @default(0)           // Click error code
+  errorNote       String?                         // Click error description
+
+  studentId       Int                             // merchant_trans_id = studentId
+
+  prepareTime     DateTime?                       // when Prepare was called
+  completeTime    DateTime?                       // when Complete was called
+
+  paymentId       String?   @unique               // FK to Payment.id (set on complete)
+
+  companyId       Int
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([clickTransId, companyId], name: "unique_click_transaction")
+  @@index([companyId, createdAt])
+  @@index([studentId])
+  @@index([status])
+}
+
+// ===== PAYMENT GATEWAY CONFIG =====
+
+// Per-company merchant credentials for payment gateways. Replaces global
+// env-based config so each company can have its own Payme/Click/Uzum merchant
+// account. Credentials are encrypted at rest via application-level encryption.
+model PaymentGatewayConfig {
+  id              String        @id @default(uuid())
+  companyId       Int
+  provider        PaymentMethod                   // PAYME, CLICK, UZUM
+  merchantId      String                          // merchant/kassa ID
+  secretKey       String                          // production secret key
+  secretKeyTest   String?                         // sandbox/test secret key
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([companyId, provider])
+}
+
+// ===== PAYMENT INTENT =====
+
+// Records the expected payment amount when a student initiates checkout via
+// initPayment(). The webhook's CheckPerformTransaction verifies that the
+// incoming amount matches a live intent for the student, closing the gap
+// between "what the student started" and "what the gateway reports".
+// Intents expire after 1 hour and are cleaned up by PaymeCronService.
+model PaymentIntent {
+  id          String        @id @default(uuid())
+  studentId   Int
+  companyId   Int
+  provider    PaymentMethod                   // PAYME, CLICK
+  amount      Int                             // expected amount in so'm
+  amountTiyin Int                             // expected amount in tiyin (for Payme)
+  expiresAt   DateTime                        // auto-expire (1 hour after creation)
+  used        Boolean       @default(false)   // set true once CheckPerformTransaction matches
+  createdAt   DateTime      @default(now())
+
+  @@index([studentId, companyId, provider, used])
+}

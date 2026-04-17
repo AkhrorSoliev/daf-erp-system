@@ -1,4 +1,11 @@
-import { IsInt, IsNotEmpty, IsEnum, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { ExpenseCategory } from '@prisma/client';
 
 export class CreateExpenseDto {

@@ -6,8 +6,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
-import { SalaryPaymentStatus, SalaryType, TransactionType, Prisma } from '@prisma/client';
-import { CreateSalaryConfigDto, GlobalSalaryConfigDto, UpdateSalaryConfigDto } from './dto/salary-config.dto';
+import {
+  SalaryPaymentStatus,
+  SalaryType,
+  TransactionType,
+  Prisma,
+} from '@prisma/client';
+import {
+  CreateSalaryConfigDto,
+  GlobalSalaryConfigDto,
+  UpdateSalaryConfigDto,
+} from './dto/salary-config.dto';
 import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
 import { calculateTax, DEFAULT_SALARY_TAX_RATE } from './tax.helper';
 import {
@@ -102,7 +111,11 @@ export class SalaryService {
         if (existing) {
           return this.prisma.employeeSalaryConfig.update({
             where: { id: existing.id },
-            data: { salaryType: dto.salaryType, value: dto.value, isActive: true },
+            data: {
+              salaryType: dto.salaryType,
+              value: dto.value,
+              isActive: true,
+            },
           });
         }
         return this.prisma.employeeSalaryConfig.create({
@@ -120,7 +133,11 @@ export class SalaryService {
     return { updated: results.length };
   }
 
-  async updateConfig(id: string, dto: UpdateSalaryConfigDto, companyId: number) {
+  async updateConfig(
+    id: string,
+    dto: UpdateSalaryConfigDto,
+    companyId: number,
+  ) {
     const existing = await this.prisma.employeeSalaryConfig.findFirst({
       where: { id, companyId },
     });
@@ -176,7 +193,9 @@ export class SalaryService {
       where: {
         userId: params.teacherId,
         companyId: params.companyId,
-        status: { in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID] },
+        status: {
+          in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID],
+        },
         periodStart: { lte: params.lessonDate },
         periodEnd: { gte: params.lessonDate },
       },
@@ -193,11 +212,10 @@ export class SalaryService {
       where: {
         userId: params.teacherId,
         isActive: true,
-        salaryType: { in: [SalaryType.PERCENTAGE, SalaryType.FIXED_PER_STUDENT] },
-        OR: [
-          { groupId: params.groupId },
-          { groupId: null },
-        ],
+        salaryType: {
+          in: [SalaryType.PERCENTAGE, SalaryType.FIXED_PER_STUDENT],
+        },
+        OR: [{ groupId: params.groupId }, { groupId: null }],
       },
       orderBy: { groupId: 'desc' }, // group-specific takes priority (non-null first)
     });
@@ -206,7 +224,7 @@ export class SalaryService {
 
     let amount: number;
     if (config.salaryType === SalaryType.PERCENTAGE) {
-      amount = Math.round(params.perLessonCost * config.value / 100);
+      amount = Math.round((params.perLessonCost * config.value) / 100);
     } else {
       amount = config.value;
     }
@@ -291,22 +309,31 @@ export class SalaryService {
     const groupsBreakdown = teacherGroups
       .filter((tg) => tg.group.statusEnum === 'ACTIVE')
       .map((tg) => {
-        const groupConfig = configs.find((c) => c.groupId === tg.group.id) ?? defaultConfig;
+        const groupConfig =
+          configs.find((c) => c.groupId === tg.group.id) ?? defaultConfig;
         const activeStudents = tg.group._count.enrollments;
         const lessonPaymentCount = tg.group.course.lessonPaymentCount || 12;
-        const perLessonCost = Math.round(tg.group.course.price / lessonPaymentCount);
+        const perLessonCost = Math.round(
+          tg.group.course.price / lessonPaymentCount,
+        );
         const lessonsPerMonth = tg.group.exactDays.length * 4;
 
         let expectedPerStudentPerLesson = 0;
-        if (groupConfig && groupConfig.salaryType !== SalaryType.FIXED_MONTHLY) {
+        if (
+          groupConfig &&
+          groupConfig.salaryType !== SalaryType.FIXED_MONTHLY
+        ) {
           if (groupConfig.salaryType === SalaryType.PERCENTAGE) {
-            expectedPerStudentPerLesson = Math.round(perLessonCost * groupConfig.value / 100);
+            expectedPerStudentPerLesson = Math.round(
+              (perLessonCost * groupConfig.value) / 100,
+            );
           } else {
             expectedPerStudentPerLesson = groupConfig.value;
           }
         }
 
-        const expectedMonthly = expectedPerStudentPerLesson * activeStudents * lessonsPerMonth;
+        const expectedMonthly =
+          expectedPerStudentPerLesson * activeStudents * lessonsPerMonth;
 
         return {
           groupId: tg.group.id,
@@ -331,7 +358,9 @@ export class SalaryService {
       _sum: { netAmount: true },
     });
 
-    const fixedMonthlyConfig = configs.find((c) => c.salaryType === SalaryType.FIXED_MONTHLY);
+    const fixedMonthlyConfig = configs.find(
+      (c) => c.salaryType === SalaryType.FIXED_MONTHLY,
+    );
     const expectedMonthlyTotal = fixedMonthlyConfig
       ? fixedMonthlyConfig.value
       : groupsBreakdown.reduce((sum, g) => sum + g.expectedMonthly, 0);
@@ -386,14 +415,28 @@ export class SalaryService {
   async calculateMonthlySalaries(companyId: number) {
     const now = new Date();
     // Cutoff: 7th of current month.
-    const cutoffDate = new Date(now.getFullYear(), now.getMonth(), 7, 23, 59, 59);
+    const cutoffDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      7,
+      23,
+      59,
+      59,
+    );
     // Period start: 8th of previous month.
     const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 8);
 
     // Per-company tax rate (default 12% ASOT if not configured).
     const taxRate = await this.getSalaryTaxRate(companyId);
 
-    const results: { userId: number; grossAmount: number; taxAmount: number; netAmount: number; advanceDeducted: number; kind: 'ACCRUAL' | 'FIXED_MONTHLY' }[] = [];
+    const results: {
+      userId: number;
+      grossAmount: number;
+      taxAmount: number;
+      netAmount: number;
+      advanceDeducted: number;
+      kind: 'ACCRUAL' | 'FIXED_MONTHLY';
+    }[] = [];
 
     // === ACCRUAL-BASED (teachers) ===
     const accruals = await this.prisma.salaryAccrual.findMany({
@@ -419,7 +462,10 @@ export class SalaryService {
 
     for (const [userId, { ids, total }] of byUser) {
       const grossAmount = total;
-      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(grossAmount, taxRate);
+      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(
+        grossAmount,
+        taxRate,
+      );
 
       // Atomic: SalaryPayment + accrual link + TAX ledger entry + advance
       // settlement are all-or-nothing. Previously each was a separate
@@ -466,7 +512,10 @@ export class SalaryService {
             userId,
             companyId,
           );
-          return { finalNet: netBeforeAdvance - advanceDeducted, advanceDeducted };
+          return {
+            finalNet: netBeforeAdvance - advanceDeducted,
+            advanceDeducted,
+          };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
@@ -482,15 +531,17 @@ export class SalaryService {
     }
 
     // === FIXED MONTHLY (admins, cashiers, branch directors, or teachers on fixed salary) ===
-    const fixedMonthlyConfigs = await this.prisma.employeeSalaryConfig.findMany({
-      where: {
-        companyId,
-        salaryType: SalaryType.FIXED_MONTHLY,
-        isActive: true,
-        groupId: null,
+    const fixedMonthlyConfigs = await this.prisma.employeeSalaryConfig.findMany(
+      {
+        where: {
+          companyId,
+          salaryType: SalaryType.FIXED_MONTHLY,
+          isActive: true,
+          groupId: null,
+        },
+        select: { userId: true, value: true },
       },
-      select: { userId: true, value: true },
-    });
+    );
 
     for (const config of fixedMonthlyConfigs) {
       // Skip if a payment already exists for this exact period (idempotent cron).
@@ -506,7 +557,10 @@ export class SalaryService {
       if (existing) continue;
 
       const grossAmount = config.value;
-      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(grossAmount, taxRate);
+      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(
+        grossAmount,
+        taxRate,
+      );
 
       // Atomic for the same reasons as the accrual branch above.
       const { finalNet, advanceDeducted } = await this.prisma.$transaction(
@@ -545,7 +599,10 @@ export class SalaryService {
             config.userId,
             companyId,
           );
-          return { finalNet: netBeforeAdvance - advanceDeducted, advanceDeducted };
+          return {
+            finalNet: netBeforeAdvance - advanceDeducted,
+            advanceDeducted,
+          };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
@@ -760,7 +817,8 @@ export class SalaryService {
       where: {
         companyId: params.companyId,
         status: { in: statuses },
-        ...(params.userIds && params.userIds.length > 0 && { userId: { in: params.userIds } }),
+        ...(params.userIds &&
+          params.userIds.length > 0 && { userId: { in: params.userIds } }),
         // Branch scope: SalaryPayment has no branchId directly, so scope via
         // the employee's mainBranch.
         ...(effectiveBranchId !== undefined && {
@@ -770,12 +828,21 @@ export class SalaryService {
       select: { id: true, userId: true, netAmount: true },
     });
 
-    const results: { id: string; userId: number; status: 'PAID' | 'FAILED'; error?: string }[] = [];
+    const results: {
+      id: string;
+      userId: number;
+      status: 'PAID' | 'FAILED';
+      error?: string;
+    }[] = [];
 
     for (const payment of eligible) {
       try {
         await this.payPayment(payment.id, performedById, params.companyId);
-        results.push({ id: payment.id, userId: payment.userId, status: 'PAID' });
+        results.push({
+          id: payment.id,
+          userId: payment.userId,
+          status: 'PAID',
+        });
       } catch (err) {
         results.push({
           id: payment.id,

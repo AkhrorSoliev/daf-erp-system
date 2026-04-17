@@ -31,7 +31,7 @@ export function createStudentRegistrationScene(
 
   // Loading button bosilganda — hech narsa qilmaslik
   scene.action('noop', async (ctx) => {
-    await ctx.answerCbQuery("Iltimos, kuting...");
+    await ctx.answerCbQuery('Iltimos, kuting...');
   });
 
   // Scene ga kirganda — ustozlar ro'yxatini ko'rsatish
@@ -49,9 +49,7 @@ export function createStudentRegistrationScene(
       where: { telegramChatId: chatId, deletedAt: null },
     });
     if (existingStudent) {
-      await ctx.reply(
-        "Siz allaqachon ro'yxatdan o'tgansiz!",
-      );
+      await ctx.reply("Siz allaqachon ro'yxatdan o'tgansiz!");
       await ctx.scene.leave();
       return;
     }
@@ -60,19 +58,36 @@ export function createStudentRegistrationScene(
     if (ctx.session.data.groupId) {
       ctx.session.step = 3;
 
-      const daysMap: Record<string, string> = { odd: 'Toq kunlar', even: 'Juft kunlar' };
+      const daysMap: Record<string, string> = {
+        odd: 'Toq kunlar',
+        even: 'Juft kunlar',
+      };
       const weekdayLabels: Record<string, string> = {
-        monday: 'Du', tuesday: 'Se', wednesday: 'Cho',
-        thursday: 'Pa', friday: 'Ju', saturday: 'Sha',
+        monday: 'Du',
+        tuesday: 'Se',
+        wednesday: 'Cho',
+        thursday: 'Pa',
+        friday: 'Ju',
+        saturday: 'Sha',
       };
 
       const d = ctx.session.data;
-      const days = d.days ? daysMap[d.days] ?? '' : (d.exactDays?.length ? d.exactDays.map((day: string) => weekdayLabels[day] ?? day).join(', ') : '');
-      const time = d.lessonStartTime && d.lessonEndTime ? `${d.lessonStartTime} – ${d.lessonEndTime}` : '';
+      const days = d.days
+        ? (daysMap[d.days] ?? '')
+        : d.exactDays?.length
+          ? d.exactDays
+              .map((day: string) => weekdayLabels[day] ?? day)
+              .join(', ')
+          : '';
+      const time =
+        d.lessonStartTime && d.lessonEndTime
+          ? `${d.lessonStartTime} – ${d.lessonEndTime}`
+          : '';
 
       let info = `📚  ${d.groupName}\n`;
       info += `👨‍🏫  ${d.teacherName}\n`;
-      if (days || time) info += `🕐  ${[days, time].filter(Boolean).join(' | ')}\n`;
+      if (days || time)
+        info += `🕐  ${[days, time].filter(Boolean).join(' | ')}\n`;
       if (d.roomName) info += `🏫  ${d.roomName}\n`;
 
       await ctx.reply(
@@ -105,7 +120,10 @@ export function createStudentRegistrationScene(
 
     // Ustozlarni inline button sifatida ko'rsatish
     const buttons = teachers.map((t) => [
-      Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
+      Markup.button.callback(
+        `${t.firstName} ${t.lastName}`,
+        `select_teacher_${t.id}`,
+      ),
     ]);
 
     await ctx.reply(
@@ -161,7 +179,9 @@ export function createStudentRegistrationScene(
 
     if (groups.length === 0) {
       ctx.session.processing = false;
-      await ctx.editMessageText(`${teacher.firstName} ${teacher.lastName} — hozirda guruhlari mavjud emas.`);
+      await ctx.editMessageText(
+        `${teacher.firstName} ${teacher.lastName} — hozirda guruhlari mavjud emas.`,
+      );
       // Qayta ustozlar ro'yxatiga qaytarish
       ctx.session.step = 1;
       const teachers = await prisma.user.findMany({
@@ -174,33 +194,46 @@ export function createStudentRegistrationScene(
         orderBy: { firstName: 'asc' },
       });
       const buttons = teachers.map((t) => [
-        Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
+        Markup.button.callback(
+          `${t.firstName} ${t.lastName}`,
+          `select_teacher_${t.id}`,
+        ),
       ]);
-      await ctx.reply("Boshqa o'qituvchini tanlang:", Markup.inlineKeyboard(buttons));
+      await ctx.reply(
+        "Boshqa o'qituvchini tanlang:",
+        Markup.inlineKeyboard(buttons),
+      );
       return;
     }
 
     ctx.session.step = 2;
     ctx.session.processing = false;
 
-    const daysMap: Record<string, string> = { odd: 'Toq kunlar', even: 'Juft kunlar' };
+    const daysMap: Record<string, string> = {
+      odd: 'Toq kunlar',
+      even: 'Juft kunlar',
+    };
 
     const buttons = groups.map((g) => {
-      const time = g.lessonStartTime && g.lessonEndTime
-        ? `${g.lessonStartTime}–${g.lessonEndTime}`
-        : '';
-      const days = g.days ? daysMap[g.days] ?? '' : '';
+      const time =
+        g.lessonStartTime && g.lessonEndTime
+          ? `${g.lessonStartTime}–${g.lessonEndTime}`
+          : '';
+      const days = g.days ? (daysMap[g.days] ?? '') : '';
       const price = g.course.price.toLocaleString('en-US');
       const label = `${g.name} | ${days} ${time} | ${price} so'm`;
       return [Markup.button.callback(label, `select_group_${g.id}`)];
     });
 
-    buttons.push([Markup.button.callback("⬅️ Orqaga", "back_to_teachers")]);
+    buttons.push([Markup.button.callback('⬅️ Orqaga', 'back_to_teachers')]);
 
     await ctx.editMessageText(
       `👨‍🏫 ${teacher.firstName} ${teacher.lastName}\n\nGuruhni tanlang:`,
     );
-    await ctx.reply("Quyidagi guruhlardan birini tanlang:", Markup.inlineKeyboard(buttons));
+    await ctx.reply(
+      'Quyidagi guruhlardan birini tanlang:',
+      Markup.inlineKeyboard(buttons),
+    );
   });
 
   // Orqaga — ustozlar ro'yxatiga
@@ -220,7 +253,10 @@ export function createStudentRegistrationScene(
     });
 
     const buttons = teachers.map((t) => [
-      Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
+      Markup.button.callback(
+        `${t.firstName} ${t.lastName}`,
+        `select_teacher_${t.id}`,
+      ),
     ]);
 
     await ctx.editMessageText(
@@ -241,7 +277,7 @@ export function createStudentRegistrationScene(
       select: { id: true, name: true },
     });
     if (!group) {
-      await ctx.reply("Guruh topilmadi. Qayta tanlang.");
+      await ctx.reply('Guruh topilmadi. Qayta tanlang.');
       return;
     }
 
@@ -249,10 +285,8 @@ export function createStudentRegistrationScene(
     ctx.session.data.groupName = group.name;
     ctx.session.step = 3;
 
-    await ctx.editMessageText(
-      `✅ Guruh tanlandi: ${group.name}`,
-    );
-    await ctx.reply("Ismingizni kiriting:");
+    await ctx.editMessageText(`✅ Guruh tanlandi: ${group.name}`);
+    await ctx.reply('Ismingizni kiriting:');
   });
 
   // Text xabarlari
@@ -267,7 +301,7 @@ export function createStudentRegistrationScene(
       }
       await ctx.scene.leave();
       await ctx.reply(
-        "Bekor qilindi. Qayta boshlash uchun /start bosing.",
+        'Bekor qilindi. Qayta boshlash uchun /start bosing.',
         Markup.removeKeyboard(),
       );
       return;
@@ -286,28 +320,34 @@ export function createStudentRegistrationScene(
       // Ism
       case 3: {
         if (text.length < 2) {
-          await ctx.reply("Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          await ctx.reply(
+            "Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
+          );
           return;
         }
         ctx.session.data.firstName = text;
         ctx.session.step = 4;
-        await ctx.reply("Familiyangizni kiriting:");
+        await ctx.reply('Familiyangizni kiriting:');
         break;
       }
 
       // Familiya
       case 4: {
         if (text.length < 2) {
-          await ctx.reply("Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          await ctx.reply(
+            "Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
+          );
           return;
         }
         ctx.session.data.lastName = text;
         ctx.session.step = 5;
         await ctx.reply(
-          "Telefon raqamingizni yuboring:",
+          'Telefon raqamingizni yuboring:',
           Markup.keyboard([
-            [Markup.button.contactRequest("📱 Telefon raqamni yuborish")],
-          ]).resize().oneTime(),
+            [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
+          ])
+            .resize()
+            .oneTime(),
         );
         break;
       }
@@ -315,17 +355,19 @@ export function createStudentRegistrationScene(
       // Telefon — text yuborilsa
       case 5: {
         await ctx.reply(
-          "Iltimos, telefon raqamni quyidagi tugma orqali yuboring:",
+          'Iltimos, telefon raqamni quyidagi tugma orqali yuboring:',
           Markup.keyboard([
-            [Markup.button.contactRequest("📱 Telefon raqamni yuborish")],
-          ]).resize().oneTime(),
+            [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
+          ])
+            .resize()
+            .oneTime(),
         );
         break;
       }
 
       // Rasm — text yuborilsa
       case 6: {
-        await ctx.reply("Iltimos, rasmingizni yuboring (foto sifatida).");
+        await ctx.reply('Iltimos, rasmingizni yuboring (foto sifatida).');
         break;
       }
 
@@ -351,8 +393,10 @@ export function createStudentRegistrationScene(
       await ctx.reply(
         "Telefon raqam noto'g'ri formatda. Qayta yuboring:",
         Markup.keyboard([
-          [Markup.button.contactRequest("📱 Telefon raqamni yuborish")],
-        ]).resize().oneTime(),
+          [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
+        ])
+          .resize()
+          .oneTime(),
       );
       return;
     }
@@ -374,13 +418,17 @@ export function createStudentRegistrationScene(
     ctx.session.data.phone = phone;
     ctx.session.step = 6;
     await ctx.reply(
-      "Rasmingizni yuboring (foto sifatida):",
+      'Rasmingizni yuboring (foto sifatida):',
       Markup.removeKeyboard(),
     );
   });
 
   // Rasm yuklash umumiy funksiya
-  async function handlePhotoUpload(ctx: BotContext, fileId: string, mimetype: string) {
+  async function handlePhotoUpload(
+    ctx: BotContext,
+    fileId: string,
+    mimetype: string,
+  ) {
     await ctx.sendChatAction('upload_photo');
 
     const fileLink = await ctx.telegram.getFileLink(fileId);
@@ -408,8 +456,8 @@ export function createStudentRegistrationScene(
         `📞 Telefon: +998 ${data.phone}`,
       ...Markup.inlineKeyboard([
         [
-          Markup.button.callback("✅ Tasdiqlash", "confirm_student"),
-          Markup.button.callback("🔄 Qayta kiritish", "restart_student"),
+          Markup.button.callback('✅ Tasdiqlash', 'confirm_student'),
+          Markup.button.callback('🔄 Qayta kiritish', 'restart_student'),
         ],
       ]),
     });
@@ -426,7 +474,7 @@ export function createStudentRegistrationScene(
     try {
       await handlePhotoUpload(ctx, photo.file_id, 'image/jpeg');
     } catch {
-      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
+      await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
 
@@ -439,14 +487,14 @@ export function createStudentRegistrationScene(
     const mime = doc.mime_type || '';
 
     if (!mime.startsWith('image/')) {
-      await ctx.reply("Iltimos, rasm formatidagi fayl yuboring (JPG, PNG).");
+      await ctx.reply('Iltimos, rasm formatidagi fayl yuboring (JPG, PNG).');
       return;
     }
 
     try {
       await handlePhotoUpload(ctx, doc.file_id, mime);
     } catch {
-      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
+      await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
 
@@ -462,7 +510,7 @@ export function createStudentRegistrationScene(
       await ctx.editMessageCaption(
         (ctx.callbackQuery.message as any)?.caption ?? '',
         Markup.inlineKeyboard([
-          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
         ]),
       );
     } catch {
@@ -568,7 +616,7 @@ export function createStudentRegistrationScene(
       });
 
       ctx.session.processing = false;
-      await ctx.editMessageCaption("✅ Tasdiqlandi!");
+      await ctx.editMessageCaption('✅ Tasdiqlandi!');
       await ctx.replyWithPhoto(data.photo, {
         caption:
           "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
@@ -578,13 +626,16 @@ export function createStudentRegistrationScene(
           `🌐 student.dafzentrum.uz\n` +
           `📱 Login: ${data.phone}\n` +
           `🔑 Parol: ${plainPassword}\n\n` +
-          "Tez orada sizga darslar haqida xabar beramiz!",
+          'Tez orada sizga darslar haqida xabar beramiz!',
       });
 
       await ctx.scene.leave();
     } catch (error) {
       ctx.session.processing = false;
-      console.error('[StudentRegistration] Ro\'yxatdan o\'tishda xatolik:', error);
+      console.error(
+        "[StudentRegistration] Ro'yxatdan o'tishda xatolik:",
+        error,
+      );
 
       // Duplicate phone/login xatoligi
       if (error?.code === 'P2002') {
@@ -601,8 +652,8 @@ export function createStudentRegistrationScene(
         "Ro'yxatdan o'tishda xatolik yuz berdi. Qayta tasdiqlang yoki administrator bilan bog'laning.",
         Markup.inlineKeyboard([
           [
-            Markup.button.callback("✅ Qayta tasdiqlash", "confirm_student"),
-            Markup.button.callback("🔄 Qayta kiritish", "restart_student"),
+            Markup.button.callback('✅ Qayta tasdiqlash', 'confirm_student'),
+            Markup.button.callback('🔄 Qayta kiritish', 'restart_student'),
           ],
         ]),
       );
@@ -621,7 +672,7 @@ export function createStudentRegistrationScene(
       await ctx.editMessageCaption(
         (ctx.callbackQuery.message as any)?.caption ?? '',
         Markup.inlineKeyboard([
-          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
         ]),
       );
     } catch {
@@ -638,7 +689,7 @@ export function createStudentRegistrationScene(
     ctx.session.step = 1;
     ctx.session.processing = false;
 
-    await ctx.editMessageCaption("🔄 Qayta kiritish tanlandi");
+    await ctx.editMessageCaption('🔄 Qayta kiritish tanlandi');
 
     // Ustozlar ro'yxatini qayta ko'rsatish
     const teachers = await prisma.user.findMany({
@@ -652,10 +703,16 @@ export function createStudentRegistrationScene(
     });
 
     const buttons = teachers.map((t) => [
-      Markup.button.callback(`${t.firstName} ${t.lastName}`, `select_teacher_${t.id}`),
+      Markup.button.callback(
+        `${t.firstName} ${t.lastName}`,
+        `select_teacher_${t.id}`,
+      ),
     ]);
 
-    await ctx.reply("O'qituvchingizni tanlang:", Markup.inlineKeyboard(buttons));
+    await ctx.reply(
+      "O'qituvchingizni tanlang:",
+      Markup.inlineKeyboard(buttons),
+    );
   });
 
   return scene;

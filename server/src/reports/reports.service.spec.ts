@@ -190,9 +190,7 @@ describe('ReportsService', () => {
           { groupId: 'g1', status: 'ABSENT', _count: { id: 10 } },
         ]);
 
-      prisma.group.findMany.mockResolvedValue([
-        { id: 'g1', name: 'Group A' },
-      ]);
+      prisma.group.findMany.mockResolvedValue([{ id: 'g1', name: 'Group A' }]);
 
       const result = await service.getAttendanceAnalytics(1, {});
 

@@ -34,7 +34,9 @@ describe('CoursesService — status methods', () => {
 
     statusHistoryService = {
       changeStatus: jest.fn().mockResolvedValue({
-        statusChangedAt: new Date(), statusChangedById: 1, statusChangeReason: null,
+        statusChangedAt: new Date(),
+        statusChangedById: 1,
+        statusChangeReason: null,
       }),
     };
 
@@ -48,7 +50,16 @@ describe('CoursesService — status methods', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: StatusCascadeService, useValue: statusCascadeService },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -57,7 +68,10 @@ describe('CoursesService — status methods', () => {
 
   describe('changeStatus', () => {
     it('updates status and sets isActive=true for ACTIVE', async () => {
-      prisma.course.findFirst.mockResolvedValue({ ...mockCourse, status: 'INACTIVE' });
+      prisma.course.findFirst.mockResolvedValue({
+        ...mockCourse,
+        status: 'INACTIVE',
+      });
 
       await service.changeStatus('course-1', { status: 'ACTIVE' as any }, 1);
 
@@ -69,10 +83,17 @@ describe('CoursesService — status methods', () => {
     });
 
     it('cascades on status change', async () => {
-      await service.changeStatus('course-1', { status: 'DEPRECATED' as any }, 1);
+      await service.changeStatus(
+        'course-1',
+        { status: 'DEPRECATED' as any },
+        1,
+      );
 
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
-        'Course', 'course-1', 'DEPRECATED', 1,
+        'Course',
+        'course-1',
+        'DEPRECATED',
+        1,
       );
     });
 

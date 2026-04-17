@@ -17,7 +17,15 @@ export class StatusHistoryService {
   constructor(private prisma: PrismaService) {}
 
   async changeStatus(params: ChangeStatusParams) {
-    const { entityType, entityId, fromStatus, toStatus, reason, changedById, companyId } = params;
+    const {
+      entityType,
+      entityId,
+      fromStatus,
+      toStatus,
+      reason,
+      changedById,
+      companyId,
+    } = params;
 
     if (fromStatus === toStatus) {
       throw new BadRequestException(`Status allaqachon "${toStatus}"`);
@@ -26,7 +34,7 @@ export class StatusHistoryService {
     if (!isValidTransition(entityType, fromStatus, toStatus)) {
       const allowed = getAllowedTransitions(entityType, fromStatus);
       throw new BadRequestException(
-        `"${fromStatus}" dan "${toStatus}" ga o'tish mumkin emas. Ruxsat etilgan: ${allowed.join(', ') || 'yo\'q'}`,
+        `"${fromStatus}" dan "${toStatus}" ga o'tish mumkin emas. Ruxsat etilgan: ${allowed.join(', ') || "yo'q"}`,
       );
     }
 

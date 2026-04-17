@@ -40,9 +40,7 @@ describe('DashboardService', () => {
     },
   ];
 
-  const mockAttendanceCounts = [
-    { groupId: 'group-1', _count: { id: 2 } },
-  ];
+  const mockAttendanceCounts = [{ groupId: 'group-1', _count: { id: 2 } }];
 
   beforeEach(async () => {
     prisma = {
@@ -92,7 +90,9 @@ describe('DashboardService', () => {
         teachers: [{ id: 10001, firstName: 'Ali', lastName: 'Valiyev' }],
         studentCount: 3,
         presentCount: 2,
-        attendanceStatus: expect.stringMatching(/^(TAKEN|NOT_TAKEN|MISSED|PENDING)$/),
+        attendanceStatus: expect.stringMatching(
+          /^(TAKEN|NOT_TAKEN|MISSED|PENDING)$/,
+        ),
       });
       expect(result.lessons[1].studentCount).toBe(2);
       expect(result.lessons[1].presentCount).toBe(0);
@@ -104,12 +104,12 @@ describe('DashboardService', () => {
     });
 
     it('should return isHoliday=true when holiday exists', async () => {
-      prisma.holiday.findFirst.mockResolvedValue({ name: 'Navro\'z' });
+      prisma.holiday.findFirst.mockResolvedValue({ name: "Navro'z" });
 
       const result = await service.getTodaySchedule(1, '2026-03-21');
 
       expect(result.isHoliday).toBe(true);
-      expect(result.holidayName).toBe('Navro\'z');
+      expect(result.holidayName).toBe("Navro'z");
     });
 
     it('should return empty lessons when no groups match', async () => {

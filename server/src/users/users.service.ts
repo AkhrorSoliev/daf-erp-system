@@ -32,7 +32,9 @@ const userSelect = {
   updatedAt: true,
   roles: { include: { role: true } },
   branches: { include: { branch: { select: { id: true, name: true } } } },
-  company: { select: { id: true, name: true, subdomain: true, logo: true, phone: true } },
+  company: {
+    select: { id: true, name: true, subdomain: true, logo: true, phone: true },
+  },
   groupTeachers: {
     where: { group: { deletedAt: null } },
     select: { groupId: true },
@@ -43,7 +45,10 @@ function formatUser(user: any) {
   const { groupTeachers, ...rest } = user;
   return {
     ...rest,
-    roles: user.roles.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })),
+    roles: user.roles.map((ur: any) => ({
+      id: ur.role.id,
+      name: ur.role.name,
+    })),
     branches: user.branches.map((ub: any) => ub.branch),
     groupCount: groupTeachers?.length ?? 0,
   };
@@ -58,7 +63,14 @@ export class UsersService {
   ) {}
 
   async findAll(query: UserQueryDto) {
-    const { user_type, search, branch_id, company_id, page = 1, pageSize = 10 } = query;
+    const {
+      user_type,
+      search,
+      branch_id,
+      company_id,
+      page = 1,
+      pageSize = 10,
+    } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = { deletedAt: null };
@@ -68,7 +80,10 @@ export class UsersService {
     }
 
     if (user_type) {
-      const types = user_type.split(',').map((t) => t.trim()).filter(Boolean);
+      const types = user_type
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
       if (types.length === 1) {
         where.roles = { some: { role: { name: types[0] } } };
       } else if (types.length > 1) {
@@ -191,12 +206,12 @@ export class UsersService {
     }
 
     if (!user.password) {
-      throw new BadRequestException('Parol o\'rnatilmagan');
+      throw new BadRequestException("Parol o'rnatilmagan");
     }
 
     const isValid = await bcrypt.compare(dto.oldPassword, user.password);
     if (!isValid) {
-      throw new BadRequestException('Joriy parol noto\'g\'ri');
+      throw new BadRequestException("Joriy parol noto'g'ri");
     }
 
     const hashed = await bcrypt.hash(dto.newPassword, 10);
@@ -205,7 +220,7 @@ export class UsersService {
       data: { password: hashed },
     });
 
-    return { message: 'Parol muvaffaqiyatli o\'zgartirildi' };
+    return { message: "Parol muvaffaqiyatli o'zgartirildi" };
   }
 
   async create(data: {
@@ -232,7 +247,9 @@ export class UsersService {
       const validIds = validRoles.map((r) => r.id);
       const invalid = data.roleIds.filter((id) => !validIds.includes(id));
       if (invalid.length) {
-        throw new BadRequestException(`Noto'g'ri role ID: ${invalid.join(', ')}`);
+        throw new BadRequestException(
+          `Noto'g'ri role ID: ${invalid.join(', ')}`,
+        );
       }
     }
 
@@ -266,7 +283,9 @@ export class UsersService {
       });
     } catch (error: any) {
       if (error.code === 'P2003') {
-        throw new BadRequestException("Noto'g'ri filial yoki role ID ko'rsatilgan");
+        throw new BadRequestException(
+          "Noto'g'ri filial yoki role ID ko'rsatilgan",
+        );
       }
       if (error.code === 'P2002') {
         throw new BadRequestException('Bu login allaqachon mavjud');
@@ -301,7 +320,8 @@ export class UsersService {
     if (dto.login !== undefined) updateData.login = dto.login;
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
-    if (dto.telegramChatId !== undefined) updateData.telegramChatId = dto.telegramChatId;
+    if (dto.telegramChatId !== undefined)
+      updateData.telegramChatId = dto.telegramChatId;
     if (dto.status !== undefined) updateData.status = dto.status;
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 10);

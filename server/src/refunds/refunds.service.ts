@@ -5,7 +5,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
-import { AttendanceStatus, ContractStatus, Prisma, RefundStatus } from '@prisma/client';
+import {
+  AttendanceStatus,
+  ContractStatus,
+  Prisma,
+  RefundStatus,
+} from '@prisma/client';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import {
@@ -45,7 +50,9 @@ export class RefundsService {
       throw new BadRequestException("Shartnoma bu o'quvchiga tegishli emas");
     }
     if (contract.status !== ContractStatus.ACTIVE) {
-      throw new BadRequestException('Faqat faol shartnomadan refund so\'rash mumkin');
+      throw new BadRequestException(
+        "Faqat faol shartnomadan refund so'rash mumkin",
+      );
     }
 
     // Count completed lessons (PRESENT or LATE) — kept for the 50% gate,
@@ -84,7 +91,11 @@ export class RefundsService {
       where: {
         contractId: contract.id,
         status: {
-          in: [RefundStatus.APPROVED, RefundStatus.PROCESSING, RefundStatus.COMPLETED],
+          in: [
+            RefundStatus.APPROVED,
+            RefundStatus.PROCESSING,
+            RefundStatus.COMPLETED,
+          ],
         },
       },
       _sum: { approvedAmount: true },
@@ -94,7 +105,7 @@ export class RefundsService {
     // Check refund eligibility
     let requestedAmount: number;
 
-    if (!contract.startDate || (contract.startDate > new Date())) {
+    if (!contract.startDate || contract.startDate > new Date()) {
       // Kurs boshlanmagan — 100% qaytarish (minus oldingi refundlar)
       requestedAmount = Math.max(0, contract.paidAmount - previousRefundsTotal);
     } else if (lessonsCompleted / totalLessons >= 0.5) {
@@ -163,7 +174,12 @@ export class RefundsService {
   /**
    * Approve or reject a refund request, then process the actual refund.
    */
-  async process(id: string, dto: ProcessRefundDto, userId: number, companyId: number) {
+  async process(
+    id: string,
+    dto: ProcessRefundDto,
+    userId: number,
+    companyId: number,
+  ) {
     const refund = await this.prisma.refund.findFirst({
       where: { id, companyId },
       select: {
@@ -178,7 +194,12 @@ export class RefundsService {
     if (!refund) throw new NotFoundException('Refund topilmadi');
 
     if (dto.status === RefundStatus.REJECTED) {
-      assertValidTransition('Refund', REFUND_TRANSITIONS, refund.status, RefundStatus.REJECTED);
+      assertValidTransition(
+        'Refund',
+        REFUND_TRANSITIONS,
+        refund.status,
+        RefundStatus.REJECTED,
+      );
       return this.prisma.refund.update({
         where: { id },
         data: {
@@ -191,7 +212,12 @@ export class RefundsService {
     }
 
     if (dto.status === RefundStatus.COMPLETED) {
-      assertValidTransition('Refund', REFUND_TRANSITIONS, refund.status, RefundStatus.COMPLETED);
+      assertValidTransition(
+        'Refund',
+        REFUND_TRANSITIONS,
+        refund.status,
+        RefundStatus.COMPLETED,
+      );
 
       const approvedAmount = dto.approvedAmount ?? refund.requestedAmount;
 
@@ -239,7 +265,12 @@ export class RefundsService {
     }
 
     // For APPROVED/PROCESSING status
-    assertValidTransition('Refund', REFUND_TRANSITIONS, refund.status, dto.status);
+    assertValidTransition(
+      'Refund',
+      REFUND_TRANSITIONS,
+      refund.status,
+      dto.status,
+    );
     return this.prisma.refund.update({
       where: { id },
       data: {
@@ -278,7 +309,7 @@ export class RefundsService {
     if (!refund) throw new NotFoundException('Refund topilmadi');
     if (refund.status !== RefundStatus.COMPLETED) {
       throw new BadRequestException(
-        "Faqat yakunlangan refundni bekor qilish mumkin",
+        'Faqat yakunlangan refundni bekor qilish mumkin',
       );
     }
 
@@ -302,7 +333,10 @@ export class RefundsService {
       async (tx) => {
         await this.transactionsService.reverseTransaction(
           ledgerEntry.id,
-          { performedById: params.performedById, reason: params.reason ?? 'Refund bekor qilindi' },
+          {
+            performedById: params.performedById,
+            reason: params.reason ?? 'Refund bekor qilindi',
+          },
           tx,
         );
 

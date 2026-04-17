@@ -32,13 +32,21 @@ const groupInclude: Prisma.GroupInclude = {
   teachers: {
     include: {
       teacher: {
-        select: { id: true, firstName: true, lastName: true, phone: true, photo: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          photo: true,
+        },
       },
     },
   },
   _count: {
     select: {
-      enrollments: { where: { deletedAt: null, status: EnrollmentStatus.ACTIVE } },
+      enrollments: {
+        where: { deletedAt: null, status: EnrollmentStatus.ACTIVE },
+      },
     },
   },
 };
@@ -113,22 +121,37 @@ export class GroupsService {
     delete baseWhere.status;
     delete baseWhere.statusEnum;
 
-    const [data, total, statsTotal, activeCount, formingCount, pausedCount, completedCount] =
-      await Promise.all([
-        this.prisma.group.findMany({
-          where,
-          include: groupInclude,
-          orderBy: { createdAt: 'desc' },
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-        }),
-        this.prisma.group.count({ where }),
-        this.prisma.group.count({ where: baseWhere }),
-        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'ACTIVE' } }),
-        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'FORMING' } }),
-        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'PAUSED' } }),
-        this.prisma.group.count({ where: { ...baseWhere, statusEnum: 'COMPLETED' } }),
-      ]);
+    const [
+      data,
+      total,
+      statsTotal,
+      activeCount,
+      formingCount,
+      pausedCount,
+      completedCount,
+    ] = await Promise.all([
+      this.prisma.group.findMany({
+        where,
+        include: groupInclude,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.group.count({ where }),
+      this.prisma.group.count({ where: baseWhere }),
+      this.prisma.group.count({
+        where: { ...baseWhere, statusEnum: 'ACTIVE' },
+      }),
+      this.prisma.group.count({
+        where: { ...baseWhere, statusEnum: 'FORMING' },
+      }),
+      this.prisma.group.count({
+        where: { ...baseWhere, statusEnum: 'PAUSED' },
+      }),
+      this.prisma.group.count({
+        where: { ...baseWhere, statusEnum: 'COMPLETED' },
+      }),
+    ]);
 
     return {
       data: data.map(formatGroup),
@@ -261,7 +284,11 @@ export class GroupsService {
 
     // Retry loop to handle race conditions on unique name
     for (let attempt = 0; attempt < 5; attempt++) {
-      const nameWhere = { branchId: dto.branchId, name: { startsWith: '#' }, deletedAt: null };
+      const nameWhere = {
+        branchId: dto.branchId,
+        name: { startsWith: '#' },
+        deletedAt: null,
+      };
       const maxGroupNumber = await this.prisma.group.aggregate({
         where: nameWhere,
         _max: { groupNumber: true },
@@ -285,7 +312,8 @@ export class GroupsService {
             lessonEndTime: dto.lessonEndTime,
             lessonMinutes: dto.lessonMinutes,
             status: dto.status ?? 2,
-            statusEnum: INT_TO_GROUP_STATUS[dto.status ?? 2] ?? GroupStatus.FORMING,
+            statusEnum:
+              INT_TO_GROUP_STATUS[dto.status ?? 2] ?? GroupStatus.FORMING,
             comment: dto.comment,
             startDate: dto.startDate ? new Date(dto.startDate) : undefined,
             endDate,
@@ -300,9 +328,10 @@ export class GroupsService {
           newValues: {
             nomi: group.name,
             kunlar: (group.exactDays ?? []).join(', '),
-            vaqt: group.lessonStartTime && group.lessonEndTime
-              ? `${group.lessonStartTime}–${group.lessonEndTime}`
-              : null,
+            vaqt:
+              group.lessonStartTime && group.lessonEndTime
+                ? `${group.lessonStartTime}–${group.lessonEndTime}`
+                : null,
             boshlanish: group.startDate,
           },
           changedById: userId,
@@ -317,7 +346,9 @@ export class GroupsService {
       }
     }
 
-    throw new NotFoundException('Guruh nomini generatsiya qilib bo\'lmadi, qayta urinib ko\'ring');
+    throw new NotFoundException(
+      "Guruh nomini generatsiya qilib bo'lmadi, qayta urinib ko'ring",
+    );
   }
 
   async update(id: string, dto: UpdateGroupDto, userId?: number) {
@@ -374,7 +405,10 @@ export class GroupsService {
         where: { groupId: id },
         include: { teacher: { select: { firstName: true, lastName: true } } },
       });
-      oldTeacherNames = oldTeachers.map((t) => `${t.teacher.firstName} ${t.teacher.lastName}`).sort().join(', ');
+      oldTeacherNames = oldTeachers
+        .map((t) => `${t.teacher.firstName} ${t.teacher.lastName}`)
+        .sort()
+        .join(', ');
     }
 
     const group = await this.prisma.$transaction(async (tx) => {
@@ -450,9 +484,11 @@ export class GroupsService {
     const updated = await this.prisma.group.update({
       where: { id },
       data: {
-        statusEnum: dto.status as GroupStatus,
+        statusEnum: dto.status,
         status: GROUP_STATUS_TO_INT[dto.status] ?? group.status,
-        isActive: dto.status === GroupStatus.ACTIVE || dto.status === GroupStatus.FORMING,
+        isActive:
+          dto.status === GroupStatus.ACTIVE ||
+          dto.status === GroupStatus.FORMING,
         ...auditData,
       },
       include: groupInclude,
