@@ -57,9 +57,10 @@ export class PaymeMethodsService {
       return paymeError(rpcId, INVALID_AMOUNT);
     }
 
-    // Validate student
-    const studentId = p.account?.student_id;
-    if (!studentId) {
+    // Validate student (Payme sends student_id as string)
+    const rawStudentId = p.account?.student_id;
+    const studentId = Number(rawStudentId);
+    if (!rawStudentId || isNaN(studentId)) {
       return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');
     }
 
@@ -108,7 +109,7 @@ export class PaymeMethodsService {
     if (existing) {
       // Idempotent: same account + amount → return existing
       if (
-        existing.studentId === p.account?.student_id &&
+        existing.studentId === Number(p.account?.student_id) &&
         existing.amount === p.amount
       ) {
         // Check if expired
@@ -134,7 +135,7 @@ export class PaymeMethodsService {
     );
     if ('error' in checkResult) return checkResult;
 
-    const studentId = p.account.student_id;
+    const studentId = Number(p.account.student_id);
     const now = BigInt(Date.now());
 
     // Cancel any existing pending transaction for this student
