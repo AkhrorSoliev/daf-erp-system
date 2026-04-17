@@ -781,6 +781,7 @@ model AiConversation {
   studentId   Int?
   student     Student?        @relation("StudentAiConversations", fields: [studentId], references: [id])
   useCase     AiUseCaseType
+  chatMode    String?
   title       String?
   model       String          @default("gpt-4o-mini")
   totalTokens Int             @default(0)

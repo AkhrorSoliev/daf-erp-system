@@ -25,6 +25,7 @@ export const PAYMENT_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
   FAILED: [],
   CANCELLED: [],
   REFUNDED: [],
+  REVERSED: [],
 };
 
 export const REFUND_TRANSITIONS: Record<RefundStatus, RefundStatus[]> = {
