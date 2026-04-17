@@ -28,7 +28,12 @@ describe('TeachersController — role guards', () => {
       controllers: [TeachersController],
       providers: [
         { provide: TeachersService, useValue: mockService },
-        { provide: SalaryService, useValue: { getTeacherSalarySummary: jest.fn().mockResolvedValue({}) } },
+        {
+          provide: SalaryService,
+          useValue: {
+            getTeacherSalarySummary: jest.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 
@@ -125,7 +130,9 @@ describe('TeachersController — role guards', () => {
     });
 
     it('should deny Administrator from changing status', () => {
-      const ctx = mockExecutionContext(controller.changeStatus, ['Administrator']);
+      const ctx = mockExecutionContext(controller.changeStatus, [
+        'Administrator',
+      ]);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
@@ -156,7 +163,10 @@ describe('TeachersController — role guards', () => {
 
   describe('findGroupsByTeacherId() — no guard', () => {
     it('should NOT have @Roles metadata (open — teachers can view their groups)', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findGroupsByTeacherId);
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.findGroupsByTeacherId,
+      );
       expect(roles).toBeUndefined();
     });
   });

@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { TeachersService } from './teachers.service';
 import { SalaryService } from '../salary/salary.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
@@ -35,7 +46,10 @@ export class TeachersController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director')
-  create(@Body() dto: CreateTeacherDto, @CurrentUser('companyId') companyId: number) {
+  create(
+    @Body() dto: CreateTeacherDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
     return this.teachersService.create(dto, companyId);
   }
 
@@ -77,7 +91,10 @@ export class TeachersController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director')
-  delete(@Param('id', ParseIntPipe) id: number, @CurrentUser('id') userId: number) {
+  delete(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
+  ) {
     return this.teachersService.delete(id, userId);
   }
 }

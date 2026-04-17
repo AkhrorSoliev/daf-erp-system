@@ -38,10 +38,7 @@ describe('SearchService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SearchService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [SearchService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     service = module.get(SearchService);
@@ -92,7 +89,7 @@ describe('SearchService', () => {
         photo: null,
         groupName: 'B2-Gruppe',
         teacherName: 'Max Müller',
-        balance: -50000,  // negative = debt
+        balance: -50000, // negative = debt
       });
       expect(result.students.total).toBe(1);
     });
@@ -185,9 +182,7 @@ describe('SearchService', () => {
           where: expect.objectContaining({
             deletedAt: null,
             companyId: 1,
-            OR: expect.arrayContaining([
-              { phone: { contains: '901234567' } },
-            ]),
+            OR: expect.arrayContaining([{ phone: { contains: '901234567' } }]),
           }),
         }),
       );
@@ -232,9 +227,7 @@ describe('SearchService', () => {
     });
 
     it('should log warning when search takes over 500ms', async () => {
-      const warnSpy = jest
-        .spyOn(Logger.prototype, 'warn')
-        .mockImplementation();
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
       prisma.student.findMany.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve([]), 600)),
@@ -310,9 +303,33 @@ describe('SearchService', () => {
   describe('relevance sorting', () => {
     it('should sort exact match first, then starts-with, then contains', async () => {
       prisma.student.findMany.mockResolvedValue([
-        { id: 1, firstName: 'Alisher', lastName: 'K', phone: null, photo: null, balance: 0, enrollments: [] },
-        { id: 2, firstName: 'Ali', lastName: 'V', phone: null, photo: null, balance: 0, enrollments: [] },
-        { id: 3, firstName: 'Salim', lastName: 'Ali', phone: null, photo: null, balance: 0, enrollments: [] },
+        {
+          id: 1,
+          firstName: 'Alisher',
+          lastName: 'K',
+          phone: null,
+          photo: null,
+          balance: 0,
+          enrollments: [],
+        },
+        {
+          id: 2,
+          firstName: 'Ali',
+          lastName: 'V',
+          phone: null,
+          photo: null,
+          balance: 0,
+          enrollments: [],
+        },
+        {
+          id: 3,
+          firstName: 'Salim',
+          lastName: 'Ali',
+          phone: null,
+          photo: null,
+          balance: 0,
+          enrollments: [],
+        },
       ]);
       prisma.student.count.mockResolvedValue(3);
 
@@ -347,13 +364,7 @@ describe('SearchService', () => {
       ]);
       prisma.student.count.mockResolvedValue(1);
 
-      const result = await service.fullSearch(
-        'ali',
-        ceoCtx,
-        'students',
-        1,
-        10,
-      );
+      const result = await service.fullSearch('ali', ceoCtx, 'students', 1, 10);
 
       expect(result).toEqual({
         data: [

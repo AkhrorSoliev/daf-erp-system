@@ -63,7 +63,7 @@ export const ERROR_MESSAGES = {
     en: 'Cannot cancel a performed transaction',
   },
   [CANNOT_PERFORM]: {
-    uz: 'Bu amalni bajarib bo\'lmaydi',
+    uz: "Bu amalni bajarib bo'lmaydi",
     ru: 'Невозможно выполнить данную операцию',
     en: 'Unable to perform this operation',
   },
@@ -95,7 +95,8 @@ export function paymeError(
     id: rpcId,
     error: {
       code,
-      message: message ?? ERROR_MESSAGES[code] ?? ERROR_MESSAGES[INTERNAL_ERROR],
+      message:
+        message ?? ERROR_MESSAGES[code] ?? ERROR_MESSAGES[INTERNAL_ERROR],
       data,
     },
   };

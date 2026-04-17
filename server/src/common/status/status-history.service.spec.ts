@@ -64,7 +64,11 @@ describe('StatusHistoryService', () => {
 
     it('throws BadRequestException for invalid transition', async () => {
       await expect(
-        service.changeStatus({ ...validParams, fromStatus: 'GRADUATED', toStatus: 'INACTIVE' }),
+        service.changeStatus({
+          ...validParams,
+          fromStatus: 'GRADUATED',
+          toStatus: 'INACTIVE',
+        }),
       ).rejects.toThrow(BadRequestException);
 
       expect(prisma.statusHistory.create).not.toHaveBeenCalled();

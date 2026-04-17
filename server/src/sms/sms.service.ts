@@ -72,7 +72,7 @@ export class SmsService {
       entityId: studentId,
       newValues: {
         action: status === 'SENT' ? 'SMS_YUBORILDI' : 'SMS_YUBORILMADI',
-        tur: type === 'AUTO' ? 'Avtomatik' : 'Qo\'lda',
+        tur: type === 'AUTO' ? 'Avtomatik' : "Qo'lda",
         xabar: content.replace(/<[^>]*>/g, '').slice(0, 100),
         holat: status === 'SENT' ? 'Yuborildi' : errorMessage,
       },

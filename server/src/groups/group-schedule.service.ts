@@ -16,8 +16,17 @@ export class GroupScheduleService {
     teacherId?: number;
     excludeGroupId?: string;
   }) {
-    const { branchId, exactDays, startTime, endTime, roomId, teacherId, excludeGroupId } = params;
-    if (!startTime || !endTime || !exactDays.length) return { room: [], teacher: [], availableRooms: [] };
+    const {
+      branchId,
+      exactDays,
+      startTime,
+      endTime,
+      roomId,
+      teacherId,
+      excludeGroupId,
+    } = params;
+    if (!startTime || !endTime || !exactDays.length)
+      return { room: [], teacher: [], availableRooms: [] };
 
     const baseWhere: any = {
       branchId,
@@ -38,7 +47,11 @@ export class GroupScheduleService {
       lessonEndTime: true,
     };
 
-    const isOverlapping = (g: { exactDays: string[]; lessonStartTime: string | null; lessonEndTime: string | null }) => {
+    const isOverlapping = (g: {
+      exactDays: string[];
+      lessonStartTime: string | null;
+      lessonEndTime: string | null;
+    }) => {
       const sharedDays = exactDays.some((d) => g.exactDays.includes(d));
       if (!sharedDays) return false;
       return startTime < g.lessonEndTime! && endTime > g.lessonStartTime!;
@@ -46,7 +59,10 @@ export class GroupScheduleService {
 
     const [roomGroups, teacherGroups] = await Promise.all([
       roomId
-        ? this.prisma.group.findMany({ where: { ...baseWhere, roomId }, select })
+        ? this.prisma.group.findMany({
+            where: { ...baseWhere, roomId },
+            select,
+          })
         : Promise.resolve([]),
       teacherId
         ? this.prisma.group.findMany({
@@ -66,7 +82,12 @@ export class GroupScheduleService {
 
     const allRoomGroups = await this.prisma.group.findMany({
       where: { ...baseWhere, roomId: { not: null } },
-      select: { roomId: true, exactDays: true, lessonStartTime: true, lessonEndTime: true },
+      select: {
+        roomId: true,
+        exactDays: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+      },
     });
     const busyRoomIds = new Set(
       allRoomGroups.filter(isOverlapping).map((g) => g.roomId),
@@ -110,12 +131,21 @@ export class GroupScheduleService {
 
     const groups = await this.prisma.group.findMany({
       where,
-      select: { name: true, exactDays: true, lessonStartTime: true, lessonEndTime: true },
+      select: {
+        name: true,
+        exactDays: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+      },
     });
 
     const busySlots = groups
       .filter((g) => exactDays.some((d) => g.exactDays.includes(d)))
-      .map((g) => ({ start: g.lessonStartTime!, end: g.lessonEndTime!, groupName: g.name }))
+      .map((g) => ({
+        start: g.lessonStartTime!,
+        end: g.lessonEndTime!,
+        groupName: g.name,
+      }))
       .sort((a, b) => a.start.localeCompare(b.start));
 
     const freeSlots: { start: string; end: string }[] = [];
@@ -165,7 +195,13 @@ export class GroupScheduleService {
 
     const groups = await this.prisma.group.findMany({
       where,
-      select: { roomId: true, name: true, exactDays: true, lessonStartTime: true, lessonEndTime: true },
+      select: {
+        roomId: true,
+        name: true,
+        exactDays: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+      },
     });
 
     const busyRoomMap = new Map<string, string>();
@@ -205,7 +241,11 @@ export class GroupScheduleService {
     });
 
     if (!exactDays.length || !startTime || !endTime) {
-      return allTeachers.map((t) => ({ ...t, available: true, busyGroup: null }));
+      return allTeachers.map((t) => ({
+        ...t,
+        available: true,
+        busyGroup: null,
+      }));
     }
 
     const where: any = {

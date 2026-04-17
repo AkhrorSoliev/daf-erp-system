@@ -43,7 +43,9 @@ export class UsersController {
     @Body() dto: CreateUserDto,
     @CurrentUser('companyId') companyId: number,
   ) {
-    this.logger.log(`Creating user: ${JSON.stringify({ ...dto, password: dto.password ? '***' : undefined, companyId })}`);
+    this.logger.log(
+      `Creating user: ${JSON.stringify({ ...dto, password: dto.password ? '***' : undefined, companyId })}`,
+    );
     return this.usersService.create({ ...dto, companyId });
   }
 

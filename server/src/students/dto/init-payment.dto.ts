@@ -7,7 +7,8 @@ export class InitPaymentDto {
   amount: number;
 
   @IsEnum(PaymentMethod, {
-    message: "method must be one of: PAYME, CLICK, UZUM (CASH/TRANSFER not allowed for student portal)",
+    message:
+      'method must be one of: PAYME, CLICK, UZUM (CASH/TRANSFER not allowed for student portal)',
   })
   method: PaymentMethod;
 

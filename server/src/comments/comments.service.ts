@@ -10,13 +10,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { CommentQueryDto, LatestCommentQueryDto } from './dto/comment-query.dto';
+import {
+  CommentQueryDto,
+  LatestCommentQueryDto,
+} from './dto/comment-query.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
 
 const commentInclude = {
-  author: { select: { id: true, firstName: true, lastName: true, photo: true } },
+  author: {
+    select: { id: true, firstName: true, lastName: true, photo: true },
+  },
   assignees: {
-    include: { user: { select: { id: true, firstName: true, lastName: true } } },
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true } },
+    },
     orderBy: { createdAt: 'asc' as const },
   },
 };
@@ -46,14 +53,15 @@ export class CommentsService {
         priority: dto.isTask && dto.priority ? dto.priority : null,
         authorId: userId,
         companyId,
-        assignees: dto.isTask && dto.assigneeIds
-          ? {
-              create: dto.assigneeIds.map((id) => ({
-                userId: id,
-                status: AssigneeStatus.PENDING,
-              })),
-            }
-          : undefined,
+        assignees:
+          dto.isTask && dto.assigneeIds
+            ? {
+                create: dto.assigneeIds.map((id) => ({
+                  userId: id,
+                  status: AssigneeStatus.PENDING,
+                })),
+              }
+            : undefined,
       },
       include: commentInclude,
     });
@@ -120,7 +128,12 @@ export class CommentsService {
     return comment;
   }
 
-  async update(id: string, dto: UpdateCommentDto, userId: number, roles: string[]) {
+  async update(
+    id: string,
+    dto: UpdateCommentDto,
+    userId: number,
+    roles: string[],
+  ) {
     const comment = await this.prisma.comment.findUnique({
       where: { id },
       include: commentInclude,
@@ -139,7 +152,8 @@ export class CommentsService {
 
     const updateData: any = {};
     if (dto.content !== undefined) updateData.content = dto.content;
-    if (dto.dueDate !== undefined) updateData.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+    if (dto.dueDate !== undefined)
+      updateData.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
     if (dto.priority !== undefined) updateData.priority = dto.priority || null;
 
     const updated = await this.prisma.comment.update({
@@ -209,7 +223,7 @@ export class CommentsService {
     const skip = (page - 1) * pageSize;
 
     const statusFilter = query.status
-      ? query.status.split(',').map((s) => s.trim()) as AssigneeStatus[]
+      ? (query.status.split(',').map((s) => s.trim()) as AssigneeStatus[])
       : undefined;
 
     const where: any = {
@@ -225,9 +239,20 @@ export class CommentsService {
           user: { select: { id: true, firstName: true, lastName: true } },
           comment: {
             include: {
-              author: { select: { id: true, firstName: true, lastName: true, photo: true } },
+              author: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  photo: true,
+                },
+              },
               assignees: {
-                include: { user: { select: { id: true, firstName: true, lastName: true } } },
+                include: {
+                  user: {
+                    select: { id: true, firstName: true, lastName: true },
+                  },
+                },
                 orderBy: { createdAt: 'asc' },
               },
             },
@@ -281,7 +306,9 @@ export class CommentsService {
       where: { commentId, userId },
       include: {
         comment: {
-          include: { author: { select: { id: true, firstName: true, lastName: true } } },
+          include: {
+            author: { select: { id: true, firstName: true, lastName: true } },
+          },
         },
       },
     });
@@ -309,7 +336,9 @@ export class CommentsService {
     const updated = await this.prisma.commentAssignee.update({
       where: { id: assignee.id },
       data: updateData,
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true } },
+      },
     });
 
     this.eventEmitter.emit('task.status.changed', {

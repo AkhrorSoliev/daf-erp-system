@@ -60,7 +60,10 @@ describe('PaymentsService', () => {
         findFirst: jest.fn().mockResolvedValue(mockPayment),
         findMany: jest.fn().mockResolvedValue([mockPaymentWithRelations]),
         findUnique: jest.fn().mockResolvedValue(mockPayment),
-        update: jest.fn().mockResolvedValue({ ...mockPayment, status: PaymentStatus.REVERSED }),
+        update: jest.fn().mockResolvedValue({
+          ...mockPayment,
+          status: PaymentStatus.REVERSED,
+        }),
         count: jest.fn().mockResolvedValue(1),
       },
       transaction: {
@@ -119,7 +122,12 @@ describe('PaymentsService', () => {
       );
       expect(prisma.contract.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: dto.contractId, studentId: dto.studentId, deletedAt: null, companyId },
+          where: {
+            id: dto.contractId,
+            studentId: dto.studentId,
+            deletedAt: null,
+            companyId,
+          },
         }),
       );
       expect(prisma.payment.create).toHaveBeenCalledWith(
@@ -155,10 +163,12 @@ describe('PaymentsService', () => {
           entityId: dto.studentId,
         }),
       );
-      expect(result).toEqual(expect.objectContaining({
-        id: mockPayment.id,
-        studentBalance: 500000,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: mockPayment.id,
+          studentBalance: 500000,
+        }),
+      );
     });
 
     it('should skip contract validation and contract.update when contractId is not provided', async () => {
@@ -187,7 +197,10 @@ describe('PaymentsService', () => {
     });
 
     it('should throw BadRequestException when branchId mismatches contract branch', async () => {
-      prisma.contract.findFirst.mockResolvedValue({ id: 'contract-uuid-1', branchId: 2 });
+      prisma.contract.findFirst.mockResolvedValue({
+        id: 'contract-uuid-1',
+        branchId: 2,
+      });
 
       await expect(
         service.create({ ...dto, branchId: 1 }, userId, companyId),
@@ -195,7 +208,10 @@ describe('PaymentsService', () => {
     });
 
     it('should resolve branchId from contract when not provided in dto', async () => {
-      prisma.contract.findFirst.mockResolvedValue({ id: 'contract-uuid-1', branchId: 3 });
+      prisma.contract.findFirst.mockResolvedValue({
+        id: 'contract-uuid-1',
+        branchId: 3,
+      });
 
       await service.create({ ...dto, branchId: undefined }, userId, companyId);
 
@@ -206,7 +222,7 @@ describe('PaymentsService', () => {
 
   describe('reverse()', () => {
     const paymentId = 'payment-uuid-1';
-    const params = { reason: 'Xato to\'lov', performedById: 1, companyId: 1001 };
+    const params = { reason: "Xato to'lov", performedById: 1, companyId: 1001 };
 
     it('should reverse a payment successfully', async () => {
       prisma.payment.findFirst.mockResolvedValue({
@@ -237,7 +253,9 @@ describe('PaymentsService', () => {
         expect.objectContaining({
           entityType: 'Payment',
           entityId: paymentId,
-          newValues: expect.objectContaining({ status: PaymentStatus.REVERSED }),
+          newValues: expect.objectContaining({
+            status: PaymentStatus.REVERSED,
+          }),
         }),
       );
       expect(entityHistoryService.recordStatusChange).toHaveBeenCalledWith(
@@ -325,10 +343,12 @@ describe('PaymentsService', () => {
         }),
       );
       expect(transactionsService.recordPayment).toHaveBeenCalled();
-      expect(result).toEqual(expect.objectContaining({
-        id: mockPayment.id,
-        studentBalance: 500000,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: mockPayment.id,
+          studentBalance: 500000,
+        }),
+      );
     });
 
     it('should throw NotFoundException when contract does not belong to student', async () => {
@@ -403,7 +423,10 @@ describe('PaymentsService', () => {
       prisma.payment.findMany.mockResolvedValue([mockPaymentWithRelations]);
       prisma.payment.count.mockResolvedValue(1);
 
-      const result = await service.findAll({ page: 1, pageSize: 10 } as any, 1001);
+      const result = await service.findAll(
+        { page: 1, pageSize: 10 } as any,
+        1001,
+      );
 
       expect(result).toEqual({
         data: [mockPaymentWithRelations],
@@ -479,7 +502,11 @@ describe('PaymentsService', () => {
       prisma.payment.findMany.mockResolvedValue([mockPaymentWithRelations]);
       prisma.payment.count.mockResolvedValue(1);
 
-      const result = await service.findByStudent(10001, { page: 2, pageSize: 5 } as any, 1001);
+      const result = await service.findByStudent(
+        10001,
+        { page: 2, pageSize: 5 } as any,
+        1001,
+      );
 
       expect(result).toEqual({
         data: [mockPaymentWithRelations],

@@ -70,7 +70,9 @@ const studentSelect = {
           course: { select: { id: true, name: true } },
           teachers: {
             select: {
-              teacher: { select: { id: true, firstName: true, lastName: true } },
+              teacher: {
+                select: { id: true, firstName: true, lastName: true },
+              },
             },
           },
         },
@@ -154,7 +156,9 @@ export class StudentsService {
       baseWhere.OR = searchConditions;
     }
 
-    const enrollmentConditions: Prisma.EnrollmentWhereInput[] = [{ deletedAt: null }];
+    const enrollmentConditions: Prisma.EnrollmentWhereInput[] = [
+      { deletedAt: null },
+    ];
 
     if (query.teacher_id) {
       enrollmentConditions.push({
@@ -182,7 +186,9 @@ export class StudentsService {
 
     if (status === 'active') {
       where.status = StudentStatus.ACTIVE;
-      const activeEnrollmentFilter = { enrollments: { some: { deletedAt: null } } };
+      const activeEnrollmentFilter = {
+        enrollments: { some: { deletedAt: null } },
+      };
       if (where.enrollments) {
         where.AND = [
           { enrollments: where.enrollments },
@@ -198,10 +204,7 @@ export class StudentsService {
       where.status = StudentStatus.ACTIVE;
       const noEnrollmentFilter = { enrollments: { none: { deletedAt: null } } };
       if (where.enrollments) {
-        where.AND = [
-          { enrollments: where.enrollments },
-          noEnrollmentFilter,
-        ];
+        where.AND = [{ enrollments: where.enrollments }, noEnrollmentFilter];
         delete where.enrollments;
       } else {
         where.enrollments = noEnrollmentFilter.enrollments;
@@ -279,7 +282,9 @@ export class StudentsService {
       where: { phone: dto.phone, deletedAt: null },
     });
     if (existing) {
-      throw new BadRequestException('Bu telefon raqam allaqachon tizimda mavjud');
+      throw new BadRequestException(
+        'Bu telefon raqam allaqachon tizimda mavjud',
+      );
     }
 
     const student = await this.prisma.$transaction(async (tx) => {
@@ -354,7 +359,11 @@ export class StudentsService {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 
-    if (dto.photo !== undefined && student.photo && dto.photo !== student.photo) {
+    if (
+      dto.photo !== undefined &&
+      student.photo &&
+      dto.photo !== student.photo
+    ) {
       await this.uploadService.deleteFile(student.photo);
     }
 
@@ -363,7 +372,9 @@ export class StudentsService {
         where: { phone: dto.phone, deletedAt: null, id: { not: id } },
       });
       if (phoneTaken) {
-        throw new BadRequestException('Bu telefon raqam allaqachon tizimda mavjud');
+        throw new BadRequestException(
+          'Bu telefon raqam allaqachon tizimda mavjud',
+        );
       }
     }
 
@@ -375,16 +386,24 @@ export class StudentsService {
           ...(dto.lastName !== undefined && { lastName: dto.lastName }),
           ...(dto.phone !== undefined && { phone: dto.phone }),
           ...(dto.extraPhone !== undefined && { extraPhone: dto.extraPhone }),
-          ...(dto.parentPhone !== undefined && { parentPhone: dto.parentPhone }),
+          ...(dto.parentPhone !== undefined && {
+            parentPhone: dto.parentPhone,
+          }),
           ...(dto.parentName !== undefined && { parentName: dto.parentName }),
           ...(dto.telegram !== undefined && { telegram: dto.telegram }),
           ...(dto.gender !== undefined && { gender: dto.gender }),
-          ...(dto.dateOfBirth !== undefined && { dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null }),
+          ...(dto.dateOfBirth !== undefined && {
+            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+          }),
           ...(dto.photo !== undefined && { photo: dto.photo }),
           ...(dto.comment !== undefined && { comment: dto.comment }),
-          ...(dto.placeOfStudy !== undefined && { placeOfStudy: dto.placeOfStudy }),
+          ...(dto.placeOfStudy !== undefined && {
+            placeOfStudy: dto.placeOfStudy,
+          }),
           ...(dto.address !== undefined && { address: dto.address }),
-          ...(dto.passportSeries !== undefined && { passportSeries: dto.passportSeries }),
+          ...(dto.passportSeries !== undefined && {
+            passportSeries: dto.passportSeries,
+          }),
           ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         },
         select: studentSelect,
@@ -394,7 +413,10 @@ export class StudentsService {
         await tx.studentBranch.deleteMany({ where: { studentId: id } });
         if (dto.branchIds.length) {
           await tx.studentBranch.createMany({
-            data: dto.branchIds.map((branchId) => ({ studentId: id, branchId })),
+            data: dto.branchIds.map((branchId) => ({
+              studentId: id,
+              branchId,
+            })),
           });
         }
         return tx.student.findUniqueOrThrow({
@@ -454,7 +476,7 @@ export class StudentsService {
     const updated = await this.prisma.student.update({
       where: { id },
       data: {
-        status: dto.status as StudentStatus,
+        status: dto.status,
         isActive,
         ...auditData,
       },
@@ -471,7 +493,12 @@ export class StudentsService {
     });
 
     // Cascade: ARCHIVED/EXPELLED → enrollment larni yangilash
-    await this.statusCascadeService.cascade('Student', String(id), dto.status, userId);
+    await this.statusCascadeService.cascade(
+      'Student',
+      String(id),
+      dto.status,
+      userId,
+    );
 
     return formatStudent(updated);
   }
@@ -530,7 +557,12 @@ export class StudentsService {
     });
 
     // Cascade: ACTIVE + FROZEN enrollment → DROPPED
-    await this.statusCascadeService.cascade('Student', String(id), 'ARCHIVED', deletedById);
+    await this.statusCascadeService.cascade(
+      'Student',
+      String(id),
+      'ARCHIVED',
+      deletedById,
+    );
 
     return { message: "O'quvchi muvaffaqiyatli o'chirildi" };
   }
@@ -568,5 +600,4 @@ export class StudentsService {
 
     return { userId: user.id, plainPassword };
   }
-
 }

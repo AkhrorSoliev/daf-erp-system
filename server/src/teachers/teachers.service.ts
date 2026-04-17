@@ -14,7 +14,10 @@ import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
-import { generateUniqueLogin, generatePassword } from '../telegram/utils/login-generator';
+import {
+  generateUniqueLogin,
+  generatePassword,
+} from '../telegram/utils/login-generator';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -50,7 +53,10 @@ function formatTeacher(user: any, studentCount = 0) {
   const { groupTeachers, ...rest } = user;
   return {
     ...rest,
-    roles: user.roles.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })),
+    roles: user.roles.map((ur: any) => ({
+      id: ur.role.id,
+      name: ur.role.name,
+    })),
     branches: user.branches.map((ub: any) => ub.branch),
     groupCount: groupTeachers?.length ?? 0,
     studentCount,
@@ -125,7 +131,9 @@ export class TeachersService {
     }
 
     return {
-      data: data.map((t: any) => formatTeacher(t, studentCountMap.get(t.id) ?? 0)),
+      data: data.map((t: any) =>
+        formatTeacher(t, studentCountMap.get(t.id) ?? 0),
+      ),
       total,
       page,
       pageSize,
@@ -134,7 +142,11 @@ export class TeachersService {
 
   async findById(id: number) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
+      where: {
+        id,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+        deletedAt: null,
+      },
       select: teacherSelect,
     });
 
@@ -162,11 +174,17 @@ export class TeachersService {
       where: { phone: dto.phone, deletedAt: null },
     });
     if (existing) {
-      throw new BadRequestException('Bu telefon raqam allaqachon tizimda mavjud');
+      throw new BadRequestException(
+        'Bu telefon raqam allaqachon tizimda mavjud',
+      );
     }
 
     // Login va parol generatsiya
-    const login = await generateUniqueLogin(dto.firstName, dto.lastName, this.prisma);
+    const login = await generateUniqueLogin(
+      dto.firstName,
+      dto.lastName,
+      this.prisma,
+    );
     const password = generatePassword();
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -198,7 +216,11 @@ export class TeachersService {
 
   async update(id: number, dto: UpdateTeacherDto) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
+      where: {
+        id,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+        deletedAt: null,
+      },
     });
 
     if (!user) {
@@ -212,7 +234,9 @@ export class TeachersService {
 
     // Login uniqueness tekshirish
     if (dto.login && dto.login !== user.login) {
-      const loginTaken = await this.prisma.user.findFirst({ where: { login: dto.login, deletedAt: null } });
+      const loginTaken = await this.prisma.user.findFirst({
+        where: { login: dto.login, deletedAt: null },
+      });
       if (loginTaken) {
         throw new BadRequestException('Bu login allaqachon band');
       }
@@ -242,7 +266,11 @@ export class TeachersService {
 
   async changeStatus(id: number, dto: ChangeTeacherStatusDto, userId: number) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
+      where: {
+        id,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+        deletedAt: null,
+      },
     });
 
     if (!user) {
@@ -264,7 +292,7 @@ export class TeachersService {
     const updated = await this.prisma.user.update({
       where: { id },
       data: {
-        status: dto.status as UserStatus,
+        status: dto.status,
         isActive,
         ...auditData,
       },
@@ -273,7 +301,10 @@ export class TeachersService {
 
     // Redis: bloklangan user ni belgilash yoki tiklash
     try {
-      if (dto.status === UserStatus.SUSPENDED || dto.status === UserStatus.TERMINATED) {
+      if (
+        dto.status === UserStatus.SUSPENDED ||
+        dto.status === UserStatus.TERMINATED
+      ) {
         await this.redis.set(`user:blocked:${id}`, '1');
       } else if (dto.status === UserStatus.ACTIVE) {
         await this.redis.del(`user:blocked:${id}`);
@@ -300,7 +331,11 @@ export class TeachersService {
 
   async delete(id: number, deletedById: number) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
+      where: {
+        id,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+        deletedAt: null,
+      },
     });
 
     if (!user) {
@@ -358,7 +393,11 @@ export class TeachersService {
   async findGroupsByTeacherId(teacherId: number) {
     // Ensure teacher exists
     const user = await this.prisma.user.findFirst({
-      where: { id: teacherId, roles: { some: { roleId: TEACHER_ROLE_ID } }, deletedAt: null },
+      where: {
+        id: teacherId,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+        deletedAt: null,
+      },
       select: { id: true },
     });
 
@@ -393,7 +432,13 @@ export class TeachersService {
         teachers: {
           include: {
             teacher: {
-              select: { id: true, firstName: true, lastName: true, phone: true, photo: true },
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                photo: true,
+              },
             },
           },
         },

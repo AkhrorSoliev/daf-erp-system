@@ -70,7 +70,16 @@ describe('GroupsService — status methods', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: StatusCascadeService, useValue: statusCascadeService },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -92,7 +101,10 @@ describe('GroupsService — status methods', () => {
     });
 
     it('sets isActive=false for PAUSED', async () => {
-      prisma.group.findFirst.mockResolvedValue({ ...mockGroup, statusEnum: 'ACTIVE' });
+      prisma.group.findFirst.mockResolvedValue({
+        ...mockGroup,
+        statusEnum: 'ACTIVE',
+      });
 
       await service.changeStatus('group-1', { status: 'PAUSED' as any }, 1);
 
@@ -107,7 +119,10 @@ describe('GroupsService — status methods', () => {
       await service.changeStatus('group-1', { status: 'ACTIVE' as any }, 1);
 
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
-        'Group', 'group-1', 'ACTIVE', 1,
+        'Group',
+        'group-1',
+        'ACTIVE',
+        1,
       );
     });
 
@@ -178,7 +193,11 @@ describe('GroupsService — status methods', () => {
 
     it('generates name in #001 format', async () => {
       prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
-      prisma.course.findFirst.mockResolvedValue({ id: 'course-1', name: 'Deutsch', deletedAt: null });
+      prisma.course.findFirst.mockResolvedValue({
+        id: 'course-1',
+        name: 'Deutsch',
+        deletedAt: null,
+      });
       prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: null } });
       prisma.group.create.mockResolvedValue({
         ...mockGroup,
@@ -205,7 +224,11 @@ describe('GroupsService — status methods', () => {
 
     it('uses custom name when dto.name is provided', async () => {
       prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
-      prisma.course.findFirst.mockResolvedValue({ id: 'course-1', name: 'Deutsch', deletedAt: null });
+      prisma.course.findFirst.mockResolvedValue({
+        id: 'course-1',
+        name: 'Deutsch',
+        deletedAt: null,
+      });
       prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 5 } });
       prisma.group.create.mockResolvedValue({
         ...mockGroup,
@@ -218,7 +241,11 @@ describe('GroupsService — status methods', () => {
         _count: { enrollments: 0 },
       });
 
-      await service.create({ ...createDto, name: 'Custom Group' } as any, 1001, 1);
+      await service.create(
+        { ...createDto, name: 'Custom Group' } as any,
+        1001,
+        1,
+      );
 
       expect(prisma.group.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -231,7 +258,11 @@ describe('GroupsService — status methods', () => {
 
     it('queries aggregate with startsWith # (not level prefix)', async () => {
       prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
-      prisma.course.findFirst.mockResolvedValue({ id: 'course-1', name: 'Deutsch', deletedAt: null });
+      prisma.course.findFirst.mockResolvedValue({
+        id: 'course-1',
+        name: 'Deutsch',
+        deletedAt: null,
+      });
       prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 10 } });
       prisma.group.create.mockResolvedValue({
         ...mockGroup,

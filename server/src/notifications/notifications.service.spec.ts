@@ -165,7 +165,10 @@ describe('NotificationsService', () => {
 
   describe('unregisterPush', () => {
     it('should delete push subscription', async () => {
-      const result = await service.unregisterPush(10001, 'https://push.example.com/123');
+      const result = await service.unregisterPush(
+        10001,
+        'https://push.example.com/123',
+      );
 
       expect(prisma.pushSubscription.deleteMany).toHaveBeenCalledWith({
         where: { userId: 10001, endpoint: 'https://push.example.com/123' },

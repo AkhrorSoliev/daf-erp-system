@@ -8,7 +8,9 @@ describe('SmsEventsListener', () => {
 
   beforeEach(async () => {
     smsService = {
-      sendToStudent: jest.fn().mockResolvedValue({ id: 'sms-1', status: 'SENT' }),
+      sendToStudent: jest
+        .fn()
+        .mockResolvedValue({ id: 'sms-1', status: 'SENT' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({

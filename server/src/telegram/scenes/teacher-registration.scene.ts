@@ -1,7 +1,10 @@
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
 import { SCENES, TEACHER_ROLE_ID, DEFAULT_COMPANY_ID } from '../constants';
-import { generateUniqueLogin, generatePassword } from '../utils/login-generator';
+import {
+  generateUniqueLogin,
+  generatePassword,
+} from '../utils/login-generator';
 import { downloadFile } from '../utils/download.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
@@ -18,7 +21,7 @@ export function createTeacherRegistrationScene(
 
   // Loading button bosilganda — hech narsa qilmaslik
   scene.action('noop', async (ctx) => {
-    await ctx.answerCbQuery("Iltimos, kuting...");
+    await ctx.answerCbQuery('Iltimos, kuting...');
   });
 
   // Scene ga kirganda
@@ -32,8 +35,8 @@ export function createTeacherRegistrationScene(
     if (existing) {
       await ctx.reply(
         "Siz allaqachon ro'yxatdan o'tgansiz\\!\n\n" +
-          "Platformaga kirish uchun login va parolingizdan foydalaning:\n" +
-          "[lehrer\\.dafzentrum\\.uz](https://lehrer.dafzentrum.uz)",
+          'Platformaga kirish uchun login va parolingizdan foydalaning:\n' +
+          '[lehrer\\.dafzentrum\\.uz](https://lehrer.dafzentrum.uz)',
         { parse_mode: 'MarkdownV2' },
       );
       await ctx.scene.leave();
@@ -45,7 +48,7 @@ export function createTeacherRegistrationScene(
     ctx.session.data = { branchId };
     await ctx.reply(
       "Assalomu alaykum! O'qituvchi sifatida ro'yxatdan o'tish.\n\n" +
-        "Ismingizni kiriting:",
+        'Ismingizni kiriting:',
     );
   });
 
@@ -62,7 +65,7 @@ export function createTeacherRegistrationScene(
       }
       await ctx.scene.leave();
       await ctx.reply(
-        "Bekor qilindi. Qayta boshlash uchun /start bosing.",
+        'Bekor qilindi. Qayta boshlash uchun /start bosing.',
         Markup.removeKeyboard(),
       );
       return;
@@ -81,28 +84,38 @@ export function createTeacherRegistrationScene(
       // Ism kiritish
       case 1: {
         if (text.length < 2) {
-          await ctx.reply("Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          await ctx.reply(
+            "Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
+          );
           return;
         }
         ctx.session.data.firstName = text;
         ctx.session.step = 2;
-        await ctx.reply("Familiyangizni kiriting:");
+        await ctx.reply('Familiyangizni kiriting:');
         break;
       }
 
       // Familiya kiritish
       case 2: {
         if (text.length < 2) {
-          await ctx.reply("Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:");
+          await ctx.reply(
+            "Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
+          );
           return;
         }
         ctx.session.data.lastName = text;
         ctx.session.step = 3;
         await ctx.reply(
-          "Telefon raqamingizni yuboring:",
+          'Telefon raqamingizni yuboring:',
           Markup.keyboard([
-            [Markup.button.contactRequest("\uD83D\uDCF1 Telefon raqamni yuborish")],
-          ]).resize().oneTime(),
+            [
+              Markup.button.contactRequest(
+                '\uD83D\uDCF1 Telefon raqamni yuborish',
+              ),
+            ],
+          ])
+            .resize()
+            .oneTime(),
         );
         break;
       }
@@ -110,10 +123,16 @@ export function createTeacherRegistrationScene(
       // Telefon raqam (text yuborilsa xatolik)
       case 3: {
         await ctx.reply(
-          "Iltimos, telefon raqamni quyidagi tugma orqali yuboring:",
+          'Iltimos, telefon raqamni quyidagi tugma orqali yuboring:',
           Markup.keyboard([
-            [Markup.button.contactRequest("\uD83D\uDCF1 Telefon raqamni yuborish")],
-          ]).resize().oneTime(),
+            [
+              Markup.button.contactRequest(
+                '\uD83D\uDCF1 Telefon raqamni yuborish',
+              ),
+            ],
+          ])
+            .resize()
+            .oneTime(),
         );
         break;
       }
@@ -121,11 +140,11 @@ export function createTeacherRegistrationScene(
       // Jins tanlash (text yuborilsa xatolik)
       case 4: {
         await ctx.reply(
-          "Iltimos, quyidagi tugmalardan birini tanlang:",
+          'Iltimos, quyidagi tugmalardan birini tanlang:',
           Markup.inlineKeyboard([
             [
-              Markup.button.callback("\uD83D\uDC68 Erkak", "gender_male"),
-              Markup.button.callback("\uD83D\uDC69 Ayol", "gender_female"),
+              Markup.button.callback('\uD83D\uDC68 Erkak', 'gender_male'),
+              Markup.button.callback('\uD83D\uDC69 Ayol', 'gender_female'),
             ],
           ]),
         );
@@ -134,7 +153,7 @@ export function createTeacherRegistrationScene(
 
       // Rasm (text yuborilsa xatolik)
       case 5: {
-        await ctx.reply("Iltimos, rasmingizni yuboring (foto sifatida).");
+        await ctx.reply('Iltimos, rasmingizni yuboring (foto sifatida).');
         break;
       }
 
@@ -161,8 +180,14 @@ export function createTeacherRegistrationScene(
       await ctx.reply(
         "Telefon raqam noto'g'ri formatda. Qayta yuboring:",
         Markup.keyboard([
-          [Markup.button.contactRequest("\uD83D\uDCF1 Telefon raqamni yuborish")],
-        ]).resize().oneTime(),
+          [
+            Markup.button.contactRequest(
+              '\uD83D\uDCF1 Telefon raqamni yuborish',
+            ),
+          ],
+        ])
+          .resize()
+          .oneTime(),
       );
       return;
     }
@@ -183,16 +208,13 @@ export function createTeacherRegistrationScene(
 
     ctx.session.data.phone = phone;
     ctx.session.step = 4;
+    await ctx.reply('Jinsingizni tanlang:', Markup.removeKeyboard());
     await ctx.reply(
-      "Jinsingizni tanlang:",
-      Markup.removeKeyboard(),
-    );
-    await ctx.reply(
-      "Quyidagi tugmalardan birini bosing:",
+      'Quyidagi tugmalardan birini bosing:',
       Markup.inlineKeyboard([
         [
-          Markup.button.callback("\uD83D\uDC68 Erkak", "gender_male"),
-          Markup.button.callback("\uD83D\uDC69 Ayol", "gender_female"),
+          Markup.button.callback('\uD83D\uDC68 Erkak', 'gender_male'),
+          Markup.button.callback('\uD83D\uDC69 Ayol', 'gender_female'),
         ],
       ]),
     );
@@ -204,8 +226,8 @@ export function createTeacherRegistrationScene(
     await ctx.answerCbQuery();
     ctx.session.data.gender = 'MALE';
     ctx.session.step = 5;
-    await ctx.editMessageText("\uD83D\uDC68 Erkak tanlandi");
-    await ctx.reply("Rasmingizni yuboring (foto sifatida):");
+    await ctx.editMessageText('\uD83D\uDC68 Erkak tanlandi');
+    await ctx.reply('Rasmingizni yuboring (foto sifatida):');
   });
 
   scene.action('gender_female', async (ctx) => {
@@ -213,12 +235,16 @@ export function createTeacherRegistrationScene(
     await ctx.answerCbQuery();
     ctx.session.data.gender = 'FEMALE';
     ctx.session.step = 5;
-    await ctx.editMessageText("\uD83D\uDC69 Ayol tanlandi");
-    await ctx.reply("Rasmingizni yuboring (foto sifatida):");
+    await ctx.editMessageText('\uD83D\uDC69 Ayol tanlandi');
+    await ctx.reply('Rasmingizni yuboring (foto sifatida):');
   });
 
   // Rasm yuklash umumiy funksiya
-  async function handlePhotoUpload(ctx: BotContext, fileId: string, mimetype: string) {
+  async function handlePhotoUpload(
+    ctx: BotContext,
+    fileId: string,
+    mimetype: string,
+  ) {
     await ctx.sendChatAction('upload_photo');
 
     const fileLink = await ctx.telegram.getFileLink(fileId);
@@ -245,8 +271,11 @@ export function createTeacherRegistrationScene(
         `\uD83D\uDC65 Jins: ${data.gender === 'MALE' ? 'Erkak' : 'Ayol'}`,
       ...Markup.inlineKeyboard([
         [
-          Markup.button.callback("\u2705 Tasdiqlash", "confirm_registration"),
-          Markup.button.callback("\uD83D\uDD04 Qayta kiritish", "restart_registration"),
+          Markup.button.callback('\u2705 Tasdiqlash', 'confirm_registration'),
+          Markup.button.callback(
+            '\uD83D\uDD04 Qayta kiritish',
+            'restart_registration',
+          ),
         ],
       ]),
     });
@@ -263,7 +292,7 @@ export function createTeacherRegistrationScene(
     try {
       await handlePhotoUpload(ctx, photo.file_id, 'image/jpeg');
     } catch (error) {
-      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
+      await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
 
@@ -276,14 +305,14 @@ export function createTeacherRegistrationScene(
     const mime = doc.mime_type || '';
 
     if (!mime.startsWith('image/')) {
-      await ctx.reply("Iltimos, rasm formatidagi fayl yuboring (JPG, PNG).");
+      await ctx.reply('Iltimos, rasm formatidagi fayl yuboring (JPG, PNG).');
       return;
     }
 
     try {
       await handlePhotoUpload(ctx, doc.file_id, mime);
     } catch (error) {
-      await ctx.reply("Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:");
+      await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
 
@@ -299,7 +328,7 @@ export function createTeacherRegistrationScene(
       await ctx.editMessageCaption(
         (ctx.callbackQuery.message as any)?.caption ?? '',
         Markup.inlineKeyboard([
-          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
         ]),
       );
     } catch {
@@ -336,15 +365,15 @@ export function createTeacherRegistrationScene(
       });
 
       ctx.session.processing = false;
-      await ctx.editMessageCaption("\u2705 Tasdiqlandi!");
+      await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
       await ctx.replyWithPhoto(data.photo, {
         caption:
           "\u2705 Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
           `\uD83D\uDC64 Sizning login: \`${login}\`\n` +
           `\uD83D\uDD11 Sizning parol: \`${password}\`\n\n` +
-          "\uD83C\uDF10 Platformaga kirish:\n" +
-          "[lehrer.dafzentrum.uz](https://lehrer.dafzentrum.uz)\n\n" +
-          "\u26A0\uFE0F Login va parolni eslab qoling yoki saqlang!",
+          '\uD83C\uDF10 Platformaga kirish:\n' +
+          '[lehrer.dafzentrum.uz](https://lehrer.dafzentrum.uz)\n\n' +
+          '\u26A0\uFE0F Login va parolni eslab qoling yoki saqlang!',
         parse_mode: 'Markdown',
       });
 
@@ -370,7 +399,7 @@ export function createTeacherRegistrationScene(
       await ctx.editMessageCaption(
         (ctx.callbackQuery.message as any)?.caption ?? '',
         Markup.inlineKeyboard([
-          [Markup.button.callback("\u23F3 Yuklanmoqda...", "noop")],
+          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
         ]),
       );
     } catch {
@@ -386,8 +415,8 @@ export function createTeacherRegistrationScene(
     const branchId = ctx.session.data?.branchId;
     ctx.session.data = { branchId };
     ctx.session.processing = false;
-    await ctx.editMessageCaption("\uD83D\uDD04 Qayta kiritish tanlandi");
-    await ctx.reply("Ismingizni kiriting:");
+    await ctx.editMessageCaption('\uD83D\uDD04 Qayta kiritish tanlandi');
+    await ctx.reply('Ismingizni kiriting:');
   });
 
   return scene;

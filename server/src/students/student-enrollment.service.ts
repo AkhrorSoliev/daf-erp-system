@@ -105,22 +105,38 @@ export class StudentEnrollmentService {
     });
 
     if (currentEnrollment) {
-      const oldGroup = await this.prisma.group.findUnique({ where: { id: currentEnrollment.groupId }, select: { name: true } });
-      const newGroup = await this.prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+      const oldGroup = await this.prisma.group.findUnique({
+        where: { id: currentEnrollment.groupId },
+        select: { name: true },
+      });
+      const newGroup = await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: { name: true },
+      });
       await this.entityHistoryService.recordUpdate({
         entityType: 'Student',
         entityId: studentId,
-        oldValues: { guruh: oldGroup?.name ?? currentEnrollment.groupId, guruhId: currentEnrollment.groupId },
+        oldValues: {
+          guruh: oldGroup?.name ?? currentEnrollment.groupId,
+          guruhId: currentEnrollment.groupId,
+        },
         newValues: { guruh: newGroup?.name ?? groupId, guruhId: groupId },
         changedById: userId,
         companyId: student.companyId ?? undefined,
       });
     } else {
-      const newGroup = await this.prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+      const newGroup = await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: { name: true },
+      });
       await this.entityHistoryService.recordCreate({
         entityType: 'Student',
         entityId: studentId,
-        newValues: { guruh: newGroup?.name ?? groupId, guruhId: groupId, action: 'GURUHGA_QOSHILDI' },
+        newValues: {
+          guruh: newGroup?.name ?? groupId,
+          guruhId: groupId,
+          action: 'GURUHGA_QOSHILDI',
+        },
         changedById: userId,
         companyId: student.companyId ?? undefined,
       });
@@ -152,7 +168,12 @@ export class StudentEnrollmentService {
     return enrollment;
   }
 
-  async removeFromGroup(_studentId: number, enrollmentId: string, userId: number, reason: string) {
+  async removeFromGroup(
+    _studentId: number,
+    enrollmentId: string,
+    userId: number,
+    reason: string,
+  ) {
     const enrollment = await this.prisma.enrollment.findFirst({
       where: { id: enrollmentId, deletedAt: null },
     });
@@ -173,16 +194,31 @@ export class StudentEnrollmentService {
     await this.entityHistoryService.recordDelete({
       entityType: 'Enrollment',
       entityId: enrollmentId,
-      oldValues: { studentId: enrollment.studentId, groupId: enrollment.groupId, status: enrollment.status },
+      oldValues: {
+        studentId: enrollment.studentId,
+        groupId: enrollment.groupId,
+        status: enrollment.status,
+      },
       changedById: userId,
     });
 
-    const removedGroup = await this.prisma.group.findUnique({ where: { id: enrollment.groupId }, select: { name: true } });
-    const student = await this.prisma.student.findUnique({ where: { id: enrollment.studentId }, select: { firstName: true, lastName: true, companyId: true } });
+    const removedGroup = await this.prisma.group.findUnique({
+      where: { id: enrollment.groupId },
+      select: { name: true },
+    });
+    const student = await this.prisma.student.findUnique({
+      where: { id: enrollment.studentId },
+      select: { firstName: true, lastName: true, companyId: true },
+    });
     await this.entityHistoryService.recordDelete({
       entityType: 'Student',
       entityId: enrollment.studentId,
-      oldValues: { guruh: removedGroup?.name ?? enrollment.groupId, guruhId: enrollment.groupId, action: 'GURUHDAN_CHIQARILDI', sabab: reason },
+      oldValues: {
+        guruh: removedGroup?.name ?? enrollment.groupId,
+        guruhId: enrollment.groupId,
+        action: 'GURUHDAN_CHIQARILDI',
+        sabab: reason,
+      },
       changedById: userId,
     });
 
@@ -191,7 +227,8 @@ export class StudentEnrollmentService {
       entityId: enrollment.groupId,
       oldValues: {
         action: 'OQUVCHI_CHIQARILDI',
-        oquvchi: `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim(),
+        oquvchi:
+          `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim(),
         oquvchiId: enrollment.studentId,
         sabab: reason,
       },

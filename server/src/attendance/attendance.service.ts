@@ -8,7 +8,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryService } from '../salary/salary.service';
-import { AttendanceMethod, AttendanceStatus, EnrollmentStatus, GroupStatus, HolidayStatus } from '@prisma/client';
+import {
+  AttendanceMethod,
+  AttendanceStatus,
+  EnrollmentStatus,
+  GroupStatus,
+  HolidayStatus,
+} from '@prisma/client';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 
 const DAY_NAME_TO_JS: Record<string, number> = {
@@ -69,11 +75,15 @@ export class AttendanceService {
   ) {
     // 1. Date format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      throw new BadRequestException("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
+      throw new BadRequestException(
+        "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
+      );
     }
     const parsedDate = new Date(date + 'T00:00:00.000Z');
     if (isNaN(parsedDate.getTime())) {
-      throw new BadRequestException("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
+      throw new BadRequestException(
+        "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
+      );
     }
 
     // 2. Group existence + multi-tenant
@@ -105,10 +115,14 @@ export class AttendanceService {
 
     // 4. Date within group range
     if (group.startDate && parsedDate < group.startDate) {
-      throw new BadRequestException("Bu sana guruh faoliyat muddatiga kirmaydi");
+      throw new BadRequestException(
+        'Bu sana guruh faoliyat muddatiga kirmaydi',
+      );
     }
     if (group.endDate && parsedDate > group.endDate) {
-      throw new BadRequestException("Bu sana guruh faoliyat muddatiga kirmaydi");
+      throw new BadRequestException(
+        'Bu sana guruh faoliyat muddatiga kirmaydi',
+      );
     }
 
     // 5. Day matches schedule
@@ -116,7 +130,7 @@ export class AttendanceService {
       .map((d) => DAY_NAME_TO_JS[d])
       .filter((d) => d !== undefined);
     if (!scheduleDays.includes(parsedDate.getUTCDay())) {
-      throw new BadRequestException("Bu kunda dars rejalashtirilmagan");
+      throw new BadRequestException('Bu kunda dars rejalashtirilmagan');
     }
 
     // 6. Not a holiday
@@ -171,7 +185,12 @@ export class AttendanceService {
    * Get lesson dates for a group in a given month/year,
    * including attendance summary per date.
    */
-  async getLessonDates(groupId: string, month?: number, year?: number, companyId?: number) {
+  async getLessonDates(
+    groupId: string,
+    month?: number,
+    year?: number,
+    companyId?: number,
+  ) {
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: {
@@ -225,9 +244,7 @@ export class AttendanceService {
       },
       select: { date: true },
     });
-    const holidaySet = new Set(
-      holidays.map((h) => toLocalDateStr(h.date)),
-    );
+    const holidaySet = new Set(holidays.map((h) => toLocalDateStr(h.date)));
 
     // Generate lesson dates
     const lessonDates: Date[] = [];
@@ -257,13 +274,25 @@ export class AttendanceService {
     // Build a map: dateStr -> { present, absent, late, excused, total }
     const countMap: Record<
       string,
-      { present: number; absent: number; late: number; excused: number; total: number }
+      {
+        present: number;
+        absent: number;
+        late: number;
+        excused: number;
+        total: number;
+      }
     > = {};
 
     for (const row of attendanceCounts) {
       const dateStr = toLocalDateStr(row.date);
       if (!countMap[dateStr]) {
-        countMap[dateStr] = { present: 0, absent: 0, late: 0, excused: 0, total: 0 };
+        countMap[dateStr] = {
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          total: 0,
+        };
       }
       const count = row._count;
       countMap[dateStr].total += count;
@@ -305,9 +334,16 @@ export class AttendanceService {
    * Get attendance for a group on a specific date.
    * Returns all active enrolled students with their attendance status.
    */
-  async getByDate(groupId: string, date: string, companyId?: number, roles?: string[]) {
+  async getByDate(
+    groupId: string,
+    date: string,
+    companyId?: number,
+    roles?: string[],
+  ) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) {
-      throw new BadRequestException("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
+      throw new BadRequestException(
+        "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
+      );
     }
 
     const group = await this.prisma.group.findFirst({
@@ -384,7 +420,12 @@ export class AttendanceService {
     roles: string[],
     companyId: number,
   ) {
-    const { group, parsedDate } = await this.validateLessonDate(groupId, date, companyId, roles);
+    const { group, parsedDate } = await this.validateLessonDate(
+      groupId,
+      date,
+      companyId,
+      roles,
+    );
     const effectiveCompanyId = companyId;
 
     const isTeacherOnly =
@@ -396,21 +437,26 @@ export class AttendanceService {
       // additionally requires non-negative balance — prevents marking a
       // student whose balance went negative between the getByDate call
       // and the save call.
-      const enrolledStudents = await tx.enrollment
-        .findMany({
-          where: {
-            groupId,
-            deletedAt: null,
-            status: EnrollmentStatus.ACTIVE,
-          },
-          select: {
-            studentId: true,
-            student: { select: { balance: true } },
-          },
-        });
-      const enrolledStudentIds = new Set(enrolledStudents.map((r) => r.studentId));
+      const enrolledStudents = await tx.enrollment.findMany({
+        where: {
+          groupId,
+          deletedAt: null,
+          status: EnrollmentStatus.ACTIVE,
+        },
+        select: {
+          studentId: true,
+          student: { select: { balance: true } },
+        },
+      });
+      const enrolledStudentIds = new Set(
+        enrolledStudents.map((r) => r.studentId),
+      );
       const negativeBalanceIds = isTeacherOnly
-        ? new Set(enrolledStudents.filter((r) => r.student.balance < 0).map((r) => r.studentId))
+        ? new Set(
+            enrolledStudents
+              .filter((r) => r.student.balance < 0)
+              .map((r) => r.studentId),
+          )
         : new Set<number>();
 
       for (const entry of dto.entries) {
@@ -430,11 +476,10 @@ export class AttendanceService {
       const existingRecords = await tx.attendance.findMany({
         where: { groupId, date: parsedDate },
       });
-      const existingMap = new Map(
-        existingRecords.map((r) => [r.studentId, r]),
-      );
+      const existingMap = new Map(existingRecords.map((r) => [r.studentId, r]));
 
-      const upsertResults: Awaited<ReturnType<typeof tx.attendance.upsert>>[] = [];
+      const upsertResults: Awaited<ReturnType<typeof tx.attendance.upsert>>[] =
+        [];
       for (const entry of dto.entries) {
         // Teacher can't write notes
         const note = isTeacherOnly ? undefined : entry.note;
@@ -506,9 +551,17 @@ export class AttendanceService {
     }
 
     // === FINANCIAL INTEGRATION: Balance deduction + Salary accrual ===
-    await this.processFinancialEffects(groupId, date, dto.entries, effectiveCompanyId);
+    await this.processFinancialEffects(
+      groupId,
+      date,
+      dto.entries,
+      effectiveCompanyId,
+    );
 
-    return { message: 'Davomat muvaffaqiyatli saqlandi', count: results.upsertResults.length };
+    return {
+      message: 'Davomat muvaffaqiyatli saqlandi',
+      count: results.upsertResults.length,
+    };
   }
 
   /**
@@ -529,7 +582,9 @@ export class AttendanceService {
     companyId: number,
   ) {
     const billableEntries = entries.filter(
-      (e) => e.status === AttendanceStatus.PRESENT || e.status === AttendanceStatus.LATE,
+      (e) =>
+        e.status === AttendanceStatus.PRESENT ||
+        e.status === AttendanceStatus.LATE,
     );
     if (billableEntries.length === 0) return;
 
@@ -602,7 +657,8 @@ export class AttendanceService {
         // Cycle boundary: lessonPaymentCount, 2*lessonPaymentCount, etc.
         // First cycle (lessons 1-N) is deducted at enrollment.
         // When totalAttended crosses N, 2N, 3N... → deduct next cycle.
-        const cyclesPaid = Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
+        const cyclesPaid =
+          Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
         const cyclesDeducted = await this.prisma.transaction.count({
           where: {
             studentId: entry.studentId,
@@ -639,7 +695,10 @@ export class AttendanceService {
           }
         }
       } catch (err) {
-        this.logger.error(`Cycle deduction check failed for student ${entry.studentId}`, err);
+        this.logger.error(
+          `Cycle deduction check failed for student ${entry.studentId}`,
+          err,
+        );
       }
 
       // 2. Coverage lookup for accrual: only earn for paid lessons (B.1).
@@ -673,7 +732,10 @@ export class AttendanceService {
             deductionTransactionId: coverage.id,
           });
         } catch (err) {
-          this.logger.error(`Salary accrual failed for teacher ${teacher.teacherId}`, err);
+          this.logger.error(
+            `Salary accrual failed for teacher ${teacher.teacherId}`,
+            err,
+          );
         }
       }
     }
@@ -682,7 +744,12 @@ export class AttendanceService {
   /**
    * Get attendance statistics for a group within a date range.
    */
-  async getStats(groupId: string, startDate?: string, endDate?: string, companyId?: number) {
+  async getStats(
+    groupId: string,
+    startDate?: string,
+    endDate?: string,
+    companyId?: number,
+  ) {
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: {
@@ -698,10 +765,8 @@ export class AttendanceService {
     const now = new Date();
     const rangeStart = startDate
       ? new Date(startDate + 'T00:00:00.000Z')
-      : group.startDate ?? new Date(now.getFullYear(), 0, 1);
-    const rangeEnd = endDate
-      ? new Date(endDate + 'T00:00:00.000Z')
-      : now;
+      : (group.startDate ?? new Date(now.getFullYear(), 0, 1));
+    const rangeEnd = endDate ? new Date(endDate + 'T00:00:00.000Z') : now;
 
     // Compute total lesson days in range
     const scheduleDays = group.exactDays
@@ -716,9 +781,7 @@ export class AttendanceService {
       },
       select: { date: true },
     });
-    const holidaySet = new Set(
-      holidays.map((h) => toLocalDateStr(h.date)),
-    );
+    const holidaySet = new Set(holidays.map((h) => toLocalDateStr(h.date)));
 
     let totalLessons = 0;
     const cursor = new Date(rangeStart);
@@ -750,7 +813,12 @@ export class AttendanceService {
 
     for (const row of attendanceData) {
       if (!statsMap[row.studentId]) {
-        statsMap[row.studentId] = { present: 0, absent: 0, late: 0, excused: 0 };
+        statsMap[row.studentId] = {
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+        };
       }
       switch (row.status) {
         case AttendanceStatus.PRESENT:

@@ -73,9 +73,7 @@ describe('ReportsController — role guards', () => {
       });
 
       it('should deny Administrator', () => {
-        const ctx = mockExecutionContext(controller[method], [
-          'Administrator',
-        ]);
+        const ctx = mockExecutionContext(controller[method], ['Administrator']);
         expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
       });
 

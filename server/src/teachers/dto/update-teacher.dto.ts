@@ -20,7 +20,9 @@ export class UpdateTeacherDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\d{9}$/, { message: "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak" })
+  @Matches(/^\d{9}$/, {
+    message: "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak",
+  })
   phone?: string;
 
   @IsOptional()
@@ -40,5 +42,4 @@ export class UpdateTeacherDto {
   @IsString()
   @MinLength(6)
   password?: string;
-
 }

@@ -33,12 +33,15 @@ describe('GroupsController — role guards', () => {
       controllers: [GroupsController],
       providers: [
         { provide: GroupsService, useValue: mockService },
-        { provide: GroupScheduleService, useValue: {
-          getScheduleConflicts: jest.fn().mockResolvedValue([]),
-          getAvailableRooms: jest.fn().mockResolvedValue([]),
-          getAvailableTeachers: jest.fn().mockResolvedValue([]),
-          getAvailableSlots: jest.fn().mockResolvedValue([]),
-        } },
+        {
+          provide: GroupScheduleService,
+          useValue: {
+            getScheduleConflicts: jest.fn().mockResolvedValue([]),
+            getAvailableRooms: jest.fn().mockResolvedValue([]),
+            getAvailableTeachers: jest.fn().mockResolvedValue([]),
+            getAvailableSlots: jest.fn().mockResolvedValue([]),
+          },
+        },
       ],
     }).compile();
 
@@ -161,7 +164,10 @@ describe('GroupsController — role guards', () => {
 
   describe('findStudentsByGroupId() — no guard', () => {
     it('should NOT have @Roles metadata (teachers can view group students)', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findStudentsByGroupId);
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.findStudentsByGroupId,
+      );
       expect(roles).toBeUndefined();
     });
   });

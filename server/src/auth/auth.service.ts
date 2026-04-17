@@ -23,7 +23,15 @@ export class AuthService {
       include: {
         roles: { include: { role: true } },
         branches: { include: { branch: { select: { id: true, name: true } } } },
-        company: { select: { id: true, name: true, subdomain: true, logo: true, phone: true } },
+        company: {
+          select: {
+            id: true,
+            name: true,
+            subdomain: true,
+            logo: true,
+            phone: true,
+          },
+        },
       },
     });
 
@@ -56,14 +64,22 @@ export class AuthService {
       balance: user.balance,
       companyId: user.companyId,
       mainBranch: user.mainBranch,
-      roles: user.roles.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })),
+      roles: user.roles.map((ur: any) => ({
+        id: ur.role.id,
+        name: ur.role.name,
+      })),
       branches: user.branches.map((ub: any) => ub.branch),
       company: user.company,
       ...(studentId !== undefined && { studentId }),
     };
   }
 
-  private generateTokens(userId: number, roles: string[], companyId: number, studentId?: number) {
+  private generateTokens(
+    userId: number,
+    roles: string[],
+    companyId: number,
+    studentId?: number,
+  ) {
     const secret = this.configService.get<string>('JWT_SECRET')!;
     const payload: Record<string, any> = { sub: userId, roles, companyId };
     if (studentId) payload.studentId = studentId;
@@ -88,7 +104,7 @@ export class AuthService {
       const hasAccess = userRoleIds.some((id) => allowedRoleIds.includes(id));
       if (!hasAccess) {
         throw new ForbiddenException(
-          "Sizning rolingiz bu portalga kirish huquqiga ega emas",
+          'Sizning rolingiz bu portalga kirish huquqiga ega emas',
         );
       }
     }
@@ -106,7 +122,12 @@ export class AuthService {
       studentId = student?.id;
     }
 
-    const tokens = this.generateTokens(user.id, roles, user.companyId, studentId);
+    const tokens = this.generateTokens(
+      user.id,
+      roles,
+      user.companyId,
+      studentId,
+    );
 
     return {
       ...tokens,
@@ -120,15 +141,25 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken, { secret });
 
       if (payload.type !== 'refresh') {
-        throw new UnauthorizedException('Noto\'g\'ri token turi');
+        throw new UnauthorizedException("Noto'g'ri token turi");
       }
 
       const user = await this.prisma.user.findFirst({
         where: { id: payload.sub, deletedAt: null },
         include: {
           roles: { include: { role: true } },
-          branches: { include: { branch: { select: { id: true, name: true } } } },
-          company: { select: { id: true, name: true, subdomain: true, logo: true, phone: true } },
+          branches: {
+            include: { branch: { select: { id: true, name: true } } },
+          },
+          company: {
+            select: {
+              id: true,
+              name: true,
+              subdomain: true,
+              logo: true,
+              phone: true,
+            },
+          },
         },
       });
 
@@ -136,7 +167,11 @@ export class AuthService {
         throw new UnauthorizedException('Foydalanuvchi topilmadi');
       }
 
-      if (user.status === 'SUSPENDED' || user.status === 'TERMINATED' || user.status === 'ARCHIVED') {
+      if (
+        user.status === 'SUSPENDED' ||
+        user.status === 'TERMINATED' ||
+        user.status === 'ARCHIVED'
+      ) {
         throw new UnauthorizedException('Hisobingiz bloklangan');
       }
 
@@ -152,7 +187,12 @@ export class AuthService {
         studentId = student?.id;
       }
 
-      const tokens = this.generateTokens(user.id, roles, user.companyId, studentId);
+      const tokens = this.generateTokens(
+        user.id,
+        roles,
+        user.companyId,
+        studentId,
+      );
 
       return {
         ...tokens,
@@ -160,7 +200,9 @@ export class AuthService {
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
-      throw new UnauthorizedException('Refresh token yaroqsiz yoki muddati tugagan');
+      throw new UnauthorizedException(
+        'Refresh token yaroqsiz yoki muddati tugagan',
+      );
     }
   }
 }

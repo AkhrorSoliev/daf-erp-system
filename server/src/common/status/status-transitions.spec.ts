@@ -128,12 +128,18 @@ describe('isValidTransition', () => {
 describe('getAllowedTransitions', () => {
   it('returns 4 options for Student ACTIVE', () => {
     expect(getAllowedTransitions('Student', 'ACTIVE')).toEqual([
-      'FROZEN', 'GRADUATED', 'EXPELLED', 'ARCHIVED',
+      'FROZEN',
+      'GRADUATED',
+      'EXPELLED',
+      'ARCHIVED',
     ]);
   });
 
   it('returns [ACTIVE, ARCHIVED] for Student GRADUATED', () => {
-    expect(getAllowedTransitions('Student', 'GRADUATED')).toEqual(['ACTIVE', 'ARCHIVED']);
+    expect(getAllowedTransitions('Student', 'GRADUATED')).toEqual([
+      'ACTIVE',
+      'ARCHIVED',
+    ]);
   });
 
   it('returns empty for User TERMINATED (terminal)', () => {

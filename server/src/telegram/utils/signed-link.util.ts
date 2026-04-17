@@ -13,7 +13,10 @@ function getSecret(): string {
   return secret;
 }
 
-export function signEmployeePayload(branchId: number, roleIds: number[]): string {
+export function signEmployeePayload(
+  branchId: number,
+  roleIds: number[],
+): string {
   const sortedRoles = [...roleIds].sort((a, b) => a - b).join(',');
   const base = `employee_${branchId}_roles_${sortedRoles}`;
   const sig = createHmac('sha256', getSecret())
@@ -28,7 +31,10 @@ export function verifyEmployeePayload(
   roleIds: number[],
   providedSig: string,
 ): boolean {
-  if (!/^[0-9a-f]+$/i.test(providedSig) || providedSig.length !== SIGNATURE_LENGTH) {
+  if (
+    !/^[0-9a-f]+$/i.test(providedSig) ||
+    providedSig.length !== SIGNATURE_LENGTH
+  ) {
     return false;
   }
   const sortedRoles = [...roleIds].sort((a, b) => a - b).join(',');

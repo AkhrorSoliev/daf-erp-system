@@ -6,7 +6,7 @@ const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Faol',
   INACTIVE: 'Nofaol',
   SUSPENDED: "To'xtatilgan",
-  TERMINATED: 'Ishdan bo\'shatilgan',
+  TERMINATED: "Ishdan bo'shatilgan",
   ARCHIVED: 'Arxivlangan',
   FROZEN: 'Muzlatilgan',
   GRADUATED: 'Bitirgan',
@@ -15,11 +15,11 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: 'Tugallangan',
   CANCELLED: 'Bekor qilingan',
   NEW: 'Yangi',
-  CONTACTED: 'Bog\'lanildi',
-  CONVERTED: 'O\'quvchiga aylandi',
-  LOST: 'Yo\'qolgan',
+  CONTACTED: "Bog'lanildi",
+  CONVERTED: "O'quvchiga aylandi",
+  LOST: "Yo'qolgan",
   CLOSED: 'Yopilgan',
-  UNDER_MAINTENANCE: 'Ta\'mirda',
+  UNDER_MAINTENANCE: "Ta'mirda",
   DEPRECATED: 'Eskirgan',
   DROPPED: 'Tark etgan',
 };
@@ -44,7 +44,15 @@ export class CommentEventsListener {
     changedById?: number;
     companyId?: number;
   }) {
-    const { entityType, entityId, oldStatus, newStatus, reason, changedById, companyId } = payload;
+    const {
+      entityType,
+      entityId,
+      oldStatus,
+      newStatus,
+      reason,
+      changedById,
+      companyId,
+    } = payload;
 
     if (!oldStatus || !newStatus || !changedById) return;
 
@@ -70,7 +78,9 @@ export class CommentEventsListener {
         },
       });
     } catch (error) {
-      this.logger.warn(`Failed to create system comment for ${entityType}/${entityId}: ${error.message}`);
+      this.logger.warn(
+        `Failed to create system comment for ${entityType}/${entityId}: ${error.message}`,
+      );
     }
   }
 }

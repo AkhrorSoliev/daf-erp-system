@@ -11,7 +11,10 @@ import {
 import { AttendanceService } from './attendance.service';
 import { QrAttendanceService } from './qr-attendance.service';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
-import { AttendanceDatesQueryDto, AttendanceStatsQueryDto } from './dto/attendance-query.dto';
+import {
+  AttendanceDatesQueryDto,
+  AttendanceStatsQueryDto,
+} from './dto/attendance-query.dto';
 import {
   StartQrSessionDto,
   RotateQrTokenDto,
@@ -43,9 +46,7 @@ export class AttendanceController {
         where: { groupId_teacherId: { groupId, teacherId: userId } },
       });
       if (!isAssigned) {
-        throw new ForbiddenException(
-          'Siz bu guruhga biriktirilmagansiz',
-        );
+        throw new ForbiddenException('Siz bu guruhga biriktirilmagansiz');
       }
     }
   }

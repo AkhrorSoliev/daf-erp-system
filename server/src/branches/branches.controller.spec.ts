@@ -23,9 +23,7 @@ describe('BranchesController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BranchesController],
-      providers: [
-        { provide: BranchesService, useValue: mockService },
-      ],
+      providers: [{ provide: BranchesService, useValue: mockService }],
     }).compile();
 
     controller = module.get(BranchesController);
@@ -119,7 +117,9 @@ describe('BranchesController — role guards', () => {
     });
 
     it('should deny Administrator from changing status', () => {
-      const ctx = mockExecutionContext(controller.changeStatus, ['Administrator']);
+      const ctx = mockExecutionContext(controller.changeStatus, [
+        'Administrator',
+      ]);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });

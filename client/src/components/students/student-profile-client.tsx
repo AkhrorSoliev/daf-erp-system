@@ -6,6 +6,7 @@ import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
 import { StudentProfileTabs } from "./student-profile-tabs";
 import { EnrollToGroupDialog } from "./enroll-to-group-dialog";
+import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
@@ -16,6 +17,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [error, setError] = useState(false);
   const [commentKey, setCommentKey] = useState(0);
   const [enrollOpen, setEnrollOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [groupsRefreshing, setGroupsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("guruhlar");
   const setName = useBreadcrumbName((s) => s.setName);
@@ -87,6 +89,8 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             commentKey={commentKey}
             onEnrollClick={() => setEnrollOpen(true)}
             onHistoryClick={() => setActiveTab("tarix")}
+            onPaymentClick={() => setPaymentOpen(true)}
+            onPaymentHistoryClick={() => setActiveTab("tolovlar")}
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -110,6 +114,17 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
         studentName={`${student.firstName} ${student.lastName}`}
         enrolledGroupIds={student.groups.map((g) => g.id)}
         onEnrolled={handleEnrolled}
+      />
+      <RecordPaymentDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        preSelectedStudent={{
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          balance: student.balance,
+        }}
+        onSuccess={() => fetchStudent(false)}
       />
     </>
   );

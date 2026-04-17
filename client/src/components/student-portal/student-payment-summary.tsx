@@ -42,7 +42,7 @@ const PAYMENT_METHODS = [
     name: "Click",
     logo: "/click-logo.png",
     imgClass: "h-25 w-30 object-contain",
-    available: false,
+    available: true,
   },
   {
     id: "uzum",
@@ -89,7 +89,7 @@ export function StudentPaymentSummary() {
       const { data } = await api.post("/student-portal/payments/init", {
         amount: Number(amount),
         method: selectedMethod.toUpperCase(),
-        returnUrl: `${window.location.origin}/payment/result`,
+        returnUrl: `${window.location.origin}/portal/payments/result`,
       });
       window.location.href = data.checkoutUrl;
     } catch (err) {

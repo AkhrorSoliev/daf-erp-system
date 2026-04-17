@@ -68,9 +68,11 @@ interface StudentProfileCardProps {
   commentKey?: number;
   onEnrollClick?: () => void;
   onHistoryClick?: () => void;
+  onPaymentClick?: () => void;
+  onPaymentHistoryClick?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const router = useRouter();
   const authUser = useAuth((s) => s.user);
@@ -191,8 +193,8 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>To&apos;lov qo&apos;shish</DropdownMenuItem>
-                <DropdownMenuItem>To&apos;lov tarixi</DropdownMenuItem>
+                <DropdownMenuItem onClick={onPaymentClick}>To&apos;lov qo&apos;shish</DropdownMenuItem>
+                <DropdownMenuItem onClick={onPaymentHistoryClick}>To&apos;lov tarixi</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

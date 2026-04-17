@@ -4,11 +4,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { PaymentMethod } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { ChangePortalPasswordDto } from './dto/change-portal-password.dto';
 import { UpdatePortalNameDto } from './dto/update-portal-name.dto';
+
+/** Intent expires 1 hour after creation */
+const INTENT_TTL_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class StudentPortalService {
@@ -223,7 +227,10 @@ export class StudentPortalService {
       });
 
       // Statistika
-      let present = 0, absent = 0, late = 0, excused = 0;
+      let present = 0,
+        absent = 0,
+        late = 0,
+        excused = 0;
       for (const r of records) {
         if (r.status === 'PRESENT') present++;
         else if (r.status === 'ABSENT') absent++;
@@ -231,15 +238,17 @@ export class StudentPortalService {
         else if (r.status === 'EXCUSED') excused++;
       }
       const total = records.length;
-      const percentage = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+      const percentage =
+        total > 0 ? Math.round(((present + late) / total) * 100) : 0;
 
       result.push({
         groupId: group.id,
         groupName: group.name,
         courseName: group.course?.name ?? null,
-        lessonTime: group.lessonStartTime && group.lessonEndTime
-          ? `${group.lessonStartTime} – ${group.lessonEndTime}`
-          : null,
+        lessonTime:
+          group.lessonStartTime && group.lessonEndTime
+            ? `${group.lessonStartTime} – ${group.lessonEndTime}`
+            : null,
         stats: { total, present, absent, late, excused, percentage },
         records: records.map((r) => ({
           date: r.date.toISOString().split('T')[0],
@@ -289,10 +298,20 @@ export class StudentPortalService {
     return { total, present, absent, late, excused, percentage };
   }
 
-  async updateName(studentId: number, dto: UpdatePortalNameDto, userId: number) {
+  async updateName(
+    studentId: number,
+    dto: UpdatePortalNameDto,
+    userId: number,
+  ) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, deletedAt: null },
-      select: { id: true, firstName: true, lastName: true, companyId: true, userId: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        companyId: true,
+        userId: true,
+      },
     });
 
     if (!student) {
@@ -325,7 +344,11 @@ export class StudentPortalService {
     return updated;
   }
 
-  async changePassword(userId: number, studentId: number, dto: ChangePortalPasswordDto) {
+  async changePassword(
+    userId: number,
+    studentId: number,
+    dto: ChangePortalPasswordDto,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, password: true },
@@ -337,7 +360,7 @@ export class StudentPortalService {
 
     const isValid = await bcrypt.compare(dto.oldPassword, user.password);
     if (!isValid) {
-      throw new BadRequestException('Joriy parol noto\'g\'ri');
+      throw new BadRequestException("Joriy parol noto'g'ri");
     }
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
@@ -355,16 +378,20 @@ export class StudentPortalService {
         entityType: 'Student',
         entityId: studentId,
         oldValues: { parol: '***' },
-        newValues: { parol: 'o\'zgartirildi' },
+        newValues: { parol: "o'zgartirildi" },
         changedById: userId,
         companyId: student?.companyId ?? undefined,
       });
     }
 
-    return { message: 'Parol muvaffaqiyatli o\'zgartirildi' };
+    return { message: "Parol muvaffaqiyatli o'zgartirildi" };
   }
 
-  async updatePhoto(studentId: number, file: Express.Multer.File, userId: number) {
+  async updatePhoto(
+    studentId: number,
+    file: Express.Multer.File,
+    userId: number,
+  ) {
     if (!file) {
       throw new BadRequestException('Rasm yuklanmadi');
     }
@@ -382,7 +409,10 @@ export class StudentPortalService {
       await this.uploadService.deleteFile(student.photo);
     }
 
-    const photoUrl = await this.uploadService.uploadFile(file, 'student-photos');
+    const photoUrl = await this.uploadService.uploadFile(
+      file,
+      'student-photos',
+    );
 
     await this.prisma.student.update({
       where: { id: studentId },
@@ -440,5 +470,38 @@ export class StudentPortalService {
     ]);
 
     return { payments, transactions };
+  }
+
+  /**
+   * Create a PaymentIntent so the webhook can verify the expected amount.
+   * Expires unused intents for the same student+provider before creating a new one.
+   */
+  async createPaymentIntent(params: {
+    studentId: number;
+    companyId: number;
+    provider: PaymentMethod;
+    amountSom: number;
+  }) {
+    // Expire any previous unused intents for same student + provider
+    await this.prisma.paymentIntent.updateMany({
+      where: {
+        studentId: params.studentId,
+        companyId: params.companyId,
+        provider: params.provider,
+        used: false,
+      },
+      data: { used: true },
+    });
+
+    return this.prisma.paymentIntent.create({
+      data: {
+        studentId: params.studentId,
+        companyId: params.companyId,
+        provider: params.provider,
+        amount: params.amountSom,
+        amountTiyin: params.amountSom * 100,
+        expiresAt: new Date(Date.now() + INTENT_TTL_MS),
+      },
+    });
   }
 }

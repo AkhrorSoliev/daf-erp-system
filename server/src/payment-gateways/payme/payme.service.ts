@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentMethod } from '@prisma/client';
 import { timingSafeEqual } from 'crypto';
 import { GatewayEventService } from '../gateway-event.service';
+import { GatewayConfigService } from '../gateway-config.service';
 import { PaymeMethodsService } from './payme-methods.service';
 import {
   AUTH_ERROR,
@@ -37,6 +38,7 @@ export class PaymeService {
   constructor(
     private config: ConfigService,
     private events: GatewayEventService,
+    private gatewayConfig: GatewayConfigService,
     private methods: PaymeMethodsService,
   ) {}
 
@@ -52,10 +54,10 @@ export class PaymeService {
     const body = (rawBody ?? {}) as Partial<PaymeRpcRequest>;
     const rpcId = typeof body.id === 'number' ? body.id : 0;
     const method = typeof body.method === 'string' ? body.method : '';
-    const params = (body.params ?? {}) as Record<string, unknown>;
+    const params = body.params ?? {};
 
-    // 1. Verify Basic Auth
-    if (!this.verifySignature(headers)) {
+    // 1. Verify Basic Auth (per-company credentials)
+    if (!(await this.verifySignature(headers, companyId))) {
       this.logger.warn(`Payme auth failed for method=${method}`);
       return paymeError(rpcId, AUTH_ERROR);
     }
@@ -79,12 +81,20 @@ export class PaymeService {
 
     // 4. Dispatch to method handler
     try {
-      const result = await this.dispatch(method as PaymeMethod, params, companyId, rpcId);
+      const result = await this.dispatch(
+        method as PaymeMethod,
+        params,
+        companyId,
+        rpcId,
+      );
       await this.events.markProcessed(event.id);
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Payme ${method} error: ${message}`, err instanceof Error ? err.stack : undefined);
+      this.logger.error(
+        `Payme ${method} error: ${message}`,
+        err instanceof Error ? err.stack : undefined,
+      );
       await this.events.markFailed(event.id, message);
       return paymeError(rpcId, INTERNAL_ERROR);
     }
@@ -117,21 +127,28 @@ export class PaymeService {
 
   /**
    * Verify Payme Basic Auth: `Authorization: Basic base64("Paycom:<KEY>")`.
-   * Uses timing-safe comparison to prevent timing attacks.
+   * Uses per-company config with env fallback. Timing-safe comparison.
    */
-  private verifySignature(headers: Record<string, string>): boolean {
+  private async verifySignature(
+    headers: Record<string, string>,
+    companyId: number,
+  ): Promise<boolean> {
     const auth = headers['authorization'] ?? headers['Authorization'] ?? '';
     if (!auth.startsWith('Basic ')) return false;
 
-    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
-    const merchantKey = isProduction
-      ? this.config.get<string>('PAYME_MERCHANT_KEY')
-      : this.config.get<string>('PAYME_MERCHANT_KEY_TEST');
-
-    if (!merchantKey) {
-      this.logger.error('PAYME_MERCHANT_KEY is not configured');
+    const cfg = await this.gatewayConfig.getConfig(
+      companyId,
+      PaymentMethod.PAYME,
+    );
+    if (!cfg) {
+      this.logger.error(
+        `PAYME credentials not configured for companyId=${companyId}`,
+      );
       return false;
     }
+
+    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
+    const merchantKey = isProduction ? cfg.secretKey : (cfg.secretKeyTest ?? cfg.secretKey);
 
     const expected = Buffer.from(`Paycom:${merchantKey}`).toString('base64');
     const received = auth.slice(6); // strip "Basic "

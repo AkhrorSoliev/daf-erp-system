@@ -69,14 +69,25 @@ describe('StudentsService — status methods', () => {
       enrollment: {
         count: jest.fn().mockResolvedValue(0),
         findFirst: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockResolvedValue({ id: 'enroll-1', studentId: 1, groupId: 'group-1' }),
+        create: jest.fn().mockResolvedValue({
+          id: 'enroll-1',
+          studentId: 1,
+          groupId: 'group-1',
+        }),
       },
       group: {
         findFirst: jest.fn().mockResolvedValue({
-          id: 'group-1', name: 'A1', deletedAt: null, statusEnum: 'ACTIVE',
+          id: 'group-1',
+          name: 'A1',
+          deletedAt: null,
+          statusEnum: 'ACTIVE',
           course: { name: 'Deutsch A1' },
-          days: 'ODD', exactDays: [], lessonStartTime: '09:00', lessonEndTime: '10:30',
-          startDate: null, endDate: null,
+          days: 'ODD',
+          exactDays: [],
+          lessonStartTime: '09:00',
+          lessonEndTime: '10:30',
+          startDate: null,
+          endDate: null,
         }),
         findUnique: jest.fn().mockResolvedValue({ name: 'A1' }),
       },
@@ -98,7 +109,16 @@ describe('StudentsService — status methods', () => {
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: StatusCascadeService, useValue: statusCascadeService },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
@@ -130,7 +150,10 @@ describe('StudentsService — status methods', () => {
       );
 
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
-        'Student', '1', 'FROZEN', 2,
+        'Student',
+        '1',
+        'FROZEN',
+        2,
       );
     });
 
@@ -179,7 +202,10 @@ describe('StudentsService — status methods', () => {
 
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: 'GRADUATED', isActive: false }),
+          data: expect.objectContaining({
+            status: 'GRADUATED',
+            isActive: false,
+          }),
         }),
       );
     });
@@ -208,7 +234,10 @@ describe('StudentsService — status methods', () => {
       );
 
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
-        'Student', '1', 'ARCHIVED', 2,
+        'Student',
+        '1',
+        'ARCHIVED',
+        2,
       );
     });
 
@@ -225,19 +254,30 @@ describe('StudentsService — status methods', () => {
 
       await service.getStatusHistory(1);
 
-      expect(statusHistoryService.getHistory).toHaveBeenCalledWith('Student', '1');
+      expect(statusHistoryService.getHistory).toHaveBeenCalledWith(
+        'Student',
+        '1',
+      );
     });
 
     it('throws NotFoundException when student not found', async () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
-      await expect(service.getStatusHistory(999)).rejects.toThrow(NotFoundException);
+      await expect(service.getStatusHistory(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('createStudentUser', () => {
     it('creates a User with Student role and links to student', async () => {
-      const result = await service.createStudentUser(1, '901234567', 'Ali', 'Valiyev', 1001);
+      const result = await service.createStudentUser(
+        1,
+        '901234567',
+        'Ali',
+        'Valiyev',
+        1001,
+      );
 
       expect(prisma.user.create).toHaveBeenCalledWith(
         expect.objectContaining({

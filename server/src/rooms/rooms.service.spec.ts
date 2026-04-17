@@ -23,7 +23,9 @@ describe('RoomsService — status methods', () => {
     prisma = {
       room: {
         findFirst: jest.fn().mockResolvedValue(mockRoom),
-        update: jest.fn().mockResolvedValue({ ...mockRoom, branch: { name: 'Branch' } }),
+        update: jest
+          .fn()
+          .mockResolvedValue({ ...mockRoom, branch: { name: 'Branch' } }),
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
@@ -36,7 +38,9 @@ describe('RoomsService — status methods', () => {
 
     statusHistoryService = {
       changeStatus: jest.fn().mockResolvedValue({
-        statusChangedAt: new Date(), statusChangedById: 1, statusChangeReason: null,
+        statusChangedAt: new Date(),
+        statusChangedById: 1,
+        statusChangeReason: null,
       }),
       getHistory: jest.fn().mockResolvedValue([]),
     };
@@ -46,7 +50,16 @@ describe('RoomsService — status methods', () => {
         RoomsService,
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -55,7 +68,11 @@ describe('RoomsService — status methods', () => {
 
   describe('changeStatus', () => {
     it('updates room status (no cascade)', async () => {
-      await service.changeStatus('room-1', { status: 'UNDER_MAINTENANCE' as any }, 1);
+      await service.changeStatus(
+        'room-1',
+        { status: 'UNDER_MAINTENANCE' as any },
+        1,
+      );
 
       expect(prisma.room.update).toHaveBeenCalledWith(
         expect.objectContaining({

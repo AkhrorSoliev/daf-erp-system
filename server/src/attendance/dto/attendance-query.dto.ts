@@ -17,10 +17,14 @@ export class AttendanceDatesQueryDto {
 
 export class AttendanceStatsQueryDto {
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "startDate YYYY-MM-DD formatda bo'lishi kerak" })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "startDate YYYY-MM-DD formatda bo'lishi kerak",
+  })
   startDate?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "endDate YYYY-MM-DD formatda bo'lishi kerak" })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "endDate YYYY-MM-DD formatda bo'lishi kerak",
+  })
   endDate?: string;
 }

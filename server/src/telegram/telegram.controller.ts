@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
 import { CurrentUser, Public, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards/roles.guard';

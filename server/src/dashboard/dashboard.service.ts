@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DAY_NAMES = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
 
 @Injectable()
 export class DashboardService {
@@ -10,7 +18,11 @@ export class DashboardService {
   async getTodaySchedule(branchId: number, date?: string) {
     const targetDate = date ? new Date(date) : new Date();
     const dayName = DAY_NAMES[targetDate.getDay()];
-    const dateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const dateOnly = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+    );
 
     const [holiday, branch, rooms, groups] = await Promise.all([
       this.prisma.holiday.findFirst({
@@ -95,8 +107,12 @@ export class DashboardService {
         ])
       : [[], []];
 
-    const presentMap = new Map(presentCounts.map((a) => [a.groupId, a._count.id]));
-    const totalAttendanceMap = new Map(totalCounts.map((a) => [a.groupId, a._count.id]));
+    const presentMap = new Map(
+      presentCounts.map((a) => [a.groupId, a._count.id]),
+    );
+    const totalAttendanceMap = new Map(
+      totalCounts.map((a) => [a.groupId, a._count.id]),
+    );
 
     // Current server time (Tashkent) — used to determine lesson phase
     const now = new Date();
@@ -105,7 +121,10 @@ export class DashboardService {
     const isToday = todayStr === targetStr;
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-    function phaseOf(startTime: string, endTime: string): 'PAST' | 'CURRENT' | 'UPCOMING' {
+    function phaseOf(
+      startTime: string,
+      endTime: string,
+    ): 'PAST' | 'CURRENT' | 'UPCOMING' {
       if (!isToday) return 'PAST';
       const [sh, sm] = startTime.split(':').map(Number);
       const [eh, em] = endTime.split(':').map(Number);

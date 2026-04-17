@@ -34,7 +34,13 @@ describe('TeachersService — status methods', () => {
     prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue(mockTeacher),
-        update: jest.fn().mockResolvedValue({ ...mockTeacher, roles: [{ role: { id: 4, name: 'Teacher' } }], branches: [], company: { id: 1001, name: 'Test' }, groupTeachers: [] }),
+        update: jest.fn().mockResolvedValue({
+          ...mockTeacher,
+          roles: [{ role: { id: 4, name: 'Teacher' } }],
+          branches: [],
+          company: { id: 1001, name: 'Test' },
+          groupTeachers: [],
+        }),
         count: jest.fn().mockResolvedValue(1),
         findMany: jest.fn().mockResolvedValue([]),
       },
@@ -62,7 +68,16 @@ describe('TeachersService — status methods', () => {
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: RedisService, useValue: redis },
         { provide: StatusHistoryService, useValue: statusHistoryService },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -71,7 +86,11 @@ describe('TeachersService — status methods', () => {
 
   describe('changeStatus', () => {
     it('sets Redis block key when status is SUSPENDED', async () => {
-      await service.changeStatus(1, { status: 'SUSPENDED' as any, reason: 'test' }, 2);
+      await service.changeStatus(
+        1,
+        { status: 'SUSPENDED' as any, reason: 'test' },
+        2,
+      );
 
       expect(redis.set).toHaveBeenCalledWith('user:blocked:1', '1');
       expect(redis.del).not.toHaveBeenCalled();
@@ -84,7 +103,10 @@ describe('TeachersService — status methods', () => {
     });
 
     it('removes Redis block key when status is ACTIVE', async () => {
-      prisma.user.findFirst.mockResolvedValue({ ...mockTeacher, status: 'SUSPENDED' });
+      prisma.user.findFirst.mockResolvedValue({
+        ...mockTeacher,
+        status: 'SUSPENDED',
+      });
 
       await service.changeStatus(1, { status: 'ACTIVE' as any }, 2);
 

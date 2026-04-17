@@ -12,7 +12,10 @@ import {
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { CommentQueryDto, LatestCommentQueryDto } from './dto/comment-query.dto';
+import {
+  CommentQueryDto,
+  LatestCommentQueryDto,
+} from './dto/comment-query.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
 import { UpdateAssigneeStatusDto } from './dto/update-assignee-status.dto';
 import { Roles } from '../common/decorators';
@@ -34,7 +37,8 @@ export class CommentsController {
   ) {
     // Only CEO and BD can create task comments
     if (dto.isTask) {
-      const canAssign = roles.includes('CEO') || roles.includes('Branch Director');
+      const canAssign =
+        roles.includes('CEO') || roles.includes('Branch Director');
       if (!canAssign) {
         dto.isTask = false;
         dto.assigneeIds = undefined;
@@ -45,10 +49,7 @@ export class CommentsController {
   }
 
   @Get('my-tasks')
-  getMyTasks(
-    @Query() query: TaskQueryDto,
-    @CurrentUser('id') userId: number,
-  ) {
+  getMyTasks(@Query() query: TaskQueryDto, @CurrentUser('id') userId: number) {
     return this.commentsService.getMyTasks(userId, query);
   }
 

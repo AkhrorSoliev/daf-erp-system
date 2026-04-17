@@ -1,8 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { PaymentMethod, PaymentSource, PaymentStatus, Prisma, StudentStatus } from '@prisma/client';
+import {
+  PaymentMethod,
+  PaymentSource,
+  PaymentStatus,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 
@@ -27,11 +37,18 @@ export class PaymentsService {
 
     if (dto.contractId) {
       const contract = await this.prisma.contract.findFirst({
-        where: { id: dto.contractId, studentId: dto.studentId, deletedAt: null, companyId },
+        where: {
+          id: dto.contractId,
+          studentId: dto.studentId,
+          deletedAt: null,
+          companyId,
+        },
         select: { id: true, branchId: true },
       });
       if (!contract) {
-        throw new NotFoundException("Shartnoma topilmadi yoki bu o'quvchiga tegishli emas");
+        throw new NotFoundException(
+          "Shartnoma topilmadi yoki bu o'quvchiga tegishli emas",
+        );
       }
       if (dto.branchId && contract.branchId !== dto.branchId) {
         throw new BadRequestException(
@@ -93,7 +110,11 @@ export class PaymentsService {
         });
 
         const methodLabel: Record<string, string> = {
-          CASH: 'Naqd', PAYME: 'Payme', CLICK: 'Click', UZUM: 'Uzum', TRANSFER: "Bank o'tkazmasi",
+          CASH: 'Naqd',
+          PAYME: 'Payme',
+          CLICK: 'Click',
+          UZUM: 'Uzum',
+          TRANSFER: "Bank o'tkazmasi",
         };
         await this.entityHistoryService.recordStatusChange({
           entityType: 'Student',
@@ -112,7 +133,11 @@ export class PaymentsService {
 
         return { payment, studentBalance: updatedStudent?.balance };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 15000,
+      },
     );
 
     return { ...payment, studentBalance };
@@ -156,7 +181,10 @@ export class PaymentsService {
       async (tx) => {
         await this.transactionsService.reverseTransaction(
           ledgerEntry.id,
-          { performedById: params.performedById, reason: params.reason ?? "To'lov bekor qilindi" },
+          {
+            performedById: params.performedById,
+            reason: params.reason ?? "To'lov bekor qilindi",
+          },
           tx,
         );
 
@@ -176,7 +204,10 @@ export class PaymentsService {
           entityType: 'Payment',
           entityId: id,
           oldValues: { status: payment.status },
-          newValues: { status: PaymentStatus.REVERSED, reason: params.reason ?? null },
+          newValues: {
+            status: PaymentStatus.REVERSED,
+            reason: params.reason ?? null,
+          },
           changedById: params.performedById,
           companyId: params.companyId,
           tx,
@@ -188,12 +219,18 @@ export class PaymentsService {
         });
 
         const methodLabel: Record<string, string> = {
-          CASH: 'Naqd', PAYME: 'Payme', CLICK: 'Click', UZUM: 'Uzum', TRANSFER: "Bank o'tkazmasi",
+          CASH: 'Naqd',
+          PAYME: 'Payme',
+          CLICK: 'Click',
+          UZUM: 'Uzum',
+          TRANSFER: "Bank o'tkazmasi",
         };
         await this.entityHistoryService.recordStatusChange({
           entityType: 'Student',
           entityId: payment.studentId,
-          oldValues: { balans: (updatedStudent?.balance ?? 0) + payment.amount },
+          oldValues: {
+            balans: (updatedStudent?.balance ?? 0) + payment.amount,
+          },
           newValues: {
             balans: updatedStudent?.balance ?? 0,
             summa: -payment.amount,
@@ -206,7 +243,11 @@ export class PaymentsService {
 
         return { reversedPaymentId: id, amount: payment.amount };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 15000,
+      },
     );
   }
 
@@ -225,9 +266,16 @@ export class PaymentsService {
       performedById?: number;
       note?: string;
     },
+    outerTx?: Prisma.TransactionClient,
   ) {
-    const student = await this.prisma.student.findFirst({
-      where: { id: params.studentId, deletedAt: null, companyId: params.companyId },
+    const db = outerTx ?? this.prisma;
+
+    const student = await db.student.findFirst({
+      where: {
+        id: params.studentId,
+        deletedAt: null,
+        companyId: params.companyId,
+      },
       select: { id: true },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
@@ -235,12 +283,19 @@ export class PaymentsService {
     let resolvedBranchId = params.branchId;
 
     if (params.contractId) {
-      const contract = await this.prisma.contract.findFirst({
-        where: { id: params.contractId, studentId: params.studentId, deletedAt: null, companyId: params.companyId },
+      const contract = await db.contract.findFirst({
+        where: {
+          id: params.contractId,
+          studentId: params.studentId,
+          deletedAt: null,
+          companyId: params.companyId,
+        },
         select: { id: true, branchId: true },
       });
       if (!contract) {
-        throw new NotFoundException("Shartnoma topilmadi yoki bu o'quvchiga tegishli emas");
+        throw new NotFoundException(
+          "Shartnoma topilmadi yoki bu o'quvchiga tegishli emas",
+        );
       }
       if (params.branchId && contract.branchId !== params.branchId) {
         throw new BadRequestException(
@@ -250,74 +305,84 @@ export class PaymentsService {
       resolvedBranchId = contract.branchId;
     }
 
-    try {
-      const { payment, studentBalance } = await this.prisma.$transaction(
-        async (tx) => {
-          const payment = await tx.payment.create({
-            data: {
-              studentId: params.studentId,
-              contractId: params.contractId,
-              amount: params.amount,
-              method: params.method,
-              status: PaymentStatus.COMPLETED,
-              source: params.source,
-              externalId: params.externalId,
-              providerFee: params.providerFee,
-              providerFeePercent: params.providerFeePercent,
-              note: params.note,
-              receivedById: params.performedById,
-              branchId: resolvedBranchId,
-              companyId: params.companyId,
-            },
-          });
-
-          await this.transactionsService.recordPayment(
-            {
-              studentId: params.studentId,
-              amount: params.amount,
-              paymentId: payment.id,
-              contractId: params.contractId,
-              branchId: resolvedBranchId,
-              companyId: params.companyId,
-              performedById: params.performedById,
-            },
-            tx,
-          );
-
-          if (params.contractId) {
-            await tx.contract.update({
-              where: { id: params.contractId },
-              data: { paidAmount: { increment: params.amount } },
-            });
-          }
-
-          const updatedStudent = await tx.student.findUnique({
-            where: { id: params.studentId },
-            select: { balance: true },
-          });
-
-          const methodLabel: Record<string, string> = {
-            CASH: 'Naqd', PAYME: 'Payme', CLICK: 'Click', UZUM: 'Uzum', TRANSFER: "Bank o'tkazmasi",
-          };
-          await this.entityHistoryService.recordStatusChange({
-            entityType: 'Student',
-            entityId: params.studentId,
-            oldValues: { balans: updatedStudent!.balance - params.amount },
-            newValues: {
-              balans: updatedStudent!.balance,
-              summa: params.amount,
-              usul: methodLabel[params.method] ?? params.method,
-              status: "TO'LOV_QABUL_QILINDI",
-            },
-            changedById: params.performedById,
-            companyId: params.companyId,
-            tx,
-          });
-
-          return { payment, studentBalance: updatedStudent?.balance };
+    const executeInTx = async (tx: Prisma.TransactionClient) => {
+      const payment = await tx.payment.create({
+        data: {
+          studentId: params.studentId,
+          contractId: params.contractId,
+          amount: params.amount,
+          method: params.method,
+          status: PaymentStatus.COMPLETED,
+          source: params.source,
+          externalId: params.externalId,
+          providerFee: params.providerFee,
+          providerFeePercent: params.providerFeePercent,
+          note: params.note,
+          receivedById: params.performedById,
+          branchId: resolvedBranchId,
+          companyId: params.companyId,
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 },
+      });
+
+      await this.transactionsService.recordPayment(
+        {
+          studentId: params.studentId,
+          amount: params.amount,
+          paymentId: payment.id,
+          contractId: params.contractId,
+          branchId: resolvedBranchId,
+          companyId: params.companyId,
+          performedById: params.performedById,
+        },
+        tx,
       );
+
+      if (params.contractId) {
+        await tx.contract.update({
+          where: { id: params.contractId },
+          data: { paidAmount: { increment: params.amount } },
+        });
+      }
+
+      const updatedStudent = await tx.student.findUnique({
+        where: { id: params.studentId },
+        select: { balance: true },
+      });
+
+      const methodLabel: Record<string, string> = {
+        CASH: 'Naqd',
+        PAYME: 'Payme',
+        CLICK: 'Click',
+        UZUM: 'Uzum',
+        TRANSFER: "Bank o'tkazmasi",
+      };
+      await this.entityHistoryService.recordStatusChange({
+        entityType: 'Student',
+        entityId: params.studentId,
+        oldValues: { balans: updatedStudent!.balance - params.amount },
+        newValues: {
+          balans: updatedStudent!.balance,
+          summa: params.amount,
+          usul: methodLabel[params.method] ?? params.method,
+          status: "TO'LOV_QABUL_QILINDI",
+        },
+        changedById: params.performedById,
+        companyId: params.companyId,
+        tx,
+      });
+
+      return { payment, studentBalance: updatedStudent?.balance };
+    };
+
+    try {
+      // If an outer transaction was provided, run within it; otherwise create our own
+      const { payment, studentBalance } = outerTx
+        ? await executeInTx(outerTx)
+        : await this.prisma.$transaction(executeInTx, {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 10000,
+            timeout: 15000,
+          });
 
       return { ...payment, studentBalance };
     } catch (err) {
@@ -345,12 +410,13 @@ export class PaymentsService {
         ? { status: query.status }
         : { status: { not: PaymentStatus.REVERSED } }),
       ...(query.branchId && { branchId: query.branchId }),
-      ...(query.startDate && query.endDate && {
-        createdAt: {
-          gte: new Date(query.startDate),
-          lte: new Date(query.endDate + 'T23:59:59.999Z'),
-        },
-      }),
+      ...(query.startDate &&
+        query.endDate && {
+          createdAt: {
+            gte: new Date(query.startDate),
+            lte: new Date(query.endDate + 'T23:59:59.999Z'),
+          },
+        }),
     };
 
     const [data, total] = await Promise.all([
@@ -396,7 +462,9 @@ export class PaymentsService {
         branchId: true,
         companyId: true,
         createdAt: true,
-        student: { select: { id: true, firstName: true, lastName: true, balance: true } },
+        student: {
+          select: { id: true, firstName: true, lastName: true, balance: true },
+        },
         contract: { select: { id: true, contractNumber: true } },
         receivedBy: { select: { id: true, firstName: true, lastName: true } },
       },
@@ -407,7 +475,11 @@ export class PaymentsService {
     return payment;
   }
 
-  async findByStudent(studentId: number, query: PaymentQueryDto, companyId: number) {
+  async findByStudent(
+    studentId: number,
+    query: PaymentQueryDto,
+    companyId: number,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
@@ -418,12 +490,13 @@ export class PaymentsService {
       ...(query.status
         ? { status: query.status }
         : { status: { not: PaymentStatus.REVERSED } }),
-      ...(query.startDate && query.endDate && {
-        createdAt: {
-          gte: new Date(query.startDate),
-          lte: new Date(query.endDate + 'T23:59:59.999Z'),
-        },
-      }),
+      ...(query.startDate &&
+        query.endDate && {
+          createdAt: {
+            gte: new Date(query.startDate),
+            lte: new Date(query.endDate + 'T23:59:59.999Z'),
+          },
+        }),
     };
 
     const [data, total] = await Promise.all([
@@ -451,7 +524,10 @@ export class PaymentsService {
     return { data, total, page, pageSize };
   }
 
-  async getDebtors(companyId: number, query: { branchId?: number; page?: number; pageSize?: number }) {
+  async getDebtors(
+    companyId: number,
+    query: { branchId?: number; page?: number; pageSize?: number },
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
@@ -496,7 +572,10 @@ export class PaymentsService {
     return { data, total, page, pageSize };
   }
 
-  async getPending(companyId: number, query: { branchId?: number; page?: number; pageSize?: number }) {
+  async getPending(
+    companyId: number,
+    query: { branchId?: number; page?: number; pageSize?: number },
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 

@@ -38,7 +38,9 @@ describe('BranchesService — status methods', () => {
 
     statusHistoryService = {
       changeStatus: jest.fn().mockResolvedValue({
-        statusChangedAt: new Date(), statusChangedById: 1, statusChangeReason: null,
+        statusChangedAt: new Date(),
+        statusChangedById: 1,
+        statusChangeReason: null,
       }),
       getHistory: jest.fn().mockResolvedValue([]),
     };
@@ -53,7 +55,16 @@ describe('BranchesService — status methods', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: StatusCascadeService, useValue: statusCascadeService },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn(), recordStatusChange: jest.fn(), recordRestore: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -71,7 +82,10 @@ describe('BranchesService — status methods', () => {
       );
 
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
-        'Branch', '1', 'CLOSED', 1,
+        'Branch',
+        '1',
+        'CLOSED',
+        1,
       );
     });
 

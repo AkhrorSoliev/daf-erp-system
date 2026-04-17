@@ -16,7 +16,11 @@ import {
  */
 
 export const PAYMENT_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
-  PENDING: [PaymentStatus.COMPLETED, PaymentStatus.FAILED, PaymentStatus.CANCELLED],
+  PENDING: [
+    PaymentStatus.COMPLETED,
+    PaymentStatus.FAILED,
+    PaymentStatus.CANCELLED,
+  ],
   COMPLETED: [PaymentStatus.REFUNDED],
   FAILED: [],
   CANCELLED: [],
@@ -31,7 +35,10 @@ export const REFUND_TRANSITIONS: Record<RefundStatus, RefundStatus[]> = {
   REJECTED: [],
 };
 
-export const SALARY_PAYMENT_TRANSITIONS: Record<SalaryPaymentStatus, SalaryPaymentStatus[]> = {
+export const SALARY_PAYMENT_TRANSITIONS: Record<
+  SalaryPaymentStatus,
+  SalaryPaymentStatus[]
+> = {
   CALCULATED: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.CANCELLED],
   APPROVED: [SalaryPaymentStatus.PAID, SalaryPaymentStatus.CANCELLED],
   PAID: [],
@@ -40,7 +47,11 @@ export const SALARY_PAYMENT_TRANSITIONS: Record<SalaryPaymentStatus, SalaryPayme
 
 export const CONTRACT_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
   DRAFT: [ContractStatus.ACTIVE, ContractStatus.CANCELLED],
-  ACTIVE: [ContractStatus.COMPLETED, ContractStatus.CANCELLED, ContractStatus.REFUNDED],
+  ACTIVE: [
+    ContractStatus.COMPLETED,
+    ContractStatus.CANCELLED,
+    ContractStatus.REFUNDED,
+  ],
   COMPLETED: [],
   CANCELLED: [],
   REFUNDED: [],
@@ -55,7 +66,9 @@ export function assertValidTransition<T extends string>(
   to: T,
 ): void {
   if (from === to) {
-    throw new BadRequestException(`${entity} statusi allaqachon '${to}' holatida`);
+    throw new BadRequestException(
+      `${entity} statusi allaqachon '${to}' holatida`,
+    );
   }
   const allowed = map[from] ?? [];
   if (!allowed.includes(to)) {

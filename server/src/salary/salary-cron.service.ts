@@ -27,7 +27,9 @@ export class SalaryCronService {
 
     for (const company of companies) {
       try {
-        const result = await this.salaryService.calculateMonthlySalaries(company.id);
+        const result = await this.salaryService.calculateMonthlySalaries(
+          company.id,
+        );
         this.logger.log(
           `Company ${company.id}: calculated ${result.calculated} employee salaries`,
         );

@@ -47,13 +47,15 @@ export class TaskReminderService {
 
     if (upcomingAssignees.length === 0) return;
 
-    this.logger.log(`${upcomingAssignees.length} ta topshiriq muddati yaqinlashmoqda`);
+    this.logger.log(
+      `${upcomingAssignees.length} ta topshiriq muddati yaqinlashmoqda`,
+    );
 
     for (const assignee of upcomingAssignees) {
       try {
         const authorName = assignee.comment.author
           ? `${assignee.comment.author.firstName} ${assignee.comment.author.lastName}`
-          : 'Noma\'lum';
+          : "Noma'lum";
 
         const title = 'Topshiriq muddati yaqinlashmoqda';
         const message = `${authorName} bergan topshiriq muddati 1 soat ichida tugaydi: "${this.truncate(assignee.comment.content, 80)}"`;
@@ -85,7 +87,9 @@ export class TaskReminderService {
           data: { lastRemindedAt: now },
         });
       } catch (error) {
-        this.logger.error(`Reminder failed for assignee ${assignee.id}: ${error.message}`);
+        this.logger.error(
+          `Reminder failed for assignee ${assignee.id}: ${error.message}`,
+        );
       }
     }
   }

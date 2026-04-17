@@ -39,7 +39,11 @@ describe('QrAttendanceService', () => {
       },
       enrollment: {
         count: jest.fn().mockResolvedValue(10),
-        findFirst: jest.fn().mockResolvedValue({ id: 'enroll-1', studentId: 10001, groupId: 'group-1' }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'enroll-1',
+          studentId: 10001,
+          groupId: 'group-1',
+        }),
       },
       attendance: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -100,7 +104,10 @@ describe('QrAttendanceService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EntityHistoryService, useValue: entityHistory },
         { provide: AttendanceService, useValue: attendanceService },
-        { provide: TransactionsService, useValue: { deductLessonFee: jest.fn() } },
+        {
+          provide: TransactionsService,
+          useValue: { deductLessonFee: jest.fn() },
+        },
         { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
       ],
     }).compile();
@@ -122,7 +129,7 @@ describe('QrAttendanceService', () => {
 
     it('should throw when validateLessonDate rejects (holiday/non-lesson/inactive)', async () => {
       attendanceService.validateLessonDate.mockRejectedValue(
-        new BadRequestException('Bu sana bayram kuni: Navro\'z'),
+        new BadRequestException("Bu sana bayram kuni: Navro'z"),
       );
 
       await expect(
@@ -144,13 +151,16 @@ describe('QrAttendanceService', () => {
       await service.startSession('group-1', '2026-04-03', 1, 1);
 
       // Find the session set call (first redis.set call is session)
-      const sessionSetCall = redis.set.mock.calls.find(
-        (call: any[]) => call[0].startsWith('qr-session:'),
+      const sessionSetCall = redis.set.mock.calls.find((call: any[]) =>
+        call[0].startsWith('qr-session:'),
       );
       expect(sessionSetCall).toBeDefined();
       const sessionData = JSON.parse(sessionSetCall[1]);
       expect(sessionData).toHaveProperty('lessonNumber');
-      expect(typeof sessionData.lessonNumber === 'number' || sessionData.lessonNumber === null).toBe(true);
+      expect(
+        typeof sessionData.lessonNumber === 'number' ||
+          sessionData.lessonNumber === null,
+      ).toBe(true);
     });
 
     it('should reject if another teacher already has an active session', async () => {
@@ -203,7 +213,12 @@ describe('QrAttendanceService', () => {
         }),
       );
 
-      const result = await service.rotateToken('group-1', '2026-04-03', 'session-1', 1);
+      const result = await service.rotateToken(
+        'group-1',
+        '2026-04-03',
+        'session-1',
+        1,
+      );
 
       expect(result.token).toBeDefined();
       expect(result.expiresIn).toBe(45);
@@ -226,8 +241,8 @@ describe('QrAttendanceService', () => {
       await service.rotateToken('group-1', '2026-04-03', 'session-1', 1);
 
       // Session set should use remaining TTL (1200), not SESSION_TTL (7200)
-      const sessionSetCall = redis.set.mock.calls.find(
-        (call: any[]) => call[0].startsWith('qr-session:'),
+      const sessionSetCall = redis.set.mock.calls.find((call: any[]) =>
+        call[0].startsWith('qr-session:'),
       );
       expect(sessionSetCall).toBeDefined();
       expect(sessionSetCall[3]).toBe(1200); // 'EX' value = remaining TTL
@@ -305,7 +320,12 @@ describe('QrAttendanceService', () => {
         }),
       );
 
-      const result = await service.stopSession('group-1', '2026-04-03', 'session-1', 1);
+      const result = await service.stopSession(
+        'group-1',
+        '2026-04-03',
+        'session-1',
+        1,
+      );
 
       expect(result.message).toBe('QR sessiya tugatildi');
       expect(redis.del).toHaveBeenCalledWith('qr-token:active-token');
@@ -313,7 +333,12 @@ describe('QrAttendanceService', () => {
     });
 
     it('should return message if session already stopped', async () => {
-      const result = await service.stopSession('group-1', '2026-04-03', 'session-1', 1);
+      const result = await service.stopSession(
+        'group-1',
+        '2026-04-03',
+        'session-1',
+        1,
+      );
       expect(result.message).toBe('Sessiya allaqachon tugatilgan');
     });
 

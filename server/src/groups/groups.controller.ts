@@ -30,7 +30,9 @@ export class GroupsController {
     const roles: string[] = currentUser.roles ?? [];
     const isTeacherOnly =
       roles.includes('Teacher') &&
-      !roles.some((r) => ['CEO', 'Branch Director', 'Administrator'].includes(r));
+      !roles.some((r) =>
+        ['CEO', 'Branch Director', 'Administrator'].includes(r),
+      );
     if (isTeacherOnly) {
       query.teacher_id = currentUser.id;
     }
@@ -112,9 +114,7 @@ export class GroupsController {
   }
 
   @Get('next-name')
-  getNextName(
-    @Query('branchId') branchId: string,
-  ) {
+  getNextName(@Query('branchId') branchId: string) {
     return this.groupsService.getNextName(Number(branchId));
   }
 

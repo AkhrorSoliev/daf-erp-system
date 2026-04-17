@@ -279,6 +279,29 @@ async function main() {
   }
   console.log(`\nTalabalar: ${studentIds.length} ta yaratildi (id: ${studentIds[0]}...${studentIds[studentIds.length - 1]})`);
 
+  // 10.1 Talabalar uchun User account yaratish (student portalga kirish uchun)
+  // Login = telefon raqami, parol = 123456
+  const STUDENT_ROLE_ID = 6;
+  for (let i = 0; i < studentsData.length; i++) {
+    const s = studentsData[i];
+    const studentUser = await prisma.user.create({
+      data: {
+        firstName: s.firstName,
+        lastName: s.lastName,
+        phone: s.phone,
+        login: s.phone,
+        password: hashedPassword,
+        companyId: COMPANY_ID,
+        roles: { create: [{ roleId: STUDENT_ROLE_ID }] },
+      },
+    });
+    await prisma.student.update({
+      where: { id: studentIds[i] },
+      data: { userId: studentUser.id },
+    });
+  }
+  console.log('Talaba user accountlari yaratildi (login=telefon, parol=123456)');
+
   // Har bir guruhga 2 ta talaba enrollment qilish (har bir talaba faqat 1 guruhda)
   const enrollments = [
     { groupId: 'group-1', studentIds: [studentIds[0], studentIds[1]] },

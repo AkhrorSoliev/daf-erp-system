@@ -34,7 +34,7 @@ export class HolidaysService {
     const updated = await this.prisma.holiday.update({
       where: { id },
       data: {
-        status: dto.status as HolidayStatus,
+        status: dto.status,
         ...auditData,
       },
     });

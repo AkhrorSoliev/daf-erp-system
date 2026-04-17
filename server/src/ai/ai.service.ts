@@ -14,9 +14,7 @@ export class AiService {
       this.client = new OpenAI({ apiKey });
       this.logger.log('OpenAI client initialized');
     } else {
-      this.logger.warn(
-        'OPENAI_API_KEY mavjud emas, AI xizmatlari ishlamaydi',
-      );
+      this.logger.warn('OPENAI_API_KEY mavjud emas, AI xizmatlari ishlamaydi');
     }
   }
 
@@ -62,9 +60,7 @@ export class AiService {
     };
   }
 
-  async *streamChatCompletion(
-    options: AiChatOptions,
-  ): AsyncIterable<string> {
+  async *streamChatCompletion(options: AiChatOptions): AsyncIterable<string> {
     const client = this.ensureClient();
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];

@@ -3,12 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { PaymeService } from './payme.service';
 import { PaymeMethodsService } from './payme-methods.service';
 import { GatewayEventService } from '../gateway-event.service';
+import { GatewayConfigService } from '../gateway-config.service';
 import { AUTH_ERROR, INTERNAL_ERROR, METHOD_NOT_FOUND } from './payme-errors';
 
 describe('PaymeService', () => {
   let service: PaymeService;
   let config: { get: jest.Mock };
-  let events: { record: jest.Mock; markProcessed: jest.Mock; markFailed: jest.Mock };
+  let events: {
+    record: jest.Mock;
+    markProcessed: jest.Mock;
+    markFailed: jest.Mock;
+  };
+  let gatewayConfig: { getConfig: jest.Mock };
   let methods: Record<string, jest.Mock>;
 
   const MERCHANT_KEY = 'test-secret-key-123';
@@ -29,13 +35,35 @@ describe('PaymeService', () => {
       markFailed: jest.fn().mockResolvedValue({}),
     };
 
+    gatewayConfig = {
+      getConfig: jest.fn().mockResolvedValue({
+        merchantId: 'test-merchant-id',
+        secretKey: MERCHANT_KEY,
+        secretKeyTest: MERCHANT_KEY,
+      }),
+    };
+
     methods = {
-      checkPerformTransaction: jest.fn().mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { allow: true } }),
-      createTransaction: jest.fn().mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: 1 } }),
-      performTransaction: jest.fn().mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: 2 } }),
-      cancelTransaction: jest.fn().mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: -1 } }),
-      checkTransaction: jest.fn().mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: 2 } }),
-      getStatement: jest.fn().mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { transactions: [] } }),
+      checkPerformTransaction: jest
+        .fn()
+        .mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { allow: true } }),
+      createTransaction: jest
+        .fn()
+        .mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: 1 } }),
+      performTransaction: jest
+        .fn()
+        .mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: 2 } }),
+      cancelTransaction: jest
+        .fn()
+        .mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: -1 } }),
+      checkTransaction: jest
+        .fn()
+        .mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { state: 2 } }),
+      getStatement: jest.fn().mockResolvedValue({
+        jsonrpc: '2.0',
+        id: 1,
+        result: { transactions: [] },
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -43,6 +71,7 @@ describe('PaymeService', () => {
         PaymeService,
         { provide: ConfigService, useValue: config },
         { provide: GatewayEventService, useValue: events },
+        { provide: GatewayConfigService, useValue: gatewayConfig },
         { provide: PaymeMethodsService, useValue: methods },
       ],
     }).compile();
@@ -60,7 +89,12 @@ describe('PaymeService', () => {
   describe('Authentication', () => {
     it('should reject missing authorization header', async () => {
       const result = await service.handleWebhook(
-        { jsonrpc: '2.0', id: 1, method: 'CheckPerformTransaction', params: {} },
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'CheckPerformTransaction',
+          params: {},
+        },
         {},
         1,
       );
@@ -69,7 +103,12 @@ describe('PaymeService', () => {
 
     it('should reject invalid authorization', async () => {
       const result = await service.handleWebhook(
-        { jsonrpc: '2.0', id: 1, method: 'CheckPerformTransaction', params: {} },
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'CheckPerformTransaction',
+          params: {},
+        },
         { authorization: 'Basic aW52YWxpZA==' },
         1,
       );
@@ -78,7 +117,12 @@ describe('PaymeService', () => {
 
     it('should reject non-Basic auth scheme', async () => {
       const result = await service.handleWebhook(
-        { jsonrpc: '2.0', id: 1, method: 'CheckPerformTransaction', params: {} },
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'CheckPerformTransaction',
+          params: {},
+        },
         { authorization: 'Bearer some-token' },
         1,
       );
@@ -86,20 +130,33 @@ describe('PaymeService', () => {
     });
 
     it('should accept valid authorization', async () => {
-      const result = await makeRequest('CheckPerformTransaction', { amount: 100, account: { student_id: 10001 } });
+      const result = await makeRequest('CheckPerformTransaction', {
+        amount: 100,
+        account: { student_id: 10001 },
+      });
       expect(result).toMatchObject({ result: { allow: true } });
     });
 
     it('should use production key when NODE_ENV is production', async () => {
       config.get.mockImplementation((key: string) => {
         if (key === 'NODE_ENV') return 'production';
-        if (key === 'PAYME_MERCHANT_KEY') return 'prod-key';
         return undefined;
+      });
+
+      gatewayConfig.getConfig.mockResolvedValue({
+        merchantId: 'test-merchant-id',
+        secretKey: 'prod-key',
+        secretKeyTest: MERCHANT_KEY,
       });
 
       const prodAuth = `Basic ${Buffer.from('Paycom:prod-key').toString('base64')}`;
       const result = await service.handleWebhook(
-        { jsonrpc: '2.0', id: 1, method: 'CheckPerformTransaction', params: {} },
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'CheckPerformTransaction',
+          params: {},
+        },
         { authorization: prodAuth },
         1,
       );
@@ -185,7 +242,11 @@ describe('PaymeService', () => {
     });
 
     it('should use rpcId 0 for malformed body', async () => {
-      const result = await service.handleWebhook(null, { authorization: VALID_AUTH }, 1);
+      const result = await service.handleWebhook(
+        null,
+        { authorization: VALID_AUTH },
+        1,
+      );
       expect(result).toMatchObject({ id: 0 });
     });
   });

@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { SmsService } from '../sms/sms.service';
@@ -24,7 +35,9 @@ export class StudentsController {
     const roles: string[] = currentUser.roles ?? [];
     const isTeacherOnly =
       roles.includes('Teacher') &&
-      !roles.some((r) => ['CEO', 'Branch Director', 'Administrator'].includes(r));
+      !roles.some((r) =>
+        ['CEO', 'Branch Director', 'Administrator'].includes(r),
+      );
     if (isTeacherOnly) {
       query.teacher_id = currentUser.id;
     }
@@ -98,7 +111,12 @@ export class StudentsController {
     @Body('reason') reason: string,
     @CurrentUser('id') userId: number,
   ) {
-    return this.studentEnrollmentService.removeFromGroup(id, enrollmentId, userId, reason || "Guruhdan chiqarildi");
+    return this.studentEnrollmentService.removeFromGroup(
+      id,
+      enrollmentId,
+      userId,
+      reason || 'Guruhdan chiqarildi',
+    );
   }
 
   @Get(':id/sms')
@@ -120,13 +138,22 @@ export class StudentsController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.smsService.sendToStudent(id, dto.content, 'MANUAL', userId, companyId);
+    return this.smsService.sendToStudent(
+      id,
+      dto.content,
+      'MANUAL',
+      userId,
+      companyId,
+    );
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  delete(@Param('id', ParseIntPipe) id: number, @CurrentUser('id') userId: number) {
+  delete(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
+  ) {
     return this.studentsService.delete(id, userId);
   }
 }

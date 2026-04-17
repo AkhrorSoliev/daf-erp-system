@@ -23,7 +23,11 @@ export class UzumService {
     private payments: PaymentsService,
   ) {}
 
-  async handleWebhook(rawBody: unknown, headers: Record<string, string>, companyId: number) {
+  async handleWebhook(
+    rawBody: unknown,
+    headers: Record<string, string>,
+    companyId: number,
+  ) {
     const payload = (rawBody ?? {}) as Record<string, unknown>;
     const externalId = String(payload.transactionId ?? payload.id ?? 'unknown');
     const eventType = String(payload.eventType ?? payload.status ?? 'unknown');
@@ -39,7 +43,9 @@ export class UzumService {
     });
 
     if (!signatureValid) {
-      this.logger.warn(`Uzum webhook rejected (invalid signature): ${event.id}`);
+      this.logger.warn(
+        `Uzum webhook rejected (invalid signature): ${event.id}`,
+      );
       await this.events.markFailed(event.id, 'Invalid signature');
       return { ok: false, reason: 'Invalid signature' };
     }
@@ -55,7 +61,10 @@ export class UzumService {
     }
   }
 
-  private verifySignature(_headers: Record<string, string>, _body: unknown): boolean {
+  private verifySignature(
+    _headers: Record<string, string>,
+    _body: unknown,
+  ): boolean {
     // TODO: implement per Uzum docs (HMAC / header signature).
     return false;
   }

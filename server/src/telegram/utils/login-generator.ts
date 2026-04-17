@@ -1,22 +1,74 @@
 import { PrismaService } from '../../prisma/prisma.service';
 
 const TRANSLITERATION_MAP: Record<string, string> = {
-  a: 'a', b: 'b', d: 'd', e: 'e', f: 'f', g: 'g',
-  h: 'h', i: 'i', j: 'j', k: 'k', l: 'l', m: 'm',
-  n: 'n', o: 'o', p: 'p', q: 'q', r: 'r', s: 's',
-  t: 't', u: 'u', v: 'v', x: 'x', y: 'y', z: 'z',
+  a: 'a',
+  b: 'b',
+  d: 'd',
+  e: 'e',
+  f: 'f',
+  g: 'g',
+  h: 'h',
+  i: 'i',
+  j: 'j',
+  k: 'k',
+  l: 'l',
+  m: 'm',
+  n: 'n',
+  o: 'o',
+  p: 'p',
+  q: 'q',
+  r: 'r',
+  s: 's',
+  t: 't',
+  u: 'u',
+  v: 'v',
+  x: 'x',
+  y: 'y',
+  z: 'z',
   // O'zbek harflari
-  "o'": 'o', "g'": 'g',
-  sh: 'sh', ch: 'ch', ng: 'ng',
+  "o'": 'o',
+  "g'": 'g',
+  sh: 'sh',
+  ch: 'ch',
+  ng: 'ng',
   // Kirill harflari
-  '\u0430': 'a', '\u0431': 'b', '\u0432': 'v', '\u0433': 'g', '\u0434': 'd',
-  '\u0435': 'e', '\u0451': 'yo', '\u0436': 'j', '\u0437': 'z', '\u0438': 'i',
-  '\u0439': 'y', '\u043a': 'k', '\u043b': 'l', '\u043c': 'm', '\u043d': 'n',
-  '\u043e': 'o', '\u043f': 'p', '\u0440': 'r', '\u0441': 's', '\u0442': 't',
-  '\u0443': 'u', '\u0444': 'f', '\u0445': 'x', '\u0446': 'ts', '\u0447': 'ch',
-  '\u0448': 'sh', '\u0449': 'sh', '\u044a': '', '\u044b': 'i', '\u044c': '',
-  '\u044d': 'e', '\u044e': 'yu', '\u044f': 'ya',
-  '\u049b': 'q', '\u0493': 'g', '\u04b3': 'h', '\u045e': 'o',
+  '\u0430': 'a',
+  '\u0431': 'b',
+  '\u0432': 'v',
+  '\u0433': 'g',
+  '\u0434': 'd',
+  '\u0435': 'e',
+  '\u0451': 'yo',
+  '\u0436': 'j',
+  '\u0437': 'z',
+  '\u0438': 'i',
+  '\u0439': 'y',
+  '\u043a': 'k',
+  '\u043b': 'l',
+  '\u043c': 'm',
+  '\u043d': 'n',
+  '\u043e': 'o',
+  '\u043f': 'p',
+  '\u0440': 'r',
+  '\u0441': 's',
+  '\u0442': 't',
+  '\u0443': 'u',
+  '\u0444': 'f',
+  '\u0445': 'x',
+  '\u0446': 'ts',
+  '\u0447': 'ch',
+  '\u0448': 'sh',
+  '\u0449': 'sh',
+  '\u044a': '',
+  '\u044b': 'i',
+  '\u044c': '',
+  '\u044d': 'e',
+  '\u044e': 'yu',
+  '\u044f': 'ya',
+  '\u049b': 'q',
+  '\u0493': 'g',
+  '\u04b3': 'h',
+  '\u045e': 'o',
 };
 
 function transliterate(text: string): string {
@@ -64,7 +116,9 @@ export async function generateUniqueLogin(
   }
 
   // Birinchi bazadan tekshirish
-  const exists = await prisma.user.findFirst({ where: { login: base, deletedAt: null } });
+  const exists = await prisma.user.findFirst({
+    where: { login: base, deletedAt: null },
+  });
   if (!exists) {
     return base;
   }
@@ -73,7 +127,9 @@ export async function generateUniqueLogin(
   for (let attempt = 0; attempt < 10; attempt++) {
     const suffix = Math.floor(1000 + Math.random() * 9000);
     const login = `${base}${suffix}`;
-    const taken = await prisma.user.findFirst({ where: { login, deletedAt: null } });
+    const taken = await prisma.user.findFirst({
+      where: { login, deletedAt: null },
+    });
     if (!taken) {
       return login;
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -29,6 +29,13 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  /** When provided, the student is pre-selected and the search step is skipped. */
+  preSelectedStudent?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    balance: number;
+  } | null;
 }
 
 const QUICK_AMOUNTS = [100_000, 200_000, 300_000, 400_000, 500_000, 800_000, 1_000_000];
@@ -45,7 +52,7 @@ function formatPrice(n: number) {
   return n.toLocaleString("en-US");
 }
 
-export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
+export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preSelectedStudent }: Props) {
   const queryClient = useQueryClient();
   const { selectedBranch } = useBranchSwitcher();
   const [studentSearch, setStudentSearch] = useState("");
@@ -65,6 +72,13 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
   const [providerFee, setProviderFee] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [searching, setSearching] = useState(false);
+
+  // Sync pre-selected student when dialog opens
+  useEffect(() => {
+    if (open && preSelectedStudent) {
+      setSelectedStudent(preSelectedStudent);
+    }
+  }, [open, preSelectedStudent]);
 
   // External transaction binding (Payme/Click/Uzum) is only meaningful for
   // non-cash methods. Keep the field hidden for CASH.
@@ -133,6 +147,7 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
       onSuccess?.();
       queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
       queryClient.invalidateQueries({ queryKey: ["recent-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["student-payments"] });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -228,14 +243,16 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess }: Props) {
                   Balans: {formatPrice(selectedStudent.balance)} so&apos;m
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedStudent(null)}
-                disabled={submitting}
-              >
-                O&apos;zgartirish
-              </Button>
+              {!preSelectedStudent && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedStudent(null)}
+                  disabled={submitting}
+                >
+                  O&apos;zgartirish
+                </Button>
+              )}
             </div>
           )}
 
