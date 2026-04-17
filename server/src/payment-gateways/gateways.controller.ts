@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, Query } from '@nestjs/common';
+import { Body, Controller, Headers, HttpCode, Post, Query } from '@nestjs/common';
 import { Public } from '../common/decorators';
 import { PaymeService } from './payme/payme.service';
 import { ClickService } from './click/click.service';
@@ -25,6 +25,7 @@ export class GatewaysController {
    * Always returns HTTP 200 — errors are encoded in the JSON-RPC response body.
    */
   @Public()
+  @HttpCode(200)
   @Post('payme/webhook')
   paymeWebhook(
     @Body() body: unknown,
@@ -35,12 +36,14 @@ export class GatewaysController {
   }
 
   @Public()
+  @HttpCode(200)
   @Post('click/webhook')
   clickWebhook(@Body() body: unknown, @Query('companyId') companyId: string) {
     return this.click.handleWebhook(body, Number(companyId));
   }
 
   @Public()
+  @HttpCode(200)
   @Post('uzum/webhook')
   uzumWebhook(
     @Body() body: unknown,
