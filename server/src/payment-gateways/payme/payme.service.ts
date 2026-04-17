@@ -147,14 +147,21 @@ export class PaymeService {
       return false;
     }
 
-    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
-    const merchantKey = isProduction ? cfg.secretKey : (cfg.secretKeyTest ?? cfg.secretKey);
-
-    const expected = Buffer.from(`Paycom:${merchantKey}`).toString('base64');
     const received = auth.slice(6); // strip "Basic "
 
-    if (expected.length !== received.length) return false;
+    // Try production key first, then test key.
+    // Payme sandbox (test.paycom.uz) always sends test key,
+    // while production Payme sends the prod key.
+    const keysToTry = [cfg.secretKey, cfg.secretKeyTest].filter(Boolean) as string[];
 
-    return timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+    for (const key of keysToTry) {
+      const expected = Buffer.from(`Paycom:${key}`).toString('base64');
+      if (expected.length !== received.length) continue;
+      if (timingSafeEqual(Buffer.from(expected), Buffer.from(received))) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
