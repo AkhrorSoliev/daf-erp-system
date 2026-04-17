@@ -31,6 +31,9 @@ export const CANNOT_CANCEL = -31007;
 /** Operation cannot be performed (wrong state) */
 export const CANNOT_PERFORM = -31008;
 
+/** Account already has a pending transaction */
+export const ACCOUNT_BUSY = -31099;
+
 /** Student not found (account validation) */
 export const STUDENT_NOT_FOUND = -31050;
 
@@ -66,6 +69,11 @@ export const ERROR_MESSAGES = {
     uz: "Bu amalni bajarib bo'lmaydi",
     ru: 'Невозможно выполнить данную операцию',
     en: 'Unable to perform this operation',
+  },
+  [ACCOUNT_BUSY]: {
+    uz: "Hisob uchun to'lov kutilmoqda",
+    ru: 'Ожидается оплата по данному счету',
+    en: 'Account has a pending transaction',
   },
   [STUDENT_NOT_FOUND]: {
     uz: 'Talaba topilmadi',

@@ -149,16 +149,18 @@ export class StudentPortalController {
       const checkoutBase = isProduction
         ? 'https://checkout.paycom.uz'
         : 'https://test.paycom.uz';
+      const amountTiyin = dto.amount * 100; // so'm → tiyin
 
-      const params = Buffer.from(
-        JSON.stringify({
-          m: cfg.merchantId,
-          ac: { student_id: studentId },
-          a: dto.amount * 100, // so'm → tiyin
-          l: 'uz',
-          c: returnUrl,
-        }),
-      ).toString('base64');
+      // Payme expects semicolon-separated params, NOT JSON
+      // Format: m=MERCHANT_ID;ac.FIELD=VALUE;a=AMOUNT;c=RETURN_URL
+      let paramStr = `m=${cfg.merchantId};ac.student_id=${studentId};a=${amountTiyin};l=uz`;
+
+      // Only include callback if not localhost (Payme rejects localhost)
+      if (returnUrl && !returnUrl.includes('localhost')) {
+        paramStr += `;c=${returnUrl}`;
+      }
+
+      const params = Buffer.from(paramStr).toString('base64');
 
       return { checkoutUrl: `${checkoutBase}/${params}` };
     }
