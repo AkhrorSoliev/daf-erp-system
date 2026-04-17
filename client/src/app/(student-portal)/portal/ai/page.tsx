@@ -1,5 +1,5 @@
-import { StudentAiSection } from "@/components/student-portal/student-ai-section";
+import { AiChatPage } from "@/components/student-portal/ai-chat/ai-chat-page";
 
 export default function AiPage() {
-  return <StudentAiSection />;
+  return <AiChatPage />;
 }
