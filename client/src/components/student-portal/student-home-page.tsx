@@ -8,15 +8,11 @@ import { StudentGroupsList } from "./student-groups-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WEEKDAY_SHORT } from "@/lib/weekdays";
 
-const WEEKDAY_ORDER: Record<string, number> = {
-  MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4,
-  FRIDAY: 5, SATURDAY: 6, SUNDAY: 0,
-};
-
-const WEEKDAY_SHORT: Record<string, string> = {
-  MONDAY: "Du", TUESDAY: "Se", WEDNESDAY: "Chor", THURSDAY: "Pay",
-  FRIDAY: "Ju", SATURDAY: "Sha", SUNDAY: "Ya",
+const WEEKDAY_TO_JS_INDEX: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
 };
 
 function getNextClass(
@@ -30,13 +26,16 @@ function getNextClass(
   let bestDiff = Infinity;
   for (const group of groups) {
     for (const day of group.exactDays) {
-      const dayIndex = WEEKDAY_ORDER[day] ?? 0;
+      const dayKey = day.toLowerCase();
+      const dayIndex = WEEKDAY_TO_JS_INDEX[dayKey];
+      if (dayIndex === undefined) continue;
       let diff = dayIndex - todayIndex;
       if (diff < 0) diff += 7;
       if (diff === 0 && group.lessonStartTime && group.lessonStartTime <= currentTime) diff = 7;
       if (diff < bestDiff) {
         bestDiff = diff;
-        bestDay = `${WEEKDAY_SHORT[day]}${group.lessonStartTime ? ` ${group.lessonStartTime}` : ""}`;
+        const label = WEEKDAY_SHORT[dayKey] ?? "";
+        bestDay = `${label}${group.lessonStartTime ? ` ${group.lessonStartTime}` : ""}`.trim();
       }
     }
   }

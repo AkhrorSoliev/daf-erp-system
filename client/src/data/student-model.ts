@@ -49,4 +49,5 @@ export interface Student {
   status: string;
   createdAt: string;
   updatedAt: string;
+  lastTransactionType: string | null;
 }

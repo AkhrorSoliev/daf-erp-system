@@ -5,17 +5,19 @@ import {
   Patch,
   Body,
   Param,
+  ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
+import { QuickRefundDto } from './dto/quick-refund.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
 @Controller('refunds')
 @UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director')
+@Roles('CEO', 'Branch Director', 'Administrator')
 export class RefundsController {
   constructor(private refundsService: RefundsService) {}
 
@@ -27,6 +29,25 @@ export class RefundsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.refundsService.create(dto, userId, companyId);
+  }
+
+  @Post('quick')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  quickRefund(
+    @Body() dto: QuickRefundDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.refundsService.quickRefund(dto, userId, companyId);
+  }
+
+  @Get('preview/:studentId')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  previewRefund(
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.refundsService.previewRefund(studentId, companyId);
   }
 
   @Get()

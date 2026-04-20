@@ -6,7 +6,7 @@ import { RolesGuard } from '../common/guards';
 
 @Controller('reports')
 @UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director')
+@Roles('CEO', 'Branch Director', 'Administrator')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 

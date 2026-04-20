@@ -39,7 +39,7 @@ export class ExpensesController {
   }
 
   @Patch(':id')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   update(
     @Param('id') id: string,
     @Body() dto: Partial<CreateExpenseDto>,
@@ -50,7 +50,7 @@ export class ExpensesController {
   }
 
   @Delete(':id')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

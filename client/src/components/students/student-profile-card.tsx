@@ -70,9 +70,10 @@ interface StudentProfileCardProps {
   onHistoryClick?: () => void;
   onPaymentClick?: () => void;
   onPaymentHistoryClick?: () => void;
+  onRefundClick?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const router = useRouter();
   const authUser = useAuth((s) => s.user);
@@ -136,16 +137,24 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
 
         <StudentStatusBadge student={student} />
 
-        <Badge
-          className={cn(
-            "px-3 py-1 text-sm font-semibold",
-            student.balance >= 0
-              ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
-              : "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
-          )}
-        >
-          {formatBalance(student.balance)} balans
-        </Badge>
+        {(() => {
+          const zeroedByRefund =
+            student.balance === 0 && student.lastTransactionType === "REFUND";
+          return (
+            <Badge
+              className={cn(
+                "px-3 py-1 text-sm font-semibold",
+                zeroedByRefund
+                  ? "bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"
+                  : student.balance >= 0
+                    ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
+              )}
+            >
+              {formatBalance(student.balance)} balans
+            </Badge>
+          );
+        })()}
       </div>
 
       {/* Contact info */}
@@ -195,6 +204,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onPaymentClick}>To&apos;lov qo&apos;shish</DropdownMenuItem>
                 <DropdownMenuItem onClick={onPaymentHistoryClick}>To&apos;lov tarixi</DropdownMenuItem>
+                <DropdownMenuItem onClick={onRefundClick}>Pulni qaytarish</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

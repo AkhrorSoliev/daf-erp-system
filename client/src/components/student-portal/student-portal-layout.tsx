@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { StudentBottomNav } from "./student-bottom-nav";
-import { StudentTopHeader } from "./student-top-header";
+import { StudentSidebar } from "./student-sidebar";
 import { StudentMobileHeader } from "./student-mobile-header";
 import { Loader2 } from "lucide-react";
 
@@ -26,7 +26,7 @@ export function StudentPortalLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="portal-theme flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -37,11 +37,13 @@ export function StudentPortalLayout({
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <StudentMobileHeader />
-      <StudentTopHeader />
-      <main className="flex-1 pb-20 md:pb-0">{children}</main>
-      <StudentBottomNav />
+    <div className="portal-theme flex min-h-screen bg-background text-foreground antialiased">
+      <StudentSidebar />
+      <div className="flex flex-1 min-w-0 flex-col">
+        <StudentMobileHeader />
+        <main className="flex-1 pb-24 md:pb-0">{children}</main>
+        <StudentBottomNav />
+      </div>
     </div>
   );
 }
