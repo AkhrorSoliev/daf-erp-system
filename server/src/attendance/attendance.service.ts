@@ -151,12 +151,23 @@ export class AttendanceService {
       AttendanceService.TIME_BYPASS_ROLES.has(r),
     );
     if (!canBypassTime && group.lessonStartTime && group.lessonEndTime) {
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      // Production server runs in UTC; lesson times are Asia/Tashkent (UTC+5)
+      const tashkentParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Tashkent',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(new Date());
+      const part = (type: string) =>
+        tashkentParts.find((p) => p.type === type)!.value;
+      const todayStr = `${part('year')}-${part('month')}-${part('day')}`;
 
       // Vaqt tekshiruvi faqat bugungi sana uchun amal qiladi
       if (date === todayStr) {
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const currentMinutes = Number(part('hour')) * 60 + Number(part('minute'));
         const [startH, startM] = group.lessonStartTime.split(':').map(Number);
         const [endH, endM] = group.lessonEndTime.split(':').map(Number);
         const lessonStart = startH * 60 + startM;
