@@ -13,8 +13,8 @@ import { format, startOfWeek, addDays, isSameDay, addWeeks } from "date-fns";
 import { uz } from "date-fns/locale";
 
 const WEEKDAY_INDEX: Record<string, number> = {
-  MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4,
-  FRIDAY: 5, SATURDAY: 6, SUNDAY: 0,
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
 };
 
 interface ScheduleGroup {
@@ -49,7 +49,7 @@ export function StudentScheduleView() {
       .map((date) => {
         const dayIndex = date.getDay();
         const classes = schedule
-          .filter((s) => s.exactDays.some((d) => WEEKDAY_INDEX[d] === dayIndex))
+          .filter((s) => s.exactDays.some((d) => WEEKDAY_INDEX[d.toLowerCase()] === dayIndex))
           .sort((a, b) => (a.lessonStartTime ?? "").localeCompare(b.lessonStartTime ?? ""));
         return { date, classes };
       })

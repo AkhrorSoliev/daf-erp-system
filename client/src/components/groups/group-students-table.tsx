@@ -59,6 +59,7 @@ function toStudent(gs: GroupStudent): Student {
     status: gs.isActive ? "ACTIVE" : "FROZEN",
     createdAt: "",
     updatedAt: "",
+    lastTransactionType: null,
   };
 }
 

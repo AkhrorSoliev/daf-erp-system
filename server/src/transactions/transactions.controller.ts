@@ -20,7 +20,7 @@ export class TransactionsController {
   constructor(private transactionsService: TransactionsService) {}
 
   @Get()
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   findAll(
     @Query() query: TransactionQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -39,7 +39,7 @@ export class TransactionsController {
   }
 
   @Get('teacher/:teacherId')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   findByTeacher(
     @Param('teacherId', ParseIntPipe) teacherId: number,
     @Query() query: TransactionQueryDto,

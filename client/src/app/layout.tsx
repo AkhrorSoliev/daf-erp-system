@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Inter } from "next/font/google";
+import { Geist, Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -13,6 +13,12 @@ const interHeading = Inter({ subsets: ["latin"], variable: "--font-heading" });
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+});
+
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 
@@ -35,6 +41,7 @@ export default function RootLayout({
         "antialiased",
         geistSans.variable,
         interHeading.variable,
+        fraunces.variable,
       )}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>

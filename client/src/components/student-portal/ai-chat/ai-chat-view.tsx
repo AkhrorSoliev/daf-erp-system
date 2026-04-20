@@ -160,7 +160,7 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full max-w-2xl mx-auto">
+      <div className="flex flex-col h-[calc(100dvh-(--spacing(12))-(--spacing(20)))] md:h-[calc(100dvh-(--spacing(14)))] max-w-2xl mx-auto">
         <div className="flex items-center gap-3 p-4 border-b">
           <Skeleton className="size-8 rounded-full" />
           <Skeleton className="h-5 w-40" />

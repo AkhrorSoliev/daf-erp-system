@@ -7,6 +7,7 @@ import { StudentProfileCard } from "./student-profile-card";
 import { StudentProfileTabs } from "./student-profile-tabs";
 import { EnrollToGroupDialog } from "./enroll-to-group-dialog";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
+import { RefundDialog } from "@/components/payments/refund-dialog";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
@@ -18,6 +19,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [commentKey, setCommentKey] = useState(0);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
   const [groupsRefreshing, setGroupsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("guruhlar");
   const setName = useBreadcrumbName((s) => s.setName);
@@ -91,6 +93,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             onHistoryClick={() => setActiveTab("tarix")}
             onPaymentClick={() => setPaymentOpen(true)}
             onPaymentHistoryClick={() => setActiveTab("tolovlar")}
+            onRefundClick={() => setRefundOpen(true)}
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -124,6 +127,13 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
           lastName: student.lastName,
           balance: student.balance,
         }}
+        onSuccess={() => fetchStudent(false)}
+      />
+      <RefundDialog
+        open={refundOpen}
+        onOpenChange={setRefundOpen}
+        studentId={student.id}
+        studentName={`${student.firstName} ${student.lastName}`}
         onSuccess={() => fetchStudent(false)}
       />
     </>

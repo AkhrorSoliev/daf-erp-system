@@ -43,9 +43,9 @@ describe('ReportsController — role guards', () => {
 
   // Class-level guard
   describe('class-level @Roles', () => {
-    it('should have @Roles(CEO, Branch Director) on the controller class', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) on the controller class', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, ReportsController);
-      expect(roles).toEqual(['CEO', 'Branch Director']);
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
     });
   });
 
@@ -72,9 +72,9 @@ describe('ReportsController — role guards', () => {
         expect(guard.canActivate(ctx)).toBe(true);
       });
 
-      it('should deny Administrator', () => {
+      it('should allow Administrator', () => {
         const ctx = mockExecutionContext(controller[method], ['Administrator']);
-        expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+        expect(guard.canActivate(ctx)).toBe(true);
       });
 
       it('should deny Teacher', () => {

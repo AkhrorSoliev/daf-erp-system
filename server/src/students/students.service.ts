@@ -274,7 +274,16 @@ export class StudentsService {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 
-    return formatStudent(student);
+    const lastTxn = await this.prisma.transaction.findFirst({
+      where: { studentId: id },
+      orderBy: { createdAt: 'desc' },
+      select: { type: true },
+    });
+
+    return {
+      ...formatStudent(student),
+      lastTransactionType: lastTxn?.type ?? null,
+    };
   }
 
   async create(dto: CreateStudentDto, companyId: number, userId?: number) {

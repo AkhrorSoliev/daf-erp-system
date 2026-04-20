@@ -67,7 +67,7 @@ export class ContractsController {
   }
 
   @Patch(':id/status')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   changeStatus(
     @Param('id') id: string,
     @Body() dto: ChangeContractStatusDto,

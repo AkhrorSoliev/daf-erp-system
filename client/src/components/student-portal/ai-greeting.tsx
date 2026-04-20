@@ -91,25 +91,31 @@ export function AiGreeting() {
   const greeting = slot.greetings[randomIndex].replace("{name}", name);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-primary/10 p-6 md:p-10">
-      {/* Decorative circles */}
-      <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-primary/5 blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-10 -left-10 size-32 rounded-full bg-primary/5 blur-2xl" />
-
+    <div
+      className={`relative overflow-hidden rounded-2xl border border-border bg-linear-to-br from-primary/5 via-background to-primary/10 px-4 py-3.5 md:px-5 md:py-4 transition-opacity duration-500 ${
+        mounted ? "opacity-100" : "opacity-0"
+      }`}
+    >
       <div
-        className={`relative flex flex-col items-center text-center gap-4 transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
-      >
-        <div className="flex items-center justify-center size-12 rounded-full bg-primary/10">
-          <Icon className="size-6 text-primary" />
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-primary/10 blur-2xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-10 -left-10 size-24 rounded-full bg-primary/5 blur-2xl"
+      />
+      <div className="relative flex items-start gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+          <Icon className="size-5" />
         </div>
-
-        <h1 className="text-xl md:text-2xl font-bold leading-relaxed tracking-tight max-w-lg">
-          {greeting}
-        </h1>
-
-        <p className="text-sm text-muted-foreground">
-          Dein KI-Assistent für Deutsch
-        </p>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            Dein KI-Assistent
+          </p>
+          <p className="portal-heading mt-0.5 text-[15px] md:text-[17px] leading-snug text-foreground">
+            {greeting}
+          </p>
+        </div>
       </div>
     </div>
   );
