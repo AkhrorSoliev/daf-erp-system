@@ -37,6 +37,7 @@ type GroupWithTeachers = {
   startDate: Date | null;
   endDate: Date | null;
   exactDays: string[];
+  room: { name: string } | null;
   teachers: { teacher: TeacherRef }[];
 };
 
@@ -97,6 +98,7 @@ export class AttendanceReminderService {
         startDate: true,
         endDate: true,
         exactDays: true,
+        room: { select: { name: true } },
         teachers: {
           select: {
             teacher: {
@@ -153,6 +155,20 @@ export class AttendanceReminderService {
     return h * 60 + m;
   }
 
+  private buildDetailsBlock(group: GroupWithTeachers): string {
+    const teacherNames =
+      group.teachers
+        .map((t) => `${t.teacher.firstName} ${t.teacher.lastName}`)
+        .join(', ') || "belgilanmagan";
+    const roomName = group.room?.name ?? 'belgilanmagan';
+    return (
+      `👥 Guruh: ${group.name}\n` +
+      `🕐 Vaqt: ${group.lessonStartTime}–${group.lessonEndTime}\n` +
+      `🚪 Xona: ${roomName}\n` +
+      `👨‍🏫 O'qituvchi: ${teacherNames}`
+    );
+  }
+
   private async handleGroup(
     group: GroupWithTeachers,
     currentMinutes: number,
@@ -199,36 +215,39 @@ export class AttendanceReminderService {
   private async sendLessonStarted(teacher: TeacherRef, group: GroupWithTeachers) {
     const type = NotificationType.LESSON_STARTED;
     if (await this.alreadySent(teacher.id, type, group.id)) return;
+    const details = this.buildDetailsBlock(group);
     await this.deliver(
       teacher,
       group,
       type,
       'Dars boshlandi',
-      `📚 "${group.name}" guruhidagi darsingiz boshlandi. Iltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
+      `📚 Darsingiz boshlandi\n\n${details}\n\nIltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
   private async sendTeacherWarning(teacher: TeacherRef, group: GroupWithTeachers) {
     const type = NotificationType.ATTENDANCE_TEACHER_WARNING;
     if (await this.alreadySent(teacher.id, type, group.id)) return;
+    const details = this.buildDetailsBlock(group);
     await this.deliver(
       teacher,
       group,
       type,
       'Davomat eslatmasi',
-      `⏰ "${group.name}" darsi tugashiga 15 daqiqa qoldi. Iltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
+      `⏰ Dars tugashiga 15 daqiqa qoldi\n\n${details}\n\nIltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
   private async sendMissingToTeacher(teacher: TeacherRef, group: GroupWithTeachers) {
     const type = NotificationType.ATTENDANCE_MISSING_TEACHER;
     if (await this.alreadySent(teacher.id, type, group.id)) return;
+    const details = this.buildDetailsBlock(group);
     await this.deliver(
       teacher,
       group,
       type,
       'Davomat belgilanmadi',
-      `📝 "${group.name}" darsingiz tugadi, ammo davomat belgilanmadi. Iltimos, administrator bilan bog'lanib, davomatni tiklashingizni so'raymiz.\n🔗 ${TEACHER_PORTAL_URL}`,
+      `📝 Darsingiz tugadi, ammo davomat belgilanmadi\n\n${details}\n\nIltimos, administrator bilan bog'lanib, davomatni tiklashingizni so'raymiz.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
@@ -253,10 +272,7 @@ export class AttendanceReminderService {
     });
     if (admins.length === 0) return;
 
-    const teacherNames =
-      group.teachers
-        .map((t) => `${t.teacher.firstName} ${t.teacher.lastName}`)
-        .join(', ') || "O'qituvchi belgilanmagan";
+    const details = this.buildDetailsBlock(group);
 
     const type =
       kind === 'ADMIN_ALERT'
@@ -266,8 +282,8 @@ export class AttendanceReminderService {
       kind === 'ADMIN_ALERT' ? "O'qituvchiga eslatib qo'ying" : 'Davomat belgilanmadi';
     const message =
       kind === 'ADMIN_ALERT'
-        ? `👀 ${teacherNames} "${group.name}" guruhi uchun hali davomatni belgilamadi. Dars tugashiga 30 daqiqa qoldi — iltimos, eslatib qo'yishingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`
-        : `📋 ${teacherNames} "${group.name}" guruhi uchun davomatni belgilamadi. Iltimos, davomatni qo'lda tiklashingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`;
+        ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomatni belgilamadi\n\n${details}\n\nIltimos, o'qituvchiga eslatib qo'yishingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`
+        : `📋 O'qituvchi davomatni belgilamadi\n\n${details}\n\nIltimos, davomatni qo'lda tiklashingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`;
 
     for (const admin of admins) {
       if (await this.alreadySent(admin.id, type, group.id)) continue;

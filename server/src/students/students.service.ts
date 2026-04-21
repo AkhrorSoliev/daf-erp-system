@@ -296,47 +296,50 @@ export class StudentsService {
       );
     }
 
-    const student = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.student.create({
-        data: {
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phone: dto.phone,
-          extraPhone: dto.extraPhone,
-          parentPhone: dto.parentPhone,
-          parentName: dto.parentName,
-          telegram: dto.telegram,
-          gender: dto.gender,
-          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
-          photo: dto.photo,
-          comment: dto.comment,
-          placeOfStudy: dto.placeOfStudy,
-          address: dto.address,
-          passportSeries: dto.passportSeries,
-          companyId,
-        },
-        select: studentSelect,
-      });
-
-      if (dto.branchIds?.length) {
-        await tx.studentBranch.createMany({
-          data: dto.branchIds.map((branchId) => ({
-            studentId: created.id,
-            branchId,
-          })),
-        });
-      }
-
-      // Re-fetch to include branches
-      if (dto.branchIds?.length) {
-        return tx.student.findUniqueOrThrow({
-          where: { id: created.id },
+    const student = await this.prisma.$transaction(
+      async (tx) => {
+        const created = await tx.student.create({
+          data: {
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            phone: dto.phone,
+            extraPhone: dto.extraPhone,
+            parentPhone: dto.parentPhone,
+            parentName: dto.parentName,
+            telegram: dto.telegram,
+            gender: dto.gender,
+            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+            photo: dto.photo,
+            comment: dto.comment,
+            placeOfStudy: dto.placeOfStudy,
+            address: dto.address,
+            passportSeries: dto.passportSeries,
+            companyId,
+          },
           select: studentSelect,
         });
-      }
 
-      return created;
-    });
+        if (dto.branchIds?.length) {
+          await tx.studentBranch.createMany({
+            data: dto.branchIds.map((branchId) => ({
+              studentId: created.id,
+              branchId,
+            })),
+          });
+        }
+
+        // Re-fetch to include branches
+        if (dto.branchIds?.length) {
+          return tx.student.findUniqueOrThrow({
+            where: { id: created.id },
+            select: studentSelect,
+          });
+        }
+
+        return created;
+      },
+      { maxWait: 10000, timeout: 15000 },
+    );
 
     await this.entityHistoryService.recordCreate({
       entityType: 'Student',
