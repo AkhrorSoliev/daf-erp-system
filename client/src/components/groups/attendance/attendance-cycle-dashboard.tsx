@@ -414,13 +414,20 @@ export function AttendanceCycleDashboard({
               </p>
             )}
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onSelectDate(todayStr)}
-          >
-            Tahrirlash
-          </Button>
+          {isAdmin ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSelectDate(todayStr)}
+            >
+              Tahrirlash
+            </Button>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-700 dark:border-green-700 dark:bg-green-950/50 dark:text-green-400">
+              <Check className="size-3.5" />
+              Davomat olib bo&apos;lingan
+            </span>
+          )}
         </div>
       )}
 

@@ -218,6 +218,27 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
   - **Teacher (manual)** — `markedMethod = MANUAL` + `markedBy.roles` contains only Teacher
   - **Admin** — `markedMethod = MANUAL` + `markedBy.roles` contains CEO/BD/Administrator
 
+#### Attendance Reminder Notifications
+
+- `AttendanceReminderService` (`src/attendance/attendance-reminder.service.ts`) — `@Cron('0 * * * * *')` running in `Asia/Tashkent` fires six lesson-attendance notifications
+- `AttendanceEventsListener` (`src/attendance/attendance-events.listener.ts`) — handles the `attendance.completed` event emitted from `AttendanceService.save()` on the first save of the day
+- **Triggers:**
+
+  | # | When | Attendance taken? | Recipient | NotificationType |
+  |---|---|---|---|---|
+  | 1 | `lessonStartTime` | — | Teacher | `LESSON_STARTED` |
+  | 2 | `lessonEndTime - 30 min` | ❌ | Branch Administrator(s) | `ATTENDANCE_ADMIN_ALERT` |
+  | 3 | `lessonEndTime - 15 min` | ❌ | Teacher | `ATTENDANCE_TEACHER_WARNING` |
+  | 4 | `lessonEndTime` | ❌ | Teacher | `ATTENDANCE_MISSING_TEACHER` |
+  | 5 | `lessonEndTime` | ❌ | Branch Administrator(s) | `ATTENDANCE_MISSING_ADMIN` |
+  | 6 | On first `save()` of the day | ✅ | Teacher | `ATTENDANCE_COMPLETED` (stats: present/absent/late/excused) |
+
+- **Idempotency (no new DB table):** each trigger checks `Notification` for an existing row with the same `(userId, type, relatedEntityType='Group', relatedEntityId=groupId)` created today (Tashkent day). If found → skip. If not → send + insert (the inserted row becomes the idempotency marker for the rest of the day)
+- **Auto-stop:** once the teacher marks attendance, triggers 2–5 short-circuit because `attendance.findFirst` returns a row. No cancellation of already-queued notifications is needed
+- **Recipients:** `ATTENDANCE_ADMIN_ALERT` / `ATTENDANCE_MISSING_ADMIN` filter users by `roles.role.name = 'Administrator'` AND `branches.branchId = group.branchId`. Branch Directors are NOT included
+- **Delivery:** all 6 notifications fan out to the 4 channels (DB + SSE + Web Push + Telegram). Push payloads set `url = /groups/<groupId>`; Telegram messages include plain-text portal URLs (`https://lehrer.dafzentrum.uz` for teachers, `https://admin.dafzentrum.uz` for admins) which Telegram auto-linkifies
+- **Skip conditions (cron tick):** group must be `ACTIVE`, not soft-deleted, within `startDate`–`endDate`, today must be in `exactDays`, and the date must not be a `Holiday` (company-scoped or global)
+
 ### Financial System
 
 The financial system is built on an **append-only ledger** principle — financial rows are never destructively edited. Corrections are written as reversal entries linked via `reversedTransactionId`.

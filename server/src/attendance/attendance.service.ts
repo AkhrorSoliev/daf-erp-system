@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -54,6 +55,7 @@ export class AttendanceService {
     private entityHistoryService: EntityHistoryService,
     private transactionsService: TransactionsService,
     private salaryService: SalaryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /** Roles that bypass lesson time restriction */
@@ -489,6 +491,14 @@ export class AttendanceService {
       });
       const existingMap = new Map(existingRecords.map((r) => [r.studentId, r]));
 
+      // Teacher can take attendance only once — editing is admin-only.
+      // Once any attendance record exists for this date, teachers are locked out.
+      if (isTeacherOnly && existingRecords.length > 0) {
+        throw new BadRequestException(
+          "Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling",
+        );
+      }
+
       const upsertResults: Awaited<ReturnType<typeof tx.attendance.upsert>>[] =
         [];
       for (const entry of dto.entries) {
@@ -568,6 +578,40 @@ export class AttendanceService {
       dto.entries,
       effectiveCompanyId,
     );
+
+    // Fire `attendance.completed` only on the first save of the day. The
+    // listener sends a stats summary to the group's teachers across the 4
+    // notification channels and relies on this single-shot semantics.
+    if (!isUpdate && dto.entries.length > 0) {
+      try {
+        const groupInfo = await this.prisma.group.findUnique({
+          where: { id: groupId },
+          select: {
+            name: true,
+            teachers: { select: { teacherId: true } },
+          },
+        });
+        if (groupInfo) {
+          this.eventEmitter.emit('attendance.completed', {
+            groupId,
+            groupName: groupInfo.name,
+            date,
+            teacherIds: groupInfo.teachers.map((t) => t.teacherId),
+            companyId: effectiveCompanyId,
+            stats: {
+              present: dto.entries.filter((e) => e.status === 'PRESENT').length,
+              absent: dto.entries.filter((e) => e.status === 'ABSENT').length,
+              late: dto.entries.filter((e) => e.status === 'LATE').length,
+              excused: dto.entries.filter((e) => e.status === 'EXCUSED').length,
+            },
+          });
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Failed to emit attendance.completed for group ${groupId}: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
 
     return {
       message: 'Davomat muvaffaqiyatli saqlandi',
