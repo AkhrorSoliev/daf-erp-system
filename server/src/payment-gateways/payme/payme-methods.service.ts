@@ -217,6 +217,12 @@ export class PaymeMethodsService {
     try {
       const result = await this.prisma.$transaction(
         async (tx) => {
+          const branchId = await this.payments.resolveStudentBranchId(
+            txn.studentId,
+            companyId,
+            tx,
+          );
+
           const erpPayment = await this.payments.createFromExternal(
             {
               studentId: txn.studentId,
@@ -225,6 +231,7 @@ export class PaymeMethodsService {
               externalId: txn.paymeId,
               source: PaymentSource.GATEWAY_WEBHOOK,
               companyId,
+              ...(branchId !== null && { branchId }),
             },
             tx,
           );

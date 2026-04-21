@@ -251,6 +251,43 @@ export class PaymentsService {
     );
   }
 
+  /**
+   * Resolves a student's branch for gateway payments that don't carry branch context.
+   *
+   * Priority:
+   *   1. Active enrollment's group.branchId (the branch where the student is studying)
+   *   2. First StudentBranch record (registered branch)
+   *   3. null (no branch linkage — will still create the payment but branch-filtered
+   *      views won't show it)
+   */
+  async resolveStudentBranchId(
+    studentId: number,
+    companyId: number,
+    outerTx?: Prisma.TransactionClient,
+  ): Promise<number | null> {
+    const db = outerTx ?? this.prisma;
+
+    const activeEnrollment = await db.enrollment.findFirst({
+      where: {
+        studentId,
+        deletedAt: null,
+        status: 'ACTIVE',
+        group: { companyId, deletedAt: null },
+      },
+      select: { group: { select: { branchId: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (activeEnrollment?.group?.branchId) {
+      return activeEnrollment.group.branchId;
+    }
+
+    const studentBranch = await db.studentBranch.findFirst({
+      where: { studentId, student: { companyId } },
+      select: { branchId: true },
+    });
+    return studentBranch?.branchId ?? null;
+  }
+
   async createFromExternal(
     params: {
       studentId: number;

@@ -218,6 +218,12 @@ export class ClickMethodsService {
     try {
       await this.prisma.$transaction(
         async (tx) => {
+          const branchId = await this.payments.resolveStudentBranchId(
+            txn.studentId,
+            companyId,
+            tx,
+          );
+
           const erpPayment = await this.payments.createFromExternal(
             {
               studentId: txn.studentId,
@@ -226,6 +232,7 @@ export class ClickMethodsService {
               externalId: String(txn.clickTransId),
               source: PaymentSource.GATEWAY_WEBHOOK,
               companyId,
+              ...(branchId !== null && { branchId }),
             },
             tx,
           );
