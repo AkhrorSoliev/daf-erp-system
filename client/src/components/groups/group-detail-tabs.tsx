@@ -12,6 +12,7 @@ import { CommentForm } from "@/components/shared/comment-form";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import { AttendanceTab } from "./attendance/attendance-tab";
 import { AttendanceStats } from "./attendance/attendance-stats";
+import { AttendanceDotsTab } from "./attendance/attendance-dots-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,6 +44,8 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
   const studentsFetched = useRef(false);
   const [attendanceVisible, setAttendanceVisible] = useState(false);
   const attendanceShown = useRef(false);
+  const [dotsVisible, setDotsVisible] = useState(false);
+  const dotsShown = useRef(false);
   const [statsVisible, setStatsVisible] = useState(false);
   const statsShown = useRef(false);
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -86,6 +89,9 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     if (tab === "davomat" && !attendanceShown.current) {
       attendanceShown.current = true;
       setAttendanceVisible(true);
+    } else if (tab === "darslar" && !dotsShown.current) {
+      dotsShown.current = true;
+      setDotsVisible(true);
     } else if (tab === "oquvchilar") {
       fetchStudents();
     } else if (tab === "statistika" && !statsShown.current) {
@@ -106,6 +112,10 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     if (value === "davomat" && !attendanceShown.current) {
       attendanceShown.current = true;
       setAttendanceVisible(true);
+    }
+    if (value === "darslar" && !dotsShown.current) {
+      dotsShown.current = true;
+      setDotsVisible(true);
     }
     if (value === "statistika" && !statsShown.current) {
       statsShown.current = true;
@@ -136,6 +146,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     >
       <TabsList className="w-full justify-start overflow-x-auto">
         <TabsTrigger value="davomat">Davomat</TabsTrigger>
+        <TabsTrigger value="darslar">Darslar</TabsTrigger>
         <TabsTrigger value="oquvchilar">O&apos;quvchilar</TabsTrigger>
         <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
         <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
@@ -150,6 +161,15 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
           <AttendanceTab group={group} />
         ) : (
           <EmptyState message="Davomat ma'lumotlari mavjud emas" />
+        )}
+      </TabsContent>
+
+      {/* Darslar ketma-ketligi */}
+      <TabsContent value="darslar">
+        {dotsVisible ? (
+          <AttendanceDotsTab group={group} />
+        ) : (
+          <EmptyState message="Darslar ma'lumotlari mavjud emas" />
         )}
       </TabsContent>
 
