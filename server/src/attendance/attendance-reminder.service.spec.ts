@@ -44,7 +44,7 @@ describe('AttendanceReminderService', () => {
 
     prisma = {
       group: { findMany: jest.fn().mockResolvedValue([]) },
-      holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      holiday: { findFirst: jest.fn().mockResolvedValue(null) },
       attendance: { findFirst: jest.fn().mockResolvedValue(null) },
       notification: { findFirst: jest.fn().mockResolvedValue(null) },
       user: { findMany: jest.fn().mockResolvedValue([]) },

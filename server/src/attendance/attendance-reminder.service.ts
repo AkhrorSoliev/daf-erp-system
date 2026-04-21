@@ -112,23 +112,19 @@ export class AttendanceReminderService {
       },
     });
 
-    const holidays = await this.prisma.holiday.findMany({
+    const isHoliday = !!(await this.prisma.holiday.findFirst({
       where: {
         status: HolidayStatus.ACTIVE,
         deletedAt: null,
         date: parsedDate,
       },
-      select: { companyId: true },
-    });
-    const globalHoliday = holidays.some((h) => h.companyId == null);
-    const holidayCompanies = new Set(
-      holidays.map((h) => h.companyId).filter((id): id is number => id != null),
-    );
+      select: { id: true },
+    }));
+    if (isHoliday) return;
 
     for (const group of groups) {
       try {
         if (!group.companyId) continue;
-        if (globalHoliday || holidayCompanies.has(group.companyId)) continue;
         if (!this.groupHasLessonToday(group, parsedDate, weekdayIdx)) continue;
         await this.handleGroup(group as GroupWithTeachers, currentMinutes, today);
       } catch (err) {
