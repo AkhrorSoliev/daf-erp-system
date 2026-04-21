@@ -176,11 +176,17 @@ export function AttendanceForm({
     };
   })();
 
-  // Teacher uchun dars vaqtidan tashqarida formani bloklash
+  // Teacher bir marta davomat olib saqlagan bo'lsa — qayta tahrirlab bo'lmaydi.
+  // Faqat admin/direktor tahrirlay oladi.
+  const alreadyTakenForTeacher =
+    !isAdmin && students.some((s) => s.status !== null);
+
+  // Teacher uchun dars vaqtidan tashqarida yoki davomat olingan bo'lsa formani bloklash
   const isLocked =
-    !isAdmin &&
-    lessonTimeInfo != null &&
-    lessonTimeInfo.status !== "during";
+    alreadyTakenForTeacher ||
+    (!isAdmin &&
+      lessonTimeInfo != null &&
+      lessonTimeInfo.status !== "during");
 
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
@@ -308,8 +314,16 @@ export function AttendanceForm({
         )}
       </div>
 
+      {/* Davomat olib bo'lingan — teacher uchun bloklangan holat */}
+      {alreadyTakenForTeacher && (
+        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
+          <Check className="size-4 shrink-0" />
+          Davomat olib bo&apos;lingan. Tahrirlash uchun administratorga murojaat qiling
+        </div>
+      )}
+
       {/* Lesson time banner */}
-      {lessonTimeInfo && (
+      {lessonTimeInfo && !alreadyTakenForTeacher && (
         <div
           className={cn(
             "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm",
@@ -549,7 +563,7 @@ export function AttendanceForm({
       )}
 
       {/* Save button */}
-      {!loading && students.length > 0 && (
+      {!loading && students.length > 0 && !alreadyTakenForTeacher && (
         <div className="sticky bottom-4 flex justify-end pt-2">
           <Button
             onClick={handleSave}

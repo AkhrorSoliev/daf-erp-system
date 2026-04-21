@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AttendanceService } from './attendance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -95,6 +96,7 @@ describe('AttendanceService', () => {
           useValue: { deductLessonFee: jest.fn(), recordPayment: jest.fn() },
         },
         { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
@@ -668,6 +670,65 @@ describe('AttendanceService', () => {
       await expect(
         service.save('group-uuid-1', '2026-04-02', dto, 1, ['CEO'], 1),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should lock Teacher from re-submitting after attendance already taken', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      // Existing attendance record for this date — teacher must be blocked
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-existing',
+          studentId: 10001,
+          status: 'PRESENT',
+          note: null,
+        },
+      ]);
+
+      const dto = {
+        entries: [{ studentId: 10001, status: 'ABSENT' }],
+      };
+
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', dto, 1, ['Teacher'], 1),
+      ).rejects.toThrow(BadRequestException);
+
+      // Upsert must not run for a locked teacher
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should allow Admin to edit attendance even after it was taken', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-existing',
+          studentId: 10001,
+          status: 'PRESENT',
+          note: null,
+        },
+      ]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-existing',
+        groupId: 'group-uuid-1',
+        studentId: 10001,
+        date: new Date('2026-04-01'),
+        status: 'LATE',
+        note: null,
+      });
+
+      const dto = { entries: [{ studentId: 10001, status: 'LATE' }] };
+      const result = await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        dto,
+        1,
+        ['Administrator'],
+        1,
+      );
+
+      expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
+      expect(prisma.attendance.upsert).toHaveBeenCalledTimes(1);
     });
   });
 
