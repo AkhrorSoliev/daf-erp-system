@@ -65,6 +65,7 @@ describe('ClickMethodsService', () => {
 
     payments = {
       createFromExternal: jest.fn().mockResolvedValue({ id: 'payment-uuid' }),
+      resolveStudentBranchId: jest.fn().mockResolvedValue(7),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -214,6 +215,11 @@ describe('ClickMethodsService', () => {
       const result = await service.complete(completeBody(), COMPANY_ID);
       expect(result.error).toBe(0);
       expect(result.merchant_confirm_id).toBe('txn-uuid');
+      expect(payments.resolveStudentBranchId).toHaveBeenCalledWith(
+        STUDENT_ID,
+        COMPANY_ID,
+        expect.anything(),
+      );
       expect(payments.createFromExternal).toHaveBeenCalledWith(
         expect.objectContaining({
           studentId: STUDENT_ID,
@@ -221,9 +227,18 @@ describe('ClickMethodsService', () => {
           method: 'CLICK',
           source: 'GATEWAY_WEBHOOK',
           companyId: COMPANY_ID,
+          branchId: 7,
         }),
         expect.anything(), // tx client from $transaction
       );
+    });
+
+    it('should omit branchId when student has no branch', async () => {
+      payments.resolveStudentBranchId.mockResolvedValueOnce(null);
+      prisma.clickTransaction.findUnique.mockResolvedValue(mockClickTxn());
+      await service.complete(completeBody(), COMPANY_ID);
+      const [call] = payments.createFromExternal.mock.calls[0];
+      expect(call).not.toHaveProperty('branchId');
     });
 
     it('should return TRANSACTION_NOT_FOUND for non-existent prepare', async () => {

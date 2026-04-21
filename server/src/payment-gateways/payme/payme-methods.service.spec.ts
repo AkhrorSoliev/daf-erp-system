@@ -72,6 +72,7 @@ describe('PaymeMethodsService', () => {
         id: 'payment-uuid',
         studentBalance: 500000,
       }),
+      resolveStudentBranchId: jest.fn().mockResolvedValue(5),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -294,6 +295,11 @@ describe('PaymeMethodsService', () => {
       expect(result).toMatchObject({
         result: { transaction: 'txn-uuid', state: 2 },
       });
+      expect(payments.resolveStudentBranchId).toHaveBeenCalledWith(
+        STUDENT_ID,
+        COMPANY_ID,
+        expect.anything(),
+      );
       expect(payments.createFromExternal).toHaveBeenCalledWith(
         expect.objectContaining({
           studentId: STUDENT_ID,
@@ -302,9 +308,18 @@ describe('PaymeMethodsService', () => {
           source: 'GATEWAY_WEBHOOK',
           externalId: PAYME_ID,
           companyId: COMPANY_ID,
+          branchId: 5,
         }),
         expect.anything(), // tx client from $transaction
       );
+    });
+
+    it('should omit branchId when student has no active enrollment or StudentBranch', async () => {
+      payments.resolveStudentBranchId.mockResolvedValueOnce(null);
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      await service.performTransaction(params as any, COMPANY_ID, 1);
+      const [call] = payments.createFromExternal.mock.calls[0];
+      expect(call).not.toHaveProperty('branchId');
     });
 
     it('should return idempotent result for already performed transaction', async () => {
