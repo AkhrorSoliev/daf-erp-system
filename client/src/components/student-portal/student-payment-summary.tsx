@@ -42,7 +42,7 @@ const PAYMENT_METHODS = [
     name: "Click",
     logo: "/click-logo.png",
     imgClass: "h-25 w-30 object-contain",
-    available: true,
+    available: false,
   },
   {
     id: "uzum",
