@@ -387,6 +387,8 @@ Full integration with Paycom's JSON-RPC 2.0 Merchant API. Paycom sends requests 
 - Checkout URL format: `https://checkout.paycom.uz/{base64(params)}` (production) or `https://test.paycom.uz/{base64(params)}` (test)
 - After payment, Paycom calls our webhook with the 6 RPC methods above
 
+**Full Payme reference docs (Uzbek)**: `docs/payme-uz/index.html` — comprehensive 25-page documentation site mirroring `developer.help.paycom.uz` structure. Covers Merchant API protocol + all 6 methods with JSON examples, Subscribe API (cards tokenization + receipts), checkout initialization (GET base64 / POST form / button / QR), sandbox scenarios, error code reference (`-32xxx` transport + `-31xxx` business), and mobile deep-link integration. Use this as the authoritative reference when modifying Payme-related code.
+
 #### Click SHOP-API (`src/payment-gateways/click/`)
 
 Full integration with Click's two-phase SHOP-API. Click sends POST requests to our webhook endpoint with Prepare (action=0) and Complete (action=1) phases.

@@ -17,6 +17,7 @@ const makeGroup = (overrides: any = {}) => ({
   startDate: new Date('2026-01-01'),
   endDate: new Date('2026-12-31'),
   exactDays: ['monday', 'wednesday'],
+  room: { name: '201-xona' },
   teachers: [
     {
       teacher: {
@@ -95,9 +96,14 @@ describe('AttendanceReminderService', () => {
       );
       expect(bot.telegram.sendMessage).toHaveBeenCalledWith(
         '555111222',
-        expect.stringContaining('darsingiz boshlandi'),
+        expect.stringContaining('Darsingiz boshlandi'),
         expect.objectContaining({ parse_mode: 'HTML' }),
       );
+      const [, telegramBody] = bot.telegram.sendMessage.mock.calls[0];
+      expect(telegramBody).toContain('Guruh: Deutsch A1');
+      expect(telegramBody).toContain('Vaqt: 09:00–10:30');
+      expect(telegramBody).toContain('Xona: 201-xona');
+      expect(telegramBody).toContain("O'qituvchi: Ali Valiev");
       // No attendance check when firing lesson-started
       expect(prisma.attendance.findFirst).not.toHaveBeenCalled();
     });

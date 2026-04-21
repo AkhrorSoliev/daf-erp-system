@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payme Business Hujjatlar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <a href="#" class="header-logo" onclick="showPage('overview')">
+      <svg viewBox="0 0 140 32" height="32">
+        <rect width="140" height="32" rx="4" fill="#19aad3"/>
+        <text x="70" y="22" text-anchor="middle" fill="#fff" font-size="16" font-weight="bold" font-family="Arial">Payme</text>
+      </svg>
+      <span>Business Hujjatlar</span>
+    </a>
+  </div>
+  <div class="header-lang">
+    <a href="#" class="active">UZ</a>
+  </div>
+</header>
+
+<!-- Layout -->
+<div class="layout">
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <a href="#" class="sidebar-link top-level active" data-page="overview" onclick="showPage('overview')">Umumiy ko'rinish</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Boshlash</div>
+    <a href="#" class="sidebar-link" data-page="setup" onclick="showPage('setup')">Integratsiyani sozlash</a>
+    <a href="#" class="sidebar-link" data-page="keys" onclick="showPage('keys')">Kassa ID va kalitni topish</a>
+    <a href="#" class="sidebar-link" data-page="sandbox" onclick="showPage('sandbox')">Sandbox (Песочница)</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Merchant API</div>
+    <a href="#" class="sidebar-link" data-page="merchant-protocol" onclick="showPage('merchant-protocol')">Protokol umumiy ko'rinish</a>
+    <a href="#" class="sidebar-link" data-page="merchant-auth" onclick="showPage('merchant-auth')">Avtorizatsiya</a>
+    <a href="#" class="sidebar-link" data-page="merchant-request" onclick="showPage('merchant-request')">So'rov formati</a>
+    <a href="#" class="sidebar-link" data-page="merchant-response" onclick="showPage('merchant-response')">Javob formati</a>
+    <a href="#" class="sidebar-link" data-page="merchant-errors" onclick="showPage('merchant-errors')">Umumiy xatoliklar</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Merchant API metodlari</div>
+    <a href="#" class="sidebar-link" data-page="method-check-perform" onclick="showPage('method-check-perform')">CheckPerformTransaction</a>
+    <a href="#" class="sidebar-link" data-page="method-create" onclick="showPage('method-create')">CreateTransaction</a>
+    <a href="#" class="sidebar-link" data-page="method-perform" onclick="showPage('method-perform')">PerformTransaction</a>
+    <a href="#" class="sidebar-link" data-page="method-cancel" onclick="showPage('method-cancel')">CancelTransaction</a>
+    <a href="#" class="sidebar-link" data-page="method-check" onclick="showPage('method-check')">CheckTransaction</a>
+    <a href="#" class="sidebar-link" data-page="method-statement" onclick="showPage('method-statement')">GetStatement</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">To'lovni boshlash</div>
+    <a href="#" class="sidebar-link" data-page="init-get" onclick="showPage('init-get')">GET so'rov (URL)</a>
+    <a href="#" class="sidebar-link" data-page="init-post" onclick="showPage('init-post')">POST forma</a>
+    <a href="#" class="sidebar-link" data-page="init-button" onclick="showPage('init-button')">To'lov tugmasi va QR</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Subscribe API</div>
+    <a href="#" class="sidebar-link" data-page="subscribe-overview" onclick="showPage('subscribe-overview')">Umumiy ko'rinish</a>
+    <a href="#" class="sidebar-link" data-page="subscribe-cards" onclick="showPage('subscribe-cards')">Karta qo'shish va tokenlash</a>
+    <a href="#" class="sidebar-link" data-page="subscribe-receipts" onclick="showPage('subscribe-receipts')">Receipts metodlari</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Qo'shimcha</div>
+    <a href="#" class="sidebar-link" data-page="plugins" onclick="showPage('plugins')">CMS plaginlar</a>
+    <a href="#" class="sidebar-link" data-page="mobile" onclick="showPage('mobile')">Mobil integratsiya</a>
+    <a href="#" class="sidebar-link" data-page="telegram" onclick="showPage('telegram')">Telegram bot</a>
+    <a href="#" class="sidebar-link" data-page="support" onclick="showPage('support')">Texnik yordam</a>
+  </div>
+</nav>
+
+<!-- Content -->
+<main class="content" id="content">
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="page-section active" id="page-overview">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Umumiy ko'rinish</div>
+  <h1>Payme Business Hujjatlar</h1>
+  <p>Payme Business — O'zbekiston hududida bank kartalari orqali to'lovlarni qabul qilish uchun to'lov platformasi. Ushbu hujjatlar to'plamida biznes ta'minotchining tizimlari va Payme Business tizimi o'rtasidagi o'zaro aloqa tartibi tavsiflangan.</p>
+
+  <div class="alert alert-info">
+    <strong>Eslatma:</strong> Payme Business faqat yuridik shaxslarga taqdim etiladi: yakka tartibdagi tadbirkorlar, xususiy korxonalar, MChJ, AJ, davlat unitar korxonalari, to'liq va kommandit shirkatlar, shuningdek, notijorat tashkilotlar.
+  </div>
+
+  <h2>Kassa turlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Kassa turi</th><th>Tavsif</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Billing bilan kassa</strong></td><td>Merchant API (JSON-RPC 2.0) orqali sizning billing tizimingizga integratsiya. Onlayn do'konlar uchun qulay.</td></tr>
+        <tr><td>2</td><td><strong>Billingsiz kassa</strong></td><td>Subscribe API orqali chek (receipt) yaratish. Billing tizimi yo'q ta'minotchilar uchun.</td></tr>
+        <tr><td>3</td><td><strong>POS kassa</strong></td><td>Ulanishdan so'ng darhol to'lov qabul qilish mumkin. Integratsiya talab qilinmaydi.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Qabul qilinadigan kartalar</h2>
+  <ul>
+    <li><strong>Uzcard</strong></li>
+    <li><strong>HUMO</strong></li>
+  </ul>
+
+  <h2>Integratsiya usullari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Usul</th><th>Tavsif</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Merchant API</strong></td><td>Payme tizimi ta'minotchining webhook manziliga JSON-RPC 2.0 so'rovlari yuboradi (CheckPerform, Create, Perform, Cancel, Check, GetStatement)</td></tr>
+        <tr><td>2</td><td><strong>Subscribe API</strong></td><td>Ta'minotchi Payme API ga so'rov yuboradi (invoice yaratish, kartani tokenlash, to'lash)</td></tr>
+        <tr><td>3</td><td><strong>Checkout forma</strong></td><td>Foydalanuvchini Payme to'lov sahifasiga yo'naltirish (GET URL yoki POST forma)</td></tr>
+        <tr><td>4</td><td><strong>To'lov tugmasi</strong></td><td>Veb-sayt yoki ilovaga o'rnatiladigan tayyor tugma</td></tr>
+        <tr><td>5</td><td><strong>Telegram bot</strong></td><td>Telegram bot orqali to'lov qabul qilish</td></tr>
+        <tr><td>6</td><td><strong>Mobil deeplink</strong></td><td>iOS/Android ilovalar uchun deeplink bilan to'lov</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Asosiy atamalar</h2>
+  <ul>
+    <li><strong>Payme Business</strong> — Paycom to'lov tizimining biznes-integratsiya platformasi.</li>
+    <li><strong>Kassa (Касса)</strong> — Payme'da yaratilgan onlayn to'lov qabul qilish nuqtasi. Har bir kassa o'z <code>merchant_id</code> va <code>key</code> ga ega.</li>
+    <li><strong>Ta'minotchi (Merchant)</strong> — Payme orqali to'lov qabul qiluvchi yuridik shaxs.</li>
+    <li><strong>Billing tizimi</strong> — ta'minotchining buyurtmalar, foydalanuvchilar va to'lovlarni yurituvchi ichki tizimi.</li>
+    <li><strong>Chek (Receipt)</strong> — Payme'da yaratilgan to'lov hujjati. Subscribe API orqali boshqariladi.</li>
+    <li><strong>Account</strong> — ta'minotchi tizimidagi foydalanuvchini aniqlovchi maydon(lar): <code>order_id</code>, <code>user_id</code>, <code>phone</code> va h.k.</li>
+    <li><strong>Tranzaksiya</strong> — alohida to'lov operatsiyasi. Payme <code>id</code> va ta'minotchi <code>transaction</code> identifikatorlariga ega.</li>
+    <li><strong>Tiyin</strong> — so'mning 1/100 qismi. Payme barcha summalarni tiyinda yuboradi (1 so'm = 100 tiyin).</li>
+  </ul>
+</div>
+
+<!-- ==================== SETUP ==================== -->
+<div class="page-section" id="page-setup">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Boshlash &rsaquo; Integratsiyani sozlash</div>
+  <h1>Integratsiyani sozlash</h1>
+
+  <p>Payme Business bilan integratsiya qilish uchun quyidagi 4 bosqichni bajaring.</p>
+
+  <h2>Integratsiya bosqichlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Bosqich</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>API tanlash</strong></td><td>Merchant API (billing mavjud) yoki Subscribe API (billing yo'q) dan birini tanlang</td></tr>
+        <tr><td>2</td><td><strong>Sandbox'da test</strong></td><td><code>https://test.paycom.uz</code> orqali sinov muhitida barcha stsenariylarni o'tkazing</td></tr>
+        <tr><td>3</td><td><strong>To'lovlarni boshlash</strong></td><td>Chek (receipt) yaratish funksiyasini qo'shing — GET, POST, tugma yoki QR</td></tr>
+        <tr><td>4</td><td><strong>Production'ga chiqarish</strong></td><td>Ishlab chiqarish kalitini olish va live rejimga o'tish</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Qaysi API ni tanlash?</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Holat</th><th>Tavsiya</th></tr></thead>
+      <tbody>
+        <tr><td>Onlayn do'konda buyurtmalar bor, o'z billing tizimingiz mavjud</td><td><strong>Merchant API</strong></td></tr>
+        <tr><td>O'z billing tizimi yo'q, faqat chek yaratib to'lov olmoqchisiz</td><td><strong>Subscribe API</strong></td></tr>
+        <tr><td>Kartalarni saqlab, keyinchalik takroriy to'lov qilmoqchisiz</td><td><strong>Subscribe API</strong> (tokenlash bilan)</td></tr>
+        <tr><td>Sayt yo'q, faqat POS terminalda to'lov qabul qilasiz</td><td><strong>POS kassa</strong> (integratsiya kerak emas)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Webhook URL sozlash</h2>
+  <p>Merchant API uchun sizning serveringizdagi webhook manzilini Payme shaxsiy kabinetidagi kassa sozlamalariga qo'shishingiz kerak.</p>
+
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://sizning-domeningiz.uz/api/payme/webhook</code>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Muhim:</strong> Webhook URL <strong>HTTPS</strong> bo'lishi shart (TLS v1, v1.1 yoki v1.2). HTTP ishlamaydi.
+  </div>
+
+  <h2>Account field'ni tanlash</h2>
+  <p>Account — bu Payme tizimida foydalanuvchini/buyurtmani aniqlovchi maydon(lar). Kassani yaratishda ko'rsatiladi.</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Account field</th><th>Misol</th><th>Qachon ishlatish</th></tr></thead>
+      <tbody>
+        <tr><td><code>order_id</code></td><td>"ORD-123"</td><td>Buyurtma asosida to'lov (onlayn do'kon)</td></tr>
+        <tr><td><code>user_id</code></td><td>"42"</td><td>Foydalanuvchi balansini to'ldirish</td></tr>
+        <tr><td><code>phone</code></td><td>"998901234567"</td><td>Telefon raqami bo'yicha to'lov (mobil operator)</td></tr>
+        <tr><td><code>student_id</code></td><td>"stud-abc"</td><td>Talaba ID (ta'lim markazlari)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Bir nechta field:</strong> Bitta account ichida bir nechta field bo'lishi mumkin (masalan <code>order_id</code> + <code>user_id</code>). Har bir field uchun alohida xato kodi bo'ladi (-31050, -31051 va h.k.).
+  </div>
+</div>
+
+<!-- ==================== KEYS ==================== -->
+<div class="page-section" id="page-keys">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Boshlash &rsaquo; Kassa ID va kalitni topish</div>
+  <h1>Kassa ID va kalitni topish</h1>
+
+  <p>Har bir Payme kassasi ikkita asosiy ma'lumotga ega: <strong>Kassa ID (merchant_id)</strong> va <strong>Kalit (key)</strong>.</p>
+
+  <h2>Kassa ID ni topish</h2>
+  <ol>
+    <li>Payme shaxsiy kabinetga kiring: <code>https://merchant.paycom.uz</code></li>
+    <li>Chap menyudan "Kassalar" (Кассы) bo'limiga o'ting</li>
+    <li>Kerakli kassani bosing</li>
+    <li>"Kassa sozlamalari" sahifasida <strong>ID</strong> maydonini ko'chirib oling (MongoDB ObjectId formatida: 24 ta belgili hex string)</li>
+  </ol>
+
+  <div class="alert alert-info">
+    Kassa ID misol: <code>5e730e8e0b852a417aa49ceb</code>
+  </div>
+
+  <h2>Kalitni topish</h2>
+  <ol>
+    <li>O'sha kassa sozlamalari sahifasida "Kalit" (Ключ) bo'limini toping</li>
+    <li>Ikki xil kalit bo'ladi:
+      <ul>
+        <li><strong>TEST_KEY</strong> — sandbox uchun</li>
+        <li><strong>PRODUCTION_KEY</strong> — ishlab chiqarish uchun</li>
+      </ul>
+    </li>
+    <li>Kalitni ko'rish uchun "Показать" tugmasini bosing</li>
+  </ol>
+
+  <div class="alert alert-danger">
+    <strong>Xavfsizlik:</strong> Kalit maxfiy! Uni ommaviy repositoriya (GitHub, GitLab) ga joylashtirmang. Faqat server tomonidagi <code>.env</code> fayllarida saqlang.
+  </div>
+
+  <h2>Kalitni qayta generatsiya qilish</h2>
+  <p>Agar kalit oshkor bo'lib qolgan bo'lsa:</p>
+  <ol>
+    <li>Kassa sozlamalarida "Kalitni qayta yaratish" (Перегенерировать ключ) tugmasini bosing</li>
+    <li>Yangi kalit paydo bo'ladi — eski kalit darhol ishlamay qoladi</li>
+    <li>Yangi kalitni <code>.env</code> ga joylashtiring va serveringizni qayta ishga tushiring</li>
+  </ol>
+
+  <div class="alert alert-warning">
+    Kalit qayta yaratilganda, barcha faol pending tranzaksiyalar ishlamay qolishi mumkin. Production'da bu operatsiyani faqat zaruriyat bo'lganda bajaring.
+  </div>
+
+  <h2>Test vs Production kalitlar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Xususiyat</th><th>TEST_KEY</th><th>PRODUCTION_KEY</th></tr></thead>
+      <tbody>
+        <tr><td>Endpoint</td><td><code>https://test.paycom.uz</code></td><td><code>https://checkout.paycom.uz</code></td></tr>
+        <tr><td>Haqiqiy pul</td><td>Yo'q</td><td>Ha</td></tr>
+        <tr><td>Sandbox testlar</td><td>Ha</td><td>Yo'q</td></tr>
+        <tr><td>Karta ma'lumotlari</td><td>Test kartalar</td><td>Haqiqiy Uzcard/HUMO</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SANDBOX ==================== -->
+<div class="page-section" id="page-sandbox">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Boshlash &rsaquo; Sandbox</div>
+  <h1>Sandbox (Песочница)</h1>
+
+  <p>Sandbox — Merchant API implementatsiyasini xavfsiz sinash uchun muhit. Production'ga chiqishdan oldin barcha stsenariylarni shu yerda o'tkazing.</p>
+
+  <div class="endpoint">
+    <span class="method method-get">URL</span>
+    <code>https://test.paycom.uz</code>
+  </div>
+
+  <h2>Testni boshlash uchun kerakli narsalar</h2>
+  <ol>
+    <li>Shaxsiy kabinetda veb-kassa yarating</li>
+    <li>Kassa <strong>ID</strong> ini oling (merchant_id)</li>
+    <li>Kassa yaratilgandan so'ng sizga <strong>TEST_KEY</strong> beriladi</li>
+    <li>Kassa sozlamalarida Endpoint URL (webhook) manzilingizni ko'rsating</li>
+  </ol>
+
+  <h2>Ikki test stsenariysi</h2>
+
+  <h3>1-stsenariy: tasdiqlanmagan tranzaksiyani yaratish va bekor qilish</h3>
+  <p>Birinchi bosqichda xavfsizlik tekshiruvlari va xatolarni qaytarish to'g'ri ishlashi tekshiriladi.</p>
+  <ul>
+    <li>Auth xato → <code>-32504</code></li>
+    <li>Noto'g'ri summa → <code>-31001</code></li>
+    <li>Mavjud bo'lmagan account → <code>-31050..-31099</code></li>
+    <li><code>CreateTransaction</code> → state=1</li>
+    <li><code>CancelTransaction</code> → state=-1</li>
+  </ul>
+
+  <h3>2-stsenariy: tasdiqlanga tranzaksiyani yaratish, bajarish va bekor qilish</h3>
+  <p>Birinchi stsenariy muvaffaqiyatli o'tgandan keyin.</p>
+  <ul>
+    <li><code>CheckPerformTransaction</code> → allow=true</li>
+    <li><code>CreateTransaction</code> → state=1</li>
+    <li><code>PerformTransaction</code> → state=2</li>
+    <li><code>CancelTransaction</code> → state=-2 (refund)</li>
+  </ul>
+
+  <div class="alert alert-warning">
+    <strong>Idempotentlik testi:</strong> <code>CreateTransaction</code>, <code>PerformTransaction</code>, <code>CancelTransaction</code> metodlariga so'rov <strong>ikki marta</strong> yuboriladi. Sizning tizimingiz ikkinchi so'rovni birinchisi bilan bir xil natija bilan qaytarishi shart (yangi yozuv YARATMASLIK!).
+  </div>
+
+  <h2>Test kartalari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Karta raqami</th><th>Amal qilish muddati</th><th>Natija</th></tr></thead>
+      <tbody>
+        <tr><td><code>8600 4954 7331 6478</code></td><td>03/99</td><td>Muvaffaqiyatli to'lov</td></tr>
+        <tr><td><code>8600 0000 0000 0000</code></td><td>01/22</td><td>Mablag' yetarli emas</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    Sandbox'da SMS kodi har doim <strong>666666</strong>.
+  </div>
+
+  <h2>Testdan o'tish shartlari</h2>
+  <div class="alert alert-danger">
+    Barcha ikki stsenariy yashil (muvaffaqiyatli) bo'lishi shart. Aks holda, production kalitini olish imkoni bo'lmaydi.
+  </div>
+
+  <h2>Test jurnali</h2>
+  <p>Har bir so'rov/javob Payme test dasturida ko'rsatiladi. Xatolarni tekshirib, kodni to'g'rilab qaytadan testdan o'tish mumkin.</p>
+</div>
+
+<!-- ==================== MERCHANT PROTOCOL ==================== -->
+<div class="page-section" id="page-merchant-protocol">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant API &rsaquo; Protokol</div>
+  <h1>Merchant API — Protokol</h1>
+
+  <h2>Umumiy qoidalar</h2>
+  <p>Merchant API Payme Business va ta'minotchining billing tizimi o'rtasidagi o'zaro aloqani tavsiflaydi. Ushbu interfeys orqali Payme tizimi ta'minotchiga so'rovlarni yuboradi.</p>
+
+  <h2>Texnologiya</h2>
+  <ul>
+    <li><strong>Protokol:</strong> JSON-RPC 2.0</li>
+    <li><strong>Transport:</strong> HTTP 1.1 <code>POST</code></li>
+    <li><strong>Shifrlash:</strong> TLS / HTTPS (v1.0, v1.1, v1.2)</li>
+    <li><strong>Parametrlar:</strong> faqat <em>named</em> (sifatli), <em>positional</em> emas</li>
+  </ul>
+
+  <h2>Asosiy talablar</h2>
+  <div class="alert alert-warning">
+    <ul style="margin-top:8px;">
+      <li>Server HTTPS ni qo'llab-quvvatlashi shart (TLS v1+ da)</li>
+      <li>Har bir javob <strong>HTTP 200 OK</strong> bilan qaytishi kerak — xato ham 200 ichida <code>error</code> sifatida qaytadi. Boshqa HTTP status &rarr; RPC xato <code>-32400</code></li>
+      <li>Javob kechikmasligi kerak: 10 sekunddan oshsa Payme timeout beradi</li>
+    </ul>
+  </div>
+
+  <h2>Jarayon diagrammasi</h2>
+  <div class="diagram-box">
+    <p style="margin:0;color:#888;">Merchant API ketma-ketlik diagrammasi</p>
+    <div style="margin-top:16px;text-align:left;max-width:550px;margin-left:auto;margin-right:auto;">
+      <p><strong>1.</strong> Foydalanuvchi &rarr; Payme: Chek ochish (checkout sahifa)</p>
+      <p><strong>2.</strong> Payme &rarr; Ta'minotchi: <code>CheckPerformTransaction</code></p>
+      <p><strong>3.</strong> Ta'minotchi &rarr; Payme: <code>allow: true</code></p>
+      <p><strong>4.</strong> Foydalanuvchi: Kartani kiritadi</p>
+      <p><strong>5.</strong> Payme &rarr; Ta'minotchi: <code>CreateTransaction</code></p>
+      <p><strong>6.</strong> Ta'minotchi &rarr; Payme: <code>state: 1</code></p>
+      <p><strong>7.</strong> Payme: Kartadan pulni ushlab turadi</p>
+      <p><strong>8.</strong> Payme &rarr; Ta'minotchi: <code>PerformTransaction</code></p>
+      <p><strong>9.</strong> Ta'minotchi &rarr; Payme: <code>state: 2</code></p>
+      <p><strong>10.</strong> Payme &rarr; Foydalanuvchi: To'lov muvaffaqiyatli</p>
+    </div>
+  </div>
+
+  <h2>Protokol tuzilishi</h2>
+  <p>Har bir so'rov JSON-RPC 2.0 formatida uchta asosiy maydonga ega:</p>
+  <ul>
+    <li><code>method</code> — metod nomi (CheckPerformTransaction, CreateTransaction va h.k.)</li>
+    <li><code>params</code> — metod parametrlari (named obyekt sifatida)</li>
+    <li><code>id</code> — so'rov identifikatori (integer). Javob ham aynan shu <code>id</code> ni qaytaradi.</li>
+  </ul>
+
+  <div class="alert alert-info">
+    JSON-RPC <code>jsonrpc: "2.0"</code> maydoni ixtiyoriy — Payme uni talab qilmaydi, lekin qo'shilsa rad etmaydi.
+  </div>
+</div>
+
+<!-- ==================== MERCHANT AUTH ==================== -->
+<div class="page-section" id="page-merchant-auth">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant API &rsaquo; Avtorizatsiya</div>
+  <h1>Merchant API — Avtorizatsiya</h1>
+
+  <p>Payme Merchant API <strong>HTTP Basic Auth</strong> orqali autentifikatsiya qiladi.</p>
+
+  <h2>Authorization header formati</h2>
+  <div class="endpoint">
+    <code>Authorization: Basic base64("Paycom:" + MERCHANT_KEY)</code>
+  </div>
+
+  <ul>
+    <li><strong>Login:</strong> har doim literal <code>Paycom</code></li>
+    <li><strong>Parol:</strong> kassa kaliti (TEST_KEY yoki PRODUCTION_KEY)</li>
+    <li><strong>Kodlash:</strong> base64(<code>Paycom:&lt;KEY&gt;</code>)</li>
+  </ul>
+
+  <h2>Misol</h2>
+  <p>Agar <code>MERCHANT_KEY = "test_key_123"</code> bo'lsa:</p>
+  <pre><code>Paycom:test_key_123
+
+base64 &rarr; UGF5Y29tOnRlc3Rfa2V5XzEyMw==
+
+Authorization: Basic UGF5Y29tOnRlc3Rfa2V5XzEyMw==</code></pre>
+
+  <h2>To'liq HTTP so'rov misoli</h2>
+  <pre><code>POST /api/payme/webhook HTTP/1.1
+Host: example.uz
+Content-Type: application/json
+Authorization: Basic UGF5Y29tOnRlc3Rfa2V5XzEyMw==
+
+{
+  "method": "CheckPerformTransaction",
+  "params": {
+    "amount": 500000,
+    "account": {
+      "order_id": "ORD-123"
+    }
+  },
+  "id": 1
+}</code></pre>
+
+  <h2>Auth tekshirish (ta'minotchi tomonidan)</h2>
+  <p>Ta'minotchi har bir so'rovda quyidagi tekshirishi kerak:</p>
+  <ol>
+    <li><code>Authorization</code> headeri mavjudmi?</li>
+    <li>U <code>Basic </code> bilan boshlanadimi?</li>
+    <li>Base64 dekod qilingandan so'ng <code>Paycom:&lt;KEY&gt;</code> formatidami?</li>
+    <li>KEY siz kutilgan MERCHANT_KEY ga mosmi?</li>
+  </ol>
+
+  <p>Agar yuqoridagilardan biri bajarilmasa, quyidagi xato qaytariladi:</p>
+  <pre><code>{
+  "error": {
+    "code": -32504,
+    "message": {
+      "ru": "Ошибка авторизации",
+      "uz": "Avtorizatsiya xatosi",
+      "en": "Authorization error"
+    },
+    "data": "auth"
+  },
+  "id": 1
+}</code></pre>
+
+  <div class="alert alert-danger">
+    <strong>Xavfsizlik:</strong> Kalitni <code>crypto.timingSafeEqual()</code> yoki shunga o'xshash <em>constant-time compare</em> orqali solishtiring — oddiy <code>===</code> timing attack'ga ochiq.
+  </div>
+</div>
+
+<!-- ==================== MERCHANT REQUEST ==================== -->
+<div class="page-section" id="page-merchant-request">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant API &rsaquo; So'rov formati</div>
+  <h1>Merchant API — So'rov formati</h1>
+
+  <h2>HTTP so'rov</h2>
+  <ul>
+    <li><strong>Metod:</strong> POST</li>
+    <li><strong>URL:</strong> ta'minotchining webhook manzili (masalan <code>/api/payme/webhook</code>)</li>
+    <li><strong>Content-Type:</strong> <code>application/json</code></li>
+    <li><strong>Authorization:</strong> Basic auth (yuqoriga qarang)</li>
+  </ul>
+
+  <h2>JSON-RPC 2.0 so'rov tanasi</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Maydon</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>method</code></td><td>String</td><td>Metod nomi (CheckPerformTransaction, CreateTransaction, PerformTransaction, CancelTransaction, CheckTransaction, GetStatement)</td></tr>
+        <tr><td><code>params</code></td><td>Object</td><td>Metod parametrlari (named)</td></tr>
+        <tr><td><code>id</code></td><td>Integer</td><td>So'rov identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>{
+  "method": "PerformTransaction",
+  "params": {
+    "id": "5e730e8e0b852a417aa49ceb"
+  },
+  "id": 2032
+}</code></pre>
+
+  <h2>Keng tarqalgan params turlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>Payme tranzaksiya identifikatori (24-belgili hex)</td></tr>
+        <tr><td><code>time</code></td><td>Timestamp (ms)</td><td>Unix vaqt, millisekundda</td></tr>
+        <tr><td><code>amount</code></td><td>Integer</td><td>To'lov summasi <strong>tiyinda</strong> (1 so'm = 100 tiyin)</td></tr>
+        <tr><td><code>account</code></td><td>Object</td><td>Ta'minotchi tizimidagi foydalanuvchi/buyurtma ma'lumotlari</td></tr>
+        <tr><td><code>reason</code></td><td>Integer</td><td>Bekor qilish sababi (1-10)</td></tr>
+        <tr><td><code>from</code> / <code>to</code></td><td>Timestamp (ms)</td><td>Davr boshi va oxiri (GetStatement uchun)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Summalar tiyinda:</strong> <code>amount: 500000</code> — bu 5000 so'm, 500 000 so'm emas!
+  </div>
+</div>
+
+<!-- ==================== MERCHANT RESPONSE ==================== -->
+<div class="page-section" id="page-merchant-response">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant API &rsaquo; Javob formati</div>
+  <h1>Merchant API — Javob formati</h1>
+
+  <p>JSON-RPC 2.0 ikki xil javob qaytaradi: muvaffaqiyatli (<code>result</code>) yoki xato (<code>error</code>). Har ikkisida ham HTTP status <code>200 OK</code> bo'ladi.</p>
+
+  <h2>Muvaffaqiyatli javob</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Maydon</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>result</code></td><td>Object</td><td>Metodga tegishli natija obyekti</td></tr>
+        <tr><td><code>id</code></td><td>Integer</td><td>So'rov <code>id</code> si (aynan shu qaytariladi)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Misol</h3>
+  <pre><code>{
+  "result": {
+    "transaction": "1001",
+    "perform_time": 1399114284039,
+    "state": 2
+  },
+  "id": 2032
+}</code></pre>
+
+  <h2>Xato javob</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Maydon</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>error</code></td><td>Object</td><td>Xato obyekti (quyida)</td></tr>
+        <tr><td><code>id</code></td><td>Integer</td><td>So'rov <code>id</code> si</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Error obyekti strukturasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Maydon</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>code</code></td><td>Integer</td><td>Xato kodi (-32xxx yoki -31xxx)</td></tr>
+        <tr><td><code>message</code></td><td>Object</td><td>Lokalizatsiyalashgan xabar: <code>{ru, uz, en}</code></td></tr>
+        <tr><td><code>data</code></td><td>String</td><td>Qo'shimcha ma'lumot (odatda xato field nomi)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Misol</h3>
+  <pre><code>{
+  "error": {
+    "code": -31003,
+    "message": {
+      "ru": "Транзакция не найдена",
+      "uz": "Tranzaksiya topilmadi",
+      "en": "Transaction not found"
+    },
+    "data": "transaction"
+  },
+  "id": 2032
+}</code></pre>
+
+  <div class="alert alert-warning">
+    <strong>message uch tilda:</strong> Payme <code>ru</code>, <code>uz</code>, <code>en</code> uchchalasi ham bo'lishini talab qiladi. Eng yaxshisi — uchchalasiga ham xabar yozing.
+  </div>
+
+  <div class="alert alert-danger">
+    <strong>HTTP status:</strong> Xato bo'lsa ham <strong>200 OK</strong> qaytaring! 4xx/5xx HTTP status Payme tomonidan <code>-32400</code> transport xatosi sifatida talqin qilinadi.
+  </div>
+</div>
+
+<!-- ==================== MERCHANT ERRORS ==================== -->
+<div class="page-section" id="page-merchant-errors">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant API &rsaquo; Umumiy xatoliklar</div>
+  <h1>Merchant API — Umumiy xatoliklar</h1>
+
+  <p>Barcha xato kodlari ikki guruhga bo'linadi: transport darajasi (<code>-32xxx</code>) va biznes darajasi (<code>-31xxx</code>).</p>
+
+  <h2>Transport va RPC darajasi xatolari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Ma'nosi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>-32300</code></td><td>Transport xatosi</td><td>So'rov yetib kelmagan (tarmoq xatosi)</td></tr>
+        <tr><td><code>-32400</code></td><td>HTTP status 200 emas</td><td>Ta'minotchi 4xx/5xx qaytardi</td></tr>
+        <tr><td><code>-32504</code></td><td>Avtorizatsiya xatosi</td><td>Auth header yo'q yoki noto'g'ri</td></tr>
+        <tr><td><code>-32600</code></td><td>Noto'g'ri so'rov</td><td>JSON-RPC struktura buzilgan (method/id yo'q)</td></tr>
+        <tr><td><code>-32601</code></td><td>Metod topilmadi</td><td>Noto'g'ri metod nomi</td></tr>
+        <tr><td><code>-32602</code></td><td>Noto'g'ri parametrlar</td><td>params obyekti noto'g'ri</td></tr>
+        <tr><td><code>-32700</code></td><td>JSON parse xatosi</td><td>Kelgan ma'lumot JSON emas</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Biznes darajasi xatolari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Ma'nosi</th><th>Qachon qaytariladi</th></tr></thead>
+      <tbody>
+        <tr><td><code>-31001</code></td><td>Noto'g'ri summa</td><td>amount invoice ga mos kelmaydi yoki noto'g'ri</td></tr>
+        <tr><td><code>-31003</code></td><td>Tranzaksiya topilmadi</td><td>Noto'g'ri yoki mavjud bo'lmagan Payme <code>id</code></td></tr>
+        <tr><td><code>-31007</code></td><td>Bekor qilish mumkin emas</td><td>Mahsulot yetkazilgan, CancelTransaction rad etildi</td></tr>
+        <tr><td><code>-31008</code></td><td>Operatsiya mumkin emas</td><td>Tranzaksiya state noto'g'ri (masalan Perform'ni cancelled'ga chaqirish)</td></tr>
+        <tr><td><code>-31050..-31099</code></td><td>Account xatolari</td><td>Foydalanuvchi/buyurtma topilmadi yoki noto'g'ri</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Account xatolari batafsil</h2>
+  <p>Ta'minotchi account ning har bir field'i uchun alohida xato kodi ajratishi kerak:</p>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Field misoli</th><th>message.uz</th></tr></thead>
+      <tbody>
+        <tr><td><code>-31050</code></td><td>order_id</td><td>"Buyurtma topilmadi"</td></tr>
+        <tr><td><code>-31051</code></td><td>user_id</td><td>"Foydalanuvchi topilmadi"</td></tr>
+        <tr><td><code>-31052</code></td><td>phone</td><td>"Telefon raqami noto'g'ri"</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Xato javob to'liq misoli</h2>
+  <pre><code>{
+  "error": {
+    "code": -31050,
+    "message": {
+      "ru": "Заказ не найден",
+      "uz": "Buyurtma topilmadi",
+      "en": "Order not found"
+    },
+    "data": "order_id"
+  },
+  "id": 1
+}</code></pre>
+
+  <div class="alert alert-info">
+    <code>data</code> maydoniga xato bo'lgan field nomini yozing — Payme foydalanuvchiga to'g'ri tushuntirishi uchun muhim.
+  </div>
+</div>
+
+<!-- ==================== METHOD: CheckPerformTransaction ==================== -->
+<div class="page-section" id="page-method-check-perform">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Metodlar &rsaquo; CheckPerformTransaction</div>
+  <h1>CheckPerformTransaction</h1>
+
+  <p>Moliyaviy tranzaksiya yaratish imkoniyatini tekshirish. Payme bu metodni foydalanuvchi chekni ochganida chaqiradi — <strong>hali hech qanday tranzaksiya yaratilmaydi</strong>.</p>
+
+  <h2>Maqsad</h2>
+  <ul>
+    <li>Account field'ini tekshirish (foydalanuvchi/buyurtma mavjud)</li>
+    <li>Summa to'g'riligi</li>
+    <li>Tizim tayyorligini tekshirish (CreateTransaction va PerformTransaction uchun)</li>
+    <li>Fiskallash uchun tovarlar ro'yxatini qaytarish (ixtiyoriy)</li>
+  </ul>
+
+  <h2>So'rov parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>amount</code></td><td>Amount</td><td>To'lov summasi (tiyinda)</td></tr>
+        <tr><td><code>account</code></td><td>Account</td><td>Foydalanuvchi/buyurtma identifikatorlari</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>allow</code></td><td>Boolean</td><td>Har doim <code>true</code> (agar ruxsat berilsa)</td></tr>
+        <tr><td><code>detail</code> <em>(ixt.)</em></td><td>Object</td><td>Fiskallash uchun mahsulot ma'lumotlari</td></tr>
+        <tr><td><code>additional</code> <em>(ixt.)</em></td><td>Object</td><td>Qo'shimcha ma'lumot (foydalanuvchi balansi va h.k.)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>{
+  "method": "CheckPerformTransaction",
+  "params": {
+    "amount": 500000,
+    "account": {
+      "order_id": "ORD-123"
+    }
+  },
+  "id": 1
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob</h2>
+  <pre><code>{
+  "result": {
+    "allow": true
+  },
+  "id": 1
+}</code></pre>
+
+  <h2>Detail bilan (fiskallash)</h2>
+  <pre><code>{
+  "result": {
+    "allow": true,
+    "detail": {
+      "receipt_type": 0,
+      "items": [
+        {
+          "discount": 0,
+          "title": "Matematika kursi",
+          "price": 500000,
+          "count": 1,
+          "code": "10101001001000000",
+          "package_code": "1234",
+          "vat_percent": 0
+        }
+      ]
+    }
+  },
+  "id": 1
+}</code></pre>
+
+  <h2>Tipik xatolar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Sharoit</th></tr></thead>
+      <tbody>
+        <tr><td><code>-31001</code></td><td>amount kutilganidan farq qiladi</td></tr>
+        <tr><td><code>-31050..-31099</code></td><td>account dagi field noto'g'ri (order_id, user_id va h.k.)</td></tr>
+        <tr><td><code>-31008</code></td><td>Tizim bu tranzaksiya uchun tayyor emas (masalan buyurtma allaqachon to'langan)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Xato javob misoli</h2>
+  <pre><code>{
+  "error": {
+    "code": -31001,
+    "message": {
+      "ru": "Неверная сумма",
+      "uz": "Noto'g'ri summa",
+      "en": "Incorrect amount"
+    },
+    "data": "amount"
+  },
+  "id": 1
+}</code></pre>
+</div>
+
+<!-- ==================== METHOD: CreateTransaction ==================== -->
+<div class="page-section" id="page-method-create">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Metodlar &rsaquo; CreateTransaction</div>
+  <h1>CreateTransaction</h1>
+
+  <p>Moliyaviy tranzaksiyani yaratish. Payme bu metodni <code>CheckPerformTransaction</code> muvaffaqiyatli o'tgandan so'ng va foydalanuvchi kartani kiritib tasdiqlagach chaqiradi.</p>
+
+  <h2>So'rov parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>Payme tranzaksiya identifikatori (24-belgili hex)</td></tr>
+        <tr><td><code>time</code></td><td>Timestamp (ms)</td><td>Tranzaksiya yaratilgan vaqt</td></tr>
+        <tr><td><code>amount</code></td><td>Amount</td><td>Summa (tiyinda)</td></tr>
+        <tr><td><code>account</code></td><td>Account</td><td>Foydalanuvchi/buyurtma identifikatorlari</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>create_time</code></td><td>Timestamp (ms)</td><td>Yaratilgan vaqt (ta'minotchi tizimida)</td></tr>
+        <tr><td><code>transaction</code></td><td>String</td><td>Ta'minotchi billing tizimidagi tranzaksiya ID</td></tr>
+        <tr><td><code>state</code></td><td>Integer</td><td>Har doim <code>1</code> (yaratilgan)</td></tr>
+        <tr><td><code>receivers</code> <em>(ixt.)</em></td><td>Array</td><td>Chain payment: boshqa merchantlarga taqsimot</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Ta'minotchining majburiyatlari</h2>
+  <div class="alert alert-warning">
+    <ul style="margin-top:8px;">
+      <li>Tranzaksiyani <strong>doimiy saqlashda</strong> saqlash (DB)</li>
+      <li>Account to'g'riligini tekshirish → xatosa <code>-31050..-31099</code></li>
+      <li>Summa to'g'riligini tekshirish → xatosa <code>-31001</code></li>
+      <li>Buyurtmani zaxiralash (boshqa xaridorlar tortib olmasin)</li>
+      <li>Buyurtma ma'lumotlarini to'lov paytida o'zgarmasligini ta'minlash</li>
+      <li>Buyurtma holatini "to'lov kutilmoqda" qilish</li>
+    </ul>
+  </div>
+
+  <h2>Idempotentlik</h2>
+  <div class="alert alert-danger">
+    <strong>Muhim:</strong> Agar bir xil <code>id</code> bilan <code>CreateTransaction</code> ikkinchi marta kelsa, yangi tranzaksiya YARATILMAYDI — avvalgi <code>create_time</code>, <code>transaction</code>, <code>state</code> qaytariladi. Sandbox testi buni ikki marta yuborib tekshiradi.
+  </div>
+
+  <h2>Timeout</h2>
+  <p>Tranzaksiya <code>state=1</code> holatida <strong>12 soat</strong> (43 200 000 ms) turadi. Undan keyin avtomatik bekor qilinadi:</p>
+  <ul>
+    <li><code>state</code> &rarr; <code>-1</code></li>
+    <li><code>reason</code> &rarr; <code>4</code> (timeout)</li>
+  </ul>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>{
+  "method": "CreateTransaction",
+  "params": {
+    "id": "5e730e8e0b852a417aa49ceb",
+    "time": 1399114284039,
+    "amount": 500000,
+    "account": {
+      "order_id": "ORD-123"
+    }
+  },
+  "id": 2
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob</h2>
+  <pre><code>{
+  "result": {
+    "create_time": 1399114284039,
+    "transaction": "1001",
+    "state": 1
+  },
+  "id": 2
+}</code></pre>
+
+  <h2>Tipik xatolar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Sharoit</th></tr></thead>
+      <tbody>
+        <tr><td><code>-31001</code></td><td>Noto'g'ri summa</td></tr>
+        <tr><td><code>-31008</code></td><td>Buyurtma allaqachon to'langan yoki boshqa sababga ko'ra yaratib bo'lmaydi</td></tr>
+        <tr><td><code>-31050..-31099</code></td><td>Account field noto'g'ri</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== METHOD: PerformTransaction ==================== -->
+<div class="page-section" id="page-method-perform">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Metodlar &rsaquo; PerformTransaction</div>
+  <h1>PerformTransaction</h1>
+
+  <p>Tranzaksiyani bajarish — kartadan pulni yechib, buyurtmani to'langan holatga o'tkazish. State 1 &rarr; 2.</p>
+
+  <h2>So'rov parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>Payme tranzaksiya identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>transaction</code></td><td>String</td><td>Ta'minotchi tranzaksiya ID (CreateTransaction javobidan)</td></tr>
+        <tr><td><code>perform_time</code></td><td>Timestamp (ms)</td><td>Bajarilgan vaqt</td></tr>
+        <tr><td><code>state</code></td><td>Integer</td><td>Har doim <code>2</code> (bajarilgan)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>State o'tish</h2>
+  <div class="endpoint">
+    <span class="state-badge state-created">state: 1</span>
+    &rarr;
+    <span class="state-badge state-performed">state: 2</span>
+  </div>
+
+  <h2>Ta'minotchining majburiyatlari</h2>
+  <ol>
+    <li>Tranzaksiyani DB da topish (<code>id</code> bo'yicha) — yo'q bo'lsa <code>-31003</code></li>
+    <li>Tranzaksiya <code>state</code> ini tekshirish:
+      <ul>
+        <li><code>state=1</code> &rarr; davom etish</li>
+        <li><code>state=2</code> &rarr; idempotentlik — avvalgi <code>perform_time</code> qaytarish</li>
+        <li><code>state=-1</code> yoki <code>-2</code> &rarr; <code>-31008</code></li>
+      </ul>
+    </li>
+    <li>Foydalanuvchi balansini oshirish / buyurtmani to'langan qilish</li>
+    <li><code>state=2</code>, <code>perform_time=now</code> qilib saqlash</li>
+  </ol>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>{
+  "method": "PerformTransaction",
+  "params": {
+    "id": "5e730e8e0b852a417aa49ceb"
+  },
+  "id": 3
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob</h2>
+  <pre><code>{
+  "result": {
+    "transaction": "1001",
+    "perform_time": 1399114302039,
+    "state": 2
+  },
+  "id": 3
+}</code></pre>
+
+  <h2>Tipik xatolar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Sharoit</th></tr></thead>
+      <tbody>
+        <tr><td><code>-31003</code></td><td>Tranzaksiya topilmadi</td></tr>
+        <tr><td><code>-31008</code></td><td>Tranzaksiya <code>state</code> noto'g'ri (masalan bekor qilingan)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== METHOD: CancelTransaction ==================== -->
+<div class="page-section" id="page-method-cancel">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Metodlar &rsaquo; CancelTransaction</div>
+  <h1>CancelTransaction</h1>
+
+  <p>Tranzaksiyani bekor qilish. <code>state=1</code> (pending) va <code>state=2</code> (performed) holatidagi tranzaksiyalarni bekor qilish mumkin (ikkinchi holat — refund).</p>
+
+  <h2>So'rov parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>Payme tranzaksiya identifikatori</td></tr>
+        <tr><td><code>reason</code></td><td>Integer</td><td>Bekor qilish sababi (1-10)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Reason kodlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>reason</th><th>Ma'nosi</th></tr></thead>
+      <tbody>
+        <tr><td><code>1</code></td><td>Foydalanuvchi yoki mijoz bekor qildi</td></tr>
+        <tr><td><code>2</code></td><td>Rad etilgan karta / mablag' yetarli emas</td></tr>
+        <tr><td><code>3</code></td><td>Operator xatosi</td></tr>
+        <tr><td><code>4</code></td><td><strong>Timeout — avtomatik bekor (12 soat)</strong></td></tr>
+        <tr><td><code>5</code></td><td>Pul qaytarildi (refund)</td></tr>
+        <tr><td><code>10</code></td><td>Boshqa</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>transaction</code></td><td>String</td><td>Ta'minotchi tranzaksiya ID</td></tr>
+        <tr><td><code>cancel_time</code></td><td>Timestamp (ms)</td><td>Bekor qilingan vaqt</td></tr>
+        <tr><td><code>state</code></td><td>Integer</td><td><code>-1</code> yoki <code>-2</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>State o'tish mantig'i</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Avvalgi state</th><th>Bekor qilgandan keyin</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><span class="state-badge state-created">1</span> (Created)</td><td><span class="state-badge state-cancelled">-1</span></td><td>Yaratilgan, ammo bajarilmagan tranzaksiya bekor qilindi</td></tr>
+        <tr><td><span class="state-badge state-performed">2</span> (Performed)</td><td><span class="state-badge state-cancelled">-2</span></td><td>Bajarilgan tranzaksiya bekor qilindi (refund — pul qaytariladi)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Ta'minotchining majburiyatlari</h2>
+  <ol>
+    <li>Tranzaksiyani topish (<code>id</code> bo'yicha)</li>
+    <li>Agar <code>state=1</code>: state ni <code>-1</code> ga o'zgartirish, buyurtma zaxirasini bo'shatish</li>
+    <li>Agar <code>state=2</code>: state ni <code>-2</code> ga o'zgartirish, <strong>foydalanuvchi balansidan pul yechish</strong> (chunki qaytariladi)</li>
+    <li>Agar <code>state=-1</code> yoki <code>-2</code>: idempotentlik — avvalgi <code>cancel_time</code> qaytarish</li>
+    <li>Agar xizmat allaqachon ko'rsatilgan bo'lsa va qaytarish mumkin bo'lmasa: <code>-31007</code></li>
+  </ol>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>{
+  "method": "CancelTransaction",
+  "params": {
+    "id": "5e730e8e0b852a417aa49ceb",
+    "reason": 1
+  },
+  "id": 4
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob (pending bekor qilindi)</h2>
+  <pre><code>{
+  "result": {
+    "transaction": "1001",
+    "cancel_time": 1399114310039,
+    "state": -1
+  },
+  "id": 4
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob (refund)</h2>
+  <pre><code>{
+  "result": {
+    "transaction": "1001",
+    "cancel_time": 1399114310039,
+    "state": -2
+  },
+  "id": 4
+}</code></pre>
+
+  <h2>Tipik xatolar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Sharoit</th></tr></thead>
+      <tbody>
+        <tr><td><code>-31003</code></td><td>Tranzaksiya topilmadi</td></tr>
+        <tr><td><code>-31007</code></td><td>Mahsulot/xizmat yetkazilgan, bekor qilib bo'lmaydi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    Refund (<code>state=-2</code>) Payme shaxsiy kabineti orqali ham boshlanishi mumkin — o'sha holatda Payme ta'minotchiga <code>CancelTransaction</code> yuboradi.
+  </div>
+</div>
+
+<!-- ==================== METHOD: CheckTransaction ==================== -->
+<div class="page-section" id="page-method-check">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Metodlar &rsaquo; CheckTransaction</div>
+  <h1>CheckTransaction</h1>
+
+  <p>Tranzaksiya holatini tekshirish. Payme bu metodni istalgan vaqtda status olish uchun chaqiradi.</p>
+
+  <h2>So'rov parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>Payme tranzaksiya identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>create_time</code></td><td>Timestamp (ms)</td><td>Yaratilgan vaqt</td></tr>
+        <tr><td><code>perform_time</code></td><td>Timestamp (ms)</td><td>Bajarilgan vaqt yoki <code>0</code></td></tr>
+        <tr><td><code>cancel_time</code></td><td>Timestamp (ms)</td><td>Bekor qilingan vaqt yoki <code>0</code></td></tr>
+        <tr><td><code>transaction</code></td><td>String</td><td>Ta'minotchi tranzaksiya ID</td></tr>
+        <tr><td><code>state</code></td><td>Integer</td><td>Joriy holat: 1, 2, -1, -2</td></tr>
+        <tr><td><code>reason</code></td><td>Integer | null</td><td>Bekor qilish sababi (faqat state&lt;0 bo'lsa)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>{
+  "method": "CheckTransaction",
+  "params": {
+    "id": "5e730e8e0b852a417aa49ceb"
+  },
+  "id": 5
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob (bajarilgan)</h2>
+  <pre><code>{
+  "result": {
+    "create_time": 1399114284039,
+    "perform_time": 1399114302039,
+    "cancel_time": 0,
+    "transaction": "1001",
+    "state": 2,
+    "reason": null
+  },
+  "id": 5
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob (bekor qilingan)</h2>
+  <pre><code>{
+  "result": {
+    "create_time": 1399114284039,
+    "perform_time": 1399114302039,
+    "cancel_time": 1399114310039,
+    "transaction": "1001",
+    "state": -2,
+    "reason": 5
+  },
+  "id": 5
+}</code></pre>
+
+  <h2>Tipik xatolar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Sharoit</th></tr></thead>
+      <tbody>
+        <tr><td><code>-31003</code></td><td>Tranzaksiya topilmadi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    Agar tranzaksiya hali bajarilmagan bo'lsa, <code>perform_time=0</code> va <code>cancel_time=0</code> qaytariladi. Null emas, <strong>0</strong>!
+  </div>
+</div>
+
+<!-- ==================== METHOD: GetStatement ==================== -->
+<div class="page-section" id="page-method-statement">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Metodlar &rsaquo; GetStatement</div>
+  <h1>GetStatement</h1>
+
+  <p>Davr bo'yicha tranzaksiyalar ro'yxatini olish. Payme va ta'minotchi ma'lumotlarini moslashtirish (reconciliation) uchun ishlatiladi.</p>
+
+  <h2>So'rov parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>from</code></td><td>Timestamp (ms)</td><td>Davr boshi</td></tr>
+        <tr><td><code>to</code></td><td>Timestamp (ms)</td><td>Davr oxiri</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>transactions</code></td><td>Array</td><td>Tranzaksiyalar ro'yxati (time bo'yicha tartiblangan)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Har bir tranzaksiya obyekti</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Maydon</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>Payme tranzaksiya ID</td></tr>
+        <tr><td><code>time</code></td><td>Timestamp (ms)</td><td>Payme yaratgan vaqt</td></tr>
+        <tr><td><code>amount</code></td><td>Amount</td><td>Summa (tiyinda)</td></tr>
+        <tr><td><code>account</code></td><td>Account</td><td>Foydalanuvchi/buyurtma identifikatori</td></tr>
+        <tr><td><code>create_time</code></td><td>Timestamp (ms)</td><td>Ta'minotchi create_time</td></tr>
+        <tr><td><code>perform_time</code></td><td>Timestamp (ms)</td><td>Ta'minotchi perform_time yoki 0</td></tr>
+        <tr><td><code>cancel_time</code></td><td>Timestamp (ms)</td><td>Ta'minotchi cancel_time yoki 0</td></tr>
+        <tr><td><code>transaction</code></td><td>String</td><td>Ta'minotchi tranzaksiya ID</td></tr>
+        <tr><td><code>state</code></td><td>Integer</td><td>Holat</td></tr>
+        <tr><td><code>reason</code></td><td>Integer | null</td><td>Bekor qilish sababi</td></tr>
+        <tr><td><code>receivers</code></td><td>Array</td><td>Chain payment taqsimoti (odatda <code>null</code>)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Tartib:</strong> Tranzaksiyalar <code>time</code> bo'yicha o'sib boradigan tartibda qaytarilishi shart. <code>from &le; time &le; to</code> filter bilan.
+  </div>
+
+  <h2>Qaytariladigan tranzaksiyalar</h2>
+  <p>Faqat <code>CreateTransaction</code> muvaffaqiyatli bo'lgan tranzaksiyalar kiritiladi (state: 1, 2, -1, -2 — barchasi).</p>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>{
+  "method": "GetStatement",
+  "params": {
+    "from": 1399114284039,
+    "to": 1399120284039
+  },
+  "id": 6
+}</code></pre>
+
+  <h2>Muvaffaqiyatli javob</h2>
+  <pre><code>{
+  "result": {
+    "transactions": [
+      {
+        "id": "5e730e8e0b852a417aa49ceb",
+        "time": 1399114284039,
+        "amount": 500000,
+        "account": { "order_id": "ORD-123" },
+        "create_time": 1399114284039,
+        "perform_time": 1399114302039,
+        "cancel_time": 0,
+        "transaction": "1001",
+        "state": 2,
+        "reason": null,
+        "receivers": null
+      },
+      {
+        "id": "5e730f000b852a417aa49cec",
+        "time": 1399115000000,
+        "amount": 300000,
+        "account": { "order_id": "ORD-124" },
+        "create_time": 1399115000000,
+        "perform_time": 0,
+        "cancel_time": 1399115500000,
+        "transaction": "1002",
+        "state": -1,
+        "reason": 4,
+        "receivers": null
+      }
+    ]
+  },
+  "id": 6
+}</code></pre>
+
+  <h2>Bo'sh natija</h2>
+  <pre><code>{
+  "result": {
+    "transactions": []
+  },
+  "id": 6
+}</code></pre>
+</div>
+
+<!-- ==================== INIT GET ==================== -->
+<div class="page-section" id="page-init-get">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; To'lovni boshlash &rsaquo; GET so'rov</div>
+  <h1>To'lovni boshlash — GET so'rov (URL)</h1>
+
+  <p>Foydalanuvchini Payme checkout sahifasiga yo'naltirish uchun eng oddiy usul — <strong>base64-kodlangan URL</strong>.</p>
+
+  <h2>URL formati</h2>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <code>https://checkout.paycom.uz/BASE64_PARAMS</code>
+  </div>
+
+  <h2>Parametrlar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>m</code></td><td>Ha</td><td>Kassa ID (merchant_id) — 24 belgili hex</td></tr>
+        <tr><td><code>ac.&lt;field&gt;</code></td><td>Ha</td><td>Account field(lar). Masalan: <code>ac.order_id=ORD-123</code></td></tr>
+        <tr><td><code>a</code></td><td>Ha</td><td>Summa (tiyinda)</td></tr>
+        <tr><td><code>l</code></td><td>Yo'q</td><td>Til: <code>ru</code>, <code>uz</code>, <code>en</code></td></tr>
+        <tr><td><code>c</code></td><td>Yo'q</td><td>To'lov tugagandan keyin qayta yo'naltirish URL (callback)</td></tr>
+        <tr><td><code>ct</code></td><td>Yo'q</td><td>Callback timeout (ms)</td></tr>
+        <tr><td><code>cr</code></td><td>Yo'q</td><td>Tijorat valyutasi: <code>860</code> (UZS), <code>840</code> (USD)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Kodlash qoidalari</h2>
+  <ol>
+    <li>Parametrlarni <code>;</code> (nuqta-vergul) bilan ajrating</li>
+    <li>Har bir parametr <code>key=value</code> shaklida</li>
+    <li>Olingan stringni <code>base64</code> kodlang</li>
+    <li>Natijaviy stringni URL oxiriga qo'shing</li>
+  </ol>
+
+  <h2>Misol</h2>
+  <p>Parametrlar:</p>
+  <pre><code>m=5e730e8e0b852a417aa49ceb;ac.order_id=ORD-123;a=500000;l=uz;c=https://example.uz/return</code></pre>
+
+  <p>Base64 qilingan:</p>
+  <pre><code>bT01ZTczMGU4ZTBiODUyYTQxN2FhNDljZWI7YWMub3JkZXJfaWQ9T1JELTEyMzthPTUwMDAwMDtsPXV6O2M9aHR0cHM6Ly9leGFtcGxlLnV6L3JldHVybg==</code></pre>
+
+  <p>To'liq URL:</p>
+  <pre><code>https://checkout.paycom.uz/bT01ZTczMGU4ZTBiODUyYTQxN2FhNDljZWI7YWMub3JkZXJfaWQ9T1JELTEyMzthPTUwMDAwMDtsPXV6O2M9aHR0cHM6Ly9leGFtcGxlLnV6L3JldHVybg==</code></pre>
+
+  <h2>JavaScript misoli</h2>
+  <pre><code>function buildPaymeCheckoutUrl(merchantId, amount, accountField, accountValue) {
+  const params = [
+    `m=${merchantId}`,
+    `ac.${accountField}=${accountValue}`,
+    `a=${amount}`,
+    `l=uz`,
+    `c=https://example.uz/return`,
+  ].join(';');
+
+  const encoded = btoa(params);
+  return `https://checkout.paycom.uz/${encoded}`;
+}
+
+const url = buildPaymeCheckoutUrl(
+  "5e730e8e0b852a417aa49ceb",
+  500000,
+  "order_id",
+  "ORD-123"
+);
+// window.location.href = url;</code></pre>
+
+  <h2>Node.js misoli</h2>
+  <pre><code>const params = `m=${merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
+const encoded = Buffer.from(params).toString('base64');
+const checkoutUrl = `https://checkout.paycom.uz/${encoded}`;</code></pre>
+
+  <div class="alert alert-info">
+    <strong>Sandbox uchun:</strong> URL base <code>https://test.paycom.uz/</code> ga o'zgartiring. Parametrlar bir xil.
+  </div>
+</div>
+
+<!-- ==================== INIT POST ==================== -->
+<div class="page-section" id="page-init-post">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; To'lovni boshlash &rsaquo; POST forma</div>
+  <h1>To'lovni boshlash — POST forma</h1>
+
+  <p>HTML forma orqali POST yuborish — base64 kodlash kerak emas.</p>
+
+  <h2>Forma strukturasi</h2>
+  <pre><code>&lt;form method="POST" action="https://checkout.paycom.uz/"&gt;
+  &lt;input type="hidden" name="merchant" value="5e730e8e0b852a417aa49ceb" /&gt;
+  &lt;input type="hidden" name="amount" value="500000" /&gt;
+  &lt;input type="hidden" name="account[order_id]" value="ORD-123" /&gt;
+  &lt;input type="hidden" name="lang" value="uz" /&gt;
+  &lt;input type="hidden" name="callback" value="https://example.uz/return" /&gt;
+  &lt;input type="hidden" name="callback_timeout" value="15000" /&gt;
+  &lt;input type="hidden" name="description" value="Matematika kursi uchun to'lov" /&gt;
+  &lt;button type="submit"&gt;Payme orqali to'lash&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+  <h2>Field nomlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Field</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>merchant</code></td><td>Ha</td><td>Kassa ID</td></tr>
+        <tr><td><code>amount</code></td><td>Ha</td><td>Summa (tiyinda)</td></tr>
+        <tr><td><code>account[&lt;field&gt;]</code></td><td>Ha</td><td>Account field(lar). PHP-stil massiv</td></tr>
+        <tr><td><code>lang</code></td><td>Yo'q</td><td>Til: ru/uz/en</td></tr>
+        <tr><td><code>callback</code></td><td>Yo'q</td><td>Qaytish URL</td></tr>
+        <tr><td><code>callback_timeout</code></td><td>Yo'q</td><td>Timeout (ms)</td></tr>
+        <tr><td><code>description</code></td><td>Yo'q</td><td>To'lov izohi (foydalanuvchiga ko'rsatiladi)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Bir nechta account field</h2>
+  <pre><code>&lt;input type="hidden" name="account[order_id]" value="ORD-123" /&gt;
+&lt;input type="hidden" name="account[user_id]" value="42" /&gt;</code></pre>
+
+  <h2>React/Next.js bilan dinamik yaratish</h2>
+  <pre><code>&lt;form ref={formRef} method="POST" action="https://checkout.paycom.uz/"&gt;
+  &lt;input type="hidden" name="merchant" value={merchantId} /&gt;
+  &lt;input type="hidden" name="amount" value={amountInTiyin} /&gt;
+  &lt;input type="hidden" name="account[order_id]" value={orderId} /&gt;
+  &lt;input type="hidden" name="lang" value="uz" /&gt;
+&lt;/form&gt;
+
+// Avtomatik submit
+useEffect(() =&gt; {
+  formRef.current?.submit();
+}, []);</code></pre>
+
+  <div class="alert alert-info">
+    <strong>GET vs POST:</strong> GET oddiyroq va ilovadan ochiladigan URL qilish uchun qulay. POST — katta parametrlar (uzun description) uchun yaxshi, URL'da ko'rinmaydi.
+  </div>
+</div>
+
+<!-- ==================== INIT BUTTON ==================== -->
+<div class="page-section" id="page-init-button">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; To'lovni boshlash &rsaquo; To'lov tugmasi va QR</div>
+  <h1>To'lov tugmasi va QR kod</h1>
+
+  <h2>1-usul: Payme JS widget</h2>
+  <p>Payme rasmiy JS kutubxonasi sahifaga to'lov tugmasini qo'shadi.</p>
+
+  <pre><code>&lt;script src="https://cdn.paycom.uz/integration/js/checkout.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+function payWithPayme() {
+  Paycom.Button({
+    merchant: "5e730e8e0b852a417aa49ceb",
+    amount: 500000,
+    account: { order_id: "ORD-123" },
+    lang: "uz",
+    callback: "https://example.uz/return"
+  });
+}
+&lt;/script&gt;
+
+&lt;button onclick="payWithPayme()" class="payme-btn"&gt;
+  Payme orqali to'lash
+&lt;/button&gt;</code></pre>
+
+  <h2>2-usul: Havola sifatida</h2>
+  <pre><code>&lt;a href="https://checkout.paycom.uz/BASE64_PARAMS"
+   target="_blank"
+   class="payme-link"&gt;
+  Payme orqali to'lash
+&lt;/a&gt;</code></pre>
+
+  <h2>QR kod generatsiyasi</h2>
+  <p>Xuddi shu URL ni QR kod sifatida ko'rsatsangiz, foydalanuvchi Payme mobil ilovasi bilan skan qilib to'lovni amalga oshira oladi.</p>
+
+  <pre><code>import QRCode from 'qrcode';
+
+const checkoutUrl = `https://checkout.paycom.uz/${base64Params}`;
+const qrDataUrl = await QRCode.toDataURL(checkoutUrl);
+// &lt;img src={qrDataUrl} alt="QR" /&gt;</code></pre>
+
+  <h2>Deep-link (mobil ilova)</h2>
+  <p>Agar foydalanuvchida Payme ilovasi o'rnatilgan bo'lsa, URL avtomatik ilovada ochiladi.</p>
+
+  <div class="endpoint">
+    <code>https://checkout.paycom.uz/&lt;BASE64&gt;</code>
+  </div>
+
+  <div class="alert alert-info">
+    Android va iOS'da Payme ilovasi <code>checkout.paycom.uz</code> havolalarini tutib oladi va o'z ichida ochadi.
+  </div>
+</div>
+
+<!-- ==================== SUBSCRIBE OVERVIEW ==================== -->
+<div class="page-section" id="page-subscribe-overview">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Subscribe API &rsaquo; Umumiy ko'rinish</div>
+  <h1>Subscribe API — Umumiy ko'rinish</h1>
+
+  <p>Subscribe API Merchant API ga <strong>aksincha yo'nalishda</strong> ishlaydi: <em>ta'minotchi</em> Payme ga so'rov yuboradi, <em>Payme</em> javob qaytaradi.</p>
+
+  <h2>Merchant API vs Subscribe API</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Xususiyat</th><th>Merchant API</th><th>Subscribe API</th></tr></thead>
+      <tbody>
+        <tr><td>Yo'nalish</td><td>Payme &rarr; Ta'minotchi</td><td>Ta'minotchi &rarr; Payme</td></tr>
+        <tr><td>Auth</td><td><code>Authorization: Basic ...</code></td><td><code>X-Auth: id:key</code></td></tr>
+        <tr><td>Maqsad</td><td>Webhook (Payme o'zi so'raydi)</td><td>Chek yaratish, kartani tokenlash</td></tr>
+        <tr><td>Billing talab qiladimi</td><td>Ha (buyurtma bazasi)</td><td>Yo'q</td></tr>
+        <tr><td>Takroriy to'lov</td><td>Yo'q</td><td>Ha (token bilan)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>URL</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Muhit</th><th>URL</th></tr></thead>
+      <tbody>
+        <tr><td>Sandbox</td><td><code>https://checkout.test.paycom.uz/api</code></td></tr>
+        <tr><td>Production</td><td><code>https://checkout.paycom.uz/api</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Avtorizatsiya — X-Auth header</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Format</th><th>Qachon</th></tr></thead>
+      <tbody>
+        <tr><td><code>X-Auth: &lt;id&gt;</code></td><td>Frontend (karta tokenlash)</td></tr>
+        <tr><td><code>X-Auth: &lt;id&gt;:&lt;key&gt;</code></td><td>Backend (server-to-server)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Bu yerda <code>id</code> — kassa ID (<code>merchant_id</code>), <code>key</code> — kassa kaliti.</p>
+
+  <h2>Xavfsizlik — karta tokenlash</h2>
+  <div class="alert alert-danger">
+    <strong>Muhim:</strong> Ta'minotchi karta ma'lumotlarini (karta raqami, CVV, muddat) <strong>saqlab bo'lmaydi</strong>. Bu PCI DSS qoidalarini buzadi.
+  </div>
+
+  <p>O'rniga:</p>
+  <ol>
+    <li>Foydalanuvchi kartani kiritadi &rarr; Payme'ga yuboriladi &rarr; Payme <strong>token</strong> qaytaradi</li>
+    <li>Ta'minotchi faqat token ni saqlaydi</li>
+    <li>Keyingi to'lovlarda token orqali chek yaratiladi</li>
+  </ol>
+
+  <h2>Karta kiritish formasi talablari</h2>
+  <ul>
+    <li>Payme logotipi ko'rsatilishi shart</li>
+    <li>Foydalanish shartlari havolasi</li>
+    <li>"Ma'lumotlar ta'minotchiga yuborilmaydi, Payme serverida saqlanadi" degan eslatma</li>
+  </ul>
+
+  <h2>Jarayon diagrammasi</h2>
+  <div class="diagram-box">
+    <p style="margin:0;color:#888;">Subscribe API ketma-ketlik diagrammasi</p>
+    <div style="margin-top:16px;text-align:left;max-width:550px;margin-left:auto;margin-right:auto;">
+      <p><strong>1.</strong> Foydalanuvchi: Karta raqamini kiritadi (ta'minotchi saytida)</p>
+      <p><strong>2.</strong> Frontend &rarr; Payme API: <code>cards.create</code> (X-Auth: id)</p>
+      <p><strong>3.</strong> Payme &rarr; Frontend: karta tokeni</p>
+      <p><strong>4.</strong> Frontend &rarr; Backend: tokenni saqlash uchun yuboradi</p>
+      <p><strong>5.</strong> Backend: tokenni DB'ga yozadi</p>
+      <p><strong>6.</strong> To'lash vaqtida: Backend &rarr; Payme API: <code>receipts.create</code></p>
+      <p><strong>7.</strong> Backend &rarr; Payme API: <code>receipts.pay</code> (token bilan)</p>
+      <p><strong>8.</strong> Payme: Kartadan pulni yechadi</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SUBSCRIBE CARDS ==================== -->
+<div class="page-section" id="page-subscribe-cards">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Subscribe API &rsaquo; Kartalar</div>
+  <h1>Subscribe API — Karta qo'shish va tokenlash</h1>
+
+  <p>Kartani Payme tizimida saqlash va keyingi to'lovlarda token sifatida ishlatish uchun metodlar.</p>
+
+  <h2>1. <code>cards.create</code> — Karta qo'shish</h2>
+  <p>Kartani yaratadi va <strong>tasdiqlanmagan</strong> token qaytaradi.</p>
+
+  <pre><code>{
+  "method": "cards.create",
+  "params": {
+    "card": {
+      "number": "8600495473316478",
+      "expire": "0399"
+    },
+    "save": true
+  }
+}</code></pre>
+
+  <p>Javob:</p>
+  <pre><code>{
+  "result": {
+    "card": {
+      "number": "860049******6478",
+      "expire": "0399",
+      "token": "627a8e0b852a417aa49ceb...",
+      "recurrent": true,
+      "verify": false
+    }
+  }
+}</code></pre>
+
+  <h2>2. <code>cards.get_verify_code</code> — SMS kodini yuborish</h2>
+  <pre><code>{
+  "method": "cards.get_verify_code",
+  "params": { "token": "627a8e0b852a417aa49ceb..." }
+}</code></pre>
+
+  <p>Javob (telefon raqami):</p>
+  <pre><code>{
+  "result": {
+    "sent": true,
+    "phone": "99890*****67",
+    "wait": 60000
+  }
+}</code></pre>
+
+  <h2>3. <code>cards.verify</code> — SMS kodi bilan tasdiqlash</h2>
+  <pre><code>{
+  "method": "cards.verify",
+  "params": {
+    "token": "627a8e0b852a417aa49ceb...",
+    "code": "666666"
+  }
+}</code></pre>
+
+  <p>Javob — <code>verify: true</code> bo'lgan token:</p>
+  <pre><code>{
+  "result": {
+    "card": {
+      "number": "860049******6478",
+      "expire": "0399",
+      "token": "627a8e0b852a417aa49ceb...",
+      "recurrent": true,
+      "verify": true
+    }
+  }
+}</code></pre>
+
+  <div class="alert alert-info">
+    Sandbox'da SMS kodi har doim <strong>666666</strong>.
+  </div>
+
+  <h2>4. <code>cards.check</code> — Tokenni tekshirish</h2>
+  <pre><code>{
+  "method": "cards.check",
+  "params": { "token": "627a8e0b852a417aa49ceb..." }
+}</code></pre>
+
+  <h2>5. <code>cards.remove</code> — Tokenni o'chirish</h2>
+  <pre><code>{
+  "method": "cards.remove",
+  "params": { "token": "627a8e0b852a417aa49ceb..." }
+}</code></pre>
+
+  <h2>Token xususiyatlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Maydon</th><th>Ma'nosi</th></tr></thead>
+      <tbody>
+        <tr><td><code>verify: false</code></td><td>Token bor, lekin SMS bilan tasdiqlanmagan — to'lov qilib bo'lmaydi</td></tr>
+        <tr><td><code>verify: true</code></td><td>Tasdiqlangan — to'lov qilish mumkin</td></tr>
+        <tr><td><code>recurrent: true</code></td><td>Takroriy to'lov uchun saqlanadi</td></tr>
+        <tr><td><code>recurrent: false</code></td><td>Faqat bir martalik ishlatish</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SUBSCRIBE RECEIPTS ==================== -->
+<div class="page-section" id="page-subscribe-receipts">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Subscribe API &rsaquo; Receipts</div>
+  <h1>Subscribe API — Receipts (Cheklar) metodlari</h1>
+
+  <p>Receipt — Payme tizimida yaratilgan to'lov hujjati. Billing tizimi yo'q ta'minotchilar uchun chek orqali to'lov qabul qilish usuli.</p>
+
+  <h2>1. <code>receipts.create</code> — Chek yaratish</h2>
+  <pre><code>{
+  "method": "receipts.create",
+  "params": {
+    "amount": 500000,
+    "account": {
+      "order_id": "ORD-123"
+    },
+    "description": "Matematika kursi"
+  }
+}</code></pre>
+
+  <p>Javob — chek obyekti (<code>_id</code> — chek ID):</p>
+  <pre><code>{
+  "result": {
+    "receipt": {
+      "_id": "627a8e0b852a417aa49ceb",
+      "state": 0,
+      "amount": 500000,
+      "account": [{ "name": "order_id", "value": "ORD-123" }],
+      "description": "Matematika kursi",
+      "create_time": 1399114284039
+    }
+  }
+}</code></pre>
+
+  <h2>2. <code>receipts.pay</code> — Chekni to'lash (token bilan)</h2>
+  <pre><code>{
+  "method": "receipts.pay",
+  "params": {
+    "id": "627a8e0b852a417aa49ceb",
+    "token": "627a8e0b852a417aa49ceb..."
+  }
+}</code></pre>
+
+  <h2>3. <code>receipts.send</code> — Chekni SMS/email orqali yuborish</h2>
+  <pre><code>{
+  "method": "receipts.send",
+  "params": {
+    "id": "627a8e0b852a417aa49ceb",
+    "phone": "998901234567"
+  }
+}</code></pre>
+
+  <p>Foydalanuvchi SMS orqali havola oladi va to'lash uchun uni ochadi.</p>
+
+  <h2>4. <code>receipts.cancel</code> — Chekni bekor qilish</h2>
+  <pre><code>{
+  "method": "receipts.cancel",
+  "params": { "id": "627a8e0b852a417aa49ceb" }
+}</code></pre>
+
+  <h2>5. <code>receipts.check</code> — Chek holatini tekshirish</h2>
+  <pre><code>{
+  "method": "receipts.check",
+  "params": { "id": "627a8e0b852a417aa49ceb" }
+}</code></pre>
+
+  <h2>6. <code>receipts.get</code> — Bitta chek</h2>
+  <pre><code>{
+  "method": "receipts.get",
+  "params": { "id": "627a8e0b852a417aa49ceb" }
+}</code></pre>
+
+  <h2>7. <code>receipts.get_all</code> — Barcha cheklar</h2>
+  <pre><code>{
+  "method": "receipts.get_all",
+  "params": {
+    "count": 100,
+    "from": 1399114284039,
+    "to": 1399120284039,
+    "offset": 0
+  }
+}</code></pre>
+
+  <h2>Chek state qiymatlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>state</th><th>Ma'nosi</th></tr></thead>
+      <tbody>
+        <tr><td><code>0</code></td><td>Yaratilgan, to'lanmagan</td></tr>
+        <tr><td><code>1</code></td><td>Tranzaksiya boshlandi</td></tr>
+        <tr><td><code>2</code></td><td>Yetkazilgan (delivered)</td></tr>
+        <tr><td><code>3</code></td><td>Bekor qilish jarayonida</td></tr>
+        <tr><td><code>4</code></td><td>To'langan</td></tr>
+        <tr><td><code>20</code></td><td>Rad qilingan</td></tr>
+        <tr><td><code>50</code></td><td>Bekor qilingan</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PLUGINS ==================== -->
+<div class="page-section" id="page-plugins">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Qo'shimcha &rsaquo; CMS plaginlar</div>
+  <h1>CMS plaginlar</h1>
+
+  <p>Payme turli CMS platformalar uchun rasmiy plaginlarni taqdim etadi:</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Platforma</th><th>Versiya</th><th>Izoh</th></tr></thead>
+      <tbody>
+        <tr><td><strong>WordPress / WooCommerce</strong></td><td>4.0+</td><td>Rasmiy plagin GitHub'da</td></tr>
+        <tr><td><strong>1C-Bitrix</strong></td><td>20.x+</td><td>Katalogdan o'rnatish</td></tr>
+        <tr><td><strong>OpenCart</strong></td><td>3.x+</td><td>GitHub repozitoriya</td></tr>
+        <tr><td><strong>Drupal / Ubercart</strong></td><td>7.x+</td><td>Drupal.org modul</td></tr>
+        <tr><td><strong>Magento</strong></td><td>2.x+</td><td>Magento Marketplace</td></tr>
+        <tr><td><strong>Tilda</strong></td><td>—</td><td>Ichki integratsiya (sozlamalardan yoqiladi)</td></tr>
+        <tr><td><strong>PrestaShop</strong></td><td>1.7+</td><td>GitHub modul</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Plaginni sozlash</h2>
+  <p>Barcha plaginlar uchun umumiy sozlamalar:</p>
+  <ul>
+    <li><code>Merchant ID</code> — kassa ID</li>
+    <li><code>TEST_KEY</code> yoki <code>PRODUCTION_KEY</code></li>
+    <li>Account field (order_id odatda)</li>
+    <li>Webhook URL (plagin o'zi beradi)</li>
+  </ul>
+
+  <div class="alert alert-info">
+    Plaginlar rasmiy bo'lmasligi mumkin. Ishlatishdan oldin versiya mosligini va oxirgi yangilanish sanasini tekshiring.
+  </div>
+</div>
+
+<!-- ==================== MOBILE ==================== -->
+<div class="page-section" id="page-mobile">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Qo'shimcha &rsaquo; Mobil integratsiya</div>
+  <h1>Mobil integratsiya</h1>
+
+  <p>iOS va Android ilovalarida Payme to'lov integratsiyasi — <strong>deeplink</strong> orqali.</p>
+
+  <h2>Umumiy yondashuv</h2>
+  <p>Mobil ilova Payme checkout URL ni tizim brauzeri yoki o'rnatilgan Payme ilovasi orqali ochadi:</p>
+  <ul>
+    <li>Agar Payme ilovasi o'rnatilgan &rarr; avtomatik o'sha ochiladi</li>
+    <li>Agar yo'q &rarr; Safari/Chrome'da checkout sahifa ochiladi</li>
+  </ul>
+
+  <h2>Android (Kotlin)</h2>
+  <pre><code>val base64Params = buildPaymeParams(merchantId, amount, orderId)
+val url = "https://checkout.paycom.uz/$base64Params"
+
+val intent = Intent(Intent.ACTION_VIEW)
+intent.data = Uri.parse(url)
+startActivity(intent)
+
+fun buildPaymeParams(m: String, amount: Long, orderId: String): String {
+    val params = "m=$m;ac.order_id=$orderId;a=$amount;l=uz"
+    return Base64.encodeToString(
+        params.toByteArray(Charsets.UTF_8),
+        Base64.NO_WRAP
+    )
+}</code></pre>
+
+  <h2>iOS (Swift)</h2>
+  <pre><code>let params = "m=\(merchantId);ac.order_id=\(orderId);a=\(amount);l=uz"
+let base64 = Data(params.utf8).base64EncodedString()
+let urlString = "https://checkout.paycom.uz/\(base64)"
+
+if let url = URL(string: urlString) {
+    UIApplication.shared.open(url)
+}</code></pre>
+
+  <h2>React Native</h2>
+  <pre><code>import { Linking } from 'react-native';
+
+const params = `m=${merchantId};ac.order_id=${orderId};a=${amount};l=uz`;
+const base64 = Buffer.from(params).toString('base64');
+const url = `https://checkout.paycom.uz/${base64}`;
+
+Linking.openURL(url);</code></pre>
+
+  <h2>Return URL orqali natijani kutib olish</h2>
+  <p><code>c=</code> (callback) parametriga sizning deeplink URL ni yozing:</p>
+  <pre><code>c=myapp://payment-result?order=ORD-123</code></pre>
+
+  <p>Payme to'lov tugagach shu URL ni ochadi.</p>
+
+  <div class="alert alert-warning">
+    <strong>Universal links (iOS) va App links (Android):</strong> Mobil ilova <code>myapp://</code> sxemasini qo'llab-quvvatlashi uchun <code>Info.plist</code> (iOS) va <code>AndroidManifest.xml</code> (Android) da intent filterlarni sozlang.
+  </div>
+</div>
+
+<!-- ==================== TELEGRAM ==================== -->
+<div class="page-section" id="page-telegram">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Qo'shimcha &rsaquo; Telegram bot</div>
+  <h1>Telegram bot orqali to'lov</h1>
+
+  <p>Payme Business Telegram bot orqali chek yaratish va to'lov qabul qilishni qo'llab-quvvatlaydi.</p>
+
+  <h2>Ish jarayoni</h2>
+  <ol>
+    <li>Sizning Telegram bot'ingiz foydalanuvchiga buyurtma tafsilotini ko'rsatadi</li>
+    <li>"To'lash" tugmasi bosilganda Payme checkout URL yuboradi</li>
+    <li>URL ochilganda — brauzer yoki Payme ilovasi orqali to'lov amalga oshiriladi</li>
+    <li>To'lov tugagach — webhook orqali botga xabar beriladi</li>
+  </ol>
+
+  <h2>Telegraf / grammY misoli (Node.js)</h2>
+  <pre><code>bot.command('pay', async (ctx) =&gt; {
+  const amount = 500000;
+  const orderId = `ORD-${ctx.from.id}-${Date.now()}`;
+
+  const params = `m=${MERCHANT_ID};ac.order_id=${orderId};a=${amount};l=uz`;
+  const base64 = Buffer.from(params).toString('base64');
+  const url = `https://checkout.paycom.uz/${base64}`;
+
+  await ctx.reply('To'lov uchun havola:', {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: "Payme orqali to'lash", url }
+      ]]
+    }
+  });
+});</code></pre>
+
+  <h2>Telegram rasmiy to'lov API</h2>
+  <p>Telegram <code>sendInvoice</code> metodida Payme provider tokenini qo'llab-quvvatlaydi. Bu holda to'lov Telegram ichida bo'ladi, tashqi havola kerak emas.</p>
+
+  <pre><code>bot.telegram.sendInvoice(chatId, {
+  title: "Matematika kursi",
+  description: "1-oy uchun to'lov",
+  payload: "ORD-123",
+  provider_token: PAYME_PROVIDER_TOKEN,
+  currency: "UZS",
+  prices: [{ label: "Kurs", amount: 500000 }]
+});</code></pre>
+
+  <div class="alert alert-info">
+    <code>PAYME_PROVIDER_TOKEN</code> — Payme Business bilan alohida shartnoma tuzilganidan so'ng beriladigan token. Oddiy kassa kalit emas.
+  </div>
+</div>
+
+<!-- ==================== SUPPORT ==================== -->
+<div class="page-section" id="page-support">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Qo'shimcha &rsaquo; Texnik yordam</div>
+  <h1>Texnik yordam</h1>
+
+  <p>Integratsiya bo'yicha savollar yoki muammolarda Payme texnik yordami bilan bog'laning.</p>
+
+  <h2>Kontaktlar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kanal</th><th>Manzil</th></tr></thead>
+      <tbody>
+        <tr><td>Rasmiy hujjat</td><td><a href="https://developer.help.paycom.uz" target="_blank">developer.help.paycom.uz</a></td></tr>
+        <tr><td>Shaxsiy kabinet</td><td><a href="https://merchant.paycom.uz" target="_blank">merchant.paycom.uz</a></td></tr>
+        <tr><td>Email (texnik)</td><td>help@paycom.uz</td></tr>
+        <tr><td>Telegram kanal</td><td>@paycom_business</td></tr>
+        <tr><td>Telefon (call centre)</td><td>+998 78 888 33 33</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Savol yuborishdan oldin</h2>
+  <div class="alert alert-info">
+    Tezroq javob olish uchun quyidagilarni tayyorlab qo'ying:
+    <ul style="margin-top:8px;">
+      <li><strong>Kassa ID</strong> (merchant_id)</li>
+      <li>Muammo sodir bo'lgan <strong>sana/vaqt</strong></li>
+      <li><strong>Xato kodi</strong> va xabar (ru/uz/en)</li>
+      <li>Tranzaksiya <code>id</code> (agar mavjud bo'lsa)</li>
+      <li>Test yoki production muhiti</li>
+      <li>So'rov/javob loglari (maxfiy ma'lumotlarsiz)</li>
+    </ul>
+  </div>
+
+  <h2>Foydali manbalar</h2>
+  <ul>
+    <li><a href="https://developer.help.paycom.uz/" target="_blank">Rasmiy hujjat (ru/uz/en)</a></li>
+    <li><a href="https://github.com/paycom" target="_blank">Rasmiy GitHub (namunalar)</a></li>
+    <li><a href="https://test.paycom.uz" target="_blank">Sandbox muhit</a></li>
+  </ul>
+
+  <div class="alert alert-success">
+    <strong>Maslahat:</strong> Integratsiya bosqichida barcha so'rov/javoblarni <code>PaymentGatewayEvent</code> kabi jadvalda log qiling — kelajakda muammolarni aniqlash ancha oson bo'ladi.
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  &copy; 2026 Payme Business. Rasmiy hujjat asosida tuzilgan: developer.help.paycom.uz
+</footer>
+
+<!-- JavaScript -->
+<script>
+function showPage(pageId) {
+  // Hide all sections
+  document.querySelectorAll('.page-section').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  // Show target section
+  var target = document.getElementById('page-' + pageId);
+  if (target) {
+    target.classList.add('active');
+  }
+
+  // Update sidebar
+  document.querySelectorAll('.sidebar-link').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var link = document.querySelector('.sidebar-link[data-page="' + pageId + '"]');
+  if (link) {
+    link.classList.add('active');
+  }
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(e) {
+  var sidebar = document.getElementById('sidebar');
+  var hamburger = document.querySelector('.hamburger');
+  if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
+    sidebar.classList.remove('open');
+  }
+});
+</script>
+
+</body>
+</html>

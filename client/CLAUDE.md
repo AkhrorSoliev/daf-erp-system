@@ -394,6 +394,7 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - **Callback**: After payment, both providers redirect to `/payment/result`
 - **Balance display**: Shows current balance (green if positive, red if negative/debt)
 - **Payment history**: Fetched from `GET /student-portal/payments` — shows transaction list with amounts and timestamps
+- **Payme reference docs (UZ)**: `docs/payme-uz/index.html` — 25-page Uzbek-language reference covering Merchant API, Subscribe API, checkout initialization (GET/POST), sandbox testing, error codes, and mobile integration; mirrors the official `developer.help.paycom.uz` structure
 
 ### Notifications (Bildirishnomalar)
 

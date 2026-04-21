@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import toast from "react-hot-toast";
 import type { Student } from "@/data/student-model";
@@ -25,6 +25,7 @@ import {
 import { StudentsStats, type StudentsStatsData } from "./students-stats";
 import { StudentsTable } from "./students-table";
 import { EditStudentDrawer } from "./edit-student-drawer";
+import { AddStudentDialog } from "./add-student-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -51,6 +52,7 @@ export function StudentsClient() {
   const [loading, setLoading] = useState(true);
   const [teacherGroups, setTeacherGroups] = useState<{ id: string; name: string }[]>([]);
   const [copied, setCopied] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const user = useAuth((s) => s.user);
   const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
@@ -139,37 +141,62 @@ export function StudentsClient() {
           </p>
         </div>
         {canManage && (
-          selectedBranch ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" onClick={handleCopyLink} className="shrink-0">
-                  {copied ? (
-                    <Check className="mr-2 size-4 text-green-500" />
-                  ) : (
-                    <Copy className="mr-2 size-4" />
-                  )}
-                  {copied ? "Nusxalandi" : "Havola olish"}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Telegram orqali ro&apos;yxatdan o&apos;tish havolasini nusxalash
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span tabIndex={0}>
-                  <Button variant="outline" disabled className="shrink-0">
-                    <Copy className="mr-2 size-4" />
-                    Havola olish
+          <div className="flex items-center gap-2">
+            {selectedBranch ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => setAddOpen(true)} className="shrink-0">
+                    <Plus className="mr-2 size-4" />
+                    Yangi o&apos;quvchi
                   </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                Avval filial tanlang
-              </TooltipContent>
-            </Tooltip>
-          )
+                </TooltipTrigger>
+                <TooltipContent>
+                  Qo&apos;lda yangi o&apos;quvchi qo&apos;shish (Telegramsiz)
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button disabled className="shrink-0">
+                      <Plus className="mr-2 size-4" />
+                      Yangi o&apos;quvchi
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Avval filial tanlang</TooltipContent>
+              </Tooltip>
+            )}
+            {selectedBranch ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={handleCopyLink} className="shrink-0">
+                    {copied ? (
+                      <Check className="mr-2 size-4 text-green-500" />
+                    ) : (
+                      <Copy className="mr-2 size-4" />
+                    )}
+                    {copied ? "Nusxalandi" : "Havola olish"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Telegram orqali ro&apos;yxatdan o&apos;tish havolasini nusxalash
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button variant="outline" disabled className="shrink-0">
+                      <Copy className="mr-2 size-4" />
+                      Havola olish
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Avval filial tanlang</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         )}
       </div>
       <StudentsStats
@@ -283,6 +310,11 @@ export function StudentsClient() {
             return prev;
           });
         }}
+      />
+      <AddStudentDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreated={() => fetchStudents()}
       />
     </div>
   );

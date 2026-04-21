@@ -36,3 +36,19 @@ export const editStudentSchema = z.object({
 });
 
 export type EditStudentFormValues = z.infer<typeof editStudentSchema>;
+
+export const addStudentSchema = z.object({
+  firstName: z
+    .string()
+    .min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+  lastName: z
+    .string()
+    .min(2, "Familiya kamida 2 ta belgidan iborat bo'lishi kerak"),
+  phone: z
+    .string()
+    .length(9, "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak")
+    .regex(/^\d{9}$/, "Faqat raqamlar kiritilishi mumkin"),
+  groupId: z.string().optional(),
+});
+
+export type AddStudentFormValues = z.infer<typeof addStudentSchema>;

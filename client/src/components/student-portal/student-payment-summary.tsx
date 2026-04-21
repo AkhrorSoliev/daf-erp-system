@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -58,6 +58,7 @@ const QUICK_AMOUNTS = [
 ];
 
 export function StudentPaymentSummary() {
+  const queryClient = useQueryClient();
   const { data: profile, isLoading } = useQuery({
     queryKey: ["student-portal", "profile"],
     queryFn: () => api.get("/student-portal/profile").then((r) => r.data),
@@ -66,6 +67,37 @@ export function StudentPaymentSummary() {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (!isRedirecting) return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        setSelectedMethod(null);
+        setAmount("");
+        setIsRedirecting(false);
+        queryClient.invalidateQueries({
+          queryKey: ["student-portal", "profile"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["student-portal", "payments"],
+        });
+        toast.success("Balansingiz tekshirilmoqda...");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isRedirecting, queryClient]);
+
+  useEffect(() => {
+    if (!isRedirecting) return;
+    const timeoutId = setTimeout(() => {
+      setIsRedirecting(false);
+    }, 20000);
+    return () => clearTimeout(timeoutId);
+  }, [isRedirecting]);
 
   const selectedInfo = PAYMENT_METHODS.find((m) => m.id === selectedMethod);
 
