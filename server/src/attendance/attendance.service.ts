@@ -973,4 +973,120 @@ export class AttendanceService {
 
     return { students, totalLessons };
   }
+
+  /**
+   * Get the last N lesson dates (N = course.lessonPaymentCount) with per-student
+   * attendance status for each date. Used for the visual "dots" view on the group page.
+   */
+  async getLessonSequence(groupId: string, companyId?: number) {
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
+      select: {
+        id: true,
+        exactDays: true,
+        startDate: true,
+        endDate: true,
+        course: { select: { lessonPaymentCount: true } },
+      },
+    });
+    if (!group) throw new NotFoundException('Guruh topilmadi');
+
+    const expectedCount = group.course?.lessonPaymentCount ?? 12;
+
+    const now = new Date();
+    const rangeStart = group.startDate ?? new Date(now.getFullYear(), 0, 1);
+    const rangeEnd = group.endDate && group.endDate < now ? group.endDate : now;
+
+    const scheduleDays = group.exactDays
+      .map((d) => DAY_NAME_TO_JS[d])
+      .filter((d) => d !== undefined);
+
+    const holidays = await this.prisma.holiday.findMany({
+      where: {
+        status: HolidayStatus.ACTIVE,
+        deletedAt: null,
+        date: { gte: rangeStart, lte: rangeEnd },
+      },
+      select: { date: true },
+    });
+    const holidaySet = new Set(holidays.map((h) => toLocalDateStr(h.date)));
+
+    const allLessonDates: string[] = [];
+    const cursor = new Date(rangeStart);
+    while (cursor <= rangeEnd) {
+      if (
+        scheduleDays.includes(cursor.getDay()) &&
+        !holidaySet.has(toLocalDateStr(cursor))
+      ) {
+        allLessonDates.push(toLocalDateStr(cursor));
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const lessonDates = allLessonDates.slice(-expectedCount);
+
+    const attendanceRecords =
+      lessonDates.length > 0
+        ? await this.prisma.attendance.findMany({
+            where: {
+              groupId,
+              date: {
+                gte: new Date(lessonDates[0] + 'T00:00:00.000Z'),
+                lte: new Date(
+                  lessonDates[lessonDates.length - 1] + 'T00:00:00.000Z',
+                ),
+              },
+            },
+            select: { studentId: true, date: true, status: true },
+          })
+        : [];
+
+    const attendanceMap = new Map<string, AttendanceStatus>();
+    for (const rec of attendanceRecords) {
+      const key = `${rec.studentId}:${toLocalDateStr(rec.date)}`;
+      attendanceMap.set(key, rec.status);
+    }
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        groupId,
+        deletedAt: null,
+        status: EnrollmentStatus.ACTIVE,
+      },
+      select: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            photo: true,
+          },
+        },
+      },
+      orderBy: { student: { firstName: 'asc' } },
+    });
+
+    const students = enrollments.map((e) => {
+      const dots = lessonDates.map((date) => {
+        const status = attendanceMap.get(`${e.student.id}:${date}`) ?? null;
+        return { date, status };
+      });
+      const attended = dots.filter(
+        (d) =>
+          d.status === AttendanceStatus.PRESENT ||
+          d.status === AttendanceStatus.LATE,
+      ).length;
+      return {
+        id: e.student.id,
+        firstName: e.student.firstName,
+        lastName: e.student.lastName,
+        photo: e.student.photo,
+        dots,
+        attended,
+        total: lessonDates.length,
+      };
+    });
+
+    return { lessonDates, expectedCount, students };
+  }
 }

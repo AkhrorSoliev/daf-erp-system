@@ -799,4 +799,153 @@ describe('AttendanceService', () => {
       );
     });
   });
+
+  describe('getLessonSequence', () => {
+    // Use a past date range so lesson dates are deterministic and all fall
+    // within the last-N slice regardless of the current system date.
+    // 2024-01-01 is a Monday; 2024-01-19 is a Friday.
+    // Schedule [Mon, Wed, Fri] → 9 lesson dates, all fit within expectedCount=12.
+    const groupWithCourse = (lessonPaymentCount: number) => ({
+      id: 'group-uuid-1',
+      exactDays: ['monday', 'wednesday', 'friday'],
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-01-19'),
+      course: { lessonPaymentCount },
+    });
+
+    it('should return lesson dates with status per student (N from course.lessonPaymentCount)', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          studentId: 10001,
+          date: new Date('2024-01-01T00:00:00.000Z'),
+          status: 'PRESENT',
+        },
+        {
+          studentId: 10001,
+          date: new Date('2024-01-03T00:00:00.000Z'),
+          status: 'ABSENT',
+        },
+        {
+          studentId: 10002,
+          date: new Date('2024-01-01T00:00:00.000Z'),
+          status: 'LATE',
+        },
+      ]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.expectedCount).toBe(12);
+      expect(result.lessonDates.length).toBe(9);
+      expect(result.students).toHaveLength(2);
+
+      const ahmad = result.students.find((s) => s.id === 10001);
+      expect(ahmad).toBeDefined();
+      expect(ahmad!.dots).toHaveLength(9);
+      expect(ahmad!.dots[0]).toEqual({ date: '2024-01-01', status: 'PRESENT' });
+      expect(ahmad!.dots[1]).toEqual({ date: '2024-01-03', status: 'ABSENT' });
+      expect(ahmad!.dots[2]).toEqual({ date: '2024-01-05', status: null });
+    });
+
+    it('should respect custom lessonPaymentCount (e.g. 20)', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(20));
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.expectedCount).toBe(20);
+      // Only 9 lesson dates exist in the date range — all should be returned.
+      expect(result.lessonDates.length).toBe(9);
+    });
+
+    it('should use default 12 when course is missing', async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'group-uuid-1',
+        exactDays: ['monday'],
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-19'),
+        course: null,
+      });
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.expectedCount).toBe(12);
+    });
+
+    it('should return null status for dates without attendance record', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.students).toHaveLength(2);
+      for (const student of result.students) {
+        expect(student.dots.every((d) => d.status === null)).toBe(true);
+        expect(student.attended).toBe(0);
+      }
+    });
+
+    it('should count PRESENT + LATE as attended', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          studentId: 10001,
+          date: new Date('2024-01-01T00:00:00.000Z'),
+          status: 'PRESENT',
+        },
+        {
+          studentId: 10001,
+          date: new Date('2024-01-03T00:00:00.000Z'),
+          status: 'LATE',
+        },
+        {
+          studentId: 10001,
+          date: new Date('2024-01-05T00:00:00.000Z'),
+          status: 'ABSENT',
+        },
+        {
+          studentId: 10001,
+          date: new Date('2024-01-08T00:00:00.000Z'),
+          status: 'EXCUSED',
+        },
+      ]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+      const ahmad = result.students.find((s) => s.id === 10001);
+      expect(ahmad!.attended).toBe(2);
+    });
+
+    it('should return empty students when no enrollments', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.enrollment.findMany.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.students).toEqual([]);
+    });
+
+    it('should throw NotFoundException when group not found', async () => {
+      prisma.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getLessonSequence('non-existent'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should pass companyId to group query', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.getLessonSequence('group-uuid-1', 42);
+
+      expect(prisma.group.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 42 }),
+        }),
+      );
+    });
+  });
 });
