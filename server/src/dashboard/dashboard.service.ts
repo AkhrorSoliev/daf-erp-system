@@ -114,12 +114,23 @@ export class DashboardService {
       totalCounts.map((a) => [a.groupId, a._count.id]),
     );
 
-    // Current server time (Tashkent) — used to determine lesson phase
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    // Current time in Asia/Tashkent — production server runs in UTC, lesson
+    // times are stored as Tashkent-local strings, so compare in the same zone.
+    const tashkentParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Tashkent',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const part = (type: string) =>
+      tashkentParts.find((p) => p.type === type)!.value;
+    const todayStr = `${part('year')}-${part('month')}-${part('day')}`;
     const targetStr = targetDate.toISOString().split('T')[0];
     const isToday = todayStr === targetStr;
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const nowMinutes = Number(part('hour')) * 60 + Number(part('minute'));
 
     function phaseOf(
       startTime: string,
