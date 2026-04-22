@@ -47,6 +47,27 @@ const STATUS_MAP: Record<
   4: { label: "To'xtatilgan", variant: "destructive" },
 };
 
+const TRANSACTION_TYPE_INFO: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+> = {
+  PAYMENT: { label: "To'lov", variant: "default" },
+  LESSON_DEDUCTION: { label: "Dars", variant: "outline" },
+  REFUND: { label: "Qaytarish", variant: "destructive" },
+  ADJUSTMENT: { label: "Tuzatish", variant: "secondary" },
+  SALARY_PAYMENT: { label: "Oylik", variant: "outline" },
+  EXPENSE: { label: "Xarajat", variant: "outline" },
+  TAX: { label: "Soliq", variant: "outline" },
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "Naqd",
+  PAYME: "Payme",
+  CLICK: "Click",
+  UZUM: "Uzum",
+  TRANSFER: "O'tkazma",
+};
+
 import { formatWeekdays } from "@/lib/weekdays";
 
 function EmptyState({ message }: { message: string }) {
@@ -155,8 +176,17 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
   const [smsVisible, setSmsVisible] = useState(false);
   const [paymentsVisible, setPaymentsVisible] = useState(false);
   const paymentsShown = useRef(false);
-  const [payments, setPayments] = useState<{ id: string; amount: number; method: string; createdAt: string; receivedBy: { firstName: string; lastName: string } | null }[]>([]);
-  const [transactions, setTransactions] = useState<{ id: string; type: string; amount: number; balanceBefore: number; balanceAfter: number; description: string | null; createdAt: string }[]>([]);
+  const [transactions, setTransactions] = useState<{
+    id: string;
+    type: string;
+    amount: number;
+    balanceBefore: number;
+    balanceAfter: number;
+    description: string | null;
+    payment: { method: string } | null;
+    performedBy: { firstName: string; lastName: string } | null;
+    createdAt: string;
+  }[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
   const [smsCount, setSmsCount] = useState<number | null>(null);
@@ -212,13 +242,14 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
       paymentsShown.current = true;
       setPaymentsVisible(true);
       setPaymentsLoading(true);
-      Promise.all([
-        api.get(`/payments/student/${student.id}`, { params: { pageSize: 20 } }),
-        api.get(`/transactions/student/${student.id}`, { params: { pageSize: 20 } }),
-      ]).then(([pRes, tRes]) => {
-        setPayments(pRes.data.data);
-        setTransactions(tRes.data.data);
-      }).catch(() => {}).finally(() => setPaymentsLoading(false));
+      // Single fetch — /transactions/student includes PAYMENT rows (with
+      // payment.method) plus all other ledger operations (deductions, refunds,
+      // adjustments). No need for a separate /payments call.
+      api
+        .get(`/transactions/student/${student.id}`, { params: { pageSize: 20 } })
+        .then((res) => setTransactions(res.data.data))
+        .catch(() => {})
+        .finally(() => setPaymentsLoading(false));
     }
   };
 
@@ -327,79 +358,79 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
               </p>
             </div>
 
-            {/* To'lov tarixi */}
-            {payments.length > 0 && (
+            {/* Balans operatsiyalari — unified ledger (payments + deductions + refunds + adjustments) */}
+            {transactions.length > 0 ? (
               <div>
-                <h4 className="text-sm font-medium mb-2">Kirim tarixi</h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12 border-r">#</TableHead>
-                      <TableHead>Summa</TableHead>
-                      <TableHead>Usul</TableHead>
-                      <TableHead>Qabul qildi</TableHead>
-                      <TableHead>Sana</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payments.map((p, i) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="text-green-600 font-medium">
-                          +{p.amount.toLocaleString("en-US")} so&apos;m
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{p.method}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {p.receivedBy ? `${p.receivedBy.firstName} ${p.receivedBy.lastName}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(p.createdAt), "dd.MM.yyyy, HH:mm")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {/* Balans tarixi */}
-            {transactions.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium mb-2">Barcha operatsiyalar</h4>
+                <h4 className="text-sm font-medium mb-2">Balans operatsiyalari</h4>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12 border-r">#</TableHead>
                       <TableHead>Turi</TableHead>
-                      <TableHead>Summa</TableHead>
-                      <TableHead>Balans</TableHead>
+                      <TableHead>Tafsilot</TableHead>
+                      <TableHead className="text-right">Summa</TableHead>
+                      <TableHead className="text-right">Balans</TableHead>
                       <TableHead>Sana</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.map((t, i) => (
-                      <TableRow key={t.id}>
-                        <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="text-sm">{t.description || t.type}</TableCell>
-                        <TableCell className={`font-medium ${t.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {t.amount >= 0 ? "+" : ""}{t.amount.toLocaleString("en-US")} so&apos;m
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {t.balanceAfter.toLocaleString("en-US")} so&apos;m
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {transactions.map((t, i) => {
+                      const typeInfo = TRANSACTION_TYPE_INFO[t.type] ?? {
+                        label: t.type,
+                        variant: "outline" as const,
+                      };
+                      const isPayment = t.type === "PAYMENT";
+                      const methodLabel = t.payment?.method
+                        ? PAYMENT_METHOD_LABELS[t.payment.method] ?? t.payment.method
+                        : null;
+                      const cashier = t.performedBy
+                        ? `${t.performedBy.firstName} ${t.performedBy.lastName}`
+                        : null;
+
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell className="border-r text-muted-foreground">
+                            {i + 1}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={typeInfo.variant}>{typeInfo.label}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {isPayment ? (
+                              <span className="flex flex-wrap items-center gap-2">
+                                {methodLabel && (
+                                  <Badge variant="secondary">{methodLabel}</Badge>
+                                )}
+                                {cashier && (
+                                  <span>Qabul qildi: {cashier}</span>
+                                )}
+                                {!methodLabel && !cashier && "—"}
+                              </span>
+                            ) : (
+                              t.description ?? "—"
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-medium whitespace-nowrap ${
+                              t.amount >= 0 ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {t.amount >= 0 ? "+" : ""}
+                            {t.amount.toLocaleString("en-US")} so&apos;m
+                          </TableCell>
+                          <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                            {t.balanceAfter.toLocaleString("en-US")} so&apos;m
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                            {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
-            )}
-
-            {payments.length === 0 && transactions.length === 0 && (
+            ) : (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Hali to&apos;lov yoki tranzaksiya mavjud emas
               </p>
