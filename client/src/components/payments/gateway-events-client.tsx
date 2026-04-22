@@ -43,6 +43,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
 
 interface GatewayEvent {
@@ -57,6 +59,7 @@ interface GatewayEvent {
   errorMessage: string | null;
   createdAt: string;
   student: { id: number; firstName: string; lastName: string } | null;
+  amount: number | null;
 }
 
 interface EventsResponse {
@@ -116,37 +119,33 @@ const STEP_INFO: Record<string, { label: string; description: string }> = {
   },
 };
 
-// Summa va talaba ID'ni har provider payload'idan chiqarish
+// Amount comes from the backend (resolved via provider transaction table),
+// so we only extract studentId here as a fallback when the backend didn't
+// find a linked Student row.
 function extractPaymentInfo(e: GatewayEvent): {
   amount: number | null;
   studentIdFromPayload: number | null;
 } {
   const p = e.payload;
-  if (!p) return { amount: null, studentIdFromPayload: null };
+  const amount = e.amount;
+
+  if (!p) return { amount, studentIdFromPayload: null };
 
   if (e.provider === "PAYME") {
-    const params = p.params ?? {};
-    // Payme amount is in tiyin — convert to so'm
-    const amountTiyin = params.amount;
-    const amount =
-      typeof amountTiyin === "number" ? Math.round(amountTiyin / 100) : null;
-    const studentIdFromPayload = params.account?.student_id
-      ? Number(params.account.student_id)
+    const studentIdFromPayload = p.params?.account?.student_id
+      ? Number(p.params.account.student_id)
       : null;
     return { amount, studentIdFromPayload };
   }
 
   if (e.provider === "CLICK") {
-    // Click amount is already in so'm (Float)
-    const amount =
-      typeof p.amount === "number" ? Math.floor(p.amount) : null;
     const studentIdFromPayload = p.merchant_trans_id
       ? Number(p.merchant_trans_id)
       : null;
     return { amount, studentIdFromPayload };
   }
 
-  return { amount: null, studentIdFromPayload: null };
+  return { amount, studentIdFromPayload: null };
 }
 
 // Umumiy natija: muvaffaqiyatli/kutilmoqda/xato
@@ -215,6 +214,10 @@ export function GatewayEventsClient() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  // Payme fires CheckPerformTransaction for every user that opens the checkout,
+  // even without a real payment intent. It's audit-log noise for CEO monitoring,
+  // so we hide it by default and let the user opt in via the toggle.
+  const [showChecks, setShowChecks] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState<GatewayEvent | null>(null);
@@ -237,6 +240,7 @@ export function GatewayEventsClient() {
       search,
       startDate,
       endDate,
+      showChecks,
       page,
       pageSize,
     ],
@@ -253,6 +257,7 @@ export function GatewayEventsClient() {
             ...(search && { search }),
             ...(startDate && { startDate: format(startDate, "yyyy-MM-dd") }),
             ...(endDate && { endDate: format(endDate, "yyyy-MM-dd") }),
+            ...(!showChecks && { hideChecks: "true" }),
             page,
             pageSize,
           },
@@ -266,6 +271,7 @@ export function GatewayEventsClient() {
     setSearch("");
     setStartDate(undefined);
     setEndDate(undefined);
+    setShowChecks(false);
     setPage(1);
   };
 
@@ -380,6 +386,20 @@ export function GatewayEventsClient() {
           }}
           placeholder="Gacha"
         />
+
+        <div className="flex items-center gap-2 px-2">
+          <Switch
+            id="show-checks"
+            checked={showChecks}
+            onCheckedChange={(v) => {
+              setShowChecks(v);
+              setPage(1);
+            }}
+          />
+          <Label htmlFor="show-checks" className="text-sm cursor-pointer">
+            Tekshirishlarni ko&apos;rsatish
+          </Label>
+        </div>
 
         <Button variant="outline" size="sm" onClick={resetFilters}>
           Tozalash

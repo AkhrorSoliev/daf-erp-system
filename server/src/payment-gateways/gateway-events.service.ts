@@ -10,6 +10,7 @@ export interface GatewayEventFilters {
   search?: string;
   startDate?: string;
   endDate?: string;
+  hideChecks?: boolean;
   page: number;
   pageSize: number;
 }
@@ -74,6 +75,9 @@ export class GatewayEventsService {
       ...(filters.signatureValid !== undefined && {
         signatureValid: filters.signatureValid,
       }),
+      ...(filters.hideChecks && {
+        eventType: { notIn: ['CheckPerformTransaction'] },
+      }),
       ...(externalIdFilter !== null && { externalId: { in: externalIdFilter } }),
       ...((filters.startDate || filters.endDate) && {
         createdAt: {
@@ -95,10 +99,13 @@ export class GatewayEventsService {
       this.prisma.paymentGatewayEvent.count({ where }),
     ]);
 
-    // Enrich with student info per event by looking up the provider transaction.
+    // Enrich with student + amount per event by looking up the provider transaction.
+    // Amount is resolved from the provider transaction table so events like
+    // PerformTransaction (whose webhook payload is just `{id}`) still show an
+    // amount in the UI instead of a dash.
     const enriched = await Promise.all(
       events.map(async (e) => {
-        const student = await this.resolveStudent(
+        const { student, amount } = await this.resolveStudentAndAmount(
           e.provider,
           e.externalId,
           e.payload,
@@ -116,6 +123,7 @@ export class GatewayEventsService {
           errorMessage: e.errorMessage,
           createdAt: e.createdAt,
           student,
+          amount,
         };
       }),
     );
@@ -128,53 +136,72 @@ export class GatewayEventsService {
     };
   }
 
-  private async resolveStudent(
+  private async resolveStudentAndAmount(
     provider: PaymentMethod,
     externalId: string,
     payload: Prisma.JsonValue,
     companyId: number,
-  ): Promise<{ id: number; firstName: string; lastName: string } | null> {
+  ): Promise<{
+    student: { id: number; firstName: string; lastName: string } | null;
+    amount: number | null;
+  }> {
     let studentId: number | null = null;
+    let amount: number | null = null;
 
     if (provider === 'PAYME') {
       // First try matching by paymeId (works for CreateTransaction, PerformTransaction, etc.)
       const txn = await this.prisma.paymeTransaction.findFirst({
         where: { paymeId: externalId, companyId },
-        select: { studentId: true },
+        select: { studentId: true, amountInSom: true },
       });
       studentId = txn?.studentId ?? null;
+      amount = txn?.amountInSom ?? null;
 
       // Fallback: CheckPerformTransaction / GetStatement don't carry a paymeId —
-      // extract student_id directly from params.account.
-      if (studentId === null && payload && typeof payload === 'object') {
-        const raw = (payload as any)?.params?.account?.student_id;
-        const asNum = Number(raw);
-        if (Number.isFinite(asNum)) studentId = asNum;
+      // extract student_id + amount directly from the payload.
+      if (payload && typeof payload === 'object') {
+        const params = (payload as any)?.params;
+        if (studentId === null) {
+          const rawId = params?.account?.student_id;
+          const asNum = Number(rawId);
+          if (Number.isFinite(asNum)) studentId = asNum;
+        }
+        if (amount === null) {
+          const rawAmount = params?.amount;
+          if (typeof rawAmount === 'number') amount = Math.round(rawAmount / 100);
+        }
       }
     } else if (provider === 'CLICK') {
       const id = Number(externalId);
       if (!Number.isNaN(id)) {
         const txn = await this.prisma.clickTransaction.findFirst({
           where: { clickTransId: BigInt(id), companyId },
-          select: { studentId: true },
+          select: { studentId: true, amountInSom: true },
         });
         studentId = txn?.studentId ?? null;
+        amount = txn?.amountInSom ?? null;
       }
 
-      // Fallback: Click carries merchant_trans_id = studentId on every call.
-      if (studentId === null && payload && typeof payload === 'object') {
-        const raw = (payload as any)?.merchant_trans_id;
-        const asNum = Number(raw);
-        if (Number.isFinite(asNum)) studentId = asNum;
+      // Fallback: Click carries merchant_trans_id = studentId + amount on every call.
+      if (payload && typeof payload === 'object') {
+        if (studentId === null) {
+          const rawId = (payload as any)?.merchant_trans_id;
+          const asNum = Number(rawId);
+          if (Number.isFinite(asNum)) studentId = asNum;
+        }
+        if (amount === null) {
+          const rawAmount = (payload as any)?.amount;
+          if (typeof rawAmount === 'number') amount = Math.floor(rawAmount);
+        }
       }
     }
 
-    if (studentId === null) return null;
+    if (studentId === null) return { student: null, amount };
 
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, companyId },
       select: { id: true, firstName: true, lastName: true },
     });
-    return student;
+    return { student, amount };
   }
 }

@@ -38,6 +38,11 @@ export class GatewayEventsQueryDto {
   endDate?: string;
 
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  hideChecks?: boolean;
+
+  @IsOptional()
   @Transform(({ value }) => Number(value))
   @IsInt()
   @Min(1)

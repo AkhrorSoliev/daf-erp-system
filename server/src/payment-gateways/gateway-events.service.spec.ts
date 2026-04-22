@@ -55,7 +55,10 @@ describe('GatewayEventsService', () => {
       };
       prisma.paymentGatewayEvent.findMany.mockResolvedValue([event]);
       prisma.paymentGatewayEvent.count.mockResolvedValue(1);
-      prisma.paymeTransaction.findFirst.mockResolvedValue({ studentId: 10003 });
+      prisma.paymeTransaction.findFirst.mockResolvedValue({
+        studentId: 10003,
+        amountInSom: 1000,
+      });
       prisma.student.findFirst.mockResolvedValue({
         id: 10003,
         firstName: 'Ahror',
@@ -71,6 +74,102 @@ describe('GatewayEventsService', () => {
         firstName: 'Ahror',
         lastName: 'Soliyev',
       });
+      expect(result.data[0].amount).toBe(1000);
+    });
+
+    it('enriches PerformTransaction with amount from PaymeTransaction even when payload has only {id}', async () => {
+      // PerformTransaction webhook body is `{method, params: {id}}` — no amount.
+      // We must pull the amount from PaymeTransaction so the UI shows it.
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([
+        {
+          id: 'evt-perform',
+          provider: 'PAYME',
+          externalId: 'perform-tx-id',
+          eventType: 'PerformTransaction',
+          payload: { method: 'PerformTransaction', params: { id: 'perform-tx-id' } },
+          signatureValid: true,
+          processed: true,
+          processedAt: new Date(),
+          errorMessage: null,
+          createdAt: new Date(),
+          companyId: 1001,
+        },
+      ]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(1);
+      prisma.paymeTransaction.findFirst.mockResolvedValue({
+        studentId: 10003,
+        amountInSom: 1000,
+      });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10003,
+        firstName: 'Ahror',
+        lastName: 'Soliyev',
+      });
+
+      const result = await service.findAll(baseFilters);
+
+      expect(result.data[0].amount).toBe(1000);
+    });
+
+    it('falls back to payload amount for PAYME CheckPerformTransaction (no DB row yet)', async () => {
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([
+        {
+          id: 'evt-check',
+          provider: 'PAYME',
+          externalId: 'some-id',
+          eventType: 'CheckPerformTransaction',
+          payload: {
+            method: 'CheckPerformTransaction',
+            params: {
+              amount: 100000, // tiyin → 1000 so'm
+              account: { student_id: '10003' },
+            },
+          },
+          signatureValid: true,
+          processed: true,
+          processedAt: new Date(),
+          errorMessage: null,
+          createdAt: new Date(),
+          companyId: 1001,
+        },
+      ]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(1);
+      prisma.paymeTransaction.findFirst.mockResolvedValue(null);
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10003,
+        firstName: 'Ahror',
+        lastName: 'Soliyev',
+      });
+
+      const result = await service.findAll(baseFilters);
+
+      expect(result.data[0].amount).toBe(1000);
+      expect(result.data[0].student?.id).toBe(10003);
+    });
+
+    it('excludes CheckPerformTransaction events when hideChecks=true', async () => {
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(0);
+
+      await service.findAll({ ...baseFilters, hideChecks: true });
+
+      expect(prisma.paymentGatewayEvent.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            eventType: { notIn: ['CheckPerformTransaction'] },
+          }),
+        }),
+      );
+    });
+
+    it('does NOT apply eventType filter when hideChecks is false/undefined', async () => {
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(0);
+
+      await service.findAll(baseFilters);
+
+      const call = prisma.paymentGatewayEvent.findMany.mock.calls[0][0];
+      expect(call.where.eventType).toBeUndefined();
     });
 
     it('returns null student when Payme transaction is missing', async () => {
@@ -115,7 +214,10 @@ describe('GatewayEventsService', () => {
         },
       ]);
       prisma.paymentGatewayEvent.count.mockResolvedValue(1);
-      prisma.clickTransaction.findFirst.mockResolvedValue({ studentId: 10005 });
+      prisma.clickTransaction.findFirst.mockResolvedValue({
+        studentId: 10005,
+        amountInSom: 500000,
+      });
       prisma.student.findFirst.mockResolvedValue({
         id: 10005,
         firstName: 'Dilshod',
@@ -125,9 +227,10 @@ describe('GatewayEventsService', () => {
       const result = await service.findAll(baseFilters);
 
       expect(result.data[0].student?.id).toBe(10005);
+      expect(result.data[0].amount).toBe(500000);
       expect(prisma.clickTransaction.findFirst).toHaveBeenCalledWith({
         where: { clickTransId: BigInt(123456789), companyId: 1001 },
-        select: { studentId: true },
+        select: { studentId: true, amountInSom: true },
       });
     });
 
