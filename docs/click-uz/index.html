@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLICK Hujjatlar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <a href="#" class="header-logo" onclick="showPage('overview')">
+      <svg viewBox="0 0 120 32" height="32">
+        <rect width="120" height="32" rx="4" fill="#27a8e0"/>
+        <text x="60" y="22" text-anchor="middle" fill="#fff" font-size="18" font-weight="bold" font-family="Arial">CLICK</text>
+      </svg>
+      <span>Hujjatlar</span>
+    </a>
+  </div>
+  <div class="header-lang">
+    <a href="#" class="active">UZ</a>
+  </div>
+</header>
+
+<!-- Layout -->
+<div class="layout">
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <a href="#" class="sidebar-link top-level active" data-page="overview" onclick="showPage('overview')">Umumiy ko'rinish</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">SHOP-API</div>
+    <a href="#" class="sidebar-link" data-page="shop-overview" onclick="showPage('shop-overview')">Umumiy ma'lumot</a>
+    <a href="#" class="sidebar-link" data-page="shop-request" onclick="showPage('shop-request')">So'rov</a>
+    <a href="#" class="sidebar-link" data-page="shop-error" onclick="showPage('shop-error')">Xatoliklar</a>
+    <a href="#" class="sidebar-link" data-page="shop-testing" onclick="showPage('shop-testing')">Testlash</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">To'lov tugmasi</div>
+    <a href="#" class="sidebar-link" data-page="button-redirect" onclick="showPage('button-redirect')">Qayta yo'naltirish orqali</a>
+    <a href="#" class="sidebar-link" data-page="button-card" onclick="showPage('button-card')">Karta orqali to'lov</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Merchant-API</div>
+    <a href="#" class="sidebar-link" data-page="merchant-overview" onclick="showPage('merchant-overview')">Umumiy ma'lumot</a>
+    <a href="#" class="sidebar-link" data-page="merchant-request" onclick="showPage('merchant-request')">So'rov</a>
+    <a href="#" class="sidebar-link" data-page="merchant-error" onclick="showPage('merchant-error')">Xatoliklar</a>
+    <a href="#" class="sidebar-link" data-page="click-pass" onclick="showPage('click-pass')">CLICK Pass</a>
+    <a href="#" class="sidebar-link" data-page="fiscalization" onclick="showPage('fiscalization')">Ma'lumotlarni fiskalizatsiya qilish</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Qo'shimcha</div>
+    <a href="#" class="sidebar-link" data-page="telegram" onclick="showPage('telegram')">Telegram to'lovlari</a>
+    <a href="#" class="sidebar-link" data-page="plugins" onclick="showPage('plugins')">CMS plaginlari</a>
+    <a href="#" class="sidebar-link" data-page="server-example" onclick="showPage('server-example')">Amalga oshirish namunasi</a>
+    <a href="#" class="sidebar-link" data-page="mobile" onclick="showPage('mobile')">Mobil integratsiya</a>
+  </div>
+</nav>
+
+<!-- Content -->
+<main class="content" id="content">
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="page-section active" id="page-overview">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Umumiy ko'rinish</div>
+  <h1>CLICK Hujjatlar</h1>
+  <p>CLICK to'lov tizimi bilan integratsiya qilish uchun to'liq texnik hujjatlar.</p>
+  <p>Ushbu hujjatlar to'plamida tovar va xizmatlar yetkazib beruvchilarning (jumladan, onlayn do'konlarning) billing tizimlari va CLICK tizimi o'rtasidagi o'zaro aloqa tartibi tavsiflangan.</p>
+
+  <h2>Mavjud integratsiya usullari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Usul</th><th>Tavsif</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><strong>SHOP-API</strong></td><td>CLICK tizimi ta'minotchining API manziliga so'rov yuboradi (Prepare va Complete bosqichlari)</td></tr>
+        <tr><td>2</td><td><strong>To'lov tugmasi</strong></td><td>Foydalanuvchini CLICK to'lov sahifasiga yo'naltirish yoki sahifada to'lov qabul qilish</td></tr>
+        <tr><td>3</td><td><strong>Merchant-API</strong></td><td>Ta'minotchi CLICK API ga aktiv so'rov yuboradi (invoice yaratish, token bilan to'lov va h.k.)</td></tr>
+        <tr><td>4</td><td><strong>Telegram to'lovlari</strong></td><td>Telegram bot orqali to'lov qabul qilish</td></tr>
+        <tr><td>5</td><td><strong>Mobil integratsiya</strong></td><td>Android va iOS ilovalar orqali deeplink bilan to'lov</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Atamalar va ta'riflar</h2>
+  <ul>
+    <li><strong>CLICK tizimi</strong> — mobil telefon (USSD/SMS-portal) yoki internet (WEB/mobil WEB) orqali turli xizmatlar uchun to'lov amalga oshirish imkonini beruvchi tizim.</li>
+    <li><strong>Ta'minotchi</strong> — foydalanuvchilarga tovar va xizmatlar sotuvchi yuridik shaxs.</li>
+    <li><strong>Foydalanuvchi</strong> — CLICK tizimiga ulangan jismoniy shaxs.</li>
+    <li><strong>Ta'minotchi xizmatlari</strong> — sotishga taklif etiladigan tovarlar va xizmatlar.</li>
+    <li><strong>Ta'minotchining billing tizimi</strong> — ta'minotchi va xaridor o'rtasidagi hisob-kitob va to'lov operatsiyalarini elektron tarzda yuritish imkonini beruvchi infratuzilma.</li>
+  </ul>
+</div>
+
+<!-- ==================== SHOP-API OVERVIEW ==================== -->
+<div class="page-section" id="page-shop-overview">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SHOP-API &rsaquo; Umumiy ma'lumot</div>
+  <h1>SHOP-API — Umumiy ma'lumot</h1>
+
+  <h2>Umumiy qoidalar</h2>
+  <p>Ushbu hujjat tovar va xizmatlar ta'minotchilarining (jumladan, onlayn do'konlarning) billing tizimlari va CLICK tizimi o'rtasidagi o'zaro aloqa interfeysi orqali ishlash tartibini tavsiflaydi.</p>
+  <p>CLICK tizimi orqali onlayn savdo, uyali aloqa operatorlari, internet-provayderlar, naqd pul o'tkazmalari va boshqa xizmatlar uchun to'lovlarni amalga oshirish mumkin.</p>
+
+  <h2>Ishlash tartibi</h2>
+  <p>SHOP-API ikki bosqichli to'lov jarayoniga asoslangan:</p>
+  <ol>
+    <li><strong>Prepare (Tayyorlash)</strong> — CLICK tizimi ta'minotchining serveriga so'rov yuborib, buyurtma/hisobni tekshiradi va to'lovni zaxiralaydi.</li>
+    <li><strong>Complete (Yakunlash)</strong> — To'lov muvaffaqiyatli amalga oshirilgandan so'ng, CLICK tizimi ta'minotchiga tasdiqlash so'rovini yuboradi.</li>
+  </ol>
+
+  <div class="alert alert-info">
+    <strong>Muhim:</strong> CLICK tizimi HTTP/HTTPS POST so'rovlari orqali ta'minotchining API manziliga murojaat qiladi. Ta'minotchi ushbu manzilni o'z serverida sozlashi kerak.
+  </div>
+
+  <h2>Jarayon diagrammasi</h2>
+  <div class="diagram-box">
+    <p style="margin:0;color:#888;">SHOP-API ketma-ketlik diagrammasi</p>
+    <div style="margin-top:16px;text-align:left;max-width:500px;margin-left:auto;margin-right:auto;">
+      <p><strong>1.</strong> Foydalanuvchi &rarr; CLICK: To'lov boshlash</p>
+      <p><strong>2.</strong> CLICK &rarr; Ta'minotchi API: <code>Prepare</code> so'rovi (action=0)</p>
+      <p><strong>3.</strong> Ta'minotchi API &rarr; CLICK: Prepare javobi (merchant_prepare_id)</p>
+      <p><strong>4.</strong> CLICK: Kartadan pul yechish</p>
+      <p><strong>5.</strong> CLICK &rarr; Ta'minotchi API: <code>Complete</code> so'rovi (action=1)</p>
+      <p><strong>6.</strong> Ta'minotchi API &rarr; CLICK: Complete javobi (merchant_confirm_id)</p>
+      <p><strong>7.</strong> CLICK &rarr; Foydalanuvchi: To'lov natijasi</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SHOP-API REQUEST ==================== -->
+<div class="page-section" id="page-shop-request">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SHOP-API &rsaquo; So'rov</div>
+  <h1>SHOP-API — So'rov</h1>
+
+  <p>To'lov jarayoni ikki bosqichda amalga oshiriladi. Barcha so'rovlar <strong>HTTP/HTTPS POST</strong> usulida ta'minotchining API interfeysiga yuboriladi.</p>
+
+  <!-- PREPARE -->
+  <h2>1-bosqich: Prepare (Tayyorlash) — action = 0</h2>
+  <p>Ushbu bosqichda CLICK tizimi to'lovni tasdiqlash uchun ta'minotchining billing tizimiga so'rov yuboradi.</p>
+
+  <h3>So'rov parametrlari</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>click_trans_id</code></td><td>bigint</td><td>CLICK tizimidagi tranzaksiya identifikatori</td></tr>
+        <tr><td>2</td><td><code>service_id</code></td><td>int</td><td>Xizmat identifikatori</td></tr>
+        <tr><td>3</td><td><code>click_paydoc_id</code></td><td>bigint</td><td>CLICK tizimidagi to'lov raqami (foydalanuvchiga SMS orqali yuboriladi)</td></tr>
+        <tr><td>4</td><td><code>merchant_trans_id</code></td><td>varchar</td><td>Ta'minotchidagi buyurtma/hisob identifikatori</td></tr>
+        <tr><td>5</td><td><code>amount</code></td><td>float</td><td>To'lov summasi (so'mda)</td></tr>
+        <tr><td>6</td><td><code>action</code></td><td>int</td><td>Harakat turi: <code>0</code> — Prepare bosqichi</td></tr>
+        <tr><td>7</td><td><code>error</code></td><td>int</td><td>Holat kodi (0 = muvaffaqiyatli)</td></tr>
+        <tr><td>8</td><td><code>error_note</code></td><td>varchar</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>9</td><td><code>sign_time</code></td><td>varchar</td><td>Imzo vaqti. Format: <code>YYYY-MM-DD HH:mm:ss</code></td></tr>
+        <tr><td>10</td><td><code>sign_string</code></td><td>varchar</td><td>Tekshiruv imzosi (quyida ko'ring)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>sign_string hisoblash (Prepare)</h4>
+  <pre><code>md5(click_trans_id + service_id + SECRET_KEY + merchant_trans_id + amount + action + sign_time)</code></pre>
+
+  <h3>Javob parametrlari</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>click_trans_id</code></td><td>bigint</td><td>CLICK tizimidagi to'lov identifikatori</td></tr>
+        <tr><td>2</td><td><code>merchant_trans_id</code></td><td>varchar</td><td>Ta'minotchidagi buyurtma/hisob identifikatori</td></tr>
+        <tr><td>3</td><td><code>merchant_prepare_id</code></td><td>int</td><td>Ta'minotchi billing tizimidagi to'lov identifikatori</td></tr>
+        <tr><td>4</td><td><code>error</code></td><td>int</td><td>Holat kodi (0 = muvaffaqiyatli)</td></tr>
+        <tr><td>5</td><td><code>error_note</code></td><td>varchar</td><td>Xatolik tavsifi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Tekshiruv talablari</h3>
+  <div class="alert alert-warning">
+    Ta'minotchi quyidagilarni tekshirishi <strong>shart</strong>:
+    <ul style="margin-top:8px;">
+      <li>Buyurtma/hisob mavjudligi va to'g'riligi</li>
+      <li>Ta'minotchining tovar/xizmat yetkazib berish imkoniyati</li>
+      <li>To'lov summasining to'g'riligi</li>
+    </ul>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Onlayn savdo uchun:</strong> Ko'rsatilgan raqamli buyurtma uchun so'rov kelganda, ta'minotchi tegishli mahsulotni boshqa xaridorlar tomonidan "ushlab qolinishining" oldini olish uchun zaxiralashi kerak.
+  </div>
+
+  <!-- COMPLETE -->
+  <h2>2-bosqich: Complete (Yakunlash) — action = 1</h2>
+  <p>Kartadan pul muvaffaqiyatli yechilgandan so'ng CLICK tizimi ushbu so'rovni yuboradi.</p>
+
+  <h3>So'rov parametrlari</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>click_trans_id</code></td><td>bigint</td><td>CLICK tizimidagi to'lov identifikatori</td></tr>
+        <tr><td>2</td><td><code>service_id</code></td><td>int</td><td>Xizmat identifikatori</td></tr>
+        <tr><td>3</td><td><code>click_paydoc_id</code></td><td>bigint</td><td>CLICK tizimidagi to'lov raqami</td></tr>
+        <tr><td>4</td><td><code>merchant_trans_id</code></td><td>varchar</td><td>Ta'minotchidagi buyurtma/hisob identifikatori</td></tr>
+        <tr><td>5</td><td><code>merchant_prepare_id</code></td><td>int</td><td>Prepare bosqichidagi javobdan olingan to'lov identifikatori</td></tr>
+        <tr><td>6</td><td><code>amount</code></td><td>float</td><td>To'lov summasi (so'mda)</td></tr>
+        <tr><td>7</td><td><code>action</code></td><td>int</td><td>Harakat turi: <code>1</code> — Complete bosqichi</td></tr>
+        <tr><td>8</td><td><code>error</code></td><td>int</td><td>Holat kodi (0 = muvaffaqiyatli)</td></tr>
+        <tr><td>9</td><td><code>error_note</code></td><td>varchar</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>10</td><td><code>sign_time</code></td><td>varchar</td><td>Imzo vaqti</td></tr>
+        <tr><td>11</td><td><code>sign_string</code></td><td>varchar</td><td>Tekshiruv imzosi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>sign_string hisoblash (Complete)</h4>
+  <pre><code>md5(click_trans_id + service_id + SECRET_KEY + merchant_trans_id + merchant_prepare_id + amount + action + sign_time)</code></pre>
+
+  <h3>Javob parametrlari</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>click_trans_id</code></td><td>bigint</td><td>CLICK tizimidagi to'lov identifikatori</td></tr>
+        <tr><td>2</td><td><code>merchant_trans_id</code></td><td>varchar</td><td>Ta'minotchidagi buyurtma/hisob identifikatori</td></tr>
+        <tr><td>3</td><td><code>merchant_confirm_id</code></td><td>int</td><td>Yakunlash uchun tranzaksiya identifikatori (NULL bo'lishi mumkin)</td></tr>
+        <tr><td>4</td><td><code>error</code></td><td>int</td><td>Holat kodi (0 = muvaffaqiyatli)</td></tr>
+        <tr><td>5</td><td><code>error_note</code></td><td>varchar</td><td>Xatolik tavsifi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Complete bosqichi xatolik kodlari</h3>
+  <ul>
+    <li><code>error = 0</code> — To'lov muvaffaqiyatli. Mablag'lar yechildi. Ta'minotchi tovar/xizmat yetkazib berishi <strong>shart</strong>.</li>
+    <li><code>error &lt;= -1</code> — Bekor qilish. Mablag'lar yechilmadi. Ta'minotchi zaxirani bekor qilishi va <code>error = -9</code> bilan javob berishi kerak.</li>
+  </ul>
+
+  <h3>Muhim eslatmalar</h3>
+  <div class="alert alert-danger">
+    <strong>Takroriy to'lovdan himoya:</strong> Ta'minotchi o'zining billing tizimida avval tasdiqlangan to'lov uchun (bir xil <code>click_trans_id</code> bilan) takroriy to'lovdan himoya qo'yishi shart.
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Xizmat ko'rsatishda xatolik:</strong> Agar mablag'lar kartadan muvaffaqiyatli yechilgandan so'ng xizmat ko'rsatishda xatolik yuzaga kelsa, ta'minotchi "Complete" so'roviga "muvaffaqiyatli" deb javob berishi va keyin "to'lovni bekor qilish" so'rovini yuborishi kerak.
+  </div>
+</div>
+
+<!-- ==================== SHOP-API ERROR ==================== -->
+<div class="page-section" id="page-shop-error">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SHOP-API &rsaquo; Xatoliklar</div>
+  <h1>SHOP-API — Xatoliklar</h1>
+
+  <p>Xizmat ta'minotchisi javobni <strong>JSON</strong> formatida qaytaradi.</p>
+
+  <h2>Muvaffaqiyatli javob parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error</code></td><td>int</td><td>Operatsiya holat kodi. Muvaffaqiyatli bo'lsa <code>0</code> ga teng bo'lishi kerak</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>varchar</td><td>Holat tavsifi</td></tr>
+        <tr><td>3</td><td><code>click_trans_id</code></td><td>int</td><td>CLICK tizimidagi to'lov identifikatori</td></tr>
+        <tr><td>4</td><td><code>merchant_trans_id</code></td><td>varchar</td><td>Ta'minotchi tizimidagi to'lov identifikatori</td></tr>
+        <tr><td>5</td><td><code>merchant_prepare_id</code> yoki <code>merchant_confirm_id</code></td><td>int</td><td>Billing tizimidagi to'lov identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>CLICK tizimi xatolik kodlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Kod</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>0</code></td><td>Muvaffaqiyatli (xatolik yo'q)</td></tr>
+        <tr><td>2</td><td><code>&lt;0</code></td><td>Manfiy xatolik kodi kelganda, ta'minotchi to'lovni bekor qilishi kerak</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Ta'minotchi tizimi xatolik kodlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Kod</th><th>error_note</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>0</code></td><td>Success</td><td>Muvaffaqiyatli so'rov</td></tr>
+        <tr><td>2</td><td><code>-1</code></td><td>SIGN CHECK FAILED!</td><td>Imzo tekshiruv xatosi</td></tr>
+        <tr><td>3</td><td><code>-2</code></td><td>Incorrect parameter amount</td><td>Noto'g'ri to'lov summasi</td></tr>
+        <tr><td>4</td><td><code>-3</code></td><td>Action not found</td><td>So'ralgan amal topilmadi</td></tr>
+        <tr><td>5</td><td><code>-4</code></td><td>Already paid</td><td>Tranzaksiya avval tasdiqlangan</td></tr>
+        <tr><td>6</td><td><code>-5</code></td><td>User does not exist</td><td>Foydalanuvchi/buyurtma topilmadi</td></tr>
+        <tr><td>7</td><td><code>-6</code></td><td>Transaction does not exist</td><td>Tranzaksiya topilmadi</td></tr>
+        <tr><td>8</td><td><code>-7</code></td><td>Failed to update user</td><td>Hisob ma'lumotlarini yangilab bo'lmadi</td></tr>
+        <tr><td>9</td><td><code>-8</code></td><td>Error in request from click</td><td>CLICK dan kelgan so'rovda xatolik (parametrlar to'liq emas)</td></tr>
+        <tr><td>10</td><td><code>-9</code></td><td>Transaction cancelled</td><td>Tranzaksiya bekor qilingan</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SHOP-API TESTING ==================== -->
+<div class="page-section" id="page-shop-testing">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SHOP-API &rsaquo; Testlash</div>
+  <h1>SHOP-API — Testlash</h1>
+
+  <p>Ishlab chiqish jarayonida CLICK API interfeysini testlash va xatoliklarni tuzatish uchun maxsus dasturiy ta'minot ishlatiladi.</p>
+
+  <h2>Test dasturi</h2>
+  <p>Dastur CLICK tizimidagi harakatlarni emulyatsiya qiladi. Dasturni ZIP fayl sifatida yuklab olish mumkin. U ta'minotchiga sozlamalarni moslashtirish va oldindan belgilangan stsenariylarni ketma-ket testlash imkonini beradi.</p>
+
+  <h2>Konfiguratsiya maydonlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Prepare URL</td><td>varchar</td><td>Prepare so'rovlari uchun API endpoint manzili</td></tr>
+        <tr><td>2</td><td>Complete URL</td><td>varchar</td><td>Complete so'rovlari uchun API endpoint manzili</td></tr>
+        <tr><td>3</td><td><code>service_id</code></td><td>int</td><td>CLICK ro'yxatdan o'tish vaqtida berilgan xizmat identifikatori</td></tr>
+        <tr><td>4</td><td><code>merchant_user_id</code></td><td>int</td><td>CLICK ro'yxatdan o'tish vaqtida berilgan xizmat identifikatori</td></tr>
+        <tr><td>5</td><td><code>secret_key</code></td><td>varchar</td><td>Imzo shakllantirilishi uchun maxfiy kalit</td></tr>
+        <tr><td>6</td><td><code>merchant_trans_id</code></td><td>varchar</td><td>Onlayn do'kon tizimidagi to'lov identifikatori</td></tr>
+        <tr><td>7</td><td><code>prepare/confirm_id</code></td><td>faqat o'qish</td><td>Skript bajarilishi davomida avtomatik to'ldiriladi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Testlash tartibi</h2>
+  <ol>
+    <li>Konfiguratsiya ma'lumotlarini kiriting</li>
+    <li>Ochiladigan menyudan stsenariyni tanlang</li>
+    <li>Testni boshlang</li>
+    <li>So'rov/javob ma'lumotlarini test jurnali oynasida ko'ring</li>
+    <li>Muvaffaqiyatli testlar "passed" holati bilan ko'rsatiladi</li>
+  </ol>
+
+  <div class="alert alert-danger">
+    <strong>Muhim:</strong> Barcha skriptlar muvaffaqiyatli o'tishi shart!
+  </div>
+
+  <h2>Ro'yxatdan o'tishni yakunlash</h2>
+  <p>Barcha testlar yakunlangandan so'ng, "Generate Report" tugmasini bosing. Bu sozlamalarni tekshirish va CLICK ro'yxatdan o'tish serveriga yuborish jarayonini boshlaydi.</p>
+
+  <div class="alert alert-success">
+    Muvaffaqiyatli ro'yxatdan o'tish xabari: <strong>"Registration Status report: Registration completed successfully!"</strong>
+  </div>
+
+  <p>Ta'minotchilar muvaffaqiyatli ro'yxatdan o'tishni <code>http://merchant.click.uz</code> orqali tekshirishlari mumkin.</p>
+
+  <div class="alert alert-warning">
+    <strong>Eslatma:</strong> Dasturda ko'rsatilgan URL test dasturi uchun mavjud bo'lishi kerak (mahalliy kompyuterda ham bo'lishi mumkin).
+  </div>
+</div>
+
+<!-- ==================== PAYMENT BUTTON - REDIRECT ==================== -->
+<div class="page-section" id="page-button-redirect">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; To'lov tugmasi &rsaquo; Qayta yo'naltirish orqali</div>
+  <h1>To'lov tugmasi — Qayta yo'naltirish orqali</h1>
+
+  <p>CLICK to'lov tugmasini ta'minotchi veb-saytiga o'rnatishning ikki usuli mavjud.</p>
+
+  <h2>1-usul: Havola orqali qayta yo'naltirish</h2>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <code>https://my.click.uz/services/pay</code>
+  </div>
+
+  <h3>Majburiy parametrlar</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>merchant_id</code></td><td>Ha</td><td>Ta'minotchi identifikatori</td></tr>
+        <tr><td><code>service_id</code></td><td>Ha</td><td>Ta'minotchi xizmat identifikatori</td></tr>
+        <tr><td><code>amount</code></td><td>Ha</td><td>Tranzaksiya qiymati (N.NN formatda)</td></tr>
+        <tr><td><code>transaction_param</code></td><td>Ha</td><td>Buyurtma identifikatori yoki hisob identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Ixtiyoriy parametrlar</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>merchant_user_id</code></td><td>Ta'minotchi tizimidagi foydalanuvchi identifikatori</td></tr>
+        <tr><td><code>return_url</code></td><td>To'lov tugagandan keyin qayta yo'naltirish manzili</td></tr>
+        <tr><td><code>card_type</code></td><td>To'lov tizimi turi: <code>uzcard</code> yoki <code>humo</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>2-usul: HTML forma</h2>
+  <pre><code>&lt;form action="https://my.click.uz/services/pay" method="GET" target="_blank"&gt;
+  &lt;input type="hidden" name="merchant_id" value="MERCHANT_ID" /&gt;
+  &lt;input type="hidden" name="service_id" value="SERVICE_ID" /&gt;
+  &lt;input type="hidden" name="amount" value="1000.00" /&gt;
+  &lt;input type="hidden" name="transaction_param" value="ORDER_123" /&gt;
+  &lt;input type="hidden" name="return_url" value="https://example.com/success" /&gt;
+  &lt;input type="hidden" name="card_type" value="uzcard" /&gt;
+  &lt;button type="submit" class="click-btn"&gt;CLICK orqali to'lash&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+  <h2>PHP namunasi</h2>
+  <pre><code>&lt;?php
+$merchantID = 20;
+$merchantUserID = 4;
+$serviceID = 31;
+$transID = "user23151";
+$transAmount = number_format(1000, 2, '.', '');
+?&gt;
+
+&lt;form action="https://my.click.uz/services/pay" method="GET" target="_blank"&gt;
+  &lt;input type="hidden" name="merchant_id" value="&lt;?= $merchantID ?&gt;" /&gt;
+  &lt;input type="hidden" name="service_id" value="&lt;?= $serviceID ?&gt;" /&gt;
+  &lt;input type="hidden" name="amount" value="&lt;?= $transAmount ?&gt;" /&gt;
+  &lt;input type="hidden" name="transaction_param" value="&lt;?= $transID ?&gt;" /&gt;
+  &lt;button type="submit"&gt;CLICK orqali to'lash&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+</div>
+
+<!-- ==================== PAYMENT BUTTON - BY CARD ==================== -->
+<div class="page-section" id="page-button-card">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; To'lov tugmasi &rsaquo; Karta orqali to'lov</div>
+  <h1>To'lov tugmasi — Karta orqali to'lov</h1>
+
+  <p>Foydalanuvchini boshqa to'lov sahifasiga yo'naltirmasdan, to'g'ridan-to'g'ri sahifada karta orqali to'lovni amalga oshirish.</p>
+
+  <h2>1-usul: Script tegi forma ichida</h2>
+  <pre><code>&lt;form method="post" action="/sizning-tolov-natijasi-url"&gt;
+  &lt;script src="https://my.click.uz/pay/checkout.js"
+    class="uzcard_payment_button"
+    data-service-id="MERCHANT_SERVICE_ID"
+    data-merchant-id="MERCHANT_ID"
+    data-transaction-param="MERCHANT_TRANS_ID"
+    data-merchant-user-id="MERCHANT_USER_ID"
+    data-amount="MERCHANT_TRANS_AMOUNT"
+    data-card-type="MERCHANT_CARD_TYPE"
+    data-label="To'lash"
+  &gt;&lt;/script&gt;
+&lt;/form&gt;</code></pre>
+
+  <h3>Parametrlar</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>MERCHANT_ID</code></td><td>Ha</td><td>Ta'minotchi identifikatori</td></tr>
+        <tr><td><code>MERCHANT_SERVICE_ID</code></td><td>Ha</td><td>Xizmat identifikatori</td></tr>
+        <tr><td><code>MERCHANT_TRANS_ID</code></td><td>Ha</td><td>Buyurtma/tranzaksiya identifikatori</td></tr>
+        <tr><td><code>MERCHANT_TRANS_AMOUNT</code></td><td>Ha</td><td>Tranzaksiya summasi (N.NN formatda)</td></tr>
+        <tr><td><code>MERCHANT_USER_ID</code></td><td>Yo'q</td><td>Foydalanuvchi identifikatori</td></tr>
+        <tr><td><code>MERCHANT_CARD_TYPE</code></td><td>Yo'q</td><td>To'lov tizimi turi: <code>uzcard</code> yoki <code>humo</code></td></tr>
+        <tr><td><code>data-label</code></td><td>Yo'q</td><td>Tugma matni (standart: "Pay")</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>2-usul: JavaScript funksiyasi</h2>
+  <pre><code>&lt;script src="https://my.click.uz/pay/checkout.js"&gt;&lt;/script&gt;
+&lt;button class="input-btn"&gt;To'lash&lt;/button&gt;
+
+&lt;script&gt;
+window.onload = function() {
+  var linkEl = document.querySelector(".input-btn");
+  linkEl.addEventListener("click", function() {
+    createPaymentRequest({
+      service_id: MERCHANT_SERVICE_ID,
+      merchant_id: MERCHANT_ID,
+      amount: MERCHANT_TRANS_AMOUNT,
+      transaction_param: "MERCHANT_TRANS_ID",
+      merchant_user_id: "MERCHANT_USER_ID",
+      card_type: "MERCHANT_CARD_TYPE",
+    }, function(data) {
+      console.log("yopildi", data.status);
+    });
+  });
+};
+&lt;/script&gt;</code></pre>
+
+  <h2>To'lov holati (status)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Holat</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>status &lt; 0</code></td><td>Xatolik yuz berdi</td></tr>
+        <tr><td><code>status = 0</code></td><td>To'lov yaratildi/boshlandi</td></tr>
+        <tr><td><code>status = 1</code></td><td>To'lov jarayonda</td></tr>
+        <tr><td><code>status = 2</code></td><td>To'lov muvaffaqiyatli yakunlandi</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== MERCHANT OVERVIEW ==================== -->
+<div class="page-section" id="page-merchant-overview">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant-API &rsaquo; Umumiy ma'lumot</div>
+  <h1>Merchant-API — Umumiy ma'lumot</h1>
+
+  <h2>Umumiy shartlar</h2>
+  <p>Ushbu interfeys ta'minotchi tomonidan internet orqali foydalanuvchiga hisob-faktura (invoice) so'rovlarini joylashtirish uchun ishlatiladi.</p>
+  <p>SHOP-API dan farqli o'laroq, Merchant-API da <strong>ta'minotchi</strong> CLICK tizimiga so'rov yuboradi (aksincha emas).</p>
+
+  <h2>Atamalar</h2>
+  <ul>
+    <li><strong>CLICK to'lov tizimi</strong> — mobil telefon (USSD/SMS) yoki internet (WEB/Mobil) kanallari orqali to'lov amalga oshirish imkonini beruvchi tizim.</li>
+    <li><strong>Ta'minotchi</strong> — foydalanuvchilarga tovar va xizmatlar sotuvchi yuridik shaxs.</li>
+    <li><strong>Foydalanuvchi</strong> — CLICK to'lov tizimiga ulangan jismoniy shaxs.</li>
+    <li><strong>Ta'minotchi xizmatlari</strong> — xizmatlar va tovarlar.</li>
+  </ul>
+
+  <h2>Jarayon diagrammasi</h2>
+  <div class="diagram-box">
+    <p style="margin:0;color:#888;">Merchant-API ketma-ketlik diagrammasi</p>
+    <div style="margin-top:16px;text-align:left;max-width:500px;margin-left:auto;margin-right:auto;">
+      <p><strong>1.</strong> Ta'minotchi &rarr; CLICK API: Invoice yaratish</p>
+      <p><strong>2.</strong> CLICK &rarr; Foydalanuvchi: To'lov so'rovi (push-xabar)</p>
+      <p><strong>3.</strong> Foydalanuvchi &rarr; CLICK: To'lovni tasdiqlash</p>
+      <p><strong>4.</strong> CLICK: Kartadan pul yechish</p>
+      <p><strong>5.</strong> Ta'minotchi &rarr; CLICK API: To'lov holatini tekshirish</p>
+      <p><strong>6.</strong> CLICK API &rarr; Ta'minotchi: Holat javobi</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MERCHANT REQUEST ==================== -->
+<div class="page-section" id="page-merchant-request">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant-API &rsaquo; So'rov</div>
+  <h1>Merchant-API — So'rov</h1>
+
+  <h2>Ulanish va autentifikatsiya</h2>
+  <div class="endpoint">
+    API bazaviy manzil: <code>https://api.click.uz/v2/merchant/</code>
+  </div>
+
+  <h3>Ro'yxatdan o'tish uchun kerakli ma'lumotlar</h3>
+  <ul>
+    <li><code>merchant_id</code> — ta'minotchi identifikatori</li>
+    <li><code>service_id</code> — xizmat identifikatori</li>
+    <li><code>merchant_user_id</code> — ta'minotchi foydalanuvchi identifikatori</li>
+    <li><code>secret_key</code> — maxfiy kalit (sir saqlanishi shart!)</li>
+  </ul>
+
+  <h3>Auth sarlavhasi formati</h3>
+  <pre><code>Auth: merchant_user_id:digest:timestamp
+
+digest = sha1(timestamp + secret_key)
+timestamp = UNIX vaqt belgisi (10 xonali, soniyalarda)</code></pre>
+
+  <h3>Kerakli sarlavhalar</h3>
+  <ul>
+    <li><code>Accept: application/json</code></li>
+    <li><code>Content-Type: application/json</code></li>
+    <li><code>Auth: 123:356a192b7913b04c54574d18c28d46e6395428ab:1519051543</code></li>
+  </ul>
+
+  <div class="alert alert-danger">
+    <strong>Xavfsizlik:</strong> <code>secret_key</code> parametri maxfiy hisoblanadi va uning xavfsizligini saqlash uchun xizmat ta'minotchisi to'liq javobgar. <code>secret_key</code> ni oshkor qilish ma'lumotlaringiz buzilishiga olib kelishi mumkin.
+  </div>
+
+  <!-- Invoice Create -->
+  <h2>1. Invoice yaratish</h2>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/invoice/create</code>
+  </div>
+
+  <h3>So'rov tanasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>service_id</code></td><td>integer</td><td>Xizmat identifikatori</td></tr>
+        <tr><td>2</td><td><code>amount</code></td><td>float</td><td>So'ralgan summa</td></tr>
+        <tr><td>3</td><td><code>phone_number</code></td><td>string</td><td>Invoice qabul qiluvchi telefon raqami</td></tr>
+        <tr><td>4</td><td><code>merchant_trans_id</code></td><td>string</td><td>Buyurtma ID / shaxsiy hisob / billing login</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Javob (HTTP 200 OK)</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>invoice_id</code></td><td>bigint</td><td>Invoice identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Invoice Status -->
+  <h2>2. Invoice holatini tekshirish</h2>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <code>https://api.click.uz/v2/merchant/invoice/status/{service_id}/{invoice_id}</code>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>invoice_status</code></td><td>bigint</td><td>Invoice holat kodi</td></tr>
+        <tr><td>4</td><td><code>invoice_status_note</code></td><td>int</td><td>Holat tavsifi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Payment Status -->
+  <h2>3. To'lov holatini tekshirish</h2>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <code>https://api.click.uz/v2/merchant/payment/status/{service_id}/{payment_id}</code>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>payment_id</code></td><td>bigint</td><td>To'lov identifikatori</td></tr>
+        <tr><td>4</td><td><code>payment_status</code></td><td>int</td><td>To'lov holat kodi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Payment Status by MTI -->
+  <h2>4. merchant_trans_id bo'yicha to'lov holatini tekshirish</h2>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <code>https://api.click.uz/v2/merchant/payment/status_by_mti/{service_id}/{merchant_trans_id}/{YYYY-MM-DD}</code>
+  </div>
+
+  <h3>So'rov parametrlari</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>service_id</code></td><td>integer</td><td>Xizmat identifikatori</td></tr>
+        <tr><td>2</td><td><code>merchant_trans_id</code></td><td>string</td><td>Ta'minotchi tranzaksiya identifikatori</td></tr>
+        <tr><td>3</td><td><code>YYYY-MM-DD</code></td><td>string</td><td>To'lov sanasi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>payment_id</code></td><td>bigint</td><td>To'lov identifikatori</td></tr>
+        <tr><td>4</td><td><code>payment_status</code></td><td>int</td><td>To'lov holat kodi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Payment Reversal -->
+  <h2>5. To'lovni bekor qilish (Reversal)</h2>
+  <div class="endpoint">
+    <span class="method method-delete">DELETE</span>
+    <code>https://api.click.uz/v2/merchant/payment/reversal/{service_id}/{payment_id}</code>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>payment_id</code></td><td>bigint</td><td>To'lov identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Bekor qilish shartlari:</strong>
+    <ul style="margin-top:8px;">
+      <li>To'lov muvaffaqiyatli yakunlangan bo'lishi kerak</li>
+      <li>Faqat joriy hisobot oyidagi to'lovlarni bekor qilish mumkin</li>
+      <li>Oldingi oy to'lovlarini faqat joriy oyning birinchi kunida bekor qilish mumkin (faqat onlayn karta)</li>
+      <li>UZCARD tomonidan bekor qilish rad etilishi mumkin</li>
+    </ul>
+  </div>
+
+  <!-- Card Token Request -->
+  <h2>6. Karta tokenini yaratish</h2>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/card_token/request</code>
+  </div>
+
+  <h3>So'rov tanasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>service_id</code></td><td>integer</td><td>Xizmat identifikatori</td></tr>
+        <tr><td>2</td><td><code>card_number</code></td><td>string</td><td>Karta raqami</td></tr>
+        <tr><td>3</td><td><code>expire_date</code></td><td>string</td><td>Karta amal qilish muddati (MMYY formatda)</td></tr>
+        <tr><td>4</td><td><code>temporary</code></td><td>bit</td><td>0 yoki 1 — bir martalik foydalanish uchun</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Eslatma:</strong> Vaqtinchalik tokenlar to'lovdan keyin avtomatik o'chiriladi.
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>card_token</code></td><td>string</td><td>Karta tokeni (UUID formatda)</td></tr>
+        <tr><td>4</td><td><code>phone_number</code></td><td>string</td><td>Foydalanuvchi telefon raqami (yashirilgan)</td></tr>
+        <tr><td>5</td><td><code>temporary</code></td><td>bit</td><td>Token turi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Card Token Verify -->
+  <h2>7. Karta tokenini tasdiqlash</h2>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/card_token/verify</code>
+  </div>
+
+  <h3>So'rov tanasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>service_id</code></td><td>integer</td><td>Xizmat identifikatori</td></tr>
+        <tr><td>2</td><td><code>card_token</code></td><td>string</td><td>Karta tokeni</td></tr>
+        <tr><td>3</td><td><code>sms_code</code></td><td>int</td><td>SMS orqali kelgan tasdiqlash kodi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>card_number</code></td><td>string</td><td>Karta raqami (yashirilgan)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Card Token Payment -->
+  <h2>8. Token orqali to'lov</h2>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/card_token/payment</code>
+  </div>
+
+  <h3>So'rov tanasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>service_id</code></td><td>integer</td><td>Xizmat identifikatori</td></tr>
+        <tr><td>2</td><td><code>card_token</code></td><td>string</td><td>Karta tokeni</td></tr>
+        <tr><td>3</td><td><code>amount</code></td><td>float</td><td>To'lov summasi</td></tr>
+        <tr><td>4</td><td><code>merchant_trans_id</code></td><td>string</td><td>Ta'minotchi tranzaksiya identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td>3</td><td><code>payment_id</code></td><td>bigint</td><td>To'lov identifikatori</td></tr>
+        <tr><td>4</td><td><code>payment_status</code></td><td>int</td><td>To'lov holat kodi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Delete Card Token -->
+  <h2>9. Karta tokenini o'chirish</h2>
+  <div class="endpoint">
+    <span class="method method-delete">DELETE</span>
+    <code>https://api.click.uz/v2/merchant/card_token/{service_id}/{card_token}</code>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>#</th><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td>2</td><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== MERCHANT ERROR ==================== -->
+<div class="page-section" id="page-merchant-error">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant-API &rsaquo; Xatoliklar</div>
+  <h1>Merchant-API — Xatoliklar</h1>
+
+  <p>Autentifikatsiya va API bilan bog'liq boshqa xatoliklar HTTP holat kodlari orqali qaytariladi.</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Holat</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>200</code></td><td>OK</td><td>Muvaffaqiyatli javob</td></tr>
+        <tr><td><code>201</code></td><td>OK</td><td>Muvaffaqiyatli javob (muqobil)</td></tr>
+        <tr><td><code>400</code></td><td>Bad request</td><td>Noto'g'ri ma'lumotlar yoki URI formatlash muammolari</td></tr>
+        <tr><td><code>401</code></td><td>Not Authorized</td><td>Autentifikatsiya muvaffaqiyatsiz</td></tr>
+        <tr><td><code>403</code></td><td>Forbidden</td><td>Cheklangan usulga kirish</td></tr>
+        <tr><td><code>404</code></td><td>Not Found</td><td>Usul mavjud emas</td></tr>
+        <tr><td><code>406</code></td><td>Not Acceptable</td><td>Noto'g'ri ma'lumot turi yuborilgan</td></tr>
+        <tr><td><code>410</code></td><td>Gone</td><td>Eskirgan/bekor qilingan usul</td></tr>
+        <tr><td><code>500</code></td><td>Internal Server Error</td><td>Jiddiy API nosozligi</td></tr>
+        <tr><td><code>502</code></td><td>Service unavailable</td><td>Tizim ishlamayapti yoki yangilanmoqda</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== CLICK PASS ==================== -->
+<div class="page-section" id="page-click-pass">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant-API &rsaquo; CLICK Pass</div>
+  <h1>CLICK Pass</h1>
+
+  <p>CLICK Pass — QR kod orqali to'lov qabul qilish imkonini beradi.</p>
+
+  <h2>Autentifikatsiya</h2>
+  <div class="endpoint">
+    API bazaviy manzil: <code>https://api.click.uz/v2/merchant/</code>
+  </div>
+  <pre><code>Auth: merchant_user_id:digest:timestamp
+digest = sha1(timestamp + secret_key)
+timestamp = UNIX vaqt belgisi (10 xonali)</code></pre>
+
+  <h2>To'lov holat kodlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Holat</th><th>Ma'nosi</th></tr></thead>
+      <tbody>
+        <tr><td><code>&lt;0</code></td><td>Xatolik</td><td>Tafsilotlar error_note da</td></tr>
+        <tr><td><code>0</code></td><td>Yaratildi</td><td>To'lov boshlangan</td></tr>
+        <tr><td><code>1</code></td><td>Jarayonda</td><td>To'lov davom etmoqda</td></tr>
+        <tr><td><code>2</code></td><td>Muvaffaqiyatli</td><td>To'lov yakunlangan</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>CLICK Pass orqali to'lov</h2>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/click_pass/payment</code>
+  </div>
+
+  <h3>So'rov tanasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>service_id</code></td><td>integer</td><td>Ha</td><td>Xizmat identifikatori</td></tr>
+        <tr><td><code>otp_data</code></td><td>string</td><td>Ha</td><td>QR kod mazmuni</td></tr>
+        <tr><td><code>amount</code></td><td>float</td><td>Ha</td><td>To'lov summasi</td></tr>
+        <tr><td><code>cashbox_code</code></td><td>string</td><td>Yo'q</td><td>Kassa identifikatori</td></tr>
+        <tr><td><code>transaction_id</code></td><td>string</td><td>Yo'q</td><td>Ta'minotchi tranzaksiya identifikatori</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Javob</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>error_code</code></td><td>integer</td><td>Xatolik kodi</td></tr>
+        <tr><td><code>error_note</code></td><td>string</td><td>Xatolik tavsifi</td></tr>
+        <tr><td><code>payment_id</code></td><td>bigint</td><td>To'lov identifikatori</td></tr>
+        <tr><td><code>payment_status</code></td><td>int</td><td>To'lov holat kodi</td></tr>
+        <tr><td><code>confirm_mode</code></td><td>bit</td><td>Tasdiqlash rejimi</td></tr>
+        <tr><td><code>card_type</code></td><td>string</td><td>Karta turi: <code>private</code> yoki <code>corporate</code></td></tr>
+        <tr><td><code>processing_type</code></td><td>string</td><td>Ishlov berish turi: <code>UZCARD</code>, <code>HUMO</code> yoki <code>WALLET</code></td></tr>
+        <tr><td><code>card_number</code></td><td>string</td><td>Karta raqami (yashirilgan)</td></tr>
+        <tr><td><code>phone_number</code></td><td>string</td><td>Telefon raqami</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>To'lov holatini tekshirish</h2>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <code>https://api.click.uz/v2/merchant/payment/status/{service_id}/{payment_id}</code>
+  </div>
+
+  <h2>To'lovni bekor qilish</h2>
+  <div class="endpoint">
+    <span class="method method-delete">DELETE</span>
+    <code>https://api.click.uz/v2/merchant/payment/reversal/{service_id}/{payment_id}</code>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Bekor qilish shartlari:</strong>
+    <ul style="margin-top:8px;">
+      <li>To'lov muvaffaqiyatli yakunlangan bo'lishi kerak</li>
+      <li>Faqat joriy oy to'lovlari bekor qilinishi mumkin</li>
+      <li>Oldingi oy to'lovlarini faqat joriy oyning birinchi kunida bekor qilish mumkin</li>
+      <li>Faqat onlayn karta to'lovlari uchun (oldingi oy)</li>
+    </ul>
+  </div>
+
+  <h2>Tasdiqlash rejimi</h2>
+
+  <h3>Tasdiqlash rejimini yoqish</h3>
+  <div class="endpoint">
+    <span class="method method-put">PUT</span>
+    <code>https://api.click.uz/v2/merchant/click_pass/confirmation/{service_id}</code>
+  </div>
+
+  <h3>To'lovni tasdiqlash</h3>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/click_pass/confirm</code>
+  </div>
+  <p>Parametrlar: <code>service_id</code>, <code>payment_id</code></p>
+
+  <div class="alert alert-danger">
+    <strong>Muhim:</strong> Tasdiqlanmagan to'lovlar 30 soniyadan keyin avtomatik bekor qilinadi.
+  </div>
+
+  <h3>Tasdiqlash rejimini o'chirish</h3>
+  <div class="endpoint">
+    <span class="method method-delete">DELETE</span>
+    <code>https://api.click.uz/v2/merchant/click_pass/confirmation/{service_id}</code>
+  </div>
+</div>
+
+<!-- ==================== FISCALIZATION ==================== -->
+<div class="page-section" id="page-fiscalization">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Merchant-API &rsaquo; Ma'lumotlarni fiskalizatsiya qilish</div>
+  <h1>Ma'lumotlarni fiskalizatsiya qilish</h1>
+
+  <p>Ushbu bo'lim ta'minotchilarga tranzaksiya ma'lumotlarini fiskalizatsiya qilish imkonini beruvchi uchta endpointni tavsiflaydi.</p>
+
+  <!-- Submit Items -->
+  <h2>1. Tovar va xizmatlarni fiskalizatsiya qilish</h2>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/payment/ofd_data/submit_items</code>
+  </div>
+
+  <h3>So'rov tanasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>service_id</code></td><td>integer</td><td>Xizmat identifikatori</td></tr>
+        <tr><td><code>payment_id</code></td><td>long</td><td>To'lov identifikatori</td></tr>
+        <tr><td><code>items</code></td><td>Item[]</td><td>Tovar yoki xizmatlar ro'yxati</td></tr>
+        <tr><td><code>received_ecash</code></td><td>integer</td><td>Elektron naqd pul summasi (tiyinda)</td></tr>
+        <tr><td><code>received_cash</code></td><td>integer</td><td>Naqd pul summasi (tiyinda)</td></tr>
+        <tr><td><code>received_card</code></td><td>integer</td><td>Karta orqali to'lov summasi (tiyinda)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Item ob'ekti parametrlari</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>Name</code></td><td>string(63)</td><td>Ha</td><td>Tovar/xizmat nomi (oxirida o'lchov birligi bilan)</td></tr>
+        <tr><td><code>Barcode</code></td><td>string(13)</td><td>Yo'q</td><td>Mahsulot shtrix-kodi</td></tr>
+        <tr><td><code>Labels</code></td><td>string(21)[]</td><td>Yo'q</td><td>Markirovka kodlari massivi (maks. 300 element)</td></tr>
+        <tr><td><code>SPIC</code></td><td>string(17)</td><td>Ha</td><td>SPIC kodi</td></tr>
+        <tr><td><code>Units</code></td><td>uint64</td><td>Yo'q</td><td>O'lchov birligi kodi</td></tr>
+        <tr><td><code>PackageCode</code></td><td>string(20)</td><td>Ha</td><td>Qadoq identifikatori</td></tr>
+        <tr><td><code>GoodPrice</code></td><td>uint64</td><td>Yo'q</td><td>Bitta mahsulot/xizmat birligining narxi</td></tr>
+        <tr><td><code>Price</code></td><td>uint64</td><td>Ha</td><td>Tovarning umumiy summasi, miqdorini hisobga olgan holda, chegirmalardan tashqari (tiyinda)</td></tr>
+        <tr><td><code>Amount</code></td><td>uint64</td><td>Ha</td><td>Miqdor</td></tr>
+        <tr><td><code>VAT</code></td><td>uint64</td><td>Ha</td><td>QQS summasi (tiyinda)</td></tr>
+        <tr><td><code>VATPercent</code></td><td>byte</td><td>Ha</td><td>QQS foizi</td></tr>
+        <tr><td><code>Discount</code></td><td>uint64</td><td>Yo'q</td><td>Chegirma summasi</td></tr>
+        <tr><td><code>Other</code></td><td>uint64</td><td>Yo'q</td><td>Boshqa chegirmalar</td></tr>
+        <tr><td><code>CommissionInfo</code></td><td>CommissionInfo</td><td>Ha</td><td>Komissiya cheki haqida ma'lumot</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>CommissionInfo ob'ekti</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>TIN</code></td><td>string(9)</td><td>Kamida bittasi talab qilinadi</td></tr>
+        <tr><td><code>PINFL</code></td><td>string(14)</td><td>Kamida bittasi talab qilinadi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Eslatma:</strong> CommissionInfo da <code>TIN</code> yoki <code>PINFL</code> dan kamida bittasi bo'lishi kerak.
+  </div>
+
+  <h3>Javob</h3>
+  <pre><code>{
+  "error_code": 0,
+  "error_note": "Success"
+}</code></pre>
+
+  <!-- Submit QR Code -->
+  <h2>2. Oldindan fiskalizatsiya qilingan cheklarni ro'yxatdan o'tkazish</h2>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <code>https://api.click.uz/v2/merchant/payment/ofd_data/submit_qrcode</code>
+  </div>
+
+  <h3>So'rov tanasi</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>service_id</code></td><td>integer</td><td>Xizmat identifikatori</td></tr>
+        <tr><td><code>payment_id</code></td><td>long</td><td>To'lov identifikatori</td></tr>
+        <tr><td><code>qrcode</code></td><td>string</td><td>Chek URL manzili</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>QR kod qiymati namunasi:</p>
+  <pre><code>https://ofd.soliq.uz/epi?t=EZ000000000030&r=123456789&c=20221028171340&s=854971301623</code></pre>
+
+  <!-- Get Fiscal Data -->
+  <h2>3. Fiskal ma'lumotlarni olish</h2>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <code>https://api.click.uz/v2/merchant/payment/ofd_data/{service_id}/{payment_id}</code>
+  </div>
+
+  <h3>Javob</h3>
+  <pre><code>{
+  "paymentId": 1946296773,
+  "qrCodeURL": "https://ofd.soliq.uz/epi?t=EZ000000000030&r=123456789&c=20221028171340&s=854971301623"
+}</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>paymentId</code></td><td>long</td><td>To'lov identifikatori</td></tr>
+        <tr><td><code>qrCodeURL</code></td><td>string</td><td>Fiskal ma'lumot URL manzili</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Eslatma:</strong> Barcha summalar <strong>tiyinda</strong> ko'rsatiladi (1 so'm = 100 tiyin). Items massivida kamida bitta element bo'lishi shart.
+  </div>
+</div>
+
+<!-- ==================== TELEGRAM PAYMENTS ==================== -->
+<div class="page-section" id="page-telegram">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Telegram to'lovlari</div>
+  <h1>Telegram to'lovlari</h1>
+
+  <h2>Yangi bot yaratish</h2>
+  <p>Telegram bot yaratish uchun <strong>@BotFather</strong> — rasmiy bot yaratish vositasidan foydalaning.</p>
+
+  <h3>Bot nomini tanlash</h3>
+  <p><code>/newbot</code> buyrug'ini yuboring. Bot nomi faqat lotin harflari va raqamlardan iborat bo'lishi kerak.</p>
+
+  <h3>Bot foydalanuvchi nomi</h3>
+  <p>Foydalanuvchi nomi — bu botni topish uchun ishlatiladigan manzil. Talablar:</p>
+  <ul>
+    <li>Qisqa va esda qolarli bo'lishi kerak</li>
+    <li>"bot" bilan tugashi kerak</li>
+    <li>Bo'sh joylar bo'lishi mumkin emas</li>
+  </ul>
+  <p>Yaratilgandan so'ng, <strong>@BotFather</strong> API tokenini beradi.</p>
+
+  <h2>Botni CLICK terminaliga ulash</h2>
+  <p><strong>@BotFather</strong> da <code>/mybots</code> buyrug'ini yuboring va tokeningizni oling. Keyin: <strong>Settings &rarr; Payments</strong> ga o'ting.</p>
+
+  <h3>To'lov tizimini tanlash</h3>
+  <p>"CLICK Uzbekistan" ni tanlang. <strong>@BotFather</strong> ikkita variant taklif qiladi:</p>
+  <ul>
+    <li><strong>Test rejimi</strong> — CLICK Terminal Test</li>
+    <li><strong>Jonli rejim</strong> — CLICK Terminal Live</li>
+  </ul>
+
+  <h3>Test rejimi</h3>
+  <ol>
+    <li>"Connect CLICK Terminal Test" ni tanlang</li>
+    <li><strong>@CLICKtest</strong> ga yo'naltirilasiz</li>
+    <li>Start tugmasini bosing, keyin "Avtorizatsiya" tugmasi paydo bo'ladi</li>
+    <li>Avtorizatsiyadan so'ng <strong>@BotFather</strong> ga qayting</li>
+    <li>Mavjud to'lov tizimlari nomi, tokeni va ulanish sanasi bilan ko'rsatiladi</li>
+  </ol>
+
+  <h3>Jonli rejim</h3>
+  <ol>
+    <li>"Connect CLICK Terminal Live" ni tanlang</li>
+    <li><strong>@CLICKTerminal</strong> ga yo'naltirilasiz</li>
+    <li>Avtorizatsiya qiling va ta'minotchi kabinetiga login/parol bilan kiring</li>
+    <li>Xizmatni tanlang va <strong>@BotFather</strong> ga qaytib tokenni oling</li>
+  </ol>
+
+  <h2>Shartnoma talablari</h2>
+  <p>CLICK to'lovlarini qabul qilish uchun ta'minotchilar:</p>
+  <ul>
+    <li>Yuridik shaxs yoki yakka tartibdagi tadbirkor sifatida ro'yxatdan o'tgan bo'lishi kerak</li>
+    <li>Ulangan banklardan biri bilan to'lovni qabul qilish bo'yicha shartnoma tuzishi kerak</li>
+  </ul>
+
+  <h3>Ulangan banklar</h3>
+  <p>Alobbank, Agrobank, Davr Bank, O'zpromqurilishbank, Qishloq qurilish bank, O'zbek-Turk banki, Universal Bank, Savdogar Bank, Trust Bank, Turkiston Bank, Xorazm Bank, Mikrokreditbank, Orient Finance Bank, Asia Alliance Bank, Ipak Yo'li Bank.</p>
+
+  <h3>To'lov shartlari</h3>
+  <div class="alert alert-info">
+    Obuna to'lovlari yoki ulanish to'lovlari olinmaydi. Ta'minotchilar banklarga faqat to'lovni qabul qilish uchun mukofot to'laydi (CLICK orqali to'langan aylanmaning foizi sifatida). To'lov oy oxirida bank tomonidan yuborilgan hisob-faktura bo'yicha amalga oshiriladi.
+  </div>
+
+  <h3>Kerakli hujjatlar</h3>
+  <ul>
+    <li>Ro'yxatdan o'tish guvohnomasi</li>
+    <li>Litsenziya (agar kerak bo'lsa)</li>
+    <li>Direktor tayinlash to'g'risidagi buyruq</li>
+    <li>Direktor pasporti</li>
+    <li>Ta'sischilar yig'ilishi bayonnomasi</li>
+    <li>Ustav (barcha sahifalar)</li>
+    <li>Domen shartnomasi</li>
+    <li>Ulanish xati (faqat Asia Alliance Bank uchun)</li>
+  </ul>
+  <p>Aloqa: <strong>+998 (71) 231-08-83</strong></p>
+
+  <h2>To'lovni testlash jarayoni</h2>
+
+  <h3>1-qadam: Hisob-faktura yaratish</h3>
+  <p>Xaridor ta'minotchi botiga murojaat qilib, tovarlarni tanlaydi. Bot mahsulot/xizmat tavsifi, to'lov summasi va yetkazib berish ma'lumotlari bilan hisob-faktura tuzadi.</p>
+  <p><code>sendInvoice</code> usuli hisob-fakturalarni yaratadi, <code>provider_token</code> parametrini talab qiladi. Bitta bot turli foydalanuvchilar yoki tovarlar uchun bir nechta turli tokenlardan foydalanishi mumkin.</p>
+
+  <div class="alert alert-warning">
+    Hisob-fakturalar faqat shaxsiy xabar foydalanuvchilariga ko'rsatiladi, guruh yoki kanallarga emas.
+  </div>
+
+  <h3>2-qadam: Buyurtmani tekshirish va tasdiqlash</h3>
+  <p>To'lov boshlanganda, Bot API <code>pre_checkout_query</code> maydonini o'z ichiga olgan yangilanishni yuboradi. Bot <strong>10 soniya ichida</strong> <code>answerPrecheckoutQuery</code> orqali javob berishi yoki tranzaksiyani bekor qilishi kerak.</p>
+  <p>Xatolik javoblari oddiy foydalanuvchilarga tushunarli bo'lishi kerak. Masalan: <em>"Kechirasiz, bu mahsulot mavjud emas, ehtimol boshqa mahsulotlarimiz sizni qiziqtirishi mumkin?"</em></p>
+
+  <h3>3-qadam: To'lovni amalga oshirish</h3>
+  <p>Bot tasdiqlangandan so'ng, Telegram to'lov tizimiga tranzaksiyani yakunlash so'rovini yuboradi. Muvaffaqiyatli to'lov <code>success_payment</code> xabarini ishga tushiradi. Foydalanuvchilar istalgan vaqtda to'lov tafsilotlarini ko'rsatuvchi kvitansiyani oladi.</p>
+
+  <h2>Jonli rejimga o'tish</h2>
+  <p>Testlar yakunlangandan so'ng, <strong>@BotFather</strong> da <code>/mybots</code> &rarr; bot tanlash &rarr; <strong>Settings &rarr; Payments &rarr; CLICK Uzbekistan</strong> &rarr; "Connect CLICK Terminal LIVE" ni tanlang.</p>
+  <p>Avtorizatsiya uchun bank shartnomasi tuzilgandan keyin berilgan hisob ma'lumotlari talab qilinadi.</p>
+  <p>Olingan tokenda <code>:LIVE:</code> mavjud bo'ladi (masalan: <code>123:LIVE:XXXX</code>).</p>
+
+  <div class="alert alert-danger">
+    <strong>Bu tokenni uchinchi shaxslarga bermang!</strong>
+  </div>
+
+  <h2>Jonli rejim talablari</h2>
+  <ul>
+    <li><strong>Ikki faktorli autentifikatsiya:</strong> Botni boshqaruvchi Telegram hisobi uchun qat'iy tavsiya etiladi</li>
+    <li><strong>Nizolar bo'yicha javobgarlik:</strong> Bot egalari nizolar yoki kelishmovchiliklar yuzaga kelganda to'liq javobgarlikni o'z zimmalariga oladi</li>
+    <li><strong>Xizmat shartlari:</strong> Botlar <code>/terms</code> buyrug'iga aniq va tushunarli shartlar bilan javob berishi kerak</li>
+    <li><strong>Mijozlarga xizmat ko'rsatish:</strong> Botlar <code>/support</code> buyrug'iga javob berishi yoki muqobil aloqa vositalarini aniq ko'rsatishi kerak</li>
+    <li><strong>Infratuzilma barqarorligi:</strong> Server jihozlari va dasturiy ta'minot barqaror bo'lishi kerak. Foydalanuvchi to'lov ma'lumotlarini yo'qotmaslik uchun zaxira nusxalardan foydalaning</li>
+  </ul>
+</div>
+
+<!-- ==================== PLUGINS ==================== -->
+<div class="page-section" id="page-plugins">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; CMS plaginlari</div>
+  <h1>CMS plaginlari</h1>
+
+  <p>CLICK turli CMS platformalar uchun tayyor plaginlar taqdim etadi:</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Platforma</th><th>Versiya</th><th>Izoh</th></tr></thead>
+      <tbody>
+        <tr><td><strong>WordPress</strong></td><td>3.5 dan boshlab</td><td>WooCommerce bilan moslik. GitHub orqali yuklab olish mumkin.</td></tr>
+        <tr><td><strong>Drupal</strong></td><td>7.x-3.11 dan boshlab</td><td>Ubercart integratsiyasi. ZIP fayl sifatida yuklab olish mumkin.</td></tr>
+        <tr><td><strong>OpenCart</strong></td><td>3.x versiya</td><td>GitHub repozitoriyasi orqali.</td></tr>
+        <tr><td><strong>1C-Bitrix</strong></td><td>20.x versiya</td><td>GitHub da joylashtirilgan.</td></tr>
+        <tr><td><strong>Joomla</strong></td><td>3.x versiya</td><td>VirtueMart integratsiyasi. GitHub orqali.</td></tr>
+        <tr><td><strong>CS-Cart</strong></td><td>4.5.x versiya</td><td>GitHub repozitoriyasi.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SERVER EXAMPLE ==================== -->
+<div class="page-section" id="page-server-example">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Amalga oshirish namunasi</div>
+  <h1>Amalga oshirish namunasi</h1>
+
+  <p>CLICK to'lov integratsiyasini server tomonida amalga oshirish uchun tayyor namunalar.</p>
+
+  <h2>PHP</h2>
+  <p>Amalga oshirish namunasi va batafsil hujjatlar quyidagi havolada mavjud:</p>
+  <div class="endpoint">
+    <code>https://github.com/click-llc/click-integration-php</code>
+  </div>
+
+  <h2>Python Django</h2>
+  <p>Amalga oshirish namunasi va batafsil hujjatlar quyidagi havolada mavjud:</p>
+  <div class="endpoint">
+    <code>https://github.com/click-llc/click-integration-django</code>
+  </div>
+</div>
+
+<!-- ==================== MOBILE ==================== -->
+<div class="page-section" id="page-mobile">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Mobil integratsiya</div>
+  <h1>Mobil integratsiya</h1>
+
+  <p>Android va iOS mobil ilovalar uchun CLICK to'lov tizimi bilan integratsiya usullari.</p>
+
+  <h2>Umumiy yondashuv</h2>
+  <p>Bizning mobil ilova ikkala platformada ham to'lov uchun havolalarni (deeplink) ushlaydi. Agar ilova o'rnatilmagan bo'lsa, tizim brauzeri ochiladi va to'lov veb-sayt orqali amalga oshiriladi.</p>
+
+  <h2>Android integratsiyasi (Kotlin)</h2>
+  <pre><code>val url = "https://my.click.uz/services/pay/" +
+    "?service_id=${serviceId}" +
+    "&merchant_id=${merchantId}" +
+    "&amount=${amount}" +
+    "&transaction_param=${transactionParam}"
+
+val i = Intent(Intent.ACTION_VIEW)
+i.data = Uri.parse(url)
+startActivity(i)</code></pre>
+
+  <h2>iOS integratsiyasi (Swift)</h2>
+  <pre><code>if let url = URL(string: "https://my.click.uz/services/pay/?service_id=\(serviceId)&merchant_id=\(merchantId)&amount=\(amount)&transaction_param=\(transactionParam)") {
+    UIApplication.shared.open(url)
+}</code></pre>
+
+  <h2>To'lovdan keyingi jarayon</h2>
+  <p>Muvaffaqiyatli to'lovdan so'ng ilova o'zini yopadi. Ishlab chiquvchilar tranzaksiya parametri yordamida <code>onStart</code> yoki <code>onRestart</code> usullarida ma'lumotlarni yangilashlari mumkin.</p>
+
+  <div class="alert alert-info">
+    Agar <code>return_url</code> parametri kiritilgan bo'lsa, tizim to'lov tugagandan keyin (xatolik holatlarini ham o'z ichiga olgan holda) ushbu havolani Intent sifatida chaqiradi.
+  </div>
+
+  <h2>Android SDK</h2>
+  <p>Chuqurroq integratsiya uchun CLICK Android Mobile SDK kutubxonasini taklif etadi. Bu kutubxona billing tizimiga ega va ega bo'lmagan ta'minotchilarni qo'llab-quvvatlaydi.</p>
+
+  <div class="alert alert-warning">
+    <strong>Eslatma:</strong> Billing tizimiga ega ta'minotchilar o'z ilova serverlarida SHOP-API ni amalga oshirishlari kerak.
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  &copy; 2026 Click. Barcha huquqlar himoyalangan.
+</footer>
+
+<!-- JavaScript -->
+<script>
+function showPage(pageId) {
+  // Hide all sections
+  document.querySelectorAll('.page-section').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  // Show target section
+  var target = document.getElementById('page-' + pageId);
+  if (target) {
+    target.classList.add('active');
+  }
+
+  // Update sidebar
+  document.querySelectorAll('.sidebar-link').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var link = document.querySelector('.sidebar-link[data-page="' + pageId + '"]');
+  if (link) {
+    link.classList.add('active');
+  }
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(e) {
+  var sidebar = document.getElementById('sidebar');
+  var hamburger = document.querySelector('.hamburger');
+  if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
+    sidebar.classList.remove('open');
+  }
+});
+</script>
+
+</body>
+</html>

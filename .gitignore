@@ -15,3 +15,7 @@ service-account*.json
 # Server
 server/dist
 server/generated
+
+# Editor / agent runtime state
+.claude/scheduled_tasks.lock
+.windsurf/
