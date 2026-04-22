@@ -45,12 +45,23 @@ type GroupWithTeachers = {
  * Sends lesson-attendance notifications on schedule.
  *
  * Idempotency relies on the `Notification` table — one row per (userId, type,
- * relatedEntityId=groupId, today) blocks repeat sends. The cron job runs every
- * minute; triggers fire only when the Tashkent clock matches the exact minute.
+ * relatedEntityId=groupId, today) blocks repeat sends. Cron fires each minute
+ * Monday–Saturday (no lessons on Sunday). Before touching groups we compare
+ * the current minute against a cached [earliestStart, latestEnd] window that's
+ * derived from active groups and refreshed hourly — outside that window the
+ * tick returns immediately with zero DB queries, letting the DB auto-suspend.
+ *
+ * When inside the window, the group query is narrowed to rows whose
+ * lessonStartTime or lessonEndTime matches a trigger minute for *right now*
+ * (start, end-30, end-15, end). In practice this returns 0-3 rows instead of
+ * every active group, so most ticks perform a single indexed lookup.
  */
 @Injectable()
 export class AttendanceReminderService {
   private readonly logger = new Logger(AttendanceReminderService.name);
+  private scheduleWindow: { startMin: number; endMin: number } | null = null;
+  private windowCachedAt = 0;
+  private readonly WINDOW_TTL_MS = 60 * 60 * 1000;
 
   constructor(
     private prisma: PrismaService,
@@ -60,7 +71,7 @@ export class AttendanceReminderService {
     private telegramService: TelegramService,
   ) {}
 
-  @Cron('0 * * * * *', { timeZone: 'Asia/Tashkent' })
+  @Cron('0 * * * * 1-6', { timeZone: 'Asia/Tashkent' })
   async tick() {
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Tashkent',
@@ -78,15 +89,27 @@ export class AttendanceReminderService {
     const weekdayIdx = DAY_NAME_TO_JS[p('weekday').toLowerCase()];
     if (weekdayIdx === undefined) return;
 
+    const window = await this.getScheduleWindow();
+    if (!window) return;
+    if (currentMinutes < window.startMin || currentMinutes > window.endMin) return;
+
     const parsedDate = new Date(today + 'T00:00:00.000Z');
+    const currentTime = `${p('hour')}:${p('minute')}`;
+    const endCandidates = [
+      currentTime,
+      this.addMinutes(currentTime, 15),
+      this.addMinutes(currentTime, 30),
+    ];
 
     const groups = await this.prisma.group.findMany({
       where: {
         statusEnum: GroupStatus.ACTIVE,
         deletedAt: null,
-        lessonStartTime: { not: null },
-        lessonEndTime: { not: null },
         companyId: { not: null },
+        OR: [
+          { lessonStartTime: currentTime },
+          { lessonEndTime: { in: endCandidates } },
+        ],
       },
       select: {
         id: true,
@@ -114,6 +137,8 @@ export class AttendanceReminderService {
       },
     });
 
+    if (groups.length === 0) return;
+
     const isHoliday = !!(await this.prisma.holiday.findFirst({
       where: {
         status: HolidayStatus.ACTIVE,
@@ -135,6 +160,63 @@ export class AttendanceReminderService {
         );
       }
     }
+  }
+
+  private addMinutes(time: string, mins: number): string {
+    const [h, m] = time.split(':').map(Number);
+    const total = h * 60 + m + mins;
+    const hh = Math.floor(total / 60) % 24;
+    const mm = total % 60;
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+
+  /**
+   * Returns the earliest lessonStartTime and latest lessonEndTime across all
+   * active groups, in minutes since midnight. Cached for WINDOW_TTL_MS so tick()
+   * rarely hits the DB just to decide whether to run. Returns null when no
+   * active groups exist — tick() then exits without touching any other table.
+   *
+   * MIN/MAX on HH:MM text is chronologically correct because hours are
+   * zero-padded, so lexical order matches numeric order.
+   */
+  private async getScheduleWindow(): Promise<{
+    startMin: number;
+    endMin: number;
+  } | null> {
+    const now = Date.now();
+    if (
+      this.scheduleWindow !== null &&
+      now - this.windowCachedAt < this.WINDOW_TTL_MS
+    ) {
+      return this.scheduleWindow;
+    }
+
+    const agg = await this.prisma.group.aggregate({
+      where: {
+        statusEnum: GroupStatus.ACTIVE,
+        deletedAt: null,
+        companyId: { not: null },
+        lessonStartTime: { not: null },
+        lessonEndTime: { not: null },
+      },
+      _min: { lessonStartTime: true },
+      _max: { lessonEndTime: true },
+    });
+
+    this.windowCachedAt = now;
+    const minStart = agg._min.lessonStartTime;
+    const maxEnd = agg._max.lessonEndTime;
+
+    if (!minStart || !maxEnd) {
+      this.scheduleWindow = null;
+      return null;
+    }
+
+    this.scheduleWindow = {
+      startMin: this.parseTime(minStart),
+      endMin: this.parseTime(maxEnd),
+    };
+    return this.scheduleWindow;
   }
 
   private groupHasLessonToday(
