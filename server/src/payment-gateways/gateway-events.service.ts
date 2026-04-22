@@ -75,8 +75,12 @@ export class GatewayEventsService {
       ...(filters.signatureValid !== undefined && {
         signatureValid: filters.signatureValid,
       }),
+      // Noise filter — Payme's polling/audit methods carry no money movement
+      // and would otherwise dominate the log. CEO-visible by default hides them.
       ...(filters.hideChecks && {
-        eventType: { notIn: ['CheckPerformTransaction'] },
+        eventType: {
+          notIn: ['CheckPerformTransaction', 'CheckTransaction', 'GetStatement'],
+        },
       }),
       ...(externalIdFilter !== null && { externalId: { in: externalIdFilter } }),
       ...((filters.startDate || filters.endDate) && {
