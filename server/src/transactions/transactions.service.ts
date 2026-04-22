@@ -414,6 +414,12 @@ export class TransactionsService {
           balanceAfter: true,
           description: true,
           paymentId: true,
+          // Join Payment.method so the frontend can render a unified ledger
+          // without a second round-trip — PAYMENT rows show Payme/Click/Cash,
+          // other types get null.
+          payment: {
+            select: { method: true },
+          },
           attendanceId: true,
           enrollmentId: true,
           performedBy: {
