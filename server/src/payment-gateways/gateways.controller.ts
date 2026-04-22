@@ -1,8 +1,20 @@
-import { Body, Controller, Headers, HttpCode, Post, Query } from '@nestjs/common';
-import { Public } from '../common/decorators';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { CurrentUser, Public, Roles } from '../common/decorators';
+import { RolesGuard } from '../common/guards';
 import { PaymeService } from './payme/payme.service';
 import { ClickService } from './click/click.service';
 import { UzumService } from './uzum.service';
+import { GatewayEventsService } from './gateway-events.service';
+import { GatewayEventsQueryDto } from './dto/gateway-events-query.dto';
 
 /**
  * Webhook endpoints for payment providers. Public (no JWT) because providers
@@ -18,7 +30,22 @@ export class GatewaysController {
     private payme: PaymeService,
     private click: ClickService,
     private uzum: UzumService,
+    private events: GatewayEventsService,
   ) {}
+
+  /**
+   * Admin audit log — list payment gateway webhook events with filters.
+   * CEO-only: raw webhook payloads may contain sensitive transaction details.
+   */
+  @UseGuards(RolesGuard)
+  @Roles('CEO')
+  @Get('events')
+  listEvents(
+    @Query() query: GatewayEventsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.events.findAll({ ...query, companyId });
+  }
 
   /**
    * Paycom Merchant API endpoint (JSON-RPC 2.0).

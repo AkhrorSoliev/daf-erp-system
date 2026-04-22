@@ -5,6 +5,7 @@ import {
   Banknote,
   UserMinus,
   FileText,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,4 +24,5 @@ export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Ish haqi", url: "/payments/salary", icon: Banknote, visibleForRoles: [1, 2] },
   { title: "Qarzdorlar", url: "/payments/debtors", icon: UserMinus },
   { title: "Shartnomalar", url: "/payments/contracts", icon: FileText },
+  { title: "To'lov tizimlari jurnali", url: "/payments/gateway-events", icon: Activity, visibleForRoles: [1] },
 ];
