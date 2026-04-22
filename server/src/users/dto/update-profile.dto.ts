@@ -1,4 +1,5 @@
 import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsPhotoUrl } from '../../common/decorators/is-photo-url.decorator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -20,5 +21,6 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @IsPhotoUrl()
   photo?: string;
 }

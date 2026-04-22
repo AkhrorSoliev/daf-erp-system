@@ -70,6 +70,7 @@ export function EditStudentForm({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState(student.photo);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,12 +78,27 @@ export function EditStudentForm({
     if (file) {
       const url = URL.createObjectURL(file);
       setAvatarPreview(url);
-      form.setValue("photo", url);
+      setAvatarFile(file);
     }
+  };
+
+  const uploadAvatar = async (): Promise<string | undefined> => {
+    if (!avatarFile) return undefined;
+    const formData = new FormData();
+    formData.append("file", avatarFile);
+    const { data } = await api.post("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data.url;
   };
 
   const onSubmit = async (values: EditStudentFormValues) => {
     try {
+      let photoUrl: string | undefined;
+      if (avatarFile) {
+        photoUrl = await uploadAvatar();
+      }
+
       const payload: Record<string, any> = {
         firstName: values.firstName,
         lastName: values.lastName,
@@ -97,6 +113,7 @@ export function EditStudentForm({
         placeOfStudy: values.placeOfStudy || null,
         address: values.address || null,
         passportSeries: values.passportSeries || null,
+        photo: photoUrl ?? (student.photo || undefined),
       };
 
       const { data } = await api.patch(`/students/${student.id}`, payload);

@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gender } from '@prisma/client';
+import { IsPhotoUrl } from '../../common/decorators/is-photo-url.decorator';
 
 export class UpdateStudentDto {
   @IsOptional()
@@ -59,6 +60,7 @@ export class UpdateStudentDto {
 
   @IsOptional()
   @IsString()
+  @IsPhotoUrl()
   photo?: string | null;
 
   @IsOptional()
