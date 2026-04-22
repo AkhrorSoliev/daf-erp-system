@@ -42,6 +42,7 @@ export class ExpensesService {
         const expense = await tx.expense.create({
           data: {
             category: dto.category,
+            paymentMethod: dto.paymentMethod,
             amount: dto.amount,
             description: dto.description,
             date: new Date(dto.date),
@@ -111,6 +112,7 @@ export class ExpensesService {
         select: {
           id: true,
           category: true,
+          paymentMethod: true,
           amount: true,
           description: true,
           date: true,
@@ -159,6 +161,7 @@ export class ExpensesService {
           where: { id },
           data: {
             ...(dto.category && { category: dto.category }),
+            ...(dto.paymentMethod && { paymentMethod: dto.paymentMethod }),
             ...(dto.amount !== undefined && { amount: dto.amount }),
             ...(dto.description && { description: dto.description }),
             ...(dto.date && { date: new Date(dto.date) }),

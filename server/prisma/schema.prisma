@@ -214,6 +214,11 @@ enum ExpenseCategory {
   OTHER
 }
 
+enum ExpensePaymentMethod {
+  CASH
+  CARD
+}
+
 enum PaymentSource {
   ADMIN_MANUAL
   STUDENT_PORTAL
@@ -1042,14 +1047,15 @@ model Refund {
 }
 
 model Expense {
-  id          String          @id @default(uuid())
-  category    ExpenseCategory
-  amount      Int
-  description String
-  date        DateTime        @db.Date
-  branchId    Int?
-  receiptUrl  String?
-  createdById Int
+  id            String               @id @default(uuid())
+  category      ExpenseCategory
+  paymentMethod ExpensePaymentMethod @default(CASH)
+  amount        Int
+  description   String
+  date          DateTime             @db.Date
+  branchId      Int?
+  receiptUrl    String?
+  createdById   Int
   createdBy   User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
 
   // Optional link to an employee — used by TEACHER_ADVANCE to bind the
