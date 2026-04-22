@@ -6,11 +6,14 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { ExpenseCategory } from '@prisma/client';
+import { ExpenseCategory, ExpensePaymentMethod } from '@prisma/client';
 
 export class CreateExpenseDto {
   @IsEnum(ExpenseCategory)
   category: ExpenseCategory;
+
+  @IsEnum(ExpensePaymentMethod)
+  paymentMethod: ExpensePaymentMethod;
 
   @IsInt()
   @Min(1)

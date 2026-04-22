@@ -40,6 +40,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 interface Expense {
   id: string;
   category: string;
+  paymentMethod: "CASH" | "CARD";
   amount: number;
   description: string;
   date: string;
@@ -64,6 +65,11 @@ const categoryLabels: Record<string, string> = {
   OTHER: "Boshqa",
 };
 
+const paymentMethodLabels: Record<string, string> = {
+  CASH: "Naqt",
+  CARD: "Karta",
+};
+
 function formatPrice(n: number) {
   return n.toLocaleString("en-US");
 }
@@ -77,6 +83,7 @@ export function ExpensesClient() {
 
   // Form state
   const [category, setCategory] = useState("OTHER");
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | null>(new Date());
@@ -116,6 +123,7 @@ export function ExpensesClient() {
     try {
       await api.post("/expenses", {
         category,
+        paymentMethod,
         amount: rawAmount,
         description: description.trim(),
         date: format(date, "yyyy-MM-dd"),
@@ -127,6 +135,7 @@ export function ExpensesClient() {
       setAmount("");
       setDescription("");
       setCategory("OTHER");
+      setPaymentMethod("CASH");
       setDate(new Date());
       setRelatedUserId("");
       setRefreshKey((k) => k + 1);
@@ -195,6 +204,7 @@ export function ExpensesClient() {
               <TableHead>Kategoriya</TableHead>
               <TableHead>Tavsif</TableHead>
               <TableHead>Summa</TableHead>
+              <TableHead>To&apos;lov turi</TableHead>
               <TableHead>Sana</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -213,6 +223,11 @@ export function ExpensesClient() {
                 <TableCell className="text-sm">{e.description}</TableCell>
                 <TableCell className="text-red-600 font-medium">
                   -{formatPrice(e.amount)} so&apos;m
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {paymentMethodLabels[e.paymentMethod] ?? e.paymentMethod}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {format(new Date(e.date), "dd.MM.yyyy")}
@@ -253,6 +268,24 @@ export function ExpensesClient() {
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(categoryLabels).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>To&apos;lov turi</Label>
+              <Select
+                value={paymentMethod}
+                onValueChange={(v) => setPaymentMethod(v as "CASH" | "CARD")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(paymentMethodLabels).map(([k, v]) => (
                     <SelectItem key={k} value={k}>
                       {v}
                     </SelectItem>
