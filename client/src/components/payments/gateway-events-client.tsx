@@ -45,6 +45,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 import api from "@/lib/api";
 
 interface GatewayEvent {
@@ -102,12 +109,14 @@ const STEP_INFO: Record<string, { label: string; description: string }> = {
     description: "To'lov bekor qilindi yoki qaytarildi",
   },
   CheckTransaction: {
-    label: "Holat so'ralgan",
-    description: "Payme tranzaksiya holatini so'radi",
+    label: "Payme holat so'radi",
+    description:
+      "Payme tizimi avtomatik ushbu to'lov holatini tekshirdi (pul harakati yo'q)",
   },
   GetStatement: {
-    label: "Hisobot",
-    description: "Payme davr uchun tranzaksiyalar ro'yxatini so'radi",
+    label: "Davriy ro'yxat",
+    description:
+      "Payme tizimi davriy tekshiruv uchun tranzaksiyalar ro'yxatini so'radi (pul harakati yo'q)",
   },
   Prepare: {
     label: "Tayyorlash",
@@ -320,90 +329,145 @@ export function GatewayEventsClient() {
       )}
 
       {/* Filtrlar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="O'quvchi ID, ism yoki familiya bo'yicha..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9"
-          />
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        {/* Qator 1: qidiruv + asosiy filtrlar */}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[240px] space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              O&apos;quvchi qidirish
+            </Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="ID, ism yoki familiya..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              To&apos;lov tizimi
+            </Label>
+            <Select
+              value={provider}
+              onValueChange={(v) => {
+                setProvider(v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Barchasi</SelectItem>
+                <SelectItem value="PAYME">Payme</SelectItem>
+                <SelectItem value="CLICK">Click</SelectItem>
+                <SelectItem value="UZUM">Uzum</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Natija</Label>
+            <Select
+              value={outcomeFilter}
+              onValueChange={(v) => {
+                setOutcomeFilter(v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Barchasi</SelectItem>
+                <SelectItem value="success">Muvaffaqiyatli</SelectItem>
+                <SelectItem value="pending">Kutilmoqda</SelectItem>
+                <SelectItem value="rejected">Xavfsizlik xatosi</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <Select
-          value={provider}
-          onValueChange={(v) => {
-            setProvider(v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha to&apos;lov tizimlari</SelectItem>
-            <SelectItem value="PAYME">Payme</SelectItem>
-            <SelectItem value="CLICK">Click</SelectItem>
-            <SelectItem value="UZUM">Uzum</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Qator 2: sana oralig'i + texnik so'rovlar + tozalash */}
+        <div className="flex flex-wrap items-end gap-3 pt-1 border-t">
+          <div className="space-y-1.5 pt-3">
+            <Label className="text-xs text-muted-foreground">
+              Sanalar oralig&apos;i
+            </Label>
+            <div className="flex items-center gap-2">
+              <DatePicker
+                value={startDate}
+                onChange={(d) => {
+                  setStartDate(d);
+                  setPage(1);
+                }}
+                placeholder="Boshidan"
+              />
+              <span className="text-muted-foreground">—</span>
+              <DatePicker
+                value={endDate}
+                onChange={(d) => {
+                  setEndDate(d);
+                  setPage(1);
+                }}
+                placeholder="Gacha"
+              />
+            </div>
+          </div>
 
-        <Select
-          value={outcomeFilter}
-          onValueChange={(v) => {
-            setOutcomeFilter(v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha natijalar</SelectItem>
-            <SelectItem value="success">Muvaffaqiyatli</SelectItem>
-            <SelectItem value="pending">Kutilmoqda</SelectItem>
-            <SelectItem value="rejected">Xavfsizlik xatosi</SelectItem>
-          </SelectContent>
-        </Select>
+          <div className="flex-1" />
 
-        <DatePicker
-          value={startDate}
-          onChange={(d) => {
-            setStartDate(d);
-            setPage(1);
-          }}
-          placeholder="Boshidan"
-        />
-        <DatePicker
-          value={endDate}
-          onChange={(d) => {
-            setEndDate(d);
-            setPage(1);
-          }}
-          placeholder="Gacha"
-        />
+          <TooltipProvider delayDuration={200}>
+            <div className="flex items-center gap-2 pt-3">
+              <Switch
+                id="show-checks"
+                checked={showChecks}
+                onCheckedChange={(v) => {
+                  setShowChecks(v);
+                  setPage(1);
+                }}
+              />
+              <Label
+                htmlFor="show-checks"
+                className="text-sm cursor-pointer whitespace-nowrap"
+              >
+                Texnik so&apos;rovlarni ko&apos;rsatish
+              </Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Texnik so'rovlar haqida ma'lumot"
+                  >
+                    <HelpCircle className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  Payme va Click tizimlari avtomatik yuborgan tekshiruv
+                  so&apos;rovlari — pul harakatiga aloqasi yo&apos;q. Jadvalda
+                  shovqinni kamaytirish uchun standart holatda yashirin.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
 
-        <div className="flex items-center gap-2 px-2">
-          <Switch
-            id="show-checks"
-            checked={showChecks}
-            onCheckedChange={(v) => {
-              setShowChecks(v);
-              setPage(1);
-            }}
-          />
-          <Label htmlFor="show-checks" className="text-sm cursor-pointer">
-            Tekshirishlarni ko&apos;rsatish
-          </Label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetFilters}
+            className="mt-3"
+          >
+            Tozalash
+          </Button>
         </div>
-
-        <Button variant="outline" size="sm" onClick={resetFilters}>
-          Tozalash
-        </Button>
       </div>
 
       {/* Jadval */}

@@ -147,7 +147,7 @@ describe('GatewayEventsService', () => {
       expect(result.data[0].student?.id).toBe(10003);
     });
 
-    it('excludes CheckPerformTransaction events when hideChecks=true', async () => {
+    it('excludes all Payme polling/audit event types when hideChecks=true', async () => {
       prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
       prisma.paymentGatewayEvent.count.mockResolvedValue(0);
 
@@ -156,7 +156,13 @@ describe('GatewayEventsService', () => {
       expect(prisma.paymentGatewayEvent.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            eventType: { notIn: ['CheckPerformTransaction'] },
+            eventType: {
+              notIn: [
+                'CheckPerformTransaction',
+                'CheckTransaction',
+                'GetStatement',
+              ],
+            },
           }),
         }),
       );
