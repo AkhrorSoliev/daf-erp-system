@@ -368,7 +368,7 @@ Full integration with Paycom's JSON-RPC 2.0 Merchant API. Paycom sends requests 
   - `payme-methods.service.ts` — 6 required RPC methods
   - `payme-errors.ts` — error codes with tri-lingual messages (uz/ru/en)
   - `payme.types.ts` — TypeScript interfaces for request/response
-  - `payme-cron.service.ts` — cancels expired transactions (state=1 older than 12h) every 30 minutes
+  - **Expiry handling is inline** (no cron) — `createTransaction` and `performTransaction` self-cancel `state=1` rows older than 12h via `cancelExpired()`. Payme also cancels on their side
 
 **6 RPC Methods**:
 
@@ -403,7 +403,7 @@ Full integration with Click's two-phase SHOP-API. Click sends POST requests to o
   - `click-methods.service.ts` — Prepare and Complete business logic
   - `click-errors.ts` — error codes (-1 to -9) with tri-lingual messages (uz/ru/en)
   - `click.types.ts` — TypeScript interfaces for request/response
-  - `click-cron.service.ts` — cancels expired transactions (status=1 older than 30min) every 10 minutes
+  - **Expiry handling is inline** (no cron) — `prepare()` and `complete()` self-cancel `status=1` rows older than 30 min via `cancelExpired()`. Late `Complete` on a stale Prepare returns `CLICK_TRANSACTION_CANCELLED` to prevent crediting balances after timeout
 
 **Two-phase webhook flow**:
 

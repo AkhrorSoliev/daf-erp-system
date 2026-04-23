@@ -16,6 +16,9 @@ import type {
   ClickWebhookResponse,
 } from './click.types';
 
+/** Prepared transactions older than this are treated as cancelled. */
+const PREPARE_TIMEOUT_MS = 30 * 60 * 1000;
+
 /**
  * Implements the two-phase Click SHOP-API business logic:
  * Prepare (action=0) and Complete (action=1).
@@ -31,6 +34,18 @@ export class ClickMethodsService {
     private prisma: PrismaService,
     private payments: PaymentsService,
   ) {}
+
+  private isPrepareExpired(prepareTime: Date | null): boolean {
+    if (!prepareTime) return false;
+    return Date.now() - prepareTime.getTime() > PREPARE_TIMEOUT_MS;
+  }
+
+  private async cancelExpired(id: string): Promise<void> {
+    await this.prisma.clickTransaction.update({
+      where: { id },
+      data: { status: -1, error: -9, errorNote: 'Transaction expired' },
+    });
+  }
 
   // ─── Prepare (action=0) ────────────────────────────────────────
 
@@ -101,6 +116,14 @@ export class ClickMethodsService {
       }
       // Idempotent: return existing prepared transaction
       if (existing.status === 1) {
+        if (this.isPrepareExpired(existing.prepareTime)) {
+          await this.cancelExpired(existing.id);
+          return clickError(
+            clickTransId,
+            merchantTransId,
+            CLICK_TRANSACTION_CANCELLED,
+          );
+        }
         return {
           click_trans_id: clickTransId,
           merchant_trans_id: merchantTransId,
@@ -184,6 +207,16 @@ export class ClickMethodsService {
         clickTransId,
         merchantTransId,
         CLICK_TRANSACTION_NOT_FOUND,
+      );
+    }
+
+    // Reject late Complete on a stale Prepare
+    if (this.isPrepareExpired(txn.prepareTime)) {
+      await this.cancelExpired(txn.id);
+      return clickError(
+        clickTransId,
+        merchantTransId,
+        CLICK_TRANSACTION_CANCELLED,
       );
     }
 
