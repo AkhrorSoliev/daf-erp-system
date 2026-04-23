@@ -396,6 +396,13 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - **Payment history**: Fetched from `GET /student-portal/payments` — shows transaction list with amounts and timestamps
 - **Payme reference docs (UZ)**: `docs/payme-uz/index.html` — 25-page Uzbek-language reference covering Merchant API, Subscribe API, checkout initialization (GET/POST), sandbox testing, error codes, and mobile integration; mirrors the official `developer.help.paycom.uz` structure
 
+### Employee & Teacher Status (Faollik holati)
+
+- Both employee (Settings → Xodimlar) and teacher forms expose a single `status` field with values `ACTIVE / INACTIVE / SUSPENDED / TERMINATED` (and `ARCHIVED` on soft delete). **Never** add a separate "Faol" toggle — the backend keeps `isActive` in sync with `status` automatically
+- When a user's status is changed to anything other than `ACTIVE`, the backend automatically stops sending them lesson/attendance notifications (filter by `status + isActive + deletedAt` is enforced at the query level on the server)
+- **Do not** try to cancel pending notifications from the frontend, and do not send secondary "you have been deactivated" notifications from the client — status changes are silent from the user's perspective and are visible only in the entity history
+- Status dropdown labels must be in Uzbek: `Faol`, `Nofaol`, `Vaqtincha to'xtatilgan`, `Ishdan bo'shatilgan`. Use the same labels consistently across employee and teacher UIs
+
 ### Notifications (Bildirishnomalar)
 
 - **NotificationBell** (`src/components/notifications/notification-bell.tsx`) — bell icon + badge + dropdown in navbar

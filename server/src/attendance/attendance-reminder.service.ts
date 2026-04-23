@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { GroupStatus, HolidayStatus, NotificationType } from '@prisma/client';
+import {
+  GroupStatus,
+  HolidayStatus,
+  NotificationType,
+  UserStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
@@ -123,6 +128,13 @@ export class AttendanceReminderService {
         exactDays: true,
         room: { select: { name: true } },
         teachers: {
+          where: {
+            teacher: {
+              deletedAt: null,
+              isActive: true,
+              status: UserStatus.ACTIVE,
+            },
+          },
           select: {
             teacher: {
               select: {
@@ -341,6 +353,7 @@ export class AttendanceReminderService {
       where: {
         deletedAt: null,
         isActive: true,
+        status: UserStatus.ACTIVE,
         companyId: group.companyId,
         branches: { some: { branchId: group.branchId } },
         roles: { some: { role: { name: 'Administrator' } } },

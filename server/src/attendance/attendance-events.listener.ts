@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
@@ -47,7 +47,12 @@ export class AttendanceEventsListener {
     if (teacherIds.length === 0) return;
 
     const teachers = await this.prisma.user.findMany({
-      where: { id: { in: teacherIds } },
+      where: {
+        id: { in: teacherIds },
+        deletedAt: null,
+        isActive: true,
+        status: UserStatus.ACTIVE,
+      },
       select: { id: true, telegramChatId: true },
     });
 
