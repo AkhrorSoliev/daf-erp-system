@@ -17,8 +17,10 @@ export class TaskReminderService {
     private pushService: PushService,
   ) {}
 
-  // Har 30 daqiqada ishlaydi
-  @Cron('0 */30 * * * *')
+  // Ish vaqtida har 30 daqiqada ishlaydi (08:00–22:59 Asia/Tashkent).
+  // Tunda DB ni uyg'otmaslik uchun cheklangan — kechqurun yangi qo'yilgan
+  // topshiriq deadline'i ertaga ertalab 08:00 dagi birinchi tekshiruvda olinadi.
+  @Cron('0 */30 8-22 * * *', { timeZone: 'Asia/Tashkent' })
   async checkUpcomingDeadlines() {
     const now = new Date();
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
