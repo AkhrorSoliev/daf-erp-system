@@ -179,8 +179,21 @@ export class StudentPortalController {
       const clickServiceId =
         this.config.get<string>('CLICK_SERVICE_ID') ?? cfg.secretKey;
       const clickMerchantId = cfg.merchantId;
+      const clickMerchantUserId = this.config.get<string>(
+        'CLICK_MERCHANT_USER_ID',
+      );
 
-      const checkoutUrl = `https://my.click.uz/services/pay?service_id=${clickServiceId}&merchant_id=${clickMerchantId}&amount=${dto.amount}&transaction_param=${studentId}&return_url=${encodeURIComponent(returnUrl)}`;
+      const params = [
+        `service_id=${clickServiceId}`,
+        `merchant_id=${clickMerchantId}`,
+        `amount=${dto.amount}`,
+        `transaction_param=${studentId}`,
+        `return_url=${encodeURIComponent(returnUrl)}`,
+      ];
+      if (clickMerchantUserId) {
+        params.push(`merchant_user_id=${clickMerchantUserId}`);
+      }
+      const checkoutUrl = `https://my.click.uz/services/pay?${params.join('&')}`;
 
       return { checkoutUrl };
     }
