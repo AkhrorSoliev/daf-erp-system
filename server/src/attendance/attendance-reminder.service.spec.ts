@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, UserStatus } from '@prisma/client';
 import { AttendanceReminderService } from './attendance-reminder.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -257,6 +257,50 @@ describe('AttendanceReminderService', () => {
       );
       expect(notificationsService.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 20002 }),
+      );
+    });
+  });
+
+  describe('recipient filters (status sync)', () => {
+    it('tick() queries group.findMany with teacher status=ACTIVE filter', async () => {
+      // Force the schedule window cache so the tick proceeds to findMany
+      (service as any).scheduleWindow = { startMin: 0, endMin: 1440 };
+      (service as any).windowCachedAt = Date.now();
+
+      await service.tick();
+
+      expect(prisma.group.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            teachers: expect.objectContaining({
+              where: {
+                teacher: {
+                  deletedAt: null,
+                  isActive: true,
+                  status: UserStatus.ACTIVE,
+                },
+              },
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('notifyBranchAdmins filters admins by status=ACTIVE + isActive + deletedAt', async () => {
+      prisma.user.findMany.mockResolvedValue([]);
+      const group = makeGroup();
+
+      await (service as any).notifyBranchAdmins(group, 'ADMIN_ALERT');
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            deletedAt: null,
+            isActive: true,
+            status: UserStatus.ACTIVE,
+            companyId: group.companyId,
+          }),
+        }),
       );
     });
   });

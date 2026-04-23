@@ -238,6 +238,7 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 - **Recipients:** `ATTENDANCE_ADMIN_ALERT` / `ATTENDANCE_MISSING_ADMIN` filter users by `roles.role.name = 'Administrator'` AND `branches.branchId = group.branchId`. Branch Directors are NOT included
 - **Delivery:** all 6 notifications fan out to the 4 channels (DB + SSE + Web Push + Telegram). Push payloads set `url = /groups/<groupId>`; Telegram messages include plain-text portal URLs (`https://lehrer.dafzentrum.uz` for teachers, `https://admin.dafzentrum.uz` for admins) which Telegram auto-linkifies
 - **Skip conditions (cron tick):** group must be `ACTIVE`, not soft-deleted, within `startDate`–`endDate`, today must be in `exactDays`, and the date must not be a `Holiday` (company-scoped or global)
+- **Recipient filter (status, isActive, deletedAt):** every notification query that loads `User` recipients (teachers via `Group.teachers`, branch admins via `prisma.user.findMany`, attendance-completed listener, etc.) **must** filter by `deletedAt: null` AND `isActive: true` AND `status: UserStatus.ACTIVE`. Missing any of these three conditions means deactivated, suspended, terminated, or archived users keep receiving notifications — a real bug we have already hit. Defense-in-depth requires all three, even though `UsersService.updateUser()` keeps `isActive` and `status` in sync
 
 ### Financial System
 
@@ -519,6 +520,17 @@ When attendance is marked:
 - When the frontend uses tabs (e.g. profile pages with "Profil", "Guruhlar", "Ish haqi"), each tab's data is fetched **only when the user switches to that tab** — not all at once on page load
 - Design API endpoints for tab-specific data as **separate routes** (e.g. `GET /api/teachers/:id/groups`) rather than embedding everything in the main entity response
 - This keeps the main entity endpoint fast and avoids loading data the user may never need
+
+### User Status & isActive Synchronization
+
+The `User` model has two related fields: `isActive: Boolean` and `status: UserStatus` (`ACTIVE | INACTIVE | SUSPENDED | TERMINATED | ARCHIVED`). They **must** stay in sync: `isActive === (status === UserStatus.ACTIVE)`.
+
+- **All code that updates `User.status` must also set `isActive` accordingly.** `UsersService.updateUser()` and `TeachersService.changeStatus()` already do this — follow the same pattern (`isActive = dto.status === UserStatus.ACTIVE`) when adding new status mutation paths
+- **Never write a DTO that exposes `isActive` directly** — it is a derived field. Callers pass `status`; the service derives `isActive`
+- When archiving (soft delete), force both: `status: UserStatus.ARCHIVED, isActive: false, deletedAt: <now>`
+- When restoring from archive, force both: `status: UserStatus.ACTIVE, isActive: true, deletedAt: null`
+- Backfill script: `server/scripts/backfill-user-isactive.ts` (supports `--dry-run`) — run after any schema migration that may introduce drift
+- **Downstream queries should still filter by both fields** (see "Recipient filter" rule above) — do not rely solely on the sync invariant, because a bug in a future mutation path could break it silently
 
 ### Future-Proof Design
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, UserStatus } from '@prisma/client';
 import { AttendanceEventsListener } from './attendance-events.listener';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -121,6 +121,42 @@ describe('AttendanceEventsListener', () => {
           /Keldi: 10.*Kelmadi: 3.*Kechikdi: 1.*Sababli: 2/,
         ),
       }),
+    );
+  });
+
+  it('filters teachers by status=ACTIVE, isActive=true, deletedAt=null', async () => {
+    prisma.user.findMany.mockResolvedValue([]);
+
+    await listener.handleAttendanceCompleted(payload);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { in: [20001, 20002] },
+          deletedAt: null,
+          isActive: true,
+          status: UserStatus.ACTIVE,
+        }),
+      }),
+    );
+  });
+
+  it('skips teachers who are filtered out by status (no notification sent)', async () => {
+    // Simulating that the DB filter removed a deactivated teacher: only one
+    // of the two requested IDs comes back. The listener must not try to
+    // notify the missing teacher.
+    prisma.user.findMany.mockResolvedValue([
+      { id: 20001, telegramChatId: '111' },
+    ]);
+
+    await listener.handleAttendanceCompleted(payload);
+
+    expect(notificationsService.create).toHaveBeenCalledTimes(1);
+    expect(notificationsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 20001 }),
+    );
+    expect(notificationsService.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 20002 }),
     );
   });
 });

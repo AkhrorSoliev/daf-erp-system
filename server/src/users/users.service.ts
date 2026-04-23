@@ -10,7 +10,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 
@@ -322,7 +322,10 @@ export class UsersService {
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
     if (dto.telegramChatId !== undefined)
       updateData.telegramChatId = dto.telegramChatId;
-    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.status !== undefined) {
+      updateData.status = dto.status;
+      updateData.isActive = dto.status === UserStatus.ACTIVE;
+    }
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 10);
     }
