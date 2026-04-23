@@ -190,6 +190,22 @@ describe('ClickMethodsService', () => {
       expect(result.merchant_prepare_id).toBe('txn-uuid');
       expect(prisma.clickTransaction.create).not.toHaveBeenCalled();
     });
+
+    it('should auto-cancel expired prepared transaction and return CANCELLED', async () => {
+      const oldPrepareTime = new Date(Date.now() - 31 * 60 * 1000);
+      prisma.clickTransaction.findUnique.mockResolvedValue(
+        mockClickTxn({ status: 1, prepareTime: oldPrepareTime }),
+      );
+      const result = await service.prepare(prepareBody(), COMPANY_ID);
+      expect(result.error).toBe(CLICK_TRANSACTION_CANCELLED);
+      expect(prisma.clickTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'txn-uuid' },
+          data: expect.objectContaining({ status: -1, error: -9 }),
+        }),
+      );
+      expect(prisma.clickTransaction.create).not.toHaveBeenCalled();
+    });
   });
 
   // ─── Complete ────────────────────────────────────────────────
@@ -271,6 +287,22 @@ describe('ClickMethodsService', () => {
       );
       const result = await service.complete(completeBody(), COMPANY_ID);
       expect(result.error).toBe(CLICK_TRANSACTION_CANCELLED);
+    });
+
+    it('should reject late Complete on stale Prepare and auto-cancel', async () => {
+      const oldPrepareTime = new Date(Date.now() - 31 * 60 * 1000);
+      prisma.clickTransaction.findUnique.mockResolvedValue(
+        mockClickTxn({ status: 1, prepareTime: oldPrepareTime }),
+      );
+      const result = await service.complete(completeBody(), COMPANY_ID);
+      expect(result.error).toBe(CLICK_TRANSACTION_CANCELLED);
+      expect(prisma.clickTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'txn-uuid' },
+          data: expect.objectContaining({ status: -1, error: -9 }),
+        }),
+      );
+      expect(payments.createFromExternal).not.toHaveBeenCalled();
     });
 
     it('should cancel transaction when Click sends error < 0', async () => {
