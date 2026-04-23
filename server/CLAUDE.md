@@ -472,6 +472,7 @@ When attendance is marked:
   - `PATCH /api/comments/:id/assignee-status` — assigned user updates their own status
 - Comment creation/deletion is recorded in the audit log via `EntityHistoryService`
 - Events are emitted via `@nestjs/event-emitter`: `comment.created`, `task.assigned`, `task.status.changed`
+- `TaskReminderService` cron sends "deadline approaching" notifications 1h before `dueDate`. Runs every 30 min only during business hours (`'0 */30 8-22 * * *'`, Asia/Tashkent) to let the DB autosuspend at night — late-evening tasks get their first reminder at 08:00 the next day
 
 ### Notifications (4 channels)
 
