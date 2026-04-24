@@ -409,6 +409,8 @@ export function GatewayEventsClient() {
                   setPage(1);
                 }}
                 placeholder="Boshidan"
+                maxDate={endDate ?? undefined}
+                defaultMonth={endDate ?? undefined}
               />
               <span className="text-muted-foreground">—</span>
               <DatePicker
@@ -418,6 +420,8 @@ export function GatewayEventsClient() {
                   setPage(1);
                 }}
                 placeholder="Gacha"
+                minDate={startDate ?? undefined}
+                defaultMonth={startDate ?? undefined}
               />
             </div>
           </div>

@@ -1,36 +1,13 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { ReportsClient } from "@/components/reports/reports-client";
+import { BarChart3 } from "lucide-react";
 
 export default function ReportsPage() {
-  const router = useRouter();
-  const user = useAuth((s) => s.user);
-  const canViewReports = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-
-  useEffect(() => {
-    if (user && !canViewReports) {
-      router.replace("/");
-    }
-  }, [user, canViewReports, router]);
-
-  if (!canViewReports) {
-    return null;
-  }
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-          Hisobotlar
-        </h1>
-        <p className="text-muted-foreground">
-          Tizim hisobotlari va statistika
-        </p>
-      </div>
-      <ReportsClient />
+    <div className="hidden md:flex min-h-[320px] flex-col items-center justify-center rounded-lg border border-dashed text-center p-10">
+      <BarChart3 className="h-10 w-10 text-muted-foreground mb-3" />
+      <p className="text-base font-medium">Hisobot bo&apos;limini tanlang</p>
+      <p className="text-sm text-muted-foreground mt-1">
+        Chap tarafdagi menyudan kerakli hisobotni oching
+      </p>
     </div>
   );
 }

@@ -95,6 +95,8 @@ export function OverviewClient() {
             onChange={(d) => handleCustomDate("start", d)}
             placeholder="Boshlanish"
             className="w-40"
+            maxDate={endDate ?? undefined}
+            defaultMonth={endDate ?? undefined}
           />
           <span className="text-sm text-muted-foreground">—</span>
           <DatePicker
@@ -102,6 +104,8 @@ export function OverviewClient() {
             onChange={(d) => handleCustomDate("end", d)}
             placeholder="Tugash"
             className="w-40"
+            minDate={startDate ?? undefined}
+            defaultMonth={startDate ?? undefined}
           />
         </div>
       </div>

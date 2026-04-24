@@ -149,6 +149,14 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **TimePicker scroll fix:** The component uses `modal` prop on `<Popover>` + `overscroll-contain` on the scroll container to ensure touchpad scrolling works correctly inside the Radix Popover (same pattern as teacher select in the group form). Do **not** remove `modal` — without it, touchpad scroll does not work
 - **Never** use plain text `<Input>` for date or time entry — always use `<DatePicker>` or `<TimePicker>` so users select from a picker
 
+#### Date Range Pickers
+
+- Whenever two `<DatePicker>`s form a range (e.g. "Boshi — Oxiri", "Boshlanish — Tugash", custom report period, attendance stats period), they **must** be wired as a pair, not as two independent inputs.
+- The **end picker** must receive `minDate={startDate}` and `defaultMonth={startDate}` — so when the user has picked the start, opening the end calendar jumps to the start's month and blocks earlier days.
+- The **start picker** must receive `maxDate={endDate}` and `defaultMonth={endDate}` — so picking start after an already-chosen end is impossible, and its calendar jumps to that month.
+- Both props use the shared `<DatePicker>` from `src/components/ui/date-picker.tsx` (`minDate` / `maxDate` / `defaultMonth`). Do not re-implement this in individual components.
+- This rule applies to **every** range picker in the app — filter bars, forms with a from/to period, reports, gateway event logs, etc. If you find an existing range pair without these props, fix it when you touch that file.
+
 #### User and Student IDs
 
 - **User** (teacher, admin, CEO...) and **Student** IDs are always **5-digit integers** (10000+)
@@ -197,6 +205,20 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
   - Wrong: `"Barchasi"` (ambiguous when multiple selects are present)
 - Do **not** use `placeholder` on `<SelectValue>` — use a real `<SelectItem value="all">` as the default option instead.
 - Align filter controls to `items-center` (not `items-end`) since there are no labels to align around.
+
+### URL-Persisted Filter State
+
+- **Every filter bar on a list or report page must persist its state in the URL query string.** The URL is the single source of truth; React state is derived from `useSearchParams()`, not held independently in `useState`.
+- **Why:** filters survive page refresh, are shareable via link, bookmarkable, and reflected in browser history — exactly the behavior users expect from a report.
+- **Scope:** applies to all report pages (`/reports/*`), list pages (`/students`, `/teachers`, `/groups`, `/leads`, etc.), and any future filter bar. It does **not** apply to transient UI state like open dialogs, selected rows, or active tabs.
+- **Implementation:**
+  - Read with `useSearchParams()` from `next/navigation`. Parse values into the filter shape in a `useMemo` keyed on the `searchParams` object.
+  - Write with `useRouter().replace(...)` (not `push`) so filter changes don't clutter browser history. Pass `{ scroll: false }` to prevent jump-to-top.
+  - For scalar (string/number) filters, prefer the shared `useUrlFilters` hook (`src/hooks/use-url-filters.ts`). For arrays, dates, or nullables, inline `useSearchParams` + `useRouter` is fine — encode arrays as comma-separated strings (`groupIds=a,b,c`), dates as `yyyy-MM-dd`.
+  - **Omit defaults from the URL.** If a filter equals its default (`branchId === null`, empty array, default status), `delete` it from the URLSearchParams so the URL stays short and meaningful.
+  - **Reset `page` to `1`** when any filter changes (including pageSize).
+- **Do not** call `router.replace` in a `useEffect` that reads state — that creates a render loop. Write the URL directly from the filter-change event handler instead.
+- **Server params must match URL param names** where practical (e.g. URL `?startDate=...&endDate=...` passes through to the API as `startDate` / `endDate`). This avoids a translation layer and makes requests greppable from URLs.
 
 ### Sidebar Active State
 

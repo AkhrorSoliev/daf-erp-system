@@ -20,6 +20,12 @@ interface DatePickerProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  /** Earliest selectable date (inclusive). Useful for range end-pickers. */
+  minDate?: Date;
+  /** Latest selectable date (inclusive). Useful for range start-pickers. */
+  maxDate?: Date;
+  /** Month to open the calendar on when `value` is not set (e.g. the other end of a range). */
+  defaultMonth?: Date;
 }
 
 export function DatePicker({
@@ -29,8 +35,18 @@ export function DatePicker({
   disabled,
   className,
   id,
+  minDate,
+  maxDate,
+  defaultMonth,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+
+  const disabledMatcher = React.useMemo(() => {
+    const matchers: Array<{ before: Date } | { after: Date }> = [];
+    if (minDate) matchers.push({ before: minDate });
+    if (maxDate) matchers.push({ after: maxDate });
+    return matchers.length > 0 ? matchers : undefined;
+  }, [minDate, maxDate]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -55,6 +71,8 @@ export function DatePicker({
           weekStartsOn={1}
           locale={uz}
           selected={value ?? undefined}
+          defaultMonth={value ?? defaultMonth}
+          disabled={disabledMatcher}
           onSelect={(date) => {
             onChange?.(date);
             setOpen(false);
