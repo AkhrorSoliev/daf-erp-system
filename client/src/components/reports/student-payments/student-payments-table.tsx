@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { format } from "date-fns";
 import {
   Table,
@@ -12,6 +13,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import type { PaymentMethod } from "./student-payments-filter-bar";
+
+const LINK_CLS =
+  "hover:underline underline-offset-2 hover:text-foreground transition-colors";
 
 export interface StudentPaymentRow {
   id: string;
@@ -94,14 +98,29 @@ export function StudentPaymentsTable({ data, isLoading, page, pageSize }: Props)
                       {rowNumber}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      {row.student.id}
+                      <Link
+                        href={`/students/profile/${row.student.id}`}
+                        className={LINK_CLS}
+                      >
+                        {row.student.id}
+                      </Link>
                     </TableCell>
                     <TableCell className="font-medium">
-                      {row.student.fullName}
+                      <Link
+                        href={`/students/profile/${row.student.id}`}
+                        className={LINK_CLS}
+                      >
+                        {row.student.fullName}
+                      </Link>
                     </TableCell>
                     <TableCell>
                       {row.group ? (
-                        row.group.name
+                        <Link
+                          href={`/groups/${row.group.id}`}
+                          className={LINK_CLS}
+                        >
+                          {row.group.name}
+                        </Link>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -110,10 +129,20 @@ export function StudentPaymentsTable({ data, isLoading, page, pageSize }: Props)
                       {row.teachers.length === 0 ? (
                         <span className="text-muted-foreground">—</span>
                       ) : row.teachers.length === 1 ? (
-                        row.teachers[0].fullName
+                        <Link
+                          href={`/teachers/profile/${row.teachers[0].id}`}
+                          className={LINK_CLS}
+                        >
+                          {row.teachers[0].fullName}
+                        </Link>
                       ) : (
-                        <div className="flex flex-wrap gap-1">
-                          <span>{row.teachers[0].fullName}</span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Link
+                            href={`/teachers/profile/${row.teachers[0].id}`}
+                            className={LINK_CLS}
+                          >
+                            {row.teachers[0].fullName}
+                          </Link>
                           <Badge variant="outline" className="text-xs">
                             +{row.teachers.length - 1}
                           </Badge>
