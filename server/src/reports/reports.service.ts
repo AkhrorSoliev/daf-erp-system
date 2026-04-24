@@ -2332,6 +2332,88 @@ export class ReportsService {
     return { data };
   }
 
+  async getDepartedStudentsList(
+    companyId: number,
+    params: {
+      branchId?: number;
+      courseId?: string;
+      teacherIds?: number[];
+      startDate: string;
+      endDate: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    const page = Math.max(1, params.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 10));
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const where = {
+      ...this.buildDepartedEnrollmentWhere(companyId, params),
+      status: 'DROPPED' as const,
+      statusChangedAt: { gte: start, lte: end },
+    };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.enrollment.findMany({
+        where,
+        orderBy: { statusChangedAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          createdAt: true,
+          statusChangedAt: true,
+          statusChangeReason: true,
+          departureReasonId: true,
+          student: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          group: {
+            select: {
+              id: true,
+              name: true,
+              branch: { select: { id: true, name: true } },
+              course: { select: { id: true, name: true } },
+              teachers: {
+                select: {
+                  teacher: {
+                    select: { id: true, firstName: true, lastName: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.enrollment.count({ where }),
+    ]);
+
+    const data = rows.map((r) => ({
+      id: r.id,
+      student: {
+        id: r.student.id,
+        fullName: `${r.student.firstName} ${r.student.lastName}`,
+      },
+      group: r.group ? { id: r.group.id, name: r.group.name } : null,
+      branch: r.group?.branch ?? null,
+      course: r.group?.course ?? null,
+      teachers:
+        r.group?.teachers.map((t) => ({
+          id: t.teacher.id,
+          fullName: `${t.teacher.firstName} ${t.teacher.lastName}`,
+        })) ?? [],
+      enrolledAt: r.createdAt.toISOString(),
+      departedAt: r.statusChangedAt?.toISOString() ?? null,
+      reason: r.statusChangeReason,
+      departureReasonId: r.departureReasonId,
+    }));
+
+    return { data, total, page, pageSize };
+  }
+
   async getDepartedStudentsGroupBy(
     companyId: number,
     params: {

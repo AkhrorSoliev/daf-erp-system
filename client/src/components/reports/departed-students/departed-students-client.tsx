@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { format } from "date-fns";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,17 @@ import {
   DepartedStudentsGroupByChart,
   type GroupByDimension,
 } from "./departed-students-group-by-chart";
+import {
+  DepartedStudentsTable,
+  type DepartedStudentRow,
+} from "./departed-students-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const VALID_PRESETS: readonly MonthsPreset[] = [
   "current_month",
@@ -115,6 +126,7 @@ export function DepartedStudentsClient() {
       courseId: next.courseId ?? undefined,
       teacherIds:
         next.teacherIds.length > 0 ? next.teacherIds.join(",") : undefined,
+      page: undefined,
     });
   };
 
@@ -172,6 +184,47 @@ export function DepartedStudentsClient() {
     writeParams({ groupBy: next === "course" ? undefined : next });
   };
 
+  const tablePage = Math.max(1, Number(searchParams.get("page")) || 1);
+  const tablePageSize = (() => {
+    const raw = Number(searchParams.get("pageSize"));
+    return [10, 20, 30, 40, 50].includes(raw) ? raw : 10;
+  })();
+
+  const listParams = {
+    ...summaryParams,
+    page: tablePage,
+    pageSize: tablePageSize,
+  };
+
+  const { data: listData, isLoading: listLoading } = useQuery<{
+    data: DepartedStudentRow[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }>({
+    queryKey: ["departed-students-list", listParams],
+    queryFn: () =>
+      api
+        .get("/reports/departed-students/list", { params: listParams })
+        .then((r) => r.data),
+    staleTime: 0,
+  });
+
+  const total = listData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / tablePageSize));
+  const clampedPage = Math.min(tablePage, totalPages);
+
+  const handlePageSizeChange = (size: number) => {
+    writeParams({
+      pageSize: size === 10 ? undefined : String(size),
+      page: undefined,
+    });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    writeParams({ page: nextPage === 1 ? undefined : String(nextPage) });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -225,6 +278,66 @@ export function DepartedStudentsClient() {
         groupBy={groupBy}
         onGroupByChange={handleGroupByChange}
       />
+
+      <DepartedStudentsTable
+        data={listData?.data}
+        isLoading={listLoading}
+        page={clampedPage}
+        pageSize={tablePageSize}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Sahifada:</span>
+          <Select
+            value={String(tablePageSize)}
+            onValueChange={(v) => handlePageSizeChange(Number(v))}
+          >
+            <SelectTrigger className="h-8 w-[80px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 30, 40, 50].map((s) => (
+                <SelectItem key={s} value={String(s)}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span>
+            Jami:{" "}
+            <span className="tabular-nums">
+              {total.toLocaleString("en-US")}
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground tabular-nums">
+            {clampedPage} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            disabled={clampedPage <= 1}
+            onClick={() => handlePageChange(clampedPage - 1)}
+            aria-label="Oldingi"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            disabled={clampedPage >= totalPages}
+            onClick={() => handlePageChange(clampedPage + 1)}
+            aria-label="Keyingi"
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
 
       {canManageReasons && (
         <DepartureReasonsDialog

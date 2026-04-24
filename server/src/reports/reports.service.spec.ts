@@ -894,6 +894,59 @@ describe('ReportsService', () => {
     });
   });
 
+  describe('getDepartedStudentsList', () => {
+    const baseParams = {
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+    };
+
+    it('returns paginated rows with flattened student/group/teachers', async () => {
+      const row = {
+        id: 'e1',
+        createdAt: new Date('2026-01-01'),
+        statusChangedAt: new Date('2026-03-10'),
+        statusChangeReason: 'Moliyaviy',
+        departureReasonId: 'r1',
+        student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
+        group: {
+          id: 'g1',
+          name: 'B1-01',
+          branch: { id: 1, name: 'Bosh' },
+          course: { id: 'c1', name: 'A1' },
+          teachers: [
+            { teacher: { id: 30001, firstName: 'Feruz', lastName: 'Ustoz' } },
+          ],
+        },
+      };
+      prisma.$transaction.mockResolvedValueOnce([[row], 1]);
+
+      const result = await service.getDepartedStudentsList(1, baseParams);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(10);
+      expect(result.data[0]).toMatchObject({
+        id: 'e1',
+        student: { id: 10001, fullName: 'Ali Valiyev' },
+        group: { id: 'g1', name: 'B1-01' },
+        branch: { id: 1, name: 'Bosh' },
+        course: { id: 'c1', name: 'A1' },
+        teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
+        reason: 'Moliyaviy',
+      });
+    });
+
+    it('clamps pageSize to 100 and page to >= 1', async () => {
+      prisma.$transaction.mockResolvedValueOnce([[], 0]);
+      const result = await service.getDepartedStudentsList(1, {
+        ...baseParams,
+        page: 0,
+        pageSize: 9999,
+      });
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(100);
+    });
+  });
+
   describe('getDepartedStudentsGroupBy', () => {
     const baseParams = {
       startDate: '2026-03-01',
