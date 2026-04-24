@@ -17,6 +17,7 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
+import { RemoveFromGroupDto } from './dto/remove-from-group.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Roles, CurrentUser } from '../common/decorators';
@@ -108,14 +109,14 @@ export class StudentsController {
   removeFromGroup(
     @Param('id', ParseIntPipe) id: number,
     @Param('enrollmentId') enrollmentId: string,
-    @Body('reason') reason: string,
+    @Body() dto: RemoveFromGroupDto,
     @CurrentUser('id') userId: number,
   ) {
     return this.studentEnrollmentService.removeFromGroup(
       id,
       enrollmentId,
       userId,
-      reason || 'Guruhdan chiqarildi',
+      dto,
     );
   }
 

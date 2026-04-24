@@ -1,0 +1,237 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { Settings } from "lucide-react";
+import { format } from "date-fns";
+import api from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  DepartedStudentsFilterBar,
+  defaultFilter,
+  resolveDateRange,
+  type DepartedStudentsFilter,
+  type DepartedStudentsFilterOptions,
+  type MonthsPreset,
+} from "./departed-students-filter-bar";
+import { DepartureReasonsDialog } from "./departure-reasons-dialog";
+import {
+  DepartedStudentsKpiCards,
+  type DepartedStudentsSummary,
+} from "./departed-students-kpi-cards";
+import { DepartedStudentsDynamicsChart } from "./departed-students-dynamics-chart";
+import { DepartedStudentsReasonsChart } from "./departed-students-reasons-chart";
+import {
+  DepartedStudentsGroupByChart,
+  type GroupByDimension,
+} from "./departed-students-group-by-chart";
+
+const VALID_PRESETS: readonly MonthsPreset[] = [
+  "current_month",
+  "last_month",
+  "3m",
+  "6m",
+  "12m",
+];
+
+const VALID_GROUP_BY: readonly GroupByDimension[] = [
+  "course",
+  "teacher",
+  "branch",
+  "status",
+  "reason",
+];
+
+function parseDate(raw: string | null): Date | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatDate(d: Date | null): string | undefined {
+  return d ? format(d, "yyyy-MM-dd") : undefined;
+}
+
+interface FilterOptionsResponse {
+  courses: { id: string; name: string }[];
+  teachers: { id: number; fullName: string }[];
+}
+
+export function DepartedStudentsClient() {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const user = useAuth((s) => s.user);
+
+  const canManageReasons =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const filter = useMemo<DepartedStudentsFilter>(() => {
+    const base = defaultFilter();
+    const branchIdRaw = searchParams.get("branchId");
+    const branchId = branchIdRaw ? Number(branchIdRaw) : null;
+    const presetRaw = searchParams.get("preset");
+    return {
+      preset:
+        presetRaw && VALID_PRESETS.includes(presetRaw as MonthsPreset)
+          ? (presetRaw as MonthsPreset)
+          : base.preset,
+      rangeStart: parseDate(searchParams.get("startDate")),
+      rangeEnd: parseDate(searchParams.get("endDate")),
+      branchId: branchId && !Number.isNaN(branchId) ? branchId : null,
+      courseId: searchParams.get("courseId") || null,
+      teacherIds:
+        searchParams
+          .get("teacherIds")
+          ?.split(",")
+          .map((v) => Number(v))
+          .filter((n) => !Number.isNaN(n)) ?? [],
+    };
+  }, [searchParams]);
+
+  const writeParams = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === undefined || value === "") params.delete(key);
+        else params.set(key, value);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [searchParams, pathname, router],
+  );
+
+  const handleFilterChange = (next: DepartedStudentsFilter) => {
+    writeParams({
+      preset: next.preset ?? undefined,
+      startDate: formatDate(next.rangeStart),
+      endDate: formatDate(next.rangeEnd),
+      branchId: next.branchId !== null ? String(next.branchId) : undefined,
+      courseId: next.courseId ?? undefined,
+      teacherIds:
+        next.teacherIds.length > 0 ? next.teacherIds.join(",") : undefined,
+    });
+  };
+
+  // Reuse the filter-options endpoint already exposed by the student-payments
+  // report — same shape (courses + teachers), same role scope (CEO/BD/Admin is
+  // a subset of its CEO/BD/Admin/Cashier access). Extra `groups` field is ignored.
+  const { data: options } = useQuery<FilterOptionsResponse>({
+    queryKey: ["reports-filter-options"],
+    queryFn: () =>
+      api
+        .get<FilterOptionsResponse>("/reports/student-payments/filter-options")
+        .then((r) => r.data),
+  });
+
+  const filterOptions: DepartedStudentsFilterOptions = useMemo(
+    () => ({
+      courses: options?.courses ?? [],
+      teachers: options?.teachers ?? [],
+    }),
+    [options],
+  );
+
+  const range = useMemo(() => resolveDateRange(filter), [filter]);
+  const startStr = format(range.start, "yyyy-MM-dd");
+  const endStr = format(range.end, "yyyy-MM-dd");
+
+  const summaryParams = {
+    branchId: filter.branchId ?? undefined,
+    courseId: filter.courseId ?? undefined,
+    teacherIds:
+      filter.teacherIds.length > 0 ? filter.teacherIds.join(",") : undefined,
+    startDate: startStr,
+    endDate: endStr,
+  };
+
+  const { data: summary, isLoading: summaryLoading } =
+    useQuery<DepartedStudentsSummary>({
+      queryKey: ["departed-students-summary", summaryParams],
+      queryFn: () =>
+        api
+          .get<DepartedStudentsSummary>("/reports/departed-students/summary", {
+            params: summaryParams,
+          })
+          .then((r) => r.data),
+      staleTime: 0,
+    });
+
+  const groupByRaw = searchParams.get("groupBy");
+  const groupBy: GroupByDimension =
+    groupByRaw && VALID_GROUP_BY.includes(groupByRaw as GroupByDimension)
+      ? (groupByRaw as GroupByDimension)
+      : "course";
+
+  const handleGroupByChange = (next: GroupByDimension) => {
+    writeParams({ groupBy: next === "course" ? undefined : next });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-heading text-xl font-bold tracking-tight">
+            Ketish va guruh o&apos;zgarishi tahlili
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Saqlab qolishni tahlil qilish, xavflarni aniqlash va LTVni oshirishga yordam beradi
+          </p>
+        </div>
+        {canManageReasons && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Ketish sabablarini boshqarish"
+            title="Ketish sabablarini boshqarish"
+            className="shrink-0"
+          >
+            <Settings className="size-4" />
+          </Button>
+        )}
+      </div>
+
+      <DepartedStudentsFilterBar
+        value={filter}
+        onChange={handleFilterChange}
+        options={filterOptions}
+      />
+
+      <DepartedStudentsKpiCards data={summary} isLoading={summaryLoading} />
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <DepartedStudentsDynamicsChart />
+        <DepartedStudentsReasonsChart
+          branchId={filter.branchId}
+          courseId={filter.courseId}
+          teacherIds={filter.teacherIds}
+          startDate={startStr}
+          endDate={endStr}
+        />
+      </div>
+
+      <DepartedStudentsGroupByChart
+        branchId={filter.branchId}
+        courseId={filter.courseId}
+        teacherIds={filter.teacherIds}
+        startDate={startStr}
+        endDate={endStr}
+        groupBy={groupBy}
+        onGroupByChange={handleGroupByChange}
+      />
+
+      {canManageReasons && (
+        <DepartureReasonsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        />
+      )}
+    </div>
+  );
+}

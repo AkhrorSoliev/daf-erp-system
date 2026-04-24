@@ -2042,6 +2042,140 @@ export class ReportsService {
     return { data, total, page, pageSize };
   }
 
+  // ─── Departed Students Summary (KPI cards) ───────────────────────
+
+  async getDepartedStudentsSummary(
+    companyId: number,
+    params: {
+      branchId?: number;
+      courseId?: string;
+      teacherIds?: number[];
+      startDate: string;
+      endDate: string;
+    },
+  ) {
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Shared filter: group scope + student multi-tenant guard.
+    const groupFilter: any = {};
+    if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
+    if (params.courseId) groupFilter.courseId = params.courseId;
+    if (params.teacherIds && params.teacherIds.length > 0) {
+      groupFilter.teachers = {
+        some: { teacherId: { in: params.teacherIds } },
+      };
+    }
+    const baseWhere: any = {
+      deletedAt: null,
+      student: { companyId, deletedAt: null },
+    };
+    if (Object.keys(groupFilter).length > 0) {
+      baseWhere.group = groupFilter;
+    }
+
+    // Enrollments dropped in the period.
+    const dropped = await this.prisma.enrollment.findMany({
+      where: {
+        ...baseWhere,
+        status: 'DROPPED',
+        statusChangedAt: { gte: start, lte: end },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        groupId: true,
+        createdAt: true,
+        statusChangedAt: true,
+      },
+    });
+
+    // Enrollments that were ACTIVE at the very start of the period.
+    // Either they were still ACTIVE at query time (so they were active at start
+    // too — since they haven't been dropped yet) or their status changed after
+    // `start` (so at `start` they were still in their pre-change state; for
+    // dropped rows we only care when status was ACTIVE at `start`, which is
+    // implicit because the change happened after).
+    const activeAtStart = await this.prisma.enrollment.count({
+      where: {
+        ...baseWhere,
+        createdAt: { lt: start },
+        OR: [{ status: 'ACTIVE' }, { statusChangedAt: { gte: start } }],
+      },
+    });
+
+    const departedCount = dropped.length;
+    const churnRate =
+      activeAtStart > 0 ? (departedCount / activeAtStart) * 100 : 0;
+
+    // Lost revenue: for each dropped enrollment, look up a matching contract
+    // (same student + group) and sum the unpaid remainder.
+    let lostRevenue = 0;
+    if (dropped.length > 0) {
+      const studentIds = Array.from(new Set(dropped.map((d) => d.studentId)));
+      const groupIds = Array.from(new Set(dropped.map((d) => d.groupId)));
+      const contracts = await this.prisma.contract.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          studentId: { in: studentIds },
+          groupId: { in: groupIds },
+        },
+        select: {
+          studentId: true,
+          groupId: true,
+          totalAmount: true,
+          paidAmount: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const latestByKey = new Map<
+        string,
+        { totalAmount: number; paidAmount: number }
+      >();
+      for (const c of contracts) {
+        const key = `${c.studentId}:${c.groupId}`;
+        if (!latestByKey.has(key)) {
+          latestByKey.set(key, {
+            totalAmount: c.totalAmount,
+            paidAmount: c.paidAmount,
+          });
+        }
+      }
+
+      for (const d of dropped) {
+        const key = `${d.studentId}:${d.groupId}`;
+        const contract = latestByKey.get(key);
+        if (contract) {
+          const unpaid = contract.totalAmount - contract.paidAmount;
+          if (unpaid > 0) lostRevenue += unpaid;
+        }
+      }
+    }
+
+    // Avg duration in months (30.44 days per month).
+    const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
+    let avgDurationMonths = 0;
+    if (dropped.length > 0) {
+      const totalMs = dropped.reduce((sum, d) => {
+        const end = d.statusChangedAt ?? d.createdAt;
+        return sum + (end.getTime() - d.createdAt.getTime());
+      }, 0);
+      avgDurationMonths = totalMs / dropped.length / MS_PER_MONTH;
+    }
+
+    return {
+      churnRate: Math.round(churnRate * 10) / 10,
+      departedCount,
+      activeAtStart,
+      lostRevenue,
+      avgDurationMonths: Math.round(avgDurationMonths * 10) / 10,
+    };
+  }
+
   async getStudentPaymentsFilterOptions(companyId: number) {
     const [groups, teachers, courses] = await Promise.all([
       this.prisma.group.findMany({
@@ -2073,5 +2207,249 @@ export class ReportsService {
       })),
       courses,
     };
+  }
+
+  // ─── Departed Students Charts ────────────────────────────────────
+
+  /** Shared filter builder — mirrors getDepartedStudentsSummary. */
+  private buildDepartedEnrollmentWhere(
+    companyId: number,
+    params: {
+      branchId?: number;
+      courseId?: string;
+      teacherIds?: number[];
+    },
+  ): any {
+    const groupFilter: any = {};
+    if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
+    if (params.courseId) groupFilter.courseId = params.courseId;
+    if (params.teacherIds && params.teacherIds.length > 0) {
+      groupFilter.teachers = {
+        some: { teacherId: { in: params.teacherIds } },
+      };
+    }
+    const where: any = {
+      deletedAt: null,
+      student: { companyId, deletedAt: null },
+    };
+    if (Object.keys(groupFilter).length > 0) {
+      where.group = groupFilter;
+    }
+    return where;
+  }
+
+  async getDepartedStudentsDynamics(companyId: number) {
+    const fmt = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 29); // inclusive 30-day window
+    start.setHours(0, 0, 0, 0);
+
+    const rows = await this.prisma.enrollment.findMany({
+      where: {
+        ...this.buildDepartedEnrollmentWhere(companyId, {}),
+        status: 'DROPPED',
+        statusChangedAt: { gte: start, lte: end },
+      },
+      select: { statusChangedAt: true },
+    });
+
+    const countByDate = new Map<string, number>();
+    for (const r of rows) {
+      if (!r.statusChangedAt) continue;
+      const key = fmt(r.statusChangedAt);
+      countByDate.set(key, (countByDate.get(key) ?? 0) + 1);
+    }
+
+    const data: { date: string; count: number }[] = [];
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const key = fmt(d);
+      data.push({ date: key, count: countByDate.get(key) ?? 0 });
+    }
+
+    return { data };
+  }
+
+  async getDepartedStudentsReasons(
+    companyId: number,
+    params: {
+      branchId?: number;
+      courseId?: string;
+      teacherIds?: number[];
+      startDate: string;
+      endDate: string;
+    },
+  ) {
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const where = {
+      ...this.buildDepartedEnrollmentWhere(companyId, params),
+      status: 'DROPPED' as const,
+      statusChangedAt: { gte: start, lte: end },
+    };
+
+    const grouped = await this.prisma.enrollment.groupBy({
+      by: ['departureReasonId'],
+      where,
+      _count: { _all: true },
+    });
+
+    const reasonIds = grouped
+      .map((g) => g.departureReasonId)
+      .filter((v): v is string => typeof v === 'string');
+
+    const reasons =
+      reasonIds.length > 0
+        ? await this.prisma.departureReason.findMany({
+            where: { id: { in: reasonIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+    const nameById = new Map(reasons.map((r) => [r.id, r.name]));
+
+    const data = grouped
+      .map((g) => ({
+        reasonId: g.departureReasonId,
+        reasonName:
+          g.departureReasonId === null
+            ? "Sababi ko'rsatilmagan"
+            : (nameById.get(g.departureReasonId) ?? 'Noma\'lum'),
+        count: g._count._all,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return { data };
+  }
+
+  async getDepartedStudentsGroupBy(
+    companyId: number,
+    params: {
+      branchId?: number;
+      courseId?: string;
+      teacherIds?: number[];
+      startDate: string;
+      endDate: string;
+      groupBy: 'course' | 'teacher' | 'branch';
+    },
+  ) {
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const where = {
+      ...this.buildDepartedEnrollmentWhere(companyId, params),
+      status: 'DROPPED' as const,
+      statusChangedAt: { gte: start, lte: end },
+    };
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where,
+      select: {
+        departureReasonId: true,
+        group: {
+          select: {
+            branch: { select: { id: true, name: true } },
+            course: { select: { id: true, name: true } },
+            teachers: {
+              select: {
+                teacher: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const allReasonIds = Array.from(
+      new Set(
+        enrollments
+          .map((e) => e.departureReasonId)
+          .filter((v): v is string => typeof v === 'string'),
+      ),
+    );
+    const reasons =
+      allReasonIds.length > 0
+        ? await this.prisma.departureReason.findMany({
+            where: { id: { in: allReasonIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+    const reasonNameById = new Map(reasons.map((r) => [r.id, r.name]));
+    const reasonLabel = (id: string | null) =>
+      id === null
+        ? "Sababi ko'rsatilmagan"
+        : (reasonNameById.get(id) ?? 'Noma\'lum');
+
+    // group-key-id -> { name, segmentCounts by reasonId|'null' }
+    type SegMap = Map<string, { reasonId: string | null; count: number }>;
+    const buckets = new Map<string, { name: string; segments: SegMap }>();
+
+    const addSegment = (
+      groupId: string,
+      groupName: string,
+      reasonId: string | null,
+    ) => {
+      let bucket = buckets.get(groupId);
+      if (!bucket) {
+        bucket = { name: groupName, segments: new Map() };
+        buckets.set(groupId, bucket);
+      }
+      const segKey = reasonId ?? '__null__';
+      const seg = bucket.segments.get(segKey);
+      if (seg) {
+        seg.count += 1;
+      } else {
+        bucket.segments.set(segKey, { reasonId, count: 1 });
+      }
+    };
+
+    for (const e of enrollments) {
+      const g = e.group;
+      if (!g) continue;
+      if (params.groupBy === 'course') {
+        if (g.course) addSegment(g.course.id, g.course.name, e.departureReasonId);
+      } else if (params.groupBy === 'branch') {
+        if (g.branch)
+          addSegment(String(g.branch.id), g.branch.name, e.departureReasonId);
+      } else {
+        // teacher — multi
+        for (const gt of g.teachers) {
+          const t = gt.teacher;
+          addSegment(
+            String(t.id),
+            `${t.firstName} ${t.lastName}`,
+            e.departureReasonId,
+          );
+        }
+      }
+    }
+
+    const result = Array.from(buckets.entries()).map(([id, bucket]) => {
+      const segments = Array.from(bucket.segments.values())
+        .map((s) => ({
+          reasonId: s.reasonId,
+          reasonName: reasonLabel(s.reasonId),
+          count: s.count,
+        }))
+        .sort((a, b) => b.count - a.count);
+      const total = segments.reduce((sum, s) => sum + s.count, 0);
+      return { id, name: bucket.name, total, segments };
+    });
+    result.sort((a, b) => b.total - a.total);
+
+    return { data: result };
   }
 }

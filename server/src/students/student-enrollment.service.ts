@@ -172,7 +172,7 @@ export class StudentEnrollmentService {
     _studentId: number,
     enrollmentId: string,
     userId: number,
-    reason: string,
+    input: { departureReasonId?: string; reason?: string },
   ) {
     const enrollment = await this.prisma.enrollment.findFirst({
       where: { id: enrollmentId, deletedAt: null },
@@ -181,13 +181,59 @@ export class StudentEnrollmentService {
       throw new NotFoundException('Faol yozuv topilmadi');
     }
 
+    // Load the student early — we need companyId to scope the reason lookup
+    // and to record history.
+    const student = await this.prisma.student.findUnique({
+      where: { id: enrollment.studentId },
+      select: { firstName: true, lastName: true, companyId: true },
+    });
+    if (!student) {
+      throw new NotFoundException("O'quvchi topilmadi");
+    }
+
+    // Resolve the reason: prefer the configured DepartureReason (id + name),
+    // fall back to free-text, and finally to the default label.
+    let departureReasonId: string | null = null;
+    let reasonText: string;
+    if (input.departureReasonId) {
+      if (student.companyId == null) {
+        throw new NotFoundException('Kompaniya aniqlanmadi');
+      }
+      const reason = await this.prisma.departureReason.findFirst({
+        where: {
+          id: input.departureReasonId,
+          companyId: student.companyId,
+          deletedAt: null,
+        },
+      });
+      if (!reason) {
+        throw new NotFoundException('Ketish sababi topilmadi');
+      }
+      departureReasonId = reason.id;
+      reasonText = reason.name;
+    } else {
+      reasonText = input.reason?.trim() || 'Guruhdan chiqarildi';
+    }
+
     await this.prisma.enrollment.update({
       where: { id: enrollmentId },
       data: {
         status: 'DROPPED',
         statusChangedAt: new Date(),
         statusChangedById: userId,
-        statusChangeReason: reason,
+        statusChangeReason: reasonText,
+        departureReasonId,
+      },
+    });
+
+    // Mirror the latest departure reason onto the student so it's visible
+    // on the student record without joining enrollments.
+    await this.prisma.student.update({
+      where: { id: enrollment.studentId },
+      data: {
+        statusChangeReason: reasonText,
+        statusChangedAt: new Date(),
+        statusChangedById: userId,
       },
     });
 
@@ -206,10 +252,6 @@ export class StudentEnrollmentService {
       where: { id: enrollment.groupId },
       select: { name: true },
     });
-    const student = await this.prisma.student.findUnique({
-      where: { id: enrollment.studentId },
-      select: { firstName: true, lastName: true, companyId: true },
-    });
     await this.entityHistoryService.recordDelete({
       entityType: 'Student',
       entityId: enrollment.studentId,
@@ -217,7 +259,7 @@ export class StudentEnrollmentService {
         guruh: removedGroup?.name ?? enrollment.groupId,
         guruhId: enrollment.groupId,
         action: 'GURUHDAN_CHIQARILDI',
-        sabab: reason,
+        sabab: reasonText,
       },
       changedById: userId,
     });
@@ -230,7 +272,7 @@ export class StudentEnrollmentService {
         oquvchi:
           `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim(),
         oquvchiId: enrollment.studentId,
-        sabab: reason,
+        sabab: reasonText,
       },
       changedById: userId,
       companyId: student?.companyId ?? undefined,
@@ -239,7 +281,8 @@ export class StudentEnrollmentService {
     this.eventEmitter.emit('student.removed_from_group', {
       studentId: enrollment.studentId,
       groupName: removedGroup?.name ?? '',
-      reason,
+      reason: reasonText,
+      departureReasonId,
       companyId: student?.companyId ?? null,
     });
 

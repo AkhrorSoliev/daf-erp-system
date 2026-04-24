@@ -1,0 +1,145 @@
+"use client";
+
+import {
+  Calendar,
+  CircleDollarSign,
+  Info,
+  TrendingDown,
+  UserMinus,
+  type LucideIcon,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+export interface DepartedStudentsSummary {
+  churnRate: number;
+  departedCount: number;
+  activeAtStart: number;
+  lostRevenue: number;
+  avgDurationMonths: number;
+}
+
+interface KpiCardProps {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  tooltip: string;
+  valueColor?: string;
+}
+
+function KpiCard({ icon: Icon, label, value, tooltip, valueColor }: KpiCardProps) {
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Icon className="size-4" />
+          <span>{label}</span>
+        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Tushuntirish"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Info className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs whitespace-pre-line">
+            {tooltip}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      <div className={cn("text-2xl font-semibold tabular-nums", valueColor)}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function formatMoney(n: number): string {
+  return `${n.toLocaleString("en-US")} so'm`;
+}
+
+function formatMonths(n: number): string {
+  if (n === 0) return "0 oy";
+  if (n >= 10) return `${Math.round(n)} oy`;
+  return `${n.toFixed(1)} oy`;
+}
+
+interface Props {
+  data: DepartedStudentsSummary | undefined;
+  isLoading: boolean;
+}
+
+export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
+  if (isLoading || !data) {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-[104px] rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const churnTooltip =
+    "Ketish koeffitsienti = (Ketganlar soni ÷ Davr boshidagi faol yozuvlar) × 100.\n" +
+    `Misol: davr boshida ${data.activeAtStart} ta faol yozuv bo'lgan, ${data.departedCount} tasi ketdi → ${data.churnRate.toFixed(1)}%.`;
+
+  const departedTooltip =
+    "Tanlangan davrda guruhdan chiqarilgan yozuvlar soni. " +
+    "Bir o'quvchi bir nechta guruhdan chiqsa — har biri alohida sanaymiz.";
+
+  const lostRevenueTooltip =
+    "Agar ketgan o'quvchilar qolishganida, yana qancha so'm keltirishardi.\n" +
+    "Har bir ketgan yozuv uchun: Shartnoma summasi − Allaqachon to'langan summa. Shartnomasi yo'q yozuvlar 0 deb hisoblanadi.";
+
+  const avgDurationTooltip =
+    "Ketgan o'quvchilar markazda o'rtacha necha oy o'qiganini ko'rsatadi. " +
+    "Har bir yozuv uchun: Chiqarilgan sana − Qo'shilgan sana (oylarda). Keyin o'rtacha olinadi.";
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <KpiCard
+        icon={TrendingDown}
+        label="Ketish koeffitsienti"
+        value={`${data.churnRate.toFixed(1)}%`}
+        valueColor={
+          data.churnRate >= 10
+            ? "text-red-600 dark:text-red-400"
+            : data.churnRate >= 5
+              ? "text-amber-600 dark:text-amber-400"
+              : undefined
+        }
+        tooltip={churnTooltip}
+      />
+      <KpiCard
+        icon={UserMinus}
+        label="Ketganlar soni"
+        value={data.departedCount.toLocaleString("en-US")}
+        tooltip={departedTooltip}
+      />
+      <KpiCard
+        icon={CircleDollarSign}
+        label="Yo'qotilgan daromad"
+        value={formatMoney(data.lostRevenue)}
+        valueColor={
+          data.lostRevenue > 0 ? "text-red-600 dark:text-red-400" : undefined
+        }
+        tooltip={lostRevenueTooltip}
+      />
+      <KpiCard
+        icon={Calendar}
+        label="O'rtacha o'qish davomiyligi"
+        value={formatMonths(data.avgDurationMonths)}
+        tooltip={avgDurationTooltip}
+      />
+    </div>
+  );
+}

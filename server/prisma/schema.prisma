@@ -275,6 +275,7 @@ model User {
   deletedGroups      Group[]            @relation("GroupDeletedBy")
   deletedEnrollments Enrollment[]       @relation("EnrollmentDeletedBy")
   deletedHolidays    Holiday[]          @relation("HolidayDeletedBy")
+  deletedDepartureReasons DepartureReason[] @relation("DepartureReasonDeletedBy")
   statusChanges      StatusHistory[]    @relation("StatusChangedBy")
   entityChanges      EntityHistory[]    @relation("EntityHistoryChangedBy")
   comments           Comment[]          @relation("CommentAuthor")
@@ -583,6 +584,9 @@ model Enrollment {
   statusChangeReason String?
   transferredToId    String?
 
+  departureReasonId String?
+  departureReason   DepartureReason? @relation(fields: [departureReasonId], references: [id])
+
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("EnrollmentDeletedBy", fields: [deletedById], references: [id])
@@ -590,6 +594,7 @@ model Enrollment {
 
   @@index([deletedAt])
   @@index([status])
+  @@index([departureReasonId])
 }
 
 model Holiday {
@@ -659,14 +664,33 @@ model Company {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  users       User[]
-  branches    Branch[]
-  students    Student[]
-  courses     Course[]
-  rooms       Room[]
-  groups      Group[]
-  comments    Comment[]
-  attendances Attendance[]
+  users            User[]
+  branches         Branch[]
+  students         Student[]
+  courses          Course[]
+  rooms            Room[]
+  groups           Group[]
+  comments         Comment[]
+  attendances      Attendance[]
+  departureReasons DepartureReason[]
+}
+
+model DepartureReason {
+  id              String    @id @default(uuid())
+  name            String
+  companyId       Int
+  company         Company   @relation(fields: [companyId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("DepartureReasonDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  enrollments Enrollment[]
+
+  @@unique([companyId, name])
+  @@index([deletedAt])
 }
 
 model Comment {

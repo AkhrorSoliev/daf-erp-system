@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -56,6 +56,9 @@ describe('StudentEnrollmentService', () => {
         findUnique: jest
           .fn()
           .mockResolvedValue({ price: 800000, lessonPaymentCount: 12 }),
+      },
+      departureReason: {
+        findFirst: jest.fn(),
       },
     };
 
@@ -163,6 +166,99 @@ describe('StudentEnrollmentService', () => {
       await expect(
         service.enrollToGroup(1, 'group-1', 2),
       ).resolves.not.toThrow();
+    });
+  });
+
+  describe('removeFromGroup', () => {
+    beforeEach(() => {
+      prisma.enrollment.findFirst.mockResolvedValue({
+        id: 'enroll-1',
+        studentId: 1,
+        groupId: 'group-1',
+        status: 'ACTIVE',
+      });
+      prisma.enrollment.update = jest.fn().mockResolvedValue({});
+      prisma.student.update = jest.fn().mockResolvedValue({});
+    });
+
+    it('uses DepartureReason name when departureReasonId is provided', async () => {
+      prisma.departureReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-1',
+        name: 'Moliyaviy sabablar',
+        companyId: 1001,
+      });
+
+      await service.removeFromGroup(1, 'enroll-1', 10001, {
+        departureReasonId: 'reason-1',
+      });
+
+      expect(prisma.departureReason.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: 'reason-1',
+          companyId: 1001,
+          deletedAt: null,
+        },
+      });
+      expect(prisma.enrollment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'enroll-1' },
+          data: expect.objectContaining({
+            status: 'DROPPED',
+            statusChangeReason: 'Moliyaviy sabablar',
+            departureReasonId: 'reason-1',
+          }),
+        }),
+      );
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 1 },
+          data: expect.objectContaining({
+            statusChangeReason: 'Moliyaviy sabablar',
+          }),
+        }),
+      );
+    });
+
+    it('throws NotFound if departureReasonId is not in company or deleted', async () => {
+      prisma.departureReason.findFirst.mockResolvedValueOnce(null);
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, {
+          departureReasonId: 'missing',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('falls back to free-text reason when no departureReasonId', async () => {
+      await service.removeFromGroup(1, 'enroll-1', 10001, {
+        reason: 'Ota-ona qarorigora ko\'ra',
+      });
+      expect(prisma.enrollment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusChangeReason: 'Ota-ona qarorigora ko\'ra',
+            departureReasonId: null,
+          }),
+        }),
+      );
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusChangeReason: 'Ota-ona qarorigora ko\'ra',
+          }),
+        }),
+      );
+    });
+
+    it('uses default reason when neither id nor text is provided', async () => {
+      await service.removeFromGroup(1, 'enroll-1', 10001, {});
+      expect(prisma.enrollment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusChangeReason: 'Guruhdan chiqarildi',
+            departureReasonId: null,
+          }),
+        }),
+      );
     });
   });
 });
