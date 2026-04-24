@@ -26,6 +26,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { EnrollToGroupDialog } from "@/components/students/enroll-to-group-dialog";
@@ -50,15 +58,34 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
   const [showEnroll, setShowEnroll] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
+  const [deleteReasonId, setDeleteReasonId] = useState<string | null>(null);
+
+  const { data: departureReasons } = useQuery<
+    { id: string; name: string }[]
+  >({
+    queryKey: ["departure-reasons"],
+    queryFn: () =>
+      api.get<{ id: string; name: string }[]>("/departure-reasons").then((r) => r.data),
+    enabled: showDelete && !!enrollmentId,
+  });
+
+  const hasConfiguredReasons = (departureReasons?.length ?? 0) > 0;
+  const canSubmit = enrollmentId && hasConfiguredReasons
+    ? deleteReasonId !== null
+    : true;
 
   const handleDelete = async () => {
+    if (!canSubmit) return;
     setDeleting(true);
     setShowDelete(false);
     onDeleted?.(student.id);
     try {
       if (enrollmentId) {
+        const payload: { departureReasonId?: string; reason?: string } = {};
+        if (deleteReasonId) payload.departureReasonId = deleteReasonId;
+        if (deleteReason.trim()) payload.reason = deleteReason.trim();
         await api.delete(`/students/${student.id}/enroll/${enrollmentId}`, {
-          data: { reason: deleteReason.trim() || "Guruhdan chiqarildi" },
+          data: payload,
         });
         toast.success("O'quvchi guruhdan chiqarildi");
       } else {
@@ -71,6 +98,7 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
     } finally {
       setDeleting(false);
       setDeleteReason("");
+      setDeleteReasonId(null);
     }
   };
 
@@ -134,19 +162,45 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
               <strong>{studentName}</strong> {enrollmentId ? "guruhdan chiqarilsinmi?" : "arxivga o'tkazilsinmi?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="px-6 pb-2">
+          {enrollmentId && hasConfiguredReasons ? (
+            <div className="space-y-2">
+              <Select
+                value={deleteReasonId ?? undefined}
+                onValueChange={(v) => setDeleteReasonId(v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Ketish sababini tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departureReasons?.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Textarea
+                placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+          ) : (
             <Textarea
               placeholder="Sabab yozing (ixtiyoriy)..."
               value={deleteReason}
               onChange={(e) => setDeleteReason(e.target.value)}
               rows={2}
+              className="resize-none"
             />
-          </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deleting || !canSubmit}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting

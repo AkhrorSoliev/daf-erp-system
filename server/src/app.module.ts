@@ -28,6 +28,7 @@ import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
+import { DepartureReasonsModule } from './departure-reasons/departure-reasons.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ContractsModule } from './contracts/contracts.module';
@@ -67,6 +68,7 @@ import { JwtAuthGuard } from './common/guards';
     SearchModule,
     DashboardModule,
     ReportsModule,
+    DepartureReasonsModule,
     TransactionsModule,
     PaymentsModule,
     ContractsModule,

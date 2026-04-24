@@ -15,6 +15,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -256,23 +264,44 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [removeEnrollmentId, setRemoveEnrollmentId] = useState<string | null>(null);
   const [removeReason, setRemoveReason] = useState("");
+  const [removeReasonId, setRemoveReasonId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+
+  const { data: departureReasons } = useQuery<
+    { id: string; name: string }[]
+  >({
+    queryKey: ["departure-reasons"],
+    queryFn: () =>
+      api.get<{ id: string; name: string }[]>("/departure-reasons").then((r) => r.data),
+    enabled: removeDialogOpen,
+  });
+
+  const hasConfiguredReasons =
+    (departureReasons?.length ?? 0) > 0;
+
+  const canSubmitRemove = hasConfiguredReasons
+    ? removeReasonId !== null
+    : removeReason.trim().length > 0;
 
   const openRemoveDialog = (enrollmentId: string) => {
     setRemoveEnrollmentId(enrollmentId);
     setRemoveReason("");
+    setRemoveReasonId(null);
     setRemoveDialogOpen(true);
   };
 
   const confirmRemove = async () => {
-    if (!removeEnrollmentId || !removeReason.trim()) return;
+    if (!removeEnrollmentId || !canSubmitRemove) return;
     setRemoving(true);
     // Instant: remove from UI
     setLocalGroups((prev) => prev.filter((g) => g.enrollmentId !== removeEnrollmentId));
     setRemoveDialogOpen(false);
     try {
+      const payload: { departureReasonId?: string; reason?: string } = {};
+      if (removeReasonId) payload.departureReasonId = removeReasonId;
+      if (removeReason.trim()) payload.reason = removeReason.trim();
       await api.delete(`/students/${student.id}/enroll/${removeEnrollmentId}`, {
-        data: { reason: removeReason.trim() },
+        data: payload,
       });
       toast.success("O'quvchi guruhdan chiqarildi");
       onEnrollmentChange?.();
@@ -283,6 +312,7 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
       setRemoving(false);
       setRemoveEnrollmentId(null);
       setRemoveReason("");
+      setRemoveReasonId(null);
     }
   };
 
@@ -499,22 +529,50 @@ export function StudentProfileTabs({ student, onCommentChange, onEnrollmentChang
           <AlertDialogHeader>
             <AlertDialogTitle>Guruhdan chiqarish</AlertDialogTitle>
             <AlertDialogDescription>
-              O&apos;quvchini guruhdan chiqarish sababini kiriting
+              {hasConfiguredReasons
+                ? "Ketish sababini tanlang"
+                : "O'quvchini guruhdan chiqarish sababini kiriting"}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-2 py-2">
+          {hasConfiguredReasons ? (
+            <div className="space-y-2">
+              <Select
+                value={removeReasonId ?? undefined}
+                onValueChange={(v) => setRemoveReasonId(v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sababni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departureReasons?.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Textarea
+                placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                value={removeReason}
+                onChange={(e) => setRemoveReason(e.target.value)}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+          ) : (
             <Textarea
               placeholder="Sabab yozing..."
               value={removeReason}
               onChange={(e) => setRemoveReason(e.target.value)}
               rows={3}
+              className="resize-none"
             />
-          </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmRemove}
-              disabled={!removeReason.trim() || removing}
+              disabled={!canSubmitRemove || removing}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {removing ? "Chiqarilmoqda..." : "Chiqarish"}

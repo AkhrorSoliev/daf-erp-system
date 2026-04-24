@@ -10,6 +10,8 @@ import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 import { StudentPaymentsReportQueryDto } from './dto/student-payments-report-query.dto';
+import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
+import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -141,6 +143,56 @@ export class ReportsController {
       endDate: query.endDate,
       page: query.page,
       pageSize: query.pageSize,
+    });
+  }
+
+  @Get('departed-students/summary')
+  getDepartedStudentsSummary(
+    @Query() query: DepartedStudentsSummaryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedStudentsSummary(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('departed-students/dynamics')
+  getDepartedStudentsDynamics(
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedStudentsDynamics(companyId);
+  }
+
+  @Get('departed-students/reasons')
+  getDepartedStudentsReasons(
+    @Query() query: DepartedStudentsSummaryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedStudentsReasons(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('departed-students/group-by')
+  getDepartedStudentsGroupBy(
+    @Query() query: DepartedStudentsGroupByQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedStudentsGroupBy(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      groupBy: query.groupBy,
     });
   }
 
