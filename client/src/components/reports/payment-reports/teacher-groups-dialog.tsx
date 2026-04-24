@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import api from "@/lib/api";
@@ -126,7 +127,15 @@ export function TeacherGroupsDialog({
                     <TableCell className="border-r text-muted-foreground">
                       {i + 1}
                     </TableCell>
-                    <TableCell className="font-medium">{g.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/groups/${g.id}`}
+                        className="hover:underline underline-offset-2 hover:text-foreground transition-colors"
+                        onClick={() => onOpenChange(false)}
+                      >
+                        {g.name}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {fmt(g.coursePrice)} so&apos;m
                     </TableCell>
