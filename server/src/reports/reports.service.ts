@@ -1830,59 +1830,82 @@ export class ReportsService {
       where.method = { in: params.methods };
     }
 
-    if (params.courseId) {
-      where.contract = { courseId: params.courseId };
-    }
+    // Each of groupIds / teacherIds / courseId is a "match via contract OR via
+    // the student's active enrollment". We AND these groups together so all
+    // selected filters apply at once.
+    const matchGroups: any[] = [];
 
     if (params.groupIds && params.groupIds.length > 0) {
-      where.OR = [
-        { contract: { groupId: { in: params.groupIds } } },
-        {
-          student: {
-            enrollments: {
-              some: {
-                groupId: { in: params.groupIds },
-                status: 'ACTIVE',
-                deletedAt: null,
+      matchGroups.push({
+        OR: [
+          { contract: { groupId: { in: params.groupIds } } },
+          {
+            student: {
+              enrollments: {
+                some: {
+                  groupId: { in: params.groupIds },
+                  status: 'ACTIVE',
+                  deletedAt: null,
+                },
               },
             },
           },
-        },
-      ];
+        ],
+      });
     }
 
     if (params.teacherIds && params.teacherIds.length > 0) {
-      const teacherCondition = [
-        {
-          contract: {
-            group: {
-              teachers: { some: { teacherId: { in: params.teacherIds } } },
+      matchGroups.push({
+        OR: [
+          {
+            contract: {
+              group: {
+                teachers: { some: { teacherId: { in: params.teacherIds } } },
+              },
             },
           },
-        },
-        {
-          student: {
-            enrollments: {
-              some: {
-                status: 'ACTIVE',
-                deletedAt: null,
-                group: {
-                  teachers: {
-                    some: { teacherId: { in: params.teacherIds } },
+          {
+            student: {
+              enrollments: {
+                some: {
+                  status: 'ACTIVE',
+                  deletedAt: null,
+                  group: {
+                    teachers: {
+                      some: { teacherId: { in: params.teacherIds } },
+                    },
                   },
                 },
               },
             },
           },
-        },
-      ];
-      // If groupIds already set OR, intersect with AND + nested OR.
-      if (where.OR) {
-        where.AND = [{ OR: where.OR }, { OR: teacherCondition }];
-        delete where.OR;
-      } else {
-        where.OR = teacherCondition;
-      }
+        ],
+      });
+    }
+
+    if (params.courseId) {
+      matchGroups.push({
+        OR: [
+          { contract: { courseId: params.courseId } },
+          {
+            student: {
+              enrollments: {
+                some: {
+                  status: 'ACTIVE',
+                  deletedAt: null,
+                  group: { courseId: params.courseId },
+                },
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    if (matchGroups.length === 1) {
+      where.OR = matchGroups[0].OR;
+    } else if (matchGroups.length > 1) {
+      where.AND = matchGroups;
     }
 
     const [payments, total] = await this.prisma.$transaction([
