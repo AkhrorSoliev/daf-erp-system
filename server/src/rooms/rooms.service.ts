@@ -36,7 +36,16 @@ export class RoomsService {
           status: true,
           branchId: true,
           branch: { select: { name: true } },
-          _count: { select: { groups: { where: { deletedAt: null } } } },
+          _count: {
+            select: {
+              groups: {
+                where: {
+                  deletedAt: null,
+                  statusEnum: { in: ['ACTIVE', 'FORMING'] },
+                },
+              },
+            },
+          },
           createdAt: true,
         },
         orderBy: { createdAt: 'asc' },

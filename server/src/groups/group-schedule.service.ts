@@ -3,6 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const TEACHER_ROLE_ID = 4;
 
+// Statuslar qaysiki guruh hali "jonli" — xona va o'qituvchi vaqtini band qiladi.
+// COMPLETED / CANCELLED / ARCHIVED — jadvalda band qilmaydi.
+const OCCUPYING_STATUSES = ['ACTIVE', 'FORMING'] as const;
+
 @Injectable()
 export class GroupScheduleService {
   constructor(private prisma: PrismaService) {}
@@ -31,6 +35,7 @@ export class GroupScheduleService {
     const baseWhere: any = {
       branchId,
       deletedAt: null,
+      statusEnum: { in: [...OCCUPYING_STATUSES] },
       lessonStartTime: { not: null as any },
       lessonEndTime: { not: null as any },
     };
@@ -122,6 +127,7 @@ export class GroupScheduleService {
       branchId,
       roomId,
       deletedAt: null,
+      statusEnum: { in: [...OCCUPYING_STATUSES] },
       lessonStartTime: { not: null },
       lessonEndTime: { not: null },
     };
@@ -187,6 +193,7 @@ export class GroupScheduleService {
     const where: any = {
       branchId,
       deletedAt: null,
+      statusEnum: { in: [...OCCUPYING_STATUSES] },
       roomId: { not: null },
       lessonStartTime: { not: null },
       lessonEndTime: { not: null },
@@ -251,6 +258,7 @@ export class GroupScheduleService {
     const where: any = {
       branchId,
       deletedAt: null,
+      statusEnum: { in: [...OCCUPYING_STATUSES] },
       lessonStartTime: { not: null },
       lessonEndTime: { not: null },
     };
