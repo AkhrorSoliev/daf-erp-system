@@ -12,6 +12,7 @@ import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 import { StudentPaymentsReportQueryDto } from './dto/student-payments-report-query.dto';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
+import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -178,6 +179,22 @@ export class ReportsController {
       teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
+    });
+  }
+
+  @Get('departed-students/list')
+  getDepartedStudentsList(
+    @Query() query: DepartedStudentsListQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedStudentsList(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      page: query.page,
+      pageSize: query.pageSize,
     });
   }
 

@@ -181,7 +181,7 @@ export function DepartedStudentsGroupByChart({
 
   return (
     <ChartCard
-      title="Deep tahlil"
+      title="Batafsil tahlil"
       tooltip={
         "Tanlangan o'lcham bo'yicha ketgan o'quvchilar.\n" +
         "Har bir ustun ichida sabablar rangli segmentlarga ajratilgan. Sahifa filtriga bo'ysunadi."
