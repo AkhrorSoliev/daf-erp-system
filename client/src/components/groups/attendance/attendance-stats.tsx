@@ -140,12 +140,16 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
             value={startDate}
             onChange={(d) => d && setStartDate(d)}
             placeholder="Boshlanish"
+            maxDate={endDate}
+            defaultMonth={endDate}
           />
           <span className="text-sm text-muted-foreground">—</span>
           <DatePicker
             value={endDate}
             onChange={(d) => d && setEndDate(d)}
             placeholder="Tugash"
+            minDate={startDate}
+            defaultMonth={startDate}
           />
         </div>
         {stats && (

@@ -1,6 +1,15 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
+import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
+import { StudentPaymentsReportQueryDto } from './dto/student-payments-report-query.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -73,5 +82,73 @@ export class ReportsController {
       startDate: query.startDate,
       endDate: query.endDate,
     });
+  }
+
+  @Get('payment-reports')
+  @Roles('CEO', 'Branch Director')
+  getPaymentReports(
+    @Query() query: PaymentReportsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getPaymentReports(companyId, {
+      branchId: query.branchId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      months: query.months,
+    });
+  }
+
+  @Get('payment-reports/teachers')
+  @Roles('CEO', 'Branch Director')
+  getTeacherPaymentReports(
+    @Query() query: PaymentReportsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getTeacherPaymentReports(companyId, {
+      branchId: query.branchId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('payment-reports/teachers/:teacherId/groups')
+  @Roles('CEO', 'Branch Director')
+  getTeacherGroupsReport(
+    @Param('teacherId', ParseIntPipe) teacherId: number,
+    @Query() query: PaymentReportsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getTeacherGroupsReport(companyId, teacherId, {
+      branchId: query.branchId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('student-payments')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  getStudentPaymentsReport(
+    @Query() query: StudentPaymentsReportQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getStudentPaymentsReport(companyId, {
+      branchId: query.branchId,
+      groupIds: query.groupIds,
+      teacherIds: query.teacherIds,
+      methods: query.methods,
+      courseId: query.courseId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      page: query.page,
+      pageSize: query.pageSize,
+    });
+  }
+
+  @Get('student-payments/filter-options')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  getStudentPaymentsFilterOptions(
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getStudentPaymentsFilterOptions(companyId);
   }
 }

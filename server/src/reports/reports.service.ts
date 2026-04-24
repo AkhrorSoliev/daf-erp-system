@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
@@ -1146,5 +1146,909 @@ export class ReportsService {
     const valid = values.filter((v): v is number => v !== null);
     if (valid.length === 0) return 0;
     return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+  }
+
+  // ─── Payment Reports (/reports/payment-reports) ───────────────────
+
+  async getPaymentReports(
+    companyId: number,
+    options: {
+      branchId?: number;
+      startDate?: string;
+      endDate?: string;
+      months?: 3 | 6;
+    },
+  ) {
+    const trendMonths = options.months ?? 6;
+    const branchId = options.branchId;
+    const branchFilter = branchId ? { branchId } : {};
+
+    const now = new Date();
+    const currentStart = options.startDate
+      ? new Date(options.startDate + 'T00:00:00.000Z')
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentEnd = options.endDate
+      ? new Date(options.endDate + 'T23:59:59.999Z')
+      : new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999,
+        );
+
+    const durationMs = currentEnd.getTime() - currentStart.getTime();
+    const previousEnd = new Date(currentStart.getTime() - 1);
+    const previousStart = new Date(previousEnd.getTime() - durationMs);
+
+    const currentPeriod = {
+      label: 'current',
+      start: currentStart,
+      end: currentEnd,
+    };
+    const previousPeriod = {
+      label: 'previous',
+      start: previousStart,
+      end: previousEnd,
+    };
+    const trendPeriods = this.buildMonthlyPeriodsEndingAt(
+      currentEnd,
+      trendMonths,
+    );
+
+    const [
+      currentMetrics,
+      previousMetrics,
+      trendMetrics,
+      branchBreakdown,
+      currentRefundCount,
+    ] = await Promise.all([
+      this.computePaymentMetricsForPeriod(
+        companyId,
+        currentPeriod,
+        branchFilter,
+      ),
+      this.computePaymentMetricsForPeriod(
+        companyId,
+        previousPeriod,
+        branchFilter,
+      ),
+      Promise.all(
+        trendPeriods.map((p) =>
+          this.computePaymentMetricsForPeriod(companyId, p, branchFilter),
+        ),
+      ),
+      this.computeBranchBreakdown(companyId, currentPeriod),
+      this.prisma.refund.count({
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          processedAt: { gte: currentStart, lte: currentEnd },
+        },
+      }),
+    ]);
+
+    return {
+      totalPayments: {
+        current: currentMetrics.totalPayments,
+        previous: previousMetrics.totalPayments,
+        change: this.percentChange(
+          currentMetrics.totalPayments,
+          previousMetrics.totalPayments,
+        ),
+        trend: trendMetrics.map((m) => ({
+          month: m.month,
+          value: m.totalPayments,
+        })),
+      },
+      onTimePayments: {
+        current: {
+          total: currentMetrics.paymentCount,
+          onTime: currentMetrics.onTimeCount,
+          rate: currentMetrics.onTimeRate,
+        },
+        previous: {
+          total: previousMetrics.paymentCount,
+          onTime: previousMetrics.onTimeCount,
+          rate: previousMetrics.onTimeRate,
+        },
+        change: this.percentChange(
+          currentMetrics.onTimeRate,
+          previousMetrics.onTimeRate,
+        ),
+        trend: trendMetrics.map((m) => ({
+          month: m.month,
+          onTime: m.onTimeCount,
+          late: m.paymentCount - m.onTimeCount,
+          rate: m.onTimeRate,
+        })),
+      },
+      branchBreakdown: {
+        current: currentMetrics.totalPayments,
+        previous: previousMetrics.totalPayments,
+        change: this.percentChange(
+          currentMetrics.totalPayments,
+          previousMetrics.totalPayments,
+        ),
+        byBranch: branchBreakdown,
+        trend: trendMetrics.map((m) => ({
+          month: m.month,
+          value: m.totalPayments,
+        })),
+      },
+      refunds: {
+        current: currentMetrics.refunds,
+        previous: previousMetrics.refunds,
+        change: this.percentChange(
+          currentMetrics.refunds,
+          previousMetrics.refunds,
+        ),
+        count: currentRefundCount,
+        trend: trendMetrics.map((m) => ({
+          month: m.month,
+          value: m.refunds,
+        })),
+      },
+    };
+  }
+
+  private buildMonthlyPeriodsEndingAt(anchor: Date, count: number) {
+    const periods: { label: string; start: Date; end: Date }[] = [];
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(
+        d.getFullYear(),
+        d.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+      const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      periods.push({ label, start, end });
+    }
+    return periods;
+  }
+
+  private async computePaymentMetricsForPeriod(
+    companyId: number,
+    period: { label: string; start: Date; end: Date },
+    branchFilter: { branchId?: number },
+  ) {
+    const dateFilter = { gte: period.start, lte: period.end };
+
+    const [paymentsAgg, payments, refundsAgg] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          createdAt: dateFilter,
+          ...branchFilter,
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      this.prisma.payment.findMany({
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          createdAt: dateFilter,
+          ...branchFilter,
+        },
+        select: {
+          id: true,
+          studentId: true,
+          createdAt: true,
+          contractId: true,
+          contract: {
+            select: {
+              groupId: true,
+              course: { select: { lessonPaymentCount: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.refund.aggregate({
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          processedAt: dateFilter,
+        },
+        _sum: { approvedAmount: true },
+      }),
+    ]);
+
+    const onTimeResults = await Promise.all(
+      payments.map((p) => this.isPaymentOnTime(p)),
+    );
+    const onTimeCount = onTimeResults.filter((r) => r === true).length;
+    const paymentCount = payments.length;
+
+    return {
+      month: period.label,
+      totalPayments: paymentsAgg._sum.amount ?? 0,
+      paymentCount,
+      onTimeCount,
+      onTimeRate:
+        paymentCount > 0 ? Math.round((onTimeCount / paymentCount) * 100) : 0,
+      refunds: refundsAgg._sum.approvedAmount ?? 0,
+    };
+  }
+
+  private async computeBranchBreakdown(
+    companyId: number,
+    period: { start: Date; end: Date },
+  ) {
+    const [grouped, branches] = await Promise.all([
+      this.prisma.payment.groupBy({
+        by: ['branchId'],
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          createdAt: { gte: period.start, lte: period.end },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.branch.findMany({
+        where: { companyId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+    ]);
+
+    const byBranch = branches.map((b) => {
+      const match = grouped.find((g) => g.branchId === b.id);
+      return {
+        branchId: b.id,
+        branchName: b.name,
+        amount: match?._sum.amount ?? 0,
+      };
+    });
+
+    return byBranch.sort((a, b) => b.amount - a.amount);
+  }
+
+  /**
+   * On-time payment rule (v1):
+   * - If the group has had ≤3 attendance records total by payment date → on-time (new group).
+   * - Else, check the student's attended lessons in that group BEFORE the payment:
+   *   if (lessons % lessonPaymentCount) === 0 → on-time (new cycle starts).
+   * - Payments without a resolvable group/course are skipped (returns null).
+   */
+  async isPaymentOnTime(payment: {
+    studentId: number;
+    createdAt: Date;
+    contractId: string | null;
+    contract: {
+      groupId: string | null;
+      course: { lessonPaymentCount: number };
+    } | null;
+  }): Promise<boolean | null> {
+    let groupId = payment.contract?.groupId ?? null;
+    let lessonPaymentCount =
+      payment.contract?.course.lessonPaymentCount ?? null;
+
+    if (!groupId || !lessonPaymentCount) {
+      const enrollment = await this.prisma.enrollment.findFirst({
+        where: {
+          studentId: payment.studentId,
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'FROZEN'] },
+        },
+        select: {
+          groupId: true,
+          group: { select: { course: { select: { lessonPaymentCount: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!enrollment) return null;
+      groupId = enrollment.groupId;
+      lessonPaymentCount = enrollment.group.course.lessonPaymentCount;
+    }
+
+    const [groupLessonsTotal, studentLessonsBefore] = await Promise.all([
+      this.prisma.attendance.count({
+        where: { groupId, date: { lte: payment.createdAt } },
+      }),
+      this.prisma.attendance.count({
+        where: {
+          groupId,
+          studentId: payment.studentId,
+          date: { lt: payment.createdAt },
+        },
+      }),
+    ]);
+
+    if (groupLessonsTotal <= 3) return true;
+    return studentLessonsBefore % lessonPaymentCount === 0;
+  }
+
+  private percentChange(current: number, previous: number): number {
+    if (previous === 0) return current === 0 ? 0 : 100;
+    return Math.round(((current - previous) / previous) * 100);
+  }
+
+  // ─── Teacher Payment Reports ──────────────────────────────────────
+
+  private resolveRange(startDate?: string, endDate?: string) {
+    const now = new Date();
+    const start = startDate
+      ? new Date(startDate + 'T00:00:00.000Z')
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = endDate
+      ? new Date(endDate + 'T23:59:59.999Z')
+      : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { start, end };
+  }
+
+  async getTeacherPaymentReports(
+    companyId: number,
+    options: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
+    const range = this.resolveRange(options.startDate, options.endDate);
+    const branchFilter = options.branchId ? { branchId: options.branchId } : {};
+
+    const teachers = await this.prisma.user.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        roles: { some: { roleId: 4 } },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        groupTeachers: {
+          where: {
+            group: { deletedAt: null, ...branchFilter },
+          },
+          select: {
+            group: {
+              select: {
+                id: true,
+                course: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const allGroupIds = Array.from(
+      new Set(
+        teachers.flatMap((t) => t.groupTeachers.map((gt) => gt.group.id)),
+      ),
+    );
+
+    if (allGroupIds.length === 0) {
+      return { teachers: [] };
+    }
+
+    const [enrollmentsByGroup, payments, debtorStudents] = await Promise.all([
+      this.prisma.enrollment.groupBy({
+        by: ['groupId'],
+        where: {
+          groupId: { in: allGroupIds },
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'FROZEN'] },
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.payment.findMany({
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          createdAt: { gte: range.start, lte: range.end },
+          contract: { groupId: { in: allGroupIds } },
+        },
+        select: {
+          amount: true,
+          contract: { select: { groupId: true } },
+        },
+      }),
+      this.prisma.student.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          balance: { lt: 0 },
+          enrollments: {
+            some: {
+              groupId: { in: allGroupIds },
+              deletedAt: null,
+              status: { in: ['ACTIVE', 'FROZEN'] },
+            },
+          },
+        },
+        select: {
+          balance: true,
+          enrollments: {
+            where: {
+              groupId: { in: allGroupIds },
+              deletedAt: null,
+              status: { in: ['ACTIVE', 'FROZEN'] },
+            },
+            select: { groupId: true },
+          },
+        },
+      }),
+    ]);
+
+    const studentCountByGroup = new Map<string, number>(
+      enrollmentsByGroup.map((e) => [e.groupId, e._count._all]),
+    );
+
+    const paymentsByGroup = new Map<string, number>();
+    for (const p of payments) {
+      const gid = p.contract?.groupId;
+      if (gid) {
+        paymentsByGroup.set(gid, (paymentsByGroup.get(gid) ?? 0) + p.amount);
+      }
+    }
+
+    const debtByGroup = new Map<string, number>();
+    for (const s of debtorStudents) {
+      for (const e of s.enrollments) {
+        debtByGroup.set(
+          e.groupId,
+          (debtByGroup.get(e.groupId) ?? 0) + Math.abs(s.balance),
+        );
+      }
+    }
+
+    const result = teachers
+      .map((t) => {
+        const groupIds = t.groupTeachers.map((gt) => gt.group.id);
+        const courses = Array.from(
+          new Set(t.groupTeachers.map((gt) => gt.group.course.name)),
+        );
+        const studentCount = groupIds.reduce(
+          (acc, gid) => acc + (studentCountByGroup.get(gid) ?? 0),
+          0,
+        );
+        const totalPayments = groupIds.reduce(
+          (acc, gid) => acc + (paymentsByGroup.get(gid) ?? 0),
+          0,
+        );
+        const debtAmount = groupIds.reduce(
+          (acc, gid) => acc + (debtByGroup.get(gid) ?? 0),
+          0,
+        );
+        return {
+          id: t.id,
+          name: `${t.firstName} ${t.lastName}`,
+          groupCount: groupIds.length,
+          courses,
+          studentCount,
+          totalPayments,
+          debtAmount,
+        };
+      })
+      .filter((t) => t.groupCount > 0)
+      .sort((a, b) => b.totalPayments - a.totalPayments);
+
+    return { teachers: result };
+  }
+
+  async getTeacherGroupsReport(
+    companyId: number,
+    teacherId: number,
+    options: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
+    const range = this.resolveRange(options.startDate, options.endDate);
+    const branchFilter = options.branchId ? { branchId: options.branchId } : {};
+
+    const teacher = await this.prisma.user.findFirst({
+      where: { id: teacherId, companyId, deletedAt: null },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    if (!teacher) {
+      throw new NotFoundException("O'qituvchi topilmadi");
+    }
+
+    const groupTeachers = await this.prisma.groupTeacher.findMany({
+      where: {
+        teacherId,
+        group: { deletedAt: null, ...branchFilter },
+      },
+      select: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+            course: { select: { price: true } },
+          },
+        },
+      },
+    });
+
+    const groups = groupTeachers.map((gt) => gt.group);
+    const groupIds = groups.map((g) => g.id);
+
+    if (groupIds.length === 0) {
+      return {
+        teacher: {
+          id: teacher.id,
+          name: `${teacher.firstName} ${teacher.lastName}`,
+        },
+        groups: [],
+      };
+    }
+
+    const [enrollments, payments, debtorStudents] = await Promise.all([
+      this.prisma.enrollment.findMany({
+        where: {
+          groupId: { in: groupIds },
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'FROZEN'] },
+        },
+        select: { groupId: true, studentId: true },
+      }),
+      this.prisma.payment.findMany({
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          createdAt: { gte: range.start, lte: range.end },
+          contract: { groupId: { in: groupIds } },
+        },
+        select: {
+          amount: true,
+          studentId: true,
+          contract: { select: { groupId: true } },
+        },
+      }),
+      this.prisma.student.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          balance: { lt: 0 },
+          enrollments: {
+            some: {
+              groupId: { in: groupIds },
+              deletedAt: null,
+              status: { in: ['ACTIVE', 'FROZEN'] },
+            },
+          },
+        },
+        select: {
+          balance: true,
+          enrollments: {
+            where: {
+              groupId: { in: groupIds },
+              deletedAt: null,
+              status: { in: ['ACTIVE', 'FROZEN'] },
+            },
+            select: { groupId: true },
+          },
+        },
+      }),
+    ]);
+
+    const studentsByGroup = new Map<string, Set<number>>();
+    for (const e of enrollments) {
+      if (!studentsByGroup.has(e.groupId)) {
+        studentsByGroup.set(e.groupId, new Set());
+      }
+      studentsByGroup.get(e.groupId)!.add(e.studentId);
+    }
+
+    const paymentSumByGroup = new Map<string, number>();
+    const paidStudentsByGroup = new Map<string, Set<number>>();
+    for (const p of payments) {
+      const gid = p.contract?.groupId;
+      if (!gid) continue;
+      paymentSumByGroup.set(
+        gid,
+        (paymentSumByGroup.get(gid) ?? 0) + p.amount,
+      );
+      if (!paidStudentsByGroup.has(gid)) {
+        paidStudentsByGroup.set(gid, new Set());
+      }
+      paidStudentsByGroup.get(gid)!.add(p.studentId);
+    }
+
+    const debtByGroup = new Map<string, { count: number; sum: number }>();
+    for (const s of debtorStudents) {
+      for (const e of s.enrollments) {
+        const cur = debtByGroup.get(e.groupId) ?? { count: 0, sum: 0 };
+        cur.count += 1;
+        cur.sum += Math.abs(s.balance);
+        debtByGroup.set(e.groupId, cur);
+      }
+    }
+
+    const result = groups
+      .map((g) => {
+        const totalStudents = studentsByGroup.get(g.id)?.size ?? 0;
+        const paidCount = paidStudentsByGroup.get(g.id)?.size ?? 0;
+        const debt = debtByGroup.get(g.id) ?? { count: 0, sum: 0 };
+        const totalPayments = paymentSumByGroup.get(g.id) ?? 0;
+        return {
+          id: g.id,
+          name: g.name,
+          coursePrice: g.course.price,
+          totalStudents,
+          paidCount,
+          debtorCount: debt.count,
+          totalPayments,
+          debtAmount: debt.sum,
+          expectedAmount: totalStudents * g.course.price,
+        };
+      })
+      .sort((a, b) => b.totalPayments - a.totalPayments);
+
+    return {
+      teacher: {
+        id: teacher.id,
+        name: `${teacher.firstName} ${teacher.lastName}`,
+      },
+      groups: result,
+    };
+  }
+
+  // ─── Student Payments Report ──────────────────────────────────────
+
+  async getStudentPaymentsReport(
+    companyId: number,
+    params: {
+      branchId?: number;
+      groupIds?: string[];
+      teacherIds?: number[];
+      methods?: ('CASH' | 'PAYME' | 'CLICK' | 'UZUM' | 'TRANSFER')[];
+      courseId?: string;
+      startDate?: string;
+      endDate?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    const page = Math.max(1, params.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 10));
+
+    const where: any = {
+      companyId,
+      status: 'COMPLETED' as const,
+    };
+
+    if (params.branchId !== undefined) {
+      where.branchId = params.branchId;
+    }
+
+    if (params.startDate || params.endDate) {
+      where.createdAt = {};
+      if (params.startDate) where.createdAt.gte = new Date(params.startDate);
+      if (params.endDate) {
+        const end = new Date(params.endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
+
+    if (params.methods && params.methods.length > 0) {
+      where.method = { in: params.methods };
+    }
+
+    if (params.courseId) {
+      where.contract = { courseId: params.courseId };
+    }
+
+    if (params.groupIds && params.groupIds.length > 0) {
+      where.OR = [
+        { contract: { groupId: { in: params.groupIds } } },
+        {
+          student: {
+            enrollments: {
+              some: {
+                groupId: { in: params.groupIds },
+                status: 'ACTIVE',
+                deletedAt: null,
+              },
+            },
+          },
+        },
+      ];
+    }
+
+    if (params.teacherIds && params.teacherIds.length > 0) {
+      const teacherCondition = [
+        {
+          contract: {
+            group: {
+              teachers: { some: { teacherId: { in: params.teacherIds } } },
+            },
+          },
+        },
+        {
+          student: {
+            enrollments: {
+              some: {
+                status: 'ACTIVE',
+                deletedAt: null,
+                group: {
+                  teachers: {
+                    some: { teacherId: { in: params.teacherIds } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ];
+      // If groupIds already set OR, intersect with AND + nested OR.
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: teacherCondition }];
+        delete where.OR;
+      } else {
+        where.OR = teacherCondition;
+      }
+    }
+
+    const [payments, total] = await this.prisma.$transaction([
+      this.prisma.payment.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          amount: true,
+          method: true,
+          note: true,
+          createdAt: true,
+          student: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          receivedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          contract: {
+            select: {
+              group: {
+                select: {
+                  id: true,
+                  name: true,
+                  teachers: {
+                    select: {
+                      teacher: {
+                        select: {
+                          id: true,
+                          firstName: true,
+                          lastName: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.payment.count({ where }),
+    ]);
+
+    // Fallback: for payments without a contract group, derive group/teachers
+    // from the student's active enrollment. Batched to avoid N+1.
+    const studentIdsNeedingFallback = payments
+      .filter((p) => !p.contract?.group)
+      .map((p) => p.student.id);
+
+    let fallbackByStudentId: Map<
+      number,
+      {
+        group: { id: string; name: string };
+        teachers: { id: number; firstName: string; lastName: string }[];
+      } | null
+    > = new Map();
+
+    if (studentIdsNeedingFallback.length > 0) {
+      const enrollments = await this.prisma.enrollment.findMany({
+        where: {
+          studentId: { in: studentIdsNeedingFallback },
+          status: 'ACTIVE',
+          deletedAt: null,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          studentId: true,
+          group: {
+            select: {
+              id: true,
+              name: true,
+              teachers: {
+                select: {
+                  teacher: {
+                    select: { id: true, firstName: true, lastName: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      for (const e of enrollments) {
+        if (!fallbackByStudentId.has(e.studentId)) {
+          fallbackByStudentId.set(e.studentId, {
+            group: { id: e.group.id, name: e.group.name },
+            teachers: e.group.teachers.map((t) => t.teacher),
+          });
+        }
+      }
+    }
+
+    const data = payments.map((p) => {
+      const contractGroup = p.contract?.group;
+      const fallback = fallbackByStudentId.get(p.student.id) ?? null;
+      const group = contractGroup
+        ? { id: contractGroup.id, name: contractGroup.name }
+        : (fallback?.group ?? null);
+      const teachers = contractGroup
+        ? contractGroup.teachers.map((t) => ({
+            id: t.teacher.id,
+            fullName: `${t.teacher.firstName} ${t.teacher.lastName}`,
+          }))
+        : (fallback?.teachers.map((t) => ({
+            id: t.id,
+            fullName: `${t.firstName} ${t.lastName}`,
+          })) ?? []);
+
+      return {
+        id: p.id,
+        student: {
+          id: p.student.id,
+          fullName: `${p.student.firstName} ${p.student.lastName}`,
+        },
+        group,
+        teachers,
+        amount: p.amount,
+        bonus: null,
+        paymentDate: p.createdAt.toISOString(),
+        note: p.note,
+        receivedBy: p.receivedBy
+          ? {
+              id: p.receivedBy.id,
+              fullName: `${p.receivedBy.firstName} ${p.receivedBy.lastName}`,
+            }
+          : null,
+        method: p.method,
+      };
+    });
+
+    return { data, total, page, pageSize };
+  }
+
+  async getStudentPaymentsFilterOptions(companyId: number) {
+    const [groups, teachers, courses] = await Promise.all([
+      this.prisma.group.findMany({
+        where: { companyId, deletedAt: null },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, branchId: true },
+      }),
+      this.prisma.user.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          roles: { some: { role: { name: 'Teacher' } } },
+        },
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+        select: { id: true, firstName: true, lastName: true },
+      }),
+      this.prisma.course.findMany({
+        where: { companyId, deletedAt: null },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true },
+      }),
+    ]);
+
+    return {
+      groups,
+      teachers: teachers.map((t) => ({
+        id: t.id,
+        fullName: `${t.firstName} ${t.lastName}`,
+      })),
+      courses,
+    };
   }
 }
