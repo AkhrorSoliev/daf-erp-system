@@ -36,6 +36,7 @@ export class GroupScheduleService {
       branchId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
+      isActive: true,
       lessonStartTime: { not: null as any },
       lessonEndTime: { not: null as any },
     };
@@ -128,6 +129,7 @@ export class GroupScheduleService {
       roomId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
+      isActive: true,
       lessonStartTime: { not: null },
       lessonEndTime: { not: null },
     };
@@ -194,6 +196,7 @@ export class GroupScheduleService {
       branchId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
+      isActive: true,
       roomId: { not: null },
       lessonStartTime: { not: null },
       lessonEndTime: { not: null },
@@ -259,6 +262,7 @@ export class GroupScheduleService {
       branchId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
+      isActive: true,
       lessonStartTime: { not: null },
       lessonEndTime: { not: null },
     };
