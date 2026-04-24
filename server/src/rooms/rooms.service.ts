@@ -42,6 +42,7 @@ export class RoomsService {
                 where: {
                   deletedAt: null,
                   statusEnum: { in: ['ACTIVE', 'FORMING'] },
+                  isActive: true,
                 },
               },
             },
@@ -88,7 +89,11 @@ export class RoomsService {
           },
         },
         groups: {
-          where: { deletedAt: null, statusEnum: { in: ['ACTIVE', 'FORMING'] } },
+          where: {
+            deletedAt: null,
+            statusEnum: { in: ['ACTIVE', 'FORMING'] },
+            isActive: true,
+          },
           select: {
             id: true,
             name: true,

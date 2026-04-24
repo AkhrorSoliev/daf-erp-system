@@ -54,9 +54,24 @@ export class DashboardService {
           branchId,
           deletedAt: null,
           statusEnum: { in: ['ACTIVE', 'FORMING'] },
+          isActive: true,
           exactDays: { has: dayName },
           lessonStartTime: { not: null },
           lessonEndTime: { not: null },
+          AND: [
+            {
+              OR: [
+                { startDate: null },
+                { startDate: { lte: dateOnly } },
+              ],
+            },
+            {
+              OR: [
+                { endDate: null },
+                { endDate: { gte: dateOnly } },
+              ],
+            },
+          ],
         },
         select: {
           id: true,
