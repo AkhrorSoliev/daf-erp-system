@@ -33,12 +33,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { SalaryConfigDialog } from "./salary-config-dialog";
-
-function getErrorMessage(err: unknown, fallback: string): string {
-  return (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
-}
 
 interface SalaryPayment {
   id: string;

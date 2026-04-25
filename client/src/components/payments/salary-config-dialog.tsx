@@ -24,13 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
-
-function getErrorMessage(err: unknown, fallback: string): string {
-  return (
-    (err as { response?: { data?: { message?: string } } })?.response?.data
-      ?.message || fallback
-  );
-}
+import { getErrorMessage } from "@/lib/get-error-message";
 
 interface Employee {
   id: number;
