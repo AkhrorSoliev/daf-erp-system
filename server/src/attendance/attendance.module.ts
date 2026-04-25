@@ -5,6 +5,8 @@ import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
 import { QrAttendanceService } from './qr-attendance.service';
+import { QrAttendanceSessionService } from './qr-attendance-session.service';
+import { QrAttendanceScanService } from './qr-attendance-scan.service';
 import { AttendanceController } from './attendance.controller';
 import { AttendanceReminderService } from './attendance-reminder.service';
 import { AttendanceEventsListener } from './attendance-events.listener';
@@ -28,6 +30,8 @@ import { SalaryModule } from '../salary/salary.module';
     AttendanceStatsService,
     AttendanceSaveService,
     QrAttendanceService,
+    QrAttendanceSessionService,
+    QrAttendanceScanService,
     AttendanceReminderService,
     AttendanceEventsListener,
   ],
