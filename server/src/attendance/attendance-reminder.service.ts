@@ -111,7 +111,8 @@ export class AttendanceReminderService {
       where: {
         statusEnum: GroupStatus.ACTIVE,
         deletedAt: null,
-        companyId: { not: null },
+        lessonStartTime: { not: null },
+        lessonEndTime: { not: null },
         OR: [
           { lessonStartTime: currentTime },
           { lessonEndTime: { in: endCandidates } },
@@ -164,10 +165,9 @@ export class AttendanceReminderService {
 
     for (const group of groups) {
       try {
-        if (!group.companyId) continue;
         if (!this.groupHasLessonToday(group, parsedDate, weekdayIdx)) continue;
         await this.handleGroup(
-          group as GroupWithTeachers,
+          group as unknown as GroupWithTeachers,
           currentMinutes,
           today,
         );
@@ -212,7 +212,6 @@ export class AttendanceReminderService {
       where: {
         statusEnum: GroupStatus.ACTIVE,
         deletedAt: null,
-        companyId: { not: null },
         lessonStartTime: { not: null },
         lessonEndTime: { not: null },
       },
@@ -221,8 +220,8 @@ export class AttendanceReminderService {
     });
 
     this.windowCachedAt = now;
-    const minStart = agg._min.lessonStartTime;
-    const maxEnd = agg._max.lessonEndTime;
+    const minStart = agg._min?.lessonStartTime;
+    const maxEnd = agg._max?.lessonEndTime;
 
     if (!minStart || !maxEnd) {
       this.scheduleWindow = null;

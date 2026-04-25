@@ -345,8 +345,8 @@ model Branch {
   statusChangedById  Int?
   statusChangeReason String?
 
-  companyId Int?
-  company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -370,8 +370,8 @@ model Room {
   status    RoomStatus @default(ACTIVE)
   branchId  Int
   branch    Branch     @relation(fields: [branchId], references: [id])
-  companyId Int?
-  company   Company?   @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company    @relation(fields: [companyId], references: [id])
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -410,8 +410,8 @@ model Course {
 
   branchId  Int?
   branch    Branch?  @relation(fields: [branchId], references: [id])
-  companyId Int?
-  company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id])
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -452,8 +452,8 @@ model Student {
   statusChangedById  Int?
   statusChangeReason String?
 
-  companyId Int?
-  company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
 
   deletedAt       DateTime?
   deletedById     Int?
@@ -526,8 +526,8 @@ model Group {
   branch          Branch      @relation(fields: [branchId], references: [id])
   roomId          String?
   room            Room?       @relation(fields: [roomId], references: [id])
-  companyId       Int?
-  company         Company?    @relation(fields: [companyId], references: [id])
+  companyId       Int
+  company         Company     @relation(fields: [companyId], references: [id])
   days            String?
   exactDays       String[]
   lessonStartTime String?
@@ -871,8 +871,8 @@ model Attendance {
   markedById   Int?
   markedBy     User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
   markedMethod AttendanceMethod @default(MANUAL)
-  companyId    Int?
-  company      Company?         @relation(fields: [companyId], references: [id])
+  companyId    Int
+  company      Company          @relation(fields: [companyId], references: [id])
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
@@ -894,7 +894,7 @@ model AiConversation {
   model       String          @default("gpt-4o-mini")
   totalTokens Int             @default(0)
   messages    AiChatMessage[]
-  companyId   Int?
+  companyId   Int
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

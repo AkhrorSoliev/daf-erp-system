@@ -253,9 +253,6 @@ export class StudentEnrollmentService {
     let departureReasonId: string | null = null;
     let reasonText: string;
     if (input.departureReasonId) {
-      if (student.companyId == null) {
-        throw new NotFoundException('Kompaniya aniqlanmadi');
-      }
       const reason = await this.prisma.departureReason.findFirst({
         where: {
           id: input.departureReasonId,
