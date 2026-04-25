@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { StudentsService } from './students.service';
+import { StudentsReadService } from './students-read.service';
+import { StudentsWriteService } from './students-write.service';
+import { StudentsStatusService } from './students-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -108,6 +111,9 @@ describe('StudentsService — status methods', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StudentsService,
+        StudentsReadService,
+        StudentsWriteService,
+        StudentsStatusService,
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: StatusHistoryService, useValue: statusHistoryService },

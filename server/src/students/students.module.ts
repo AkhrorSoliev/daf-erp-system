@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { StudentsService } from './students.service';
+import { StudentsReadService } from './students-read.service';
+import { StudentsWriteService } from './students-write.service';
+import { StudentsStatusService } from './students-status.service';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { StudentsController } from './students.controller';
 import { StudentPortalController } from './student-portal.controller';
@@ -27,6 +30,9 @@ import { PaymentGatewaysModule } from '../payment-gateways/payment-gateways.modu
   ],
   providers: [
     StudentsService,
+    StudentsReadService,
+    StudentsWriteService,
+    StudentsStatusService,
     StudentEnrollmentService,
     StudentPortalService,
     StudentAiChatService,
