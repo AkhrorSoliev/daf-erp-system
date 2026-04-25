@@ -3,7 +3,7 @@ import { PaymeMethodsService } from './payme-methods.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
 import {
-  CANNOT_CANCEL,
+  ACCOUNT_BUSY,
   CANNOT_PERFORM,
   INVALID_AMOUNT,
   STUDENT_NOT_FOUND,
@@ -46,6 +46,7 @@ describe('PaymeMethodsService', () => {
       },
       paymeTransaction: {
         findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockImplementation(({ data }) => ({
           id: 'txn-uuid',
@@ -73,6 +74,7 @@ describe('PaymeMethodsService', () => {
         studentBalance: 500000,
       }),
       resolveStudentBranchId: jest.fn().mockResolvedValue(5),
+      reverse: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -251,13 +253,19 @@ describe('PaymeMethodsService', () => {
       expect(result).toMatchObject({ error: { code: CANNOT_PERFORM } });
     });
 
-    it('should cancel existing pending transactions for same student', async () => {
-      await service.createTransaction(params as any, COMPANY_ID, 1);
-      expect(prisma.paymeTransaction.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { studentId: STUDENT_ID, companyId: COMPANY_ID, state: 1 },
-        }),
+    it('should return ACCOUNT_BUSY when a non-expired pending transaction exists for same student', async () => {
+      const pending = mockTxn({
+        paymeId: 'different-payme-id',
+        createTime: BigInt(Date.now()),
+      });
+      prisma.paymeTransaction.findFirst.mockResolvedValue(pending);
+      const result = await service.createTransaction(
+        params as any,
+        COMPANY_ID,
+        1,
       );
+      expect(result).toMatchObject({ error: { code: ACCOUNT_BUSY } });
+      expect(prisma.paymeTransaction.create).not.toHaveBeenCalled();
     });
 
     it('should auto-cancel expired existing transaction', async () => {
@@ -412,16 +420,28 @@ describe('PaymeMethodsService', () => {
       );
     });
 
-    it('should return CANNOT_CANCEL for performed transaction (state 2)', async () => {
+    it('should refund performed transaction (state 2 → -2) and reverse linked payment', async () => {
       prisma.paymeTransaction.findUnique.mockResolvedValue(
-        mockTxn({ state: 2 }),
+        mockTxn({ state: 2, paymentId: 'payment-uuid' }),
       );
       const result = await service.cancelTransaction(
         params as any,
         COMPANY_ID,
         1,
       );
-      expect(result).toMatchObject({ error: { code: CANNOT_CANCEL } });
+      expect(result).toMatchObject({ result: { state: -2 } });
+      expect(prisma.paymeTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ state: -2, reason: 3 }),
+        }),
+      );
+      expect(payments.reverse).toHaveBeenCalledWith(
+        'payment-uuid',
+        expect.objectContaining({
+          companyId: COMPANY_ID,
+          performedById: 0,
+        }),
+      );
     });
 
     it('should return idempotent result for already cancelled transaction', async () => {

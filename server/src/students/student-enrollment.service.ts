@@ -96,7 +96,7 @@ export class StudentEnrollmentService {
         const reason = await this.prisma.enrollmentTransferReason.findFirst({
           where: {
             id: options.transferReasonId,
-            companyId: student.companyId,
+            companyId,
             deletedAt: null,
           },
         });
@@ -109,7 +109,7 @@ export class StudentEnrollmentService {
         const reason = await this.prisma.enrollmentTransferReason.findFirst({
           where: {
             id: options.transferReasonId,
-            companyId: student.companyId,
+            companyId,
             deletedAt: null,
           },
         });
