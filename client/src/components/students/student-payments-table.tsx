@@ -1,0 +1,132 @@
+"use client";
+
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  PAYMENT_METHOD_LABELS,
+  TRANSACTION_TYPE_INFO,
+  type StudentTransaction,
+} from "./student-profile-tabs-utils";
+
+interface StudentPaymentsTableProps {
+  isLoading: boolean;
+  balance: number;
+  transactions: StudentTransaction[];
+}
+
+export function StudentPaymentsTable({
+  isLoading,
+  balance,
+  transactions,
+}: StudentPaymentsTableProps) {
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 rounded" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Balans */}
+      <div className="rounded-lg border p-4">
+        <p className="text-sm text-muted-foreground">Joriy balans</p>
+        <p
+          className={`text-2xl font-bold ${
+            balance >= 0 ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {balance.toLocaleString("en-US")} so&apos;m
+        </p>
+      </div>
+
+      {/* Balans operatsiyalari — unified ledger */}
+      {transactions.length > 0 ? (
+        <div>
+          <h4 className="text-sm font-medium mb-2">Balans operatsiyalari</h4>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12 border-r">#</TableHead>
+                <TableHead>Turi</TableHead>
+                <TableHead>Tafsilot</TableHead>
+                <TableHead className="text-right">Summa</TableHead>
+                <TableHead className="text-right">Balans</TableHead>
+                <TableHead>Sana</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.map((t, i) => {
+                const typeInfo = TRANSACTION_TYPE_INFO[t.type] ?? {
+                  label: t.type,
+                  variant: "outline" as const,
+                };
+                const isPayment = t.type === "PAYMENT";
+                const methodLabel = t.payment?.method
+                  ? (PAYMENT_METHOD_LABELS[t.payment.method] ?? t.payment.method)
+                  : null;
+                const cashier = t.performedBy
+                  ? `${t.performedBy.firstName} ${t.performedBy.lastName}`
+                  : null;
+
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell className="border-r text-muted-foreground">
+                      {i + 1}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={typeInfo.variant}>{typeInfo.label}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {isPayment ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          {methodLabel && (
+                            <Badge variant="secondary">{methodLabel}</Badge>
+                          )}
+                          {cashier && <span>Qabul qildi: {cashier}</span>}
+                          {!methodLabel && !cashier && "—"}
+                        </span>
+                      ) : (
+                        (t.description ?? "—")
+                      )}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right font-medium whitespace-nowrap ${
+                        t.amount >= 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {t.amount >= 0 ? "+" : ""}
+                      {t.amount.toLocaleString("en-US")} so&apos;m
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                      {t.balanceAfter.toLocaleString("en-US")} so&apos;m
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          Hali to&apos;lov yoki tranzaksiya mavjud emas
+        </p>
+      )}
+    </div>
+  );
+}
