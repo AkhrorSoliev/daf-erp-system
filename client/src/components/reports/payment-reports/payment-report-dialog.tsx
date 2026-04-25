@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  Area,
-  AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
@@ -57,8 +57,6 @@ export function PaymentReportDialog({
   onMonthsChange,
   trend,
 }: PaymentReportDialogProps) {
-  const gradientId = `grad-${title.replace(/\s/g, "-")}`;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -96,42 +94,28 @@ export function PaymentReportDialog({
           <div className="space-y-4">
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trend}>
-                  <defs>
-                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={color} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <LineChart data={trend}>
+                  <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis
                     tick={{ fontSize: 11 }}
                     tickFormatter={(v) => compactFmt(Number(v))}
                   />
                   <RechartsTooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      fontSize: 13,
-                      border: "1px solid var(--border)",
-                      background: "var(--popover)",
-                      color: "var(--popover-foreground)",
-                    }}
                     formatter={(value: unknown) => [
                       `${fmt(Number(value))}${suffix}`,
                       title,
                     ]}
                   />
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey="value"
                     stroke={color}
-                    strokeWidth={2.5}
-                    fill={`url(#${gradientId})`}
-                    dot={{ r: 4, fill: color, strokeWidth: 0 }}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: color }}
+                    activeDot={{ r: 6 }}
                   />
-                </AreaChart>
+                </LineChart>
               </ResponsiveContainer>
             </div>
 
