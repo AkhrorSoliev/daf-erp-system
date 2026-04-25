@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
+import { GroupsReadService } from './groups-read.service';
+import { GroupsWriteService } from './groups-write.service';
+import { GroupsStatusService } from './groups-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
@@ -73,6 +76,9 @@ describe('GroupsService — status methods', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GroupsService,
+        GroupsReadService,
+        GroupsWriteService,
+        GroupsStatusService,
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: StatusCascadeService, useValue: statusCascadeService },
