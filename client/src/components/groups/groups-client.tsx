@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronsUpDown, Plus, Search } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,21 +11,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { GroupsTable } from "./groups-table";
 import { GroupsStats, type GroupsStatsData } from "./groups-stats";
 import { EditGroupDrawer } from "./edit-group-drawer";
+import { GroupsRoomFilter } from "./groups-room-filter";
+import { GroupsTeacherFilter } from "./groups-teacher-filter";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
@@ -71,40 +67,6 @@ export function GroupsClient() {
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const [rooms, setRooms] = useState<RoomOption[]>([]);
   const [teachers, setTeachers] = useState<TeacherOption[]>([]);
-  const [roomPopoverOpen, setRoomPopoverOpen] = useState(false);
-  const [roomSearch, setRoomSearch] = useState("");
-  const [teacherPopoverOpen, setTeacherPopoverOpen] = useState(false);
-  const [teacherSearch, setTeacherSearch] = useState("");
-
-  const selectedRoom = useMemo(
-    () => rooms.find((r) => String(r.id) === filters.room),
-    [rooms, filters.room],
-  );
-
-  const filteredRooms = useMemo(
-    () =>
-      roomSearch.trim()
-        ? rooms.filter((r) =>
-            r.name.toLowerCase().includes(roomSearch.toLowerCase()),
-          )
-        : rooms,
-    [rooms, roomSearch],
-  );
-
-  const selectedTeacher = useMemo(
-    () => teachers.find((t) => String(t.id) === filters.teacher),
-    [teachers, filters.teacher],
-  );
-
-  const filteredTeachers = useMemo(
-    () =>
-      teacherSearch.trim()
-        ? teachers.filter((t) =>
-            `${t.lastName} ${t.firstName}`.toLowerCase().includes(teacherSearch.toLowerCase()),
-          )
-        : teachers,
-    [teachers, teacherSearch],
-  );
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setUrlFilters({ search: value, page: 1 });
@@ -219,160 +181,17 @@ export function GroupsClient() {
             <SelectItem value="COMPLETED">Tugallangan</SelectItem>
           </SelectContent>
         </Select>
-        <Popover
-          modal
-          open={roomPopoverOpen}
-          onOpenChange={(open) => {
-            setRoomPopoverOpen(open);
-            if (!open) setRoomSearch("");
-          }}
-        >
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              type="button"
-              className="h-9 w-[calc(100%-3rem)] min-w-0 justify-between font-normal sm:w-44"
-            >
-              <span className={cn(!selectedRoom && "text-muted-foreground")}>
-                {selectedRoom ? selectedRoom.name : "Barcha xonalar"}
-              </span>
-              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-60 gap-0 p-0" align="start">
-            <div className="border-b p-2">
-              <div className="relative">
-                <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
-                <Input
-                  placeholder="Xona qidirish..."
-                  value={roomSearch}
-                  onChange={(e) => setRoomSearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain p-2">
-              <button
-                type="button"
-                onClick={() => {
-                  handleRoomChange("all");
-                  setRoomPopoverOpen(false);
-                  setRoomSearch("");
-                }}
-                className={cn(
-                  "flex w-full items-center rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-                  filters.room === "all" && "bg-accent",
-                )}
-              >
-                <span className="truncate flex-1 text-left">Barcha xonalar</span>
-              </button>
-              {filteredRooms.map((room) => {
-                const isSelected = filters.room === String(room.id);
-                return (
-                  <button
-                    key={room.id}
-                    type="button"
-                    onClick={() => {
-                      handleRoomChange(isSelected ? "all" : String(room.id));
-                      setRoomPopoverOpen(false);
-                      setRoomSearch("");
-                    }}
-                    className={cn(
-                      "flex w-full items-center rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-                      isSelected && "bg-accent",
-                    )}
-                  >
-                    <span className="truncate flex-1 text-left">{room.name}</span>
-                  </button>
-                );
-              })}
-              {filteredRooms.length === 0 && (
-                <p className="text-muted-foreground px-2 py-1.5 text-sm">
-                  Xonalar topilmadi
-                </p>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <GroupsRoomFilter
+          value={filters.room}
+          rooms={rooms}
+          onChange={handleRoomChange}
+        />
         {!isTeacherOnly && (
-          <Popover
-            modal
-            open={teacherPopoverOpen}
-            onOpenChange={(open) => {
-              setTeacherPopoverOpen(open);
-              if (!open) setTeacherSearch("");
-            }}
-          >
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                type="button"
-                className="h-9 w-[calc(100%-3rem)] min-w-0 justify-between font-normal sm:w-48"
-              >
-                <span className={cn(!selectedTeacher && "text-muted-foreground")}>
-                  {selectedTeacher
-                    ? `${selectedTeacher.lastName} ${selectedTeacher.firstName}`
-                    : "Barcha o\u2018qituvchilar"}
-                </span>
-                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 gap-0 p-0" align="start">
-              <div className="border-b p-2">
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
-                  <Input
-                    placeholder="O&#39;qituvchi qidirish..."
-                    value={teacherSearch}
-                    onChange={(e) => setTeacherSearch(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-              </div>
-              <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain p-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleTeacherChange("all");
-                    setTeacherPopoverOpen(false);
-                    setTeacherSearch("");
-                  }}
-                  className={cn(
-                    "flex w-full items-center rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-                    filters.teacher === "all" && "bg-accent",
-                  )}
-                >
-                  <span className="truncate flex-1 text-left">Barcha o&apos;qituvchilar</span>
-                </button>
-                {filteredTeachers.map((teacher) => {
-                  const isSelected = filters.teacher === String(teacher.id);
-                  const fullName = `${teacher.lastName} ${teacher.firstName}`;
-                  return (
-                    <button
-                      key={teacher.id}
-                      type="button"
-                      onClick={() => {
-                        handleTeacherChange(isSelected ? "all" : String(teacher.id));
-                        setTeacherPopoverOpen(false);
-                        setTeacherSearch("");
-                      }}
-                      className={cn(
-                        "flex w-full items-center rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-                        isSelected && "bg-accent",
-                      )}
-                    >
-                      <span className="truncate flex-1 text-left">{fullName}</span>
-                    </button>
-                  );
-                })}
-                {filteredTeachers.length === 0 && (
-                  <p className="text-muted-foreground px-2 py-1.5 text-sm">
-                    O&apos;qituvchilar topilmadi
-                  </p>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <GroupsTeacherFilter
+            value={filters.teacher}
+            teachers={teachers}
+            onChange={handleTeacherChange}
+          />
         )}
         {canManage &&
           (selectedBranch ? (
