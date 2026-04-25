@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 interface Contract {
@@ -40,10 +41,6 @@ interface Contract {
   student: { id: number; firstName: string; lastName: string };
   course: { id: string; name: string };
   group: { id: string; name: string } | null;
-}
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
 }
 
 const statusLabels: Record<string, string> = {

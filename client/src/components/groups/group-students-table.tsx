@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StudentRowActions } from "@/components/students/student-row-actions";
+import { formatPhone } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import type { Student } from "@/data/student-model";
@@ -69,14 +70,6 @@ function formatBalance(balance: number) {
     .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const sign = balance < 0 ? "-" : "";
   return `${sign}${abs} so'm`;
-}
-
-function formatPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 9) {
-    return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
-  }
-  return phone;
 }
 
 interface GroupStudentsTableProps {

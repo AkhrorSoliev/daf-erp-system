@@ -39,6 +39,7 @@ import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { EnrollToGroupDialog } from "@/components/students/enroll-to-group-dialog";
 import { useEditStudent } from "@/hooks/use-edit-student";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import type { Student } from "@/data/student-model";
 
@@ -86,9 +87,8 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
         data: payload,
       });
       toast.success("O'quvchi guruhdan chiqarildi");
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || "Chiqarishda xatolik yuz berdi";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Chiqarishda xatolik yuz berdi"));
     } finally {
       setRemoving(false);
       setRemoveReason("");

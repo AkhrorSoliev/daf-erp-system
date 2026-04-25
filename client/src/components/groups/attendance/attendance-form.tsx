@@ -8,16 +8,10 @@ import {
   UserCheck,
   UserX,
   Check,
-  X,
-  AlarmClock,
-  ShieldCheck,
   QrCode,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -26,89 +20,18 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
-
-type Status = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
-
-interface StudentAttendance {
-  studentId: number;
-  firstName: string;
-  lastName: string;
-  photo: string | null;
-  status: Status | null;
-  note: string | null;
-}
-
-interface AttendanceEntry {
-  studentId: number;
-  status: Status | null;
-  note?: string;
-}
-
-const DAY_NAMES: Record<number, string> = {
-  0: "Yakshanba",
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
-};
-
-const STATUS_CONFIG: {
-  value: Status;
-  label: string;
-  icon: LucideIcon;
-  color: string;
-  activeColor: string;
-  activeBg: string;
-}[] = [
-  {
-    value: "PRESENT",
-    label: "Keldi",
-    icon: Check,
-    color:
-      "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30",
-    activeColor:
-      "border-green-500 bg-green-500 text-white dark:border-green-500 dark:bg-green-600",
-    activeBg: "",
-  },
-  {
-    value: "ABSENT",
-    label: "Kelmadi",
-    icon: X,
-    color:
-      "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30",
-    activeColor:
-      "border-red-500 bg-red-500 text-white dark:border-red-500 dark:bg-red-600",
-    activeBg:
-      "border-red-100 bg-red-50/60 dark:border-red-900/40 dark:bg-red-950/20",
-  },
-  {
-    value: "LATE",
-    label: "Kechikdi",
-    icon: AlarmClock,
-    color:
-      "border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30",
-    activeColor:
-      "border-amber-500 bg-amber-500 text-white dark:border-amber-500 dark:bg-amber-600",
-    activeBg:
-      "border-amber-100 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20",
-  },
-  {
-    value: "EXCUSED",
-    label: "Sababli",
-    icon: ShieldCheck,
-    color:
-      "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30",
-    activeColor:
-      "border-blue-500 bg-blue-500 text-white dark:border-blue-500 dark:bg-blue-600",
-    activeBg:
-      "border-blue-100 bg-blue-50/60 dark:border-blue-900/40 dark:bg-blue-950/20",
-  },
-];
+import { AttendanceStudentRow } from "./attendance-student-row";
+import {
+  DAY_NAMES,
+  STATUS_CONFIG,
+  type AttendanceEntry,
+  type AttendanceStatus,
+  type StudentAttendance,
+} from "./attendance-form-utils";
 
 interface AttendanceFormProps {
   group: GroupData;
@@ -138,13 +61,11 @@ export function AttendanceForm({
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
-  // Format date for display
   const [y, m, d] = date.split("-");
   const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
   const dayName = DAY_NAMES[dateObj.getDay()] ?? "";
   const formattedDate = `${d}.${m}.${y}`;
 
-  // Check lesson time
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const isToday = date === todayStr;
@@ -181,7 +102,6 @@ export function AttendanceForm({
   const alreadyTakenForTeacher =
     !isAdmin && students.some((s) => s.status !== null);
 
-  // Teacher uchun dars vaqtidan tashqarida yoki davomat olingan bo'lsa formani bloklash
   const isLocked =
     alreadyTakenForTeacher ||
     (!isAdmin &&
@@ -215,7 +135,7 @@ export function AttendanceForm({
     fetchAttendance();
   }, [fetchAttendance]);
 
-  const setStatus = (studentId: number, status: Status) => {
+  const setStatus = (studentId: number, status: AttendanceStatus) => {
     setEntries((prev) => {
       const next = new Map(prev);
       const existing = next.get(studentId);
@@ -259,17 +179,13 @@ export function AttendanceForm({
       });
       toast.success("Davomat muvaffaqiyatli saqlandi");
       onSaved();
-    } catch (err: unknown) {
-      const message =
-        (err as any)?.response?.data?.message ||
-        "Davomatni saqlashda xatolik yuz berdi";
-      toast.error(Array.isArray(message) ? message[0] : message);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Davomatni saqlashda xatolik yuz berdi"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Count summary
   const presentCount = Array.from(entries.values()).filter(
     (e) => e.status === "PRESENT" || e.status === "LATE",
   ).length;
@@ -318,7 +234,8 @@ export function AttendanceForm({
       {alreadyTakenForTeacher && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
           <Check className="size-4 shrink-0" />
-          Davomat olib bo&apos;lingan. Tahrirlash uchun administratorga murojaat qiling
+          Davomat olib bo&apos;lingan. Tahrirlash uchun administratorga murojaat
+          qiling
         </div>
       )}
 
@@ -425,140 +342,25 @@ export function AttendanceForm({
         </div>
       ) : (
         <div className="space-y-1.5">
-          {students.map((student, index) => {
-            const entry = entries.get(student.studentId);
-            const statusCfg = STATUS_CONFIG.find(
-              (s) => s.value === entry?.status,
-            );
-            const rowBg = statusCfg?.activeBg ?? "";
-
-            return (
-              <div
-                key={student.studentId}
-                className={cn(
-                  "rounded-lg border p-2.5 transition-colors sm:p-3",
-                  rowBg,
-                )}
-              >
-                {/* Main row */}
-                <div className="flex items-center gap-2.5 sm:gap-3">
-                  {/* Index */}
-                  <span className="w-5 text-center text-xs font-medium text-muted-foreground">
-                    {index + 1}
-                  </span>
-
-                  {/* Avatar */}
-                  <Avatar className="size-9 shrink-0 sm:size-10">
-                    <AvatarImage
-                      src={student.photo ?? undefined}
-                      alt={`${student.firstName} ${student.lastName}`}
-                    />
-                    <AvatarFallback className="text-xs">
-                      {student.firstName[0]}
-                      {student.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  {/* Name + note preview */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {student.firstName} {student.lastName}
-                    </p>
-                    {isAdmin &&
-                      entry?.note &&
-                      expandedNote !== student.studentId && (
-                        <p className="truncate text-[11px] text-purple-600 dark:text-purple-400">
-                          {entry.note}
-                        </p>
-                      )}
-                  </div>
-
-                  {/* Status buttons */}
-                  <div className="flex shrink-0 gap-1.5">
-                    {statusOptions.map((opt) => (
-                      <Tooltip key={opt.value}>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            disabled={isLocked}
-                            onClick={() =>
-                              setStatus(student.studentId, opt.value)
-                            }
-                            className={cn(
-                              "flex items-center justify-center rounded-lg border p-2 transition-all sm:p-2.5",
-                              isLocked && "cursor-not-allowed opacity-50",
-                              entry?.status === opt.value
-                                ? opt.activeColor
-                                : entry?.status === null
-                                  ? "border-muted text-muted-foreground hover:bg-muted/50"
-                                  : opt.color,
-                            )}
-                          >
-                            <opt.icon className="size-5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>{opt.label}</TooltipContent>
-                      </Tooltip>
-                    ))}
-
-                    {/* Note toggle for admin */}
-                    {isAdmin && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedNote(
-                                expandedNote === student.studentId
-                                  ? null
-                                  : student.studentId,
-                              )
-                            }
-                            className={cn(
-                              "flex items-center justify-center rounded-lg border px-2 py-2 text-xs transition-colors",
-                              expandedNote === student.studentId || entry?.note
-                                ? "border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-700 dark:bg-purple-950/30 dark:text-purple-400"
-                                : "border-muted text-muted-foreground hover:bg-muted/50",
-                            )}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="size-4"
-                            >
-                              <path d="M12 20h9" />
-                              <path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z" />
-                            </svg>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Izoh qo&apos;shish</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
-
-                {/* Note input (expanded) */}
-                {isAdmin && expandedNote === student.studentId && (
-                  <div className="mt-2 pl-8 sm:pl-[4.25rem]">
-                    <Input
-                      placeholder="Izoh yozing..."
-                      value={entry?.note ?? ""}
-                      onChange={(e) =>
-                        setNote(student.studentId, e.target.value)
-                      }
-                      className="h-8 text-xs"
-                      autoFocus
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {students.map((student, index) => (
+            <AttendanceStudentRow
+              key={student.studentId}
+              index={index}
+              student={student}
+              entry={entries.get(student.studentId)}
+              statusOptions={statusOptions}
+              isAdmin={isAdmin}
+              isLocked={isLocked}
+              isNoteOpen={expandedNote === student.studentId}
+              onSetStatus={setStatus}
+              onSetNote={setNote}
+              onToggleNote={() =>
+                setExpandedNote(
+                  expandedNote === student.studentId ? null : student.studentId,
+                )
+              }
+            />
+          ))}
         </div>
       )}
 

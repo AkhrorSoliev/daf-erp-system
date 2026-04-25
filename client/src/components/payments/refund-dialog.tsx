@@ -23,16 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import api from "@/lib/api";
-
-function getErrorMessage(err: unknown, fallback: string): string {
-  const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
-  if (Array.isArray(msg)) return msg[0] ?? fallback;
-  return msg || fallback;
-}
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
-}
+import { formatPrice } from "@/lib/format-utils";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 interface RefundPreview {
   contractId: string;

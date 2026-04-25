@@ -35,6 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 interface Expense {
@@ -69,10 +70,6 @@ const paymentMethodLabels: Record<string, string> = {
   CASH: "Naqt",
   CARD: "Karta",
 };
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
-}
 
 export function ExpensesClient() {
   const queryClient = useQueryClient();

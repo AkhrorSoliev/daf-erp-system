@@ -54,8 +54,8 @@ export function useSSE() {
             }
           }
         }
-      } catch (error: any) {
-        if (error?.name === "AbortError") return;
+      } catch (error) {
+        if ((error as Error)?.name === "AbortError") return;
       }
 
       // Reconnect with exponential backoff

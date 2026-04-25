@@ -25,6 +25,7 @@ import {
 import { PhoneInput } from "@/components/ui/phone-input";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 
 const ROLES = [
@@ -155,9 +156,8 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       }
       onSaved?.(saved);
       onClose();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || "Saqlashda xatolik");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
     } finally {
       setSubmitting(false);
     }

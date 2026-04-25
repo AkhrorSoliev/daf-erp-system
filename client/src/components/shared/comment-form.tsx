@@ -18,6 +18,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import type { CommentData } from "./comment-list";
 
@@ -147,9 +148,9 @@ export function CommentForm({
       if (taskMode && priority) payload.priority = priority;
       const { data } = await api.post("/comments", payload);
       onConfirmed?.(tempId, data);
-    } catch (err: any) {
+    } catch (err) {
       onFailed?.(tempId);
-      toast.error(err?.response?.data?.message || "Saqlashda xatolik");
+      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
     } finally {
       setSubmitting(false);
     }

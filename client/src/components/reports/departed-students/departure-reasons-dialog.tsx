@@ -5,13 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
-
-function getErrorMessage(err: unknown, fallback: string): string {
-  const msg = (err as { response?: { data?: { message?: string | string[] } } })
-    ?.response?.data?.message;
-  if (Array.isArray(msg)) return msg[0] ?? fallback;
-  return msg || fallback;
-}
+import { getErrorMessage } from "@/lib/get-error-message";
 import {
   Dialog,
   DialogContent,

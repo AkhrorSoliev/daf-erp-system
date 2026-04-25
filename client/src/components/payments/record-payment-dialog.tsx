@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 
 interface Props {
   open: boolean;
@@ -47,10 +48,6 @@ const methodOptions = [
   { value: "UZUM", label: "Uzum" },
   { value: "TRANSFER", label: "Bank o'tkazmasi" },
 ];
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
-}
 
 export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preSelectedStudent }: Props) {
   const queryClient = useQueryClient();

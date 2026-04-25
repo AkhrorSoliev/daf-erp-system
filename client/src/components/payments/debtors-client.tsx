@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { RecordPaymentDialog } from "./record-payment-dialog";
 
@@ -26,10 +27,6 @@ interface Debtor {
   enrollments: {
     group: { name: string; course: { name: string } };
   }[];
-}
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
 }
 
 export function DebtorsClient() {

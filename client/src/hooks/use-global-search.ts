@@ -111,8 +111,8 @@ export function useGlobalSearch() {
       if (latestQuery.current === trimmed) {
         setResults(data);
       }
-    } catch (error) {
-      console.error("Search error:", error);
+    } catch {
+      // Search failed — silently fall back to empty results
       if (latestQuery.current === trimmed) {
         setResults(emptyResult);
       }

@@ -31,6 +31,7 @@ import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 interface GroupRowActionsProps {
   group: GroupData;
@@ -53,9 +54,8 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
       toast.success("Guruh muvaffaqiyatli o'chirildi");
       setShowDelete(false);
       onDeleted?.(group.id);
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
     } finally {
       setDeleting(false);
       setDeleteReason("");
