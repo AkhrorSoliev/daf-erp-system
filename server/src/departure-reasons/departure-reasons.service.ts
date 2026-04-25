@@ -31,7 +31,7 @@ export class DepartureReasonsService {
   ) {
     const name = dto.name.trim();
     if (!name) {
-      throw new BadRequestException('Sabab nomi bo\'sh bo\'lishi mumkin emas');
+      throw new BadRequestException("Sabab nomi bo'sh bo'lishi mumkin emas");
     }
 
     const existing = await this.prisma.departureReason.findFirst({
@@ -72,9 +72,7 @@ export class DepartureReasonsService {
     if (dto.name !== undefined) {
       const name = dto.name.trim();
       if (!name) {
-        throw new BadRequestException(
-          'Sabab nomi bo\'sh bo\'lishi mumkin emas',
-        );
+        throw new BadRequestException("Sabab nomi bo'sh bo'lishi mumkin emas");
       }
       if (name !== existing.name) {
         const clash = await this.prisma.departureReason.findFirst({

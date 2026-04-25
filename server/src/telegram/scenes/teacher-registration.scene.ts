@@ -15,7 +15,7 @@ export function createTeacherRegistrationScene(
   prisma: PrismaService,
   uploadService: UploadService,
   usersService: UsersService,
-  bot: Telegraf<BotContext>,
+  _bot: Telegraf<BotContext>,
 ): Scenes.BaseScene<BotContext> {
   const scene = new Scenes.BaseScene<BotContext>(SCENES.TEACHER_REGISTRATION);
 
@@ -291,7 +291,7 @@ export function createTeacherRegistrationScene(
 
     try {
       await handlePhotoUpload(ctx, photo.file_id, 'image/jpeg');
-    } catch (error) {
+    } catch {
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
@@ -311,7 +311,7 @@ export function createTeacherRegistrationScene(
 
     try {
       await handlePhotoUpload(ctx, doc.file_id, mime);
-    } catch (error) {
+    } catch {
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
@@ -378,7 +378,7 @@ export function createTeacherRegistrationScene(
       });
 
       await ctx.scene.leave();
-    } catch (error) {
+    } catch {
       ctx.session.processing = false;
       await ctx.reply(
         "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",

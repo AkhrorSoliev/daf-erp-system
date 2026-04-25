@@ -20,26 +20,28 @@ export class ArchiveController {
   constructor(private archiveService: ArchiveService) {}
 
   @Get('counts')
-  getCounts() {
-    return this.archiveService.getCounts();
+  getCounts(@CurrentUser('companyId') companyId: number) {
+    return this.archiveService.getCounts(companyId);
   }
 
   @Get(':entityType')
   findAll(
     @Param('entityType') entityType: ArchiveEntityType,
     @Query() query: ArchiveQueryDto,
+    @CurrentUser('companyId') companyId: number,
   ) {
     this.validateEntityType(entityType);
-    return this.archiveService.findAll(entityType, query);
+    return this.archiveService.findAll(entityType, query, companyId);
   }
 
   @Get(':entityType/:id')
   findOne(
     @Param('entityType') entityType: ArchiveEntityType,
     @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
   ) {
     this.validateEntityType(entityType);
-    return this.archiveService.findOne(entityType, id);
+    return this.archiveService.findOne(entityType, id, companyId);
   }
 
   @Post(':entityType/:id/restore')
@@ -47,18 +49,20 @@ export class ArchiveController {
     @Param('entityType') entityType: ArchiveEntityType,
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
     this.validateEntityType(entityType);
-    return this.archiveService.restore(entityType, id, userId);
+    return this.archiveService.restore(entityType, id, userId, companyId);
   }
 
   @Delete(':entityType/:id')
   permanentDelete(
     @Param('entityType') entityType: ArchiveEntityType,
     @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
   ) {
     this.validateEntityType(entityType);
-    return this.archiveService.permanentDelete(entityType, id);
+    return this.archiveService.permanentDelete(entityType, id, companyId);
   }
 
   private validateEntityType(entityType: string) {

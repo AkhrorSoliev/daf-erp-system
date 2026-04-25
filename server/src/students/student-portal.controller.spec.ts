@@ -35,7 +35,10 @@ describe('StudentPortalController — role guards', () => {
         { provide: StudentPortalService, useValue: mockService },
         { provide: QrAttendanceService, useValue: mockQrService },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: GatewayConfigService, useValue: { getConfig: jest.fn().mockResolvedValue(null) } },
+        {
+          provide: GatewayConfigService,
+          useValue: { getConfig: jest.fn().mockResolvedValue(null) },
+        },
       ],
     }).compile();
 
@@ -44,7 +47,10 @@ describe('StudentPortalController — role guards', () => {
     guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(handler: Function, roles: string[]) {
+  function mockExecutionContext(
+    handler: (...args: unknown[]) => unknown,
+    roles: string[],
+  ) {
     return {
       getHandler: () => handler,
       getClass: () => StudentPortalController,

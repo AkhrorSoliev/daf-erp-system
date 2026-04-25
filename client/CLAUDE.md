@@ -189,12 +189,19 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 #### Pagination Rules
 
+- **These rules apply to every data table in the project — including tables rendered inside dialogs, drawers, popovers, drill-down modals, and sheets. There is no exception for "modal" or "secondary" tables.**
 - All data tables **must default to showing 10 rows per page**.
 - Every table must include a **page size selector** allowing the user to choose from: **10, 20, 30, 40, 50** rows per page.
 - Changing the page size must reset the current page back to 1.
 - Display the total record count and current page / total pages in the pagination controls.
 - Use `useState` for `page` and `pageSize` in the client wrapper component (not inside the table component itself).
 - The table component only receives the already-paginated slice of data as a prop — it does not handle pagination logic internally.
+- **Dialog/drawer drill-down tables:**
+  - Keep `useState` for `page` / `pageSize` inside the dialog component, not at the page level (page-level URL state is not needed for modal-scoped pagination).
+  - **Reset `page` to `1` whenever the dialog's target entity changes** (e.g. the user clicks a different segment/bar). Use `useEffect` watching the key identifier (`drilldown?.reasonId`, `row?.id`, etc.).
+  - Keep the footer pagination controls inside `DialogContent` (next to the bottom, outside the scrolling table area) so they stay visible while the table body scrolls.
+  - The pagination footer must occupy a non-shrinking slot (`shrink-0`) so the table above is the only scroll container.
+  - Reference: `src/components/reports/departed-students/departed-students-reasons-chart.tsx` → `ReasonStudentsDialog`.
 
 ### Filter Bars
 
@@ -279,6 +286,92 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - For **tables**: show skeleton rows in the table body area while rows are loading.
 - For **detail pages**: show a full-page skeleton layout that mimics the page structure until the entity data is available.
 - Use a simple `Loader2` spinning icon from `lucide-react` with `animate-spin` class **only** for inline indicators (button loading, small async operations). For page-level or section-level loading, always prefer skeletons.
+
+### Charts and Data Visualization
+
+These rules codify lessons learned while building `/reports/departed-students`. Every chart in the project — existing and future — must follow them.
+
+#### Chart Library
+
+- Use **`recharts`** (already installed) for all chart needs. **Do NOT install other chart libraries** (Tremor, Nivo, Chart.js, etc.) without explicit user approval — the project keeps chart code consistent.
+
+#### SVG Color Pitfall: Avoid `hsl(var(--...))` in SVG Attributes
+
+- `hsl(var(--popover))`, `hsl(var(--border))`, `hsl(var(--muted) / 0.3)`, etc. work fine in **HTML inline styles** (`backgroundColor`, `border` on a `<div>`) but **fail silently in SVG attributes** (`fill`, `stroke` on `<rect>`, `<text>`, `<path>` elements that Recharts renders internally).
+- When CSS variable resolution fails in an SVG attribute, the attribute becomes empty and SVG defaults take over — **usually black fill** — which causes bugs like "tooltip cursor turns black on hover" or "axis labels unreadable in dark mode".
+- **Rules:**
+  - **SVG element colors** (`<Bar fill=...>`, `<Tooltip cursor={{ fill }}>`, `<LabelList style={{ fill }}>`, axis `tick`/`stroke`, `<CartesianGrid stroke>`): use **literal hex** (`#ef4444`, `#64748b`), **literal rgba** (`rgba(100, 116, 139, 0.12)`), or **`currentColor`** (inherits parent text color — adapts to light/dark automatically).
+  - **Tooltip `contentStyle`** (a DOM inline style on a `<div>`): `hsl(var(--popover))` works — but prefer a **custom themed tooltip** (see below) for better control over text color and structure.
+
+#### Custom Themed Tooltip Pattern
+
+- Do NOT rely on Recharts' default `<Tooltip>` styling — its built-in text colors ignore the shadcn theme (dark text on dark background in dark mode) and it spams 0-value rows for stacked charts.
+- Pass a custom tooltip component via `<Tooltip content={<CustomTooltip />} />`. Use Tailwind classes (`bg-popover text-popover-foreground border shadow-md`) so it inherits the shadcn theme.
+- **Filter out zero-value entries** for stacked charts so the tooltip only shows segments that actually have data.
+- **Include a total row** at the bottom for multi-segment charts — helps the user understand the bucket's magnitude.
+- Reference implementations:
+  - `src/components/reports/departed-students/departed-students-group-by-chart.tsx` → `GroupByTooltip`
+  - `src/components/reports/departed-students/departed-students-dynamics-chart.tsx` → `DynamicsTooltip`
+
+#### Color Palette for Categorical Data
+
+- **Never use a rainbow palette with more than 4–5 distinct colors.** Stacked bars and grouped charts become unreadable past 4 hues, and colorblind accessibility degrades sharply.
+- For categorical breakdowns (e.g. "top reasons"), use a **coordinated 3-color accent palette** + a neutral grey for "Boshqalar":
+  - Top 1: `#f59e0b` (amber-500)
+  - Top 2: `#8b5cf6` (violet-500)
+  - Top 3: `#06b6d4` (cyan-500)
+  - Boshqalar: `#94a3b8` (slate-400)
+  - Sababi ko'rsatilmagan / null bucket: `#cbd5e1` (slate-300)
+- For single-series charts (e.g. dynamics), pick **one semantic color**: red (`#ef4444`) for negative metrics (departures, errors), green for positive (revenue), primary for neutral.
+- For **ranked bar lists**, use a heatmap-style scale: rank 1 = red, rank 2 = orange, rank 3 = amber, rest = primary tone. This lets the reader spot severity at a glance.
+
+#### Data Aggregation: Top N + "Boshqalar"
+
+- Every ranked breakdown chart **must collapse the long tail**. A chart with 20+ segments or 20+ rows is noise, not signal.
+- Defaults used on `/reports/departed-students`:
+  - `TOP_N_BUCKETS = 10` — max rows/columns in a chart
+  - `TOP_N_REASONS = 3` — max segments in a stacked bar (additional segments merge into "Boshqalar")
+- Label the collapsed row with the count: `"Boshqalar (${tail.length} ta ...)"` so the user knows how much is hidden.
+- Collapsed rows must be **non-interactive** (disable click-through — there's no single entity to drill into).
+
+#### Chart Card Title + Subtitle
+
+- Every chart has a clear **title** and an informative **subtitle** that adds context at a glance:
+  - Title: what the chart shows (e.g. `"Ketish dinamikasi"`, `"Ketish sabablari"`).
+  - Subtitle: one-line summary with totals or the top finding (e.g. `"Jami 71 ta ketish — eng asosiy sabab: Moliyaviy qiyinchilik (31 ta)"`).
+- Use the shared `<ChartCard title subtitle tooltip ...>` component at `src/components/reports/departed-students/chart-card.tsx` as the reference pattern. Copy it (or lift it to `src/components/shared/`) for new report pages.
+
+#### Empty States Must Be Actionable
+
+- Don't show bare `"Ma'lumot topilmadi"` — tell the user what to do next.
+- Good examples:
+  - `"Tanlangan davrda ketganlar yo'q — davrni kengaytirib ko'ring"`
+  - `"Hali ma'lumot yo'q — birinchi guruhni yaratish uchun 'Yangi guruh' tugmasini bosing"`
+- Skeleton/loading states use the same `<ChartCard isLoading>` flag — don't roll your own.
+
+#### Click-Through Drill-Downs
+
+- For any categorical chart with more than one segment per bar (stacked, grouped, ranked lists), bars/rows **must be clickable** and open a dialog listing the underlying students/rows.
+- The dialog query must be scoped to the clicked segment (e.g. `departureReasonId=<id>`) AND inherit the page's existing filters (branch, course, date range).
+- Non-interactive rows (like "Boshqalar" aggregate) must be `disabled` with a `cursor-not-allowed` style.
+
+#### Bar List vs Recharts for Ranked Breakdowns
+
+- For ranked breakdowns with long labels (Uzbek reason names, course names), a **custom HTML bar list** beats Recharts' horizontal `BarChart`:
+  - Full labels visible (no axis-width truncation, no ellipsis)
+  - Numbers and percents aligned inline, easy to scan
+  - Better hover/focus states via `<button>` + Tailwind
+  - Click-through drill-down is just an `onClick` on the button — no Recharts event plumbing
+- Reference: `src/components/reports/departed-students/departed-students-reasons-chart.tsx`.
+- Use Recharts when the chart actually benefits from its axes: time series (dynamics), stacked bars (group-by with segmentation), grouped bars.
+
+#### Number Display in Bars
+
+- `<LabelList>` inside a segment only makes sense if the segment is tall/wide enough to fit the text. Add a minimum-value guard in the formatter:
+  ```tsx
+  formatter={(v: unknown) => (typeof v === "number" && v >= 3 ? String(v) : "")}
+  ```
+- For stacked bars, also render a **top total label** on the last segment (`position="top"`) so the bucket's total is visible without hover — use `<LabelList dataKey="_total">` with a precomputed total field on each row.
 
 ### Submit Loading State in Drawers and Dialogs
 

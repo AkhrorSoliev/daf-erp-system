@@ -73,13 +73,14 @@ export class TeachersService {
     private redis: RedisService,
   ) {}
 
-  async findAll(query: TeacherQueryDto) {
+  async findAll(query: TeacherQueryDto, companyId: number) {
     const { page = 1, pageSize = 10, search, branch_id } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = {
       roles: { some: { roleId: TEACHER_ROLE_ID } },
       deletedAt: null,
+      companyId,
     };
 
     if (search) {
@@ -140,12 +141,13 @@ export class TeachersService {
     };
   }
 
-  async findById(id: number) {
+  async findById(id: number, companyId: number) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
         roles: { some: { roleId: TEACHER_ROLE_ID } },
         deletedAt: null,
+        companyId,
       },
       select: teacherSelect,
     });
@@ -214,12 +216,13 @@ export class TeachersService {
     };
   }
 
-  async update(id: number, dto: UpdateTeacherDto) {
+  async update(id: number, dto: UpdateTeacherDto, companyId: number) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
         roles: { some: { roleId: TEACHER_ROLE_ID } },
         deletedAt: null,
+        companyId,
       },
     });
 
@@ -264,12 +267,18 @@ export class TeachersService {
     return formatTeacher(updated);
   }
 
-  async changeStatus(id: number, dto: ChangeTeacherStatusDto, userId: number) {
+  async changeStatus(
+    id: number,
+    dto: ChangeTeacherStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
         roles: { some: { roleId: TEACHER_ROLE_ID } },
         deletedAt: null,
+        companyId,
       },
     });
 
@@ -316,9 +325,13 @@ export class TeachersService {
     return formatTeacher(updated);
   }
 
-  async getStatusHistory(id: number) {
+  async getStatusHistory(id: number, companyId: number) {
     const user = await this.prisma.user.findFirst({
-      where: { id, roles: { some: { roleId: TEACHER_ROLE_ID } } },
+      where: {
+        id,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+        companyId,
+      },
       select: { id: true },
     });
 
@@ -329,12 +342,13 @@ export class TeachersService {
     return this.statusHistoryService.getHistory('User', String(id));
   }
 
-  async delete(id: number, deletedById: number) {
+  async delete(id: number, deletedById: number, companyId: number) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
         roles: { some: { roleId: TEACHER_ROLE_ID } },
         deletedAt: null,
+        companyId,
       },
     });
 
@@ -390,13 +404,14 @@ export class TeachersService {
     return { message: "O'qituvchi muvaffaqiyatli o'chirildi" };
   }
 
-  async findGroupsByTeacherId(teacherId: number) {
-    // Ensure teacher exists
+  async findGroupsByTeacherId(teacherId: number, companyId: number) {
+    // Ensure teacher exists (and belongs to the caller's company)
     const user = await this.prisma.user.findFirst({
       where: {
         id: teacherId,
         roles: { some: { roleId: TEACHER_ROLE_ID } },
         deletedAt: null,
+        companyId,
       },
       select: { id: true },
     });
@@ -409,6 +424,7 @@ export class TeachersService {
       where: {
         teachers: { some: { teacherId } },
         deletedAt: null,
+        companyId,
       },
       include: {
         course: {

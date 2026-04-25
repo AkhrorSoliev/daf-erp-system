@@ -167,14 +167,46 @@ async function main() {
 
   // 8. Ustozlar (5 ta)
   const teachersData = [
-    { firstName: 'Aziz', lastName: 'Karimov', login: 'aziz', phone: '901112233' },
-    { firstName: 'Dilnoza', lastName: 'Rahimova', login: 'dilnoza', phone: '902223344', gender: 'FEMALE' as const },
-    { firstName: 'Jasur', lastName: 'Toshmatov', login: 'jasur', phone: '903334455' },
-    { firstName: 'Madina', lastName: 'Usmonova', login: 'madina', phone: '904445566', gender: 'FEMALE' as const },
-    { firstName: 'Bekzod', lastName: 'Aliyev', login: 'bekzod', phone: '905556677' },
+    {
+      firstName: 'Aziz',
+      lastName: 'Karimov',
+      login: 'aziz',
+      phone: '901112233',
+    },
+    {
+      firstName: 'Dilnoza',
+      lastName: 'Rahimova',
+      login: 'dilnoza',
+      phone: '902223344',
+      gender: 'FEMALE' as const,
+    },
+    {
+      firstName: 'Jasur',
+      lastName: 'Toshmatov',
+      login: 'jasur',
+      phone: '903334455',
+    },
+    {
+      firstName: 'Madina',
+      lastName: 'Usmonova',
+      login: 'madina',
+      phone: '904445566',
+      gender: 'FEMALE' as const,
+    },
+    {
+      firstName: 'Bekzod',
+      lastName: 'Aliyev',
+      login: 'bekzod',
+      phone: '905556677',
+    },
   ];
 
-  const teachers: { id: number; firstName: string; lastName: string; login: string }[] = [];
+  const teachers: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    login: string;
+  }[] = [];
   for (const t of teachersData) {
     const teacher = await prisma.user.create({
       data: {
@@ -190,10 +222,19 @@ async function main() {
         branches: { create: [{ branchId: BRANCH_ID }] },
       },
     });
-    teachers.push({ id: teacher.id, firstName: t.firstName, lastName: t.lastName, login: t.login });
+    teachers.push({
+      id: teacher.id,
+      firstName: t.firstName,
+      lastName: t.lastName,
+      login: t.login,
+    });
   }
   console.log('\nUstozlar:');
-  teachers.forEach((t) => console.log(`  ${t.firstName} ${t.lastName}: login=${t.login}, parol=123456 (id: ${t.id})`));
+  teachers.forEach((t) =>
+    console.log(
+      `  ${t.firstName} ${t.lastName}: login=${t.login}, parol=123456 (id: ${t.id})`,
+    ),
+  );
 
   // 9. Guruhlar (8 ta — har bir ustoz kamida 1 ta, bugun va ertaga darslari bor)
   // Bugun: 2026-04-03 (friday) → toq kunlar (odd: mon/wed/fri)
@@ -203,18 +244,90 @@ async function main() {
 
   const groupsData = [
     // Aziz — 2 guruh (intensiv toq + standart juft)
-    { id: 'group-1', name: 'DE-101', courseId: courseIntensiv.id, roomId: roomIds[0], teacherId: teachers[0].id, days: ODD_DAYS, start: '08:00', end: '09:30' },
-    { id: 'group-2', name: 'DE-102', courseId: courseStandart.id, roomId: roomIds[1], teacherId: teachers[0].id, days: EVEN_DAYS, start: '08:00', end: '09:00' },
+    {
+      id: 'group-1',
+      name: 'DE-101',
+      courseId: courseIntensiv.id,
+      roomId: roomIds[0],
+      teacherId: teachers[0].id,
+      days: ODD_DAYS,
+      start: '08:00',
+      end: '09:30',
+    },
+    {
+      id: 'group-2',
+      name: 'DE-102',
+      courseId: courseStandart.id,
+      roomId: roomIds[1],
+      teacherId: teachers[0].id,
+      days: EVEN_DAYS,
+      start: '08:00',
+      end: '09:00',
+    },
     // Dilnoza — 2 guruh (standart toq + intensiv juft)
-    { id: 'group-3', name: 'DE-103', courseId: courseStandart.id, roomId: roomIds[0], teacherId: teachers[1].id, days: ODD_DAYS, start: '10:00', end: '11:00' },
-    { id: 'group-4', name: 'DE-104', courseId: courseIntensiv.id, roomId: roomIds[2], teacherId: teachers[1].id, days: EVEN_DAYS, start: '10:00', end: '11:30' },
+    {
+      id: 'group-3',
+      name: 'DE-103',
+      courseId: courseStandart.id,
+      roomId: roomIds[0],
+      teacherId: teachers[1].id,
+      days: ODD_DAYS,
+      start: '10:00',
+      end: '11:00',
+    },
+    {
+      id: 'group-4',
+      name: 'DE-104',
+      courseId: courseIntensiv.id,
+      roomId: roomIds[2],
+      teacherId: teachers[1].id,
+      days: EVEN_DAYS,
+      start: '10:00',
+      end: '11:30',
+    },
     // Jasur — 2 guruh (intensiv toq + standart juft)
-    { id: 'group-5', name: 'DE-105', courseId: courseIntensiv.id, roomId: roomIds[3], teacherId: teachers[2].id, days: ODD_DAYS, start: '14:00', end: '15:30' },
-    { id: 'group-6', name: 'DE-106', courseId: courseStandart.id, roomId: roomIds[4], teacherId: teachers[2].id, days: EVEN_DAYS, start: '14:00', end: '15:00' },
+    {
+      id: 'group-5',
+      name: 'DE-105',
+      courseId: courseIntensiv.id,
+      roomId: roomIds[3],
+      teacherId: teachers[2].id,
+      days: ODD_DAYS,
+      start: '14:00',
+      end: '15:30',
+    },
+    {
+      id: 'group-6',
+      name: 'DE-106',
+      courseId: courseStandart.id,
+      roomId: roomIds[4],
+      teacherId: teachers[2].id,
+      days: EVEN_DAYS,
+      start: '14:00',
+      end: '15:00',
+    },
     // Madina — 1 guruh (standart juft)
-    { id: 'group-7', name: 'DE-107', courseId: courseStandart.id, roomId: roomIds[1], teacherId: teachers[3].id, days: EVEN_DAYS, start: '10:00', end: '11:00' },
+    {
+      id: 'group-7',
+      name: 'DE-107',
+      courseId: courseStandart.id,
+      roomId: roomIds[1],
+      teacherId: teachers[3].id,
+      days: EVEN_DAYS,
+      start: '10:00',
+      end: '11:00',
+    },
     // Bekzod — 1 guruh (intensiv toq)
-    { id: 'group-8', name: 'DE-108', courseId: courseIntensiv.id, roomId: roomIds[5], teacherId: teachers[4].id, days: ODD_DAYS, start: '16:00', end: '17:30' },
+    {
+      id: 'group-8',
+      name: 'DE-108',
+      courseId: courseIntensiv.id,
+      roomId: roomIds[5],
+      teacherId: teachers[4].id,
+      days: ODD_DAYS,
+      start: '16:00',
+      end: '17:30',
+    },
   ];
 
   for (const g of groupsData) {
@@ -240,26 +353,64 @@ async function main() {
   groupsData.forEach((g) => {
     const teacher = teachers.find((t) => t.id === g.teacherId);
     const type = g.courseId === courseIntensiv.id ? 'Intensiv' : 'Standart';
-    const dayLabel = g.days === ODD_DAYS ? 'Toq (Du/Chor/Ju)' : 'Juft (Se/Pay/Sha)';
-    console.log(`  ${g.name} — ${type}, ${dayLabel}, ${g.start}-${g.end}, Ustoz: ${teacher?.firstName}`);
+    const dayLabel =
+      g.days === ODD_DAYS ? 'Toq (Du/Chor/Ju)' : 'Juft (Se/Pay/Sha)';
+    console.log(
+      `  ${g.name} — ${type}, ${dayLabel}, ${g.start}-${g.end}, Ustoz: ${teacher?.firstName}`,
+    );
   });
 
   // 10. Talabalar (15 ta) va enrollment
   const studentsData = [
     { firstName: 'Asilbek', lastName: 'Qodirov', phone: '911001001' },
-    { firstName: 'Barno', lastName: 'Sodiqova', phone: '911002002', gender: 'FEMALE' as const },
+    {
+      firstName: 'Barno',
+      lastName: 'Sodiqova',
+      phone: '911002002',
+      gender: 'FEMALE' as const,
+    },
     { firstName: 'Davron', lastName: 'Xolmatov', phone: '911003003' },
-    { firstName: 'Ezoza', lastName: 'Tursunova', phone: '911004004', gender: 'FEMALE' as const },
+    {
+      firstName: 'Ezoza',
+      lastName: 'Tursunova',
+      phone: '911004004',
+      gender: 'FEMALE' as const,
+    },
     { firstName: 'Farrux', lastName: 'Abdullayev', phone: '911005005' },
-    { firstName: 'Gulnora', lastName: 'Kamalova', phone: '911006006', gender: 'FEMALE' as const },
+    {
+      firstName: 'Gulnora',
+      lastName: 'Kamalova',
+      phone: '911006006',
+      gender: 'FEMALE' as const,
+    },
     { firstName: 'Husan', lastName: 'Mirzayev', phone: '911007007' },
-    { firstName: 'Iroda', lastName: 'Nazarova', phone: '911008008', gender: 'FEMALE' as const },
+    {
+      firstName: 'Iroda',
+      lastName: 'Nazarova',
+      phone: '911008008',
+      gender: 'FEMALE' as const,
+    },
     { firstName: 'Javohir', lastName: 'Rahmonov', phone: '911009009' },
-    { firstName: 'Kamola', lastName: 'Ergasheva', phone: '911010010', gender: 'FEMALE' as const },
+    {
+      firstName: 'Kamola',
+      lastName: 'Ergasheva',
+      phone: '911010010',
+      gender: 'FEMALE' as const,
+    },
     { firstName: 'Laziz', lastName: 'Sobirov', phone: '911011011' },
-    { firstName: 'Mohira', lastName: 'Jumayeva', phone: '911012012', gender: 'FEMALE' as const },
+    {
+      firstName: 'Mohira',
+      lastName: 'Jumayeva',
+      phone: '911012012',
+      gender: 'FEMALE' as const,
+    },
     { firstName: 'Nodir', lastName: 'Temirov', phone: '911013013' },
-    { firstName: 'Ozoda', lastName: 'Valiyeva', phone: '911014014', gender: 'FEMALE' as const },
+    {
+      firstName: 'Ozoda',
+      lastName: 'Valiyeva',
+      phone: '911014014',
+      gender: 'FEMALE' as const,
+    },
     { firstName: 'Pulat', lastName: 'Ismoilov', phone: '911015015' },
   ];
 
@@ -277,7 +428,9 @@ async function main() {
     });
     studentIds.push(student.id);
   }
-  console.log(`\nTalabalar: ${studentIds.length} ta yaratildi (id: ${studentIds[0]}...${studentIds[studentIds.length - 1]})`);
+  console.log(
+    `\nTalabalar: ${studentIds.length} ta yaratildi (id: ${studentIds[0]}...${studentIds[studentIds.length - 1]})`,
+  );
 
   // 10.1 Talabalar uchun User account yaratish (student portalga kirish uchun)
   // Login = telefon raqami, parol = 123456
@@ -300,7 +453,9 @@ async function main() {
       data: { userId: studentUser.id },
     });
   }
-  console.log('Talaba user accountlari yaratildi (login=telefon, parol=123456)');
+  console.log(
+    'Talaba user accountlari yaratildi (login=telefon, parol=123456)',
+  );
 
   // Har bir guruhga 2 ta talaba enrollment qilish (har bir talaba faqat 1 guruhda)
   const enrollments = [
@@ -315,7 +470,8 @@ async function main() {
   ];
 
   // Store enrollment ids + student/group mapping for downstream finance seeding.
-  const enrollmentRows: { id: string; studentId: number; groupId: string }[] = [];
+  const enrollmentRows: { id: string; studentId: number; groupId: string }[] =
+    [];
   for (const e of enrollments) {
     for (const sId of e.studentIds) {
       const en = await prisma.enrollment.create({
@@ -382,16 +538,28 @@ async function main() {
       companyId: COMPANY_ID,
     },
   });
-  console.log(`Salary configs: teachers ${TEACHER_PERCENTAGE}%, admin 5,000,000 so'm/oy`);
+  console.log(
+    `Salary configs: teachers ${TEACHER_PERCENTAGE}%, admin 5,000,000 so'm/oy`,
+  );
 
   // 11.3 Contracts — one per enrollment, active. Student 13's contract
   // will be reversed into REFUNDED later.
-  const contractByEnrollmentId = new Map<string, { id: string; totalAmount: number; lessonPaymentCount: number }>();
-  const enrollmentCourseInfo = new Map<string, { price: number; lessonPaymentCount: number }>();
+  const contractByEnrollmentId = new Map<
+    string,
+    { id: string; totalAmount: number; lessonPaymentCount: number }
+  >();
+  const enrollmentCourseInfo = new Map<
+    string,
+    { price: number; lessonPaymentCount: number }
+  >();
   for (const en of enrollmentRows) {
     const group = groupsData.find((g) => g.id === en.groupId)!;
-    const course = group.courseId === courseIntensiv.id ? courseIntensiv : courseStandart;
-    enrollmentCourseInfo.set(en.id, { price: course.price, lessonPaymentCount: course.lessonPaymentCount });
+    const course =
+      group.courseId === courseIntensiv.id ? courseIntensiv : courseStandart;
+    enrollmentCourseInfo.set(en.id, {
+      price: course.price,
+      lessonPaymentCount: course.lessonPaymentCount,
+    });
 
     const year = new Date().getFullYear();
     const contractNumber = `DAF-${year}-${String(enrollmentRows.indexOf(en) + 1).padStart(5, '0')}`;
@@ -480,11 +648,19 @@ async function main() {
   const paymentMethodCycle = ['CASH', 'PAYME', 'CLICK', 'UZUM'] as const;
   let paymentCount = 0;
   for (const en of enrollmentRows) {
-    const shouldPay = [...PREPAID_STUDENT_IDS, ...PREPAID_NO_ATTEND_IDS].includes(en.studentId);
+    const shouldPay = [
+      ...PREPAID_STUDENT_IDS,
+      ...PREPAID_NO_ATTEND_IDS,
+    ].includes(en.studentId);
     if (!shouldPay) continue;
     const contract = contractByEnrollmentId.get(en.id)!;
     const method = paymentMethodCycle[paymentCount % paymentMethodCycle.length];
-    await recordPaymentAndBalance(en.studentId, contract.id, contract.totalAmount, method);
+    await recordPaymentAndBalance(
+      en.studentId,
+      contract.id,
+      contract.totalAmount,
+      method,
+    );
     paymentCount++;
   }
   console.log(`Payments: ${paymentCount} ta talaba 1-sikl to'lovini qildi`);
@@ -539,7 +715,8 @@ async function main() {
       const totalAttended = await tx.attendance.count({
         where: { groupId, studentId, status: { in: ['PRESENT', 'LATE'] } },
       });
-      const cyclesPaid = Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
+      const cyclesPaid =
+        Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
       const cyclesDeducted = await tx.transaction.count({
         where: { studentId, enrollmentId, type: 'LESSON_DEDUCTION' },
       });
@@ -607,14 +784,23 @@ async function main() {
             companyId: COMPANY_ID,
             deductionTransactionId: coverage.id,
           },
-          update: { amount, attendanceId: att.id, deductionTransactionId: coverage.id },
+          update: {
+            amount,
+            attendanceId: att.id,
+            deductionTransactionId: coverage.id,
+          },
         });
       }
     });
   }
 
   // Helper: attendance only (no finance) — used for unpaid students.
-  async function writeAttendanceOnly(studentId: number, groupId: string, date: Date, teacherId: number) {
+  async function writeAttendanceOnly(
+    studentId: number,
+    groupId: string,
+    date: Date,
+    teacherId: number,
+  ) {
     await prisma.attendance.create({
       data: {
         groupId,
@@ -660,18 +846,52 @@ async function main() {
       }
     }
   }
-  console.log(`Attendance: ${paidAttendanceCount} ta to'lagan talabaga (deduction + accrual)`);
-  console.log(`            ${unpaidAttendanceCount} ta qarzdorga (faqat attendance, accrual yo'q)`);
+  console.log(
+    `Attendance: ${paidAttendanceCount} ta to'lagan talabaga (deduction + accrual)`,
+  );
+  console.log(
+    `            ${unpaidAttendanceCount} ta qarzdorga (faqat attendance, accrual yo'q)`,
+  );
 
   // 11.6 Expenses — mixed categories including a TEACHER_ADVANCE to test
   // the auto-deduction on the next salary run.
   const expenseRows = [
-    { category: 'RENT' as const, amount: 3_000_000, description: 'Aprel uchun ijara', date: new Date('2026-04-01'), relatedUserId: null },
-    { category: 'UTILITIES' as const, amount: 450_000, description: 'Elektr + internet', date: new Date('2026-04-05'), relatedUserId: null },
-    { category: 'MARKETING' as const, amount: 800_000, description: 'Instagram reklamasi', date: new Date('2026-04-08'), relatedUserId: null },
-    { category: 'SUPPLIES' as const, amount: 200_000, description: 'Flipchart qog\'oz', date: new Date('2026-04-10'), relatedUserId: null },
+    {
+      category: 'RENT' as const,
+      amount: 3_000_000,
+      description: 'Aprel uchun ijara',
+      date: new Date('2026-04-01'),
+      relatedUserId: null,
+    },
+    {
+      category: 'UTILITIES' as const,
+      amount: 450_000,
+      description: 'Elektr + internet',
+      date: new Date('2026-04-05'),
+      relatedUserId: null,
+    },
+    {
+      category: 'MARKETING' as const,
+      amount: 800_000,
+      description: 'Instagram reklamasi',
+      date: new Date('2026-04-08'),
+      relatedUserId: null,
+    },
+    {
+      category: 'SUPPLIES' as const,
+      amount: 200_000,
+      description: "Flipchart qog'oz",
+      date: new Date('2026-04-10'),
+      relatedUserId: null,
+    },
     // Teacher advance for Aziz — will net out of next salary via applyPendingAdvances
-    { category: 'TEACHER_ADVANCE' as const, amount: 500_000, description: 'Aprel avansi', date: new Date('2026-04-12'), relatedUserId: teachers[0].id },
+    {
+      category: 'TEACHER_ADVANCE' as const,
+      amount: 500_000,
+      description: 'Aprel avansi',
+      date: new Date('2026-04-12'),
+      relatedUserId: teachers[0].id,
+    },
   ];
   for (const e of expenseRows) {
     await prisma.$transaction(async (tx) => {
@@ -703,18 +923,24 @@ async function main() {
       });
     });
   }
-  console.log(`Expenses: ${expenseRows.length} ta (shu jumladan TEACHER_ADVANCE 500k Azizga)`);
+  console.log(
+    `Expenses: ${expenseRows.length} ta (shu jumladan TEACHER_ADVANCE 500k Azizga)`,
+  );
 
   // 11.7 One COMPLETED refund — Gulnora (student 5) paid two cycles,
   // attended four lessons (= one full cycle consumed from the ledger),
   // then requested a refund on the untouched second cycle. Exercises
   // the real contract-level consumption formula from audit #11.
   const refundStudentId = studentIds[5]; // Gulnora
-  const refundEnrollment = enrollmentRows.find((e) => e.studentId === refundStudentId);
+  const refundEnrollment = enrollmentRows.find(
+    (e) => e.studentId === refundStudentId,
+  );
   if (refundEnrollment) {
     const refundContract = contractByEnrollmentId.get(refundEnrollment.id)!;
     const info = enrollmentCourseInfo.get(refundEnrollment.id)!;
-    const perLessonCost = Math.round(refundContract.totalAmount / info.lessonPaymentCount);
+    const perLessonCost = Math.round(
+      refundContract.totalAmount / info.lessonPaymentCount,
+    );
 
     // Top up so contract.paidAmount > consumption — gives the refund
     // something to return. Without this second cycle, the first cycle's
@@ -743,7 +969,10 @@ async function main() {
       where: { id: refundContract.id },
       select: { paidAmount: true },
     });
-    const refundableAmount = Math.max(0, freshContract.paidAmount - consumedAmount);
+    const refundableAmount = Math.max(
+      0,
+      freshContract.paidAmount - consumedAmount,
+    );
 
     const lessonsConsumed = await prisma.attendance.count({
       where: {
@@ -827,11 +1056,13 @@ async function main() {
     `SELECT setval(pg_get_serial_sequence('"Student"', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM "Student"), 0), 9999))`,
   );
 
-  console.log('\n✅ Tayyor! Test ma\'lumotlar yaratildi.');
-  console.log('\nLogin ma\'lumotlari (parol: 123456):');
+  console.log("\n✅ Tayyor! Test ma'lumotlar yaratildi.");
+  console.log("\nLogin ma'lumotlari (parol: 123456):");
   console.log('  CEO:   login=ceo');
   console.log('  Admin: login=admin');
-  teachers.forEach((t) => console.log(`  Ustoz: login=${t.login} (${t.firstName} ${t.lastName})`));
+  teachers.forEach((t) =>
+    console.log(`  Ustoz: login=${t.login} (${t.firstName} ${t.lastName})`),
+  );
 }
 
 main()

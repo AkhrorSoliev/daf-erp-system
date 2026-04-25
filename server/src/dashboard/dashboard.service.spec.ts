@@ -46,7 +46,7 @@ describe('DashboardService', () => {
     prisma = {
       holiday: { findFirst: jest.fn().mockResolvedValue(null) },
       branch: {
-        findUnique: jest.fn().mockResolvedValue({
+        findFirst: jest.fn().mockResolvedValue({
           startOfWorkingDay: '08:00',
           endOfWorkingDay: '20:00',
         }),
@@ -76,7 +76,7 @@ describe('DashboardService', () => {
 
   describe('getTodaySchedule', () => {
     it('should return lessons with studentCount and presentCount', async () => {
-      const result = await service.getTodaySchedule(1, '2026-04-13');
+      const result = await service.getTodaySchedule(1, 1001, '2026-04-13');
 
       expect(result.lessons).toHaveLength(2);
       expect(result.lessons[0]).toEqual({
@@ -106,7 +106,7 @@ describe('DashboardService', () => {
     it('should return isHoliday=true when holiday exists', async () => {
       prisma.holiday.findFirst.mockResolvedValue({ name: "Navro'z" });
 
-      const result = await service.getTodaySchedule(1, '2026-03-21');
+      const result = await service.getTodaySchedule(1, 1001, '2026-03-21');
 
       expect(result.isHoliday).toBe(true);
       expect(result.holidayName).toBe("Navro'z");
@@ -115,18 +115,18 @@ describe('DashboardService', () => {
     it('should return empty lessons when no groups match', async () => {
       prisma.group.findMany.mockResolvedValue([]);
 
-      const result = await service.getTodaySchedule(1, '2026-04-12');
+      const result = await service.getTodaySchedule(1, 1001, '2026-04-12');
 
       expect(result.lessons).toEqual([]);
     });
 
     it('should use default working hours when branch has none', async () => {
-      prisma.branch.findUnique.mockResolvedValue({
+      prisma.branch.findFirst.mockResolvedValue({
         startOfWorkingDay: null,
         endOfWorkingDay: null,
       });
 
-      const result = await service.getTodaySchedule(1, '2026-04-13');
+      const result = await service.getTodaySchedule(1, 1001, '2026-04-13');
 
       expect(result.workingHours).toEqual({ start: '08:00', end: '20:00' });
     });
@@ -147,7 +147,7 @@ describe('DashboardService', () => {
       ]);
       prisma.attendance.groupBy.mockResolvedValue([]);
 
-      const result = await service.getTodaySchedule(1, '2026-04-13');
+      const result = await service.getTodaySchedule(1, 1001, '2026-04-13');
 
       expect(result.lessons[0].roomName).toBeNull();
       expect(result.lessons[0].courseName).toBeNull();
@@ -157,7 +157,7 @@ describe('DashboardService', () => {
     });
 
     it('should filter by branchId', async () => {
-      await service.getTodaySchedule(5, '2026-04-13');
+      await service.getTodaySchedule(5, 1001, '2026-04-13');
 
       expect(prisma.group.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -173,7 +173,7 @@ describe('DashboardService', () => {
 
     it('should query correct day name for the given date', async () => {
       // 2026-04-13 is a Monday
-      await service.getTodaySchedule(1, '2026-04-13');
+      await service.getTodaySchedule(1, 1001, '2026-04-13');
 
       expect(prisma.group.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

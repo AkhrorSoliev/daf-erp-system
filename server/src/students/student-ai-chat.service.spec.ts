@@ -67,6 +67,7 @@ describe('StudentAiChatService', () => {
       }),
       streamChatCompletion: jest.fn().mockReturnValue(
         (async function* () {
+          await Promise.resolve();
           yield 'Mir ';
           yield 'geht ';
           yield 'es gut!';

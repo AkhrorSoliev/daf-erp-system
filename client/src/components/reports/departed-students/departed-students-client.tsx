@@ -31,6 +31,10 @@ import {
   DepartedStudentsTable,
   type DepartedStudentRow,
 } from "./departed-students-table";
+import { TeacherChangeRetentionCards } from "./teacher-change-retention-cards";
+import { TeacherChangeReasonsChart } from "./teacher-change-reasons-chart";
+import { TransferReasonsChart } from "./transfer-reasons-chart";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
   Select,
   SelectContent,
@@ -51,8 +55,6 @@ const VALID_GROUP_BY: readonly GroupByDimension[] = [
   "course",
   "teacher",
   "branch",
-  "status",
-  "reason",
 ];
 
 function parseDate(raw: string | null): Date | null {
@@ -153,14 +155,21 @@ export function DepartedStudentsClient() {
   const startStr = format(range.start, "yyyy-MM-dd");
   const endStr = format(range.end, "yyyy-MM-dd");
 
-  const summaryParams = {
-    branchId: filter.branchId ?? undefined,
-    courseId: filter.courseId ?? undefined,
-    teacherIds:
-      filter.teacherIds.length > 0 ? filter.teacherIds.join(",") : undefined,
-    startDate: startStr,
-    endDate: endStr,
-  };
+  const rawSummaryParams = useMemo(
+    () => ({
+      branchId: filter.branchId ?? undefined,
+      courseId: filter.courseId ?? undefined,
+      teacherIds:
+        filter.teacherIds.length > 0 ? filter.teacherIds.join(",") : undefined,
+      startDate: startStr,
+      endDate: endStr,
+    }),
+    [filter.branchId, filter.courseId, filter.teacherIds, startStr, endStr],
+  );
+
+  // Debounce so rapid filter changes (multi-select, quick preset swaps) only
+  // trigger one request instead of N.
+  const summaryParams = useDebouncedValue(rawSummaryParams, 250);
 
   const { data: summary, isLoading: summaryLoading } =
     useQuery<DepartedStudentsSummary>({
@@ -258,8 +267,44 @@ export function DepartedStudentsClient() {
 
       <DepartedStudentsKpiCards data={summary} isLoading={summaryLoading} />
 
+      <TeacherChangeRetentionCards
+        data={
+          summary
+            ? {
+                totalTeacherChanges: summary.totalTeacherChanges,
+                departedAfterTeacherChange: summary.departedAfterTeacherChange,
+              }
+            : undefined
+        }
+        isLoading={summaryLoading}
+        queryParams={summaryParams}
+      />
+
       <div className="grid gap-3 lg:grid-cols-2">
-        <DepartedStudentsDynamicsChart />
+        <TeacherChangeReasonsChart
+          branchId={filter.branchId}
+          courseId={filter.courseId}
+          teacherIds={filter.teacherIds}
+          startDate={startStr}
+          endDate={endStr}
+        />
+        <TransferReasonsChart
+          branchId={filter.branchId}
+          courseId={filter.courseId}
+          teacherIds={filter.teacherIds}
+          startDate={startStr}
+          endDate={endStr}
+        />
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <DepartedStudentsDynamicsChart
+          branchId={filter.branchId}
+          courseId={filter.courseId}
+          teacherIds={filter.teacherIds}
+          startDate={startStr}
+          endDate={endStr}
+        />
         <DepartedStudentsReasonsChart
           branchId={filter.branchId}
           courseId={filter.courseId}

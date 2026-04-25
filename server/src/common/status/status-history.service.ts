@@ -57,11 +57,15 @@ export class StatusHistoryService {
     };
   }
 
-  async getHistory(entityType: string, entityId: string) {
+  async getHistory(entityType: string, entityId: string, companyId?: number) {
     return this.prisma.statusHistory.findMany({
       where: {
         entityType,
         entityId: String(entityId),
+        // Defence-in-depth: callers are expected to verify the entity belongs
+        // to their company before calling this — but if companyId is supplied
+        // we apply it here too, so a bypass in a caller cannot leak history.
+        ...(companyId != null && { companyId }),
       },
       orderBy: { createdAt: 'desc' },
       include: {

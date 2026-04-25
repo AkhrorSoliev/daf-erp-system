@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { SearchService, SearchContext } from './search.service';
+import { SearchPeopleService } from './search-people.service';
+import { SearchContentService } from './search-content.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const ceoCtx: SearchContext = { companyId: 1, roles: ['CEO'], userId: 10001 };
@@ -38,7 +40,12 @@ describe('SearchService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SearchService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        SearchService,
+        SearchPeopleService,
+        SearchContentService,
+        { provide: PrismaService, useValue: prisma },
+      ],
     }).compile();
 
     service = module.get(SearchService);

@@ -21,9 +21,15 @@ export class StudentEnrollmentService {
     private eventEmitter: EventEmitter2,
   ) {}
 
-  async enrollToGroup(studentId: number, groupId: string, userId: number) {
+  async enrollToGroup(
+    studentId: number,
+    groupId: string,
+    userId: number,
+    companyId: number,
+    options: { transferReasonId?: string } = {},
+  ) {
     const student = await this.prisma.student.findFirst({
-      where: { id: studentId, deletedAt: null },
+      where: { id: studentId, deletedAt: null, companyId },
     });
     if (!student) {
       throw new NotFoundException(`O'quvchi #${studentId} topilmadi`);
@@ -35,15 +41,12 @@ export class StudentEnrollmentService {
       );
     }
 
-    if (student.companyId == null) {
-      throw new BadRequestException(
-        "O'quvchining kompaniyasi aniqlanmagan — ma'lumotni to'g'rilang",
-      );
-    }
-
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
-      include: { course: { select: { name: true } } },
+      where: { id: groupId, deletedAt: null, companyId },
+      include: {
+        course: { select: { name: true } },
+        teachers: { select: { teacherId: true } },
+      },
     });
     if (!group) {
       throw new NotFoundException(`Guruh topilmadi`);
@@ -65,8 +68,57 @@ export class StudentEnrollmentService {
 
     const currentEnrollment = await this.prisma.enrollment.findFirst({
       where: { studentId, deletedAt: null, status: 'ACTIVE' },
+      include: {
+        group: {
+          select: { teachers: { select: { teacherId: true } } },
+        },
+      },
     });
+
+    // Transfer reason validation — only applies when this is a transfer
+    // (i.e. there's an existing active enrollment being moved).
+    let transferReasonId: string | null = null;
     if (currentEnrollment) {
+      const oldTeachers = new Set(
+        currentEnrollment.group.teachers.map((t) => t.teacherId),
+      );
+      const newTeachers = new Set(group.teachers.map((t) => t.teacherId));
+      const teachersDiffer =
+        oldTeachers.size !== newTeachers.size ||
+        [...oldTeachers].some((t) => !newTeachers.has(t));
+
+      if (teachersDiffer) {
+        if (!options.transferReasonId) {
+          throw new BadRequestException(
+            "Ustoz farqli guruhga o'tkazilayotgan o'quvchi uchun sabab tanlash majburiy",
+          );
+        }
+        const reason = await this.prisma.enrollmentTransferReason.findFirst({
+          where: {
+            id: options.transferReasonId,
+            companyId,
+            deletedAt: null,
+          },
+        });
+        if (!reason) {
+          throw new NotFoundException('Tanlangan transfer sababi topilmadi');
+        }
+        transferReasonId = reason.id;
+      } else if (options.transferReasonId) {
+        // Same teachers — reason is optional but if provided, validate it.
+        const reason = await this.prisma.enrollmentTransferReason.findFirst({
+          where: {
+            id: options.transferReasonId,
+            companyId,
+            deletedAt: null,
+          },
+        });
+        if (!reason) {
+          throw new NotFoundException('Tanlangan transfer sababi topilmadi');
+        }
+        transferReasonId = reason.id;
+      }
+
       await this.prisma.enrollment.update({
         where: { id: currentEnrollment.id },
         data: {
@@ -75,6 +127,7 @@ export class StudentEnrollmentService {
           statusChangedById: userId,
           statusChangeReason: `Guruh o'zgartirildi`,
           transferredToId: groupId,
+          transferReasonId,
         },
       });
     }
@@ -172,17 +225,21 @@ export class StudentEnrollmentService {
     _studentId: number,
     enrollmentId: string,
     userId: number,
+    companyId: number,
     input: { departureReasonId?: string; reason?: string },
   ) {
     const enrollment = await this.prisma.enrollment.findFirst({
-      where: { id: enrollmentId, deletedAt: null },
+      where: {
+        id: enrollmentId,
+        deletedAt: null,
+        student: { companyId },
+      },
     });
     if (!enrollment) {
       throw new NotFoundException('Faol yozuv topilmadi');
     }
 
-    // Load the student early — we need companyId to scope the reason lookup
-    // and to record history.
+    // Load the student — already scoped by the enrollment query above.
     const student = await this.prisma.student.findUnique({
       where: { id: enrollment.studentId },
       select: { firstName: true, lastName: true, companyId: true },
@@ -196,9 +253,6 @@ export class StudentEnrollmentService {
     let departureReasonId: string | null = null;
     let reasonText: string;
     if (input.departureReasonId) {
-      if (student.companyId == null) {
-        throw new NotFoundException('Kompaniya aniqlanmadi');
-      }
       const reason = await this.prisma.departureReason.findFirst({
         where: {
           id: input.departureReasonId,

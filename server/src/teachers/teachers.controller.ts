@@ -29,18 +29,31 @@ export class TeachersController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  findAll(@Query() query: TeacherQueryDto) {
-    return this.teachersService.findAll(query);
+  findAll(
+    @Query() query: TeacherQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.teachersService.findAll(query, companyId);
   }
 
   @Get(':id/groups')
-  findGroupsByTeacherId(@Param('id', ParseIntPipe) id: number) {
-    return this.teachersService.findGroupsByTeacherId(id);
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  findGroupsByTeacherId(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.teachersService.findGroupsByTeacherId(id, companyId);
   }
 
   @Get(':id')
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.teachersService.findById(id);
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  findById(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.teachersService.findById(id, companyId);
   }
 
   @Post()
@@ -56,8 +69,12 @@ export class TeachersController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTeacherDto) {
-    return this.teachersService.update(id, dto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTeacherDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.teachersService.update(id, dto, companyId);
   }
 
   @Patch(':id/status')
@@ -67,8 +84,9 @@ export class TeachersController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeTeacherStatusDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.teachersService.changeStatus(id, dto, userId);
+    return this.teachersService.changeStatus(id, dto, userId, companyId);
   }
 
   @Get(':id/salary-summary')
@@ -84,8 +102,11 @@ export class TeachersController {
   @Get(':id/status-history')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director')
-  getStatusHistory(@Param('id', ParseIntPipe) id: number) {
-    return this.teachersService.getStatusHistory(id);
+  getStatusHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.teachersService.getStatusHistory(id, companyId);
   }
 
   @Delete(':id')
@@ -94,7 +115,8 @@ export class TeachersController {
   delete(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.teachersService.delete(id, userId);
+    return this.teachersService.delete(id, userId, companyId);
   }
 }

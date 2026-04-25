@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { StudentsService } from './students.service';
+import { StudentsReadService } from './students-read.service';
+import { StudentsWriteService } from './students-write.service';
+import { StudentsStatusService } from './students-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -91,6 +94,9 @@ describe('StudentsService — status methods', () => {
         }),
         findUnique: jest.fn().mockResolvedValue({ name: 'A1' }),
       },
+      transaction: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
     };
 
     statusHistoryService = {
@@ -105,6 +111,9 @@ describe('StudentsService — status methods', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StudentsService,
+        StudentsReadService,
+        StudentsWriteService,
+        StudentsStatusService,
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: StatusHistoryService, useValue: statusHistoryService },
@@ -128,7 +137,7 @@ describe('StudentsService — status methods', () => {
 
   describe('changeStatus', () => {
     it('calls statusHistoryService, updates student, and cascades', async () => {
-      await service.changeStatus(1, { status: 'FROZEN' as any }, 2);
+      await service.changeStatus(1, { status: 'FROZEN' as any }, 2, 1001);
 
       expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -158,7 +167,7 @@ describe('StudentsService — status methods', () => {
     });
 
     it('sets isActive=true only when status is ACTIVE', async () => {
-      await service.changeStatus(1, { status: 'ACTIVE' as any }, 2);
+      await service.changeStatus(1, { status: 'ACTIVE' as any }, 2, 1001);
 
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -168,7 +177,7 @@ describe('StudentsService — status methods', () => {
     });
 
     it('sets isActive=false for non-ACTIVE statuses', async () => {
-      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2);
+      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2, 1001);
 
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -181,7 +190,7 @@ describe('StudentsService — status methods', () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.changeStatus(999, { status: 'FROZEN' as any }, 1),
+        service.changeStatus(999, { status: 'FROZEN' as any }, 1, 1001),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -189,7 +198,7 @@ describe('StudentsService — status methods', () => {
       prisma.enrollment.count.mockResolvedValue(2);
 
       await expect(
-        service.changeStatus(1, { status: 'GRADUATED' as any }, 2),
+        service.changeStatus(1, { status: 'GRADUATED' as any }, 2, 1001),
       ).rejects.toThrow(BadRequestException);
 
       expect(prisma.student.update).not.toHaveBeenCalled();
@@ -198,7 +207,7 @@ describe('StudentsService — status methods', () => {
     it('allows GRADUATED when student has no active enrollments', async () => {
       prisma.enrollment.count.mockResolvedValue(0);
 
-      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2);
+      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2, 1001);
 
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -213,12 +222,13 @@ describe('StudentsService — status methods', () => {
 
   describe('delete', () => {
     it('archives student: status ARCHIVED + deletedAt + statusHistory + cascade', async () => {
-      await service.delete(1, 2);
+      await service.delete(1, 2, 'Duplikat yozuv', 1001);
 
       expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
         expect.objectContaining({
           entityType: 'Student',
           toStatus: 'ARCHIVED',
+          reason: 'Duplikat yozuv',
         }),
       );
 
@@ -229,6 +239,7 @@ describe('StudentsService — status methods', () => {
             isActive: false,
             deletedAt: expect.any(Date),
             deletedById: 2,
+            statusChangeReason: 'Duplikat yozuv',
           }),
         }),
       );
@@ -244,7 +255,9 @@ describe('StudentsService — status methods', () => {
     it('throws NotFoundException when student not found', async () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
-      await expect(service.delete(999, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.delete(999, 1, 'Test', 1001)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -252,7 +265,7 @@ describe('StudentsService — status methods', () => {
     it('delegates to statusHistoryService.getHistory', async () => {
       prisma.student.findFirst.mockResolvedValue({ id: 1 });
 
-      await service.getStatusHistory(1);
+      await service.getStatusHistory(1, 1001);
 
       expect(statusHistoryService.getHistory).toHaveBeenCalledWith(
         'Student',
@@ -263,8 +276,68 @@ describe('StudentsService — status methods', () => {
     it('throws NotFoundException when student not found', async () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
-      await expect(service.getStatusHistory(999)).rejects.toThrow(
+      await expect(service.getStatusHistory(999, 1001)).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('multi-tenant filter (companyId)', () => {
+    it('findById passes companyId in the where clause', async () => {
+      prisma.student.findFirst.mockResolvedValueOnce(mockStudentSelect);
+      await service.findById(1, 1001);
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 1, companyId: 1001 }),
+        }),
+      );
+    });
+
+    it('changeStatus scopes lookup to companyId', async () => {
+      await service.changeStatus(1, { status: 'FROZEN' as any }, 2, 1001);
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 1,
+            deletedAt: null,
+            companyId: 1001,
+          }),
+        }),
+      );
+    });
+
+    it('delete scopes lookup to companyId', async () => {
+      await service.delete(1, 2, 'Duplikat', 1001);
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 1,
+            deletedAt: null,
+            companyId: 1001,
+          }),
+        }),
+      );
+    });
+
+    it('getStatusHistory scopes lookup to companyId', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 1 });
+      await service.getStatusHistory(1, 1001);
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 1, companyId: 1001 }),
+        }),
+      );
+    });
+
+    it('findAll scopes base query to companyId', async () => {
+      await service.findAll({ page: 1, pageSize: 10 } as any, 1001);
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            deletedAt: null,
+            companyId: 1001,
+          }),
+        }),
       );
     });
   });

@@ -13,7 +13,8 @@ export function IsPhotoUrl(validationOptions?: ValidationOptions) {
       options: validationOptions,
       validator: {
         validate(value: unknown) {
-          if (value === null || value === undefined || value === '') return true;
+          if (value === null || value === undefined || value === '')
+            return true;
           if (typeof value !== 'string') return false;
           return /^https?:\/\//i.test(value);
         },

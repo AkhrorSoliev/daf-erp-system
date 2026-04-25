@@ -19,6 +19,7 @@ export class GroupScheduleService {
     roomId?: string;
     teacherId?: number;
     excludeGroupId?: string;
+    companyId: number;
   }) {
     const {
       branchId,
@@ -28,12 +29,14 @@ export class GroupScheduleService {
       roomId,
       teacherId,
       excludeGroupId,
+      companyId,
     } = params;
     if (!startTime || !endTime || !exactDays.length)
       return { room: [], teacher: [], availableRooms: [] };
 
     const baseWhere: any = {
       branchId,
+      companyId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
       isActive: true,
@@ -81,7 +84,7 @@ export class GroupScheduleService {
     const roomConflicts = roomGroups.filter(isOverlapping);
 
     const allRooms = await this.prisma.room.findMany({
-      where: { branchId, deletedAt: null },
+      where: { branchId, companyId, deletedAt: null },
       select: { id: true, name: true, capacity: true },
       orderBy: { name: 'asc' },
     });
@@ -113,12 +116,13 @@ export class GroupScheduleService {
     roomId: string;
     exactDays: string[];
     excludeGroupId?: string;
+    companyId: number;
   }) {
-    const { branchId, roomId, exactDays, excludeGroupId } = params;
+    const { branchId, roomId, exactDays, excludeGroupId, companyId } = params;
     if (!roomId || !exactDays.length) return { busySlots: [], freeSlots: [] };
 
-    const branch = await this.prisma.branch.findUnique({
-      where: { id: branchId },
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, companyId },
       select: { startOfWorkingDay: true, endOfWorkingDay: true },
     });
     const dayStart = branch?.startOfWorkingDay ?? '08:00';
@@ -126,6 +130,7 @@ export class GroupScheduleService {
 
     const where: any = {
       branchId,
+      companyId,
       roomId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
@@ -179,11 +184,19 @@ export class GroupScheduleService {
     startTime: string;
     endTime: string;
     excludeGroupId?: string;
+    companyId: number;
   }) {
-    const { branchId, exactDays, startTime, endTime, excludeGroupId } = params;
+    const {
+      branchId,
+      exactDays,
+      startTime,
+      endTime,
+      excludeGroupId,
+      companyId,
+    } = params;
 
     const allRooms = await this.prisma.room.findMany({
-      where: { branchId, deletedAt: null },
+      where: { branchId, companyId, deletedAt: null },
       select: { id: true, name: true, capacity: true },
       orderBy: { name: 'asc' },
     });
@@ -194,6 +207,7 @@ export class GroupScheduleService {
 
     const where: any = {
       branchId,
+      companyId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
       isActive: true,
@@ -237,14 +251,23 @@ export class GroupScheduleService {
     startTime: string;
     endTime: string;
     excludeGroupId?: string;
+    companyId: number;
   }) {
-    const { branchId, exactDays, startTime, endTime, excludeGroupId } = params;
+    const {
+      branchId,
+      exactDays,
+      startTime,
+      endTime,
+      excludeGroupId,
+      companyId,
+    } = params;
 
     const allTeachers = await this.prisma.user.findMany({
       where: {
         roles: { some: { roleId: TEACHER_ROLE_ID } },
         branches: { some: { branchId } },
         deletedAt: null,
+        companyId,
       },
       select: { id: true, firstName: true, lastName: true, photo: true },
       orderBy: { firstName: 'asc' },
@@ -260,6 +283,7 @@ export class GroupScheduleService {
 
     const where: any = {
       branchId,
+      companyId,
       deletedAt: null,
       statusEnum: { in: [...OCCUPYING_STATUSES] },
       isActive: true,

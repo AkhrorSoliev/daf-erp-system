@@ -86,7 +86,10 @@ describe('GatewayEventsService', () => {
           provider: 'PAYME',
           externalId: 'perform-tx-id',
           eventType: 'PerformTransaction',
-          payload: { method: 'PerformTransaction', params: { id: 'perform-tx-id' } },
+          payload: {
+            method: 'PerformTransaction',
+            params: { id: 'perform-tx-id' },
+          },
           signatureValid: true,
           processed: true,
           processedAt: new Date(),

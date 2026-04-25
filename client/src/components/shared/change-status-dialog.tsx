@@ -50,6 +50,7 @@ const STATUS_CARD_CONFIG: Record<string, StatusCardConfig> = {
   FROZEN: { icon: Snowflake, label: "Muzlatilgan", description: "O'qishni muzlatish", color: "blue" },
   GRADUATED: { icon: GraduationCap, label: "Bitirgan", description: "Kursni muvaffaqiyatli tugatdi", color: "emerald" },
   EXPELLED: { icon: Ban, label: "Chetlatilgan", description: "Sabab bilan chetlatish", color: "red" },
+  ARCHIVED: { icon: Archive, label: "Arxivlash", description: "Xato/duplikat yozuvni yashirish", color: "red" },
   // User/Teacher
   SUSPENDED: { icon: ShieldOff, label: "To'xtatilgan", description: "Vaqtincha to'xtatish", color: "amber" },
   TERMINATED: { icon: UserX, label: "Ishdan bo'shatilgan", description: "Butunlay to'xtatish", color: "red" },
@@ -133,6 +134,7 @@ export function ChangeStatusDialog({
 
   const allowedStatuses = getAllowedTransitions(entityType, currentStatus);
   const apiPath = ENTITY_API_PATH[entityType];
+  const isArchiving = selectedStatus === "ARCHIVED";
   const isReasonRequired = selectedStatus !== "GRADUATED" && selectedStatus !== "COMPLETED";
 
   const handleSubmit = async () => {
@@ -144,15 +146,25 @@ export function ChangeStatusDialog({
 
     setSubmitting(true);
     try {
-      await api.patch(`${apiPath}/${entityId}/status`, {
-        status: selectedStatus,
-        reason: reason.trim() || undefined,
-      });
-      toast.success("Status muvaffaqiyatli o'zgartirildi");
+      if (isArchiving) {
+        await api.delete(`${apiPath}/${entityId}`, {
+          data: { reason: reason.trim() },
+        });
+        toast.success("Muvaffaqiyatli arxivlandi");
+      } else {
+        await api.patch(`${apiPath}/${entityId}/status`, {
+          status: selectedStatus,
+          reason: reason.trim() || undefined,
+        });
+        toast.success("Status muvaffaqiyatli o'zgartirildi");
+      }
       onStatusChanged?.(selectedStatus);
       handleClose(false);
     } catch (error: any) {
-      const msg = error?.response?.data?.message || "Statusni o'zgartirishda xatolik";
+      const fallback = isArchiving
+        ? "Arxivlashda xatolik"
+        : "Statusni o'zgartirishda xatolik";
+      const msg = error?.response?.data?.message || fallback;
       toast.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setSubmitting(false);
@@ -237,6 +249,13 @@ export function ChangeStatusDialog({
                 </div>
               </div>
 
+              {/* Arxivlash uchun qo'shimcha ogohlantirish */}
+              {isArchiving && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-relaxed text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+                  Arxivlash faqat <strong>xato, duplikat yoki test yozuvlar</strong> uchun — yozuv ro&apos;yxatdan ko&apos;rinmay qoladi. Agar o&apos;quvchi real chetlatilayotgan bo&apos;lsa, <strong>&ldquo;Chetlatilgan&rdquo;</strong> holatni tanlang.
+                </div>
+              )}
+
               {/* Sabab */}
               {selectedStatus && (
                 <div className="space-y-2">
@@ -244,7 +263,7 @@ export function ChangeStatusDialog({
                     Sabab <span className="text-destructive">*</span>
                   </span>
                   <Textarea
-                    placeholder="Sabab yozing..."
+                    placeholder={isArchiving ? "Masalan: duplikat yozuv, xato kiritilgan..." : "Sabab yozing..."}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={3}
@@ -263,8 +282,11 @@ export function ChangeStatusDialog({
             <Button
               onClick={handleSubmit}
               disabled={!selectedStatus || submitting || (isReasonRequired && !reason.trim())}
+              variant={isArchiving ? "destructive" : "default"}
             >
-              {submitting ? "O'zgartirilmoqda..." : "O'zgartirish"}
+              {submitting
+                ? isArchiving ? "Arxivlanmoqda..." : "O'zgartirilmoqda..."
+                : isArchiving ? "Arxivlash" : "O'zgartirish"}
             </Button>
           )}
         </DialogFooter>

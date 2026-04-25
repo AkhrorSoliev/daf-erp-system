@@ -66,15 +66,21 @@ export class CommentsController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  findByEntity(@Query() query: CommentQueryDto) {
-    return this.commentsService.findByEntity(query);
+  findByEntity(
+    @Query() query: CommentQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.commentsService.findByEntity(query, companyId);
   }
 
   @Get('latest')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  getLatestComment(@Query() query: LatestCommentQueryDto) {
-    return this.commentsService.getLatestComment(query);
+  getLatestComment(
+    @Query() query: LatestCommentQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.commentsService.getLatestComment(query, companyId);
   }
 
   @Patch(':id')
@@ -85,16 +91,17 @@ export class CommentsController {
     @Body() dto: UpdateCommentDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.commentsService.update(id, dto, userId, roles);
+    return this.commentsService.update(id, dto, userId, roles, companyId);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO')
-  delete(@Param('id') id: string) {
+  delete(@Param('id') id: string, @CurrentUser('companyId') companyId: number) {
     // RolesGuard already ensures only CEO can reach here
-    return this.commentsService.delete(id);
+    return this.commentsService.delete(id, companyId);
   }
 
   @Patch(':id/assignee-status')

@@ -91,7 +91,7 @@ export class CommentsService {
     return comment;
   }
 
-  async findByEntity(query: CommentQueryDto) {
+  async findByEntity(query: CommentQueryDto, companyId: number) {
     const page = query.page || 1;
     const pageSize = query.pageSize || 20;
     const skip = (page - 1) * pageSize;
@@ -99,6 +99,7 @@ export class CommentsService {
     const where = {
       entityType: query.entityType,
       entityId: String(query.entityId),
+      companyId,
     };
 
     const [data, total] = await Promise.all([
@@ -115,11 +116,12 @@ export class CommentsService {
     return { data, total, page, pageSize };
   }
 
-  async getLatestComment(query: LatestCommentQueryDto) {
+  async getLatestComment(query: LatestCommentQueryDto, companyId: number) {
     const comment = await this.prisma.comment.findFirst({
       where: {
         entityType: query.entityType,
         entityId: String(query.entityId),
+        companyId,
       },
       include: commentInclude,
       orderBy: { createdAt: 'desc' },
@@ -133,9 +135,10 @@ export class CommentsService {
     dto: UpdateCommentDto,
     userId: number,
     roles: string[],
+    companyId: number,
   ) {
-    const comment = await this.prisma.comment.findUnique({
-      where: { id },
+    const comment = await this.prisma.comment.findFirst({
+      where: { id, companyId },
       include: commentInclude,
     });
 
@@ -182,9 +185,9 @@ export class CommentsService {
     return updated;
   }
 
-  async delete(id: string) {
-    const comment = await this.prisma.comment.findUnique({
-      where: { id },
+  async delete(id: string, companyId: number) {
+    const comment = await this.prisma.comment.findFirst({
+      where: { id, companyId },
       include: commentInclude,
     });
 

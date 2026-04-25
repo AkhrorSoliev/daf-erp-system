@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { AiMessage } from '../ai/ai.types';
@@ -48,11 +44,7 @@ export class StudentAiChatService {
 
     // Grammar Practice va Roleplay da AI birinchi xabarni avtomatik yuboradi
     if (dto.mode !== 'FREE_CONVERSATION') {
-      await this.generateOpeningMessage(
-        conversation.id,
-        studentId,
-        dto.mode,
-      );
+      await this.generateOpeningMessage(conversation.id, studentId, dto.mode);
     }
 
     return conversation;
@@ -104,11 +96,7 @@ export class StudentAiChatService {
     }
   }
 
-  async getConversations(
-    studentId: number,
-    page: number,
-    pageSize: number,
-  ) {
+  async getConversations(studentId: number, page: number, pageSize: number) {
     const where = {
       studentId,
       useCase: 'STUDENT_CHAT' as const,
@@ -361,7 +349,12 @@ Generate exactly 3 short follow-up messages (in German, ${level} level) the stud
 
       return result.content
         .split('\n')
-        .map((s) => s.replace(/^\d+[\.\)]\s*/, '').replace(/^[""]|[""]$/g, '').trim())
+        .map((s) =>
+          s
+            .replace(/^\d+[.)]\s*/, '')
+            .replace(/^[""]|[""]$/g, '')
+            .trim(),
+        )
         .filter((s) => s.length > 0 && s.length <= 50)
         .slice(0, 3);
     } catch {
@@ -372,7 +365,7 @@ Generate exactly 3 short follow-up messages (in German, ${level} level) the stud
   private generateTitle(assistantResponse: string): string {
     // Extract first meaningful sentence/phrase as title
     const clean = assistantResponse
-      .replace(/[✏️🎭📝🗣️]/g, '')
+      .replace(/✏️|🎭|📝|🗣️/gu, '')
       .replace(/\*\*/g, '')
       .trim();
     const firstSentence = clean.split(/[.!?\n]/)[0]?.trim() ?? '';

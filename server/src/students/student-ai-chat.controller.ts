@@ -52,19 +52,13 @@ export class StudentAiChatController {
   }
 
   @Get(':id')
-  getOne(
-    @Param('id') id: string,
-    @CurrentUser('studentId') studentId: number,
-  ) {
+  getOne(@Param('id') id: string, @CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.service.getConversation(id, studentId);
   }
 
   @Delete(':id')
-  remove(
-    @Param('id') id: string,
-    @CurrentUser('studentId') studentId: number,
-  ) {
+  remove(@Param('id') id: string, @CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.service.deleteConversation(id, studentId);
   }
@@ -87,14 +81,18 @@ export class StudentAiChatController {
     res.flushHeaders();
 
     try {
-      const { stream, conversationId: convId, isFirstExchange, conversationTitle } =
-        await this.service.sendMessageStream(
-          conversationId,
-          studentId,
-          userId,
-          companyId,
-          dto.content,
-        );
+      const {
+        stream,
+        conversationId: convId,
+        isFirstExchange,
+        conversationTitle,
+      } = await this.service.sendMessageStream(
+        conversationId,
+        studentId,
+        userId,
+        companyId,
+        dto.content,
+      );
 
       let fullContent = '';
       for await (const chunk of stream) {

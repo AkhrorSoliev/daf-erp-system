@@ -26,6 +26,8 @@ export class GroupsController {
   ) {}
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
   findAll(@Query() query: GroupQueryDto, @CurrentUser() currentUser: any) {
     const roles: string[] = currentUser.roles ?? [];
     const isTeacherOnly =
@@ -36,15 +38,18 @@ export class GroupsController {
     if (isTeacherOnly) {
       query.teacher_id = currentUser.id;
     }
-    return this.groupsService.findAll(query);
+    return this.groupsService.findAll(query, currentUser.companyId);
   }
 
   @Get('schedule-conflicts')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   getScheduleConflicts(
     @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
     @Query('startTime') startTime: string,
     @Query('endTime') endTime: string,
+    @CurrentUser('companyId') companyId: number,
     @Query('roomId') roomId?: string,
     @Query('teacherId') teacherId?: string,
     @Query('excludeGroupId') excludeGroupId?: string,
@@ -58,15 +63,19 @@ export class GroupsController {
       roomId: roomId || undefined,
       teacherId: teacherId ? Number(teacherId) : undefined,
       excludeGroupId: excludeGroupId || undefined,
+      companyId,
     });
   }
 
   @Get('available-rooms')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   getAvailableRooms(
     @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
     @Query('startTime') startTime: string,
     @Query('endTime') endTime: string,
+    @CurrentUser('companyId') companyId: number,
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
@@ -76,15 +85,19 @@ export class GroupsController {
       startTime: startTime || '',
       endTime: endTime || '',
       excludeGroupId: excludeGroupId || undefined,
+      companyId,
     });
   }
 
   @Get('available-teachers')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   getAvailableTeachers(
     @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
     @Query('startTime') startTime: string,
     @Query('endTime') endTime: string,
+    @CurrentUser('companyId') companyId: number,
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
@@ -94,14 +107,18 @@ export class GroupsController {
       startTime: startTime || '',
       endTime: endTime || '',
       excludeGroupId: excludeGroupId || undefined,
+      companyId,
     });
   }
 
   @Get('available-slots')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
   getAvailableSlots(
     @Query('branchId') branchId: string,
     @Query('roomId') roomId: string,
     @Query('exactDays') exactDays: string,
+    @CurrentUser('companyId') companyId: number,
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
@@ -110,22 +127,38 @@ export class GroupsController {
       roomId,
       exactDays: days,
       excludeGroupId: excludeGroupId || undefined,
+      companyId,
     });
   }
 
   @Get('next-name')
-  getNextName(@Query('branchId') branchId: string) {
-    return this.groupsService.getNextName(Number(branchId));
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getNextName(
+    @Query('branchId') branchId: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.groupsService.getNextName(Number(branchId), companyId);
   }
 
   @Get(':id/students')
-  findStudentsByGroupId(@Param('id') id: string) {
-    return this.groupsService.findStudentsByGroupId(id);
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  findStudentsByGroupId(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.groupsService.findStudentsByGroupId(id, companyId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.groupsService.findOne(id);
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.groupsService.findOne(id, companyId);
   }
 
   @Post()
@@ -146,8 +179,9 @@ export class GroupsController {
     @Param('id') id: string,
     @Body() dto: UpdateGroupDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.groupsService.update(id, dto, userId);
+    return this.groupsService.update(id, dto, userId, companyId);
   }
 
   @Patch(':id/status')
@@ -157,21 +191,29 @@ export class GroupsController {
     @Param('id') id: string,
     @Body() dto: ChangeGroupStatusDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.groupsService.changeStatus(id, dto, userId);
+    return this.groupsService.changeStatus(id, dto, userId, companyId);
   }
 
   @Get(':id/status-history')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  getStatusHistory(@Param('id') id: string) {
-    return this.groupsService.getStatusHistory(id);
+  getStatusHistory(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.groupsService.getStatusHistory(id, companyId);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  delete(@Param('id') id: string, @CurrentUser('id') userId: number) {
-    return this.groupsService.delete(id, userId);
+  delete(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.groupsService.delete(id, userId, companyId);
   }
 }

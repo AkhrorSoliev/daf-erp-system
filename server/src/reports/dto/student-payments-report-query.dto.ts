@@ -13,6 +13,7 @@ import { PaymentMethod } from '@prisma/client';
 function toArray<T = string>(value: unknown): T[] | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   if (Array.isArray(value)) return value as T[];
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined;
   return String(value)
     .split(',')
     .map((v) => v.trim())

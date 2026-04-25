@@ -43,18 +43,26 @@ describe('DashboardController', () => {
     });
 
     it('should delegate to service with correct params', async () => {
-      await controller.getTodaySchedule({ branchId: 1, date: '2026-04-13' });
+      await controller.getTodaySchedule(
+        { branchId: 1, date: '2026-04-13' },
+        1001,
+      );
 
       expect(mockService.getTodaySchedule).toHaveBeenCalledWith(
         1,
+        1001,
         '2026-04-13',
       );
     });
 
     it('should delegate to service without date when not provided', async () => {
-      await controller.getTodaySchedule({ branchId: 2 });
+      await controller.getTodaySchedule({ branchId: 2 }, 1001);
 
-      expect(mockService.getTodaySchedule).toHaveBeenCalledWith(2, undefined);
+      expect(mockService.getTodaySchedule).toHaveBeenCalledWith(
+        2,
+        1001,
+        undefined,
+      );
     });
   });
 });

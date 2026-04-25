@@ -38,8 +38,9 @@ export function buildDeutschTutorPrompt(
 ): string {
   const { studentName, level, mode } = options;
 
-  const modeInstruction = (MODE_INSTRUCTIONS[mode] ?? MODE_INSTRUCTIONS.FREE_CONVERSATION)
-    .replace(/\$\{'{level}'}/g, level);
+  const modeInstruction = (
+    MODE_INSTRUCTIONS[mode] ?? MODE_INSTRUCTIONS.FREE_CONVERSATION
+  ).replace(/\$\{'{level}'}/g, level);
 
   return `Du bist ein freundlicher und geduldiger Deutschlehrer für usbekische Studenten am DaF Sprachzentrum.
 

@@ -52,7 +52,7 @@ describe('ClickMethodsService', () => {
         update: jest.fn().mockImplementation(({ data }) => data),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
-      $transaction: jest.fn().mockImplementation(async (fn) => {
+      $transaction: jest.fn().mockImplementation((fn) => {
         const tx = {
           clickTransaction: prisma.clickTransaction,
           student: prisma.student,

@@ -21,9 +21,7 @@ describe('DepartureReasonsController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DepartureReasonsController],
-      providers: [
-        { provide: DepartureReasonsService, useValue: mockService },
-      ],
+      providers: [{ provide: DepartureReasonsService, useValue: mockService }],
     }).compile();
 
     controller = module.get(DepartureReasonsController);
@@ -31,7 +29,10 @@ describe('DepartureReasonsController — role guards', () => {
     guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(handler: Function, roles: string[]) {
+  function mockExecutionContext(
+    handler: (...args: unknown[]) => unknown,
+    roles: string[],
+  ) {
     return {
       getHandler: () => handler,
       getClass: () => DepartureReasonsController,

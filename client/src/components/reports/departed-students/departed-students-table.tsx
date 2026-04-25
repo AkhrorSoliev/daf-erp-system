@@ -74,7 +74,7 @@ export function DepartedStudentsTable({ data, isLoading, page, pageSize }: Props
                   colSpan={COLSPAN}
                   className="text-center py-8 text-sm text-muted-foreground"
                 >
-                  Ketgan o&apos;quvchilar topilmadi
+                  Tanlangan davrda ketgan o&apos;quvchilar yo&apos;q — davrni kengaytiring yoki filtrni o&apos;zgartiring
                 </TableCell>
               </TableRow>
             ) : (

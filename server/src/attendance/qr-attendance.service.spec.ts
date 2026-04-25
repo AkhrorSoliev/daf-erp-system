@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { QrAttendanceService } from './qr-attendance.service';
+import { QrAttendanceSessionService } from './qr-attendance-session.service';
+import { QrAttendanceScanService } from './qr-attendance-scan.service';
 import { AttendanceService } from './attendance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -99,6 +101,8 @@ describe('QrAttendanceService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QrAttendanceService,
+        QrAttendanceSessionService,
+        QrAttendanceScanService,
         { provide: PrismaService, useValue: prisma },
         { provide: RedisService, useValue: redis },
         { provide: NotificationsGateway, useValue: gateway },

@@ -1,0 +1,351 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class ReportsFinancialService {
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Financial overview: expected vs actual income, salary, expenses.
+   */
+  async getFinancialOverview(
+    companyId: number,
+    query: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
+    const now = new Date();
+    const start =
+      query.startDate ??
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const end =
+      query.endDate ??
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+
+    const dateFilter = {
+      gte: new Date(start),
+      lte: new Date(end + 'T23:59:59.999Z'),
+    };
+
+    const actualIncome = await this.prisma.payment.aggregate({
+      where: {
+        companyId,
+        status: 'COMPLETED',
+        createdAt: dateFilter,
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      _sum: { amount: true },
+      _count: true,
+    });
+
+    const incomeByMethod = await this.prisma.payment.groupBy({
+      by: ['method'],
+      where: {
+        companyId,
+        status: 'COMPLETED',
+        createdAt: dateFilter,
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      _sum: { amount: true },
+      _count: true,
+    });
+
+    // Recognized revenue forecast: for each active contract in scope,
+    // estimate monthly recognition from the negotiated contract amount
+    // (honors discounts) and the group's weekly cadence. Using contracts
+    // instead of enrollments means chegirmali shartnomalar are priced
+    // correctly and students without an active contract (test enrollments,
+    // incomplete setup) don't inflate the forecast.
+    const activeContracts = await this.prisma.contract.findMany({
+      where: {
+        status: 'ACTIVE',
+        deletedAt: null,
+        companyId,
+        ...(query.branchId && { branchId: query.branchId }),
+        group: {
+          deletedAt: null,
+          statusEnum: 'ACTIVE',
+        },
+      },
+      select: {
+        totalAmount: true,
+        course: { select: { lessonPaymentCount: true } },
+        group: { select: { exactDays: true } },
+      },
+    });
+    const recognizedRevenueForecast = activeContracts.reduce((sum, c) => {
+      const lpc = c.course.lessonPaymentCount || 12;
+      const perLesson = Math.round(c.totalAmount / lpc);
+      const lessonsPerMonth = (c.group?.exactDays?.length ?? 0) * 4;
+      return sum + perLesson * lessonsPerMonth;
+    }, 0);
+    const expectedIncome = recognizedRevenueForecast;
+
+    // Outstanding receivable (D.2): total unpaid balance across active
+    // debtors. Not a forecast — it's what the center is actually owed today.
+    const receivables = await this.prisma.student.aggregate({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: 'ACTIVE',
+        balance: { lt: 0 },
+      },
+      _sum: { balance: true },
+      _count: true,
+    });
+    const outstandingReceivable = Math.abs(receivables._sum.balance ?? 0);
+    const debtorCount = receivables._count;
+    const avgDebt =
+      debtorCount > 0 ? Math.round(outstandingReceivable / debtorCount) : 0;
+
+    // Salary: paid + pending. Both are reported on the same basis — net of
+    // tax — so the dashboard number reflects what actually leaves (or will
+    // leave) the center.
+    const [salaryPaid, salaryPending, companyTax] = await Promise.all([
+      this.prisma.salaryPayment.aggregate({
+        where: { companyId, status: 'PAID', paidAt: dateFilter },
+        _sum: { netAmount: true, grossAmount: true, taxAmount: true },
+      }),
+      this.prisma.salaryAccrual.aggregate({
+        where: { companyId, salaryPaymentId: null },
+        _sum: { amount: true },
+      }),
+      this.prisma.companyTaxConfig.findUnique({
+        where: { companyId },
+        select: { salaryTaxRate: true, isActive: true },
+      }),
+    ]);
+
+    const salaryTaxRate =
+      companyTax && companyTax.isActive ? companyTax.salaryTaxRate : 12.0;
+    const pendingGross = salaryPending._sum.amount ?? 0;
+    const pendingTax = Math.round((pendingGross * salaryTaxRate) / 100);
+    const pendingNet = pendingGross - pendingTax;
+
+    const expenses = await this.prisma.expense.aggregate({
+      where: {
+        companyId,
+        deletedAt: null,
+        date: { gte: new Date(start), lte: new Date(end) },
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      _sum: { amount: true },
+    });
+
+    const debtors = await this.prisma.student.count({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: 'ACTIVE',
+        balance: { lt: 0 },
+      },
+    });
+
+    const activeStudents = await this.prisma.student.aggregate({
+      where: { companyId, deletedAt: null, status: 'ACTIVE' },
+      _count: true,
+      _sum: { balance: true },
+    });
+
+    // Active LTV: period revenue / unique payers in that period.
+    const periodPayerFilter = {
+      companyId,
+      status: 'COMPLETED' as const,
+      createdAt: dateFilter,
+      ...(query.branchId && { branchId: query.branchId }),
+    };
+    const [periodPayerIncome, periodUniquePayers] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: periodPayerFilter,
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.groupBy({
+        by: ['studentId'],
+        where: periodPayerFilter,
+      }),
+    ]);
+
+    const marketingExpenses = await this.prisma.expense.aggregate({
+      where: {
+        companyId,
+        deletedAt: null,
+        category: 'MARKETING',
+        date: { gte: new Date(start), lte: new Date(end) },
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      _sum: { amount: true },
+    });
+
+    const newStudents = await this.prisma.student.count({
+      where: {
+        companyId,
+        deletedAt: null,
+        createdAt: dateFilter,
+        ...(query.branchId && {
+          branches: { some: { branchId: query.branchId } },
+        }),
+      },
+    });
+
+    const totalIncome = actualIncome._sum.amount ?? 0;
+    const totalExpenseAmount = expenses._sum.amount ?? 0;
+    const totalSalaryPaid = salaryPaid._sum.netAmount ?? 0;
+    const totalExpenses = totalExpenseAmount + totalSalaryPaid;
+    const marketingTotal = marketingExpenses._sum.amount ?? 0;
+    const periodPayerTotal = periodPayerIncome._sum.amount ?? 0;
+    const periodPayerCount = periodUniquePayers.length || 1;
+
+    return {
+      income: {
+        expected: expectedIncome,
+        actual: totalIncome,
+        paymentCount: actualIncome._count,
+        byMethod: incomeByMethod.map((m) => ({
+          method: m.method,
+          amount: m._sum.amount ?? 0,
+          count: m._count,
+        })),
+      },
+      forecast: {
+        recognizedRevenueForecast,
+        outstandingReceivable,
+        debtorExposure: { count: debtorCount, avgDebt },
+      },
+      salary: {
+        paid: totalSalaryPaid,
+        paidGross: salaryPaid._sum.grossAmount ?? 0,
+        paidTax: salaryPaid._sum.taxAmount ?? 0,
+        pending: pendingNet,
+        pendingGross,
+        pendingTax,
+      },
+      expenses: totalExpenseAmount,
+      netProfit: totalIncome - totalExpenses,
+      debtorCount: debtors,
+      activeBalance: activeStudents._sum.balance ?? 0,
+      activeStudentCount: activeStudents._count,
+      ltv: Math.round(periodPayerTotal / periodPayerCount),
+      ltvPayerCount: periodUniquePayers.length,
+      cac: newStudents > 0 ? Math.round(marketingTotal / newStudents) : 0,
+      marketingRoi:
+        marketingTotal > 0
+          ? Math.round(((totalIncome - marketingTotal) / marketingTotal) * 100)
+          : 0,
+      avgPayment:
+        actualIncome._count > 0
+          ? Math.round(totalIncome / actualIncome._count)
+          : 0,
+      newStudentCount: newStudents,
+      marketingExpenses: marketingTotal,
+    };
+  }
+
+  /**
+   * Monthly trend data for the last 6 months — used for KPI card charts.
+   */
+  async getFinancialTrend(companyId: number, branchId?: number) {
+    const now = new Date();
+    const months: { label: string; start: Date; end: Date }[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(
+        d.getFullYear(),
+        d.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+      const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      months.push({ label, start, end });
+    }
+
+    const branchFilter = branchId ? { branchId } : {};
+
+    const result = await Promise.all(
+      months.map(async (m) => {
+        const dateFilter = { gte: m.start, lte: m.end };
+
+        const [
+          income,
+          expenseAgg,
+          salaryAgg,
+          marketing,
+          newStudents,
+          payerCount,
+        ] = await Promise.all([
+          this.prisma.payment.aggregate({
+            where: {
+              companyId,
+              status: 'COMPLETED',
+              createdAt: dateFilter,
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+            _count: true,
+          }),
+          this.prisma.expense.aggregate({
+            where: {
+              companyId,
+              deletedAt: null,
+              date: { gte: m.start, lte: m.end },
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          }),
+          this.prisma.salaryPayment.aggregate({
+            where: { companyId, status: 'PAID', paidAt: dateFilter },
+            _sum: { netAmount: true },
+          }),
+          this.prisma.expense.aggregate({
+            where: {
+              companyId,
+              deletedAt: null,
+              category: 'MARKETING',
+              date: { gte: m.start, lte: m.end },
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          }),
+          this.prisma.student.count({
+            where: { companyId, deletedAt: null, createdAt: dateFilter },
+          }),
+          this.prisma.payment.groupBy({
+            by: ['studentId'],
+            where: { companyId, status: 'COMPLETED', createdAt: dateFilter },
+          }),
+        ]);
+
+        const incomeTotal = income._sum.amount ?? 0;
+        const expenseTotal = expenseAgg._sum.amount ?? 0;
+        const salaryTotal = salaryAgg._sum.netAmount ?? 0;
+        const marketingTotal = marketing._sum.amount ?? 0;
+        const paymentCount = income._count;
+
+        return {
+          month: m.label,
+          income: incomeTotal,
+          expenses: expenseTotal + salaryTotal,
+          profit: incomeTotal - expenseTotal - salaryTotal,
+          activeBalance: 0,
+          ltv:
+            payerCount.length > 0
+              ? Math.round(incomeTotal / payerCount.length)
+              : 0,
+          cac: newStudents > 0 ? Math.round(marketingTotal / newStudents) : 0,
+          marketingRoi:
+            marketingTotal > 0
+              ? Math.round(
+                  ((incomeTotal - marketingTotal) / marketingTotal) * 100,
+                )
+              : 0,
+          avgPayment:
+            paymentCount > 0 ? Math.round(incomeTotal / paymentCount) : 0,
+        };
+      }),
+    );
+
+    return result;
+  }
+}

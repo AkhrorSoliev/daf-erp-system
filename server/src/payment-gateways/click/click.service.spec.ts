@@ -5,10 +5,7 @@ import { ClickService } from './click.service';
 import { ClickMethodsService } from './click-methods.service';
 import { GatewayEventService } from '../gateway-event.service';
 import { GatewayConfigService } from '../gateway-config.service';
-import {
-  CLICK_ACTION_NOT_FOUND,
-  CLICK_SIGN_CHECK_FAILED,
-} from './click-errors';
+import { CLICK_SIGN_CHECK_FAILED } from './click-errors';
 
 describe('ClickService', () => {
   let service: ClickService;

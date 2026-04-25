@@ -50,7 +50,10 @@ describe('GroupsController — role guards', () => {
     guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(handler: Function, roles: string[]) {
+  function mockExecutionContext(
+    handler: (...args: unknown[]) => unknown,
+    roles: string[],
+  ) {
     return {
       getHandler: () => handler,
       getClass: () => GroupsController,
@@ -148,27 +151,142 @@ describe('GroupsController — role guards', () => {
     });
   });
 
-  describe('findAll() — no guard metadata', () => {
-    it('should NOT have @Roles metadata (filtered by service logic for teachers)', () => {
+  describe('findAll()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator, Teacher) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual([
+        'CEO',
+        'Branch Director',
+        'Administrator',
+        'Teacher',
+      ]);
+    });
+
+    it('should allow Teacher to list (service filters to their groups)', () => {
+      const ctx = mockExecutionContext(controller.findAll, ['Teacher']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Cashier from listing groups', () => {
+      const ctx = mockExecutionContext(controller.findAll, ['Cashier']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 
-  describe('findOne() — no guard', () => {
-    it('should NOT have @Roles metadata (teachers can view group details)', () => {
+  describe('findOne()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator, Teacher) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findOne);
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual([
+        'CEO',
+        'Branch Director',
+        'Administrator',
+        'Teacher',
+      ]);
+    });
+
+    it('should allow Teacher to view group details', () => {
+      const ctx = mockExecutionContext(controller.findOne, ['Teacher']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Cashier from viewing group details', () => {
+      const ctx = mockExecutionContext(controller.findOne, ['Cashier']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 
-  describe('findStudentsByGroupId() — no guard', () => {
-    it('should NOT have @Roles metadata (teachers can view group students)', () => {
+  describe('findStudentsByGroupId()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator, Teacher) metadata', () => {
       const roles = reflector.get<string[]>(
         ROLES_KEY,
         controller.findStudentsByGroupId,
       );
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual([
+        'CEO',
+        'Branch Director',
+        'Administrator',
+        'Teacher',
+      ]);
+    });
+
+    it('should allow Teacher to view group students', () => {
+      const ctx = mockExecutionContext(controller.findStudentsByGroupId, [
+        'Teacher',
+      ]);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Cashier from viewing group students', () => {
+      const ctx = mockExecutionContext(controller.findStudentsByGroupId, [
+        'Cashier',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('getScheduleConflicts()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getScheduleConflicts,
+      );
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+
+    it('should deny Teacher from checking schedule conflicts', () => {
+      const ctx = mockExecutionContext(controller.getScheduleConflicts, [
+        'Teacher',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('getAvailableRooms()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getAvailableRooms,
+      );
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+
+    it('should deny Teacher from querying available rooms', () => {
+      const ctx = mockExecutionContext(controller.getAvailableRooms, [
+        'Teacher',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('getAvailableTeachers()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getAvailableTeachers,
+      );
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+  });
+
+  describe('getAvailableSlots()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getAvailableSlots,
+      );
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+  });
+
+  describe('getNextName()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.getNextName);
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+
+    it('should deny Teacher from fetching next group name', () => {
+      const ctx = mockExecutionContext(controller.getNextName, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 });

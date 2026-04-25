@@ -128,15 +128,22 @@ export class EntityHistoryService {
   async getHistory(
     entityType: string,
     entityId: string,
+    companyId: number,
     options?: { page?: number; pageSize?: number },
   ) {
     const page = options?.page || 1;
     const pageSize = options?.pageSize || 10;
     const skip = (page - 1) * pageSize;
 
+    const where = {
+      entityType,
+      entityId: String(entityId),
+      companyId,
+    };
+
     const [data, total] = await Promise.all([
       this.prisma.entityHistory.findMany({
-        where: { entityType, entityId: String(entityId) },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: pageSize,
@@ -152,9 +159,7 @@ export class EntityHistoryService {
           },
         },
       }),
-      this.prisma.entityHistory.count({
-        where: { entityType, entityId: String(entityId) },
-      }),
+      this.prisma.entityHistory.count({ where }),
     ]);
 
     return { data, total, page, pageSize };

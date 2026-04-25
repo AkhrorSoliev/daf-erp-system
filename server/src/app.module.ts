@@ -29,6 +29,8 @@ import { SearchModule } from './search/search.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { DepartureReasonsModule } from './departure-reasons/departure-reasons.module';
+import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/group-teacher-change-reasons.module';
+import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ContractsModule } from './contracts/contracts.module';
@@ -69,6 +71,8 @@ import { JwtAuthGuard } from './common/guards';
     DashboardModule,
     ReportsModule,
     DepartureReasonsModule,
+    GroupTeacherChangeReasonsModule,
+    EnrollmentTransferReasonsModule,
     TransactionsModule,
     PaymentsModule,
     ContractsModule,

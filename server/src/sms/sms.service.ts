@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -21,10 +21,20 @@ export class SmsService {
     senderUserId?: number,
     companyId?: number,
   ) {
-    const student = await this.prisma.student.findUnique({
-      where: { id: studentId },
+    // When a companyId is provided (admin-initiated SMS), verify the student
+    // belongs to that company — otherwise refuse without leaking existence.
+    // Cron/system callers omit companyId and fall back to audit-friendly
+    // behaviour: missing student → SMS saved with FAILED status.
+    const student = await this.prisma.student.findFirst({
+      where: {
+        id: studentId,
+        ...(companyId != null && { companyId }),
+      },
       select: { telegramChatId: true },
     });
+    if (!student && companyId != null) {
+      throw new NotFoundException("O'quvchi topilmadi");
+    }
 
     const chatId = student?.telegramChatId;
 
@@ -83,12 +93,19 @@ export class SmsService {
     return sms;
   }
 
-  async getByStudent(studentId: number, page = 1, pageSize = 20) {
+  async getByStudent(
+    studentId: number,
+    companyId: number,
+    page = 1,
+    pageSize = 20,
+  ) {
     const skip = (page - 1) * pageSize;
+
+    const where = { studentId, companyId };
 
     const [data, total] = await Promise.all([
       this.prisma.smsMessage.findMany({
-        where: { studentId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: pageSize,
@@ -96,7 +113,7 @@ export class SmsService {
           senderUser: { select: { id: true, firstName: true, lastName: true } },
         },
       }),
-      this.prisma.smsMessage.count({ where: { studentId } }),
+      this.prisma.smsMessage.count({ where }),
     ]);
 
     return { data, total, page, pageSize };

@@ -83,4 +83,9 @@ export class UpdateGroupDto {
   @IsArray()
   @IsInt({ each: true })
   teacherIds?: number[];
+
+  /** Optional — when teachers are changed, admins may pick a reason. */
+  @IsOptional()
+  @IsString()
+  changeReasonId?: string;
 }

@@ -1,15 +1,21 @@
 import { Scenes, Markup, Telegraf } from 'telegraf';
+import { message } from 'telegraf/filters';
 import { BotContext } from '../types/context';
-import { SCENES, DEFAULT_COMPANY_ID } from '../constants';
+import { SCENES } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
-import { generatePassword } from '../../common/utils/password.util';
-import { downloadFile } from '../utils/download.util';
-import { message } from 'telegraf/filters';
-import * as bcrypt from 'bcryptjs';
-
-const STUDENT_ROLE_ID = 6;
+import {
+  buildTeachersKeyboard,
+  daysMap,
+  formatQrGroupInfo,
+  loadTeachersForBranch,
+  TEACHER_ROLE_ID,
+} from './student-registration-helpers';
+import {
+  registerStudentFromTelegram,
+  uploadStudentPhoto,
+} from './student-registration-flow';
 
 /**
  * Student registration flow:
@@ -24,7 +30,7 @@ const STUDENT_ROLE_ID = 6;
 export function createStudentRegistrationScene(
   prisma: PrismaService,
   uploadService: UploadService,
-  bot: Telegraf<BotContext>,
+  _bot: Telegraf<BotContext>,
   entityHistoryService: EntityHistoryService,
 ): Scenes.BaseScene<BotContext> {
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
@@ -34,7 +40,7 @@ export function createStudentRegistrationScene(
     await ctx.answerCbQuery('Iltimos, kuting...');
   });
 
-  // Scene ga kirganda — ustozlar ro'yxatini ko'rsatish
+  // Scene'ga kirganda — ustozlar ro'yxatini ko'rsatish
   scene.enter(async (ctx) => {
     const branchId = ctx.session.data?.branchId;
     if (!branchId) {
@@ -43,7 +49,6 @@ export function createStudentRegistrationScene(
       return;
     }
 
-    // Allaqachon ro'yxatdan o'tganini tekshirish
     const chatId = String(ctx.chat!.id);
     const existingStudent = await prisma.student.findFirst({
       where: { telegramChatId: chatId, deletedAt: null },
@@ -57,39 +62,7 @@ export function createStudentRegistrationScene(
     // QR kod orqali guruh bilan kelgan bo'lsa — to'g'ridan-to'g'ri ism kiritishga o'tish
     if (ctx.session.data.groupId) {
       ctx.session.step = 3;
-
-      const daysMap: Record<string, string> = {
-        odd: 'Toq kunlar',
-        even: 'Juft kunlar',
-      };
-      const weekdayLabels: Record<string, string> = {
-        monday: 'Du',
-        tuesday: 'Se',
-        wednesday: 'Cho',
-        thursday: 'Pa',
-        friday: 'Ju',
-        saturday: 'Sha',
-      };
-
-      const d = ctx.session.data;
-      const days = d.days
-        ? (daysMap[d.days] ?? '')
-        : d.exactDays?.length
-          ? d.exactDays
-              .map((day: string) => weekdayLabels[day] ?? day)
-              .join(', ')
-          : '';
-      const time =
-        d.lessonStartTime && d.lessonEndTime
-          ? `${d.lessonStartTime} – ${d.lessonEndTime}`
-          : '';
-
-      let info = `📚  ${d.groupName}\n`;
-      info += `👨‍🏫  ${d.teacherName}\n`;
-      if (days || time)
-        info += `🕐  ${[days, time].filter(Boolean).join(' | ')}\n`;
-      if (d.roomName) info += `🏫  ${d.roomName}\n`;
-
+      const info = formatQrGroupInfo(ctx.session.data);
       await ctx.reply(
         `Assalomu alaykum!\nQuyidagi guruhga ro'yxatdan o'tish:\n\n${info}\nIsmingizni kiriting:`,
       );
@@ -101,16 +74,7 @@ export function createStudentRegistrationScene(
 
     await ctx.sendChatAction('typing');
 
-    // Ushbu filialda dars beradigan ustozlarni olish
-    const teachers = await prisma.user.findMany({
-      where: {
-        deletedAt: null,
-        roles: { some: { roleId: 4 } },
-        branches: { some: { branchId } },
-      },
-      select: { id: true, firstName: true, lastName: true, photo: true },
-      orderBy: { firstName: 'asc' },
-    });
+    const teachers = await loadTeachersForBranch(prisma, branchId);
 
     if (teachers.length === 0) {
       await ctx.reply("Hozirda ushbu filialda o'qituvchilar mavjud emas.");
@@ -118,18 +82,10 @@ export function createStudentRegistrationScene(
       return;
     }
 
-    // Ustozlarni inline button sifatida ko'rsatish
-    const buttons = teachers.map((t) => [
-      Markup.button.callback(
-        `${t.firstName} ${t.lastName}`,
-        `select_teacher_${t.id}`,
-      ),
-    ]);
-
     await ctx.reply(
       "Assalomu alaykum! O'quvchi sifatida ro'yxatdan o'tish.\n\n" +
         "O'qituvchingizni tanlang:",
-      Markup.inlineKeyboard(buttons),
+      Markup.inlineKeyboard(buildTeachersKeyboard(teachers)),
     );
   });
 
@@ -145,9 +101,12 @@ export function createStudentRegistrationScene(
 
     await ctx.sendChatAction('typing');
 
-    // Ustoz mavjudligini tekshirish
     const teacher = await prisma.user.findFirst({
-      where: { id: teacherId, deletedAt: null, roles: { some: { roleId: 4 } } },
+      where: {
+        id: teacherId,
+        deletedAt: null,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+      },
       select: { id: true, firstName: true, lastName: true },
     });
     if (!teacher) {
@@ -159,7 +118,6 @@ export function createStudentRegistrationScene(
     ctx.session.data.teacherId = teacherId;
     ctx.session.data.teacherName = `${teacher.firstName} ${teacher.lastName}`;
 
-    // Ushbu ustozning guruhlarini olish
     const groups = await prisma.group.findMany({
       where: {
         deletedAt: null,
@@ -182,37 +140,17 @@ export function createStudentRegistrationScene(
       await ctx.editMessageText(
         `${teacher.firstName} ${teacher.lastName} — hozirda guruhlari mavjud emas.`,
       );
-      // Qayta ustozlar ro'yxatiga qaytarish
       ctx.session.step = 1;
-      const teachers = await prisma.user.findMany({
-        where: {
-          deletedAt: null,
-          roles: { some: { roleId: 4 } },
-          branches: { some: { branchId } },
-        },
-        select: { id: true, firstName: true, lastName: true },
-        orderBy: { firstName: 'asc' },
-      });
-      const buttons = teachers.map((t) => [
-        Markup.button.callback(
-          `${t.firstName} ${t.lastName}`,
-          `select_teacher_${t.id}`,
-        ),
-      ]);
+      const teachers = await loadTeachersForBranch(prisma, branchId);
       await ctx.reply(
         "Boshqa o'qituvchini tanlang:",
-        Markup.inlineKeyboard(buttons),
+        Markup.inlineKeyboard(buildTeachersKeyboard(teachers)),
       );
       return;
     }
 
     ctx.session.step = 2;
     ctx.session.processing = false;
-
-    const daysMap: Record<string, string> = {
-      odd: 'Toq kunlar',
-      even: 'Juft kunlar',
-    };
 
     const buttons = groups.map((g) => {
       const time =
@@ -241,27 +179,10 @@ export function createStudentRegistrationScene(
     await ctx.answerCbQuery();
     ctx.session.step = 1;
     const branchId = ctx.session.data.branchId;
-
-    const teachers = await prisma.user.findMany({
-      where: {
-        deletedAt: null,
-        roles: { some: { roleId: 4 } },
-        branches: { some: { branchId } },
-      },
-      select: { id: true, firstName: true, lastName: true },
-      orderBy: { firstName: 'asc' },
-    });
-
-    const buttons = teachers.map((t) => [
-      Markup.button.callback(
-        `${t.firstName} ${t.lastName}`,
-        `select_teacher_${t.id}`,
-      ),
-    ]);
-
+    const teachers = await loadTeachersForBranch(prisma, branchId);
     await ctx.editMessageText(
       "O'qituvchingizni tanlang:",
-      Markup.inlineKeyboard(buttons),
+      Markup.inlineKeyboard(buildTeachersKeyboard(teachers)),
     );
   });
 
@@ -307,7 +228,6 @@ export function createStudentRegistrationScene(
       return;
     }
 
-    // /start buyrug'i — scene'dan chiqib, boshidan boshlash
     if (text.startsWith('/start')) {
       if (ctx.session.data?.photo) {
         await uploadService.deleteFile(ctx.session.data.photo);
@@ -317,7 +237,6 @@ export function createStudentRegistrationScene(
     }
 
     switch (step) {
-      // Ism
       case 3: {
         if (text.length < 2) {
           await ctx.reply(
@@ -331,7 +250,6 @@ export function createStudentRegistrationScene(
         break;
       }
 
-      // Familiya
       case 4: {
         if (text.length < 2) {
           await ctx.reply(
@@ -352,7 +270,6 @@ export function createStudentRegistrationScene(
         break;
       }
 
-      // Telefon — text yuborilsa
       case 5: {
         await ctx.reply(
           'Iltimos, telefon raqamni quyidagi tugma orqali yuboring:',
@@ -365,7 +282,6 @@ export function createStudentRegistrationScene(
         break;
       }
 
-      // Rasm — text yuborilsa
       case 6: {
         await ctx.reply('Iltimos, rasmingizni yuboring (foto sifatida).');
         break;
@@ -382,9 +298,7 @@ export function createStudentRegistrationScene(
     if (ctx.session.processing) return;
 
     const contact = ctx.message.contact;
-    let phone = contact.phone_number;
-
-    phone = phone.replace(/\D/g, '');
+    let phone = contact.phone_number.replace(/\D/g, '');
     if (phone.startsWith('998')) {
       phone = phone.slice(3);
     }
@@ -401,7 +315,6 @@ export function createStudentRegistrationScene(
       return;
     }
 
-    // Bazada tekshirish
     const existing = await prisma.student.findFirst({
       where: { phone, deletedAt: null },
     });
@@ -423,46 +336,6 @@ export function createStudentRegistrationScene(
     );
   });
 
-  // Rasm yuklash umumiy funksiya
-  async function handlePhotoUpload(
-    ctx: BotContext,
-    fileId: string,
-    mimetype: string,
-  ) {
-    await ctx.sendChatAction('upload_photo');
-
-    const fileLink = await ctx.telegram.getFileLink(fileId);
-    const buffer = await downloadFile(fileLink.href);
-
-    const ext = mimetype === 'image/png' ? '.png' : '.jpg';
-    const multerFile = {
-      originalname: `student_${ctx.chat!.id}${ext}`,
-      buffer,
-      mimetype,
-    } as Express.Multer.File;
-
-    const photoUrl = await uploadService.uploadFile(multerFile, 'students');
-    ctx.session.data.photo = photoUrl;
-    ctx.session.step = 7;
-
-    const data = ctx.session.data;
-    await ctx.replyWithPhoto(photoUrl, {
-      caption:
-        "📋 Ma'lumotlaringizni tekshiring:\n\n" +
-        `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
-        `📚 Guruh: ${data.groupName}\n` +
-        `👤 Ism: ${data.firstName}\n` +
-        `👤 Familiya: ${data.lastName}\n` +
-        `📞 Telefon: +998 ${data.phone}`,
-      ...Markup.inlineKeyboard([
-        [
-          Markup.button.callback('✅ Tasdiqlash', 'confirm_student'),
-          Markup.button.callback('🔄 Qayta kiritish', 'restart_student'),
-        ],
-      ]),
-    });
-  }
-
   // Rasm qabul qilish (compressed photo)
   scene.on(message('photo'), async (ctx) => {
     if (ctx.session.step !== 6) return;
@@ -472,7 +345,7 @@ export function createStudentRegistrationScene(
     const photo = photos[photos.length - 1];
 
     try {
-      await handlePhotoUpload(ctx, photo.file_id, 'image/jpeg');
+      await uploadStudentPhoto(ctx, uploadService, photo.file_id, 'image/jpeg');
     } catch {
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
@@ -492,7 +365,7 @@ export function createStudentRegistrationScene(
     }
 
     try {
-      await handlePhotoUpload(ctx, doc.file_id, mime);
+      await uploadStudentPhoto(ctx, uploadService, doc.file_id, mime);
     } catch {
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
@@ -505,12 +378,11 @@ export function createStudentRegistrationScene(
     ctx.session.processing = true;
     await ctx.answerCbQuery();
 
-    // Buttonlarni loading holatiga o'zgartirish
     try {
       await ctx.editMessageCaption(
         (ctx.callbackQuery.message as any)?.caption ?? '',
         Markup.inlineKeyboard([
-          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
+          [Markup.button.callback('⏳ Yuklanmoqda...', 'noop')],
         ]),
       );
     } catch {
@@ -522,98 +394,12 @@ export function createStudentRegistrationScene(
     const chatId = String(ctx.chat!.id);
 
     try {
-      // Student yaratish
-      const student = await prisma.student.create({
-        data: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          photo: data.photo,
-          telegramChatId: chatId,
-          companyId: DEFAULT_COMPANY_ID,
-          branches: {
-            create: [{ branchId: data.branchId }],
-          },
-        },
-      });
-
-      // Tarix: O'quvchi yaratildi (Telegram bot orqali)
-      await entityHistoryService.recordCreate({
-        entityType: 'Student',
-        entityId: student.id,
-        newValues: {
-          ism: data.firstName,
-          familiya: data.lastName,
-          telefon: data.phone,
-          action: 'TELEGRAM_ROYXATDAN_OTDI',
-        },
-        companyId: DEFAULT_COMPANY_ID,
-      });
-
-      // Guruhga enrollment qo'shish
-      const enrollment = await prisma.enrollment.create({
-        data: {
-          studentId: student.id,
-          groupId: data.groupId,
-        },
-      });
-
-      // Tarix: Guruhga qo'shildi (Telegram bot orqali)
-      await entityHistoryService.recordCreate({
-        entityType: 'Student',
-        entityId: student.id,
-        newValues: {
-          guruh: data.groupName,
-          guruhId: data.groupId,
-          action: 'GURUHGA_QOSHILDI',
-        },
-        companyId: DEFAULT_COMPANY_ID,
-      });
-
-      // Tarix: Enrollment yaratildi
-      await entityHistoryService.recordCreate({
-        entityType: 'Enrollment',
-        entityId: enrollment.id,
-        newValues: {
-          studentId: student.id,
-          groupId: data.groupId,
-          status: 'ACTIVE',
-        },
-        companyId: DEFAULT_COMPANY_ID,
-      });
-
-      // Tarix: Group entity — guruh tarix tabida ko'rinadi
-      await entityHistoryService.recordCreate({
-        entityType: 'Group',
-        entityId: data.groupId,
-        newValues: {
-          action: 'OQUVCHI_QOSHILDI',
-          oquvchi: `${data.firstName} ${data.lastName}`,
-          oquvchiId: student.id,
-        },
-        companyId: DEFAULT_COMPANY_ID,
-      });
-
-      // Student uchun User yaratish (login/parol)
-      const plainPassword = generatePassword();
-      const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-      const user = await prisma.user.create({
-        data: {
-          login: data.phone,
-          password: hashedPassword,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          companyId: DEFAULT_COMPANY_ID,
-          roles: { create: [{ roleId: STUDENT_ROLE_ID }] },
-        },
-      });
-
-      await prisma.student.update({
-        where: { id: student.id },
-        data: { userId: user.id },
-      });
+      const { plainPassword } = await registerStudentFromTelegram(
+        prisma,
+        entityHistoryService,
+        data,
+        chatId,
+      );
 
       ctx.session.processing = false;
       await ctx.editMessageCaption('✅ Tasdiqlandi!');
@@ -637,7 +423,6 @@ export function createStudentRegistrationScene(
         error,
       );
 
-      // Duplicate phone/login xatoligi
       if (error?.code === 'P2002') {
         await ctx.reply(
           "Bu ma'lumotlar allaqachon tizimda mavjud. Administrator bilan bog'laning.",
@@ -646,7 +431,6 @@ export function createStudentRegistrationScene(
         return;
       }
 
-      // Boshqa xatolikda — qayta urinish imkoni
       ctx.session.step = 7;
       await ctx.reply(
         "Ro'yxatdan o'tishda xatolik yuz berdi. Qayta tasdiqlang yoki administrator bilan bog'laning.",
@@ -667,19 +451,17 @@ export function createStudentRegistrationScene(
     ctx.session.processing = true;
     await ctx.answerCbQuery();
 
-    // Buttonlarni loading holatiga o'zgartirish
     try {
       await ctx.editMessageCaption(
         (ctx.callbackQuery.message as any)?.caption ?? '',
         Markup.inlineKeyboard([
-          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
+          [Markup.button.callback('⏳ Yuklanmoqda...', 'noop')],
         ]),
       );
     } catch {
       // editMessage xatosi bo'lsa davom etamiz
     }
 
-    // Yuklangan rasmni o'chirish
     if (ctx.session.data.photo) {
       await uploadService.deleteFile(ctx.session.data.photo);
     }
@@ -691,27 +473,10 @@ export function createStudentRegistrationScene(
 
     await ctx.editMessageCaption('🔄 Qayta kiritish tanlandi');
 
-    // Ustozlar ro'yxatini qayta ko'rsatish
-    const teachers = await prisma.user.findMany({
-      where: {
-        deletedAt: null,
-        roles: { some: { roleId: 4 } },
-        branches: { some: { branchId } },
-      },
-      select: { id: true, firstName: true, lastName: true },
-      orderBy: { firstName: 'asc' },
-    });
-
-    const buttons = teachers.map((t) => [
-      Markup.button.callback(
-        `${t.firstName} ${t.lastName}`,
-        `select_teacher_${t.id}`,
-      ),
-    ]);
-
+    const teachers = await loadTeachersForBranch(prisma, branchId);
     await ctx.reply(
       "O'qituvchingizni tanlang:",
-      Markup.inlineKeyboard(buttons),
+      Markup.inlineKeyboard(buildTeachersKeyboard(teachers)),
     );
   });
 

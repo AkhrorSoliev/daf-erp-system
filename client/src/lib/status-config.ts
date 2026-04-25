@@ -99,14 +99,15 @@ export const ENTITY_API_PATH: Record<string, string> = {
 };
 
 // ─── Status transitions (backend bilan sinxron) ──────
-// ARCHIVED hech qachon qo'yilmaydi — arxivlash faqat "O'chirish" orqali
+// Student uchun ARCHIVED ham tanlanadi — bu DELETE endpointga yo'naladi
+// (arxivlash = xato/duplikat yozuvlarni ko'rinmas qilish, real chetlatish emas)
 const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   students: {
-    ACTIVE: ["FROZEN", "EXPELLED"],    // GRADUATED avtomatik — guruh tugaganda
-    INACTIVE: ["ACTIVE", "FROZEN"],     // legacy
-    FROZEN: ["ACTIVE"],
-    GRADUATED: ["ACTIVE"],
-    EXPELLED: ["ACTIVE"],
+    ACTIVE: ["FROZEN", "EXPELLED", "ARCHIVED"],  // GRADUATED avtomatik — guruh tugaganda
+    INACTIVE: ["ACTIVE", "FROZEN", "ARCHIVED"],   // legacy
+    FROZEN: ["ACTIVE", "ARCHIVED"],
+    GRADUATED: ["ACTIVE", "ARCHIVED"],
+    EXPELLED: ["ACTIVE", "ARCHIVED"],
   },
   teachers: {
     ACTIVE: ["INACTIVE", "SUSPENDED", "TERMINATED"],

@@ -22,6 +22,8 @@ export interface DepartedStudentsSummary {
   activeAtStart: number;
   lostRevenue: number;
   avgDurationMonths: number;
+  totalTeacherChanges: number;
+  departedAfterTeacherChange: number;
 }
 
 interface KpiCardProps {
@@ -107,6 +109,12 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <KpiCard
+        icon={UserMinus}
+        label="Ketganlar soni"
+        value={data.departedCount.toLocaleString("en-US")}
+        tooltip={departedTooltip}
+      />
+      <KpiCard
         icon={TrendingDown}
         label="Ketish koeffitsienti"
         value={`${data.churnRate.toFixed(1)}%`}
@@ -118,12 +126,6 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
               : undefined
         }
         tooltip={churnTooltip}
-      />
-      <KpiCard
-        icon={UserMinus}
-        label="Ketganlar soni"
-        value={data.departedCount.toLocaleString("en-US")}
-        tooltip={departedTooltip}
       />
       <KpiCard
         icon={CircleDollarSign}

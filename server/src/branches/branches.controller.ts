@@ -22,20 +22,30 @@ export class BranchesController {
   constructor(private branchesService: BranchesService) {}
 
   @Get()
-  findAll(@Query() query: BranchQueryDto) {
-    return this.branchesService.findAll(query);
+  findAll(
+    @Query() query: BranchQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.branchesService.findAll(query, companyId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.branchesService.findOne(id);
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.branchesService.findOne(id, companyId);
   }
 
   @Post()
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director')
-  create(@Body() dto: CreateBranchDto, @CurrentUser('id') userId: number) {
-    return this.branchesService.create(dto, userId);
+  create(
+    @Body() dto: CreateBranchDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.branchesService.create(dto, companyId, userId);
   }
 
   @Patch(':id')
@@ -45,8 +55,9 @@ export class BranchesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateBranchDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.branchesService.update(id, dto, userId);
+    return this.branchesService.update(id, dto, userId, companyId);
   }
 
   @Patch(':id/status')
@@ -56,14 +67,18 @@ export class BranchesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeBranchStatusDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.branchesService.changeStatus(id, dto, userId);
+    return this.branchesService.changeStatus(id, dto, userId, companyId);
   }
 
   @Get(':id/status-history')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director')
-  getStatusHistory(@Param('id', ParseIntPipe) id: number) {
-    return this.branchesService.getStatusHistory(id);
+  getStatusHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.branchesService.getStatusHistory(id, companyId);
   }
 }

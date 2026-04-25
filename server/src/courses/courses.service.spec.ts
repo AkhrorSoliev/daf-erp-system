@@ -73,7 +73,12 @@ describe('CoursesService — status methods', () => {
         status: 'INACTIVE',
       });
 
-      await service.changeStatus('course-1', { status: 'ACTIVE' as any }, 1);
+      await service.changeStatus(
+        'course-1',
+        { status: 'ACTIVE' as any },
+        1,
+        1001,
+      );
 
       expect(prisma.course.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -87,6 +92,7 @@ describe('CoursesService — status methods', () => {
         'course-1',
         { status: 'DEPRECATED' as any },
         1,
+        1001,
       );
 
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
@@ -100,14 +106,14 @@ describe('CoursesService — status methods', () => {
     it('throws NotFoundException for missing course', async () => {
       prisma.course.findFirst.mockResolvedValue(null);
       await expect(
-        service.changeStatus('missing', { status: 'INACTIVE' as any }, 1),
+        service.changeStatus('missing', { status: 'INACTIVE' as any }, 1, 1001),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('delete', () => {
     it('archives course with ARCHIVED status', async () => {
-      await service.delete('course-1', 1);
+      await service.delete('course-1', 1, 1001);
 
       expect(prisma.course.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -115,6 +121,39 @@ describe('CoursesService — status methods', () => {
             status: 'ARCHIVED',
             isActive: false,
             deletedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('multi-tenant filter (companyId)', () => {
+    it('changeStatus scopes lookup to companyId', async () => {
+      await service.changeStatus(
+        'course-1',
+        { status: 'INACTIVE' as any },
+        1,
+        1001,
+      );
+      expect(prisma.course.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 'course-1',
+            deletedAt: null,
+            companyId: 1001,
+          }),
+        }),
+      );
+    });
+
+    it('delete scopes lookup to companyId', async () => {
+      await service.delete('course-1', 1, 1001);
+      expect(prisma.course.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 'course-1',
+            deletedAt: null,
+            companyId: 1001,
           }),
         }),
       );

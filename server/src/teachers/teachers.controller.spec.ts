@@ -42,7 +42,10 @@ describe('TeachersController — role guards', () => {
     guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(handler: Function, roles: string[]) {
+  function mockExecutionContext(
+    handler: (...args: unknown[]) => unknown,
+    roles: string[],
+  ) {
     return {
       getHandler: () => handler,
       getClass: () => TeachersController,
@@ -154,20 +157,44 @@ describe('TeachersController — role guards', () => {
     });
   });
 
-  describe('findById() — no guard', () => {
-    it('should NOT have @Roles metadata (open — teachers can view profiles)', () => {
+  describe('findById()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findById);
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+
+    it('should deny Teacher from viewing a teacher profile', () => {
+      const ctx = mockExecutionContext(controller.findById, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('should deny Cashier from viewing a teacher profile', () => {
+      const ctx = mockExecutionContext(controller.findById, ['Cashier']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 
-  describe('findGroupsByTeacherId() — no guard', () => {
-    it('should NOT have @Roles metadata (open — teachers can view their groups)', () => {
+  describe('findGroupsByTeacherId()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
       const roles = reflector.get<string[]>(
         ROLES_KEY,
         controller.findGroupsByTeacherId,
       );
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+
+    it('should deny Teacher from listing teacher groups', () => {
+      const ctx = mockExecutionContext(controller.findGroupsByTeacherId, [
+        'Teacher',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('should deny Cashier from listing teacher groups', () => {
+      const ctx = mockExecutionContext(controller.findGroupsByTeacherId, [
+        'Cashier',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 });

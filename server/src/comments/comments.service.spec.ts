@@ -171,16 +171,19 @@ describe('CommentsService', () => {
 
   describe('findByEntity', () => {
     it('should return paginated comments', async () => {
-      const result = await service.findByEntity({
-        entityType: 'Student',
-        entityId: '10001',
-        page: 1,
-        pageSize: 20,
-      });
+      const result = await service.findByEntity(
+        {
+          entityType: 'Student',
+          entityId: '10001',
+          page: 1,
+          pageSize: 20,
+        },
+        1001,
+      );
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Student', entityId: '10001' },
+          where: { entityType: 'Student', entityId: '10001', companyId: 1001 },
           orderBy: { createdAt: 'desc' },
           skip: 0,
           take: 20,
@@ -197,14 +200,17 @@ describe('CommentsService', () => {
 
   describe('getLatestComment', () => {
     it('should return the latest comment', async () => {
-      const result = await service.getLatestComment({
-        entityType: 'Student',
-        entityId: '10001',
-      });
+      const result = await service.getLatestComment(
+        {
+          entityType: 'Student',
+          entityId: '10001',
+        },
+        1001,
+      );
 
       expect(prisma.comment.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Student', entityId: '10001' },
+          where: { entityType: 'Student', entityId: '10001', companyId: 1001 },
           orderBy: { createdAt: 'desc' },
         }),
       );
@@ -214,10 +220,13 @@ describe('CommentsService', () => {
     it('should return null when no comments exist', async () => {
       prisma.comment.findFirst.mockResolvedValue(null);
 
-      const result = await service.getLatestComment({
-        entityType: 'Student',
-        entityId: '99999',
-      });
+      const result = await service.getLatestComment(
+        {
+          entityType: 'Student',
+          entityId: '99999',
+        },
+        1001,
+      );
 
       expect(result).toBeNull();
     });
@@ -225,7 +234,7 @@ describe('CommentsService', () => {
 
   describe('update', () => {
     it('should allow author to update their own comment', async () => {
-      prisma.comment.findUnique.mockResolvedValue(mockComment);
+      prisma.comment.findFirst.mockResolvedValue(mockComment);
       prisma.comment.update = jest.fn().mockResolvedValue({
         ...mockComment,
         content: 'Yangilangan izoh',
@@ -236,6 +245,7 @@ describe('CommentsService', () => {
         { content: 'Yangilangan izoh' },
         1, // authorId matches
         ['Administrator'],
+        1001,
       );
 
       expect(prisma.comment.update).toHaveBeenCalledWith(
@@ -249,7 +259,7 @@ describe('CommentsService', () => {
     });
 
     it('should allow CEO to update any comment', async () => {
-      prisma.comment.findUnique.mockResolvedValue({
+      prisma.comment.findFirst.mockResolvedValue({
         ...mockComment,
         authorId: 999,
       });
@@ -264,36 +274,41 @@ describe('CommentsService', () => {
         { content: 'CEO tahrir qildi' },
         1,
         ['CEO'],
+        1001,
       );
 
       expect(result.content).toBe('CEO tahrir qildi');
     });
 
     it('should throw if non-author non-CEO tries to update', async () => {
-      prisma.comment.findUnique.mockResolvedValue({
+      prisma.comment.findFirst.mockResolvedValue({
         ...mockComment,
         authorId: 999,
       });
 
       await expect(
-        service.update('comment-uuid-1', { content: 'test' }, 10001, [
-          'Administrator',
-        ]),
+        service.update(
+          'comment-uuid-1',
+          { content: 'test' },
+          10001,
+          ['Administrator'],
+          1001,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw if comment not found', async () => {
-      prisma.comment.findUnique.mockResolvedValue(null);
+      prisma.comment.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.update('nonexistent', { content: 'test' }, 1, ['CEO']),
+        service.update('nonexistent', { content: 'test' }, 1, ['CEO'], 1001),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('delete', () => {
     it('should hard delete a comment', async () => {
-      const result = await service.delete('comment-uuid-1');
+      const result = await service.delete('comment-uuid-1', 1001);
 
       expect(prisma.comment.delete).toHaveBeenCalledWith({
         where: { id: 'comment-uuid-1' },
@@ -305,9 +320,9 @@ describe('CommentsService', () => {
     });
 
     it('should throw if comment not found', async () => {
-      prisma.comment.findUnique.mockResolvedValue(null);
+      prisma.comment.findFirst.mockResolvedValue(null);
 
-      await expect(service.delete('nonexistent')).rejects.toThrow(
+      await expect(service.delete('nonexistent', 1001)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -431,7 +446,7 @@ describe('CommentsService', () => {
         user: { id: 10001, name: 'Admin 1' },
       });
 
-      const result = await service.updateAssigneeStatus(
+      await service.updateAssigneeStatus(
         'comment-uuid-2',
         10001,
         AssigneeStatus.SEEN,

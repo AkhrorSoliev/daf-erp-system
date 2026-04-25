@@ -90,6 +90,7 @@ describe('TeachersService — status methods', () => {
         1,
         { status: 'SUSPENDED' as any, reason: 'test' },
         2,
+        1001,
       );
 
       expect(redis.set).toHaveBeenCalledWith('user:blocked:1', '1');
@@ -97,7 +98,7 @@ describe('TeachersService — status methods', () => {
     });
 
     it('sets Redis block key when status is TERMINATED', async () => {
-      await service.changeStatus(1, { status: 'TERMINATED' as any }, 2);
+      await service.changeStatus(1, { status: 'TERMINATED' as any }, 2, 1001);
 
       expect(redis.set).toHaveBeenCalledWith('user:blocked:1', '1');
     });
@@ -108,21 +109,21 @@ describe('TeachersService — status methods', () => {
         status: 'SUSPENDED',
       });
 
-      await service.changeStatus(1, { status: 'ACTIVE' as any }, 2);
+      await service.changeStatus(1, { status: 'ACTIVE' as any }, 2, 1001);
 
       expect(redis.del).toHaveBeenCalledWith('user:blocked:1');
       expect(redis.set).not.toHaveBeenCalled();
     });
 
     it('does NOT touch Redis for INACTIVE status', async () => {
-      await service.changeStatus(1, { status: 'INACTIVE' as any }, 2);
+      await service.changeStatus(1, { status: 'INACTIVE' as any }, 2, 1001);
 
       expect(redis.set).not.toHaveBeenCalled();
       expect(redis.del).not.toHaveBeenCalled();
     });
 
     it('calls statusHistoryService with entityType "User"', async () => {
-      await service.changeStatus(1, { status: 'INACTIVE' as any }, 2);
+      await service.changeStatus(1, { status: 'INACTIVE' as any }, 2, 1001);
 
       expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
         expect.objectContaining({ entityType: 'User' }),
@@ -133,14 +134,14 @@ describe('TeachersService — status methods', () => {
       prisma.user.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.changeStatus(999, { status: 'INACTIVE' as any }, 1),
+        service.changeStatus(999, { status: 'INACTIVE' as any }, 1, 1001),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('delete', () => {
     it('archives teacher, removes from groups, sets Redis block key', async () => {
-      await service.delete(1, 2);
+      await service.delete(1, 2, 1001);
 
       expect(prisma.groupTeacher.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { teacherId: 1 } }),
@@ -163,7 +164,37 @@ describe('TeachersService — status methods', () => {
     it('throws NotFoundException when teacher not found', async () => {
       prisma.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.delete(999, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.delete(999, 1, 1001)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('multi-tenant filter (companyId)', () => {
+    it('changeStatus scopes lookup to companyId', async () => {
+      await service.changeStatus(1, { status: 'INACTIVE' as any }, 2, 1001);
+      expect(prisma.user.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 1,
+            deletedAt: null,
+            companyId: 1001,
+          }),
+        }),
+      );
+    });
+
+    it('delete scopes lookup to companyId', async () => {
+      await service.delete(1, 2, 1001);
+      expect(prisma.user.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 1,
+            deletedAt: null,
+            companyId: 1001,
+          }),
+        }),
+      );
     });
   });
 });

@@ -23,9 +23,7 @@ describe('StudentAiChatController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StudentAiChatController],
-      providers: [
-        { provide: StudentAiChatService, useValue: mockService },
-      ],
+      providers: [{ provide: StudentAiChatService, useValue: mockService }],
     }).compile();
 
     controller = module.get(StudentAiChatController);
@@ -33,7 +31,10 @@ describe('StudentAiChatController — role guards', () => {
     guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(handler: Function, roles: string[]) {
+  function mockExecutionContext(
+    handler: (...args: unknown[]) => unknown,
+    roles: string[],
+  ) {
     return {
       getHandler: () => handler,
       getClass: () => StudentAiChatController,

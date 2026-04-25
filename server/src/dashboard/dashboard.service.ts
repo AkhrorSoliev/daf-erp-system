@@ -15,7 +15,7 @@ const DAY_NAMES = [
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getTodaySchedule(branchId: number, date?: string) {
+  async getTodaySchedule(branchId: number, companyId: number, date?: string) {
     const targetDate = date ? new Date(date) : new Date();
     const dayName = DAY_NAMES[targetDate.getDay()];
     const dateOnly = new Date(
@@ -34,14 +34,15 @@ export class DashboardService {
         select: { name: true },
       }),
 
-      this.prisma.branch.findUnique({
-        where: { id: branchId },
+      this.prisma.branch.findFirst({
+        where: { id: branchId, companyId },
         select: { startOfWorkingDay: true, endOfWorkingDay: true },
       }),
 
       this.prisma.room.findMany({
         where: {
           branchId,
+          companyId,
           deletedAt: null,
           status: 'ACTIVE',
         },
@@ -52,6 +53,7 @@ export class DashboardService {
       this.prisma.group.findMany({
         where: {
           branchId,
+          companyId,
           deletedAt: null,
           statusEnum: { in: ['ACTIVE', 'FORMING'] },
           isActive: true,
@@ -60,16 +62,10 @@ export class DashboardService {
           lessonEndTime: { not: null },
           AND: [
             {
-              OR: [
-                { startDate: null },
-                { startDate: { lte: dateOnly } },
-              ],
+              OR: [{ startDate: null }, { startDate: { lte: dateOnly } }],
             },
             {
-              OR: [
-                { endDate: null },
-                { endDate: { gte: dateOnly } },
-              ],
+              OR: [{ endDate: null }, { endDate: { gte: dateOnly } }],
             },
           ],
         },
