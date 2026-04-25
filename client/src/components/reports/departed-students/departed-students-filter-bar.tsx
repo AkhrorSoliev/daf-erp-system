@@ -25,6 +25,8 @@ export type MonthsPreset =
   | "6m"
   | "12m";
 
+export const DEFAULT_PRESET: MonthsPreset = "6m";
+
 export interface DepartedStudentsFilter {
   preset: MonthsPreset | null;
   rangeStart: Date | null;
@@ -47,7 +49,6 @@ interface Props {
 
 const ALL_BRANCHES = "all";
 const ALL_COURSES = "all";
-const ALL_PRESET = "all";
 
 const PRESET_LABELS: Record<MonthsPreset, string> = {
   current_month: "Joriy oy",
@@ -67,7 +68,7 @@ const PRESET_ORDER: MonthsPreset[] = [
 
 export function defaultFilter(): DepartedStudentsFilter {
   return {
-    preset: null,
+    preset: DEFAULT_PRESET,
     rangeStart: null,
     rangeEnd: null,
     branchId: null,
@@ -78,7 +79,8 @@ export function defaultFilter(): DepartedStudentsFilter {
 
 /**
  * Resolve the filter into a concrete `{ start, end }` date range.
- * Custom range wins; otherwise preset is expanded; fallback is "last 6 months".
+ * Custom range wins; otherwise preset is expanded. A non-null preset is
+ * always expected; callers should use `defaultFilter()` to seed state.
  */
 export function resolveDateRange(f: DepartedStudentsFilter): {
   start: Date;
@@ -92,7 +94,8 @@ export function resolveDateRange(f: DepartedStudentsFilter): {
   const now = new Date();
   const endNow = new Date(now);
   endNow.setHours(23, 59, 59, 999);
-  switch (f.preset) {
+  const preset = f.preset ?? DEFAULT_PRESET;
+  switch (preset) {
     case "current_month":
       return { start: startOfMonth(now), end: endOfMonth(now) };
     case "last_month": {
@@ -105,9 +108,6 @@ export function resolveDateRange(f: DepartedStudentsFilter): {
       return { start: startOfMonth(subMonths(now, 5)), end: endNow };
     case "12m":
       return { start: startOfMonth(subMonths(now, 11)), end: endNow };
-    default:
-      // "Barcha davr" — for cards we need a bounded range; default to 6 months
-      return { start: startOfMonth(subMonths(now, 5)), end: endNow };
   }
 }
 
@@ -124,15 +124,15 @@ export function DepartedStudentsFilterBar({ value, onChange, options }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Select
-        value={value.preset ?? ALL_PRESET}
+        value={value.preset ?? DEFAULT_PRESET}
         onValueChange={(v) => {
-          const next = v === ALL_PRESET ? null : (v as MonthsPreset);
+          const next = v as MonthsPreset;
           onChange({
             ...value,
             preset: next,
             // Selecting a preset clears custom range, and vice versa.
-            rangeStart: next ? null : value.rangeStart,
-            rangeEnd: next ? null : value.rangeEnd,
+            rangeStart: null,
+            rangeEnd: null,
           });
         }}
         disabled={hasCustomRange}
@@ -141,7 +141,6 @@ export function DepartedStudentsFilterBar({ value, onChange, options }: Props) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL_PRESET}>Barcha davr</SelectItem>
           {PRESET_ORDER.map((p) => (
             <SelectItem key={p} value={p}>
               {PRESET_LABELS[p]}

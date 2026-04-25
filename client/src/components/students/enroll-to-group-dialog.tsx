@@ -20,9 +20,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AlertCircle } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useQuery } from "@tanstack/react-query";
 
 interface GroupTeacher {
   id: number;
@@ -83,6 +92,7 @@ export function EnrollToGroupDialog({
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [transferReasonId, setTransferReasonId] = useState<string | undefined>();
 
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
@@ -115,14 +125,49 @@ export function EnrollToGroupDialog({
     if (open) {
       setSelectedId(null);
       setSearch("");
+      setTransferReasonId(undefined);
     }
   }, [open]);
 
+  // Current (active) enrollment group — use first enrolled group as "from".
+  // Backend marks the previous ACTIVE enrollment as TRANSFERRED on the new POST.
+  const currentGroup = groups.find((g) => enrolledGroupIds.includes(g.id));
+  const targetGroup = selectedId
+    ? groups.find((g) => g.id === selectedId)
+    : null;
+
+  const isTransfer = !!currentGroup && !!targetGroup;
+  const oldTeacherIds = currentGroup?.teachers.map((t) => t.id).sort() ?? [];
+  const newTeacherIds = targetGroup?.teachers.map((t) => t.id).sort() ?? [];
+  const teachersDiffer =
+    isTransfer &&
+    (oldTeacherIds.length !== newTeacherIds.length ||
+      oldTeacherIds.some((t, i) => t !== newTeacherIds[i]));
+
+  const { data: transferReasons = [] } = useQuery<
+    { id: string; name: string }[]
+  >({
+    queryKey: ["enrollment-transfer-reasons"],
+    queryFn: () =>
+      api
+        .get<{ id: string; name: string }[]>("/enrollment-transfer-reasons")
+        .then((r) => r.data),
+    enabled: open && teachersDiffer,
+    staleTime: 60_000,
+  });
+
   const handleEnroll = async () => {
     if (!selectedId) return;
+    if (teachersDiffer && !transferReasonId) {
+      toast.error("Iltimos, transfer sababini tanlang");
+      return;
+    }
     setSubmitting(true);
     try {
-      await api.post(`/students/${studentId}/enroll`, { groupId: selectedId });
+      await api.post(`/students/${studentId}/enroll`, {
+        groupId: selectedId,
+        transferReasonId,
+      });
       toast.success("O'quvchi guruhga qo'shildi");
       onEnrolled?.();
       onOpenChange(false);
@@ -332,11 +377,56 @@ export function EnrollToGroupDialog({
           )}
         </div>
 
+        {teachersDiffer && (
+          <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-3">
+            <div className="flex items-start gap-2 text-xs">
+              <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-medium text-amber-900 dark:text-amber-200">
+                  Ustoz farqli — sabab majburiy
+                </div>
+                <div className="text-amber-800 dark:text-amber-300 mt-0.5">
+                  {currentGroup?.teachers.map((t) => `${t.firstName} ${t.lastName}`).join(", ") || "—"}
+                  {" → "}
+                  {targetGroup?.teachers.map((t) => `${t.firstName} ${t.lastName}`).join(", ") || "—"}
+                </div>
+              </div>
+            </div>
+            <Select
+              value={transferReasonId ?? ""}
+              onValueChange={(v) => setTransferReasonId(v || undefined)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Transfer sababini tanlang..." />
+              </SelectTrigger>
+              <SelectContent>
+                {transferReasons.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+                {transferReasons.length === 0 && (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    Sabab ro&apos;yxati bo&apos;sh. Sozlamalardan qo&apos;shing.
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Bekor qilish
           </Button>
-          <Button onClick={handleEnroll} disabled={!selectedId || submitting}>
+          <Button
+            onClick={handleEnroll}
+            disabled={
+              !selectedId ||
+              submitting ||
+              (teachersDiffer && !transferReasonId)
+            }
+          >
             {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
             {hasGroup ? "O'zgartirish" : "Qo'shish"}
           </Button>

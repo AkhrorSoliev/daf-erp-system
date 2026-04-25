@@ -276,6 +276,8 @@ model User {
   deletedEnrollments Enrollment[]       @relation("EnrollmentDeletedBy")
   deletedHolidays    Holiday[]          @relation("HolidayDeletedBy")
   deletedDepartureReasons DepartureReason[] @relation("DepartureReasonDeletedBy")
+  deletedGroupTeacherChangeReasons GroupTeacherChangeReason[] @relation("GroupTeacherChangeReasonDeletedBy")
+  deletedEnrollmentTransferReasons EnrollmentTransferReason[] @relation("EnrollmentTransferReasonDeletedBy")
   statusChanges      StatusHistory[]    @relation("StatusChangedBy")
   entityChanges      EntityHistory[]    @relation("EntityHistoryChangedBy")
   comments           Comment[]          @relation("CommentAuthor")
@@ -302,6 +304,8 @@ model User {
   deletedExpenses       Expense[]       @relation("ExpenseDeletedBy")
   relatedExpenses       Expense[]       @relation("ExpenseRelatedUser")
   deletedContracts      Contract[]      @relation("ContractDeletedBy")
+
+  teacherHistoryChanges GroupTeacherHistory[] @relation("GroupTeacherHistoryChangedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -547,10 +551,11 @@ model Group {
   deletedBy       User?     @relation("GroupDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  teachers    GroupTeacher[]
-  students    User[]         @relation("StudentGroups")
-  enrollments Enrollment[]
-  attendances Attendance[]
+  teachers        GroupTeacher[]
+  teacherHistory  GroupTeacherHistory[]
+  students        User[]                @relation("StudentGroups")
+  enrollments     Enrollment[]
+  attendances     Attendance[]
 
   // Financial relations
   contracts     Contract[]
@@ -570,6 +575,32 @@ model GroupTeacher {
   @@id([groupId, teacherId])
 }
 
+model GroupTeacherHistory {
+  id                   String   @id @default(uuid())
+  groupId              String
+  group                Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  previousTeacherIds   Int[]
+  newTeacherIds        Int[]
+  changeType           GroupTeacherChangeType
+  changeReason         String?
+  changeReasonId       String?
+  changeReasonRef      GroupTeacherChangeReason? @relation(fields: [changeReasonId], references: [id])
+  triggeredByDismissal Boolean  @default(false)
+  changedById          Int?
+  changedBy            User?    @relation("GroupTeacherHistoryChangedBy", fields: [changedById], references: [id])
+  createdAt            DateTime @default(now())
+
+  @@index([groupId, createdAt])
+  @@index([createdAt])
+  @@index([changeReasonId])
+}
+
+enum GroupTeacherChangeType {
+  ADDED
+  REMOVED
+  REPLACED
+}
+
 model Enrollment {
   id        String           @id @default(uuid())
   studentId Int
@@ -587,6 +618,9 @@ model Enrollment {
   departureReasonId String?
   departureReason   DepartureReason? @relation(fields: [departureReasonId], references: [id])
 
+  transferReasonId String?
+  transferReason   EnrollmentTransferReason? @relation(fields: [transferReasonId], references: [id])
+
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("EnrollmentDeletedBy", fields: [deletedById], references: [id])
@@ -595,6 +629,7 @@ model Enrollment {
   @@index([deletedAt])
   @@index([status])
   @@index([departureReasonId])
+  @@index([transferReasonId])
 }
 
 model Holiday {
@@ -664,15 +699,17 @@ model Company {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  users            User[]
-  branches         Branch[]
-  students         Student[]
-  courses          Course[]
-  rooms            Room[]
-  groups           Group[]
-  comments         Comment[]
-  attendances      Attendance[]
-  departureReasons DepartureReason[]
+  users                     User[]
+  branches                  Branch[]
+  students                  Student[]
+  courses                   Course[]
+  rooms                     Room[]
+  groups                    Group[]
+  comments                  Comment[]
+  attendances               Attendance[]
+  departureReasons          DepartureReason[]
+  groupTeacherChangeReasons GroupTeacherChangeReason[]
+  enrollmentTransferReasons EnrollmentTransferReason[]
 }
 
 model DepartureReason {
@@ -685,6 +722,42 @@ model DepartureReason {
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("DepartureReasonDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  enrollments Enrollment[]
+
+  @@unique([companyId, name])
+  @@index([deletedAt])
+}
+
+model GroupTeacherChangeReason {
+  id              String    @id @default(uuid())
+  name            String
+  companyId       Int
+  company         Company   @relation(fields: [companyId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("GroupTeacherChangeReasonDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  historyEntries GroupTeacherHistory[]
+
+  @@unique([companyId, name])
+  @@index([deletedAt])
+}
+
+model EnrollmentTransferReason {
+  id              String    @id @default(uuid())
+  name            String
+  companyId       Int
+  company         Company   @relation(fields: [companyId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("EnrollmentTransferReasonDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
   enrollments Enrollment[]

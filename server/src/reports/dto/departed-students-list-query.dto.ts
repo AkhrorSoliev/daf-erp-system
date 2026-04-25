@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DepartedStudentsSummaryQueryDto } from './departed-students-summary-query.dto';
 
@@ -15,4 +15,9 @@ export class DepartedStudentsListQueryDto extends DepartedStudentsSummaryQueryDt
   @Min(1)
   @Max(100)
   pageSize?: number = 10;
+
+  /** When set, filter to enrollments that departed with this reason. Use "null" (literal string) for "Sababi ko'rsatilmagan". */
+  @IsOptional()
+  @IsString()
+  departureReasonId?: string;
 }

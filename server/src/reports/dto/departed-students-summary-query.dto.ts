@@ -1,10 +1,4 @@
-import {
-  IsArray,
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUUID,
-} from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 function toArray(value: unknown): string[] | undefined {

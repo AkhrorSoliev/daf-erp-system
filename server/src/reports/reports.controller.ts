@@ -163,9 +163,16 @@ export class ReportsController {
 
   @Get('departed-students/dynamics')
   getDepartedStudentsDynamics(
+    @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.reportsService.getDepartedStudentsDynamics(companyId);
+    return this.reportsService.getDepartedStudentsDynamics(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
   }
 
   @Get('departed-students/reasons')
@@ -174,6 +181,34 @@ export class ReportsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.reportsService.getDepartedStudentsReasons(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('departed-students/teacher-change-reasons')
+  getTeacherChangeReasons(
+    @Query() query: DepartedStudentsSummaryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getTeacherChangeReasons(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('departed-students/transfer-reasons')
+  getTransferReasons(
+    @Query() query: DepartedStudentsSummaryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getTransferReasons(companyId, {
       branchId: query.branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
@@ -195,6 +230,7 @@ export class ReportsController {
       endDate: query.endDate,
       page: query.page,
       pageSize: query.pageSize,
+      departureReasonId: query.departureReasonId,
     });
   }
 
@@ -213,11 +249,60 @@ export class ReportsController {
     });
   }
 
-  @Get('student-payments/filter-options')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
-  getStudentPaymentsFilterOptions(
+  @Get('departed-students/teacher-changes-list')
+  getTeacherChangesList(
+    @Query() query: DepartedStudentsSummaryQueryDto & { reasonId?: string },
     @CurrentUser('companyId') companyId: number,
   ) {
+    return this.reportsService.getTeacherChangesList(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      reasonId: query.reasonId,
+    });
+  }
+
+  @Get('departed-students/transferred-list')
+  getTransferredList(
+    @Query()
+    query: DepartedStudentsSummaryQueryDto & {
+      page?: number;
+      pageSize?: number;
+      transferReasonId?: string;
+    },
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getTransferredList(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      page: query.page ? Number(query.page) : undefined,
+      pageSize: query.pageSize ? Number(query.pageSize) : undefined,
+      transferReasonId: query.transferReasonId,
+    });
+  }
+
+  @Get('departed-students/departed-after-change')
+  getDepartedAfterTeacherChangeList(
+    @Query() query: DepartedStudentsSummaryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedAfterTeacherChangeList(companyId, {
+      branchId: query.branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('student-payments/filter-options')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  getStudentPaymentsFilterOptions(@CurrentUser('companyId') companyId: number) {
     return this.reportsService.getStudentPaymentsFilterOptions(companyId);
   }
 }

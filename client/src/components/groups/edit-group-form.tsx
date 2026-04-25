@@ -35,6 +35,7 @@ import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useScheduleAvailability } from "@/hooks/use-schedule-availability";
 import api from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 interface CourseOption {
   id: string;
@@ -246,6 +247,29 @@ export function EditGroupForm({
   const watchedLessonMinutes = form.watch("lessonMinutes");
   const effectiveLessonMinutes = watchedLessonMinutes ?? selectedCourse?.lessonMinutes ?? null;
 
+  // Teacher change detection — only applies when editing an existing group.
+  const originalTeacherId = group?.teachers[0]?.id;
+  const teacherChanged =
+    !isAdd && !!originalTeacherId && watchedTeacherId !== originalTeacherId;
+
+  const [changeReasonId, setChangeReasonId] = useState<string | undefined>();
+  const { data: changeReasonOptions = [] } = useQuery<
+    { id: string; name: string }[]
+  >({
+    queryKey: ["group-teacher-change-reasons"],
+    queryFn: () =>
+      api
+        .get<{ id: string; name: string }[]>("/group-teacher-change-reasons")
+        .then((r) => r.data),
+    enabled: teacherChanged,
+    staleTime: 60_000,
+  });
+
+  // Reset reason selection when teacher goes back to original (no change anymore).
+  useEffect(() => {
+    if (!teacherChanged) setChangeReasonId(undefined);
+  }, [teacherChanged]);
+
   // Auto-calculate endTime using effectiveLessonMinutes
   useEffect(() => {
     if (watchedStartTime && effectiveLessonMinutes) {
@@ -284,6 +308,9 @@ export function EditGroupForm({
       if (values.name) payload.name = values.name;
       if (values.level) payload.level = values.level;
       if (values.teacherId) payload.teacherIds = [values.teacherId];
+      if (teacherChanged && changeReasonId) {
+        payload.changeReasonId = changeReasonId;
+      }
       if (values.roomId) payload.roomId = values.roomId;
       if (values.exactDays?.length) payload.exactDays = values.exactDays;
       if (values.lessonStartTime) payload.lessonStartTime = values.lessonStartTime;
@@ -767,6 +794,33 @@ export function EditGroupForm({
                 </Popover>
               )}
             />
+          )}
+          {teacherChanged && (
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+              <Label className="text-xs text-muted-foreground">
+                Ustoz o&apos;zgartirilmoqda — sababi (ixtiyoriy)
+              </Label>
+              <Select
+                value={changeReasonId ?? "__none__"}
+                onValueChange={(v) =>
+                  setChangeReasonId(v === "__none__" ? undefined : v)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sabab tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">
+                    Sababsiz (ko&apos;rsatilmagan)
+                  </SelectItem>
+                  {changeReasonOptions.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
       </div>

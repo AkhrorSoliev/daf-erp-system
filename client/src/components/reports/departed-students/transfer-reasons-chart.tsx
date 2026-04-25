@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Settings } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChartCard } from "./chart-card";
+import { EnrollmentTransferReasonsDialog } from "./enrollment-transfer-reasons-dialog";
 
 interface ReasonsResponse {
   data: { reasonId: string | null; reasonName: string; count: number }[];
@@ -47,27 +49,31 @@ interface Props {
 const TOP_N = 5;
 const OTHERS_ID = "__others__";
 
-// Coordinated palette matching the deep-analysis chart for visual harmony.
 const PALETTE = [
-  "#ef4444", // red-500 — highest (most severe)
-  "#f97316", // orange-500
-  "#f59e0b", // amber-500
-  "#8b5cf6", // violet-500
-  "#06b6d4", // cyan-500
+  "#06b6d4",
+  "#8b5cf6",
+  "#f59e0b",
+  "#22c55e",
+  "#ef4444",
 ];
-const OTHERS_COLOR = "#94a3b8"; // slate-400
+const OTHERS_COLOR = "#94a3b8";
 
-export function DepartedStudentsReasonsChart({
+export function TransferReasonsChart({
   branchId,
   courseId,
   teacherIds,
   startDate,
   endDate,
 }: Props) {
+  const user = useAuth((s) => s.user);
+  const canManageReasons =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+
   const [drilldown, setDrilldown] = useState<{
     reasonId: string | null;
     reasonName: string;
   } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const params = {
     branchId: branchId ?? undefined,
@@ -78,12 +84,13 @@ export function DepartedStudentsReasonsChart({
   };
 
   const { data, isLoading } = useQuery<ReasonsResponse>({
-    queryKey: ["departed-students-reasons", params],
+    queryKey: ["transfer-reasons", params],
     queryFn: () =>
       api
-        .get<ReasonsResponse>("/reports/departed-students/reasons", {
-          params,
-        })
+        .get<ReasonsResponse>(
+          "/reports/departed-students/transfer-reasons",
+          { params },
+        )
         .then((r) => r.data),
     staleTime: 0,
   });
@@ -92,14 +99,17 @@ export function DepartedStudentsReasonsChart({
     const all = data?.data ?? [];
     const total = all.reduce((sum, r) => sum + r.count, 0);
     if (all.length <= TOP_N) {
-      return { rows: all.map((r, i) => ({ ...r, color: colorFor(i, false) })), grandTotal: total };
+      return {
+        rows: all.map((r, i) => ({ ...r, color: PALETTE[i % PALETTE.length] })),
+        grandTotal: total,
+      };
     }
     const top = all.slice(0, TOP_N);
     const tail = all.slice(TOP_N);
     const othersCount = tail.reduce((sum, r) => sum + r.count, 0);
     return {
       rows: [
-        ...top.map((r, i) => ({ ...r, color: colorFor(i, false) })),
+        ...top.map((r, i) => ({ ...r, color: PALETTE[i % PALETTE.length] })),
         {
           reasonId: OTHERS_ID,
           reasonName: `Boshqalar (${tail.length} ta sabab)`,
@@ -112,29 +122,43 @@ export function DepartedStudentsReasonsChart({
   }, [data]);
 
   const isEmpty = rows.length === 0;
-
-  const topReasonName = rows.find((r) => r.reasonId !== OTHERS_ID)?.reasonName ?? "";
-  const topReasonCount = rows.find((r) => r.reasonId !== OTHERS_ID)?.count ?? 0;
+  const topReasonName =
+    rows.find((r) => r.reasonId !== OTHERS_ID)?.reasonName ?? "";
+  const topReasonCount =
+    rows.find((r) => r.reasonId !== OTHERS_ID)?.count ?? 0;
 
   return (
     <>
       <ChartCard
-        title="Ketish sabablari"
+        title="Nima uchun o'quvchi guruhni o'zgartirdi?"
         subtitle={
           grandTotal > 0
-            ? `Jami ${grandTotal} ta${topReasonName ? ` — eng asosiy: ${topReasonName} (${topReasonCount} ta)` : ""}`
-            : "Sabablar taqsimoti"
+            ? `Jami ${grandTotal} ta transfer${topReasonName ? ` — eng asosiy: ${topReasonName} (${topReasonCount} ta)` : ""}`
+            : "O'quvchi transferi sabablari"
         }
         tooltip={
-          "Tanlangan davrda ketgan o'quvchilar sabablari bo'yicha taqsimot.\n" +
+          "Tanlangan davrda o'quvchilar bir guruhdan boshqasiga o'tkazilishi sabablari bo'yicha taqsimot.\n" +
           `Eng ko'p uchragan ${TOP_N} ta sabab alohida, qolganlari "Boshqalar"ga yig'ilgan.\n` +
-          "Segment yoki qator ustiga bosing — shu sabab bilan ketgan o'quvchilar ro'yxati ochiladi.\n" +
-          "Sahifa filtriga bo'ysunadi."
+          "Segment yoki qator ustiga bosing — shu sabab bilan transfer bo'lgan o'quvchilar ochiladi."
         }
         isLoading={isLoading}
         isEmpty={isEmpty}
-        emptyMessage="Tanlangan davrda ketganlar yo'q — davrni kengaytirib ko'ring"
+        emptyMessage="Tanlangan davrda transfer yo'q — davrni kengaytirib ko'ring"
         bodyHeightClass="h-[260px]"
+        headerAction={
+          canManageReasons ? (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Sabablarni boshqarish"
+              title="Sabablarni boshqarish"
+            >
+              <Settings className="size-4" />
+            </Button>
+          ) : undefined
+        }
       >
         {!isEmpty && !isLoading && (
           <div className="flex h-full items-center gap-4">
@@ -177,7 +201,6 @@ export function DepartedStudentsReasonsChart({
                 </div>
               </div>
             </div>
-
             <div className="flex-1 min-w-0 space-y-1 overflow-auto max-h-full">
               {rows.map((r) => {
                 const percent = grandTotal > 0 ? (r.count / grandTotal) * 100 : 0;
@@ -199,10 +222,7 @@ export function DepartedStudentsReasonsChart({
                       className="size-3 rounded-sm shrink-0"
                       style={{ backgroundColor: r.color }}
                     />
-                    <span
-                      className="text-xs flex-1 truncate"
-                      title={r.reasonName}
-                    >
+                    <span className="text-xs flex-1 truncate" title={r.reasonName}>
                       {r.reasonName}
                     </span>
                     <span className="text-xs font-semibold tabular-nums shrink-0">
@@ -218,18 +238,19 @@ export function DepartedStudentsReasonsChart({
           </div>
         )}
       </ChartCard>
-      <ReasonStudentsDialog
+      <TransferDrilldownDialog
         drilldown={drilldown}
         onClose={() => setDrilldown(null)}
         filterParams={params}
       />
+      {canManageReasons && (
+        <EnrollmentTransferReasonsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        />
+      )}
     </>
   );
-}
-
-function colorFor(index: number, isOthers: boolean): string {
-  if (isOthers) return OTHERS_COLOR;
-  return PALETTE[index % PALETTE.length];
 }
 
 function DonutTooltip({
@@ -268,19 +289,20 @@ function DonutTooltip({
   );
 }
 
-interface StudentListResponse {
+interface TransferListResponse {
   data: {
     id: string;
     student: { id: number; fullName: string };
-    group: { id: string; name: string } | null;
+    fromGroup: { id: string; name: string } | null;
+    toGroup: { id: string; name: string } | null;
     branch: { id: number; name: string } | null;
-    departedAt: string | null;
-    reason: string | null;
+    transferredAt: string | null;
+    reason: { id: string; name: string } | null;
   }[];
   total: number;
 }
 
-function ReasonStudentsDialog({
+function TransferDrilldownDialog({
   drilldown,
   onClose,
   filterParams,
@@ -298,8 +320,6 @@ function ReasonStudentsDialog({
   const open = drilldown !== null;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  // Reset to page 1 whenever the user opens a different reason.
   useEffect(() => {
     if (open) setPage(1);
   }, [open, drilldown?.reasonId]);
@@ -309,17 +329,18 @@ function ReasonStudentsDialog({
         ...filterParams,
         page,
         pageSize,
-        departureReasonId: drilldown.reasonId ?? "null",
+        transferReasonId: drilldown.reasonId ?? "null",
       }
     : null;
 
-  const { data, isLoading } = useQuery<StudentListResponse>({
-    queryKey: ["departed-students-list-drilldown", queryParams],
+  const { data, isLoading } = useQuery<TransferListResponse>({
+    queryKey: ["transferred-list-drilldown", queryParams],
     queryFn: () =>
       api
-        .get<StudentListResponse>("/reports/departed-students/list", {
-          params: queryParams,
-        })
+        .get<TransferListResponse>(
+          "/reports/departed-students/transferred-list",
+          { params: queryParams },
+        )
         .then((r) => r.data),
     enabled: open,
     staleTime: 0,
@@ -335,7 +356,7 @@ function ReasonStudentsDialog({
         <DialogHeader>
           <DialogTitle>{drilldown?.reasonName ?? ""}</DialogTitle>
           <DialogDescription>
-            Shu sabab bilan ketgan o&apos;quvchilar
+            Shu sabab bilan guruhni o&apos;zgartirgan o&apos;quvchilar
             {!isLoading && data ? ` (${data.total} ta)` : ""}
           </DialogDescription>
         </DialogHeader>
@@ -345,36 +366,27 @@ function ReasonStudentsDialog({
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
                 <TableHead>O&apos;quvchi</TableHead>
-                <TableHead>Guruh</TableHead>
+                <TableHead>Qaysi guruhdan</TableHead>
+                <TableHead>Qaysi guruhga</TableHead>
                 <TableHead>Filial</TableHead>
-                <TableHead>Ketgan sana</TableHead>
+                <TableHead>Sana</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={`sk-${i}`}>
-                    <TableCell className="border-r">
-                      <Skeleton className="h-4 w-6" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-40" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-20" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-28" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
+                    {Array.from({ length: 6 }).map((__, j) => (
+                      <TableCell key={j} className={j === 0 ? "border-r" : ""}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))
               ) : !data || data.data.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="text-center py-16 text-muted-foreground"
                   >
                     Ma&apos;lumot yo&apos;q
@@ -389,11 +401,12 @@ function ReasonStudentsDialog({
                     <TableCell className="font-medium">
                       {row.student.fullName}
                     </TableCell>
-                    <TableCell>{row.group?.name ?? "—"}</TableCell>
+                    <TableCell>{row.fromGroup?.name ?? "—"}</TableCell>
+                    <TableCell>{row.toGroup?.name ?? "—"}</TableCell>
                     <TableCell>{row.branch?.name ?? "—"}</TableCell>
                     <TableCell className="tabular-nums text-muted-foreground">
-                      {row.departedAt
-                        ? format(new Date(row.departedAt), "dd.MM.yyyy")
+                      {row.transferredAt
+                        ? format(new Date(row.transferredAt), "dd.MM.yyyy")
                         : "—"}
                     </TableCell>
                   </TableRow>
@@ -402,7 +415,6 @@ function ReasonStudentsDialog({
             </TableBody>
           </Table>
         </div>
-
         <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {isLoading ? (
@@ -440,7 +452,6 @@ function ReasonStudentsDialog({
               </>
             )}
           </div>
-
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground tabular-nums">
               {clampedPage} / {totalPages}
