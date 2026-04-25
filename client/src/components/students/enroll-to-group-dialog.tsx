@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { AlertCircle } from "lucide-react";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useQuery } from "@tanstack/react-query";
@@ -171,9 +172,8 @@ export function EnrollToGroupDialog({
       toast.success("O'quvchi guruhga qo'shildi");
       onEnrolled?.();
       onOpenChange(false);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Guruhga qo'shishda xatolik";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Guruhga qo'shishda xatolik"));
     } finally {
       setSubmitting(false);
     }

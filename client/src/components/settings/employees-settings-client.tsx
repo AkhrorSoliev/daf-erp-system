@@ -39,6 +39,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import { formatPhone } from "@/lib/format-utils";
+import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -128,8 +129,8 @@ export function EmployeesSettingsClient() {
       setEmployees((prev) => prev.filter((e) => e.id !== id));
       setTotal((t) => t - 1);
       toast.success("Xodim o'chirildi");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "O'chirishda xatolik");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
     }
   };
 

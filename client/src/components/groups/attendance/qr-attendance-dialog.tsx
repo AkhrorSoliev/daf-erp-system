@@ -232,8 +232,8 @@ export function QrAttendanceDialog({
             }
           }
         }
-      } catch (err: any) {
-        if (err?.name === "AbortError") return;
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
       }
     }
 

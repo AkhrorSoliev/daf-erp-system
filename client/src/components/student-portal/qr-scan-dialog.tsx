@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 type ScanState = "scanning" | "loading" | "success" | "error";
 
@@ -82,12 +83,8 @@ export function QrScanDialog({ open, onOpenChange }: QrScanDialogProps) {
         } catch {
           // not supported
         }
-      } catch (err: any) {
-        const raw = (err as any)?.response?.data?.message;
-        const msg = Array.isArray(raw)
-          ? raw[0]
-          : raw || "QR kodni o'qishda xatolik yuz berdi";
-        setErrorMessage(msg);
+      } catch (err) {
+        setErrorMessage(getErrorMessage(err, "QR kodni o'qishda xatolik yuz berdi"));
         setScanState("error");
         await stopScanner();
 

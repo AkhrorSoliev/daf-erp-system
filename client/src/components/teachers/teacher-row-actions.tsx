@@ -31,6 +31,7 @@ import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 interface TeacherRowActionsProps {
   teacher: TeacherData;
@@ -53,9 +54,8 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
     try {
       await api.delete(`/teachers/${teacher.id}`);
       toast.success("O'qituvchi muvaffaqiyatli o'chirildi");
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
     } finally {
       setDeleting(false);
       setDeleteReason("");

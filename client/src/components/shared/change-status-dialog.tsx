@@ -33,6 +33,7 @@ import {
   ENTITY_API_PATH,
 } from "@/lib/status-config";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 
 // ─── Status card configs ─────────────────────────────
@@ -160,12 +161,11 @@ export function ChangeStatusDialog({
       }
       onStatusChanged?.(selectedStatus);
       handleClose(false);
-    } catch (error: any) {
+    } catch (error) {
       const fallback = isArchiving
         ? "Arxivlashda xatolik"
         : "Statusni o'zgartirishda xatolik";
-      const msg = error?.response?.data?.message || fallback;
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+      toast.error(getErrorMessage(error, fallback));
     } finally {
       setSubmitting(false);
     }

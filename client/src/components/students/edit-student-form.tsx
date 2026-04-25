@@ -24,6 +24,7 @@ import {
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 function stripPhonePrefix(phone: string): string {
   return phone.replace(/^\+998/, "").replace(/\s/g, "");
@@ -120,9 +121,8 @@ export function EditStudentForm({
       toast.success("O'quvchi muvaffaqiyatli yangilandi");
       onSaved?.(data);
       onClose();
-    } catch (err: any) {
-      const message = err?.response?.data?.message || "Saqlashda xatolik yuz berdi";
-      toast.error(message);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Saqlashda xatolik yuz berdi"));
     }
   };
 

@@ -23,6 +23,7 @@ import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher"; // getState() orqali ishlatiladi
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 interface EditTeacherFormProps {
   teacher: TeacherData | null;
@@ -139,9 +140,8 @@ export function EditTeacherForm({
         onSaved?.(data);
       }
       onClose();
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || "Xatolik yuz berdi";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Xatolik yuz berdi"));
     } finally {
       setSubmitting(false);
     }

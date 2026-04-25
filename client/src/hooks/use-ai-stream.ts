@@ -82,8 +82,8 @@ export function useAiStream() {
             }
           }
         }
-      } catch (error: any) {
-        if (error?.name === "AbortError") return;
+      } catch (error) {
+        if ((error as Error)?.name === "AbortError") return;
         callbacks.onError("Tarmoq xatosi yuz berdi");
       }
     },

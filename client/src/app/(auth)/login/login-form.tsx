@@ -17,6 +17,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 
@@ -56,11 +57,15 @@ export function LoginForm({ portal }: LoginFormProps) {
       // Student portal foydalanuvchilarini /portal ga yo'naltirish
       const isStudent = res.data.user?.roles?.some((r: any) => r.id === 6);
       router.push(portal === "student" || isStudent ? "/portal" : "/");
-    } catch (err: any) {
-      if (err?.response?.status === 403) {
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      if (status === 403) {
         setError(
-          err.response.data?.message ||
-            "Sizning rolingiz bu portalga kirish huquqiga ega emas"
+          getErrorMessage(
+            err,
+            "Sizning rolingiz bu portalga kirish huquqiga ega emas",
+          ),
         );
       } else {
         setError("Login yoki parol noto'g'ri");

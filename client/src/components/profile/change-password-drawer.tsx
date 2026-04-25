@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 interface ChangePasswordDrawerProps {
   open: boolean;
@@ -57,10 +58,8 @@ export function ChangePasswordDrawer({
       });
       toast.success("Parol muvaffaqiyatli o'zgartirildi");
       handleClose();
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message ?? "Parolni o'zgartirishda xatolik";
-      toast.error(message);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Parolni o'zgartirishda xatolik"));
     } finally {
       setSaving(false);
     }

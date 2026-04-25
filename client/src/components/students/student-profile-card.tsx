@@ -38,6 +38,7 @@ import { formatPhone } from "@/lib/format-utils";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 
 function formatBalance(balance: number): string {
@@ -78,9 +79,8 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
       await api.delete(`/students/${student.id}`);
       toast.success("O'quvchi muvaffaqiyatli o'chirildi");
       router.push("/students");
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
     } finally {
       setDeleting(false);
       setDeleteReason("");
