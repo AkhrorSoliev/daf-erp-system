@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
+import { AttendanceValidationService } from './attendance-validation.service';
+import { AttendanceReadService } from './attendance-read.service';
+import { AttendanceStatsService } from './attendance-stats.service';
+import { AttendanceSaveService } from './attendance-save.service';
 import { QrAttendanceService } from './qr-attendance.service';
 import { AttendanceController } from './attendance.controller';
 import { AttendanceReminderService } from './attendance-reminder.service';
@@ -19,6 +23,10 @@ import { SalaryModule } from '../salary/salary.module';
   controllers: [AttendanceController],
   providers: [
     AttendanceService,
+    AttendanceValidationService,
+    AttendanceReadService,
+    AttendanceStatsService,
+    AttendanceSaveService,
     QrAttendanceService,
     AttendanceReminderService,
     AttendanceEventsListener,

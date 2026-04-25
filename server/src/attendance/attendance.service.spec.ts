@@ -2,6 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AttendanceService } from './attendance.service';
+import { AttendanceValidationService } from './attendance-validation.service';
+import { AttendanceReadService } from './attendance-read.service';
+import { AttendanceStatsService } from './attendance-stats.service';
+import { AttendanceSaveService } from './attendance-save.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -89,6 +93,10 @@ describe('AttendanceService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AttendanceService,
+        AttendanceValidationService,
+        AttendanceReadService,
+        AttendanceStatsService,
+        AttendanceSaveService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
         {
