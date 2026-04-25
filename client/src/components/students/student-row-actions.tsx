@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Trash2, RefreshCw, History, UserPlus, UserMinus } from "lucide-react";
+import { MoreHorizontal, Pencil, RefreshCw, History, UserPlus, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -44,7 +44,7 @@ import type { Student } from "@/data/student-model";
 
 interface StudentRowActionsProps {
   student: Student;
-  /** When set, shows "Guruhdan chiqarish" instead of "O'chirish" */
+  /** When set, shows an additional "Guruhdan chiqarish" item (enrollment-level removal). */
   enrollmentId?: string;
   onDeleted?: (id: number) => void;
   onStatusChanged?: (id: number, newStatus: string) => void;
@@ -52,13 +52,13 @@ interface StudentRowActionsProps {
 
 export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusChanged }: StudentRowActionsProps) {
   const { openDrawer } = useEditStudent();
-  const [showDelete, setShowDelete] = useState(false);
+  const [showRemove, setShowRemove] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showEnroll, setShowEnroll] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteReason, setDeleteReason] = useState("");
-  const [deleteReasonId, setDeleteReasonId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeReason, setRemoveReason] = useState("");
+  const [removeReasonId, setRemoveReasonId] = useState<string | null>(null);
 
   const { data: departureReasons } = useQuery<
     { id: string; name: string }[]
@@ -66,39 +66,41 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
     queryKey: ["departure-reasons"],
     queryFn: () =>
       api.get<{ id: string; name: string }[]>("/departure-reasons").then((r) => r.data),
-    enabled: showDelete && !!enrollmentId,
+    enabled: showRemove && !!enrollmentId,
   });
 
   const hasConfiguredReasons = (departureReasons?.length ?? 0) > 0;
-  const canSubmit = enrollmentId && hasConfiguredReasons
-    ? deleteReasonId !== null
-    : true;
+  const trimmedReason = removeReason.trim();
+  const canRemove = hasConfiguredReasons ? removeReasonId !== null : true;
 
-  const handleDelete = async () => {
-    if (!canSubmit) return;
-    setDeleting(true);
-    setShowDelete(false);
+  const handleRemoveFromGroup = async () => {
+    if (!enrollmentId || !canRemove) return;
+    setRemoving(true);
+    setShowRemove(false);
     onDeleted?.(student.id);
     try {
-      if (enrollmentId) {
-        const payload: { departureReasonId?: string; reason?: string } = {};
-        if (deleteReasonId) payload.departureReasonId = deleteReasonId;
-        if (deleteReason.trim()) payload.reason = deleteReason.trim();
-        await api.delete(`/students/${student.id}/enroll/${enrollmentId}`, {
-          data: payload,
-        });
-        toast.success("O'quvchi guruhdan chiqarildi");
-      } else {
-        await api.delete(`/students/${student.id}`);
-        toast.success("O'quvchi muvaffaqiyatli o'chirildi");
-      }
+      const payload: { departureReasonId?: string; reason?: string } = {};
+      if (removeReasonId) payload.departureReasonId = removeReasonId;
+      if (trimmedReason) payload.reason = trimmedReason;
+      await api.delete(`/students/${student.id}/enroll/${enrollmentId}`, {
+        data: payload,
+      });
+      toast.success("O'quvchi guruhdan chiqarildi");
     } catch (error: any) {
-      const msg = error?.response?.data?.message || "O'chirishda xatolik yuz berdi";
+      const msg = error?.response?.data?.message || "Chiqarishda xatolik yuz berdi";
       toast.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
-      setDeleting(false);
-      setDeleteReason("");
-      setDeleteReasonId(null);
+      setRemoving(false);
+      setRemoveReason("");
+      setRemoveReasonId(null);
+    }
+  };
+
+  const handleStatusChanged = (newStatus: string) => {
+    if (newStatus === "ARCHIVED") {
+      onDeleted?.(student.id);
+    } else {
+      onStatusChanged?.(student.id, newStatus);
     }
   };
 
@@ -140,76 +142,86 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
             <History className="mr-2 size-4" />
             Status tarixi
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() => setShowDelete(true)}
-          >
-            {enrollmentId ? (
-              <><UserMinus className="mr-2 size-4" />Guruhdan chiqarish</>
-            ) : (
-              <><Trash2 className="mr-2 size-4" />O&apos;chirish</>
-            )}
-          </DropdownMenuItem>
+          {enrollmentId && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setShowRemove(true)}
+              >
+                <UserMinus className="mr-2 size-4" />
+                Guruhdan chiqarish
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{enrollmentId ? "Guruhdan chiqarishni tasdiqlang" : "O'chirishni tasdiqlang"}</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{studentName}</strong> {enrollmentId ? "guruhdan chiqarilsinmi?" : "arxivga o'tkazilsinmi?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {enrollmentId && hasConfiguredReasons ? (
-            <div className="space-y-2">
-              <Select
-                value={deleteReasonId ?? undefined}
-                onValueChange={(v) => setDeleteReasonId(v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Ketish sababini tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departureReasons?.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {enrollmentId && (
+        <AlertDialog
+          open={showRemove}
+          onOpenChange={(open) => {
+            setShowRemove(open);
+            if (!open) {
+              setRemoveReason("");
+              setRemoveReasonId(null);
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Guruhdan chiqarishni tasdiqlang</AlertDialogTitle>
+              <AlertDialogDescription>
+                <strong>{studentName}</strong> guruhdan chiqarilsinmi?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {hasConfiguredReasons ? (
+              <div className="space-y-2">
+                <Select
+                  value={removeReasonId ?? undefined}
+                  onValueChange={(v) => setRemoveReasonId(v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Ketish sababini tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departureReasons?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Textarea
+                  placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                  value={removeReason}
+                  onChange={(e) => setRemoveReason(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+            ) : (
               <Textarea
-                placeholder="Qo'shimcha izoh (ixtiyoriy)"
-                value={deleteReason}
-                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Sabab yozing (ixtiyoriy)..."
+                value={removeReason}
+                onChange={(e) => setRemoveReason(e.target.value)}
                 rows={2}
                 className="resize-none"
               />
-            </div>
-          ) : (
-            <Textarea
-              placeholder="Sabab yozing (ixtiyoriy)..."
-              value={deleteReason}
-              onChange={(e) => setDeleteReason(e.target.value)}
-              rows={2}
-              className="resize-none"
-            />
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting || !canSubmit}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting
-                ? (enrollmentId ? "Chiqarilmoqda..." : "O'chirilmoqda...")
-                : (enrollmentId ? "Chiqarish" : "O'chirish")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRemoveFromGroup}
+                disabled={removing || !canRemove}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {removing ? "Chiqarilmoqda..." : "Chiqarish"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       <ChangeStatusDialog
         open={showStatus}
@@ -218,7 +230,7 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
         entityId={student.id}
         entityName={studentName}
         currentStatus={student.status || "ACTIVE"}
-        onStatusChanged={(newStatus) => onStatusChanged?.(student.id, newStatus)}
+        onStatusChanged={handleStatusChanged}
       />
 
       <StatusHistoryDialog
