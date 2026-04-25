@@ -14,14 +14,7 @@ import {
 import type { TeacherData } from "@/hooks/use-edit-teacher";
 import { TeacherRowActions } from "./teacher-row-actions";
 import { useAuth } from "@/hooks/use-auth";
-
-function formatPhone(phone: string | null) {
-  if (!phone) return "—";
-  if (phone.length === 9) {
-    return `+998 ${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)}`;
-  }
-  return phone;
-}
+import { formatPhone } from "@/lib/format-utils";
 
 interface TeachersTableProps {
   teachers: TeacherData[];

@@ -44,10 +44,7 @@ const STATUS_MAP: Record<
 };
 
 import { formatWeekdays } from "@/lib/weekdays";
-
-function formatPrice(price: number) {
-  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
+import { formatPrice } from "@/lib/format-utils";
 
 interface GroupInfoCardProps {
   group: GroupData;

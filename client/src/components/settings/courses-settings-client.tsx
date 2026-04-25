@@ -35,10 +35,7 @@ import { SettingsPageHeader } from "./settings-page-header";
 import { CourseRowActions } from "./course-row-actions";
 import { EditCourseDrawer } from "./edit-course-drawer";
 import api from "@/lib/api";
-
-function formatPrice(price: number): string {
-  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " so'm";
-}
+import { formatPrice } from "@/lib/format-utils";
 
 const coursesSchema = {
   search: { type: "string" as const, defaultValue: "" },
@@ -208,7 +205,7 @@ export function CoursesSettingsClient() {
                       ? `${course.lessonDuration} ta`
                       : "—"}
                   </TableCell>
-                  <TableCell>{formatPrice(course.price)}</TableCell>
+                  <TableCell>{formatPrice(course.price)} so&apos;m</TableCell>
                   <TableCell>
                     <Badge
                       variant={course.isActive ? "default" : "secondary"}

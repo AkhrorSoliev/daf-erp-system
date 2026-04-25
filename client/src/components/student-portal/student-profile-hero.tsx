@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Phone, Calendar, MapPin, Wallet } from "lucide-react";
 import { format } from "date-fns";
+import { formatPhone } from "@/lib/format-utils";
 
 interface StudentProfile {
   id: number;
@@ -19,11 +20,6 @@ interface StudentProfile {
   dateOfBirth: string | null;
   address: string | null;
   branches: { id: number; name: string }[];
-}
-
-function formatPhone(phone: string) {
-  if (!phone || phone.length !== 9) return phone;
-  return `+998 ${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7)}`;
 }
 
 function formatBalance(balance: number) {

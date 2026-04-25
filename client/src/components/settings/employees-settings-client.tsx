@@ -38,6 +38,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import { formatPhone } from "@/lib/format-utils";
 import toast from "react-hot-toast";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -64,15 +65,6 @@ const filtersSchema = {
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
-
-function formatPhone(phone: string | null): string {
-  if (!phone) return "—";
-  const d = phone.replace(/\D/g, "");
-  if (d.length === 9) {
-    return `+998 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)}`;
-  }
-  return phone;
-}
 
 function getEmployeeProfileUrl(emp: EmployeeUser): string {
   return `/settings/employees/${emp.id}`;

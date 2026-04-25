@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { SalaryConfigDialog } from "./salary-config-dialog";
@@ -54,10 +55,6 @@ interface SalaryPayment {
     roles: { role: { id: number; name: string } }[];
   };
   paidBy: { id: number; firstName: string; lastName: string } | null;
-}
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
 }
 
 const statusLabels: Record<string, string> = {

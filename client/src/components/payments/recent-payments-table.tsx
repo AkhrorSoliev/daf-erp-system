@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 interface Payment {
@@ -44,10 +45,6 @@ const methodColors: Record<string, string> = {
   UZUM: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
   TRANSFER: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
 };
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
-}
 
 interface Props {
   refreshKey?: number;

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { RecordPaymentDialog } from "./record-payment-dialog";
 
@@ -27,10 +28,6 @@ interface PendingStudent {
   enrollments: {
     group: { name: string; course: { name: string; price: number } };
   }[];
-}
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
 }
 
 export function PendingClient() {

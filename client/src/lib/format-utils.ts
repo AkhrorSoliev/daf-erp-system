@@ -1,7 +1,9 @@
 /**
- * Telefon raqamni formatlash: 9 raqamli → +998 XX XXX XX XX
+ * Telefon raqamni formatlash: 9 raqamli → +998 XX XXX XX XX.
+ * `null`/`undefined` uchun "—" qaytaradi (jadval va kartochkalarda standart).
  */
-export function formatPhone(phone: string): string {
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return "—";
   const digits = phone.replace(/\D/g, "");
   if (digits.length === 9) {
     return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
@@ -22,4 +24,12 @@ export function formatBalance(balance: number): string {
     .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   if (balance < 0) return `-${abs} so'm`;
   return `${abs} so'm`;
+}
+
+/**
+ * Narxni formatlash (so'm yo'q): 1500000 → "1,500,000".
+ * Pul birligi qo'shilishi kerak bo'lsa, qo'l bilan " so'm" qo'shing.
+ */
+export function formatPrice(price: number): string {
+  return price.toLocaleString("en-US");
 }

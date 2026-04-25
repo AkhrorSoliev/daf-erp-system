@@ -31,10 +31,7 @@ import type { Course } from "@/hooks/use-edit-course";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { EditCourseDrawer } from "./edit-course-drawer";
 import api from "@/lib/api";
-
-function formatPrice(price: number): string {
-  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " so'm";
-}
+import { formatPrice } from "@/lib/format-utils";
 
 interface CourseDetailClientProps {
   courseId: string;
@@ -153,7 +150,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
             <InfoRow
               icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
               label="Narx"
-              value={formatPrice(course.price)}
+              value={`${formatPrice(course.price)} so'm`}
             />
             <InfoRow
               icon={<Users className="h-4 w-4 text-muted-foreground" />}

@@ -23,11 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import api from "@/lib/api";
+import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US");
-}
 
 interface RefundPreview {
   contractId: string;
