@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Receipt,
@@ -170,6 +170,9 @@ export function PaymentReportsClient() {
         })
         .then((r) => r.data),
     staleTime: 0,
+    // months 3↔6 toggle dialog ichida bo'lsa, eski ma'lumotni saqlab turamiz
+    // — aks holda Dialog komponentlari unmount bo'lib, dialog yopilib qayta ochiladi
+    placeholderData: keepPreviousData,
   });
 
   return (
