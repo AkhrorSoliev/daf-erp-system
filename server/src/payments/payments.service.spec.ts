@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { PaymentsWriteService } from './payments-write.service';
+import { PaymentsReadService } from './payments-read.service';
+import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -91,6 +94,9 @@ describe('PaymentsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
+        PaymentsWriteService,
+        PaymentsReadService,
+        PaymentsDebtorsService,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: EntityHistoryService, useValue: entityHistoryService },
