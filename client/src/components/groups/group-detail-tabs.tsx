@@ -207,7 +207,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
                 <EntityHistoryTable entityType="GroupAttendance" entityId={group.id} />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Guruh o'zgarishlari</h3>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Guruh o&apos;zgarishlari</h3>
                 <EntityHistoryTable entityType="Group" entityId={group.id} />
               </div>
             </div>

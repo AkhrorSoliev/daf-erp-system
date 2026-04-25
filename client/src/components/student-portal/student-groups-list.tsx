@@ -93,7 +93,7 @@ export function StudentGroupsList({ groups }: { groups: GroupInfo[] }) {
     return (
       <div className="rounded-lg border bg-card p-8 text-center">
         <UsersRound className="size-8 text-muted-foreground mx-auto mb-3" />
-        <p className="text-sm font-medium">Guruhlar yo'q</p>
+        <p className="text-sm font-medium">Guruhlar yo&apos;q</p>
         <p className="text-xs text-muted-foreground mt-1">
           Hozircha siz hech qanday guruhga yozilmagansiz
         </p>

@@ -504,7 +504,7 @@ export function EntityHistoryTable({ entityType, entityId }: EntityHistoryTableP
                           </Avatar>
                           <span className="text-sm">
                             {record.changedBy!.firstName} {record.changedBy!.lastName}
-                            {isStudent && <span className="text-xs text-muted-foreground ml-1">(o'quvchi)</span>}
+                            {isStudent && <span className="text-xs text-muted-foreground ml-1">(o&apos;quvchi)</span>}
                           </span>
                         </span>
                       );

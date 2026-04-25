@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 export function useDebouncedCallback<T extends (...args: any[]) => void>(
   callback: T,
@@ -6,7 +6,11 @@ export function useDebouncedCallback<T extends (...args: any[]) => void>(
 ): T {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+
+  // Keep ref in sync with the latest callback without writing during render.
+  useLayoutEffect(() => {
+    callbackRef.current = callback;
+  });
 
   return useCallback(
     (...args: Parameters<T>) => {

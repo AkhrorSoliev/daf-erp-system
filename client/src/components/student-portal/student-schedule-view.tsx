@@ -38,9 +38,12 @@ export function StudentScheduleView() {
   const today = new Date();
   const weekStart = addWeeks(startOfWeek(today, { weekStartsOn: 1 }), weekOffset);
 
+  const weekStartIso = weekStart.toISOString();
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
-    [weekStart.toISOString()]
+    // weekStartIso captures the only changing driver (weekOffset shifts the start date)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [weekStartIso]
   );
 
   // Faqat dars bor kunlarni filtrlash
@@ -95,7 +98,7 @@ export function StudentScheduleView() {
       {daySchedule.length === 0 ? (
         <div className="rounded-lg border bg-card p-8 text-center">
           <CalendarX className="size-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm font-medium">Bu hafta darslar yo'q</p>
+          <p className="text-sm font-medium">Bu hafta darslar yo&apos;q</p>
         </div>
       ) : (
         <div className="space-y-3">

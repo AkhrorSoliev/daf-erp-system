@@ -69,9 +69,9 @@ export function StudentHomePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
         <AlertCircle className="size-8 text-muted-foreground mb-3" />
-        <p className="text-sm font-medium">Ma'lumotlarni yuklashda xatolik</p>
+        <p className="text-sm font-medium">Ma&apos;lumotlarni yuklashda xatolik</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Admin bilan bog'laning yoki sahifani yangilang
+          Admin bilan bog&apos;laning yoki sahifani yangilang
         </p>
         <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
           Qayta yuklash

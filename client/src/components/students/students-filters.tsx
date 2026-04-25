@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronsUpDown, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -72,20 +72,28 @@ export function StudentsFilters({
   const [teacherSearch, setTeacherSearch] = useState("");
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
-  const fetchTeachers = useCallback(async () => {
-    try {
-      const params: Record<string, any> = { user_type: "Teacher", pageSize: 100 };
-      if (selectedBranch?.id) params.branch_id = selectedBranch.id;
-      const { data } = await api.get("/users", { params });
-      setTeachers(data.data);
-    } catch {
-      // xatolik
-    }
-  }, [selectedBranch?.id]);
+  const branchId = selectedBranch?.id;
 
   useEffect(() => {
-    if (!isTeacher) fetchTeachers();
-  }, [fetchTeachers, isTeacher]);
+    if (isTeacher) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const params: Record<string, unknown> = {
+          user_type: "Teacher",
+          pageSize: 100,
+        };
+        if (branchId) params.branch_id = branchId;
+        const { data } = await api.get("/users", { params });
+        if (!cancelled) setTeachers(data.data);
+      } catch {
+        // xatolik
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isTeacher, branchId]);
 
   const selectedTeacher = useMemo(
     () => teachers.find((t) => String(t.id) === filters.teacherId),

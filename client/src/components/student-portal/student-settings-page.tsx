@@ -107,7 +107,7 @@ function PhotoSection() {
           onClick={() => fileRef.current?.click()}
         >
           <Camera className="size-4 mr-1.5" />
-          O'zgartirish
+          O&apos;zgartirish
         </Button>
         <input
           ref={fileRef}
@@ -255,7 +255,7 @@ function PasswordSection() {
       >
         <KeyRound className="size-4 text-muted-foreground shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">Parolni o'zgartirish</p>
+          <p className="text-sm font-medium">Parolni o&apos;zgartirish</p>
           <p className="text-xs text-muted-foreground">
             Login va parol sozlamalari
           </p>
@@ -271,7 +271,7 @@ function PasswordSection() {
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Parolni o'zgartirish</DialogTitle>
+            <DialogTitle>Parolni o&apos;zgartirish</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
