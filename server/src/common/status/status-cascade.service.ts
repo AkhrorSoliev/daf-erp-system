@@ -71,6 +71,58 @@ export class StatusCascadeService {
     }
   }
 
+  /**
+   * Per-Group statusChange tarixini yozadi (Branch/Course cascade'larida).
+   * updateMany dan OLDIN chaqirilishi kerak — eski statuslar yo'qolmasligi uchun.
+   */
+  private async recordGroupBatchStatusChange(
+    filter: Prisma.GroupWhereInput,
+    toStatus: string,
+    reason: string,
+    userId: number,
+  ): Promise<void> {
+    const groups = await this.prisma.group.findMany({
+      where: filter,
+      select: { id: true, statusEnum: true, companyId: true },
+    });
+    for (const group of groups) {
+      await this.entityHistoryService.recordStatusChange({
+        entityType: 'Group',
+        entityId: group.id,
+        oldValues: { statusEnum: group.statusEnum, reason },
+        newValues: { statusEnum: toStatus, reason },
+        changedById: userId,
+        companyId: group.companyId ?? undefined,
+      });
+    }
+  }
+
+  /**
+   * Per-Room statusChange tarixini yozadi (Branch cascade'larida).
+   * updateMany dan OLDIN chaqirilishi kerak.
+   */
+  private async recordRoomBatchStatusChange(
+    filter: Prisma.RoomWhereInput,
+    toStatus: string,
+    reason: string,
+    userId: number,
+  ): Promise<void> {
+    const rooms = await this.prisma.room.findMany({
+      where: filter,
+      select: { id: true, status: true, companyId: true },
+    });
+    for (const room of rooms) {
+      await this.entityHistoryService.recordStatusChange({
+        entityType: 'Room',
+        entityId: room.id,
+        oldValues: { status: room.status, reason },
+        newValues: { status: toStatus, reason },
+        changedById: userId,
+        companyId: room.companyId ?? undefined,
+      });
+    }
+  }
+
   async cascade(
     entityType: string,
     entityId: string,
@@ -95,12 +147,19 @@ export class StatusCascadeService {
         newStatus === BranchStatus.ARCHIVED
       ) {
         // Guruhlar → CANCELLED
+        const groupFilter = {
+          branchId,
+          deletedAt: null,
+          statusEnum: { not: GroupStatus.ARCHIVED },
+        };
+        await this.recordGroupBatchStatusChange(
+          groupFilter,
+          GroupStatus.CANCELLED,
+          reason,
+          userId,
+        );
         const groupResult = await this.prisma.group.updateMany({
-          where: {
-            branchId,
-            deletedAt: null,
-            statusEnum: { not: GroupStatus.ARCHIVED },
-          },
+          where: groupFilter,
           data: {
             statusEnum: GroupStatus.CANCELLED,
             isActive: false,
@@ -129,12 +188,19 @@ export class StatusCascadeService {
         });
 
         // Xonalar → ARCHIVED
+        const roomFilter = {
+          branchId,
+          deletedAt: null,
+          status: { not: RoomStatus.ARCHIVED },
+        };
+        await this.recordRoomBatchStatusChange(
+          roomFilter,
+          RoomStatus.ARCHIVED,
+          reason,
+          userId,
+        );
         const roomResult = await this.prisma.room.updateMany({
-          where: {
-            branchId,
-            deletedAt: null,
-            status: { not: RoomStatus.ARCHIVED },
-          },
+          where: roomFilter,
           data: { status: RoomStatus.ARCHIVED, ...auditFields },
         });
         results.push({
@@ -144,8 +210,19 @@ export class StatusCascadeService {
         });
       } else if (newStatus === BranchStatus.INACTIVE) {
         // Guruhlar → PAUSED
+        const groupFilter = {
+          branchId,
+          deletedAt: null,
+          statusEnum: GroupStatus.ACTIVE,
+        };
+        await this.recordGroupBatchStatusChange(
+          groupFilter,
+          GroupStatus.PAUSED,
+          reason,
+          userId,
+        );
         const groupResult = await this.prisma.group.updateMany({
-          where: { branchId, deletedAt: null, statusEnum: GroupStatus.ACTIVE },
+          where: groupFilter,
           data: { statusEnum: GroupStatus.PAUSED, ...auditFields },
         });
         results.push({
@@ -159,12 +236,19 @@ export class StatusCascadeService {
     if (entityType === 'Course') {
       if (newStatus === CourseStatus.ARCHIVED) {
         // Guruhlar → CANCELLED
+        const groupFilter = {
+          courseId: entityId,
+          deletedAt: null,
+          statusEnum: { not: GroupStatus.ARCHIVED },
+        };
+        await this.recordGroupBatchStatusChange(
+          groupFilter,
+          GroupStatus.CANCELLED,
+          reason,
+          userId,
+        );
         const groupResult = await this.prisma.group.updateMany({
-          where: {
-            courseId: entityId,
-            deletedAt: null,
-            statusEnum: { not: GroupStatus.ARCHIVED },
-          },
+          where: groupFilter,
           data: {
             statusEnum: GroupStatus.CANCELLED,
             isActive: false,

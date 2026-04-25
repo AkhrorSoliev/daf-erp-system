@@ -18,13 +18,19 @@ describe('StatusCascadeService', () => {
 
   beforeEach(async () => {
     prisma = {
-      group: { updateMany: jest.fn().mockResolvedValue({ count: 3 }) },
+      group: {
+        updateMany: jest.fn().mockResolvedValue({ count: 3 }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       enrollment: {
         updateMany: jest.fn().mockResolvedValue({ count: 5 }),
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
       },
-      room: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      room: {
+        updateMany: jest.fn().mockResolvedValue({ count: 2 }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       student: {
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({}),
