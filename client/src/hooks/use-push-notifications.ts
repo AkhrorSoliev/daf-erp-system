@@ -9,41 +9,23 @@ export function usePushNotifications() {
     registered.current = true;
 
     async function register() {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-        console.warn("[Push] Browser does not support push notifications");
-        return;
-      }
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
       try {
         const { data } = await api.get("/notifications/vapid-public-key");
-        if (!data.key) {
-          console.warn("[Push] No VAPID key from server");
-          return;
-        }
+        if (!data.key) return;
 
         const registration = await navigator.serviceWorker.register("/sw.js");
         await navigator.serviceWorker.ready;
 
         // If already subscribed, no need to re-subscribe
         const existing = await registration.pushManager.getSubscription();
-        if (existing) {
-          console.info("[Push] Already subscribed");
-          return;
-        }
-
-        console.info("[Push] Current permission:", Notification.permission);
+        if (existing) return;
 
         // If denied, user must manually allow in browser settings
-        if (Notification.permission === "denied") {
-          console.warn(
-            "[Push] Notifications blocked. User must allow in browser settings: " +
-            "Chrome → Settings → Privacy → Site Settings → Notifications"
-          );
-          return;
-        }
+        if (Notification.permission === "denied") return;
 
         const permission = await Notification.requestPermission();
-        console.info("[Push] Permission result:", permission);
         if (permission !== "granted") return;
 
         const subscription = await registration.pushManager.subscribe({
@@ -59,10 +41,8 @@ export function usePushNotifications() {
           p256dh: json.keys.p256dh,
           auth: json.keys.auth,
         });
-
-        console.info("[Push] Successfully subscribed");
-      } catch (err) {
-        console.error("[Push] Registration failed:", err);
+      } catch {
+        // Push registration is non-critical — silently fail
       }
     }
 

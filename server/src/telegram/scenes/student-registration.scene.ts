@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { BotContext } from '../types/context';
@@ -33,6 +34,7 @@ export function createStudentRegistrationScene(
   _bot: Telegraf<BotContext>,
   entityHistoryService: EntityHistoryService,
 ): Scenes.BaseScene<BotContext> {
+  const logger = new Logger('StudentRegistrationScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
 
   // Loading button bosilganda — hech narsa qilmaslik
@@ -418,10 +420,7 @@ export function createStudentRegistrationScene(
       await ctx.scene.leave();
     } catch (error) {
       ctx.session.processing = false;
-      console.error(
-        "[StudentRegistration] Ro'yxatdan o'tishda xatolik:",
-        error,
-      );
+      logger.error("Ro'yxatdan o'tishda xatolik", error as Error);
 
       if (error?.code === 'P2002') {
         await ctx.reply(
