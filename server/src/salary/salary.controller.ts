@@ -29,8 +29,11 @@ export class SalaryController {
   // ===== CONFIG =====
 
   @Get('config/:userId')
-  getConfig(@Param('userId', ParseIntPipe) userId: number) {
-    return this.salaryService.getConfig(userId);
+  getConfig(
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getConfig(userId, companyId);
   }
 
   @Post('config')

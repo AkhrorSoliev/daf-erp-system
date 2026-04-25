@@ -18,6 +18,8 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
 import { RemoveFromGroupDto } from './dto/remove-from-group.dto';
+import { EnrollToGroupDto } from './dto/enroll-to-group.dto';
+import { DeleteStudentDto } from './dto/delete-student.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Roles, CurrentUser } from '../common/decorators';
@@ -42,14 +44,17 @@ export class StudentsController {
     if (isTeacherOnly) {
       query.teacher_id = currentUser.id;
     }
-    return this.studentsService.findAll(query);
+    return this.studentsService.findAll(query, currentUser.companyId);
   }
 
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.studentsService.findById(id);
+  findById(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentsService.findById(id, companyId);
   }
 
   @Post()
@@ -70,8 +75,9 @@ export class StudentsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStudentDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.studentsService.update(id, dto, userId);
+    return this.studentsService.update(id, dto, userId, companyId);
   }
 
   @Patch(':id/status')
@@ -81,15 +87,19 @@ export class StudentsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeStudentStatusDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.studentsService.changeStatus(id, dto, userId);
+    return this.studentsService.changeStatus(id, dto, userId, companyId);
   }
 
   @Get(':id/status-history')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  getStatusHistory(@Param('id', ParseIntPipe) id: number) {
-    return this.studentsService.getStatusHistory(id);
+  getStatusHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentsService.getStatusHistory(id, companyId);
   }
 
   @Post(':id/enroll')
@@ -97,10 +107,17 @@ export class StudentsController {
   @Roles('CEO', 'Branch Director', 'Administrator')
   enrollToGroup(
     @Param('id', ParseIntPipe) id: number,
-    @Body('groupId') groupId: string,
+    @Body() dto: EnrollToGroupDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.studentEnrollmentService.enrollToGroup(id, groupId, userId);
+    return this.studentEnrollmentService.enrollToGroup(
+      id,
+      dto.groupId,
+      userId,
+      companyId,
+      { transferReasonId: dto.transferReasonId },
+    );
   }
 
   @Delete(':id/enroll/:enrollmentId')
@@ -111,11 +128,13 @@ export class StudentsController {
     @Param('enrollmentId') enrollmentId: string,
     @Body() dto: RemoveFromGroupDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
     return this.studentEnrollmentService.removeFromGroup(
       id,
       enrollmentId,
       userId,
+      companyId,
       dto,
     );
   }
@@ -126,8 +145,14 @@ export class StudentsController {
   getSmsHistory(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: PaginationDto,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.smsService.getByStudent(id, query.page, query.pageSize);
+    return this.smsService.getByStudent(
+      id,
+      companyId,
+      query.page,
+      query.pageSize,
+    );
   }
 
   @Post(':id/sms')
@@ -153,8 +178,10 @@ export class StudentsController {
   @Roles('CEO', 'Branch Director', 'Administrator')
   delete(
     @Param('id', ParseIntPipe) id: number,
+    @Body() dto: DeleteStudentDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.studentsService.delete(id, userId);
+    return this.studentsService.delete(id, userId, dto.reason, companyId);
   }
 }

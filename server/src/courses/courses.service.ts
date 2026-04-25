@@ -17,10 +17,11 @@ export class CoursesService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async findAll(query: CourseQueryDto) {
+  async findAll(query: CourseQueryDto, companyId: number) {
     const where = {
       branchId: query.branch_id,
       deletedAt: null,
+      companyId,
     };
 
     const page = query.page ?? 1;
@@ -53,9 +54,9 @@ export class CoursesService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, companyId: number) {
     const course = await this.prisma.course.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
       include: {
         branch: { select: { name: true } },
         _count: { select: { groups: { where: { deletedAt: null } } } },
@@ -69,9 +70,9 @@ export class CoursesService {
     return course;
   }
 
-  async create(dto: CreateCourseDto, userId?: number) {
+  async create(dto: CreateCourseDto, companyId: number, userId?: number) {
     const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, deletedAt: null },
+      where: { id: dto.branchId, deletedAt: null, companyId },
     });
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
@@ -86,7 +87,7 @@ export class CoursesService {
         courseDuration: dto.courseDuration,
         price: dto.price,
         branchId: dto.branchId,
-        companyId: dto.companyId,
+        companyId,
       },
     });
 
@@ -95,15 +96,20 @@ export class CoursesService {
       entityId: course.id,
       newValues: course,
       changedById: userId,
-      companyId: dto.companyId ?? undefined,
+      companyId,
     });
 
     return course;
   }
 
-  async update(id: string, dto: UpdateCourseDto, userId?: number) {
+  async update(
+    id: string,
+    dto: UpdateCourseDto,
+    userId: number | undefined,
+    companyId: number,
+  ) {
     const course = await this.prisma.course.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!course) {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
@@ -126,9 +132,14 @@ export class CoursesService {
     return updated;
   }
 
-  async changeStatus(id: string, dto: ChangeCourseStatusDto, userId: number) {
+  async changeStatus(
+    id: string,
+    dto: ChangeCourseStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const course = await this.prisma.course.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!course) {
@@ -169,9 +180,9 @@ export class CoursesService {
     return updated;
   }
 
-  async getStatusHistory(id: string) {
+  async getStatusHistory(id: string, companyId: number) {
     const course = await this.prisma.course.findFirst({
-      where: { id },
+      where: { id, companyId },
       select: { id: true },
     });
 
@@ -182,9 +193,9 @@ export class CoursesService {
     return this.statusHistoryService.getHistory('Course', id);
   }
 
-  async delete(id: string, userId: number) {
+  async delete(id: string, userId: number, companyId: number) {
     const course = await this.prisma.course.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!course) {
       throw new NotFoundException(`Kurs #${id} topilmadi`);

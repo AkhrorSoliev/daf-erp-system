@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { EntityHistoryService } from './entity-history.service';
 import { HistoryQueryDto } from './dto/history-query.dto';
-import { Roles } from '../decorators';
+import { CurrentUser, Roles } from '../decorators';
 import { RolesGuard } from '../guards';
 
 @Controller('entity-history')
@@ -15,8 +15,9 @@ export class EntityHistoryController {
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
     @Query() query: HistoryQueryDto,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.entityHistoryService.getHistory(entityType, entityId, {
+    return this.entityHistoryService.getHistory(entityType, entityId, companyId, {
       page: query.page,
       pageSize: query.pageSize,
     });

@@ -73,7 +73,7 @@ describe('BranchesService — status methods', () => {
 
   describe('changeStatus', () => {
     it('updates status and calls cascade', async () => {
-      await service.changeStatus(1, { status: 'CLOSED' as any }, 1);
+      await service.changeStatus(1, { status: 'CLOSED' as any }, 1, 1001);
 
       expect(prisma.branch.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -92,8 +92,23 @@ describe('BranchesService — status methods', () => {
     it('throws NotFoundException for missing branch', async () => {
       prisma.branch.findFirst.mockResolvedValue(null);
       await expect(
-        service.changeStatus(999, { status: 'INACTIVE' as any }, 1),
+        service.changeStatus(999, { status: 'INACTIVE' as any }, 1, 1001),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('multi-tenant filter (companyId)', () => {
+    it('changeStatus scopes lookup to companyId', async () => {
+      await service.changeStatus(1, { status: 'INACTIVE' as any }, 1, 1001);
+      expect(prisma.branch.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 1,
+            deletedAt: null,
+            companyId: 1001,
+          }),
+        }),
+      );
     });
   });
 });

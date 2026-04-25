@@ -43,8 +43,11 @@ export class ContractsController {
 
   @Get(':id')
   @Roles('CEO', 'Branch Director', 'Administrator')
-  findOne(@Param('id') id: string) {
-    return this.contractsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.contractsService.findOne(id, companyId);
   }
 
   @Get('student/:studentId')
@@ -52,8 +55,9 @@ export class ContractsController {
   findByStudent(
     @Param('studentId', ParseIntPipe) studentId: number,
     @Query() query: ContractQueryDto,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.contractsService.findByStudent(studentId, query);
+    return this.contractsService.findByStudent(studentId, query, companyId);
   }
 
   @Patch(':id')
@@ -62,8 +66,9 @@ export class ContractsController {
     @Param('id') id: string,
     @Body() dto: UpdateContractDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.contractsService.update(id, dto, userId);
+    return this.contractsService.update(id, dto, userId, companyId);
   }
 
   @Patch(':id/status')
@@ -72,7 +77,8 @@ export class ContractsController {
     @Param('id') id: string,
     @Body() dto: ChangeContractStatusDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.contractsService.changeStatus(id, dto, userId);
+    return this.contractsService.changeStatus(id, dto, userId, companyId);
   }
 }

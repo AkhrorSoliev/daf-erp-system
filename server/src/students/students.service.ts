@@ -132,13 +132,14 @@ export class StudentsService {
     private eventEmitter: EventEmitter2,
   ) {}
 
-  async findAll(query: StudentQueryDto) {
+  async findAll(query: StudentQueryDto, companyId: number) {
     const { page = 1, pageSize = 10, search, status, branch_id } = query;
     const skip = (page - 1) * pageSize;
 
-    // Base where: search + teacher + branch (without status filter)
+    // Base where: company scope + search + teacher + branch (without status filter)
     const baseWhere: Prisma.StudentWhereInput = {
       deletedAt: null,
+      companyId,
     };
 
     if (search) {
@@ -264,9 +265,9 @@ export class StudentsService {
     };
   }
 
-  async findById(id: number) {
+  async findById(id: number, companyId: number) {
     const student = await this.prisma.student.findFirst({
-      where: { id },
+      where: { id, companyId },
       select: studentSelect,
     });
 
@@ -287,6 +288,9 @@ export class StudentsService {
   }
 
   async create(dto: CreateStudentDto, companyId: number, userId?: number) {
+    // Phone is the student-portal login identifier → must be globally unique,
+    // not scoped to companyId (otherwise two students in different companies
+    // could share a login and auth lookup would be ambiguous).
     const existing = await this.prisma.student.findFirst({
       where: { phone: dto.phone, deletedAt: null },
     });
@@ -362,9 +366,14 @@ export class StudentsService {
     return { ...formatted, generatedPassword: plainPassword };
   }
 
-  async update(id: number, dto: UpdateStudentDto, userId?: number) {
+  async update(
+    id: number,
+    dto: UpdateStudentDto,
+    userId: number | undefined,
+    companyId: number,
+  ) {
     const student = await this.prisma.student.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!student) {
@@ -380,8 +389,13 @@ export class StudentsService {
     }
 
     if (dto.phone && dto.phone !== student.phone) {
+      // Phone uniqueness is global (student-portal login identifier).
       const phoneTaken = await this.prisma.student.findFirst({
-        where: { phone: dto.phone, deletedAt: null, id: { not: id } },
+        where: {
+          phone: dto.phone,
+          deletedAt: null,
+          id: { not: id },
+        },
       });
       if (phoneTaken) {
         throw new BadRequestException(
@@ -452,9 +466,14 @@ export class StudentsService {
     return formatStudent(updated);
   }
 
-  async changeStatus(id: number, dto: ChangeStudentStatusDto, userId: number) {
+  async changeStatus(
+    id: number,
+    dto: ChangeStudentStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const student = await this.prisma.student.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!student) {
@@ -515,9 +534,9 @@ export class StudentsService {
     return formatStudent(updated);
   }
 
-  async getStatusHistory(id: number) {
+  async getStatusHistory(id: number, companyId: number) {
     const student = await this.prisma.student.findFirst({
-      where: { id },
+      where: { id, companyId },
       select: { id: true },
     });
 
@@ -528,9 +547,14 @@ export class StudentsService {
     return this.statusHistoryService.getHistory('Student', String(id));
   }
 
-  async delete(id: number, deletedById: number) {
+  async delete(
+    id: number,
+    deletedById: number,
+    reason: string,
+    companyId: number,
+  ) {
     const student = await this.prisma.student.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!student) {
@@ -542,7 +566,7 @@ export class StudentsService {
       entityId: String(id),
       fromStatus: student.status,
       toStatus: StudentStatus.ARCHIVED,
-      reason: "O'chirildi",
+      reason,
       changedById: deletedById,
       companyId: student.companyId ?? undefined,
     });
@@ -550,7 +574,7 @@ export class StudentsService {
     await this.entityHistoryService.recordDelete({
       entityType: 'Student',
       entityId: id,
-      oldValues: student,
+      oldValues: { ...student, deletionReason: reason },
       changedById: deletedById,
       companyId: student.companyId ?? undefined,
     });
@@ -564,7 +588,7 @@ export class StudentsService {
         deletedById,
         statusChangedAt: new Date(),
         statusChangedById: deletedById,
-        statusChangeReason: "O'chirildi",
+        statusChangeReason: reason,
       },
     });
 

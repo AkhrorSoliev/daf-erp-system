@@ -86,12 +86,13 @@ export class GroupsService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async findAll(query: GroupQueryDto) {
+  async findAll(query: GroupQueryDto, companyId: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
     const where: Prisma.GroupWhereInput = {
       deletedAt: null,
+      companyId,
     };
 
     if (query.branch_id) {
@@ -168,18 +169,23 @@ export class GroupsService {
     };
   }
 
-  async getNextName(branchId: number) {
+  async getNextName(branchId: number, companyId: number) {
     const maxGroupNumber = await this.prisma.group.aggregate({
-      where: { branchId, name: { startsWith: '#' }, deletedAt: null },
+      where: {
+        branchId,
+        name: { startsWith: '#' },
+        deletedAt: null,
+        companyId,
+      },
       _max: { groupNumber: true },
     });
     const nextNumber = (maxGroupNumber._max?.groupNumber ?? 0) + 1;
     return { nextName: `#${String(nextNumber).padStart(3, '0')}` };
   }
 
-  async findStudentsByGroupId(groupId: string) {
+  async findStudentsByGroupId(groupId: string, companyId: number) {
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
+      where: { id: groupId, deletedAt: null, companyId },
       select: { id: true },
     });
 
@@ -219,9 +225,9 @@ export class GroupsService {
     }));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, companyId: number) {
     const group = await this.prisma.group.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
       include: groupInclude,
     });
 
@@ -288,6 +294,7 @@ export class GroupsService {
         branchId: dto.branchId,
         name: { startsWith: '#' },
         deletedAt: null,
+        companyId,
       };
       const maxGroupNumber = await this.prisma.group.aggregate({
         where: nameWhere,
@@ -351,9 +358,14 @@ export class GroupsService {
     );
   }
 
-  async update(id: string, dto: UpdateGroupDto, userId?: number) {
+  async update(
+    id: string,
+    dto: UpdateGroupDto,
+    userId: number | undefined,
+    companyId: number,
+  ) {
     const existing = await this.prisma.group.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
       include: { course: { select: { courseDuration: true } } },
     });
     if (!existing) {
@@ -396,19 +408,58 @@ export class GroupsService {
       endDate.setMonth(endDate.getMonth() + courseDuration);
     }
 
-    const { teacherIds, ...updateData } = dto;
+    const { teacherIds, changeReasonId, ...updateData } = dto;
+
+    // Validate changeReasonId if provided — must belong to the same company.
+    if (changeReasonId) {
+      const reason = await this.prisma.groupTeacherChangeReason.findFirst({
+        where: {
+          id: changeReasonId,
+          companyId: existing.companyId ?? undefined,
+          deletedAt: null,
+        },
+      });
+      if (!reason) {
+        throw new NotFoundException('Tanlangan sabab topilmadi');
+      }
+    }
 
     // Eski ustozlar ro'yxatini olish (teacher tracking uchun)
+    let oldTeacherIds: number[] = [];
     let oldTeacherNames: string | null = null;
+    let triggeredByDismissal = false;
     if (teacherIds) {
       const oldTeachers = await this.prisma.groupTeacher.findMany({
         where: { groupId: id },
-        include: { teacher: { select: { firstName: true, lastName: true } } },
+        include: {
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              status: true,
+              isActive: true,
+              deletedAt: true,
+            },
+          },
+        },
       });
+      oldTeacherIds = oldTeachers.map((t) => t.teacher.id);
       oldTeacherNames = oldTeachers
         .map((t) => `${t.teacher.firstName} ${t.teacher.lastName}`)
         .sort()
         .join(', ');
+
+      // Removed ustozlardan birortasi inactive/terminated/archived/deleted bo'lsa,
+      // bu o'zgarish "ishdan ketish" sababli ekanligini bildiradi
+      triggeredByDismissal = oldTeachers.some((t) => {
+        const notInNew = !teacherIds.includes(t.teacher.id);
+        const isDismissed =
+          t.teacher.deletedAt !== null ||
+          !t.teacher.isActive ||
+          t.teacher.status !== 'ACTIVE';
+        return notInNew && isDismissed;
+      });
     }
 
     const group = await this.prisma.$transaction(async (tx) => {
@@ -456,15 +507,45 @@ export class GroupsService {
           changedById: userId,
           companyId: existing.companyId ?? undefined,
         });
+
+        const newTeacherIds = teacherIds;
+        const added = newTeacherIds.filter((tid) => !oldTeacherIds.includes(tid));
+        const removed = oldTeacherIds.filter((tid) => !newTeacherIds.includes(tid));
+
+        let changeType: 'ADDED' | 'REMOVED' | 'REPLACED';
+        if (added.length > 0 && removed.length === 0) {
+          changeType = 'ADDED';
+        } else if (removed.length > 0 && added.length === 0) {
+          changeType = 'REMOVED';
+        } else {
+          changeType = 'REPLACED';
+        }
+
+        await this.prisma.groupTeacherHistory.create({
+          data: {
+            groupId: id,
+            previousTeacherIds: oldTeacherIds,
+            newTeacherIds,
+            changeType,
+            triggeredByDismissal,
+            changedById: userId ?? null,
+            changeReasonId: changeReasonId ?? null,
+          },
+        });
       }
     }
 
     return formatGroup(group);
   }
 
-  async changeStatus(id: string, dto: ChangeGroupStatusDto, userId: number) {
+  async changeStatus(
+    id: string,
+    dto: ChangeGroupStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const group = await this.prisma.group.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!group) {
@@ -509,9 +590,9 @@ export class GroupsService {
     return formatGroup(updated);
   }
 
-  async getStatusHistory(id: string) {
+  async getStatusHistory(id: string, companyId: number) {
     const group = await this.prisma.group.findFirst({
-      where: { id },
+      where: { id, companyId },
       select: { id: true },
     });
 
@@ -522,9 +603,9 @@ export class GroupsService {
     return this.statusHistoryService.getHistory('Group', id);
   }
 
-  async delete(id: string, userId: number) {
+  async delete(id: string, userId: number, companyId: number) {
     const group = await this.prisma.group.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!group) {
       throw new NotFoundException(`Guruh #${id} topilmadi`);

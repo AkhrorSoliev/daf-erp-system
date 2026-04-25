@@ -35,9 +35,9 @@ export class SalaryService {
 
   // ===== SALARY CONFIG =====
 
-  async getConfig(userId: number) {
+  async getConfig(userId: number, companyId: number) {
     return this.prisma.employeeSalaryConfig.findMany({
-      where: { userId, isActive: true },
+      where: { userId, companyId, isActive: true },
       select: {
         id: true,
         salaryType: true,

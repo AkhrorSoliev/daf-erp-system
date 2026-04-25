@@ -20,7 +20,7 @@ describe('SmsService', () => {
 
     prisma = {
       student: {
-        findUnique: jest.fn(),
+        findFirst: jest.fn(),
       },
       smsMessage: {
         create: jest.fn().mockImplementation(({ data }) => ({
@@ -59,7 +59,7 @@ describe('SmsService', () => {
 
   describe('sendToStudent', () => {
     it('should send message and save with SENT status', async () => {
-      prisma.student.findUnique.mockResolvedValue({
+      prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',
       });
 
@@ -84,7 +84,7 @@ describe('SmsService', () => {
     });
 
     it('should save FAILED status when student has no telegramChatId', async () => {
-      prisma.student.findUnique.mockResolvedValue({
+      prisma.student.findFirst.mockResolvedValue({
         telegramChatId: null,
       });
 
@@ -101,7 +101,7 @@ describe('SmsService', () => {
     });
 
     it('should save FAILED status when student not found', async () => {
-      prisma.student.findUnique.mockResolvedValue(null);
+      prisma.student.findFirst.mockResolvedValue(null);
 
       await service.sendToStudent(10001, 'Test message', 'AUTO');
 
@@ -114,7 +114,7 @@ describe('SmsService', () => {
     });
 
     it('should save FAILED status when bot is not available', async () => {
-      prisma.student.findUnique.mockResolvedValue({
+      prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',
       });
       telegramService.getBot.mockReturnValue(null);
@@ -130,7 +130,7 @@ describe('SmsService', () => {
     });
 
     it('should save FAILED status when Telegram API throws', async () => {
-      prisma.student.findUnique.mockResolvedValue({
+      prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',
       });
       mockBot.telegram.sendMessage.mockRejectedValue(
@@ -148,7 +148,7 @@ describe('SmsService', () => {
     });
 
     it('should set senderUserId to null for system messages', async () => {
-      prisma.student.findUnique.mockResolvedValue({
+      prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',
       });
 
@@ -164,7 +164,7 @@ describe('SmsService', () => {
     });
 
     it('should record entity history for AUTO messages', async () => {
-      prisma.student.findUnique.mockResolvedValue({
+      prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',
       });
 
@@ -189,7 +189,7 @@ describe('SmsService', () => {
     });
 
     it('should record entity history for MANUAL messages with sender', async () => {
-      prisma.student.findUnique.mockResolvedValue({
+      prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',
       });
 
@@ -217,7 +217,7 @@ describe('SmsService', () => {
       prisma.smsMessage.findMany.mockResolvedValue(messages);
       prisma.smsMessage.count.mockResolvedValue(25);
 
-      const result = await service.getByStudent(10001, 2, 10);
+      const result = await service.getByStudent(10001, 1001, 2, 10);
 
       expect(result).toEqual({
         data: messages,
@@ -226,7 +226,7 @@ describe('SmsService', () => {
         pageSize: 10,
       });
       expect(prisma.smsMessage.findMany).toHaveBeenCalledWith({
-        where: { studentId: 10001 },
+        where: { studentId: 10001, companyId: 1001 },
         orderBy: { createdAt: 'desc' },
         skip: 10,
         take: 10,
@@ -240,7 +240,7 @@ describe('SmsService', () => {
       prisma.smsMessage.findMany.mockResolvedValue([]);
       prisma.smsMessage.count.mockResolvedValue(0);
 
-      const result = await service.getByStudent(10001);
+      const result = await service.getByStudent(10001, 1001);
 
       expect(result).toEqual({
         data: [],

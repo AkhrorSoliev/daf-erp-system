@@ -45,6 +45,28 @@ const ENTITY_TYPE_MAP: Record<string, string> = {
   [ArchiveEntityType.HOLIDAYS]: 'Holiday',
 };
 
+/**
+ * Entity types whose Prisma model has a `companyId` column — we filter by it
+ * to keep archive views strictly multi-tenant. Lead/Holiday are schema-global
+ * today (no companyId) and are intentionally omitted.
+ */
+const COMPANY_SCOPED_ENTITIES = new Set<string>([
+  ArchiveEntityType.USERS,
+  ArchiveEntityType.STUDENTS,
+  ArchiveEntityType.GROUPS,
+  ArchiveEntityType.COURSES,
+  ArchiveEntityType.BRANCHES,
+  ArchiveEntityType.ROOMS,
+  // Enrollment/Lead/Holiday do not carry companyId in the current schema.
+]);
+
+function companyScope(
+  entityType: ArchiveEntityType,
+  companyId: number,
+): Record<string, number> {
+  return COMPANY_SCOPED_ENTITIES.has(entityType) ? { companyId } : {};
+}
+
 @Injectable()
 export class ArchiveService {
   constructor(
@@ -54,8 +76,9 @@ export class ArchiveService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async getCounts() {
+  async getCounts(companyId: number) {
     const deletedFilter = { deletedAt: { not: null } };
+    const scoped = { ...deletedFilter, companyId };
     const [
       users,
       branches,
@@ -67,13 +90,14 @@ export class ArchiveService {
       enrollments,
       holidays,
     ] = await Promise.all([
-      this.prisma.user.count({ where: deletedFilter }),
-      this.prisma.branch.count({ where: deletedFilter }),
-      this.prisma.room.count({ where: deletedFilter }),
-      this.prisma.course.count({ where: deletedFilter }),
-      this.prisma.student.count({ where: deletedFilter }),
+      this.prisma.user.count({ where: scoped }),
+      this.prisma.branch.count({ where: scoped }),
+      this.prisma.room.count({ where: scoped }),
+      this.prisma.course.count({ where: scoped }),
+      this.prisma.student.count({ where: scoped }),
+      // Lead/Holiday/Enrollment are company-global in schema — count unscoped.
       this.prisma.lead.count({ where: deletedFilter }),
-      this.prisma.group.count({ where: deletedFilter }),
+      this.prisma.group.count({ where: scoped }),
       this.prisma.enrollment.count({ where: deletedFilter }),
       this.prisma.holiday.count({ where: deletedFilter }),
     ]);
@@ -90,12 +114,19 @@ export class ArchiveService {
     };
   }
 
-  async findAll(entityType: ArchiveEntityType, query: ArchiveQueryDto) {
+  async findAll(
+    entityType: ArchiveEntityType,
+    query: ArchiveQueryDto,
+    companyId: number,
+  ) {
     const { page = 1, pageSize = 10, search } = query;
     const skip = (page - 1) * pageSize;
 
     const delegate = this.getDelegate(entityType);
-    const where: any = { deletedAt: { not: null } };
+    const where: any = {
+      deletedAt: { not: null },
+      ...companyScope(entityType, companyId),
+    };
 
     if (search) {
       const searchFilter = this.getSearchFilter(entityType, search);
@@ -118,13 +149,21 @@ export class ArchiveService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(entityType: ArchiveEntityType, id: string | number) {
+  async findOne(
+    entityType: ArchiveEntityType,
+    id: string | number,
+    companyId: number,
+  ) {
     const delegate = this.getDelegate(entityType);
     const include = this.getInclude(entityType);
     const parsedId = this.parseId(entityType, id);
 
     const record = await delegate.findFirst({
-      where: { id: parsedId, deletedAt: { not: null } },
+      where: {
+        id: parsedId,
+        deletedAt: { not: null },
+        ...companyScope(entityType, companyId),
+      },
       ...(include && { include }),
     });
 
@@ -139,12 +178,17 @@ export class ArchiveService {
     entityType: ArchiveEntityType,
     id: string | number,
     userId: number,
+    companyId: number,
   ) {
     const delegate = this.getDelegate(entityType);
     const parsedId = this.parseId(entityType, id);
 
     const record = await delegate.findFirst({
-      where: { id: parsedId, deletedAt: { not: null } },
+      where: {
+        id: parsedId,
+        deletedAt: { not: null },
+        ...companyScope(entityType, companyId),
+      },
     });
 
     if (!record) {
@@ -211,12 +255,20 @@ export class ArchiveService {
     return { message: `${entityType} muvaffaqiyatli tiklandi` };
   }
 
-  async permanentDelete(entityType: ArchiveEntityType, id: string | number) {
+  async permanentDelete(
+    entityType: ArchiveEntityType,
+    id: string | number,
+    companyId: number,
+  ) {
     const delegate = this.getDelegate(entityType);
     const parsedId = this.parseId(entityType, id);
 
     const record = await delegate.findFirst({
-      where: { id: parsedId, deletedAt: { not: null } },
+      where: {
+        id: parsedId,
+        deletedAt: { not: null },
+        ...companyScope(entityType, companyId),
+      },
     });
 
     if (!record) {

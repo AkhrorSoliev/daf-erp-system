@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionType, Prisma } from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
@@ -352,6 +352,16 @@ export class TransactionsService {
     tx?: Prisma.TransactionClient,
   ) {
     return this.runInTx(async (client) => {
+      // Multi-tenant guard: confirm the target student belongs to the
+      // caller's company before mutating the balance ledger.
+      const studentCheck = await client.student.findFirst({
+        where: { id: params.studentId, companyId: params.companyId },
+        select: { id: true },
+      });
+      if (!studentCheck) {
+        throw new NotFoundException("O'quvchi topilmadi");
+      }
+
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;

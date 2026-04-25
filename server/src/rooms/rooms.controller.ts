@@ -23,25 +23,38 @@ export class RoomsController {
   constructor(private roomsService: RoomsService) {}
 
   @Get('count-by-branch')
-  countByBranch(@Query() query: CountByBranchQueryDto) {
-    return this.roomsService.countByBranch(query);
+  countByBranch(
+    @Query() query: CountByBranchQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.roomsService.countByBranch(query, companyId);
   }
 
   @Get()
-  findAll(@Query() query: RoomQueryDto) {
-    return this.roomsService.findAll(query);
+  findAll(
+    @Query() query: RoomQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.roomsService.findAll(query, companyId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.roomsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.roomsService.findOne(id, companyId);
   }
 
   @Post()
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  create(@Body() dto: CreateRoomDto, @CurrentUser('id') userId: number) {
-    return this.roomsService.create(dto, userId);
+  create(
+    @Body() dto: CreateRoomDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.roomsService.create(dto, companyId, userId);
   }
 
   @Patch(':id')
@@ -51,8 +64,9 @@ export class RoomsController {
     @Param('id') id: string,
     @Body() dto: UpdateRoomDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.roomsService.update(id, dto, userId);
+    return this.roomsService.update(id, dto, userId, companyId);
   }
 
   @Patch(':id/status')
@@ -62,21 +76,29 @@ export class RoomsController {
     @Param('id') id: string,
     @Body() dto: ChangeRoomStatusDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.roomsService.changeStatus(id, dto, userId);
+    return this.roomsService.changeStatus(id, dto, userId, companyId);
   }
 
   @Get(':id/status-history')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  getStatusHistory(@Param('id') id: string) {
-    return this.roomsService.getStatusHistory(id);
+  getStatusHistory(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.roomsService.getStatusHistory(id, companyId);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  delete(@Param('id') id: string, @CurrentUser('id') userId: number) {
-    return this.roomsService.delete(id, userId);
+  delete(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.roomsService.delete(id, userId, companyId);
   }
 }

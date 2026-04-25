@@ -72,6 +72,7 @@ describe('RoomsService — status methods', () => {
         'room-1',
         { status: 'UNDER_MAINTENANCE' as any },
         1,
+        1001,
       );
 
       expect(prisma.room.update).toHaveBeenCalledWith(
@@ -84,20 +85,40 @@ describe('RoomsService — status methods', () => {
     it('throws NotFoundException for missing room', async () => {
       prisma.room.findFirst.mockResolvedValue(null);
       await expect(
-        service.changeStatus('missing', { status: 'INACTIVE' as any }, 1),
+        service.changeStatus('missing', { status: 'INACTIVE' as any }, 1, 1001),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('delete', () => {
     it('archives room with ARCHIVED status and deletedAt', async () => {
-      await service.delete('room-1', 1);
+      await service.delete('room-1', 1, 1001);
 
       expect(prisma.room.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             status: 'ARCHIVED',
             deletedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('multi-tenant filter (companyId)', () => {
+    it('changeStatus scopes lookup to companyId', async () => {
+      await service.changeStatus(
+        'room-1',
+        { status: 'INACTIVE' as any },
+        1,
+        1001,
+      );
+      expect(prisma.room.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 'room-1',
+            deletedAt: null,
+            companyId: 1001,
           }),
         }),
       );

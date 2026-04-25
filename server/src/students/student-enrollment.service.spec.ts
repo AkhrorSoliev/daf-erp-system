@@ -49,6 +49,7 @@ describe('StudentEnrollmentService', () => {
           exactDays: [],
           lessonStartTime: '09:00',
           lessonEndTime: '10:30',
+          teachers: [{ teacherId: 5001 }],
         }),
         findUnique: jest.fn().mockResolvedValue({ name: 'A1' }),
       },
@@ -58,6 +59,9 @@ describe('StudentEnrollmentService', () => {
           .mockResolvedValue({ price: 800000, lessonPaymentCount: 12 }),
       },
       departureReason: {
+        findFirst: jest.fn(),
+      },
+      enrollmentTransferReason: {
         findFirst: jest.fn(),
       },
     };
@@ -93,7 +97,7 @@ describe('StudentEnrollmentService', () => {
         ...mockStudent,
         status: 'FROZEN',
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -103,7 +107,7 @@ describe('StudentEnrollmentService', () => {
         ...mockStudent,
         status: 'GRADUATED',
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -115,8 +119,9 @@ describe('StudentEnrollmentService', () => {
         deletedAt: null,
         statusEnum: 'COMPLETED',
         course: { name: 'Deutsch A1' },
+        teachers: [],
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -128,8 +133,9 @@ describe('StudentEnrollmentService', () => {
         deletedAt: null,
         statusEnum: 'CANCELLED',
         course: { name: 'Deutsch A1' },
+        teachers: [],
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2)).rejects.toThrow(
+      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -145,9 +151,10 @@ describe('StudentEnrollmentService', () => {
         exactDays: [],
         lessonStartTime: '09:00',
         lessonEndTime: '10:30',
+        teachers: [],
       });
       await expect(
-        service.enrollToGroup(1, 'group-1', 2),
+        service.enrollToGroup(1, 'group-1', 2, 1001),
       ).resolves.not.toThrow();
     });
 
@@ -162,10 +169,106 @@ describe('StudentEnrollmentService', () => {
         exactDays: [],
         lessonStartTime: '09:00',
         lessonEndTime: '10:30',
+        teachers: [],
       });
       await expect(
-        service.enrollToGroup(1, 'group-1', 2),
+        service.enrollToGroup(1, 'group-1', 2, 1001),
       ).resolves.not.toThrow();
+    });
+
+    describe('transfer (already has active enrollment)', () => {
+      beforeEach(() => {
+        // Target group has teacher 5001 (same as default mock).
+        // sameGroup check (findFirst 1st call) → null
+        // currentEnrollment check (findFirst 2nd call) → existing enrollment
+        //   with old group teachers
+      });
+
+      it('allows transfer with same teachers and no reason', async () => {
+        prisma.enrollment.findFirst
+          .mockResolvedValueOnce(null) // sameGroup check
+          .mockResolvedValueOnce({
+            id: 'enroll-old',
+            studentId: 1,
+            groupId: 'old-group',
+            group: { teachers: [{ teacherId: 5001 }] }, // same as target
+          });
+
+        await expect(
+          service.enrollToGroup(1, 'group-1', 2, 1001),
+        ).resolves.not.toThrow();
+
+        expect(prisma.enrollment.update).toHaveBeenCalledWith({
+          where: { id: 'enroll-old' },
+          data: expect.objectContaining({
+            status: 'TRANSFERRED',
+            transferReasonId: null,
+          }),
+        });
+      });
+
+      it('rejects transfer with different teachers and no reason', async () => {
+        prisma.enrollment.findFirst
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            id: 'enroll-old',
+            studentId: 1,
+            groupId: 'old-group',
+            group: { teachers: [{ teacherId: 9999 }] }, // different teacher
+          });
+
+        await expect(
+          service.enrollToGroup(1, 'group-1', 2, 1001),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('accepts transfer with different teachers when valid reason provided', async () => {
+        prisma.enrollment.findFirst
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            id: 'enroll-old',
+            studentId: 1,
+            groupId: 'old-group',
+            group: { teachers: [{ teacherId: 9999 }] },
+          });
+        prisma.enrollmentTransferReason.findFirst.mockResolvedValueOnce({
+          id: 'reason-1',
+          name: 'Daraja past',
+          companyId: 1001,
+        });
+
+        await expect(
+          service.enrollToGroup(1, 'group-1', 2, 1001, {
+            transferReasonId: 'reason-1',
+          }),
+        ).resolves.not.toThrow();
+
+        expect(prisma.enrollment.update).toHaveBeenCalledWith({
+          where: { id: 'enroll-old' },
+          data: expect.objectContaining({
+            status: 'TRANSFERRED',
+            transferReasonId: 'reason-1',
+          }),
+        });
+      });
+
+      it('rejects unknown transferReasonId', async () => {
+        prisma.enrollment.findFirst
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            id: 'enroll-old',
+            studentId: 1,
+            groupId: 'old-group',
+            group: { teachers: [{ teacherId: 9999 }] },
+          });
+        prisma.enrollmentTransferReason.findFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          service.enrollToGroup(1, 'group-1', 2, 1001, {
+            transferReasonId: 'nope',
+          }),
+        ).rejects.toThrow(NotFoundException);
+      });
     });
   });
 
@@ -188,7 +291,7 @@ describe('StudentEnrollmentService', () => {
         companyId: 1001,
       });
 
-      await service.removeFromGroup(1, 'enroll-1', 10001, {
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
         departureReasonId: 'reason-1',
       });
 
@@ -222,14 +325,14 @@ describe('StudentEnrollmentService', () => {
     it('throws NotFound if departureReasonId is not in company or deleted', async () => {
       prisma.departureReason.findFirst.mockResolvedValueOnce(null);
       await expect(
-        service.removeFromGroup(1, 'enroll-1', 10001, {
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
           departureReasonId: 'missing',
         }),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('falls back to free-text reason when no departureReasonId', async () => {
-      await service.removeFromGroup(1, 'enroll-1', 10001, {
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
         reason: 'Ota-ona qarorigora ko\'ra',
       });
       expect(prisma.enrollment.update).toHaveBeenCalledWith(
@@ -250,7 +353,7 @@ describe('StudentEnrollmentService', () => {
     });
 
     it('uses default reason when neither id nor text is provided', async () => {
-      await service.removeFromGroup(1, 'enroll-1', 10001, {});
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {});
       expect(prisma.enrollment.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({

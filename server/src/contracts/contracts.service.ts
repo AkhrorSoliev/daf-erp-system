@@ -102,9 +102,9 @@ export class ContractsService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, companyId: number) {
     const contract = await this.prisma.contract.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
       select: {
         id: true,
         contractNumber: true,
@@ -147,12 +147,17 @@ export class ContractsService {
     return contract;
   }
 
-  async findByStudent(studentId: number, query: ContractQueryDto) {
+  async findByStudent(
+    studentId: number,
+    query: ContractQueryDto,
+    companyId: number,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
     const where: Prisma.ContractWhereInput = {
       studentId,
+      companyId,
       deletedAt: null,
       ...(query.status && { status: query.status }),
     };
@@ -182,9 +187,14 @@ export class ContractsService {
     return { data, total, page, pageSize };
   }
 
-  async update(id: string, dto: UpdateContractDto, userId: number) {
+  async update(
+    id: string,
+    dto: UpdateContractDto,
+    userId: number,
+    companyId: number,
+  ) {
     const existing = await this.prisma.contract.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Shartnoma topilmadi');
 
@@ -213,9 +223,14 @@ export class ContractsService {
     return contract;
   }
 
-  async changeStatus(id: string, dto: ChangeContractStatusDto, userId: number) {
+  async changeStatus(
+    id: string,
+    dto: ChangeContractStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const existing = await this.prisma.contract.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Shartnoma topilmadi');
 

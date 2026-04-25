@@ -17,10 +17,11 @@ export class RoomsService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async findAll(query: RoomQueryDto) {
+  async findAll(query: RoomQueryDto, companyId: number) {
     const where = {
       branchId: query.branch_id,
       deletedAt: null,
+      companyId,
     };
 
     const page = query.page ?? 1;
@@ -73,9 +74,9 @@ export class RoomsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, companyId: number) {
     const room = await this.prisma.room.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
       select: {
         id: true,
         name: true,
@@ -122,11 +123,9 @@ export class RoomsService {
     return room;
   }
 
-  async countByBranch(query: CountByBranchQueryDto) {
-    const branchWhere: any = { deletedAt: null };
-    if (query.company_id) {
-      branchWhere.companyId = query.company_id;
-    }
+  async countByBranch(query: CountByBranchQueryDto, companyId: number) {
+    // Caller company is authoritative; ignore ?company_id= query param.
+    const branchWhere: any = { deletedAt: null, companyId };
 
     const branches = await this.prisma.branch.findMany({
       where: branchWhere,
@@ -149,9 +148,9 @@ export class RoomsService {
     }));
   }
 
-  async create(dto: CreateRoomDto, userId?: number) {
+  async create(dto: CreateRoomDto, companyId: number, userId?: number) {
     const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, deletedAt: null },
+      where: { id: dto.branchId, deletedAt: null, companyId },
     });
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
@@ -162,7 +161,7 @@ export class RoomsService {
         name: dto.name,
         capacity: dto.capacity,
         branchId: dto.branchId,
-        companyId: dto.companyId,
+        companyId,
       },
       include: { branch: { select: { name: true } } },
     });
@@ -172,15 +171,20 @@ export class RoomsService {
       entityId: room.id,
       newValues: room,
       changedById: userId,
-      companyId: dto.companyId ?? undefined,
+      companyId,
     });
 
     return room;
   }
 
-  async update(id: string, dto: UpdateRoomDto, userId?: number) {
+  async update(
+    id: string,
+    dto: UpdateRoomDto,
+    userId: number | undefined,
+    companyId: number,
+  ) {
     const room = await this.prisma.room.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!room) {
       throw new NotFoundException(`Xona #${id} topilmadi`);
@@ -204,9 +208,14 @@ export class RoomsService {
     return updated;
   }
 
-  async changeStatus(id: string, dto: ChangeRoomStatusDto, userId: number) {
+  async changeStatus(
+    id: string,
+    dto: ChangeRoomStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const room = await this.prisma.room.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!room) {
@@ -244,9 +253,9 @@ export class RoomsService {
     return updated;
   }
 
-  async getStatusHistory(id: string) {
+  async getStatusHistory(id: string, companyId: number) {
     const room = await this.prisma.room.findFirst({
-      where: { id },
+      where: { id, companyId },
       select: { id: true },
     });
 
@@ -257,9 +266,9 @@ export class RoomsService {
     return this.statusHistoryService.getHistory('Room', id);
   }
 
-  async delete(id: string, userId: number) {
+  async delete(id: string, userId: number, companyId: number) {
     const room = await this.prisma.room.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!room) {
       throw new NotFoundException(`Xona #${id} topilmadi`);

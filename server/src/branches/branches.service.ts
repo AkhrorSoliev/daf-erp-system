@@ -17,11 +17,10 @@ export class BranchesService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async findAll(query: BranchQueryDto) {
-    const where: any = { deletedAt: null };
-    if (query.company_id) {
-      where.companyId = query.company_id;
-    }
+  async findAll(query: BranchQueryDto, companyId: number) {
+    // Caller company is authoritative; legacy ?company_id= filter is ignored
+    // to prevent a user from querying another company's branches.
+    const where: any = { deletedAt: null, companyId };
 
     return this.prisma.branch.findMany({
       where,
@@ -39,9 +38,9 @@ export class BranchesService {
     });
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, companyId: number) {
     const branch = await this.prisma.branch.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!branch) {
@@ -93,7 +92,7 @@ export class BranchesService {
     };
   }
 
-  async create(dto: CreateBranchDto, userId?: number) {
+  async create(dto: CreateBranchDto, companyId: number, userId?: number) {
     const lastBranch = await this.prisma.branch.findFirst({
       orderBy: { id: 'desc' },
       select: { id: true },
@@ -106,7 +105,7 @@ export class BranchesService {
         name: dto.name,
         address: dto.address,
         phone: dto.phone,
-        companyId: dto.companyId,
+        companyId,
       },
     });
 
@@ -115,14 +114,21 @@ export class BranchesService {
       entityId: branch.id,
       newValues: branch,
       changedById: userId,
-      companyId: dto.companyId ?? undefined,
+      companyId,
     });
 
     return branch;
   }
 
-  async update(id: number, dto: UpdateBranchDto, userId?: number) {
-    const branch = await this.prisma.branch.findUnique({ where: { id } });
+  async update(
+    id: number,
+    dto: UpdateBranchDto,
+    userId: number | undefined,
+    companyId: number,
+  ) {
+    const branch = await this.prisma.branch.findFirst({
+      where: { id, deletedAt: null, companyId },
+    });
     if (!branch) {
       throw new NotFoundException(`Branch #${id} topilmadi`);
     }
@@ -144,9 +150,14 @@ export class BranchesService {
     return updated;
   }
 
-  async changeStatus(id: number, dto: ChangeBranchStatusDto, userId: number) {
+  async changeStatus(
+    id: number,
+    dto: ChangeBranchStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const branch = await this.prisma.branch.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
 
     if (!branch) {
@@ -194,9 +205,9 @@ export class BranchesService {
     return updated;
   }
 
-  async getStatusHistory(id: number) {
+  async getStatusHistory(id: number, companyId: number) {
     const branch = await this.prisma.branch.findFirst({
-      where: { id },
+      where: { id, companyId },
       select: { id: true },
     });
 
