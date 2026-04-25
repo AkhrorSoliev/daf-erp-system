@@ -45,7 +45,8 @@ export class ClickService {
     const body = (rawBody ?? {}) as Record<string, unknown>;
     const action = Number(body.action ?? -1);
     const clickTransId = Number(body.click_trans_id ?? 0);
-    const merchantTransId = String(body.merchant_trans_id ?? '');
+    const merchantTransId =
+      (body.merchant_trans_id as string | number | undefined)?.toString() ?? '';
     const eventType =
       action === 0 ? 'Prepare' : action === 1 ? 'Complete' : `Action${action}`;
 
@@ -132,7 +133,7 @@ export class ClickService {
       return false;
     }
 
-    const signString = String(body.sign_string ?? '');
+    const signString = (body.sign_string as string | undefined) ?? '';
     if (!signString) return false;
 
     let dataToSign: string;

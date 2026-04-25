@@ -345,7 +345,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy() {
+  onModuleDestroy() {
     if (this.bot) {
       this.bot.stop('NestJS shutdown');
     }

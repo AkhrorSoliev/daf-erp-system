@@ -59,7 +59,10 @@ export function companyScope(
   return COMPANY_SCOPED_ENTITIES.has(entityType) ? { companyId } : {};
 }
 
-export function getDelegate(prisma: PrismaService, entityType: ArchiveEntityType) {
+export function getDelegate(
+  prisma: PrismaService,
+  entityType: ArchiveEntityType,
+) {
   const map: Record<ArchiveEntityType, any> = {
     [ArchiveEntityType.USERS]: prisma.user,
     [ArchiveEntityType.BRANCHES]: prisma.branch,

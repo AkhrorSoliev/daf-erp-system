@@ -40,11 +40,7 @@ export class StudentPortalService {
   ) {
     return this.write.changePassword(userId, studentId, dto);
   }
-  updatePhoto(
-    studentId: number,
-    file: Express.Multer.File,
-    userId: number,
-  ) {
+  updatePhoto(studentId: number, file: Express.Multer.File, userId: number) {
     return this.write.updatePhoto(studentId, file, userId);
   }
   createPaymentIntent(params: {

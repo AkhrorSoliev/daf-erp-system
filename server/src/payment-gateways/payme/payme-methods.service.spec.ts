@@ -56,7 +56,7 @@ describe('PaymeMethodsService', () => {
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
-      $transaction: jest.fn().mockImplementation(async (fn) => {
+      $transaction: jest.fn().mockImplementation((fn) => {
         // Create a tx proxy that delegates to prisma mock models
         const tx = {
           paymeTransaction: prisma.paymeTransaction,

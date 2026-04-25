@@ -9,7 +9,11 @@ import {
   EnrollmentStatus,
   HolidayStatus,
 } from '@prisma/client';
-import { DAY_NAME_TO_JS, JS_TO_DAY_NAME, toLocalDateStr } from './shared/date-utils';
+import {
+  DAY_NAME_TO_JS,
+  JS_TO_DAY_NAME,
+  toLocalDateStr,
+} from './shared/date-utils';
 
 @Injectable()
 export class AttendanceReadService {

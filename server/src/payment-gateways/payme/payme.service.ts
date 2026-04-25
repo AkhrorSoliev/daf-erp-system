@@ -63,7 +63,10 @@ export class PaymeService {
     }
 
     // 2. Log raw event
-    const externalId = String(params.id ?? body.id ?? 'unknown');
+    const externalId =
+      (params.id as string | number | undefined)?.toString() ??
+      (body.id as string | number | undefined)?.toString() ??
+      'unknown';
     const event = await this.events.record({
       provider: PaymentMethod.PAYME,
       externalId,

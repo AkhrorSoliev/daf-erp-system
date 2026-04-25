@@ -38,12 +38,7 @@ export class StudentsService {
   ) {
     return this.write.update(id, dto, userId, companyId);
   }
-  delete(
-    id: number,
-    deletedById: number,
-    reason: string,
-    companyId: number,
-  ) {
+  delete(id: number, deletedById: number, reason: string, companyId: number) {
     return this.write.delete(id, deletedById, reason, companyId);
   }
   createStudentUser(

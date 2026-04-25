@@ -4,6 +4,7 @@ import { Transform, Type } from 'class-transformer';
 function toArray(value: unknown): string[] | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   if (Array.isArray(value)) return value as string[];
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined;
   return String(value)
     .split(',')
     .map((v) => v.trim())

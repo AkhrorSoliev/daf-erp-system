@@ -29,8 +29,14 @@ export class UzumService {
     companyId: number,
   ) {
     const payload = (rawBody ?? {}) as Record<string, unknown>;
-    const externalId = String(payload.transactionId ?? payload.id ?? 'unknown');
-    const eventType = String(payload.eventType ?? payload.status ?? 'unknown');
+    const externalId =
+      (payload.transactionId as string | number | undefined)?.toString() ??
+      (payload.id as string | number | undefined)?.toString() ??
+      'unknown';
+    const eventType =
+      (payload.eventType as string | undefined) ??
+      (payload.status as string | undefined) ??
+      'unknown';
     const signatureValid = this.verifySignature(headers, rawBody);
 
     const event = await this.events.record({

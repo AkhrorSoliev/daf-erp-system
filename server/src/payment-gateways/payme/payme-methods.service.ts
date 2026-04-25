@@ -4,7 +4,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
 import {
   ACCOUNT_BUSY,
-  CANNOT_CANCEL,
   CANNOT_PERFORM,
   INVALID_AMOUNT,
   STUDENT_NOT_FOUND,
@@ -215,7 +214,7 @@ export class PaymeMethodsService {
     const now = BigInt(Date.now());
 
     try {
-      const result = await this.prisma.$transaction(
+      await this.prisma.$transaction(
         async (tx) => {
           const branchId = await this.payments.resolveStudentBranchId(
             txn.studentId,
@@ -244,8 +243,6 @@ export class PaymeMethodsService {
               paymentId: erpPayment.id,
             },
           });
-
-          return erpPayment;
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,

@@ -446,7 +446,7 @@ describe('CommentsService', () => {
         user: { id: 10001, name: 'Admin 1' },
       });
 
-      const result = await service.updateAssigneeStatus(
+      await service.updateAssigneeStatus(
         'comment-uuid-2',
         10001,
         AssigneeStatus.SEEN,

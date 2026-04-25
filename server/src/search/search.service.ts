@@ -2,11 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchPeopleService } from './search-people.service';
 import { SearchContentService } from './search-content.service';
-import {
-  CategoryResult,
-  SearchContext,
-  SearchItem,
-} from './shared/search-helpers';
+import { CategoryResult, SearchContext } from './shared/search-helpers';
 
 export type {
   SearchItem,

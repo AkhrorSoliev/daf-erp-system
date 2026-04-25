@@ -27,7 +27,7 @@ export function createEmployeeRegistrationScene(
   prisma: PrismaService,
   uploadService: UploadService,
   usersService: UsersService,
-  bot: Telegraf<BotContext>,
+  _bot: Telegraf<BotContext>,
 ): Scenes.BaseScene<BotContext> {
   const scene = new Scenes.BaseScene<BotContext>(SCENES.EMPLOYEE_REGISTRATION);
 

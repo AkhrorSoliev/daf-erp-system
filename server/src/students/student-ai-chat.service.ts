@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { AiMessage } from '../ai/ai.types';
@@ -355,7 +351,7 @@ Generate exactly 3 short follow-up messages (in German, ${level} level) the stud
         .split('\n')
         .map((s) =>
           s
-            .replace(/^\d+[\.\)]\s*/, '')
+            .replace(/^\d+[.)]\s*/, '')
             .replace(/^[""]|[""]$/g, '')
             .trim(),
         )
@@ -369,7 +365,7 @@ Generate exactly 3 short follow-up messages (in German, ${level} level) the stud
   private generateTitle(assistantResponse: string): string {
     // Extract first meaningful sentence/phrase as title
     const clean = assistantResponse
-      .replace(/[✏️🎭📝🗣️]/g, '')
+      .replace(/✏️|🎭|📝|🗣️/gu, '')
       .replace(/\*\*/g, '')
       .trim();
     const firstSentence = clean.split(/[.!?\n]/)[0]?.trim() ?? '';
