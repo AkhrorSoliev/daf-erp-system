@@ -53,11 +53,17 @@ export class GatewayEventsService {
       } else {
         const [paymeTxns, clickTxns] = await Promise.all([
           this.prisma.paymeTransaction.findMany({
-            where: { studentId: { in: studentIds }, companyId: filters.companyId },
+            where: {
+              studentId: { in: studentIds },
+              companyId: filters.companyId,
+            },
             select: { paymeId: true },
           }),
           this.prisma.clickTransaction.findMany({
-            where: { studentId: { in: studentIds }, companyId: filters.companyId },
+            where: {
+              studentId: { in: studentIds },
+              companyId: filters.companyId,
+            },
             select: { clickTransId: true },
           }),
         ]);
@@ -79,10 +85,16 @@ export class GatewayEventsService {
       // and would otherwise dominate the log. CEO-visible by default hides them.
       ...(filters.hideChecks && {
         eventType: {
-          notIn: ['CheckPerformTransaction', 'CheckTransaction', 'GetStatement'],
+          notIn: [
+            'CheckPerformTransaction',
+            'CheckTransaction',
+            'GetStatement',
+          ],
         },
       }),
-      ...(externalIdFilter !== null && { externalId: { in: externalIdFilter } }),
+      ...(externalIdFilter !== null && {
+        externalId: { in: externalIdFilter },
+      }),
       ...((filters.startDate || filters.endDate) && {
         createdAt: {
           ...(filters.startDate && { gte: new Date(filters.startDate) }),
@@ -172,7 +184,8 @@ export class GatewayEventsService {
         }
         if (amount === null) {
           const rawAmount = params?.amount;
-          if (typeof rawAmount === 'number') amount = Math.round(rawAmount / 100);
+          if (typeof rawAmount === 'number')
+            amount = Math.round(rawAmount / 100);
         }
       }
     } else if (provider === 'CLICK') {

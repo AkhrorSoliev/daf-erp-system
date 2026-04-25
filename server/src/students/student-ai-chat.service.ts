@@ -48,11 +48,7 @@ export class StudentAiChatService {
 
     // Grammar Practice va Roleplay da AI birinchi xabarni avtomatik yuboradi
     if (dto.mode !== 'FREE_CONVERSATION') {
-      await this.generateOpeningMessage(
-        conversation.id,
-        studentId,
-        dto.mode,
-      );
+      await this.generateOpeningMessage(conversation.id, studentId, dto.mode);
     }
 
     return conversation;
@@ -104,11 +100,7 @@ export class StudentAiChatService {
     }
   }
 
-  async getConversations(
-    studentId: number,
-    page: number,
-    pageSize: number,
-  ) {
+  async getConversations(studentId: number, page: number, pageSize: number) {
     const where = {
       studentId,
       useCase: 'STUDENT_CHAT' as const,
@@ -361,7 +353,12 @@ Generate exactly 3 short follow-up messages (in German, ${level} level) the stud
 
       return result.content
         .split('\n')
-        .map((s) => s.replace(/^\d+[\.\)]\s*/, '').replace(/^[""]|[""]$/g, '').trim())
+        .map((s) =>
+          s
+            .replace(/^\d+[\.\)]\s*/, '')
+            .replace(/^[""]|[""]$/g, '')
+            .trim(),
+        )
         .filter((s) => s.length > 0 && s.length <= 50)
         .slice(0, 3);
     } catch {

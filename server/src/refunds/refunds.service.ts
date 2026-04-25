@@ -313,7 +313,7 @@ export class RefundsService {
     }
     if (contract.status !== ContractStatus.ACTIVE) {
       throw new BadRequestException(
-        "Faqat faol shartnomadan refund qilish mumkin",
+        'Faqat faol shartnomadan refund qilish mumkin',
       );
     }
 
@@ -409,7 +409,7 @@ export class RefundsService {
               studentId: dto.studentId,
               amount: overDeducted,
               description:
-                "Refund: foydalanilmagan darslar balansga qaytarildi",
+                'Refund: foydalanilmagan darslar balansga qaytarildi',
               companyId,
               performedById: userId,
             },
@@ -447,7 +447,7 @@ export class RefundsService {
       PAYME: 'Payme',
       CLICK: 'Click',
       UZUM: 'Uzum',
-      TRANSFER: 'Bank o\'tkazmasi',
+      TRANSFER: "Bank o'tkazmasi",
     };
     const balanceAfter = student.balance + overDeducted - dto.amount;
     await this.entityHistoryService.recordStatusChange({

@@ -99,10 +99,7 @@ export class CommentsController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO')
-  delete(
-    @Param('id') id: string,
-    @CurrentUser('companyId') companyId: number,
-  ) {
+  delete(@Param('id') id: string, @CurrentUser('companyId') companyId: number) {
     // RolesGuard already ensures only CEO can reach here
     return this.commentsService.delete(id, companyId);
   }

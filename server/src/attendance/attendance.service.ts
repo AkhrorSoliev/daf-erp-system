@@ -169,7 +169,8 @@ export class AttendanceService {
 
       // Vaqt tekshiruvi faqat bugungi sana uchun amal qiladi
       if (date === todayStr) {
-        const currentMinutes = Number(part('hour')) * 60 + Number(part('minute'));
+        const currentMinutes =
+          Number(part('hour')) * 60 + Number(part('minute'));
         const [startH, startM] = group.lessonStartTime.split(':').map(Number);
         const [endH, endM] = group.lessonEndTime.split(':').map(Number);
         const lessonStart = startH * 60 + startM;

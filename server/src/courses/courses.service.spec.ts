@@ -73,7 +73,12 @@ describe('CoursesService — status methods', () => {
         status: 'INACTIVE',
       });
 
-      await service.changeStatus('course-1', { status: 'ACTIVE' as any }, 1, 1001);
+      await service.changeStatus(
+        'course-1',
+        { status: 'ACTIVE' as any },
+        1,
+        1001,
+      );
 
       expect(prisma.course.update).toHaveBeenCalledWith(
         expect.objectContaining({

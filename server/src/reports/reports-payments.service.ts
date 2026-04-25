@@ -24,15 +24,7 @@ export class ReportsPaymentsService {
       : new Date(now.getFullYear(), now.getMonth(), 1);
     const currentEnd = options.endDate
       ? new Date(options.endDate + 'T23:59:59.999Z')
-      : new Date(
-          now.getFullYear(),
-          now.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-          999,
-        );
+      : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
     const durationMs = currentEnd.getTime() - currentStart.getTime();
     const previousEnd = new Date(currentStart.getTime() - 1);
@@ -178,7 +170,9 @@ export class ReportsPaymentsService {
         },
         select: {
           groupId: true,
-          group: { select: { course: { select: { lessonPaymentCount: true } } } },
+          group: {
+            select: { course: { select: { lessonPaymentCount: true } } },
+          },
         },
         orderBy: { createdAt: 'desc' },
       });

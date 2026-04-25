@@ -312,7 +312,9 @@ export class StudentsService {
             parentName: dto.parentName,
             telegram: dto.telegram,
             gender: dto.gender,
-            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+            dateOfBirth: dto.dateOfBirth
+              ? new Date(dto.dateOfBirth)
+              : undefined,
             photo: dto.photo,
             comment: dto.comment,
             placeOfStudy: dto.placeOfStudy,

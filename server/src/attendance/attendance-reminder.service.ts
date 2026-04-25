@@ -96,7 +96,8 @@ export class AttendanceReminderService {
 
     const window = await this.getScheduleWindow();
     if (!window) return;
-    if (currentMinutes < window.startMin || currentMinutes > window.endMin) return;
+    if (currentMinutes < window.startMin || currentMinutes > window.endMin)
+      return;
 
     const parsedDate = new Date(today + 'T00:00:00.000Z');
     const currentTime = `${p('hour')}:${p('minute')}`;
@@ -165,7 +166,11 @@ export class AttendanceReminderService {
       try {
         if (!group.companyId) continue;
         if (!this.groupHasLessonToday(group, parsedDate, weekdayIdx)) continue;
-        await this.handleGroup(group as GroupWithTeachers, currentMinutes, today);
+        await this.handleGroup(
+          group as GroupWithTeachers,
+          currentMinutes,
+          today,
+        );
       } catch (err) {
         this.logger.error(
           `handleGroup failed for group ${group.id}: ${err instanceof Error ? err.message : err}`,
@@ -232,7 +237,11 @@ export class AttendanceReminderService {
   }
 
   private groupHasLessonToday(
-    group: { startDate: Date | null; endDate: Date | null; exactDays: string[] },
+    group: {
+      startDate: Date | null;
+      endDate: Date | null;
+      exactDays: string[];
+    },
     date: Date,
     weekdayIdx: number,
   ): boolean {
@@ -253,7 +262,7 @@ export class AttendanceReminderService {
     const teacherNames =
       group.teachers
         .map((t) => `${t.teacher.firstName} ${t.teacher.lastName}`)
-        .join(', ') || "belgilanmagan";
+        .join(', ') || 'belgilanmagan';
     const roomName = group.room?.name ?? 'belgilanmagan';
     return (
       `👥 Guruh: ${group.name}\n` +
@@ -306,7 +315,10 @@ export class AttendanceReminderService {
     await this.notifyBranchAdmins(group, 'MISSING');
   }
 
-  private async sendLessonStarted(teacher: TeacherRef, group: GroupWithTeachers) {
+  private async sendLessonStarted(
+    teacher: TeacherRef,
+    group: GroupWithTeachers,
+  ) {
     const type = NotificationType.LESSON_STARTED;
     if (await this.alreadySent(teacher.id, type, group.id)) return;
     const details = this.buildDetailsBlock(group);
@@ -319,7 +331,10 @@ export class AttendanceReminderService {
     );
   }
 
-  private async sendTeacherWarning(teacher: TeacherRef, group: GroupWithTeachers) {
+  private async sendTeacherWarning(
+    teacher: TeacherRef,
+    group: GroupWithTeachers,
+  ) {
     const type = NotificationType.ATTENDANCE_TEACHER_WARNING;
     if (await this.alreadySent(teacher.id, type, group.id)) return;
     const details = this.buildDetailsBlock(group);
@@ -332,7 +347,10 @@ export class AttendanceReminderService {
     );
   }
 
-  private async sendMissingToTeacher(teacher: TeacherRef, group: GroupWithTeachers) {
+  private async sendMissingToTeacher(
+    teacher: TeacherRef,
+    group: GroupWithTeachers,
+  ) {
     const type = NotificationType.ATTENDANCE_MISSING_TEACHER;
     if (await this.alreadySent(teacher.id, type, group.id)) return;
     const details = this.buildDetailsBlock(group);
@@ -374,7 +392,9 @@ export class AttendanceReminderService {
         ? NotificationType.ATTENDANCE_ADMIN_ALERT
         : NotificationType.ATTENDANCE_MISSING_ADMIN;
     const title =
-      kind === 'ADMIN_ALERT' ? "O'qituvchiga eslatib qo'ying" : 'Davomat belgilanmadi';
+      kind === 'ADMIN_ALERT'
+        ? "O'qituvchiga eslatib qo'ying"
+        : 'Davomat belgilanmadi';
     const message =
       kind === 'ADMIN_ALERT'
         ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomatni belgilamadi\n\n${details}\n\nIltimos, o'qituvchiga eslatib qo'yishingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`

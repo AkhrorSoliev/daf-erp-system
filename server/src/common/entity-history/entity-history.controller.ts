@@ -17,9 +17,14 @@ export class EntityHistoryController {
     @Query() query: HistoryQueryDto,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.entityHistoryService.getHistory(entityType, entityId, companyId, {
-      page: query.page,
-      pageSize: query.pageSize,
-    });
+    return this.entityHistoryService.getHistory(
+      entityType,
+      entityId,
+      companyId,
+      {
+        page: query.page,
+        pageSize: query.pageSize,
+      },
+    );
   }
 }

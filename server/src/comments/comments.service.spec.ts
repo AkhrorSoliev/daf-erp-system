@@ -287,9 +287,13 @@ describe('CommentsService', () => {
       });
 
       await expect(
-        service.update('comment-uuid-1', { content: 'test' }, 10001, [
-          'Administrator',
-        ], 1001),
+        service.update(
+          'comment-uuid-1',
+          { content: 'test' },
+          10001,
+          ['Administrator'],
+          1001,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 

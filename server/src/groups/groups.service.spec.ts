@@ -94,7 +94,12 @@ describe('GroupsService — status methods', () => {
 
   describe('changeStatus', () => {
     it('updates statusEnum and sets isActive correctly for ACTIVE', async () => {
-      await service.changeStatus('group-1', { status: 'ACTIVE' as any }, 1, 1001);
+      await service.changeStatus(
+        'group-1',
+        { status: 'ACTIVE' as any },
+        1,
+        1001,
+      );
 
       expect(prisma.group.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -112,7 +117,12 @@ describe('GroupsService — status methods', () => {
         statusEnum: 'ACTIVE',
       });
 
-      await service.changeStatus('group-1', { status: 'PAUSED' as any }, 1, 1001);
+      await service.changeStatus(
+        'group-1',
+        { status: 'PAUSED' as any },
+        1,
+        1001,
+      );
 
       expect(prisma.group.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -122,7 +132,12 @@ describe('GroupsService — status methods', () => {
     });
 
     it('calls cascade after update', async () => {
-      await service.changeStatus('group-1', { status: 'ACTIVE' as any }, 1, 1001);
+      await service.changeStatus(
+        'group-1',
+        { status: 'ACTIVE' as any },
+        1,
+        1001,
+      );
 
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
         'Group',
@@ -407,7 +422,12 @@ describe('GroupsService — status methods', () => {
         _count: { enrollments: 0 },
       });
 
-      await service.update('group-1', { teacherIds: [1001, 2002] } as any, 42, 1001);
+      await service.update(
+        'group-1',
+        { teacherIds: [1001, 2002] } as any,
+        42,
+        1001,
+      );
 
       expect(prisma.groupTeacherHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -495,7 +515,12 @@ describe('GroupsService — status methods', () => {
 
   describe('multi-tenant filter (companyId)', () => {
     it('changeStatus scopes lookup to companyId', async () => {
-      await service.changeStatus('group-1', { status: 'ACTIVE' as any }, 1, 1001);
+      await service.changeStatus(
+        'group-1',
+        { status: 'ACTIVE' as any },
+        1,
+        1001,
+      );
       expect(prisma.group.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({

@@ -260,10 +260,7 @@ export class ReportsTeacherPaymentsService {
     for (const p of payments) {
       const gid = p.contract?.groupId;
       if (!gid) continue;
-      paymentSumByGroup.set(
-        gid,
-        (paymentSumByGroup.get(gid) ?? 0) + p.amount,
-      );
+      paymentSumByGroup.set(gid, (paymentSumByGroup.get(gid) ?? 0) + p.amount);
       if (!paidStudentsByGroup.has(gid)) {
         paidStudentsByGroup.set(gid, new Set());
       }

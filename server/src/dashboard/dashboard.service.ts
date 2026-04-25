@@ -62,16 +62,10 @@ export class DashboardService {
           lessonEndTime: { not: null },
           AND: [
             {
-              OR: [
-                { startDate: null },
-                { startDate: { lte: dateOnly } },
-              ],
+              OR: [{ startDate: null }, { startDate: { lte: dateOnly } }],
             },
             {
-              OR: [
-                { endDate: null },
-                { endDate: { gte: dateOnly } },
-              ],
+              OR: [{ endDate: null }, { endDate: { gte: dateOnly } }],
             },
           ],
         },

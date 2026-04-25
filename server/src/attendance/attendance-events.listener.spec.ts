@@ -70,10 +70,7 @@ describe('AttendanceEventsListener', () => {
         relatedEntityId: 'g-1',
       }),
     );
-    expect(gateway.sendToUser).toHaveBeenCalledWith(
-      20001,
-      expect.any(Object),
-    );
+    expect(gateway.sendToUser).toHaveBeenCalledWith(20001, expect.any(Object));
     expect(pushService.sendToUser).toHaveBeenCalledWith(
       20001,
       expect.objectContaining({ url: '/groups/g-1' }),
@@ -88,10 +85,15 @@ describe('AttendanceEventsListener', () => {
   });
 
   it('skips a teacher when ATTENDANCE_COMPLETED already sent today', async () => {
-    prisma.user.findMany.mockResolvedValue([{ id: 20001, telegramChatId: null }]);
+    prisma.user.findMany.mockResolvedValue([
+      { id: 20001, telegramChatId: null },
+    ]);
     prisma.notification.findFirst.mockResolvedValue({ id: 'already' });
 
-    await listener.handleAttendanceCompleted({ ...payload, teacherIds: [20001] });
+    await listener.handleAttendanceCompleted({
+      ...payload,
+      teacherIds: [20001],
+    });
 
     expect(notificationsService.create).not.toHaveBeenCalled();
     expect(gateway.sendToUser).not.toHaveBeenCalled();

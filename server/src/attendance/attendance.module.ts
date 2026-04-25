@@ -10,7 +10,12 @@ import { TransactionsModule } from '../transactions/transactions.module';
 import { SalaryModule } from '../salary/salary.module';
 
 @Module({
-  imports: [NotificationsModule, TelegramModule, TransactionsModule, SalaryModule],
+  imports: [
+    NotificationsModule,
+    TelegramModule,
+    TransactionsModule,
+    SalaryModule,
+  ],
   controllers: [AttendanceController],
   providers: [
     AttendanceService,

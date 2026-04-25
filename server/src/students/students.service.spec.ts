@@ -249,7 +249,9 @@ describe('StudentsService — status methods', () => {
     it('throws NotFoundException when student not found', async () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
-      await expect(service.delete(999, 1, 'Test', 1001)).rejects.toThrow(NotFoundException);
+      await expect(service.delete(999, 1, 'Test', 1001)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

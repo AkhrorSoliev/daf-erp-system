@@ -21,9 +21,7 @@ describe('DepartureReasonsController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DepartureReasonsController],
-      providers: [
-        { provide: DepartureReasonsService, useValue: mockService },
-      ],
+      providers: [{ provide: DepartureReasonsService, useValue: mockService }],
     }).compile();
 
     controller = module.get(DepartureReasonsController);

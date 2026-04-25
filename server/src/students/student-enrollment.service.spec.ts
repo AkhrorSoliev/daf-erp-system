@@ -97,9 +97,9 @@ describe('StudentEnrollmentService', () => {
         ...mockStudent,
         status: 'FROZEN',
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2, 1001),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException for GRADUATED student', async () => {
@@ -107,9 +107,9 @@ describe('StudentEnrollmentService', () => {
         ...mockStudent,
         status: 'GRADUATED',
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2, 1001),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException for COMPLETED group', async () => {
@@ -121,9 +121,9 @@ describe('StudentEnrollmentService', () => {
         course: { name: 'Deutsch A1' },
         teachers: [],
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2, 1001),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException for CANCELLED group', async () => {
@@ -135,9 +135,9 @@ describe('StudentEnrollmentService', () => {
         course: { name: 'Deutsch A1' },
         teachers: [],
       });
-      await expect(service.enrollToGroup(1, 'group-1', 2, 1001)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.enrollToGroup(1, 'group-1', 2, 1001),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('allows enrollment to FORMING group', async () => {
@@ -333,12 +333,12 @@ describe('StudentEnrollmentService', () => {
 
     it('falls back to free-text reason when no departureReasonId', async () => {
       await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
-        reason: 'Ota-ona qarorigora ko\'ra',
+        reason: "Ota-ona qarorigora ko'ra",
       });
       expect(prisma.enrollment.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            statusChangeReason: 'Ota-ona qarorigora ko\'ra',
+            statusChangeReason: "Ota-ona qarorigora ko'ra",
             departureReasonId: null,
           }),
         }),
@@ -346,7 +346,7 @@ describe('StudentEnrollmentService', () => {
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            statusChangeReason: 'Ota-ona qarorigora ko\'ra',
+            statusChangeReason: "Ota-ona qarorigora ko'ra",
           }),
         }),
       );

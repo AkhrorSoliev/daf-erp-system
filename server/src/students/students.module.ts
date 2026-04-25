@@ -13,9 +13,24 @@ import { TransactionsModule } from '../transactions/transactions.module';
 import { PaymentGatewaysModule } from '../payment-gateways/payment-gateways.module';
 
 @Module({
-  imports: [UploadModule, SmsModule, AttendanceModule, TransactionsModule, PaymentGatewaysModule],
-  controllers: [StudentsController, StudentPortalController, StudentAiChatController],
-  providers: [StudentsService, StudentEnrollmentService, StudentPortalService, StudentAiChatService],
+  imports: [
+    UploadModule,
+    SmsModule,
+    AttendanceModule,
+    TransactionsModule,
+    PaymentGatewaysModule,
+  ],
+  controllers: [
+    StudentsController,
+    StudentPortalController,
+    StudentAiChatController,
+  ],
+  providers: [
+    StudentsService,
+    StudentEnrollmentService,
+    StudentPortalService,
+    StudentAiChatService,
+  ],
   exports: [StudentsService, StudentEnrollmentService],
 })
 export class StudentsModule {}

@@ -343,5 +343,4 @@ export class ReportsDepartedStudentsService {
 
     return { data, granularity };
   }
-
 }

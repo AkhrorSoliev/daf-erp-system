@@ -186,8 +186,14 @@ export class GroupScheduleService {
     excludeGroupId?: string;
     companyId: number;
   }) {
-    const { branchId, exactDays, startTime, endTime, excludeGroupId, companyId } =
-      params;
+    const {
+      branchId,
+      exactDays,
+      startTime,
+      endTime,
+      excludeGroupId,
+      companyId,
+    } = params;
 
     const allRooms = await this.prisma.room.findMany({
       where: { branchId, companyId, deletedAt: null },
@@ -247,8 +253,14 @@ export class GroupScheduleService {
     excludeGroupId?: string;
     companyId: number;
   }) {
-    const { branchId, exactDays, startTime, endTime, excludeGroupId, companyId } =
-      params;
+    const {
+      branchId,
+      exactDays,
+      startTime,
+      endTime,
+      excludeGroupId,
+      companyId,
+    } = params;
 
     const allTeachers = await this.prisma.user.findMany({
       where: {

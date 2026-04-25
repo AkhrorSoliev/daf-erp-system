@@ -165,9 +165,7 @@ describe('ReportsController — role guards', () => {
           'Cashier',
         ]) {
           expect(
-            guard.canActivate(
-              mockExecutionContext(controller[method], [role]),
-            ),
+            guard.canActivate(mockExecutionContext(controller[method], [role])),
           ).toBe(true);
         }
       });

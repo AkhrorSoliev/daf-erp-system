@@ -152,7 +152,9 @@ export class PaymeService {
     // Try production key first, then test key.
     // Payme sandbox (test.paycom.uz) always sends test key,
     // while production Payme sends the prod key.
-    const keysToTry = [cfg.secretKey, cfg.secretKeyTest].filter(Boolean) as string[];
+    const keysToTry = [cfg.secretKey, cfg.secretKeyTest].filter(
+      Boolean,
+    ) as string[];
 
     for (const key of keysToTry) {
       const expected = Buffer.from(`Paycom:${key}`).toString('base64');

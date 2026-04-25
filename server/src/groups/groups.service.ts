@@ -509,8 +509,12 @@ export class GroupsService {
         });
 
         const newTeacherIds = teacherIds;
-        const added = newTeacherIds.filter((tid) => !oldTeacherIds.includes(tid));
-        const removed = oldTeacherIds.filter((tid) => !newTeacherIds.includes(tid));
+        const added = newTeacherIds.filter(
+          (tid) => !oldTeacherIds.includes(tid),
+        );
+        const removed = oldTeacherIds.filter(
+          (tid) => !newTeacherIds.includes(tid),
+        );
 
         let changeType: 'ADDED' | 'REMOVED' | 'REPLACED';
         if (added.length > 0 && removed.length === 0) {

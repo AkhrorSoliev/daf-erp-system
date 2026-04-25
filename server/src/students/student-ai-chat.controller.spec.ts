@@ -23,9 +23,7 @@ describe('StudentAiChatController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StudentAiChatController],
-      providers: [
-        { provide: StudentAiChatService, useValue: mockService },
-      ],
+      providers: [{ provide: StudentAiChatService, useValue: mockService }],
     }).compile();
 
     controller = module.get(StudentAiChatController);

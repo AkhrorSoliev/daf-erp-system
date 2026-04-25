@@ -653,7 +653,7 @@ describe('ReportsService', () => {
           id: 'p1',
           amount: 500_000,
           method: 'CASH',
-          note: 'To\'lov 1',
+          note: "To'lov 1",
           createdAt: new Date('2026-04-01T10:00:00Z'),
           student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
           receivedBy: { id: 20001, firstName: 'Laziz', lastName: 'Kassa' },
@@ -676,7 +676,10 @@ describe('ReportsService', () => {
       ];
       prisma.$transaction.mockResolvedValueOnce([payments, 1]);
 
-      const result = await service.getStudentPaymentsReport(1, { page: 1, pageSize: 10 });
+      const result = await service.getStudentPaymentsReport(1, {
+        page: 1,
+        pageSize: 10,
+      });
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(10);

@@ -929,9 +929,9 @@ describe('AttendanceService', () => {
     it('should throw NotFoundException when group not found', async () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.getLessonSequence('non-existent'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getLessonSequence('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should pass companyId to group query', async () => {
