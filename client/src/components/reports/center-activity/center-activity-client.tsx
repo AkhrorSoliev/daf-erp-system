@@ -70,10 +70,16 @@ function writeFilterToUrl(
   if (filter.branchId !== defaults.branchId && filter.branchId !== null) {
     params.set("branchId", String(filter.branchId));
   }
-  if (filter.rangeStart && filter.rangeEnd) {
+  // Persist range dates independently so the user can pick start before
+  // end (or vice-versa) without losing the in-progress selection.
+  if (filter.rangeStart) {
     params.set("startDate", format(filter.rangeStart, "yyyy-MM-dd"));
+  }
+  if (filter.rangeEnd) {
     params.set("endDate", format(filter.rangeEnd, "yyyy-MM-dd"));
-  } else {
+  }
+  // Year/month only meaningful if a full custom range isn't set
+  if (!filter.rangeStart || !filter.rangeEnd) {
     if (filter.year !== defaults.year) {
       params.set("year", String(filter.year));
     }
