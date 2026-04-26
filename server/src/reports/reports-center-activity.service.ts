@@ -9,6 +9,12 @@ import {
 const DEFAULT_WORK_START = '09:00';
 const DEFAULT_WORK_END = '21:00';
 
+/**
+ * Used as fallback "typical lesson load" per student per week when a room
+ * has no existing groups to derive an average from. 3 days/week × 2h.
+ */
+const DEFAULT_LESSON_HOURS_PER_WEEK = 6;
+
 const MAX_DAILY_DAYS = 90;
 const MAX_WEEKLY_WEEKS = 52;
 const MAX_MONTHLY_MONTHS = 24;
@@ -251,6 +257,25 @@ export class ReportsCenterActivityService {
       workingHoursPerWeek - lessonHoursPerWeek,
     );
 
+    // Theoretical maximum students: room can run multiple groups in
+    // sequence within working hours. Each group fills `capacity` seats.
+    // possibleGroups = workingHours / typicalLessonLoadPerStudent
+    const avgGroupLessonHours =
+      groupEntries.length > 0
+        ? groupEntries.reduce((s, g) => s + g.lessonHoursPerWeek, 0) /
+          groupEntries.length
+        : DEFAULT_LESSON_HOURS_PER_WEEK;
+    const possibleGroups =
+      avgGroupLessonHours > 0
+        ? Math.floor(workingHoursPerWeek / avgGroupLessonHours)
+        : 0;
+    const theoreticalMaxStudents =
+      capacity != null ? capacity * possibleGroups : 0;
+    const extraStudentsCapacity =
+      capacity != null
+        ? Math.max(0, theoreticalMaxStudents - enrolledTotal)
+        : 0;
+
     const seatHoursActualWeekly = groupEntries.reduce(
       (sum, g) => sum + g.enrolled * g.lessonHoursPerWeek,
       0,
@@ -291,6 +316,8 @@ export class ReportsCenterActivityService {
         groupCount: groupEntries.length,
         enrolled: enrolledTotal,
         emptySeats,
+        extraStudentsCapacity,
+        theoreticalMaxStudents,
         lessonHoursPerWeek: Math.round(lessonHoursPerWeek * 10) / 10,
         idleHoursPerWeek: Math.round(idleHoursPerWeek * 10) / 10,
         idleHoursPeriod: Math.round(idleHoursPeriod * 10) / 10,
@@ -324,6 +351,7 @@ export class ReportsCenterActivityService {
     let totalSeatHoursPlanned = 0;
     let emptyHours = 0;
     let emptySeats = 0;
+    let extraStudentsCapacity = 0;
     let potentialExtraRevenue = 0;
 
     for (const r of rooms) {
@@ -333,6 +361,7 @@ export class ReportsCenterActivityService {
       }
       emptyHours += r.totals.idleHoursPeriod;
       emptySeats += r.totals.emptySeats;
+      extraStudentsCapacity += r.totals.extraStudentsCapacity;
       potentialExtraRevenue += r.totals.potentialExtraRevenue;
     }
 
@@ -347,7 +376,7 @@ export class ReportsCenterActivityService {
       activeStudents,
       potentialExtraRevenue,
       emptySeats,
-      extraStudentsCapacity: emptySeats,
+      extraStudentsCapacity,
     };
   }
 
@@ -449,6 +478,7 @@ export class ReportsCenterActivityService {
       let totalSeatHoursPlanned = 0;
       let totalIdle = 0;
       let totalEmptySeats = 0;
+      let totalExtraStudents = 0;
       const studentIds = new Set<number>();
 
       if (!isHoliday) {
@@ -458,6 +488,7 @@ export class ReportsCenterActivityService {
         for (const room of rooms) {
           const roomGroups = groupsByRoom.get(room.id) ?? [];
           const workingHours = this.computeWorkingHoursPerDay(room.branch);
+          const workingHoursPerWeek = workingHours * 7;
 
           const groupsToday = roomGroups.filter(
             (g) =>
@@ -468,6 +499,7 @@ export class ReportsCenterActivityService {
           let scheduledHours = 0;
           let seatHoursActual = 0;
           let maxEnrolled = 0;
+          let totalEnrolledOnDate = 0;
           for (const g of groupsToday) {
             const lessonHours = this.computeLessonHours(
               g.lessonStartTime,
@@ -479,6 +511,7 @@ export class ReportsCenterActivityService {
             ).length;
             seatHoursActual += enrolled * lessonHours;
             maxEnrolled = Math.max(maxEnrolled, enrolled);
+            totalEnrolledOnDate += enrolled;
             for (const e of g.enrollments) {
               if (this.enrollmentActiveOn(e, cursor)) {
                 studentIds.add(e.studentId);
@@ -486,11 +519,45 @@ export class ReportsCenterActivityService {
             }
           }
 
+          // Room-wide enrolled (for extra-capacity calc) — across all groups
+          // assigned to this room, not just today's, to track real headcount
+          let roomEnrolledOnDate = 0;
+          for (const g of roomGroups) {
+            if (!this.groupActiveOn(g, cursor)) continue;
+            roomEnrolledOnDate += g.enrollments.filter((e) =>
+              this.enrollmentActiveOn(e, cursor),
+            ).length;
+          }
+          // Avg lesson hours from all room groups (not just today's)
+          const lessonHoursAvgWeekly = (() => {
+            const active = roomGroups.filter((g) =>
+              this.groupActiveOn(g, cursor),
+            );
+            if (active.length === 0) return DEFAULT_LESSON_HOURS_PER_WEEK;
+            const sum = active.reduce(
+              (s, g) =>
+                s +
+                this.computeLessonHours(g.lessonStartTime, g.lessonEndTime) *
+                  g.exactDays.length,
+              0,
+            );
+            return sum / active.length || DEFAULT_LESSON_HOURS_PER_WEEK;
+          })();
+
           totalIdle += Math.max(0, workingHours - scheduledHours);
           totalSeatHoursActual += seatHoursActual;
           if (room.capacity != null) {
             totalSeatHoursPlanned += room.capacity * workingHours;
             totalEmptySeats += Math.max(0, room.capacity - maxEnrolled);
+            const possibleGroups =
+              lessonHoursAvgWeekly > 0
+                ? Math.floor(workingHoursPerWeek / lessonHoursAvgWeekly)
+                : 0;
+            const theoreticalMax = room.capacity * possibleGroups;
+            totalExtraStudents += Math.max(
+              0,
+              theoreticalMax - roomEnrolledOnDate,
+            );
           }
         }
       }
@@ -509,7 +576,7 @@ export class ReportsCenterActivityService {
         emptyHours: Math.round(totalIdle * 10) / 10,
         activeStudents: studentIds.size,
         emptySeats: totalEmptySeats,
-        extraStudentsCapacity: totalEmptySeats,
+        extraStudentsCapacity: totalExtraStudents,
       });
 
       cursor.setDate(cursor.getDate() + 1);

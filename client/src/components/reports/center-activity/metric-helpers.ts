@@ -22,6 +22,8 @@ export interface CenterActivityRoomTotals {
   groupCount: number;
   enrolled: number;
   emptySeats: number;
+  extraStudentsCapacity: number;
+  theoreticalMaxStudents: number;
   lessonHoursPerWeek: number;
   idleHoursPerWeek: number;
   idleHoursPeriod: number;
@@ -129,9 +131,9 @@ export const KPI_TOOLTIPS = {
   potentialRevenue:
     "Agar markaz to'liq sig'imda ishlasa, qancha qo'shimcha daromad olinadi. Hisob: har bir guruh uchun (sig'im − o'quvchilar) × kurs narxi.",
   emptySeats:
-    "Xonadagi bo'sh o'rinlar soni. Hisob: har xona uchun sig'im − eng ko'p o'quvchili guruh. Kam bo'sh o'rin yaxshi foydalanishni bildiradi.",
+    "Jismoniy bo'sh o'rindiqlar soni. Hisob: har xona uchun sig'im − eng ko'p o'quvchili guruh. Bu — bir vaqtning o'zida bo'sh qoladigan o'rindiqlar.",
   extraStudents:
-    "Yana qancha o'quvchi qabul qilish mumkin. Bo'sh o'rinlar soniga teng — boshqacha qaralgan ko'rsatkich.",
+    "Yana qancha o'quvchi qabul qilish mumkin (vaqt slotlarini hisobga olib). Hisob: (sig'im × ish vaqtidagi mumkin guruh soni) − hozirgi o'quvchilar. Bir xonada navbati bilan ko'p guruh dars o'tishini hisobga oladi.",
   fik: "FIK (Foydalanish Intensivlik Koeffitsienti). Hisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100. Reja o'rinsoat = sig'im × ish vaqti.",
 };
 
