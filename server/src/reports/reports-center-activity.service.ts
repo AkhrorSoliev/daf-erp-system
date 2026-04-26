@@ -711,7 +711,15 @@ export class ReportsCenterActivityService {
   }
 
   private dayCodeFromDow(dow: number): string {
-    return ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dow];
+    return [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ][dow];
   }
 
   private groupActiveOn(g: GroupRecord, date: Date): boolean {
