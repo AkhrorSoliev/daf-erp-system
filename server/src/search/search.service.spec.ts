@@ -72,6 +72,7 @@ describe('SearchService', () => {
           phone: '901234567',
           photo: null,
           balance: -50000,
+          status: 'ACTIVE',
           enrollments: [
             {
               group: {
@@ -97,8 +98,40 @@ describe('SearchService', () => {
         groupName: 'B2-Gruppe',
         teacherName: 'Max Müller',
         balance: -50000, // negative = debt
+        status: null, // ACTIVE status mapped to null
       });
       expect(result.students.total).toBe(1);
+    });
+
+    it('should return non-ACTIVE status for graduated/expelled students', async () => {
+      prisma.student.findMany.mockResolvedValue([
+        {
+          id: 10001,
+          firstName: 'Bitirgan',
+          lastName: 'Talaba',
+          phone: '901234567',
+          photo: null,
+          balance: 0,
+          status: 'GRADUATED',
+          enrollments: [],
+        },
+        {
+          id: 10002,
+          firstName: 'Chetlangan',
+          lastName: 'Talaba',
+          phone: '907654321',
+          photo: null,
+          balance: 0,
+          status: 'EXPELLED',
+          enrollments: [],
+        },
+      ]);
+      prisma.student.count.mockResolvedValue(2);
+
+      const result = await service.quickSearch('Talaba', ceoCtx);
+
+      expect(result.students.items[0].status).toBe('GRADUATED');
+      expect(result.students.items[1].status).toBe('EXPELLED');
     });
 
     it('should return null balance for non-debtor students', async () => {
@@ -192,6 +225,30 @@ describe('SearchService', () => {
             OR: expect.arrayContaining([{ phone: { contains: '901234567' } }]),
           }),
         }),
+      );
+    });
+
+    it('should search students by extraPhone and parentPhone when query is numeric', async () => {
+      await service.quickSearch('901234567', ceoCtx);
+
+      const studentCall = prisma.student.findMany.mock.calls[0][0];
+      expect(studentCall.where.OR).toEqual(
+        expect.arrayContaining([
+          { extraPhone: { contains: '901234567' } },
+          { parentPhone: { contains: '901234567' } },
+        ]),
+      );
+    });
+
+    it('should search students by parentName and telegram for text queries', async () => {
+      await service.quickSearch('Akmal', ceoCtx);
+
+      const studentCall = prisma.student.findMany.mock.calls[0][0];
+      expect(studentCall.where.OR).toEqual(
+        expect.arrayContaining([
+          { parentName: { contains: 'Akmal', mode: 'insensitive' } },
+          { telegram: { contains: 'Akmal', mode: 'insensitive' } },
+        ]),
       );
     });
 
@@ -357,6 +414,7 @@ describe('SearchService', () => {
           phone: '901234567',
           photo: null,
           balance: -30000,
+          status: 'ACTIVE',
           enrollments: [
             {
               group: {
@@ -383,6 +441,7 @@ describe('SearchService', () => {
             groupName: 'A1-Gruppe',
             teacherName: 'Anna Schmidt',
             balance: -30000,
+            status: null,
           },
         ],
         total: 1,

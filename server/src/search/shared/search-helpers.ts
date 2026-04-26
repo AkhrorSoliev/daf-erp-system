@@ -9,6 +9,7 @@ export interface SearchItem {
   groupName?: string | null;
   teacherName?: string | null;
   balance?: number | null;
+  status?: string | null;
 }
 
 export interface CategoryResult {

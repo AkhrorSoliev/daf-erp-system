@@ -2,6 +2,7 @@
 
 import { FileText } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { SearchItem } from "@/hooks/use-global-search";
 import { formatPhone, getInitials } from "./search-dropdown-utils";
 
@@ -86,6 +87,13 @@ export function EntityResultItem({
             <span className="text-xs text-muted-foreground shrink-0">
               ID: {item.id}
             </span>
+          )}
+          {isStudent && item.status && (
+            <StatusBadge
+              entityType="students"
+              status={item.status}
+              className="shrink-0 text-[10px] px-1.5 py-0"
+            />
           )}
         </div>
         {(phone || item.sublabel) && (
