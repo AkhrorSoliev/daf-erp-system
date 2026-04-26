@@ -138,31 +138,31 @@ export const KPI_TOOLTIPS = {
 
 export const TABLE_TOOLTIPS = {
   capacity:
-    "Xonaning maksimal o'quvchi sig'imi (jismoniy o'rindiqlar soni).",
+    "Xonaga sig'a oladigan o'quvchilar soni (jismoniy o'rindiqlar).",
   workingHours:
-    "Xonaning haftalik ish soati. Hisob: markaz kunlik ish soati × 7 kun. Misol: 12h × 7 = 84h.",
+    "Xonaning bir haftada ishlay oladigan umumiy vaqti.\n\nHisob: markazning kunlik ish soati × 7 kun.\nMisol: 12 soat × 7 = 84 soat.",
   groups:
-    "Xonada dars o'tayotgan faol guruhlar soni. Sichqonchani ustiga olib kelsangiz guruh nomlari va o'quvchi soni ko'rinadi.",
+    "Hozirda shu xonada dars o'tayotgan faol guruhlar soni.\n\nGuruh nomlari va o'quvchilar sonini ko'rish uchun raqam ustiga sichqonchani olib keling.",
   enrolled:
-    "Xona guruhlaridagi jami o'quvchilar yig'indisi. Bir o'quvchi bir nechta guruhda bo'lsa, har birida sanaladi.",
+    "Xonadagi barcha guruhlardagi o'quvchilarning umumiy soni.\n\nBir o'quvchi bir nechta guruhda bo'lsa, har bir guruhida alohida sanaladi.",
   emptySeats:
-    "Bir vaqtning o'zida bo'sh turgan jismoniy o'rindiqlar soni. Hisob: sig'im − eng ko'p o'quvchili guruh.",
+    "Eng to'la guruh dars o'tayotgan paytda bo'sh turadigan o'rindiqlar.\n\nHisob: xona sig'imi − eng katta guruhdagi o'quvchilar soni.\nMisol: sig'im 14, eng katta guruh 12 ta o'quvchi → 2 ta bo'sh o'rin.",
   lessonHours:
-    "Xonadagi barcha guruhlar uchun jami haftalik dars soatlari. Misol: 3 guruh × har biri 6h = 18h.",
+    "Xonadagi barcha guruhlarning bir haftadagi dars soatlari yig'indisi.\n\nMisol: 3 ta guruh, har biri haftada 6 soat → 18 soat.",
   coursePrice:
-    "Guruhlardagi unikal kurs narxlari oralig'i. Sichqonchani ustiga olib kelsangiz barcha unikal narxlar ko'rinadi.",
+    "Xonadagi guruhlar uchun belgilangan kurs narxlari.\n\nEng kichik va eng katta narx oralig'i ko'rsatilgan. Barcha unikal narxlarni ko'rish uchun sichqonchani olib keling.",
   totalRevenue:
-    "Xonadan olinadigan jami daromad. Hisob: har guruh uchun (o'quvchilar × kurs narxi), barchasi yig'iladi.",
+    "Xonadagi barcha guruhlardan olinadigan jami daromad.\n\nHisob: har guruh uchun (o'quvchilar soni × kurs narxi), so'ng yig'iladi.",
   idleTime:
-    "Xonaning haftada bo'sh qolgan ish vaqti. Hisob: ish vaqti − jami dars soatlari. Misol: 84h − 18h = 66h. Kam bo'sh vaqt yaxshi foydalanishni bildiradi.",
+    "Xonaning haftada hech qaysi dars uchun ishlatilmagan vaqti.\n\nHisob: jami ish vaqti − jami dars soatlari.\nMisol: 84 soat − 18 soat = 66 soat bo'sh.\n\nKam bo'sh vaqt = xona yaxshi ishlatilgan.",
   seatHoursScheduled:
-    "Xonada haftada amalda taklif qilinayotgan o'rin-soatlar. Hisob: sig'im × jami dars soatlari. Misol: 14 stol × 18h dars = 252 o'rinsoat. Bu — guruhlar tashkil etilgan vaqtdagi maksimal sig'im.",
+    "Xona hozirgi dars jadvalida taklif qilayotgan jami o'rin-soatlar.\n\nO'rinsoat — bu bitta o'rindiq 1 soat ishlatilsa, 1 o'rinsoat hisoblanadi.\n\nHisob: sig'im × jami dars soatlari.\nMisol: 14 ta o'rindiq × 18 soat = 252 o'rinsoat.",
   seatHoursActual:
-    "Haqiqatan band bo'lgan o'rin-soatlar. Hisob: har guruh uchun (o'quvchilar × dars soatlari), barchasi yig'iladi. Misol: 10 × 6h + 12 × 6h = 132 o'rinsoat.",
+    "Xonada haqiqatan band bo'layotgan o'rin-soatlar.\n\nHisob: har guruh uchun (o'quvchilar soni × shu guruhning dars soatlari), so'ng yig'iladi.\nMisol: 10 o'quvchi × 6 soat + 12 o'quvchi × 6 soat = 132 o'rinsoat.",
   seatHoursPlanned:
-    "Nazariy maksimal o'rin-soatlar (agar xona to'liq sig'imda butun ish vaqtida ishlasa). Hisob: sig'im × ish vaqti. Misol: 14 stol × 84h = 1,176 o'rinsoat.",
+    "Agar xona butun haftalik ish vaqtida to'liq sig'imda ishlasa, qancha o'rinsoat bo'lishi mumkin.\n\nHisob: sig'im × haftalik ish vaqti.\nMisol: 14 ta o'rindiq × 84 soat = 1,176 o'rinsoat.\n\nBu — xonaning maksimal nazariy imkoniyati.",
   fik:
-    "FIK — Foydalanish Intensivligi Koeffitsienti. Hisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100. Yashil ≥ 70%, sariq 40-70%, qizil < 40%.",
+    "FIK — Foydalanish Intensivligi Koeffitsienti.\n\nXonaning maksimal imkoniyatidan necha foizi ishlatilayotganini ko'rsatadi.\n\nHisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100.\n\nRanglar:\n• Yashil — 70% va yuqori (yaxshi)\n• Sariq — 40–70% (o'rta)\n• Qizil — 40% dan kam (yomon)",
 };
 
 export const BUCKET_LABELS: Record<CenterActivityBucket, string> = {

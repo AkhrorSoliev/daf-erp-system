@@ -321,7 +321,7 @@ export function RoomsActivityTable({
                       )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {r.workingHoursPerWeek}h
+                      {r.workingHoursPerWeek} soat
                     </TableCell>
                     <TableCell className="text-right">
                       {renderGroupCount(r.groups)}
@@ -333,7 +333,7 @@ export function RoomsActivityTable({
                       {r.totals.emptySeats}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {r.totals.lessonHoursPerWeek}h
+                      {r.totals.lessonHoursPerWeek} soat
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {renderPriceRange(r.groups)}
@@ -342,7 +342,7 @@ export function RoomsActivityTable({
                       {formatBalance(r.totals.revenueSum)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {r.totals.idleHoursPerWeek}h
+                      {r.totals.idleHoursPerWeek} soat
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {r.totals.seatHoursCapacityScheduled ?? "—"}
