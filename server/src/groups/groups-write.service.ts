@@ -125,6 +125,19 @@ export class GroupsWriteService {
           companyId,
         });
 
+        // Activity report — initial schedule snapshot
+        await this.prisma.groupScheduleSnapshot.create({
+          data: {
+            groupId: group.id,
+            exactDays: group.exactDays,
+            lessonStartTime: group.lessonStartTime,
+            lessonEndTime: group.lessonEndTime,
+            courseId: group.courseId,
+            validFrom: group.createdAt,
+            changedById: userId,
+          },
+        });
+
         return formatGroup(group);
       } catch (error: any) {
         // Unique constraint violation — retry with next number
@@ -270,6 +283,39 @@ export class GroupsWriteService {
       changedById: userId,
       companyId: existing.companyId ?? undefined,
     });
+
+    // Activity report — schedule snapshot if any schedule field changed
+    const arrayEq = (a: string[], b: string[]) =>
+      a.length === b.length && a.every((v, i) => v === b[i]);
+    const scheduleChanged =
+      (dto.exactDays !== undefined &&
+        !arrayEq(dto.exactDays, existing.exactDays)) ||
+      (dto.lessonStartTime !== undefined &&
+        dto.lessonStartTime !== existing.lessonStartTime) ||
+      (dto.lessonEndTime !== undefined &&
+        dto.lessonEndTime !== existing.lessonEndTime) ||
+      (dto.courseId !== undefined && dto.courseId !== existing.courseId);
+
+    if (scheduleChanged) {
+      const now = new Date();
+      await this.prisma.$transaction([
+        this.prisma.groupScheduleSnapshot.updateMany({
+          where: { groupId: id, validTo: null },
+          data: { validTo: now },
+        }),
+        this.prisma.groupScheduleSnapshot.create({
+          data: {
+            groupId: id,
+            exactDays: group.exactDays,
+            lessonStartTime: group.lessonStartTime,
+            lessonEndTime: group.lessonEndTime,
+            courseId: group.courseId,
+            validFrom: now,
+            changedById: userId,
+          },
+        }),
+      ]);
+    }
 
     // Ustoz o'zgarishini alohida track qilish
     if (teacherIds && oldTeacherNames !== null) {

@@ -124,10 +124,28 @@ export class ArchiveRestoreService {
     };
 
     await this.prisma.$transaction(async (tx) => {
+      // Capture enrollment IDs before update to write state log entries
+      const restoredEnrollments = await tx.enrollment.findMany({
+        where: { deletionBatchId: batchId },
+        select: { id: true },
+      });
+
       await tx.enrollment.updateMany({
         where: { deletionBatchId: batchId },
         data: { ...restoreBase, status: EnrollmentStatus.ACTIVE },
       });
+
+      if (restoredEnrollments.length > 0) {
+        await tx.enrollmentStateLog.createMany({
+          data: restoredEnrollments.map((e) => ({
+            enrollmentId: e.id,
+            status: EnrollmentStatus.ACTIVE,
+            transitionAt: now,
+            reason: 'Arxivdan tiklandi',
+            changedById: userId ?? null,
+          })),
+        });
+      }
       await tx.group.updateMany({
         where: { deletionBatchId: batchId },
         data: {

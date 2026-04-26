@@ -99,6 +99,16 @@ export class CoursesService {
       companyId,
     });
 
+    // Activity report — initial price snapshot
+    await this.prisma.coursePriceSnapshot.create({
+      data: {
+        courseId: course.id,
+        price: course.price,
+        validFrom: course.createdAt,
+        changedById: userId,
+      },
+    });
+
     return course;
   }
 
@@ -128,6 +138,25 @@ export class CoursesService {
       changedById: userId,
       companyId: course.companyId ?? undefined,
     });
+
+    // Activity report — price snapshot if price changed
+    if (dto.price !== undefined && dto.price !== course.price) {
+      const now = new Date();
+      await this.prisma.$transaction([
+        this.prisma.coursePriceSnapshot.updateMany({
+          where: { courseId: id, validTo: null },
+          data: { validTo: now },
+        }),
+        this.prisma.coursePriceSnapshot.create({
+          data: {
+            courseId: id,
+            price: dto.price,
+            validFrom: now,
+            changedById: userId,
+          },
+        }),
+      ]);
+    }
 
     return updated;
   }

@@ -54,6 +54,7 @@ interface GroupRecord {
   name: string;
   roomId: string | null;
   branchId: number;
+  courseId: string;
   exactDays: string[];
   lessonStartTime: string | null;
   lessonEndTime: string | null;
@@ -68,6 +69,43 @@ interface GroupRecord {
     statusChangedAt: Date | null;
     status: string;
   }>;
+}
+
+// ---------------------------------------------------------------------------
+// Snapshot lookup data structures (point-in-time history for activity report)
+// ---------------------------------------------------------------------------
+
+interface CapacityPoint {
+  capacity: number;
+  validFrom: Date;
+  validTo: Date | null;
+}
+
+interface SchedulePoint {
+  exactDays: string[];
+  lessonStartTime: string | null;
+  lessonEndTime: string | null;
+  courseId: string | null;
+  validFrom: Date;
+  validTo: Date | null;
+}
+
+interface PricePoint {
+  price: number;
+  validFrom: Date;
+  validTo: Date | null;
+}
+
+interface StateEvent {
+  status: string;
+  transitionAt: Date;
+}
+
+interface SnapshotMaps {
+  roomCapacity: Map<string, CapacityPoint[]>;
+  groupSchedule: Map<string, SchedulePoint[]>;
+  coursePrice: Map<string, PricePoint[]>;
+  enrollmentEvents: Map<string, StateEvent[]>;
 }
 
 @Injectable()
@@ -124,6 +162,7 @@ export class ReportsCenterActivityService {
           name: true,
           roomId: true,
           branchId: true,
+          courseId: true,
           exactDays: true,
           lessonStartTime: true,
           lessonEndTime: true,
@@ -169,6 +208,9 @@ export class ReportsCenterActivityService {
       groupsByRoom.set(g.roomId, list);
     }
 
+    // Load point-in-time snapshots for accurate historical reports.
+    const snaps = await this.loadSnapshots(rooms, groups, range);
+
     // Snapshot at the END of the selected period: only count groups that
     // existed by then, and only enrollments that were active by then.
     // For periods entirely before any group existed, all metrics are 0.
@@ -181,12 +223,17 @@ export class ReportsCenterActivityService {
         filteredGroups,
         periodScale,
         range.end,
+        snaps,
       );
     });
 
     // KPI aggregate considers all rooms (empty rooms count as wasted
     // capacity in operational periods).
-    const activeStudents = this.countDistinctActiveStudents(groups, range);
+    const activeStudents = this.countDistinctActiveStudents(
+      groups,
+      range,
+      snaps,
+    );
     const kpis = this.aggregateKpis(allRoomEntries, activeStudents);
 
     // Table & breakdown only show rooms that had groups in this period.
@@ -200,6 +247,7 @@ export class ReportsCenterActivityService {
       range,
       holidayDates,
       bucketUsed,
+      snaps,
     );
 
     const result = {
@@ -225,20 +273,35 @@ export class ReportsCenterActivityService {
     roomGroups: GroupRecord[],
     periodScale: number,
     asOfDate: Date,
+    snaps: SnapshotMaps,
   ) {
     const workingHoursPerDay = this.computeWorkingHoursPerDay(room.branch);
     const workingHoursPerWeek = workingHoursPerDay * 7;
 
     const groupEntries = roomGroups.map((g) => {
       const enrolled = g.enrollments.filter((e) =>
-        this.enrollmentActiveOn(e, asOfDate),
+        this.isEnrollmentActiveOn(e, asOfDate, snaps),
       ).length;
+      // Use historical schedule and price if available
+      const sched = this.scheduleOn(g.id, asOfDate, snaps, {
+        exactDays: g.exactDays,
+        lessonStartTime: g.lessonStartTime,
+        lessonEndTime: g.lessonEndTime,
+        courseId: g.courseId,
+        validFrom: g.createdAt,
+        validTo: null,
+      });
       const lessonHoursPerLesson = this.computeLessonHours(
-        g.lessonStartTime,
-        g.lessonEndTime,
+        sched.lessonStartTime,
+        sched.lessonEndTime,
       );
-      const lessonHoursPerWeek = lessonHoursPerLesson * g.exactDays.length;
-      const coursePrice = g.course?.price ?? 0;
+      const lessonHoursPerWeek = lessonHoursPerLesson * sched.exactDays.length;
+      const coursePrice = this.priceOn(
+        sched.courseId,
+        asOfDate,
+        snaps,
+        g.course?.price ?? 0,
+      );
       return {
         id: g.id,
         name: g.name,
@@ -264,7 +327,8 @@ export class ReportsCenterActivityService {
       0,
     );
 
-    const capacity = room.capacity;
+    // Capacity from snapshot at asOfDate (falls back to current room.capacity)
+    const capacity = this.capacityOn(room.id, asOfDate, snaps, room.capacity);
     // If no groups exist as of this date, the room is "not in operation"
     // for this period — emit zeros across the board so pre-launch periods
     // don't inflate emptyHours / emptySeats.
@@ -395,12 +459,13 @@ export class ReportsCenterActivityService {
   private countDistinctActiveStudents(
     groups: GroupRecord[],
     range: ResolvedRange,
+    snaps: SnapshotMaps,
   ): number {
     const studentIds = new Set<number>();
     for (const g of groups) {
       if (g.createdAt > range.end) continue;
       for (const e of g.enrollments) {
-        if (!this.enrollmentActiveOn(e, range.end)) continue;
+        if (!this.isEnrollmentActiveOn(e, range.end, snaps)) continue;
         studentIds.add(e.studentId);
       }
     }
@@ -461,6 +526,7 @@ export class ReportsCenterActivityService {
     range: ResolvedRange,
     holidayDates: Set<string>,
     bucket: CenterActivityBucket,
+    snaps: SnapshotMaps,
   ) {
     type DayPoint = {
       date: Date;
@@ -518,20 +584,37 @@ export class ReportsCenterActivityService {
         const roomGroups = groupsByRoom.get(room.id) ?? [];
         const workingHours = this.computeWorkingHoursPerDay(room.branch);
         totalWorkingHoursToday += workingHours;
+        // Capacity from snapshot at this date (falls back to current value)
+        const capacityOnDate = this.capacityOn(
+          room.id,
+          cursor,
+          snaps,
+          room.capacity,
+        );
 
-        // Day-dependent: only groups that meet today
-        const groupsToday = !isHoliday
-          ? roomGroups.filter(
-              (g) =>
-                g.exactDays.includes(dayCode) && this.groupActiveOn(g, cursor),
-            )
+        // Day-dependent: only groups that meet today (using snapshot schedule)
+        const groupsTodayWithSchedule = !isHoliday
+          ? roomGroups
+              .filter((g) => this.groupActiveOn(g, cursor))
+              .map((g) => ({
+                group: g,
+                schedule: this.scheduleOn(g.id, cursor, snaps, {
+                  exactDays: g.exactDays,
+                  lessonStartTime: g.lessonStartTime,
+                  lessonEndTime: g.lessonEndTime,
+                  courseId: g.courseId,
+                  validFrom: g.createdAt,
+                  validTo: null,
+                }),
+              }))
+              .filter(({ schedule }) => schedule.exactDays.includes(dayCode))
           : [];
 
         let scheduledHoursToday = 0;
-        for (const g of groupsToday) {
+        for (const { schedule } of groupsTodayWithSchedule) {
           scheduledHoursToday += this.computeLessonHours(
-            g.lessonStartTime,
-            g.lessonEndTime,
+            schedule.lessonStartTime,
+            schedule.lessonEndTime,
           );
         }
 
@@ -544,26 +627,26 @@ export class ReportsCenterActivityService {
         for (const g of roomGroups) {
           if (!this.groupActiveOn(g, cursor)) continue;
           const enrolledOnDate = g.enrollments.filter((e) =>
-            this.enrollmentActiveOn(e, cursor),
+            this.isEnrollmentActiveOn(e, cursor, snaps),
           ).length;
           maxEnrolledInRoom = Math.max(maxEnrolledInRoom, enrolledOnDate);
           for (const e of g.enrollments) {
-            if (this.enrollmentActiveOn(e, cursor)) {
+            if (this.isEnrollmentActiveOn(e, cursor, snaps)) {
               studentIds.add(e.studentId);
             }
           }
           // Yana o'qishi mumkin = Σ (capacity - enrolled) per group
-          if (room.capacity != null) {
+          if (capacityOnDate != null) {
             totalExtraStudents += Math.max(
               0,
-              room.capacity - enrolledOnDate,
+              capacityOnDate - enrolledOnDate,
             );
           }
         }
 
         // Bo'sh o'rinlar = capacity - max(enrolled per group), per room
-        if (room.capacity != null) {
-          totalEmptySeats += Math.max(0, room.capacity - maxEnrolledInRoom);
+        if (capacityOnDate != null) {
+          totalEmptySeats += Math.max(0, capacityOnDate - maxEnrolledInRoom);
         }
       }
 
@@ -667,6 +750,234 @@ export class ReportsCenterActivityService {
         emptySeats: Math.round(b.sumSeats / b.count),
         extraStudentsCapacity: Math.round(b.sumSeats / b.count),
       }));
+  }
+
+  // --- snapshot loading + per-date lookups ---------------------------------
+
+  private async loadSnapshots(
+    rooms: RoomRecord[],
+    groups: GroupRecord[],
+    range: ResolvedRange,
+  ): Promise<SnapshotMaps> {
+    const roomIds = rooms.map((r) => r.id);
+    const groupIds = groups.map((g) => g.id);
+    const courseIds = Array.from(
+      new Set(groups.map((g) => g.courseId).filter(Boolean)),
+    );
+    const enrollmentIds = groups.flatMap((g) =>
+      g.enrollments.map((e) => e.id),
+    );
+
+    // Fetch any snapshot whose validity window overlaps the period:
+    // (validFrom <= range.end) AND (validTo IS NULL OR validTo > range.start)
+    const overlap = (validToField: string) => ({
+      validFrom: { lte: range.end },
+      OR: [{ [validToField]: null }, { [validToField]: { gt: range.start } }],
+    });
+
+    const [capacities, schedules, prices, events] = await Promise.all([
+      roomIds.length === 0
+        ? Promise.resolve([])
+        : this.prisma.roomCapacitySnapshot.findMany({
+            where: {
+              roomId: { in: roomIds },
+              ...overlap('validTo'),
+            },
+            select: {
+              roomId: true,
+              capacity: true,
+              validFrom: true,
+              validTo: true,
+            },
+          }),
+      groupIds.length === 0
+        ? Promise.resolve([])
+        : this.prisma.groupScheduleSnapshot.findMany({
+            where: {
+              groupId: { in: groupIds },
+              ...overlap('validTo'),
+            },
+            select: {
+              groupId: true,
+              exactDays: true,
+              lessonStartTime: true,
+              lessonEndTime: true,
+              courseId: true,
+              validFrom: true,
+              validTo: true,
+            },
+          }),
+      courseIds.length === 0
+        ? Promise.resolve([])
+        : this.prisma.coursePriceSnapshot.findMany({
+            where: {
+              courseId: { in: courseIds },
+              ...overlap('validTo'),
+            },
+            select: {
+              courseId: true,
+              price: true,
+              validFrom: true,
+              validTo: true,
+            },
+          }),
+      enrollmentIds.length === 0
+        ? Promise.resolve([])
+        : this.prisma.enrollmentStateLog.findMany({
+            where: {
+              enrollmentId: { in: enrollmentIds },
+              transitionAt: { lte: range.end },
+            },
+            select: {
+              enrollmentId: true,
+              status: true,
+              transitionAt: true,
+            },
+            orderBy: { transitionAt: 'asc' },
+          }),
+    ]);
+
+    const roomCapacity = new Map<string, CapacityPoint[]>();
+    for (const s of capacities) {
+      const arr = roomCapacity.get(s.roomId) ?? [];
+      arr.push({
+        capacity: s.capacity,
+        validFrom: s.validFrom,
+        validTo: s.validTo,
+      });
+      roomCapacity.set(s.roomId, arr);
+    }
+
+    const groupSchedule = new Map<string, SchedulePoint[]>();
+    for (const s of schedules) {
+      const arr = groupSchedule.get(s.groupId) ?? [];
+      arr.push({
+        exactDays: s.exactDays,
+        lessonStartTime: s.lessonStartTime,
+        lessonEndTime: s.lessonEndTime,
+        courseId: s.courseId,
+        validFrom: s.validFrom,
+        validTo: s.validTo,
+      });
+      groupSchedule.set(s.groupId, arr);
+    }
+
+    const coursePrice = new Map<string, PricePoint[]>();
+    for (const s of prices) {
+      const arr = coursePrice.get(s.courseId) ?? [];
+      arr.push({
+        price: s.price,
+        validFrom: s.validFrom,
+        validTo: s.validTo,
+      });
+      coursePrice.set(s.courseId, arr);
+    }
+
+    const enrollmentEvents = new Map<string, StateEvent[]>();
+    for (const e of events) {
+      const arr = enrollmentEvents.get(e.enrollmentId) ?? [];
+      arr.push({ status: e.status, transitionAt: e.transitionAt });
+      enrollmentEvents.set(e.enrollmentId, arr);
+    }
+
+    return { roomCapacity, groupSchedule, coursePrice, enrollmentEvents };
+  }
+
+  /**
+   * Capacity active on `date`. Falls back to the room's current capacity
+   * if no snapshot covers this date (degraded mode for un-backfilled data).
+   */
+  private capacityOn(
+    roomId: string,
+    date: Date,
+    snaps: SnapshotMaps,
+    fallback: number | null,
+  ): number | null {
+    const arr = snaps.roomCapacity.get(roomId);
+    if (!arr) return fallback;
+    for (const s of arr) {
+      if (s.validFrom <= date && (s.validTo === null || s.validTo > date)) {
+        return s.capacity;
+      }
+    }
+    return fallback;
+  }
+
+  private scheduleOn(
+    groupId: string,
+    date: Date,
+    snaps: SnapshotMaps,
+    fallback: SchedulePoint,
+  ): SchedulePoint {
+    const arr = snaps.groupSchedule.get(groupId);
+    if (!arr) return fallback;
+    for (const s of arr) {
+      if (s.validFrom <= date && (s.validTo === null || s.validTo > date)) {
+        return s;
+      }
+    }
+    return fallback;
+  }
+
+  private priceOn(
+    courseId: string | null,
+    date: Date,
+    snaps: SnapshotMaps,
+    fallback: number,
+  ): number {
+    if (!courseId) return fallback;
+    const arr = snaps.coursePrice.get(courseId);
+    if (!arr) return fallback;
+    for (const s of arr) {
+      if (s.validFrom <= date && (s.validTo === null || s.validTo > date)) {
+        return s.price;
+      }
+    }
+    return fallback;
+  }
+
+  /**
+   * Status active on `date` from event log. If no events recorded, falls back
+   * to deriving from `e.statusChangedAt` and current status.
+   */
+  private statusOn(
+    enrollmentId: string,
+    date: Date,
+    snaps: SnapshotMaps,
+    fallback: {
+      createdAt: Date;
+      statusChangedAt: Date | null;
+      status: string;
+    },
+  ): string | null {
+    const events = snaps.enrollmentEvents.get(enrollmentId);
+    if (events && events.length > 0) {
+      // Events sorted ascending by transitionAt; find latest <= date
+      let last: string | null = null;
+      for (const e of events) {
+        if (e.transitionAt <= date) last = e.status;
+        else break;
+      }
+      return last;
+    }
+    // Fallback: legacy enrollment without state log entries
+    if (fallback.createdAt > date) return null;
+    if (
+      fallback.status !== 'ACTIVE' &&
+      fallback.statusChangedAt &&
+      fallback.statusChangedAt <= date
+    ) {
+      return fallback.status;
+    }
+    return 'ACTIVE';
+  }
+
+  private isEnrollmentActiveOn(
+    e: GroupRecord['enrollments'][number],
+    date: Date,
+    snaps: SnapshotMaps,
+  ): boolean {
+    return this.statusOn(e.id, date, snaps, e) === 'ACTIVE';
   }
 
   // --- helpers --------------------------------------------------------------
@@ -800,21 +1111,6 @@ export class ReportsCenterActivityService {
     if (g.createdAt > date) return false;
     if (g.startDate && date < g.startDate) return false;
     if (g.endDate && date > g.endDate) return false;
-    return true;
-  }
-
-  private enrollmentActiveOn(
-    e: { createdAt: Date; statusChangedAt: Date | null; status: string },
-    date: Date,
-  ): boolean {
-    if (e.createdAt > date) return false;
-    if (
-      e.status !== 'ACTIVE' &&
-      e.statusChangedAt !== null &&
-      e.statusChangedAt <= date
-    ) {
-      return false;
-    }
     return true;
   }
 

@@ -64,6 +64,10 @@ describe('StudentEnrollmentService', () => {
       enrollmentTransferReason: {
         findFirst: jest.fn(),
       },
+      enrollmentStateLog: {
+        create: jest.fn(),
+        createMany: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({

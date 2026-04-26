@@ -103,6 +103,15 @@ export async function registerStudentFromTelegram(
     },
   });
 
+  // Activity report — initial state log entry
+  await prisma.enrollmentStateLog.create({
+    data: {
+      enrollmentId: enrollment.id,
+      status: 'ACTIVE',
+      transitionAt: enrollment.createdAt,
+    },
+  });
+
   await entityHistoryService.recordCreate({
     entityType: 'Student',
     entityId: student.id,

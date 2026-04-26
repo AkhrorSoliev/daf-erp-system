@@ -19,6 +19,10 @@ describe('ReportsCenterActivityService', () => {
       room: { findMany: jest.fn() },
       group: { findMany: jest.fn() },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      roomCapacitySnapshot: { findMany: jest.fn().mockResolvedValue([]) },
+      groupScheduleSnapshot: { findMany: jest.fn().mockResolvedValue([]) },
+      coursePriceSnapshot: { findMany: jest.fn().mockResolvedValue([]) },
+      enrollmentStateLog: { findMany: jest.fn().mockResolvedValue([]) },
     };
     redis = {
       get: jest.fn().mockResolvedValue(null),
@@ -400,6 +404,130 @@ describe('ReportsCenterActivityService', () => {
       300,
       expect.any(String),
     );
+  });
+
+  // ----- Snapshot-based historical accuracy tests --------------------------
+
+  it('uses historical capacity snapshot, not current room.capacity', async () => {
+    // Room currently has capacity 30, but historically had 14 in April 2026.
+    prisma.room.findMany.mockResolvedValue([
+      { id: 'r1', name: 'X', capacity: 30, branchId: 1, branch },
+    ]);
+    prisma.group.findMany.mockResolvedValue([
+      makeGroup(
+        'g1',
+        'r1',
+        10,
+        ['monday', 'wednesday', 'friday'],
+        '09:00',
+        '11:00',
+        500_000,
+      ),
+    ]);
+    prisma.roomCapacitySnapshot.findMany.mockResolvedValue([
+      {
+        roomId: 'r1',
+        capacity: 14,
+        validFrom: new Date('2026-01-01'),
+        validTo: new Date('2026-05-01'),
+      },
+      {
+        roomId: 'r1',
+        capacity: 30,
+        validFrom: new Date('2026-05-01'),
+        validTo: null,
+      },
+    ]);
+
+    const result = await service.getCenterActivity(1, makeQuery());
+    // April period uses historical capacity 14, not current 30
+    expect(result.rooms[0].capacity).toBe(14);
+    expect(result.rooms[0].totals.emptySeats).toBe(4); // 14 − 10
+    expect(result.rooms[0].totals.extraStudentsCapacity).toBe(4);
+  });
+
+  it('uses historical course price for revenue calculations', async () => {
+    // Course currently 1M, but in April it was 600K.
+    prisma.room.findMany.mockResolvedValue([
+      { id: 'r1', name: 'X', capacity: 20, branchId: 1, branch },
+    ]);
+    prisma.group.findMany.mockResolvedValue([
+      makeGroup('g1', 'r1', 10, ['monday'], '09:00', '11:00', 1_000_000),
+    ]);
+    // Course price snapshot: 600K in April, 1M in May
+    prisma.coursePriceSnapshot.findMany.mockResolvedValue([
+      {
+        courseId: 'g1course',
+        price: 600_000,
+        validFrom: new Date('2026-01-01'),
+        validTo: new Date('2026-05-01'),
+      },
+      {
+        courseId: 'g1course',
+        price: 1_000_000,
+        validFrom: new Date('2026-05-01'),
+        validTo: null,
+      },
+    ]);
+
+    // Override courseId on the mock group so it matches our snapshot
+    const groups = await prisma.group.findMany();
+    groups[0].courseId = 'g1course';
+    prisma.group.findMany.mockResolvedValue(groups);
+
+    const result = await service.getCenterActivity(1, makeQuery());
+    expect(result.rooms[0].groups[0].coursePrice).toBe(600_000);
+    expect(result.rooms[0].totals.revenueSum).toBe(6_000_000); // 10 × 600K
+  });
+
+  it('replays multiple status transitions via EnrollmentStateLog', async () => {
+    // Enrollment timeline:
+    //   2026-01-01: ACTIVE (initial)
+    //   2026-02-01: FROZEN
+    //   2026-04-15: ACTIVE (resumed)
+    // For April period query (Apr 1-30) we expect this enrollment to be:
+    //   - INACTIVE on Apr 14 (still frozen)
+    //   - ACTIVE on Apr 30 (resumed)
+    // KPI snapshot at Apr 30 → 1 active student.
+    prisma.room.findMany.mockResolvedValue([
+      { id: 'r1', name: 'X', capacity: 20, branchId: 1, branch },
+    ]);
+    prisma.group.findMany.mockResolvedValue([
+      {
+        id: 'g1',
+        name: 'A',
+        roomId: 'r1',
+        branchId: 1,
+        courseId: 'c1',
+        exactDays: ['monday'],
+        lessonStartTime: '09:00',
+        lessonEndTime: '10:00',
+        startDate: null,
+        endDate: null,
+        createdAt: new Date('2026-01-01'),
+        course: { price: 0 },
+        enrollments: [
+          {
+            id: 'e1',
+            studentId: 100,
+            createdAt: new Date('2026-01-01'),
+            statusChangedAt: new Date('2026-04-15'),
+            // current status (would be misleading without state log)
+            status: 'ACTIVE',
+          },
+        ],
+      },
+    ]);
+    prisma.enrollmentStateLog.findMany.mockResolvedValue([
+      { enrollmentId: 'e1', status: 'ACTIVE', transitionAt: new Date('2026-01-01') },
+      { enrollmentId: 'e1', status: 'FROZEN', transitionAt: new Date('2026-02-01') },
+      { enrollmentId: 'e1', status: 'ACTIVE', transitionAt: new Date('2026-04-15') },
+    ]);
+
+    const result = await service.getCenterActivity(1, makeQuery());
+    // Apr 30 snapshot — student is ACTIVE again
+    expect(result.kpis.activeStudents).toBe(1);
+    expect(result.rooms[0].totals.enrolled).toBe(1);
   });
 });
 

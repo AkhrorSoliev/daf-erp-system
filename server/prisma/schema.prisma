@@ -267,27 +267,27 @@ model User {
   groups        Group[]        @relation("StudentGroups")
   groupTeachers GroupTeacher[] @relation("GroupTeachers")
 
-  deletedBranches    Branch[]           @relation("BranchDeletedBy")
-  deletedRooms       Room[]             @relation("RoomDeletedBy")
-  deletedCourses     Course[]           @relation("CourseDeletedBy")
-  deletedStudents    Student[]          @relation("StudentDeletedBy")
-  deletedLeads       Lead[]             @relation("LeadDeletedBy")
-  deletedGroups      Group[]            @relation("GroupDeletedBy")
-  deletedEnrollments Enrollment[]       @relation("EnrollmentDeletedBy")
-  deletedHolidays    Holiday[]          @relation("HolidayDeletedBy")
-  deletedDepartureReasons DepartureReason[] @relation("DepartureReasonDeletedBy")
+  deletedBranches                  Branch[]                   @relation("BranchDeletedBy")
+  deletedRooms                     Room[]                     @relation("RoomDeletedBy")
+  deletedCourses                   Course[]                   @relation("CourseDeletedBy")
+  deletedStudents                  Student[]                  @relation("StudentDeletedBy")
+  deletedLeads                     Lead[]                     @relation("LeadDeletedBy")
+  deletedGroups                    Group[]                    @relation("GroupDeletedBy")
+  deletedEnrollments               Enrollment[]               @relation("EnrollmentDeletedBy")
+  deletedHolidays                  Holiday[]                  @relation("HolidayDeletedBy")
+  deletedDepartureReasons          DepartureReason[]          @relation("DepartureReasonDeletedBy")
   deletedGroupTeacherChangeReasons GroupTeacherChangeReason[] @relation("GroupTeacherChangeReasonDeletedBy")
   deletedEnrollmentTransferReasons EnrollmentTransferReason[] @relation("EnrollmentTransferReasonDeletedBy")
-  statusChanges      StatusHistory[]    @relation("StatusChangedBy")
-  entityChanges      EntityHistory[]    @relation("EntityHistoryChangedBy")
-  comments           Comment[]          @relation("CommentAuthor")
-  commentAssignees   CommentAssignee[]  @relation("CommentAssignees")
-  notifications      Notification[]     @relation("UserNotifications")
-  pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
-  sentSmsMessages    SmsMessage[]       @relation("SmsSender")
-  markedAttendances  Attendance[]       @relation("AttendanceMarkedBy")
-  student            Student?           @relation("StudentUser")
-  aiConversations    AiConversation[]   @relation("UserAiConversations")
+  statusChanges                    StatusHistory[]            @relation("StatusChangedBy")
+  entityChanges                    EntityHistory[]            @relation("EntityHistoryChangedBy")
+  comments                         Comment[]                  @relation("CommentAuthor")
+  commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
+  notifications                    Notification[]             @relation("UserNotifications")
+  pushSubscriptions                PushSubscription[]         @relation("UserPushSubscriptions")
+  sentSmsMessages                  SmsMessage[]               @relation("SmsSender")
+  markedAttendances                Attendance[]               @relation("AttendanceMarkedBy")
+  student                          Student?                   @relation("StudentUser")
+  aiConversations                  AiConversation[]           @relation("UserAiConversations")
 
   // Financial relations (employee salary — works for all roles)
   salaryConfigs       EmployeeSalaryConfig[] @relation("UserSalaryConfigs")
@@ -306,6 +306,12 @@ model User {
   deletedContracts      Contract[]      @relation("ContractDeletedBy")
 
   teacherHistoryChanges GroupTeacherHistory[] @relation("GroupTeacherHistoryChangedBy")
+
+  // Activity report snapshot authorship
+  roomCapacitySnapshots  RoomCapacitySnapshot[]  @relation("RoomCapacitySnapshotChangedBy")
+  groupScheduleSnapshots GroupScheduleSnapshot[] @relation("GroupScheduleSnapshotChangedBy")
+  coursePriceSnapshots   CoursePriceSnapshot[]   @relation("CoursePriceSnapshotChangedBy")
+  enrollmentStateLogs    EnrollmentStateLog[]    @relation("EnrollmentStateLogChangedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -384,7 +390,8 @@ model Room {
   deletedBy       User?     @relation("RoomDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  groups Group[]
+  groups            Group[]
+  capacitySnapshots RoomCapacitySnapshot[]
 
   @@index([deletedAt])
   @@index([status])
@@ -409,17 +416,18 @@ model Course {
   statusChangeReason String?
 
   branchId  Int?
-  branch    Branch?  @relation(fields: [branchId], references: [id])
+  branch    Branch? @relation(fields: [branchId], references: [id])
   companyId Int
-  company   Company  @relation(fields: [companyId], references: [id])
+  company   Company @relation(fields: [companyId], references: [id])
 
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("CourseDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  groups    Group[]
-  contracts Contract[]
+  groups         Group[]
+  contracts      Contract[]
+  priceSnapshots CoursePriceSnapshot[]
 
   @@index([deletedAt])
   @@index([status])
@@ -551,15 +559,17 @@ model Group {
   deletedBy       User?     @relation("GroupDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  teachers        GroupTeacher[]
-  teacherHistory  GroupTeacherHistory[]
-  students        User[]                @relation("StudentGroups")
-  enrollments     Enrollment[]
-  attendances     Attendance[]
+  teachers       GroupTeacher[]
+  teacherHistory GroupTeacherHistory[]
+  students       User[]                @relation("StudentGroups")
+  enrollments    Enrollment[]
+  attendances    Attendance[]
 
   // Financial relations
   contracts     Contract[]
   salaryConfigs EmployeeSalaryConfig[]
+
+  scheduleSnapshots GroupScheduleSnapshot[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -576,19 +586,19 @@ model GroupTeacher {
 }
 
 model GroupTeacherHistory {
-  id                   String   @id @default(uuid())
+  id                   String                    @id @default(uuid())
   groupId              String
-  group                Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group                Group                     @relation(fields: [groupId], references: [id], onDelete: Cascade)
   previousTeacherIds   Int[]
   newTeacherIds        Int[]
   changeType           GroupTeacherChangeType
   changeReason         String?
   changeReasonId       String?
   changeReasonRef      GroupTeacherChangeReason? @relation(fields: [changeReasonId], references: [id])
-  triggeredByDismissal Boolean  @default(false)
+  triggeredByDismissal Boolean                   @default(false)
   changedById          Int?
-  changedBy            User?    @relation("GroupTeacherHistoryChangedBy", fields: [changedById], references: [id])
-  createdAt            DateTime @default(now())
+  changedBy            User?                     @relation("GroupTeacherHistoryChangedBy", fields: [changedById], references: [id])
+  createdAt            DateTime                  @default(now())
 
   @@index([groupId, createdAt])
   @@index([createdAt])
@@ -626,6 +636,8 @@ model Enrollment {
   deletedBy       User?     @relation("EnrollmentDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  stateLog EnrollmentStateLog[]
+
   @@index([deletedAt])
   @@index([status])
   @@index([departureReasonId])
@@ -649,6 +661,83 @@ model Holiday {
 
   @@index([deletedAt])
   @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Activity report snapshot tables (point-in-time history for /reports/activity)
+//
+// Pattern: Slowly Changing Dimension Type 2 (SCD2)
+//   - validFrom: when this row started being effective
+//   - validTo:   when it stopped (NULL = currently effective)
+//   - On update, the old row gets validTo = now() and a new row is inserted.
+//
+// EnrollmentStateLog uses an event-log pattern instead, since enrollment
+// status can transition multiple times (ACTIVE → FROZEN → ACTIVE). Each
+// transition is appended as a new row; query MAX(transitionAt) <= date to
+// reconstruct status at any given moment.
+// ---------------------------------------------------------------------------
+
+model RoomCapacitySnapshot {
+  id          String    @id @default(uuid())
+  roomId      String
+  room        Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  capacity    Int
+  validFrom   DateTime
+  validTo     DateTime?
+  changedById Int?
+  changedBy   User?     @relation("RoomCapacitySnapshotChangedBy", fields: [changedById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([roomId, validFrom])
+  @@index([validFrom, validTo])
+}
+
+model GroupScheduleSnapshot {
+  id              String    @id @default(uuid())
+  groupId         String
+  group           Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  exactDays       String[]
+  lessonStartTime String?
+  lessonEndTime   String?
+  courseId        String?
+  validFrom       DateTime
+  validTo         DateTime?
+  changedById     Int?
+  changedBy       User?     @relation("GroupScheduleSnapshotChangedBy", fields: [changedById], references: [id])
+  createdAt       DateTime  @default(now())
+
+  @@index([groupId, validFrom])
+  @@index([validFrom, validTo])
+}
+
+model CoursePriceSnapshot {
+  id          String    @id @default(uuid())
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  price       Int
+  validFrom   DateTime
+  validTo     DateTime?
+  changedById Int?
+  changedBy   User?     @relation("CoursePriceSnapshotChangedBy", fields: [changedById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([courseId, validFrom])
+  @@index([validFrom, validTo])
+}
+
+model EnrollmentStateLog {
+  id           String           @id @default(uuid())
+  enrollmentId String
+  enrollment   Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  status       EnrollmentStatus
+  transitionAt DateTime
+  reason       String?
+  changedById  Int?
+  changedBy    User?            @relation("EnrollmentStateLogChangedBy", fields: [changedById], references: [id])
+  createdAt    DateTime         @default(now())
+
+  @@index([enrollmentId, transitionAt])
+  @@index([transitionAt])
 }
 
 model StatusHistory {
@@ -919,26 +1008,26 @@ model AiChatMessage {
 // ===== FINANCIAL SYSTEM MODELS =====
 
 model Payment {
-  id                 String         @id @default(uuid())
+  id                 String        @id @default(uuid())
   studentId          Int
-  student            Student        @relation(fields: [studentId], references: [id])
+  student            Student       @relation(fields: [studentId], references: [id])
   contractId         String?
-  contract           Contract?      @relation(fields: [contractId], references: [id])
+  contract           Contract?     @relation(fields: [contractId], references: [id])
   amount             Int
   method             PaymentMethod
-  status             PaymentStatus  @default(COMPLETED)
-  source             PaymentSource  @default(ADMIN_MANUAL)
+  status             PaymentStatus @default(COMPLETED)
+  source             PaymentSource @default(ADMIN_MANUAL)
   externalId         String?
   providerFee        Int?
   providerFeePercent Float?
   receiptNumber      String?
   note               String?
   receivedById       Int?
-  receivedBy         User?          @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  receivedBy         User?         @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
   branchId           Int?
   companyId          Int
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   transactions Transaction[]
 
@@ -1104,9 +1193,9 @@ model SalaryPayment {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  transactions     Transaction[]
-  accruals         SalaryAccrual[]
-  settledExpenses  Expense[]       @relation("ExpenseSettledBy")
+  transactions    Transaction[]
+  accruals        SalaryAccrual[]
+  settledExpenses Expense[]       @relation("ExpenseSettledBy")
 
   @@index([userId])
   @@index([companyId, periodEnd])
@@ -1153,7 +1242,7 @@ model Expense {
   branchId      Int?
   receiptUrl    String?
   createdById   Int
-  createdBy   User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  createdBy     User                 @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
 
   // Optional link to an employee — used by TEACHER_ADVANCE to bind the
   // advance to the recipient so it can be netted against future salary.
@@ -1227,25 +1316,25 @@ model PaymentGatewayEvent {
 // when PerformTransaction succeeds (state=2). Cancelled/refunded transactions
 // are kept for audit and GetStatement reconciliation.
 model PaymeTransaction {
-  id              String   @id @default(uuid())
-  paymeId         String                          // 24-char Paycom transaction ID
-  paymeTime       BigInt                          // Paycom-sent creation timestamp (ms)
-  amount          Int                             // amount in tiyin (Paycom native)
-  amountInSom     Int                             // amount / 100 — for ERP use
-  state           Int      @default(1)            // 1=created, 2=performed, -1=cancelled, -2=refunded
-  reason          Int?                            // cancellation reason (1-6)
+  id          String @id @default(uuid())
+  paymeId     String // 24-char Paycom transaction ID
+  paymeTime   BigInt // Paycom-sent creation timestamp (ms)
+  amount      Int // amount in tiyin (Paycom native)
+  amountInSom Int // amount / 100 — for ERP use
+  state       Int    @default(1) // 1=created, 2=performed, -1=cancelled, -2=refunded
+  reason      Int? // cancellation reason (1-6)
 
-  studentId       Int                             // paying student
+  studentId Int // paying student
 
-  createTime      BigInt                          // our creation timestamp (ms)
-  performTime     BigInt?                         // when PerformTransaction was called (ms)
-  cancelTime      BigInt?                         // when CancelTransaction was called (ms)
+  createTime  BigInt // our creation timestamp (ms)
+  performTime BigInt? // when PerformTransaction was called (ms)
+  cancelTime  BigInt? // when CancelTransaction was called (ms)
 
-  paymentId       String?  @unique                // FK to Payment.id (set on state=2)
+  paymentId String? @unique // FK to Payment.id (set on state=2)
 
-  companyId       Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  companyId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([paymeId, companyId], name: "unique_payme_transaction")
   @@index([companyId, createTime])
@@ -1259,25 +1348,25 @@ model PaymeTransaction {
 // is created on Prepare (status=1) and linked to an ERP Payment only when
 // Complete succeeds (status=2). Cancelled transactions are kept for audit.
 model ClickTransaction {
-  id              String    @id @default(uuid())
-  clickTransId    BigInt                          // click_trans_id from Click
-  clickPaydocId   BigInt                          // click_paydoc_id (payment number in SMS)
-  amount          Float                           // amount in so'm (N.NN format from Click)
-  amountInSom     Int                             // truncated integer for ERP use
-  status          Int       @default(0)           // 0=pending, 1=prepared, 2=completed, -1=cancelled
-  error           Int       @default(0)           // Click error code
-  errorNote       String?                         // Click error description
+  id            String  @id @default(uuid())
+  clickTransId  BigInt // click_trans_id from Click
+  clickPaydocId BigInt // click_paydoc_id (payment number in SMS)
+  amount        Float // amount in so'm (N.NN format from Click)
+  amountInSom   Int // truncated integer for ERP use
+  status        Int     @default(0) // 0=pending, 1=prepared, 2=completed, -1=cancelled
+  error         Int     @default(0) // Click error code
+  errorNote     String? // Click error description
 
-  studentId       Int                             // merchant_trans_id = studentId
+  studentId Int // merchant_trans_id = studentId
 
-  prepareTime     DateTime?                       // when Prepare was called
-  completeTime    DateTime?                       // when Complete was called
+  prepareTime  DateTime? // when Prepare was called
+  completeTime DateTime? // when Complete was called
 
-  paymentId       String?   @unique               // FK to Payment.id (set on complete)
+  paymentId String? @unique // FK to Payment.id (set on complete)
 
-  companyId       Int
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  companyId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([clickTransId, companyId], name: "unique_click_transaction")
   @@index([companyId, createdAt])
@@ -1291,15 +1380,15 @@ model ClickTransaction {
 // env-based config so each company can have its own Payme/Click/Uzum merchant
 // account. Credentials are encrypted at rest via application-level encryption.
 model PaymentGatewayConfig {
-  id              String        @id @default(uuid())
-  companyId       Int
-  provider        PaymentMethod                   // PAYME, CLICK, UZUM
-  merchantId      String                          // merchant/kassa ID
-  secretKey       String                          // production secret key
-  secretKeyTest   String?                         // sandbox/test secret key
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id            String        @id @default(uuid())
+  companyId     Int
+  provider      PaymentMethod // PAYME, CLICK, UZUM
+  merchantId    String // merchant/kassa ID
+  secretKey     String // production secret key
+  secretKeyTest String? // sandbox/test secret key
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@unique([companyId, provider])
 }
@@ -1315,11 +1404,11 @@ model PaymentIntent {
   id          String        @id @default(uuid())
   studentId   Int
   companyId   Int
-  provider    PaymentMethod                   // PAYME, CLICK
-  amount      Int                             // expected amount in so'm
-  amountTiyin Int                             // expected amount in tiyin (for Payme)
-  expiresAt   DateTime                        // auto-expire (1 hour after creation)
-  used        Boolean       @default(false)   // set true once CheckPerformTransaction matches
+  provider    PaymentMethod // PAYME, CLICK
+  amount      Int // expected amount in so'm
+  amountTiyin Int // expected amount in tiyin (for Payme)
+  expiresAt   DateTime // auto-expire (1 hour after creation)
+  used        Boolean       @default(false) // set true once CheckPerformTransaction matches
   createdAt   DateTime      @default(now())
 
   @@index([studentId, companyId, provider, used])
