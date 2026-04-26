@@ -67,6 +67,7 @@ describe('ReportsCenterActivityService', () => {
         lessonEndTime: '11:00', // 2h × 5 days = 10h/week
         startDate: new Date('2025-01-01'),
         endDate: new Date('2027-01-01'),
+        createdAt: new Date('2025-01-01'),
         course: { price: 1_000_000 },
         enrollments: Array.from({ length: 10 }, (_, i) => ({
           id: `e${i}`,
@@ -187,6 +188,7 @@ describe('ReportsCenterActivityService', () => {
         lessonEndTime: '10:00',
         startDate: null,
         endDate: null,
+        createdAt: new Date('2025-01-01'),
         course: { price: 0 },
         enrollments: [
           enrollment(100),
@@ -204,6 +206,7 @@ describe('ReportsCenterActivityService', () => {
         lessonEndTime: '10:00',
         startDate: null,
         endDate: null,
+        createdAt: new Date('2025-01-01'),
         course: { price: 0 },
         // student 101 is in both groups → distinct count = 4
         enrollments: [
@@ -237,6 +240,61 @@ describe('ReportsCenterActivityService', () => {
     expect(potentialBreakdown.gap).toBe(13_500_000);
     expect(potentialBreakdown.currentIncome).toBe(6_500_000);
     expect(potentialBreakdown.maxIncome).toBe(20_000_000);
+  });
+
+  it('returns zero metrics in trend buckets before any group existed', async () => {
+    // Group created on 2026-04-01. Range is 2026-01-01 to 2026-04-30 monthly.
+    // Yan/Fev/Mart should be 0 across all metrics; Apr should have data.
+    prisma.room.findMany.mockResolvedValue([
+      { id: 'r1', name: 'X', capacity: 10, branchId: 1, branch },
+    ]);
+    prisma.group.findMany.mockResolvedValue([
+      {
+        id: 'g1',
+        name: 'A',
+        roomId: 'r1',
+        branchId: 1,
+        exactDays: ['monday', 'wednesday', 'friday'],
+        lessonStartTime: '09:00',
+        lessonEndTime: '11:00',
+        startDate: null,
+        endDate: null,
+        createdAt: new Date('2026-04-01'),
+        course: { price: 500_000 },
+        enrollments: [
+          {
+            id: 'e1',
+            studentId: 100,
+            createdAt: new Date('2026-04-01'),
+            statusChangedAt: null,
+            status: 'ACTIVE',
+          },
+        ],
+      },
+    ]);
+
+    const result = await service.getCenterActivity(
+      1,
+      makeQuery({
+        startDate: '2026-01-01',
+        endDate: '2026-04-30',
+        bucket: 'monthly',
+      }),
+    );
+
+    // 4 monthly buckets: Yan, Fev, Mart, Apr
+    expect(result.trend).toHaveLength(4);
+    // First three months are zero
+    for (let i = 0; i < 3; i++) {
+      expect(result.trend[i].utilizationPct).toBe(0);
+      expect(result.trend[i].emptyHours).toBe(0);
+      expect(result.trend[i].activeStudents).toBe(0);
+      expect(result.trend[i].emptySeats).toBe(0);
+      expect(result.trend[i].extraStudentsCapacity).toBe(0);
+    }
+    // April has data
+    expect(result.trend[3].activeStudents).toBeGreaterThan(0);
+    expect(result.trend[3].extraStudentsCapacity).toBeGreaterThan(0);
   });
 
   it('aggregates trend data into weekly buckets when requested', async () => {
@@ -322,6 +380,7 @@ function makeGroup(
     lessonEndTime: end,
     startDate: null,
     endDate: null,
+    createdAt: new Date('2025-01-01'),
     course: { price },
     enrollments: Array.from({ length: enrolledCount }, (_, i) =>
       enrollment(parseInt(`${id.replace(/\D/g, '')}${i.toString().padStart(3, '0')}`)),
