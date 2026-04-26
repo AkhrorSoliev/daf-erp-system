@@ -130,12 +130,31 @@ export class StudentEnrollmentService {
           transferReasonId,
         },
       });
+      await this.prisma.enrollmentStateLog.create({
+        data: {
+          enrollmentId: currentEnrollment.id,
+          status: 'TRANSFERRED',
+          transitionAt: new Date(),
+          reason: `Guruh o'zgartirildi`,
+          changedById: userId,
+        },
+      });
     }
 
     const enrollment = await this.prisma.enrollment.create({
       data: {
         studentId,
         groupId,
+      },
+    });
+
+    // Activity report — initial state log entry
+    await this.prisma.enrollmentStateLog.create({
+      data: {
+        enrollmentId: enrollment.id,
+        status: 'ACTIVE',
+        transitionAt: enrollment.createdAt,
+        changedById: userId,
       },
     });
 
@@ -268,6 +287,16 @@ export class StudentEnrollmentService {
     } else {
       reasonText = input.reason?.trim() || 'Guruhdan chiqarildi';
     }
+
+    await this.prisma.enrollmentStateLog.create({
+      data: {
+        enrollmentId,
+        status: 'DROPPED',
+        transitionAt: new Date(),
+        reason: reasonText,
+        changedById: userId,
+      },
+    });
 
     await this.prisma.enrollment.update({
       where: { id: enrollmentId },

@@ -38,6 +38,9 @@ describe('StatusCascadeService', () => {
       statusHistory: {
         create: jest.fn().mockResolvedValue({ id: 'test-id' }),
       },
+      enrollmentStateLog: {
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
     };
 
     entityHistoryService = {

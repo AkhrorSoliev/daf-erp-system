@@ -61,7 +61,13 @@ describe('GroupsService — status methods', () => {
       groupTeacherHistory: { create: jest.fn() },
       groupTeacherChangeReason: { findFirst: jest.fn() },
       statusHistory: { create: jest.fn() },
-      $transaction: jest.fn((fn) => fn(prisma)),
+      groupScheduleSnapshot: {
+        create: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      $transaction: jest.fn((arg) =>
+        typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+      ),
     };
 
     statusHistoryService = {

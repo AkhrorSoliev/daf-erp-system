@@ -24,6 +24,45 @@ export class StatusCascadeService {
   ) {}
 
   /**
+   * Cascade enrollment status update + activity-report state log entries.
+   * Use this in place of `prisma.enrollment.updateMany` whenever the cascade
+   * mutates enrollment status, so that historical reports can replay the
+   * transition. Returns the same shape as updateMany.
+   */
+  private async cascadeEnrollmentStatus(
+    filter: Prisma.EnrollmentWhereInput,
+    newStatus: EnrollmentStatus,
+    reason: string | null,
+    userId: number,
+    auditFields: Prisma.EnrollmentUncheckedUpdateManyInput,
+  ): Promise<{ count: number }> {
+    const matches = await this.prisma.enrollment.findMany({
+      where: filter,
+      select: { id: true },
+    });
+
+    const result = await this.prisma.enrollment.updateMany({
+      where: filter,
+      data: { status: newStatus, ...auditFields },
+    });
+
+    if (matches.length > 0) {
+      const now = new Date();
+      await this.prisma.enrollmentStateLog.createMany({
+        data: matches.map((m) => ({
+          enrollmentId: m.id,
+          status: newStatus,
+          transitionAt: now,
+          reason,
+          changedById: userId,
+        })),
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Cascade enrollment o'zgarishlarini guruh tarixiga yozadi.
    * updateMany dan OLDIN chaqirilishi kerak (chunki updateMany individual record qaytarmaydi).
    */
@@ -173,14 +212,17 @@ export class StatusCascadeService {
         });
 
         // Enrollmentlar → DROPPED
-        const enrollResult = await this.prisma.enrollment.updateMany({
-          where: {
+        const enrollResult = await this.cascadeEnrollmentStatus(
+          {
             group: { branchId },
             deletedAt: null,
             status: EnrollmentStatus.ACTIVE,
           },
-          data: { status: EnrollmentStatus.DROPPED, ...auditFields },
-        });
+          EnrollmentStatus.DROPPED,
+          reason ?? null,
+          userId,
+          auditFields,
+        );
         results.push({
           entity: 'Enrollment',
           count: enrollResult.count,
@@ -262,14 +304,17 @@ export class StatusCascadeService {
         });
 
         // Enrollmentlar → DROPPED
-        const enrollResult = await this.prisma.enrollment.updateMany({
-          where: {
+        const enrollResult = await this.cascadeEnrollmentStatus(
+          {
             group: { courseId: entityId },
             deletedAt: null,
             status: EnrollmentStatus.ACTIVE,
           },
-          data: { status: EnrollmentStatus.DROPPED, ...auditFields },
-        });
+          EnrollmentStatus.DROPPED,
+          reason ?? null,
+          userId,
+          auditFields,
+        );
         results.push({
           entity: 'Enrollment',
           count: enrollResult.count,
@@ -283,14 +328,17 @@ export class StatusCascadeService {
         newStatus === GroupStatus.CANCELLED ||
         newStatus === GroupStatus.ARCHIVED
       ) {
-        const enrollResult = await this.prisma.enrollment.updateMany({
-          where: {
+        const enrollResult = await this.cascadeEnrollmentStatus(
+          {
             groupId: entityId,
             deletedAt: null,
             status: EnrollmentStatus.ACTIVE,
           },
-          data: { status: EnrollmentStatus.DROPPED, ...auditFields },
-        });
+          EnrollmentStatus.DROPPED,
+          reason ?? null,
+          userId,
+          auditFields,
+        );
         results.push({
           entity: 'Enrollment',
           count: enrollResult.count,
@@ -298,14 +346,17 @@ export class StatusCascadeService {
         });
       } else if (newStatus === GroupStatus.COMPLETED) {
         // 1) ACTIVE enrollment → COMPLETED
-        const enrollResult = await this.prisma.enrollment.updateMany({
-          where: {
+        const enrollResult = await this.cascadeEnrollmentStatus(
+          {
             groupId: entityId,
             deletedAt: null,
             status: EnrollmentStatus.ACTIVE,
           },
-          data: { status: EnrollmentStatus.COMPLETED, ...auditFields },
-        });
+          EnrollmentStatus.COMPLETED,
+          reason ?? null,
+          userId,
+          auditFields,
+        );
         results.push({
           entity: 'Enrollment',
           count: enrollResult.count,
@@ -393,10 +444,13 @@ export class StatusCascadeService {
           'OQUVCHI_MUZLATILDI',
           userId,
         );
-        const enrollResult = await this.prisma.enrollment.updateMany({
-          where: filter,
-          data: { status: EnrollmentStatus.FROZEN, ...auditFields },
-        });
+        const enrollResult = await this.cascadeEnrollmentStatus(
+          filter,
+          EnrollmentStatus.FROZEN,
+          reason ?? null,
+          userId,
+          auditFields,
+        );
         results.push({
           entity: 'Enrollment',
           count: enrollResult.count,
@@ -418,10 +472,13 @@ export class StatusCascadeService {
           userId,
           'add',
         );
-        const enrollResult = await this.prisma.enrollment.updateMany({
-          where: filter,
-          data: { status: EnrollmentStatus.ACTIVE, ...auditFields },
-        });
+        const enrollResult = await this.cascadeEnrollmentStatus(
+          filter,
+          EnrollmentStatus.ACTIVE,
+          reason ?? null,
+          userId,
+          auditFields,
+        );
         results.push({
           entity: 'Enrollment',
           count: enrollResult.count,
@@ -447,10 +504,13 @@ export class StatusCascadeService {
           action,
           userId,
         );
-        const enrollResult = await this.prisma.enrollment.updateMany({
-          where: filter,
-          data: { status: EnrollmentStatus.DROPPED, ...auditFields },
-        });
+        const enrollResult = await this.cascadeEnrollmentStatus(
+          filter,
+          EnrollmentStatus.DROPPED,
+          reason ?? null,
+          userId,
+          auditFields,
+        );
         results.push({
           entity: 'Enrollment',
           count: enrollResult.count,

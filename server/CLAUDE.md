@@ -176,6 +176,55 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 | User | ✅ | ✅ (profile) | — | — | — |
 | Holiday | — | — | ✅ | — | — |
 
+### Activity Report Snapshots (Point-in-Time History)
+
+Powers the `/reports/activity` page so historical periods (e.g. "Feb 2-20" before a capacity change) reflect the **state as of that date**, not the current state.
+
+#### Tables
+
+Four dedicated tables in `prisma/schema.prisma`:
+
+| Table | Pattern | Tracks |
+|-------|---------|--------|
+| `RoomCapacitySnapshot` | SCD2 (`validFrom` / `validTo`) | Room capacity changes |
+| `GroupScheduleSnapshot` | SCD2 | Group `exactDays`, `lessonStartTime/endTime`, `courseId` |
+| `CoursePriceSnapshot` | SCD2 | Course price changes |
+| `EnrollmentStateLog` | Event log (`transitionAt`) | Every enrollment status transition |
+
+SCD2 tables: on update, the old row gets `validTo = now()` and a new row is inserted with `validFrom = now()`. Query "state on date X" via `WHERE validFrom <= X AND (validTo IS NULL OR validTo > X)`.
+
+Event log: append-only. Query latest status via `MAX(transitionAt) WHERE transitionAt <= X`. Required because enrollment status can transition multiple times (`ACTIVE → FROZEN → ACTIVE`) — SCD2 single-row-per-current-state can't represent this without a separate intermediate row per change.
+
+#### Write Hooks (mandatory)
+
+Every entity update that touches a tracked field MUST also write a snapshot row. These hooks already exist:
+
+- `RoomsService.create()` / `update()` — capacity hook
+- `GroupsWriteService.create()` / `update()` — schedule hook (exactDays / lessonStartTime / lessonEndTime / courseId)
+- `CoursesService.create()` / `update()` — price hook
+- `StudentEnrollmentService.assignToGroup()` / `removeFromGroup()` — state log
+- `StatusCascadeService.cascadeEnrollmentStatus()` — helper used by all cascade transitions (Branch/Course/Group/Student status changes that flip enrollments)
+- `ArchiveRestoreService.restoreBatch()` — restore creates ACTIVE event
+- `telegram/scenes/student-registration-flow.ts` — telegram bot enrollment
+
+**When adding new code that mutates these fields:** wire the corresponding snapshot write or the activity report will silently use the new value retroactively.
+
+#### Reads (`reports-center-activity.service.ts`)
+
+`loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
+
+#### Backfill
+
+For existing entities, run the idempotent backfill script after deploying the migration:
+
+```
+cd server
+npx ts-node scripts/backfill-activity-snapshots.ts --dry-run
+npx ts-node scripts/backfill-activity-snapshots.ts
+```
+
+Creates one initial snapshot per existing room/group/course (with `validFrom = entity.createdAt`) and one or two state log entries per enrollment (initial ACTIVE + optional transition based on `statusChangedAt`).
+
 ### Attendance (Davomat)
 
 - `AttendanceModule` (`src/attendance/`) — manual + QR-based attendance system

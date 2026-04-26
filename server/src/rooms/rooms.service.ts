@@ -191,6 +191,18 @@ export class RoomsService {
       companyId,
     });
 
+    // Activity report snapshot — initial capacity
+    if (room.capacity != null) {
+      await this.prisma.roomCapacitySnapshot.create({
+        data: {
+          roomId: room.id,
+          capacity: room.capacity,
+          validFrom: room.createdAt,
+          changedById: userId,
+        },
+      });
+    }
+
     await this.invalidateActivityCache(companyId);
 
     return room;
@@ -223,6 +235,29 @@ export class RoomsService {
       changedById: userId,
       companyId: room.companyId ?? undefined,
     });
+
+    // Activity report snapshot — capacity change starts a new SCD2 row
+    if (
+      dto.capacity !== undefined &&
+      dto.capacity !== room.capacity &&
+      dto.capacity != null
+    ) {
+      const now = new Date();
+      await this.prisma.$transaction([
+        this.prisma.roomCapacitySnapshot.updateMany({
+          where: { roomId: id, validTo: null },
+          data: { validTo: now },
+        }),
+        this.prisma.roomCapacitySnapshot.create({
+          data: {
+            roomId: id,
+            capacity: dto.capacity,
+            validFrom: now,
+            changedById: userId,
+          },
+        }),
+      ]);
+    }
 
     if (room.companyId != null) {
       await this.invalidateActivityCache(room.companyId);
