@@ -11,6 +11,19 @@ import {
   ListTodo,
   type LucideIcon,
 } from "lucide-react";
+import { paymentsNavItems } from "./payments-nav";
+import { reportsNavSections } from "./reports-nav";
+import { settingsNavSections } from "./settings-nav";
+
+export interface NavItemChild {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  /** When set, only users with at least one matching role ID see the item. Omit to show to all. */
+  visibleForRoles?: number[];
+  /** Optional nested sub-items rendered as an inner dropdown. */
+  children?: NavItemChild[];
+}
 
 export interface NavItem {
   title: string;
@@ -18,7 +31,12 @@ export interface NavItem {
   icon: LucideIcon;
   /** When set, only users with at least one matching role ID see the item. Omit to show to all. */
   visibleForRoles?: number[];
+  /** When provided, the item renders as a collapsible group with these sub-links. */
+  children?: NavItemChild[];
 }
+
+const reportsChildren: NavItemChild[] = reportsNavSections.flatMap((s) => s.items);
+const settingsChildren: NavItemChild[] = settingsNavSections.flatMap((s) => s.items);
 
 export const navItems: NavItem[] = [
   { title: "Bosh sahifa", url: "/", icon: LayoutDashboard },
@@ -28,7 +46,25 @@ export const navItems: NavItem[] = [
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
 
-  { title: "Moliya", url: "/payments", icon: DollarSign, visibleForRoles: [1, 2, 3, 5] },
-  { title: "Hisobotlar", url: "/reports", icon: BarChart3, visibleForRoles: [1, 2] },
-  { title: "Sozlamalar", url: "/settings", icon: Settings, visibleForRoles: [1, 2, 3] },
+  {
+    title: "Moliya",
+    url: "/payments",
+    icon: DollarSign,
+    visibleForRoles: [1, 2, 3, 5],
+    children: paymentsNavItems,
+  },
+  {
+    title: "Hisobotlar",
+    url: "/reports",
+    icon: BarChart3,
+    visibleForRoles: [1, 2],
+    children: reportsChildren,
+  },
+  {
+    title: "Sozlamalar",
+    url: "/settings",
+    icon: Settings,
+    visibleForRoles: [1, 2, 3],
+    children: settingsChildren,
+  },
 ];
