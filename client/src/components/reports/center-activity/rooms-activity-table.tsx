@@ -30,7 +30,7 @@ import {
   type CenterActivityRoom,
   formatPctValue,
   getFikColor,
-  KPI_TOOLTIPS,
+  TABLE_TOOLTIPS,
 } from "./metric-helpers";
 
 interface Props {
@@ -42,6 +42,32 @@ interface Props {
 }
 
 const PAGE_SIZES = [10, 20, 30, 40, 50];
+
+interface HeaderWithTooltipProps {
+  label: string;
+  tooltip: string;
+  align?: "left" | "right";
+}
+
+function HeaderWithTooltip({ label, tooltip, align = "left" }: HeaderWithTooltipProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            "cursor-help underline decoration-dotted decoration-muted-foreground/40 underline-offset-4",
+            align === "right" && "block text-right",
+          )}
+        >
+          {label}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs whitespace-pre-line">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 function renderGroupCount(
   groups: CenterActivityRoom["groups"],
@@ -150,29 +176,96 @@ export function RoomsActivityTable({
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Xona</TableHead>
-              <TableHead className="text-right">Sig&apos;im</TableHead>
-              <TableHead className="text-right">Ish vaqti</TableHead>
-              <TableHead className="text-right">Guruhlar</TableHead>
-              <TableHead className="text-right">O&apos;quvchilar</TableHead>
-              <TableHead className="text-right">Bo&apos;sh o&apos;rin</TableHead>
-              <TableHead className="text-right">Dars soatlari</TableHead>
-              <TableHead className="text-right">Kurs narxi</TableHead>
-              <TableHead className="text-right">Jami summa</TableHead>
-              <TableHead className="text-right">Bo&apos;sh vaqt</TableHead>
-              <TableHead className="text-right">O&apos;rinsoat</TableHead>
-              <TableHead className="text-right">Amaldagi o&apos;rinsoat</TableHead>
-              <TableHead className="text-right">Reja o&apos;rinsoat</TableHead>
               <TableHead className="text-right">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="cursor-help underline decoration-dotted">
-                      FIK %
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    {KPI_TOOLTIPS.fik}
-                  </TooltipContent>
-                </Tooltip>
+                <HeaderWithTooltip
+                  label="Sig'im"
+                  tooltip={TABLE_TOOLTIPS.capacity}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Ish vaqti"
+                  tooltip={TABLE_TOOLTIPS.workingHours}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Guruhlar"
+                  tooltip={TABLE_TOOLTIPS.groups}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="O'quvchilar"
+                  tooltip={TABLE_TOOLTIPS.enrolled}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Bo'sh o'rin"
+                  tooltip={TABLE_TOOLTIPS.emptySeats}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Dars soatlari"
+                  tooltip={TABLE_TOOLTIPS.lessonHours}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Kurs narxi"
+                  tooltip={TABLE_TOOLTIPS.coursePrice}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Jami summa"
+                  tooltip={TABLE_TOOLTIPS.totalRevenue}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Bo'sh vaqt"
+                  tooltip={TABLE_TOOLTIPS.idleTime}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="O'rinsoat"
+                  tooltip={TABLE_TOOLTIPS.seatHoursScheduled}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Amaldagi o'rinsoat"
+                  tooltip={TABLE_TOOLTIPS.seatHoursActual}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Reja o'rinsoat"
+                  tooltip={TABLE_TOOLTIPS.seatHoursPlanned}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="FIK %"
+                  tooltip={TABLE_TOOLTIPS.fik}
+                  align="right"
+                />
               </TableHead>
               {canEdit && <TableHead className="w-12" />}
             </TableRow>

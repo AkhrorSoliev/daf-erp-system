@@ -136,6 +136,35 @@ export const KPI_TOOLTIPS = {
   fik: "FIK (Foydalanish Intensivlik Koeffitsienti). Hisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100. Reja o'rinsoat = sig'im × ish vaqti.",
 };
 
+export const TABLE_TOOLTIPS = {
+  capacity:
+    "Xonaning maksimal o'quvchi sig'imi (jismoniy o'rindiqlar soni).",
+  workingHours:
+    "Xonaning haftalik ish soati. Hisob: markaz kunlik ish soati × 7 kun. Misol: 12h × 7 = 84h.",
+  groups:
+    "Xonada dars o'tayotgan faol guruhlar soni. Sichqonchani ustiga olib kelsangiz guruh nomlari va o'quvchi soni ko'rinadi.",
+  enrolled:
+    "Xona guruhlaridagi jami o'quvchilar yig'indisi. Bir o'quvchi bir nechta guruhda bo'lsa, har birida sanaladi.",
+  emptySeats:
+    "Bir vaqtning o'zida bo'sh turgan jismoniy o'rindiqlar soni. Hisob: sig'im − eng ko'p o'quvchili guruh.",
+  lessonHours:
+    "Xonadagi barcha guruhlar uchun jami haftalik dars soatlari. Misol: 3 guruh × har biri 6h = 18h.",
+  coursePrice:
+    "Guruhlardagi unikal kurs narxlari oralig'i. Sichqonchani ustiga olib kelsangiz barcha unikal narxlar ko'rinadi.",
+  totalRevenue:
+    "Xonadan olinadigan jami daromad. Hisob: har guruh uchun (o'quvchilar × kurs narxi), barchasi yig'iladi.",
+  idleTime:
+    "Xonaning haftada bo'sh qolgan ish vaqti. Hisob: ish vaqti − jami dars soatlari. Misol: 84h − 18h = 66h. Kam bo'sh vaqt yaxshi foydalanishni bildiradi.",
+  seatHoursScheduled:
+    "Xonada haftada amalda taklif qilinayotgan o'rin-soatlar. Hisob: sig'im × jami dars soatlari. Misol: 14 stol × 18h dars = 252 o'rinsoat. Bu — guruhlar tashkil etilgan vaqtdagi maksimal sig'im.",
+  seatHoursActual:
+    "Haqiqatan band bo'lgan o'rin-soatlar. Hisob: har guruh uchun (o'quvchilar × dars soatlari), barchasi yig'iladi. Misol: 10 × 6h + 12 × 6h = 132 o'rinsoat.",
+  seatHoursPlanned:
+    "Nazariy maksimal o'rin-soatlar (agar xona to'liq sig'imda butun ish vaqtida ishlasa). Hisob: sig'im × ish vaqti. Misol: 14 stol × 84h = 1,176 o'rinsoat.",
+  fik:
+    "FIK — Foydalanish Intensivligi Koeffitsienti. Hisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100. Yashil ≥ 70%, sariq 40-70%, qizil < 40%.",
+};
+
 export const BUCKET_LABELS: Record<CenterActivityBucket, string> = {
   daily: "Kunlik",
   weekly: "Haftalik",
