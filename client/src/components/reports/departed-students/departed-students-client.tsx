@@ -32,8 +32,6 @@ import {
   type DepartedStudentRow,
 } from "./departed-students-table";
 import { TeacherChangeRetentionCards } from "./teacher-change-retention-cards";
-import { TeacherChangeReasonsChart } from "./teacher-change-reasons-chart";
-import { TransferReasonsChart } from "./transfer-reasons-chart";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
   Select,
@@ -267,36 +265,6 @@ export function DepartedStudentsClient() {
 
       <DepartedStudentsKpiCards data={summary} isLoading={summaryLoading} />
 
-      <TeacherChangeRetentionCards
-        data={
-          summary
-            ? {
-                totalTeacherChanges: summary.totalTeacherChanges,
-                departedAfterTeacherChange: summary.departedAfterTeacherChange,
-              }
-            : undefined
-        }
-        isLoading={summaryLoading}
-        queryParams={summaryParams}
-      />
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <TeacherChangeReasonsChart
-          branchId={filter.branchId}
-          courseId={filter.courseId}
-          teacherIds={filter.teacherIds}
-          startDate={startStr}
-          endDate={endStr}
-        />
-        <TransferReasonsChart
-          branchId={filter.branchId}
-          courseId={filter.courseId}
-          teacherIds={filter.teacherIds}
-          startDate={startStr}
-          endDate={endStr}
-        />
-      </div>
-
       <div className="grid gap-3 lg:grid-cols-2">
         <DepartedStudentsDynamicsChart
           branchId={filter.branchId}
@@ -324,12 +292,26 @@ export function DepartedStudentsClient() {
         onGroupByChange={handleGroupByChange}
       />
 
+      <TeacherChangeRetentionCards
+        data={
+          summary
+            ? {
+              totalTeacherChanges: summary.totalTeacherChanges,
+              departedAfterTeacherChange: summary.departedAfterTeacherChange,
+            }
+            : undefined
+        }
+        isLoading={summaryLoading}
+        queryParams={summaryParams}
+      />
+
       <DepartedStudentsTable
         data={listData?.data}
         isLoading={listLoading}
         page={clampedPage}
         pageSize={tablePageSize}
       />
+
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
