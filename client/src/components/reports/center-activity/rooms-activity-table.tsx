@@ -43,35 +43,66 @@ interface Props {
 
 const PAGE_SIZES = [10, 20, 30, 40, 50];
 
-function joinGroups(groups: CenterActivityRoom["groups"]): React.ReactNode {
+function renderGroupCount(
+  groups: CenterActivityRoom["groups"],
+): React.ReactNode {
   if (groups.length === 0) {
     return <span className="text-muted-foreground">—</span>;
   }
-  if (groups.length <= 3) {
-    return groups.map((g) => g.name).join(", ");
-  }
-  const visible = groups.slice(0, 3).map((g) => g.name).join(", ");
-  const rest = groups.slice(3);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="cursor-help underline decoration-dotted">
-          {visible}, +{rest.length} ta
+        <span className="cursor-help underline decoration-dotted tabular-nums">
+          {groups.length} ta
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">
-        {rest.map((g) => g.name).join(", ")}
+        <div className="space-y-0.5 text-xs">
+          {groups.map((g) => (
+            <div key={g.id}>
+              {g.name}{" "}
+              <span className="text-muted-foreground">
+                — {g.enrolled} o&apos;quvchi
+              </span>
+            </div>
+          ))}
+        </div>
       </TooltipContent>
     </Tooltip>
   );
 }
 
-function joinNumbers(
-  values: number[],
-  formatter: (n: number) => string,
+function renderPriceRange(
+  groups: CenterActivityRoom["groups"],
 ): React.ReactNode {
-  if (values.length === 0) return <span className="text-muted-foreground">—</span>;
-  return values.map(formatter).join(", ");
+  if (groups.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const unique = Array.from(
+    new Set(groups.map((g) => g.coursePrice).filter((p) => p > 0)),
+  ).sort((a, b) => a - b);
+  if (unique.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  if (unique.length === 1) {
+    return formatPrice(unique[0]);
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-help underline decoration-dotted tabular-nums">
+          {formatPrice(unique[0])} — {formatPrice(unique[unique.length - 1])}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="space-y-0.5 text-xs">
+          {unique.map((p) => (
+            <div key={p}>{formatPrice(p)} so&apos;m</div>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function RoomsActivityTable({
@@ -121,11 +152,11 @@ export function RoomsActivityTable({
               <TableHead>Xona</TableHead>
               <TableHead className="text-right">Sig&apos;im</TableHead>
               <TableHead className="text-right">Ish vaqti</TableHead>
-              <TableHead>Guruhlar</TableHead>
+              <TableHead className="text-right">Guruhlar</TableHead>
               <TableHead className="text-right">O&apos;quvchilar</TableHead>
               <TableHead className="text-right">Bo&apos;sh o&apos;rin</TableHead>
-              <TableHead>Dars soatlari</TableHead>
-              <TableHead>Kurs narxi</TableHead>
+              <TableHead className="text-right">Dars soatlari</TableHead>
+              <TableHead className="text-right">Kurs narxi</TableHead>
               <TableHead className="text-right">Jami summa</TableHead>
               <TableHead className="text-right">Bo&apos;sh vaqt</TableHead>
               <TableHead className="text-right">O&apos;rinsoat</TableHead>
@@ -171,8 +202,6 @@ export function RoomsActivityTable({
             {!isLoading &&
               slice.map((r, i) => {
                 const num = start + i + 1;
-                const lessonHours = r.groups.map((g) => g.lessonHoursPerWeek);
-                const coursePrices = r.groups.map((g) => g.coursePrice);
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="border-r text-muted-foreground">
@@ -201,18 +230,20 @@ export function RoomsActivityTable({
                     <TableCell className="text-right tabular-nums">
                       {r.workingHoursPerWeek}h
                     </TableCell>
-                    <TableCell>{joinGroups(r.groups)}</TableCell>
+                    <TableCell className="text-right">
+                      {renderGroupCount(r.groups)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {r.totals.enrolled}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {r.totals.emptySeats}
                     </TableCell>
-                    <TableCell className="tabular-nums text-sm">
-                      {joinNumbers(lessonHours, (n) => `${n}h`)}
+                    <TableCell className="text-right tabular-nums">
+                      {r.totals.lessonHoursPerWeek}h
                     </TableCell>
-                    <TableCell className="tabular-nums text-sm">
-                      {joinNumbers(coursePrices, (n) => formatPrice(n))}
+                    <TableCell className="text-right tabular-nums">
+                      {renderPriceRange(r.groups)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatBalance(r.totals.revenueSum)}
