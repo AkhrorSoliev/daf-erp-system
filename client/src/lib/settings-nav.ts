@@ -4,8 +4,8 @@ import {
   CalendarOff,
   Archive,
   UserMinus,
-  Settings,
   Users,
+  Building,
   Building2,
   type LucideIcon,
 } from "lucide-react";
@@ -16,6 +16,8 @@ export interface SettingsNavItem {
   icon: LucideIcon;
   /** When set, only users with at least one matching role ID see the item. Omit to show to all. */
   visibleForRoles?: number[];
+  /** Optional nested sub-items rendered as an inner dropdown in the main sidebar. */
+  children?: SettingsNavItem[];
 }
 
 interface SettingsNavSection {
@@ -41,7 +43,12 @@ export const settingsNavSections: SettingsNavSection[] = [
   {
     title: "CEO",
     items: [
-      { title: "Umumiy sozlamalar", url: "/settings/general", icon: Settings, visibleForRoles: [1, 2, 3] },
+      {
+        title: "Kompaniya ma'lumotlari",
+        url: "/settings/general",
+        icon: Building,
+        visibleForRoles: [1, 2, 3],
+      },
       { title: "Xodimlar", url: "/settings/employees", icon: Users, visibleForRoles: [1, 2] },
       { title: "Filiallar", url: "/settings/branches", icon: Building2, visibleForRoles: [1, 2] },
     ],
