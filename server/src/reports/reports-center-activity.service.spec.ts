@@ -62,7 +62,7 @@ describe('ReportsCenterActivityService', () => {
         name: 'A2',
         roomId: 'r1',
         branchId: 1,
-        exactDays: ['MON', 'WED', 'FRI', 'SAT', 'SUN'],
+        exactDays: ['monday', 'wednesday', 'friday', 'saturday', 'sunday'],
         lessonStartTime: '09:00',
         lessonEndTime: '11:00', // 2h × 5 days = 10h/week
         startDate: new Date('2025-01-01'),
@@ -102,8 +102,8 @@ describe('ReportsCenterActivityService', () => {
       { id: 'r1', name: 'Xona 1', capacity: 20, branchId: 1, branch },
     ]);
     prisma.group.findMany.mockResolvedValue([
-      makeGroup('g1', 'r1', 15, ['MON'], '09:00', '11:00', 1_000_000),
-      makeGroup('g2', 'r1', 12, ['TUE'], '09:00', '11:00', 1_000_000),
+      makeGroup('g1', 'r1', 15, ['monday'], '09:00', '11:00', 1_000_000),
+      makeGroup('g2', 'r1', 12, ['tuesday'], '09:00', '11:00', 1_000_000),
     ]);
 
     const result = await service.getCenterActivity(1, makeQuery());
@@ -117,7 +117,7 @@ describe('ReportsCenterActivityService', () => {
       { id: 'r1', name: 'Xona 1', capacity: null, branchId: 1, branch },
     ]);
     prisma.group.findMany.mockResolvedValue([
-      makeGroup('g1', 'r1', 10, ['MON'], '09:00', '11:00', 500_000),
+      makeGroup('g1', 'r1', 10, ['monday'], '09:00', '11:00', 500_000),
     ]);
 
     const result = await service.getCenterActivity(1, makeQuery());
@@ -136,7 +136,7 @@ describe('ReportsCenterActivityService', () => {
         name: 'A',
         roomId: 'r1',
         branchId: 1,
-        exactDays: ['MON'],
+        exactDays: ['monday'],
         lessonStartTime: '09:00',
         lessonEndTime: '10:00',
         startDate: null,
@@ -153,7 +153,7 @@ describe('ReportsCenterActivityService', () => {
         name: 'B',
         roomId: 'r1',
         branchId: 1,
-        exactDays: ['TUE'],
+        exactDays: ['tuesday'],
         lessonStartTime: '09:00',
         lessonEndTime: '10:00',
         startDate: null,
@@ -177,8 +177,8 @@ describe('ReportsCenterActivityService', () => {
       { id: 'r2', name: 'Katta', capacity: 30, branchId: 1, branch },
     ]);
     prisma.group.findMany.mockResolvedValue([
-      makeGroup('g1', 'r1', 8, ['MON'], '09:00', '10:00', 500_000),
-      makeGroup('g2', 'r2', 5, ['MON'], '09:00', '10:00', 500_000),
+      makeGroup('g1', 'r1', 8, ['monday'], '09:00', '10:00', 500_000),
+      makeGroup('g2', 'r2', 5, ['monday'], '09:00', '10:00', 500_000),
     ]);
 
     const result = await service.getCenterActivity(1, makeQuery());
@@ -202,7 +202,7 @@ describe('ReportsCenterActivityService', () => {
         'g1',
         'r1',
         5,
-        ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
         '09:00',
         '10:00',
         100_000,
