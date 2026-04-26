@@ -17,6 +17,7 @@ export interface SearchItem {
   balance?: number | null;
   photo?: string | null;
   phone?: string | null;
+  status?: string | null;
 }
 
 interface CategoryResult {

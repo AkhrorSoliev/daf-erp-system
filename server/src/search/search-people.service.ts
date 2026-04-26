@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, EnrollmentStatus } from '@prisma/client';
+import { Prisma, EnrollmentStatus, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CategoryResult,
@@ -20,6 +20,7 @@ export class SearchPeopleService {
     phone: true,
     photo: true,
     balance: true,
+    status: true,
     enrollments: {
       where: { status: EnrollmentStatus.ACTIVE },
       take: 1,
@@ -48,6 +49,7 @@ export class SearchPeopleService {
     phone: string | null;
     photo: string | null;
     balance: number;
+    status: StudentStatus;
     enrollments: {
       group: {
         name: string;
@@ -66,6 +68,7 @@ export class SearchPeopleService {
       groupName: group?.name ?? null,
       teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : null,
       balance: s.balance ?? 0,
+      status: s.status === StudentStatus.ACTIVE ? null : s.status,
     };
   }
 
@@ -301,11 +304,20 @@ export class SearchPeopleService {
     } else if (isNumeric && numericValue) {
       where.OR = [
         { phone: { contains: search } },
+        { extraPhone: { contains: search } },
+        { parentPhone: { contains: search } },
         { id: { equals: numericValue } },
       ];
     } else {
       const nameConditions = buildNameConditions(search);
-      where.OR = [...nameConditions, { phone: { contains: search } }];
+      where.OR = [
+        ...nameConditions,
+        { phone: { contains: search } },
+        { extraPhone: { contains: search } },
+        { parentPhone: { contains: search } },
+        { parentName: { contains: search, mode: 'insensitive' } },
+        { telegram: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
     return where;
