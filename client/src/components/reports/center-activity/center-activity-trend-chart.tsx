@@ -52,7 +52,7 @@ function formatAxisValue(metric: string, value: number): string {
     case "utilizationPct":
       return `${value}%`;
     case "emptyHours":
-      return `${value}h`;
+      return value.toLocaleString("en-US");
     default:
       return value.toLocaleString("en-US");
   }
