@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RoomStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { RoomQueryDto } from './dto/room-query.dto';
@@ -13,9 +14,25 @@ import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
 export class RoomsService {
   constructor(
     private prisma: PrismaService,
+    private redis: RedisService,
     private statusHistoryService: StatusHistoryService,
     private entityHistoryService: EntityHistoryService,
   ) {}
+
+  private async invalidateActivityCache(companyId: number) {
+    const patterns = [
+      `reports:center-activity:${companyId}:*`,
+      `reports:room-util:${companyId}:*`,
+    ];
+    for (const pattern of patterns) {
+      const stream = this.redis.scanStream({ match: pattern, count: 100 });
+      for await (const keys of stream) {
+        if ((keys as string[]).length > 0) {
+          await this.redis.del(...(keys as string[]));
+        }
+      }
+    }
+  }
 
   async findAll(query: RoomQueryDto, companyId: number) {
     const where = {
@@ -174,6 +191,8 @@ export class RoomsService {
       companyId,
     });
 
+    await this.invalidateActivityCache(companyId);
+
     return room;
   }
 
@@ -204,6 +223,10 @@ export class RoomsService {
       changedById: userId,
       companyId: room.companyId ?? undefined,
     });
+
+    if (room.companyId != null) {
+      await this.invalidateActivityCache(room.companyId);
+    }
 
     return updated;
   }
@@ -249,6 +272,10 @@ export class RoomsService {
       changedById: userId,
       companyId: room.companyId ?? undefined,
     });
+
+    if (room.companyId != null) {
+      await this.invalidateActivityCache(room.companyId);
+    }
 
     return updated;
   }
@@ -303,6 +330,10 @@ export class RoomsService {
         statusChangeReason: "O'chirildi",
       },
     });
+
+    if (room.companyId != null) {
+      await this.invalidateActivityCache(room.companyId);
+    }
 
     return { message: "Xona muvaffaqiyatli o'chirildi" };
   }

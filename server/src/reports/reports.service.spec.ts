@@ -12,6 +12,7 @@ import { ReportsDepartedStudentsService } from './reports-departed-students.serv
 import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
+import { ReportsCenterActivityService } from './reports-center-activity.service';
 
 describe('ReportsService', () => {
   let service: ReportsService;
@@ -63,6 +64,7 @@ describe('ReportsService', () => {
       },
       groupTeacherChangeReason: { findMany: jest.fn().mockResolvedValue([]) },
       enrollmentTransferReason: { findMany: jest.fn().mockResolvedValue([]) },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
     };
     prisma.enrollment.groupBy = jest.fn();
     prisma.enrollment.findMany = jest.fn();
@@ -85,6 +87,7 @@ describe('ReportsService', () => {
         ReportsDepartedListsService,
         ReportsDepartedReasonsService,
         ReportsTeacherChangesService,
+        ReportsCenterActivityService,
         { provide: PrismaService, useValue: prisma },
         { provide: RedisService, useValue: redis },
       ],

@@ -11,6 +11,7 @@ import { ReportsDepartedStudentsService } from './reports-departed-students.serv
 import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
+import { ReportsCenterActivityService } from './reports-center-activity.service';
 
 @Module({
   controllers: [ReportsController],
@@ -26,6 +27,7 @@ import { ReportsTeacherChangesService } from './reports-teacher-changes.service'
     ReportsDepartedListsService,
     ReportsDepartedReasonsService,
     ReportsTeacherChangesService,
+    ReportsCenterActivityService,
   ],
 })
 export class ReportsModule {}

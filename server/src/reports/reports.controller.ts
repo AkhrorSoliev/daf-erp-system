@@ -13,6 +13,7 @@ import { StudentPaymentsReportQueryDto } from './dto/student-payments-report-que
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
+import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -36,6 +37,14 @@ export class ReportsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.reportsService.getRoomUtilization(companyId, query);
+  }
+
+  @Get('center-activity')
+  getCenterActivity(
+    @Query() query: CenterActivityQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getCenterActivity(companyId, query);
   }
 
   @Get('teacher-performance')
