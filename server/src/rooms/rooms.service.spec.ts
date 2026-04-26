@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 
@@ -58,6 +59,17 @@ describe('RoomsService — status methods', () => {
             recordDelete: jest.fn(),
             recordStatusChange: jest.fn(),
             recordRestore: jest.fn(),
+          },
+        },
+        {
+          provide: RedisService,
+          useValue: {
+            scanStream: jest.fn().mockReturnValue(
+              (async function* () {
+                /* no keys */
+              })(),
+            ),
+            del: jest.fn().mockResolvedValue(0),
           },
         },
       ],

@@ -10,6 +10,8 @@ import { ReportsDepartedStudentsService } from './reports-departed-students.serv
 import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
+import { ReportsCenterActivityService } from './reports-center-activity.service';
+import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 
 @Injectable()
 export class ReportsService {
@@ -24,7 +26,13 @@ export class ReportsService {
     private departedLists: ReportsDepartedListsService,
     private departedReasons: ReportsDepartedReasonsService,
     private teacherChanges: ReportsTeacherChangesService,
+    private centerActivity: ReportsCenterActivityService,
   ) {}
+
+  // Center activity
+  getCenterActivity(companyId: number, query: CenterActivityQueryDto) {
+    return this.centerActivity.getCenterActivity(companyId, query);
+  }
 
   // Overview
   getKpis(companyId: number, query: ReportsQueryDto) {
