@@ -170,9 +170,9 @@ export function RoomsActivityTable({
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto border-t">
         <Table>
-          <TableHeader>
+          <TableHeader className="[&_th]:border-r [&_th:last-child]:border-r-0 [&_th]:bg-muted/40">
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Xona</TableHead>
