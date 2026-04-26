@@ -59,6 +59,7 @@ interface GroupRecord {
   lessonEndTime: string | null;
   startDate: Date | null;
   endDate: Date | null;
+  createdAt: Date;
   course: { price: number } | null;
   enrollments: Array<{
     id: string;
@@ -128,6 +129,7 @@ export class ReportsCenterActivityService {
           lessonEndTime: true,
           startDate: true,
           endDate: true,
+          createdAt: true,
           course: { select: { price: true } },
           enrollments: {
             where: { deletedAt: null },
@@ -460,6 +462,24 @@ export class ReportsCenterActivityService {
       const iso = this.toIsoDate(cursor);
       const isHoliday = holidayDates.has(iso);
 
+      // If no group existed in the system by this date, the system had no
+      // operational data — emit zeros across all metrics rather than treating
+      // empty rooms as "all idle hours wasted".
+      const anyGroupExistedByDate = groups.some((g) => g.createdAt <= cursor);
+      if (!anyGroupExistedByDate) {
+        daily.push({
+          date: new Date(cursor),
+          iso,
+          utilizationPct: 0,
+          emptyHours: 0,
+          activeStudents: 0,
+          emptySeats: 0,
+          extraStudentsCapacity: 0,
+        });
+        cursor.setDate(cursor.getDate() + 1);
+        continue;
+      }
+
       let totalScheduledHoursToday = 0;
       let totalWorkingHoursToday = 0;
       let totalIdle = 0;
@@ -752,6 +772,8 @@ export class ReportsCenterActivityService {
   }
 
   private groupActiveOn(g: GroupRecord, date: Date): boolean {
+    // Group can't exist in the system before it was created
+    if (g.createdAt > date) return false;
     if (g.startDate && date < g.startDate) return false;
     if (g.endDate && date > g.endDate) return false;
     return true;
