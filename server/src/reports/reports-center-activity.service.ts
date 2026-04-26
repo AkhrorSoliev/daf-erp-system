@@ -169,12 +169,30 @@ export class ReportsCenterActivityService {
       groupsByRoom.set(g.roomId, list);
     }
 
-    const roomsResponse = rooms.map((room) =>
-      this.buildRoomEntry(room, groupsByRoom.get(room.id) ?? [], periodScale),
-    );
+    // Snapshot at the END of the selected period: only count groups that
+    // existed by then, and only enrollments that were active by then.
+    // For periods entirely before any group existed, all metrics are 0.
+    const allRoomEntries = rooms.map((room) => {
+      const filteredGroups = (groupsByRoom.get(room.id) ?? []).filter(
+        (g) => g.createdAt <= range.end,
+      );
+      return this.buildRoomEntry(
+        room,
+        filteredGroups,
+        periodScale,
+        range.end,
+      );
+    });
 
+    // KPI aggregate considers all rooms (empty rooms count as wasted
+    // capacity in operational periods).
     const activeStudents = this.countDistinctActiveStudents(groups, range);
-    const kpis = this.aggregateKpis(roomsResponse, activeStudents);
+    const kpis = this.aggregateKpis(allRoomEntries, activeStudents);
+
+    // Table & breakdown only show rooms that had groups in this period.
+    const roomsResponse = allRoomEntries.filter(
+      (r) => r.totals.groupCount > 0,
+    );
     const potentialBreakdown = this.buildPotentialBreakdown(roomsResponse);
     const trend = this.buildTrend(
       rooms,
@@ -206,13 +224,14 @@ export class ReportsCenterActivityService {
     room: RoomRecord,
     roomGroups: GroupRecord[],
     periodScale: number,
+    asOfDate: Date,
   ) {
     const workingHoursPerDay = this.computeWorkingHoursPerDay(room.branch);
     const workingHoursPerWeek = workingHoursPerDay * 7;
 
     const groupEntries = roomGroups.map((g) => {
-      const enrolled = g.enrollments.filter(
-        (e) => e.status === 'ACTIVE',
+      const enrolled = g.enrollments.filter((e) =>
+        this.enrollmentActiveOn(e, asOfDate),
       ).length;
       const lessonHoursPerLesson = this.computeLessonHours(
         g.lessonStartTime,
@@ -246,12 +265,17 @@ export class ReportsCenterActivityService {
     );
 
     const capacity = room.capacity;
+    // If no groups exist as of this date, the room is "not in operation"
+    // for this period — emit zeros across the board so pre-launch periods
+    // don't inflate emptyHours / emptySeats.
+    const noGroups = roomGroups.length === 0;
     const emptySeats =
-      capacity != null ? Math.max(0, capacity - maxEnrolledByGroup) : 0;
-    const idleHoursPerWeek = Math.max(
-      0,
-      workingHoursPerWeek - lessonHoursPerWeek,
-    );
+      noGroups || capacity == null
+        ? 0
+        : Math.max(0, capacity - maxEnrolledByGroup);
+    const idleHoursPerWeek = noGroups
+      ? 0
+      : Math.max(0, workingHoursPerWeek - lessonHoursPerWeek);
 
     // Yana o'qishi mumkin bo'lgan o'quvchilar = jami bo'sh enrollment slotlari
     // (har guruh uchun: capacity - enrolled, jami yig'indisi)
@@ -374,9 +398,9 @@ export class ReportsCenterActivityService {
   ): number {
     const studentIds = new Set<number>();
     for (const g of groups) {
+      if (g.createdAt > range.end) continue;
       for (const e of g.enrollments) {
-        if (e.status !== 'ACTIVE') continue;
-        if (e.createdAt > range.end) continue;
+        if (!this.enrollmentActiveOn(e, range.end)) continue;
         studentIds.add(e.studentId);
       }
     }

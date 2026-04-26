@@ -242,6 +242,58 @@ describe('ReportsCenterActivityService', () => {
     expect(potentialBreakdown.maxIncome).toBe(20_000_000);
   });
 
+  it('KPI cards show zero for periods before any group existed', async () => {
+    // Group + enrollment created on 2026-04-01.
+    // Selected period: Feb 2 - Feb 20, 2026 (entirely before launch).
+    // All KPIs should be 0; rooms list should be empty (no operational data).
+    prisma.room.findMany.mockResolvedValue([
+      { id: 'r1', name: 'X', capacity: 14, branchId: 1, branch },
+    ]);
+    prisma.group.findMany.mockResolvedValue([
+      {
+        id: 'g1',
+        name: 'A',
+        roomId: 'r1',
+        branchId: 1,
+        exactDays: ['monday'],
+        lessonStartTime: '09:00',
+        lessonEndTime: '11:00',
+        startDate: null,
+        endDate: null,
+        createdAt: new Date('2026-04-01'),
+        course: { price: 500_000 },
+        enrollments: [
+          {
+            id: 'e1',
+            studentId: 100,
+            createdAt: new Date('2026-04-01'),
+            statusChangedAt: null,
+            status: 'ACTIVE',
+          },
+        ],
+      },
+    ]);
+
+    const result = await service.getCenterActivity(
+      1,
+      makeQuery({
+        startDate: '2026-02-02',
+        endDate: '2026-02-20',
+        bucket: 'daily',
+      }),
+    );
+
+    expect(result.kpis.utilizationPct).toBe(0);
+    expect(result.kpis.emptyHours).toBe(0);
+    expect(result.kpis.activeStudents).toBe(0);
+    expect(result.kpis.potentialExtraRevenue).toBe(0);
+    expect(result.kpis.emptySeats).toBe(0);
+    expect(result.kpis.extraStudentsCapacity).toBe(0);
+    expect(result.rooms).toHaveLength(0);
+    expect(result.potentialBreakdown.currentIncome).toBe(0);
+    expect(result.potentialBreakdown.maxIncome).toBe(0);
+  });
+
   it('returns zero metrics in trend buckets before any group existed', async () => {
     // Group created on 2026-04-01. Range is 2026-01-01 to 2026-04-30 monthly.
     // Yan/Fev/Mart should be 0 across all metrics; Apr should have data.
