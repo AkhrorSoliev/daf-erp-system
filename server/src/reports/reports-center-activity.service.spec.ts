@@ -93,10 +93,9 @@ describe('ReportsCenterActivityService', () => {
     expect(room.totals.potentialExtraRevenue).toBe(10_000_000);
     expect(result.kpis.activeStudents).toBe(10);
     expect(result.kpis.emptySeats).toBe(10);
-    // theoreticalMax = capacity(20) × possibleGroups(floor(84h/10h)=8) = 160
-    // extraCapacity = 160 − 10 enrolled = 150
-    expect(result.kpis.extraStudentsCapacity).toBe(150);
-    expect(result.rooms[0].totals.theoreticalMaxStudents).toBe(160);
+    // extraStudentsCapacity = sum of (capacity - enrolled) per group
+    // = (20 - 10) = 10 for the single group
+    expect(result.kpis.extraStudentsCapacity).toBe(10);
     expect(result.kpis.potentialExtraRevenue).toBe(10_000_000);
   });
 
@@ -115,13 +114,31 @@ describe('ReportsCenterActivityService', () => {
     expect(result.kpis.emptySeats).toBe(5);
   });
 
-  it('extraStudentsCapacity uses time-slot formula, not just empty seats', async () => {
-    // 14-seat room, 12h/day × 7 = 84h/week working
-    // One group: 10 students, 6h/week (3 days × 2h)
-    // possibleGroups = floor(84 / 6) = 14
-    // theoreticalMax = 14 × 14 = 196
-    // extraCapacity = 196 − 10 = 186
-    // emptySeats (different metric) = 14 − 10 = 4
+  it('emptySeats is peak-based, extraStudentsCapacity sums slots across groups', async () => {
+    // 14-seat room with 2 groups
+    //   Group A: 10 enrolled (Mon mornings) → 4 empty in this group
+    //   Group B: 12 enrolled (Tue evenings)  → 2 empty in this group
+    // emptySeats (peak)        = 14 − max(10, 12) = 2
+    // extraStudentsCapacity    = 4 + 2 = 6
+    prisma.room.findMany.mockResolvedValue([
+      { id: 'r1', name: 'X', capacity: 14, branchId: 1, branch },
+    ]);
+    prisma.group.findMany.mockResolvedValue([
+      makeGroup('a', 'r1', 10, ['monday'], '09:00', '11:00', 500_000),
+      makeGroup('b', 'r1', 12, ['tuesday'], '18:00', '20:00', 500_000),
+    ]);
+
+    const result = await service.getCenterActivity(1, makeQuery());
+    expect(result.rooms[0].totals.emptySeats).toBe(2);
+    expect(result.rooms[0].totals.extraStudentsCapacity).toBe(6);
+    expect(result.kpis.emptySeats).toBe(2);
+    expect(result.kpis.extraStudentsCapacity).toBe(6);
+  });
+
+  it('utilizationPct uses room-hour basis, not seat-hour', async () => {
+    // 1 room, 12h/day × 7 = 84h/week working
+    // 1 group: 6h/week scheduled (3 days × 2h)
+    // utilization = 6 / 84 ≈ 7.1%
     prisma.room.findMany.mockResolvedValue([
       { id: 'r1', name: 'X', capacity: 14, branchId: 1, branch },
     ]);
@@ -132,17 +149,13 @@ describe('ReportsCenterActivityService', () => {
         10,
         ['monday', 'wednesday', 'friday'],
         '09:00',
-        '11:00', // 2h × 3 = 6h/week
+        '11:00',
         500_000,
       ),
     ]);
 
     const result = await service.getCenterActivity(1, makeQuery());
-    expect(result.rooms[0].totals.emptySeats).toBe(4);
-    expect(result.rooms[0].totals.theoreticalMaxStudents).toBe(196);
-    expect(result.rooms[0].totals.extraStudentsCapacity).toBe(186);
-    expect(result.kpis.emptySeats).toBe(4);
-    expect(result.kpis.extraStudentsCapacity).toBe(186);
+    expect(result.kpis.utilizationPct).toBeCloseTo(7.1, 1);
   });
 
   it('returns null FIK when capacity is missing', async () => {

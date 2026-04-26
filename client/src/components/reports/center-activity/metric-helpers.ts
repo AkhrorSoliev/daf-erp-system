@@ -23,7 +23,6 @@ export interface CenterActivityRoomTotals {
   enrolled: number;
   emptySeats: number;
   extraStudentsCapacity: number;
-  theoreticalMaxStudents: number;
   lessonHoursPerWeek: number;
   idleHoursPerWeek: number;
   idleHoursPeriod: number;
@@ -122,8 +121,8 @@ export function getUtilizationColor(pct: number): string | undefined {
 }
 
 export const KPI_TOOLTIPS = {
-  utilization:
-    "Markazning umumiy foydalanish darajasi. Hisob: jami amaldagi o'rinsoat ÷ jami reja o'rinsoat × 100. Yuqori foiz yaxshi samaradorlikni bildiradi.",
+    utilization:
+    "Markazning umumiy foydalanish darajasi. Hisob: xonalarning jami band soatlari ÷ jami ish soatlari × 100. Yuqori foiz xona vaqti yaxshi ishlatilganini bildiradi.",
   emptyHours:
     "Xonalarning bo'sh qolgan ish vaqti soatlari. Hisob: jami ish soatlari − jami dars soatlari. Kam bo'sh vaqt yaxshi foydalanishni bildiradi.",
   activeStudents:
@@ -133,7 +132,7 @@ export const KPI_TOOLTIPS = {
   emptySeats:
     "Jismoniy bo'sh o'rindiqlar soni. Hisob: har xona uchun sig'im − eng ko'p o'quvchili guruh. Bu — bir vaqtning o'zida bo'sh qoladigan o'rindiqlar.",
   extraStudents:
-    "Yana qancha o'quvchi qabul qilish mumkin (vaqt slotlarini hisobga olib). Hisob: (sig'im × ish vaqtidagi mumkin guruh soni) − hozirgi o'quvchilar. Bir xonada navbati bilan ko'p guruh dars o'tishini hisobga oladi.",
+    "Hozirgi guruhlardagi jami bo'sh enrollment slotlari. Hisob: har guruh uchun (sig'im − o'quvchilar), barcha guruhlar bo'yicha yig'iladi. Yangi guruh ochmasdan, hozirgi guruhlarga nechta o'quvchi qo'shilishi mumkin.",
   fik: "FIK (Foydalanish Intensivlik Koeffitsienti). Hisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100. Reja o'rinsoat = sig'im × ish vaqti.",
 };
 
