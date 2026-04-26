@@ -9,12 +9,6 @@ import {
 const DEFAULT_WORK_START = '09:00';
 const DEFAULT_WORK_END = '21:00';
 
-/**
- * Used as fallback "typical lesson load" per student per week when a room
- * has no existing groups to derive an average from. 3 days/week × 2h.
- */
-const DEFAULT_LESSON_HOURS_PER_WEEK = 6;
-
 const MAX_DAILY_DAYS = 90;
 const MAX_WEEKLY_WEEKS = 52;
 const MAX_MONTHLY_MONTHS = 24;
@@ -257,23 +251,14 @@ export class ReportsCenterActivityService {
       workingHoursPerWeek - lessonHoursPerWeek,
     );
 
-    // Theoretical maximum students: room can run multiple groups in
-    // sequence within working hours. Each group fills `capacity` seats.
-    // possibleGroups = workingHours / typicalLessonLoadPerStudent
-    const avgGroupLessonHours =
-      groupEntries.length > 0
-        ? groupEntries.reduce((s, g) => s + g.lessonHoursPerWeek, 0) /
-          groupEntries.length
-        : DEFAULT_LESSON_HOURS_PER_WEEK;
-    const possibleGroups =
-      avgGroupLessonHours > 0
-        ? Math.floor(workingHoursPerWeek / avgGroupLessonHours)
-        : 0;
-    const theoreticalMaxStudents =
-      capacity != null ? capacity * possibleGroups : 0;
+    // Yana o'qishi mumkin bo'lgan o'quvchilar = jami bo'sh enrollment slotlari
+    // (har guruh uchun: capacity - enrolled, jami yig'indisi)
     const extraStudentsCapacity =
       capacity != null
-        ? Math.max(0, theoreticalMaxStudents - enrolledTotal)
+        ? groupEntries.reduce(
+            (sum, g) => sum + Math.max(0, capacity - g.enrolled),
+            0,
+          )
         : 0;
 
     const seatHoursActualWeekly = groupEntries.reduce(
@@ -317,7 +302,6 @@ export class ReportsCenterActivityService {
         enrolled: enrolledTotal,
         emptySeats,
         extraStudentsCapacity,
-        theoreticalMaxStudents,
         lessonHoursPerWeek: Math.round(lessonHoursPerWeek * 10) / 10,
         idleHoursPerWeek: Math.round(idleHoursPerWeek * 10) / 10,
         idleHoursPeriod: Math.round(idleHoursPeriod * 10) / 10,
@@ -347,27 +331,29 @@ export class ReportsCenterActivityService {
     rooms: ReturnType<ReportsCenterActivityService['buildRoomEntry']>[],
     activeStudents: number,
   ) {
-    let totalSeatHoursActual = 0;
-    let totalSeatHoursPlanned = 0;
+    let totalScheduledHoursPerWeek = 0;
+    let totalWorkingHoursPerWeek = 0;
     let emptyHours = 0;
     let emptySeats = 0;
     let extraStudentsCapacity = 0;
     let potentialExtraRevenue = 0;
 
     for (const r of rooms) {
-      totalSeatHoursActual += r.totals.seatHoursActualPeriod;
-      if (r.totals.seatHoursPlannedPeriod !== null) {
-        totalSeatHoursPlanned += r.totals.seatHoursPlannedPeriod;
-      }
+      totalScheduledHoursPerWeek += r.totals.lessonHoursPerWeek;
+      totalWorkingHoursPerWeek += r.workingHoursPerWeek;
       emptyHours += r.totals.idleHoursPeriod;
       emptySeats += r.totals.emptySeats;
       extraStudentsCapacity += r.totals.extraStudentsCapacity;
       potentialExtraRevenue += r.totals.potentialExtraRevenue;
     }
 
+    // Markaz foydaliligi % = jami band soatlar / jami ish soatlari × 100
+    // (xona-vaqti asosi — soat-asoslangan utilization)
     const utilizationPct =
-      totalSeatHoursPlanned > 0
-        ? Math.round((totalSeatHoursActual / totalSeatHoursPlanned) * 1000) / 10
+      totalWorkingHoursPerWeek > 0
+        ? Math.round(
+            (totalScheduledHoursPerWeek / totalWorkingHoursPerWeek) * 1000,
+          ) / 10
         : 0;
 
     return {
@@ -474,98 +460,74 @@ export class ReportsCenterActivityService {
       const iso = this.toIsoDate(cursor);
       const isHoliday = holidayDates.has(iso);
 
-      let totalSeatHoursActual = 0;
-      let totalSeatHoursPlanned = 0;
+      let totalScheduledHoursToday = 0;
+      let totalWorkingHoursToday = 0;
       let totalIdle = 0;
       let totalEmptySeats = 0;
       let totalExtraStudents = 0;
       const studentIds = new Set<number>();
 
-      if (!isHoliday) {
-        const dow = cursor.getDay();
-        const dayCode = this.dayCodeFromDow(dow);
+      const dow = cursor.getDay();
+      const dayCode = this.dayCodeFromDow(dow);
 
-        for (const room of rooms) {
-          const roomGroups = groupsByRoom.get(room.id) ?? [];
-          const workingHours = this.computeWorkingHoursPerDay(room.branch);
-          const workingHoursPerWeek = workingHours * 7;
+      for (const room of rooms) {
+        const roomGroups = groupsByRoom.get(room.id) ?? [];
+        const workingHours = this.computeWorkingHoursPerDay(room.branch);
+        totalWorkingHoursToday += workingHours;
 
-          const groupsToday = roomGroups.filter(
-            (g) =>
-              g.exactDays.includes(dayCode) &&
-              this.groupActiveOn(g, cursor),
+        // Day-dependent: only groups that meet today
+        const groupsToday = !isHoliday
+          ? roomGroups.filter(
+              (g) =>
+                g.exactDays.includes(dayCode) && this.groupActiveOn(g, cursor),
+            )
+          : [];
+
+        let scheduledHoursToday = 0;
+        for (const g of groupsToday) {
+          scheduledHoursToday += this.computeLessonHours(
+            g.lessonStartTime,
+            g.lessonEndTime,
           );
+        }
 
-          let scheduledHours = 0;
-          let seatHoursActual = 0;
-          let maxEnrolled = 0;
-          let totalEnrolledOnDate = 0;
-          for (const g of groupsToday) {
-            const lessonHours = this.computeLessonHours(
-              g.lessonStartTime,
-              g.lessonEndTime,
-            );
-            scheduledHours += lessonHours;
-            const enrolled = g.enrollments.filter((e) =>
-              this.enrollmentActiveOn(e, cursor),
-            ).length;
-            seatHoursActual += enrolled * lessonHours;
-            maxEnrolled = Math.max(maxEnrolled, enrolled);
-            totalEnrolledOnDate += enrolled;
-            for (const e of g.enrollments) {
-              if (this.enrollmentActiveOn(e, cursor)) {
-                studentIds.add(e.studentId);
-              }
+        totalScheduledHoursToday += scheduledHoursToday;
+        totalIdle += Math.max(0, workingHours - scheduledHoursToday);
+
+        // Snapshot metrics: based on enrollment state on this date,
+        // across ALL room groups (not just today's). Day-of-week independent.
+        let maxEnrolledInRoom = 0;
+        for (const g of roomGroups) {
+          if (!this.groupActiveOn(g, cursor)) continue;
+          const enrolledOnDate = g.enrollments.filter((e) =>
+            this.enrollmentActiveOn(e, cursor),
+          ).length;
+          maxEnrolledInRoom = Math.max(maxEnrolledInRoom, enrolledOnDate);
+          for (const e of g.enrollments) {
+            if (this.enrollmentActiveOn(e, cursor)) {
+              studentIds.add(e.studentId);
             }
           }
-
-          // Room-wide enrolled (for extra-capacity calc) — across all groups
-          // assigned to this room, not just today's, to track real headcount
-          let roomEnrolledOnDate = 0;
-          for (const g of roomGroups) {
-            if (!this.groupActiveOn(g, cursor)) continue;
-            roomEnrolledOnDate += g.enrollments.filter((e) =>
-              this.enrollmentActiveOn(e, cursor),
-            ).length;
-          }
-          // Avg lesson hours from all room groups (not just today's)
-          const lessonHoursAvgWeekly = (() => {
-            const active = roomGroups.filter((g) =>
-              this.groupActiveOn(g, cursor),
-            );
-            if (active.length === 0) return DEFAULT_LESSON_HOURS_PER_WEEK;
-            const sum = active.reduce(
-              (s, g) =>
-                s +
-                this.computeLessonHours(g.lessonStartTime, g.lessonEndTime) *
-                  g.exactDays.length,
-              0,
-            );
-            return sum / active.length || DEFAULT_LESSON_HOURS_PER_WEEK;
-          })();
-
-          totalIdle += Math.max(0, workingHours - scheduledHours);
-          totalSeatHoursActual += seatHoursActual;
+          // Yana o'qishi mumkin = Σ (capacity - enrolled) per group
           if (room.capacity != null) {
-            totalSeatHoursPlanned += room.capacity * workingHours;
-            totalEmptySeats += Math.max(0, room.capacity - maxEnrolled);
-            const possibleGroups =
-              lessonHoursAvgWeekly > 0
-                ? Math.floor(workingHoursPerWeek / lessonHoursAvgWeekly)
-                : 0;
-            const theoreticalMax = room.capacity * possibleGroups;
             totalExtraStudents += Math.max(
               0,
-              theoreticalMax - roomEnrolledOnDate,
+              room.capacity - enrolledOnDate,
             );
           }
         }
+
+        // Bo'sh o'rinlar = capacity - max(enrolled per group), per room
+        if (room.capacity != null) {
+          totalEmptySeats += Math.max(0, room.capacity - maxEnrolledInRoom);
+        }
       }
 
+      // Markaz foydaliligi % = scheduled / working × 100 (room-hour basis)
       const utilizationPct =
-        totalSeatHoursPlanned > 0
+        totalWorkingHoursToday > 0
           ? Math.round(
-              (totalSeatHoursActual / totalSeatHoursPlanned) * 1000,
+              (totalScheduledHoursToday / totalWorkingHoursToday) * 1000,
             ) / 10
           : 0;
 
