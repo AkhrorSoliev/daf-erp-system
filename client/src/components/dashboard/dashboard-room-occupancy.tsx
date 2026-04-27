@@ -78,28 +78,59 @@ interface PositionedLesson {
   totalLanes: number;
 }
 
+// Group lessons into "clusters" of transitively overlapping intervals,
+// then assign lanes within each cluster. totalLanes is per-cluster, so
+// non-overlapping lessons stay full-width even when other lessons in
+// the same room conflict.
 function computeOverlapLanes(lessons: DashboardLesson[]): PositionedLesson[] {
   if (lessons.length === 0) return [];
   const sorted = [...lessons].sort((a, b) =>
     a.startTime.localeCompare(b.startTime)
   );
-  const laneEnds: string[] = [];
-  const lanes = sorted.map((lesson) => {
-    for (let i = 0; i < laneEnds.length; i++) {
-      if (laneEnds[i] <= lesson.startTime) {
-        laneEnds[i] = lesson.endTime;
-        return i;
-      }
+  const result: PositionedLesson[] = [];
+
+  let i = 0;
+  while (i < sorted.length) {
+    // Expand cluster while lessons overlap any previous lesson's tail
+    let clusterEnd = sorted[i].endTime;
+    let j = i + 1;
+    while (j < sorted.length && sorted[j].startTime < clusterEnd) {
+      if (sorted[j].endTime > clusterEnd) clusterEnd = sorted[j].endTime;
+      j++;
     }
-    laneEnds.push(lesson.endTime);
-    return laneEnds.length - 1;
-  });
-  const totalLanes = laneEnds.length;
-  return sorted.map((lesson, i) => ({
-    lesson,
-    lane: lanes[i],
-    totalLanes,
-  }));
+
+    // Greedy lane assignment within this cluster
+    const laneEnds: string[] = [];
+    const lanesInCluster: number[] = [];
+    for (let k = i; k < j; k++) {
+      const lesson = sorted[k];
+      let lane = -1;
+      for (let l = 0; l < laneEnds.length; l++) {
+        if (laneEnds[l] <= lesson.startTime) {
+          laneEnds[l] = lesson.endTime;
+          lane = l;
+          break;
+        }
+      }
+      if (lane === -1) {
+        laneEnds.push(lesson.endTime);
+        lane = laneEnds.length - 1;
+      }
+      lanesInCluster.push(lane);
+    }
+
+    const totalLanes = laneEnds.length;
+    for (let k = 0; k < j - i; k++) {
+      result.push({
+        lesson: sorted[i + k],
+        lane: lanesInCluster[k],
+        totalLanes,
+      });
+    }
+    i = j;
+  }
+
+  return result;
 }
 
 export function DashboardRoomOccupancy({
@@ -275,7 +306,10 @@ export function DashboardRoomOccupancy({
                 style={{ top: nowTop }}
               >
                 <div className="h-0 border-t-2 border-red-500" />
-                <span className="absolute -top-2 left-1 inline-block bg-red-500 text-white text-[10px] font-bold px-1 py-0 rounded-sm tabular-nums leading-tight">
+                <span
+                  className="absolute inline-block bg-red-500 text-white text-[10px] font-bold px-1 py-0 rounded-sm tabular-nums leading-tight"
+                  style={{ top: -8, left: TIME_COL_W + 4 }}
+                >
                   {now}
                 </span>
               </div>
