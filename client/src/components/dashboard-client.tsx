@@ -8,6 +8,8 @@ import {
   CalendarX,
   DoorOpen,
   GraduationCap,
+  LayoutGrid,
+  List,
   RotateCcw,
   Users,
 } from "lucide-react";
@@ -17,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
@@ -232,16 +235,28 @@ export function DashboardClient() {
             )}
           </div>
 
-          {/* Daily schedule + Room occupancy (single card) */}
-          <DashboardDailySchedule
-            lessons={myLessons}
-            dateLabel={
-              isTodaySelected
-                ? "Bugungi darslar"
-                : `${format(selectedDate, "dd.MM.yyyy")} darslar`
-            }
-            isToday={isTodaySelected}
-            roomOccupancy={
+          {/* Schedule card with Grid / List tabs */}
+          <Tabs defaultValue="grid" className="rounded-lg border bg-card overflow-hidden gap-0">
+            <div className="flex items-center justify-between border-b px-3 py-2 gap-3 flex-wrap">
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <CalendarDays className="size-4 text-muted-foreground" />
+                {isTodaySelected
+                  ? "Bugungi darslar"
+                  : `${format(selectedDate, "dd.MM.yyyy")} darslar`}
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({myLessons.length})
+                </span>
+              </h2>
+              <TabsList>
+                <TabsTrigger value="grid">
+                  <LayoutGrid className="size-3.5 mr-1" /> Grid
+                </TabsTrigger>
+                <TabsTrigger value="list">
+                  <List className="size-3.5 mr-1" /> Ro&apos;yxat
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="grid" className="p-3 mt-0">
               <DashboardRoomOccupancy
                 lessons={myLessons}
                 rooms={data.rooms}
@@ -249,8 +264,14 @@ export function DashboardClient() {
                 isTeacher={isTeacher}
                 isToday={isTodaySelected}
               />
-            }
-          />
+            </TabsContent>
+            <TabsContent value="list" className="mt-0">
+              <DashboardDailySchedule
+                lessons={myLessons}
+                isToday={isTodaySelected}
+              />
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>
