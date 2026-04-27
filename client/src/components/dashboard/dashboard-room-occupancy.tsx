@@ -10,11 +10,11 @@ import {
 } from "@/components/ui/tooltip";
 import type { AttendanceStatus, DashboardLesson } from "./dashboard-daily-schedule";
 
-const SLOT_HEIGHT_PX = 36;
+const SLOT_HEIGHT_PX = 44;
 const SLOT_MIN = 30;
 const PX_PER_MIN = SLOT_HEIGHT_PX / SLOT_MIN;
-const TIME_COL_W = 56;
-const ROOM_COL_MIN_W = 112;
+const TIME_COL_W = 64;
+const ROOM_COL_MIN_W = 156;
 
 const attendanceLabel: Record<AttendanceStatus, string> = {
   TAKEN: "Davomat olindi",
@@ -74,21 +74,15 @@ function generateSlots(start: string, end: string): string[] {
 
 interface LayoutSegment {
   lesson: DashboardLesson;
-  isFirst: boolean;
-  isLast: boolean;
   lane: number;
   segmentLanes: number;
   startMin: number;
   endMin: number;
 }
 
-// Compute per-time-slice rendering segments for lessons in one room.
-// Lanes are reassigned PER SLICE based on currently-active lessons rather
-// than fixed across the full overlap cluster. This means a lesson expands
-// to fill the column when it's alone in a slice, even after a conflicting
-// lesson ends. The trade-off is that a lesson can shift horizontally at
-// slice boundaries — but that movement actually communicates the schedule
-// changing, instead of leaving a "phantom column" of dead space.
+// Keep each lesson as one stable block. Earlier code split lessons into
+// per-slice segments, which made a single class shift horizontally when an
+// overlap started or ended. That saves space but makes times hard to scan.
 function computeLayoutSegments(lessons: DashboardLesson[]): LayoutSegment[] {
   if (lessons.length === 0) return [];
 
@@ -103,84 +97,59 @@ function computeLayoutSegments(lessons: DashboardLesson[]): LayoutSegment[] {
       return a.endMin - b.endMin;
     });
 
-  // Transition points = every distinct start/end minute across all lessons
-  const pointSet = new Set<number>();
-  for (const info of infos) {
-    pointSet.add(info.startMin);
-    pointSet.add(info.endMin);
-  }
-  const points = [...pointSet].sort((a, b) => a - b);
+  const clusters: number[][] = [];
+  let currentCluster: number[] = [];
+  let clusterEnd = -Infinity;
 
-  type SliceData = {
-    startMin: number;
-    endMin: number;
-    lane: number;
-    sliceLanes: number;
-  };
-  const lessonSlices: SliceData[][] = infos.map(() => []);
-
-  for (let p = 0; p < points.length - 1; p++) {
-    const t1 = points[p];
-    const t2 = points[p + 1];
-
-    // Lessons active during [t1, t2). `infos` is already sorted by startMin
-    // then endMin, so `active` inherits that order — earlier lessons take
-    // the lower lanes, which makes the layout deterministic across slices.
-    const active: number[] = [];
-    for (let i = 0; i < infos.length; i++) {
-      if (infos[i].startMin < t2 && infos[i].endMin > t1) {
-        active.push(i);
-      }
+  infos.forEach((info, index) => {
+    if (currentCluster.length === 0 || info.startMin < clusterEnd) {
+      currentCluster.push(index);
+      clusterEnd = Math.max(clusterEnd, info.endMin);
+      return;
     }
-    if (active.length === 0) continue;
 
-    const sliceLanes = active.length;
-    for (let l = 0; l < active.length; l++) {
-      lessonSlices[active[l]].push({
-        startMin: t1,
-        endMin: t2,
-        lane: l,
-        sliceLanes,
-      });
-    }
-  }
+    clusters.push(currentCluster);
+    currentCluster = [index];
+    clusterEnd = info.endMin;
+  });
 
-  const segments: LayoutSegment[] = [];
-  for (let i = 0; i < infos.length; i++) {
-    const slices = lessonSlices[i];
-    if (slices.length === 0) continue;
+  if (currentCluster.length > 0) clusters.push(currentCluster);
 
-    // Merge contiguous slices with identical (lane, sliceLanes) so a lesson
-    // renders as a single segment when its position doesn't change
-    const merged: SliceData[] = [];
-    for (const s of slices) {
-      const last = merged[merged.length - 1];
-      if (
-        last &&
-        last.endMin === s.startMin &&
-        last.lane === s.lane &&
-        last.sliceLanes === s.sliceLanes
-      ) {
-        last.endMin = s.endMin;
+  const segmentsByIndex = new Map<number, LayoutSegment>();
+
+  for (const cluster of clusters) {
+    const laneEnds: number[] = [];
+    const clusterAssignments: Array<{ index: number; lane: number }> = [];
+
+    for (const index of cluster) {
+      const info = infos[index];
+      let lane = laneEnds.findIndex((end) => end <= info.startMin);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(info.endMin);
       } else {
-        merged.push({ ...s });
+        laneEnds[lane] = info.endMin;
       }
+
+      clusterAssignments.push({ index, lane });
     }
 
-    for (let k = 0; k < merged.length; k++) {
-      segments.push({
-        lesson: infos[i].lesson,
-        isFirst: k === 0,
-        isLast: k === merged.length - 1,
-        lane: merged[k].lane,
-        segmentLanes: merged[k].sliceLanes,
-        startMin: merged[k].startMin,
-        endMin: merged[k].endMin,
+    const segmentLanes = laneEnds.length;
+    for (const assignment of clusterAssignments) {
+      const info = infos[assignment.index];
+      segmentsByIndex.set(assignment.index, {
+        lesson: info.lesson,
+        lane: assignment.lane,
+        segmentLanes,
+        startMin: info.startMin,
+        endMin: info.endMin,
       });
     }
   }
 
-  return segments;
+  return [...segmentsByIndex.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, segment]) => segment);
 }
 
 export function DashboardRoomOccupancy({
@@ -267,13 +236,13 @@ export function DashboardRoomOccupancy({
             className="grid bg-muted/40 border-b"
             style={{ gridTemplateColumns }}
           >
-            <div className="sticky left-0 z-20 bg-muted/40 border-r px-2 py-2 text-[11px] font-medium text-muted-foreground text-center">
+            <div className="sticky left-0 z-20 bg-muted/40 border-r px-2 py-2 text-[11px] font-semibold text-muted-foreground text-center">
               Vaqt
             </div>
             {visibleRooms.map((room) => (
               <div
                 key={room.id}
-                className="border-l px-2 py-2 text-xs font-medium text-center truncate"
+                className="border-l px-3 py-2 text-xs font-semibold text-center truncate"
                 title={room.name}
               >
                 {room.name}
@@ -292,14 +261,14 @@ export function DashboardRoomOccupancy({
                 {slots.map((slot) => (
                   <div
                     key={slot}
-                    className={`px-2 text-[10px] tabular-nums ${
+                    className={`px-2 text-[11px] tabular-nums ${
                       slot.endsWith(":00")
-                        ? "font-medium text-muted-foreground border-b border-border/60"
+                        ? "font-semibold text-foreground border-b border-border/70"
                         : "text-muted-foreground/60 border-b border-border/30"
                     }`}
                     style={{
                       height: SLOT_HEIGHT_PX,
-                      paddingTop: 2,
+                      paddingTop: 4,
                       lineHeight: "1",
                     }}
                   >
@@ -315,7 +284,7 @@ export function DashboardRoomOccupancy({
                 return (
                   <div
                     key={room.id}
-                    className="border-l relative"
+                    className="border-l relative bg-gradient-to-b from-transparent via-muted/10 to-transparent"
                     style={{ height: bodyHeight }}
                   >
                     {/* Gridlines */}
@@ -334,7 +303,7 @@ export function DashboardRoomOccupancy({
                     {/* Lesson segments */}
                     {segments.map((segment, idx) => (
                       <LessonSegmentCard
-                        key={`${segment.lesson.groupId}-${idx}`}
+                        key={`${segment.lesson.groupId}-${segment.startMin}-${idx}`}
                         segment={segment}
                         dayStart={dayStart}
                         dayEnd={dayEnd}
@@ -393,8 +362,7 @@ function LessonSegmentCard({
   isToday,
   nowMin,
 }: LessonSegmentCardProps) {
-  const { lesson, isFirst, isLast, lane, segmentLanes, startMin, endMin } =
-    segment;
+  const { lesson, lane, segmentLanes, startMin, endMin } = segment;
 
   // Lesson-wide bounds (used for status, progress, clip indicators)
   const lFullStart = timeToMin(lesson.startTime);
@@ -410,9 +378,8 @@ function LessonSegmentCard({
   const widthPct = 100 / segmentLanes;
   const leftPct = lane * widthPct;
 
-  // Clip indicators only on the segment that actually touches the lesson edge
-  const clipTop = isFirst && lFullStart < dayStart;
-  const clipBottom = isLast && lFullEnd > dayEnd;
+  const clipTop = lFullStart < dayStart;
+  const clipBottom = lFullEnd > dayEnd;
 
   const status: "past" | "current" | "upcoming" = isToday
     ? nowMin >= lFullEnd
@@ -424,10 +391,10 @@ function LessonSegmentCard({
 
   const colorClass =
     status === "current"
-      ? "bg-primary/10 border-primary/40 hover:bg-primary/15"
+      ? "bg-primary/10 border-primary/50 shadow-sm shadow-primary/10 hover:bg-primary/15"
       : status === "past"
-        ? "bg-muted/60 border-border text-muted-foreground"
-        : "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-950/50";
+        ? "bg-muted/55 border-border text-muted-foreground"
+        : "bg-sky-50 border-sky-200 text-sky-950 dark:bg-sky-950/30 dark:border-sky-800/70 dark:text-sky-50 hover:bg-sky-100 dark:hover:bg-sky-950/50";
 
   const att = lesson.attendanceStatus;
   const AttIcon = att ? attendanceIcon[att] : null;
@@ -437,10 +404,6 @@ function LessonSegmentCard({
       : att === "MISSED"
         ? "!border-orange-400 dark:!border-orange-600"
         : "";
-
-  // Round corners only on the first/last segment so connected segments of
-  // the same lesson read as one box
-  const radiusClass = `${isFirst ? "rounded-t" : ""} ${isLast ? "rounded-b" : ""}`;
 
   const teacherName =
     lesson.teachers.length > 0
@@ -458,11 +421,9 @@ function LessonSegmentCard({
         )
       : 0;
 
-  // Only the first segment carries content; subsequent segments are silent
-  // continuations of the same lesson
-  const showContent = isFirst;
-  const showTeacher = showContent && height >= 48;
-  const showCount = showContent && height >= 64;
+  const showTeacher = height >= 58;
+  const showCount = height >= 78;
+  const showCompactMeta = height >= 48;
 
   return (
     <div
@@ -478,7 +439,7 @@ function LessonSegmentCard({
         <TooltipTrigger asChild>
           <Link
             href={`/groups/${lesson.groupId}`}
-            className={`block h-full relative overflow-hidden border ${radiusClass} ${colorClass} ${borderOverride} transition-colors`}
+            className={`block h-full relative overflow-hidden rounded-md border ${colorClass} ${borderOverride} transition-colors`}
           >
             {status === "current" && (
               <div
@@ -487,12 +448,12 @@ function LessonSegmentCard({
               />
             )}
 
-            {isFirst && att && AttIcon && (
+            {att && AttIcon && (
               <span
-                className={`absolute top-0.5 right-0.5 z-10 inline-flex items-center justify-center rounded-full size-3.5 ${attendanceBadgeClass[att]}`}
+                className={`absolute top-1 right-1 z-10 inline-flex items-center justify-center rounded-full size-4 ${attendanceBadgeClass[att]}`}
                 aria-label={attendanceLabel[att]}
               >
-                <AttIcon className="size-2.5" />
+                <AttIcon className="size-3" />
               </span>
             )}
 
@@ -507,32 +468,40 @@ function LessonSegmentCard({
               </span>
             )}
 
-            {showContent && (
-              <div className="relative px-1.5 py-1 pr-5">
-                <div className="flex items-center gap-1">
-                  {status === "current" && (
-                    <span className="relative flex size-1.5 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                      <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-                    </span>
-                  )}
-                  <p className="text-[11px] font-medium truncate leading-tight">
-                    {lesson.groupName}
-                  </p>
-                </div>
-                {showTeacher && teacherName && (
-                  <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
-                    {teacherName}
-                  </p>
+            <div className="relative flex h-full min-h-0 flex-col px-2 py-1.5 pr-6">
+              <div className="mb-1 flex items-center gap-1.5">
+                {status === "current" && (
+                  <span className="relative flex size-1.5 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+                  </span>
                 )}
-                {showCount && (
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-0.5 leading-tight mt-0.5">
-                    <Users className="size-2.5 shrink-0" />
-                    {lesson.presentCount}/{lesson.studentCount}
-                  </p>
-                )}
+                <span className="rounded-sm bg-background/80 px-1.5 py-0.5 text-[10px] font-semibold leading-none tabular-nums text-foreground shadow-sm">
+                  {lesson.startTime}-{lesson.endTime}
+                </span>
               </div>
-            )}
+              <p className="min-w-0 truncate text-[12px] font-semibold leading-tight">
+                {lesson.groupName}
+              </p>
+              {showTeacher && teacherName && (
+                <p className="mt-0.5 min-w-0 truncate text-[10px] leading-tight text-muted-foreground">
+                  {teacherName}
+                </p>
+              )}
+              {showCount && (
+                <p className="mt-auto flex items-center gap-1 text-[10px] leading-tight text-muted-foreground">
+                  <Users className="size-3 shrink-0" />
+                  <span className="tabular-nums">
+                    {lesson.presentCount}/{lesson.studentCount}
+                  </span>
+                </p>
+              )}
+              {!showTeacher && showCompactMeta && teacherName && (
+                <p className="mt-0.5 min-w-0 truncate text-[10px] leading-tight text-muted-foreground">
+                  {teacherName}
+                </p>
+              )}
+            </div>
           </Link>
         </TooltipTrigger>
         <TooltipContent>
