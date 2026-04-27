@@ -72,65 +72,132 @@ function generateSlots(start: string, end: string): string[] {
   return slots;
 }
 
-interface PositionedLesson {
+interface LayoutSegment {
   lesson: DashboardLesson;
+  isFirst: boolean;
+  isLast: boolean;
   lane: number;
-  totalLanes: number;
+  segmentLanes: number;
+  startMin: number;
+  endMin: number;
 }
 
-// Group lessons into "clusters" of transitively overlapping intervals,
-// then assign lanes within each cluster. totalLanes is per-cluster, so
-// non-overlapping lessons stay full-width even when other lessons in
-// the same room conflict.
-function computeOverlapLanes(lessons: DashboardLesson[]): PositionedLesson[] {
+// Compute per-time-slice rendering segments for lessons in one room.
+// A lesson keeps a constant lane within its overlap cluster, but its width
+// can change over time: it expands to fill the column during periods with
+// no concurrent lessons, and shrinks during conflicts. Each lesson may
+// produce multiple visual segments stacked vertically.
+function computeLayoutSegments(lessons: DashboardLesson[]): LayoutSegment[] {
   if (lessons.length === 0) return [];
-  const sorted = [...lessons].sort((a, b) =>
-    a.startTime.localeCompare(b.startTime)
-  );
-  const result: PositionedLesson[] = [];
 
-  let i = 0;
-  while (i < sorted.length) {
-    // Expand cluster while lessons overlap any previous lesson's tail
-    let clusterEnd = sorted[i].endTime;
-    let j = i + 1;
-    while (j < sorted.length && sorted[j].startTime < clusterEnd) {
-      if (sorted[j].endTime > clusterEnd) clusterEnd = sorted[j].endTime;
-      j++;
+  type Info = {
+    lesson: DashboardLesson;
+    startMin: number;
+    endMin: number;
+    lane: number;
+  };
+
+  const infos: Info[] = lessons
+    .map((lesson) => ({
+      lesson,
+      startMin: timeToMin(lesson.startTime),
+      endMin: timeToMin(lesson.endTime),
+      lane: 0,
+    }))
+    .sort((a, b) => a.startMin - b.startMin);
+
+  // Group into transitive-overlap clusters
+  const clusters: Info[][] = [];
+  {
+    let i = 0;
+    while (i < infos.length) {
+      let clusterEnd = infos[i].endMin;
+      let j = i + 1;
+      while (j < infos.length && infos[j].startMin < clusterEnd) {
+        if (infos[j].endMin > clusterEnd) clusterEnd = infos[j].endMin;
+        j++;
+      }
+      clusters.push(infos.slice(i, j));
+      i = j;
     }
+  }
 
-    // Greedy lane assignment within this cluster
-    const laneEnds: string[] = [];
-    const lanesInCluster: number[] = [];
-    for (let k = i; k < j; k++) {
-      const lesson = sorted[k];
+  // Greedy lane assignment within each cluster
+  for (const cluster of clusters) {
+    const laneEnds: number[] = [];
+    for (const info of cluster) {
       let lane = -1;
       for (let l = 0; l < laneEnds.length; l++) {
-        if (laneEnds[l] <= lesson.startTime) {
-          laneEnds[l] = lesson.endTime;
+        if (laneEnds[l] <= info.startMin) {
+          laneEnds[l] = info.endMin;
           lane = l;
           break;
         }
       }
       if (lane === -1) {
-        laneEnds.push(lesson.endTime);
+        laneEnds.push(info.endMin);
         lane = laneEnds.length - 1;
       }
-      lanesInCluster.push(lane);
+      info.lane = lane;
     }
-
-    const totalLanes = laneEnds.length;
-    for (let k = 0; k < j - i; k++) {
-      result.push({
-        lesson: sorted[i + k],
-        lane: lanesInCluster[k],
-        totalLanes,
-      });
-    }
-    i = j;
   }
 
-  return result;
+  // Generate per-lesson segments based on cluster transition points
+  const segments: LayoutSegment[] = [];
+  for (const cluster of clusters) {
+    const points = new Set<number>();
+    for (const info of cluster) {
+      points.add(info.startMin);
+      points.add(info.endMin);
+    }
+    const sortedPoints = [...points].sort((a, b) => a - b);
+
+    for (const info of cluster) {
+      type Slice = { startMin: number; endMin: number; segmentLanes: number };
+      const slices: Slice[] = [];
+
+      for (let p = 0; p < sortedPoints.length - 1; p++) {
+        const t1 = sortedPoints[p];
+        const t2 = sortedPoints[p + 1];
+        if (info.endMin <= t1 || info.startMin >= t2) continue;
+
+        // segmentLanes = highest lane index of any concurrently active lesson + 1
+        let maxLane = info.lane;
+        for (const other of cluster) {
+          if (other === info) continue;
+          if (other.startMin < t2 && other.endMin > t1) {
+            if (other.lane > maxLane) maxLane = other.lane;
+          }
+        }
+        slices.push({ startMin: t1, endMin: t2, segmentLanes: maxLane + 1 });
+      }
+
+      // Merge contiguous slices with the same width
+      const merged: Slice[] = [];
+      for (const s of slices) {
+        const last = merged[merged.length - 1];
+        if (last && last.endMin === s.startMin && last.segmentLanes === s.segmentLanes) {
+          last.endMin = s.endMin;
+        } else {
+          merged.push({ ...s });
+        }
+      }
+
+      for (let i = 0; i < merged.length; i++) {
+        segments.push({
+          lesson: info.lesson,
+          isFirst: i === 0,
+          isLast: i === merged.length - 1,
+          lane: info.lane,
+          segmentLanes: merged[i].segmentLanes,
+          startMin: merged[i].startMin,
+          endMin: merged[i].endMin,
+        });
+      }
+    }
+  }
+
+  return segments;
 }
 
 export function DashboardRoomOccupancy({
@@ -261,7 +328,7 @@ export function DashboardRoomOccupancy({
               {/* Room columns */}
               {visibleRooms.map((room) => {
                 const roomLessons = lessonsByRoom.get(room.id) ?? [];
-                const positioned = computeOverlapLanes(roomLessons);
+                const segments = computeLayoutSegments(roomLessons);
                 return (
                   <div
                     key={room.id}
@@ -281,13 +348,11 @@ export function DashboardRoomOccupancy({
                       />
                     ))}
 
-                    {/* Lessons */}
-                    {positioned.map((p) => (
-                      <LessonCard
-                        key={p.lesson.groupId}
-                        lesson={p.lesson}
-                        lane={p.lane}
-                        totalLanes={p.totalLanes}
+                    {/* Lesson segments */}
+                    {segments.map((segment, idx) => (
+                      <LessonSegmentCard
+                        key={`${segment.lesson.groupId}-${idx}`}
+                        segment={segment}
                         dayStart={dayStart}
                         dayEnd={dayEnd}
                         isToday={isToday}
@@ -330,44 +395,46 @@ export function DashboardRoomOccupancy({
   );
 }
 
-interface LessonCardProps {
-  lesson: DashboardLesson;
-  lane: number;
-  totalLanes: number;
+interface LessonSegmentCardProps {
+  segment: LayoutSegment;
   dayStart: number;
   dayEnd: number;
   isToday: boolean;
   nowMin: number;
 }
 
-function LessonCard({
-  lesson,
-  lane,
-  totalLanes,
+function LessonSegmentCard({
+  segment,
   dayStart,
   dayEnd,
   isToday,
   nowMin,
-}: LessonCardProps) {
-  const lStart = timeToMin(lesson.startTime);
-  const lEnd = timeToMin(lesson.endTime);
+}: LessonSegmentCardProps) {
+  const { lesson, isFirst, isLast, lane, segmentLanes, startMin, endMin } =
+    segment;
 
-  const clipTop = lStart < dayStart;
-  const clipBottom = lEnd > dayEnd;
-  const visStart = Math.max(lStart, dayStart);
-  const visEnd = Math.min(lEnd, dayEnd);
+  // Lesson-wide bounds (used for status, progress, clip indicators)
+  const lFullStart = timeToMin(lesson.startTime);
+  const lFullEnd = timeToMin(lesson.endTime);
 
+  // Clamp this segment's vertical range to the working-hour window
+  const visStart = Math.max(startMin, dayStart);
+  const visEnd = Math.min(endMin, dayEnd);
   if (visStart >= visEnd) return null;
 
   const top = (visStart - dayStart) * PX_PER_MIN;
   const height = (visEnd - visStart) * PX_PER_MIN;
-  const widthPct = 100 / totalLanes;
+  const widthPct = 100 / segmentLanes;
   const leftPct = lane * widthPct;
 
+  // Clip indicators only on the segment that actually touches the lesson edge
+  const clipTop = isFirst && lFullStart < dayStart;
+  const clipBottom = isLast && lFullEnd > dayEnd;
+
   const status: "past" | "current" | "upcoming" = isToday
-    ? nowMin >= lEnd
+    ? nowMin >= lFullEnd
       ? "past"
-      : nowMin >= lStart
+      : nowMin >= lFullStart
         ? "current"
         : "upcoming"
     : "upcoming";
@@ -388,6 +455,10 @@ function LessonCard({
         ? "!border-orange-400 dark:!border-orange-600"
         : "";
 
+  // Round corners only on the first/last segment so connected segments of
+  // the same lesson read as one box
+  const radiusClass = `${isFirst ? "rounded-t" : ""} ${isLast ? "rounded-b" : ""}`;
+
   const teacherName =
     lesson.teachers.length > 0
       ? `${lesson.teachers[0].firstName} ${lesson.teachers[0].lastName[0]}.`
@@ -395,11 +466,20 @@ function LessonCard({
 
   const progress =
     status === "current"
-      ? Math.round(((nowMin - lStart) / (lEnd - lStart)) * 100)
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(((nowMin - lFullStart) / (lFullEnd - lFullStart)) * 100),
+          ),
+        )
       : 0;
 
-  const showTeacher = height >= 48;
-  const showCount = height >= 64;
+  // Only the first segment carries content; subsequent segments are silent
+  // continuations of the same lesson
+  const showContent = isFirst;
+  const showTeacher = showContent && height >= 48;
+  const showCount = showContent && height >= 64;
 
   return (
     <div
@@ -415,7 +495,7 @@ function LessonCard({
         <TooltipTrigger asChild>
           <Link
             href={`/groups/${lesson.groupId}`}
-            className={`block h-full relative overflow-hidden rounded border ${colorClass} ${borderOverride} transition-colors`}
+            className={`block h-full relative overflow-hidden border ${radiusClass} ${colorClass} ${borderOverride} transition-colors`}
           >
             {status === "current" && (
               <div
@@ -424,7 +504,7 @@ function LessonCard({
               />
             )}
 
-            {att && AttIcon && (
+            {isFirst && att && AttIcon && (
               <span
                 className={`absolute top-0.5 right-0.5 z-10 inline-flex items-center justify-center rounded-full size-3.5 ${attendanceBadgeClass[att]}`}
                 aria-label={attendanceLabel[att]}
@@ -444,30 +524,32 @@ function LessonCard({
               </span>
             )}
 
-            <div className="relative px-1.5 py-1 pr-5">
-              <div className="flex items-center gap-1">
-                {status === "current" && (
-                  <span className="relative flex size-1.5 shrink-0">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                    <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-                  </span>
+            {showContent && (
+              <div className="relative px-1.5 py-1 pr-5">
+                <div className="flex items-center gap-1">
+                  {status === "current" && (
+                    <span className="relative flex size-1.5 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                      <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+                    </span>
+                  )}
+                  <p className="text-[11px] font-medium truncate leading-tight">
+                    {lesson.groupName}
+                  </p>
+                </div>
+                {showTeacher && teacherName && (
+                  <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
+                    {teacherName}
+                  </p>
                 )}
-                <p className="text-[11px] font-medium truncate leading-tight">
-                  {lesson.groupName}
-                </p>
+                {showCount && (
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-0.5 leading-tight mt-0.5">
+                    <Users className="size-2.5 shrink-0" />
+                    {lesson.presentCount}/{lesson.studentCount}
+                  </p>
+                )}
               </div>
-              {showTeacher && teacherName && (
-                <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
-                  {teacherName}
-                </p>
-              )}
-              {showCount && (
-                <p className="text-[10px] text-muted-foreground flex items-center gap-0.5 leading-tight mt-0.5">
-                  <Users className="size-2.5 shrink-0" />
-                  {lesson.presentCount}/{lesson.studentCount}
-                </p>
-              )}
-            </div>
+            )}
           </Link>
         </TooltipTrigger>
         <TooltipContent>
