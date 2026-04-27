@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Table,
   TableBody,
@@ -41,6 +42,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
             <TableHead className="w-12 border-r">#</TableHead>
             <TableHead className="w-10">Rasm</TableHead>
             <TableHead className="min-w-36">Ism familiya</TableHead>
+            <TableHead className="w-28">Holat</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">Telefon</TableHead>
             <TableHead className="hidden md:table-cell">Guruhlar</TableHead>
             <TableHead className="hidden md:table-cell">O&apos;quvchilar</TableHead>
@@ -52,10 +54,11 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
             const fullName = `${teacher.firstName} ${teacher.lastName}`;
             const initials = `${teacher.firstName[0] ?? ''}${teacher.lastName[0] ?? ''}`.toUpperCase();
 
+            const isInactive = teacher.status !== "ACTIVE";
             return (
               <TableRow
                 key={teacher.id}
-                className="relative cursor-pointer hover:bg-muted/50"
+                className={`relative cursor-pointer hover:bg-muted/50 ${isInactive ? "opacity-70" : ""}`}
               >
                 <TableCell className="border-r text-muted-foreground">
                   {index + 1}
@@ -76,6 +79,9 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                 <TableCell className="font-medium">
                   <Link href={`/teachers/profile/${teacher.id}`} className="absolute inset-0" />
                   {fullName}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge entityType="teachers" status={teacher.status} />
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {formatPhone(teacher.phone)}

@@ -107,7 +107,12 @@ export class UsersService {
         skip,
         take: pageSize,
         select: userSelect,
-        orderBy: { createdAt: 'desc' },
+        // Active users first, then by name alphabetically within each group
+        orderBy: [
+          { isActive: 'desc' },
+          { firstName: 'asc' },
+          { lastName: 'asc' },
+        ],
       }),
       this.prisma.user.count({ where }),
     ]);
