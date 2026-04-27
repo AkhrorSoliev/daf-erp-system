@@ -83,117 +83,100 @@ interface LayoutSegment {
 }
 
 // Compute per-time-slice rendering segments for lessons in one room.
-// A lesson keeps a constant lane within its overlap cluster, but its width
-// can change over time: it expands to fill the column during periods with
-// no concurrent lessons, and shrinks during conflicts. Each lesson may
-// produce multiple visual segments stacked vertically.
+// Lanes are reassigned PER SLICE based on currently-active lessons rather
+// than fixed across the full overlap cluster. This means a lesson expands
+// to fill the column when it's alone in a slice, even after a conflicting
+// lesson ends. The trade-off is that a lesson can shift horizontally at
+// slice boundaries — but that movement actually communicates the schedule
+// changing, instead of leaving a "phantom column" of dead space.
 function computeLayoutSegments(lessons: DashboardLesson[]): LayoutSegment[] {
   if (lessons.length === 0) return [];
 
-  type Info = {
-    lesson: DashboardLesson;
-    startMin: number;
-    endMin: number;
-    lane: number;
-  };
-
-  const infos: Info[] = lessons
+  const infos = lessons
     .map((lesson) => ({
       lesson,
       startMin: timeToMin(lesson.startTime),
       endMin: timeToMin(lesson.endTime),
-      lane: 0,
     }))
-    .sort((a, b) => a.startMin - b.startMin);
+    .sort((a, b) => {
+      if (a.startMin !== b.startMin) return a.startMin - b.startMin;
+      return a.endMin - b.endMin;
+    });
 
-  // Group into transitive-overlap clusters
-  const clusters: Info[][] = [];
-  {
-    let i = 0;
-    while (i < infos.length) {
-      let clusterEnd = infos[i].endMin;
-      let j = i + 1;
-      while (j < infos.length && infos[j].startMin < clusterEnd) {
-        if (infos[j].endMin > clusterEnd) clusterEnd = infos[j].endMin;
-        j++;
+  // Transition points = every distinct start/end minute across all lessons
+  const pointSet = new Set<number>();
+  for (const info of infos) {
+    pointSet.add(info.startMin);
+    pointSet.add(info.endMin);
+  }
+  const points = [...pointSet].sort((a, b) => a - b);
+
+  type SliceData = {
+    startMin: number;
+    endMin: number;
+    lane: number;
+    sliceLanes: number;
+  };
+  const lessonSlices: SliceData[][] = infos.map(() => []);
+
+  for (let p = 0; p < points.length - 1; p++) {
+    const t1 = points[p];
+    const t2 = points[p + 1];
+
+    // Lessons active during [t1, t2). `infos` is already sorted by startMin
+    // then endMin, so `active` inherits that order — earlier lessons take
+    // the lower lanes, which makes the layout deterministic across slices.
+    const active: number[] = [];
+    for (let i = 0; i < infos.length; i++) {
+      if (infos[i].startMin < t2 && infos[i].endMin > t1) {
+        active.push(i);
       }
-      clusters.push(infos.slice(i, j));
-      i = j;
+    }
+    if (active.length === 0) continue;
+
+    const sliceLanes = active.length;
+    for (let l = 0; l < active.length; l++) {
+      lessonSlices[active[l]].push({
+        startMin: t1,
+        endMin: t2,
+        lane: l,
+        sliceLanes,
+      });
     }
   }
 
-  // Greedy lane assignment within each cluster
-  for (const cluster of clusters) {
-    const laneEnds: number[] = [];
-    for (const info of cluster) {
-      let lane = -1;
-      for (let l = 0; l < laneEnds.length; l++) {
-        if (laneEnds[l] <= info.startMin) {
-          laneEnds[l] = info.endMin;
-          lane = l;
-          break;
-        }
-      }
-      if (lane === -1) {
-        laneEnds.push(info.endMin);
-        lane = laneEnds.length - 1;
-      }
-      info.lane = lane;
-    }
-  }
-
-  // Generate per-lesson segments based on cluster transition points
   const segments: LayoutSegment[] = [];
-  for (const cluster of clusters) {
-    const points = new Set<number>();
-    for (const info of cluster) {
-      points.add(info.startMin);
-      points.add(info.endMin);
+  for (let i = 0; i < infos.length; i++) {
+    const slices = lessonSlices[i];
+    if (slices.length === 0) continue;
+
+    // Merge contiguous slices with identical (lane, sliceLanes) so a lesson
+    // renders as a single segment when its position doesn't change
+    const merged: SliceData[] = [];
+    for (const s of slices) {
+      const last = merged[merged.length - 1];
+      if (
+        last &&
+        last.endMin === s.startMin &&
+        last.lane === s.lane &&
+        last.sliceLanes === s.sliceLanes
+      ) {
+        last.endMin = s.endMin;
+      } else {
+        merged.push({ ...s });
+      }
     }
-    const sortedPoints = [...points].sort((a, b) => a - b);
 
-    for (const info of cluster) {
-      type Slice = { startMin: number; endMin: number; segmentLanes: number };
-      const slices: Slice[] = [];
-
-      for (let p = 0; p < sortedPoints.length - 1; p++) {
-        const t1 = sortedPoints[p];
-        const t2 = sortedPoints[p + 1];
-        if (info.endMin <= t1 || info.startMin >= t2) continue;
-
-        // segmentLanes = highest lane index of any concurrently active lesson + 1
-        let maxLane = info.lane;
-        for (const other of cluster) {
-          if (other === info) continue;
-          if (other.startMin < t2 && other.endMin > t1) {
-            if (other.lane > maxLane) maxLane = other.lane;
-          }
-        }
-        slices.push({ startMin: t1, endMin: t2, segmentLanes: maxLane + 1 });
-      }
-
-      // Merge contiguous slices with the same width
-      const merged: Slice[] = [];
-      for (const s of slices) {
-        const last = merged[merged.length - 1];
-        if (last && last.endMin === s.startMin && last.segmentLanes === s.segmentLanes) {
-          last.endMin = s.endMin;
-        } else {
-          merged.push({ ...s });
-        }
-      }
-
-      for (let i = 0; i < merged.length; i++) {
-        segments.push({
-          lesson: info.lesson,
-          isFirst: i === 0,
-          isLast: i === merged.length - 1,
-          lane: info.lane,
-          segmentLanes: merged[i].segmentLanes,
-          startMin: merged[i].startMin,
-          endMin: merged[i].endMin,
-        });
-      }
+    for (let k = 0; k < merged.length; k++) {
+      segments.push({
+        lesson: infos[i].lesson,
+        isFirst: k === 0,
+        isLast: k === merged.length - 1,
+        lane: merged[k].lane,
+        segmentLanes: merged[k].sliceLanes,
+        startMin: merged[k].startMin,
+        endMin: merged[k].endMin,
+      });
     }
   }
 
