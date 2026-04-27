@@ -101,24 +101,16 @@ export class UsersService {
       where.branches = { some: { branchId: branch_id } };
     }
 
-    const [data, total] = await Promise.all([
-      this.prisma.user.findMany({
-        where,
-        skip,
-        take: pageSize,
-        select: userSelect,
-        // Active users first, then by name alphabetically within each group
-        orderBy: [
-          { isActive: 'desc' },
-          { firstName: 'asc' },
-          { lastName: 'asc' },
-        ],
-      }),
-      this.prisma.user.count({ where }),
-    ]);
+    // We sort by student count (a computed field), so DB-level pagination
+    // can't be used directly. Fetch all matching users, compute counts,
+    // sort, and paginate in memory. Per-company user counts are small
+    // enough (hundreds, not thousands) that this stays fast.
+    const allRows = await this.prisma.user.findMany({
+      where,
+      select: userSelect,
+    });
 
-    // Calculate student counts per teacher
-    const teacherIds = data
+    const teacherIds = allRows
       .filter((u: any) => u.roles.some((ur: any) => ur.role.name === 'Teacher'))
       .map((u: any) => u.id);
     const studentCountMap = new Map<number, number>();
@@ -145,15 +137,27 @@ export class UsersService {
       }
     }
 
-    return {
-      data: data.map((u: any) => ({
-        ...formatUser(u),
-        studentCount: studentCountMap.get(u.id) ?? 0,
-      })),
-      total,
-      page,
-      pageSize,
-    };
+    const formatted = allRows.map((u: any) => ({
+      ...formatUser(u),
+      studentCount: studentCountMap.get(u.id) ?? 0,
+    }));
+
+    // Sort: active first, then by student count (desc), then alphabetically.
+    // Non-teachers all have studentCount=0 so they collapse to alpha order.
+    formatted.sort((a, b) => {
+      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+      if (a.studentCount !== b.studentCount) {
+        return b.studentCount - a.studentCount;
+      }
+      const fn = a.firstName.localeCompare(b.firstName);
+      if (fn !== 0) return fn;
+      return a.lastName.localeCompare(b.lastName);
+    });
+
+    const total = formatted.length;
+    const data = formatted.slice(skip, skip + pageSize);
+
+    return { data, total, page, pageSize };
   }
 
   async findById(id: number) {
