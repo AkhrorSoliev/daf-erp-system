@@ -257,6 +257,15 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 
 - `save()` wraps enrollment validation + existing record reads + upserts in `prisma.$transaction()` to prevent race conditions
 
+#### Full-Roster Requirement (`save()`)
+
+- **Manual attendance is all-or-nothing.** `AttendanceSaveService.save()` rejects the request unless `dto.entries` covers every active enrollment the role would render via `getByDate` — partial saves are not allowed. A previous bug let admins/teachers leave students "na bor — na yo'q": only the marked subset was persisted and the rest stayed `null` forever.
+- "Expected" set per role (must mirror `getByDate` exactly):
+  - **Teacher** — every active enrollment with `student.balance >= 0` (negative-balance students are hidden from the teacher view, so they are NOT required in entries).
+  - **CEO / Branch Director / Administrator** — every active enrollment in the group.
+- On miss → `BadRequestException("Davomat saqlash uchun barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan o'quvchilar: N ta")`. Validation runs **inside** the `Serializable` tx, so a concurrent enrollment add can't race past it.
+- The frontend (`attendance-form.tsx`) mirrors this: the `Saqlash` button is disabled while any visible student has `status === null`, an amber "Belgilanmagan: N ta" badge sits next to it, and `handleSave()` no longer auto-coerces `null → "PRESENT"`. Both layers must stay in sync — never weaken the backend check thinking the UI already prevents the case (API is callable directly).
+
 #### Attendance Method Tracking (`markedMethod`)
 
 - `AttendanceMethod` enum: `MANUAL` | `QR` — stored in `Attendance.markedMethod` field

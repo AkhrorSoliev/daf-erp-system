@@ -87,6 +87,31 @@ export class AttendanceSaveService {
         }
       }
 
+      // "Expected" set: every active student the frontend renders for this
+      // role (Teacher view filters out negative-balance students; everyone
+      // else sees the full roster). Davomatni saqlashdan oldin barcha
+      // ko'rsatilgan o'quvchilar uchun status belgilanishi shart — aks
+      // holda ba'zi o'quvchilar "na bor, na yo'q" holatida qolib ketadi.
+      const expectedStudentIds = isTeacherOnly
+        ? new Set(
+            enrolledStudents
+              .filter((r) => r.student.balance >= 0)
+              .map((r) => r.studentId),
+          )
+        : new Set(enrolledStudentIds);
+
+      const submittedStudentIds = new Set(
+        dto.entries.map((e) => e.studentId),
+      );
+      const missingStudentIds = [...expectedStudentIds].filter(
+        (id) => !submittedStudentIds.has(id),
+      );
+      if (missingStudentIds.length > 0) {
+        throw new BadRequestException(
+          `Davomat saqlash uchun barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan o'quvchilar: ${missingStudentIds.length} ta`,
+        );
+      }
+
       const existingRecords = await tx.attendance.findMany({
         where: { groupId, date: parsedDate },
       });

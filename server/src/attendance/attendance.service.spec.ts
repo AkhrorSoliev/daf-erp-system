@@ -551,6 +551,76 @@ describe('AttendanceService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('should throw BadRequestException when not all enrolled students have entries', async () => {
+      prisma.enrollment.findMany.mockResolvedValue(
+        mockEnrollments.map((e) => ({
+          studentId: e.studentId,
+          student: { balance: e.student.balance },
+        })),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      // Only 1 of 2 enrolled students has an entry
+      const dto = {
+        entries: [{ studentId: 10001, status: 'PRESENT' }],
+      };
+
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1),
+      ).rejects.toThrow(BadRequestException);
+
+      // No upserts must run when validation fails
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should throw when Teacher submits empty entries with active enrollments', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const dto = { entries: [] };
+
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', dto, 1, ['Teacher'], 1),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should not require entries for negative-balance students when role is Teacher', async () => {
+      // Two students: one with positive balance (visible to teacher), one
+      // with negative balance (hidden from teacher view). Teacher should only
+      // need to provide an entry for the visible student.
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+        { studentId: 10002, student: { balance: -10000 } },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-1',
+        groupId: 'group-uuid-1',
+        studentId: 10001,
+        date: new Date('2026-04-01'),
+        status: 'PRESENT',
+        note: null,
+      });
+
+      const dto = { entries: [{ studentId: 10001, status: 'PRESENT' }] };
+
+      const result = await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        dto,
+        1,
+        ['Teacher'],
+        1,
+      );
+
+      expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
+      expect(prisma.attendance.upsert).toHaveBeenCalledTimes(1);
+    });
+
     it('should strip notes from teacher-only users', async () => {
       const mockResult = {
         id: 'att-1',
