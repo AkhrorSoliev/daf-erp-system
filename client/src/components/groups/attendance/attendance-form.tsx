@@ -168,14 +168,28 @@ export function AttendanceForm({
     });
   };
 
+  const unmarkedStudents = students.filter((s) => {
+    const entry = entries.get(s.studentId);
+    return !entry?.status;
+  });
+
   const handleSave = async () => {
+    if (unmarkedStudents.length > 0) {
+      toast.error(
+        `Barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan: ${unmarkedStudents.length} ta`,
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       await api.post(`/attendance/${group.id}/date/${date}`, {
-        entries: Array.from(entries.values()).map((e) => ({
-          ...e,
-          status: e.status ?? "PRESENT",
-        })),
+        entries: Array.from(entries.values())
+          .filter((e) => e.status !== null)
+          .map((e) => ({
+            studentId: e.studentId,
+            status: e.status,
+            note: e.note,
+          })),
       });
       toast.success("Davomat muvaffaqiyatli saqlandi");
       onSaved();
@@ -366,10 +380,15 @@ export function AttendanceForm({
 
       {/* Save button */}
       {!loading && students.length > 0 && !alreadyTakenForTeacher && (
-        <div className="sticky bottom-4 flex justify-end pt-2">
+        <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
+          {unmarkedStudents.length > 0 && !isLocked && (
+            <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+              Belgilanmagan: {unmarkedStudents.length} ta
+            </span>
+          )}
           <Button
             onClick={handleSave}
-            disabled={submitting || isLocked}
+            disabled={submitting || isLocked || unmarkedStudents.length > 0}
             size="lg"
             className="min-w-36 shadow-lg"
           >
