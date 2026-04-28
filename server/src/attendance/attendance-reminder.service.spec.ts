@@ -118,7 +118,7 @@ describe('AttendanceReminderService', () => {
       expect(bot.telegram.sendMessage).not.toHaveBeenCalled();
     });
 
-    it('notifies ONLY admins at lessonEndTime - 30 when attendance is missing', async () => {
+    it('notifies teacher AND admins at lessonEndTime - 30 when attendance is missing', async () => {
       prisma.user.findMany.mockResolvedValue([
         {
           id: 30001,
@@ -132,36 +132,19 @@ describe('AttendanceReminderService', () => {
       await (service as any).handleGroup(group, 600, '2026-04-22');
 
       expect(prisma.attendance.findFirst).toHaveBeenCalled();
-      // Admin notified
-      expect(notificationsService.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 30001,
-          type: NotificationType.ATTENDANCE_ADMIN_ALERT,
-        }),
-      );
-      // Teacher NOT notified at -30
-      expect(notificationsService.create).not.toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 20001 }),
-      );
-    });
-
-    it('notifies ONLY teacher at lessonEndTime - 15 when attendance is missing', async () => {
-      prisma.user.findMany.mockResolvedValue([
-        { id: 30001, firstName: 'U', lastName: 'A', telegramChatId: null },
-      ]);
-      const group = makeGroup();
-      // lessonEndTime 630 - 15 = 615
-      await (service as any).handleGroup(group, 615, '2026-04-22');
-
+      // Teacher notified at -30
       expect(notificationsService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 20001,
           type: NotificationType.ATTENDANCE_TEACHER_WARNING,
         }),
       );
-      // Admins not notified in -15 trigger
-      expect(notificationsService.create).not.toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 30001 }),
+      // Admin notified at -30
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 30001,
+          type: NotificationType.ATTENDANCE_ADMIN_ALERT,
+        }),
       );
     });
 
@@ -191,8 +174,8 @@ describe('AttendanceReminderService', () => {
       prisma.attendance.findFirst.mockResolvedValue({ id: 'att-1' });
       const group = makeGroup();
 
-      // Try all three attendance-gated trigger minutes
-      for (const minute of [600, 615, 630]) {
+      // Try both attendance-gated trigger minutes (end-30, end)
+      for (const minute of [600, 630]) {
         await (service as any).handleGroup(group, minute, '2026-04-22');
       }
 
