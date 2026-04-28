@@ -50,16 +50,22 @@ type GroupWithTeachers = {
  * Sends lesson-attendance notifications on schedule.
  *
  * Idempotency relies on the `Notification` table — one row per (userId, type,
- * relatedEntityId=groupId, today) blocks repeat sends. Cron fires each minute
- * Monday–Saturday (no lessons on Sunday). Before touching groups we compare
- * the current minute against a cached [earliestStart, latestEnd] window that's
- * derived from active groups and refreshed hourly — outside that window the
- * tick returns immediately with zero DB queries, letting the DB auto-suspend.
+ * relatedEntityId=groupId, today) blocks repeat sends. Cron fires twice per
+ * hour (at :00 and :30) between 07:00 and 22:30 Tashkent time, Monday–Saturday.
+ * At night and on Sundays the cron is silent so the DB endpoint can stay
+ * suspended. This relies on lessons being scheduled on half-hour boundaries
+ * — non-aligned lesson times (e.g. 09:15) will not trigger reminders.
  *
- * When inside the window, the group query is narrowed to rows whose
- * lessonStartTime or lessonEndTime matches a trigger minute for *right now*
- * (start, end-30, end-15, end). In practice this returns 0-3 rows instead of
- * every active group, so most ticks perform a single indexed lookup.
+ * Three trigger points per lesson:
+ *   - start            → LESSON_STARTED (teacher)
+ *   - end - 30 minutes → TEACHER_WARNING (teacher) + ADMIN_ALERT (admin)
+ *   - end              → MISSING_TEACHER (teacher) + MISSING_ADMIN (admin)
+ *
+ * Before touching groups we compare the current minute against a cached
+ * [earliestStart, latestEnd] window derived from active groups (refreshed
+ * hourly). When inside the window, the group query is narrowed to rows whose
+ * lessonStartTime or lessonEndTime matches the current trigger minute, so
+ * most ticks perform a single indexed lookup returning 0–3 rows.
  */
 @Injectable()
 export class AttendanceReminderService {
@@ -76,7 +82,7 @@ export class AttendanceReminderService {
     private telegramService: TelegramService,
   ) {}
 
-  @Cron('0 * * * * 1-6', { timeZone: 'Asia/Tashkent' })
+  @Cron('0 0,30 7-22 * * 1-6', { timeZone: 'Asia/Tashkent' })
   async tick() {
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Tashkent',
@@ -103,7 +109,6 @@ export class AttendanceReminderService {
     const currentTime = `${p('hour')}:${p('minute')}`;
     const endCandidates = [
       currentTime,
-      this.addMinutes(currentTime, 15),
       this.addMinutes(currentTime, 30),
     ];
 
@@ -286,7 +291,7 @@ export class AttendanceReminderService {
       return;
     }
 
-    if (![endMin - 30, endMin - 15, endMin].includes(currentMinutes)) return;
+    if (![endMin - 30, endMin].includes(currentMinutes)) return;
 
     const parsedDate = new Date(today + 'T00:00:00.000Z');
     const hasAttendance = await this.prisma.attendance.findFirst({
@@ -296,14 +301,10 @@ export class AttendanceReminderService {
     if (hasAttendance) return;
 
     if (currentMinutes === endMin - 30) {
-      await this.notifyBranchAdmins(group, 'ADMIN_ALERT');
-      return;
-    }
-
-    if (currentMinutes === endMin - 15) {
       for (const t of group.teachers) {
         await this.sendTeacherWarning(t.teacher, group);
       }
+      await this.notifyBranchAdmins(group, 'ADMIN_ALERT');
       return;
     }
 
@@ -342,7 +343,7 @@ export class AttendanceReminderService {
       group,
       type,
       'Davomat eslatmasi',
-      `⏰ Dars tugashiga 15 daqiqa qoldi\n\n${details}\n\nIltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
+      `⏰ Dars tugashiga 30 daqiqa qoldi\n\n${details}\n\nIltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
