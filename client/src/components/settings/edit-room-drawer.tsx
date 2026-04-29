@@ -8,6 +8,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEditRoom, type Room } from "@/hooks/use-edit-room";
 import { EditRoomForm } from "./edit-room-form";
@@ -53,11 +54,12 @@ export function EditRoomDrawer({ onSaved }: EditRoomDrawerProps) {
 
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
-            <Button type="button" variant="outline" onClick={closeDrawer}>
+            <Button type="button" variant="outline" onClick={closeDrawer} disabled={submitting}>
               Bekor qilish
             </Button>
             <Button type="submit" form="edit-room-form" disabled={submitting}>
-              {submitting ? "Saqlanmoqda..." : "Saqlash"}
+              {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
+              Saqlash
             </Button>
           </div>
         </SheetFooter>
