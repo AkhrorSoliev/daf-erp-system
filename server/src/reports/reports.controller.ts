@@ -14,6 +14,12 @@ import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
+import {
+  AttendanceAnalyticsQueryDto,
+  AttendanceByCourseQueryDto,
+  AttendanceByGroupQueryDto,
+  AttendanceTeacherPerfQueryDto,
+} from './dto/attendance-reports-query.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -49,7 +55,7 @@ export class ReportsController {
 
   @Get('teacher-performance')
   getTeacherPerformance(
-    @Query() query: ReportsQueryDto,
+    @Query() query: AttendanceTeacherPerfQueryDto,
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.reportsService.getTeacherPerformance(companyId, query);
@@ -57,10 +63,26 @@ export class ReportsController {
 
   @Get('attendance-analytics')
   getAttendanceAnalytics(
-    @Query() query: ReportsQueryDto,
+    @Query() query: AttendanceAnalyticsQueryDto,
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.reportsService.getAttendanceAnalytics(companyId, query);
+  }
+
+  @Get('attendance-by-group')
+  getAttendanceByGroup(
+    @Query() query: AttendanceByGroupQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getAttendanceByGroup(companyId, query);
+  }
+
+  @Get('attendance-by-course')
+  getAttendanceByCourse(
+    @Query() query: AttendanceByCourseQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getAttendanceByCourse(companyId, query);
   }
 
   @Get('group-analytics')
@@ -224,6 +246,23 @@ export class ReportsController {
       startDate: query.startDate,
       endDate: query.endDate,
     });
+  }
+
+  @Get('departed-students/status-exit-reasons')
+  getStatusExitReasons(
+    @Query() query: DepartedStudentsSummaryQueryDto,
+    @Query('exitType') exitType: 'FREEZE' | 'EXPEL' | 'INACTIVE' | 'ARCHIVE',
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getStatusExitReasons(
+      companyId,
+      {
+        branchId: query.branchId,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      },
+      exitType,
+    );
   }
 
   @Get('departed-students/list')
