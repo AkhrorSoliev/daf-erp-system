@@ -12,6 +12,12 @@ import { ReportsDepartedReasonsService } from './reports-departed-reasons.servic
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { ReportsCenterActivityService } from './reports-center-activity.service';
 import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
+import {
+  AttendanceAnalyticsQueryDto,
+  AttendanceByCourseQueryDto,
+  AttendanceByGroupQueryDto,
+  AttendanceTeacherPerfQueryDto,
+} from './dto/attendance-reports-query.dto';
 
 @Injectable()
 export class ReportsService {
@@ -49,11 +55,23 @@ export class ReportsService {
   }
 
   // Attendance analytics
-  getTeacherPerformance(companyId: number, query: ReportsQueryDto) {
+  getTeacherPerformance(
+    companyId: number,
+    query: AttendanceTeacherPerfQueryDto,
+  ) {
     return this.attendanceAnalytics.getTeacherPerformance(companyId, query);
   }
-  getAttendanceAnalytics(companyId: number, query: ReportsQueryDto) {
+  getAttendanceAnalytics(
+    companyId: number,
+    query: AttendanceAnalyticsQueryDto,
+  ) {
     return this.attendanceAnalytics.getAttendanceAnalytics(companyId, query);
+  }
+  getAttendanceByGroup(companyId: number, query: AttendanceByGroupQueryDto) {
+    return this.attendanceAnalytics.getAttendanceByGroup(companyId, query);
+  }
+  getAttendanceByCourse(companyId: number, query: AttendanceByCourseQueryDto) {
+    return this.attendanceAnalytics.getAttendanceByCourse(companyId, query);
   }
 
   // Financial
@@ -221,6 +239,21 @@ export class ReportsService {
     },
   ) {
     return this.departedReasons.getTransferReasons(companyId, params);
+  }
+  getStatusExitReasons(
+    companyId: number,
+    params: {
+      branchId?: number;
+      startDate: string;
+      endDate: string;
+    },
+    exitType: 'FREEZE' | 'EXPEL' | 'INACTIVE' | 'ARCHIVE',
+  ) {
+    return this.departedReasons.getStatusExitReasons(
+      companyId,
+      params,
+      exitType,
+    );
   }
 
   // Teacher changes drill-downs

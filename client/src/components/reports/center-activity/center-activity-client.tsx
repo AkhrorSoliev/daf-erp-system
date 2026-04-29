@@ -28,6 +28,8 @@ import {
   type CenterActivityBucket,
   BUCKET_LABELS,
 } from "./metric-helpers";
+import { AttendanceSection } from "../attendance/attendance-section";
+import { Separator } from "@/components/ui/separator";
 
 const BUCKETS: CenterActivityBucket[] = ["daily", "weekly", "monthly"];
 
@@ -241,6 +243,10 @@ export function CenterActivityClient() {
         rooms={data?.rooms ?? []}
         onSaved={handleRoomCapacitySaved}
       />
+
+      <Separator className="my-8" />
+
+      <AttendanceSection />
     </div>
   );
 }
