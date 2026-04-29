@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { Camera, Trash2 } from "lucide-react";
+import { Camera, Loader2, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   Sheet,
@@ -273,7 +273,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
 
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={saving || uploading}>
               Bekor qilish
             </Button>
             <Button
@@ -281,7 +281,8 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
               form="edit-profile-form"
               disabled={saving || uploading}
             >
-              {saving ? "Saqlanmoqda..." : "Saqlash"}
+              {(saving || uploading) && <Loader2 className="mr-1.5 size-4 animate-spin" />}
+              Saqlash
             </Button>
           </div>
         </SheetFooter>
