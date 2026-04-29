@@ -219,7 +219,7 @@ export class ReportsAttendanceAnalyticsService {
   ) {
     const bucket = query.bucket ?? 'week';
 
-    const cacheKey = `reports:attendance-analytics:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${bucket}`;
+    const cacheKey = `reports:attendance-analytics:v3:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${bucket}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -272,6 +272,7 @@ export class ReportsAttendanceAnalyticsService {
         total: number;
         presentLate: number;
         bucketStart: string;
+        displayLabel: string;
         rangeStart: Date;
         rangeEnd: Date;
       }
@@ -289,7 +290,7 @@ export class ReportsAttendanceAnalyticsService {
       else if (row.status === 'LATE') lateCount += count;
       else if (row.status === 'EXCUSED') excusedCount += count;
 
-      const { key, sortStart } = this.bucketKey(row.date, bucket);
+      const { key, sortStart, displayLabel } = this.bucketKey(row.date, bucket);
       let slot = bucketMap.get(key);
       if (!slot) {
         const range = this.bucketBoundaries(row.date, bucket);
@@ -297,6 +298,7 @@ export class ReportsAttendanceAnalyticsService {
           total: 0,
           presentLate: 0,
           bucketStart: sortStart,
+          displayLabel,
           rangeStart: range.start,
           rangeEnd: range.end,
         };
@@ -329,7 +331,7 @@ export class ReportsAttendanceAnalyticsService {
 
     const trend = [...bucketMap.entries()]
       .sort(([, a], [, b]) => a.bucketStart.localeCompare(b.bucketStart))
-      .map(([label, data]) => {
+      .map(([, data]) => {
         const startCount = [
           ...this.countActiveByGroupAt(
             enrollmentSnapshots,
@@ -344,7 +346,7 @@ export class ReportsAttendanceAnalyticsService {
         ].reduce((s, n) => s + n, 0);
         return {
           bucketStart: data.bucketStart,
-          label,
+          label: data.displayLabel,
           rate: Math.round((data.presentLate / data.total) * 100),
           total: data.total,
           retentionPct: this.computeRetentionPct(startCount, endCount),
@@ -941,17 +943,28 @@ export class ReportsAttendanceAnalyticsService {
   private bucketKey(
     date: Date,
     bucket: 'week' | 'month',
-  ): { key: string; sortStart: string } {
+  ): { key: string; sortStart: string; displayLabel: string } {
     if (bucket === 'month') {
       const year = date.getFullYear();
       const month = date.getMonth();
       const label = `${MONTH_LABELS_UZ[month]} ${year}`;
       const sortStart = `${year}-${String(month + 1).padStart(2, '0')}`;
-      return { key: label, sortStart };
+      return { key: label, sortStart, displayLabel: label };
     }
-    // week
+    // week — key/sort use ISO week string (unique across years), but the
+    // display label is the human-readable Monday-of-week date, e.g. "5 Apr"
     const isoWeek = this.getISOWeek(date);
-    return { key: isoWeek, sortStart: isoWeek };
+    const monday = this.getISOWeekMonday(date);
+    const displayLabel = `${monday.getDate()} ${MONTH_LABELS_UZ[monday.getMonth()]}`;
+    return { key: isoWeek, sortStart: isoWeek, displayLabel };
+  }
+
+  private getISOWeekMonday(date: Date): Date {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const dayOffset = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+    d.setDate(d.getDate() - dayOffset);
+    return d;
   }
 
   // Boundaries (start/end Date objects) of the bucket containing `date`.

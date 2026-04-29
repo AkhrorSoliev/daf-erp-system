@@ -397,12 +397,20 @@ export function AttendanceSection() {
 
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="lg:col-span-2 rounded-xl border bg-card p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Davomat dinamikasi</h3>
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">
+              Davomat va saqlanish — vaqt bo&apos;yicha
+            </h3>
             <span className="text-xs text-muted-foreground">
               {ATTENDANCE_BUCKET_LABELS[state.filter.bucket]} kesim
             </span>
           </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Har bir nuqta — bitta{" "}
+            {state.filter.bucket === "week" ? "hafta" : "oy"}. Ko&apos;k chiziq
+            — davomat foizi, qizil punktir — saqlanish foizi (davr oxirida
+            qolgan o&apos;quvchilar / boshida bo&apos;lganlar).
+          </p>
           <div className="h-[260px]">
             {analyticsLoading ? (
               <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
