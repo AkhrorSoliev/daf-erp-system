@@ -25,7 +25,6 @@ import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { useEditStudent } from "@/hooks/use-edit-student";
 
 function stripPhonePrefix(phone: string): string {
   return phone.replace(/^\+998/, "").replace(/\s/g, "");
@@ -70,7 +69,6 @@ export function EditStudentForm({
     defaultValues: mapStudentToForm(student),
   });
 
-  const setSubmitting = useEditStudent((s) => s.setSubmitting);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState(student.photo);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -96,7 +94,6 @@ export function EditStudentForm({
   };
 
   const onSubmit = async (values: EditStudentFormValues) => {
-    setSubmitting(true);
     try {
       let photoUrl: string | undefined;
       if (avatarFile) {
@@ -126,8 +123,6 @@ export function EditStudentForm({
       onClose();
     } catch (err) {
       toast.error(getErrorMessage(err, "Saqlashda xatolik yuz berdi"));
-    } finally {
-      setSubmitting(false);
     }
   };
 
