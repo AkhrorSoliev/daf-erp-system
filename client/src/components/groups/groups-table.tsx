@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { GroupRowActions } from "./group-row-actions";
+import { LevelBadge } from "./level-badge";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -46,8 +47,8 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
           <TableRow>
             <TableHead className="min-w-16 border-r">#</TableHead>
             <TableHead className="min-w-28">Nomi</TableHead>
-            <TableHead className="hidden min-w-24 sm:table-cell">
-              Kurs
+            <TableHead className="hidden min-w-32 sm:table-cell">
+              Daraja / Kurs
             </TableHead>
             <TableHead className="hidden min-w-28 md:table-cell">
               O&apos;qituvchi
@@ -85,7 +86,10 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
                   {group.name}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
-                  {group.course.name}
+                  <div className="flex items-center gap-2">
+                    {group.level && <LevelBadge level={group.level} />}
+                    <span>{group.course.name}</span>
+                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {group.teachers.length > 0 ? (
