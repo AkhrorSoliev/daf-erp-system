@@ -78,49 +78,26 @@ export function AttendanceTrendChart({ data }: Props) {
     );
   }
 
-  // With a single bucket (e.g. one month picked + monthly bucket), there is
-  // only one data point — recharts can't draw a line between zero points.
-  // Show the value as a stat and hint at how to see a trend.
-  if (data.length === 1) {
-    const point = data[0];
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-        <div className="text-xs text-muted-foreground">{point.label}</div>
-        <div className="flex items-end gap-6">
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Davomat
-            </div>
-            <div
-              className="text-3xl font-bold tabular-nums"
-              style={{ color: ATT_COLOR }}
-            >
-              {point.rate}%
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Saqlanish
-            </div>
-            <div
-              className="text-3xl font-bold tabular-nums"
-              style={{ color: RETENTION_COLOR }}
-            >
-              {point.retentionPct === null ? "—" : `${point.retentionPct}%`}
-            </div>
-          </div>
-        </div>
-        <p className="max-w-[420px] text-xs text-muted-foreground">
-          Trend chizig&apos;ini ko&apos;rish uchun davrni kengaytiring yoki{" "}
-          <span className="font-medium">Haftalik</span> kesimga o&apos;ting.
-        </p>
-      </div>
-    );
-  }
+  // With a single bucket (e.g. one month picked + monthly bucket), recharts
+  // can't draw a line between zero points. The dot still renders, so add a
+  // small banner above the chart explaining how to see a trend instead of
+  // replacing the chart entirely.
+  const isSinglePoint = data.length === 1;
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+    <div className="flex h-full flex-col">
+      {isSinglePoint && (
+        <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+          Tanlangan davrda atigi 1 ta {data[0].label} bor. Trend chiziqlarini
+          ko&apos;rish uchun davrni kengaytiring yoki{" "}
+          <span className="font-semibold">Haftalik</span> kesimga o&apos;ting.
+        </div>
+      )}
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+        >
         <defs>
           <linearGradient id="grad-attendance-rate" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={ATT_COLOR} stopOpacity={0.35} />
@@ -171,8 +148,13 @@ export function AttendanceTrendChart({ data }: Props) {
           stroke={ATT_COLOR}
           strokeWidth={2.5}
           fill="url(#grad-attendance-rate)"
-          dot={{ r: 3, fill: ATT_COLOR, stroke: ATT_COLOR, strokeWidth: 0 }}
-          activeDot={{ r: 5, stroke: "white", strokeWidth: 2 }}
+          dot={{
+            r: isSinglePoint ? 6 : 3,
+            fill: ATT_COLOR,
+            stroke: ATT_COLOR,
+            strokeWidth: 0,
+          }}
+          activeDot={{ r: 6, stroke: "white", strokeWidth: 2 }}
         />
         <Area
           type="monotone"
@@ -183,15 +165,16 @@ export function AttendanceTrendChart({ data }: Props) {
           strokeDasharray="4 3"
           fill="url(#grad-retention-rate)"
           dot={{
-            r: 2.5,
+            r: isSinglePoint ? 5 : 2.5,
             fill: RETENTION_COLOR,
             stroke: RETENTION_COLOR,
             strokeWidth: 0,
           }}
-          activeDot={{ r: 4.5, stroke: "white", strokeWidth: 2 }}
+          activeDot={{ r: 5, stroke: "white", strokeWidth: 2 }}
           connectNulls={false}
         />
-      </AreaChart>
-    </ResponsiveContainer>
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
