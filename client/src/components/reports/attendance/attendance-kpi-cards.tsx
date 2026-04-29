@@ -5,6 +5,7 @@ import {
   Info,
   ListChecks,
   TrendingUp,
+  UserCheck,
   XCircle,
   Clock,
   type LucideIcon,
@@ -22,6 +23,7 @@ import {
   formatAttendancePct,
   formatCount,
   getAttendanceColor,
+  getRetentionColor,
 } from "./metric-helpers";
 
 interface KpiCardProps {
@@ -71,19 +73,21 @@ function KpiCard({
 
 interface Props {
   overallRate: number | null;
+  overallRetention: number | null;
   statusBreakdown: AttendanceStatusBreakdown | undefined;
   isLoading: boolean;
 }
 
 export function AttendanceKpiCards({
   overallRate,
+  overallRetention,
   statusBreakdown,
   isLoading,
 }: Props) {
   if (isLoading || !statusBreakdown) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-[100px] rounded-xl" />
         ))}
       </div>
@@ -93,13 +97,20 @@ export function AttendanceKpiCards({
   const lateExcused = statusBreakdown.late + statusBreakdown.excused;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <KpiCard
         icon={TrendingUp}
         label="Umumiy davomat"
         value={formatAttendancePct(overallRate)}
         valueColor={getAttendanceColor(overallRate)}
         tooltip={ATTENDANCE_KPI_TOOLTIPS.overall}
+      />
+      <KpiCard
+        icon={UserCheck}
+        label="Saqlanish darajasi"
+        value={formatAttendancePct(overallRetention)}
+        valueColor={getRetentionColor(overallRetention)}
+        tooltip={ATTENDANCE_KPI_TOOLTIPS.retention}
       />
       <KpiCard
         icon={ListChecks}

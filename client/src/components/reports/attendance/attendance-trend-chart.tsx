@@ -4,6 +4,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -17,7 +18,11 @@ interface Props {
 
 interface CustomTooltipProps {
   active?: boolean;
-  payload?: Array<{ value: number; payload: AttendanceTrendPoint }>;
+  payload?: Array<{
+    value: number;
+    payload: AttendanceTrendPoint;
+    dataKey: string;
+  }>;
   label?: string;
 }
 
@@ -25,38 +30,44 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
   const point = payload[0].payload;
   return (
-    <div className="rounded-md border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md">
-      <div className="font-medium">{label}</div>
-      <div className="text-muted-foreground">
-        Davomat:{" "}
-        <span className="text-foreground font-semibold">{point.rate}%</span>
+    <div className="rounded-md border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md min-w-[160px]">
+      <div className="font-medium mb-1">{label}</div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <span
+            className="size-2 rounded-sm"
+            style={{ backgroundColor: ATT_COLOR }}
+          />
+          <span>Davomat</span>
+        </div>
+        <span className="text-foreground font-semibold tabular-nums">
+          {point.rate}%
+        </span>
       </div>
-      <div className="text-muted-foreground">
-        Yozuvlar:{" "}
-        <span className="text-foreground">{point.total.toLocaleString("en-US")}</span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <span
+            className="size-2 rounded-sm"
+            style={{ backgroundColor: RETENTION_COLOR }}
+          />
+          <span>Saqlanish</span>
+        </div>
+        <span className="text-foreground font-semibold tabular-nums">
+          {point.retentionPct === null ? "—" : `${point.retentionPct}%`}
+        </span>
+      </div>
+      <div className="mt-1 pt-1 border-t flex items-center justify-between gap-3 text-muted-foreground">
+        <span>Yozuvlar</span>
+        <span className="text-foreground tabular-nums">
+          {point.total.toLocaleString("en-US")}
+        </span>
       </div>
     </div>
   );
 }
 
-function computeDomain(values: number[]): [number, number] | undefined {
-  if (values.length === 0) return undefined;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  if (min === max) {
-    if (min === 0) return [0, 100];
-    const pad = Math.abs(min) * 0.1 || 5;
-    return [Math.max(0, min - pad), Math.min(100, max + pad)];
-  }
-  const range = max - min;
-  const pad = range * 0.15;
-  return [
-    Math.max(0, Math.floor(min - pad)),
-    Math.min(100, Math.ceil(max + pad)),
-  ];
-}
-
-const COLOR = "#3b82f6"; // blue-500
+const ATT_COLOR = "#3b82f6"; // blue-500
+const RETENTION_COLOR = "#ef4444"; // red-500
 
 export function AttendanceTrendChart({ data }: Props) {
   if (!data || data.length === 0) {
@@ -67,16 +78,17 @@ export function AttendanceTrendChart({ data }: Props) {
     );
   }
 
-  const values = data.map((d) => d.rate);
-  const domain = computeDomain(values);
-
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="grad-attendance-rate" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={COLOR} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={COLOR} stopOpacity={0.02} />
+            <stop offset="0%" stopColor={ATT_COLOR} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={ATT_COLOR} stopOpacity={0.02} />
+          </linearGradient>
+          <linearGradient id="grad-retention-rate" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={RETENTION_COLOR} stopOpacity={0.25} />
+            <stop offset="100%" stopColor={RETENTION_COLOR} stopOpacity={0.02} />
           </linearGradient>
         </defs>
         <CartesianGrid
@@ -99,21 +111,45 @@ export function AttendanceTrendChart({ data }: Props) {
           tickLine={false}
           axisLine={{ stroke: "#e2e8f0" }}
           width={48}
-          domain={domain}
+          domain={[0, 100]}
           tickFormatter={(v) => `${v}%`}
         />
         <Tooltip
           content={<CustomTooltip />}
           cursor={{ fill: "rgba(100, 116, 139, 0.12)" }}
         />
+        <Legend
+          verticalAlign="top"
+          height={28}
+          iconType="square"
+          wrapperStyle={{ fontSize: 11, paddingBottom: 4 }}
+        />
         <Area
           type="monotone"
+          name="Davomat"
           dataKey="rate"
-          stroke={COLOR}
+          stroke={ATT_COLOR}
           strokeWidth={2.5}
           fill="url(#grad-attendance-rate)"
-          dot={{ r: 3, fill: COLOR, stroke: COLOR, strokeWidth: 0 }}
+          dot={{ r: 3, fill: ATT_COLOR, stroke: ATT_COLOR, strokeWidth: 0 }}
           activeDot={{ r: 5, stroke: "white", strokeWidth: 2 }}
+        />
+        <Area
+          type="monotone"
+          name="Saqlanish"
+          dataKey="retentionPct"
+          stroke={RETENTION_COLOR}
+          strokeWidth={2}
+          strokeDasharray="4 3"
+          fill="url(#grad-retention-rate)"
+          dot={{
+            r: 2.5,
+            fill: RETENTION_COLOR,
+            stroke: RETENTION_COLOR,
+            strokeWidth: 0,
+          }}
+          activeDot={{ r: 4.5, stroke: "white", strokeWidth: 2 }}
+          connectNulls={false}
         />
       </AreaChart>
     </ResponsiveContainer>

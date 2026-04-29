@@ -25,6 +25,7 @@ import {
   ATTENDANCE_BUCKET_LABELS,
   formatAttendancePct,
   getAttendanceColor,
+  getRetentionColor,
   type AttendanceAnalyticsResponse,
   type AttendanceBucket,
   type AttendanceCoursesResponse,
@@ -38,8 +39,13 @@ import {
 
 const BUCKETS: AttendanceBucket[] = ["week", "month"];
 const TABS: AttendanceTab[] = ["teachers", "groups", "courses"];
-const TEACHER_SORTS: TeacherSortBy[] = ["rate", "groupsCount"];
-const GROUP_SORTS: GroupSortBy[] = ["rate", "studentCount", "lessonCount"];
+const TEACHER_SORTS: TeacherSortBy[] = ["rate", "groupsCount", "retention"];
+const GROUP_SORTS: GroupSortBy[] = [
+  "rate",
+  "studentCount",
+  "lessonCount",
+  "retention",
+];
 const ORDERS: SortOrder[] = ["asc", "desc"];
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -199,17 +205,32 @@ function RankedGroupsList({
       {groups.length === 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">{emptyText}</p>
       ) : (
-        <ol className="mt-3 space-y-1.5">
+        <ol className="mt-3 space-y-2">
           {groups.map((g, i) => (
             <li
               key={g.groupId}
-              className="flex items-center justify-between gap-2 text-sm"
+              className="flex items-start justify-between gap-2 text-sm"
             >
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 items-start gap-2">
                 <span className="text-muted-foreground tabular-nums w-4 shrink-0">
                   {i + 1}.
                 </span>
-                <span className="truncate">{g.groupName || "—"}</span>
+                <div className="min-w-0">
+                  <div className="truncate">{g.groupName || "—"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Saqlanish:{" "}
+                    <span
+                      className={cn(
+                        "tabular-nums",
+                        getRetentionColor(g.retentionPct),
+                      )}
+                    >
+                      {g.retentionPct === null
+                        ? "—"
+                        : `${g.retentionPct}%`}
+                    </span>
+                  </div>
+                </div>
               </div>
               <span
                 className={cn(
@@ -369,6 +390,7 @@ export function AttendanceSection() {
 
       <AttendanceKpiCards
         overallRate={analytics?.overallRate ?? null}
+        overallRetention={analytics?.overallRetention ?? null}
         statusBreakdown={analytics?.statusBreakdown}
         isLoading={analyticsLoading}
       />

@@ -28,6 +28,7 @@ import {
   ATTENDANCE_TABLE_TOOLTIPS,
   formatAttendancePct,
   getAttendanceColor,
+  getRetentionColor,
   type AttendanceGroupRow,
   type GroupSortBy,
   type SortOrder,
@@ -177,13 +178,29 @@ export function AttendanceGroupsTable({
               <TableHead className="hidden lg:table-cell">
                 O&apos;qituvchi
               </TableHead>
+              <TableHead className="text-right hidden md:table-cell">
+                <HeaderWithTooltip
+                  label="Boshi"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.startStudentCount}
+                  align="right"
+                />
+              </TableHead>
               <TableHead className="text-right">
                 <SortHeader
-                  label="O'quvchilar"
-                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.studentCount}
+                  label="Yakun"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.endStudentCount}
                   active={sortBy === "studentCount"}
                   order={sortOrder}
                   onToggle={() => handleSort("studentCount")}
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <SortHeader
+                  label="Saqlanish %"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.retention}
+                  active={sortBy === "retention"}
+                  order={sortOrder}
+                  onToggle={() => handleSort("retention")}
                 />
               </TableHead>
               <TableHead className="text-right hidden md:table-cell">
@@ -213,7 +230,7 @@ export function AttendanceGroupsTable({
                   <TableCell className="border-r">
                     <Skeleton className="h-4 w-6" />
                   </TableCell>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={9}>
                     <Skeleton className="h-4 w-full" />
                   </TableCell>
                 </TableRow>
@@ -221,7 +238,7 @@ export function AttendanceGroupsTable({
             ) : groups.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={10}
                   className="text-center text-muted-foreground py-8"
                 >
                   Tanlangan filtrlar bo&apos;yicha guruhlar topilmadi
@@ -245,8 +262,21 @@ export function AttendanceGroupsTable({
                     <TableCell className="hidden lg:table-cell">
                       {teachersDisplay(g.teachers)}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums hidden md:table-cell text-muted-foreground">
+                      {g.startStudentCount}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {g.studentCount}
+                      {g.endStudentCount}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums font-semibold",
+                        getRetentionColor(g.retentionPct),
+                      )}
+                    >
+                      {g.retentionPct === null
+                        ? "—"
+                        : formatAttendancePct(g.retentionPct)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums hidden md:table-cell">
                       {g.lessonCount}
