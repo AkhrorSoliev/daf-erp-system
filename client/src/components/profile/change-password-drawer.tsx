@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -152,7 +151,7 @@ export function ChangePasswordDrawer({
 
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={saving}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Bekor qilish
             </Button>
             <Button
@@ -160,8 +159,7 @@ export function ChangePasswordDrawer({
               form="change-password-form"
               disabled={saving}
             >
-              {saving && <Loader2 className="mr-1.5 size-4 animate-spin" />}
-              O&apos;zgartirish
+              {saving ? "Saqlanmoqda..." : "O'zgartirish"}
             </Button>
           </div>
         </SheetFooter>

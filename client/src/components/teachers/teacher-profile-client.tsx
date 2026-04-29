@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
-import { Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { TeacherProfileCard } from "./teacher-profile-card";
 import { TeacherProfileTabs } from "./teacher-profile-tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import {
   AlertDialog,
@@ -32,28 +31,11 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const canManageTeachers = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const isMobile = useIsMobile();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
   const { openDrawer } = useEditTeacher();
   const [teacher, setTeacher] = useState<TeacherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const activeTab = searchParams.get("tab") ?? "guruhlar";
-
-  const setActiveTab = useCallback(
-    (tab: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (tab === "guruhlar") {
-        params.delete("tab");
-      } else {
-        params.set("tab", tab);
-      }
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
-    },
-    [searchParams, router, pathname],
-  );
 
   const fetchTeacher = useCallback(async () => {
     try {
@@ -82,36 +64,8 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="w-full lg:w-85 lg:shrink-0">
-          <div className="space-y-4 rounded-lg border bg-card p-6">
-            <div className="flex flex-col items-center gap-3">
-              <Skeleton className="size-20 rounded-full" />
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-            <div className="space-y-3 border-t pt-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-3 w-28" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="min-w-0 flex-1 space-y-4">
-          <div className="flex gap-2 border-b pb-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-9 w-24" />
-            ))}
-          </div>
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        </div>
+      <div className="flex h-60 items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -168,11 +122,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
             infoItems={mobileInfoItems}
             actions={mobileActions}
           />
-          <TeacherProfileTabs
-            teacher={teacher}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+          <TeacherProfileTabs teacher={teacher} />
         </div>
       ) : (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -180,11 +130,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
             <TeacherProfileCard teacher={teacher} />
           </div>
           <div className="min-w-0 flex-1">
-            <TeacherProfileTabs
-            teacher={teacher}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+            <TeacherProfileTabs teacher={teacher} />
           </div>
         </div>
       )}
