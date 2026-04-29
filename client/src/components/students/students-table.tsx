@@ -19,6 +19,7 @@ import type { Student } from "@/data/student-model";
 import { useAuth } from "@/hooks/use-auth";
 import { StudentStatusBadge } from "./student-status-badge";
 import { StudentRowActions } from "./student-row-actions";
+import { LevelBadge } from "@/components/groups/level-badge";
 
 function formatBalance(balance: number) {
   const abs = Math.abs(balance).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -87,11 +88,15 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-1">
                   {student.groups.length > 0 ? (
-                    student.groups.map((g) => (
-                      <Badge key={g.id} variant="secondary" className="text-xs">
-                        {g.level ?? g.name}
-                      </Badge>
-                    ))
+                    student.groups.map((g) =>
+                      g.level ? (
+                        <LevelBadge key={g.id} level={g.level} />
+                      ) : (
+                        <Badge key={g.id} variant="secondary" className="text-xs">
+                          {g.name}
+                        </Badge>
+                      ),
+                    )
                   ) : (
                     <span className="text-muted-foreground text-xs">Guruhsiz</span>
                   )}
@@ -173,11 +178,15 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                 <TableCell className="hidden md:table-cell">
                   <div className="flex gap-1">
                     {student.groups.length > 0 ? (
-                      student.groups.map((g) => (
-                        <Badge key={g.id} variant="secondary">
-                          {g.level ?? g.name}
-                        </Badge>
-                      ))
+                      student.groups.map((g) =>
+                        g.level ? (
+                          <LevelBadge key={g.id} level={g.level} />
+                        ) : (
+                          <Badge key={g.id} variant="secondary">
+                            {g.name}
+                          </Badge>
+                        ),
+                      )
                     ) : (
                       <span className="text-muted-foreground text-sm">—</span>
                     )}

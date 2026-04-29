@@ -43,6 +43,16 @@ export class GroupsReadService {
       where.roomId = query.room_id;
     }
 
+    if (query.level) {
+      where.level = query.level;
+    }
+
+    if (query.course_type === 'intensive') {
+      where.course = { lessonPaymentCount: 20 };
+    } else if (query.course_type === 'standard') {
+      where.course = { lessonPaymentCount: { not: 20 } };
+    }
+
     // baseWhere = filters without status (for stats)
     const baseWhere: Prisma.GroupWhereInput = { ...where };
     delete baseWhere.status;

@@ -29,4 +29,12 @@ export class GroupQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   room_id?: string;
+
+  @IsOptional()
+  @IsString()
+  level?: string;
+
+  @IsOptional()
+  @IsString()
+  course_type?: 'intensive' | 'standard';
 }

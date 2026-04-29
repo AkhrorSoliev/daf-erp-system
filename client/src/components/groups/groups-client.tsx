@@ -22,6 +22,7 @@ import { GroupsStats, type GroupsStatsData } from "./groups-stats";
 import { EditGroupDrawer } from "./edit-group-drawer";
 import { GroupsRoomFilter } from "./groups-room-filter";
 import { GroupsTeacherFilter } from "./groups-teacher-filter";
+import { LevelBadge } from "./level-badge";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
@@ -42,9 +43,13 @@ interface TeacherOption {
   lastName: string;
 }
 
+const LEVEL_OPTIONS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
   status: { type: "string" as const, defaultValue: "all" },
+  level: { type: "string" as const, defaultValue: "all" },
+  courseType: { type: "string" as const, defaultValue: "all" },
   room: { type: "string" as const, defaultValue: "all" },
   teacher: { type: "string" as const, defaultValue: "all" },
   page: { type: "number" as const, defaultValue: 1 },
@@ -106,6 +111,8 @@ export function GroupsClient() {
         params.statusEnum = filters.status;
       }
       if (filters.search.trim()) params.search = filters.search.trim();
+      if (filters.level !== "all") params.level = filters.level;
+      if (filters.courseType !== "all") params.course_type = filters.courseType;
       if (filters.room !== "all") params.room_id = filters.room;
       if (filters.teacher !== "all") params.teacher_id = Number(filters.teacher);
       const { data } = await api.get("/groups", { params });
@@ -122,6 +129,8 @@ export function GroupsClient() {
     filters.pageSize,
     filters.search,
     filters.status,
+    filters.level,
+    filters.courseType,
     filters.room,
     filters.teacher,
     selectedBranch,
@@ -179,6 +188,37 @@ export function GroupsClient() {
             <SelectItem value="FORMING">Boshlanmagan</SelectItem>
             <SelectItem value="PAUSED">Pauza</SelectItem>
             <SelectItem value="COMPLETED">Tugallangan</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.level}
+          onValueChange={(value) => setUrlFilters({ level: value, page: 1 })}
+        >
+          <SelectTrigger className="h-9 w-[calc(100%-3rem)] sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha darajalar</SelectItem>
+            {LEVEL_OPTIONS.map((level) => (
+              <SelectItem key={level} value={level}>
+                <LevelBadge level={level} />
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.courseType}
+          onValueChange={(value) =>
+            setUrlFilters({ courseType: value, page: 1 })
+          }
+        >
+          <SelectTrigger className="h-9 w-[calc(100%-3rem)] sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha turlar</SelectItem>
+            <SelectItem value="standard">Standart</SelectItem>
+            <SelectItem value="intensive">Intensiv</SelectItem>
           </SelectContent>
         </Select>
         <GroupsRoomFilter
