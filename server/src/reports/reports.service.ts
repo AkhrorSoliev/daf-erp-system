@@ -240,21 +240,6 @@ export class ReportsService {
   ) {
     return this.departedReasons.getTransferReasons(companyId, params);
   }
-  getStatusExitReasons(
-    companyId: number,
-    params: {
-      branchId?: number;
-      startDate: string;
-      endDate: string;
-    },
-    exitType: 'FREEZE' | 'EXPEL' | 'INACTIVE' | 'ARCHIVE',
-  ) {
-    return this.departedReasons.getStatusExitReasons(
-      companyId,
-      params,
-      exitType,
-    );
-  }
 
   // Teacher changes drill-downs
   getTeacherChangesList(

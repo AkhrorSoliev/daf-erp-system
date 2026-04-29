@@ -248,23 +248,6 @@ export class ReportsController {
     });
   }
 
-  @Get('departed-students/status-exit-reasons')
-  getStatusExitReasons(
-    @Query() query: DepartedStudentsSummaryQueryDto,
-    @Query('exitType') exitType: 'FREEZE' | 'EXPEL' | 'INACTIVE' | 'ARCHIVE',
-    @CurrentUser('companyId') companyId: number,
-  ) {
-    return this.reportsService.getStatusExitReasons(
-      companyId,
-      {
-        branchId: query.branchId,
-        startDate: query.startDate,
-        endDate: query.endDate,
-      },
-      exitType,
-    );
-  }
-
   @Get('departed-students/list')
   getDepartedStudentsList(
     @Query() query: DepartedStudentsListQueryDto,
