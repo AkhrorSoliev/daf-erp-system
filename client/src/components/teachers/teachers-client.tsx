@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TeachersTable } from "./teachers-table";
 import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
@@ -214,8 +215,31 @@ export function TeachersClient() {
       </div>
 
       {loading ? (
-        <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-          Yuklanmoqda...
+        <div className="overflow-x-auto rounded-md border">
+          <div className="space-y-0">
+            <div className="flex items-center gap-4 border-b bg-muted/40 px-4 py-3">
+              <Skeleton className="h-4 w-8" />
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="hidden h-4 w-28 sm:block" />
+              <Skeleton className="hidden h-4 w-20 md:block" />
+              <Skeleton className="hidden h-4 w-20 md:block" />
+              {canManageTeachers && <Skeleton className="ml-auto h-4 w-8" />}
+            </div>
+            {Array.from({ length: filters.pageSize > 5 ? 5 : filters.pageSize }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 border-b px-4 py-3">
+                <Skeleton className="h-4 w-8" />
+                <Skeleton className="size-8 rounded-full" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="hidden h-4 w-28 sm:block" />
+                <Skeleton className="hidden h-4 w-12 md:block" />
+                <Skeleton className="hidden h-4 w-12 md:block" />
+                {canManageTeachers && <Skeleton className="ml-auto h-4 w-8" />}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <TeachersTable
