@@ -78,6 +78,46 @@ export function AttendanceTrendChart({ data }: Props) {
     );
   }
 
+  // With a single bucket (e.g. one month picked + monthly bucket), there is
+  // only one data point — recharts can't draw a line between zero points.
+  // Show the value as a stat and hint at how to see a trend.
+  if (data.length === 1) {
+    const point = data[0];
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+        <div className="text-xs text-muted-foreground">{point.label}</div>
+        <div className="flex items-end gap-6">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Davomat
+            </div>
+            <div
+              className="text-3xl font-bold tabular-nums"
+              style={{ color: ATT_COLOR }}
+            >
+              {point.rate}%
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Saqlanish
+            </div>
+            <div
+              className="text-3xl font-bold tabular-nums"
+              style={{ color: RETENTION_COLOR }}
+            >
+              {point.retentionPct === null ? "—" : `${point.retentionPct}%`}
+            </div>
+          </div>
+        </div>
+        <p className="max-w-[420px] text-xs text-muted-foreground">
+          Trend chizig&apos;ini ko&apos;rish uchun davrni kengaytiring yoki{" "}
+          <span className="font-medium">Haftalik</span> kesimga o&apos;ting.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
