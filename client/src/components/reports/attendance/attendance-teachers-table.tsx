@@ -28,6 +28,7 @@ import {
   ATTENDANCE_TABLE_TOOLTIPS,
   formatAttendancePct,
   getAttendanceColor,
+  getRetentionColor,
   type AttendanceTeacherRow,
   type SortOrder,
   type TeacherSortBy,
@@ -154,11 +155,27 @@ export function AttendanceTeachersTable({
                   onToggle={() => handleSort("groupsCount")}
                 />
               </TableHead>
+              <TableHead className="text-right hidden md:table-cell">
+                <HeaderWithTooltip
+                  label="Boshi"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.startStudentCount}
+                  align="right"
+                />
+              </TableHead>
               <TableHead className="text-right">
                 <HeaderWithTooltip
-                  label="O'quvchilar"
-                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.totalStudents}
+                  label="Yakun"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.endStudentCount}
                   align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <SortHeader
+                  label="Saqlanish %"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.retention}
+                  active={sortBy === "retention"}
+                  order={sortOrder}
+                  onToggle={() => handleSort("retention")}
                 />
               </TableHead>
               <TableHead className="text-right">
@@ -179,7 +196,7 @@ export function AttendanceTeachersTable({
                   <TableCell className="border-r">
                     <Skeleton className="h-4 w-6" />
                   </TableCell>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={6}>
                     <Skeleton className="h-4 w-full" />
                   </TableCell>
                 </TableRow>
@@ -187,7 +204,7 @@ export function AttendanceTeachersTable({
             ) : teachers.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={7}
                   className="text-center text-muted-foreground py-8"
                 >
                   Tanlangan davrda davomat ma&apos;lumotlari yo&apos;q
@@ -207,8 +224,21 @@ export function AttendanceTeachersTable({
                     <TableCell className="text-right tabular-nums">
                       {t.groupsCount}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums hidden md:table-cell text-muted-foreground">
+                      {t.startStudentCount}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {t.totalStudents}
+                      {t.endStudentCount}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums font-semibold",
+                        getRetentionColor(t.retentionPct),
+                      )}
+                    >
+                      {t.retentionPct === null
+                        ? "—"
+                        : formatAttendancePct(t.retentionPct)}
                     </TableCell>
                     <TableCell
                       className={cn(

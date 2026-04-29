@@ -40,7 +40,7 @@ export class ReportsAttendanceAnalyticsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
-    const cacheKey = `reports:teacher-perf:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
+    const cacheKey = `reports:teacher-perf:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -69,10 +69,6 @@ export class ReportsAttendanceAnalyticsService {
             id: true,
             roomId: true,
             room: { select: { capacity: true } },
-            enrollments: {
-              where: { status: 'ACTIVE', deletedAt: null },
-              select: { id: true },
-            },
           },
         },
       },
@@ -86,7 +82,6 @@ export class ReportsAttendanceAnalyticsService {
         lastName: string;
         photo: string | null;
         groupIds: string[];
-        totalEnrolled: number;
         totalCapacity: number;
         groupsWithCapacity: number;
       }
@@ -101,15 +96,12 @@ export class ReportsAttendanceAnalyticsService {
           lastName: gt.teacher.lastName,
           photo: gt.teacher.photo,
           groupIds: [],
-          totalEnrolled: 0,
           totalCapacity: 0,
           groupsWithCapacity: 0,
         };
         teacherMap.set(gt.teacherId, t);
       }
       t.groupIds.push(gt.groupId);
-      const enrolled = gt.group.enrollments.length;
-      t.totalEnrolled += enrolled;
       if (gt.group.room?.capacity) {
         t.totalCapacity += gt.group.room.capacity;
         t.groupsWithCapacity++;
@@ -119,9 +111,11 @@ export class ReportsAttendanceAnalyticsService {
     const allGroupIds = [...new Set(groupTeachers.map((gt) => gt.groupId))];
 
     const dateFilter = this.buildDateFilter(query);
-    const attendanceByGroup =
+    const period = this.resolvePeriod(query);
+
+    const [attendanceByGroup, enrollmentSnapshots] = await Promise.all([
       allGroupIds.length > 0
-        ? await this.prisma.attendance.groupBy({
+        ? this.prisma.attendance.groupBy({
             by: ['groupId', 'status'],
             where: {
               companyId,
@@ -130,7 +124,18 @@ export class ReportsAttendanceAnalyticsService {
             },
             _count: { id: true },
           })
-        : [];
+        : Promise.resolve([]),
+      this.loadEnrollmentsForCounts(companyId, allGroupIds),
+    ]);
+
+    const startCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.start,
+    );
+    const endCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.end,
+    );
 
     const attMap = new Map<string, { total: number; presentLate: number }>();
     for (const a of attendanceByGroup) {
@@ -145,12 +150,16 @@ export class ReportsAttendanceAnalyticsService {
     const allTeachers = [...teacherMap.values()].map((t) => {
       let totalAtt = 0;
       let totalPresentLate = 0;
+      let startStudentCount = 0;
+      let endStudentCount = 0;
       for (const gid of t.groupIds) {
         const att = attMap.get(gid);
         if (att) {
           totalAtt += att.total;
           totalPresentLate += att.presentLate;
         }
+        startStudentCount += startCounts.get(gid) ?? 0;
+        endStudentCount += endCounts.get(gid) ?? 0;
       }
 
       const averageAttendance =
@@ -158,7 +167,7 @@ export class ReportsAttendanceAnalyticsService {
 
       const averageFillRate =
         t.groupsWithCapacity > 0
-          ? Math.round((t.totalEnrolled / t.totalCapacity) * 100)
+          ? Math.round((endStudentCount / t.totalCapacity) * 100)
           : null;
 
       return {
@@ -167,16 +176,28 @@ export class ReportsAttendanceAnalyticsService {
         lastName: t.lastName,
         photo: t.photo,
         groupsCount: t.groupIds.length,
-        totalStudents: t.totalEnrolled,
+        totalStudents: endStudentCount,
+        startStudentCount,
+        endStudentCount,
+        retentionPct: this.computeRetentionPct(
+          startStudentCount,
+          endStudentCount,
+        ),
         averageAttendance,
         averageFillRate,
       };
     });
 
     const orderMul = sortOrder === 'asc' ? 1 : -1;
+    const nullRetentionSinkValue = sortOrder === 'asc' ? Infinity : -Infinity;
     allTeachers.sort((a, b) => {
       if (sortBy === 'groupsCount') {
         return (a.groupsCount - b.groupsCount) * orderMul;
+      }
+      if (sortBy === 'retention') {
+        const av = a.retentionPct ?? nullRetentionSinkValue;
+        const bv = b.retentionPct ?? nullRetentionSinkValue;
+        return (av - bv) * orderMul;
       }
       // 'rate' default — null treated as -1 so it sinks to bottom on desc
       const av = a.averageAttendance ?? -1;
@@ -198,11 +219,12 @@ export class ReportsAttendanceAnalyticsService {
   ) {
     const bucket = query.bucket ?? 'week';
 
-    const cacheKey = `reports:attendance-analytics:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${bucket}`;
+    const cacheKey = `reports:attendance-analytics:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${bucket}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
     const dateFilter = this.buildDateFilter(query);
+    const period = this.resolvePeriod(query);
     const branchGroupIds = await this.getBranchGroupIds(
       companyId,
       query.branchId,
@@ -210,6 +232,21 @@ export class ReportsAttendanceAnalyticsService {
     const groupIdFilter = branchGroupIds
       ? { groupId: { in: branchGroupIds } }
       : {};
+
+    // For retention math: load all enrollment snapshots for branch-scoped
+    // groups (or all company groups when no branch filter).
+    const retentionGroupIds =
+      branchGroupIds ??
+      (
+        await this.prisma.group.findMany({
+          where: { companyId, deletedAt: null },
+          select: { id: true },
+        })
+      ).map((g) => g.id);
+    const enrollmentSnapshots = await this.loadEnrollmentsForCounts(
+      companyId,
+      retentionGroupIds,
+    );
 
     const attendanceData = await this.prisma.attendance.groupBy({
       by: ['date', 'status'],
@@ -231,7 +268,13 @@ export class ReportsAttendanceAnalyticsService {
 
     const bucketMap = new Map<
       string,
-      { total: number; presentLate: number; bucketStart: string }
+      {
+        total: number;
+        presentLate: number;
+        bucketStart: string;
+        rangeStart: Date;
+        rangeEnd: Date;
+      }
     >();
     const dayMap = new Map<number, { total: number; presentLate: number }>();
 
@@ -247,14 +290,20 @@ export class ReportsAttendanceAnalyticsService {
       else if (row.status === 'EXCUSED') excusedCount += count;
 
       const { key, sortStart } = this.bucketKey(row.date, bucket);
-      const slot = bucketMap.get(key) || {
-        total: 0,
-        presentLate: 0,
-        bucketStart: sortStart,
-      };
+      let slot = bucketMap.get(key);
+      if (!slot) {
+        const range = this.bucketBoundaries(row.date, bucket);
+        slot = {
+          total: 0,
+          presentLate: 0,
+          bucketStart: sortStart,
+          rangeStart: range.start,
+          rangeEnd: range.end,
+        };
+        bucketMap.set(key, slot);
+      }
       slot.total += count;
       if (isPresentLate) slot.presentLate += count;
-      bucketMap.set(key, slot);
 
       const day = row.date.getDay();
       const dayEntry = dayMap.get(day) || { total: 0, presentLate: 0 };
@@ -266,14 +315,41 @@ export class ReportsAttendanceAnalyticsService {
     const overallRate =
       totalAll > 0 ? Math.round((totalPresentLate / totalAll) * 100) : 0;
 
+    // Company-wide retention across the entire period
+    const overallStartCount = [
+      ...this.countActiveByGroupAt(enrollmentSnapshots, period.start).values(),
+    ].reduce((s, n) => s + n, 0);
+    const overallEndCount = [
+      ...this.countActiveByGroupAt(enrollmentSnapshots, period.end).values(),
+    ].reduce((s, n) => s + n, 0);
+    const overallRetention = this.computeRetentionPct(
+      overallStartCount,
+      overallEndCount,
+    );
+
     const trend = [...bucketMap.entries()]
       .sort(([, a], [, b]) => a.bucketStart.localeCompare(b.bucketStart))
-      .map(([label, data]) => ({
-        bucketStart: data.bucketStart,
-        label,
-        rate: Math.round((data.presentLate / data.total) * 100),
-        total: data.total,
-      }));
+      .map(([label, data]) => {
+        const startCount = [
+          ...this.countActiveByGroupAt(
+            enrollmentSnapshots,
+            data.rangeStart,
+          ).values(),
+        ].reduce((s, n) => s + n, 0);
+        const endCount = [
+          ...this.countActiveByGroupAt(
+            enrollmentSnapshots,
+            data.rangeEnd,
+          ).values(),
+        ].reduce((s, n) => s + n, 0);
+        return {
+          bucketStart: data.bucketStart,
+          label,
+          rate: Math.round((data.presentLate / data.total) * 100),
+          total: data.total,
+          retentionPct: this.computeRetentionPct(startCount, endCount),
+        };
+      });
 
     const dayNames = [
       'Yakshanba',
@@ -350,19 +426,37 @@ export class ReportsAttendanceAnalyticsService {
 
     const nameMap = new Map(groupNames.map((g) => [g.id, g.name]));
 
+    // Per-group retention for ranked lists
+    const rankingStartCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.start,
+    );
+    const rankingEndCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.end,
+    );
+    const retentionForGroup = (groupId: string) =>
+      this.computeRetentionPct(
+        rankingStartCounts.get(groupId) ?? 0,
+        rankingEndCounts.get(groupId) ?? 0,
+      );
+
     const worstGroups = worstSlice.map((g) => ({
       groupId: g.groupId,
       groupName: nameMap.get(g.groupId) ?? '',
       rate: g.rate,
+      retentionPct: retentionForGroup(g.groupId),
     }));
     const bestGroups = bestSlice.map((g) => ({
       groupId: g.groupId,
       groupName: nameMap.get(g.groupId) ?? '',
       rate: g.rate,
+      retentionPct: retentionForGroup(g.groupId),
     }));
 
     const result = {
       overallRate,
+      overallRetention,
       statusBreakdown: {
         present: presentCount,
         absent: absentCount,
@@ -390,7 +484,7 @@ export class ReportsAttendanceAnalyticsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
-    const cacheKey = `reports:attendance-by-group:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${query.courseId || 'all'}:${query.teacherId || 'all'}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
+    const cacheKey = `reports:attendance-by-group:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${query.courseId || 'all'}:${query.teacherId || 'all'}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -421,10 +515,6 @@ export class ReportsAttendanceAnalyticsService {
             },
           },
         },
-        enrollments: {
-          where: { status: 'ACTIVE', deletedAt: null },
-          select: { id: true },
-        },
       },
     });
 
@@ -436,25 +526,37 @@ export class ReportsAttendanceAnalyticsService {
 
     const groupIds = groups.map((g) => g.id);
     const dateFilter = this.buildDateFilter(query);
+    const period = this.resolvePeriod(query);
 
-    const attendance = await this.prisma.attendance.groupBy({
-      by: ['groupId', 'status'],
-      where: {
-        companyId,
-        groupId: { in: groupIds },
-        ...dateFilter,
-      },
-      _count: { id: true },
-    });
+    const [attendance, lessonCounts, enrollmentSnapshots] = await Promise.all([
+      this.prisma.attendance.groupBy({
+        by: ['groupId', 'status'],
+        where: {
+          companyId,
+          groupId: { in: groupIds },
+          ...dateFilter,
+        },
+        _count: { id: true },
+      }),
+      this.prisma.attendance.groupBy({
+        by: ['groupId', 'date'],
+        where: {
+          companyId,
+          groupId: { in: groupIds },
+          ...dateFilter,
+        },
+      }),
+      this.loadEnrollmentsForCounts(companyId, groupIds),
+    ]);
 
-    const lessonCounts = await this.prisma.attendance.groupBy({
-      by: ['groupId', 'date'],
-      where: {
-        companyId,
-        groupId: { in: groupIds },
-        ...dateFilter,
-      },
-    });
+    const startCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.start,
+    );
+    const endCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.end,
+    );
 
     const attMap = new Map<
       string,
@@ -502,6 +604,8 @@ export class ReportsAttendanceAnalyticsService {
       const total = a?.total ?? 0;
       const attendanceRate =
         total > 0 ? Math.round(((a?.presentLate ?? 0) / total) * 100) : 0;
+      const startStudentCount = startCounts.get(g.id) ?? 0;
+      const endStudentCount = endCounts.get(g.id) ?? 0;
       return {
         groupId: g.id,
         groupName: g.name,
@@ -514,7 +618,12 @@ export class ReportsAttendanceAnalyticsService {
           firstName: t.teacher.firstName,
           lastName: t.teacher.lastName,
         })),
-        studentCount: g.enrollments.length,
+        startStudentCount,
+        endStudentCount,
+        retentionPct: this.computeRetentionPct(
+          startStudentCount,
+          endStudentCount,
+        ),
         lessonCount: lessonsMap.get(g.id) ?? 0,
         attendanceRate,
         present: a?.present ?? 0,
@@ -525,12 +634,19 @@ export class ReportsAttendanceAnalyticsService {
     });
 
     const orderMul = sortOrder === 'asc' ? 1 : -1;
+    // null retention sinks to bottom regardless of sort order
+    const nullRetentionSinkValue = sortOrder === 'asc' ? Infinity : -Infinity;
     enriched.sort((a, b) => {
       if (sortBy === 'studentCount') {
-        return (a.studentCount - b.studentCount) * orderMul;
+        return (a.endStudentCount - b.endStudentCount) * orderMul;
       }
       if (sortBy === 'lessonCount') {
         return (a.lessonCount - b.lessonCount) * orderMul;
+      }
+      if (sortBy === 'retention') {
+        const av = a.retentionPct ?? nullRetentionSinkValue;
+        const bv = b.retentionPct ?? nullRetentionSinkValue;
+        return (av - bv) * orderMul;
       }
       return (a.attendanceRate - b.attendanceRate) * orderMul;
     });
@@ -547,7 +663,7 @@ export class ReportsAttendanceAnalyticsService {
     companyId: number,
     query: AttendanceByCourseQueryDto,
   ) {
-    const cacheKey = `reports:attendance-by-course:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}`;
+    const cacheKey = `reports:attendance-by-course:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -563,10 +679,6 @@ export class ReportsAttendanceAnalyticsService {
         id: true,
         courseId: true,
         course: { select: { id: true, name: true } },
-        enrollments: {
-          where: { status: 'ACTIVE', deletedAt: null },
-          select: { id: true },
-        },
       },
     });
 
@@ -578,31 +690,44 @@ export class ReportsAttendanceAnalyticsService {
 
     const groupIds = groups.map((g) => g.id);
     const dateFilter = this.buildDateFilter(query);
+    const period = this.resolvePeriod(query);
 
-    const attendance = await this.prisma.attendance.groupBy({
-      by: ['groupId', 'status'],
-      where: {
-        companyId,
-        groupId: { in: groupIds },
-        ...dateFilter,
-      },
-      _count: { id: true },
-    });
+    const [attendance, lessonCounts, enrollmentSnapshots] = await Promise.all([
+      this.prisma.attendance.groupBy({
+        by: ['groupId', 'status'],
+        where: {
+          companyId,
+          groupId: { in: groupIds },
+          ...dateFilter,
+        },
+        _count: { id: true },
+      }),
+      this.prisma.attendance.groupBy({
+        by: ['groupId', 'date'],
+        where: {
+          companyId,
+          groupId: { in: groupIds },
+          ...dateFilter,
+        },
+      }),
+      this.loadEnrollmentsForCounts(companyId, groupIds),
+    ]);
 
-    const lessonCounts = await this.prisma.attendance.groupBy({
-      by: ['groupId', 'date'],
-      where: {
-        companyId,
-        groupId: { in: groupIds },
-        ...dateFilter,
-      },
-    });
+    const startCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.start,
+    );
+    const endCounts = this.countActiveByGroupAt(
+      enrollmentSnapshots,
+      period.end,
+    );
 
     type CourseAcc = {
       courseId: string;
       courseName: string;
       groupCount: number;
-      studentCount: number;
+      startStudentCount: number;
+      endStudentCount: number;
       lessonCount: number;
       total: number;
       presentLate: number;
@@ -624,7 +749,8 @@ export class ReportsAttendanceAnalyticsService {
           courseId,
           courseName: g.course?.name ?? '',
           groupCount: 0,
-          studentCount: 0,
+          startStudentCount: 0,
+          endStudentCount: 0,
           lessonCount: 0,
           total: 0,
           presentLate: 0,
@@ -636,7 +762,8 @@ export class ReportsAttendanceAnalyticsService {
         courseMap.set(courseId, acc);
       }
       acc.groupCount += 1;
-      acc.studentCount += g.enrollments.length;
+      acc.startStudentCount += startCounts.get(g.id) ?? 0;
+      acc.endStudentCount += endCounts.get(g.id) ?? 0;
     }
 
     for (const row of lessonCounts) {
@@ -671,7 +798,12 @@ export class ReportsAttendanceAnalyticsService {
         courseId: acc.courseId,
         courseName: acc.courseName,
         groupCount: acc.groupCount,
-        studentCount: acc.studentCount,
+        startStudentCount: acc.startStudentCount,
+        endStudentCount: acc.endStudentCount,
+        retentionPct: this.computeRetentionPct(
+          acc.startStudentCount,
+          acc.endStudentCount,
+        ),
         lessonCount: acc.lessonCount,
         attendanceRate:
           acc.total > 0 ? Math.round((acc.presentLate / acc.total) * 100) : 0,
@@ -695,6 +827,99 @@ export class ReportsAttendanceAnalyticsService {
       if (query.endDate) filter.date.lte = new Date(query.endDate);
     }
     return filter;
+  }
+
+  // Period boundary used for retention math. Mirrors ReportsQueryDto's
+  // startDate/endDate parsing but returns concrete Date objects with sensible
+  // defaults — start = epoch (so all enrollments count as "before start"),
+  // end = now.
+  private resolvePeriod(query: {
+    startDate?: string;
+    endDate?: string;
+  }): { start: Date; end: Date } {
+    const start = query.startDate ? new Date(query.startDate) : new Date(0);
+    const end = query.endDate ? new Date(query.endDate) : new Date();
+    return { start, end };
+  }
+
+  // Loads all non-deleted enrollments for the given groups with the minimal
+  // fields needed to compute "active at date X". Used by retention helpers.
+  // Multi-tenant safety comes from the caller scoping `groupIds` to the
+  // current company (Enrollment has no companyId column — it inherits via Group).
+  private async loadEnrollmentsForCounts(
+    _companyId: number,
+    groupIds: string[],
+  ): Promise<
+    Array<{
+      id: string;
+      groupId: string;
+      createdAt: Date;
+      status: string;
+      statusChangedAt: Date | null;
+    }>
+  > {
+    if (groupIds.length === 0) return [];
+    return this.prisma.enrollment.findMany({
+      where: {
+        deletedAt: null,
+        groupId: { in: groupIds },
+      },
+      select: {
+        id: true,
+        groupId: true,
+        createdAt: true,
+        status: true,
+        statusChangedAt: true,
+      },
+    });
+  }
+
+  // Was this enrollment "in the group" at the given moment?
+  // "In the group" means status was ACTIVE or FROZEN at date X.
+  // Uses Enrollment.status + statusChangedAt as a single-transition
+  // approximation (matches reports-departed-students.service.ts).
+  private isEnrollmentActiveAt(
+    e: {
+      createdAt: Date;
+      status: string;
+      statusChangedAt: Date | null;
+    },
+    date: Date,
+  ): boolean {
+    if (e.createdAt >= date) return false;
+    if (e.status === 'ACTIVE' || e.status === 'FROZEN') return true;
+    // Status is DROPPED / TRANSFERRED / COMPLETED — count as active only if
+    // the transition happened strictly after the boundary.
+    return e.statusChangedAt != null && e.statusChangedAt > date;
+  }
+
+  // For each group in `enrollments`, returns the count of enrollments that
+  // were active (ACTIVE/FROZEN) at the given date.
+  private countActiveByGroupAt(
+    enrollments: Array<{
+      groupId: string;
+      createdAt: Date;
+      status: string;
+      statusChangedAt: Date | null;
+    }>,
+    date: Date,
+  ): Map<string, number> {
+    const out = new Map<string, number>();
+    for (const e of enrollments) {
+      if (!this.isEnrollmentActiveAt(e, date)) continue;
+      out.set(e.groupId, (out.get(e.groupId) ?? 0) + 1);
+    }
+    return out;
+  }
+
+  // retention % from start/end counts, rounded to nearest integer.
+  // null when start = 0 (group did not exist or had no students at start).
+  private computeRetentionPct(
+    startCount: number,
+    endCount: number,
+  ): number | null {
+    if (startCount === 0) return null;
+    return Math.round((endCount / startCount) * 100);
   }
 
   private async getBranchGroupIds(
@@ -727,6 +952,37 @@ export class ReportsAttendanceAnalyticsService {
     // week
     const isoWeek = this.getISOWeek(date);
     return { key: isoWeek, sortStart: isoWeek };
+  }
+
+  // Boundaries (start/end Date objects) of the bucket containing `date`.
+  // Used by retention math to count active enrollments at the bucket edges.
+  private bucketBoundaries(
+    date: Date,
+    bucket: 'week' | 'month',
+  ): { start: Date; end: Date } {
+    if (bucket === 'month') {
+      const start = new Date(date.getFullYear(), date.getMonth(), 1);
+      const end = new Date(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+      return { start, end };
+    }
+    // week — ISO week, Monday-start
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const dayOffset = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+    const start = new Date(d);
+    start.setDate(d.getDate() - dayOffset);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
   }
 
   private getISOWeek(date: Date): string {

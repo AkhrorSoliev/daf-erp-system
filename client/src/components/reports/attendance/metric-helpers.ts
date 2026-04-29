@@ -13,6 +13,7 @@ export interface AttendanceTrendPoint {
   label: string;
   rate: number;
   total: number;
+  retentionPct: number | null;
 }
 
 export interface AttendanceDayOfWeekPoint {
@@ -24,10 +25,12 @@ export interface AttendanceGroupRanked {
   groupId: string;
   groupName: string;
   rate: number;
+  retentionPct: number | null;
 }
 
 export interface AttendanceAnalyticsResponse {
   overallRate: number;
+  overallRetention: number | null;
   statusBreakdown: AttendanceStatusBreakdown;
   bucket: AttendanceBucket;
   trend: AttendanceTrendPoint[];
@@ -43,6 +46,9 @@ export interface AttendanceTeacherRow {
   photo: string | null;
   groupsCount: number;
   totalStudents: number;
+  startStudentCount: number;
+  endStudentCount: number;
+  retentionPct: number | null;
   averageAttendance: number | null;
   averageFillRate: number | null;
 }
@@ -62,7 +68,9 @@ export interface AttendanceGroupRow {
   courseId: string;
   courseName: string;
   teachers: Array<{ id: number; firstName: string; lastName: string }>;
-  studentCount: number;
+  startStudentCount: number;
+  endStudentCount: number;
+  retentionPct: number | null;
   lessonCount: number;
   attendanceRate: number;
   present: number;
@@ -82,7 +90,9 @@ export interface AttendanceCourseRow {
   courseId: string;
   courseName: string;
   groupCount: number;
-  studentCount: number;
+  startStudentCount: number;
+  endStudentCount: number;
+  retentionPct: number | null;
   lessonCount: number;
   attendanceRate: number;
   present: number;
@@ -95,8 +105,8 @@ export interface AttendanceCoursesResponse {
   courses: AttendanceCourseRow[];
 }
 
-export type TeacherSortBy = "rate" | "groupsCount";
-export type GroupSortBy = "rate" | "studentCount" | "lessonCount";
+export type TeacherSortBy = "rate" | "groupsCount" | "retention";
+export type GroupSortBy = "rate" | "studentCount" | "lessonCount" | "retention";
 export type SortOrder = "asc" | "desc";
 
 export const ATTENDANCE_BUCKET_LABELS: Record<AttendanceBucket, string> = {
@@ -106,6 +116,14 @@ export const ATTENDANCE_BUCKET_LABELS: Record<AttendanceBucket, string> = {
 
 // Color thresholds — green ≥80%, amber ≥60%, red <60%
 export function getAttendanceColor(pct: number | null): string | undefined {
+  if (pct === null) return undefined;
+  if (pct >= 80) return "text-emerald-600 dark:text-emerald-400";
+  if (pct >= 60) return "text-amber-600 dark:text-amber-400";
+  return "text-red-600 dark:text-red-400";
+}
+
+// Same thresholds as attendance — deliberate so users internalize one scale.
+export function getRetentionColor(pct: number | null): string | undefined {
   if (pct === null) return undefined;
   if (pct >= 80) return "text-emerald-600 dark:text-emerald-400";
   if (pct >= 60) return "text-amber-600 dark:text-amber-400";
@@ -146,12 +164,20 @@ export const ATTENDANCE_KPI_TOOLTIPS = {
     "KELMADI (sababsiz) deb belgilangan davomat yozuvlari soni. Yuqori son — muammoli signal.",
   lateExcused:
     "KECHIKDI va SABABLI yozuvlarning yig'indisi.\n\nKechikdi — keldi, lekin kech.\nSababli — kelmadi, lekin sababi bor (kasal, dars bekor qilingan, va h.k.).",
+  retention:
+    "Saqlanish darajasi — davr boshida faol bo'lgan o'quvchilarning necha foizi davr oxirigacha guruhda qolgan.\n\nHisob: davr oxiridagi faol o'quvchilar / davr boshidagi faol o'quvchilar × 100.\n\nMuhim: davomat % yuqori bo'lib, saqlanish % past bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nFaol = ACTIVE yoki FROZEN status. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
 };
 
 export const ATTENDANCE_TABLE_TOOLTIPS = {
   rate:
     "Davomat foizi: (KELDI + KECHIKDI) / Jami yozuvlar × 100.\n\nDarslar bekor qilingan yoki sababli kelmagan yozuvlar yig'indidan chiqariladi.",
   studentCount: "Hozirda guruhda o'qiyotgan faol o'quvchilar soni.",
+  startStudentCount:
+    "Tanlangan davr boshida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
+  endStudentCount:
+    "Tanlangan davr oxirida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
+  retention:
+    "Saqlanish %: davr oxirida qolgan o'quvchilar / davr boshida bo'lgan o'quvchilar × 100.\n\nDavomat % yuqori bo'lib, saqlanish past bo'lsa — qolgan o'quvchilar yaxshi keladi, lekin guruh kichraygan.\n\nRanglar:\n• Yashil ≥80% — yaxshi\n• Sariq 60–79% — diqqat\n• Qizil <60% — muammo",
   lessonCount:
     "Tanlangan davrda bu guruh uchun davomat olingan kunlar soni.",
   groupsCount: "Bu o'qituvchi yetakchilik qilayotgan faol guruhlar soni.",

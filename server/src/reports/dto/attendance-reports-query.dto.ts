@@ -38,8 +38,8 @@ export class AttendanceTeacherPerfQueryDto {
   endDate?: string;
 
   @IsOptional()
-  @IsIn(['rate', 'groupsCount'])
-  sortBy?: 'rate' | 'groupsCount';
+  @IsIn(['rate', 'groupsCount', 'retention'])
+  sortBy?: 'rate' | 'groupsCount' | 'retention';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])
@@ -83,8 +83,8 @@ export class AttendanceByGroupQueryDto {
   teacherId?: number;
 
   @IsOptional()
-  @IsIn(['rate', 'studentCount', 'lessonCount'])
-  sortBy?: 'rate' | 'studentCount' | 'lessonCount';
+  @IsIn(['rate', 'studentCount', 'lessonCount', 'retention'])
+  sortBy?: 'rate' | 'studentCount' | 'lessonCount' | 'retention';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])

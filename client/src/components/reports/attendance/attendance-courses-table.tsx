@@ -19,6 +19,7 @@ import {
   ATTENDANCE_TABLE_TOOLTIPS,
   formatAttendancePct,
   getAttendanceColor,
+  getRetentionColor,
   type AttendanceCourseRow,
 } from "./metric-helpers";
 
@@ -69,8 +70,22 @@ export function AttendanceCoursesTable({ courses, isLoading }: Props) {
               <TableHead className="text-right">Guruhlar</TableHead>
               <TableHead className="text-right hidden md:table-cell">
                 <HeaderWithTooltip
-                  label="O'quvchilar"
-                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.studentCount}
+                  label="Boshi"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.startStudentCount}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Yakun"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.endStudentCount}
+                  align="right"
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <HeaderWithTooltip
+                  label="Saqlanish %"
+                  tooltip={ATTENDANCE_TABLE_TOOLTIPS.retention}
                   align="right"
                 />
               </TableHead>
@@ -103,7 +118,7 @@ export function AttendanceCoursesTable({ courses, isLoading }: Props) {
                   <TableCell className="border-r">
                     <Skeleton className="h-4 w-6" />
                   </TableCell>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={9}>
                     <Skeleton className="h-4 w-full" />
                   </TableCell>
                 </TableRow>
@@ -111,7 +126,7 @@ export function AttendanceCoursesTable({ courses, isLoading }: Props) {
             ) : courses.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={10}
                   className="text-center text-muted-foreground py-8"
                 >
                   Tanlangan davrda kurs ma&apos;lumotlari yo&apos;q
@@ -127,8 +142,21 @@ export function AttendanceCoursesTable({ courses, isLoading }: Props) {
                   <TableCell className="text-right tabular-nums">
                     {c.groupCount}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums hidden md:table-cell">
-                    {c.studentCount}
+                  <TableCell className="text-right tabular-nums hidden md:table-cell text-muted-foreground">
+                    {c.startStudentCount}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {c.endStudentCount}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "text-right tabular-nums font-semibold",
+                      getRetentionColor(c.retentionPct),
+                    )}
+                  >
+                    {c.retentionPct === null
+                      ? "—"
+                      : formatAttendancePct(c.retentionPct)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums hidden md:table-cell">
                     {c.lessonCount}
