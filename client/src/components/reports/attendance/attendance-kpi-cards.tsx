@@ -107,7 +107,7 @@ export function AttendanceKpiCards({
       />
       <KpiCard
         icon={UserCheck}
-        label="Saqlanish darajasi"
+        label="Guruhda qolganlar"
         value={formatAttendancePct(overallRetention)}
         valueColor={getRetentionColor(overallRetention)}
         tooltip={ATTENDANCE_KPI_TOOLTIPS.retention}

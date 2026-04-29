@@ -196,7 +196,7 @@ export function AttendanceGroupsTable({
               </TableHead>
               <TableHead className="text-right">
                 <SortHeader
-                  label="Saqlanish %"
+                  label="Qoldi %"
                   tooltip={ATTENDANCE_TABLE_TOOLTIPS.retention}
                   active={sortBy === "retention"}
                   order={sortOrder}
