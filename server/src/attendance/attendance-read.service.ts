@@ -17,6 +17,10 @@ import {
   dayOfWeekForDateStr,
   addDaysToDateStr,
 } from './shared/date-utils';
+import {
+  calculateDebtAmount,
+  calculatePerLessonCost,
+} from '../billing/debtor-check.helper';
 
 @Injectable()
 export class AttendanceReadService {
@@ -207,24 +211,31 @@ export class AttendanceReadService {
 
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
-      select: { id: true },
+      select: {
+        id: true,
+        course: { select: { price: true, lessonPaymentCount: true } },
+      },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
 
     const parsedDate = new Date(date + 'T00:00:00.000Z');
 
-    // Teacher sees only students with non-negative balance — students who
-    // haven't prepaid are invisible to the teacher so they can't be marked
-    // present by accident. Admin/CEO see everyone regardless of balance.
-    const isTeacherOnly =
-      roles && roles.length > 0 && roles.every((r) => r === 'Teacher');
+    const perLessonCost = calculatePerLessonCost(
+      group.course.price,
+      group.course.lessonPaymentCount,
+    );
 
+    // Two filters at the enrollment level:
+    //   1. status ACTIVE + not soft-deleted (existing rule)
+    //   2. startDate <= lessonDate — students who joined later don't appear
+    //      on past lessons. NULL startDate (legacy/un-backfilled) is treated
+    //      as "no restriction" so the page never silently empties.
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         groupId,
         deletedAt: null,
         status: EnrollmentStatus.ACTIVE,
-        ...(isTeacherOnly && { student: { balance: { gte: 0 } } }),
+        OR: [{ startDate: null }, { startDate: { lte: parsedDate } }],
       },
       select: {
         studentId: true,
@@ -234,6 +245,7 @@ export class AttendanceReadService {
             firstName: true,
             lastName: true,
             photo: true,
+            balance: true,
           },
         },
       },
@@ -253,17 +265,50 @@ export class AttendanceReadService {
       existingAttendance.map((a) => [a.studentId, a]),
     );
 
-    return enrollments.map((e) => {
+    // Per-group debt classification: a student is a debtor if their balance
+    // can't cover even one lesson at this group's per-lesson cost. The
+    // teacher view hides them entirely (so they can't be PRESENT-marked by
+    // mistake); the admin view surfaces them in a separate panel for
+    // collection follow-up.
+    const isTeacherOnly =
+      roles && roles.length > 0 && roles.every((r) => r === 'Teacher');
+
+    const mapped = enrollments.map((e) => {
       const att = attendanceMap.get(e.studentId);
+      const isDebtor = e.student.balance < perLessonCost;
       return {
         studentId: e.student.id,
         firstName: e.student.firstName,
         lastName: e.student.lastName,
         photo: e.student.photo,
+        balance: e.student.balance,
+        isDebtor,
+        debtAmount: calculateDebtAmount(
+          e.student.balance,
+          group.course.price,
+          group.course.lessonPaymentCount,
+        ),
         status: att?.status ?? null,
         note: att?.note ?? null,
       };
     });
+
+    const activeStudents = mapped.filter((s) => !s.isDebtor);
+    const debtorStudents = mapped.filter((s) => s.isDebtor);
+
+    if (isTeacherOnly) {
+      // Teacher portal never sees debtors — they aren't part of the
+      // expected-set in attendance-save either, so omitting them from the
+      // payload keeps the two layers in sync.
+      return { activeStudents, debtorStudents: [] };
+    }
+
+    return {
+      activeStudents,
+      debtorStudents,
+      perLessonCost,
+      coursePrice: group.course.price,
+    };
   }
 
   /**

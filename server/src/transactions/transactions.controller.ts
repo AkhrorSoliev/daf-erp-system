@@ -38,6 +38,29 @@ export class TransactionsController {
     return this.transactionsService.findByStudent(studentId, query, companyId);
   }
 
+  // FAZA 6.2 — Lesson trail (per-student "where did each so'm go?" report).
+  // Cashier reads it too because they need to explain ledger gaps to
+  // confused students at the front desk.
+  @Get('student/:studentId/lesson-trail')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  getLessonTrail(
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @Query('contractId') contractId: string | undefined,
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Query('page') page: string | undefined,
+    @Query('pageSize') pageSize: string | undefined,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.transactionsService.getLessonTrail(studentId, companyId, {
+      contractId,
+      from,
+      to,
+      page: page ? parseInt(page, 10) : undefined,
+      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+    });
+  }
+
   @Get('teacher/:teacherId')
   @Roles('CEO', 'Branch Director', 'Administrator')
   findByTeacher(

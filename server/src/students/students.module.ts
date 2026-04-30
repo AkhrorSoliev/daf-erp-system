@@ -16,6 +16,7 @@ import { SmsModule } from '../sms/sms.module';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { PaymentGatewaysModule } from '../payment-gateways/payment-gateways.module';
+import { BillingModule } from '../billing/billing.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PaymentGatewaysModule } from '../payment-gateways/payment-gateways.modu
     AttendanceModule,
     TransactionsModule,
     PaymentGatewaysModule,
+    BillingModule,
   ],
   controllers: [
     StudentsController,

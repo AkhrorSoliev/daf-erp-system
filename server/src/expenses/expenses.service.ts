@@ -183,6 +183,7 @@ export class ExpensesService {
               expenseId: id,
               type: 'EXPENSE',
               reversedTransactionId: null,
+              reversedAt: null,
             },
             select: { id: true },
           });
@@ -243,6 +244,7 @@ export class ExpensesService {
         expenseId: id,
         type: 'EXPENSE',
         reversedTransactionId: null,
+        reversedAt: null,
       },
       select: { id: true },
     });

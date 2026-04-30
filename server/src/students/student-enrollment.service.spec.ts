@@ -3,7 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { TransactionsService } from '../transactions/transactions.service';
+import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('StudentEnrollmentService', () => {
@@ -58,8 +58,9 @@ describe('StudentEnrollmentService', () => {
           .fn()
           .mockResolvedValue({ price: 800000, lessonPaymentCount: 12 }),
       },
-      departureReason: {
+      studentExitReason: {
         findFirst: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       enrollmentTransferReason: {
         findFirst: jest.fn(),
@@ -68,6 +69,10 @@ describe('StudentEnrollmentService', () => {
         create: jest.fn(),
         createMany: jest.fn(),
       },
+      // Faza 5: enrollToGroup (transfer branch) and removeFromGroup wrap
+      // their work in $transaction; the callback receives prisma so all
+      // model mocks remain reachable.
+      $transaction: jest.fn((cb) => cb(prisma)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -85,8 +90,8 @@ describe('StudentEnrollmentService', () => {
           },
         },
         {
-          provide: TransactionsService,
-          useValue: { deductLessonFee: jest.fn() },
+          provide: EnrollmentBillingService,
+          useValue: { refundPrepaidToBalance: jest.fn().mockResolvedValue(null) },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
@@ -288,22 +293,24 @@ describe('StudentEnrollmentService', () => {
       prisma.student.update = jest.fn().mockResolvedValue({});
     });
 
-    it('uses DepartureReason name when departureReasonId is provided', async () => {
-      prisma.departureReason.findFirst.mockResolvedValueOnce({
+    it('uses StudentExitReason name when departureReasonId is provided', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
         id: 'reason-1',
         name: 'Moliyaviy sabablar',
         companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
       });
 
       await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
         departureReasonId: 'reason-1',
       });
 
-      expect(prisma.departureReason.findFirst).toHaveBeenCalledWith({
+      expect(prisma.studentExitReason.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'reason-1',
           companyId: 1001,
           deletedAt: null,
+          appliesTo: { has: 'GROUP_REMOVAL' },
         },
       });
       expect(prisma.enrollment.update).toHaveBeenCalledWith(
@@ -327,7 +334,7 @@ describe('StudentEnrollmentService', () => {
     });
 
     it('throws NotFound if departureReasonId is not in company or deleted', async () => {
-      prisma.departureReason.findFirst.mockResolvedValueOnce(null);
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce(null);
       await expect(
         service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
           departureReasonId: 'missing',
@@ -335,7 +342,15 @@ describe('StudentEnrollmentService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('falls back to free-text reason when no departureReasonId', async () => {
+    it('rejects empty reason when configured GROUP_REMOVAL reasons exist', async () => {
+      prisma.studentExitReason.count.mockResolvedValueOnce(3);
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {}),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('accepts free-text reason when no configured reasons exist', async () => {
+      prisma.studentExitReason.count.mockResolvedValueOnce(0);
       await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
         reason: "Ota-ona qarorigora ko'ra",
       });
@@ -356,16 +371,11 @@ describe('StudentEnrollmentService', () => {
       );
     });
 
-    it('uses default reason when neither id nor text is provided', async () => {
-      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {});
-      expect(prisma.enrollment.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            statusChangeReason: 'Guruhdan chiqarildi',
-            departureReasonId: null,
-          }),
-        }),
-      );
+    it('rejects empty reason when no configured reasons exist either', async () => {
+      prisma.studentExitReason.count.mockResolvedValueOnce(0);
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {}),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

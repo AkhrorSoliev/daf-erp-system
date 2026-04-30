@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryService } from './salary.service';
+import { isCycleStartDayForCompany } from './shared/resolve-current-period';
 
 @Injectable()
 export class SalaryCronService {
@@ -13,26 +14,38 @@ export class SalaryCronService {
   ) {}
 
   /**
-   * Auto-calculate monthly salaries on the 8th of each month at 2:00 AM Tashkent time.
-   * Cutoff date: 7th of current month.
-   * Accruals from 8th onward go to next month's calculation.
+   * Auto-calculate monthly salaries.
+   *
+   * Faza 2 makes the cycle start day per-company configurable. The cron now
+   * runs DAILY at 02:00 Tashkent and asks the resolver for each company:
+   * "is today your cycleStartDay?". Only matching companies get their
+   * calculation. This way a company that switches from 8→1 takes effect on
+   * the next 1st without redeploying or re-scheduling the cron.
    */
-  @Cron('0 2 8 * *', { timeZone: 'Asia/Tashkent' })
+  @Cron('0 2 * * *', { timeZone: 'Asia/Tashkent' })
   async calculateMonthlySalaries() {
-    this.logger.log('Starting monthly salary calculation...');
-
+    const now = new Date();
     const companies = await this.prisma.company.findMany({
       select: { id: true },
     });
 
+    let ran = 0;
     for (const company of companies) {
       try {
+        const isStartDay = await isCycleStartDayForCompany(
+          this.prisma,
+          company.id,
+          now,
+        );
+        if (!isStartDay) continue;
+
         const result = await this.salaryService.calculateMonthlySalaries(
           company.id,
         );
         this.logger.log(
           `Company ${company.id}: calculated ${result.calculated} employee salaries`,
         );
+        ran++;
       } catch (error) {
         this.logger.error(
           `Company ${company.id}: salary calculation failed`,
@@ -41,6 +54,10 @@ export class SalaryCronService {
       }
     }
 
-    this.logger.log('Monthly salary calculation completed');
+    if (ran > 0) {
+      this.logger.log(
+        `Monthly salary calculation completed for ${ran} company(ies)`,
+      );
+    }
   }
 }

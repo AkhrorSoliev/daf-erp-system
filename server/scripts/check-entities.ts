@@ -29,7 +29,7 @@ async function main() {
       teachers: { select: { teacherId: true } },
     },
   });
-  const reasons = await prisma.departureReason.findMany({
+  const reasons = await prisma.studentExitReason.findMany({
     where: { deletedAt: null },
     select: { id: true, name: true, companyId: true },
   });

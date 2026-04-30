@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { ExitType, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
+
+const EXIT_TYPE_TO_STATUS: Record<ExitType, StudentStatus | null> = {
+  GROUP_REMOVAL: null, // enrollment-based, not student-status-based
+  FREEZE: 'FROZEN',
+  EXPEL: 'EXPELLED',
+  INACTIVE: 'INACTIVE',
+  ARCHIVE: 'ARCHIVED',
+};
 
 @Injectable()
 export class ReportsDepartedReasonsService {
@@ -38,7 +47,7 @@ export class ReportsDepartedReasonsService {
 
     const reasons =
       reasonIds.length > 0
-        ? await this.prisma.departureReason.findMany({
+        ? await this.prisma.studentExitReason.findMany({
             where: { id: { in: reasonIds } },
             select: { id: true, name: true },
           })
@@ -115,6 +124,74 @@ export class ReportsDepartedReasonsService {
           g.changeReasonId === null
             ? "Sababi ko'rsatilmagan"
             : (nameById.get(g.changeReasonId) ?? "Noma'lum"),
+        count: g._count._all,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return { data };
+  }
+
+  /**
+   * Aggregates Student rows by statusChangeReasonId for non-GROUP_REMOVAL
+   * exit types (FREEZE / EXPEL / INACTIVE / ARCHIVE). Groups students whose
+   * `status` matches the requested exit type and whose `statusChangedAt`
+   * falls in the period.
+   */
+  async getStatusExitReasons(
+    companyId: number,
+    params: {
+      branchId?: number;
+      startDate: string;
+      endDate: string;
+    },
+    exitType: ExitType,
+  ) {
+    const targetStatus = EXIT_TYPE_TO_STATUS[exitType];
+    if (!targetStatus) {
+      // GROUP_REMOVAL is enrollment-based — caller should use
+      // getDepartedStudentsReasons instead.
+      return { data: [] };
+    }
+
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const where: any = {
+      companyId,
+      status: targetStatus,
+      statusChangedAt: { gte: start, lte: end },
+    };
+    if (params.branchId !== undefined) {
+      where.branches = { some: { branchId: params.branchId } };
+    }
+
+    const grouped = await this.prisma.student.groupBy({
+      by: ['statusChangeReasonId'],
+      where,
+      _count: { _all: true },
+    });
+
+    const reasonIds = grouped
+      .map((g) => g.statusChangeReasonId)
+      .filter((v): v is string => typeof v === 'string');
+
+    const reasons =
+      reasonIds.length > 0
+        ? await this.prisma.studentExitReason.findMany({
+            where: { id: { in: reasonIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+    const nameById = new Map(reasons.map((r) => [r.id, r.name]));
+
+    const data = grouped
+      .map((g) => ({
+        reasonId: g.statusChangeReasonId,
+        reasonName:
+          g.statusChangeReasonId === null
+            ? "Sababi ko'rsatilmagan"
+            : (nameById.get(g.statusChangeReasonId) ?? "Noma'lum"),
         count: g._count._all,
       }))
       .sort((a, b) => b.count - a.count);

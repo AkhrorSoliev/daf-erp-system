@@ -85,6 +85,14 @@ enum EnrollmentStatus {
   TRANSFERRED
 }
 
+enum ExitType {
+  GROUP_REMOVAL
+  FREEZE
+  EXPEL
+  INACTIVE
+  ARCHIVE
+}
+
 enum HolidayStatus {
   ACTIVE
   CANCELLED
@@ -168,12 +176,19 @@ enum PaymentStatus {
 enum TransactionType {
   PAYMENT
   LESSON_DEDUCTION
+  LESSON_CONSUMPTION
+  INITIAL_BALANCE
   REFUND
   SALARY_ACCRUAL
   SALARY_PAYMENT
   EXPENSE
   ADJUSTMENT
   TAX
+}
+
+enum LessonDeductionMode {
+  FULL_CYCLE
+  PARTIAL
 }
 
 enum ContractStatus {
@@ -275,7 +290,7 @@ model User {
   deletedGroups                    Group[]                    @relation("GroupDeletedBy")
   deletedEnrollments               Enrollment[]               @relation("EnrollmentDeletedBy")
   deletedHolidays                  Holiday[]                  @relation("HolidayDeletedBy")
-  deletedDepartureReasons          DepartureReason[]          @relation("DepartureReasonDeletedBy")
+  deletedStudentExitReasons        StudentExitReason[]        @relation("StudentExitReasonDeletedBy")
   deletedGroupTeacherChangeReasons GroupTeacherChangeReason[] @relation("GroupTeacherChangeReasonDeletedBy")
   deletedEnrollmentTransferReasons EnrollmentTransferReason[] @relation("EnrollmentTransferReasonDeletedBy")
   statusChanges                    StatusHistory[]            @relation("StatusChangedBy")
@@ -313,6 +328,14 @@ model User {
   groupScheduleSnapshots GroupScheduleSnapshot[] @relation("GroupScheduleSnapshotChangedBy")
   coursePriceSnapshots   CoursePriceSnapshot[]   @relation("CoursePriceSnapshotChangedBy")
   enrollmentStateLogs    EnrollmentStateLog[]    @relation("EnrollmentStateLogChangedBy")
+
+  // Financial v2 authorship (Faza 1 — version + period + cancellation + accrual reversal)
+  salaryConfigVersionsAuthored EmployeeSalaryConfigVersion[] @relation("SalaryConfigVersionChangedBy")
+  salaryPeriodsAuthored        SalaryPeriodSetting[]         @relation("SalaryPeriodChangedBy")
+  cancelledLessons             LessonCancellation[]          @relation("LessonCancelledBy")
+  deletedLessonCancellations   LessonCancellation[]          @relation("LessonCancellationDeletedBy")
+  reversedSalaryAccruals       SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
+  reversedTransactions         Transaction[]                 @relation("TransactionReversedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -461,6 +484,9 @@ model Student {
   statusChangedById  Int?
   statusChangeReason String?
 
+  statusChangeReasonId String?
+  statusExitReason     StudentExitReason? @relation(fields: [statusChangeReasonId], references: [id])
+
   companyId Int
   company   Company @relation(fields: [companyId], references: [id])
 
@@ -479,10 +505,11 @@ model Student {
   aiConversations AiConversation[] @relation("StudentAiConversations")
 
   // Financial relations
-  payments     Payment[]
-  transactions Transaction[] @relation("StudentTransactions")
-  contracts    Contract[]
-  refunds      Refund[]
+  payments       Payment[]
+  transactions   Transaction[]   @relation("StudentTransactions")
+  contracts      Contract[]
+  refunds        Refund[]
+  salaryAccruals SalaryAccrual[] @relation("StudentSalaryAccruals")
 
   @@index([deletedAt])
   @@index([status])
@@ -567,10 +594,12 @@ model Group {
   attendances    Attendance[]
 
   // Financial relations
-  contracts     Contract[]
-  salaryConfigs EmployeeSalaryConfig[]
+  contracts      Contract[]
+  salaryConfigs  EmployeeSalaryConfig[]
+  salaryAccruals SalaryAccrual[]        @relation("GroupSalaryAccruals")
 
-  scheduleSnapshots GroupScheduleSnapshot[]
+  scheduleSnapshots   GroupScheduleSnapshot[]
+  lessonCancellations LessonCancellation[]    @relation("LessonCancellationGroup")
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -613,13 +642,23 @@ enum GroupTeacherChangeType {
 }
 
 model Enrollment {
-  id        String           @id @default(uuid())
-  studentId Int
-  student   Student          @relation(fields: [studentId], references: [id])
-  groupId   String
-  group     Group            @relation(fields: [groupId], references: [id])
-  status    EnrollmentStatus @default(ACTIVE)
-  createdAt DateTime         @default(now())
+  id                      String           @id @default(uuid())
+  studentId               Int
+  student                 Student          @relation(fields: [studentId], references: [id])
+  groupId                 String
+  group                   Group            @relation(fields: [groupId], references: [id])
+  status                  EnrollmentStatus @default(ACTIVE)
+  // Lessons covered by an upfront LESSON_DEDUCTION but not yet consumed.
+  // Each PRESENT/LATE attendance decrements this; refilled at cycle start
+  // when balance allows. Unused prepaid is refunded to balance on
+  // DROPPED/TRANSFERRED so money doesn't stay locked to a closed enrollment.
+  prepaidLessonsRemaining Int              @default(0)
+  // Date this student starts appearing in attendance and being billed for
+  // this group. Set explicitly during enroll (admin picks "from which lesson")
+  // to support late joiners. Lessons before this date never bill or accrue
+  // for this enrollment. Defaults to enrollment creation day on backfill.
+  startDate               DateTime?
+  createdAt               DateTime         @default(now())
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -627,7 +666,7 @@ model Enrollment {
   transferredToId    String?
 
   departureReasonId String?
-  departureReason   DepartureReason? @relation(fields: [departureReasonId], references: [id])
+  departureReason   StudentExitReason? @relation(fields: [departureReasonId], references: [id])
 
   transferReasonId String?
   transferReason   EnrollmentTransferReason? @relation(fields: [transferReasonId], references: [id])
@@ -798,24 +837,26 @@ model Company {
   groups                    Group[]
   comments                  Comment[]
   attendances               Attendance[]
-  departureReasons          DepartureReason[]
+  studentExitReasons        StudentExitReason[]
   groupTeacherChangeReasons GroupTeacherChangeReason[]
   enrollmentTransferReasons EnrollmentTransferReason[]
 }
 
-model DepartureReason {
-  id              String    @id @default(uuid())
+model StudentExitReason {
+  id              String     @id @default(uuid())
   name            String
+  appliesTo       ExitType[]
   companyId       Int
-  company         Company   @relation(fields: [companyId], references: [id])
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  company         Company    @relation(fields: [companyId], references: [id])
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
   deletedAt       DateTime?
   deletedById     Int?
-  deletedBy       User?     @relation("DepartureReasonDeletedBy", fields: [deletedById], references: [id])
+  deletedBy       User?      @relation("StudentExitReasonDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
   enrollments Enrollment[]
+  students    Student[]
 
   @@unique([companyId, name])
   @@index([deletedAt])
@@ -951,26 +992,33 @@ model SmsMessage {
 }
 
 model Attendance {
-  id           String           @id @default(uuid())
-  groupId      String
-  group        Group            @relation(fields: [groupId], references: [id])
-  studentId    Int
-  student      Student          @relation(fields: [studentId], references: [id])
-  date         DateTime         @db.Date
-  status       AttendanceStatus
-  note         String?
-  markedById   Int?
-  markedBy     User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
-  markedMethod AttendanceMethod @default(MANUAL)
-  companyId    Int
-  company      Company          @relation(fields: [companyId], references: [id])
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id             String              @id @default(uuid())
+  groupId        String
+  group          Group               @relation(fields: [groupId], references: [id])
+  studentId      Int
+  student        Student             @relation(fields: [studentId], references: [id])
+  date           DateTime            @db.Date
+  status         AttendanceStatus
+  note           String?
+  markedById     Int?
+  markedBy       User?               @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  markedMethod   AttendanceMethod    @default(MANUAL)
+  // Set when this attendance row exists for a lesson that was later
+  // cancelled. The status is forced to EXCUSED so existing biller/stat
+  // queries keep working — cancellation is metadata via this link, not a
+  // new enum value on AttendanceStatus.
+  cancellationId String?
+  cancellation   LessonCancellation? @relation(fields: [cancellationId], references: [id])
+  companyId      Int
+  company        Company             @relation(fields: [companyId], references: [id])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@unique([groupId, studentId, date])
   @@index([groupId, date])
   @@index([studentId])
   @@index([companyId])
+  @@index([cancellationId])
 }
 
 model AiConversation {
@@ -1047,6 +1095,10 @@ model Transaction {
   balanceBefore Int
   balanceAfter  Int
   description   String?
+  // Free-form structured audit. LESSON_CONSUMPTION rows carry
+  // { perLessonCost, lessonMode } so a single row tells the whole story.
+  // LESSON_DEDUCTION rows tag themselves with { lessonMode: FULL_CYCLE | PARTIAL }.
+  metadata      Json?
 
   studentId Int?
   student   Student? @relation("StudentTransactions", fields: [studentId], references: [id])
@@ -1072,7 +1124,10 @@ model Transaction {
   reversalEntries       Transaction[] @relation("TransactionReversal")
 
   // Set on an *original* row when another row reverses it. Lets idempotency
-  // filters select "still-active" rows in a single column.
+  // filters and partial unique indexes select "still-active" rows in a
+  // single column without sub-queries — without this, the LESSON_CONSUMPTION
+  // idempotency check finds reversed originals and incorrectly skips
+  // re-billing on ABSENT→PRESENT transitions.
   reversedAt   DateTime?
   reversedById Int?
   reversedBy   User?     @relation("TransactionReversedBy", fields: [reversedById], references: [id])
@@ -1152,9 +1207,87 @@ model EmployeeSalaryConfig {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
+  versions EmployeeSalaryConfigVersion[]
+
   @@unique([userId, groupId])
   @@index([userId])
   @@index([companyId])
+}
+
+// SCD2 history for EmployeeSalaryConfig. Every create/update on the parent
+// closes the previous version (sets effectiveTo) and inserts a new row.
+// Salary accruals look up the version active on the lesson date so a rate
+// change applies to lessons after `effectiveFrom` only — past lessons keep
+// their original rate.
+model EmployeeSalaryConfigVersion {
+  id            String               @id @default(uuid())
+  configId      String
+  config        EmployeeSalaryConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  salaryType    SalaryType
+  value         Int
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  changedById   Int?
+  changedBy     User?                @relation("SalaryConfigVersionChangedBy", fields: [changedById], references: [id])
+  companyId     Int
+  createdAt     DateTime             @default(now())
+
+  accruals SalaryAccrual[]
+
+  @@index([configId, effectiveFrom])
+  @@index([effectiveFrom, effectiveTo])
+  @@index([companyId])
+}
+
+// Configurable salary period (cycle start day). Default 8th→7th, but CEO
+// can change. SCD2-style: effectiveFrom + effectiveTo. Calculation cron
+// resolves the active setting for `now` and computes periodStart/periodEnd
+// based on cycleStartDay.
+model SalaryPeriodSetting {
+  id            String    @id @default(uuid())
+  companyId     Int
+  cycleStartDay Int // 1..28
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  changedById   Int?
+  changedBy     User?     @relation("SalaryPeriodChangedBy", fields: [changedById], references: [id])
+  createdAt     DateTime  @default(now())
+
+  @@index([companyId, effectiveFrom])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+// Per-group lesson cancellation. Distinct from Holiday (company-wide) —
+// cancels just one group's lesson on a specific date. When attendance was
+// already taken, creating a cancellation atomically reverses each affected
+// student's consumption and salary accrual.
+model LessonCancellation {
+  id            String   @id @default(uuid())
+  groupId       String
+  group         Group    @relation("LessonCancellationGroup", fields: [groupId], references: [id])
+  date          DateTime @db.Date
+  reason        String
+  cancelledById Int
+  cancelledBy   User     @relation("LessonCancelledBy", fields: [cancelledById], references: [id])
+  companyId     Int
+  createdAt     DateTime @default(now())
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("LessonCancellationDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  attendances Attendance[]
+
+  // The plain @@unique here keeps a hard guard for the common case. The
+  // *active* uniqueness ("at most one un-deleted cancellation per
+  // [groupId, date]") is enforced via a partial unique index added in the
+  // raw SQL section of the migration so a soft-deleted cancellation does
+  // not block re-creating one for the same lesson.
+  @@index([groupId, date])
+  @@index([date])
+  @@index([companyId])
+  @@index([deletedAt])
 }
 
 model SalaryAccrual {
@@ -1162,10 +1295,16 @@ model SalaryAccrual {
   userId          Int
   user            User           @relation("UserSalaryAccruals", fields: [userId], references: [id])
   studentId       Int
+  student         Student        @relation("StudentSalaryAccruals", fields: [studentId], references: [id])
   groupId         String
+  group           Group          @relation("GroupSalaryAccruals", fields: [groupId], references: [id])
   attendanceId    String
   lessonDate      DateTime       @db.Date
   amount          Int
+  // Frozen per-lesson cost at write time. Future course price changes
+  // won't retroactively rewrite this row, so audit/breakdown reports stay
+  // correct even if the course price moves. 0 for legacy/pre-versioning rows.
+  perLessonCost   Int            @default(0)
   salaryPaymentId String?
   salaryPayment   SalaryPayment? @relation(fields: [salaryPaymentId], references: [id])
 
@@ -1174,6 +1313,20 @@ model SalaryAccrual {
   deductionTransactionId String?
   deductionTransaction   Transaction? @relation("AccrualDeduction", fields: [deductionTransactionId], references: [id])
 
+  // Which salary-config version was active when this accrual was written.
+  // Powers granular breakdown ("this 6,000 came from a 30% rule active
+  // 2026-01-01..2026-04-15"). Null for accruals predating versioning.
+  salaryConfigVersionId String?
+  salaryConfigVersion   EmployeeSalaryConfigVersion? @relation(fields: [salaryConfigVersionId], references: [id])
+
+  // Reversal audit (set when an attendance is flipped away from PRESENT/LATE
+  // or a lesson is cancelled after-the-fact). Reversed accruals are excluded
+  // from salary calculation and labelled in the breakdown UI.
+  reversedAt     DateTime?
+  reversedById   Int?
+  reversedBy     User?     @relation("SalaryAccrualReversedBy", fields: [reversedById], references: [id])
+  reversalReason String?
+
   companyId Int
   createdAt DateTime @default(now())
 
@@ -1181,6 +1334,8 @@ model SalaryAccrual {
   @@index([userId, salaryPaymentId])
   @@index([companyId])
   @@index([deductionTransactionId])
+  @@index([salaryConfigVersionId])
+  @@index([reversedAt])
 }
 
 model SalaryPayment {
@@ -1189,9 +1344,7 @@ model SalaryPayment {
   user        User                @relation("UserSalaryPayments", fields: [userId], references: [id])
   periodStart DateTime
   periodEnd   DateTime
-  grossAmount Int
-  taxAmount   Int                 @default(0)
-  netAmount   Int
+  amount      Int
   status      SalaryPaymentStatus @default(CALCULATED)
   paidAt      DateTime?
   paidById    Int?
@@ -1284,20 +1437,6 @@ model Expense {
   @@index([category])
   @@index([deletedAt])
   @@index([relatedUserId])
-}
-
-// ===== TAX CONFIGURATION =====
-
-// Per-company tax rates applied during salary calculation and refund processing.
-// Default 12% reflects Uzbekistan ASOT (Aholidan Soliq Olishning Oliy Tartibi).
-model CompanyTaxConfig {
-  id            String   @id @default(cuid())
-  companyId     Int      @unique
-  salaryTaxRate Float    @default(12.0)
-  refundTaxRate Float    @default(0.0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
 }
 
 // ===== PAYMENT GATEWAY EVENT LOG =====

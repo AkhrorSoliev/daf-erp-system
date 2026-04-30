@@ -4,28 +4,38 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ExitType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { CreateDepartureReasonDto } from './dto/create-departure-reason.dto';
-import { UpdateDepartureReasonDto } from './dto/update-departure-reason.dto';
+import { CreateStudentExitReasonDto } from './dto/create-student-exit-reason.dto';
+import { UpdateStudentExitReasonDto } from './dto/update-student-exit-reason.dto';
 
 @Injectable()
-export class DepartureReasonsService {
+export class StudentExitReasonsService {
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  findAll(companyId: number) {
-    return this.prisma.departureReason.findMany({
-      where: { companyId, deletedAt: null },
-      select: { id: true, name: true, createdAt: true },
+  findAll(companyId: number, appliesTo?: ExitType) {
+    return this.prisma.studentExitReason.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        ...(appliesTo ? { appliesTo: { has: appliesTo } } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        appliesTo: true,
+        createdAt: true,
+      },
       orderBy: { name: 'asc' },
     });
   }
 
   async create(
-    dto: CreateDepartureReasonDto,
+    dto: CreateStudentExitReasonDto,
     companyId: number,
     userId: number,
   ) {
@@ -34,21 +44,21 @@ export class DepartureReasonsService {
       throw new BadRequestException("Sabab nomi bo'sh bo'lishi mumkin emas");
     }
 
-    const existing = await this.prisma.departureReason.findFirst({
+    const existing = await this.prisma.studentExitReason.findFirst({
       where: { companyId, name, deletedAt: null },
     });
     if (existing) {
       throw new ConflictException('Bu nomdagi sabab allaqachon mavjud');
     }
 
-    const created = await this.prisma.departureReason.create({
-      data: { name, companyId },
+    const created = await this.prisma.studentExitReason.create({
+      data: { name, appliesTo: dto.appliesTo, companyId },
     });
 
     await this.entityHistoryService.recordCreate({
-      entityType: 'DepartureReason',
+      entityType: 'StudentExitReason',
       entityId: created.id,
-      newValues: created,
+      newValues: { name: created.name, appliesTo: created.appliesTo.join(',') },
       changedById: userId,
       companyId,
     });
@@ -58,16 +68,18 @@ export class DepartureReasonsService {
 
   async update(
     id: string,
-    dto: UpdateDepartureReasonDto,
+    dto: UpdateStudentExitReasonDto,
     companyId: number,
     userId: number,
   ) {
-    const existing = await this.prisma.departureReason.findFirst({
+    const existing = await this.prisma.studentExitReason.findFirst({
       where: { id, companyId, deletedAt: null },
     });
     if (!existing) {
       throw new NotFoundException('Sabab topilmadi');
     }
+
+    const data: { name?: string; appliesTo?: ExitType[] } = {};
 
     if (dto.name !== undefined) {
       const name = dto.name.trim();
@@ -75,25 +87,36 @@ export class DepartureReasonsService {
         throw new BadRequestException("Sabab nomi bo'sh bo'lishi mumkin emas");
       }
       if (name !== existing.name) {
-        const clash = await this.prisma.departureReason.findFirst({
+        const clash = await this.prisma.studentExitReason.findFirst({
           where: { companyId, name, deletedAt: null, id: { not: id } },
         });
         if (clash) {
           throw new ConflictException('Bu nomdagi sabab allaqachon mavjud');
         }
       }
+      data.name = name;
     }
 
-    const updated = await this.prisma.departureReason.update({
+    if (dto.appliesTo !== undefined) {
+      data.appliesTo = dto.appliesTo;
+    }
+
+    const updated = await this.prisma.studentExitReason.update({
       where: { id },
-      data: { name: dto.name?.trim() },
+      data,
     });
 
     await this.entityHistoryService.recordUpdate({
-      entityType: 'DepartureReason',
+      entityType: 'StudentExitReason',
       entityId: id,
-      oldValues: existing,
-      newValues: updated,
+      oldValues: {
+        name: existing.name,
+        appliesTo: existing.appliesTo.join(','),
+      },
+      newValues: {
+        name: updated.name,
+        appliesTo: updated.appliesTo.join(','),
+      },
       changedById: userId,
       companyId,
     });
@@ -102,7 +125,7 @@ export class DepartureReasonsService {
   }
 
   async remove(id: string, companyId: number, userId: number) {
-    const existing = await this.prisma.departureReason.findFirst({
+    const existing = await this.prisma.studentExitReason.findFirst({
       where: { id, companyId, deletedAt: null },
     });
     if (!existing) {
@@ -110,14 +133,17 @@ export class DepartureReasonsService {
     }
 
     await this.entityHistoryService.recordDelete({
-      entityType: 'DepartureReason',
+      entityType: 'StudentExitReason',
       entityId: id,
-      oldValues: existing,
+      oldValues: {
+        name: existing.name,
+        appliesTo: existing.appliesTo.join(','),
+      },
       changedById: userId,
       companyId,
     });
 
-    await this.prisma.departureReason.update({
+    await this.prisma.studentExitReason.update({
       where: { id },
       data: { deletedAt: new Date(), deletedById: userId },
     });

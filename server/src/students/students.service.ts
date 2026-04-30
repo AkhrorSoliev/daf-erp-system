@@ -25,6 +25,9 @@ export class StudentsService {
   getStatusHistory(id: number, companyId: number) {
     return this.read.getStatusHistory(id, companyId);
   }
+  getActiveEnrollmentsWithPrepaid(id: number, companyId: number) {
+    return this.read.getActiveEnrollmentsWithPrepaid(id, companyId);
+  }
 
   // Writes
   create(dto: CreateStudentDto, companyId: number, userId?: number) {

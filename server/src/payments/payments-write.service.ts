@@ -155,17 +155,41 @@ export class PaymentsWriteService {
       throw new BadRequestException("Bu to'lov allaqachon bekor qilingan");
     }
 
+    // "Active original" = not a reversal entry (reversedTransactionId IS NULL)
+    // and not been reversed (reversedAt IS NULL). Both filters are needed
+    // because either alone leaks the wrong row in some flows.
     const ledgerEntry = await this.prisma.transaction.findFirst({
       where: {
         paymentId: id,
         type: 'PAYMENT',
         reversedTransactionId: null,
+        reversedAt: null,
       },
-      select: { id: true },
+      select: { id: true, createdAt: true },
     });
     if (!ledgerEntry) {
       throw new BadRequestException(
         "To'lovning ledger yozuvi topilmadi — bu yozuv avvalroq bekor qilingan yoki yaratilmagan",
+      );
+    }
+
+    // Faza 5: don't let a refund-via-reverse short-circuit the formal
+    // refund path once the money has actually been spent on lessons. If
+    // any active LESSON_CONSUMPTION exists for this student dated AFTER
+    // the payment landed, we treat the funds as already-consumed and force
+    // the user through the Refund flow (which has the proper math for
+    // partial completion, deductions, eligibility, etc).
+    const downstreamConsumption = await this.prisma.transaction.count({
+      where: {
+        studentId: payment.studentId,
+        type: 'LESSON_CONSUMPTION',
+        reversedAt: null,
+        createdAt: { gt: ledgerEntry.createdAt },
+      },
+    });
+    if (downstreamConsumption > 0) {
+      throw new BadRequestException(
+        "To'lov allaqachon darslarga sarflangan. Bekor qilish o'rniga refund'dan foydalaning.",
       );
     }
 

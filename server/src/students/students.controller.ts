@@ -21,9 +21,11 @@ import { RemoveFromGroupDto } from './dto/remove-from-group.dto';
 import { EnrollToGroupDto } from './dto/enroll-to-group.dto';
 import { DeleteStudentDto } from './dto/delete-student.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
+import { InitialBalanceDto } from './dto/initial-balance.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import { TransactionsService } from '../transactions/transactions.service';
 
 @Controller('students')
 export class StudentsController {
@@ -31,6 +33,7 @@ export class StudentsController {
     private studentsService: StudentsService,
     private studentEnrollmentService: StudentEnrollmentService,
     private smsService: SmsService,
+    private transactionsService: TransactionsService,
   ) {}
 
   @Get()
@@ -102,6 +105,16 @@ export class StudentsController {
     return this.studentsService.getStatusHistory(id, companyId);
   }
 
+  @Get(':id/active-enrollments-prepaid')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getActiveEnrollmentsWithPrepaid(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentsService.getActiveEnrollmentsWithPrepaid(id, companyId);
+  }
+
   @Post(':id/enroll')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
@@ -116,7 +129,10 @@ export class StudentsController {
       dto.groupId,
       userId,
       companyId,
-      { transferReasonId: dto.transferReasonId },
+      {
+        transferReasonId: dto.transferReasonId,
+        startDate: dto.startDate,
+      },
     );
   }
 
@@ -183,5 +199,31 @@ export class StudentsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.studentsService.delete(id, userId, dto.reason, companyId);
+  }
+
+  // ===========================================================================
+  // FAZA 6.1 — Initial balance.
+  //
+  // For centers transitioning to the new finance system: the CEO enters
+  // each student's current outstanding balance once, and the system tracks
+  // lesson-by-lesson from there. Enforced by a Postgres partial unique
+  // index — only one INITIAL_BALANCE row per student.
+  // ===========================================================================
+  @Post(':id/initial-balance')
+  @UseGuards(RolesGuard)
+  @Roles('CEO')
+  setInitialBalance(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: InitialBalanceDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.transactionsService.recordInitialBalance({
+      studentId: id,
+      amount: dto.amount,
+      note: dto.note,
+      companyId,
+      performedById: userId,
+    });
   }
 }

@@ -64,7 +64,7 @@ async function main() {
     _count: { _all: true },
   });
   const reasonIds = byReason.map((r) => r.departureReasonId).filter((v): v is string => !!v);
-  const reasonNames = await prisma.departureReason.findMany({
+  const reasonNames = await prisma.studentExitReason.findMany({
     where: { id: { in: reasonIds } },
     select: { id: true, name: true },
   });

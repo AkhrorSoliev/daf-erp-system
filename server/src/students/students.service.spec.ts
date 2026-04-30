@@ -72,6 +72,9 @@ describe('StudentsService — status methods', () => {
       enrollment: {
         count: jest.fn().mockResolvedValue(0),
         findFirst: jest.fn().mockResolvedValue(null),
+        // FROZEN cascade walks active enrollments to refund prepaid;
+        // default to "no active enrollments" so the path is a no-op.
+        findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue({
           id: 'enroll-1',
           studentId: 1,
@@ -96,6 +99,10 @@ describe('StudentsService — status methods', () => {
       },
       transaction: {
         findFirst: jest.fn().mockResolvedValue(null),
+      },
+      studentExitReason: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        count: jest.fn().mockResolvedValue(0),
       },
     };
 
@@ -129,6 +136,14 @@ describe('StudentsService — status methods', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        // FROZEN status cascade now refunds unused prepaid lessons via this
+        // service. The students.service tests don't exercise that path, so
+        // a no-op mock is sufficient.
+        {
+          provide: require('../billing/enrollment-billing.service')
+            .EnrollmentBillingService,
+          useValue: { refundPrepaidWithOverride: jest.fn(), refundPrepaidToBalance: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -137,7 +152,12 @@ describe('StudentsService — status methods', () => {
 
   describe('changeStatus', () => {
     it('calls statusHistoryService, updates student, and cascades', async () => {
-      await service.changeStatus(1, { status: 'FROZEN' as any }, 2, 1001);
+      await service.changeStatus(
+        1,
+        { status: 'FROZEN' as any, reason: 'Test sabab' },
+        2,
+        1001,
+      );
 
       expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -177,7 +197,12 @@ describe('StudentsService — status methods', () => {
     });
 
     it('sets isActive=false for non-ACTIVE statuses', async () => {
-      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2, 1001);
+      await service.changeStatus(
+        1,
+        { status: 'EXPELLED' as any, reason: 'Test sabab' },
+        2,
+        1001,
+      );
 
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -190,33 +215,21 @@ describe('StudentsService — status methods', () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.changeStatus(999, { status: 'FROZEN' as any }, 1, 1001),
+        service.changeStatus(
+          999,
+          { status: 'FROZEN' as any, reason: 'Test sabab' },
+          1,
+          1001,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws BadRequestException for GRADUATED when student has active enrollments', async () => {
-      prisma.enrollment.count.mockResolvedValue(2);
-
+    it('rejects manual GRADUATED — only set automatically on group completion', async () => {
       await expect(
         service.changeStatus(1, { status: 'GRADUATED' as any }, 2, 1001),
       ).rejects.toThrow(BadRequestException);
 
       expect(prisma.student.update).not.toHaveBeenCalled();
-    });
-
-    it('allows GRADUATED when student has no active enrollments', async () => {
-      prisma.enrollment.count.mockResolvedValue(0);
-
-      await service.changeStatus(1, { status: 'GRADUATED' as any }, 2, 1001);
-
-      expect(prisma.student.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: 'GRADUATED',
-            isActive: false,
-          }),
-        }),
-      );
     });
   });
 
@@ -294,7 +307,12 @@ describe('StudentsService — status methods', () => {
     });
 
     it('changeStatus scopes lookup to companyId', async () => {
-      await service.changeStatus(1, { status: 'FROZEN' as any }, 2, 1001);
+      await service.changeStatus(
+        1,
+        { status: 'FROZEN' as any, reason: 'Test sabab' },
+        2,
+        1001,
+      );
       expect(prisma.student.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({

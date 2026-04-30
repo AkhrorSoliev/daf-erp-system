@@ -185,4 +185,103 @@ export class StudentsReadService {
 
     return this.statusHistoryService.getHistory('Student', String(id));
   }
+
+  /**
+   * Active enrollments enriched with prepaid + per-lesson cost + already-
+   * consumed lesson count. Used by the FROZEN status dialog so the admin
+   * can preview "X dars × Y so'm = Z so'm balansga qaytariladi" before
+   * confirming, and adjust the per-enrollment refund count if needed.
+   *
+   * Cap on the override input is `prepaidLessonsRemaining + consumedLessons` —
+   * the admin can roll back as far as the very first paid lesson but no
+   * further (we have no money to refund beyond what was actually deducted).
+   */
+  async getActiveEnrollmentsWithPrepaid(id: number, companyId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException(`O'quvchi topilmadi`);
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        studentId: id,
+        status: 'ACTIVE',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        prepaidLessonsRemaining: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+            course: { select: { price: true, lessonPaymentCount: true } },
+          },
+        },
+      },
+    });
+
+    if (enrollments.length === 0) return [];
+
+    // perLessonCost: prefer the most recent unreversed LESSON_DEDUCTION
+    // metadata so course price changes after the deduction don't inflate
+    // the displayed refund. Falls back to current course price.
+    const enrollmentIds = enrollments.map((e) => e.id);
+    const recentDeductions = await this.prisma.transaction.findMany({
+      where: {
+        enrollmentId: { in: enrollmentIds },
+        type: 'LESSON_DEDUCTION',
+        reversedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { enrollmentId: true, metadata: true },
+    });
+    const perLessonByEnrollment = new Map<string, number>();
+    for (const d of recentDeductions) {
+      if (perLessonByEnrollment.has(d.enrollmentId!)) continue; // first wins (most recent)
+      const meta = d.metadata as { perLessonCost?: number } | null | undefined;
+      if (
+        meta &&
+        typeof meta.perLessonCost === 'number' &&
+        meta.perLessonCost > 0
+      ) {
+        perLessonByEnrollment.set(d.enrollmentId!, meta.perLessonCost);
+      }
+    }
+
+    // Consumption count per enrollment — matches what refundPrepaidWithOverride
+    // can actually reverse if the admin asks for more than current prepaid.
+    const consumptionGroups = await this.prisma.transaction.groupBy({
+      by: ['enrollmentId'],
+      where: {
+        enrollmentId: { in: enrollmentIds },
+        type: 'LESSON_CONSUMPTION',
+        reversedAt: null,
+      },
+      _count: true,
+    });
+    const consumedByEnrollment = new Map<string, number>();
+    for (const g of consumptionGroups) {
+      consumedByEnrollment.set(g.enrollmentId!, g._count);
+    }
+
+    return enrollments.map((e) => {
+      const fallback = Math.round(
+        e.group.course.price / (e.group.course.lessonPaymentCount || 12),
+      );
+      const perLessonCost = perLessonByEnrollment.get(e.id) ?? fallback;
+      const consumedLessons = consumedByEnrollment.get(e.id) ?? 0;
+      return {
+        enrollmentId: e.id,
+        groupId: e.group.id,
+        groupName: e.group.name,
+        prepaidLessonsRemaining: e.prepaidLessonsRemaining,
+        perLessonCost,
+        consumedLessons,
+        maxRefundable: e.prepaidLessonsRemaining + consumedLessons,
+        suggestedRefundAmount: e.prepaidLessonsRemaining * perLessonCost,
+      };
+    });
+  }
 }

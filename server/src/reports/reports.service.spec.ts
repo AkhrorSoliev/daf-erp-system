@@ -30,11 +30,14 @@ describe('ReportsService', () => {
       enrollment: {
         count: jest.fn(),
         findFirst: jest.fn(),
-        findMany: jest.fn(),
+        // Default to [] so loadEnrollmentsForCounts in the analytics service
+        // doesn't iterate over `undefined`. Tests that need specific snapshots
+        // override this via mockResolvedValueOnce.
+        findMany: jest.fn().mockResolvedValue([]),
         groupBy: jest.fn(),
       },
       contract: { findMany: jest.fn() },
-      departureReason: { findMany: jest.fn() },
+      studentExitReason: { findMany: jest.fn() },
       course: { findMany: jest.fn() },
       $transaction: jest.fn(),
       attendance: {
@@ -993,7 +996,7 @@ describe('ReportsService', () => {
         { departureReasonId: 'r2', _count: { _all: 5 } },
         { departureReasonId: null, _count: { _all: 2 } },
       ]);
-      prisma.departureReason.findMany.mockResolvedValueOnce([
+      prisma.studentExitReason.findMany.mockResolvedValueOnce([
         { id: 'r1', name: 'Moliyaviy' },
         { id: 'r2', name: 'Vaqt yetmasligi' },
       ]);
@@ -1013,7 +1016,7 @@ describe('ReportsService', () => {
       const result = await service.getDepartedStudentsReasons(1, baseParams);
       expect(result.data).toEqual([]);
       // no follow-up reason lookup needed
-      expect(prisma.departureReason.findMany).not.toHaveBeenCalled();
+      expect(prisma.studentExitReason.findMany).not.toHaveBeenCalled();
     });
   });
 
@@ -1111,7 +1114,7 @@ describe('ReportsService', () => {
           },
         },
       ]);
-      prisma.departureReason.findMany.mockResolvedValueOnce([
+      prisma.studentExitReason.findMany.mockResolvedValueOnce([
         { id: 'r1', name: 'Moliyaviy' },
         { id: 'r2', name: 'Vaqt' },
       ]);
@@ -1152,7 +1155,7 @@ describe('ReportsService', () => {
           },
         },
       ]);
-      prisma.departureReason.findMany.mockResolvedValueOnce([
+      prisma.studentExitReason.findMany.mockResolvedValueOnce([
         { id: 'r1', name: 'Moliyaviy' },
       ]);
 

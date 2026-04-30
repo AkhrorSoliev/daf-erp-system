@@ -8,8 +8,7 @@ import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { TransactionsService } from '../transactions/transactions.service';
-import { SalaryService } from '../salary/salary.service';
+import { LessonBillingService } from '../billing/lesson-billing.service';
 
 const mockGroup = {
   id: 'group-uuid-1',
@@ -22,8 +21,12 @@ const mockGroup = {
   lessonStartTime: '09:00',
   lessonEndTime: '11:00',
   _count: { enrollments: 2 },
+  course: { price: 800000, lessonPaymentCount: 12 },
 };
 
+// Both students have balances above the per-lesson threshold (800000/12 ≈
+// 66,667), so neither is a debtor — keeps the existing assertions on the
+// "all students appear in the active list" path stable.
 const mockEnrollments = [
   {
     studentId: 10001,
@@ -42,7 +45,7 @@ const mockEnrollments = [
       firstName: 'Dilnoza',
       lastName: 'Rashidova',
       photo: null,
-      balance: 0,
+      balance: 100000,
     },
   },
 ];
@@ -66,6 +69,9 @@ describe('AttendanceService', () => {
       },
       holiday: {
         findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      lessonCancellation: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
       attendance: {
@@ -101,14 +107,10 @@ describe('AttendanceService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
         {
-          provide: TransactionsService,
-          useValue: { deductLessonFee: jest.fn(), recordPayment: jest.fn() },
+          provide: LessonBillingService,
+          useValue: { processAttendanceBilling: jest.fn() },
         },
-        { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
-        {
-          provide: EventEmitter2,
-          useValue: (eventEmitter = { emit: jest.fn() }),
-        },
+        { provide: EventEmitter2, useValue: (eventEmitter = { emit: jest.fn() }) },
       ],
     }).compile();
 
@@ -431,17 +433,23 @@ describe('AttendanceService', () => {
 
       const result = await service.getByDate('group-uuid-1', '2026-04-01');
 
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        studentId: 10001,
-        firstName: 'Ahmad',
-        lastName: 'Karimov',
-        photo: null,
-        status: 'PRESENT',
-        note: null,
-      });
-      // Second student has no attendance record
-      expect(result[1].status).toBeNull();
+      // New shape: { activeStudents, debtorStudents, perLessonCost, coursePrice }
+      expect(result.activeStudents).toHaveLength(2);
+      expect(result.activeStudents[0]).toEqual(
+        expect.objectContaining({
+          studentId: 10001,
+          firstName: 'Ahmad',
+          lastName: 'Karimov',
+          photo: null,
+          status: 'PRESENT',
+          note: null,
+          isDebtor: false,
+        }),
+      );
+      expect(result.activeStudents[1].status).toBeNull();
+      // No debtors in the seed (both balances > perLessonCost = 66,667)
+      expect(result.debtorStudents).toEqual([]);
+      expect(result.coursePrice).toBe(800000);
     });
 
     it('should throw NotFoundException when group not found', async () => {
@@ -909,8 +917,8 @@ describe('AttendanceService', () => {
       prisma.group.findUnique.mockResolvedValue({
         name: 'Deutsch A1',
         branchId: 1,
-        course: { price: 800000, lessonPaymentCount: 12 },
         teachers: [{ teacherId: 20001 }],
+        course: { price: 800000, lessonPaymentCount: 12 },
       });
 
       const dto = {

@@ -110,6 +110,14 @@ export class PaymentsController {
     });
   }
 
+  @Get('debtors/group/:groupId')
+  getDebtorsForGroup(
+    @Param('groupId') groupId: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.paymentsService.getDebtorsForGroup(groupId, companyId);
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,

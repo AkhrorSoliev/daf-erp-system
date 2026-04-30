@@ -96,29 +96,21 @@ export class ReportsFinancialService {
     const avgDebt =
       debtorCount > 0 ? Math.round(outstandingReceivable / debtorCount) : 0;
 
-    // Salary: paid + pending. Both are reported on the same basis — net of
-    // tax — so the dashboard number reflects what actually leaves (or will
-    // leave) the center.
-    const [salaryPaid, salaryPending, companyTax] = await Promise.all([
+    // Salary: paid + pending. Both are reported on the same basis — the
+    // dashboard number reflects what actually leaves (or will leave) the
+    // center.
+    const [salaryPaid, salaryPending] = await Promise.all([
       this.prisma.salaryPayment.aggregate({
         where: { companyId, status: 'PAID', paidAt: dateFilter },
-        _sum: { netAmount: true, grossAmount: true, taxAmount: true },
+        _sum: { amount: true },
       }),
       this.prisma.salaryAccrual.aggregate({
         where: { companyId, salaryPaymentId: null },
         _sum: { amount: true },
       }),
-      this.prisma.companyTaxConfig.findUnique({
-        where: { companyId },
-        select: { salaryTaxRate: true, isActive: true },
-      }),
     ]);
 
-    const salaryTaxRate =
-      companyTax && companyTax.isActive ? companyTax.salaryTaxRate : 12.0;
-    const pendingGross = salaryPending._sum.amount ?? 0;
-    const pendingTax = Math.round((pendingGross * salaryTaxRate) / 100);
-    const pendingNet = pendingGross - pendingTax;
+    const pending = salaryPending._sum.amount ?? 0;
 
     const expenses = await this.prisma.expense.aggregate({
       where: {
@@ -187,7 +179,7 @@ export class ReportsFinancialService {
 
     const totalIncome = actualIncome._sum.amount ?? 0;
     const totalExpenseAmount = expenses._sum.amount ?? 0;
-    const totalSalaryPaid = salaryPaid._sum.netAmount ?? 0;
+    const totalSalaryPaid = salaryPaid._sum.amount ?? 0;
     const totalExpenses = totalExpenseAmount + totalSalaryPaid;
     const marketingTotal = marketingExpenses._sum.amount ?? 0;
     const periodPayerTotal = periodPayerIncome._sum.amount ?? 0;
@@ -211,11 +203,7 @@ export class ReportsFinancialService {
       },
       salary: {
         paid: totalSalaryPaid,
-        paidGross: salaryPaid._sum.grossAmount ?? 0,
-        paidTax: salaryPaid._sum.taxAmount ?? 0,
-        pending: pendingNet,
-        pendingGross,
-        pendingTax,
+        pending,
       },
       expenses: totalExpenseAmount,
       netProfit: totalIncome - totalExpenses,
@@ -296,7 +284,7 @@ export class ReportsFinancialService {
           }),
           this.prisma.salaryPayment.aggregate({
             where: { companyId, status: 'PAID', paidAt: dateFilter },
-            _sum: { netAmount: true },
+            _sum: { amount: true },
           }),
           this.prisma.expense.aggregate({
             where: {
@@ -319,7 +307,7 @@ export class ReportsFinancialService {
 
         const incomeTotal = income._sum.amount ?? 0;
         const expenseTotal = expenseAgg._sum.amount ?? 0;
-        const salaryTotal = salaryAgg._sum.netAmount ?? 0;
+        const salaryTotal = salaryAgg._sum.amount ?? 0;
         const marketingTotal = marketing._sum.amount ?? 0;
         const paymentCount = income._count;
 

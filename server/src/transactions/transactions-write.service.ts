@@ -1,6 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TransactionType, Prisma } from '@prisma/client';
+import {
+  TransactionType,
+  LessonDeductionMode,
+  Prisma,
+} from '@prisma/client';
 
 @Injectable()
 export class TransactionsWriteService {
@@ -68,8 +76,17 @@ export class TransactionsWriteService {
   }
 
   /**
-   * Deduct per-lesson fee from student balance on attendance.
-   * Balance CAN go negative (deduction always succeeds).
+   * Deduct an upfront lesson-batch fee from the student's balance.
+   *
+   * The new prepaid model (Faza 3) uses this on the FIRST attended lesson
+   * of a cycle (or first attendance after running out of prepaid). The
+   * Enrollment.prepaidLessonsRemaining counter then absorbs subsequent
+   * lessons via recordLessonConsumption (no balance impact).
+   *
+   * `mode` distinguishes:
+   *   - FULL_CYCLE: balance covered the whole course price (lessonPaymentCount × perLessonCost)
+   *   - PARTIAL:    balance only covered some lessons; fewer prepaid units bought
+   * Stored in metadata so reports/audit can tell the two apart.
    */
   async deductLessonFee(
     params: {
@@ -80,6 +97,9 @@ export class TransactionsWriteService {
       contractId?: string;
       companyId: number;
       branchId?: number;
+      mode?: LessonDeductionMode;
+      perLessonCost?: number;
+      lessonsCovered?: number;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -87,6 +107,18 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore - params.amount;
+
+      const metadata: Prisma.InputJsonValue | undefined = params.mode
+        ? {
+            mode: params.mode,
+            ...(params.perLessonCost !== undefined && {
+              perLessonCost: params.perLessonCost,
+            }),
+            ...(params.lessonsCovered !== undefined && {
+              lessonsCovered: params.lessonsCovered,
+            }),
+          }
+        : undefined;
 
       const transaction = await client.transaction.create({
         data: {
@@ -101,6 +133,7 @@ export class TransactionsWriteService {
           branchId: params.branchId,
           companyId: params.companyId,
           description: 'Dars uchun yechildi',
+          ...(metadata && { metadata }),
         },
       });
 
@@ -110,6 +143,145 @@ export class TransactionsWriteService {
       });
 
       return transaction;
+    }, tx);
+  }
+
+  /**
+   * Audit-only ledger row written each time an attended lesson burns one
+   * unit of `Enrollment.prepaidLessonsRemaining`. Balance is unchanged
+   * (amount=0, balanceBefore == balanceAfter): the money was already
+   * deducted by an earlier LESSON_DEDUCTION batch.
+   *
+   * Idempotency is enforced at the DB level by a partial unique index on
+   * `(attendanceId) WHERE type = 'LESSON_CONSUMPTION' AND reversedTransactionId IS NULL`,
+   * so calling this twice for the same attendance throws P2002 — the
+   * billing service catches that and treats it as a no-op.
+   */
+  async recordLessonConsumption(
+    params: {
+      studentId: number;
+      attendanceId: string;
+      enrollmentId: string;
+      perLessonCost: number;
+      contractId?: string;
+      companyId: number;
+      branchId?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const student = await client.student.findUnique({
+        where: { id: params.studentId },
+        select: { balance: true },
+      });
+      const balance = student?.balance ?? 0;
+
+      return client.transaction.create({
+        data: {
+          type: TransactionType.LESSON_CONSUMPTION,
+          amount: 0,
+          balanceBefore: balance,
+          balanceAfter: balance,
+          studentId: params.studentId,
+          attendanceId: params.attendanceId,
+          enrollmentId: params.enrollmentId,
+          contractId: params.contractId,
+          branchId: params.branchId,
+          companyId: params.companyId,
+          description: 'Oldindan to`langan dars iste`mol qilindi',
+          metadata: { perLessonCost: params.perLessonCost },
+        },
+      });
+    }, tx);
+  }
+
+  /**
+   * Reverse a LESSON_CONSUMPTION row (used when an attendance flips back
+   * to ABSENT/EXCUSED, or when a lesson is cancelled with attendance
+   * already taken). Just delegates to reverseTransaction — the parent
+   * handles ledger linkage. Caller is responsible for the prepaid +1
+   * and salary accrual reversal in the same tx.
+   */
+  async reverseLessonConsumption(
+    consumptionTransactionId: string,
+    params: { performedById?: number; reason?: string },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.reverseTransaction(consumptionTransactionId, params, tx);
+  }
+
+  /**
+   * Record a one-time INITIAL_BALANCE row for a student. Used when an
+   * existing center transitions to the new finance system: instead of
+   * importing every historical payment, an admin enters the student's
+   * current outstanding balance and the system tracks lesson-by-lesson
+   * from there.
+   *
+   * Enforced at the DB level by a partial unique index — only one
+   * INITIAL_BALANCE per student. Re-running throws P2002, which we
+   * translate into a clear domain error.
+   */
+  async recordInitialBalance(
+    params: {
+      studentId: number;
+      amount: number;
+      note?: string;
+      companyId: number;
+      branchId?: number;
+      performedById: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    if (params.amount < 0) {
+      throw new BadRequestException("Boshlang'ich balans manfiy bo'la olmaydi");
+    }
+
+    return this.runInTx(async (client) => {
+      // Multi-tenant guard.
+      const studentCheck = await client.student.findFirst({
+        where: { id: params.studentId, companyId: params.companyId },
+        select: { id: true },
+      });
+      if (!studentCheck) {
+        throw new NotFoundException("O'quvchi topilmadi");
+      }
+
+      const student = await this.lockStudent(client, params.studentId);
+      const balanceBefore = student.balance;
+      const balanceAfter = balanceBefore + params.amount;
+
+      try {
+        const transaction = await client.transaction.create({
+          data: {
+            type: TransactionType.INITIAL_BALANCE,
+            amount: params.amount,
+            balanceBefore,
+            balanceAfter,
+            studentId: params.studentId,
+            branchId: params.branchId,
+            companyId: params.companyId,
+            performedById: params.performedById,
+            description: params.note ?? "Boshlang'ich balans kiritildi",
+          },
+        });
+
+        await client.student.update({
+          where: { id: params.studentId },
+          data: { balance: balanceAfter },
+        });
+
+        return transaction;
+      } catch (err) {
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2002'
+        ) {
+          throw new BadRequestException(
+            "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan",
+          );
+        }
+        throw err;
+      }
     }, tx);
   }
 
@@ -227,7 +399,15 @@ export class TransactionsWriteService {
       if (original.reversedTransactionId) {
         throw new Error(`Transaction ${originalId} allaqachon qaytarilgan`);
       }
-      // Reject reversing a reversal (keeps the chain flat).
+      // The new reversedAt marker is the source of truth for "is this row
+      // still active?". A pre-existing value here means we already reversed
+      // it; the older `reversalEntries` check below kept around as a
+      // belt-and-braces guard for legacy rows that pre-date the column.
+      if (original.reversedAt) {
+        throw new Error(
+          `Transaction ${originalId} uchun reversal allaqachon mavjud`,
+        );
+      }
       const alreadyReversed = await client.transaction.findFirst({
         where: { reversedTransactionId: originalId },
         select: { id: true },
@@ -269,7 +449,7 @@ export class TransactionsWriteService {
         }
       }
 
-      return client.transaction.create({
+      const reversal = await client.transaction.create({
         data: {
           type: original.type,
           amount: reversalAmount,
@@ -293,6 +473,21 @@ export class TransactionsWriteService {
             : `Bekor qilindi (${original.id})`,
         },
       });
+
+      // Mark the original as reversed so all "still-active?" filters and
+      // partial unique indexes (LESSON_CONSUMPTION idempotency,
+      // INITIAL_BALANCE per student, etc) see it as gone in O(1). Without
+      // this, ABSENT→PRESENT after a reverse would no-op because the
+      // idempotency check would still find the original consumption row.
+      await client.transaction.update({
+        where: { id: original.id },
+        data: {
+          reversedAt: new Date(),
+          reversedById: params.performedById,
+        },
+      });
+
+      return reversal;
     }, tx);
   }
 

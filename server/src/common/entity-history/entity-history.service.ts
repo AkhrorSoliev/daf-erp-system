@@ -86,7 +86,7 @@ export class EntityHistoryService {
       newValues: Record<string, any>;
     },
   ) {
-    await this.prisma.entityHistory.create({
+    await this.client(params.tx).entityHistory.create({
       data: {
         entityType: params.entityType,
         entityId: String(params.entityId),
@@ -98,6 +98,8 @@ export class EntityHistoryService {
       },
     });
 
+    // Emit outside the tx — listeners should not assume the write is committed
+    // yet. Notifications/side-effects must tolerate the rare rollback case.
     this.eventEmitter.emit('entity.status.changed', {
       entityType: params.entityType,
       entityId: String(params.entityId),
@@ -112,7 +114,7 @@ export class EntityHistoryService {
   async recordRestore(
     params: BaseHistoryParams & { newValues: Record<string, any> },
   ) {
-    await this.prisma.entityHistory.create({
+    await this.client(params.tx).entityHistory.create({
       data: {
         entityType: params.entityType,
         entityId: String(params.entityId),
