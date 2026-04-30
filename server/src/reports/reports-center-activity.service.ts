@@ -705,6 +705,7 @@ export class ReportsCenterActivityService {
       sumEmpty: number;
       sumStudents: number;
       sumSeats: number;
+      sumExtra: number;
       count: number;
     };
 
@@ -718,6 +719,7 @@ export class ReportsCenterActivityService {
         existing.sumEmpty += d.emptyHours;
         existing.sumStudents += d.activeStudents;
         existing.sumSeats += d.emptySeats;
+        existing.sumExtra += d.extraStudentsCapacity;
         existing.count += 1;
       } else {
         const start =
@@ -734,6 +736,7 @@ export class ReportsCenterActivityService {
           sumEmpty: d.emptyHours,
           sumStudents: d.activeStudents,
           sumSeats: d.emptySeats,
+          sumExtra: d.extraStudentsCapacity,
           count: 1,
         });
       }
@@ -748,7 +751,7 @@ export class ReportsCenterActivityService {
         emptyHours: Math.round(b.sumEmpty * 10) / 10,
         activeStudents: Math.round(b.sumStudents / b.count),
         emptySeats: Math.round(b.sumSeats / b.count),
-        extraStudentsCapacity: Math.round(b.sumSeats / b.count),
+        extraStudentsCapacity: Math.round(b.sumExtra / b.count),
       }));
   }
 

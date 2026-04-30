@@ -48,47 +48,51 @@ function KpiCard({
   onClick,
   actionLabel = "Batafsil",
 }: KpiCardProps) {
+  // Single interactive element (the outer button). The Info icon stays
+  // non-interactive — its tooltip is shown via the wrapping Tooltip's hover
+  // and shows on the button's focus too. The "Batafsil" affordance is
+  // visible on focus AND hover so keyboard users discover it.
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex flex-col rounded-xl border bg-card p-4 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Icon className="size-4" />
-          <span>{label}</span>
-        </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              role="button"
-              aria-label="Tushuntirish"
-              tabIndex={0}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Info className="size-4" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs whitespace-pre-line">
-            {tooltip}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      <div
-        className={cn(
-          "mt-3 text-2xl font-semibold tabular-nums",
-          valueColor,
-        )}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={`${label} — batafsil ko'rish`}
+          className="group flex w-full flex-col rounded-xl border bg-card p-4 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Icon className="size-4" />
+              <span>{label}</span>
+            </div>
+            <Info
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </div>
+          <div
+            className={cn(
+              "mt-3 text-2xl font-semibold tabular-nums",
+              valueColor,
+            )}
+          >
+            {value}
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            {actionLabel}
+            <ArrowRight className="size-3" />
+          </div>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        className="max-w-xs whitespace-pre-line"
       >
-        {value}
-      </div>
-      <div className="mt-3 flex items-center justify-end gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-        {actionLabel}
-        <ArrowRight className="size-3" />
-      </div>
-    </button>
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
