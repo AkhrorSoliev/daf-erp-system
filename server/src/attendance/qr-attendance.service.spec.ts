@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { QrAttendanceService } from './qr-attendance.service';
 import { QrAttendanceSessionService } from './qr-attendance-session.service';
 import { QrAttendanceScanService } from './qr-attendance-scan.service';
@@ -113,6 +114,7 @@ describe('QrAttendanceService', () => {
           useValue: { deductLessonFee: jest.fn() },
         },
         { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 

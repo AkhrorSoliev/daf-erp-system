@@ -51,6 +51,7 @@ describe('AttendanceService', () => {
   let service: AttendanceService;
   let prisma: any;
   let entityHistoryService: any;
+  let eventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -104,7 +105,10 @@ describe('AttendanceService', () => {
           useValue: { deductLessonFee: jest.fn(), recordPayment: jest.fn() },
         },
         { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: (eventEmitter = { emit: jest.fn() }),
+        },
       ],
     }).compile();
 
@@ -807,6 +811,130 @@ describe('AttendanceService', () => {
 
       expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
       expect(prisma.attendance.upsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('emits attendance.student.recorded for each new entry on first save', async () => {
+      const mockResults = [
+        {
+          id: 'att-1',
+          groupId: 'group-uuid-1',
+          studentId: 10001,
+          date: new Date('2026-04-01'),
+          status: 'PRESENT',
+          note: null,
+        },
+        {
+          id: 'att-2',
+          groupId: 'group-uuid-1',
+          studentId: 10002,
+          date: new Date('2026-04-01'),
+          status: 'ABSENT',
+          note: null,
+        },
+      ];
+
+      prisma.enrollment.findMany.mockResolvedValue(
+        mockEnrollments.map((e) => ({ studentId: e.studentId })),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert
+        .mockResolvedValueOnce(mockResults[0])
+        .mockResolvedValueOnce(mockResults[1]);
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'Deutsch A1',
+        branchId: 1,
+        course: { price: 800000, lessonPaymentCount: 12 },
+        teachers: [{ teacherId: 20001 }],
+      });
+
+      const dto = {
+        entries: [
+          { studentId: 10001, status: 'PRESENT' },
+          { studentId: 10002, status: 'ABSENT' },
+        ],
+      };
+
+      await service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1);
+
+      const studentRecorded = eventEmitter.emit.mock.calls.filter(
+        (c) => c[0] === 'attendance.student.recorded',
+      );
+      expect(studentRecorded).toHaveLength(2);
+      expect(studentRecorded[0][1]).toEqual(
+        expect.objectContaining({
+          studentId: 10001,
+          groupId: 'group-uuid-1',
+          groupName: 'Deutsch A1',
+          oldStatus: null,
+          newStatus: 'PRESENT',
+        }),
+      );
+      expect(studentRecorded[1][1]).toEqual(
+        expect.objectContaining({
+          studentId: 10002,
+          oldStatus: null,
+          newStatus: 'ABSENT',
+        }),
+      );
+    });
+
+    it('emits attendance.student.recorded only for entries whose status changed', async () => {
+      const existingRecords = [
+        { id: 'att-1', studentId: 10001, status: 'PRESENT', note: null },
+        { id: 'att-2', studentId: 10002, status: 'ABSENT', note: null },
+      ];
+
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001 },
+        { studentId: 10002 },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue(existingRecords);
+      prisma.attendance.upsert
+        .mockResolvedValueOnce({
+          id: 'att-1',
+          groupId: 'group-uuid-1',
+          studentId: 10001,
+          date: new Date('2026-04-01'),
+          status: 'PRESENT',
+          note: null,
+        })
+        .mockResolvedValueOnce({
+          id: 'att-2',
+          groupId: 'group-uuid-1',
+          studentId: 10002,
+          date: new Date('2026-04-01'),
+          status: 'PRESENT',
+          note: null,
+        });
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'Deutsch A1',
+        branchId: 1,
+        course: { price: 800000, lessonPaymentCount: 12 },
+        teachers: [{ teacherId: 20001 }],
+      });
+
+      const dto = {
+        entries: [
+          // unchanged: PRESENT → PRESENT
+          { studentId: 10001, status: 'PRESENT' },
+          // changed: ABSENT → PRESENT
+          { studentId: 10002, status: 'PRESENT' },
+        ],
+      };
+
+      await service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1);
+
+      const studentRecorded = eventEmitter.emit.mock.calls.filter(
+        (c) => c[0] === 'attendance.student.recorded',
+      );
+      expect(studentRecorded).toHaveLength(1);
+      expect(studentRecorded[0][1]).toEqual(
+        expect.objectContaining({
+          studentId: 10002,
+          oldStatus: 'ABSENT',
+          newStatus: 'PRESENT',
+        }),
+      );
     });
   });
 
