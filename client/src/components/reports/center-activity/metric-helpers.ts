@@ -121,8 +121,8 @@ export function getUtilizationColor(pct: number): string | undefined {
 }
 
 export const KPI_TOOLTIPS = {
-    utilization:
-    "Markazning umumiy foydalanish darajasi. Hisob: xonalarning jami band soatlari ÷ jami ish soatlari × 100. Yuqori foiz xona vaqti yaxshi ishlatilganini bildiradi.",
+  utilization:
+    "Xonalarning ish vaqti necha foiz darslar bilan band ekanligini ko'rsatadi.\n\nHisob: jami dars soatlari ÷ jami ish soatlari × 100.\n\nYuqori foiz — markaz vaqti yaxshi ishlatilgan. Past foiz — bo'sh vaqtlar ko'p, yangi guruhlar joylashtirish imkoniyati bor.\n\nDIQQAT: bu \"foyda\" emas, vaqt bandligi. Daromad statistikasi alohida \"Potensial qo'shimcha daromad\" KPI'sida.",
   emptyHours:
     "Xonalarning bo'sh qolgan ish vaqti soatlari. Hisob: jami ish soatlari − jami dars soatlari. Kam bo'sh vaqt yaxshi foydalanishni bildiradi.",
   activeStudents:

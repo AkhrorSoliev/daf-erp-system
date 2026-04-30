@@ -35,7 +35,7 @@ const METRIC_CONFIG: Record<
   }
 > = {
   utilizationPct: {
-    title: "Markaz foydaliligi darajasi",
+    title: "Vaqt bandligi",
     description: KPI_TOOLTIPS.utilization,
     color: "#10b981",
     type: "line",

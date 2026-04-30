@@ -123,7 +123,7 @@ export function CenterActivityKpiCards({
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard
         icon={TrendingUp}
-        label="Markaz foydaliligi darajasi"
+        label="Vaqt bandligi"
         value={formatPctValue(kpis.utilizationPct)}
         valueColor={getUtilizationColor(kpis.utilizationPct)}
         tooltip={KPI_TOOLTIPS.utilization}

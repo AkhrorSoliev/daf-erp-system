@@ -227,8 +227,12 @@ export class ReportsCenterActivityService {
       );
     });
 
-    // KPI aggregate considers all rooms (empty rooms count as wasted
-    // capacity in operational periods).
+    // KPIs and the rooms table are kept in sync: rooms with no groups in
+    // this period emit zero across all metrics (see buildRoomEntry's
+    // `noGroups` branch), so they neither inflate KPI totals nor clutter
+    // the table — they're filtered out of the table here for the same
+    // reason. The visible rooms in the table fully account for every
+    // number in the KPI cards above.
     const activeStudents = this.countDistinctActiveStudents(
       groups,
       range,
@@ -236,7 +240,6 @@ export class ReportsCenterActivityService {
     );
     const kpis = this.aggregateKpis(allRoomEntries, activeStudents);
 
-    // Table & breakdown only show rooms that had groups in this period.
     const roomsResponse = allRoomEntries.filter(
       (r) => r.totals.groupCount > 0,
     );
