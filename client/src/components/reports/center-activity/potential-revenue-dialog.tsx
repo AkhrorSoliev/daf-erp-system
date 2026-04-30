@@ -106,8 +106,10 @@ export function PotentialRevenueDialog({ open, onClose, data }: Props) {
                 </div>
               )}
               <p className="mt-2 text-xs text-muted-foreground">
-                * Hisob-kitob barcha xonalarning maksimal sig&apos;imi va
-                o&apos;rtacha kurs narxlari asosida amalga oshirilgan.
+                * Hisob-kitob har bir guruh uchun alohida amalga oshiriladi:
+                (xona sig&apos;imi − guruh o&apos;quvchilari) × shu guruhning
+                kurs narxi. Xona bo&apos;yicha barcha guruhlar yig&apos;indisi
+                va kompaniya bo&apos;yicha umumiy hosil qilinadi.
               </p>
             </section>
 

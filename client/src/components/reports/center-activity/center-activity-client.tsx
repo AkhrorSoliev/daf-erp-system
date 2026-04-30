@@ -13,6 +13,7 @@ import {
   resolveCenterActivityRange,
   type CenterActivityFilter,
 } from "./center-activity-filter-bar";
+import { CenterActivityDiagnostics } from "./center-activity-diagnostics";
 import { CenterActivityKpiCards } from "./center-activity-kpi-cards";
 import { PotentialRevenueDialog } from "./potential-revenue-dialog";
 import { RoomsActivityTable } from "./rooms-activity-table";
@@ -194,6 +195,8 @@ export function CenterActivityClient() {
         onPotentialClick={() => setPotentialOpen(true)}
         onMetricClick={(m) => setActiveMetric(m)}
       />
+
+      <CenterActivityDiagnostics data={data} isLoading={isLoading} />
 
       <RoomsActivityTable
         rooms={data?.rooms ?? []}

@@ -154,7 +154,7 @@ export const TABLE_TOOLTIPS = {
   totalRevenue:
     "Xonadagi barcha guruhlardan olinadigan jami daromad.\n\nHisob: har guruh uchun (o'quvchilar soni × kurs narxi), so'ng yig'iladi.",
   idleTime:
-    "Xonaning haftada hech qaysi dars uchun ishlatilmagan vaqti.\n\nHisob: jami ish vaqti − jami dars soatlari.\nMisol: 84 soat − 18 soat = 66 soat bo'sh.\n\nKam bo'sh vaqt = xona yaxshi ishlatilgan.",
+    "Xonaning tanlangan davr ichida darslar bilan band bo'lmagan jami soatlari.\n\nHisob: (haftalik ish vaqti − haftalik dars soatlari) × davr haftalari.\n\nYuqoridagi \"Bo'sh vaqtlar\" KPI bilan bir xil davr bo'yicha hisoblanadi — solishtirish to'g'ri keladi.\n\nKam bo'sh vaqt = xona yaxshi ishlatilgan.",
   seatHoursScheduled:
     "Xona hozirgi dars jadvalida taklif qilayotgan jami o'rin-soatlar.\n\nO'rinsoat — bu bitta o'rindiq 1 soat ishlatilsa, 1 o'rinsoat hisoblanadi.\n\nHisob: sig'im × jami dars soatlari.\nMisol: 14 ta o'rindiq × 18 soat = 252 o'rinsoat.",
   seatHoursActual:
