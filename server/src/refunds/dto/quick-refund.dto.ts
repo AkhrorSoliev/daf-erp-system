@@ -15,7 +15,7 @@ export class QuickRefundDto {
 
   @IsString()
   @IsNotEmpty()
-  contractId: string;
+  enrollmentId: string;
 
   @IsInt()
   @Min(1)

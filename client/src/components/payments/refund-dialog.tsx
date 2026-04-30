@@ -27,8 +27,9 @@ import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 
 interface RefundPreview {
-  contractId: string;
-  contractNumber: string;
+  enrollmentId: string;
+  groupId: string;
+  groupName: string;
   courseName: string;
   paidAmount: number;
   studentBalance: number;
@@ -107,7 +108,7 @@ export function RefundDialog({
     try {
       const { data } = await api.post("/refunds/quick", {
         studentId,
-        contractId: preview.contractId,
+        enrollmentId: preview.enrollmentId,
         amount: rawAmount,
         refundMethod,
         reason: reason.trim() || undefined,
@@ -166,8 +167,8 @@ export function RefundDialog({
             <>
               <div className="rounded-md border bg-muted/30 p-3 space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Shartnoma:</span>
-                  <span className="font-medium">{preview.contractNumber}</span>
+                  <span className="text-muted-foreground">Guruh:</span>
+                  <span className="font-medium">{preview.groupName}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Kurs:</span>

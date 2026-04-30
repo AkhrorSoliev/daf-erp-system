@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   ParseIntPipe,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
@@ -46,8 +47,13 @@ export class RefundsController {
   previewRefund(
     @Param('studentId', ParseIntPipe) studentId: number,
     @CurrentUser('companyId') companyId: number,
+    @Query('enrollmentId') enrollmentId?: string,
   ) {
-    return this.refundsService.previewRefund(studentId, companyId);
+    return this.refundsService.previewRefund(
+      studentId,
+      companyId,
+      enrollmentId,
+    );
   }
 
   @Get()

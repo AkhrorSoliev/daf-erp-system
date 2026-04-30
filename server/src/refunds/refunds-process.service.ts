@@ -73,7 +73,9 @@ export class RefundsProcessService {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 21); // ~15 business days
 
-      // Atomic: balance deduction + contract update + refund update all-or-nothing
+      // Atomic: balance deduction + (optional) contract update + refund update
+      // all-or-nothing. Contract update only runs for legacy refunds that were
+      // tied to a Contract row — new refunds are enrollment-based.
       return this.prisma.$transaction(
         async (tx) => {
           await this.transactionsService.recordRefund(
@@ -81,20 +83,22 @@ export class RefundsProcessService {
               studentId: refund.studentId,
               amount: approvedAmount,
               refundId: refund.id,
-              contractId: refund.contractId,
+              contractId: refund.contractId ?? undefined,
               companyId: refund.companyId,
               performedById: userId,
             },
             tx,
           );
 
-          await tx.contract.update({
-            where: { id: refund.contractId },
-            data: {
-              status: ContractStatus.REFUNDED,
-              paidAmount: { decrement: approvedAmount },
-            },
-          });
+          if (refund.contractId) {
+            await tx.contract.update({
+              where: { id: refund.contractId },
+              data: {
+                status: ContractStatus.REFUNDED,
+                paidAmount: { decrement: approvedAmount },
+              },
+            });
+          }
 
           return tx.refund.update({
             where: { id },
@@ -166,6 +170,7 @@ export class RefundsProcessService {
         refundId: id,
         type: 'REFUND',
         reversedTransactionId: null,
+        reversedAt: null,
       },
       select: { id: true },
     });
@@ -190,8 +195,10 @@ export class RefundsProcessService {
 
         // Undo the contract paidAmount decrement done by the original
         // refund. Contract status stays REFUNDED — operators change it
-        // explicitly if they want to reopen the contract.
-        if (approvedAmount > 0) {
+        // explicitly if they want to reopen the contract. Only runs for
+        // legacy refunds tied to a Contract; enrollment-based refunds skip
+        // this step.
+        if (approvedAmount > 0 && refund.contractId) {
           await tx.contract.update({
             where: { id: refund.contractId },
             data: { paidAmount: { increment: approvedAmount } },
