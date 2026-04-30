@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings } from "lucide-react";
+import { ChevronsLeftRight, Settings } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -140,6 +140,7 @@ export function RoomsActivityTable({
 }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const total = rooms.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -147,27 +148,46 @@ export function RoomsActivityTable({
   const start = (safePage - 1) * pageSize;
   const slice = rooms.slice(start, start + pageSize);
 
+  // Default view shows 8 actionable columns; "Texnik ustunlar" toggle
+  // reveals the seat-hour breakdown columns that belong to the FIK formula.
+  const defaultColCount = 9 + (canEdit ? 1 : 0); // # + 8 data + optional action
+  const advancedColCount = 7; // workingHours, lessonHours, coursePrice, revenueSum, seatHours×3
+  const totalColCount = defaultColCount + (showAdvanced ? advancedColCount : 0);
+
   return (
     <div className="rounded-xl border bg-card">
-      <div className="flex items-center justify-between gap-2 p-4 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
         <div>
           <h3 className="font-semibold">Xonalar bo&apos;yicha tafsilot</h3>
           <p className="text-xs text-muted-foreground">
-            Har bir xonaning sig&apos;imi, dars vaqti, daromadi va FIK
-            ko&apos;rsatkichlari.
+            Har bir xonaning sig&apos;imi, dars vaqti va bandligi.
           </p>
         </div>
-        {canEdit && (
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={onBulkEdit}
+            onClick={() => setShowAdvanced((s) => !s)}
             className="gap-2"
+            aria-pressed={showAdvanced}
           >
-            <Settings className="size-4" />
-            Xonalar sig&apos;imini sozlash
+            <ChevronsLeftRight className="size-4" />
+            {showAdvanced
+              ? "Texnik ustunlarni yashirish"
+              : "Texnik ustunlarni ko'rsatish"}
           </Button>
-        )}
+          {canEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBulkEdit}
+              className="gap-2"
+            >
+              <Settings className="size-4" />
+              Xonalar sig&apos;imini sozlash
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto border-t">
@@ -183,13 +203,15 @@ export function RoomsActivityTable({
                   align="right"
                 />
               </TableHead>
-              <TableHead className="text-right">
-                <HeaderWithTooltip
-                  label="Ish vaqti"
-                  tooltip={TABLE_TOOLTIPS.workingHours}
-                  align="right"
-                />
-              </TableHead>
+              {showAdvanced && (
+                <TableHead className="text-right">
+                  <HeaderWithTooltip
+                    label="Ish vaqti"
+                    tooltip={TABLE_TOOLTIPS.workingHours}
+                    align="right"
+                  />
+                </TableHead>
+              )}
               <TableHead className="text-right">
                 <HeaderWithTooltip
                   label="Guruhlar"
@@ -211,27 +233,33 @@ export function RoomsActivityTable({
                   align="right"
                 />
               </TableHead>
-              <TableHead className="text-right">
-                <HeaderWithTooltip
-                  label="Dars soatlari"
-                  tooltip={TABLE_TOOLTIPS.lessonHours}
-                  align="right"
-                />
-              </TableHead>
-              <TableHead className="text-right">
-                <HeaderWithTooltip
-                  label="Kurs narxi"
-                  tooltip={TABLE_TOOLTIPS.coursePrice}
-                  align="right"
-                />
-              </TableHead>
-              <TableHead className="text-right">
-                <HeaderWithTooltip
-                  label="Jami summa"
-                  tooltip={TABLE_TOOLTIPS.totalRevenue}
-                  align="right"
-                />
-              </TableHead>
+              {showAdvanced && (
+                <TableHead className="text-right">
+                  <HeaderWithTooltip
+                    label="Dars soatlari"
+                    tooltip={TABLE_TOOLTIPS.lessonHours}
+                    align="right"
+                  />
+                </TableHead>
+              )}
+              {showAdvanced && (
+                <TableHead className="text-right">
+                  <HeaderWithTooltip
+                    label="Kurs narxi"
+                    tooltip={TABLE_TOOLTIPS.coursePrice}
+                    align="right"
+                  />
+                </TableHead>
+              )}
+              {showAdvanced && (
+                <TableHead className="text-right">
+                  <HeaderWithTooltip
+                    label="Jami summa"
+                    tooltip={TABLE_TOOLTIPS.totalRevenue}
+                    align="right"
+                  />
+                </TableHead>
+              )}
               <TableHead className="text-right">
                 <HeaderWithTooltip
                   label="Bo'sh vaqt"
@@ -239,30 +267,36 @@ export function RoomsActivityTable({
                   align="right"
                 />
               </TableHead>
+              {showAdvanced && (
+                <TableHead className="text-right">
+                  <HeaderWithTooltip
+                    label="O'rinsoat"
+                    tooltip={TABLE_TOOLTIPS.seatHoursScheduled}
+                    align="right"
+                  />
+                </TableHead>
+              )}
+              {showAdvanced && (
+                <TableHead className="text-right">
+                  <HeaderWithTooltip
+                    label="Amaldagi o'rinsoat"
+                    tooltip={TABLE_TOOLTIPS.seatHoursActual}
+                    align="right"
+                  />
+                </TableHead>
+              )}
+              {showAdvanced && (
+                <TableHead className="text-right">
+                  <HeaderWithTooltip
+                    label="Reja o'rinsoat"
+                    tooltip={TABLE_TOOLTIPS.seatHoursPlanned}
+                    align="right"
+                  />
+                </TableHead>
+              )}
               <TableHead className="text-right">
                 <HeaderWithTooltip
-                  label="O'rinsoat"
-                  tooltip={TABLE_TOOLTIPS.seatHoursScheduled}
-                  align="right"
-                />
-              </TableHead>
-              <TableHead className="text-right">
-                <HeaderWithTooltip
-                  label="Amaldagi o'rinsoat"
-                  tooltip={TABLE_TOOLTIPS.seatHoursActual}
-                  align="right"
-                />
-              </TableHead>
-              <TableHead className="text-right">
-                <HeaderWithTooltip
-                  label="Reja o'rinsoat"
-                  tooltip={TABLE_TOOLTIPS.seatHoursPlanned}
-                  align="right"
-                />
-              </TableHead>
-              <TableHead className="text-right">
-                <HeaderWithTooltip
-                  label="FIK %"
+                  label="Bandlik %"
                   tooltip={TABLE_TOOLTIPS.fik}
                   align="right"
                 />
@@ -275,7 +309,7 @@ export function RoomsActivityTable({
               <>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={canEdit ? 16 : 15}>
+                    <TableCell colSpan={totalColCount}>
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
                   </TableRow>
@@ -285,7 +319,7 @@ export function RoomsActivityTable({
             {!isLoading && slice.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={canEdit ? 16 : 15}
+                  colSpan={totalColCount}
                   className="text-center text-sm text-muted-foreground py-8"
                 >
                   Tanlangan filtrlar bo&apos;yicha xonalar topilmadi
@@ -320,9 +354,11 @@ export function RoomsActivityTable({
                         </Tooltip>
                       )}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {r.workingHoursPerWeek} soat
-                    </TableCell>
+                    {showAdvanced && (
+                      <TableCell className="text-right tabular-nums">
+                        {r.workingHoursPerWeek} soat
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       {renderGroupCount(r.groups)}
                     </TableCell>
@@ -332,27 +368,39 @@ export function RoomsActivityTable({
                     <TableCell className="text-right tabular-nums">
                       {r.totals.emptySeats}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {r.totals.lessonHoursPerWeek} soat
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {renderPriceRange(r.groups)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatBalance(r.totals.revenueSum)}
-                    </TableCell>
+                    {showAdvanced && (
+                      <TableCell className="text-right tabular-nums">
+                        {r.totals.lessonHoursPerWeek} soat
+                      </TableCell>
+                    )}
+                    {showAdvanced && (
+                      <TableCell className="text-right tabular-nums">
+                        {renderPriceRange(r.groups)}
+                      </TableCell>
+                    )}
+                    {showAdvanced && (
+                      <TableCell className="text-right tabular-nums">
+                        {formatBalance(r.totals.revenueSum)}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right tabular-nums">
                       {r.totals.idleHoursPerWeek} soat
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {r.totals.seatHoursCapacityScheduled ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {r.totals.seatHoursActual}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {r.totals.seatHoursPlanned ?? "—"}
-                    </TableCell>
+                    {showAdvanced && (
+                      <TableCell className="text-right tabular-nums">
+                        {r.totals.seatHoursCapacityScheduled ?? "—"}
+                      </TableCell>
+                    )}
+                    {showAdvanced && (
+                      <TableCell className="text-right tabular-nums">
+                        {r.totals.seatHoursActual}
+                      </TableCell>
+                    )}
+                    {showAdvanced && (
+                      <TableCell className="text-right tabular-nums">
+                        {r.totals.seatHoursPlanned ?? "—"}
+                      </TableCell>
+                    )}
                     <TableCell
                       className={cn(
                         "text-right tabular-nums font-medium",

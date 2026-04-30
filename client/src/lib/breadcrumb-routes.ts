@@ -16,6 +16,7 @@ export const routeLabels: Record<string, string> = {
   "departed-students": "Ketgan o'quvchilar",
   graduates: "Bitiruvchilar",
   activity: "Markaz faoliyati",
+  attendance: "Davomat statistikasi",
   profile: "Profil",
   settings: "Sozlamalar",
   general: "Umumiy sozlamalar",
@@ -25,12 +26,13 @@ export const routeLabels: Record<string, string> = {
   rooms: "Xonalar",
   holidays: "Dam olish kunlari",
   tasks: "Topshiriqlar",
-  "left-students": "Guruhni tark etganlar",
   archive: "Arxiv",
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
   expenses: "Xarajatlar",
   salary: "Ish haqi",
+  // /payments/salary/settings — CEO oylik davri sozlamalari sahifasi.
+  // /profile/salary — Teacher portalida ustozning o'z oyligi sahifasi.
   debtors: "Qarzdorlar",
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",

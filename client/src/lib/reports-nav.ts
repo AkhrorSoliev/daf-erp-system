@@ -5,6 +5,7 @@ import {
   UserPlus,
   GraduationCap,
   Activity,
+  CalendarCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -41,6 +42,7 @@ export const reportsNavSections: ReportsNavSection[] = [
     items: [
       { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus },
       { title: "Markaz faoliyat statistikasi", url: "/reports/activity", icon: Activity },
+      { title: "Davomat statistikasi", url: "/reports/attendance", icon: CalendarCheck },
     ],
   },
 ];
