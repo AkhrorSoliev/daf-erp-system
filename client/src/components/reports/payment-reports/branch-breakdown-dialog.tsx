@@ -34,7 +34,7 @@ interface BranchBreakdownDialogProps {
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString("en-US");
+  return n.toLocaleString("uz-UZ");
 }
 
 function compactFmt(n: number): string {

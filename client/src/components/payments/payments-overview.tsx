@@ -70,7 +70,7 @@ const methodLabels: Record<string, string> = {
 };
 
 function fmt(n: number) {
-  return n.toLocaleString("en-US");
+  return n.toLocaleString("uz-UZ");
 }
 
 interface PaymentsOverviewProps {

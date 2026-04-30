@@ -158,7 +158,7 @@ export function ExpensesClient() {
   const handleAmountChange = (val: string) => {
     const digits = val.replace(/\D/g, "");
     if (digits) {
-      setAmount(parseInt(digits, 10).toLocaleString("en-US"));
+      setAmount(parseInt(digits, 10).toLocaleString("uz-UZ"));
     } else {
       setAmount("");
     }

@@ -95,16 +95,16 @@ export interface CenterActivityResponse {
 
 export function formatHours(hours: number): string {
   if (!Number.isFinite(hours)) return "—";
-  return `${hours.toLocaleString("en-US", { maximumFractionDigits: 1 })} soat`;
+  return `${hours.toLocaleString("uz-UZ", { maximumFractionDigits: 1 })} soat`;
 }
 
 export function formatPctValue(pct: number | null): string {
   if (pct === null || !Number.isFinite(pct)) return "—";
-  return `${pct.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
+  return `${pct.toLocaleString("uz-UZ", { maximumFractionDigits: 1 })}%`;
 }
 
 export function formatCount(count: number, suffix = "ta"): string {
-  return `${count.toLocaleString("en-US")} ${suffix}`;
+  return `${count.toLocaleString("uz-UZ")} ${suffix}`;
 }
 
 export function getFikColor(pct: number | null): string | undefined {

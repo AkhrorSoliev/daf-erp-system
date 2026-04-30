@@ -32,7 +32,7 @@ interface TeachersReportTableProps {
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString("en-US");
+  return n.toLocaleString("uz-UZ");
 }
 
 export function TeachersReportTable({

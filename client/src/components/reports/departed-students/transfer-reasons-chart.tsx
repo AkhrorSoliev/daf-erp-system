@@ -446,7 +446,7 @@ function TransferDrilldownDialog({
                 <span>
                   Jami:{" "}
                   <span className="tabular-nums">
-                    {total.toLocaleString("en-US")}
+                    {total.toLocaleString("uz-UZ")}
                   </span>
                 </span>
               </>

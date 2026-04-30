@@ -64,7 +64,7 @@ interface PaymentReportsResponse {
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString("en-US");
+  return n.toLocaleString("uz-UZ");
 }
 
 function parseDate(raw: string | null): Date | null {

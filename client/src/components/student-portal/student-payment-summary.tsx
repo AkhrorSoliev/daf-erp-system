@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 function formatBalance(balance: number) {
-  return balance.toLocaleString("en-US");
+  return balance.toLocaleString("uz-UZ");
 }
 
 const PAYMENT_METHODS = [
@@ -107,7 +107,7 @@ export function StudentPaymentSummary() {
   };
 
   const displayAmount =
-    amount && Number(amount) > 0 ? Number(amount).toLocaleString("en-US") : "";
+    amount && Number(amount) > 0 ? Number(amount).toLocaleString("uz-UZ") : "";
 
   const handleQuickAmount = (val: number) => {
     setAmount(String(val));
@@ -421,10 +421,10 @@ function PaymentHistory() {
                     className={`text-sm font-bold ${t.amount >= 0 ? "text-green-600" : "text-red-600"}`}
                   >
                     {t.amount >= 0 ? "+" : ""}
-                    {t.amount.toLocaleString("en-US")} so&apos;m
+                    {t.amount.toLocaleString("uz-UZ")} so&apos;m
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {t.balanceAfter.toLocaleString("en-US")} so&apos;m
+                    {t.balanceAfter.toLocaleString("uz-UZ")} so&apos;m
                   </p>
                 </div>
               </div>

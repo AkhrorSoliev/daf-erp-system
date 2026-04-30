@@ -139,7 +139,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
             <p
               className={`text-lg font-bold ${teacher.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
             >
-              {teacher.balance.toLocaleString("en-US")} so&apos;m
+              {teacher.balance.toLocaleString("uz-UZ")} so&apos;m
             </p>
           </div>
 

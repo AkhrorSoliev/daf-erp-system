@@ -15,21 +15,53 @@ export function formatPhone(phone: string | null | undefined): string {
   return phone;
 }
 
+// Locale uchun yagona Intl.NumberFormat namunasi. O'zbek tilidagi
+// foydalanuvchi guruh ajratuvchi sifatida bo'sh joyni va kasr ajratuvchi
+// sifatida vergulni kutadi: 1 500 000,5 — bu uz-UZ konvensiyasi.
+const NUMBER_LOCALE = "uz-UZ";
+const defaultNumberFormat = new Intl.NumberFormat(NUMBER_LOCALE);
+
 /**
- * Balansni formatlash: 1500000 → "1,500,000 so'm"
+ * Sonni o'zbek formatida formatlash: 1500000 → "1 500 000".
+ * Markaz formatter — barcha hisobotlar va jadvallar shuni ishlatishi kerak.
+ */
+export function formatNumber(
+  value: number,
+  options?: Intl.NumberFormatOptions,
+): string {
+  if (!Number.isFinite(value)) return "—";
+  if (options) return new Intl.NumberFormat(NUMBER_LOCALE, options).format(value);
+  return defaultNumberFormat.format(value);
+}
+
+/**
+ * Foiz formatlash: 75.5 → "75.5%" (vergul kasr bilan: "75,5%").
+ * `null` uchun "—" qaytaradi.
+ */
+export function formatPercent(
+  value: number | null | undefined,
+  options?: Intl.NumberFormatOptions,
+): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "—";
+  }
+  return `${formatNumber(value, options)}%`;
+}
+
+/**
+ * Balansni formatlash: 1500000 → "1 500 000 so'm", -50000 → "-50 000 so'm".
  */
 export function formatBalance(balance: number): string {
-  const abs = Math.abs(balance)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const abs = formatNumber(Math.abs(balance));
   if (balance < 0) return `-${abs} so'm`;
   return `${abs} so'm`;
 }
 
 /**
- * Narxni formatlash (so'm yo'q): 1500000 → "1,500,000".
- * Pul birligi qo'shilishi kerak bo'lsa, qo'l bilan " so'm" qo'shing.
+ * Narxni formatlash (so'm qo'shilmasdan): 1500000 → "1 500 000".
+ * Pul birligi qo'shilishi kerak bo'lsa, qo'l bilan " so'm" qo'shing yoki
+ * `formatBalance()` ni ishlating.
  */
 export function formatPrice(price: number): string {
-  return price.toLocaleString("en-US");
+  return formatNumber(price);
 }

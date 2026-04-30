@@ -5,17 +5,17 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 /**
- * Formats a raw digit string with comma thousands separators.
- * Examples: "500" → "500", "1500" → "1,500", "1500000" → "1,500,000"
+ * Formats a raw digit string with Uzbek thousands separators (space).
+ * Examples: "500" → "500", "1500" → "1 500", "1500000" → "1 500 000"
  */
 function formatPriceValue(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (!digits) return "";
-  return Number(digits).toLocaleString("en-US");
+  return Number(digits).toLocaleString("uz-UZ");
 }
 
 /**
- * Strips commas, returns raw digits only.
+ * Strips separators and any non-digit, returns raw digits only.
  */
 function stripPriceFormat(value: string): string {
   return value.replace(/\D/g, "");
@@ -52,7 +52,7 @@ const PriceInput = React.forwardRef<HTMLInputElement, PriceInputProps>(
         <Input
           ref={ref}
           className={cn(className)}
-          placeholder="400,000"
+          placeholder="400 000"
           value={display}
           onChange={handleChange}
           name={name}

@@ -90,14 +90,14 @@ export function TeacherChangeRetentionCards({
           <ClickableKpiCard
             icon={<ArrowRightLeft className="size-4" />}
             label="Jami o'zgarishlar"
-            value={data.totalTeacherChanges.toLocaleString("en-US")}
+            value={data.totalTeacherChanges.toLocaleString("uz-UZ")}
             disabled={data.totalTeacherChanges === 0}
             onClick={() => setChangesOpen(true)}
           />
           <ClickableKpiCard
             icon={<UserX className="size-4" />}
             label="O'zgargandan keyin ketish"
-            value={data.departedAfterTeacherChange.toLocaleString("en-US")}
+            value={data.departedAfterTeacherChange.toLocaleString("uz-UZ")}
             secondary={
               data.totalTeacherChanges > 0
                 ? `${ratePercent.toFixed(1)}% (${data.departedAfterTeacherChange} / ${data.totalTeacherChanges})`

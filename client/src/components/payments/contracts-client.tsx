@@ -112,7 +112,7 @@ export function ContractsClient() {
   const handleAmountChange = (val: string) => {
     const digits = val.replace(/\D/g, "");
     if (digits) {
-      setTotalAmount(parseInt(digits, 10).toLocaleString("en-US"));
+      setTotalAmount(parseInt(digits, 10).toLocaleString("uz-UZ"));
     } else {
       setTotalAmount("");
     }
