@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format, parse } from "date-fns";
 import { TrendingDown, TrendingUp } from "lucide-react";
@@ -249,6 +249,7 @@ function RankedGroupsList({
 
 export function AttendanceSection() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const state = useMemo(
@@ -263,9 +264,9 @@ export function AttendanceSection() {
         merged,
         new URLSearchParams(searchParams.toString()),
       );
-      router.replace(`/reports/activity${qs}`, { scroll: false });
+      router.replace(`${pathname}${qs}`, { scroll: false });
     },
-    [router, searchParams, state],
+    [router, pathname, searchParams, state],
   );
 
   const range = useMemo(() => resolveAttendanceRange(state.filter), [state.filter]);
