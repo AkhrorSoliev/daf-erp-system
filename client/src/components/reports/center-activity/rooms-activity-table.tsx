@@ -386,7 +386,7 @@ export function RoomsActivityTable({
                       </TableCell>
                     )}
                     <TableCell className="text-right tabular-nums">
-                      {r.totals.idleHoursPerWeek} soat
+                      {r.totals.idleHoursPeriod} soat
                     </TableCell>
                     {showAdvanced && (
                       <TableCell className="text-right tabular-nums">
