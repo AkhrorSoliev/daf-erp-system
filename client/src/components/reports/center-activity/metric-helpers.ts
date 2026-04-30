@@ -162,7 +162,7 @@ export const TABLE_TOOLTIPS = {
   seatHoursPlanned:
     "Agar xona butun haftalik ish vaqtida to'liq sig'imda ishlasa, qancha o'rinsoat bo'lishi mumkin.\n\nHisob: sig'im × haftalik ish vaqti.\nMisol: 14 ta o'rindiq × 84 soat = 1,176 o'rinsoat.\n\nBu — xonaning maksimal nazariy imkoniyati.",
   fik:
-    "FIK — Foydalanish Intensivligi Koeffitsienti.\n\nXonaning maksimal imkoniyatidan necha foizi ishlatilayotganini ko'rsatadi.\n\nHisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100.\n\nRanglar:\n• Yashil — 70% va yuqori (yaxshi)\n• Sariq — 40–70% (o'rta)\n• Qizil — 40% dan kam (yomon)",
+    "FIK — Foydalanish Intensivligi Koeffitsienti.\n\nXonaning o'rin-soat imkoniyatidan necha foizi ishlatilayotganini ko'rsatadi (sig'im × ish vaqti × bandlik).\n\nHisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100.\n\nDIQQAT: bu yuqoridagi \"Vaqt bandligi\" KPI'sidan farq qiladi. Vaqt bandligi xona qancha vaqt darslar bilan band ekanini ko'rsatadi (dars soatlari ÷ ish soatlari). FIK esa o'rin-soatlar nuqtai nazaridan to'liq foydalanish darajasini hisoblaydi.\n\nRanglar:\n• Yashil — 70% va yuqori (yaxshi)\n• Sariq — 40–70% (o'rta)\n• Qizil — 40% dan kam (yomon)",
 };
 
 export const BUCKET_LABELS: Record<CenterActivityBucket, string> = {
