@@ -216,6 +216,10 @@ export function CenterActivityClient() {
         onClose={() => setActiveMetric(null)}
         metric={activeMetric}
         branchId={filter.branchId}
+        startDate={queryParams.startDate}
+        endDate={queryParams.endDate}
+        bucket={filter.bucket}
+        rangeLabel={range.label}
       />
 
       <EditRoomCapacityDialog
