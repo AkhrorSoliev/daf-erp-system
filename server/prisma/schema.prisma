@@ -298,6 +298,7 @@ model User {
   // Financial relations (operator)
   receivedPayments      Payment[]       @relation("PaymentReceivedBy")
   performedTransactions Transaction[]   @relation("TransactionPerformedBy")
+  reversedTransactions  Transaction[]   @relation("TransactionReversedBy")
   processedRefunds      Refund[]        @relation("RefundProcessedBy")
   paidSalaries          SalaryPayment[] @relation("SalaryPaidBy")
   createdExpenses       Expense[]       @relation("ExpenseCreatedBy")
@@ -637,6 +638,7 @@ model Enrollment {
   deletionBatchId String?
 
   stateLog EnrollmentStateLog[]
+  refunds  Refund[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1069,6 +1071,12 @@ model Transaction {
   reversedTransaction   Transaction?  @relation("TransactionReversal", fields: [reversedTransactionId], references: [id])
   reversalEntries       Transaction[] @relation("TransactionReversal")
 
+  // Set on an *original* row when another row reverses it. Lets idempotency
+  // filters select "still-active" rows in a single column.
+  reversedAt   DateTime?
+  reversedById Int?
+  reversedBy   User?     @relation("TransactionReversedBy", fields: [reversedById], references: [id])
+
   // Linked salary accruals (coverage guard — B.1).
   accruals SalaryAccrual[] @relation("AccrualDeduction")
 
@@ -1206,8 +1214,13 @@ model Refund {
   id               String         @id @default(uuid())
   studentId        Int
   student          Student        @relation(fields: [studentId], references: [id])
-  contractId       String
-  contract         Contract       @relation(fields: [contractId], references: [id])
+  // contractId is kept for legacy refunds that were tied to a Contract row.
+  // New refunds are scoped per Enrollment instead — Contract is optional in
+  // this system and most active students never have one.
+  contractId       String?
+  contract         Contract?      @relation(fields: [contractId], references: [id])
+  enrollmentId    String?
+  enrollment      Enrollment? @relation(fields: [enrollmentId], references: [id])
   requestedAmount  Int
   approvedAmount   Int?
   lessonsCompleted Int
@@ -1228,6 +1241,7 @@ model Refund {
 
   @@index([studentId])
   @@index([contractId])
+  @@index([enrollmentId])
   @@index([companyId])
   @@index([status])
 }

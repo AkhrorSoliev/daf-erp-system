@@ -8,7 +8,8 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
 import {
   AttendanceStatus,
-  ContractStatus,
+  EnrollmentStatus,
+  PaymentStatus,
   Prisma,
   RefundStatus,
 } from '@prisma/client';
@@ -32,97 +33,43 @@ export class RefundsCreateService {
   ) {}
 
   /**
-   * Calculate refund amount and create a refund request.
+   * Calculate refund amount and create a refund request. Refund is scoped to
+   * an Enrollment — Contract is not used.
    */
-  async create(dto: CreateRefundDto, userId: number, companyId: number) {
-    const contract = await this.prisma.contract.findFirst({
-      where: { id: dto.contractId, deletedAt: null, companyId },
-      select: {
-        id: true,
-        studentId: true,
-        courseId: true,
-        groupId: true,
-        totalAmount: true,
-        paidAmount: true,
-        status: true,
-        startDate: true,
-        course: {
-          select: { price: true, lessonPaymentCount: true },
-        },
-      },
-    });
-    if (!contract) throw new NotFoundException('Shartnoma topilmadi');
-    if (contract.studentId !== dto.studentId) {
-      throw new BadRequestException("Shartnoma bu o'quvchiga tegishli emas");
-    }
-    if (contract.status !== ContractStatus.ACTIVE) {
-      throw new BadRequestException(
-        "Faqat faol shartnomadan refund so'rash mumkin",
-      );
-    }
+  async create(dto: CreateRefundDto, _userId: number, companyId: number) {
+    const enrollment = await this.loadEnrollment(
+      dto.enrollmentId,
+      dto.studentId,
+      companyId,
+    );
 
-    // Count completed lessons (PRESENT or LATE) — kept for the 50% gate,
-    // which remains policy-driven. Not used for consumed-amount math anymore.
-    let lessonsCompleted = 0;
-    if (contract.groupId) {
-      lessonsCompleted = await this.prisma.attendance.count({
-        where: {
-          groupId: contract.groupId,
-          studentId: dto.studentId,
-          status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
-        },
-      });
-    }
+    const lessonsCompleted = await this.countAttendance(
+      enrollment.groupId,
+      dto.studentId,
+    );
 
-    const totalLessons = contract.course.lessonPaymentCount;
-    const perLessonCost = Math.round(contract.totalAmount / totalLessons);
+    const totalLessons = enrollment.group.course.lessonPaymentCount;
+    const coursePrice = enrollment.group.course.price;
+    const perLessonCost =
+      totalLessons > 0 ? Math.round(coursePrice / totalLessons) : 0;
 
-    // Contract-level consumption from the ledger — source of truth for how
-    // much of the paid amount has already been spent on delivered lessons
-    // (Phase C.1 populated Transaction.contractId for LESSON_DEDUCTION). The
-    // amount is negative in the ledger, so we negate the sum.
-    const consumed = await this.prisma.transaction.aggregate({
-      where: {
-        contractId: contract.id,
-        type: 'LESSON_DEDUCTION',
-        reversedTransactionId: null,
-      },
-      _sum: { amount: true },
-    });
-    const consumedAmount = Math.abs(consumed._sum.amount ?? 0);
-
-    // Prior refunds on the same contract — prevents a second request from
-    // reclaiming an amount that was already refunded.
-    const priorRefunds = await this.prisma.refund.aggregate({
-      where: {
-        contractId: contract.id,
-        status: {
-          in: [
-            RefundStatus.APPROVED,
-            RefundStatus.PROCESSING,
-            RefundStatus.COMPLETED,
-          ],
-        },
-      },
-      _sum: { approvedAmount: true },
-    });
-    const previousRefundsTotal = priorRefunds._sum.approvedAmount ?? 0;
+    const paidAmount = await this.sumPayments(dto.studentId, companyId);
+    const consumedAmount = await this.sumLessonDeductions(enrollment.id);
+    const previousRefundsTotal = await this.sumPriorRefunds(enrollment.id);
 
     let requestedAmount: number;
 
-    if (!contract.startDate || contract.startDate > new Date()) {
-      // Kurs boshlanmagan — 100% qaytarish (minus oldingi refundlar)
-      requestedAmount = Math.max(0, contract.paidAmount - previousRefundsTotal);
+    if (lessonsCompleted === 0) {
+      // Hali davomat yo'q — 100% qaytarish (oldingi refundlar minus)
+      requestedAmount = Math.max(0, paidAmount - previousRefundsTotal);
     } else if (lessonsCompleted / totalLessons >= 0.5) {
-      // 50% dan ko'pi o'tilgan — qaytarilMAYDI
       throw new BadRequestException(
         "Kursning 50% dan ortiq qismi o'tilgan. Pul qaytarilmaydi",
       );
     } else {
-      // refundableAmount = paidAmount - consumedAmount (from ledger) - previousRefunds
       requestedAmount = Math.max(
         0,
-        contract.paidAmount - consumedAmount - previousRefundsTotal,
+        paidAmount - consumedAmount - previousRefundsTotal,
       );
     }
 
@@ -138,7 +85,7 @@ export class RefundsCreateService {
     const refund = await this.prisma.refund.create({
       data: {
         studentId: dto.studentId,
-        contractId: dto.contractId,
+        enrollmentId: enrollment.id,
         requestedAmount,
         lessonsCompleted,
         totalLessons,
@@ -177,70 +124,25 @@ export class RefundsCreateService {
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
 
-    const contract = await this.prisma.contract.findFirst({
-      where: { id: dto.contractId, deletedAt: null, companyId },
-      select: {
-        id: true,
-        studentId: true,
-        groupId: true,
-        totalAmount: true,
-        paidAmount: true,
-        status: true,
-        course: {
-          select: { lessonPaymentCount: true },
-        },
-      },
-    });
-    if (!contract) throw new NotFoundException('Shartnoma topilmadi');
-    if (contract.studentId !== dto.studentId) {
-      throw new BadRequestException("Shartnoma bu o'quvchiga tegishli emas");
-    }
-    if (contract.status !== ContractStatus.ACTIVE) {
-      throw new BadRequestException(
-        'Faqat faol shartnomadan refund qilish mumkin',
-      );
-    }
+    const enrollment = await this.loadEnrollment(
+      dto.enrollmentId,
+      dto.studentId,
+      companyId,
+    );
 
-    let lessonsCompleted = 0;
-    if (contract.groupId) {
-      lessonsCompleted = await this.prisma.attendance.count({
-        where: {
-          groupId: contract.groupId,
-          studentId: dto.studentId,
-          status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
-        },
-      });
-    }
+    const lessonsCompleted = await this.countAttendance(
+      enrollment.groupId,
+      dto.studentId,
+    );
 
-    const totalLessons = contract.course.lessonPaymentCount;
+    const totalLessons = enrollment.group.course.lessonPaymentCount;
+    const coursePrice = enrollment.group.course.price;
     const perLessonCost =
-      totalLessons > 0 ? Math.round(contract.totalAmount / totalLessons) : 0;
+      totalLessons > 0 ? Math.round(coursePrice / totalLessons) : 0;
     const attendanceConsumed = lessonsCompleted * perLessonCost;
 
-    const ledgerAgg = await this.prisma.transaction.aggregate({
-      where: {
-        contractId: contract.id,
-        type: 'LESSON_DEDUCTION',
-        reversedTransactionId: null,
-      },
-      _sum: { amount: true },
-    });
-    const ledgerConsumed = Math.abs(ledgerAgg._sum.amount ?? 0);
-
-    const priorRefunds = await this.prisma.refund.aggregate({
-      where: {
-        contractId: contract.id,
-        status: {
-          in: [
-            RefundStatus.APPROVED,
-            RefundStatus.PROCESSING,
-            RefundStatus.COMPLETED,
-          ],
-        },
-      },
-      _sum: { approvedAmount: true },
-    });
-    const previousRefundsTotal = priorRefunds._sum.approvedAmount ?? 0;
+    const ledgerConsumed = await this.sumLessonDeductions(enrollment.id);
+    const previousRefundsTotal = await this.sumPriorRefunds(enrollment.id);
 
     const overDeducted = Math.max(0, ledgerConsumed - attendanceConsumed);
     const maxRefundable = Math.max(0, student.balance + overDeducted);
@@ -271,7 +173,7 @@ export class RefundsCreateService {
         const refundRow = await tx.refund.create({
           data: {
             studentId: dto.studentId,
-            contractId: dto.contractId,
+            enrollmentId: enrollment.id,
             requestedAmount: dto.amount,
             approvedAmount: dto.amount,
             lessonsCompleted,
@@ -306,20 +208,11 @@ export class RefundsCreateService {
             studentId: dto.studentId,
             amount: dto.amount,
             refundId: refundRow.id,
-            contractId: dto.contractId,
             companyId,
             performedById: userId,
           },
           tx,
         );
-
-        await tx.contract.update({
-          where: { id: dto.contractId },
-          data: {
-            status: ContractStatus.REFUNDED,
-            paidAmount: { decrement: dto.amount },
-          },
-        });
 
         return refundRow;
       },
@@ -335,7 +228,7 @@ export class RefundsCreateService {
         balans: balanceAfter,
         qaytarilgan_summa: dto.amount,
         usul: REFUND_METHOD_LABEL[dto.refundMethod] ?? dto.refundMethod,
-        shartnoma: contract.id,
+        guruh: enrollment.group.name,
         sabab: dto.reason ?? null,
         status: 'PUL_QAYTARILDI',
       },
@@ -344,5 +237,100 @@ export class RefundsCreateService {
     });
 
     return refund;
+  }
+
+  // -- helpers ---------------------------------------------------------------
+
+  private async loadEnrollment(
+    enrollmentId: string,
+    studentId: number,
+    companyId: number,
+  ) {
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        id: enrollmentId,
+        studentId,
+        deletedAt: null,
+        group: { companyId },
+      },
+      select: {
+        id: true,
+        groupId: true,
+        status: true,
+        group: {
+          select: {
+            name: true,
+            course: {
+              select: {
+                name: true,
+                price: true,
+                lessonPaymentCount: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!enrollment) {
+      throw new NotFoundException("Bu o'quvchining bunday guruhi topilmadi");
+    }
+    if (enrollment.status !== EnrollmentStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Faqat faol guruhdan pul qaytarish mumkin',
+      );
+    }
+    return enrollment;
+  }
+
+  private async countAttendance(groupId: string, studentId: number) {
+    return this.prisma.attendance.count({
+      where: {
+        groupId,
+        studentId,
+        status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
+      },
+    });
+  }
+
+  private async sumPayments(studentId: number, companyId: number) {
+    const agg = await this.prisma.payment.aggregate({
+      where: {
+        studentId,
+        companyId,
+        status: PaymentStatus.COMPLETED,
+      },
+      _sum: { amount: true },
+    });
+    return agg._sum.amount ?? 0;
+  }
+
+  private async sumLessonDeductions(enrollmentId: string) {
+    const agg = await this.prisma.transaction.aggregate({
+      where: {
+        enrollmentId,
+        type: 'LESSON_DEDUCTION',
+        reversedTransactionId: null,
+        reversedAt: null,
+      },
+      _sum: { amount: true },
+    });
+    return Math.abs(agg._sum.amount ?? 0);
+  }
+
+  private async sumPriorRefunds(enrollmentId: string) {
+    const agg = await this.prisma.refund.aggregate({
+      where: {
+        enrollmentId,
+        status: {
+          in: [
+            RefundStatus.APPROVED,
+            RefundStatus.PROCESSING,
+            RefundStatus.COMPLETED,
+          ],
+        },
+      },
+      _sum: { approvedAmount: true },
+    });
+    return agg._sum.approvedAmount ?? 0;
   }
 }

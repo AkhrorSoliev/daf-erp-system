@@ -7,7 +7,7 @@ export class CreateRefundDto {
 
   @IsString()
   @IsNotEmpty()
-  contractId: string;
+  enrollmentId: string;
 
   @IsOptional()
   @IsString()
