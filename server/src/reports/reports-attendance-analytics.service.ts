@@ -40,7 +40,7 @@ export class ReportsAttendanceAnalyticsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
-    const cacheKey = `reports:teacher-perf:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
+    const cacheKey = `reports:teacher-perf:v3:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -137,10 +137,15 @@ export class ReportsAttendanceAnalyticsService {
       period.end,
     );
 
-    const attMap = new Map<string, { total: number; presentLate: number }>();
+    const attMap = new Map<string, { scored: number; presentLate: number }>();
     for (const a of attendanceByGroup) {
-      const entry = attMap.get(a.groupId) || { total: 0, presentLate: 0 };
-      entry.total += a._count.id;
+      const entry = attMap.get(a.groupId) || { scored: 0, presentLate: 0 };
+      // Skip EXCUSED — it's not part of either side of the ratio.
+      if (a.status === 'EXCUSED') {
+        attMap.set(a.groupId, entry);
+        continue;
+      }
+      entry.scored += a._count.id;
       if (a.status === 'PRESENT' || a.status === 'LATE') {
         entry.presentLate += a._count.id;
       }
@@ -148,14 +153,14 @@ export class ReportsAttendanceAnalyticsService {
     }
 
     const allTeachers = [...teacherMap.values()].map((t) => {
-      let totalAtt = 0;
+      let scoredTotal = 0;
       let totalPresentLate = 0;
       let startStudentCount = 0;
       let endStudentCount = 0;
       for (const gid of t.groupIds) {
         const att = attMap.get(gid);
         if (att) {
-          totalAtt += att.total;
+          scoredTotal += att.scored;
           totalPresentLate += att.presentLate;
         }
         startStudentCount += startCounts.get(gid) ?? 0;
@@ -163,7 +168,9 @@ export class ReportsAttendanceAnalyticsService {
       }
 
       const averageAttendance =
-        totalAtt > 0 ? Math.round((totalPresentLate / totalAtt) * 100) : null;
+        scoredTotal > 0
+          ? Math.round((totalPresentLate / scoredTotal) * 100)
+          : null;
 
       const averageFillRate =
         t.groupsWithCapacity > 0
@@ -219,7 +226,7 @@ export class ReportsAttendanceAnalyticsService {
   ) {
     const bucket = query.bucket ?? 'week';
 
-    const cacheKey = `reports:attendance-analytics:v3:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${bucket}`;
+    const cacheKey = `reports:attendance-analytics:v4:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${bucket}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -269,26 +276,31 @@ export class ReportsAttendanceAnalyticsService {
     const bucketMap = new Map<
       string,
       {
-        total: number;
-        presentLate: number;
+        total: number;       // all records (for display/tooltip)
+        scored: number;      // denominator: total - excused (PRESENT+ABSENT+LATE)
+        presentLate: number; // numerator: PRESENT + LATE
         bucketStart: string;
         displayLabel: string;
         rangeStart: Date;
         rangeEnd: Date;
       }
     >();
-    const dayMap = new Map<number, { total: number; presentLate: number }>();
+    const dayMap = new Map<
+      number,
+      { scored: number; presentLate: number }
+    >();
 
     for (const row of attendanceData) {
       const count = row._count.id;
       const isPresentLate = row.status === 'PRESENT' || row.status === 'LATE';
+      const isExcused = row.status === 'EXCUSED';
 
       totalAll += count;
       if (isPresentLate) totalPresentLate += count;
       if (row.status === 'PRESENT') presentCount += count;
       else if (row.status === 'ABSENT') absentCount += count;
       else if (row.status === 'LATE') lateCount += count;
-      else if (row.status === 'EXCUSED') excusedCount += count;
+      else if (isExcused) excusedCount += count;
 
       const { key, sortStart, displayLabel } = this.bucketKey(row.date, bucket);
       let slot = bucketMap.get(key);
@@ -296,6 +308,7 @@ export class ReportsAttendanceAnalyticsService {
         const range = this.bucketBoundaries(row.date, bucket);
         slot = {
           total: 0,
+          scored: 0,
           presentLate: 0,
           bucketStart: sortStart,
           displayLabel,
@@ -305,17 +318,24 @@ export class ReportsAttendanceAnalyticsService {
         bucketMap.set(key, slot);
       }
       slot.total += count;
+      if (!isExcused) slot.scored += count;
       if (isPresentLate) slot.presentLate += count;
 
+      // Day-of-week rate also excludes EXCUSED from denominator so a
+      // cancelled-lessons-on-Mondays group doesn't drag Monday down.
       const day = row.date.getDay();
-      const dayEntry = dayMap.get(day) || { total: 0, presentLate: 0 };
-      dayEntry.total += count;
+      const dayEntry = dayMap.get(day) || { scored: 0, presentLate: 0 };
+      if (!isExcused) dayEntry.scored += count;
       if (isPresentLate) dayEntry.presentLate += count;
       dayMap.set(day, dayEntry);
     }
 
+    // Attendance rate excludes EXCUSED from denominator (cancelled lessons,
+    // sick-leave with note shouldn't penalise the rate). Tooltip text in the
+    // frontend already documents this; backend formula now matches it.
+    const scoredTotal = totalAll - excusedCount;
     const overallRate =
-      totalAll > 0 ? Math.round((totalPresentLate / totalAll) * 100) : 0;
+      scoredTotal > 0 ? Math.round((totalPresentLate / scoredTotal) * 100) : 0;
 
     // Company-wide retention across the entire period
     const overallStartCount = [
@@ -347,7 +367,10 @@ export class ReportsAttendanceAnalyticsService {
         return {
           bucketStart: data.bucketStart,
           label: data.displayLabel,
-          rate: Math.round((data.presentLate / data.total) * 100),
+          rate:
+            data.scored > 0
+              ? Math.round((data.presentLate / data.scored) * 100)
+              : 0,
           total: data.total,
           retentionPct: this.computeRetentionPct(startCount, endCount),
         };
@@ -370,7 +393,10 @@ export class ReportsAttendanceAnalyticsService {
         const data = dayMap.get(d)!;
         return {
           day: dayNames[d],
-          rate: Math.round((data.presentLate / data.total) * 100),
+          rate:
+            data.scored > 0
+              ? Math.round((data.presentLate / data.scored) * 100)
+              : 0,
         };
       });
 
@@ -386,14 +412,20 @@ export class ReportsAttendanceAnalyticsService {
 
     const groupRateMap = new Map<
       string,
-      { total: number; presentLate: number }
+      { scored: number; presentLate: number }
     >();
     for (const row of groupAttendance) {
       const entry = groupRateMap.get(row.groupId) || {
-        total: 0,
+        scored: 0,
         presentLate: 0,
       };
-      entry.total += row._count.id;
+      // EXCUSED rows are skipped from both numerator and denominator —
+      // cancelled/sick lessons shouldn't penalise the group's rate.
+      if (row.status === 'EXCUSED') {
+        groupRateMap.set(row.groupId, entry);
+        continue;
+      }
+      entry.scored += row._count.id;
       if (row.status === 'PRESENT' || row.status === 'LATE') {
         entry.presentLate += row._count.id;
       }
@@ -401,11 +433,11 @@ export class ReportsAttendanceAnalyticsService {
     }
 
     const ranked = [...groupRateMap.entries()]
-      .filter(([, data]) => data.total > 0)
+      .filter(([, data]) => data.scored > 0)
       .map(([groupId, data]) => ({
         groupId,
-        rate: Math.round((data.presentLate / data.total) * 100),
-        total: data.total,
+        rate: Math.round((data.presentLate / data.scored) * 100),
+        total: data.scored,
       }));
 
     const worstSlice = [...ranked].sort((a, b) => a.rate - b.rate).slice(0, 5);
@@ -486,7 +518,7 @@ export class ReportsAttendanceAnalyticsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
-    const cacheKey = `reports:attendance-by-group:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${query.courseId || 'all'}:${query.teacherId || 'all'}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
+    const cacheKey = `reports:attendance-by-group:v3:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}:${query.courseId || 'all'}:${query.teacherId || 'all'}:${sortBy}:${sortOrder}:${page}:${pageSize}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -603,9 +635,10 @@ export class ReportsAttendanceAnalyticsService {
 
     const enriched = groups.map((g) => {
       const a = attMap.get(g.id);
-      const total = a?.total ?? 0;
+      // Denominator excludes EXCUSED — cancelled/sick lessons don't penalise.
+      const scored = (a?.total ?? 0) - (a?.excused ?? 0);
       const attendanceRate =
-        total > 0 ? Math.round(((a?.presentLate ?? 0) / total) * 100) : 0;
+        scored > 0 ? Math.round(((a?.presentLate ?? 0) / scored) * 100) : 0;
       const startStudentCount = startCounts.get(g.id) ?? 0;
       const endStudentCount = endCounts.get(g.id) ?? 0;
       return {
@@ -665,7 +698,7 @@ export class ReportsAttendanceAnalyticsService {
     companyId: number,
     query: AttendanceByCourseQueryDto,
   ) {
-    const cacheKey = `reports:attendance-by-course:v2:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}`;
+    const cacheKey = `reports:attendance-by-course:v3:${companyId}:${query.branchId || 'all'}:${query.startDate || ''}:${query.endDate || ''}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -807,8 +840,12 @@ export class ReportsAttendanceAnalyticsService {
           acc.endStudentCount,
         ),
         lessonCount: acc.lessonCount,
-        attendanceRate:
-          acc.total > 0 ? Math.round((acc.presentLate / acc.total) * 100) : 0,
+        attendanceRate: (() => {
+          const scored = acc.total - acc.excused;
+          return scored > 0
+            ? Math.round((acc.presentLate / scored) * 100)
+            : 0;
+        })(),
         present: acc.present,
         absent: acc.absent,
         late: acc.late,

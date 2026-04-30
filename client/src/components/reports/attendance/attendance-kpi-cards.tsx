@@ -2,12 +2,12 @@
 
 import {
   CheckCircle2,
+  Clock,
   Info,
-  ListChecks,
+  ShieldCheck,
   TrendingUp,
   UserCheck,
   XCircle,
-  Clock,
   type LucideIcon,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -95,8 +95,6 @@ export function AttendanceKpiCards({
     );
   }
 
-  const lateExcused = statusBreakdown.late + statusBreakdown.excused;
-
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <KpiCard
@@ -114,17 +112,22 @@ export function AttendanceKpiCards({
         tooltip={ATTENDANCE_KPI_TOOLTIPS.retention}
       />
       <KpiCard
-        icon={ListChecks}
-        label="Jami yozuvlar"
-        value={formatCount(statusBreakdown.total)}
-        tooltip={ATTENDANCE_KPI_TOOLTIPS.totalLessons}
-      />
-      <KpiCard
         icon={CheckCircle2}
         label="Keldi"
         value={formatCount(statusBreakdown.present)}
         valueColor="text-emerald-600 dark:text-emerald-400"
         tooltip={ATTENDANCE_KPI_TOOLTIPS.present}
+      />
+      <KpiCard
+        icon={Clock}
+        label="Kechikdi"
+        value={formatCount(statusBreakdown.late)}
+        valueColor={
+          statusBreakdown.late > 0
+            ? "text-amber-600 dark:text-amber-400"
+            : undefined
+        }
+        tooltip={ATTENDANCE_KPI_TOOLTIPS.late}
       />
       <KpiCard
         icon={XCircle}
@@ -138,13 +141,11 @@ export function AttendanceKpiCards({
         tooltip={ATTENDANCE_KPI_TOOLTIPS.absent}
       />
       <KpiCard
-        icon={Clock}
-        label="Kechikdi + Sababli"
-        value={formatCount(lateExcused)}
-        valueColor={
-          lateExcused > 0 ? "text-amber-600 dark:text-amber-400" : undefined
-        }
-        tooltip={ATTENDANCE_KPI_TOOLTIPS.lateExcused}
+        icon={ShieldCheck}
+        label="Sababli"
+        value={formatCount(statusBreakdown.excused)}
+        valueColor="text-cyan-600 dark:text-cyan-400"
+        tooltip={ATTENDANCE_KPI_TOOLTIPS.excused}
       />
     </div>
   );
