@@ -12,7 +12,10 @@ import {
 import {
   DAY_NAME_TO_JS,
   JS_TO_DAY_NAME,
-  toLocalDateStr,
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+  dayOfWeekForDateStr,
+  addDaysToDateStr,
 } from './shared/date-utils';
 
 @Injectable()
@@ -49,6 +52,11 @@ export class AttendanceReadService {
 
     if (!group) throw new NotFoundException('Guruh topilmadi');
 
+    // Iterate by Tashkent calendar date strings — stable across server
+    // timezones. Group startDate/endDate are stored as Tashkent midnight in
+    // UTC (toISOString() of a Tashkent-browser Date), so a UTC server iterating
+    // by `new Date(year, month, day)` (UTC midnight) would terminate one day
+    // early on `cursor <= rangeEnd`. String-based iteration sidesteps that.
     const now = new Date();
     const targetMonth = month ? month - 1 : now.getMonth();
     const targetYear = year ?? now.getFullYear();
@@ -59,47 +67,67 @@ export class AttendanceReadService {
 
     if (scheduleDays.length === 0) return [];
 
-    const monthStart = new Date(targetYear, targetMonth, 1);
-    const monthEnd = new Date(targetYear, targetMonth + 1, 0);
+    const monthStartStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(
+      Date.UTC(targetYear, targetMonth + 1, 0),
+    ).getUTCDate();
+    const monthEndStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    const rangeStart =
-      group.startDate && group.startDate > monthStart
-        ? group.startDate
-        : monthStart;
-    const rangeEnd =
-      group.endDate && group.endDate < monthEnd ? group.endDate : monthEnd;
+    const groupStartStr = group.startDate
+      ? tashkentDateStr(group.startDate)
+      : null;
+    const groupEndStr = group.endDate ? tashkentDateStr(group.endDate) : null;
 
-    if (rangeStart > rangeEnd) return [];
+    const rangeStartStr =
+      groupStartStr && groupStartStr > monthStartStr
+        ? groupStartStr
+        : monthStartStr;
+    const rangeEndStr =
+      groupEndStr && groupEndStr < monthEndStr ? groupEndStr : monthEndStr;
 
+    if (rangeStartStr > rangeEndStr) return [];
+
+    // Holiday query bounds: pad ±1 day so that holidays stored as either
+    // UTC midnight or Tashkent midnight (= prior-day 19:00 UTC) are both
+    // captured. We dedupe by Tashkent calendar date afterwards.
+    const holidayQueryStart = new Date(
+      utcMidnightFromDateStr(rangeStartStr).getTime() - 24 * 60 * 60 * 1000,
+    );
+    const holidayQueryEnd = new Date(
+      utcMidnightFromDateStr(rangeEndStr).getTime() + 24 * 60 * 60 * 1000,
+    );
     const holidays = await this.prisma.holiday.findMany({
       where: {
         status: HolidayStatus.ACTIVE,
         deletedAt: null,
-        date: { gte: rangeStart, lte: rangeEnd },
+        date: { gte: holidayQueryStart, lte: holidayQueryEnd },
       },
       select: { date: true },
     });
-    const holidaySet = new Set(holidays.map((h) => toLocalDateStr(h.date)));
+    const holidaySet = new Set(holidays.map((h) => tashkentDateStr(h.date)));
 
-    const lessonDates: Date[] = [];
-    const cursor = new Date(rangeStart);
-    while (cursor <= rangeEnd) {
+    const lessonDateStrs: string[] = [];
+    let cursorStr = rangeStartStr;
+    while (cursorStr <= rangeEndStr) {
       if (
-        scheduleDays.includes(cursor.getDay()) &&
-        !holidaySet.has(toLocalDateStr(cursor))
+        scheduleDays.includes(dayOfWeekForDateStr(cursorStr)) &&
+        !holidaySet.has(cursorStr)
       ) {
-        lessonDates.push(new Date(cursor));
+        lessonDateStrs.push(cursorStr);
       }
-      cursor.setDate(cursor.getDate() + 1);
+      cursorStr = addDaysToDateStr(cursorStr, 1);
     }
 
-    if (lessonDates.length === 0) return [];
+    if (lessonDateStrs.length === 0) return [];
 
+    // Attendance.date is stored as UTC midnight (see attendance-validation
+    // line 36: `new Date(date + 'T00:00:00.000Z')`).
+    const lessonDateObjs = lessonDateStrs.map(utcMidnightFromDateStr);
     const attendanceCounts = await this.prisma.attendance.groupBy({
       by: ['date', 'status'],
       where: {
         groupId,
-        date: { in: lessonDates },
+        date: { in: lessonDateObjs },
       },
       _count: true,
     });
@@ -116,7 +144,7 @@ export class AttendanceReadService {
     > = {};
 
     for (const row of attendanceCounts) {
-      const dateStr = toLocalDateStr(row.date);
+      const dateStr = tashkentDateStr(row.date);
       if (!countMap[dateStr]) {
         countMap[dateStr] = {
           present: 0,
@@ -146,12 +174,11 @@ export class AttendanceReadService {
 
     const totalStudents = group._count.enrollments;
 
-    return lessonDates.map((date) => {
-      const dateStr = toLocalDateStr(date);
+    return lessonDateStrs.map((dateStr) => {
       const counts = countMap[dateStr];
       return {
         date: dateStr,
-        dayName: JS_TO_DAY_NAME[date.getDay()] ?? '',
+        dayName: JS_TO_DAY_NAME[dayOfWeekForDateStr(dateStr)] ?? '',
         hasAttendance: !!counts && counts.total > 0,
         presentCount: counts?.present ?? 0,
         absentCount: counts?.absent ?? 0,
@@ -258,34 +285,48 @@ export class AttendanceReadService {
 
     const expectedCount = group.course?.lessonPaymentCount ?? 12;
 
+    // Same TZ-aware iteration as getLessonDates — see comment there.
     const now = new Date();
-    const rangeStart = group.startDate ?? new Date(now.getFullYear(), 0, 1);
-    const rangeEnd = group.endDate && group.endDate < now ? group.endDate : now;
+    const todayStr = tashkentDateStr(now);
+    const rangeStartStr = group.startDate
+      ? tashkentDateStr(group.startDate)
+      : `${now.getFullYear()}-01-01`;
+    const groupEndStr = group.endDate ? tashkentDateStr(group.endDate) : null;
+    const rangeEndStr =
+      groupEndStr && groupEndStr < todayStr ? groupEndStr : todayStr;
 
     const scheduleDays = group.exactDays
       .map((d) => DAY_NAME_TO_JS[d])
       .filter((d) => d !== undefined);
 
+    const holidayQueryStart = new Date(
+      utcMidnightFromDateStr(rangeStartStr).getTime() - 24 * 60 * 60 * 1000,
+    );
+    const holidayQueryEnd = new Date(
+      utcMidnightFromDateStr(rangeEndStr).getTime() + 24 * 60 * 60 * 1000,
+    );
     const holidays = await this.prisma.holiday.findMany({
       where: {
         status: HolidayStatus.ACTIVE,
         deletedAt: null,
-        date: { gte: rangeStart, lte: rangeEnd },
+        date: { gte: holidayQueryStart, lte: holidayQueryEnd },
       },
       select: { date: true },
     });
-    const holidaySet = new Set(holidays.map((h) => toLocalDateStr(h.date)));
+    const holidaySet = new Set(holidays.map((h) => tashkentDateStr(h.date)));
 
     const allLessonDates: string[] = [];
-    const cursor = new Date(rangeStart);
-    while (cursor <= rangeEnd) {
-      if (
-        scheduleDays.includes(cursor.getDay()) &&
-        !holidaySet.has(toLocalDateStr(cursor))
-      ) {
-        allLessonDates.push(toLocalDateStr(cursor));
+    if (rangeStartStr <= rangeEndStr) {
+      let cursorStr = rangeStartStr;
+      while (cursorStr <= rangeEndStr) {
+        if (
+          scheduleDays.includes(dayOfWeekForDateStr(cursorStr)) &&
+          !holidaySet.has(cursorStr)
+        ) {
+          allLessonDates.push(cursorStr);
+        }
+        cursorStr = addDaysToDateStr(cursorStr, 1);
       }
-      cursor.setDate(cursor.getDate() + 1);
     }
 
     const lessonDates = allLessonDates.slice(-expectedCount);
@@ -296,9 +337,9 @@ export class AttendanceReadService {
             where: {
               groupId,
               date: {
-                gte: new Date(lessonDates[0] + 'T00:00:00.000Z'),
-                lte: new Date(
-                  lessonDates[lessonDates.length - 1] + 'T00:00:00.000Z',
+                gte: utcMidnightFromDateStr(lessonDates[0]),
+                lte: utcMidnightFromDateStr(
+                  lessonDates[lessonDates.length - 1],
                 ),
               },
             },
@@ -308,7 +349,7 @@ export class AttendanceReadService {
 
     const attendanceMap = new Map<string, AttendanceStatus>();
     for (const rec of attendanceRecords) {
-      const key = `${rec.studentId}:${toLocalDateStr(rec.date)}`;
+      const key = `${rec.studentId}:${tashkentDateStr(rec.date)}`;
       attendanceMap.set(key, rec.status);
     }
 
