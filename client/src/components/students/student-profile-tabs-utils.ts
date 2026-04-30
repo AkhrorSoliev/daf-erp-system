@@ -8,17 +8,17 @@ export const STATUS_MAP: Record<number, { label: string; variant: BadgeVariant }
     4: { label: "To'xtatilgan", variant: "destructive" },
   };
 
+// Only the four types the "To'lovlar" tab actually requests live here.
+// Lesson-related types (LESSON_DEDUCTION/LESSON_CONSUMPTION) are scoped to
+// the "Darslar" tab via lesson-trail-tab.tsx — they have their own labels.
 export const TRANSACTION_TYPE_INFO: Record<
   string,
   { label: string; variant: BadgeVariant }
 > = {
   PAYMENT: { label: "To'lov", variant: "default" },
-  LESSON_DEDUCTION: { label: "Dars", variant: "outline" },
   REFUND: { label: "Qaytarish", variant: "destructive" },
   ADJUSTMENT: { label: "Tuzatish", variant: "secondary" },
-  SALARY_PAYMENT: { label: "Oylik", variant: "outline" },
-  EXPENSE: { label: "Xarajat", variant: "outline" },
-  TAX: { label: "Soliq", variant: "outline" },
+  INITIAL_BALANCE: { label: "Boshlang'ich balans", variant: "outline" },
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {

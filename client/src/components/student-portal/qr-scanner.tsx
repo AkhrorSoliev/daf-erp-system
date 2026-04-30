@@ -67,6 +67,27 @@ export function QrScanner() {
           token: parsed.t,
         });
 
+        // Balance gate: backend returns 200 with `balanceInsufficient: true`
+        // when the student's balance can't cover even one lesson at this
+        // group's per-lesson cost. The student isn't marked PRESENT — admin
+        // intervention is required (collect payment first).
+        if (data?.balanceInsufficient) {
+          const debt = data.debtAmount
+            ? ` (${data.debtAmount.toLocaleString("uz-UZ").replace(/,/g, " ")} so'm yetishmaydi)`
+            : "";
+          setErrorMessage(
+            (data.message ?? "Balansingiz dars uchun yetmadi") + debt,
+          );
+          setScanState("error");
+          await stopScanner();
+          try {
+            navigator.vibrate?.([100, 50, 100]);
+          } catch {
+            // not supported
+          }
+          return;
+        }
+
         setResult(data);
         setScanState("success");
         await stopScanner();

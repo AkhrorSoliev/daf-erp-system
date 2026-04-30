@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CheckCircle, Loader2, Wallet } from "lucide-react";
+import { CheckCircle, ChevronDown, Loader2, Play, Settings2, Wallet } from "lucide-react";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -32,17 +32,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { SalaryConfigDialog } from "./salary-config-dialog";
+import { SalaryBreakdownDrawer } from "./salary-breakdown-drawer";
+import { SalaryPeriodSettingsSheet } from "./salary-period-settings-sheet";
 
 interface SalaryPayment {
   id: string;
-  grossAmount: number;
-  taxAmount: number;
-  netAmount: number;
+  amount: number;
   status: string;
   periodStart: string;
   periodEnd: string;
@@ -95,6 +103,8 @@ export function SalaryClient() {
   const [batchPaying, setBatchPaying] = useState(false);
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [periodSettingsOpen, setPeriodSettingsOpen] = useState(false);
+  const [breakdownPaymentId, setBreakdownPaymentId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["salary-payments", refreshKey],
@@ -114,7 +124,7 @@ export function SalaryClient() {
     () =>
       data?.data
         .filter((sp) => sp.status === "APPROVED")
-        .reduce((sum, sp) => sum + sp.netAmount, 0) ?? 0,
+        .reduce((sum, sp) => sum + sp.amount, 0) ?? 0,
     [data],
   );
 
@@ -217,22 +227,64 @@ export function SalaryClient() {
             </TooltipProvider>
           )}
           {isCeo && (
-            <Button
-              variant="outline"
-              onClick={() => setConfigDialogOpen(true)}
-            >
-              Oylik belgilash
-            </Button>
+            // Recurring monthly action — distinguished from settings by
+            // its Play icon and clearer "close the cycle" wording.
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    onClick={handleCalculate}
+                    disabled={calculating}
+                  >
+                    {calculating ? (
+                      <Loader2 className="size-4 animate-spin mr-2" />
+                    ) : (
+                      <Play className="size-4 mr-2" />
+                    )}
+                    Davrni yakunlash
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Joriy davrning oyligini hisoblab chiqaradi va tasdiqlashga jo&apos;natadi
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {isCeo && (
-            <Button
-              variant="outline"
-              onClick={handleCalculate}
-              disabled={calculating}
-            >
-              {calculating && <Loader2 className="size-4 animate-spin mr-2" />}
-              Oylikni hisoblash
-            </Button>
+            // One-off configuration grouped under a single dropdown so it
+            // doesn't blur into the recurring "yakunlash" action above.
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Settings2 className="size-4 mr-2" />
+                  Sozlamalar
+                  <ChevronDown className="size-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Oylik konfiguratsiyasi</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setConfigDialogOpen(true)}
+                  className="flex flex-col items-start gap-0.5 py-2"
+                >
+                  <span className="font-medium">Xodim stavkalari</span>
+                  <span className="text-xs text-muted-foreground">
+                    Har xodim uchun foiz, fixed yoki o&apos;quvchi boshiga
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setPeriodSettingsOpen(true)}
+                  className="flex flex-col items-start gap-0.5 py-2"
+                >
+                  <span className="font-medium">Hisoblash davri</span>
+                  <span className="text-xs text-muted-foreground">
+                    Davr boshlanish kuni (masalan, har oyning 8-kuni)
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>
@@ -274,16 +326,18 @@ export function SalaryClient() {
               <TableHead>Xodim</TableHead>
               <TableHead>Lavozim</TableHead>
               <TableHead>Davr</TableHead>
-              <TableHead>Brutto</TableHead>
-              <TableHead>Soliq</TableHead>
-              <TableHead>Netto</TableHead>
+              <TableHead>Summa</TableHead>
               <TableHead>Holat</TableHead>
               <TableHead>Amallar</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.data.map((sp, i) => (
-              <TableRow key={sp.id}>
+              <TableRow
+                key={sp.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => setBreakdownPaymentId(sp.id)}
+              >
                 <TableCell className="border-r text-muted-foreground">
                   {i + 1}
                 </TableCell>
@@ -297,12 +351,8 @@ export function SalaryClient() {
                   {format(new Date(sp.periodStart), "dd.MM")} —{" "}
                   {format(new Date(sp.periodEnd), "dd.MM.yyyy")}
                 </TableCell>
-                <TableCell>{formatPrice(sp.grossAmount)} so&apos;m</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {sp.taxAmount > 0 ? `−${formatPrice(sp.taxAmount)} so'm` : "—"}
-                </TableCell>
                 <TableCell className="font-medium">
-                  {formatPrice(sp.netAmount)} so&apos;m
+                  {formatPrice(sp.amount)} so&apos;m
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className={statusColors[sp.status]}>
@@ -314,7 +364,10 @@ export function SalaryClient() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleApprove(sp.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApprove(sp.id);
+                      }}
                       disabled={processingId === sp.id}
                     >
                       {processingId === sp.id ? (
@@ -327,7 +380,10 @@ export function SalaryClient() {
                   {sp.status === "APPROVED" && (
                     <Button
                       size="sm"
-                      onClick={() => handlePay(sp.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePay(sp.id);
+                      }}
                       disabled={processingId === sp.id}
                     >
                       {processingId === sp.id ? (
@@ -354,6 +410,16 @@ export function SalaryClient() {
         onOpenChange={setConfigDialogOpen}
         onSaved={() => setRefreshKey((k) => k + 1)}
       />
+      <SalaryBreakdownDrawer
+        salaryPaymentId={breakdownPaymentId}
+        onClose={() => setBreakdownPaymentId(null)}
+      />
+      {isCeo && (
+        <SalaryPeriodSettingsSheet
+          open={periodSettingsOpen}
+          onOpenChange={setPeriodSettingsOpen}
+        />
+      )}
     </div>
   );
 }

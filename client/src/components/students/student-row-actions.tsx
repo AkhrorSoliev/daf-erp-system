@@ -15,28 +15,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { EnrollToGroupDialog } from "@/components/students/enroll-to-group-dialog";
+import { StudentRemoveFromGroupDialog } from "@/components/students/student-remove-from-group-dialog";
 import { useEditStudent } from "@/hooks/use-edit-student";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -64,15 +47,21 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
   const { data: departureReasons } = useQuery<
     { id: string; name: string }[]
   >({
-    queryKey: ["departure-reasons"],
+    queryKey: ["student-exit-reasons", "GROUP_REMOVAL"],
     queryFn: () =>
-      api.get<{ id: string; name: string }[]>("/departure-reasons").then((r) => r.data),
+      api
+        .get<{ id: string; name: string }[]>("/student-exit-reasons", {
+          params: { appliesTo: "GROUP_REMOVAL" },
+        })
+        .then((r) => r.data),
     enabled: showRemove && !!enrollmentId,
   });
 
   const hasConfiguredReasons = (departureReasons?.length ?? 0) > 0;
   const trimmedReason = removeReason.trim();
-  const canRemove = hasConfiguredReasons ? removeReasonId !== null : true;
+  const canRemove = hasConfiguredReasons
+    ? removeReasonId !== null
+    : trimmedReason.length > 0;
 
   const handleRemoveFromGroup = async () => {
     if (!enrollmentId || !canRemove) return;
@@ -158,7 +147,7 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
       </DropdownMenu>
 
       {enrollmentId && (
-        <AlertDialog
+        <StudentRemoveFromGroupDialog
           open={showRemove}
           onOpenChange={(open) => {
             setShowRemove(open);
@@ -167,60 +156,15 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
               setRemoveReasonId(null);
             }
           }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Guruhdan chiqarishni tasdiqlang</AlertDialogTitle>
-              <AlertDialogDescription>
-                <strong>{studentName}</strong> guruhdan chiqarilsinmi?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            {hasConfiguredReasons ? (
-              <div className="space-y-2">
-                <Select
-                  value={removeReasonId ?? undefined}
-                  onValueChange={(v) => setRemoveReasonId(v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Ketish sababini tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departureReasons?.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Textarea
-                  placeholder="Qo'shimcha izoh (ixtiyoriy)"
-                  value={removeReason}
-                  onChange={(e) => setRemoveReason(e.target.value)}
-                  rows={2}
-                  className="resize-none"
-                />
-              </div>
-            ) : (
-              <Textarea
-                placeholder="Sabab yozing (ixtiyoriy)..."
-                value={removeReason}
-                onChange={(e) => setRemoveReason(e.target.value)}
-                rows={2}
-                className="resize-none"
-              />
-            )}
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleRemoveFromGroup}
-                disabled={removing || !canRemove}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {removing ? "Chiqarilmoqda..." : "Chiqarish"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          reasons={departureReasons}
+          reasonId={removeReasonId}
+          onReasonIdChange={setRemoveReasonId}
+          reasonText={removeReason}
+          onReasonTextChange={setRemoveReason}
+          removing={removing}
+          canSubmit={canRemove}
+          onConfirm={handleRemoveFromGroup}
+        />
       )}
 
       <ChangeStatusDialog

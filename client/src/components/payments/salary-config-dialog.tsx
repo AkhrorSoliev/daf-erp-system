@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DatePicker } from "@/components/ui/date-picker";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 
@@ -70,6 +72,7 @@ export function SalaryConfigDialog({
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [salaryType, setSalaryType] = useState("FIXED_MONTHLY");
   const [value, setValue] = useState("");
+  const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>();
   const [submitting, setSubmitting] = useState(false);
 
   const { data: employees, isLoading: loadingEmployees } = useQuery({
@@ -97,6 +100,7 @@ export function SalaryConfigDialog({
       setSelectedUserId("");
       setSalaryType("FIXED_MONTHLY");
       setValue("");
+      setEffectiveFrom(undefined);
     }
   }, [open]);
 
@@ -131,6 +135,9 @@ export function SalaryConfigDialog({
         userId: parseInt(selectedUserId, 10),
         salaryType,
         value: rawValue,
+        effectiveFrom: effectiveFrom
+          ? format(effectiveFrom, "yyyy-MM-dd")
+          : undefined,
       });
       toast.success("Oylik sozlamasi saqlandi");
       onSaved();
@@ -264,6 +271,25 @@ export function SalaryConfigDialog({
                     {salaryType === "PERCENTAGE" ? "%" : "so'm"}
                   </span>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Kuchga kirish sanasi{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (ixtiyoriy — bugundan)
+                  </span>
+                </Label>
+                <DatePicker
+                  value={effectiveFrom}
+                  onChange={setEffectiveFrom}
+                  disabled={submitting}
+                  placeholder="Bugundan boshlab"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Yangi qoida shu sana va undan keyingi darslarga
+                  qo&apos;llanadi. Avvalgi darslar eski stavkada qoladi.
+                </p>
               </div>
             </>
           )}

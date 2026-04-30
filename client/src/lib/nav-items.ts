@@ -9,6 +9,7 @@ import {
   Settings,
   UsersRound,
   ListTodo,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { paymentsNavItems } from "./payments-nav";
@@ -45,6 +46,14 @@ export const navItems: NavItem[] = [
   { title: "Lidlar", url: "/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
+  // Lehrer portal — only Teachers see this. Backend `/salary/me/*`
+  // endpoints scope by @CurrentUser('id') so a teacher only sees their own.
+  {
+    title: "Mening oyligim",
+    url: "/profile/salary",
+    icon: Wallet,
+    visibleForRoles: [4],
+  },
 
   {
     title: "Moliya",
