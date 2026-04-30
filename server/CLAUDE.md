@@ -320,10 +320,9 @@ The financial system is built on an **append-only ledger** principle — financi
 | `Contract` | Student-course agreement | `contractNumber` (DAF-YYYY-#####), `totalAmount`, `paidAmount`, `status` |
 | `EmployeeSalaryConfig` | Salary configuration per employee | `userId`, `groupId?`, `salaryType`, `value`, `isActive` |
 | `SalaryAccrual` | Per-lesson teacher earnings | `userId`, `studentId`, `groupId`, `lessonDate`, `amount`, `deductionTransactionId?` |
-| `SalaryPayment` | Monthly salary run | `userId`, `periodStart/End`, `grossAmount`, `taxAmount`, `netAmount`, `status` |
+| `SalaryPayment` | Monthly salary run | `userId`, `periodStart/End`, `amount`, `status` |
 | `Refund` | Student refund request/processing | `studentId`, `contractId`, `requestedAmount`, `approvedAmount?`, `deductions` (JSON), `status` |
 | `Expense` | Company outflows | `category`, `amount`, `branchId?`, `relatedUserId?` (for TEACHER_ADVANCE), `settledBySalaryPaymentId?` |
-| `CompanyTaxConfig` | Tax rates per company | `salaryTaxRate` (default 12%), `refundTaxRate` (default 0%) |
 | `PaymentGatewayEvent` | Webhook audit log | `provider`, `externalId`, `eventType`, `payload` (JSON), `signatureValid`, `processed` |
 | `PaymeTransaction` | Payme-specific transaction lifecycle | `paymeId`, `amount` (tiyin), `amountInSom`, `state` (1/2/-1/-2), `studentId`, `createTime`, `performTime`, `cancelTime`, `paymentId?` |
 
@@ -369,11 +368,11 @@ The financial system is built on an **append-only ledger** principle — financi
   - Cutoff: 7th of current month; Period: 8th previous month → 7th current
   - Accrual-based: sums unpaid accruals ≤ cutoff
   - Fixed-monthly: creates payment from config.value (idempotent — skips if exists)
-  - Tax applied per `CompanyTaxConfig.salaryTaxRate` (default 12% ASOT)
   - TEACHER_ADVANCE expenses settled against salary in `createdAt` order
-  - Atomic per user: SalaryPayment + accrual links + TAX transaction + advance settlement
+  - Atomic per user: SalaryPayment + accrual links + advance settlement
 - **Cron**: `0 2 8 * *` (8th of month at 2:00 AM Tashkent) — iterates all companies
 - **Batch pay**: pays multiple APPROVED salaries; Branch Directors scoped to their `mainBranch`
+- **No tax calculation** — the system does not compute or apply taxes. Possible deductions (Ustoz oyligidan 12%, Markaz qo'shimchasi 12%, Markaz daromad solig'i 4%, gateway commissions 2%) are surfaced as a static informational note in the salary UI only — they are not stored, not aggregated, not deducted from any payment
 
 #### Transactions Module (`src/transactions/`) — Universal Ledger
 
@@ -498,12 +497,131 @@ Full integration with Click's two-phase SHOP-API. Click sends POST requests to o
 - Redirect URL: `https://my.click.uz/services/pay?service_id=X&merchant_id=X&amount=X&transaction_param=studentId&return_url=X`
 - After payment, Click calls our webhook with Prepare then Complete
 
-#### Attendance → Finance Integration
+#### Attendance → Finance Integration (Prepaid Billing Model)
 
-When attendance is marked:
-1. `deductLessonFee()` creates LESSON_DEDUCTION transaction, decrements Student.balance
-2. `createAccrual()` writes SalaryAccrual for each teacher (only if coverage transaction exists — B.1 rule)
-3. FIXED_MONTHLY teachers: no accrual needed, salary calculated directly from config
+The billing model is **prepaid-by-batch**, not cycle-boundary. Both manual and QR attendance flows delegate to `LessonBillingService.processAttendanceBilling(tx, ...)`. There is no other path that mutates student balance, prepaid counters, or salary accruals — this single service is the source of truth.
+
+**Key invariant:** every attendance write runs inside `prisma.$transaction(Serializable)` with `LessonBillingService` called from the same `tx`. The attendance row, `LESSON_DEDUCTION` (when applicable), `LESSON_CONSUMPTION` audit row, prepaid decrement, and `SalaryAccrual` write are all-or-nothing.
+
+##### Status transition matrix
+
+| oldStatus | newStatus | Action |
+|---|---|---|
+| (yo'q) | ABSENT/EXCUSED | no-op |
+| (yo'q) | PRESENT/LATE | **bill** (consume or refill) |
+| ABS/EXC | ABS/EXC | no-op |
+| ABS/EXC | PRESENT/LATE | **bill** |
+| PRES/LATE | PRES/LATE | no-op |
+| PRES/LATE | ABS/EXC | **reverse** (consumption + prepaid +1 + accrual reverse) |
+
+##### Billing algorithm (PRESENT/LATE branch)
+
+1. **Idempotency**: skip if a non-reversed `LESSON_CONSUMPTION` already exists for `attendanceId`.
+2. **Lock** `Enrollment` row (`SELECT FOR UPDATE`).
+3. If `enrollment.prepaidLessonsRemaining > 0`:
+   - Decrement by 1.
+   - Coverage tx for accrual = most recent `LESSON_DEDUCTION` on this enrollment.
+4. Else (need to refill):
+   - Lock student balance.
+   - `balance >= fullCycleCost` → deduct full price, set `prepaidLessonsRemaining = lessonPaymentCount`, decrement.
+   - `balance >= perLessonCost` → partial: `floor(balance / perLessonCost)` lessons, deduct `N × perLessonCost`, set prepaid = N, decrement.
+   - `balance < perLessonCost` → no deduction, no accrual, no consumption (B.1 preserved).
+5. Write `LESSON_CONSUMPTION` audit row (amount=0, balance unchanged, metadata = `{ perLessonCost }`).
+6. Create `SalaryAccrual` for each `group.teachers` linked to the coverage tx.
+
+##### Reverse algorithm (PRESENT/LATE → ABSENT/EXCUSED)
+
+1. Find active `LESSON_CONSUMPTION` for this attendance.
+2. If found:
+   - `reverseTransaction(consumption.id, ...)` (which sets `reversedAt` on the original — see "Reversal markers" below).
+   - `prepaidLessonsRemaining +=1`.
+3. Reverse linked `SalaryAccrual` (set `reversedAt`/`reversedById`/`reversalReason`).
+4. If consumption was **never** written (insufficient balance — Misol 7): only the accrual reverse runs; **prepaid is NOT incremented** (no free lessons).
+
+##### Reversal markers (`Transaction.reversedAt`)
+
+`reverseTransaction()` writes a new reversal row AND sets `reversedAt`/`reversedById` on the original. All "still-active" filters (idempotency checks, partial unique indexes, downstream consumption queries, refund eligibility, debt aggregations) use `reversedAt: null` as the canonical "this row is still in effect" predicate.
+
+Two partial unique indexes back this:
+- `tx_consumption_per_attendance_unique`: `(attendanceId) WHERE type='LESSON_CONSUMPTION' AND reversedAt IS NULL`
+- `tx_initial_balance_per_student_unique`: `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL`
+
+##### Salary accrual gate (B.1)
+
+`createAccrual()` only writes when a non-reversed `LESSON_DEDUCTION` (the `coverage` tx) exists for the lesson. Closed-period guard: refuses to write into an APPROVED/PAID `SalaryPayment` window.
+
+`SalaryCalculation` excludes accruals with `reversedAt: null` so reversed lessons don't pay teachers.
+
+##### Lesson-deduction reversal endpoint
+
+`POST /billing/lesson-deduction/:id/reverse` (CEO/BD) — undoes an entire prepaid batch:
+- Reverses the deduction (balance restored).
+- Reverses every linked `SalaryAccrual`.
+- Reverses every `LESSON_CONSUMPTION` for the same enrollment dated after the batch.
+- Resets `enrollment.prepaidLessonsRemaining = 0`.
+
+Use case: admin entered the wrong cycle, wrong group, or wrong amount. Distinct from the per-attendance flip (which handles "this single lesson didn't happen").
+
+#### Salary Versioning (`EmployeeSalaryConfigVersion`)
+
+Every salary config write (PERCENTAGE / FIXED_PER_STUDENT / FIXED_MONTHLY) creates an SCD2 version row alongside the parent `EmployeeSalaryConfig` mirror. Accruals look up the version active on the lesson date so a rate change applies forward, not retroactively.
+
+- `effectiveFrom` (DateTime, mandatory in DTO; defaults to today @ 00:00 Tashkent).
+- Reject going backwards: `effectiveFrom < latestVersion.effectiveFrom` → 400.
+- Reject inside a closed period: `effectiveFrom` inside an APPROVED/PAID `SalaryPayment` window → 400.
+- Lookup: two-query pattern (per-group first, then global) — Postgres NULL ordering with `groupId DESC` is not contractual, so the resolver explicitly tries `groupId = X` then falls back to `groupId IS NULL`.
+- `salary-summary.service.ts` and `salary-calculation.service.ts` both use the version table; `FIXED_MONTHLY` payroll reads the version active at `periodEnd`, not the parent mirror, so a future-dated rate change does NOT affect the current cycle.
+
+##### `FIXED_PER_STUDENT` semantics (audit fix)
+
+Value is per-student-per-cycle, NOT per-lesson. Per-lesson amount in `createAccrual` and `salary-summary` is `Math.round(value / lessonPaymentCount)`. The previous bug wrote the full `value` per lesson, inflating teacher pay by `lessonPaymentCount × `.
+
+#### Salary Period (`SalaryPeriodSetting`)
+
+Per-company configurable cycle start day (default 8). Replaces the previously-hardcoded `8 → 7` window.
+
+- `cycleStartDay`: 1–28 (capped to 28 to dodge the February edge case).
+- `effectiveFrom` / `effectiveTo` SCD2.
+- **Mid-cycle cutover policy**: if a CEO sets `effectiveFrom` inside the currently-running cycle (under the old `cycleStartDay`), the service auto-shifts `effectiveFrom` to the start of the next cycle on the OLD schedule. The current cycle always closes on its original schedule.
+- `resolveCurrentPeriod(companyId, now)` (in `src/salary/shared/resolve-current-period.ts`) returns `{periodStart, periodEnd, cycleStartDay}` for `now`.
+- Cron is now `0 2 * * *` (daily 02:00 Tashkent); each company-tick checks `isCycleStartDayForCompany` before triggering calculation.
+
+#### Lesson Cancellation (`src/lesson-cancellations/`)
+
+Per-group lesson cancellation distinct from `Holiday` (company-wide).
+
+- Schema: `LessonCancellation { groupId, date, reason, cancelledById, deletedAt? }`. Partial unique index `WHERE deletedAt IS NULL` so soft-delete doesn't block re-creation.
+- `Attendance.cancellationId` (nullable FK) — set by the cascade when an existing attendance is rolled into a cancellation. `AttendanceStatus` enum is **not** extended (existing biller/stat queries unaffected); the link itself plus `status = EXCUSED` are the cancellation marker.
+- `attendance-validation.service.ts` rejects writes for cancelled `(groupId, date)`.
+- `LessonCancellationsService.create()` is atomic (`Serializable`):
+  1. Insert `LessonCancellation` row.
+  2. Find PRESENT/LATE attendances for `(groupId, date)`.
+  3. For each: flip status to EXCUSED, set `cancellationId`, run `lessonBillingService.processAttendanceBilling(tx, oldStatus=PRESENT, newStatus=EXCUSED)` — which reverses consumption + accrual + restores prepaid (only when consumption existed).
+- `DELETE /lesson-cancellations/:id` is **soft** — it does NOT auto-restore attendance/billing. Admins must re-take attendance manually. UI explains this in the confirm dialog.
+- Teacher scope: `GET /lesson-cancellations` requires `groupId`; teacher role is additionally constrained to groups they teach (returns `[]` for unauthorised groups instead of leaking 403/404).
+
+#### Initial Balance (`POST /students/:id/initial-balance`)
+
+CEO-only one-shot for centers transitioning to the new finance system. Writes a single `INITIAL_BALANCE` Transaction; the partial unique index enforces "at most one per student". P2002 is translated to `BadRequestException("Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan")`.
+
+#### Lesson Trail (`GET /transactions/student/:id/lesson-trail`)
+
+Per-student "where did each so'm go for lessons?" report. Strictly scoped to `LESSON_DEDUCTION` (prepaid-batch allocation rows) and `LESSON_CONSUMPTION` (per-lesson use rows) — money-flow types (PAYMENT/REFUND/ADJUSTMENT/INITIAL_BALANCE) are filtered out at the service level so this endpoint never overlaps with the To'lovlar tab's data. Paginated (`page`, `pageSize`). Returns rows in ASC order (chronological story) enriched with attendance metadata (date, group, course) and reversal markers. Drives the "Darslar" tab (URL `?tab=darslar`) on the student profile.
+
+#### Student transactions list (`GET /transactions/student/:id`)
+
+Used by the "To'lovlar" tab. Accepts a `types` query parameter — a comma-separated list of `TransactionType` values (e.g. `?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE`) — so the tab can request only the money-flow rows it cares about. Validated against the enum at the DTO boundary; invalid tokens reject. The legacy single-`type` parameter still works as a fallback for one type.
+
+#### Enrollment Lifecycle Prepaid Refund (`EnrollmentBillingService`)
+
+When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are converted back to balance. **Original** `perLessonCost` (from the most recent unreversed `LESSON_DEDUCTION.metadata.perLessonCost`) is used so course price changes after the deduction don't affect the refund. Falls back to the current course price for legacy rows without metadata.
+
+- `removeFromGroup()`: refund + flip to DROPPED in one tx.
+- Transfer (`enrollToGroup` with existing enrollment): refund old enrollment + close TRANSFERRED + create new enrollment + state log — all in a single Serializable transaction so we never end up with prepaid stranded on a closed enrollment.
+
+#### Payment Reverse Block
+
+`payments-write.service.ts:reverse()` refuses if any non-reversed `LESSON_CONSUMPTION` exists for the student dated AFTER the payment landed. The funds are already spent on lessons — admins must use the formal `Refund` flow (which has proper math for partial completion + deductions). Force-reverse is intentionally not provided to prevent ledger drift.
 
 #### Status Transitions (centralized in `src/common/finance/status-transitions.ts`)
 

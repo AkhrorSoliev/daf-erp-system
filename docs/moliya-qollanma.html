@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<title>DaF Markaz — Moliyaviy Tizim Qo'llanmasi</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 18mm 24mm 18mm;
+    @bottom-center {
+      content: "DaF Moliyaviy Qo'llanma · " counter(page) " / " counter(pages);
+      font-size: 9pt;
+      color: #94a3b8;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 11pt; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", Tahoma, sans-serif;
+    color: #0f172a;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+  }
+  h1 {
+    font-size: 26pt;
+    color: #0c4a6e;
+    margin: 0 0 0.2em 0;
+    line-height: 1.2;
+  }
+  .subtitle {
+    font-size: 13pt;
+    color: #475569;
+    font-weight: 400;
+    margin-bottom: 1.2em;
+  }
+  h2 {
+    font-size: 18pt;
+    color: #0c4a6e;
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #0ea5e9;
+    page-break-before: always;
+    page-break-after: avoid;
+  }
+  h2:first-of-type { page-break-before: auto; }
+  h3 {
+    font-size: 14pt;
+    color: #1e3a8a;
+    margin-top: 1.3em;
+    margin-bottom: 0.4em;
+    page-break-after: avoid;
+  }
+  h4 {
+    font-size: 12pt;
+    color: #334155;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+    font-weight: 600;
+  }
+  p { margin: 0.5em 0 0.8em 0; }
+  ul, ol { margin: 0.4em 0 1em 0; padding-left: 1.6em; }
+  li { margin: 0.25em 0; }
+  strong { color: #1e293b; }
+
+  /* Asosiy elementlar */
+  .lead {
+    font-size: 12pt;
+    color: #475569;
+    background: #f8fafc;
+    padding: 14px 18px;
+    border-radius: 8px;
+    border-left: 4px solid #0ea5e9;
+    margin-bottom: 1.2em;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8em 0 1.2em 0;
+    font-size: 10.5pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #0c4a6e;
+    color: #fff;
+    text-align: left;
+    padding: 9px 11px;
+    font-weight: 600;
+  }
+  td {
+    border: 1px solid #cbd5e1;
+    padding: 8px 11px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  /* Misol qutisi */
+  .example {
+    background: #fefce8;
+    border: 1px solid #facc15;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 0.8em 0;
+    page-break-inside: avoid;
+  }
+  .example .title {
+    color: #713f12;
+    font-weight: 700;
+    font-size: 12pt;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  /* Eslatma qutisi */
+  .note {
+    border-left: 4px solid #0ea5e9;
+    background: #ecfeff;
+    padding: 12px 16px;
+    margin: 0.8em 0;
+    border-radius: 0 6px 6px 0;
+    page-break-inside: avoid;
+  }
+  .note .title {
+    color: #0c4a6e;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .note.warn { border-color: #f59e0b; background: #fffbeb; }
+  .note.warn .title { color: #92400e; }
+  .note.tip { border-color: #10b981; background: #ecfdf5; }
+  .note.tip .title { color: #065f46; }
+  .note.danger { border-color: #ef4444; background: #fef2f2; }
+  .note.danger .title { color: #991b1b; }
+
+  /* Qadamlar */
+  .steps {
+    counter-reset: step;
+    padding-left: 0;
+    list-style: none;
+    margin: 0.8em 0;
+  }
+  .steps > li {
+    counter-increment: step;
+    padding-left: 38px;
+    position: relative;
+    margin: 0.6em 0;
+    min-height: 30px;
+  }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: #0ea5e9;
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 26px;
+    font-size: 11pt;
+    font-weight: 700;
+  }
+
+  /* Pul harakati ko'rsatkichi */
+  .money-flow {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 0.8em 0;
+    page-break-inside: avoid;
+  }
+  .money-flow .row {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #cbd5e1;
+    font-size: 10.5pt;
+  }
+  .money-flow .row:last-child { border-bottom: none; }
+  .money-flow .label { flex: 1; color: #475569; font-weight: 500; }
+  .money-flow .value { font-weight: 700; color: #0c4a6e; font-size: 11pt; }
+  .money-flow .value.in { color: #059669; }
+  .money-flow .value.out { color: #dc2626; }
+
+  /* TOC */
+  .toc {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 18px 26px;
+    border-radius: 8px;
+    page-break-after: always;
+  }
+  .toc h2 {
+    border: none;
+    page-break-before: auto;
+    margin-top: 0;
+    font-size: 16pt;
+  }
+  .toc ol { padding-left: 1.6em; }
+  .toc li { margin: 0.35em 0; font-size: 11pt; }
+  .toc a { color: #0c4a6e; text-decoration: none; }
+
+  /* Title page */
+  .title-page {
+    page-break-after: always;
+    padding-top: 100px;
+  }
+  .title-page .doc-meta {
+    margin-top: 60px;
+    font-size: 11pt;
+    color: #475569;
+    line-height: 1.8;
+  }
+  .title-page .doc-meta strong { color: #0c4a6e; display: inline-block; min-width: 140px; }
+
+  /* Yes/No badges */
+  .yes { color: #059669; font-weight: 700; }
+  .no { color: #dc2626; font-weight: 700; }
+
+  /* Rol jadvali uchun */
+  .role-table th { background: #1e3a8a; }
+  .role-table td:not(:first-child) { text-align: center; }
+
+  hr {
+    border: none;
+    border-top: 1px solid #cbd5e1;
+    margin: 1.4em 0;
+  }
+
+  .quote {
+    font-style: italic;
+    color: #475569;
+    border-left: 3px solid #94a3b8;
+    padding-left: 14px;
+    margin: 0.6em 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="title-page">
+  <h1>DaF Markaz<br>Moliyaviy Tizim Qo'llanmasi</h1>
+  <p class="subtitle">Boshqaruvchilar, buxgalterlar va administratorlar uchun</p>
+  <p class="lead" style="margin-top: 30px;">
+    Bu hujjatda DaF markazidagi pul oqimi — o'quvchidan kelgan to'lovdan tortib, ustozga to'lanadigan oylik maoshgacha — barcha holatlar oddiy tilda, real misollar bilan tushuntirilgan.
+  </p>
+
+  <div class="doc-meta">
+    <div><strong>Hujjat versiyasi:</strong> 1.0</div>
+    <div><strong>Sana:</strong> 2026-04-30</div>
+    <div><strong>Mo'ljallangan o'quvchi:</strong> CEO, buxgalter, administrator</div>
+    <div><strong>Hujjatdan maqsad:</strong> tizim qanday ishlashini har kim tushunishi</div>
+  </div>
+</div>
+
+<div class="toc">
+<h2>Mundarija</h2>
+<ol>
+  <li><a href="#1">Bu hujjat haqida</a></li>
+  <li><a href="#2">Tizim qanday ishlaydi — asoslari</a></li>
+  <li><a href="#3">O'quvchining to'lovi va dars uchun pul yechilishi</a></li>
+  <li><a href="#4">O'quvchining hayot davri (qo'shilish, chiqish, ko'chirish, muzlatish)</a></li>
+  <li><a href="#5">Ustozning oylik maoshi</a></li>
+  <li><a href="#6">Pul qaytarish (refund)</a></li>
+  <li><a href="#7">Bekor qilingan to'lov va dars</a></li>
+  <li><a href="#8">Eski o'quvchilarni yangi tizimga ko'chirish</a></li>
+  <li><a href="#9">Markaz xarajatlari va o'qituvchi avansi</a></li>
+  <li><a href="#10">Maxsus holatlar — nima bo'lsa nima sodir bo'ladi</a></li>
+  <li><a href="#11">Kim nima qila oladi (ruxsatlar)</a></li>
+  <li><a href="#12">E'tibor talab qiluvchi joylar va tavsiyalar</a></li>
+  <li><a href="#13">Tez-tez beriladigan savollar</a></li>
+</ol>
+</div>
+
+<h2 id="1">1. Bu hujjat haqida</h2>
+
+<p class="lead">Agar siz markazda CEO, bosh buxgalter yoki administrator bo'lsangiz — bu qo'llanma siz uchun. Hujjat dasturchilarga emas, balki <strong>moliyaviy jarayonni boshqaradigan odamlarga</strong> mo'ljallangan.</p>
+
+<h3>Nima uchun bu kerak?</h3>
+
+<p>DaF markazi avval qog'ozda yoki Excel'da ish yuritgan bo'lsa, endi avtomatlashtirilgan tizim mavjud. Tizim har bir tiyin qaerdan kelganini va qaerga ketganini avtomatik kuzatadi. Bu hujjatda quyidagi savollarga javob bor:</p>
+
+<ul>
+  <li>O'quvchi pul to'lasa — pul qayerda saqlanadi va qachon yechiladi?</li>
+  <li>Ustozga oylik maosh qanday hisoblanadi?</li>
+  <li>O'quvchi guruhdan chiqsa, qolgan puli qayerga ketadi?</li>
+  <li>Eski o'quvchilarni yangi tizimga qanday ko'chiramiz?</li>
+  <li>Xato bo'lsa — qanday tuzatamiz?</li>
+</ul>
+
+<h3>Hujjatni qanday o'qish kerak</h3>
+
+<ul>
+  <li><strong>Sariq qutilar</strong> — real hayotiy misollarni ko'rsatadi (ism, summa, sana bilan)</li>
+  <li><strong>Ko'k qutilar</strong> — muhim eslatmalar</li>
+  <li><strong>Yashil qutilar</strong> — foydali maslahatlar</li>
+  <li><strong>Qizil qutilar</strong> — diqqat talab qiluvchi narsalar</li>
+  <li><strong>Sariq-jigarrang qutilar</strong> — ehtiyot bo'lish kerak bo'lgan holatlar</li>
+</ul>
+
+<p>Hujjatning oxirida "<strong>Tez-tez beriladigan savollar</strong>" bo'limi bor — siz duch keladigan ko'pgina savollar shu yerda javob topadi.</p>
+
+<h2 id="2">2. Tizim qanday ishlaydi — asoslari</h2>
+
+<p class="lead">Tizimda 3 ta asosiy "kassa" mavjud: o'quvchining kassasi (balans), markazning kassasi va har bir ustozning shaxsiy kassasi. Hamma pul harakatlari shu kassalar o'rtasida bo'ladi.</p>
+
+<h3>2.1 Uchta asosiy kassa</h3>
+
+<table>
+<tr><th>Kassa</th><th>Nima uchun?</th><th>Pul qachon kiradi?</th><th>Pul qachon chiqadi?</th></tr>
+<tr><td><strong>O'quvchining kassasi</strong> (balans)</td><td>Har bir o'quvchining shaxsiy hisobi</td><td>O'quvchi pul to'laganda</td><td>Dars uchun pul yechilganda yoki qaytarilganda</td></tr>
+<tr><td><strong>Markaz kassasi</strong></td><td>Markazning umumiy daromadi</td><td>O'quvchi balansidan dars uchun yechilganda</td><td>Ustozga oylik to'langanda yoki xarajat qilinganda</td></tr>
+<tr><td><strong>Ustozning kassasi</strong></td><td>Har bir ustoz/xodimning shaxsiy hisobi</td><td>Dars o'tilganda (oylik yig'iladi)</td><td>Oylik to'langanda</td></tr>
+</table>
+
+<h3>2.2 "Pul daftari" qoidasi</h3>
+
+<p>Tizimda har bir pul harakati alohida yozuv sifatida saqlanadi — xuddi qog'oz pul daftari kabi. Lekin bir farqi bor:</p>
+
+<div class="note danger">
+<span class="title">Muhim qoida: yozuvlar hech qachon o'chirilmaydi</span>
+Agar siz xato qilgan bo'lsangiz, eski yozuv o'chirilmaydi. Uning o'rniga "bekor qilish yozuvi" qo'shiladi. Bu — buxgalterlik standartining asosi: har bir harakat tarixiy yozuvga ega bo'lishi kerak.
+</div>
+
+<h3>2.3 Misol — bir kunlik tizim</h3>
+
+<div class="example">
+<span class="title">Misol: 1-mart kuni markazda nima sodir bo'ladi</span>
+
+<p><strong>Ertalab 09:00</strong> — Aliya kassada 400,000 so'm to'laydi.<br>
+<em>Tizim:</em> Aliyaning balansiga +400,000 so'm yoziladi.</p>
+
+<p><strong>Tushki 14:00</strong> — Aliya birinchi darsga keladi (PRESENT).<br>
+<em>Tizim:</em> Aliyaning balansidan 400,000 so'm yechiladi (12 ta dars uchun oldindan), ustoziga 10,000 so'm yig'iladi (har dars uchun).</p>
+
+<p><strong>Kechqurun 18:00</strong> — Markaz bosh ofisiga 5,000,000 so'm ijara haqi to'lashi kerak.<br>
+<em>Tizim:</em> Bu xarajat sifatida yoziladi.</p>
+
+<p><strong>Kechqurun 19:00</strong> — CEO ustoz Botirga 200,000 so'm avans beradi.<br>
+<em>Tizim:</em> Avans yoziladi va Botirning oxirgi oyligidan ushlanib qolinishi belgilanadi.</p>
+</div>
+
+<h3>2.4 "Bir vaqtda ikki ish" muammosi yo'q</h3>
+
+<p>Tizim shunday qurilganki, ikkita admin bir vaqtda bir o'quvchi uchun davomat olsa ham, chalkashlik bo'lmaydi. Tizim avtomatik ravishda navbat qo'yadi va har bir harakat to'g'ri yoziladi.</p>
+
+<h2 id="3">3. O'quvchining to'lovi va dars uchun pul yechilishi</h2>
+
+<p class="lead">DaF markazda kurslar 12 ta yoki 20 ta darsdan iborat tsikllar bo'yicha sotiladi. O'quvchi to'lasa, pul birdaniga balansga tushadi, lekin har dars uchun alohida-alohida yechiladi.</p>
+
+<h3>3.1 Kurs turlari va narxlari</h3>
+
+<table>
+<tr><th>Kurs turi</th><th>Darslar soni</th><th>Misol narxi</th><th>Bir dars narxi</th></tr>
+<tr><td>Standart</td><td>12 dars</td><td>400,000 so'm</td><td>~33,333 so'm</td></tr>
+<tr><td>Intensiv</td><td>20 dars</td><td>690,000 so'm</td><td>~34,500 so'm</td></tr>
+</table>
+
+<p><em>Eslatma: aniq narxlar markaz tomonidan belgilanadi va Kurslar bo'limida sozlanadi.</em></p>
+
+<h3>3.2 To'lov qabul qilish — 2 yo'l</h3>
+
+<table>
+<tr><th>Yo'l</th><th>Kim ishlatadi</th><th>Qachon qulay</th></tr>
+<tr><td><strong>Naqd to'lov (kassa)</strong></td><td>Kassir, administrator, BD, CEO</td><td>O'quvchi markazga kelib to'laganda</td></tr>
+<tr><td><strong>Online to'lov (Payme/Click/Uzum)</strong></td><td>O'quvchining o'zi (student portal orqali)</td><td>O'quvchi uydan to'laganda</td></tr>
+</table>
+
+<h3>3.3 Pul oqimi — birinchi to'lovdan birinchi darsgacha</h3>
+
+<div class="example">
+<span class="title">Misol: Aliya Standart kursga yozildi (400,000 so'm, 12 dars)</span>
+
+<div class="money-flow">
+<div class="row"><span class="label">1-mart, 09:00 — Aliya kassada to'laydi</span><span class="value in">+400,000 so'm</span></div>
+<div class="row"><span class="label">Aliyaning balansi:</span><span class="value">400,000 so'm</span></div>
+<div class="row"><span class="label">Markaz kassasi:</span><span class="value">o'zgarmaydi (pul hali "qarzga olingan" hisoblanadi)</span></div>
+</div>
+
+<p><strong>2-mart — Aliya birinchi darsga keladi (PRESENT)</strong></p>
+
+<div class="money-flow">
+<div class="row"><span class="label">Aliyaning balansidan yechiladi (12 dars uchun oldindan):</span><span class="value out">−400,000 so'm</span></div>
+<div class="row"><span class="label">Aliyaning balansi:</span><span class="value">0 so'm</span></div>
+<div class="row"><span class="label">Aliya hali "to'langan" 11 ta darsga ega</span><span class="value">11 ta dars qoldi</span></div>
+<div class="row"><span class="label">Markaz kassasiga tushdi:</span><span class="value in">+400,000 so'm</span></div>
+<div class="row"><span class="label">Ustozga yig'ildi (30% stavka misol):</span><span class="value in">+10,000 so'm</span></div>
+</div>
+
+<p><strong>3-mart — Aliya 2-darsga keladi (PRESENT)</strong></p>
+
+<div class="money-flow">
+<div class="row"><span class="label">Balansdan yechilmaydi (oldindan to'langan)</span><span class="value">o'zgarmaydi</span></div>
+<div class="row"><span class="label">Aliyada qolgan darslar:</span><span class="value">10 ta dars qoldi</span></div>
+<div class="row"><span class="label">Ustozga yig'ildi:</span><span class="value in">+10,000 so'm</span></div>
+</div>
+
+<p><em>Va shu tariqa har dars davomida...</em></p>
+</div>
+
+<h3>3.4 Nega birdaniga 12 ta dars uchun yechiladi?</h3>
+
+<p>Bu — oldindan to'lov tizimi. O'quvchi 12 ta dars uchun yarim yili oldindan to'laydi. Tizim shu pulni "qarzga olingan" deb hisoblaydi va birinchi darsga kelganida butun summani markaz daromadiga o'tkazadi. Keyingi 11 ta dars uchun pul yechilmaydi — chunki allaqachon yechilgan.</p>
+
+<h3>3.5 12 dars tugagach nima bo'ladi?</h3>
+
+<p>Aliya 12 ta darsni o'tib bo'lgach (qoldi: 0), keyingi (13-) darsga kelganida tizim avtomatik ravishda Aliyaning balansiga qaraydi:</p>
+
+<ul>
+  <li>Agar balansda yana 400,000 so'm bo'lsa → yangi tsikl boshlanadi (yana 12 dars uchun yechiladi)</li>
+  <li>Agar balansda 100,000 so'm bo'lsa → 3 dars uchun yetadi, shuncha yechiladi (qisman tsikl)</li>
+  <li>Agar balans bo'sh yoki kam bo'lsa (33,333 so'mdan kam) → <strong>hech narsa yechilmaydi</strong> va ustozga oylik yozilmaydi</li>
+</ul>
+
+<div class="note danger">
+<span class="title">Asosiy qoida: To'lov yo'q — oylik yo'q</span>
+O'quvchi pul to'lamagan dars uchun ustozga oylik yozilmaydi. Bu — markazning eng muhim moliyaviy qoidasi. Markaz "qarzga" dars sotmaydi: agar o'quvchi pul to'lamasa, ustoz ham bu dars uchun pul olmaydi.
+</div>
+
+<h3>3.6 Qisman to'lov holati</h3>
+
+<div class="example">
+<span class="title">Misol: Diyora 100,000 so'm to'ladi (12 dars uchun yetmaydi)</span>
+
+<ul>
+  <li>Bir dars narxi: ~33,333 so'm</li>
+  <li>100,000 so'mga necha dars yetadi: 3 ta (3 × 33,333 = 99,999 so'm)</li>
+  <li>1 so'm balansda qoladi</li>
+</ul>
+
+<p>Diyora birinchi darsga kelganida tizim 99,999 so'mni yechib, "3 ta dars to'langan" deb belgilaydi. Diyora 4-darsga kelganida balans yetmaydi — pul yechilmaydi va ustozga oylik yozilmaydi.</p>
+
+<p>Diyora qachondir yana pul to'lasa va keyingi dars vaqti kelsa, tizim yana avtomatik ravishda hisoblaydi.</p>
+</div>
+
+<h3>3.7 Davomatni kim oladi?</h3>
+
+<p>Davomatni quyidagilar olishi mumkin:</p>
+<ul>
+  <li><strong>O'qituvchi</strong> — oddiy holatda</li>
+  <li><strong>Administrator</strong> — agar ustoz unutgan bo'lsa</li>
+  <li><strong>QR kod orqali</strong> — o'quvchi telefonida QR'ni skanerlasa</li>
+</ul>
+
+<div class="note tip">
+<span class="title">Yaxshi xabar</span>
+Davomatni kim olganidan qat'iy nazar, tizim ustozga oylikni to'liq yozadi. Yani agar ustoz davomat olishni unutsa va admin keyin uni belgilasa, ustoz baribir o'z oyligini oladi.
+</div>
+
+<h2 id="4">4. O'quvchining hayot davri</h2>
+
+<p class="lead">O'quvchi tizimga qo'shilgan paytdan boshlab, guruhdan chiqib ketgan paytgacha bo'lgan barcha bosqichlar va ularning moliyaviy ta'siri bu yerda tushuntirilgan.</p>
+
+<h3>4.1 Yangi o'quvchi tizimga qo'shilishi</h3>
+
+<ol class="steps">
+<li>Administrator yoki BD o'quvchining ma'lumotlarini kiritadi (ism, telefon va h.k.)</li>
+<li>O'quvchini guruhga yozadi (enroll)</li>
+<li>Tizim yangi yozuv yaratadi: <strong>balans = 0, qolgan dars = 0</strong></li>
+<li>O'quvchi pul to'lashi bilan birinchi darsga kelganida tizim avtomatik ishlaydi</li>
+</ol>
+
+<h3>4.2 O'quvchining 4 xil holati</h3>
+
+<table>
+<tr><th>Holat</th><th>Mazmuni</th><th>Pul oqimiga ta'siri</th></tr>
+<tr><td><strong>FAOL</strong> (ACTIVE)</td><td>Oddiy holatda o'qiyapti</td><td>Davomatda pul yechiladi, ustozga oylik yoziladi</td></tr>
+<tr><td><strong>MUZLATILGAN</strong> (FROZEN)</td><td>Vaqtinchalik to'xtatilgan</td><td>Davomatga kelmasa pul yechilmaydi (qachon kelsa shundan boshlab)</td></tr>
+<tr><td><strong>CHIQQAN</strong> (DROPPED)</td><td>Tark etgan</td><td>Qolgan to'langan darslarning puli o'quvchining balansiga qaytariladi</td></tr>
+<tr><td><strong>BITIRGAN</strong> (GRADUATED)</td><td>Kursni tugatgan</td><td>Avtomatik holat — pul o'zgarmaydi</td></tr>
+</table>
+
+<h3>4.3 O'quvchini muzlatish (FROZEN)</h3>
+
+<div class="example">
+<span class="title">Misol: Aliya 15-aprelda 500,000 so'm to'ladi va 1-maygacha o'qishini muzlatdi</span>
+
+<table>
+<tr><th>Sana</th><th>Voqea</th><th>Aliyaning balansi</th><th>Holat</th></tr>
+<tr><td>15-apr</td><td>To'lov 500,000 so'm</td><td>500,000 so'm</td><td>FAOL</td></tr>
+<tr><td>15-apr</td><td>MUZLATILGAN qilindi</td><td>500,000 so'm</td><td>MUZLATILGAN</td></tr>
+<tr><td>16-30 apr</td><td>Davomatga kelmaydi</td><td>500,000 so'm (o'zgarmaydi)</td><td>MUZLATILGAN</td></tr>
+<tr><td>1-may</td><td>FAOL qilindi va darsga keldi</td><td>500,000 → 100,000 so'm</td><td>FAOL</td></tr>
+</table>
+
+<p>1-mayda Aliya birinchi marta darsga kelganida tizim 400,000 so'm yechib, 12 ta darsni "to'langan" deb belgilaydi. Ustoziga ham 1-may sanasi uchun oylik yozila boshlaydi.</p>
+</div>
+
+<div class="note tip">
+<span class="title">Xulosa</span>
+Muzlatish — bu xavfsiz operatsiya. O'quvchi pul to'lasayam, agar darsga kelmasa, balansidan hech narsa yechilmaydi. Bu hech qanday qo'shimcha sozlama talab qilmaydi — tizim avtomatik shunday ishlaydi.
+</div>
+
+<h3>4.4 O'quvchini guruhdan chiqarish</h3>
+
+<p>Agar o'quvchi guruhdan chiqib ketsa (DROPPED holati), tizim avtomatik ravishda <strong>qolgan to'langan darslarning pulini qaytaradi</strong>.</p>
+
+<div class="example">
+<span class="title">Misol: Bekzod Standart kursga 400,000 so'm to'ladi, 5 ta dars o'tdi va guruhdan chiqdi</span>
+
+<ul>
+  <li>To'langan: 12 ta dars</li>
+  <li>O'tilgan: 5 ta dars (har biri 33,333 so'm)</li>
+  <li>Qolgan to'langan darslar: 7 ta</li>
+  <li>Qaytariladigan summa: 7 × 33,333 = <strong>233,331 so'm</strong></li>
+</ul>
+
+<p>Bu 233,331 so'm Bekzodning balansiga qo'shiladi. Bekzod istasa keyin yangi guruhga qo'shilib, shu pulidan foydalanishi mumkin. Yoki refund (pul qaytarish) so'rashi mumkin (6-bo'limga qarang).</p>
+</div>
+
+<h3>4.5 O'quvchini boshqa guruhga ko'chirish (TRANSFER)</h3>
+
+<p>Agar o'quvchi A guruhdan B guruhga o'tkazilsa, tizim quyidagilarni avtomatik bajaradi:</p>
+
+<ol class="steps">
+<li>A guruhdagi qolgan to'langan darslarning puli o'quvchining balansiga qaytariladi</li>
+<li>A guruhdagi yozuv "TRANSFER QILINDI" holatiga o'tadi (saqlanadi, o'chirilmaydi)</li>
+<li>B guruhda yangi yozuv ochiladi (qolgan dars = 0)</li>
+<li>B guruhda birinchi darsga kelganida tizim avtomatik ravishda balansga qarab pul yechadi</li>
+</ol>
+
+<div class="note">
+<span class="title">Foydalanuvchi savoliga javob</span>
+"Bir o'quvchini bugun A guruhdan keyin esa B guruhda o'qisa A guruhda o'qiganida uni to'lovidan A guruh ustozi qancha olishi kerak bo'lsa shuncha oladi"
+<br><br>
+<strong>Ha, bu to'liq qo'llab-quvvatlangan:</strong>
+<ul>
+  <li>A guruhda o'qigan darslari uchun A ustoziga oylik yozib bo'lingan (transferda bekor qilinmaydi)</li>
+  <li>Transferda qolgan pul balansiga qaytariladi</li>
+  <li>B guruhda yangi darslar uchun B ustozi o'z oyligini oladi</li>
+</ul>
+</div>
+
+<h3>4.6 Guruh ichida ustoz o'zgarishi</h3>
+
+<p>Agar Botir o'qitgan guruh endi Farxod tomonidan o'qitiladigan bo'lsa:</p>
+<ul>
+  <li>Botir o'tgan darslar uchun olgan oyligi <strong>saqlanadi</strong> (qaytarib olinmaydi)</li>
+  <li>Yangi darslar uchun Farxod oylik oladi</li>
+  <li>Tizim avtomatik bilib oladi: dars sanasi qaysi ustozning faollik davriga to'g'ri keladi</li>
+</ul>
+
+<h3>4.7 Hammasi tarix sifatida saqlanadi</h3>
+
+<p>Har bir o'quvchining sahifasida quyidagi tarix ko'rinadi:</p>
+<ul>
+  <li><strong>To'lovlar tarixi</strong> — qachon, qancha, qanday usul bilan to'langan</li>
+  <li><strong>Darslar tarixi</strong> — har dars uchun qancha pul yechilgani</li>
+  <li><strong>Status tarixi</strong> — qachon FAOL bo'lgan, qachon MUZLATILGAN, va h.k.</li>
+  <li><strong>Guruh tarixi</strong> — qaysi guruhlarda qachon o'qigan</li>
+</ul>
+
+<h2 id="5">5. Ustozning oylik maoshi</h2>
+
+<p class="lead">Ustoz har bir dars uchun o'z oyligini avtomatik to'playdi. Oyning belgilangan kunida (default 8-sana) tizim ustozning hammasini yig'ib, "to'lovga tayyor" oylik chiqaradi. CEO tasdiqlasa, oylik to'lanadi.</p>
+
+<h3>5.1 Uch xil oylik turi</h3>
+
+<p>Tizimda 3 turdagi oylik bor:</p>
+
+<table>
+<tr><th>Turi</th><th>Kim uchun?</th><th>Misol</th></tr>
+<tr><td><strong>Foiz bo'yicha</strong> (PERCENTAGE)</td><td>Asosan o'qituvchilar</td><td>Har dars narxining 30%i. Dars 33,333 so'm bo'lsa, ustozga 10,000 so'm</td></tr>
+<tr><td><strong>O'quvchi boshiga qattiq summa</strong> (FIXED_PER_STUDENT)</td><td>Maxsus o'qituvchilar uchun</td><td>Har o'quvchidan 200,000 so'm (12 darsga taqsimlangan: har dars uchun ~16,667 so'm)</td></tr>
+<tr><td><strong>Oyiga qattiq summa</strong> (FIXED_MONTHLY)</td><td>Administrator, kassir, filial direktori</td><td>Oyiga 4,000,000 so'm (darsga bog'liq emas)</td></tr>
+</table>
+
+<div class="note warn">
+<span class="title">Diqqat: O'quvchi boshiga qattiq summa qanday tushuniladi</span>
+Agar ustozga "o'quvchi boshiga 200,000 so'm" deb belgilansangiz — bu butun kurs (12 dars) uchun. Har dars uchun emas. Har dars uchun ustoz 200,000 / 12 = ~16,667 so'm oladi.
+</div>
+
+<h3>5.2 Stavka qanday belgilanadi</h3>
+
+<p>Faqat <strong>CEO</strong> oylik stavkasini belgilashi mumkin. UX'da bu BD, Admin va boshqa rollarga ko'rinmaydi va tizim ham ularning so'roviga rad javobini beradi.</p>
+
+<p>Stavka belgilashning ikki yo'li bor:</p>
+<ol>
+  <li><strong>Hammasiga birdan</strong> — barcha o'qituvchilarga bir xil stavka (masalan 30%)</li>
+  <li><strong>Bitta ustozga maxsus</strong> — bitta ustozga boshqacha stavka (masalan 60% yoki 250,000 so'm)</li>
+</ol>
+
+<div class="note">
+<span class="title">Foydalanuvchi savoliga javob</span>
+"Ayni damda hamma ustozlarga 30% maosh belgilangan. Biz bu ustozga 40% qilib belgilasak undan keyin uning oylik maoshlari 40% dan hisoblanadi."
+<br><br>
+<strong>Ha — alohida ustozning stavkasi avtomatik ustun keladi.</strong> Tizim har dars uchun avval shu ustozning maxsus stavkasini qidiradi; agar topmasa — umumiy stavkani ishlatadi.
+</div>
+
+<h3>5.3 Bir ustozga turli guruhlarda turli stavka</h3>
+
+<p>Mumkin. CEO bitta ustozga "A guruh uchun 40%, B guruh uchun 50%" deb belgilashi mumkin. Tizim har dars uchun shu guruhga mos stavkani topadi.</p>
+
+<h3>5.4 Stavka o'zgarganda — qaysi sanadan?</h3>
+
+<p>Stavka belgilaganda CEO <strong>"Kuchga kirish sanasi"</strong>ni tanlaydi. Bu shuni anglatadi:</p>
+<ul>
+  <li>Bu sanagacha bo'lgan darslar — eski stavka bo'yicha hisoblanadi</li>
+  <li>Bu sanadan keyingi darslar — yangi stavka bo'yicha hisoblanadi</li>
+</ul>
+
+<div class="example">
+<span class="title">Misol: Botirning stavkasi vaqt o'tishi bilan o'zgargan</span>
+
+<ul>
+  <li>1-yanvar — 4-mart oralig'ida: 30%</li>
+  <li>4-mart — 20-aprel oralig'ida: 35%</li>
+  <li>20-apreldan boshlab: 40%</li>
+</ul>
+
+<p>Agar Botir 10-fevral kuni o'qigan dars uchun oylik hisoblansa — 30% bo'yicha. 25-aprelda o'qigan dars uchun — 40% bo'yicha. Bu avtomatik ravishda to'g'ri ishlaydi.</p>
+</div>
+
+<h3>5.5 Hisoblash davri (qachon oylik chiqariladi)</h3>
+
+<p>Default qoida: <strong>har oyning 8-sanasidan keyingi oyning 8-sanasigacha</strong>. Yani:</p>
+<ul>
+  <li>1-mart kuni hisoblanadigan oylik: 8-fevral — 7-mart oralig'idagi darslar uchun</li>
+  <li>1-aprel kuni hisoblanadigan oylik: 8-mart — 7-aprel oralig'idagi darslar uchun</li>
+</ul>
+
+<p>Bu kunni faqat <strong>CEO</strong> o'zgartirishi mumkin (masalan har oyning 1-sanasiga).</p>
+
+<h3>5.6 Oylik chiqarish jarayoni</h3>
+
+<ol class="steps">
+<li><strong>Oyning belgilangan kuni (8-sana, soat 02:00)</strong> — tizim avtomatik har bir ustoz uchun oylik hisoblaydi (yig'ilgan oyliklarni jamlaydi)</li>
+<li>Holat: <strong>"Hisoblangan"</strong> (sariq badge)</li>
+<li><strong>CEO ko'rib chiqadi va tasdiqlaydi</strong> — Holat: <strong>"Tasdiqlangan"</strong> (ko'k badge)</li>
+<li><strong>CEO yoki BD to'laydi</strong> — Holat: <strong>"To'langan"</strong> (yashil badge)</li>
+<li>To'langanidan keyin pul ustozning kassasidan yechiladi va tizimda yozuv qoladi</li>
+</ol>
+
+<h3>5.7 Ustoz o'z oyligini ko'rishi</h3>
+
+<p>Har bir ustozning shaxsiy kabineti bor (lehrer.dafzentrum.uz). U yerda ustoz quyidagilarni ko'radi:</p>
+
+<table>
+<tr><th>Ko'rsatkich</th><th>Mazmuni</th></tr>
+<tr><td><strong>Kutilayotgan oylik</strong></td><td>Bu oyda qanchaga kelishi mumkinligi (aktiv o'quvchilar va kursning normal grafigi asosida)</td></tr>
+<tr><td><strong>Real ishlangan</strong></td><td>Hozircha qancha yig'ilgani (haqiqatda o'tilgan darslar asosida)</td></tr>
+<tr><td><strong>To'langan</strong></td><td>Oxirgi to'langan oylik miqdori</td></tr>
+<tr><td><strong>Guruhlar bo'yicha bo'linish</strong></td><td>Har guruh uchun: nechta o'quvchi, nechta dars, qancha oylik kutilayotgani</td></tr>
+<tr><td><strong>Har dars tafsilot</strong></td><td>Sana, o'quvchi, guruh, dars narxi, qaysi stavka qo'llanilgani — barchasi ko'rinadi</td></tr>
+</table>
+
+<div class="note">
+<span class="title">Foydalanuvchi savoliga javob</span>
+"Ustoz oyligidan aniq har bir summa qayerdan kelgani nega bunday summaga kelib qolgani haqidagi to'liq hisobotni ko'ra olishimiz shart"
+<br><br>
+<strong>Ha, to'liq qo'llab-quvvatlangan.</strong> Oylik jadvalida har qatorga bosish — "Oylik tafsilotlari" oynasi ochiladi. U yerda har dars uchun: o'quvchi nomi, guruhi, sanasi, dars narxi, qaysi stavka qo'llanilgani — barchasi ko'rinadi. Hammasini Excel'ga (CSV) eksport qilish ham mumkin.
+</div>
+
+<h3>5.8 Tarix (Taymlayn) — har qanday o'zgarish ko'rinadi</h3>
+
+<p>Ustozning sahifasida "Taymlayn" (tarix) tab'i bor. CEO/BD/Admin ko'radi. U yerda:</p>
+<ul>
+  <li>"Stavka 30% → 35% o'zgartirildi (1-mart, 2026)"</li>
+  <li>"A-101 guruhiga qo'shildi (5-fevral)"</li>
+  <li>"B-202 guruhidan chiqarildi (10-mart)"</li>
+  <li>"Profil ma'lumotlari yangilandi (15-mart)"</li>
+</ul>
+
+<h3>5.9 Tax (soliq) qanday hisoblanadi?</h3>
+
+<div class="note warn">
+<span class="title">Hozirgi holat — tax avtomatik hisoblanmaydi</span>
+Hozir tizim oylikni <strong>brutto</strong> (soliqsiz) hisoblaydi. Soliqlar (12% ASOT, va boshqalar) avtomatik ushlab qolinmaydi.
+<br><br>
+UI'da har oylik tafsiloti pastida shunday eslatma chiqadi:
+<ul>
+  <li>Ustoz oyligidan — 12% (ushlanishi mumkin)</li>
+  <li>Markaz tomonidan ustoz oyligiga — 12%</li>
+  <li>Markaz oylik daromadidan — 4%</li>
+  <li>Click har bir to'lovdan — 2%</li>
+  <li>Payme har bir to'lovdan — 2%</li>
+  <li>Uzum har bir to'lovdan — 2%</li>
+</ul>
+Bu raqamlar faqat eslatma sifatida ko'rsatiladi — buxgalter qo'lda hisoblashi kerak. Agar siz tax avtomatik hisoblanishini xohlasangiz, bu alohida modul sifatida qo'shilishi kerak.
+</div>
+
+<h2 id="6">6. Pul qaytarish (refund)</h2>
+
+<p class="lead">Agar o'quvchi to'lagan pulini qaytarib so'rasa, tizim avtomatik qancha qaytarish mumkinligini hisoblaydi va CEO yoki BD tasdiqlasa, pul qaytariladi.</p>
+
+<h3>6.1 Qancha qaytariladi?</h3>
+
+<table>
+<tr><th>Holat</th><th>Qaytarish</th></tr>
+<tr><td>Kurs hali boshlanmagan (start sanasi kelmagan)</td><td><strong>100%</strong> qaytariladi (oldingi qaytarishlar bo'lsa minus qilinadi)</td></tr>
+<tr><td>50% va undan ortiq dars o'tilgan</td><td><strong>0%</strong> — qaytarish yo'q</td></tr>
+<tr><td>50% dan kam dars o'tilgan</td><td><strong>To'langan minus o'tilgan darslarning pulini</strong> qaytariladi</td></tr>
+</table>
+
+<h3>6.2 Misol — refund hisobi</h3>
+
+<div class="example">
+<span class="title">Misol: Aliya 400,000 so'm to'lagan, 4 ta dars o'tdi, refund so'radi</span>
+
+<ul>
+  <li>Bir dars narxi: 33,333 so'm</li>
+  <li>O'tilgan darslar: 4 ta</li>
+  <li>O'tilgan darslarning puli: 4 × 33,333 = ~133,333 so'm</li>
+  <li>50% chegirma (12 / 2 = 6 dars) — Aliya 4 dars o'tgan, hali 50% emas</li>
+  <li>Qaytarish hisobi: 400,000 − 133,333 = <strong>266,667 so'm</strong></li>
+</ul>
+
+<p>Bu summa Aliyaga qaytarib beriladi. Aliyaning balansidan ham yechiladi.</p>
+</div>
+
+<h3>6.3 Refund jarayoni — qadamlar</h3>
+
+<ol class="steps">
+<li><strong>Administrator yoki BD refund so'rovini yaratadi</strong> — holat "So'ralgan"</li>
+<li><strong>CEO yoki BD ko'rib chiqadi va tasdiqlaydi</strong> — holat "Tasdiqlangan" (pul hali yechilmagan)</li>
+<li><strong>Pul qaytarib berilganda</strong> — holat "Yakunlangan"</li>
+<li>Tizimda yozuv qoladi: kim qaytargan, qachon, qancha</li>
+</ol>
+
+<h3>6.4 Refundni bekor qilish</h3>
+
+<p>Agar refund xato bo'lib qaytarib bo'lingan bo'lsa, faqat <strong>CEO</strong> uni bekor qila oladi. Bekor qilinganida pul yana o'quvchining balansidan yechiladi va tarix saqlanadi.</p>
+
+<h3>6.5 Bank komissiyasi haqida</h3>
+
+<p>Hozir tizim bank komissiyasini avtomatik ushlab qolmaydi. Agar Payme/Click/Uzum orqali to'langan bo'lsa va siz refund'da komissiyani ushlab qolmoqchi bo'lsangiz — buni qo'lda qisqartirishingiz kerak.</p>
+
+<h2 id="7">7. Bekor qilingan to'lov va dars</h2>
+
+<p class="lead">Tizimda har qanday yozuvni "bekor qilish" mumkin (lekin o'chirib emas). Bu uch xil bo'ladi: to'lovni bekor qilish, dars uchun yechilgan pulni bekor qilish va dars o'zini bekor qilish.</p>
+
+<h3>7.1 To'lovni bekor qilish</h3>
+
+<p>Agar admin xato bilan o'quvchining nomi ostidan to'lov yozgan bo'lsa, faqat <strong>CEO</strong> uni bekor qila oladi.</p>
+
+<div class="note danger">
+<span class="title">Muhim himoya</span>
+Agar to'lov allaqachon dars uchun ishlatilgan bo'lsa (o'quvchi shu to'lovdan keyin darsga kelgan bo'lsa), to'lovni bekor qilib bo'lmaydi. Tizim ogohlantiradi: <em>"Pul allaqachon darslarga sarflangan"</em>. Avval darslarning pulini qaytarish kerak.
+</div>
+
+<h3>7.2 Dars uchun yechilgan pulni bekor qilish</h3>
+
+<p>Agar admin xato bilan dars uchun pul yechgan bo'lsa (masalan, davomatni noto'g'ri PRESENT qo'ygan bo'lsa), CEO yoki BD bu yechishni bekor qilishi mumkin. Tizim avtomatik:</p>
+<ul>
+  <li>Pulni o'quvchining balansiga qaytaradi</li>
+  <li>Ustozga yozilgan oylikni bekor qiladi</li>
+  <li>"Qolgan dars" hisobini tiklaydi</li>
+</ul>
+
+<h3>7.3 Darsni bekor qilish (kasallik, dam olish)</h3>
+
+<p>Agar guruhning bitta darsi bekor qilinsa (masalan, ustoz kasal):</p>
+
+<ol class="steps">
+<li>Administrator "Bu darsni bekor qilish" tugmasini bosadi</li>
+<li>Sabab kiritadi (kasallik, mahalliy bayram va h.k.)</li>
+<li>Tizim avtomatik:
+  <ul>
+    <li>Shu kunda "PRESENT" qilingan barcha o'quvchilarni "EXCUSED" (qonuniy yo'q) ga o'zgartiradi</li>
+    <li>Pulni o'quvchilarning balansiga qaytaradi (qolgan dars hisobini +1 qiladi)</li>
+    <li>Ustozga yozilgan oyliklarni bekor qiladi</li>
+  </ul>
+</li>
+</ol>
+
+<div class="note warn">
+<span class="title">Diqqat: bekor qilingan dars yozuvini o'chirish</span>
+Agar siz "bekor qilingan dars" yozuvini o'chirsangiz (qaytadan qo'yish uchun), tizim avtomatik ravishda davomatlarni qayta tiklamaydi. Admin qo'lda davomatni qayta olishi kerak. UI'da bu haqida ogohlantirish chiqadi.
+</div>
+
+<h3>7.4 Dam olish kunlari (Holiday)</h3>
+
+<p>Davlat bayramlari yoki butun markaz dam oladigan kunlar Holiday sifatida belgilanadi. O'sha kunlarda davomat olib bo'lmaydi — shuning uchun pul yechilmaydi va ustozlarga oylik yozilmaydi.</p>
+
+<div class="note">
+<span class="title">Foydalanuvchi savoliga javob</span>
+"Dam olish kunlari, guruhning ma'lum sanadagi darsi bo'lmasligini belgilash kabi imkoniyatlar ham moliyani bir qismi hisoblangani uchun bularni ham inobatga olishimiz kerak."
+<br><br>
+<strong>Ha, ikkala holat ham qo'llab-quvvatlangan:</strong>
+<ul>
+  <li><strong>Holiday</strong> — kompaniya bo'yicha dam olish kuni (masalan 21-mart Navro'z)</li>
+  <li><strong>Lesson Cancellation</strong> — bitta guruhning bitta darsi bekor qilinishi (masalan ustoz kasal)</li>
+</ul>
+Ikkalasida ham pul yechilmaydi va ustoz oylik olmaydi.
+</div>
+
+<h2 id="8">8. Eski o'quvchilarni yangi tizimga ko'chirish</h2>
+
+<p class="lead">Markaz avval qog'ozda yoki Excel'da ish yuritgan bo'lsa, eski o'quvchilarning to'lov tarixi tizimda yo'q bo'lishi mumkin. Bu bo'limda ularni yangi tizimga qanday ko'chirishni tushuntiramiz.</p>
+
+<h3>8.1 Foydalanuvchining muammosi</h3>
+
+<div class="quote">
+"Hozir o'quv markazi avvaldan faoliyat olib borayotgan markaz hisoblanadi. Oldin tizim bo'lmagani uchun kim qachon to'lov qilgani unchalik ham aniq emas. Markaz to'lovlarni oylik tizimda qabul qilgan. Har oyning 1 sanasida misol uchun. Shunga biz buni to'liq tizimga o'tkazishimiz uchun ya'ni 12 talik yoki 20 talik (kurs sonidan kelib chiqib) qanday o'tkazishimiz mumkin."
+</div>
+
+<h3>8.2 Yechim — "Boshlang'ich balans" funksiyasi</h3>
+
+<p>Faqat <strong>CEO</strong> har bir o'quvchi uchun "Boshlang'ich balans" yozishi mumkin. Bu — o'quvchi eski tizimda to'lab qolgan, lekin yangi tizimga hali yozilmagan summa.</p>
+
+<h3>8.3 Tavsiya etiladigan ish jarayoni</h3>
+
+<div class="example">
+<span class="title">Misol: Aliya eski tizimda 1-yanvarda 400,000 so'm to'lagan va 8 ta dars o'tgan</span>
+
+<table>
+<tr><th>Qadam</th><th>Harakat</th><th>Natija</th></tr>
+<tr><td>1</td><td>Aliyani yangi tizimga qo'shish</td><td>balans = 0</td></tr>
+<tr><td>2</td><td>Guruhga yozish</td><td>qolgan dars = 0</td></tr>
+<tr><td>3</td><td>Eski qoldiqni hisoblash:<br>400,000 − (8 × 33,333) ≈ 133,336 so'm</td><td>—</td></tr>
+<tr><td>4</td><td>CEO Aliyaning sahifasidagi "Boshlang'ich balans" tugmasini bosadi va 133,336 so'm kiritadi</td><td>Aliyaning balansi = 133,336 so'm</td></tr>
+<tr><td>5</td><td>Aliya yangi davomatga keladi (PRESENT)</td><td>4 ta dars uchun yetadi (4 × 33,333 = 133,332). Yechiladi va keyingi 4 dars to'langan deb belgilanadi.</td></tr>
+</table>
+</div>
+
+<h3>8.4 Eski qoldiq qanday hisoblanadi?</h3>
+
+<p>Buxgalter eski yozuvlardan tekshirib, har bir o'quvchi uchun:</p>
+<ol>
+  <li>Eski tizimda nechta darsga to'lagan</li>
+  <li>Yangi tizimga ko'chguncha nechta dars o'tgan</li>
+  <li>Qolgan darslar = (1) − (2)</li>
+  <li>Boshlang'ich balans = qolgan darslar × bir dars narxi</li>
+</ol>
+
+<h3>8.5 Xato qilsak nima qilamiz?</h3>
+
+<p>Agar boshlang'ich balansni xato kiritgan bo'lsangiz, CEO uni bekor qilib, qaytadan to'g'ri summani kiritishi mumkin. Eski yozuv tarixda saqlanadi (audit uchun).</p>
+
+<div class="note tip">
+<span class="title">Maslahat</span>
+Eski tizimdan ko'chirishni qilishdan oldin barcha o'quvchilarning ro'yxati va eski to'lov tarixi tayyor bo'lsin. Buxgalter va admin birgalikda har o'quvchi uchun qoldiqni hisoblab, keyin tizimga kiritgan ma'qul. Bu bir martalik ish.
+</div>
+
+<h2 id="9">9. Markaz xarajatlari va o'qituvchi avansi</h2>
+
+<p class="lead">Markaz har oy ijara, kommunal, ta'minot va boshqa xarajatlarni qiladi. Bularning hammasi tizimda yozib boriladi. Shuningdek, ustozga avans berishni alohida boshqaramiz.</p>
+
+<h3>9.1 Xarajat turlari</h3>
+
+<table>
+<tr><th>Tur</th><th>Misol</th></tr>
+<tr><td><strong>Ijara</strong> (RENT)</td><td>Bino ijarasi, oyiga 5,000,000 so'm</td></tr>
+<tr><td><strong>Kommunal</strong> (UTILITIES)</td><td>Svet, suv, internet</td></tr>
+<tr><td><strong>Ta'minot</strong> (SUPPLIES)</td><td>Marker, qog'oz, kanselyariya</td></tr>
+<tr><td><strong>Reklama</strong> (MARKETING)</td><td>Instagram reklamasi, ko'cha bannerlari</td></tr>
+<tr><td><strong>O'qituvchi avansi</strong> (TEACHER_ADVANCE)</td><td>Ustozga oylikdan oldin avans berish</td></tr>
+<tr><td><strong>Boshqa</strong> (OTHER)</td><td>Yuqorida sanab o'tilmagan boshqa xarajatlar</td></tr>
+</table>
+
+<h3>9.2 O'qituvchi avansi qanday ishlaydi</h3>
+
+<p>Ko'pincha ustozlar oylik kunidan oldin "20-aprelda 200,000 so'm avans bering" deb so'rashadi. Bu jarayon avtomatlashtirilgan:</p>
+
+<ol class="steps">
+<li>CEO yoki BD "Xarajat" bo'limidan yangi xarajat kiritadi: tur = "O'qituvchi avansi", qaysi ustoz uchun, qancha</li>
+<li>Avans berilgan deb yoziladi (markaz kassasidan chiqadi)</li>
+<li>Oy oxirida (oylik chiqish kunida) tizim avtomatik ravishda ustozning oyligidan shu avansni ushlab qoladi</li>
+<li>Agar oylik avansdan kam bo'lsa, qolgan avans keyingi oyga o'tadi</li>
+</ol>
+
+<div class="example">
+<span class="title">Misol: Botir 200,000 so'm avans oldi, oxirida oyligi 1,500,000 so'm</span>
+
+<div class="money-flow">
+<div class="row"><span class="label">Oylik (yig'ilgan)</span><span class="value">1,500,000 so'm</span></div>
+<div class="row"><span class="label">Avans ushlanadi</span><span class="value out">−200,000 so'm</span></div>
+<div class="row"><span class="label">To'lanadigan summa</span><span class="value in">1,300,000 so'm</span></div>
+</div>
+</div>
+
+<h3>9.3 Xarajatni tahrirlash yoki o'chirish</h3>
+
+<ul>
+  <li><strong>Tahrirlash</strong> — agar summa yoki kategoriya o'zgarsa, tizim eski yozuvni bekor qilib yangisini yozadi (tarix saqlanadi)</li>
+  <li><strong>O'chirish</strong> — soft delete (yozuv saqlanadi, lekin "o'chirilgan" deb belgilanadi). Markaz kassasiga puli qaytariladi.</li>
+</ul>
+
+<h2 id="10">10. Maxsus holatlar — nima bo'lsa nima sodir bo'ladi</h2>
+
+<p class="lead">Bu bo'limda kam uchraydigan, lekin oldindan o'ylab qo'yish kerak bo'lgan holatlar.</p>
+
+<h3>10.1 Holat: O'quvchi pul yo'q, lekin darsga kelyapti</h3>
+
+<p><strong>Nima sodir bo'ladi:</strong> Davomat PRESENT qo'yiladi, lekin pul yechilmaydi va ustozga oylik yozilmaydi. Bu — markazning muhim qoidasi: <em>to'lov yo'q — oylik yo'q</em>.</p>
+
+<p><strong>Kelajakda pul to'lansa nima bo'ladi:</strong> O'tib bo'lgan darslar uchun retroaktiv hisoblanmaydi (avtomatik). Yani agar o'quvchi 5 ta darsga "qarzga" qatnashgan bo'lsa va 6-darsdan oldin pul to'lasa, faqat 6-darsdan boshlab pul yechiladi va oylik yoziladi. Eski 5 ta dars uchun avtomatik to'lanmaydi.</p>
+
+<div class="note warn">
+<span class="title">Eslatma CEO uchun</span>
+Agar siz "pul yetmaganda ham ustozga oylik yozilsin va keyin to'lansa qarzdorlik chiqsin" degan tartibni xohlasangiz — bu hozir tizimda yo'q. Bu alohida funksiya sifatida qo'shilishi mumkin.
+</div>
+
+<h3>10.2 Holat: Bir vaqtda 2 admin bir o'quvchi uchun davomat oladi</h3>
+
+<p><strong>Nima sodir bo'ladi:</strong> Tizim avtomatik birinchisini qabul qiladi, ikkinchisini rad etadi. Hech qachon ikki marta pul yechilmaydi.</p>
+
+<h3>10.3 Holat: O'quvchi ko'p marta to'laydi (bir kunda 3 marta)</h3>
+
+<p><strong>Nima sodir bo'ladi:</strong> Har bir to'lov alohida yoziladi va balansga qo'shiladi. Hech qanday muammo yo'q. Tarixda har bir to'lov ko'rinadi.</p>
+
+<h3>10.4 Holat: O'quvchi to'lasa, keyin guruhdan chiqsa</h3>
+
+<p><strong>Nima sodir bo'ladi:</strong> Qolgan to'langan darslarning puli avtomatik ravishda balansga qaytariladi. Agar o'quvchi pulni naqdda olib ketmoqchi bo'lsa — refund jarayoni boshlanadi (6-bo'limga qarang).</p>
+
+<h3>10.5 Holat: Ustoz darsdan keyin "o'quvchi yo'q edi" deb statusni o'zgartirsa</h3>
+
+<p><strong>Nima sodir bo'ladi:</strong> Tizim avtomatik:</p>
+<ul>
+  <li>Yechilgan pulni o'quvchining balansiga qaytaradi</li>
+  <li>Ustozga yozilgan oylikni bekor qiladi</li>
+  <li>Qolgan dars hisobini +1 qiladi</li>
+</ul>
+
+<h3>10.6 Holat: Ustoz oy o'rtasida ishga kirsa yoki ketsa (FIXED_MONTHLY)</h3>
+
+<div class="note warn">
+<span class="title">Eslatma</span>
+Hozir tizim FIXED_MONTHLY ustoz oy o'rtasida ishga kirsa ham, oylikni <strong>to'liq</strong> hisoblaydi. Pro-rata (kunlar bo'yicha taqsimlash) yo'q. Agar siz bu funksiyani xohlasangiz — alohida buyurtma berishingiz kerak.
+</div>
+
+<h3>10.7 Holat: Kurs narxi o'zgaradi (eski o'quvchilar uchun nima bo'ladi?)</h3>
+
+<p><strong>Nima sodir bo'ladi:</strong> Eski to'langan o'quvchilar eski narx bo'yicha yakunlaydi. Tizim har bir tsikl uchun "shu vaqtda kurs narxi qancha edi" deb saqlaydi. Ya'ni Aliya 1-yanvarda 400,000 so'mga to'lagan bo'lsa, mart kuni narx 500,000 ga ko'tarilsa ham, Aliyaning qolgan darslari eski narx bo'yicha sanaladi.</p>
+
+<h3>10.8 Holat: Ustoz bir kun ishladi, keyin u o'rniga boshqa ustoz tayinlandi</h3>
+
+<p><strong>Nima sodir bo'ladi:</strong></p>
+<ul>
+  <li>Eski ustoz o'tgan darslar uchun olgan oyligini saqlaydi</li>
+  <li>Yangi darslar uchun yangi ustoz oylik oladi</li>
+  <li>Tarixda har ikkala ustoz ham ko'rinadi</li>
+</ul>
+
+<h2 id="11">11. Kim nima qila oladi (ruxsatlar)</h2>
+
+<p class="lead">Tizimda 5 ta asosiy rol bor: CEO, Filial Direktori (BD), Administrator, Kassir va O'qituvchi. Har birining o'z ruxsatlari bor.</p>
+
+<table class="role-table">
+<tr><th>Operatsiya</th><th>CEO</th><th>BD</th><th>Admin</th><th>Kassir</th><th>Ustoz</th></tr>
+<tr><td>To'lov qabul qilish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>To'lovni bekor qilish</td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>O'quvchi balansini ko'rish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Boshlang'ich balans yozish</td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Refund yaratish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Refundni tasdiqlash/to'lash</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Refundni bekor qilish</td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Ustoz stavkasini belgilash</td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Hisoblash davrini o'zgartirish</td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Oylikni hisoblashga buyurish</td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Oylikni tasdiqlash</td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Oylikni to'lash</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>O'z oyligini ko'rish</td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="yes">Ha</span></td></tr>
+<tr><td>Boshqa ustozning oyligini ko'rish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Xarajat kiritish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Xarajatni tahrirlash/o'chirish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Moliyaviy hisobotlarni ko'rish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>O'quvchi statusini o'zgartirish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+<tr><td>Dars bekor qilish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td>O'z guruhi</td></tr>
+<tr><td>Bekor qilingan darsni o'chirish</td><td><span class="yes">Ha</span></td><td><span class="yes">Ha</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td><td><span class="no">Yo'q</span></td></tr>
+</table>
+
+<div class="note tip">
+<span class="title">Foydalanuvchi savoliga javob</span>
+"Ustozlarga oylik belgilash faqat CEO tomonidan UX tomonlama ham backend tomonlama ham bu boshqalarga ko'rinmasligi va ruxsat berilmasligi shart"
+<br><br>
+<strong>Ha, to'liq bajarilgan:</strong>
+<ul>
+  <li>Boshqa rollar uchun "Stavka belgilash" tugmasi <strong>ko'rinmaydi</strong></li>
+  <li>Hatto agar kimdir to'g'ridan-to'g'ri tizimga so'rov yuborsa ham — server "Ruxsat yo'q" javobini beradi</li>
+</ul>
+</div>
+
+<h2 id="12">12. E'tibor talab qiluvchi joylar va tavsiyalar</h2>
+
+<p class="lead">Bu bo'limda CEO va boshqaruvchilar bilishi kerak bo'lgan ehtiyot bo'lish kerak bo'lgan joylar va kelajakda yaxshilash mumkin bo'lgan funksiyalar.</p>
+
+<h3>12.1 "Qarzga dars" — yo'q</h3>
+
+<p>Hozirgi tizim qoidasi: pul yo'q — oylik yo'q. Agar o'quvchi pul yetmagan holatda darsga kelsa, ustoz shu dars uchun pul olmaydi va keyinchalik pul to'lansa ham retroaktiv to'lanmaydi.</p>
+
+<p><strong>Tavsiya:</strong> agar siz "qarzga" tartibini xohlasangiz, bu alohida funksiya sifatida qo'shilishi kerak.</p>
+
+<h3>12.2 Avtomatik soliq hisoblash — yo'q</h3>
+
+<p>Hozir tax (12% ASOT, 4% va boshqalar) avtomatik ushlab qolinmaydi. Buxgalter qo'lda hisoblashi kerak.</p>
+
+<p><strong>Tavsiya:</strong> agar avtomatik tax kerak bo'lsa — bu alohida buyurtma sifatida ishlab chiqilishi kerak.</p>
+
+<h3>12.3 Pro-rata oylik (yarim oylik) — yo'q</h3>
+
+<p>FIXED_MONTHLY xodim oy o'rtasida ishga kirgan/ketgan bo'lsa, oylik to'liq yoziladi. Yarim oy ishlagan bo'lsa ham — to'liq oylik chiqadi.</p>
+
+<p><strong>Tavsiya:</strong> agar pro-rata kerak bo'lsa, bu alohida sozlamada qo'shilishi mumkin.</p>
+
+<h3>12.4 Bank komissiyasi avtomatik ushlanmaydi</h3>
+
+<p>Refund qilganingizda Payme/Click/Uzum komissiyasi avtomatik ushlanmaydi. Agar siz to'la summani qaytarmoqchi bo'lmasangiz — qo'lda kamaytiring.</p>
+
+<h3>12.5 Bekor qilingan darsni qaytarish</h3>
+
+<p>Agar siz bir kun darsni bekor qilib, keyin "yo'q, dars bo'lgan ekan" desangiz, soft delete qilsangiz davomatlar avtomatik tiklanmaydi. Admin qo'lda davomatlarni qayta olishi kerak.</p>
+
+<h3>12.6 Qog'ozchi nazorat — har oy oxirida tekshirish</h3>
+
+<div class="note tip">
+<span class="title">Tavsiya</span>
+Har oy oxirida (oylik chiqarilgandan keyin) buxgalter quyidagilarni tekshirsin:
+<ul>
+  <li>Hisoblangan oyliklar - tasdiqlanganlar - to'langanlar mosligi</li>
+  <li>Markaz kassasiga tushgan jami summa - chiqarilgan xarajatlar</li>
+  <li>Avans olgan ustozlardan ushlangan summa</li>
+  <li>Refund qilingan summalar va sabablari</li>
+</ul>
+Bu — saqlamasdan, har oy uchun "Moliyaviy hisobot" sahifasiga kirib ko'rib chiqish ma'qul.
+</div>
+
+<h2 id="13">13. Tez-tez beriladigan savollar</h2>
+
+<h4>S: Agar o'quvchi to'lasa, lekin keyin guruhga yozilmasa, pul qayerda?</h4>
+<p><strong>J:</strong> Pul o'quvchining balansida turaveradi. Guruhga yozilganida birinchi darsda yechiladi. Yoki refund so'ralsa qaytariladi.</p>
+
+<h4>S: Bir o'quvchi 2 ta guruhda o'qisa-chi?</h4>
+<p><strong>J:</strong> Bu mumkin. Har bir guruhda alohida yozuv bor. Pul har dars uchun balansdan yechiladi va shu darsning ustoziga oylik yoziladi. Tizim ikkala guruhga ham to'g'ri taqsimlaydi.</p>
+
+<h4>S: Ustoz davomatni unutib, 3 kundan keyin oladi. Oylik yoziladi-mi?</h4>
+<p><strong>J:</strong> Ha, yoziladi. Sana — asl dars sanasi (admin qo'yganida emas) bo'lib qoladi. Pul ham shu vaqtda balans yetadigan bo'lsa yechiladi.</p>
+
+<h4>S: Agar admin xato bilan o'quvchining nomidan boshqa o'quvchining to'lovini yozsa-chi?</h4>
+<p><strong>J:</strong> CEO bu to'lovni bekor qilib, to'g'ri o'quvchining nomidan yangidan yoziladi. Eski yozuv tarixda saqlanadi.</p>
+
+<h4>S: Markaz daromadi qayerda ko'rinadi?</h4>
+<p><strong>J:</strong> "Moliyaviy ko'rsatkichlar" sahifasida (CEO va BD ko'radi). Bu yerda davr bo'yicha tushum, xarajat, foyda, marketing ROI va boshqa ko'rsatkichlar bor.</p>
+
+<h4>S: Ustozga avans bersak, oylik chiqishi vaqti uni unutib qo'ymaydi-mi?</h4>
+<p><strong>J:</strong> Yo'q. Tizim avtomatik avansni qidiradi va ustozning oyligidan ushlab qoladi. Avansni alohida eslab yurishingiz kerak emas.</p>
+
+<h4>S: Boshlang'ich balansni har bir o'quvchiga bir martagina yozish mumkin-mi?</h4>
+<p><strong>J:</strong> Ha. Tizim boshlang'ich balansni bir martagina yozishga ruxsat beradi. Agar xato bo'lsa, CEO uni bekor qilib qaytadan yozishi mumkin.</p>
+
+<h4>S: O'quvchi pul to'lasayam, darsga kelmasa-chi?</h4>
+<p><strong>J:</strong> Pul balansda turadi, hech narsa yechilmaydi. O'quvchi qachondir darsga kelsa — o'shanda yechiladi. Yoki guruhdan chiqsa — pul balansiga qaytariladi.</p>
+
+<h4>S: Ustozga pul to'laganimizdan keyin qaytarib olishimiz mumkin-mi?</h4>
+<p><strong>J:</strong> Texnik jihatdan ha — CEO yozuvni bekor qilishi mumkin. Lekin bu — buxgalterlik nuqtai nazaridan ehtiyotkorlik bilan qilinishi kerak. Agar siz xato to'lagan bo'lsangiz — eng yaxshisi ustoz bilan kelishib, keyingi oylikdan chegirib qoldirish.</p>
+
+<h4>S: Bir kun har xil oylikni belgilab keyin "kechagi belgilanganini bugundan" boshlash mumkin-mi?</h4>
+<p><strong>J:</strong> Ha — har stavka belgilashda "Kuchga kirish sanasi" maydoni bor. Siz qaysi sanadan bu yangi stavka qo'llanishini tanlaysiz. O'tgan davrlarni o'zgartirib bo'lmaydi (agar oylik allaqachon to'langan bo'lsa).</p>
+
+<h4>S: Agar tizim ishlamay qolsa, qaerda nazorat qilamiz?</h4>
+<p><strong>J:</strong> Tizimda har bir harakat tarixi saqlanadi. Buxgalter har oyda hisobotlarni eksport qilib (CSV, Excel) saqlab qo'yishi tavsiya etiladi. Bu — "agar nimadir bo'lsa" rejasi.</p>
+
+<hr>
+
+<p style="text-align: center; color: #64748b; font-size: 10pt; margin-top: 2em;">
+DaF Markaz — Moliyaviy Tizim Qo'llanmasi · 2026-04-30 · Versiya 1.0<br>
+Hujjat boshqaruvchilar, buxgalterlar va administratorlar uchun mo'ljallangan.<br>
+Texnik tafsilotlar uchun: <em>moliya-tahlili.pdf</em> hujjatiga qarang.
+</p>
+
+</body>
+</html>
