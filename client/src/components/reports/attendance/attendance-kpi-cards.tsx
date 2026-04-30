@@ -21,9 +21,10 @@ import {
   ATTENDANCE_KPI_TOOLTIPS,
   type AttendanceStatusBreakdown,
   formatAttendancePct,
+  formatChangePct,
   formatCount,
   getAttendanceColor,
-  getRetentionColor,
+  getChangeColor,
 } from "./metric-helpers";
 
 interface KpiCardProps {
@@ -107,9 +108,9 @@ export function AttendanceKpiCards({
       />
       <KpiCard
         icon={UserCheck}
-        label="Guruhda qolganlar"
-        value={formatAttendancePct(overallRetention)}
-        valueColor={getRetentionColor(overallRetention)}
+        label="O'quvchilar o'zgarishi"
+        value={formatChangePct(overallRetention)}
+        valueColor={getChangeColor(overallRetention)}
         tooltip={ATTENDANCE_KPI_TOOLTIPS.retention}
       />
       <KpiCard

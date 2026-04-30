@@ -122,12 +122,35 @@ export function getAttendanceColor(pct: number | null): string | undefined {
   return "text-red-600 dark:text-red-400";
 }
 
-// Same thresholds as attendance — deliberate so users internalize one scale.
+// "O'zgarish %" — period growth/shrinkage from baseline (retention - 100).
+// Keep retentionPct on the wire as-is; convert on display so users see
+// "+45%" / "-20%" / "0%" instead of "145%" / "80%" / "100%" which read
+// as "145% stayed" — confusing.
+export function retentionToChangePct(pct: number | null): number | null {
+  if (pct === null) return null;
+  return pct - 100;
+}
+
+export function formatChangePct(retentionPct: number | null): string {
+  if (retentionPct === null) return "—";
+  const change = retentionPct - 100;
+  if (change === 0) return "0%";
+  const sign = change > 0 ? "+" : "";
+  return `${sign}${change}%`;
+}
+
+// Color: green positive (growth), red negative (shrinkage), neutral zero.
+export function getChangeColor(retentionPct: number | null): string | undefined {
+  if (retentionPct === null) return undefined;
+  const change = retentionPct - 100;
+  if (change > 0) return "text-emerald-600 dark:text-emerald-400";
+  if (change < 0) return "text-red-600 dark:text-red-400";
+  return "text-muted-foreground";
+}
+
+// Old name kept for any callers we missed; behaves like getChangeColor now.
 export function getRetentionColor(pct: number | null): string | undefined {
-  if (pct === null) return undefined;
-  if (pct >= 80) return "text-emerald-600 dark:text-emerald-400";
-  if (pct >= 60) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
+  return getChangeColor(pct);
 }
 
 export function formatAttendancePct(pct: number | null): string {
@@ -165,7 +188,7 @@ export const ATTENDANCE_KPI_TOOLTIPS = {
   lateExcused:
     "KECHIKDI va SABABLI yozuvlarning yig'indisi.\n\nKechikdi — keldi, lekin kech.\nSababli — kelmadi, lekin sababi bor (kasal, dars bekor qilingan, va h.k.).",
   retention:
-    "Guruhda qolganlar — davr boshida o'qiyotgan o'quvchilarning necha foizi davr oxiriga qadar guruhda qolgan.\n\nHisob: davr oxirida qolganlar / davr boshida bo'lganlar × 100.\n\nMuhim: davomat % yuqori bo'lib, qolganlar % past bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = ACTIVE yoki FROZEN. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
+    "O'quvchilar soni davr boshida bo'lganga nisbatan necha foizga o'zgargan.\n\n• +45% — guruh 45% kattalashgan (yangi o'quvchilar qo'shilgan)\n• 0% — barqaror (kim ketgan, kim qo'shilgan teng)\n• -20% — guruh 20% ga kichraygan (yo'qotish bor)\n\nHisob: (davr oxiri − davr boshi) / davr boshi × 100.\n\nMuhim: davomat % yuqori bo'lib, o'zgarish manfiy bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = ACTIVE yoki FROZEN. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
 };
 
 export const ATTENDANCE_TABLE_TOOLTIPS = {
@@ -177,7 +200,7 @@ export const ATTENDANCE_TABLE_TOOLTIPS = {
   endStudentCount:
     "Tanlangan davr oxirida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
   retention:
-    "Qoldi %: davr oxirida guruhda qolgan o'quvchilar / davr boshida bo'lganlar × 100.\n\nDavomat % yuqori bo'lib, qoldi past bo'lsa — qolganlar yaxshi keladi, lekin guruh kichraygan.\n\nRanglar:\n• Yashil ≥80% — yaxshi\n• Sariq 60–79% — diqqat\n• Qizil <60% — muammo",
+    "O'zgarish: o'quvchilar soni davr boshida bo'lgandan necha foizga o'zgargan.\n\n• +45% — guruh kattalashgan\n• 0% — barqaror\n• -20% — guruh kichraygan\n\nHisob: (Yakun − Boshi) / Boshi × 100.\n\nRanglar:\n• Yashil — o'sish (>0%)\n• Kulrang — barqaror (0%)\n• Qizil — yo'qotish (<0%)",
   lessonCount:
     "Tanlangan davrda bu guruh uchun davomat olingan kunlar soni.",
   groupsCount: "Bu o'qituvchi yetakchilik qilayotgan faol guruhlar soni.",
