@@ -121,11 +121,11 @@ export function EntityResultItem({
             <span className="text-muted-foreground/50">·</span>
             {item.balance != null && item.balance < 0 ? (
               <span className="text-destructive font-medium">
-                {item.balance.toLocaleString("en-US")} so&#39;m
+                {item.balance.toLocaleString("uz-UZ")} so&#39;m
               </span>
             ) : (
               <span className="text-emerald-500 font-medium">
-                Balans: {(item.balance ?? 0).toLocaleString("en-US")} so&#39;m
+                Balans: {(item.balance ?? 0).toLocaleString("uz-UZ")} so&#39;m
               </span>
             )}
           </div>

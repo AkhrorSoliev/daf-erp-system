@@ -33,7 +33,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
       <div className="text-muted-foreground">
         Soni:{" "}
         <span className="text-foreground font-semibold">
-          {slice.value.toLocaleString("en-US")}
+          {slice.value.toLocaleString("uz-UZ")}
         </span>
       </div>
       <div className="text-muted-foreground">
@@ -119,7 +119,7 @@ export function AttendanceStatusBreakdown({ data }: Props) {
                 <span className="text-muted-foreground">{s.name}</span>
               </div>
               <span className="tabular-nums font-medium">
-                {s.value.toLocaleString("en-US")}{" "}
+                {s.value.toLocaleString("uz-UZ")}{" "}
                 <span className="text-muted-foreground font-normal">
                   ({pct}%)
                 </span>

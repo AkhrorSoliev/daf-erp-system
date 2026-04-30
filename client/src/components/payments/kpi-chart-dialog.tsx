@@ -100,7 +100,7 @@ const kpiConfig: Record<
 };
 
 function fmt(n: number) {
-  return n.toLocaleString("en-US");
+  return n.toLocaleString("uz-UZ");
 }
 
 interface Props {

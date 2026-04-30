@@ -63,7 +63,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
       <div className="mt-1 pt-1 border-t flex items-center justify-between gap-3 text-muted-foreground">
         <span>Yozuvlar</span>
         <span className="text-foreground tabular-nums">
-          {point.total.toLocaleString("en-US")}
+          {point.total.toLocaleString("uz-UZ")}
         </span>
       </div>
     </div>

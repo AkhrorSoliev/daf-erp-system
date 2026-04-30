@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, ArrowLeft, Wallet } from "lucide-react";
 
 function formatBalance(balance: number) {
-  return balance.toLocaleString("en-US");
+  return balance.toLocaleString("uz-UZ");
 }
 
 export function PaymentResultPage() {

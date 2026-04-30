@@ -23,7 +23,7 @@ interface StudentProfile {
 }
 
 function formatBalance(balance: number) {
-  return balance.toLocaleString("en-US");
+  return balance.toLocaleString("uz-UZ");
 }
 
 const statusMap: Record<string, { label: string; className: string }> = {

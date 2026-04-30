@@ -169,7 +169,7 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preSelected
   const handleAmountChange = (val: string) => {
     const digits = val.replace(/\D/g, "");
     if (digits) {
-      setAmount(parseInt(digits, 10).toLocaleString("en-US"));
+      setAmount(parseInt(digits, 10).toLocaleString("uz-UZ"));
     } else {
       setAmount("");
     }
@@ -340,7 +340,7 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preSelected
                       onChange={(e) => {
                         const digits = e.target.value.replace(/\D/g, "");
                         setProviderFee(
-                          digits ? parseInt(digits, 10).toLocaleString("en-US") : "",
+                          digits ? parseInt(digits, 10).toLocaleString("uz-UZ") : "",
                         );
                       }}
                       inputMode="numeric"

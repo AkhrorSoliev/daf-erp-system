@@ -46,7 +46,7 @@ interface Props {
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString("en-US");
+  return n.toLocaleString("uz-UZ");
 }
 
 const COLSPAN = 11;

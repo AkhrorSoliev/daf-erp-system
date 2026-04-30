@@ -43,7 +43,7 @@ function formatValue(metric: string, value: number): string {
     case "potentialExtraRevenue":
       return formatBalance(value);
     default:
-      return value.toLocaleString("en-US");
+      return value.toLocaleString("uz-UZ");
   }
 }
 
@@ -52,9 +52,9 @@ function formatAxisValue(metric: string, value: number): string {
     case "utilizationPct":
       return `${value}%`;
     case "emptyHours":
-      return value.toLocaleString("en-US");
+      return value.toLocaleString("uz-UZ");
     default:
-      return value.toLocaleString("en-US");
+      return value.toLocaleString("uz-UZ");
   }
 }
 

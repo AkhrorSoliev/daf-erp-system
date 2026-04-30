@@ -159,7 +159,7 @@ export function formatAttendancePct(pct: number | null): string {
 }
 
 export function formatCount(count: number, suffix = "ta"): string {
-  return `${count.toLocaleString("en-US")} ${suffix}`;
+  return `${count.toLocaleString("uz-UZ")} ${suffix}`;
 }
 
 // Status palette — used in pie chart and table cells

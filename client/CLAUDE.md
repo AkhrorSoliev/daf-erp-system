@@ -162,15 +162,21 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **User** (teacher, admin, CEO...) and **Student** IDs are always **5-digit integers** (10000+)
 - The backend guarantees this — the frontend should expect and display 5-digit numeric IDs for users and students
 
-#### Prices and Currency
+#### Numbers, Prices and Currency
 
-- **Display format:** Use comma as thousands separator. Numbers below 1,000 have no separator. Examples:
-  - `500`, `1,000`, `1,500`, `300,000`, `450,000`, `1,500,000`, `2,000,000`
-- **Stored value:** Always store as a plain number without separators (e.g. `200000`, not `"200,000"`)
-- **Currency suffix:** **so'm** — e.g. `1,500,000 so'm`
-- **Negative balances:** prefix with `-`, e.g. `-50,000 so'm`
-- **Formatting function:** Use `price.toLocaleString("en-US")` or a regex replacer `price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")` to convert the stored number to display format
-- **Price inputs:** All price inputs must use the shared `<PriceInput>` component from `src/components/ui/price-input.tsx`. It live-formats digits with commas as the user types (e.g. typing `1500000` shows `1,500,000`), appends a `so'm` suffix addon, and stores raw digits without separators in form state. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
+- **Locale:** All number formatting uses **`uz-UZ`** — Uzbek convention is space (`U+00A0`) as thousands separator and comma as decimal separator.
+- **Display format:** Numbers below 1,000 have no separator; thousands use space. Examples:
+  - `500`, `1 000`, `1 500`, `300 000`, `450 000`, `1 500 000`, `2 000 000`
+- **Stored value:** Always store as a plain number without separators (e.g. `200000`, not `"200 000"`)
+- **Currency suffix:** **so'm** — e.g. `1 500 000 so'm`
+- **Negative balances:** prefix with `-`, e.g. `-50 000 so'm`
+- **Formatting helpers (`src/lib/format-utils.ts`):** Use these instead of inline `toLocaleString` calls — they centralise the locale and ensure visual consistency across the app:
+  - `formatNumber(value, options?)` → "1 500" / "1 500.5"
+  - `formatPercent(value, options?)` → "75.5%"
+  - `formatBalance(balance)` → "1 500 000 so'm" / "-50 000 so'm"
+  - `formatPrice(price)` → "1 500 000" (no currency)
+- **Price inputs:** All price inputs must use the shared `<PriceInput>` component from `src/components/ui/price-input.tsx`. It live-formats digits with Uzbek-style spaces as the user types (e.g. typing `1500000` shows `1 500 000`), appends a `so'm` suffix addon, and stores raw digits without separators in form state. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
+- **Why uz-UZ:** the entire UI is in Uzbek — number formatting matches the rest of the language convention. Do **not** introduce `toLocaleString("en-US")` for new code; route through the helpers above so a future locale change is one file edit, not 30.
 
 ### Tables and Pagination
 
@@ -217,7 +223,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 - **Every filter bar on a list or report page must persist its state in the URL query string.** The URL is the single source of truth; React state is derived from `useSearchParams()`, not held independently in `useState`.
 - **Why:** filters survive page refresh, are shareable via link, bookmarkable, and reflected in browser history — exactly the behavior users expect from a report.
-- **Scope:** applies to all report pages (`/reports/*`), list pages (`/students`, `/teachers`, `/groups`, `/leads`, etc.), and any future filter bar. It does **not** apply to transient UI state like open dialogs, selected rows, or active tabs.
+- **Scope:** applies to all report pages (`/reports/*`), list pages (`/students`, `/teachers`, `/groups`, `/leads`, etc.), filter bars, and active tabs on detail pages (see "URL-Persisted Tab State" below). It does **not** apply to transient UI state like open dialogs or selected rows.
 - **Implementation:**
   - Read with `useSearchParams()` from `next/navigation`. Parse values into the filter shape in a `useMemo` keyed on the `searchParams` object.
   - Write with `useRouter().replace(...)` (not `push`) so filter changes don't clutter browser history. Pass `{ scroll: false }` to prevent jump-to-top.
@@ -226,6 +232,19 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
   - **Reset `page` to `1`** when any filter changes (including pageSize).
 - **Do not** call `router.replace` in a `useEffect` that reads state — that creates a render loop. Write the URL directly from the filter-change event handler instead.
 - **Server params must match URL param names** where practical (e.g. URL `?startDate=...&endDate=...` passes through to the API as `startDate` / `endDate`). This avoids a translation layer and makes requests greppable from URLs.
+
+### URL-Persisted Tab State
+
+- **Every detail/profile page that uses tabs must persist the active tab in the URL via `?tab=<value>`.** Reload, share, and back/forward navigation must restore the same tab the user was on.
+- **Why:** users link colleagues to a specific tab (`/teachers/profile/10239?tab=ish-haqi`), and reloading the page must not drop them back to the default tab.
+- **Scope:** detail pages with internal tabs — currently `/groups/[id]`, `/students/profile/[id]`, `/teachers/profile/[id]`. Add the same pattern to any new detail page that introduces tabs.
+- **Implementation:** the parent `*-client.tsx` owns the URL ↔ tab state and passes `activeTab` + `onTabChange` to the tabs component:
+  - Read: `const activeTab = searchParams.get("tab") ?? "<default>"`.
+  - Write: `useCallback((tab) => { ... router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false }) }, [...])`.
+  - **Omit the default tab from the URL** — when tab equals the default (e.g. `"guruhlar"`), `delete` the param so the URL stays clean.
+  - The tabs component uses `<Tabs value={activeTab} onValueChange={handleTabChange}>` (NOT `defaultValue`).
+- **Lazy-load on direct URL navigation:** if any tab fetches data on first activation (history, izohlar, ish-haqi, tolovlar, etc.), wrap the fetch logic in a `useCallback` and call it from BOTH the click handler AND a `useEffect` keyed on `activeTab`. Without the effect, reloading on `?tab=ish-haqi` shows an empty tab because the click handler never fired. The `*Shown.current` ref guards keep it idempotent.
+- Reference implementation: `group-detail-client.tsx` ↔ `group-detail-tabs.tsx`.
 
 ### Sidebar Active State
 
@@ -467,6 +486,8 @@ The financial section lives under `/payments/*` with these sub-pages:
 #### Key Components
 
 - **`salary-config-dialog.tsx`** — CEO assigns salary to any employee: select employee → choose type (FIXED_MONTHLY / PERCENTAGE / FIXED_PER_STUDENT) → enter value → save. Shows existing config if present. PERCENTAGE and FIXED_PER_STUDENT only shown for teachers (role id 4).
+- **`salary-period-settings-sheet.tsx`** — CEO-only side sheet for managing the salary cycle start day (1–28). Renders only when `isCeo` — backend write is `@Roles('CEO')`.
+- **`possible-deductions-info.tsx`** — pure-static info card listing the deductions that may be applied outside the system. Takes a `variant` prop: `"teacher"` shows only "Ustoz oyligidan — 12%", `"all"` (default) shows all six items (Ustoz 12%, Markaz qo'shimchasi 12%, Markaz daromad 4%, Click/Payme/Uzum 2%). Rendered in: salary-breakdown-drawer (default `"all"` — part of the company-wide /payments/salary admin page), teacher-salary-client (lehrer portal, `"teacher"` — teacher viewing their own salary), teacher-profile-tabs (admin Ish haqi tab, `"teacher"` — view scoped to one teacher's salary). Has no state, no API calls, no calculations. Numbers are documentation, not configuration — not enforced by any code.
 - **`record-payment-dialog.tsx`** — Manual payment entry: student select, amount, method, contract (optional), receipt number
 - **`payments-overview.tsx`** — KPI cards fetching from `GET /reports/financial-overview`. Uses `staleTime: 0` to always show fresh data.
 
@@ -478,8 +499,71 @@ The financial section lives under `/payments/*` with these sub-pages:
 - **Salary role labels**: `{ 1: "Direktor", 2: "Filial direktori", 3: "Administrator", 4: "O'qituvchi", 5: "Kassir" }`
 - **Payment status labels**: `{ CALCULATED: "Hisoblangan", APPROVED: "Tasdiqlangan", PAID: "To'langan", CANCELLED: "Bekor qilingan", REVERSED: "Bekor qilingan" }`
 - **Salary actions by role**:
-  - CEO: "Oylik belgilash" + "Oylikni hisoblash" + "Tasdiqlash"
+  - CEO: "Oylik belgilash" + "Oylikni hisoblash" + "Tasdiqlash" + "Sozlamalar" dropdown (Xodim stavkalari, Hisoblash davri)
   - CEO + BD: "To'lash" + "Hammasini to'lash"
+- **Salary settings dropdown (`Sozlamalar`)**: rendered only when `isCeo`. Two items, each opens a separate side sheet:
+  1. **Xodim stavkalari** → `salary-config-dialog` (per-employee salary type + value)
+  2. **Hisoblash davri** → `salary-period-settings-sheet` (cycle start day, 1–28)
+- **No tax UI** — the system does not compute or apply taxes anywhere. Possible deductions (Ustoz 12%, Markaz qo'shimchasi 12%, Markaz daromad 4%, gateway 2%) are surfaced as a static info note via `possible-deductions-info.tsx` only. Do not re-introduce a tax config sheet or any "Soliqdan keyin" / "Brutto" / "Netto" columns in salary views.
+
+### Salary Breakdown Drawer
+
+- **`salary-breakdown-drawer.tsx`** — opens when CEO/BD/Admin clicks a row in `/payments/salary` table. Shows what the payment is composed of: every accrual that fed into it, with student, lesson date, the rate config version that supplied the rule, and per-lesson cost.
+- Layout follows the project's standard drawer skeleton: `SheetContent p-0 flex flex-col` → `SheetHeader border-b px-6 py-4` → scrollable body with sections (`px-6 py-5`) → `SheetFooter border-t px-6 py-4`.
+- Summary card at the top: Amount (large, tabular-nums), period range, lessons/students stats. Followed by the per-lesson breakdown table and a `<PossibleDeductionsInfo />` note at the bottom listing possible deductions.
+- Reversed accruals stay in the table (sorted in date order) but with `bg-amber-50/40`, opacity 60%, strikethrough amount, and a small `Bekor` badge with `RotateCcw` icon. Backend filters them out of payroll math (`reversedAt: null`) but they remain visible for audit.
+- CSV export (`Download` icon button) builds a UTF-8-with-BOM CSV (Excel-compatible) of every line.
+
+### Lehrer Portal Salary Page
+
+- **`/profile/salary`** (lehrer subdomain only) → `teacher-salary-client.tsx`. Backend uses `@CurrentUser('id')` so each teacher sees only their own data — no role check needed beyond authentication.
+- Three sections: KPI cards (Expected monthly / Actual earned / Paid total), per-group expected breakdown, current cycle accrual table, plus a `<PossibleDeductionsInfo />` note at the bottom.
+- Sidebar nav item "Mening oyligim" with `visibleForRoles: [4]` so it appears only on the lehrer portal.
+- Endpoints: `GET /salary/me/summary`, `GET /salary/me/current-cycle/breakdown`. The summary endpoint returns the same shape as the admin's per-teacher salary view (so the existing component is largely shared logic).
+
+### Lesson Cancellations Tab (Group Detail)
+
+- **Tab "Bekor qilingan"** on `/groups/[id]` → `lesson-cancellations-tab.tsx`. Visible to CEO / BD / Administrator (`canManage` gate).
+- Lists active cancellations for the group (date, reason, who cancelled, when).
+- "Bu darsni bekor qilish" button (CEO/BD/Admin) opens a dialog with `DatePicker` + reason `Textarea`. Submission triggers atomic backend cascade — if any students were marked PRESENT for that day, their attendance is flipped to EXCUSED, prepaid restored, salary accruals reversed.
+- Delete (`Trash2` icon, CEO/BD only) is **soft delete** — the confirm dialog explicitly warns: "Diqqat: bu davomat va to'lovni tiklamaydi. Agar dars haqiqatda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak."
+- Toast on success: "Bekor qilingan dars yozuvi o'chirildi" (NOT "tiklandi" — that wording was misleading and was fixed in the audit).
+- Lazy-loaded: `cancellationsVisible` / `cancellationsShown` ref pattern in `group-detail-tabs.tsx`.
+
+### Teacher Timeline Tab
+
+- **Tab "Taymlayn"** on `/teachers/profile/[id]` → `teacher-timeline-tab.tsx`. Visible to CEO / BD / Administrator.
+- Merged chronological feed of three streams from `GET /salary/timeline/:userId`: salary config version changes, group teacher history (added/removed/replaced), profile updates (EntityHistory).
+- Each event renders with a kind-specific icon (CircleDollarSign / UserPlus / UserMinus / Users / PencilLine) and color, the actor name, and a localized summary string.
+
+### Student Profile Tabs — To'lovlar vs Darslar
+
+The student profile (`/students/profile/[id]`) has two related but **non-overlapping** transaction tabs. Every `Transaction` row appears in exactly one of them — never both. This separation is the rule; do not re-introduce types into the wrong tab.
+
+#### "To'lovlar" tab (`?tab=tolovlar`)
+
+- Component: `student-payments-table.tsx`. Visible to CEO / BD / Administrator (`canManage`).
+- Question it answers: **"Where did money flow in/out of the student's balance?"**
+- Reads `GET /transactions/student/:id?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE&pageSize=20`. The `types` query param is required to scope the tab to money-flow rows; without it the endpoint would return everything.
+- Sort: DESC (newest first), paginated by 20.
+- Header: balance card, then a "Balans operatsiyalari" table.
+- Type badges live in `student-profile-tabs-utils.ts` → `TRANSACTION_TYPE_INFO` (only the four money-flow types are mapped — adding lesson types here is a smell that will cause overlap).
+
+#### "Darslar" tab (`?tab=darslar`)
+
+- Component: `lesson-trail-tab.tsx`. Visible to CEO / BD / Administrator (`canManage`).
+- Question it answers: **"Which lessons did the student consume and which prepaid batch covered them?"**
+- Reads `GET /transactions/student/:id/lesson-trail?page=1&pageSize=20`. The endpoint itself filters to `LESSON_DEDUCTION` + `LESSON_CONSUMPTION` server-side — the frontend doesn't pass a `types` param.
+- Sort: ASC (chronological story), paginated by 20 (selectable 10/20/30/40/50).
+- LESSON_DEDUCTION rows show `lessonMode` from `metadata` ("To'liq tsikl (12 dars)" / "Qisman (6 dars)") + contract number.
+- LESSON_CONSUMPTION rows show the lesson date + group/course from the joined attendance row.
+- Reversed rows (`isReversal`) get an extra "Bekor" badge and 60% opacity. The pre-pagination tab name was `?tab=dars-hisob` — that URL no longer exists; old links fall back to the default tab.
+
+### Initial Balance Dialog (Student Profile)
+
+- **`initial-balance-dialog.tsx`** — accessed via student profile `To'lov ▼` dropdown → "Boshlang'ich balans". CEO-only menu item (`isCeo` gate); backend write is `@Roles('CEO')`.
+- Used during transition from old finance systems to enter a student's outstanding balance. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
+- Form: amount (`PriceInput`, min 0) + optional note (`Input`, maxLength 500).
 
 ### Student Portal (`src/components/student-portal/`)
 

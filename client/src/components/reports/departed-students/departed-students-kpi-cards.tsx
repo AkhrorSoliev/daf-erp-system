@@ -65,7 +65,7 @@ function KpiCard({ icon: Icon, label, value, tooltip, valueColor }: KpiCardProps
 }
 
 function formatMoney(n: number): string {
-  return `${n.toLocaleString("en-US")} so'm`;
+  return `${n.toLocaleString("uz-UZ")} so'm`;
 }
 
 function formatMonths(n: number): string {
@@ -111,7 +111,7 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
       <KpiCard
         icon={UserMinus}
         label="Ketganlar soni"
-        value={data.departedCount.toLocaleString("en-US")}
+        value={data.departedCount.toLocaleString("uz-UZ")}
         tooltip={departedTooltip}
       />
       <KpiCard

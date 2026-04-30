@@ -48,7 +48,7 @@ export function StudentPaymentsTable({
             balance >= 0 ? "text-green-600" : "text-red-600"
           }`}
         >
-          {balance.toLocaleString("en-US")} so&apos;m
+          {balance.toLocaleString("uz-UZ")} so&apos;m
         </p>
       </div>
 
@@ -108,10 +108,10 @@ export function StudentPaymentsTable({
                       }`}
                     >
                       {t.amount >= 0 ? "+" : ""}
-                      {t.amount.toLocaleString("en-US")} so&apos;m
+                      {t.amount.toLocaleString("uz-UZ")} so&apos;m
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                      {t.balanceAfter.toLocaleString("en-US")} so&apos;m
+                      {t.balanceAfter.toLocaleString("uz-UZ")} so&apos;m
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}

@@ -116,5 +116,5 @@ export function computeOutcome(e: GatewayEvent): Outcome {
 
 export function formatAmount(n: number | null): string {
   if (n === null) return "—";
-  return n.toLocaleString("en-US") + " so'm";
+  return n.toLocaleString("uz-UZ") + " so'm";
 }
