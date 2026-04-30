@@ -27,8 +27,9 @@ import { cn } from "@/lib/utils";
 import {
   ATTENDANCE_TABLE_TOOLTIPS,
   formatAttendancePct,
+  formatChangePct,
   getAttendanceColor,
-  getRetentionColor,
+  getChangeColor,
   type AttendanceTeacherRow,
   type SortOrder,
   type TeacherSortBy,
@@ -171,7 +172,7 @@ export function AttendanceTeachersTable({
               </TableHead>
               <TableHead className="text-right">
                 <SortHeader
-                  label="Qoldi %"
+                  label="O'zgarish"
                   tooltip={ATTENDANCE_TABLE_TOOLTIPS.retention}
                   active={sortBy === "retention"}
                   order={sortOrder}
@@ -233,12 +234,10 @@ export function AttendanceTeachersTable({
                     <TableCell
                       className={cn(
                         "text-right tabular-nums font-semibold",
-                        getRetentionColor(t.retentionPct),
+                        getChangeColor(t.retentionPct),
                       )}
                     >
-                      {t.retentionPct === null
-                        ? "—"
-                        : formatAttendancePct(t.retentionPct)}
+                      {formatChangePct(t.retentionPct)}
                     </TableCell>
                     <TableCell
                       className={cn(

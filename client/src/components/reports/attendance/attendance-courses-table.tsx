@@ -18,8 +18,9 @@ import { cn } from "@/lib/utils";
 import {
   ATTENDANCE_TABLE_TOOLTIPS,
   formatAttendancePct,
+  formatChangePct,
   getAttendanceColor,
-  getRetentionColor,
+  getChangeColor,
   type AttendanceCourseRow,
 } from "./metric-helpers";
 
@@ -84,7 +85,7 @@ export function AttendanceCoursesTable({ courses, isLoading }: Props) {
               </TableHead>
               <TableHead className="text-right">
                 <HeaderWithTooltip
-                  label="Qoldi %"
+                  label="O'zgarish"
                   tooltip={ATTENDANCE_TABLE_TOOLTIPS.retention}
                   align="right"
                 />
@@ -151,12 +152,10 @@ export function AttendanceCoursesTable({ courses, isLoading }: Props) {
                   <TableCell
                     className={cn(
                       "text-right tabular-nums font-semibold",
-                      getRetentionColor(c.retentionPct),
+                      getChangeColor(c.retentionPct),
                     )}
                   >
-                    {c.retentionPct === null
-                      ? "—"
-                      : formatAttendancePct(c.retentionPct)}
+                    {formatChangePct(c.retentionPct)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums hidden md:table-cell">
                     {c.lessonCount}

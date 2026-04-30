@@ -24,8 +24,9 @@ import {
 import {
   ATTENDANCE_BUCKET_LABELS,
   formatAttendancePct,
+  formatChangePct,
   getAttendanceColor,
-  getRetentionColor,
+  getChangeColor,
   type AttendanceAnalyticsResponse,
   type AttendanceBucket,
   type AttendanceCoursesResponse,
@@ -218,16 +219,14 @@ function RankedGroupsList({
                 <div className="min-w-0">
                   <div className="truncate">{g.groupName || "—"}</div>
                   <div className="text-xs text-muted-foreground">
-                    Qoldi:{" "}
+                    O&apos;zgarish:{" "}
                     <span
                       className={cn(
                         "tabular-nums",
-                        getRetentionColor(g.retentionPct),
+                        getChangeColor(g.retentionPct),
                       )}
                     >
-                      {g.retentionPct === null
-                        ? "—"
-                        : `${g.retentionPct}%`}
+                      {formatChangePct(g.retentionPct)}
                     </span>
                   </div>
                 </div>
@@ -407,9 +406,12 @@ export function AttendanceSection() {
           </div>
           <p className="mb-3 text-xs text-muted-foreground">
             Har bir nuqta — bitta{" "}
-            {state.filter.bucket === "week" ? "hafta" : "oy"}. Ko&apos;k chiziq
-            — davomat foizi, qizil punktir — guruhda qolganlar foizi (davr
-            oxirida qolgan o&apos;quvchilar / boshida bo&apos;lganlar).
+            {state.filter.bucket === "week" ? "hafta" : "oy"}. Ko&apos;k
+            chiziq (chap o&apos;q) — davomat foizi. Qizil punktir (o&apos;ng
+            o&apos;q) — o&apos;quvchilar soni davr boshiga nisbatan necha
+            foizga o&apos;zgargan: <span className="font-medium">+</span>{" "}
+            o&apos;sgan,{" "}
+            <span className="font-medium">−</span> kichraygan.
           </p>
           <div className="h-[260px]">
             {analyticsLoading ? (

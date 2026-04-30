@@ -5,12 +5,16 @@ import {
   AreaChart,
   CartesianGrid,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { formatChangePct } from "./metric-helpers";
 import type { AttendanceTrendPoint } from "./metric-helpers";
+
+type ChartPoint = AttendanceTrendPoint & { changePct: number | null };
 
 interface Props {
   data: AttendanceTrendPoint[];
@@ -50,10 +54,10 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
             className="size-2 rounded-sm"
             style={{ backgroundColor: RETENTION_COLOR }}
           />
-          <span>Qoldi</span>
+          <span>O&apos;zgarish</span>
         </div>
         <span className="text-foreground font-semibold tabular-nums">
-          {point.retentionPct === null ? "—" : `${point.retentionPct}%`}
+          {formatChangePct(point.retentionPct)}
         </span>
       </div>
       <div className="mt-1 pt-1 border-t flex items-center justify-between gap-3 text-muted-foreground">
@@ -84,6 +88,14 @@ export function AttendanceTrendChart({ data }: Props) {
   // replacing the chart entirely.
   const isSinglePoint = data.length === 1;
 
+  // Augment each point with a 0-baseline change %, so the red line shows
+  // "+45% / -20%" instead of "145% / 80%". Right-side Y axis auto-scales
+  // around 0 with a reference line at 0 to anchor the eye.
+  const chartData: ChartPoint[] = data.map((d) => ({
+    ...d,
+    changePct: d.retentionPct === null ? null : d.retentionPct - 100,
+  }));
+
   return (
     <div className="flex h-full flex-col">
       {isSinglePoint && (
@@ -95,84 +107,107 @@ export function AttendanceTrendChart({ data }: Props) {
       )}
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={data}
-          margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+          data={chartData}
+          margin={{ top: 8, right: 56, left: 0, bottom: 0 }}
         >
-        <defs>
-          <linearGradient id="grad-attendance-rate" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={ATT_COLOR} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={ATT_COLOR} stopOpacity={0.02} />
-          </linearGradient>
-          <linearGradient id="grad-retention-rate" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={RETENTION_COLOR} stopOpacity={0.25} />
-            <stop offset="100%" stopColor={RETENTION_COLOR} stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="#e2e8f0"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="label"
-          tick={{ fontSize: 11, fill: "#64748b" }}
-          tickLine={false}
-          axisLine={{ stroke: "#e2e8f0" }}
-          interval={0}
-          angle={data.length > 8 ? -35 : 0}
-          textAnchor={data.length > 8 ? "end" : "middle"}
-          height={data.length > 8 ? 60 : 30}
-        />
-        <YAxis
-          tick={{ fontSize: 11, fill: "#64748b" }}
-          tickLine={false}
-          axisLine={{ stroke: "#e2e8f0" }}
-          width={48}
-          domain={[0, 100]}
-          tickFormatter={(v) => `${v}%`}
-        />
-        <Tooltip
-          content={<CustomTooltip />}
-          cursor={{ fill: "rgba(100, 116, 139, 0.12)" }}
-        />
-        <Legend
-          verticalAlign="top"
-          height={28}
-          iconType="square"
-          wrapperStyle={{ fontSize: 11, paddingBottom: 4 }}
-        />
-        <Area
-          type="monotone"
-          name="Davomat"
-          dataKey="rate"
-          stroke={ATT_COLOR}
-          strokeWidth={2.5}
-          fill="url(#grad-attendance-rate)"
-          dot={{
-            r: isSinglePoint ? 6 : 3,
-            fill: ATT_COLOR,
-            stroke: ATT_COLOR,
-            strokeWidth: 0,
-          }}
-          activeDot={{ r: 6, stroke: "white", strokeWidth: 2 }}
-        />
-        <Area
-          type="monotone"
-          name="Qoldi"
-          dataKey="retentionPct"
-          stroke={RETENTION_COLOR}
-          strokeWidth={2}
-          strokeDasharray="4 3"
-          fill="url(#grad-retention-rate)"
-          dot={{
-            r: isSinglePoint ? 5 : 2.5,
-            fill: RETENTION_COLOR,
-            stroke: RETENTION_COLOR,
-            strokeWidth: 0,
-          }}
-          activeDot={{ r: 5, stroke: "white", strokeWidth: 2 }}
-          connectNulls={false}
-        />
+          <defs>
+            <linearGradient id="grad-attendance-rate" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={ATT_COLOR} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={ATT_COLOR} stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="grad-retention-rate" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={RETENTION_COLOR} stopOpacity={0.25} />
+              <stop offset="100%" stopColor={RETENTION_COLOR} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="#e2e8f0"
+            vertical={false}
+          />
+          <XAxis
+            dataKey="label"
+            tick={{ fontSize: 11, fill: "#64748b" }}
+            tickLine={false}
+            axisLine={{ stroke: "#e2e8f0" }}
+            interval={0}
+            angle={data.length > 8 ? -35 : 0}
+            textAnchor={data.length > 8 ? "end" : "middle"}
+            height={data.length > 8 ? 60 : 30}
+          />
+          <YAxis
+            yAxisId="rate"
+            tick={{ fontSize: 11, fill: "#64748b" }}
+            tickLine={false}
+            axisLine={{ stroke: "#e2e8f0" }}
+            width={48}
+            domain={[0, 100]}
+            tickFormatter={(v) => `${v}%`}
+          />
+          <YAxis
+            yAxisId="change"
+            orientation="right"
+            tick={{ fontSize: 11, fill: RETENTION_COLOR }}
+            tickLine={false}
+            axisLine={{ stroke: "#e2e8f0" }}
+            width={48}
+            tickFormatter={(v) => {
+              const n = v as number;
+              if (n === 0) return "0%";
+              return n > 0 ? `+${n}%` : `${n}%`;
+            }}
+          />
+          <ReferenceLine
+            yAxisId="change"
+            y={0}
+            stroke={RETENTION_COLOR}
+            strokeOpacity={0.35}
+            strokeDasharray="2 4"
+          />
+          <Tooltip
+            content={<CustomTooltip />}
+            cursor={{ fill: "rgba(100, 116, 139, 0.12)" }}
+          />
+          <Legend
+            verticalAlign="top"
+            height={28}
+            iconType="square"
+            wrapperStyle={{ fontSize: 11, paddingBottom: 4 }}
+          />
+          <Area
+            yAxisId="rate"
+            type="monotone"
+            name="Davomat"
+            dataKey="rate"
+            stroke={ATT_COLOR}
+            strokeWidth={2.5}
+            fill="url(#grad-attendance-rate)"
+            dot={{
+              r: isSinglePoint ? 6 : 3,
+              fill: ATT_COLOR,
+              stroke: ATT_COLOR,
+              strokeWidth: 0,
+            }}
+            activeDot={{ r: 6, stroke: "white", strokeWidth: 2 }}
+          />
+          <Area
+            yAxisId="change"
+            type="monotone"
+            name="O'zgarish"
+            dataKey="changePct"
+            stroke={RETENTION_COLOR}
+            strokeWidth={2}
+            strokeDasharray="4 3"
+            fill="url(#grad-retention-rate)"
+            dot={{
+              r: isSinglePoint ? 5 : 2.5,
+              fill: RETENTION_COLOR,
+              stroke: RETENTION_COLOR,
+              strokeWidth: 0,
+            }}
+            activeDot={{ r: 5, stroke: "white", strokeWidth: 2 }}
+            connectNulls={false}
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>
