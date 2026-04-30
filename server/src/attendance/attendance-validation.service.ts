@@ -99,19 +99,6 @@ export class AttendanceValidationService {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
     }
 
-    // Per-group lesson cancellation (Faza 4) — distinct from Holiday
-    // (company-wide). The cancellation is keyed by (groupId, date) and
-    // only blocks attendance for that specific group on that day.
-    const cancellation = await this.prisma.lessonCancellation.findFirst({
-      where: { groupId, date: parsedDate, deletedAt: null },
-      select: { id: true, reason: true },
-    });
-    if (cancellation) {
-      throw new BadRequestException(
-        `Bu kungi dars bekor qilingan: ${cancellation.reason}`,
-      );
-    }
-
     // Lesson time check (server time, only for Teacher/Cashier)
     const canBypassTime = roles?.some((r) =>
       AttendanceValidationService.TIME_BYPASS_ROLES.has(r),
