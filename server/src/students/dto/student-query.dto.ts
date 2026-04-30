@@ -24,4 +24,8 @@ export class StudentQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   group_id?: string;
+
+  @IsOptional()
+  @IsString()
+  level?: string;
 }

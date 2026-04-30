@@ -54,6 +54,12 @@ export class StudentsReadService {
       enrollmentConditions.push({ groupId: query.group_id });
     }
 
+    if (query.level) {
+      enrollmentConditions.push({
+        group: { deletedAt: null, level: query.level },
+      });
+    }
+
     if (enrollmentConditions.length > 1) {
       baseWhere.enrollments = { some: { AND: enrollmentConditions } };
     }

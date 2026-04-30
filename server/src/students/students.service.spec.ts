@@ -342,6 +342,37 @@ describe('StudentsService — status methods', () => {
     });
   });
 
+  describe('findAll filters', () => {
+    it('filters by level via enrollments.some.AND with group.level', async () => {
+      await service.findAll(
+        { page: 1, pageSize: 10, level: 'B1' } as any,
+        1001,
+      );
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            enrollments: {
+              some: {
+                AND: expect.arrayContaining([
+                  { deletedAt: null },
+                  { group: { deletedAt: null, level: 'B1' } },
+                ]),
+              },
+            },
+          }),
+        }),
+      );
+    });
+
+    it('does not attach enrollments filter when level is absent', async () => {
+      await service.findAll({ page: 1, pageSize: 10 } as any, 1001);
+
+      const findManyCall = prisma.student.findMany.mock.calls[0][0];
+      expect(findManyCall.where.enrollments).toBeUndefined();
+    });
+  });
+
   describe('createStudentUser', () => {
     it('creates a User with Student role and links to student', async () => {
       const result = await service.createStudentUser(
