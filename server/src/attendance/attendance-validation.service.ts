@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupStatus, HolidayStatus } from '@prisma/client';
-import { DAY_NAME_TO_JS } from './shared/date-utils';
+import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
 
 @Injectable()
 export class AttendanceValidationService {
@@ -65,12 +65,16 @@ export class AttendanceValidationService {
       );
     }
 
-    if (group.startDate && parsedDate < group.startDate) {
+    // Compare as Tashkent calendar date strings: group.startDate/endDate are
+    // stored as Tashkent midnight in UTC (toISOString() of a Tashkent-browser
+    // Date). On a UTC server, naive Date comparison cuts off the last day
+    // because parsedDate (UTC midnight) > group.endDate (prior 19:00 UTC).
+    if (group.startDate && date < tashkentDateStr(group.startDate)) {
       throw new BadRequestException(
         'Bu sana guruh faoliyat muddatiga kirmaydi',
       );
     }
-    if (group.endDate && parsedDate > group.endDate) {
+    if (group.endDate && date > tashkentDateStr(group.endDate)) {
       throw new BadRequestException(
         'Bu sana guruh faoliyat muddatiga kirmaydi',
       );
@@ -93,6 +97,19 @@ export class AttendanceValidationService {
     });
     if (holiday) {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
+    }
+
+    // Per-group lesson cancellation (Faza 4) — distinct from Holiday
+    // (company-wide). The cancellation is keyed by (groupId, date) and
+    // only blocks attendance for that specific group on that day.
+    const cancellation = await this.prisma.lessonCancellation.findFirst({
+      where: { groupId, date: parsedDate, deletedAt: null },
+      select: { id: true, reason: true },
+    });
+    if (cancellation) {
+      throw new BadRequestException(
+        `Bu kungi dars bekor qilingan: ${cancellation.reason}`,
+      );
     }
 
     // Lesson time check (server time, only for Teacher/Cashier)
