@@ -84,7 +84,7 @@ export function AttendanceCoursesTable({ courses, isLoading }: Props) {
               </TableHead>
               <TableHead className="text-right">
                 <HeaderWithTooltip
-                  label="Saqlanish %"
+                  label="Qoldi %"
                   tooltip={ATTENDANCE_TABLE_TOOLTIPS.retention}
                   align="right"
                 />

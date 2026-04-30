@@ -165,7 +165,7 @@ export const ATTENDANCE_KPI_TOOLTIPS = {
   lateExcused:
     "KECHIKDI va SABABLI yozuvlarning yig'indisi.\n\nKechikdi — keldi, lekin kech.\nSababli — kelmadi, lekin sababi bor (kasal, dars bekor qilingan, va h.k.).",
   retention:
-    "Saqlanish darajasi — davr boshida faol bo'lgan o'quvchilarning necha foizi davr oxirigacha guruhda qolgan.\n\nHisob: davr oxiridagi faol o'quvchilar / davr boshidagi faol o'quvchilar × 100.\n\nMuhim: davomat % yuqori bo'lib, saqlanish % past bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nFaol = ACTIVE yoki FROZEN status. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
+    "Guruhda qolganlar — davr boshida o'qiyotgan o'quvchilarning necha foizi davr oxiriga qadar guruhda qolgan.\n\nHisob: davr oxirida qolganlar / davr boshida bo'lganlar × 100.\n\nMuhim: davomat % yuqori bo'lib, qolganlar % past bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = ACTIVE yoki FROZEN. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
 };
 
 export const ATTENDANCE_TABLE_TOOLTIPS = {
@@ -177,7 +177,7 @@ export const ATTENDANCE_TABLE_TOOLTIPS = {
   endStudentCount:
     "Tanlangan davr oxirida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
   retention:
-    "Saqlanish %: davr oxirida qolgan o'quvchilar / davr boshida bo'lgan o'quvchilar × 100.\n\nDavomat % yuqori bo'lib, saqlanish past bo'lsa — qolgan o'quvchilar yaxshi keladi, lekin guruh kichraygan.\n\nRanglar:\n• Yashil ≥80% — yaxshi\n• Sariq 60–79% — diqqat\n• Qizil <60% — muammo",
+    "Qoldi %: davr oxirida guruhda qolgan o'quvchilar / davr boshida bo'lganlar × 100.\n\nDavomat % yuqori bo'lib, qoldi past bo'lsa — qolganlar yaxshi keladi, lekin guruh kichraygan.\n\nRanglar:\n• Yashil ≥80% — yaxshi\n• Sariq 60–79% — diqqat\n• Qizil <60% — muammo",
   lessonCount:
     "Tanlangan davrda bu guruh uchun davomat olingan kunlar soni.",
   groupsCount: "Bu o'qituvchi yetakchilik qilayotgan faol guruhlar soni.",

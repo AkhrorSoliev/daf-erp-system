@@ -50,7 +50,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
             className="size-2 rounded-sm"
             style={{ backgroundColor: RETENTION_COLOR }}
           />
-          <span>Saqlanish</span>
+          <span>Qoldi</span>
         </div>
         <span className="text-foreground font-semibold tabular-nums">
           {point.retentionPct === null ? "—" : `${point.retentionPct}%`}
@@ -158,7 +158,7 @@ export function AttendanceTrendChart({ data }: Props) {
         />
         <Area
           type="monotone"
-          name="Saqlanish"
+          name="Qoldi"
           dataKey="retentionPct"
           stroke={RETENTION_COLOR}
           strokeWidth={2}
