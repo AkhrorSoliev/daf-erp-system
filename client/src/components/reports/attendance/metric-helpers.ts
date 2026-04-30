@@ -179,14 +179,16 @@ export const STATUS_LABELS = {
 
 export const ATTENDANCE_KPI_TOOLTIPS = {
   overall:
-    "Tanlangan davrdagi umumiy davomat foizi.\n\nHisob: (KELDI + KECHIKDI) / Jami yozuvlar × 100.\n\nRanglar:\n• Yashil — 80% va undan yuqori\n• Sariq — 60–79%\n• Qizil — 60% dan past",
+    "Tanlangan davrdagi umumiy davomat foizi.\n\nHisob: (KELDI + KECHIKDI) / (Jami yozuvlar − SABABLI) × 100.\n\nSABABLI yozuvlar (dars bekor qilindi yoki o'quvchi sababli kelmadi) hisobdan chiqariladi — bu kunlar guruh foizini pasaytirmaydi.\n\nRanglar:\n• Yashil — 80% va undan yuqori\n• Sariq — 60–79%\n• Qizil — 60% dan past",
   totalLessons:
     "Tanlangan davrda olingan davomat yozuvlari soni (har o'quvchi-dars uchun bitta yozuv).",
   present: "KELDI deb belgilangan davomat yozuvlari soni.",
+  late:
+    "KECHIKDI deb belgilangan yozuvlar — o'quvchi darsga keldi, lekin kech keldi. Davomat foiziga \"keldi\" sifatida hisoblanadi.",
   absent:
     "KELMADI (sababsiz) deb belgilangan davomat yozuvlari soni. Yuqori son — muammoli signal.",
-  lateExcused:
-    "KECHIKDI va SABABLI yozuvlarning yig'indisi.\n\nKechikdi — keldi, lekin kech.\nSababli — kelmadi, lekin sababi bor (kasal, dars bekor qilingan, va h.k.).",
+  excused:
+    "SABABLI yozuvlar — dars bekor qilindi yoki o'quvchi sababli kelmadi (kasal, hujjat bilan).\n\nDavomat foizi formulasidan chiqariladi: bu kunlar guruh ko'rsatkichini pasaytirmaydi.",
   retention:
     "O'quvchilar soni davr boshida bo'lganga nisbatan necha foizga o'zgargan.\n\n• +45% — guruh 45% kattalashgan (yangi o'quvchilar qo'shilgan)\n• 0% — barqaror (kim ketgan, kim qo'shilgan teng)\n• -20% — guruh 20% ga kichraygan (yo'qotish bor)\n\nHisob: (davr oxiri − davr boshi) / davr boshi × 100.\n\nMuhim: davomat % yuqori bo'lib, o'zgarish manfiy bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = ACTIVE yoki FROZEN. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
 };

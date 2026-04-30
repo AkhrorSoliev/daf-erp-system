@@ -13,6 +13,7 @@ import {
   resolveAttendanceRange,
   type AttendanceFilter,
 } from "./attendance-filter-bar";
+import { AttendanceDiagnostics } from "./attendance-diagnostics";
 import { AttendanceKpiCards } from "./attendance-kpi-cards";
 import { AttendanceTrendChart } from "./attendance-trend-chart";
 import { AttendanceDayOfWeekChart } from "./attendance-day-of-week-chart";
@@ -392,6 +393,11 @@ export function AttendanceSection() {
         overallRate={analytics?.overallRate ?? null}
         overallRetention={analytics?.overallRetention ?? null}
         statusBreakdown={analytics?.statusBreakdown}
+        isLoading={analyticsLoading}
+      />
+
+      <AttendanceDiagnostics
+        analytics={analytics}
         isLoading={analyticsLoading}
       />
 
