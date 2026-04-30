@@ -70,7 +70,7 @@ describe('ReportsService', () => {
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
     };
     prisma.enrollment.groupBy = jest.fn();
-    prisma.enrollment.findMany = jest.fn();
+    prisma.enrollment.findMany = jest.fn().mockResolvedValue([]);
 
     redis = {
       get: jest.fn().mockResolvedValue(null),
@@ -217,6 +217,15 @@ describe('ReportsService', () => {
         { groupId: 'g1', status: 'PRESENT', _count: { id: 40 } },
         { groupId: 'g1', status: 'ABSENT', _count: { id: 10 } },
       ]);
+
+      prisma.enrollment.findMany.mockResolvedValue(
+        Array.from({ length: 15 }, () => ({
+          groupId: 'g1',
+          createdAt: new Date('2024-01-01'),
+          status: 'ACTIVE',
+          statusChangedAt: null,
+        })),
+      );
 
       const result = await service.getTeacherPerformance(1, {});
 

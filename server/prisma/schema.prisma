@@ -335,7 +335,6 @@ model User {
   cancelledLessons             LessonCancellation[]          @relation("LessonCancelledBy")
   deletedLessonCancellations   LessonCancellation[]          @relation("LessonCancellationDeletedBy")
   reversedSalaryAccruals       SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
-  reversedTransactions         Transaction[]                 @relation("TransactionReversedBy")
 
   @@index([deletedAt])
   @@index([status])
