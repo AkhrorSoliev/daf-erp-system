@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import {
@@ -66,43 +65,45 @@ const METRIC_CONFIG: Record<
   },
 };
 
-function toIso(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
   metric: MetricKey | null;
   branchId: number | null;
+  // Page's current filter context — keeps the modal in sync with the
+  // KPI cards above it instead of silently switching to "last 12 months".
+  startDate: string;
+  endDate: string;
+  bucket: "daily" | "weekly" | "monthly";
+  rangeLabel: string;
 }
 
-export function MetricTrendDialog({ open, onClose, metric, branchId }: Props) {
-  const range = useMemo(() => {
-    const now = new Date();
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-    return { startDate: toIso(start), endDate: toIso(end) };
-  }, []);
-
+export function MetricTrendDialog({
+  open,
+  onClose,
+  metric,
+  branchId,
+  startDate,
+  endDate,
+  bucket,
+  rangeLabel,
+}: Props) {
   const { data, isLoading } = useQuery<CenterActivityResponse>({
     queryKey: [
-      "center-activity-12m",
+      "center-activity-trend",
       branchId,
-      range.startDate,
-      range.endDate,
+      startDate,
+      endDate,
+      bucket,
     ],
     queryFn: () =>
       api
         .get("/reports/center-activity", {
           params: {
             branchId: branchId ?? undefined,
-            startDate: range.startDate,
-            endDate: range.endDate,
-            bucket: "monthly",
+            startDate,
+            endDate,
+            bucket,
           },
         })
         .then((r) => r.data),
@@ -112,6 +113,8 @@ export function MetricTrendDialog({ open, onClose, metric, branchId }: Props) {
 
   if (!metric) return null;
   const config = METRIC_CONFIG[metric];
+  const bucketLabel =
+    bucket === "daily" ? "kunlik" : bucket === "weekly" ? "haftalik" : "oylik";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -119,7 +122,7 @@ export function MetricTrendDialog({ open, onClose, metric, branchId }: Props) {
         <DialogHeader>
           <DialogTitle>{config.title}</DialogTitle>
           <DialogDescription>
-            So&apos;nggi 12 oy bo&apos;yicha o&apos;zgarish dinamikasi
+            {rangeLabel} — {bucketLabel} kesimda o&apos;zgarish dinamikasi
           </DialogDescription>
         </DialogHeader>
 
