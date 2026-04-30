@@ -39,6 +39,7 @@ const filtersSchema = {
   status: { type: "string" as const, defaultValue: "all" },
   teacherId: { type: "string" as const, defaultValue: "all" },
   groupId: { type: "string" as const, defaultValue: "all" },
+  level: { type: "string" as const, defaultValue: "all" },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
@@ -84,6 +85,7 @@ export function StudentsClient() {
       if (filters.status && filters.status !== "all") params.status = filters.status;
       if (filters.teacherId && filters.teacherId !== "all") params.teacher_id = filters.teacherId;
       if (filters.groupId && filters.groupId !== "all") params.group_id = filters.groupId;
+      if (filters.level && filters.level !== "all") params.level = filters.level;
       if (selectedBranch?.id) params.branch_id = selectedBranch.id;
       const { data } = await api.get("/students", { params });
       setStudents(data.data);
@@ -94,7 +96,7 @@ export function StudentsClient() {
     } finally {
       setLoading(false);
     }
-  }, [filters.page, filters.pageSize, filters.search, filters.status, filters.teacherId, filters.groupId, selectedBranch?.id]);
+  }, [filters.page, filters.pageSize, filters.search, filters.status, filters.teacherId, filters.groupId, filters.level, selectedBranch?.id]);
 
   useEffect(() => {
     fetchStudents();
@@ -120,8 +122,19 @@ export function StudentsClient() {
       setSearchInput(newFilters.fullName);
       debouncedSetSearch(newFilters.fullName);
     }
-    if (newFilters.status !== filters.status || newFilters.teacherId !== filters.teacherId || newFilters.groupId !== filters.groupId) {
-      setUrlFilters({ status: newFilters.status, teacherId: newFilters.teacherId, groupId: newFilters.groupId, page: 1 });
+    if (
+      newFilters.status !== filters.status ||
+      newFilters.teacherId !== filters.teacherId ||
+      newFilters.groupId !== filters.groupId ||
+      newFilters.level !== filters.level
+    ) {
+      setUrlFilters({
+        status: newFilters.status,
+        teacherId: newFilters.teacherId,
+        groupId: newFilters.groupId,
+        level: newFilters.level,
+        page: 1,
+      });
     }
   };
 
@@ -205,7 +218,7 @@ export function StudentsClient() {
         isTeacher={isTeacher}
       />
       <StudentsFilters
-        filters={{ fullName: searchInput, status: filters.status, teacherId: filters.teacherId, groupId: filters.groupId }}
+        filters={{ fullName: searchInput, status: filters.status, teacherId: filters.teacherId, groupId: filters.groupId, level: filters.level }}
         onFilterChange={handleFilterChange}
         onClear={() => { setSearchInput(""); resetFilters(); }}
         isTeacher={isTeacher}
@@ -221,6 +234,7 @@ export function StudentsClient() {
               <Skeleton className="h-4 w-28" />
               <Skeleton className="hidden h-4 w-28 sm:block" />
               <Skeleton className="hidden h-4 w-16 md:block" />
+              <Skeleton className="hidden h-4 w-16 md:block" />
               <Skeleton className="ml-auto h-4 w-20" />
               <Skeleton className="hidden h-4 w-14 sm:block" />
               <Skeleton className="h-4 w-8" />
@@ -232,6 +246,7 @@ export function StudentsClient() {
                 <Skeleton className="size-8 rounded-full" />
                 <Skeleton className="h-4 w-28" />
                 <Skeleton className="hidden h-4 w-28 sm:block" />
+                <Skeleton className="hidden h-4 w-16 md:block" />
                 <Skeleton className="hidden h-4 w-16 md:block" />
                 <Skeleton className="ml-auto h-4 w-20" />
                 <Skeleton className="hidden h-4 w-14 sm:block" />

@@ -44,6 +44,7 @@ export const studentSelect = {
         select: {
           id: true,
           name: true,
+          level: true,
           status: true,
           days: true,
           exactDays: true,
@@ -90,6 +91,7 @@ export function formatStudent(student: any) {
       id: e.group.id,
       enrollmentId: e.id,
       name: e.group.name,
+      level: e.group.level ?? null,
       status: e.group.status,
       course_name: e.group.course?.name ?? null,
       days: e.group.days,

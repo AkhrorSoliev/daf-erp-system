@@ -88,15 +88,22 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-1">
                   {student.groups.length > 0 ? (
-                    student.groups.map((g) =>
-                      g.level ? (
-                        <LevelBadge key={g.id} level={g.level} />
-                      ) : (
+                    <>
+                      {Array.from(
+                        new Set(
+                          student.groups
+                            .map((g) => g.level)
+                            .filter((l): l is string => !!l),
+                        ),
+                      ).map((lvl) => (
+                        <LevelBadge key={lvl} level={lvl} />
+                      ))}
+                      {student.groups.map((g) => (
                         <Badge key={g.id} variant="secondary" className="text-xs">
                           {g.name}
                         </Badge>
-                      ),
-                    )
+                      ))}
+                    </>
                   ) : (
                     <span className="text-muted-foreground text-xs">Guruhsiz</span>
                   )}
@@ -138,6 +145,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                 Telefon
               </TableHead>
               <TableHead className="hidden md:table-cell">Guruh</TableHead>
+              <TableHead className="hidden md:table-cell">Daraja</TableHead>
               <TableHead className="min-w-28 text-right">Balans</TableHead>
               <TableHead>Holat</TableHead>
               {!isTeacher && <TableHead className="w-10" />}
@@ -176,21 +184,37 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                   </a>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {student.groups.length > 0 ? (
-                      student.groups.map((g) =>
-                        g.level ? (
-                          <LevelBadge key={g.id} level={g.level} />
-                        ) : (
-                          <Badge key={g.id} variant="secondary">
-                            {g.name}
-                          </Badge>
-                        ),
-                      )
+                      student.groups.map((g) => (
+                        <Badge key={g.id} variant="secondary">
+                          {g.name}
+                        </Badge>
+                      ))
                     ) : (
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
                   </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {(() => {
+                    const uniqueLevels = Array.from(
+                      new Set(
+                        student.groups
+                          .map((g) => g.level)
+                          .filter((l): l is string => !!l),
+                      ),
+                    );
+                    return uniqueLevels.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {uniqueLevels.map((lvl) => (
+                          <LevelBadge key={lvl} level={lvl} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell
                   className={cn(

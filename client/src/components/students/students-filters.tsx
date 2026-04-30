@@ -31,6 +31,7 @@ export interface StudentFilters {
   status: string;
   teacherId: string;
   groupId: string;
+  level: string;
 }
 
 const defaultFilters: StudentFilters = {
@@ -38,7 +39,10 @@ const defaultFilters: StudentFilters = {
   status: "all",
   teacherId: "all",
   groupId: "all",
+  level: "all",
 };
+
+const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 
 interface Teacher {
   id: number;
@@ -113,6 +117,7 @@ export function StudentsFilters({
   const hasActiveFilters =
     filters.fullName !== "" ||
     filters.groupId !== "all" ||
+    filters.level !== "all" ||
     (!isTeacher && (filters.status !== "all" || filters.teacherId !== "all"));
 
   const updateFilter = (key: keyof StudentFilters, value: string) => {
@@ -166,6 +171,23 @@ export function StudentsFilters({
           </SelectContent>
         </Select>
       )}
+
+      <Select
+        value={filters.level}
+        onValueChange={(value) => updateFilter("level", value)}
+      >
+        <SelectTrigger className="w-full sm:w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Barcha darajalar</SelectItem>
+          {LEVELS.map((lvl) => (
+            <SelectItem key={lvl} value={lvl}>
+              {lvl}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {!isTeacher && (
         <Popover
