@@ -298,6 +298,15 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 - **Skip conditions (cron tick):** group must be `ACTIVE`, not soft-deleted, within `startDate`–`endDate`, today must be in `exactDays`, and the date must not be a `Holiday` (company-scoped or global)
 - **Recipient filter (status, isActive, deletedAt):** every notification query that loads `User` recipients (teachers via `Group.teachers`, branch admins via `prisma.user.findMany`, attendance-completed listener, etc.) **must** filter by `deletedAt: null` AND `isActive: true` AND `status: UserStatus.ACTIVE`. Missing any of these three conditions means deactivated, suspended, terminated, or archived users keep receiving notifications — a real bug we have already hit. Defense-in-depth requires all three, even though `UsersService.updateUser()` keeps `isActive` and `status` in sync
 
+#### Per-Student Attendance Telegram Notifications
+
+- `StudentAttendanceNotificationListener` (`src/attendance/student-attendance-notification.listener.ts`) sends a personal Telegram message to the **student themselves** whenever their attendance status changes to `PRESENT`, `LATE`, or `ABSENT`
+- `EXCUSED` is intentionally skipped (no notification when an absence is officially excused)
+- **Trigger:** `attendance.student.recorded` event emitted per-entry from both manual `AttendanceSaveService.save()` (post-tx, only for entries where `oldStatus !== newStatus` so idempotent re-saves don't spam) and `QrAttendanceScanService.scanQr()` (per scan, after the early-return for already-PRESENT)
+- **Delivery:** Telegram only — uses `Student.telegramChatId` (populated when the student registers via the Telegram bot deep-link). Silently skips students without a chat ID. Telegram API failures are logged at `warn` and never break the attendance save
+- **Re-emit on edit:** when an admin later corrects a status (e.g. `ABSENT → PRESENT`), a new message goes out — confirmed business behaviour, not a bug
+- Messages are short Uzbek HTML directed at the student in second person ("Darsga keldingiz" / "Darsga kech keldingiz" / "Darsga kelmadingiz") with group name, date (`dd.MM.yyyy`), and `lessonStartTime` when available
+
 ### Financial System
 
 The financial system is built on an **append-only ledger** principle — financial rows are never destructively edited. Corrections are written as reversal entries linked via `reversedTransactionId`.

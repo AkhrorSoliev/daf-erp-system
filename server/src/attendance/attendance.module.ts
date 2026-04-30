@@ -10,6 +10,7 @@ import { QrAttendanceScanService } from './qr-attendance-scan.service';
 import { AttendanceController } from './attendance.controller';
 import { AttendanceReminderService } from './attendance-reminder.service';
 import { AttendanceEventsListener } from './attendance-events.listener';
+import { StudentAttendanceNotificationListener } from './student-attendance-notification.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { TransactionsModule } from '../transactions/transactions.module';
@@ -34,6 +35,7 @@ import { SalaryModule } from '../salary/salary.module';
     QrAttendanceScanService,
     AttendanceReminderService,
     AttendanceEventsListener,
+    StudentAttendanceNotificationListener,
   ],
   exports: [AttendanceService, QrAttendanceService],
 })

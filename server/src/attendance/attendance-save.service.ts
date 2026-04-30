@@ -208,7 +208,11 @@ export class AttendanceSaveService {
     // Fire `attendance.completed` only on the first save of the day. The
     // listener sends a stats summary to the group's teachers across the 4
     // notification channels and relies on this single-shot semantics.
-    if (!isUpdate && dto.entries.length > 0) {
+    // Per-student `attendance.student.recorded` events fire on every save
+    // for entries whose status actually changed — so an admin editing a
+    // single student's status later still triggers the personal Telegram
+    // ping to that student.
+    if (dto.entries.length > 0) {
       try {
         const groupInfo = await this.prisma.group.findUnique({
           where: { id: groupId },
@@ -218,23 +222,43 @@ export class AttendanceSaveService {
           },
         });
         if (groupInfo) {
-          this.eventEmitter.emit('attendance.completed', {
-            groupId,
-            groupName: groupInfo.name,
-            date,
-            teacherIds: groupInfo.teachers.map((t) => t.teacherId),
-            companyId: effectiveCompanyId,
-            stats: {
-              present: dto.entries.filter((e) => e.status === 'PRESENT').length,
-              absent: dto.entries.filter((e) => e.status === 'ABSENT').length,
-              late: dto.entries.filter((e) => e.status === 'LATE').length,
-              excused: dto.entries.filter((e) => e.status === 'EXCUSED').length,
-            },
-          });
+          if (!isUpdate) {
+            this.eventEmitter.emit('attendance.completed', {
+              groupId,
+              groupName: groupInfo.name,
+              date,
+              teacherIds: groupInfo.teachers.map((t) => t.teacherId),
+              companyId: effectiveCompanyId,
+              stats: {
+                present: dto.entries.filter((e) => e.status === 'PRESENT')
+                  .length,
+                absent: dto.entries.filter((e) => e.status === 'ABSENT')
+                  .length,
+                late: dto.entries.filter((e) => e.status === 'LATE').length,
+                excused: dto.entries.filter((e) => e.status === 'EXCUSED')
+                  .length,
+              },
+            });
+          }
+
+          for (const entry of dto.entries) {
+            const oldStatus =
+              results.existingMap.get(entry.studentId)?.status ?? null;
+            if (oldStatus === entry.status) continue;
+            this.eventEmitter.emit('attendance.student.recorded', {
+              studentId: entry.studentId,
+              groupId,
+              groupName: groupInfo.name,
+              date,
+              oldStatus,
+              newStatus: entry.status,
+              companyId: effectiveCompanyId,
+            });
+          }
         }
       } catch (err) {
         this.logger.warn(
-          `Failed to emit attendance.completed for group ${groupId}: ${err instanceof Error ? err.message : err}`,
+          `Failed to emit attendance events for group ${groupId}: ${err instanceof Error ? err.message : err}`,
         );
       }
     }

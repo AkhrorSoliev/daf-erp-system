@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AttendanceMethod,
   AttendanceStatus,
@@ -23,6 +24,7 @@ export class QrAttendanceScanService {
     private entityHistoryService: EntityHistoryService,
     private transactionsService: TransactionsService,
     private salaryService: SalaryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async scanQr(
@@ -170,6 +172,19 @@ export class QrAttendanceScanService {
         photo: studentData?.photo,
       },
       scannedAt: new Date().toISOString(),
+    });
+
+    // Per-student Telegram ping. The early-return above guarantees the
+    // student was not already PRESENT, so this is always a real status
+    // change (null/ABSENT/LATE/EXCUSED → PRESENT).
+    this.eventEmitter.emit('attendance.student.recorded', {
+      studentId,
+      groupId,
+      groupName: group?.name ?? '',
+      date,
+      oldStatus: existing?.status ?? null,
+      newStatus: AttendanceStatus.PRESENT,
+      companyId,
     });
 
     return {
