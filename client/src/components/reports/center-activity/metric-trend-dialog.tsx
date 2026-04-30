@@ -113,8 +113,17 @@ export function MetricTrendDialog({
 
   if (!metric) return null;
   const config = METRIC_CONFIG[metric];
+  // Backend may auto-promote daily → weekly/monthly when the period is too
+  // long for daily granularity. Show the effective bucket from the response
+  // instead of the requested one so the label always matches the chart.
+  const effectiveBucket = data?.range.bucketUsed ?? bucket;
   const bucketLabel =
-    bucket === "daily" ? "kunlik" : bucket === "weekly" ? "haftalik" : "oylik";
+    effectiveBucket === "daily"
+      ? "kunlik"
+      : effectiveBucket === "weekly"
+        ? "haftalik"
+        : "oylik";
+  const wasPromoted = effectiveBucket !== bucket;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -123,6 +132,11 @@ export function MetricTrendDialog({
           <DialogTitle>{config.title}</DialogTitle>
           <DialogDescription>
             {rangeLabel} — {bucketLabel} kesimda o&apos;zgarish dinamikasi
+            {wasPromoted && (
+              <span className="ml-1 text-amber-600 dark:text-amber-400">
+                (uzun davr uchun avtomatik {bucketLabel} kesimga o&apos;tildi)
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 

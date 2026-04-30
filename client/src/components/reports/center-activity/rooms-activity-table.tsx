@@ -148,10 +148,12 @@ export function RoomsActivityTable({
   const start = (safePage - 1) * pageSize;
   const slice = rooms.slice(start, start + pageSize);
 
-  // Default view shows 8 actionable columns; "Texnik ustunlar" toggle
-  // reveals the seat-hour breakdown columns that belong to the FIK formula.
-  const defaultColCount = 9 + (canEdit ? 1 : 0); // # + 8 data + optional action
-  const advancedColCount = 7; // workingHours, lessonHours, coursePrice, revenueSum, seatHours×3
+  // Default view: # + 7 data columns (Xona, Sig'im, Guruhlar, O'quvchilar,
+  // Bo'sh o'rin, Bo'sh vaqt, FIK %) + optional edit action.
+  // Advanced toggle reveals 7 more (Ish vaqti, Dars soatlari, Kurs narxi,
+  // Jami summa, plus the three seat-hour columns that feed the FIK formula).
+  const defaultColCount = 8 + (canEdit ? 1 : 0);
+  const advancedColCount = 7;
   const totalColCount = defaultColCount + (showAdvanced ? advancedColCount : 0);
 
   return (
@@ -296,7 +298,7 @@ export function RoomsActivityTable({
               )}
               <TableHead className="text-right">
                 <HeaderWithTooltip
-                  label="Bandlik %"
+                  label="FIK %"
                   tooltip={TABLE_TOOLTIPS.fik}
                   align="right"
                 />
