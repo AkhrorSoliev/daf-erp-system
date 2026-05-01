@@ -4,10 +4,20 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AttendanceStatus, Prisma } from '@prisma/client';
+import { AttendanceStatus, GroupStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { CreateLessonRescheduleDto } from './dto/create-lesson-reschedule.dto';
+
+const DAY_NAME_BY_JS_DAY: Record<number, string> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday',
+};
 
 /**
  * Per-(groupId, originalDate) lesson move. The scheduled lesson on
@@ -123,7 +133,15 @@ export class LessonReschedulesService {
       async (tx) => {
         const group = await tx.group.findFirst({
           where: { id: dto.groupId, companyId, deletedAt: null },
-          select: { id: true, branchId: true, name: true, exactDays: true },
+          select: {
+            id: true,
+            branchId: true,
+            name: true,
+            exactDays: true,
+            roomId: true,
+            lessonStartTime: true,
+            lessonEndTime: true,
+          },
         });
         if (!group) throw new NotFoundException('Guruh topilmadi');
 
@@ -177,6 +195,23 @@ export class LessonReschedulesService {
           throw new BadRequestException(
             'Yangi sana — bekor qilingan dars sanasi',
           );
+        }
+
+        // Room availability check on the new date.
+        // Resolve effective values: explicit override falls back to group default.
+        const effectiveRoomId = dto.newRoomId ?? group.roomId;
+        const effectiveStart =
+          dto.newLessonStartTime ?? group.lessonStartTime ?? null;
+        const effectiveEnd =
+          dto.newLessonEndTime ?? group.lessonEndTime ?? null;
+        if (effectiveRoomId && effectiveStart && effectiveEnd) {
+          await this.assertRoomAvailable(tx, {
+            roomId: effectiveRoomId,
+            date: newDate,
+            startTime: effectiveStart,
+            endTime: effectiveEnd,
+            excludeGroupId: dto.groupId,
+          });
         }
 
         const reschedule = await tx.lessonReschedule.create({
@@ -269,5 +304,114 @@ export class LessonReschedulesService {
       throw new BadRequestException('Sana formati YYYY-MM-DD bo\'lishi kerak');
     }
     return new Date(`${dateStr}T00:00:00.000Z`);
+  }
+
+  /**
+   * Throws if the given room has any overlapping lesson on `date` in the
+   * given time window. Walks two sources of truth:
+   *   - groups whose normal schedule (exactDays + lessonStart/EndTime) hits
+   *     this room on this weekday — minus those with a cancellation or
+   *     a reschedule that moves the lesson AWAY from this date.
+   *   - other reschedules that LAND on this date in this room.
+   * Times are HH:MM strings; lexicographic compare matches numeric order.
+   */
+  private async assertRoomAvailable(
+    tx: Prisma.TransactionClient,
+    params: {
+      roomId: string;
+      date: Date;
+      startTime: string;
+      endTime: string;
+      excludeGroupId: string;
+    },
+  ): Promise<void> {
+    const { roomId, date, startTime, endTime, excludeGroupId } = params;
+    const dayName = DAY_NAME_BY_JS_DAY[date.getUTCDay()];
+
+    const candidateGroups = await tx.group.findMany({
+      where: {
+        id: { not: excludeGroupId },
+        roomId,
+        deletedAt: null,
+        statusEnum: GroupStatus.ACTIVE,
+        exactDays: { has: dayName },
+        AND: [
+          { OR: [{ startDate: null }, { startDate: { lte: date } }] },
+          { OR: [{ endDate: null }, { endDate: { gte: date } }] },
+          // Time overlap: otherStart < ourEnd AND otherEnd > ourStart
+          { lessonStartTime: { lt: endTime } },
+          { lessonEndTime: { gt: startTime } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+      },
+    });
+
+    if (candidateGroups.length > 0) {
+      const groupIds = candidateGroups.map((g) => g.id);
+      const [cancelled, movedAway] = await Promise.all([
+        tx.lessonCancellation.findMany({
+          where: { groupId: { in: groupIds }, date, deletedAt: null },
+          select: { groupId: true },
+        }),
+        tx.lessonReschedule.findMany({
+          where: {
+            groupId: { in: groupIds },
+            originalDate: date,
+            deletedAt: null,
+          },
+          select: { groupId: true },
+        }),
+      ]);
+      const skipIds = new Set([
+        ...cancelled.map((c) => c.groupId),
+        ...movedAway.map((r) => r.groupId),
+      ]);
+      const realConflicts = candidateGroups.filter((g) => !skipIds.has(g.id));
+      if (realConflicts.length > 0) {
+        const c = realConflicts[0];
+        throw new BadRequestException(
+          `Tanlangan xona bu vaqtda band: ${c.name} guruhi (${c.lessonStartTime}–${c.lessonEndTime}) shu xonada dars o'tadi`,
+        );
+      }
+    }
+
+    // Other reschedules landing on this date.
+    const otherReschedules = await tx.lessonReschedule.findMany({
+      where: {
+        groupId: { not: excludeGroupId },
+        newDate: date,
+        deletedAt: null,
+      },
+      select: {
+        newRoomId: true,
+        newLessonStartTime: true,
+        newLessonEndTime: true,
+        group: {
+          select: {
+            name: true,
+            roomId: true,
+            lessonStartTime: true,
+            lessonEndTime: true,
+          },
+        },
+      },
+    });
+    for (const r of otherReschedules) {
+      const otherRoomId = r.newRoomId ?? r.group.roomId;
+      if (otherRoomId !== roomId) continue;
+      const otherStart = r.newLessonStartTime ?? r.group.lessonStartTime;
+      const otherEnd = r.newLessonEndTime ?? r.group.lessonEndTime;
+      if (!otherStart || !otherEnd) continue;
+      if (otherStart < endTime && otherEnd > startTime) {
+        throw new BadRequestException(
+          `Tanlangan xona bu vaqtda band: ${r.group.name} guruhining ko'chirilgan darsi (${otherStart}–${otherEnd}) shu xonada bo'lishi rejalashtirilgan`,
+        );
+      }
+    }
   }
 }

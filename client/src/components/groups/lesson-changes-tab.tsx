@@ -489,6 +489,23 @@ function FetchedTeacherLabel({ teacherId }: { teacherId: number }) {
   return <>{data.firstName} {data.lastName}</>;
 }
 
+// ─── Time helpers ──────────────────────────────────────────────────
+
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  const hh = Math.floor(total / 60) % 24;
+  const mm = total % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+function diffMinutes(start: string | null, end: string | null): number | null {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  return eh * 60 + em - (sh * 60 + sm);
+}
+
 // ─── Cancellation dialog (existing, ko'chirilgan) ──────────────────
 
 interface CancellationProps {
@@ -805,11 +822,16 @@ function CreateRescheduleDialog({
   const [newStartTime, setNewStartTime] = useState<string>(
     group.lessonStartTime ?? "",
   );
-  const [newEndTime, setNewEndTime] = useState<string>(
-    group.lessonEndTime ?? "",
-  );
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Lesson duration in minutes: prefer explicit `lessonMinutes`, otherwise
+  // diff the group's default start/end. Falls back to 60 for legacy groups.
+  const lessonMinutes =
+    group.lessonMinutes ??
+    diffMinutes(group.lessonStartTime, group.lessonEndTime) ??
+    60;
+  const newEndTime = newStartTime ? addMinutes(newStartTime, lessonMinutes) : "";
 
   // Rooms in the group's branch — for the optional room override.
   const roomsQuery = useQuery({
@@ -839,13 +861,8 @@ function CreateRescheduleDialog({
       toast.error("Yangi sana asl sanadan keyin bo'lishi kerak");
       return;
     }
-    // Both-or-nothing for time override
-    if ((newStartTime && !newEndTime) || (!newStartTime && newEndTime)) {
-      toast.error("Boshlanish va tugash vaqti birga kiritilishi kerak");
-      return;
-    }
-    if (newStartTime && newEndTime && newEndTime <= newStartTime) {
-      toast.error("Tugash vaqti boshlanishidan keyin bo'lishi kerak");
+    if (!newStartTime || !newEndTime) {
+      toast.error("Dars boshlanish vaqtini kiriting");
       return;
     }
     setSubmitting(true);
@@ -853,16 +870,9 @@ function CreateRescheduleDialog({
     // the group's defaults — avoids cluttering the row with redundant data.
     const roomOverride =
       newRoomId && newRoomId !== group.room?.id ? newRoomId : undefined;
-    const startOverride =
-      newStartTime && newStartTime !== group.lessonStartTime
-        ? newStartTime
-        : undefined;
-    const endOverride =
-      newEndTime && newEndTime !== group.lessonEndTime ? newEndTime : undefined;
-    // Time both-or-nothing applies after diffing: if start was changed
-    // but end wasn't (or vice versa), send both so the validator can
-    // reason about the window.
-    const timeChanged = !!(startOverride || endOverride);
+    const timeChanged =
+      newStartTime !== group.lessonStartTime ||
+      newEndTime !== group.lessonEndTime;
     try {
       await api.post("/lesson-reschedules", {
         groupId: group.id,
@@ -880,7 +890,6 @@ function CreateRescheduleDialog({
       setNewDate(undefined);
       setNewRoomId(group.room?.id ?? "");
       setNewStartTime(group.lessonStartTime ?? "");
-      setNewEndTime(group.lessonEndTime ?? "");
       setReason("");
     } catch (err) {
       toast.error(getErrorMessage(err, "Ko'chirishda xatolik"));
@@ -937,24 +946,28 @@ function CreateRescheduleDialog({
             </div>
           </div>
 
-          {/* Vaqtlar — 2 ustun, default group vaqti bilan */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Boshlanish</Label>
-              <TimePicker
-                value={newStartTime}
-                onChange={setNewStartTime}
-                disabled={submitting}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Tugash</Label>
-              <TimePicker
-                value={newEndTime}
-                onChange={setNewEndTime}
-                disabled={submitting}
-                minTime={newStartTime || undefined}
-              />
+          {/* Boshlanish vaqti — tugash avtomatik hisoblanadi */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              Dars boshlanish vaqti
+            </Label>
+            <div className="flex items-center gap-3">
+              <div className="w-40">
+                <TimePicker
+                  value={newStartTime}
+                  onChange={setNewStartTime}
+                  disabled={submitting}
+                />
+              </div>
+              {newEndTime && (
+                <div className="text-sm text-muted-foreground">
+                  → tugaydi <span className="font-medium text-foreground">{newEndTime}</span>
+                  <span className="ml-1 text-xs">
+                    ({Math.floor(lessonMinutes / 60)} soat
+                    {lessonMinutes % 60 ? ` ${lessonMinutes % 60} daqiqa` : ""})
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
