@@ -9,9 +9,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 
+// Business rule: a lesson held = a lesson paid. The student's prepaid
+// quota is consumed (and the teacher earns) for any status that confirms
+// the lesson actually took place — regardless of whether the student
+// physically attended. Only EXCUSED ("uzrli sabab — kechirildi") and
+// cancelled lessons skip billing entirely.
 const BILLABLE: ReadonlySet<AttendanceStatus> = new Set([
   AttendanceStatus.PRESENT,
   AttendanceStatus.LATE,
+  AttendanceStatus.ABSENT,
 ]);
 
 export interface ProcessAttendanceBillingParams {
@@ -37,15 +43,21 @@ export interface ProcessAttendanceBillingParams {
  * Always called from inside an outer `prisma.$transaction(Serializable)` —
  * the `tx` parameter is REQUIRED.
  *
- * Status transition matrix (P0.3):
+ * Status transition matrix:
  *   eski        →  yangi              →  harakat
  *   ────────────────────────────────────────────
- *   (yo'q)      →  ABSENT/EXCUSED     →  hech narsa
- *   (yo'q)      →  PRESENT/LATE       →  bill (consume yoki refill)
- *   ABS/EXC     →  ABS/EXC            →  hech narsa
- *   ABS/EXC     →  PRESENT/LATE       →  bill
- *   PRES/LATE   →  PRES/LATE          →  hech narsa
- *   PRES/LATE   →  ABSENT/EXCUSED     →  reverse (consumption + prepaid +1 + accrual reverse)
+ *   (yo'q)      →  EXCUSED            →  hech narsa
+ *   (yo'q)      →  PRESENT/LATE/ABSENT →  bill (consume yoki refill)
+ *   EXC         →  EXC                →  hech narsa
+ *   EXC         →  PRESENT/LATE/ABSENT →  bill
+ *   billable    →  billable (turli)   →  hech narsa
+ *   PRES/LATE/ABS →  EXCUSED          →  reverse (consumption + prepaid +1 + accrual reverse)
+ *
+ * "Billable" — dars haqiqatda o'tdi degani. PRESENT (keldi), LATE (kech keldi)
+ * va ABSENT (kelmadi) — uchchalasi ham talabaning prepaid kvotasini sarflaydi
+ * va ustozga oylik yozadi: dars o'tdi, talabaning paketdan 1 ta dars ketdi,
+ * ustoz mehnat qildi. EXCUSED faqat uzrli sabab bilan rad etilgan vaqt — bu
+ * holatda dars hisoblanmaydi.
  */
 @Injectable()
 export class LessonBillingService {

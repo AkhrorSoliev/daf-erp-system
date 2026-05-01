@@ -122,14 +122,21 @@ export class LessonCancellationsService {
           },
         });
 
-        // Reverse all billable attendance for this date. Walk PRESENT/LATE
-        // rows and for each: flip status to EXCUSED, link cancellationId,
-        // run the billing reverse path.
+        // Reverse all billable attendance for this date. Walk PRESENT / LATE
+        // / ABSENT rows (every status that triggers billing under the
+        // "lesson held = lesson paid" rule) and for each: flip status to
+        // EXCUSED, link cancellationId, run the billing reverse path.
         const billable = await tx.attendance.findMany({
           where: {
             groupId: dto.groupId,
             date,
-            status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
+            status: {
+              in: [
+                AttendanceStatus.PRESENT,
+                AttendanceStatus.LATE,
+                AttendanceStatus.ABSENT,
+              ],
+            },
           },
           select: { id: true, studentId: true, status: true },
         });

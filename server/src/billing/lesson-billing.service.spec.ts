@@ -77,21 +77,21 @@ describe('LessonBillingService', () => {
   // ============================================================
 
   describe('transition matrix — no-op cases', () => {
-    it('null → ABSENT does nothing', async () => {
+    it('null → EXCUSED does nothing', async () => {
       await service.processAttendanceBilling(tx, {
         ...baseParams,
         oldStatus: null,
-        newStatus: AttendanceStatus.ABSENT,
+        newStatus: AttendanceStatus.EXCUSED,
       });
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
       expect(transactionsService.recordLessonConsumption).not.toHaveBeenCalled();
     });
 
-    it('ABSENT → ABSENT does nothing', async () => {
+    it('EXCUSED → EXCUSED does nothing', async () => {
       await service.processAttendanceBilling(tx, {
         ...baseParams,
-        oldStatus: AttendanceStatus.ABSENT,
-        newStatus: AttendanceStatus.ABSENT,
+        oldStatus: AttendanceStatus.EXCUSED,
+        newStatus: AttendanceStatus.EXCUSED,
       });
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
     });
@@ -101,6 +101,16 @@ describe('LessonBillingService', () => {
         ...baseParams,
         oldStatus: AttendanceStatus.PRESENT,
         newStatus: AttendanceStatus.LATE,
+      });
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+      expect(transactionsService.reverseLessonConsumption).not.toHaveBeenCalled();
+    });
+
+    it('LATE → ABSENT does nothing (both billable now)', async () => {
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: AttendanceStatus.LATE,
+        newStatus: AttendanceStatus.ABSENT,
       });
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
       expect(transactionsService.reverseLessonConsumption).not.toHaveBeenCalled();
@@ -298,16 +308,18 @@ describe('LessonBillingService', () => {
   });
 
   // ============================================================
-  // Misol 9 — reverse (PRESENT → ABSENT)
+  // Misol 9 — reverse (billable → EXCUSED)
+  // Under the "lesson held = lesson paid" rule, only EXCUSED is non-billable.
+  // PRESENT/LATE/ABSENT → EXCUSED triggers the reverse path.
   // ============================================================
 
-  describe('Misol 9 — reverse on PRESENT/LATE → ABSENT/EXCUSED', () => {
+  describe('Misol 9 — reverse on PRESENT/LATE/ABSENT → EXCUSED', () => {
     it('reverses consumption + restores prepaid +1 + reverses accrual', async () => {
       tx.transaction.findFirst.mockResolvedValueOnce({ id: 'cons-existing' });
       await service.processAttendanceBilling(tx, {
         ...baseParams,
         oldStatus: AttendanceStatus.PRESENT,
-        newStatus: AttendanceStatus.ABSENT,
+        newStatus: AttendanceStatus.EXCUSED,
       });
       expect(transactionsService.reverseLessonConsumption).toHaveBeenCalledWith(
         'cons-existing',
@@ -327,7 +339,7 @@ describe('LessonBillingService', () => {
       await service.processAttendanceBilling(tx, {
         ...baseParams,
         oldStatus: AttendanceStatus.PRESENT,
-        newStatus: AttendanceStatus.ABSENT,
+        newStatus: AttendanceStatus.EXCUSED,
       });
       expect(transactionsService.reverseLessonConsumption).not.toHaveBeenCalled();
       expect(tx.enrollment.update).not.toHaveBeenCalled();
