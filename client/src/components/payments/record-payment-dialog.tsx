@@ -91,9 +91,11 @@ export function RecordPaymentDialog({
 
   // Pre-fill amount only on initial open. Re-syncing on every render would
   // overwrite the user's edits — that's why we key the effect on `open`.
+  // Format with uz-UZ thousand separators (matches handleAmountChange) so
+  // the input shows e.g. "800 000" instead of bare "800000".
   useEffect(() => {
     if (open && suggestedAmount && suggestedAmount > 0) {
-      setAmount(String(suggestedAmount));
+      setAmount(suggestedAmount.toLocaleString("uz-UZ"));
     }
   }, [open, suggestedAmount]);
 
