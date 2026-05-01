@@ -38,32 +38,25 @@ const BRANCHES = [
     name: 'Toshkent filiali',
     address: "Toshkent sh., Amir Temur shoh ko'chasi 12",
     phone: '901001001',
-    teacherCount: 10,
-    groupCount: 12,
-    studentCount: 450,
-    roomCount: 8,
+    teacherCount: 50,
+    groupCount: 260,
+    studentCount: 6000,
+    roomCount: 6,
   },
   {
     id: 2,
     name: 'Samarqand filiali',
     address: "Samarqand sh., Registon ko'chasi 5",
     phone: '902002002',
-    teacherCount: 7,
-    groupCount: 10,
-    studentCount: 380,
-    roomCount: 6,
-  },
-  {
-    id: 3,
-    name: "Farg'ona filiali",
-    address: "Farg'ona sh., Mustaqillik ko'chasi 15",
-    phone: '903003003',
-    teacherCount: 6,
-    groupCount: 8,
-    studentCount: 320,
+    teacherCount: 50,
+    groupCount: 260,
+    studentCount: 6000,
     roomCount: 6,
   },
 ] as const;
+
+// Min 15 ACTIVE talaba har bir guruhda
+const MIN_ACTIVE_PER_GROUP = 15;
 
 // ============================================================================
 // HELPERS
@@ -71,13 +64,17 @@ const BRANCHES = [
 
 const ODD_DAYS = ['monday', 'wednesday', 'friday'];
 const EVEN_DAYS = ['tuesday', 'thursday', 'saturday'];
-const TIME_SLOTS = [
-  { start: '08:00', endStandart: '09:00', endIntensiv: '09:30' },
-  { start: '10:00', endStandart: '11:00', endIntensiv: '11:30' },
-  { start: '14:00', endStandart: '15:00', endIntensiv: '15:30' },
-  { start: '16:00', endStandart: '17:00', endIntensiv: '17:30' },
-  { start: '18:00', endStandart: '19:00', endIntensiv: '19:30' },
-];
+// 24 ta soatlik slot — markaz 24/7 ishlaydi (00:00 → 23:00 boshlanish)
+// Standart darslar 1 soat, Intensiv 1 soat (oddiylik uchun seed'da bir xil — overlap'ni minimizatsiya).
+const TIME_SLOTS = Array.from({ length: 24 }, (_, h) => {
+  const startH = String(h).padStart(2, '0');
+  const endH = String((h + 1) % 24).padStart(2, '0');
+  return {
+    start: `${startH}:00`,
+    endStandart: `${endH}:00`,
+    endIntensiv: `${endH}:00`, // seed'da overlap bo'lmasligi uchun
+  };
+});
 
 const FIRST_NAMES_M = ['Aziz', 'Jasur', 'Bekzod', 'Doniyor', 'Sardor', 'Otabek', 'Sherzod', 'Akmal', 'Bobur', 'Nodir', 'Sanjar', 'Rustam', 'Olim', 'Anvar', 'Komil', 'Hasan', 'Husan', 'Davron', 'Asror', 'Eldor'];
 const FIRST_NAMES_F = ['Dilnoza', 'Madina', 'Nilufar', 'Zarina', 'Gulnora', 'Shahnoza', 'Sevara', 'Maftuna', 'Yulduz', 'Iroda', 'Kamola', 'Lola', 'Charos', 'Nigora', 'Sayyora', 'Nodira', 'Mahliyo', 'Aziza', 'Dildora', 'Feruza'];
@@ -321,8 +318,9 @@ async function seedBranch(
       address: spec.address,
       phone: spec.phone,
       companyId: COMPANY_ID,
-      startOfWorkingDay: '08:00',
-      endOfWorkingDay: '20:00',
+      // Markaz 24/7 ishlaydi — to'liq sutka davomida darslar bo'ladi
+      startOfWorkingDay: '00:00',
+      endOfWorkingDay: '23:59',
     },
   });
 
@@ -437,14 +435,29 @@ async function seedBranch(
     });
   }
 
-  // Groups
+  // Groups — har bir (room × slot × day-pattern) unique combinatsiyasini ishlatish
+  // Total available combinations: roomCount × 24 slot × 2 day-pattern
+  // 90% ni to'ldirish uchun deterministic round-robin: combinatsiyalarni shuffle
+  // qilib, kerakli sonni tanlaymiz.
+  const allCombos: Array<{ roomId: string; slotIdx: number; oddDays: boolean }> = [];
+  for (const roomId of rooms) {
+    for (let s = 0; s < TIME_SLOTS.length; s++) {
+      for (const oddDays of [true, false]) {
+        allCombos.push({ roomId, slotIdx: s, oddDays });
+      }
+    }
+  }
+  // Stable shuffle (deterministic per branch via seed-like mod)
+  allCombos.sort((a, b) => (a.slotIdx * 13 + (a.oddDays ? 1 : 0)) - (b.slotIdx * 13 + (b.oddDays ? 1 : 0)));
+
   const groups: BranchSummary['groups'] = [];
   for (let i = 0; i < spec.groupCount; i++) {
+    const combo = allCombos[i % allCombos.length];
     const course = courses[i % courses.length];
-    const days = i % 2 === 0 ? ODD_DAYS : EVEN_DAYS;
-    const slot = TIME_SLOTS[i % TIME_SLOTS.length];
+    const days = combo.oddDays ? ODD_DAYS : EVEN_DAYS;
+    const slot = TIME_SLOTS[combo.slotIdx];
     const teacher = teachers[i % teachers.length];
-    const room = rooms[i % rooms.length];
+    const room = combo.roomId;
     const id = `group-b${spec.id}-${i + 1}`;
     const name = `${spec.name.split(' ')[0].slice(0, 3).toUpperCase()}-${100 + i + 1}`;
     const group = await prisma.group.create({
@@ -463,6 +476,10 @@ async function seedBranch(
         lessonEndTime: course.isIntensiv ? slot.endIntensiv : slot.endStandart,
         lessonMinutes: course.isIntensiv ? 90 : 60,
         statusEnum: 'ACTIVE',
+        // Legacy `status` Int (1=ACTIVE) — kept in sync with statusEnum so
+        // older UI components reading the integer column still see the
+        // group as active.
+        status: 1,
         startDate: new Date('2026-01-01T00:00:00.000Z'),
         endDate: new Date('2026-12-31T00:00:00.000Z'),
       },
@@ -487,7 +504,7 @@ async function seedBranch(
   console.log(`  ✓ ${students.length} o'quvchi`);
 
   // Enrollments — distribute ~70% across groups, ~10% frozen, 5% dropped, 15% un-enrolled
-  await assignStudentsToGroups(students, groups);
+  await assignStudentsToGroups(students, groups, spec.id);
   console.log(`  ✓ Enrollment'lar taqsimlandi`);
 
   return {
@@ -547,33 +564,147 @@ async function seedStudents(branchId: number, count: number) {
 async function assignStudentsToGroups(
   students: Array<{ id: number; firstName: string; lastName: string }>,
   groups: BranchSummary['groups'],
+  branchId: number,
 ) {
-  // Distribution:
-  //   70% → ACTIVE in some group
-  //   10% → FROZEN (had been active, now paused)
-  //    5% → DROPPED (left)
-  //   15% → un-enrolled (registered but not yet in a group)
+  // Phase 1: Har guruhga MIN_ACTIVE_PER_GROUP (15) ta ACTIVE talaba —
+  //   "min 15 talaba per guruh" kafolati uchun.
+  // Phase 2: Qolgan talabalar — turli holatda taqsimot (ko'pchilik ACTIVE qo'shimcha,
+  //   bir nechtasi FROZEN/DROPPED/un-enrolled).
   const enrollmentRows: Prisma.EnrollmentCreateManyInput[] = [];
+  // Prepaid bo'lishi kerak bo'lgan ACTIVE enrollment'lar — ID lari createMany'dan
+  // keyin ma'lum bo'ladi, shuning uchun reja ko'rinishida saqlaymiz.
+  const prepaidPlan: Array<{
+    studentId: number;
+    groupId: string;
+    prepaidCount: number;
+    perLessonCost: number;
+  }> = [];
+
+  const neededActive = groups.length * MIN_ACTIVE_PER_GROUP;
+  const phase1Count = Math.min(neededActive, students.length);
+
+  // Phase 1 — round-robin ACTIVE
+  for (let i = 0; i < phase1Count; i++) {
+    const group = groups[i % groups.length];
+    enrollmentRows.push({
+      studentId: students[i].id,
+      groupId: group.id,
+      status: 'ACTIVE',
+      prepaidLessonsRemaining: 0,
+    });
+    if (Math.random() < 0.4) {
+      prepaidPlan.push({
+        studentId: students[i].id,
+        groupId: group.id,
+        prepaidCount: Math.floor(Math.random() * 6) + 1,
+        perLessonCost: group.perLessonCost,
+      });
+    }
+    group.studentIds.push(students[i].id);
+  }
+
+  // Phase 2 — qolgan talabalar
   let groupCursor = 0;
-  for (let i = 0; i < students.length; i++) {
+  for (let i = phase1Count; i < students.length; i++) {
     const r = Math.random();
-    if (r < 0.15) continue; // un-enrolled
+    if (r < 0.20) continue; // un-enrolled (registered, no group yet)
     const status: EnrollmentStatus =
-      r < 0.20 ? 'FROZEN' : r < 0.25 ? 'DROPPED' : 'ACTIVE';
+      r < 0.27 ? 'FROZEN' : r < 0.32 ? 'DROPPED' : 'ACTIVE';
     const group = groups[groupCursor % groups.length];
     groupCursor++;
     enrollmentRows.push({
       studentId: students[i].id,
       groupId: group.id,
       status,
-      // ACTIVE rows get a small starting prepaid (simulates already paid for
-      // a current cycle). 0 for FROZEN/DROPPED.
-      prepaidLessonsRemaining:
-        status === 'ACTIVE' && Math.random() < 0.4 ? Math.floor(Math.random() * 6) + 1 : 0,
+      prepaidLessonsRemaining: 0,
     });
+    if (status === 'ACTIVE' && Math.random() < 0.4) {
+      prepaidPlan.push({
+        studentId: students[i].id,
+        groupId: group.id,
+        prepaidCount: Math.floor(Math.random() * 6) + 1,
+        perLessonCost: group.perLessonCost,
+      });
+    }
     if (status === 'ACTIVE') group.studentIds.push(students[i].id);
   }
+
+  // Batch insert (createMany supports up to ~30k rows easily)
   await prisma.enrollment.createMany({ data: enrollmentRows });
+
+  if (prepaidPlan.length === 0) return;
+
+  // Prepaid hisobini real money-flow bilan birga yozamiz: har bir prepaid
+  // batch ortida PAYMENT (kelgan pul) + LESSON_DEDUCTION (yechib olingan pul)
+  // juftligi turadi. Bu LessonBillingService'ning B.1 coverage qoidasini
+  // qondiradi (prepaid ortida unreversed LESSON_DEDUCTION bo'lishi shart),
+  // shu bilan birga net balansga ta'sir qilmaydi (PAYMENT +X, DEDUCTION −X).
+  const enrollments = await prisma.enrollment.findMany({
+    where: {
+      studentId: { in: prepaidPlan.map((p) => p.studentId) },
+      status: 'ACTIVE',
+    },
+    select: { id: true, studentId: true, groupId: true },
+  });
+  const enrollmentMap = new Map<string, string>();
+  for (const e of enrollments) {
+    enrollmentMap.set(`${e.studentId}-${e.groupId}`, e.id);
+  }
+
+  const txRows: Prisma.TransactionCreateManyInput[] = [];
+  const updatesByCount = new Map<number, string[]>();
+
+  for (const p of prepaidPlan) {
+    const enrollmentId = enrollmentMap.get(`${p.studentId}-${p.groupId}`);
+    if (!enrollmentId) continue;
+    const cost = p.prepaidCount * p.perLessonCost;
+
+    // Bu nuqtada talabaning balansi 0 (financial activity hali ishlamagan).
+    // PAYMENT: 0 → cost; LESSON_DEDUCTION: cost → 0. Net: 0.
+    txRows.push({
+      type: TransactionType.PAYMENT,
+      amount: cost,
+      balanceBefore: 0,
+      balanceAfter: cost,
+      studentId: p.studentId,
+      branchId,
+      companyId: COMPANY_ID,
+      description: "Oldindan to'lov (seed)",
+    });
+    txRows.push({
+      type: TransactionType.LESSON_DEDUCTION,
+      amount: -cost,
+      balanceBefore: cost,
+      balanceAfter: 0,
+      studentId: p.studentId,
+      enrollmentId,
+      branchId,
+      companyId: COMPANY_ID,
+      description: "Dars uchun yechib olindi (seed)",
+      metadata: {
+        mode: 'PARTIAL',
+        perLessonCost: p.perLessonCost,
+        lessonsCovered: p.prepaidCount,
+      },
+    });
+
+    if (!updatesByCount.has(p.prepaidCount)) {
+      updatesByCount.set(p.prepaidCount, []);
+    }
+    updatesByCount.get(p.prepaidCount)!.push(enrollmentId);
+  }
+
+  if (txRows.length > 0) {
+    await prisma.transaction.createMany({ data: txRows });
+  }
+
+  // 1–6 ta prepaidCount qiymati uchun bittadan updateMany — 4-6 ta SQL.
+  for (const [count, ids] of Array.from(updatesByCount.entries())) {
+    await prisma.enrollment.updateMany({
+      where: { id: { in: ids } },
+      data: { prepaidLessonsRemaining: count },
+    });
+  }
 }
 
 // ============================================================================
