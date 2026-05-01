@@ -20,8 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { LessonDateSelect } from "./lesson-date-select";
 import {
   Select,
   SelectContent,
@@ -305,7 +305,7 @@ export function LessonChangesTab({ group }: Props) {
           <CreateCancellationDialog
             open={createCancellationOpen}
             onOpenChange={setCreateCancellationOpen}
-            groupId={group.id}
+            group={group}
             onSaved={refetchAll}
           />
           <CreateOverrideDialog
@@ -350,14 +350,14 @@ function FetchedTeacherLabel({ teacherId }: { teacherId: number }) {
 interface CancellationProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  groupId: string;
+  group: GroupData;
   onSaved: () => void;
 }
 
 function CreateCancellationDialog({
   open,
   onOpenChange,
-  groupId,
+  group,
   onSaved,
 }: CancellationProps) {
   const [date, setDate] = useState<Date | undefined>();
@@ -372,7 +372,7 @@ function CreateCancellationDialog({
     setSubmitting(true);
     try {
       await api.post("/lesson-cancellations", {
-        groupId,
+        groupId: group.id,
         date: format(date, "yyyy-MM-dd"),
         reason: reason.trim(),
       });
@@ -401,8 +401,18 @@ function CreateCancellationDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Bekor qilingan sana</Label>
-            <DatePicker value={date} onChange={setDate} disabled={submitting} />
+            <Label>Bekor qilinadigan dars sanasi</Label>
+            <LessonDateSelect
+              exactDays={group.exactDays ?? []}
+              groupStartDate={group.startDate}
+              groupEndDate={group.endDate}
+              value={date}
+              onChange={setDate}
+              disabled={submitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              Faqat ushbu guruh dars qiladigan sanalar ko&apos;rinadi
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="cancel-reason">Sabab</Label>
@@ -539,7 +549,17 @@ function CreateOverrideDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Dars sanasi</Label>
-            <DatePicker value={date} onChange={setDate} disabled={submitting} />
+            <LessonDateSelect
+              exactDays={group.exactDays ?? []}
+              groupStartDate={group.startDate}
+              groupEndDate={group.endDate}
+              value={date}
+              onChange={setDate}
+              disabled={submitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              Faqat ushbu guruh dars qiladigan sanalar ko&apos;rinadi
+            </p>
           </div>
 
           <div className="space-y-2">
