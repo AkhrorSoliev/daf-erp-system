@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CheckCircle, ChevronDown, Loader2, Play, Settings2, Wallet } from "lucide-react";
@@ -44,7 +45,6 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
-import { SalaryConfigDialog } from "./salary-config-dialog";
 import { SalaryBreakdownDrawer } from "./salary-breakdown-drawer";
 import { SalaryPeriodSettingsSheet } from "./salary-period-settings-sheet";
 
@@ -94,6 +94,7 @@ function primaryRoleLabel(roles: { role: { id: number } }[]): string {
 }
 
 export function SalaryClient() {
+  const router = useRouter();
   const user = useAuth((s) => s.user);
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
   const canPay = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
@@ -102,7 +103,6 @@ export function SalaryClient() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [batchPaying, setBatchPaying] = useState(false);
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [periodSettingsOpen, setPeriodSettingsOpen] = useState(false);
   const [breakdownPaymentId, setBreakdownPaymentId] = useState<string | null>(null);
 
@@ -244,12 +244,12 @@ export function SalaryClient() {
                 <DropdownMenuLabel>Oylik sozlamalari</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => setConfigDialogOpen(true)}
+                  onClick={() => router.push("/payments/salary/config")}
                   className="flex flex-col items-start gap-0.5 py-2"
                 >
                   <span className="font-medium">Oylik belgilash</span>
                   <span className="text-xs text-muted-foreground">
-                    Har xodim uchun foiz, oylik yoki o&apos;quvchi boshiga
+                    Xodimlar ro&apos;yxati, bulk va individual qoidalar
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -405,11 +405,6 @@ export function SalaryClient() {
           </TableBody>
         </Table>
       )}
-      <SalaryConfigDialog
-        open={configDialogOpen}
-        onOpenChange={setConfigDialogOpen}
-        onSaved={() => setRefreshKey((k) => k + 1)}
-      />
       <SalaryBreakdownDrawer
         salaryPaymentId={breakdownPaymentId}
         onClose={() => setBreakdownPaymentId(null)}

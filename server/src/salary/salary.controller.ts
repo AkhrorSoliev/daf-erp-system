@@ -88,6 +88,23 @@ export class SalaryController {
     return this.salaryService.getConfig(userId, companyId);
   }
 
+  /**
+   * Bulk fetch — `?userIds=1,2,3`. Powers the salary-config table summary
+   * (current rate per row) without firing N requests from the frontend.
+   */
+  @Get('configs/by-users')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getConfigsForUsers(
+    @Query('userIds') userIdsParam: string | undefined,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    const userIds = (userIdsParam ?? '')
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return this.salaryService.getConfigsForUsers(userIds, companyId);
+  }
+
   @Get('config-history/:userId')
   @Roles('CEO', 'Branch Director', 'Administrator')
   getConfigHistory(

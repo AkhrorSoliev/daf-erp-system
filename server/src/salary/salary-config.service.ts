@@ -42,6 +42,48 @@ export class SalaryConfigService {
     });
   }
 
+  /**
+   * Bulk-fetch active configs for many users in one query. Powers the
+   * "Joriy oylik" column on the /payments/salary/config page where the
+   * UI needs a summary for every visible row without N parallel calls.
+   */
+  async getConfigsForUsers(userIds: number[], companyId: number) {
+    if (userIds.length === 0) return {};
+    const configs = await this.prisma.employeeSalaryConfig.findMany({
+      where: { userId: { in: userIds }, companyId, isActive: true },
+      select: {
+        id: true,
+        userId: true,
+        salaryType: true,
+        value: true,
+        groupId: true,
+        group: { select: { id: true, name: true } },
+      },
+    });
+    const byUser: Record<
+      number,
+      Array<{
+        id: string;
+        salaryType: string;
+        value: number;
+        groupId: string | null;
+        group: { id: string; name: string } | null;
+      }>
+    > = {};
+    for (const c of configs) {
+      const list = byUser[c.userId] ?? [];
+      list.push({
+        id: c.id,
+        salaryType: c.salaryType,
+        value: c.value,
+        groupId: c.groupId,
+        group: c.group,
+      });
+      byUser[c.userId] = list;
+    }
+    return byUser;
+  }
+
   async createConfig(
     dto: CreateSalaryConfigDto,
     companyId: number,

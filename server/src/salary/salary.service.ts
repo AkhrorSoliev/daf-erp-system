@@ -26,6 +26,9 @@ export class SalaryService {
   getConfig(userId: number, companyId: number) {
     return this.config.getConfig(userId, companyId);
   }
+  getConfigsForUsers(userIds: number[], companyId: number) {
+    return this.config.getConfigsForUsers(userIds, companyId);
+  }
   getConfigHistory(userId: number, companyId: number) {
     return this.config.getHistory(userId, companyId);
   }
