@@ -417,8 +417,9 @@ model Room {
   deletedBy       User?     @relation("RoomDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  groups            Group[]
-  capacitySnapshots RoomCapacitySnapshot[]
+  groups              Group[]
+  capacitySnapshots   RoomCapacitySnapshot[]
+  lessonReschedules   LessonReschedule[]      @relation("LessonRescheduleNewRoom")
 
   @@index([deletedAt])
   @@index([status])
@@ -1348,11 +1349,17 @@ model LessonReschedule {
   group         Group     @relation("LessonRescheduleGroup", fields: [groupId], references: [id])
   originalDate  DateTime  @db.Date
   newDate       DateTime  @db.Date
-  reason        String?
-  scheduledById Int
-  scheduledBy   User      @relation("LessonRescheduleScheduledBy", fields: [scheduledById], references: [id])
-  companyId     Int
-  createdAt     DateTime  @default(now())
+  // Optional per-lesson room/time override on the new date. When NULL,
+  // the group's default room and times are used.
+  newRoomId            String?
+  newRoom              Room?    @relation("LessonRescheduleNewRoom", fields: [newRoomId], references: [id])
+  newLessonStartTime   String?
+  newLessonEndTime     String?
+  reason               String?
+  scheduledById        Int
+  scheduledBy          User     @relation("LessonRescheduleScheduledBy", fields: [scheduledById], references: [id])
+  companyId            Int
+  createdAt            DateTime @default(now())
 
   deletedAt   DateTime?
   deletedById Int?
@@ -1362,6 +1369,7 @@ model LessonReschedule {
   @@index([groupId, newDate])
   @@index([companyId])
   @@index([deletedAt])
+  @@index([newRoomId])
 }
 
 model SalaryAccrual {

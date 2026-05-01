@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { LessonDateSelect } from "./lesson-date-select";
 import {
   Select,
@@ -63,6 +64,10 @@ interface LessonReschedule {
   id: string;
   originalDate: string;
   newDate: string;
+  newRoomId: string | null;
+  newRoom: { id: string; name: string } | null;
+  newLessonStartTime: string | null;
+  newLessonEndTime: string | null;
   reason: string | null;
   createdAt: string;
   scheduledBy: { id: number; firstName: string; lastName: string };
@@ -387,7 +392,20 @@ export function LessonChangesTab({ group }: Props) {
                       <ArrowRight className="size-4" />
                     </TableCell>
                     <TableCell className="font-medium tabular-nums text-amber-700 dark:text-amber-400">
-                      {format(new Date(r.newDate), "dd.MM.yyyy")}
+                      <div>{format(new Date(r.newDate), "dd.MM.yyyy")}</div>
+                      {(r.newRoom || r.newLessonStartTime) && (
+                        <div className="text-xs text-muted-foreground font-normal mt-0.5">
+                          {r.newRoom?.name && (
+                            <span>{r.newRoom.name}</span>
+                          )}
+                          {r.newRoom && r.newLessonStartTime && <span> · </span>}
+                          {r.newLessonStartTime && r.newLessonEndTime && (
+                            <span>
+                              {r.newLessonStartTime}–{r.newLessonEndTime}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
                       {r.reason ?? <span className="text-muted-foreground">—</span>}
@@ -781,8 +799,30 @@ function CreateRescheduleDialog({
 }: RescheduleProps) {
   const [originalDate, setOriginalDate] = useState<Date | undefined>();
   const [newDate, setNewDate] = useState<Date | undefined>();
+  const [newRoomId, setNewRoomId] = useState<string>("__default__");
+  const [newStartTime, setNewStartTime] = useState<string>("");
+  const [newEndTime, setNewEndTime] = useState<string>("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Rooms in the group's branch — for the optional room override.
+  const roomsQuery = useQuery({
+    queryKey: ["branch-rooms", group.branchId],
+    queryFn: () =>
+      api
+        .get<{ data: { id: string; name: string }[] } | { id: string; name: string }[]>(
+          `/rooms?branch_id=${group.branchId}`,
+        )
+        .then((r) => {
+          const d = r.data as unknown;
+          if (Array.isArray(d)) return d as { id: string; name: string }[];
+          if (d && typeof d === "object" && "data" in d) {
+            return (d as { data: { id: string; name: string }[] }).data;
+          }
+          return [];
+        }),
+    enabled: open,
+  });
 
   const handleSubmit = async () => {
     if (!originalDate || !newDate) {
@@ -793,12 +833,24 @@ function CreateRescheduleDialog({
       toast.error("Yangi sana asl sanadan keyin bo'lishi kerak");
       return;
     }
+    // Both-or-nothing for time override
+    if ((newStartTime && !newEndTime) || (!newStartTime && newEndTime)) {
+      toast.error("Boshlanish va tugash vaqti birga kiritilishi kerak");
+      return;
+    }
+    if (newStartTime && newEndTime && newEndTime <= newStartTime) {
+      toast.error("Tugash vaqti boshlanishidan keyin bo'lishi kerak");
+      return;
+    }
     setSubmitting(true);
     try {
       await api.post("/lesson-reschedules", {
         groupId: group.id,
         originalDate: format(originalDate, "yyyy-MM-dd"),
         newDate: format(newDate, "yyyy-MM-dd"),
+        newRoomId: newRoomId === "__default__" ? undefined : newRoomId,
+        newLessonStartTime: newStartTime || undefined,
+        newLessonEndTime: newEndTime || undefined,
         reason: reason.trim() || undefined,
       });
       toast.success("Dars boshqa kunga ko'chirildi");
@@ -806,6 +858,9 @@ function CreateRescheduleDialog({
       onOpenChange(false);
       setOriginalDate(undefined);
       setNewDate(undefined);
+      setNewRoomId("__default__");
+      setNewStartTime("");
+      setNewEndTime("");
       setReason("");
     } catch (err) {
       toast.error(getErrorMessage(err, "Ko'chirishda xatolik"));
@@ -869,6 +924,63 @@ function CreateRescheduleDialog({
               keyin bo&apos;lishi kerak.
             </p>
           </div>
+          <div className="rounded-md border bg-muted/20 p-3 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Yangi kun uchun xona va vaqt — ixtiyoriy. Bo&apos;sh qoldirilsa,
+              guruhning oddiy xonasi ({group.room?.name ?? "—"}) va vaqti
+              ({group.lessonStartTime ?? "—"}–{group.lessonEndTime ?? "—"})
+              ishlatiladi.
+            </p>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Xona (ixtiyoriy)</Label>
+              <Select
+                value={newRoomId}
+                onValueChange={setNewRoomId}
+                disabled={submitting}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__default__">
+                    Standart xona ({group.room?.name ?? "—"})
+                  </SelectItem>
+                  {(roomsQuery.data ?? []).map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Boshlanish vaqti
+                </Label>
+                <TimePicker
+                  value={newStartTime}
+                  onChange={setNewStartTime}
+                  disabled={submitting}
+                  placeholder={group.lessonStartTime ?? "—"}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Tugash vaqti
+                </Label>
+                <TimePicker
+                  value={newEndTime}
+                  onChange={setNewEndTime}
+                  disabled={submitting}
+                  placeholder={group.lessonEndTime ?? "—"}
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="reschedule-reason">Sabab (ixtiyoriy)</Label>
             <Input

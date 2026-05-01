@@ -88,7 +88,12 @@ export class AttendanceValidationService {
         deletedAt: null,
         OR: [{ originalDate: parsedDate }, { newDate: parsedDate }],
       },
-      select: { originalDate: true, newDate: true },
+      select: {
+        originalDate: true,
+        newDate: true,
+        newLessonStartTime: true,
+        newLessonEndTime: true,
+      },
     });
     if (
       reschedule &&
@@ -123,11 +128,21 @@ export class AttendanceValidationService {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
     }
 
-    // Lesson time check (server time, only for Teacher/Cashier)
+    // Lesson time check (server time, only for Teacher/Cashier).
+    // On a moved-lesson day with a per-reschedule time override, use those
+    // times instead of the group's defaults.
     const canBypassTime = roles?.some((r) =>
       AttendanceValidationService.TIME_BYPASS_ROLES.has(r),
     );
-    if (!canBypassTime && group.lessonStartTime && group.lessonEndTime) {
+    const effectiveStartTime =
+      isMovedLessonDay && reschedule?.newLessonStartTime
+        ? reschedule.newLessonStartTime
+        : group.lessonStartTime;
+    const effectiveEndTime =
+      isMovedLessonDay && reschedule?.newLessonEndTime
+        ? reschedule.newLessonEndTime
+        : group.lessonEndTime;
+    if (!canBypassTime && effectiveStartTime && effectiveEndTime) {
       // Production server runs in UTC; lesson times are Asia/Tashkent (UTC+5)
       const tashkentParts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Tashkent',
@@ -146,8 +161,8 @@ export class AttendanceValidationService {
       if (date === todayStr) {
         const currentMinutes =
           Number(part('hour')) * 60 + Number(part('minute'));
-        const [startH, startM] = group.lessonStartTime.split(':').map(Number);
-        const [endH, endM] = group.lessonEndTime.split(':').map(Number);
+        const [startH, startM] = effectiveStartTime.split(':').map(Number);
+        const [endH, endM] = effectiveEndTime.split(':').map(Number);
         const lessonStart = startH * 60 + startM;
         const lessonEnd = endH * 60 + endM;
 
@@ -156,12 +171,12 @@ export class AttendanceValidationService {
 
         if (currentMinutes < windowStart) {
           throw new BadRequestException(
-            `Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (${group.lessonStartTime})`,
+            `Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (${effectiveStartTime})`,
           );
         }
         if (currentMinutes > lessonEnd) {
           throw new BadRequestException(
-            `Dars vaqti tugagan (${group.lessonEndTime}). Davomat olish yopilgan`,
+            `Dars vaqti tugagan (${effectiveEndTime}). Davomat olish yopilgan`,
           );
         }
       }

@@ -70,6 +70,10 @@ export class LessonReschedulesService {
         id: true,
         originalDate: true,
         newDate: true,
+        newRoomId: true,
+        newRoom: { select: { id: true, name: true } },
+        newLessonStartTime: true,
+        newLessonEndTime: true,
         reason: true,
         createdAt: true,
         scheduledBy: {
@@ -94,6 +98,27 @@ export class LessonReschedulesService {
       );
     }
 
+    // Time order check: end > start (when both supplied)
+    if (
+      dto.newLessonStartTime &&
+      dto.newLessonEndTime &&
+      dto.newLessonEndTime <= dto.newLessonStartTime
+    ) {
+      throw new BadRequestException(
+        "Dars tugash vaqti boshlanish vaqtidan keyin bo'lishi kerak",
+      );
+    }
+    // Both-or-nothing: if one time is set, both must be set (otherwise the
+    // override is half-defined and the validator can't reason about it)
+    if (
+      (dto.newLessonStartTime && !dto.newLessonEndTime) ||
+      (!dto.newLessonStartTime && dto.newLessonEndTime)
+    ) {
+      throw new BadRequestException(
+        "Boshlanish va tugash vaqti birga kiritilishi kerak",
+      );
+    }
+
     return this.prisma.$transaction(
       async (tx) => {
         const group = await tx.group.findFirst({
@@ -101,6 +126,24 @@ export class LessonReschedulesService {
           select: { id: true, branchId: true, name: true, exactDays: true },
         });
         if (!group) throw new NotFoundException('Guruh topilmadi');
+
+        // Room scoping: if a room override is given, it must belong to the
+        // same branch as the group (and not be soft-deleted).
+        if (dto.newRoomId) {
+          const room = await tx.room.findFirst({
+            where: {
+              id: dto.newRoomId,
+              branchId: group.branchId,
+              deletedAt: null,
+            },
+            select: { id: true },
+          });
+          if (!room) {
+            throw new BadRequestException(
+              "Tanlangan xona ushbu filialga tegishli emas yoki o'chirilgan",
+            );
+          }
+        }
 
         // Reject duplicate origin
         const existingOrigin = await tx.lessonReschedule.findFirst({
@@ -141,6 +184,9 @@ export class LessonReschedulesService {
             groupId: dto.groupId,
             originalDate,
             newDate,
+            newRoomId: dto.newRoomId ?? null,
+            newLessonStartTime: dto.newLessonStartTime ?? null,
+            newLessonEndTime: dto.newLessonEndTime ?? null,
             reason: dto.reason ?? null,
             scheduledById,
             companyId,
