@@ -149,7 +149,7 @@ export function TeacherSalaryClient() {
           <CardHeader>
             <CardTitle>Guruhlar bo&apos;yicha kutilayotgan oylik</CardTitle>
             <CardDescription>
-              Aktiv o&apos;quvchilar soni × stavka × bir oydagi darslar
+              Aktiv o&apos;quvchilar soni × foiz/qoida × bir oydagi darslar
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -167,7 +167,7 @@ export function TeacherSalaryClient() {
                     <TableHead>Guruh</TableHead>
                     <TableHead>Aktiv o&apos;quvchilar</TableHead>
                     <TableHead>Oylik darslar</TableHead>
-                    <TableHead>Stavka</TableHead>
+                    <TableHead>Foiz / qoida</TableHead>
                     <TableHead className="text-right">Oylik</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -244,7 +244,7 @@ function BreakdownTable({
             <TableHead>O&apos;quvchi</TableHead>
             <TableHead>Guruh</TableHead>
             <TableHead>Dars narxi</TableHead>
-            <TableHead>Stavka</TableHead>
+            <TableHead>Foiz / qoida</TableHead>
             <TableHead className="text-right">Yozilgan</TableHead>
           </TableRow>
         </TableHeader>

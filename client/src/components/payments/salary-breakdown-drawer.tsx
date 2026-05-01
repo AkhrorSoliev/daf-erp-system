@@ -125,9 +125,9 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
         "Guruh",
         "Kurs",
         "Dars narxi",
-        "Stavka turi",
-        "Stavka qiymati",
-        "Stavka miqyosi",
+        "Hisoblash turi",
+        "Qiymat",
+        "Qo'llanilish doirasi",
         "Summa",
         "Bekor qilingan",
         "Bekor qilingan sabab",
@@ -176,7 +176,7 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
             <div className="space-y-1 min-w-0">
               <SheetTitle>Oylik tafsilotlari</SheetTitle>
               <SheetDescription>
-                Har dars uchun yozilgan summalar va qo&apos;llangan stavka qoidasi
+                Har dars uchun yozilgan summalar va qo&apos;llangan hisoblash qoidasi
               </SheetDescription>
             </div>
             {data && (
@@ -272,7 +272,7 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
                           <TableHead className="w-12 border-r">#</TableHead>
                           <TableHead className="w-[88px]">Sana</TableHead>
                           <TableHead>O&apos;quvchi · Guruh</TableHead>
-                          <TableHead>Stavka qoidasi</TableHead>
+                          <TableHead>Hisoblash qoidasi</TableHead>
                           <TableHead className="text-right">Summa</TableHead>
                         </TableRow>
                       </TableHeader>

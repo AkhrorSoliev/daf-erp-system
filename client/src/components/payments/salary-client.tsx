@@ -247,7 +247,7 @@ export function SalaryClient() {
                   onClick={() => setConfigDialogOpen(true)}
                   className="flex flex-col items-start gap-0.5 py-2"
                 >
-                  <span className="font-medium">Stavkalar belgilash</span>
+                  <span className="font-medium">Oylik belgilash</span>
                   <span className="text-xs text-muted-foreground">
                     Har xodim uchun foiz, oylik yoki o&apos;quvchi boshiga
                   </span>

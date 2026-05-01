@@ -212,7 +212,7 @@ export function SalaryConfigDialog({
           ? format(effectiveFrom, "yyyy-MM-dd")
           : undefined,
       });
-      toast.success("Stavka saqlandi");
+      toast.success("Oylik qoidasi saqlandi");
       resetForm();
       await refetchConfigs();
       onSaved();
@@ -224,13 +224,13 @@ export function SalaryConfigDialog({
   };
 
   const handleDeactivate = async (configId: string) => {
-    if (!confirm("Bu stavkani o'chirmoqchimisiz? Eski accruallar saqlanadi, lekin keyingi darslarga ta'sir qilmaydi.")) {
+    if (!confirm("Bu oylik qoidasini o'chirmoqchimisiz? Eski yig'ilgan oyliklar saqlanadi, lekin keyingi darslarga ta'sir qilmaydi.")) {
       return;
     }
     setDeletingId(configId);
     try {
       await api.patch(`/salary/config/${configId}`, { isActive: false });
-      toast.success("Stavka o'chirildi");
+      toast.success("Oylik qoidasi o'chirildi");
       await refetchConfigs();
       onSaved();
     } catch (err) {
@@ -250,10 +250,10 @@ export function SalaryConfigDialog({
     >
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Stavkalar belgilash</DialogTitle>
+          <DialogTitle>Oylik belgilash</DialogTitle>
           <DialogDescription>
-            Xodim tanlang, mavjud stavkalarni ko&apos;ring va kerak bo&apos;lsa
-            yangi stavka qo&apos;shing.
+            Xodim tanlang, mavjud oylik qoidalarini ko&apos;ring va kerak
+            bo&apos;lsa yangi qoida qo&apos;shing.
           </DialogDescription>
         </DialogHeader>
 
@@ -298,7 +298,7 @@ export function SalaryConfigDialog({
           {selectedUserId && (
             <section className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Mavjud stavkalar</Label>
+                <Label>Mavjud oylik qoidalari</Label>
                 {sortedConfigs.length > 0 && (
                   <Badge variant="outline" className="text-xs font-normal">
                     {sortedConfigs.length} ta
@@ -312,8 +312,8 @@ export function SalaryConfigDialog({
                 </div>
               ) : sortedConfigs.length === 0 ? (
                 <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                  Bu xodimga hali stavka belgilanmagan. Pastdagi formadan birinchi
-                  stavkani qo&apos;shing.
+                  Bu xodimga hali oylik belgilanmagan. Pastdagi formadan birinchi
+                  qoidani qo&apos;shing.
                 </div>
               ) : (
                 <ul className="space-y-2">
@@ -367,7 +367,7 @@ export function SalaryConfigDialog({
             <section className="space-y-3 rounded-md border bg-muted/30 p-3">
               <div className="flex items-center gap-2">
                 <Plus className="size-4 text-muted-foreground" />
-                <Label className="text-base">Yangi stavka qo&apos;shish</Label>
+                <Label className="text-base">Yangi qoida qo&apos;shish</Label>
               </div>
 
               {/* Group scope (teacher only — others are always global) */}
@@ -393,15 +393,15 @@ export function SalaryConfigDialog({
                   </Select>
                   {groupId !== "__global__" && (
                     <p className="text-xs text-muted-foreground">
-                      Maxsus stavka shu guruhdagi darslarga qo&apos;llanadi va
-                      umumiy stavkani bekor qiladi (faqat shu guruh uchun).
+                      Maxsus qoida shu guruhdagi darslarga qo&apos;llanadi va
+                      umumiy qoidani bekor qiladi (faqat shu guruh uchun).
                     </p>
                   )}
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Stavka turi</Label>
+                <Label className="text-xs text-muted-foreground">Hisoblash turi</Label>
                 <Select value={salaryType} onValueChange={setSalaryType}>
                   <SelectTrigger>
                     <SelectValue />
@@ -469,8 +469,8 @@ export function SalaryConfigDialog({
                   placeholder="Bugundan boshlab"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Bu sanadan boshlangan darslar yangi stavkada hisoblanadi.
-                  Avvalgi davrlar avvalgi stavkada qoladi.
+                  Bu sanadan boshlangan darslar yangi qoida bo&apos;yicha
+                  hisoblanadi. Avvalgi davrlar avvalgi qoida bo&apos;yicha qoladi.
                 </p>
               </div>
 
@@ -480,7 +480,7 @@ export function SalaryConfigDialog({
                 className="w-full"
               >
                 {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-                Stavkani qo&apos;shish
+                Qoidani qo&apos;shish
               </Button>
             </section>
           )}
