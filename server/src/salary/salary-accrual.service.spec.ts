@@ -27,6 +27,15 @@ describe('SalaryAccrualService', () => {
         }),
       },
       salaryAccrual: { upsert: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+      // Defaults so applyAccrualToBalance / reverseAccrualBalance run silently
+      // in tests that don't care about balance side-effects.
+      transaction: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+      user: { update: jest.fn() },
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 1, balance: 0 }]),
     };
 
     const module: TestingModule = await Test.createTestingModule({

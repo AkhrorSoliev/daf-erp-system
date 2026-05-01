@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
+import {
+  Prisma,
+  SalaryPaymentStatus,
+  SalaryType,
+  TransactionType,
+} from '@prisma/client';
 
 @Injectable()
 export class SalaryAccrualService {
@@ -94,7 +99,7 @@ export class SalaryAccrualService {
         : version.value;
     }
 
-    return db.salaryAccrual.upsert({
+    const accrual = await db.salaryAccrual.upsert({
       where: {
         userId_studentId_groupId_lessonDate: {
           userId: params.teacherId,
@@ -127,6 +132,69 @@ export class SalaryAccrualService {
         reversalReason: null,
       },
     });
+
+    // Mirror the accrual into User.balance via a SALARY_ACCRUAL Transaction.
+    // Idempotent: skip if a non-reversed transaction already exists for this
+    // (attendanceId, teacherId) — accrual upsert may run multiple times when
+    // an attendance is edited/un-reversed.
+    await this.applyAccrualToBalance(db, {
+      teacherId: params.teacherId,
+      attendanceId: params.attendanceId,
+      amount,
+      companyId: params.companyId,
+    });
+
+    return accrual;
+  }
+
+  /**
+   * Increase teacher's balance by the accrual amount and write an
+   * SALARY_ACCRUAL Transaction (audit + ledger). Skips if a non-reversed
+   * transaction for this (attendanceId, teacherId) already exists.
+   */
+  private async applyAccrualToBalance(
+    db: Prisma.TransactionClient | PrismaService,
+    params: {
+      teacherId: number;
+      attendanceId: string;
+      amount: number;
+      companyId: number;
+    },
+  ) {
+    const existing = await db.transaction.findFirst({
+      where: {
+        attendanceId: params.attendanceId,
+        teacherId: params.teacherId,
+        type: TransactionType.SALARY_ACCRUAL,
+        reversedAt: null,
+      },
+      select: { id: true },
+    });
+    if (existing) return;
+
+    const users = await db.$queryRaw<{ id: number; balance: number }[]>`
+      SELECT id, balance FROM "User" WHERE id = ${params.teacherId} FOR UPDATE
+    `;
+    if (!users.length) return;
+    const balanceBefore = users[0].balance;
+    const balanceAfter = balanceBefore + params.amount;
+
+    await db.transaction.create({
+      data: {
+        type: TransactionType.SALARY_ACCRUAL,
+        amount: params.amount,
+        balanceBefore,
+        balanceAfter,
+        teacherId: params.teacherId,
+        attendanceId: params.attendanceId,
+        companyId: params.companyId,
+        description: "Dars uchun yig'ildi",
+      },
+    });
+    await db.user.update({
+      where: { id: params.teacherId },
+      data: { balance: balanceAfter },
+    });
   }
 
   /**
@@ -156,17 +224,92 @@ export class SalaryAccrualService {
           lessonDate: params.lessonDate,
         },
       },
-      select: { id: true, reversedAt: true },
+      select: { id: true, reversedAt: true, attendanceId: true, amount: true },
     });
     if (!existing || existing.reversedAt) return null;
 
-    return db.salaryAccrual.update({
+    const updated = await db.salaryAccrual.update({
       where: { id: existing.id },
       data: {
         reversedAt: new Date(),
         reversedById: params.reversedById,
         reversalReason: params.reversalReason,
       },
+    });
+
+    // Mirror reversal: undo the SALARY_ACCRUAL Transaction's effect on User.balance.
+    if (existing.attendanceId) {
+      await this.reverseAccrualBalance(db, {
+        teacherId: params.teacherId,
+        attendanceId: existing.attendanceId,
+        amount: existing.amount,
+        companyId: undefined,
+        reversedById: params.reversedById,
+        reversalReason: params.reversalReason,
+      });
+    }
+
+    return updated;
+  }
+
+  /**
+   * Reverse the SALARY_ACCRUAL Transaction that mirrors the accrual: write a
+   * compensating Transaction and decrement User.balance. Idempotent: skips if
+   * the original transaction is already reversed or doesn't exist.
+   */
+  private async reverseAccrualBalance(
+    db: Prisma.TransactionClient | PrismaService,
+    params: {
+      teacherId: number;
+      attendanceId: string;
+      amount: number;
+      companyId?: number;
+      reversedById?: number;
+      reversalReason?: string;
+    },
+  ) {
+    const original = await db.transaction.findFirst({
+      where: {
+        attendanceId: params.attendanceId,
+        teacherId: params.teacherId,
+        type: TransactionType.SALARY_ACCRUAL,
+        reversedAt: null,
+      },
+      select: { id: true, amount: true, companyId: true },
+    });
+    if (!original) return;
+
+    const users = await db.$queryRaw<{ id: number; balance: number }[]>`
+      SELECT id, balance FROM "User" WHERE id = ${params.teacherId} FOR UPDATE
+    `;
+    if (!users.length) return;
+    const balanceBefore = users[0].balance;
+    const balanceAfter = balanceBefore - original.amount;
+
+    await db.transaction.create({
+      data: {
+        type: TransactionType.SALARY_ACCRUAL,
+        amount: -original.amount,
+        balanceBefore,
+        balanceAfter,
+        teacherId: params.teacherId,
+        attendanceId: params.attendanceId,
+        companyId: original.companyId,
+        reversedTransactionId: original.id,
+        performedById: params.reversedById,
+        description: params.reversalReason ?? 'Dars uchun yig\'ilgan oylik bekor qilindi',
+      },
+    });
+    await db.transaction.update({
+      where: { id: original.id },
+      data: {
+        reversedAt: new Date(),
+        reversedById: params.reversedById,
+      },
+    });
+    await db.user.update({
+      where: { id: params.teacherId },
+      data: { balance: balanceAfter },
     });
   }
 
