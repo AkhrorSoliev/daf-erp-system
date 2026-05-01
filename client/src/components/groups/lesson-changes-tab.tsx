@@ -789,8 +789,8 @@ function CreateRescheduleDialog({
       toast.error("Asl va yangi sanani tanlang");
       return;
     }
-    if (originalDate.getTime() === newDate.getTime()) {
-      toast.error("Asl va yangi sana bir xil bo'la olmaydi");
+    if (newDate.getTime() <= originalDate.getTime()) {
+      toast.error("Yangi sana asl sanadan keyin bo'lishi kerak");
       return;
     }
     setSubmitting(true);
@@ -853,12 +853,20 @@ function CreateRescheduleDialog({
             <DatePicker
               value={newDate}
               onChange={setNewDate}
-              disabled={submitting}
-              placeholder="Istalgan kun"
+              disabled={submitting || !originalDate}
+              minDate={
+                originalDate
+                  ? new Date(originalDate.getTime() + 24 * 60 * 60 * 1000)
+                  : undefined
+              }
+              defaultMonth={originalDate ?? undefined}
+              placeholder={
+                originalDate ? "Asl sanadan keyingi kun" : "Avval asl sanani tanlang"
+              }
             />
             <p className="text-xs text-muted-foreground">
-              Istalgan kun (kun-haftadan qat&apos;i nazar) — ko&apos;chirilgan
-              dars shu kunda o&apos;tiladi
+              Istalgan kun (kun-haftadan qat&apos;i nazar), lekin asl sanadan
+              keyin bo&apos;lishi kerak.
             </p>
           </div>
           <div className="space-y-2">

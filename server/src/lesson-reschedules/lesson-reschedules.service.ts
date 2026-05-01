@@ -88,9 +88,9 @@ export class LessonReschedulesService {
     const originalDate = this.parseDate(dto.originalDate);
     const newDate = this.parseDate(dto.newDate);
 
-    if (originalDate.getTime() === newDate.getTime()) {
+    if (newDate.getTime() <= originalDate.getTime()) {
       throw new BadRequestException(
-        "Asl sana va yangi sana bir xil bo'la olmaydi",
+        "Yangi sana asl sanadan keyin bo'lishi kerak",
       );
     }
 
