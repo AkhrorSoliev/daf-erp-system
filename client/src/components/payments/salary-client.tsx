@@ -227,33 +227,11 @@ export function SalaryClient() {
             </TooltipProvider>
           )}
           {isCeo && (
-            // Recurring monthly action — distinguished from settings by
-            // its Play icon and clearer "close the cycle" wording.
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    onClick={handleCalculate}
-                    disabled={calculating}
-                  >
-                    {calculating ? (
-                      <Loader2 className="size-4 animate-spin mr-2" />
-                    ) : (
-                      <Play className="size-4 mr-2" />
-                    )}
-                    Davrni yakunlash
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Joriy davrning oyligini hisoblab chiqaradi va tasdiqlashga jo&apos;natadi
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {isCeo && (
-            // One-off configuration grouped under a single dropdown so it
-            // doesn't blur into the recurring "yakunlash" action above.
+            // All CEO controls live under a single Sozlamalar dropdown so
+            // the toolbar stays focused on day-to-day operator actions
+            // (Hammasini to'lash). The cron handles the recurring period
+            // close automatically every 8th of the month — the manual
+            // override is parked here as a last resort.
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -262,16 +240,16 @@ export function SalaryClient() {
                   <ChevronDown className="size-4 ml-2" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>Oylik konfiguratsiyasi</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>Oylik sozlamalari</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setConfigDialogOpen(true)}
                   className="flex flex-col items-start gap-0.5 py-2"
                 >
-                  <span className="font-medium">Xodim stavkalari</span>
+                  <span className="font-medium">Stavkalar belgilash</span>
                   <span className="text-xs text-muted-foreground">
-                    Har xodim uchun foiz, fixed yoki o&apos;quvchi boshiga
+                    Har xodim uchun foiz, oylik yoki o&apos;quvchi boshiga
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -280,7 +258,29 @@ export function SalaryClient() {
                 >
                   <span className="font-medium">Hisoblash davri</span>
                   <span className="text-xs text-muted-foreground">
-                    Davr boshlanish kuni (masalan, har oyning 8-kuni)
+                    Davr boshlanish kuni (default — har oyning 8-kuni)
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                  Kun-kunda kerak emas
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={handleCalculate}
+                  disabled={calculating}
+                  className="flex flex-col items-start gap-0.5 py-2"
+                >
+                  <span className="font-medium flex items-center gap-2">
+                    {calculating ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
+                    Joriy davrni qo&apos;lda hisoblash
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Cron har 8-sanada avtomatik ishlaydi — bu tugma faqat
+                    favqulodda holatda
                   </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
