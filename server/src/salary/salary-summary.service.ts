@@ -105,15 +105,31 @@ export class SalarySummaryService {
 
     // Filter out reversed accruals from "actually earned" — those rows
     // exist for audit but are not paid out by the salary cron.
+    const accrualWhere = {
+      userId: teacherId,
+      companyId,
+      salaryPaymentId: null,
+      reversedAt: null,
+    };
     const unpaidAccruals = await this.prisma.salaryAccrual.aggregate({
-      where: {
-        userId: teacherId,
-        companyId,
-        salaryPaymentId: null,
-        reversedAt: null,
-      },
+      where: accrualWhere,
       _sum: { amount: true },
       _count: true,
+    });
+
+    // For the UI summary card we surface `lessonsCount` (distinct lesson
+    // dates the teacher actually held) and `studentsCount` (distinct
+    // students who attended). `accrualCount` is the cross-product
+    // (lessons × students) and is too abstract for an at-a-glance card —
+    // we keep it for downstream consumers but lead the UI with the two
+    // friendlier numbers.
+    const lessonsByDate = await this.prisma.salaryAccrual.groupBy({
+      by: ['lessonDate'],
+      where: accrualWhere,
+    });
+    const studentsByStudent = await this.prisma.salaryAccrual.groupBy({
+      by: ['studentId'],
+      where: accrualWhere,
     });
 
     const paidTotal = await this.prisma.salaryPayment.aggregate({
@@ -132,6 +148,8 @@ export class SalarySummaryService {
       expectedMonthly: expectedMonthlyTotal,
       actualEarned: unpaidAccruals._sum.amount ?? 0,
       accrualCount: unpaidAccruals._count,
+      lessonsCount: lessonsByDate.length,
+      studentsCount: studentsByStudent.length,
       paidTotal: paidTotal._sum.amount ?? 0,
       groups: groupsBreakdown,
       hasConfig: configs.length > 0,

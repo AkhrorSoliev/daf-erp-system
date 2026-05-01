@@ -50,6 +50,8 @@ export function TeacherProfileTabs({
     expectedMonthly: number;
     actualEarned: number;
     accrualCount: number;
+    lessonsCount?: number;
+    studentsCount?: number;
     paidTotal: number;
     groups: { groupName: string; activeStudents: number; salaryType: string | null; salaryValue: number; expectedMonthly: number }[];
     hasConfig: boolean;
@@ -221,8 +223,14 @@ export function TeacherProfileTabs({
                   </p>
                 </div>
                 <div className="rounded-lg border p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground">Dars-o&apos;quvchi soni</p>
-                  <p className="text-lg font-bold">{salarySummary.accrualCount}</p>
+                  <p className="text-xs text-muted-foreground">O&apos;tilgan darslar</p>
+                  <p className="text-lg font-bold">
+                    {salarySummary.lessonsCount ?? 0}
+                    <span className="text-xs font-normal text-muted-foreground"> ta dars</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {salarySummary.studentsCount ?? 0} ta o&apos;quvchi qatnashdi
+                  </p>
                 </div>
                 <div className="rounded-lg border p-3 space-y-1">
                   <p className="text-xs text-muted-foreground">Jami to&apos;langan</p>
