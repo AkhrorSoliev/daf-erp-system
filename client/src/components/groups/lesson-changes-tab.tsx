@@ -799,9 +799,15 @@ function CreateRescheduleDialog({
 }: RescheduleProps) {
   const [originalDate, setOriginalDate] = useState<Date | undefined>();
   const [newDate, setNewDate] = useState<Date | undefined>();
-  const [newRoomId, setNewRoomId] = useState<string>("__default__");
-  const [newStartTime, setNewStartTime] = useState<string>("");
-  const [newEndTime, setNewEndTime] = useState<string>("");
+  // Pre-fill room/time with the group's defaults so admins don't have to
+  // re-enter "the same as usual" — they only adjust if it differs.
+  const [newRoomId, setNewRoomId] = useState<string>(group.room?.id ?? "");
+  const [newStartTime, setNewStartTime] = useState<string>(
+    group.lessonStartTime ?? "",
+  );
+  const [newEndTime, setNewEndTime] = useState<string>(
+    group.lessonEndTime ?? "",
+  );
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -843,14 +849,28 @@ function CreateRescheduleDialog({
       return;
     }
     setSubmitting(true);
+    // Only persist room/time as overrides when they actually differ from
+    // the group's defaults — avoids cluttering the row with redundant data.
+    const roomOverride =
+      newRoomId && newRoomId !== group.room?.id ? newRoomId : undefined;
+    const startOverride =
+      newStartTime && newStartTime !== group.lessonStartTime
+        ? newStartTime
+        : undefined;
+    const endOverride =
+      newEndTime && newEndTime !== group.lessonEndTime ? newEndTime : undefined;
+    // Time both-or-nothing applies after diffing: if start was changed
+    // but end wasn't (or vice versa), send both so the validator can
+    // reason about the window.
+    const timeChanged = !!(startOverride || endOverride);
     try {
       await api.post("/lesson-reschedules", {
         groupId: group.id,
         originalDate: format(originalDate, "yyyy-MM-dd"),
         newDate: format(newDate, "yyyy-MM-dd"),
-        newRoomId: newRoomId === "__default__" ? undefined : newRoomId,
-        newLessonStartTime: newStartTime || undefined,
-        newLessonEndTime: newEndTime || undefined,
+        newRoomId: roomOverride,
+        newLessonStartTime: timeChanged ? newStartTime : undefined,
+        newLessonEndTime: timeChanged ? newEndTime : undefined,
         reason: reason.trim() || undefined,
       });
       toast.success("Dars boshqa kunga ko'chirildi");
@@ -858,9 +878,9 @@ function CreateRescheduleDialog({
       onOpenChange(false);
       setOriginalDate(undefined);
       setNewDate(undefined);
-      setNewRoomId("__default__");
-      setNewStartTime("");
-      setNewEndTime("");
+      setNewRoomId(group.room?.id ?? "");
+      setNewStartTime(group.lessonStartTime ?? "");
+      setNewEndTime(group.lessonEndTime ?? "");
       setReason("");
     } catch (err) {
       toast.error(getErrorMessage(err, "Ko'chirishda xatolik"));
@@ -876,113 +896,94 @@ function CreateRescheduleDialog({
         if (!submitting) onOpenChange(v);
       }}
     >
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Darsni boshqa kunga ko&apos;chirish</DialogTitle>
           <DialogDescription>
-            Bu kungi dars yangi sanaga o&apos;tkaziladi. Yangi sanada davomat
-            olish mumkin bo&apos;ladi (oddiy hafta jadvalida bo&apos;lmasa
-            ham). Agar asl kunda davomat olingan bo&apos;lsa, o&apos;sha
-            kungi to&apos;lov o&apos;quvchilarga qaytariladi va ustozdan
-            shu kungi oylik ham olib tashlanadi — chunki dars endi yangi
-            kunda o&apos;tadi.
+            Bu kungi dars yangi sanaga o&apos;tkaziladi. Asl kunda davomat
+            olingan bo&apos;lsa, to&apos;lov va oylik avtomatik qaytariladi.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Asl dars sanasi</Label>
-            <LessonDateSelect
-              exactDays={group.exactDays ?? []}
-              groupStartDate={group.startDate}
-              groupEndDate={group.endDate}
-              value={originalDate}
-              onChange={setOriginalDate}
-              disabled={submitting}
-            />
-            <p className="text-xs text-muted-foreground">
-              Faqat ushbu guruh dars qiladigan sanalar
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label>Yangi dars sanasi</Label>
-            <DatePicker
-              value={newDate}
-              onChange={setNewDate}
-              disabled={submitting || !originalDate}
-              minDate={
-                originalDate
-                  ? new Date(originalDate.getTime() + 24 * 60 * 60 * 1000)
-                  : undefined
-              }
-              defaultMonth={originalDate ?? undefined}
-              placeholder={
-                originalDate ? "Asl sanadan keyingi kun" : "Avval asl sanani tanlang"
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Istalgan kun (kun-haftadan qat&apos;i nazar), lekin asl sanadan
-              keyin bo&apos;lishi kerak.
-            </p>
-          </div>
-          <div className="rounded-md border bg-muted/20 p-3 space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Yangi kun uchun xona va vaqt — ixtiyoriy. Bo&apos;sh qoldirilsa,
-              guruhning oddiy xonasi ({group.room?.name ?? "—"}) va vaqti
-              ({group.lessonStartTime ?? "—"}–{group.lessonEndTime ?? "—"})
-              ishlatiladi.
-            </p>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Xona (ixtiyoriy)</Label>
-              <Select
-                value={newRoomId}
-                onValueChange={setNewRoomId}
+          {/* Sanalar — 2 ustun */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Asl dars sanasi</Label>
+              <LessonDateSelect
+                exactDays={group.exactDays ?? []}
+                groupStartDate={group.startDate}
+                groupEndDate={group.endDate}
+                value={originalDate}
+                onChange={setOriginalDate}
                 disabled={submitting}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__default__">
-                    Standart xona ({group.room?.name ?? "—"})
-                  </SelectItem>
-                  {(roomsQuery.data ?? []).map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Boshlanish vaqti
-                </Label>
-                <TimePicker
-                  value={newStartTime}
-                  onChange={setNewStartTime}
-                  disabled={submitting}
-                  placeholder={group.lessonStartTime ?? "—"}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Tugash vaqti
-                </Label>
-                <TimePicker
-                  value={newEndTime}
-                  onChange={setNewEndTime}
-                  disabled={submitting}
-                  placeholder={group.lessonEndTime ?? "—"}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Yangi dars sanasi</Label>
+              <DatePicker
+                value={newDate}
+                onChange={setNewDate}
+                disabled={submitting || !originalDate}
+                minDate={
+                  originalDate
+                    ? new Date(originalDate.getTime() + 24 * 60 * 60 * 1000)
+                    : undefined
+                }
+                defaultMonth={originalDate ?? undefined}
+                placeholder={
+                  originalDate ? "Asl sanadan keyingi kun" : "Avval asl sanani tanlang"
+                }
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="reschedule-reason">Sabab (ixtiyoriy)</Label>
+          {/* Vaqtlar — 2 ustun, default group vaqti bilan */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Boshlanish</Label>
+              <TimePicker
+                value={newStartTime}
+                onChange={setNewStartTime}
+                disabled={submitting}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Tugash</Label>
+              <TimePicker
+                value={newEndTime}
+                onChange={setNewEndTime}
+                disabled={submitting}
+                minTime={newStartTime || undefined}
+              />
+            </div>
+          </div>
+
+          {/* Xona */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Xona</Label>
+            <Select
+              value={newRoomId}
+              onValueChange={setNewRoomId}
+              disabled={submitting}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Xonani tanlang" />
+              </SelectTrigger>
+              <SelectContent>
+                {(roomsQuery.data ?? []).map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Sabab */}
+          <div className="space-y-1.5">
+            <Label htmlFor="reschedule-reason" className="text-xs text-muted-foreground">
+              Sabab (ixtiyoriy)
+            </Label>
             <Input
               id="reschedule-reason"
               value={reason}
