@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -82,6 +82,20 @@ export function SalaryConfigDialog({
   // ─── selection ─────────────────────────────────────────────
   const [employeeQuery, setEmployeeQuery] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Close picker when clicking outside
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [pickerOpen]);
 
   // ─── new-config form ───────────────────────────────────────
   const [groupId, setGroupId] = useState<string>("__global__");
@@ -98,7 +112,7 @@ export function SalaryConfigDialog({
     queryFn: () =>
       api
         .get<{ data: Employee[]; total: number }>("/users", {
-          params: { pageSize: 200 },
+          params: { pageSize: 100 },
         })
         .then((r) => r.data.data),
     enabled: open,
@@ -261,36 +275,57 @@ export function SalaryConfigDialog({
           {/* ─── 1. EMPLOYEE PICKER ─────────────────────────── */}
           <section className="space-y-2">
             <Label>Xodim</Label>
-            <Input
-              placeholder="Ism, ID yoki rol bo'yicha qidiruv..."
-              value={employeeQuery}
-              onChange={(e) => setEmployeeQuery(e.target.value)}
-            />
             {loadingEmployees ? (
               <Skeleton className="h-10 w-full" />
             ) : (
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Xodimni tanlang" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {filteredEmployees.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">
-                      Hech qaysi xodim topilmadi
-                    </div>
-                  ) : (
-                    filteredEmployees.map((e) => {
-                      const role = roleLabels[e.roles[0]?.role.id] ?? "—";
-                      return (
-                        <SelectItem key={e.id} value={String(e.id)}>
-                          #{e.id} {e.firstName} {e.lastName}{" "}
-                          <span className="text-muted-foreground">({role})</span>
-                        </SelectItem>
-                      );
-                    })
-                  )}
-                </SelectContent>
-              </Select>
+              <div className="relative" ref={pickerRef}>
+                <Input
+                  placeholder="Ism, ID yoki rol bo'yicha qidiruv..."
+                  value={employeeQuery}
+                  onChange={(e) => {
+                    setEmployeeQuery(e.target.value);
+                    setPickerOpen(true);
+                    if (selectedUserId) setSelectedUserId("");
+                  }}
+                  onFocus={() => setPickerOpen(true)}
+                />
+                {pickerOpen && (
+                  <div className="absolute top-full mt-1 w-full bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto z-50">
+                    {filteredEmployees.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        Hech qaysi xodim topilmadi
+                      </div>
+                    ) : (
+                      filteredEmployees.map((e) => {
+                        const role = roleLabels[e.roles[0]?.role.id] ?? "—";
+                        const isSelected = String(e.id) === selectedUserId;
+                        return (
+                          <button
+                            key={e.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedUserId(String(e.id));
+                              setEmployeeQuery(`#${e.id} ${e.firstName} ${e.lastName}`);
+                              setPickerOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 ${isSelected ? "bg-accent" : ""}`}
+                          >
+                            {isSelected ? (
+                              <Check className="size-4 text-primary shrink-0" />
+                            ) : (
+                              <span className="size-4 shrink-0" />
+                            )}
+                            <span className="flex-1 truncate">
+                              #{e.id} {e.firstName} {e.lastName}{" "}
+                              <span className="text-muted-foreground">({role})</span>
+                            </span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </section>
 
