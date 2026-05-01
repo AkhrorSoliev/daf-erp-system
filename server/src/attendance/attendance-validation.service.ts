@@ -80,11 +80,35 @@ export class AttendanceValidationService {
       );
     }
 
-    const scheduleDays = group.exactDays
-      .map((d) => DAY_NAME_TO_JS[d])
-      .filter((d) => d !== undefined);
-    if (!scheduleDays.includes(parsedDate.getUTCDay())) {
-      throw new BadRequestException('Bu kunda dars rejalashtirilmagan');
+    // LessonReschedule: a moved lesson lands on `newDate` even if that day
+    // isn't normally scheduled, and the original day is forbidden once moved.
+    const reschedule = await this.prisma.lessonReschedule.findFirst({
+      where: {
+        groupId: group.id,
+        deletedAt: null,
+        OR: [{ originalDate: parsedDate }, { newDate: parsedDate }],
+      },
+      select: { originalDate: true, newDate: true },
+    });
+    if (
+      reschedule &&
+      reschedule.originalDate.getTime() === parsedDate.getTime()
+    ) {
+      throw new BadRequestException(
+        "Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling",
+      );
+    }
+    const isMovedLessonDay =
+      reschedule != null &&
+      reschedule.newDate.getTime() === parsedDate.getTime();
+
+    if (!isMovedLessonDay) {
+      const scheduleDays = group.exactDays
+        .map((d) => DAY_NAME_TO_JS[d])
+        .filter((d) => d !== undefined);
+      if (!scheduleDays.includes(parsedDate.getUTCDay())) {
+        throw new BadRequestException('Bu kunda dars rejalashtirilmagan');
+      }
     }
 
     const holiday = await this.prisma.holiday.findFirst({

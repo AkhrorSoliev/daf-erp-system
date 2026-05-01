@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader2, Plus, Trash2, UserCog, XCircle } from "lucide-react";
+import { ArrowRight, CalendarClock, Loader2, Plus, Trash2, UserCog, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
 import { LessonDateSelect } from "./lesson-date-select";
 import {
   Select,
@@ -58,6 +59,15 @@ interface LessonOverride {
   setBy: { id: number; firstName: string; lastName: string };
 }
 
+interface LessonReschedule {
+  id: string;
+  originalDate: string;
+  newDate: string;
+  reason: string | null;
+  createdAt: string;
+  scheduledBy: { id: number; firstName: string; lastName: string };
+}
+
 interface Props {
   group: GroupData;
 }
@@ -91,13 +101,25 @@ export function LessonChangesTab({ group }: Props) {
         .then((r) => r.data),
   });
 
+  const reschedulesQuery = useQuery({
+    queryKey: ["lesson-reschedules", group.id],
+    queryFn: () =>
+      api
+        .get<LessonReschedule[]>("/lesson-reschedules", {
+          params: { groupId: group.id },
+        })
+        .then((r) => r.data),
+  });
+
   const [createCancellationOpen, setCreateCancellationOpen] = useState(false);
   const [createOverrideOpen, setCreateOverrideOpen] = useState(false);
+  const [createRescheduleOpen, setCreateRescheduleOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const refetchAll = () => {
     queryClient.invalidateQueries({ queryKey: ["lesson-cancellations", group.id] });
     queryClient.invalidateQueries({ queryKey: ["lesson-teacher-overrides", group.id] });
+    queryClient.invalidateQueries({ queryKey: ["lesson-reschedules", group.id] });
   };
 
   const handleDeleteCancellation = async (id: string) => {
@@ -132,6 +154,25 @@ export function LessonChangesTab({ group }: Props) {
     try {
       await api.delete(`/lesson-teacher-overrides/${id}`);
       toast.success("O'rinbosar bekor qilindi");
+      refetchAll();
+    } catch (err) {
+      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteReschedule = async (id: string) => {
+    if (
+      !confirm(
+        "Ko'chirish yozuvini o'chirmoqchimisiz?\n\nDiqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar dars haqiqatan asl kunda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
+      )
+    )
+      return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/lesson-reschedules/${id}`);
+      toast.success("Ko'chirish yozuvi o'chirildi");
       refetchAll();
     } catch (err) {
       toast.error(getErrorMessage(err, "O'chirishda xatolik"));
@@ -299,6 +340,85 @@ export function LessonChangesTab({ group }: Props) {
         </CardContent>
       </Card>
 
+      {/* Ko'chirilgan darslar */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <CalendarClock className="size-5 text-amber-500" />
+            Ko&apos;chirilgan darslar
+          </CardTitle>
+          {canCreate && (
+            <Button size="sm" onClick={() => setCreateRescheduleOpen(true)}>
+              <Plus className="size-4 mr-1" />
+              Darsni boshqa kunga ko&apos;chirish
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {reschedulesQuery.isLoading ? (
+            <Skeleton className="h-32 w-full" />
+          ) : !reschedulesQuery.data?.length ? (
+            <p className="text-muted-foreground text-sm py-4 text-center">
+              Hech qanday dars boshqa kunga ko&apos;chirilmagan
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12 border-r">#</TableHead>
+                  <TableHead>Asl sana</TableHead>
+                  <TableHead className="w-8"></TableHead>
+                  <TableHead>Yangi sana</TableHead>
+                  <TableHead>Sabab</TableHead>
+                  <TableHead>Belgilagan</TableHead>
+                  {canDelete && <TableHead className="w-16">Amal</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reschedulesQuery.data.map((r, i) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="border-r text-muted-foreground">
+                      {i + 1}
+                    </TableCell>
+                    <TableCell className="font-medium tabular-nums">
+                      {format(new Date(r.originalDate), "dd.MM.yyyy")}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <ArrowRight className="size-4" />
+                    </TableCell>
+                    <TableCell className="font-medium tabular-nums text-amber-700 dark:text-amber-400">
+                      {format(new Date(r.newDate), "dd.MM.yyyy")}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {r.reason ?? <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {r.scheduledBy.firstName} {r.scheduledBy.lastName}
+                    </TableCell>
+                    {canDelete && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteReschedule(r.id)}
+                          disabled={deletingId === r.id}
+                        >
+                          {deletingId === r.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4 text-red-500" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Dialogs */}
       {canCreate && (
         <>
@@ -311,6 +431,12 @@ export function LessonChangesTab({ group }: Props) {
           <CreateOverrideDialog
             open={createOverrideOpen}
             onOpenChange={setCreateOverrideOpen}
+            group={group}
+            onSaved={refetchAll}
+          />
+          <CreateRescheduleDialog
+            open={createRescheduleOpen}
+            onOpenChange={setCreateRescheduleOpen}
             group={group}
             onSaved={refetchAll}
           />
@@ -629,6 +755,132 @@ function CreateOverrideDialog({
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
             Saqlash
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+// ─── Reschedule dialog ──────────────────────────────────────────────
+
+interface RescheduleProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  group: GroupData;
+  onSaved: () => void;
+}
+
+function CreateRescheduleDialog({
+  open,
+  onOpenChange,
+  group,
+  onSaved,
+}: RescheduleProps) {
+  const [originalDate, setOriginalDate] = useState<Date | undefined>();
+  const [newDate, setNewDate] = useState<Date | undefined>();
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!originalDate || !newDate) {
+      toast.error("Asl va yangi sanani tanlang");
+      return;
+    }
+    if (originalDate.getTime() === newDate.getTime()) {
+      toast.error("Asl va yangi sana bir xil bo'la olmaydi");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.post("/lesson-reschedules", {
+        groupId: group.id,
+        originalDate: format(originalDate, "yyyy-MM-dd"),
+        newDate: format(newDate, "yyyy-MM-dd"),
+        reason: reason.trim() || undefined,
+      });
+      toast.success("Dars boshqa kunga ko'chirildi");
+      onSaved();
+      onOpenChange(false);
+      setOriginalDate(undefined);
+      setNewDate(undefined);
+      setReason("");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Ko'chirishda xatolik"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!submitting) onOpenChange(v);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Darsni boshqa kunga ko&apos;chirish</DialogTitle>
+          <DialogDescription>
+            Asl kun darsi yangi kunga ko&apos;chiriladi. Yangi sanada davomat
+            olish ruxsat etiladi (oddiy kun-haftaga bog&apos;liq emas). Asl
+            kunda davomat olingan bo&apos;lsa avtomatik EXCUSED qilinadi va
+            billing qaytariladi.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Asl dars sanasi</Label>
+            <LessonDateSelect
+              exactDays={group.exactDays ?? []}
+              groupStartDate={group.startDate}
+              groupEndDate={group.endDate}
+              value={originalDate}
+              onChange={setOriginalDate}
+              disabled={submitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              Faqat ushbu guruh dars qiladigan sanalar
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Yangi dars sanasi</Label>
+            <DatePicker
+              value={newDate}
+              onChange={setNewDate}
+              disabled={submitting}
+              placeholder="Istalgan kun"
+            />
+            <p className="text-xs text-muted-foreground">
+              Istalgan kun (kun-haftadan qat&apos;i nazar) — ko&apos;chirilgan
+              dars shu kunda o&apos;tiladi
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="reschedule-reason">Sabab (ixtiyoriy)</Label>
+            <Input
+              id="reschedule-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Masalan 'Ustoz dushanba kuni boshqa shaharda'"
+              maxLength={500}
+              disabled={submitting}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            Bekor qilish
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
+            Ko&apos;chirish
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -74,6 +74,9 @@ describe('AttendanceService', () => {
       lessonCancellation: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      lessonReschedule: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       attendance: {
         groupBy: jest.fn().mockResolvedValue([]),
         findMany: jest.fn().mockResolvedValue([]),

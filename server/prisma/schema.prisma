@@ -332,10 +332,12 @@ model User {
   // Financial v2 authorship (Faza 1 — version + period + cancellation + accrual reversal)
   salaryConfigVersionsAuthored EmployeeSalaryConfigVersion[] @relation("SalaryConfigVersionChangedBy")
   salaryPeriodsAuthored        SalaryPeriodSetting[]         @relation("SalaryPeriodChangedBy")
-  cancelledLessons             LessonCancellation[]          @relation("LessonCancelledBy")
-  deletedLessonCancellations   LessonCancellation[]          @relation("LessonCancellationDeletedBy")
-  setLessonTeacherOverrides    LessonTeacherOverride[]       @relation("LessonTeacherOverrideSetBy")
-  deletedLessonTeacherOverrides LessonTeacherOverride[]      @relation("LessonTeacherOverrideDeletedBy")
+  cancelledLessons              LessonCancellation[]          @relation("LessonCancelledBy")
+  deletedLessonCancellations    LessonCancellation[]          @relation("LessonCancellationDeletedBy")
+  setLessonTeacherOverrides     LessonTeacherOverride[]       @relation("LessonTeacherOverrideSetBy")
+  deletedLessonTeacherOverrides LessonTeacherOverride[]       @relation("LessonTeacherOverrideDeletedBy")
+  scheduledLessonReschedules    LessonReschedule[]            @relation("LessonRescheduleScheduledBy")
+  deletedLessonReschedules      LessonReschedule[]            @relation("LessonRescheduleDeletedBy")
   reversedSalaryAccruals       SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
 
   @@index([deletedAt])
@@ -602,6 +604,7 @@ model Group {
   scheduleSnapshots      GroupScheduleSnapshot[]
   lessonCancellations    LessonCancellation[]    @relation("LessonCancellationGroup")
   lessonTeacherOverrides LessonTeacherOverride[] @relation("LessonTeacherOverrideGroup")
+  lessonReschedules      LessonReschedule[]      @relation("LessonRescheduleGroup")
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1322,6 +1325,41 @@ model LessonTeacherOverride {
 
   @@index([groupId, date])
   @@index([date])
+  @@index([companyId])
+  @@index([deletedAt])
+}
+
+/// Per-(groupId, originalDate) lesson reschedule. The lesson originally
+/// scheduled for `originalDate` is moved to `newDate`.
+///
+/// Effects:
+///   - originalDate is treated like a cancelled lesson (no attendance
+///     allowed; existing attendance there is reversed via cascade).
+///   - newDate is treated like a regular lesson day even if it isn't
+///     in `Group.exactDays` — the validator allows attendance on it.
+///
+/// Two partial unique indexes (raw SQL in migration):
+///   - one active reschedule per (groupId, originalDate)
+///   - one active reschedule per (groupId, newDate) — prevents two
+///     moved lessons landing on the same destination day.
+model LessonReschedule {
+  id            String    @id @default(uuid())
+  groupId       String
+  group         Group     @relation("LessonRescheduleGroup", fields: [groupId], references: [id])
+  originalDate  DateTime  @db.Date
+  newDate       DateTime  @db.Date
+  reason        String?
+  scheduledById Int
+  scheduledBy   User      @relation("LessonRescheduleScheduledBy", fields: [scheduledById], references: [id])
+  companyId     Int
+  createdAt     DateTime  @default(now())
+
+  deletedAt   DateTime?
+  deletedById Int?
+  deletedBy   User?     @relation("LessonRescheduleDeletedBy", fields: [deletedById], references: [id])
+
+  @@index([groupId, originalDate])
+  @@index([groupId, newDate])
   @@index([companyId])
   @@index([deletedAt])
 }
