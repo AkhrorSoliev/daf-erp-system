@@ -520,9 +520,10 @@ function CreateCancellationDialog({
         <DialogHeader>
           <DialogTitle>Darsni bekor qilish</DialogTitle>
           <DialogDescription>
-            Agar bu kuni davomat allaqachon olingan bo&apos;lsa, har attendance
-            EXCUSED ga o&apos;tadi va talabalar oldindan-to&apos;langan dars
-            hisobi 1 ga oshadi.
+            Agar bu kuni davomat allaqachon olingan bo&apos;lsa, har bir
+            o&apos;quvchining holati &quot;uzrli sabab bilan kelmadi&quot;
+            ga o&apos;tadi va undan yechilgan pul qaytariladi (qoldiq
+            darslar hisobi 1 ga oshadi).
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -824,10 +825,12 @@ function CreateRescheduleDialog({
         <DialogHeader>
           <DialogTitle>Darsni boshqa kunga ko&apos;chirish</DialogTitle>
           <DialogDescription>
-            Asl kun darsi yangi kunga ko&apos;chiriladi. Yangi sanada davomat
-            olish ruxsat etiladi (oddiy kun-haftaga bog&apos;liq emas). Asl
-            kunda davomat olingan bo&apos;lsa avtomatik EXCUSED qilinadi va
-            billing qaytariladi.
+            Bu kungi dars yangi sanaga o&apos;tkaziladi. Yangi sanada davomat
+            olish mumkin bo&apos;ladi (oddiy hafta jadvalida bo&apos;lmasa
+            ham). Agar asl kunda davomat olingan bo&apos;lsa, o&apos;sha
+            kungi to&apos;lov o&apos;quvchilarga qaytariladi va ustozdan
+            shu kungi oylik ham olib tashlanadi — chunki dars endi yangi
+            kunda o&apos;tadi.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
