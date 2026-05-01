@@ -98,16 +98,17 @@ export class AttendanceSaveService {
         const enrolledStudentIds = new Set(
           enrolledStudents.map((r) => r.studentId),
         );
-        // Per-group debtor set: balance below the per-lesson cost. Teachers
-        // can't mark these students at all — admin handles them via the
-        // dedicated debtors panel after collecting payment.
-        const debtorIds = isTeacherOnly
-          ? new Set(
-              enrolledStudents
-                .filter((r) => r.student.balance < perLessonCost)
-                .map((r) => r.studentId),
-            )
-          : new Set<number>();
+        // Per-group debtor set: balance below the per-lesson cost. The
+        // attendance form renders debtors in a separate "Qarzdorlar" panel
+        // outside the main roster — they are NEVER required to be marked,
+        // for any role. Admins/CEO can still optionally include a debtor
+        // entry (e.g. after collecting payment in the same session); we
+        // accept it. Teachers cannot send debtor entries at all.
+        const debtorIds = new Set(
+          enrolledStudents
+            .filter((r) => r.student.balance < perLessonCost)
+            .map((r) => r.studentId),
+        );
 
         for (const entry of dto.entries) {
           if (!enrolledStudentIds.has(entry.studentId)) {
@@ -115,24 +116,21 @@ export class AttendanceSaveService {
               `O'quvchi #${entry.studentId} bu guruhga yozilmagan yoki dars sanasi uning boshlanish sanasidan oldin`,
             );
           }
-          if (debtorIds.has(entry.studentId)) {
+          if (isTeacherOnly && debtorIds.has(entry.studentId)) {
             throw new BadRequestException(
               `O'quvchi #${entry.studentId} balansi dars uchun yetmaydi — davomat olish mumkin emas`,
             );
           }
         }
 
-        // "Expected" set: every active student the frontend renders for this
-        // role. Davomatni saqlashdan oldin barcha ko'rsatilgan o'quvchilar
-        // uchun status belgilanishi shart — aks holda ba'zi o'quvchilar
-        // "na bor, na yo'q" holatida qolib ketadi.
-        const expectedStudentIds = isTeacherOnly
-          ? new Set(
-              enrolledStudents
-                .filter((r) => r.student.balance >= perLessonCost)
-                .map((r) => r.studentId),
-            )
-          : new Set(enrolledStudentIds);
+        // "Expected" set: every student the frontend renders in the main
+        // attendance form. Debtors live in a separate panel and are not
+        // required for any role.
+        const expectedStudentIds = new Set(
+          enrolledStudents
+            .filter((r) => r.student.balance >= perLessonCost)
+            .map((r) => r.studentId),
+        );
 
         const submittedStudentIds = new Set(
           dto.entries.map((e) => e.studentId),

@@ -501,7 +501,7 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue(
-        mockEnrollments.map((e) => ({ studentId: e.studentId })),
+        mockEnrollments.map((e) => ({ studentId: e.studentId, student: { balance: e.student.balance } })),
       );
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert
@@ -552,7 +552,9 @@ describe('AttendanceService', () => {
     });
 
     it('should throw BadRequestException for unenrolled student', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
 
       const dto = {
         entries: [{ studentId: 99999, status: 'PRESENT' }],
@@ -684,7 +686,7 @@ describe('AttendanceService', () => {
         },
       ];
 
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
+      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001, student: { balance: 500000 } }]);
       prisma.attendance.findMany.mockResolvedValue(existingRecords);
       prisma.attendance.upsert.mockResolvedValue(mockResults[0]);
 
@@ -789,7 +791,7 @@ describe('AttendanceService', () => {
     });
 
     it('should allow Admin to edit attendance even after it was taken', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
+      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001, student: { balance: 500000 } }]);
       prisma.attendance.findMany.mockResolvedValue([
         {
           id: 'att-existing',
@@ -842,7 +844,7 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue(
-        mockEnrollments.map((e) => ({ studentId: e.studentId })),
+        mockEnrollments.map((e) => ({ studentId: e.studentId, student: { balance: e.student.balance } })),
       );
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert
@@ -893,8 +895,8 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue([
-        { studentId: 10001 },
-        { studentId: 10002 },
+        { studentId: 10001, student: { balance: 500000 } },
+        { studentId: 10002, student: { balance: 500000 } },
       ]);
       prisma.attendance.findMany.mockResolvedValue(existingRecords);
       prisma.attendance.upsert
