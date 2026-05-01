@@ -44,8 +44,8 @@ interface Employee {
   firstName: string;
   lastName: string;
   isActive: boolean;
-  branches: { branch: { id: number; name: string } }[];
-  roles: { role: { id: number; name: string } }[];
+  branches: { id: number; name: string }[];
+  roles: { id: number; name: string }[];
 }
 
 interface ActiveConfig {
@@ -320,8 +320,8 @@ export function SalaryConfigPageClient() {
               </TableRow>
             ) : (
               visibleEmployees.map((emp, idx) => {
-                const role = ROLE_LABELS[emp.roles[0]?.role?.name ?? ""] ?? "—";
-                const branch = emp.branches[0]?.branch?.name ?? "—";
+                const role = ROLE_LABELS[emp.roles[0]?.name ?? ""] ?? "—";
+                const branch = emp.branches[0]?.name ?? "—";
                 const cfgs = configsByUser[emp.id] ?? [];
                 const checked = selectedIds.has(emp.id);
                 return (

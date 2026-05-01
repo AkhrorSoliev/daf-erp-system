@@ -35,8 +35,8 @@ interface SimpleEmployee {
   id: number;
   firstName: string;
   lastName: string;
-  branches: { branch: { id: number; name: string } }[];
-  roles: { role: { id: number; name: string } }[];
+  branches: { id: number; name: string }[];
+  roles: { id: number; name: string }[];
 }
 
 interface SalaryConfig {
@@ -85,7 +85,7 @@ interface Props {
 export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Props) {
   const open = !!userId && !!employee;
   const isTeacher =
-    employee?.roles.some((r) => r.role?.id === TEACHER_ROLE_ID) ?? false;
+    employee?.roles.some((r) => r?.id === TEACHER_ROLE_ID) ?? false;
 
   // Form state (resets when the row changes)
   const [groupId, setGroupId] = useState<string>("__global__");
@@ -200,9 +200,9 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
   };
 
   const role = employee
-    ? ROLE_LABELS[employee.roles[0]?.role?.name ?? ""] ?? "—"
+    ? ROLE_LABELS[employee.roles[0]?.name ?? ""] ?? "—"
     : "";
-  const branch = employee?.branches[0]?.branch?.name ?? "—";
+  const branch = employee?.branches[0]?.name ?? "—";
 
   return (
     <Sheet
