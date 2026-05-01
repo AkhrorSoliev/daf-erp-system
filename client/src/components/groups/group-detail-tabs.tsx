@@ -13,7 +13,7 @@ import { CommentList, type CommentData } from "@/components/shared/comment-list"
 import { AttendanceTab } from "./attendance/attendance-tab";
 import { AttendanceStats } from "./attendance/attendance-stats";
 import { AttendanceDotsTab } from "./attendance/attendance-dots-tab";
-import { LessonCancellationsTab } from "./lesson-cancellations-tab";
+import { LessonChangesTab } from "./lesson-changes-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
@@ -161,7 +161,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
         <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
         {canManage && (
-          <TabsTrigger value="bekor-qilingan">Bekor qilingan</TabsTrigger>
+          <TabsTrigger value="bekor-qilingan">Dars o&apos;zgarishlari</TabsTrigger>
         )}
         {canManage && <TabsTrigger value="tarix">Tarix</TabsTrigger>}
         {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
@@ -210,13 +210,13 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         <EmptyState message="Imtihonlar mavjud emas" />
       </TabsContent>
 
-      {/* Bekor qilingan darslar (faqat CEO, BD, Admin) */}
+      {/* Dars o'zgarishlari — bekor qilish + o'rinbosar ustoz (CEO/BD/Admin) */}
       {canManage && (
         <TabsContent value="bekor-qilingan">
           {cancellationsVisible ? (
-            <LessonCancellationsTab groupId={group.id} />
+            <LessonChangesTab group={group} />
           ) : (
-            <EmptyState message="Bekor qilingan darslar mavjud emas" />
+            <EmptyState message="Dars o'zgarishlari ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
       )}
