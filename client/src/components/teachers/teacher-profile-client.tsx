@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
@@ -31,11 +31,28 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const canManageTeachers = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const isMobile = useIsMobile();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "guruhlar";
   const { openDrawer } = useEditTeacher();
   const [teacher, setTeacher] = useState<TeacherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "guruhlar") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const fetchTeacher = useCallback(async () => {
     try {
@@ -122,7 +139,11 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
             infoItems={mobileInfoItems}
             actions={mobileActions}
           />
-          <TeacherProfileTabs teacher={teacher} />
+          <TeacherProfileTabs
+            teacher={teacher}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
         </div>
       ) : (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -130,7 +151,11 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
             <TeacherProfileCard teacher={teacher} />
           </div>
           <div className="min-w-0 flex-1">
-            <TeacherProfileTabs teacher={teacher} />
+            <TeacherProfileTabs
+            teacher={teacher}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
           </div>
         </div>
       )}
