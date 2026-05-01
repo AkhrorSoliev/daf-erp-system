@@ -227,9 +227,16 @@ export class AttendanceSaveService {
         return { upsertResults, existingMap, statusChanges };
       },
       {
+        // Saving attendance for a full roster (15-30 students) issues many
+        // serial queries inside a single Serializable transaction:
+        // attendance upsert + lesson billing (balance lock, deduction,
+        // consumption) + salary accrual (version lookup, upsert,
+        // teacher-balance lock + update) per entry. Neon serverless adds
+        // round-trip latency on each. 60s gives comfortable headroom for
+        // larger groups; raise further if a group regularly times out.
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 15_000,
+        maxWait: 15_000,
+        timeout: 60_000,
       },
     );
 
