@@ -39,6 +39,7 @@ import { RefundsModule } from './refunds/refunds.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
 import { LessonCancellationsModule } from './lesson-cancellations/lesson-cancellations.module';
+import { LessonTeacherOverridesModule } from './lesson-teacher-overrides/lesson-teacher-overrides.module';
 import { BillingModule } from './billing/billing.module';
 import { JwtAuthGuard } from './common/guards';
 
@@ -84,6 +85,7 @@ import { JwtAuthGuard } from './common/guards';
     PaymentGatewaysModule,
     BillingModule,
     LessonCancellationsModule,
+    LessonTeacherOverridesModule,
   ],
   providers: [
     {

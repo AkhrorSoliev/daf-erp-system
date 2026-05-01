@@ -46,6 +46,13 @@ describe('LessonBillingService', () => {
       group: { findUnique: jest.fn().mockResolvedValue(baseGroup) },
       student: { findUnique: jest.fn() },
       groupTeacher: { findMany: jest.fn().mockResolvedValue(baseGroup.teachers) },
+      // Default: no per-lesson substitute override → resolver falls back
+      // to GroupTeacher list above. Tests that exercise the override
+      // branch explicitly mockResolvedValue([{ teacherIds: [...] }])
+      // for this call.
+      lessonTeacherOverride: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
     };
     prisma = tx;
 

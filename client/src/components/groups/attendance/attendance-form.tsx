@@ -26,6 +26,7 @@ import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
 import { AttendanceStudentRow } from "./attendance-student-row";
 import { AttendanceDebtorsSection } from "./attendance-debtors-section";
+import { LessonSubstituteCard } from "./lesson-substitute-card";
 import {
   DAY_NAMES,
   STATUS_CONFIG,
@@ -341,6 +342,16 @@ export function AttendanceForm({
             ))}
           </div>
         </div>
+      )}
+
+      {/* O'rinbosar ustoz (CEO/BD/Admin only) */}
+      {!loading && students.length > 0 && (
+        <LessonSubstituteCard
+          groupId={group.id}
+          date={date}
+          regularTeachers={group.teachers ?? []}
+          enabled={isAdmin}
+        />
       )}
 
       {/* Student list */}

@@ -132,6 +132,24 @@ export class SalaryBreakdownService {
     const activeTotal = active.reduce((s, r) => s + r.amount, 0);
     const reversedTotal = reversed.reduce((s, r) => s + r.amount, 0);
 
+    // Mark which (groupId, lessonDate) pairs had a substitute teacher override
+    // active. Build a Set of "groupId|date" keys so each line gets an O(1)
+    // boolean lookup. We over-fetch slightly (any override that touches these
+    // groups in this period) — fine for breakdown's small row counts.
+    const overrides = rows.length
+      ? await this.prisma.lessonTeacherOverride.findMany({
+          where: {
+            deletedAt: null,
+            groupId: { in: [...new Set(rows.map((r) => r.group.id))] },
+            date: { in: [...new Set(rows.map((r) => r.lessonDate))] },
+          },
+          select: { groupId: true, date: true },
+        })
+      : [];
+    const overrideKeys = new Set(
+      overrides.map((o) => `${o.groupId}|${o.date.toISOString()}`),
+    );
+
     return {
       lines: rows.map((r) => ({
         id: r.id,
@@ -150,6 +168,9 @@ export class SalaryBreakdownService {
               scope: r.salaryConfigVersion.config.groupId ? 'GROUP' : 'GLOBAL',
             }
           : null,
+        isSubstitute: overrideKeys.has(
+          `${r.group.id}|${r.lessonDate.toISOString()}`,
+        ),
         reversedAt: r.reversedAt,
         reversalReason: r.reversalReason,
         reversedBy: r.reversedBy,

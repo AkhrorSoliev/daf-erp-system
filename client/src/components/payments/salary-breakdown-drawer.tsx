@@ -38,6 +38,7 @@ interface BreakdownLine {
     value: number;
     scope: "GROUP" | "GLOBAL";
   } | null;
+  isSubstitute?: boolean;
   reversedAt: string | null;
   reversalReason: string | null;
   reversedBy: { firstName: string; lastName: string } | null;
@@ -345,8 +346,16 @@ function BreakdownRow({ line, index }: { line: BreakdownLine; index: number }) {
         <div className="font-medium text-sm leading-tight">
           {line.student.firstName} {line.student.lastName}
         </div>
-        <div className="text-xs text-muted-foreground leading-tight mt-0.5">
-          {line.group.name} · {line.group.course.name}
+        <div className="text-xs text-muted-foreground leading-tight mt-0.5 flex items-center gap-1.5 flex-wrap">
+          <span>{line.group.name} · {line.group.course.name}</span>
+          {line.isSubstitute && (
+            <Badge
+              variant="outline"
+              className="text-[10px] py-0 h-4 border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+            >
+              O&apos;rinbosar
+            </Badge>
+          )}
         </div>
       </TableCell>
       <TableCell className={cn(isReversed && "opacity-60")}>

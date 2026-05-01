@@ -132,7 +132,6 @@ export class LessonBillingService {
       where: { id: p.groupId },
       select: {
         course: { select: { price: true, lessonPaymentCount: true } },
-        teachers: { select: { teacherId: true } },
         contracts: {
           where: { studentId: p.studentId, status: 'ACTIVE', deletedAt: null },
           select: { id: true },
@@ -141,6 +140,14 @@ export class LessonBillingService {
       },
     });
     if (!group) return;
+
+    // Effective teacher list for THIS lesson (override-aware). Falls back to
+    // GroupTeacher when no override is set for (groupId, lessonDate).
+    const teacherIds = await this.resolveTeachersForLesson(
+      tx,
+      p.groupId,
+      p.lessonDate,
+    );
 
     const lessonPaymentCount = group.course.lessonPaymentCount || 12;
     const fullCycleCost = group.course.price;
@@ -249,14 +256,15 @@ export class LessonBillingService {
       tx,
     );
 
-    // Salary accruals — one per teacher attached to the group. The
-    // accrual service handles version lookup, FIXED_PER_STUDENT semantics,
-    // closed-period guard. Coverage tx is the upstream LESSON_DEDUCTION.
+    // Salary accruals — one per teacher resolved for THIS lesson. When a
+    // LessonTeacherOverride exists for (groupId, lessonDate), `teacherIds`
+    // holds the substitute roster (e.g. Aziz instead of Botir); otherwise
+    // it's the standard GroupTeacher list.
     if (coverageTransactionId) {
-      for (const t of group.teachers) {
+      for (const teacherId of teacherIds) {
         try {
           await this.salaryAccrualService.createAccrual({
-            teacherId: t.teacherId,
+            teacherId,
             studentId: p.studentId,
             groupId: p.groupId,
             attendanceId: p.attendanceId,
@@ -268,7 +276,7 @@ export class LessonBillingService {
           });
         } catch (err) {
           this.logger.error(
-            `Salary accrual failed for teacher ${t.teacherId}`,
+            `Salary accrual failed for teacher ${teacherId}`,
             err,
           );
         }
@@ -293,14 +301,17 @@ export class LessonBillingService {
     // Even if there's no consumption (Misol 7: insufficient balance, no
     // billing happened), we still try to reverse any accrual that snuck
     // through. Without consumption, prepaid is NOT incremented — we don't
-    // hand out free lessons.
-    const teachers = await tx.groupTeacher.findMany({
-      where: { groupId: p.groupId },
-      select: { teacherId: true },
-    });
-    for (const t of teachers) {
+    // hand out free lessons. Resolver picks up the override if one exists
+    // for (groupId, lessonDate), so the substitute's accrual is the one
+    // that gets reversed — not the regular GroupTeacher list.
+    const teacherIds = await this.resolveTeachersForLesson(
+      tx,
+      p.groupId,
+      p.lessonDate,
+    );
+    for (const teacherId of teacherIds) {
       await this.salaryAccrualService.reverseAccrualForAttendance({
-        teacherId: t.teacherId,
+        teacherId,
         studentId: p.studentId,
         groupId: p.groupId,
         lessonDate: p.lessonDate,
@@ -439,5 +450,32 @@ export class LessonBillingService {
         timeout: 15_000,
       },
     );
+  }
+
+  /**
+   * Effective teacher list for a single lesson. If a non-deleted
+   * `LessonTeacherOverride` exists for (groupId, lessonDate), its
+   * `teacherIds` are the authoritative roster — `Group.teachers` is
+   * ignored entirely. Otherwise we fall back to the standard group
+   * roster.
+   *
+   * `lessonDate` is normalised to UTC midnight by the caller, matching
+   * the @db.Date column on `LessonTeacherOverride.date`.
+   */
+  private async resolveTeachersForLesson(
+    tx: Prisma.TransactionClient,
+    groupId: string,
+    lessonDate: Date,
+  ): Promise<number[]> {
+    const override = await tx.lessonTeacherOverride.findFirst({
+      where: { groupId, date: lessonDate, deletedAt: null },
+      select: { teacherIds: true },
+    });
+    if (override) return override.teacherIds;
+    const groupTeachers = await tx.groupTeacher.findMany({
+      where: { groupId },
+      select: { teacherId: true },
+    });
+    return groupTeachers.map((t) => t.teacherId);
   }
 }

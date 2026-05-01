@@ -334,6 +334,8 @@ model User {
   salaryPeriodsAuthored        SalaryPeriodSetting[]         @relation("SalaryPeriodChangedBy")
   cancelledLessons             LessonCancellation[]          @relation("LessonCancelledBy")
   deletedLessonCancellations   LessonCancellation[]          @relation("LessonCancellationDeletedBy")
+  setLessonTeacherOverrides    LessonTeacherOverride[]       @relation("LessonTeacherOverrideSetBy")
+  deletedLessonTeacherOverrides LessonTeacherOverride[]      @relation("LessonTeacherOverrideDeletedBy")
   reversedSalaryAccruals       SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
 
   @@index([deletedAt])
@@ -597,8 +599,9 @@ model Group {
   salaryConfigs  EmployeeSalaryConfig[]
   salaryAccruals SalaryAccrual[]        @relation("GroupSalaryAccruals")
 
-  scheduleSnapshots   GroupScheduleSnapshot[]
-  lessonCancellations LessonCancellation[]    @relation("LessonCancellationGroup")
+  scheduleSnapshots      GroupScheduleSnapshot[]
+  lessonCancellations    LessonCancellation[]    @relation("LessonCancellationGroup")
+  lessonTeacherOverrides LessonTeacherOverride[] @relation("LessonTeacherOverrideGroup")
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1283,6 +1286,40 @@ model LessonCancellation {
   // [groupId, date]") is enforced via a partial unique index added in the
   // raw SQL section of the migration so a soft-deleted cancellation does
   // not block re-creating one for the same lesson.
+  @@index([groupId, date])
+  @@index([date])
+  @@index([companyId])
+  @@index([deletedAt])
+}
+
+/// Per-lesson substitute-teacher override. When a row exists for
+/// (groupId, date) with deletedAt = null, the billing service treats
+/// `teacherIds` as the *full effective* roster for that lesson —
+/// `Group.teachers` is ignored. Without an override row, billing falls
+/// back to `Group.teachers` as before.
+///
+/// `teacherIds` is the complete list (not a delta), so multi-teacher
+/// substitutions ("Botir + Karima → Aziz + Karima") store cleanly.
+///
+/// "At most one active override per (groupId, date)" is enforced via a
+/// partial unique index in raw SQL of the migration so a soft-deleted
+/// override doesn't block re-creating one.
+model LessonTeacherOverride {
+  id          String    @id @default(uuid())
+  groupId     String
+  group       Group     @relation("LessonTeacherOverrideGroup", fields: [groupId], references: [id])
+  date        DateTime  @db.Date
+  teacherIds  Int[]
+  reason      String?
+  setById     Int
+  setBy       User      @relation("LessonTeacherOverrideSetBy", fields: [setById], references: [id])
+  companyId   Int
+  createdAt   DateTime  @default(now())
+
+  deletedAt   DateTime?
+  deletedById Int?
+  deletedBy   User?     @relation("LessonTeacherOverrideDeletedBy", fields: [deletedById], references: [id])
+
   @@index([groupId, date])
   @@index([date])
   @@index([companyId])
