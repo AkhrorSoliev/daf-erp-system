@@ -12,8 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  getLessonDatesInRange,
   fullWeekdayLabel,
+  getEffectiveLessonDates,
+  type LessonDateOption,
 } from "@/lib/lesson-dates";
 
 interface Props {
@@ -28,6 +29,17 @@ interface Props {
   pastDays?: number;
   futureDays?: number;
   placeholder?: string;
+  /**
+   * Lesson dates moved here via reschedule (`LessonReschedule.newDate`).
+   * Surfaced even if outside `exactDays` and tagged with a "(ko'chirilgan)"
+   * badge so admins know why a Saturday is in a Mon/Wed/Fri group.
+   */
+  rescheduleDestinations?: (Date | string)[];
+  /**
+   * Dates to drop from the picker — typically cancelled days and
+   * reschedule originals (lesson moved away from this date).
+   */
+  excludeDates?: (Date | string)[];
 }
 
 /**
@@ -48,6 +60,8 @@ export function LessonDateSelect({
   pastDays = 30,
   futureDays = 60,
   placeholder = "Dars sanasini tanlang",
+  rescheduleDestinations,
+  excludeDates,
 }: Props) {
   const today = useMemo(() => {
     const d = new Date();
@@ -60,17 +74,28 @@ export function LessonDateSelect({
     from.setDate(from.getDate() - pastDays);
     const to = new Date(today);
     to.setDate(to.getDate() + futureDays);
-    const all = getLessonDatesInRange({
+    const all = getEffectiveLessonDates({
       exactDays,
       groupStartDate,
       groupEndDate,
       from,
       to,
+      rescheduleDestinations,
+      excludeDates,
     });
-    const upcoming = all.filter((d) => d >= today);
-    const past = all.filter((d) => d < today).reverse(); // newest-first
+    const upcoming = all.filter((o) => o.date >= today);
+    const past = all.filter((o) => o.date < today).reverse(); // newest-first
     return { upcoming, past };
-  }, [exactDays, groupStartDate, groupEndDate, pastDays, futureDays, today]);
+  }, [
+    exactDays,
+    groupStartDate,
+    groupEndDate,
+    pastDays,
+    futureDays,
+    today,
+    rescheduleDestinations,
+    excludeDates,
+  ]);
 
   const selectedKey = value ? format(value, "yyyy-MM-dd") : "";
 
@@ -107,13 +132,8 @@ export function LessonDateSelect({
                 <SelectLabel className="text-xs text-muted-foreground">
                   Bugun va kelgusi darslar
                 </SelectLabel>
-                {upcoming.map((d) => (
-                  <SelectItem key={d.toISOString()} value={format(d, "yyyy-MM-dd")}>
-                    <span className="tabular-nums">{format(d, "dd.MM.yyyy")}</span>
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      {fullWeekdayLabel(d)}
-                    </span>
-                  </SelectItem>
+                {upcoming.map((o) => (
+                  <DateItem key={o.date.toISOString()} option={o} />
                 ))}
               </SelectGroup>
             )}
@@ -122,13 +142,8 @@ export function LessonDateSelect({
                 <SelectLabel className="text-xs text-muted-foreground">
                   O&apos;tgan darslar
                 </SelectLabel>
-                {past.map((d) => (
-                  <SelectItem key={d.toISOString()} value={format(d, "yyyy-MM-dd")}>
-                    <span className="tabular-nums">{format(d, "dd.MM.yyyy")}</span>
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      {fullWeekdayLabel(d)}
-                    </span>
-                  </SelectItem>
+                {past.map((o) => (
+                  <DateItem key={o.date.toISOString()} option={o} />
                 ))}
               </SelectGroup>
             )}
@@ -136,5 +151,21 @@ export function LessonDateSelect({
         )}
       </SelectContent>
     </Select>
+  );
+}
+
+function DateItem({ option }: { option: LessonDateOption }) {
+  return (
+    <SelectItem value={format(option.date, "yyyy-MM-dd")}>
+      <span className="tabular-nums">{format(option.date, "dd.MM.yyyy")}</span>
+      <span className="text-muted-foreground ml-2 text-xs">
+        {fullWeekdayLabel(option.date)}
+      </span>
+      {option.isRescheduleDestination && (
+        <span className="ml-2 rounded bg-amber-100 dark:bg-amber-950/50 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-400">
+          ko&apos;chirilgan
+        </span>
+      )}
+    </SelectItem>
   );
 }

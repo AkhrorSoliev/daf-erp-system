@@ -209,6 +209,23 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
   - The pagination footer must occupy a non-shrinking slot (`shrink-0`) so the table above is the only scroll container.
   - Reference: `src/components/reports/departed-students/departed-students-reasons-chart.tsx` → `ReasonStudentsDialog`.
 
+#### Row Actions Column
+
+- **Every data table's "Amal" column must use a 3-dot dropdown** (`MoreHorizontal` icon → `<DropdownMenu>`), not inline icon buttons. A row with multiple actions (Tahrirlash, O'chirish, Tarix, etc.) gets noisy fast — the dropdown collapses them into one trigger and gives every action a labelled menu item.
+- The trigger is a ghost `<Button size="icon">` containing `<MoreHorizontal />` and a visually-hidden `<span className="sr-only">Amallar</span>` for accessibility.
+- Use `<DropdownMenuContent align="end">` so the menu opens to the left of the trigger and never gets clipped by the table edge.
+- Menu items use lucide icons with `mr-2 size-4` spacing. Destructive items get `className="text-destructive focus:text-destructive"`.
+- While a row's mutation is in flight (e.g. delete), replace the `<MoreHorizontal />` icon with `<Loader2 className="size-4 animate-spin" />` and disable the trigger so a second click can't fire.
+- Reference: `src/components/settings/branch-row-actions.tsx`, `src/components/groups/lesson-changes-tab.tsx` (reschedules table).
+
+### Confirmation Dialogs (Destructive Actions)
+
+- **Never use the native `confirm()` browser API** for delete/destructive confirmations. It's unstyled, blocks the JS thread, can't render formatted Uzbek warnings or HTML, and looks completely out of place against the shadcn UI.
+- Use the shadcn `<AlertDialog>` component (`src/components/ui/alert-dialog.tsx`) for every destructive confirmation: row delete from a table, archive, status reset, batch delete, etc.
+- Standard shape: `<AlertDialogTitle>` (the question), `<AlertDialogDescription>` (the consequence — what data is affected, what cascades, what cannot be undone), `<AlertDialogCancel>Bekor qilish</AlertDialogCancel>`, and `<AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">O'chirish</AlertDialogAction>`.
+- For a list/table with multiple destructive actions sharing the same look-and-feel, hold a single `useState<{ title, description, onConfirm } | null>` and render one `<AlertDialog>` controlled by that state — each row's handler just calls `setConfirmDelete({ ... })`. Avoids one AlertDialog per row.
+- Reference implementations: `src/components/teachers/teacher-profile-client.tsx` (single-action archive), `src/components/groups/lesson-changes-tab.tsx` (shared confirmDelete state across three different delete flows).
+
 ### Filter Bars
 
 - **No labels** — filter bars must not use `<Label>` elements above inputs or selects. The UI should be self-explanatory through placeholders and select option text alone.

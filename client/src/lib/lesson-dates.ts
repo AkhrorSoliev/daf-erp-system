@@ -70,3 +70,81 @@ function stripTime(d: Date): Date {
 export function fullWeekdayLabel(date: Date): string {
   return WEEKDAY_LABEL_FULL[date.getDay()] ?? "";
 }
+
+export interface LessonDateOption {
+  date: Date;
+  /**
+   * True when this date is in the picker because a lesson was rescheduled
+   * onto it — i.e. it isn't part of the group's regular `exactDays` weekly
+   * schedule, but a `LessonReschedule.newDate` points here.
+   */
+  isRescheduleDestination: boolean;
+}
+
+/**
+ * Same idea as `getLessonDatesInRange`, but layers reschedule destinations
+ * (extra valid lesson days outside the regular schedule) and excludes
+ * cancellation dates + reschedule origins (lesson has moved away).
+ *
+ * Used by every lesson-aware date picker so the override / cancellation /
+ * reschedule dialogs see the SAME notion of "what counts as a lesson day"
+ * — no more "I rescheduled to Saturday but the override picker doesn't
+ * show Saturday" UX bug.
+ */
+export function getEffectiveLessonDates(opts: {
+  exactDays: string[];
+  groupStartDate?: string | Date | null;
+  groupEndDate?: string | Date | null;
+  from: Date; // inclusive
+  to: Date; // inclusive
+  /** Dates a lesson was MOVED TO (LessonReschedule.newDate) — included even if outside `exactDays`. */
+  rescheduleDestinations?: (Date | string)[];
+  /** Dates to remove: cancellations + LessonReschedule.originalDate (lesson has moved away). */
+  excludeDates?: (Date | string)[];
+}): LessonDateOption[] {
+  const base = getLessonDatesInRange({
+    exactDays: opts.exactDays,
+    groupStartDate: opts.groupStartDate,
+    groupEndDate: opts.groupEndDate,
+    from: opts.from,
+    to: opts.to,
+  });
+
+  const excludeKeys = new Set((opts.excludeDates ?? []).map(toDateKey));
+  const filteredBase = base.filter((d) => !excludeKeys.has(toDateKey(d)));
+  const baseKeys = new Set(filteredBase.map(toDateKey));
+
+  const fromKey = toDateKey(opts.from);
+  const toKey = toDateKey(opts.to);
+  const extras: Date[] = [];
+  for (const raw of opts.rescheduleDestinations ?? []) {
+    const key = toDateKey(raw);
+    if (excludeKeys.has(key)) continue; // already removed (cancellation on the new date)
+    if (baseKeys.has(key)) continue; // already in the regular schedule
+    if (key < fromKey || key > toKey) continue; // out of window
+    extras.push(parseKey(key));
+  }
+
+  const merged: LessonDateOption[] = [
+    ...filteredBase.map((date) => ({ date, isRescheduleDestination: false })),
+    ...extras.map((date) => ({ date, isRescheduleDestination: true })),
+  ];
+  merged.sort((a, b) => a.date.getTime() - b.date.getTime());
+  return merged;
+}
+
+function toDateKey(d: Date | string): string {
+  if (typeof d === "string") return d.slice(0, 10);
+  // Use local-day components so a Date constructed via `new Date(y, m, d)`
+  // round-trips to the same key — `toISOString().slice(0,10)` would
+  // shift across timezones.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}

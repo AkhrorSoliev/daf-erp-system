@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowRight, CalendarClock, Loader2, Plus, Trash2, UserCog, XCircle } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -32,16 +31,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { aggregateLessonModifications } from "./lesson-modifications/aggregate";
+import {
+  LessonModificationsTable,
+  type LessonModificationCreateKind,
+} from "./lesson-modifications/lesson-modifications-table";
 
 interface LessonCancellation {
   id: string;
@@ -116,326 +122,169 @@ export function LessonChangesTab({ group }: Props) {
         .then((r) => r.data),
   });
 
+  // Effective lesson-date data for the date pickers. Reschedules add new
+  // valid lesson dates (`newDate`) outside `exactDays`; both reschedules
+  // (`originalDate`) and active cancellations remove dates that aren't
+  // real lesson days anymore. Computed once and threaded into every
+  // child dialog so they all see the same definition of "lesson day".
+  const rescheduleDestinations = useMemo(
+    () => (reschedulesQuery.data ?? []).map((r) => r.newDate),
+    [reschedulesQuery.data],
+  );
+  const lessonDateExcludes = useMemo(
+    () => [
+      ...(reschedulesQuery.data ?? []).map((r) => r.originalDate),
+      ...(cancellationsQuery.data ?? []).map((c) => c.date),
+    ],
+    [reschedulesQuery.data, cancellationsQuery.data],
+  );
+
   const [createCancellationOpen, setCreateCancellationOpen] = useState(false);
   const [createOverrideOpen, setCreateOverrideOpen] = useState(false);
   const [createRescheduleOpen, setCreateRescheduleOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingReschedule, setEditingReschedule] = useState<LessonReschedule | null>(
+    null,
+  );
+  const [busyRowKey, setBusyRowKey] = useState<string | null>(null);
+  // Shared confirm-delete dialog. We never use native `confirm()` —
+  // it's unstyled, blocks the main thread, and can't render formatted
+  // warnings the way our destructive flows need.
+  const [confirmDelete, setConfirmDelete] = useState<{
+    title: string;
+    description: string;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
 
   const refetchAll = () => {
     queryClient.invalidateQueries({ queryKey: ["lesson-cancellations", group.id] });
     queryClient.invalidateQueries({ queryKey: ["lesson-teacher-overrides", group.id] });
     queryClient.invalidateQueries({ queryKey: ["lesson-reschedules", group.id] });
+    // The Davomat / Darslar tabs also depend on lesson dates — without these,
+    // a reschedule that drops `originalDate` and adds `newDate` would only
+    // show on the current tab and leave the cycle dashboard / dots view stale.
+    queryClient.invalidateQueries({ queryKey: ["attendance-dates", group.id] });
+    queryClient.invalidateQueries({ queryKey: ["attendance-lesson-sequence", group.id] });
+    // Calendar view (Davomat tab) reads per-month — prefix match invalidates
+    // every cached month so any scrolled-to view also refreshes.
+    queryClient.invalidateQueries({ queryKey: ["attendance-calendar", group.id] });
   };
 
-  const handleDeleteCancellation = async (id: string) => {
-    if (
-      !confirm(
-        "Bekor qilingan dars yozuvini o'chirmoqchimisiz?\n\n" +
-          "Diqqat: bu davomat va to'lovni tiklamaydi. Agar dars haqiqatda " +
-          "o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
-      )
-    )
-      return;
-    setDeletingId(id);
+  const performDelete = async (
+    url: string,
+    successMessage: string,
+    rowKey?: string,
+  ) => {
+    if (rowKey) setBusyRowKey(rowKey);
     try {
-      await api.delete(`/lesson-cancellations/${id}`);
-      toast.success("Bekor qilingan dars yozuvi o'chirildi");
+      await api.delete(url);
+      toast.success(successMessage);
       refetchAll();
     } catch (err) {
       toast.error(getErrorMessage(err, "O'chirishda xatolik"));
     } finally {
-      setDeletingId(null);
+      setBusyRowKey(null);
     }
   };
 
-  const handleDeleteOverride = async (id: string) => {
-    if (
-      !confirm(
-        "O'rinbosar ustoz qoidasini bekor qilmoqchimisiz?\n\nOddiy guruh ustozlariga qaytariladi va ularning oyligi qayta hisoblanadi.",
-      )
-    )
-      return;
-    setDeletingId(id);
-    try {
-      await api.delete(`/lesson-teacher-overrides/${id}`);
-      toast.success("O'rinbosar bekor qilindi");
-      refetchAll();
-    } catch (err) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
-    } finally {
-      setDeletingId(null);
-    }
+  const findDateKeyForReschedule = (id: string): string | undefined => {
+    const r = (reschedulesQuery.data ?? []).find((x) => x.id === id);
+    return r ? r.newDate.slice(0, 10) : undefined;
+  };
+  const findDateKeyForOverride = (id: string): string | undefined => {
+    const o = (overridesQuery.data ?? []).find((x) => x.id === id);
+    return o ? o.date.slice(0, 10) : undefined;
+  };
+  const findDateKeyForCancellation = (id: string): string | undefined => {
+    const c = (cancellationsQuery.data ?? []).find((x) => x.id === id);
+    return c ? c.date.slice(0, 10) : undefined;
   };
 
-  const handleDeleteReschedule = async (id: string) => {
-    if (
-      !confirm(
-        "Ko'chirish yozuvini o'chirmoqchimisiz?\n\nDiqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar dars haqiqatan asl kunda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
-      )
-    )
-      return;
-    setDeletingId(id);
-    try {
-      await api.delete(`/lesson-reschedules/${id}`);
-      toast.success("Ko'chirish yozuvi o'chirildi");
-      refetchAll();
-    } catch (err) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDeleteCancellation = (id: string) => {
+    setConfirmDelete({
+      title: "Bekor qilingan dars yozuvini o'chirmoqchimisiz?",
+      description:
+        "Diqqat: bu davomat va to'lovni tiklamaydi. Agar dars haqiqatda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
+      onConfirm: () =>
+        performDelete(
+          `/lesson-cancellations/${id}`,
+          "Bekor qilingan dars yozuvi o'chirildi",
+          findDateKeyForCancellation(id),
+        ),
+    });
   };
 
-  const teachersById = new Map<number, { firstName: string; lastName: string }>();
-  for (const t of group.teachers ?? []) teachersById.set(t.id, t);
+  const handleDeleteOverride = (id: string) => {
+    setConfirmDelete({
+      title: "O'rinbosar ustoz qoidasini bekor qilmoqchimisiz?",
+      description:
+        "Oddiy guruh ustozlariga qaytariladi va ularning oyligi qayta hisoblanadi.",
+      onConfirm: () =>
+        performDelete(
+          `/lesson-teacher-overrides/${id}`,
+          "O'rinbosar bekor qilindi",
+          findDateKeyForOverride(id),
+        ),
+    });
+  };
+
+  const handleDeleteReschedule = (id: string) => {
+    setConfirmDelete({
+      title: "Ko'chirish yozuvini o'chirmoqchimisiz?",
+      description:
+        "Diqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar dars haqiqatan asl kunda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
+      onConfirm: () =>
+        performDelete(
+          `/lesson-reschedules/${id}`,
+          "Ko'chirish yozuvi o'chirildi",
+          findDateKeyForReschedule(id),
+        ),
+    });
+  };
+
+  const aggregatedRows = useMemo(
+    () =>
+      aggregateLessonModifications({
+        cancellations: cancellationsQuery.data,
+        overrides: overridesQuery.data,
+        reschedules: reschedulesQuery.data,
+      }),
+    [cancellationsQuery.data, overridesQuery.data, reschedulesQuery.data],
+  );
+
+  const handleCreate = (kind: LessonModificationCreateKind) => {
+    if (kind === "cancellation") setCreateCancellationOpen(true);
+    if (kind === "override") setCreateOverrideOpen(true);
+    if (kind === "reschedule") setCreateRescheduleOpen(true);
+  };
 
   return (
     <div className="space-y-4">
-      {/* Bekor qilingan darslar */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <XCircle className="size-5 text-red-500" />
-            Bekor qilingan darslar
-          </CardTitle>
-          {canCreate && (
-            <Button size="sm" onClick={() => setCreateCancellationOpen(true)}>
-              <Plus className="size-4 mr-1" />
-              Bu darsni bekor qilish
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {cancellationsQuery.isLoading ? (
-            <Skeleton className="h-32 w-full" />
-          ) : !cancellationsQuery.data?.length ? (
-            <p className="text-muted-foreground text-sm py-4 text-center">
-              Hech qanday dars bekor qilinmagan
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Sana</TableHead>
-                  <TableHead>Sabab</TableHead>
-                  <TableHead>Bekor qilgan</TableHead>
-                  <TableHead>Vaqti</TableHead>
-                  {canDelete && <TableHead className="w-16">Amal</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cancellationsQuery.data.map((c, i) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="border-r text-muted-foreground">
-                      {i + 1}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {format(new Date(c.date), "dd.MM.yyyy")}
-                    </TableCell>
-                    <TableCell>{c.reason}</TableCell>
-                    <TableCell>
-                      {c.cancelledBy.firstName} {c.cancelledBy.lastName}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(c.createdAt), "dd.MM.yyyy, HH:mm")}
-                    </TableCell>
-                    {canDelete && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteCancellation(c.id)}
-                          disabled={deletingId === c.id}
-                        >
-                          {deletingId === c.id ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-4 text-red-500" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent className="pt-6">
+          <LessonModificationsTable
+            rows={aggregatedRows}
+            isLoading={
+              cancellationsQuery.isLoading ||
+              overridesQuery.isLoading ||
+              reschedulesQuery.isLoading
+            }
+            canCreate={canCreate}
+            canDelete={canDelete}
+            onCreate={handleCreate}
+            onEditReschedule={(r) =>
+              setEditingReschedule(r as unknown as LessonReschedule)
+            }
+            onDeleteReschedule={handleDeleteReschedule}
+            onDeleteOverride={handleDeleteOverride}
+            onDeleteCancellation={handleDeleteCancellation}
+            busyRowKey={busyRowKey}
+          />
         </CardContent>
       </Card>
 
-      {/* O'rinbosar ustozlar */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <UserCog className="size-5 text-blue-500" />
-            O&apos;rinbosar ustozlar
-          </CardTitle>
-          {canCreate && (
-            <Button size="sm" onClick={() => setCreateOverrideOpen(true)}>
-              <Plus className="size-4 mr-1" />
-              Darsga o&apos;rinbosar qo&apos;shish
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {overridesQuery.isLoading ? (
-            <Skeleton className="h-32 w-full" />
-          ) : !overridesQuery.data?.length ? (
-            <p className="text-muted-foreground text-sm py-4 text-center">
-              Hech qanday o&apos;rinbosar belgilanmagan
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Sana</TableHead>
-                  <TableHead>Ustozlar</TableHead>
-                  <TableHead>Sabab</TableHead>
-                  <TableHead>Belgilagan</TableHead>
-                  {canDelete && <TableHead className="w-16">Amal</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {overridesQuery.data.map((o, i) => (
-                  <TableRow key={o.id}>
-                    <TableCell className="border-r text-muted-foreground">
-                      {i + 1}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {format(new Date(o.date), "dd.MM.yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {o.teacherIds.map((tid) => (
-                          <Badge key={tid} variant="secondary" className="text-xs">
-                            <TeacherLabel teacherId={tid} fromGroup={teachersById} />
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {o.reason ?? <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {o.setBy.firstName} {o.setBy.lastName}
-                    </TableCell>
-                    {canDelete && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteOverride(o.id)}
-                          disabled={deletingId === o.id}
-                        >
-                          {deletingId === o.id ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-4 text-red-500" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Ko'chirilgan darslar */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="size-5 text-amber-500" />
-            Ko&apos;chirilgan darslar
-          </CardTitle>
-          {canCreate && (
-            <Button size="sm" onClick={() => setCreateRescheduleOpen(true)}>
-              <Plus className="size-4 mr-1" />
-              Darsni boshqa kunga ko&apos;chirish
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {reschedulesQuery.isLoading ? (
-            <Skeleton className="h-32 w-full" />
-          ) : !reschedulesQuery.data?.length ? (
-            <p className="text-muted-foreground text-sm py-4 text-center">
-              Hech qanday dars boshqa kunga ko&apos;chirilmagan
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Asl sana</TableHead>
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead>Yangi sana</TableHead>
-                  <TableHead>Sabab</TableHead>
-                  <TableHead>Belgilagan</TableHead>
-                  {canDelete && <TableHead className="w-16">Amal</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reschedulesQuery.data.map((r, i) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="border-r text-muted-foreground">
-                      {i + 1}
-                    </TableCell>
-                    <TableCell className="font-medium tabular-nums">
-                      {format(new Date(r.originalDate), "dd.MM.yyyy")}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <ArrowRight className="size-4" />
-                    </TableCell>
-                    <TableCell className="font-medium tabular-nums text-amber-700 dark:text-amber-400">
-                      <div>{format(new Date(r.newDate), "dd.MM.yyyy")}</div>
-                      {(r.newRoom || r.newLessonStartTime) && (
-                        <div className="text-xs text-muted-foreground font-normal mt-0.5">
-                          {r.newRoom?.name && (
-                            <span>{r.newRoom.name}</span>
-                          )}
-                          {r.newRoom && r.newLessonStartTime && <span> · </span>}
-                          {r.newLessonStartTime && r.newLessonEndTime && (
-                            <span>
-                              {r.newLessonStartTime}–{r.newLessonEndTime}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {r.reason ?? <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {r.scheduledBy.firstName} {r.scheduledBy.lastName}
-                    </TableCell>
-                    {canDelete && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteReschedule(r.id)}
-                          disabled={deletingId === r.id}
-                        >
-                          {deletingId === r.id ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-4 text-red-500" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Eski 3 ta Card olib tashlandi — yagona "Dars o'zgarishlari" feed'iga
+          birlashtirildi. Eski breakdown (turi bo'yicha alohida) audit yozuvlarini
+          /tarix tabidan ko'rish mumkin. */}
 
       {/* Dialogs */}
       {canCreate && (
@@ -445,48 +294,69 @@ export function LessonChangesTab({ group }: Props) {
             onOpenChange={setCreateCancellationOpen}
             group={group}
             onSaved={refetchAll}
+            rescheduleDestinations={rescheduleDestinations}
+            excludeDates={lessonDateExcludes}
           />
           <CreateOverrideDialog
             open={createOverrideOpen}
             onOpenChange={setCreateOverrideOpen}
             group={group}
             onSaved={refetchAll}
+            rescheduleDestinations={rescheduleDestinations}
+            excludeDates={lessonDateExcludes}
           />
           <CreateRescheduleDialog
             open={createRescheduleOpen}
             onOpenChange={setCreateRescheduleOpen}
             group={group}
             onSaved={refetchAll}
+            rescheduleDestinations={rescheduleDestinations}
+            excludeDates={lessonDateExcludes}
           />
+          {editingReschedule && (
+            <CreateRescheduleDialog
+              key={editingReschedule.id}
+              open={!!editingReschedule}
+              onOpenChange={(v) => {
+                if (!v) setEditingReschedule(null);
+              }}
+              group={group}
+              onSaved={refetchAll}
+              existing={editingReschedule}
+              rescheduleDestinations={rescheduleDestinations}
+              excludeDates={lessonDateExcludes}
+            />
+          )}
         </>
       )}
+      <AlertDialog
+        open={!!confirmDelete}
+        onOpenChange={(v) => {
+          if (!v) setConfirmDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDelete?.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                void confirmDelete?.onConfirm();
+              }}
+            >
+              O&apos;chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-}
-
-function TeacherLabel({
-  teacherId,
-  fromGroup,
-}: {
-  teacherId: number;
-  fromGroup: Map<number, { firstName: string; lastName: string }>;
-}) {
-  const local = fromGroup.get(teacherId);
-  if (local) return <>{local.firstName} {local.lastName}</>;
-  return <FetchedTeacherLabel teacherId={teacherId} />;
-}
-
-function FetchedTeacherLabel({ teacherId }: { teacherId: number }) {
-  const { data } = useQuery({
-    queryKey: ["user-mini", teacherId],
-    queryFn: () =>
-      api
-        .get<{ firstName: string; lastName: string }>(`/users/${teacherId}`)
-        .then((r) => r.data)
-        .catch(() => null),
-  });
-  if (!data) return <>#{teacherId}</>;
-  return <>{data.firstName} {data.lastName}</>;
 }
 
 // ─── Time helpers ──────────────────────────────────────────────────
@@ -497,6 +367,17 @@ function addMinutes(time: string, minutes: number): string {
   const hh = Math.floor(total / 60) % 24;
   const mm = total % 60;
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+// Some legacy/seed groups store lesson times as "9:00" (no leading zero).
+// The backend validator and its lexicographic time compares both expect
+// strict HH:MM, so pad before sending.
+function normalizeTime(time: string): string {
+  if (!time) return "";
+  const parts = time.split(":");
+  if (parts.length < 2) return time;
+  const [h, m] = parts;
+  return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
 }
 
 function diffMinutes(start: string | null, end: string | null): number | null {
@@ -513,6 +394,8 @@ interface CancellationProps {
   onOpenChange: (open: boolean) => void;
   group: GroupData;
   onSaved: () => void;
+  rescheduleDestinations?: (Date | string)[];
+  excludeDates?: (Date | string)[];
 }
 
 function CreateCancellationDialog({
@@ -520,6 +403,8 @@ function CreateCancellationDialog({
   onOpenChange,
   group,
   onSaved,
+  rescheduleDestinations,
+  excludeDates,
 }: CancellationProps) {
   const [date, setDate] = useState<Date | undefined>();
   const [reason, setReason] = useState("");
@@ -571,6 +456,8 @@ function CreateCancellationDialog({
               value={date}
               onChange={setDate}
               disabled={submitting}
+              rescheduleDestinations={rescheduleDestinations}
+              excludeDates={excludeDates}
             />
             <p className="text-xs text-muted-foreground">
               Faqat ushbu guruh dars qiladigan sanalar ko&apos;rinadi
@@ -610,6 +497,8 @@ interface OverrideProps {
   onOpenChange: (open: boolean) => void;
   group: GroupData;
   onSaved: () => void;
+  rescheduleDestinations?: (Date | string)[];
+  excludeDates?: (Date | string)[];
 }
 
 function CreateOverrideDialog({
@@ -617,6 +506,8 @@ function CreateOverrideDialog({
   onOpenChange,
   group,
   onSaved,
+  rescheduleDestinations,
+  excludeDates,
 }: OverrideProps) {
   const [date, setDate] = useState<Date | undefined>();
   const [selected, setSelected] = useState<number[]>([]);
@@ -718,9 +609,12 @@ function CreateOverrideDialog({
               value={date}
               onChange={setDate}
               disabled={submitting}
+              rescheduleDestinations={rescheduleDestinations}
+              excludeDates={excludeDates}
             />
             <p className="text-xs text-muted-foreground">
-              Faqat ushbu guruh dars qiladigan sanalar ko&apos;rinadi
+              Ushbu guruh dars qiladigan kunlar; ko&apos;chirilgan sanalar
+              ham ro&apos;yxatda chiqadi
             </p>
           </div>
 
@@ -806,6 +700,10 @@ interface RescheduleProps {
   onOpenChange: (open: boolean) => void;
   group: GroupData;
   onSaved: () => void;
+  /** When present, the dialog runs in edit mode for this reschedule. */
+  existing?: LessonReschedule | null;
+  rescheduleDestinations?: (Date | string)[];
+  excludeDates?: (Date | string)[];
 }
 
 function CreateRescheduleDialog({
@@ -813,44 +711,117 @@ function CreateRescheduleDialog({
   onOpenChange,
   group,
   onSaved,
+  existing,
+  rescheduleDestinations,
+  excludeDates,
 }: RescheduleProps) {
-  const [originalDate, setOriginalDate] = useState<Date | undefined>();
-  const [newDate, setNewDate] = useState<Date | undefined>();
-  // Pre-fill room/time with the group's defaults so admins don't have to
-  // re-enter "the same as usual" — they only adjust if it differs.
-  const [newRoomId, setNewRoomId] = useState<string>(group.room?.id ?? "");
-  const [newStartTime, setNewStartTime] = useState<string>(
-    group.lessonStartTime ?? "",
+  const isEdit = !!existing;
+  const groupStartFallback = normalizeTime(group.lessonStartTime ?? "");
+  const groupEndFallback = normalizeTime(group.lessonEndTime ?? "");
+  const groupRoomFallback = group.room?.id ?? "";
+
+  const [originalDate, setOriginalDate] = useState<Date | undefined>(() =>
+    existing ? new Date(existing.originalDate) : undefined,
   );
-  const [reason, setReason] = useState("");
+  const [newDate, setNewDate] = useState<Date | undefined>(() =>
+    existing ? new Date(existing.newDate) : undefined,
+  );
+  // Pre-fill room/time with the existing reschedule (edit) or the group's
+  // defaults (create) so admins don't have to re-enter "the same as usual".
+  const [newRoomId, setNewRoomId] = useState<string>(() =>
+    existing
+      ? (existing.newRoomId ?? groupRoomFallback)
+      : groupRoomFallback,
+  );
+  const [newStartTime, setNewStartTime] = useState<string>(() =>
+    existing
+      ? normalizeTime(existing.newLessonStartTime ?? groupStartFallback)
+      : groupStartFallback,
+  );
+  const [reason, setReason] = useState(() => existing?.reason ?? "");
   const [submitting, setSubmitting] = useState(false);
 
   // Lesson duration in minutes: prefer explicit `lessonMinutes`, otherwise
   // diff the group's default start/end. Falls back to 60 for legacy groups.
-  const lessonMinutes =
-    group.lessonMinutes ??
-    diffMinutes(group.lessonStartTime, group.lessonEndTime) ??
-    60;
-  const newEndTime = newStartTime ? addMinutes(newStartTime, lessonMinutes) : "";
+  // `??` would let a stored `0` or a negative diff slip through and produce
+  // `end <= start`, which the backend then rejects as 400.
+  const lessonMinutes = (() => {
+    const direct = group.lessonMinutes;
+    if (typeof direct === "number" && direct > 0) return direct;
+    const diff = diffMinutes(group.lessonStartTime, group.lessonEndTime);
+    if (typeof diff === "number" && diff > 0) return diff;
+    return 60;
+  })();
+  // Clamp the end to 23:59 instead of wrapping past midnight — backend
+  // compares times lexicographically, so "00:30" would test as less than
+  // "23:00" and produce a false "end before start" rejection.
+  const computedEnd = newStartTime ? addMinutes(newStartTime, lessonMinutes) : "";
+  const newEndTime =
+    computedEnd && computedEnd <= newStartTime ? "23:59" : computedEnd;
 
-  // Rooms in the group's branch — for the optional room override.
-  const roomsQuery = useQuery({
-    queryKey: ["branch-rooms", group.branchId],
+  // Available rooms — only those with no conflicting lesson on the chosen
+  // date+time. Backend walks regular schedules + other reschedules so the
+  // dropdown only shows bookable rooms instead of letting admins pick a
+  // busy one and fail at submit.
+  const newDateStr = newDate ? format(newDate, "yyyy-MM-dd") : "";
+  // Guard the query so we never fire an obviously-bad payload (would
+  // round-trip 4× because react-query retries on failure).
+  const canQueryRooms = Boolean(
+    open && newDateStr && newStartTime && newEndTime && newEndTime > newStartTime,
+  );
+  const availableRoomsQuery = useQuery({
+    queryKey: [
+      "reschedule-available-rooms",
+      group.id,
+      newDateStr,
+      newStartTime,
+      newEndTime,
+    ],
     queryFn: () =>
       api
-        .get<{ data: { id: string; name: string }[] } | { id: string; name: string }[]>(
-          `/rooms?branch_id=${group.branchId}`,
+        .get<{ id: string; name: string }[]>(
+          `/lesson-reschedules/available-rooms`,
+          {
+            params: {
+              groupId: group.id,
+              date: newDateStr,
+              startTime: newStartTime,
+              endTime: newEndTime,
+            },
+          },
         )
-        .then((r) => {
-          const d = r.data as unknown;
-          if (Array.isArray(d)) return d as { id: string; name: string }[];
-          if (d && typeof d === "object" && "data" in d) {
-            return (d as { data: { id: string; name: string }[] }).data;
-          }
-          return [];
-        }),
-    enabled: open,
+        .then((r) => r.data),
+    enabled: canQueryRooms,
+    // 400 is a deterministic validation failure — retrying just spams the log.
+    retry: false,
   });
+
+  // If the currently-selected room becomes unavailable (e.g. the admin
+  // changed the date and the group's default room is now busy), clear it
+  // so they're forced to pick from the bookable set.
+  const availableRooms = availableRoomsQuery.data ?? [];
+  useEffect(() => {
+    if (!canQueryRooms || availableRoomsQuery.isLoading) return;
+    if (newRoomId && !availableRooms.some((r) => r.id === newRoomId)) {
+      setNewRoomId("");
+    }
+  }, [
+    canQueryRooms,
+    availableRoomsQuery.isLoading,
+    availableRooms,
+    newRoomId,
+  ]);
+
+  // Surface the backend error so silent 400s become visible — easier to
+  // diagnose validation/format issues on the room availability query.
+  const roomQueryError = availableRoomsQuery.error;
+  useEffect(() => {
+    if (!roomQueryError) return;
+    const msg = getErrorMessage(roomQueryError, "Bo'sh xonalarni olishda xatolik");
+    toast.error(msg);
+    // eslint-disable-next-line no-console
+    console.error("available-rooms error:", roomQueryError);
+  }, [roomQueryError]);
 
   const handleSubmit = async () => {
     if (!originalDate || !newDate) {
@@ -865,34 +836,54 @@ function CreateRescheduleDialog({
       toast.error("Dars boshlanish vaqtini kiriting");
       return;
     }
+    if (!newRoomId) {
+      toast.error("Bo'sh xonani tanlang");
+      return;
+    }
     setSubmitting(true);
     // Only persist room/time as overrides when they actually differ from
     // the group's defaults — avoids cluttering the row with redundant data.
     const roomOverride =
-      newRoomId && newRoomId !== group.room?.id ? newRoomId : undefined;
+      newRoomId && newRoomId !== groupRoomFallback ? newRoomId : null;
     const timeChanged =
-      newStartTime !== group.lessonStartTime ||
-      newEndTime !== group.lessonEndTime;
+      newStartTime !== groupStartFallback || newEndTime !== groupEndFallback;
     try {
-      await api.post("/lesson-reschedules", {
-        groupId: group.id,
-        originalDate: format(originalDate, "yyyy-MM-dd"),
-        newDate: format(newDate, "yyyy-MM-dd"),
-        newRoomId: roomOverride,
-        newLessonStartTime: timeChanged ? newStartTime : undefined,
-        newLessonEndTime: timeChanged ? newEndTime : undefined,
-        reason: reason.trim() || undefined,
-      });
-      toast.success("Dars boshqa kunga ko'chirildi");
+      if (isEdit && existing) {
+        await api.patch(`/lesson-reschedules/${existing.id}`, {
+          newDate: format(newDate, "yyyy-MM-dd"),
+          newRoomId: roomOverride,
+          newLessonStartTime: timeChanged ? newStartTime : null,
+          newLessonEndTime: timeChanged ? newEndTime : null,
+          reason: reason.trim() || null,
+        });
+        toast.success("Ko'chirilgan dars yangilandi");
+      } else {
+        await api.post("/lesson-reschedules", {
+          groupId: group.id,
+          originalDate: format(originalDate, "yyyy-MM-dd"),
+          newDate: format(newDate, "yyyy-MM-dd"),
+          newRoomId: roomOverride ?? undefined,
+          newLessonStartTime: timeChanged ? newStartTime : undefined,
+          newLessonEndTime: timeChanged ? newEndTime : undefined,
+          reason: reason.trim() || undefined,
+        });
+        toast.success("Dars boshqa kunga ko'chirildi");
+      }
       onSaved();
       onOpenChange(false);
-      setOriginalDate(undefined);
-      setNewDate(undefined);
-      setNewRoomId(group.room?.id ?? "");
-      setNewStartTime(group.lessonStartTime ?? "");
-      setReason("");
+      // Edit mode keeps the loaded values; create mode resets to blanks
+      // so the next "yangi ko'chirish" starts clean.
+      if (!isEdit) {
+        setOriginalDate(undefined);
+        setNewDate(undefined);
+        setNewRoomId(groupRoomFallback);
+        setNewStartTime(groupStartFallback);
+        setReason("");
+      }
     } catch (err) {
-      toast.error(getErrorMessage(err, "Ko'chirishda xatolik"));
+      toast.error(
+        getErrorMessage(err, isEdit ? "Saqlashda xatolik" : "Ko'chirishda xatolik"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -907,10 +898,15 @@ function CreateRescheduleDialog({
     >
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Darsni boshqa kunga ko&apos;chirish</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? "Ko'chirilgan darsni tahrirlash"
+              : "Darsni boshqa kunga ko'chirish"}
+          </DialogTitle>
           <DialogDescription>
-            Bu kungi dars yangi sanaga o&apos;tkaziladi. Asl kunda davomat
-            olingan bo&apos;lsa, to&apos;lov va oylik avtomatik qaytariladi.
+            {isEdit
+              ? "Asl sana o'zgartirib bo'lmaydi (audit yozuvi). Yangi sana, vaqt, xona va sababni o'zgartirishingiz mumkin."
+              : "Bu kungi dars yangi sanaga o'tkaziladi. Asl kunda davomat olingan bo'lsa, to'lov va oylik avtomatik qaytariladi."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -918,14 +914,22 @@ function CreateRescheduleDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Asl dars sanasi</Label>
-              <LessonDateSelect
-                exactDays={group.exactDays ?? []}
-                groupStartDate={group.startDate}
-                groupEndDate={group.endDate}
-                value={originalDate}
-                onChange={setOriginalDate}
-                disabled={submitting}
-              />
+              {isEdit && originalDate ? (
+                <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-muted-foreground tabular-nums">
+                  {format(originalDate, "dd.MM.yyyy")}
+                </div>
+              ) : (
+                <LessonDateSelect
+                  exactDays={group.exactDays ?? []}
+                  groupStartDate={group.startDate}
+                  groupEndDate={group.endDate}
+                  rescheduleDestinations={rescheduleDestinations}
+                  excludeDates={excludeDates}
+                  value={originalDate}
+                  onChange={setOriginalDate}
+                  disabled={submitting}
+                />
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Yangi dars sanasi</Label>
@@ -971,7 +975,7 @@ function CreateRescheduleDialog({
             </div>
           </div>
 
-          {/* Xona */}
+          {/* Xona — faqat bo'sh xonalar ko'rsatiladi */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Xona</Label>
             <Select
@@ -980,16 +984,49 @@ function CreateRescheduleDialog({
               disabled={submitting}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Xonani tanlang" />
+                <SelectValue
+                  placeholder={
+                    !canQueryRooms
+                      ? "Avval sana va vaqtni tanlang"
+                      : availableRoomsQuery.isLoading
+                        ? "Bo'sh xonalar tekshirilmoqda..."
+                        : availableRooms.length === 0
+                          ? "Bu vaqtda bo'sh xona yo'q"
+                          : "Xonani tanlang"
+                  }
+                />
               </SelectTrigger>
-              <SelectContent>
-                {(roomsQuery.data ?? []).map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name}
-                  </SelectItem>
-                ))}
+              <SelectContent position="popper">
+                {!canQueryRooms ? (
+                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    Avval yangi dars sanasi va vaqtini tanlang
+                  </div>
+                ) : availableRoomsQuery.isLoading ? (
+                  <div className="flex items-center justify-center px-3 py-6 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin mr-2" />
+                    Tekshirilmoqda...
+                  </div>
+                ) : availableRooms.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    Bu vaqtda bo&apos;sh xona topilmadi
+                  </div>
+                ) : (
+                  availableRooms.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
+            {canQueryRooms &&
+              !availableRoomsQuery.isLoading &&
+              availableRooms.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  Tanlangan sana va vaqtda bu filialda bo&apos;sh xona yo&apos;q.
+                  Vaqtni o&apos;zgartiring yoki boshqa kunni tanlang.
+                </p>
+              )}
           </div>
 
           {/* Sabab */}
@@ -1017,7 +1054,7 @@ function CreateRescheduleDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Ko&apos;chirish
+            {isEdit ? "Saqlash" : "Ko'chirish"}
           </Button>
         </DialogFooter>
       </DialogContent>
