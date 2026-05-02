@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../attendance/shared/date-utils';
 
 const DAY_NAMES = [
   'sunday',
@@ -16,13 +20,12 @@ export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getTodaySchedule(branchId: number, companyId: number, date?: string) {
-    const targetDate = date ? new Date(date) : new Date();
-    const dayName = DAY_NAMES[targetDate.getDay()];
-    const dateOnly = new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth(),
-      targetDate.getDate(),
-    );
+    // Calendar date in Asia/Tashkent — stable across UTC vs Tashkent servers.
+    // Attendance.date and Holiday.date are stored as UTC midnight (see
+    // attendance-validation.service.ts:36), so queries must use the same shape.
+    const targetStr = date ?? tashkentDateStr(new Date());
+    const dateOnly = utcMidnightFromDateStr(targetStr);
+    const dayName = DAY_NAMES[dateOnly.getUTCDay()];
 
     const [holiday, branch, rooms, groups] = await Promise.all([
       this.prisma.holiday.findFirst({
@@ -139,7 +142,6 @@ export class DashboardService {
     const part = (type: string) =>
       tashkentParts.find((p) => p.type === type)!.value;
     const todayStr = `${part('year')}-${part('month')}-${part('day')}`;
-    const targetStr = targetDate.toISOString().split('T')[0];
     const isToday = todayStr === targetStr;
     const nowMinutes = Number(part('hour')) * 60 + Number(part('minute'));
 
@@ -200,7 +202,7 @@ export class DashboardService {
       },
       isHoliday: !!holiday,
       holidayName: holiday?.name ?? null,
-      date: targetDate.toISOString().split('T')[0],
+      date: targetStr,
     };
   }
 }
