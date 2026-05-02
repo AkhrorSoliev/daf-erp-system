@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -15,12 +16,28 @@ import {
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PAYMENT_METHOD_LABEL } from './shared/method-label';
 
+/**
+ * Emitted after a successful payment commit (manual or gateway). Consumed
+ * by `PaymentEventsListener` to send a Telegram receipt to the student.
+ */
+export interface PaymentReceivedPayload {
+  paymentId: string;
+  studentId: number;
+  amount: number;
+  method: PaymentMethod;
+  source: PaymentSource;
+  studentBalance: number | null;
+  companyId: number;
+  performedById?: number;
+}
+
 @Injectable()
 export class PaymentsWriteService {
   constructor(
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
     private entityHistoryService: EntityHistoryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreatePaymentDto, userId: number, companyId: number) {
@@ -131,6 +148,20 @@ export class PaymentsWriteService {
         timeout: 15000,
       },
     );
+
+    // Fire-and-forget Telegram receipt to the student. The listener uses
+    // SmsService so the message also lands in the student profile "SMS"
+    // tab (the SMS module is already Telegram-backed).
+    this.eventEmitter.emit('payment.received', {
+      paymentId: payment.id,
+      studentId: dto.studentId,
+      amount: dto.amount,
+      method: dto.method,
+      source: payment.source,
+      studentBalance: studentBalance ?? null,
+      companyId,
+      performedById: userId,
+    } satisfies PaymentReceivedPayload);
 
     return { ...payment, studentBalance };
   }
@@ -422,6 +453,23 @@ export class PaymentsWriteService {
             maxWait: 10000,
             timeout: 15000,
           });
+
+      // Telegram receipt — only when we owned the tx (i.e. it has
+      // committed by now). When the caller passed `outerTx` they're
+      // responsible for emitting after their own commit, so we skip to
+      // avoid notifying for a payment that may still be rolled back.
+      if (!outerTx) {
+        this.eventEmitter.emit('payment.received', {
+          paymentId: payment.id,
+          studentId: params.studentId,
+          amount: params.amount,
+          method: params.method,
+          source: params.source,
+          studentBalance: studentBalance ?? null,
+          companyId: params.companyId,
+          performedById: params.performedById,
+        } satisfies PaymentReceivedPayload);
+      }
 
       return { ...payment, studentBalance };
     } catch (err) {

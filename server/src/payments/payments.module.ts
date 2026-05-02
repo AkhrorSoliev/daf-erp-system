@@ -4,16 +4,19 @@ import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PaymentsController } from './payments.controller';
+import { PaymentEventsListener } from './payment-events.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { SmsModule } from '../sms/sms.module';
 
 @Module({
-  imports: [TransactionsModule],
+  imports: [TransactionsModule, SmsModule],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,
     PaymentsWriteService,
     PaymentsReadService,
     PaymentsDebtorsService,
+    PaymentEventsListener,
   ],
   exports: [PaymentsService],
 })
