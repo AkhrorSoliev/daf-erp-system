@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -135,26 +135,19 @@ function AttendanceDots({
 }
 
 export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
-  const [data, setData] = useState<SequenceResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchSequence = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get(
-        `/attendance/${group.id}/lesson-sequence`,
-      );
-      setData(data);
-    } catch {
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [group.id]);
-
-  useEffect(() => {
-    fetchSequence();
-  }, [fetchSequence]);
+  // react-query so reschedule / cancellation / override mutations elsewhere
+  // can `invalidateQueries(["attendance-lesson-sequence", id])` and refresh
+  // this view automatically.
+  const sequenceQuery = useQuery<SequenceResponse | null>({
+    queryKey: ["attendance-lesson-sequence", group.id],
+    queryFn: () =>
+      api
+        .get<SequenceResponse>(`/attendance/${group.id}/lesson-sequence`)
+        .then((r) => r.data)
+        .catch(() => null),
+  });
+  const data = sequenceQuery.data ?? null;
+  const loading = sequenceQuery.isLoading;
 
   if (loading) {
     return (

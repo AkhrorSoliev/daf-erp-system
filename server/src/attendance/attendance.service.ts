@@ -45,6 +45,15 @@ export class AttendanceService {
     return this.read.getLessonSequence(groupId, companyId);
   }
 
+  getLessonCalendar(
+    groupId: string,
+    month?: number,
+    year?: number,
+    companyId?: number,
+  ) {
+    return this.read.getLessonCalendar(groupId, month, year, companyId);
+  }
+
   getStats(
     groupId: string,
     startDate?: string,

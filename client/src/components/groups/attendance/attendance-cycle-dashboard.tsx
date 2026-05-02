@@ -1,26 +1,58 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import {
-  getCycleSize,
-  getMonthRange,
-  MONTH_NAMES,
-  type LessonDate,
-} from "./attendance-cycle-utils";
+  AttendanceMonthCalendar,
+  type LessonCalendarCell,
+} from "./attendance-month-calendar";
 import { AttendanceTodayCard } from "./attendance-today-card";
 import { AttendanceNoLessonTodayCard } from "./attendance-no-lesson-today-card";
-import { AttendanceCycleGrid } from "./attendance-cycle-grid";
 import { AttendanceMissedLessons } from "./attendance-missed-lessons";
 
 interface AttendanceCycleDashboardProps {
   group: GroupData;
   onSelectDate: (date: string) => void;
+}
+
+interface CalendarResponse {
+  cells: LessonCalendarCell[];
+}
+
+// LessonDate-shaped projection used by the legacy today/missed cards.
+interface LessonDateLike {
+  date: string;
+  dayName: string;
+  hasAttendance: boolean;
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
+  excusedCount: number;
+  totalStudents: number;
+}
+
+function lessonDateFromCell(c: LessonCalendarCell): LessonDateLike {
+  return {
+    date: c.date,
+    dayName: c.dayName,
+    hasAttendance: c.hasAttendance,
+    presentCount: c.presentCount,
+    absentCount: c.absentCount,
+    lateCount: c.lateCount,
+    excusedCount: c.excusedCount,
+    totalStudents: c.totalStudents,
+  };
+}
+
+function dateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function AttendanceCycleDashboard({
@@ -30,164 +62,109 @@ export function AttendanceCycleDashboard({
   const user = useAuth((s) => s.user);
   const isAdmin = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
 
-  const [allLessons, setAllLessons] = useState<LessonDate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentCycleIndex, setCurrentCycleIndex] = useState(-1);
-  const fetchedRef = useRef(false);
-
   const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const todayStr = dateKey(now);
 
-  const cycleSize = getCycleSize(group.course?.name ?? "");
+  // Visible month: drives the calendar query. Defaults to current month so
+  // the user sees today by default, with the today card matching.
+  const [visibleMonth, setVisibleMonth] = useState<Date>(
+    () => new Date(now.getFullYear(), now.getMonth(), 1),
+  );
 
-  // Fetch all months from group start to now+1
-  const fetchAllLessons = useCallback(async () => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    setLoading(true);
+  // Calendar cells for the visible month — drives both the calendar grid
+  // and (when visibleMonth is the current month) the today/missed cards.
+  const calendarQuery = useQuery<CalendarResponse>({
+    queryKey: [
+      "attendance-calendar",
+      group.id,
+      visibleMonth.getFullYear(),
+      visibleMonth.getMonth() + 1,
+    ],
+    queryFn: () =>
+      api
+        .get<CalendarResponse>(`/attendance/${group.id}/calendar`, {
+          params: {
+            month: visibleMonth.getMonth() + 1,
+            year: visibleMonth.getFullYear(),
+          },
+        })
+        .then((r) => r.data),
+  });
 
-    try {
-      const months = getMonthRange(group.startDate);
-      const responses = await Promise.all(
-        months.map(({ month, year }) =>
-          api
-            .get(`/attendance/${group.id}/dates`, { params: { month, year } })
-            .then((r) => r.data as LessonDate[])
-            .catch(() => [] as LessonDate[]),
-        ),
-      );
-
-      // Merge, deduplicate by date, sort
-      const dateMap = new Map<string, LessonDate>();
-      for (const monthData of responses) {
-        for (const lesson of monthData) {
-          dateMap.set(lesson.date, lesson);
-        }
-      }
-      const sorted = Array.from(dateMap.values()).sort((a, b) =>
-        a.date.localeCompare(b.date),
-      );
-      setAllLessons(sorted);
-    } catch {
-      setAllLessons([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [group.id, group.startDate]);
-
-  useEffect(() => {
-    fetchAllLessons();
-  }, [fetchAllLessons]);
-
-  // Split into cycles
-  const cycles = useMemo(() => {
-    const result: LessonDate[][] = [];
-    for (let i = 0; i < allLessons.length; i += cycleSize) {
-      result.push(allLessons.slice(i, i + cycleSize));
-    }
-    return result;
-  }, [allLessons, cycleSize]);
-
-  // Month-based grouping for teacher view
-  const monthGroups = useMemo(() => {
-    if (isAdmin) return [];
-    const map = new Map<string, LessonDate[]>();
-    for (const lesson of allLessons) {
-      const key = lesson.date.slice(0, 7); // "YYYY-MM"
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(lesson);
-    }
-    return Array.from(map.entries()).map(([key, lessons]) => {
-      const [y, m] = key.split("-").map(Number);
-      return { label: `${MONTH_NAMES[m]} ${y}`, month: m, year: y, lessons };
-    });
-  }, [allLessons, isAdmin]);
-
-  // Auto-detect current cycle/month on first load
-  useEffect(() => {
-    if (currentCycleIndex >= 0) return;
-    if (isAdmin) {
-      if (cycles.length === 0) return;
-      const idx = cycles.findIndex((cycle) =>
-        cycle.some((l) => l.date >= todayStr),
-      );
-      setCurrentCycleIndex(idx >= 0 ? idx : cycles.length - 1);
-    } else {
-      if (monthGroups.length === 0) return;
-      const todayMonth = now.getMonth() + 1;
-      const todayYear = now.getFullYear();
-      const idx = monthGroups.findIndex(
-        (mg) => mg.month === todayMonth && mg.year === todayYear,
-      );
-      setCurrentCycleIndex(idx >= 0 ? idx : monthGroups.length - 1);
-    }
+  // Always-fetched current-month query so the today/no-lesson card stays
+  // accurate even when the admin is browsing a different month. Deduped
+  // by react-query when current === visible.
+  const currentMonthKey = useMemo(
+    () => ({ year: now.getFullYear(), month: now.getMonth() + 1 }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cycles, monthGroups, currentCycleIndex, todayStr, isAdmin]);
+    [],
+  );
+  const currentMonthQuery = useQuery<CalendarResponse>({
+    queryKey: [
+      "attendance-calendar",
+      group.id,
+      currentMonthKey.year,
+      currentMonthKey.month,
+    ],
+    queryFn: () =>
+      api
+        .get<CalendarResponse>(`/attendance/${group.id}/calendar`, {
+          params: currentMonthKey,
+        })
+        .then((r) => r.data),
+  });
 
-  const currentLessons = isAdmin
-    ? (cycles[currentCycleIndex] ?? [])
-    : (monthGroups[currentCycleIndex]?.lessons ?? []);
-  const totalItems = isAdmin ? cycles.length : monthGroups.length;
+  const visibleCells = calendarQuery.data?.cells ?? [];
+  const currentMonthCells = currentMonthQuery.data?.cells ?? [];
 
-  // Cycle/month summary
-  const summary = useMemo(() => {
-    let taken = 0;
-    let missed = 0;
-    let future = 0;
-    let today = 0;
-
-    for (const lesson of currentLessons) {
-      if (lesson.date === todayStr) {
-        today++;
-        if (lesson.hasAttendance) taken++;
-      } else if (lesson.hasAttendance) {
-        taken++;
-      } else if (lesson.date < todayStr) {
-        missed++;
-      } else {
-        future++;
-      }
-    }
-    return { taken, missed, future, today };
-  }, [currentLessons, todayStr]);
-
-  const todayLesson = allLessons.find((l) => l.date === todayStr);
-  const hasTodayLesson = !!todayLesson;
+  // Today / next lesson — derived from the current-month query, not the
+  // visible-month one (so the cards don't disappear when admin scrolls to
+  // a different month).
+  const liveCurrent = useMemo(
+    () =>
+      currentMonthCells.filter(
+        (c) => c.type === "regular" || c.type === "rescheduledTo",
+      ),
+    [currentMonthCells],
+  );
+  const todayLesson = liveCurrent.find((c) => c.date === todayStr);
   const nextLessonDate = useMemo(
     () =>
       !todayLesson
-        ? (allLessons.find((l) => l.date > todayStr) ?? null)
+        ? (liveCurrent.find((c) => c.date > todayStr) ?? null)
         : null,
-    [todayLesson, allLessons, todayStr],
+    [todayLesson, liveCurrent, todayStr],
   );
 
-  const globalOffset = isAdmin ? currentCycleIndex * cycleSize : 0;
-  const progressPct =
-    currentLessons.length > 0
-      ? Math.round((summary.taken / currentLessons.length) * 100)
-      : 0;
+  const visibleLiveCells = useMemo(
+    () =>
+      visibleCells
+        .filter((c) => c.type === "regular" || c.type === "rescheduledTo")
+        .map(lessonDateFromCell),
+    [visibleCells],
+  );
 
-  if (loading) {
+  // Visible-month progress strip.
+  const summary = useMemo(() => {
+    let taken = 0;
+    let missed = 0;
+    let upcoming = 0;
+    for (const c of visibleCells) {
+      if (c.type !== "regular" && c.type !== "rescheduledTo") continue;
+      if (c.hasAttendance) taken++;
+      else if (c.date < todayStr) missed++;
+      else upcoming++;
+    }
+    return { taken, missed, upcoming, total: taken + missed + upcoming };
+  }, [visibleCells, todayStr]);
+  const progressPct =
+    summary.total > 0 ? Math.round((summary.taken / summary.total) * 100) : 0;
+
+  if (calendarQuery.isLoading && currentMonthQuery.isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-8 w-full" />
-        <div className="grid grid-cols-6 gap-3 sm:grid-cols-12">
-          {Array.from({ length: cycleSize }).map((_, i) => (
-            <Skeleton key={i} className="mx-auto size-11 rounded-full" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (allLessons.length === 0) {
-    return (
-      <div className="flex h-24 items-center justify-center rounded-md border">
-        <p className="text-sm text-muted-foreground">
-          Dars kunlari mavjud emas
-        </p>
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
@@ -196,7 +173,7 @@ export function AttendanceCycleDashboard({
     <div className="space-y-4">
       {todayLesson && (
         <AttendanceTodayCard
-          todayLesson={todayLesson}
+          todayLesson={lessonDateFromCell(todayLesson)}
           todayStr={todayStr}
           isAdmin={isAdmin}
           lessonStartTime={group.lessonStartTime ?? null}
@@ -205,63 +182,38 @@ export function AttendanceCycleDashboard({
         />
       )}
 
-      {!hasTodayLesson && (
+      {!todayLesson && (
         <AttendanceNoLessonTodayCard
           exactDays={group.exactDays}
-          nextLesson={nextLessonDate}
+          nextLesson={
+            nextLessonDate ? lessonDateFromCell(nextLessonDate) : null
+          }
           lessonStartTime={group.lessonStartTime ?? null}
         />
       )}
 
-      {/* Cycle navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setCurrentCycleIndex((i) => i - 1)}
-            disabled={currentCycleIndex <= 0}
-            className="size-8"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <span className="min-w-44 text-center text-sm font-medium">
-            {isAdmin
-              ? `Sikl ${currentCycleIndex + 1} (${globalOffset + 1}-${globalOffset + currentLessons.length} darslar)`
-              : (monthGroups[currentCycleIndex]?.label ?? "")}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setCurrentCycleIndex((i) => i + 1)}
-            disabled={currentCycleIndex >= totalItems - 1}
-            className="size-8"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Cycle summary + progress bar */}
-      {isAdmin ? (
+      {/* Visible-month progress bar (admin only) */}
+      {isAdmin && summary.total > 0 && (
         <div className="space-y-2 rounded-lg border p-3">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            <span className="text-green-600 dark:text-green-400">
-              Olingan: {summary.taken}/{currentLessons.length}
+            <span className="text-emerald-600 dark:text-emerald-400">
+              Olingan: {summary.taken}/{summary.total}
             </span>
             {summary.missed > 0 && (
               <span className="text-amber-600 dark:text-amber-400">
                 Olinmagan: {summary.missed}
               </span>
             )}
-            <span className="text-muted-foreground">
-              Kelgusi: {summary.future + summary.today}
-            </span>
+            {summary.upcoming > 0 && (
+              <span className="text-muted-foreground">
+                Kelgusi: {summary.upcoming}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-green-500 transition-all"
+                className="h-full rounded-full bg-emerald-500 transition-all"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
@@ -270,28 +222,19 @@ export function AttendanceCycleDashboard({
             </span>
           </div>
         </div>
-      ) : (
-        <div className="rounded-lg border p-3">
-          <span className="text-sm font-medium text-green-600 dark:text-green-400">
-            O&apos;tilgan: {progressPct}%
-          </span>
-        </div>
       )}
 
-      {/* Lesson circles (admin only) */}
-      {isAdmin && (
-        <AttendanceCycleGrid
-          lessons={currentLessons}
-          cycleSize={cycleSize}
-          todayStr={todayStr}
-          onSelectDate={onSelectDate}
-        />
-      )}
+      <AttendanceMonthCalendar
+        cells={visibleCells}
+        isLoading={calendarQuery.isLoading}
+        onSelectDate={onSelectDate}
+        onMonthChange={setVisibleMonth}
+        initialMonth={visibleMonth}
+      />
 
-      {/* Missed lessons (admin only) */}
-      {isAdmin && (
+      {isAdmin && visibleLiveCells.length > 0 && (
         <AttendanceMissedLessons
-          cycleLessons={currentLessons}
+          cycleLessons={visibleLiveCells}
           todayStr={todayStr}
           onSelectDate={onSelectDate}
         />

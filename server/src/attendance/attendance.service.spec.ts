@@ -73,9 +73,11 @@ describe('AttendanceService', () => {
       },
       lessonCancellation: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       lessonReschedule: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       attendance: {
         groupBy: jest.fn().mockResolvedValue([]),
@@ -390,6 +392,31 @@ describe('AttendanceService', () => {
       expect(dates).not.toContain('2026-04-01');
     });
 
+    it('drops a date that has been rescheduled away (originalDate)', async () => {
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-04T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getLessonDates('group-uuid-1', 4, 2026);
+      const dates = result.map((r) => r.date);
+      // 2026-04-01 (Wed) was a regular lesson day; lesson moved to 2026-04-04 (Sat)
+      expect(dates).not.toContain('2026-04-01');
+      // 2026-04-04 is a Saturday — outside exactDays — but reschedule lands here
+      expect(dates).toContain('2026-04-04');
+    });
+
+    it('drops a date that has an active cancellation', async () => {
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { date: new Date('2026-04-01T00:00:00Z') },
+      ]);
+
+      const result = await service.getLessonDates('group-uuid-1', 4, 2026);
+      expect(result.map((r) => r.date)).not.toContain('2026-04-01');
+    });
+
     it('should return empty array when group has no exactDays', async () => {
       prisma.group.findFirst.mockResolvedValue({
         ...mockGroup,
@@ -421,6 +448,108 @@ describe('AttendanceService', () => {
         expect(apr1.presentCount).toBe(8);
         expect(apr1.absentCount).toBe(2);
       }
+    });
+  });
+
+  describe('getLessonCalendar', () => {
+    it('marks regular lesson days with type=regular', async () => {
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+      // mockGroup has exactDays Mon/Wed/Fri; April 2026 contains the usual mix
+      expect(result.cells.length).toBeGreaterThan(0);
+      const apr1 = result.cells.find((c) => c.date === '2026-04-01');
+      expect(apr1?.type).toBe('regular');
+    });
+
+    it('marks rescheduled-to dates with movedFrom (when newDate is outside exactDays)', async () => {
+      // Move Wed Apr 1 → Sat Apr 4 (Saturday is NOT in exactDays).
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-04T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const movedHere = result.cells.find((c) => c.date === '2026-04-04');
+      expect(movedHere?.type).toBe('rescheduledTo');
+      expect(movedHere?.movedFrom).toBe('2026-04-01');
+
+      const movedAway = result.cells.find((c) => c.date === '2026-04-01');
+      expect(movedAway?.type).toBe('rescheduledFrom');
+      expect(movedAway?.movedTo).toBe('2026-04-04');
+    });
+
+    it("keeps newDate as 'regular' when it's already a normal lesson day, but stores movedFrom for tooltip", async () => {
+      // Move Wed Apr 1 → Wed Apr 8 — Apr 8 is already a regular Wednesday.
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-08T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const dest = result.cells.find((c) => c.date === '2026-04-08');
+      expect(dest?.type).toBe('regular'); // not promoted to rescheduledTo
+      expect(dest?.movedFrom).toBe('2026-04-01');
+
+      const src = result.cells.find((c) => c.date === '2026-04-01');
+      expect(src?.type).toBe('rescheduledFrom');
+    });
+
+    it('marks cancelled dates with type=cancelled and reason', async () => {
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { date: new Date('2026-04-01T00:00:00Z'), reason: 'Bayram' },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const cancelled = result.cells.find((c) => c.date === '2026-04-01');
+      expect(cancelled?.type).toBe('cancelled');
+      expect(cancelled?.cancellationReason).toBe('Bayram');
+    });
+
+    it('cancellation overrides reschedule on the same date', async () => {
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-04T00:00:00Z'),
+        },
+      ]);
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { date: new Date('2026-04-01T00:00:00Z'), reason: 'Test' },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const apr1 = result.cells.find((c) => c.date === '2026-04-01');
+      expect(apr1?.type).toBe('cancelled');
+    });
+
+    it('merges attendance counts only for live cells (regular/rescheduledTo)', async () => {
+      prisma.attendance.groupBy.mockResolvedValue([
+        {
+          date: new Date('2026-04-01T00:00:00Z'),
+          status: 'PRESENT',
+          _count: 5,
+        },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const apr1 = result.cells.find((c) => c.date === '2026-04-01');
+      expect(apr1?.hasAttendance).toBe(true);
+      expect(apr1?.presentCount).toBe(5);
+    });
+
+    it('throws NotFoundException when group is missing', async () => {
+      prisma.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getLessonCalendar('non-existent', 4, 2026),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
