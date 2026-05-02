@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import {
   Pencil,
@@ -30,17 +31,22 @@ import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
 
+// Read from `statusEnum` (GroupStatus) — the legacy `status: Int` mirror is
+// not kept in sync by the seed/migrations, so falling back on it shows
+// "Boshlanmagan" even after the group is activated.
 const STATUS_MAP: Record<
-  number,
+  string,
   {
     label: string;
     variant: "default" | "secondary" | "outline" | "destructive";
   }
 > = {
-  1: { label: "Faol", variant: "default" },
-  2: { label: "Boshlanmagan", variant: "secondary" },
-  3: { label: "Pauza", variant: "outline" },
-  4: { label: "To'xtatilgan", variant: "destructive" },
+  ACTIVE: { label: "Faol", variant: "default" },
+  FORMING: { label: "Boshlanmagan", variant: "secondary" },
+  PAUSED: { label: "Pauza", variant: "outline" },
+  COMPLETED: { label: "Yakunlangan", variant: "outline" },
+  CANCELLED: { label: "Bekor qilingan", variant: "destructive" },
+  ARCHIVED: { label: "Arxivlangan", variant: "outline" },
 };
 
 import { formatWeekdays } from "@/lib/weekdays";
@@ -79,7 +85,9 @@ export function GroupInfoCard({
       .catch(() => {});
   }, [group.id, commentKey, canManage]);
 
-  const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
+  const statusKey = (group as unknown as { statusEnum?: string }).statusEnum
+    ?? "FORMING";
+  const status = STATUS_MAP[statusKey] ?? STATUS_MAP.FORMING;
 
   const daysLabel =
     group.exactDays?.length > 0 ? formatWeekdays(group.exactDays) : null;
@@ -107,11 +115,23 @@ export function GroupInfoCard({
         <InfoRow
           label="O'qituvchi"
           value={
-            group.teachers.length > 0
-              ? group.teachers
-                  .map((t) => `${t.firstName} ${t.lastName}`)
-                  .join(", ")
-              : "—"
+            group.teachers.length > 0 ? (
+              <span className="flex flex-wrap justify-end gap-x-1">
+                {group.teachers.map((t, idx) => (
+                  <span key={t.id}>
+                    <Link
+                      href={`/teachers/profile/${t.id}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {t.firstName} {t.lastName}
+                    </Link>
+                    {idx < group.teachers.length - 1 && ","}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              "—"
+            )
           }
         />
         <InfoRow label="O'quvchilar" value={`${group.studentCount} ta`} bold />
@@ -335,7 +355,7 @@ function InfoRow({
   bold,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   bold?: boolean;
 }) {
   return (

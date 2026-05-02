@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { LessonDeductionMode, Prisma } from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { TransactionsWriteService } from './transactions-write.service';
 import { TransactionsReadService } from './transactions-read.service';
@@ -35,10 +35,51 @@ export class TransactionsService {
       contractId?: string;
       companyId: number;
       branchId?: number;
+      mode?: LessonDeductionMode;
+      perLessonCost?: number;
+      lessonsCovered?: number;
     },
     tx?: Prisma.TransactionClient,
   ) {
     return this.write.deductLessonFee(params, tx);
+  }
+  recordLessonConsumption(
+    params: {
+      studentId: number;
+      attendanceId: string;
+      enrollmentId: string;
+      perLessonCost: number;
+      contractId?: string;
+      companyId: number;
+      branchId?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.write.recordLessonConsumption(params, tx);
+  }
+  reverseLessonConsumption(
+    consumptionTransactionId: string,
+    params: { performedById?: number; reason?: string },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.write.reverseLessonConsumption(
+      consumptionTransactionId,
+      params,
+      tx,
+    );
+  }
+  recordInitialBalance(
+    params: {
+      studentId: number;
+      amount: number;
+      note?: string;
+      companyId: number;
+      branchId?: number;
+      performedById: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.write.recordInitialBalance(params, tx);
   }
   recordRefund(
     params: {
@@ -107,6 +148,19 @@ export class TransactionsService {
     companyId: number,
   ) {
     return this.read.findByStudent(studentId, query, companyId);
+  }
+  getLessonTrail(
+    studentId: number,
+    companyId: number,
+    options?: {
+      contractId?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    return this.read.getLessonTrail(studentId, companyId, options);
   }
   findByTeacher(
     teacherId: number,

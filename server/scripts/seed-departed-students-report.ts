@@ -122,18 +122,22 @@ function projectLessonDates(
 
 async function ensureReasons() {
   // Remove placeholder reasons if they exist.
-  await prisma.departureReason.deleteMany({
+  await prisma.studentExitReason.deleteMany({
     where: { companyId: COMPANY_ID, name: { in: ['sabab-1', 'sabab-2'] } },
   });
 
   for (const r of DEPARTURE_REASONS) {
-    await prisma.departureReason.upsert({
+    await prisma.studentExitReason.upsert({
       where: { companyId_name: { companyId: COMPANY_ID, name: r.name } },
       update: {},
-      create: { name: r.name, companyId: COMPANY_ID },
+      create: {
+        name: r.name,
+        appliesTo: ['GROUP_REMOVAL'],
+        companyId: COMPANY_ID,
+      },
     });
   }
-  const reasons = await prisma.departureReason.findMany({
+  const reasons = await prisma.studentExitReason.findMany({
     where: { companyId: COMPANY_ID, deletedAt: null },
     select: { id: true, name: true },
   });
@@ -484,7 +488,7 @@ async function seedTeacherChangeHistory(
         if (departedAt > cutoffDate) departedAt.setTime(cutoffDate.getTime());
 
         const reasonId = (
-          await prisma.departureReason.findFirst({
+          await prisma.studentExitReason.findFirst({
             where: { companyId: COMPANY_ID, deletedAt: null },
             select: { id: true },
           })

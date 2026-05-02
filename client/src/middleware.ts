@@ -1,11 +1,41 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getPortalType, getPortalConfig } from "@/lib/portal";
+import { getPortalType, getPortalConfig, isPublicPortal } from "@/lib/portal";
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   const refreshToken = request.cookies.get("refreshToken")?.value;
   const { pathname } = request.nextUrl;
+
+  // ── Public portal short-circuit ─────────────────────────────────────
+  // The invoice subdomain serves receipt verification pages with NO auth
+  // wall. We also rewrite single-segment paths (`/<id>`) to the existing
+  // verification route (`/r/<id>`) so the URL stays clean for end users.
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+  const portal = getPortalType(host);
+  if (isPublicPortal(portal)) {
+    if (
+      pathname === "/" ||
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/r/")
+    ) {
+      return NextResponse.next();
+    }
+    // /<paymentOrRefundId> → /r/<id>
+    const url = request.nextUrl.clone();
+    url.pathname = `/r${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // Receipt verification pages on every other host stay public too —
+  // existing receipts already in circulation may QR-link to admin.* /r/<id>.
+  if (pathname.startsWith("/r/")) {
+    return NextResponse.next();
+  }
 
   const isAuthenticated = token || refreshToken;
 
@@ -34,11 +64,6 @@ export function middleware(request: NextRequest) {
 
   // Authenticated user portal-role mismatch tekshiruvi (ikkinchi darajali himoya)
   if (pathname !== "/login" && isAuthenticated) {
-    const host =
-      request.headers.get("x-forwarded-host") ||
-      request.headers.get("host") ||
-      "";
-
     const isLocalhost =
       host.includes("localhost") || host.includes("127.0.0.1");
 
@@ -60,8 +85,6 @@ export function middleware(request: NextRequest) {
 
     // Student portal routing: student.dafzentrum.uz -> /portal
     if (!isLocalhost) {
-      const portal = getPortalType(host);
-
       if (portal === "student") {
         // Student portal foydalanuvchilari /portal ga yo'naltiriladi
         if (
@@ -86,7 +109,6 @@ export function middleware(request: NextRequest) {
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
-          const portal = getPortalType(host);
           const { allowedRoleIds } = getPortalConfig(portal);
           const userRoleIds: number[] =
             user.roles?.map((r: any) => r.id) || [];

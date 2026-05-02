@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -65,6 +66,7 @@ export function StudentPaymentsTable({
                 <TableHead className="text-right">Summa</TableHead>
                 <TableHead className="text-right">Balans</TableHead>
                 <TableHead>Sana</TableHead>
+                <TableHead className="w-24 text-center">Hujjat</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -116,6 +118,9 @@ export function StudentPaymentsTable({
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
                     </TableCell>
+                    <TableCell className="text-center">
+                      <ReceiptLink transaction={t} />
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -128,5 +133,28 @@ export function StudentPaymentsTable({
         </p>
       )}
     </div>
+  );
+}
+
+function ReceiptLink({ transaction }: { transaction: StudentTransaction }) {
+  // Only Payment ledger rows have a receipt today. Refunds get one too,
+  // but on the refunds page (separate UI). Other ledger types
+  // (ADJUSTMENT, INITIAL_BALANCE) aren't customer-facing → no receipt.
+  if (transaction.type !== "PAYMENT" || !transaction.payment?.id) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+  const href = `${apiUrl}/receipts/payment/${transaction.payment.id}.pdf`;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+    >
+      <FileText className="size-3.5" />
+      Kvitansiya
+    </a>
   );
 }

@@ -34,7 +34,7 @@ async function main() {
     prisma.student.count({ where: { deletedAt: null } }),
     prisma.enrollment.count({ where: { deletedAt: null } }),
     prisma.enrollment.count({ where: { status: 'DROPPED', deletedAt: null } }),
-    prisma.departureReason.count({ where: { deletedAt: null } }),
+    prisma.studentExitReason.count({ where: { deletedAt: null } }),
     prisma.attendance.count(),
     prisma.contract.count({ where: { deletedAt: null } }),
   ]);

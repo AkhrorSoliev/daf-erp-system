@@ -13,16 +13,10 @@ import { AttendanceEventsListener } from './attendance-events.listener';
 import { StudentAttendanceNotificationListener } from './student-attendance-notification.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
-import { TransactionsModule } from '../transactions/transactions.module';
-import { SalaryModule } from '../salary/salary.module';
+import { BillingModule } from '../billing/billing.module';
 
 @Module({
-  imports: [
-    NotificationsModule,
-    TelegramModule,
-    TransactionsModule,
-    SalaryModule,
-  ],
+  imports: [NotificationsModule, TelegramModule, BillingModule],
   controllers: [AttendanceController],
   providers: [
     AttendanceService,

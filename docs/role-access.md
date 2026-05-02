@@ -50,6 +50,8 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Approve salary | Yes | No | No | No | No |
 | Pay salary | Yes | Own branch | No | No | No |
 | Batch pay salary | Yes | Own branch | No | No | No |
+| View/update salary tax rate | Yes | No | No | No | No |
+| Manage salary period (cycle start day) | Yes | No | No | No | No |
 | Create refund | Yes | Yes | Yes | No | No |
 | Process refund | Yes | Yes | No | No | No |
 | Reverse refund | Yes | No | No | No | No |

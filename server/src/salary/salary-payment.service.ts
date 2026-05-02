@@ -30,9 +30,7 @@ export class SalaryPaymentService {
         where,
         select: {
           id: true,
-          grossAmount: true,
-          taxAmount: true,
-          netAmount: true,
+          amount: true,
           status: true,
           periodStart: true,
           periodEnd: true,
@@ -90,7 +88,7 @@ export class SalaryPaymentService {
 
     await this.transactionsService.recordSalaryPayment({
       userId: payment.userId,
-      amount: payment.netAmount,
+      amount: payment.amount,
       salaryPaymentId: payment.id,
       companyId: payment.companyId,
       performedById,
@@ -155,7 +153,7 @@ export class SalaryPaymentService {
           user: { mainBranch: effectiveBranchId },
         }),
       },
-      select: { id: true, userId: true, netAmount: true },
+      select: { id: true, userId: true, amount: true },
     });
 
     const results: {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 import { GroupInfoCard } from "./group-info-card";
 import { GroupDetailTabs } from "./group-detail-tabs";
 import { EditGroupDrawer } from "./edit-group-drawer";
@@ -68,38 +68,8 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="w-full lg:w-85 lg:shrink-0">
-          <div className="space-y-4 rounded-lg border bg-card p-6">
-            <div className="flex items-center gap-3">
-              <Skeleton className="size-12 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-            </div>
-            <div className="space-y-3 pt-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-3 w-28" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="min-w-0 flex-1 space-y-4">
-          <div className="flex gap-2 border-b pb-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-9 w-24" />
-            ))}
-          </div>
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        </div>
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-muted-foreground size-6 animate-spin" />
       </div>
     );
   }

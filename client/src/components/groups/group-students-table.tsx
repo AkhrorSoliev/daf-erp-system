@@ -65,9 +65,7 @@ function toStudent(gs: GroupStudent): Student {
 }
 
 function formatBalance(balance: number) {
-  const abs = Math.abs(balance)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const abs = Math.abs(balance).toLocaleString("uz-UZ");
   const sign = balance < 0 ? "-" : "";
   return `${sign}${abs} so'm`;
 }

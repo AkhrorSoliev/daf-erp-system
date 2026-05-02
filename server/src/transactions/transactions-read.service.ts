@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, TransactionType } from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 
 @Injectable()
@@ -18,10 +18,20 @@ export class TransactionsReadService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
+    // `types` (comma-separated) takes precedence over single `type` so the
+    // student profile's "To'lovlar" tab can ask for {PAYMENT, REFUND,
+    // ADJUSTMENT, INITIAL_BALANCE} in one call. Validation already happened
+    // in the DTO regex.
+    const typesFilter = query.types
+      ? (query.types.split(',') as TransactionType[])
+      : query.type
+        ? [query.type]
+        : undefined;
+
     const where: Prisma.TransactionWhereInput = {
       studentId,
       companyId,
-      ...(query.type && { type: query.type }),
+      ...(typesFilter && { type: { in: typesFilter } }),
       ...(query.startDate &&
         query.endDate && {
           createdAt: {
@@ -46,7 +56,7 @@ export class TransactionsReadService {
           // without a second round-trip — PAYMENT rows show Payme/Click/Cash,
           // other types get null.
           payment: {
-            select: { method: true },
+            select: { id: true, method: true, status: true },
           },
           attendanceId: true,
           enrollmentId: true,
@@ -111,6 +121,120 @@ export class TransactionsReadService {
       }),
       this.prisma.transaction.count({ where }),
     ]);
+
+    return { data, total, page, pageSize };
+  }
+
+  /**
+   * Lesson-trail report: lesson deductions + per-lesson consumption rows for
+   * one student, enriched with attendance metadata. The endpoint is scoped
+   * strictly to LESSON_DEDUCTION and LESSON_CONSUMPTION so the "Darslar" tab
+   * never overlaps with the "To'lovlar" tab (which shows the money-flow
+   * types). Paginated because active students can produce hundreds of
+   * LESSON_CONSUMPTION rows.
+   */
+  async getLessonTrail(
+    studentId: number,
+    companyId: number,
+    options: {
+      contractId?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ) {
+    const page = options.page ?? 1;
+    const pageSize = options.pageSize ?? 20;
+
+    const where: Prisma.TransactionWhereInput = {
+      studentId,
+      companyId,
+      type: {
+        in: [TransactionType.LESSON_DEDUCTION, TransactionType.LESSON_CONSUMPTION],
+      },
+      ...(options.contractId && { contractId: options.contractId }),
+      ...(options.from &&
+        options.to && {
+          createdAt: {
+            gte: new Date(options.from),
+            lte: new Date(options.to + 'T23:59:59.999Z'),
+          },
+        }),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where,
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          balanceBefore: true,
+          balanceAfter: true,
+          description: true,
+          metadata: true,
+          attendanceId: true,
+          contractId: true,
+          reversedTransactionId: true,
+          createdAt: true,
+          payment: {
+            select: { method: true, receiptNumber: true },
+          },
+          contract: {
+            select: { contractNumber: true },
+          },
+          performedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.transaction.count({ where }),
+    ]);
+
+    // Pull attendance rows in one round-trip so we can enrich LESSON_DEDUCTION
+    // and LESSON_CONSUMPTION rows with the lesson date + group name.
+    const attendanceIds = rows
+      .map((r) => r.attendanceId)
+      .filter((id): id is string => !!id);
+    const attendances = attendanceIds.length
+      ? await this.prisma.attendance.findMany({
+          where: { id: { in: attendanceIds } },
+          select: {
+            id: true,
+            date: true,
+            group: {
+              select: { id: true, name: true, course: { select: { name: true } } },
+            },
+          },
+        })
+      : [];
+    const attendanceMap = new Map(attendances.map((a) => [a.id, a]));
+
+    const data = rows.map((r) => {
+      const attendance = r.attendanceId ? attendanceMap.get(r.attendanceId) : null;
+      return {
+        id: r.id,
+        type: r.type,
+        amount: r.amount,
+        balanceBefore: r.balanceBefore,
+        balanceAfter: r.balanceAfter,
+        description: r.description,
+        metadata: r.metadata,
+        contractNumber: r.contract?.contractNumber ?? null,
+        paymentMethod: r.payment?.method ?? null,
+        paymentReceipt: r.payment?.receiptNumber ?? null,
+        lessonDate: attendance?.date ?? null,
+        groupName: attendance?.group.name ?? null,
+        courseName: attendance?.group.course.name ?? null,
+        isReversal: !!r.reversedTransactionId,
+        performedBy: r.performedBy,
+        createdAt: r.createdAt,
+      };
+    });
 
     return { data, total, page, pageSize };
   }

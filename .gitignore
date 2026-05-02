@@ -15,6 +15,7 @@ service-account*.json
 # Server
 server/dist
 server/generated
+server/audit-output/
 
 # Editor / agent runtime state
 .claude/scheduled_tasks.lock

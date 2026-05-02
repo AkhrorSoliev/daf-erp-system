@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Bell, CheckCheck, MessageSquare, ListTodo, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Popover,
   PopoverContent,
@@ -155,17 +154,8 @@ export function NotificationBell() {
 
         <div className="max-h-80 overflow-y-auto">
           {loading && notifications.length === 0 ? (
-            <div className="divide-y">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex w-full items-start gap-3 p-3">
-                  <Skeleton className="size-8 shrink-0 rounded-full" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-1/3" />
-                  </div>
-                </div>
-              ))}
+            <div className="flex h-20 items-center justify-center">
+              <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex h-20 items-center justify-center">

@@ -4,13 +4,14 @@ import {
   AttendanceMethod,
   AttendanceStatus,
   EnrollmentStatus,
+  Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
-import { TransactionsService } from '../transactions/transactions.service';
-import { SalaryService } from '../salary/salary.service';
+import { LessonBillingService } from '../billing/lesson-billing.service';
+import { calculatePerLessonCost } from '../billing/debtor-check.helper';
 import { QrSession, QrToken } from './shared/qr-types';
 
 @Injectable()
@@ -22,8 +23,7 @@ export class QrAttendanceScanService {
     private redis: RedisService,
     private notificationsGateway: NotificationsGateway,
     private entityHistoryService: EntityHistoryService,
-    private transactionsService: TransactionsService,
-    private salaryService: SalaryService,
+    private lessonBillingService: LessonBillingService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -40,6 +40,7 @@ export class QrAttendanceScanService {
 
     const tokenData: QrToken = JSON.parse(raw);
     const { groupId, date, teacherId } = tokenData;
+    const parsedLessonDate = new Date(date + 'T00:00:00.000Z');
 
     const enrollment = await this.prisma.enrollment.findFirst({
       where: {
@@ -53,82 +54,144 @@ export class QrAttendanceScanService {
       throw new BadRequestException('Siz bu guruhga yozilmagansiz');
     }
 
-    // Balance gate: block scans when fully consumed (balance < 0).
-    // balance = 0 still allowed (will be checked again before cycle deduction).
+    // Late-joiner gate: a student enrolled "from lesson 5" must not be able
+    // to scan into earlier lessons. NULL startDate (legacy data) is permissive.
+    if (enrollment.startDate && enrollment.startDate > parsedLessonDate) {
+      throw new BadRequestException(
+        "Sizning darslaringiz bu sanadan keyin boshlanadi",
+      );
+    }
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: {
+        name: true,
+        branchId: true,
+        course: { select: { price: true, lessonPaymentCount: true } },
+      },
+    });
+    if (!group) {
+      throw new BadRequestException('Guruh topilmadi');
+    }
+
+    // Balance gate: block scans when the balance can't cover one lesson at
+    // this group's per-lesson cost. The structured response lets the student
+    // portal surface a clear "balance short by N" message instead of a
+    // generic error — and stops the QR flow before any side effects run.
+    const perLessonCost = calculatePerLessonCost(
+      group.course.price,
+      group.course.lessonPaymentCount,
+    );
     const studentBalance = await this.prisma.student.findUnique({
       where: { id: studentId },
       select: { balance: true },
     });
-    if (studentBalance && studentBalance.balance < 0) {
+    if (studentBalance && studentBalance.balance < perLessonCost) {
       return {
         success: false,
         balanceInsufficient: true,
-        message: "Balans yetarli emas. Iltimos, ma'muriyatga murojaat qiling",
+        message:
+          "Balansingiz dars uchun yetmadi. Iltimos, ma'muriyatga murojaat qiling",
         balance: studentBalance.balance,
+        debtAmount: perLessonCost - studentBalance.balance,
       };
     }
 
-    const existing = await this.prisma.attendance.findUnique({
-      where: {
-        groupId_studentId_date: {
-          groupId,
-          studentId,
-          date: new Date(date),
-        },
-      },
-    });
-
-    const group = await this.prisma.group.findUnique({
-      where: { id: groupId },
-      select: { name: true },
-    });
-
-    // Lesson number was computed once in startSession and cached
+    // Cache the lesson number from the session so the early-return path
+    // (already-marked) and the success path both surface the same value.
     let lessonNumber: number | null = null;
-    const sessionKey = `qr-session:${groupId}:${date}`;
-    const sessionRaw = await this.redis.get(sessionKey);
+    const sessionRaw = await this.redis.get(`qr-session:${groupId}:${date}`);
     if (sessionRaw) {
       const sessionData: QrSession = JSON.parse(sessionRaw);
       lessonNumber = sessionData.lessonNumber;
     }
 
+    // Already marked PRESENT? Nothing to do.
+    const existing = await this.prisma.attendance.findUnique({
+      where: {
+        groupId_studentId_date: {
+          groupId,
+          studentId,
+          date: parsedLessonDate,
+        },
+      },
+    });
     if (existing && existing.status === AttendanceStatus.PRESENT) {
       return {
         message: 'Davomat allaqachon belgilangan',
         alreadyMarked: true,
         status: AttendanceStatus.PRESENT,
-        groupName: group?.name,
+        groupName: group.name,
         lessonNumber,
       };
     }
 
-    const oldValues = existing ? { ...existing } : null;
-    const attendance = await this.prisma.attendance.upsert({
-      where: {
-        groupId_studentId_date: {
-          groupId,
-          studentId,
-          date: new Date(date),
-        },
-      },
-      create: {
-        groupId,
-        studentId,
-        date: new Date(date),
-        status: AttendanceStatus.PRESENT,
-        markedById: userId,
-        markedMethod: AttendanceMethod.QR,
-        companyId,
-      },
-      update: {
-        status: AttendanceStatus.PRESENT,
-        markedById: userId,
-        markedMethod: AttendanceMethod.QR,
-      },
-    });
+    // Atomic block: upsert + LessonBillingService — same pattern as the
+    // manual attendance flow, so QR and manual stay byte-for-byte equivalent.
+    const { attendance, oldStatus, oldValues } = await this.prisma.$transaction(
+      async (tx) => {
+        const existingInTx = await tx.attendance.findUnique({
+          where: {
+            groupId_studentId_date: {
+              groupId,
+              studentId,
+              date: parsedLessonDate,
+            },
+          },
+        });
+        const oldStatus = existingInTx?.status ?? null;
+        const oldValues = existingInTx ? { ...existingInTx } : null;
 
+        const attendance = await tx.attendance.upsert({
+          where: {
+            groupId_studentId_date: {
+              groupId,
+              studentId,
+              date: parsedLessonDate,
+            },
+          },
+          create: {
+            groupId,
+            studentId,
+            date: parsedLessonDate,
+            status: AttendanceStatus.PRESENT,
+            markedById: userId,
+            markedMethod: AttendanceMethod.QR,
+            companyId,
+          },
+          update: {
+            status: AttendanceStatus.PRESENT,
+            markedById: userId,
+            markedMethod: AttendanceMethod.QR,
+          },
+        });
+
+        await this.lessonBillingService.processAttendanceBilling(tx, {
+          attendanceId: attendance.id,
+          enrollmentId: enrollment.id,
+          studentId,
+          groupId,
+          branchId: group.branchId,
+          lessonDate: parsedLessonDate,
+          oldStatus,
+          newStatus: AttendanceStatus.PRESENT,
+          companyId,
+          performedById: userId,
+        });
+
+        return { attendance, oldStatus, oldValues };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 15_000,
+      },
+    );
+
+    // History records run outside the tx — these are audit-only side effects
+    // that don't affect the financial atomicity guarantees.
     if (oldValues) {
-      this.entityHistoryService.recordUpdate({
+      await this.entityHistoryService.recordUpdate({
         entityType: 'Attendance',
         entityId: attendance.id,
         oldValues,
@@ -137,7 +200,7 @@ export class QrAttendanceScanService {
         companyId,
       });
     } else {
-      this.entityHistoryService.recordCreate({
+      await this.entityHistoryService.recordCreate({
         entityType: 'Attendance',
         entityId: attendance.id,
         newValues: attendance,
@@ -145,15 +208,6 @@ export class QrAttendanceScanService {
         companyId,
       });
     }
-
-    await this.processFinancialEffects(
-      attendance.id,
-      enrollment.id,
-      groupId,
-      studentId,
-      date,
-      companyId,
-    );
 
     const studentData = await this.prisma.student.findUnique({
       where: { id: studentId },
@@ -174,140 +228,28 @@ export class QrAttendanceScanService {
       scannedAt: new Date().toISOString(),
     });
 
-    // Per-student Telegram ping. The early-return above guarantees the
-    // student was not already PRESENT, so this is always a real status
-    // change (null/ABSENT/LATE/EXCUSED → PRESENT).
-    this.eventEmitter.emit('attendance.student.recorded', {
-      studentId,
-      groupId,
-      groupName: group?.name ?? '',
-      date,
-      oldStatus: existing?.status ?? null,
-      newStatus: AttendanceStatus.PRESENT,
-      companyId,
-    });
+    // Per-student Telegram ping. Skip when oldStatus is already PRESENT —
+    // the early-return above catches the common case, but a student who was
+    // marked LATE/ABSENT manually then scans the QR will still flip to
+    // PRESENT here and deserves the notification.
+    if (oldStatus !== AttendanceStatus.PRESENT) {
+      this.eventEmitter.emit('attendance.student.recorded', {
+        studentId,
+        groupId,
+        groupName: group.name,
+        date,
+        oldStatus,
+        newStatus: AttendanceStatus.PRESENT,
+        companyId,
+      });
+    }
 
     return {
       message: 'Davomat muvaffaqiyatli belgilandi',
       status: AttendanceStatus.PRESENT,
       alreadyMarked: false,
-      groupName: group?.name,
+      groupName: group.name,
       lessonNumber,
     };
-  }
-
-  private async processFinancialEffects(
-    attendanceId: string,
-    enrollmentId: string,
-    groupId: string,
-    studentId: number,
-    date: string,
-    companyId: number,
-  ) {
-    try {
-      const groupData = await this.prisma.group.findUnique({
-        where: { id: groupId },
-        select: {
-          branchId: true,
-          course: { select: { price: true, lessonPaymentCount: true } },
-          teachers: { select: { teacherId: true } },
-        },
-      });
-
-      if (!groupData) return;
-
-      const { price, lessonPaymentCount: rawLPC } = groupData.course;
-      const lessonPaymentCount = rawLPC || 12;
-      const perLessonCost = Math.round(price / lessonPaymentCount);
-      const parsedLessonDate = new Date(date + 'T00:00:00.000Z');
-
-      const totalAttended = await this.prisma.attendance.count({
-        where: {
-          groupId,
-          studentId,
-          status: { in: ['PRESENT', 'LATE'] },
-        },
-      });
-
-      const cyclesPaid =
-        Math.floor((totalAttended - 1) / lessonPaymentCount) + 1;
-      const cyclesDeducted = await this.prisma.transaction.count({
-        where: {
-          studentId,
-          enrollmentId,
-          type: 'LESSON_DEDUCTION',
-        },
-      });
-
-      if (cyclesPaid > cyclesDeducted) {
-        // Prepaid guard — same rule as manual attendance. QR already
-        // blocks scans for balance < 0 upstream, but we repeat the check
-        // here because the block allows balance = 0 (fully consumed
-        // prepaid) through, and that case can't cover a new cycle.
-        const studentRow = await this.prisma.student.findUnique({
-          where: { id: studentId },
-          select: { balance: true },
-        });
-        if ((studentRow?.balance ?? 0) >= price) {
-          const activeContract = await this.prisma.contract.findFirst({
-            where: {
-              studentId,
-              groupId,
-              status: 'ACTIVE',
-              deletedAt: null,
-            },
-            select: { id: true },
-          });
-          await this.transactionsService.deductLessonFee({
-            studentId,
-            amount: price,
-            attendanceId,
-            enrollmentId,
-            contractId: activeContract?.id,
-            companyId,
-            branchId: groupData.branchId,
-          });
-        } else {
-          this.logger.warn(
-            `Skipping cycle deduction: student ${studentId} balance (${studentRow?.balance ?? 0}) insufficient for cycle fee (${price}) in group ${groupId}`,
-          );
-        }
-      }
-
-      // Coverage lookup for accrual: only earn for paid lessons (B.1).
-      const coverage = await this.prisma.transaction.findFirst({
-        where: {
-          studentId,
-          enrollmentId,
-          type: 'LESSON_DEDUCTION',
-        },
-        orderBy: { createdAt: 'desc' },
-        select: { id: true },
-      });
-
-      if (coverage) {
-        for (const teacher of groupData.teachers) {
-          await this.salaryService.createAccrual({
-            teacherId: teacher.teacherId,
-            studentId,
-            groupId,
-            attendanceId,
-            lessonDate: parsedLessonDate,
-            perLessonCost,
-            companyId,
-            deductionTransactionId: coverage.id,
-          });
-        }
-      } else {
-        this.logger.warn(
-          `Skipping salary accrual: student ${studentId} has no payment coverage in group ${groupId}`,
-        );
-      }
-    } catch (err) {
-      this.logger.error(
-        `Financial processing failed for QR scan: student ${studentId}, group ${groupId}`,
-        err,
-      );
-    }
   }
 }

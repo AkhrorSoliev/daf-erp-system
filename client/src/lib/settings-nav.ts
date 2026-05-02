@@ -3,7 +3,6 @@ import {
   DoorOpen,
   CalendarOff,
   Archive,
-  UserMinus,
   Users,
   Building,
   Building2,
@@ -33,11 +32,6 @@ export const settingsNavSections: SettingsNavSection[] = [
       { title: "Xonalar", url: "/settings/rooms", icon: DoorOpen },
       { title: "Dam olish kunlari", url: "/settings/holidays", icon: CalendarOff },
       { title: "Arxiv", url: "/settings/archive", icon: Archive },
-      {
-        title: "Guruhni tark etganlar",
-        url: "/settings/left-students",
-        icon: UserMinus,
-      },
     ],
   },
   {

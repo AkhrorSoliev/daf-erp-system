@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<title>DaF ERP — Moliyaviy Tizim To'liq Tahlili</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font-size: 9pt;
+      color: #888;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 10.5pt; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", Tahoma, sans-serif;
+    color: #1f2937;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+  }
+  h1, h2, h3, h4 {
+    color: #0f172a;
+    font-weight: 700;
+    margin-top: 1.4em;
+    margin-bottom: 0.5em;
+    page-break-after: avoid;
+  }
+  h1 {
+    font-size: 22pt;
+    border-bottom: 3px solid #0ea5e9;
+    padding-bottom: 0.2em;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 16pt;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 0.15em;
+    color: #0c4a6e;
+    page-break-before: always;
+  }
+  h2:first-of-type { page-break-before: auto; }
+  h3 {
+    font-size: 13pt;
+    color: #075985;
+    border-left: 4px solid #0ea5e9;
+    padding-left: 8px;
+  }
+  h4 {
+    font-size: 11pt;
+    color: #1e3a8a;
+    margin-top: 1em;
+  }
+  p { margin: 0.4em 0 0.7em 0; }
+  ul, ol { margin: 0.3em 0 0.8em 0; padding-left: 1.4em; }
+  li { margin: 0.15em 0; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    background: #f1f5f9;
+    color: #be123c;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9.5pt;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 12px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8.8pt;
+    line-height: 1.45;
+    page-break-inside: avoid;
+    border-left: 4px solid #0ea5e9;
+  }
+  pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+  }
+  .diagram {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8.5pt;
+    line-height: 1.4;
+    white-space: pre;
+    overflow-x: auto;
+    page-break-inside: avoid;
+    margin: 0.6em 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.6em 0 1em 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #0c4a6e;
+    color: #fff;
+    text-align: left;
+    padding: 7px 9px;
+    font-weight: 600;
+  }
+  td {
+    border: 1px solid #cbd5e1;
+    padding: 6px 9px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .callout {
+    border-left: 4px solid #0ea5e9;
+    background: #ecfeff;
+    padding: 10px 14px;
+    margin: 0.7em 0;
+    border-radius: 0 4px 4px 0;
+    page-break-inside: avoid;
+  }
+  .callout.warn { border-color: #f59e0b; background: #fffbeb; }
+  .callout.danger { border-color: #ef4444; background: #fef2f2; }
+  .callout.success { border-color: #10b981; background: #ecfdf5; }
+  .callout strong { display: block; margin-bottom: 4px; color: #0c4a6e; font-size: 10.5pt; }
+  .callout.warn strong { color: #92400e; }
+  .callout.danger strong { color: #991b1b; }
+  .callout.success strong { color: #065f46; }
+  .badge {
+    display: inline-block;
+    background: #0ea5e9;
+    color: #fff;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 8.5pt;
+    font-weight: 600;
+    margin: 0 2px;
+  }
+  .badge.gray { background: #64748b; }
+  .badge.green { background: #10b981; }
+  .badge.red { background: #ef4444; }
+  .badge.amber { background: #f59e0b; }
+  .badge.blue { background: #3b82f6; }
+  .badge.purple { background: #8b5cf6; }
+  .toc {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 16px 22px;
+    border-radius: 6px;
+    page-break-after: always;
+  }
+  .toc h2 { border: none; page-break-before: auto; margin-top: 0; }
+  .toc ol { padding-left: 1.5em; }
+  .toc a { color: #0c4a6e; text-decoration: none; }
+  .meta {
+    background: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 1.5em;
+    font-size: 9.5pt;
+  }
+  .meta strong { color: #0c4a6e; }
+  hr {
+    border: none;
+    border-top: 1px solid #cbd5e1;
+    margin: 1.4em 0;
+  }
+  .scenario {
+    background: #fefce8;
+    border: 1px solid #facc15;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 0.8em 0;
+    page-break-inside: avoid;
+  }
+  .scenario strong { color: #713f12; display: block; margin-bottom: 6px; font-size: 11pt; }
+  .step-list { counter-reset: step; padding-left: 0; list-style: none; }
+  .step-list li {
+    counter-increment: step;
+    padding-left: 30px;
+    position: relative;
+    margin: 0.4em 0;
+  }
+  .step-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: #0ea5e9;
+    color: #fff;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 10pt;
+    font-weight: 700;
+  }
+  .field-list { font-size: 9.5pt; }
+  .file-ref {
+    color: #64748b;
+    font-size: 8.5pt;
+    font-style: italic;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .role-table th { background: #1e3a8a; }
+</style>
+</head>
+<body>
+
+<h1>DaF ERP — Moliyaviy Tizim<br>To'liq Texnik Tahlil</h1>
+
+<div class="meta">
+<strong>Hujjat versiyasi:</strong> 4.0 (post Faza 8 audit)<br>
+<strong>Sana:</strong> 2026-04-30<br>
+<strong>Kapital:</strong> Bu hujjat backend va frontend kodlarini, hozirgi commit qilinmagan o'zgarishlarni va yangi migrationlarni o'rganib chiqilgan tahlildir.<br>
+<strong>Asos manbalar:</strong> server/src/billing/*, server/src/salary/*, server/src/refunds/*, server/src/students/*, server/src/transactions/*, server/src/payments/*, server/src/lesson-cancellations/*, server/src/student-exit-reasons/*, server/prisma/schema.prisma va so'nggi 4 migration, client/src/components/payments/*, client/src/components/profile/*, client/src/components/students/*, client/src/components/teachers/*, client/src/components/groups/*.<br>
+<strong>Tahlil maqsadi:</strong> Foydalanuvchi (CEO) tomonidan so'ralgan kengaytirilgan, holat-asosli tushuntirish — har bir mumkin bo'lgan stsenariy uchun "agar A holat bo'lsa, X sodir bo'ladi; agar B holat bo'lsa, Y sodir bo'ladi" ko'rinishida.
+</div>
+
+<div class="toc">
+<h2>Mundarija</h2>
+<ol>
+  <li><a href="#asoslar">Asosiy printsiplar va ma'lumotlar bazasi qatlami</a></li>
+  <li><a href="#pul-oqimi">Pul oqimining umumiy ko'rinishi (real misollar)</a></li>
+  <li><a href="#davomat">Davomat va billing oqimi</a></li>
+  <li><a href="#oylik">Ustozga oylik hisoblanishi</a></li>
+  <li><a href="#student-lifecycle">O'quvchi hayot tsikli moliyaviy nuqtai nazardan</a></li>
+  <li><a href="#refund">Pul qaytarish (refund) va to'lov bekor qilish (reverse)</a></li>
+  <li><a href="#lesson-cancel">Dars bekor qilish (lesson cancellation) va dam olish kunlari</a></li>
+  <li><a href="#initial-balance">Initial Balance va eski tizimdan migratsiya</a></li>
+  <li><a href="#xarajatlar">Markaz xarajatlari va TEACHER_ADVANCE</a></li>
+  <li><a href="#edge-cases">Maxsus holatlar (edge cases)</a></li>
+  <li><a href="#frontend">Frontend UI yo'llari va sahifalari</a></li>
+  <li><a href="#rollar">Rollar va ruxsatlar matritsasi</a></li>
+  <li><a href="#kamchiliklar">Topilgan kamchiliklar va e'tibor talab qiluvchi joylar</a></li>
+</ol>
+</div>
+
+<h2 id="asoslar">1. Asosiy printsiplar va ma'lumotlar bazasi qatlami</h2>
+
+<h3>1.1 Append-only Ledger printsipi</h3>
+
+<p>Tizimda har bir pul harakati <strong><code>Transaction</code></strong> jadvaliga yoziladi. Ushbu yozuvlar <strong>hech qachon o'chirilmaydi yoki tahrir qilinmaydi</strong>. Xato bo'lsa, teskari (reversal) yozuv qo'shiladi va asl yozuvga <code>reversedAt</code>, <code>reversedById</code>, <code>reversalReason</code> belgilari qo'yiladi.</p>
+
+<p>Bu yondashuv quyidagi imkonlarni beradi:</p>
+<ul>
+  <li><strong>Auditga tayyorlik:</strong> har bir tiyinning yo'li tarix orqali kuzatiladi</li>
+  <li><strong>Idempotentlik:</strong> takroriy operatsiyalar partial unique indekslar orqali bloklanadi</li>
+  <li><strong>Reverssibility:</strong> xato qaytarish ham yozuv sifatida saqlanadi (faqat <code>reversedAt</code> markerini olib tashlash)</li>
+</ul>
+
+<div class="callout">
+<strong>Muhim:</strong> Tizimning ishonchli yagona haqiqat manbai — <code>Transaction</code> jadvali. Boshqa jadvallarda saqlanadigan summalar (masalan <code>Student.balance</code>, <code>Contract.paidAmount</code>) — ledger asosida hisoblangan ko'zgu (mirror).
+</div>
+
+<h3>1.2 Atomiklik va race condition himoyasi</h3>
+
+<p>Barcha balans o'zgaruvchi operatsiyalar quyidagi parametrlar bilan o'raladi:</p>
+
+<pre><code>prisma.$transaction(callback, {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  maxWait: 10000,   // 10s — Neon serverless cold-start uchun
+  timeout: 15000    // 15s
+});</code></pre>
+
+<p><code>Student.balance</code> yoki <code>User.balance</code> o'qish va yozish <code>SELECT FOR UPDATE</code> bilan qulflanadi — bir vaqtda ishlayotgan ikkinchi tranzaksiya birinchisi yakunlanguncha kutadi.</p>
+
+<h3>1.3 Reversal markeri (<code>reversedAt</code>)</h3>
+
+<p>20260428010035 migration <code>Transaction</code> jadvaliga ikkita yangi maydon qo'shdi: <code>reversedAt</code> va <code>reversedById</code>. <code>reverseTransaction()</code> metodi <em>ikki ish</em> qiladi:</p>
+<ol>
+  <li>Yangi reversal qator yozadi (asl <code>reversedTransactionId</code> bilan bog'langan)</li>
+  <li>Asl qatorga <code>reversedAt = now()</code> va <code>reversedById</code> yozadi</li>
+</ol>
+
+<p>Barcha "hali aktiv" filtrlar <code>WHERE reversedAt IS NULL</code> ishlatadi.</p>
+
+<h3>1.4 Multi-tenant izolyatsiya</h3>
+
+<p>Har bir moliyaviy yozuvda <code>companyId</code> NOT NULL maydoni bor. Barcha read/write operatsiyalar JWT tokendan olingan <code>@CurrentUser('companyId')</code> bo'yicha filtrlash bilan qilinadi. Filial direktori (Branch Director) qo'shimcha ravishda faqat o'z filiali ma'lumotlarini ko'radi.</p>
+
+<h3>1.5 Asosiy moliyaviy modellar</h3>
+
+<table>
+<tr><th>Model</th><th>Maqsad</th><th>Asosiy maydonlar</th></tr>
+<tr><td><code>Payment</code></td><td>Tashqi pul kelishi (kassa yoki online)</td><td>amount, method, status, source, externalId, contractId</td></tr>
+<tr><td><code>Transaction</code></td><td>Bosh ledger — har bir balans o'zgarishi</td><td>type, amount, balanceBefore/After, metadata, reversedAt</td></tr>
+<tr><td><code>Contract</code></td><td>O'quvchi-kurs shartnomasi</td><td>contractNumber, totalAmount, paidAmount, status</td></tr>
+<tr><td><code>Enrollment</code></td><td>O'quvchi-guruh bog'lanishi</td><td>status, prepaidLessonsRemaining, departureReasonId</td></tr>
+<tr><td><code>Attendance</code></td><td>Davomat yozuvi</td><td>status (PRESENT/LATE/ABSENT/EXCUSED), markedMethod, cancellationId</td></tr>
+<tr><td><code>EmployeeSalaryConfig</code></td><td>Xodim oylik sozlamasi (ko'zgu — joriy qiymat)</td><td>userId, groupId?, salaryType, value, isActive</td></tr>
+<tr><td><code>EmployeeSalaryConfigVersion</code></td><td>Oylik sozlamasi tarixi (SCD2)</td><td>configId, salaryType, value, effectiveFrom, effectiveTo</td></tr>
+<tr><td><code>SalaryAccrual</code></td><td>Bitta dars uchun ustozga yig'ilgan summa</td><td>userId, studentId, lessonDate, amount, deductionTransactionId, reversedAt</td></tr>
+<tr><td><code>SalaryPayment</code></td><td>Oylik to'lov (CALCULATED → APPROVED → PAID)</td><td>userId, periodStart/End, amount, status</td></tr>
+<tr><td><code>SalaryPeriodSetting</code></td><td>Hisoblash davri sozlamasi (default: 8-sana)</td><td>cycleStartDay, effectiveFrom/To</td></tr>
+<tr><td><code>Refund</code></td><td>Pul qaytarish so'rovi va jarayoni</td><td>requestedAmount, approvedAmount, deductions JSON, status</td></tr>
+<tr><td><code>Expense</code></td><td>Markaz xarajati</td><td>category, amount, relatedUserId, settledBySalaryPaymentId</td></tr>
+<tr><td><code>LessonCancellation</code></td><td>Bitta guruhning bitta kunini bekor qilish</td><td>groupId, date, reason, deletedAt</td></tr>
+<tr><td><code>StudentExitReason</code></td><td>O'quvchi chiqib ketish sabablari katalogi</td><td>name, appliesTo (ExitType[])</td></tr>
+</table>
+
+<h3>1.6 TransactionType enum (10 ta tur)</h3>
+
+<table>
+<tr><th>Tur</th><th>Qachon yoziladi</th><th>Amount belgisi</th></tr>
+<tr><td><code>PAYMENT</code></td><td>O'quvchi to'lovi (kassa yoki gateway)</td><td>+ (balansga qo'shadi)</td></tr>
+<tr><td><code>LESSON_DEDUCTION</code></td><td>Prepaid tsikl uchun pul yechilishi (FULL_CYCLE yoki PARTIAL)</td><td>− (balansdan yechiladi)</td></tr>
+<tr><td><code>LESSON_CONSUMPTION</code></td><td>Bitta dars iste'mol qilingani audit yozuvi (amount = 0)</td><td>0</td></tr>
+<tr><td><code>INITIAL_BALANCE</code></td><td>Eski tizimdan o'tkazilayotgan o'quvchi uchun bir martalik balans</td><td>+</td></tr>
+<tr><td><code>REFUND</code></td><td>Pul qaytarilgani (o'quvchi balansidan yechib chiqariladi)</td><td>− (balansdan)</td></tr>
+<tr><td><code>SALARY_ACCRUAL</code></td><td>Ustoz oyligi yig'ildi (User balansiga + qarz)</td><td>+ (User balansiga)</td></tr>
+<tr><td><code>SALARY_PAYMENT</code></td><td>Ustozga oylik to'landi</td><td>− (User balansidan)</td></tr>
+<tr><td><code>EXPENSE</code></td><td>Markaz xarajati (ijara, ta'minot va h.k.)</td><td>− (kompaniya kassasidan)</td></tr>
+<tr><td><code>ADJUSTMENT</code></td><td>Manual balans tuzatish (CEO tomonidan)</td><td>± (har ikkalasi)</td></tr>
+<tr><td><code>TAX</code></td><td>Soliq (deprecated — 20260428120000 da o'chirilgan)</td><td>—</td></tr>
+</table>
+
+<h3>1.7 Soliq hisoblashning olib tashlanishi (muhim o'zgarish)</h3>
+
+<div class="callout warn">
+<strong>20260428120000_remove_tax_calculation:</strong> Tax hisoblash logikasi tizimdan butunlay olib tashlangan. <code>SalaryPayment</code>'dan <code>grossAmount</code>, <code>taxAmount</code>, <code>netAmount</code> maydonlari o'chirildi va o'rniga yagona <code>amount</code> qoldi. <code>CompanyTaxConfig</code> jadvali ham DROP qilindi. Hozir oylik <strong>brutto</strong> hisoblanadi (yig'ilgan accrual'lar yig'indisi). Soliq stavkalari faqat UI'da informatsiya sifatida ko'rsatiladi.
+</div>
+
+<p>UI'da (Salary Breakdown Drawer'da) shunday eslatma chiqadi:</p>
+<ul>
+  <li>Ustoz oyligidan — 12% (ushlanishi mumkin)</li>
+  <li>Markaz tomonidan ustoz oyligiga — 12%</li>
+  <li>Markaz oylik daromadidan — 4%</li>
+  <li>Click har bir to'lovdan — 2%</li>
+  <li>Payme har bir to'lovdan — 2%</li>
+  <li>Uzum har bir to'lovdan — 2%</li>
+</ul>
+
+<p>Bu raqamlar <strong>statik infografika</strong> — backend'da ushlanmaydi.</p>
+
+<h3>1.8 Partial unique indekslar (atomiklik kafolati)</h3>
+
+<pre><code>-- Bitta davomat = bitta aktiv LESSON_CONSUMPTION
+CREATE UNIQUE INDEX tx_consumption_per_attendance_unique
+  ON "Transaction"("attendanceId")
+  WHERE type = 'LESSON_CONSUMPTION' AND "reversedAt" IS NULL;
+
+-- Bitta o'quvchi = bitta aktiv INITIAL_BALANCE
+CREATE UNIQUE INDEX tx_initial_balance_per_student_unique
+  ON "Transaction"("studentId")
+  WHERE type = 'INITIAL_BALANCE' AND "reversedAt" IS NULL;
+
+-- Bitta guruh + sana = bitta aktiv LessonCancellation
+CREATE UNIQUE INDEX lesson_cancellation_active_unique
+  ON "LessonCancellation"("groupId", "date")
+  WHERE "deletedAt" IS NULL;</code></pre>
+
+<p>Bu indekslar reversed/soft-deleted yozuvlarni hisobga olmaydi — shuning uchun bekor qilingan operatsiyani qayta yozish mumkin (lekin asl yozuv saqlanib qoladi).</p>
+
+<h2 id="pul-oqimi">2. Pul oqimining umumiy ko'rinishi (real misollar)</h2>
+
+<h3>2.1 Yagona pul oqimi diagrammasi</h3>
+
+<div class="diagram">
+  O'QUVCHI                       MARKAZ KASSASI                    USTOZ
+   │                                 │                              │
+   │   1. To'lov (kassa/online)      │                              │
+   ├────────────────────────────────►│                              │
+   │   PAYMENT tx (+800,000)         │                              │
+   │   Student.balance += 800k       │                              │
+   │   Contract.paidAmount += 800k   │                              │
+   │                                 │                              │
+   │   2. Birinchi davomat (PRESENT) │                              │
+   │ ◄───────────────────────────────┤                              │
+   │   LESSON_DEDUCTION (-400,000)   │                              │
+   │   prepaidLessonsRemaining = 11  │   3. SalaryAccrual (+xxx)    │
+   │   LESSON_CONSUMPTION (audit)    ├─────────────────────────────►│
+   │                                 │   12 ta dars uchun           │
+   │   3-12. Keyingi 11 dars         │   pre-allocate qilinadi      │
+   │   prepaid -= 1 har birida       │                              │
+   │   balans o'zgarmaydi            │                              │
+   │   Har birida SalaryAccrual      ├─────────────────────────────►│
+   │                                 │                              │
+   │   13-tsikl: prepaid = 0         │                              │
+   │   Yangi LESSON_DEDUCTION        │                              │
+   │   ...                           │                              │
+   │                                 │                              │
+   │                                 │   Oy oxiri: SalaryPayment    │
+   │                                 │   CALCULATED → APPROVED      │
+   │                                 │   → PAID                     │
+   │                                 │   SALARY_PAYMENT (-NET)      │
+   │                                 ├─────────────────────────────►│
+   │                                 │   User.balance -= amount     │
+</div>
+
+<h3>2.2 Misol 1 — Standart kurs (12 dars, 400 ming so'm)</h3>
+
+<div class="scenario">
+<strong>Stsenariy:</strong> Aliya 400,000 so'm to'ladi. Standart kurs (12 dars), per-lesson narxi: 33,333 so'm. Ustozga PERCENTAGE 30% belgilangan. Birinchi 5 dars davomida hammasini PRESENT qildi.
+</div>
+
+<table>
+<tr><th>Vaqt</th><th>Voqea</th><th>Transaction</th><th>O'quvchi balansi</th><th>Prepaid</th><th>Ustoz accrual</th></tr>
+<tr><td>T0</td><td>Aliya kassada to'laydi</td><td>PAYMENT +400,000</td><td>0 → 400,000</td><td>0</td><td>—</td></tr>
+<tr><td>T1</td><td>1-dars: PRESENT</td><td>LESSON_DEDUCTION −400,000<br>LESSON_CONSUMPTION (0)</td><td>400,000 → 0</td><td>0 → 11</td><td>+10,000 (33,333 × 30%)</td></tr>
+<tr><td>T2</td><td>2-dars: PRESENT</td><td>LESSON_CONSUMPTION (0)</td><td>0</td><td>11 → 10</td><td>+10,000</td></tr>
+<tr><td>T3</td><td>3-dars: PRESENT</td><td>LESSON_CONSUMPTION (0)</td><td>0</td><td>10 → 9</td><td>+10,000</td></tr>
+<tr><td>T4</td><td>4-dars: PRESENT</td><td>LESSON_CONSUMPTION (0)</td><td>0</td><td>9 → 8</td><td>+10,000</td></tr>
+<tr><td>T5</td><td>5-dars: PRESENT</td><td>LESSON_CONSUMPTION (0)</td><td>0</td><td>8 → 7</td><td>+10,000</td></tr>
+</table>
+
+<p><strong>Natija:</strong> 5 dars o'tildi, ustoz uchun 5 × 10,000 = <strong>50,000 so'm</strong> SalaryAccrual yig'ildi. O'quvchining balansi 0, lekin <code>prepaidLessonsRemaining = 7</code> (yana 7 dars to'langan).</p>
+
+<h3>2.3 Misol 2 — Intensiv kurs (20 dars, 690 ming so'm)</h3>
+
+<div class="scenario">
+<strong>Stsenariy:</strong> Bekzod 690,000 so'm to'ladi. Intensiv kurs (20 dars), per-lesson narxi: 34,500 so'm. Ustozga FIXED_PER_STUDENT 200,000 so'm belgilangan (butun kurs uchun, ya'ni har dars uchun = 200,000 / 20 = <strong>10,000 so'm</strong>).
+</div>
+
+<div class="callout warn">
+<strong>Faza 2 audit fix:</strong> <code>FIXED_PER_STUDENT</code> ning eski semantikasi bug edi — har darsda <code>value</code> to'liq yozilgan, natijada o'qituvchi <code>lessonPaymentCount</code> marta ortig'i bilan oylik olgan. Yangi semantika: <code>amount = Math.round(value / lessonPaymentCount)</code>. Misolda 200,000 / 20 = 10,000 so'm har dars.
+</div>
+
+<h3>2.4 Misol 3 — Qisman to'lov (PARTIAL deduction)</h3>
+
+<div class="scenario">
+<strong>Stsenariy:</strong> Diyora 100,000 so'm to'ladi (Standart kursning yarmidan kam). Per-lesson 33,333 so'm. Birinchi davomatda nima sodir bo'ladi?
+</div>
+
+<p>Algoritm: balans &lt; fullCycleCost (400k), lekin balans &ge; perLessonCost (33,333) → <strong>PARTIAL deduction</strong>.</p>
+
+<div class="diagram">
+  balance = 100,000
+  fullCycleCost = 400,000  (yetmaydi)
+  perLessonCost = 33,333
+
+  lessonsCovered = floor(100,000 / 33,333) = 3 ta dars
+  deductionAmount = 3 × 33,333 = 99,999 so'm
+
+  → LESSON_DEDUCTION (-99,999, mode: PARTIAL)
+  → balance = 100,000 - 99,999 = 1 so'm
+  → prepaidLessonsRemaining = 3 - 1 = 2 (1 ta birinchi dars uchun)
+  → SalaryAccrual yoziladi (coverage = bu LESSON_DEDUCTION)
+</div>
+
+<p>Keyingi 2 dars uchun ham accrual yoziladi (prepaid hisobidan). 4-darsda balans 1 so'm — yetmaydi → <strong>B.1 qoidasi:</strong> hech narsa yozilmaydi (no consumption, no accrual).</p>
+
+<h3>2.5 Misol 4 — Pul yetmasa (B.1 Coverage qoidasi)</h3>
+
+<div class="scenario">
+<strong>Stsenariy:</strong> Sardor 5,000 so'm balansi bilan keldi (per-lesson 33,333 so'm). Davomat: PRESENT.
+</div>
+
+<div class="callout danger">
+<strong>B.1 Coverage qoidasi:</strong> O'quvchi balansi yetmasa, pul yechilmaydi va ustozga oylik yozilmaydi. Bu — <strong>tizimning eng muhim qoidasi</strong>. Markaz "qarzga" dars sotmaydi: agar to'lov yo'q bo'lsa, ustozga ham hech narsa yozilmaydi.
+</div>
+
+<div class="diagram">
+  balance = 5,000
+  perLessonCost = 33,333  (yetmaydi)
+
+  → LESSON_DEDUCTION yo'q
+  → LESSON_CONSUMPTION yo'q (audit qator ham yozilmaydi)
+  → SalaryAccrual yo'q
+  → Davomat status'i PRESENT, lekin moliyaviy ta'sir nol
+</div>
+
+<p>Keyinroq Sardor pul to'lasa va keyingi davomat PRESENT bo'lsa, o'shanda yangi LESSON_DEDUCTION yoziladi. <em>Lekin o'tgan dars uchun retroaktiv accrual yozilmaydi</em> — <strong>bu cheklov hozirgi kodda mavjud</strong>.</p>
+
+<h2 id="davomat">3. Davomat va billing oqimi</h2>
+
+<h3>3.1 Yagona giriş nuqtasi: LessonBillingService</h3>
+
+<p>Manual davomat (<code>AttendanceSaveService</code>) va QR davomat (<code>QrAttendanceScanService</code>) — ikkalasi ham bitta servisga delegate qiladi: <code>LessonBillingService.processAttendanceBilling(tx, ...)</code>. Bu — <strong>tizimdagi yagona pul yechish nuqtasi</strong>.</p>
+
+<p class="file-ref">server/src/billing/lesson-billing.service.ts</p>
+
+<h3>3.2 Status transition matritsasi</h3>
+
+<table>
+<tr><th>Eski status</th><th>Yangi status</th><th>Harakat</th></tr>
+<tr><td>—</td><td>ABSENT, EXCUSED</td><td>Hech narsa</td></tr>
+<tr><td>—</td><td>PRESENT, LATE</td><td><span class="badge green">BILL</span> (pul yechiladi)</td></tr>
+<tr><td>ABSENT, EXCUSED</td><td>ABSENT, EXCUSED</td><td>Hech narsa</td></tr>
+<tr><td>ABSENT, EXCUSED</td><td>PRESENT, LATE</td><td><span class="badge green">BILL</span></td></tr>
+<tr><td>PRESENT, LATE</td><td>PRESENT, LATE</td><td>Hech narsa</td></tr>
+<tr><td>PRESENT, LATE</td><td>ABSENT, EXCUSED</td><td><span class="badge red">REVERSE</span></td></tr>
+</table>
+
+<p><strong>BILLABLE statuslar:</strong> <code>PRESENT</code> va <code>LATE</code>. Faqat shu ikkita holatda pul yechiladi.</p>
+
+<h3>3.3 bill() algoritmi (PRESENT/LATE statusiga o'zgarganda)</h3>
+
+<ol class="step-list">
+<li><strong>Idempotency tekshiruvi:</strong> Shu attendance uchun aktiv (<code>reversedAt IS NULL</code>) <code>LESSON_CONSUMPTION</code> bormi? Bo'lsa, hech narsa qilmasdan chiqish (dars allaqachon to'langan).</li>
+<li><strong>Enrollment lock:</strong> <code>SELECT * FROM Enrollment WHERE id = ? FOR UPDATE</code> — concurrent davomatlarni qulflash.</li>
+<li><strong>Guruh, kurs narxi, ustozlar topiladi:</strong> <code>course.price</code>, <code>course.lessonPaymentCount</code>, <code>group.teachers</code>.</li>
+<li><strong>Strategiya tanlash:</strong>
+  <ul>
+    <li><strong>(a)</strong> <code>prepaidLessonsRemaining > 0</code> → faqat decrement, balansga tegmaydi. Coverage = eng so'nggi unreversed <code>LESSON_DEDUCTION</code>.</li>
+    <li><strong>(b)</strong> <code>balance >= fullCycleCost</code> → <code>LESSON_DEDUCTION</code> (FULL_CYCLE) yoziladi, <code>prepaidLessonsRemaining = lessonPaymentCount - 1</code>. Coverage = yangi DEDUCTION.</li>
+    <li><strong>(c)</strong> <code>perLessonCost ≤ balance &lt; fullCycleCost</code> → <code>LESSON_DEDUCTION</code> (PARTIAL) yoziladi, <code>prepaidLessonsRemaining = floor(balance / perLessonCost) - 1</code>.</li>
+    <li><strong>(d)</strong> <code>balance &lt; perLessonCost</code> → <strong>hech narsa</strong> (B.1 qoidasi).</li>
+  </ul>
+</li>
+<li><strong>LESSON_CONSUMPTION audit qator:</strong> amount = 0, <code>metadata = {perLessonCost}</code>. Bu yozuv har bir aktiv dars uchun yagona (partial unique index orqali).</li>
+<li><strong>SalaryAccrual:</strong> har bir aktiv ustoz uchun (group.teachers), <code>deductionTransactionId</code> coverage'ga linked. Bu — <strong>B.1 Coverage qoidasi</strong>.</li>
+</ol>
+
+<h3>3.4 reverse() algoritmi (PRESENT/LATE → ABSENT/EXCUSED)</h3>
+
+<ol class="step-list">
+<li>Aktiv <code>LESSON_CONSUMPTION</code> qidiriladi (<code>attendanceId</code> bo'yicha).</li>
+<li>Topilsa: <code>reverseTransaction()</code> chaqiriladi → reversal qator yoziladi, <code>reversedAt</code> markeri qo'yiladi.</li>
+<li><code>prepaidLessonsRemaining += 1</code> — qaytarilgan darsni hisobga olish.</li>
+<li>Har bir ustoz uchun <code>SalaryAccrual</code> qaytariladi (<code>reversedAt</code> qo'yiladi).</li>
+<li><strong>Agar consumption topilmasa</strong> (B.1 qoidasi tufayli yozilmagan edi): faqat accrual'lar reverse qilinadi (agar bo'lsa), prepaid <em>oshmaydi</em> — chunki pul yo'q edi.</li>
+</ol>
+
+<h3>3.5 Davomatni administrator yoki QR olishi farqi</h3>
+
+<p>Tizim <code>markedMethod</code> (MANUAL yoki QR) ni e'tiborga olmaydi. Davomatni kim qo'ygani (admin, ustoz yoki QR scan) ahamiyatga ega emas — agar status <code>PRESENT</code>/<code>LATE</code> bo'lsa, hisoblanadi va ustozga oylik yoziladi.</p>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Davomat olish esidan chiqqan bo'lsa unda uni administrator olsa ham bu oylik maosh ustozga yoziladi." — Ha, bu kod darajasida tasdiqlangan. Davomatni qaysi metod bilan kim olganidan qat'iy nazar ustoz oyligi yoziladi.
+</div>
+
+<h2 id="oylik">4. Ustozga oylik hisoblanishi</h2>
+
+<h3>4.1 Uch xil oylik turi</h3>
+
+<table>
+<tr><th>Tur</th><th>Kim uchun</th><th>Hisoblanishi</th><th>Misol</th></tr>
+<tr><td><code>PERCENTAGE</code></td><td>Asosan o'qituvchilar</td><td><code>amount = round(perLessonCost × value / 100)</code></td><td>30%, dars 33,333 → 10,000</td></tr>
+<tr><td><code>FIXED_PER_STUDENT</code></td><td>O'qituvchilar (qattiq tarif)</td><td><code>amount = round(value / lessonPaymentCount)</code></td><td>200,000/12 = 16,667 har dars</td></tr>
+<tr><td><code>FIXED_MONTHLY</code></td><td>Admin, kassir, BD</td><td>Accrual yo'q, oy oxirida config.value to'g'ridan-to'g'ri SalaryPayment</td><td>4,000,000 so'm/oy</td></tr>
+</table>
+
+<div class="callout warn">
+<strong>Muhim semantika (FIXED_PER_STUDENT):</strong> <code>value</code> — <strong>butun kurs (tsikl) uchun</strong> umumiy summa, har dars uchun emas. Eski bug bo'lib, har darsda to'liq <code>value</code> yozilgan edi va o'qituvchi <code>lessonPaymentCount</code> marta ortig'i bilan oylik olgan. Faza 2 audit'da to'g'rilangan.
+</div>
+
+<h3>4.2 Per-group vs Global sozlama</h3>
+
+<p><code>EmployeeSalaryConfig.groupId</code> maydoni ikki holatda bo'lishi mumkin:</p>
+<ul>
+  <li><code>NULL</code> → <strong>Global</strong> — bu xodimning barcha guruhlari uchun amal qiladi</li>
+  <li><code>UUID</code> → <strong>Per-group</strong> — faqat shu guruh uchun</li>
+</ul>
+
+<p>Lookup pattern (ikki query): avval <code>(userId, groupId = X)</code> qidiriladi (per-group ustun); topilmasa <code>(userId, groupId IS NULL)</code> qidiriladi (global fallback). Postgres NULL ordering driver-specific bo'lgani uchun explicit ikki bosqich.</p>
+
+<p class="file-ref">server/src/salary/salary-accrual.service.ts:196-241</p>
+
+<h3>4.3 Salary Config Versioning (SCD2)</h3>
+
+<p>Har bir oylik o'zgarishi <code>EmployeeSalaryConfigVersion</code> jadvaliga yangi qator yozadi. <code>EmployeeSalaryConfig</code> — joriy qiymat ko'zgusi (mirror). Tarix versiyalari bo'yicha:</p>
+
+<div class="diagram">
+  Misol: O'qituvchining stavkasi vaqt o'tishi bilan o'zgargan
+
+  Version 1: PERCENTAGE 30%, effectiveFrom: 2026-01-01, effectiveTo: 2026-03-15
+  Version 2: PERCENTAGE 35%, effectiveFrom: 2026-03-15, effectiveTo: 2026-04-20
+  Version 3: PERCENTAGE 40%, effectiveFrom: 2026-04-20, effectiveTo: NULL (joriy)
+
+  2026-02-10 sanasidagi dars uchun: Version 1 (30%)
+  2026-04-01 sanasidagi dars uchun: Version 2 (35%)
+  2026-04-25 sanasidagi dars uchun: Version 3 (40%)
+</div>
+
+<p><strong>Validatsiyalar:</strong></p>
+<ul>
+  <li><code>effectiveFrom &lt; latest.effectiveFrom</code> → 400 (orqaga vaqt yo'q)</li>
+  <li>APPROVED yoki PAID <code>SalaryPayment</code> davriga tushadigan <code>effectiveFrom</code> → 400 (yopiq davrga o'zgartirib bo'lmaydi)</li>
+</ul>
+
+<p class="file-ref">server/src/salary/salary-config.service.ts:335-357</p>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Biror ustozga oylik belgilashda biz qaysi kundan boshlab buni hisoblanishini ham inobatga olishimiz kerak" — Ha, bu <code>effectiveFrom</code> orqali to'liq qo'llab-quvvatlangan. UI'da Salary Config Dialog'ida date picker bor.
+</div>
+
+<h3>4.4 Hisoblash davri (SalaryPeriodSetting)</h3>
+
+<p>Default: <strong>oyning 8-sanasi</strong>. Ya'ni davr <code>[oldingi oyning 8-i 00:00 Tashkent, joriy oyning 8-i 00:00 Tashkent − 1ms]</code>.</p>
+
+<p>Sozlamalar ham SCD2 (tarixli). Faqat CEO o'zgartira oladi.</p>
+
+<div class="callout warn">
+<strong>Mid-cycle cutover policy:</strong> Agar CEO joriy davr ichida (masalan 15-aprel) yangi <code>cycleStartDay</code> belgilasa, yangi sozlama avtomatik ravishda <strong>keyingi davr boshiga ko'chiriladi</strong>. Joriy davr eski jadval bo'yicha yopiladi. Bu — "qaysi oy?" muammosini oldini olish uchun.
+</div>
+
+<p class="file-ref">server/src/salary/salary-period-settings.service.ts:62-83</p>
+
+<h3>4.5 Cron oqimi (avtomatik hisoblash)</h3>
+
+<p><strong>Tariff:</strong> <code>0 2 * * *</code> — har kuni 02:00 Tashkent vaqtida.</p>
+
+<p><strong>Logika:</strong> har bir kompaniya uchun <code>isCycleStartDayForCompany()</code> tekshiradi — agar bugungi <code>day-of-month</code> kompaniyaning <code>cycleStartDay</code>'ga teng bo'lsa, oylik hisoblash boshlanadi.</p>
+
+<p class="file-ref">server/src/salary/salary-cron.service.ts:25-62</p>
+
+<h3>4.6 calculateMonthlySalaries() — to'liq oqim</h3>
+
+<h4>A) Accrual-based (PERCENTAGE / FIXED_PER_STUDENT)</h4>
+
+<ol class="step-list">
+<li><strong>Davr aniqlash:</strong> faol <code>SalaryPeriodSetting</code> topiladi → <code>[periodStart, periodEnd]</code></li>
+<li><strong>Unpaid accruallarni yig'ish:</strong> <code>WHERE salaryPaymentId IS NULL AND reversedAt IS NULL AND lessonDate BETWEEN periodStart AND periodEnd</code></li>
+<li><strong>Userlar bo'yicha guruhlash:</strong> <code>Map&lt;userId, {ids[], total}&gt;</code></li>
+<li><strong>Atomik blok</strong> har bir o'qituvchi uchun:
+  <ul>
+    <li><code>SalaryPayment</code> CREATE (status: <code>CALCULATED</code>, amount = total)</li>
+    <li>Yig'ilgan accrual'larni <code>salaryPaymentId</code> bilan link qilish</li>
+    <li><code>applyPendingAdvances()</code> — TEACHER_ADVANCE settlement</li>
+  </ul>
+</li>
+</ol>
+
+<h4>B) Fixed-monthly (admin, kassir, BD)</h4>
+
+<ol class="step-list">
+<li>Parent <code>EmployeeSalaryConfig</code> ni topish (<code>salaryType = FIXED_MONTHLY, isActive = true, groupId IS NULL</code>)</li>
+<li>periodEnd sanasida faol <code>EmployeeSalaryConfigVersion</code> ni o'qish (future-dated rate change'lar joriy davrga ta'sir qilmaydi)</li>
+<li>Idempotency — bu davr uchun allaqachon payment bo'lsa, skip</li>
+<li><code>SalaryPayment</code> yaratish, advance settlement</li>
+</ol>
+
+<h3>4.7 TEACHER_ADVANCE settlement (avans ushlab qolish)</h3>
+
+<p>Agar markaz oy davomida o'qituvchiga avans bergan bo'lsa (<code>Expense.category = TEACHER_ADVANCE, relatedUserId = teacherId, settledBySalaryPaymentId IS NULL</code>), oylik hisoblanganda bu avanslar netto summadan ushlanib qolinadi.</p>
+
+<p><strong>Tartib:</strong> <code>createdAt</code> bo'yicha (eski avans avval). Agar bitta avans qoplay olmaydigan miqdorda bo'lsa, qolgan avans keyingi oyga o'tadi.</p>
+
+<p class="file-ref">server/src/salary/salary-calculation.service.ts:198-236</p>
+
+<h3>4.8 Status oqimi</h3>
+
+<div class="diagram">
+  CALCULATED ──(CEO approve)──► APPROVED ──(CEO/BD pay)──► PAID
+       │                                                      │
+       │                                                      ├──► SALARY_PAYMENT tx (-amount)
+       └─(CEO cancel)──► CANCELLED                            │    User.balance -= amount
+</div>
+
+<h3>4.9 Salary Breakdown — har dars qayerdan kelgani</h3>
+
+<p><code>SalaryBreakdownService</code> (<code>server/src/salary/salary-breakdown.service.ts:79-164</code>) per-payment yoki per-cycle tahlil qaytaradi:</p>
+
+<table>
+<tr><th>Maydon</th><th>Mazmuni</th></tr>
+<tr><td>lessonDate</td><td>Dars sanasi</td></tr>
+<tr><td>student</td><td>O'quvchi (ism, ID)</td></tr>
+<tr><td>group</td><td>Guruh (ism, kurs)</td></tr>
+<tr><td>perLessonCost</td><td>Dars narxi (snapshot — kurs narxi keyinroq o'zgarsa ham bu yerda saqlanadi)</td></tr>
+<tr><td>amount</td><td>Hisoblangan summa</td></tr>
+<tr><td>salaryConfigVersion</td><td>Qaysi versiya bo'yicha hisoblangan (salaryType, value, scope)</td></tr>
+<tr><td>scope</td><td>GROUP (per-group config) yoki GLOBAL</td></tr>
+<tr><td>reversedAt / reversalReason</td><td>Bekor qilingan accrual'lar uchun</td></tr>
+</table>
+
+<p><strong>Totallar:</strong> active accrual count, active total, reversed count, reversed total.</p>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Ustoz oyligidan aniq har bir summa qayerdan kelgani nega bunday summaga kelib qolgani haqidagi to'liq hisobotni ko'ra olishimiz shart" — Ha, Salary Breakdown Drawer (UI) va <code>GET /salary/payments/:id/breakdown</code> endpoint orqali har dars uchun: o'quvchi, guruh, sana, dars narxi, qaysi stavka qo'llangan, qaysi versiya — barchasi ko'rinadi. CSV eksport ham bor.
+</div>
+
+<h3>4.10 Teacher Timeline (taymlayn)</h3>
+
+<p><code>TeacherTimelineService</code> uch turdagi event'larni birlashtiradi va xronologik feed qaytaradi:</p>
+
+<table>
+<tr><th>Event turi</th><th>Manba</th><th>Misol</th></tr>
+<tr><td><code>SalaryChanged</code></td><td>EmployeeSalaryConfigVersion</td><td>"Stavka 30% → 35% o'zgartirildi"</td></tr>
+<tr><td><code>GroupAdded</code></td><td>GroupTeacherHistory</td><td>"A-101 guruhiga qo'shildi"</td></tr>
+<tr><td><code>GroupRemoved</code></td><td>GroupTeacherHistory</td><td>"B-202 guruhidan chiqarildi"</td></tr>
+<tr><td><code>GroupReplaced</code></td><td>GroupTeacherHistory</td><td>"C-303 → D-404 ga o'tkazildi"</td></tr>
+<tr><td><code>ProfileUpdated</code></td><td>EntityHistory (User)</td><td>Profil ma'lumotlari yangilandi</td></tr>
+</table>
+
+<p><strong>Endpoint:</strong> <code>GET /salary/timeline/:userId</code> — CEO, BD, Admin uchun.</p>
+
+<h2 id="student-lifecycle">5. O'quvchi hayot tsikli moliyaviy nuqtai nazardan</h2>
+
+<h3>5.1 O'quvchini guruhga qo'shish (enroll)</h3>
+
+<p><strong>Endpoint:</strong> <code>POST /students/:id/enroll</code> — CEO, BD, Admin</p>
+
+<div class="diagram">
+  ┌─────────────────────────────────────┐
+  │ O'quvchi va guruh tekshiriladi      │
+  │ (ACTIVE/FORMING/PAUSED bo'lishi sh.)│
+  └────────────┬────────────────────────┘
+               ▼
+  ┌─────────────────────────────────────┐
+  │ Aktiv enrollment bormi?             │
+  └────────────┬────────────────────────┘
+       ┌───────┴───────┐
+   YO'Q│               │ BOR (transfer holati)
+       ▼               ▼
+  ┌──────────┐   ┌─────────────────────────┐
+  │ Yangi    │   │ ATOMIC (Serializable):  │
+  │ Enroll-  │   │ 1. refundPrepaidToBal.  │
+  │ ment     │   │ 2. Eski → TRANSFERRED   │
+  │ ACTIVE   │   │ 3. EnrollmentStateLog   │
+  │ prepaid: │   │ 4. Yangi enroll CREATE  │
+  │   0      │   │ 5. EntityHistory        │
+  └──────────┘   └─────────────────────────┘
+</div>
+
+<p><strong>Yangi enrollment dastlab <code>prepaidLessonsRemaining = 0</code> bilan boshlanadi.</strong> Birinchi PRESENT/LATE davomatda balans asosida deduction yoziladi (B.1 qoidasi bilan).</p>
+
+<p><strong>Transfer holida:</strong> agar o'quvchi yangi guruhda boshqa ustoz bo'lsa, <code>transferReasonId</code> majburiy bo'lishi mumkin.</p>
+
+<p class="file-ref">server/src/students/student-enrollment.service.ts:24-274</p>
+
+<h3>5.2 O'quvchini guruhdan chiqarish (DROPPED / removeFromGroup)</h3>
+
+<p><strong>Endpoint:</strong> <code>DELETE /students/:id/enroll/:enrollmentId</code></p>
+
+<p><strong>Asosiy ish:</strong> qolgan prepaid darslarning pulini o'quvchi balansiga qaytarish.</p>
+
+<div class="diagram">
+  Hisoblash formulasi:
+
+  perLessonCost = oxirgi unreversed LESSON_DEDUCTION dan
+                  metadata.perLessonCost
+                  (kurs narxi keyin o'zgargan bo'lsa ham
+                   asl narx qo'llanadi)
+
+  refundAmount = prepaidLessonsRemaining × perLessonCost
+
+  ATOMIC TRANSACTION (Serializable):
+  ┌────────────────────────────────────┐
+  │ 1. refundPrepaidToBalance:         │
+  │    ADJUSTMENT TX (+refundAmount)   │
+  │    Student.balance += refundAmount │
+  │    prepaidLessonsRemaining = 0     │
+  │                                    │
+  │ 2. Enrollment.status = DROPPED     │
+  │    departureReasonId set           │
+  │    statusChangeReason set          │
+  │    EnrollmentStateLog yoziladi     │
+  │                                    │
+  │ 3. EntityHistory: DROPPED          │
+  └────────────────────────────────────┘
+</div>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "O'quvchi krus uchun to'lov qildi va o'qishini bir muddatga muzlatdi" — Bu holat to'liq hal qilingan. O'quvchi pul to'lasa, lekin davomatga qatnashmasa, balans yechilmaydi (B.1). Davomatga qatnashganda — o'shanda yechiladi. Agar guruhdan butunlay chiqsa, qolgan darslarning puli balansga qaytariladi.
+</div>
+
+<h3>5.3 Guruhdan guruhga ko'chirish (TRANSFERRED)</h3>
+
+<p>Yuqorida tasvirlangan <em>transfer</em> holati. Bu — o'quvchini bir guruhdan boshqasiga ko'chirishda <strong>atomik</strong>:</p>
+
+<ol class="step-list">
+<li>Eski enrollmentdagi qolgan prepaid darslarning puli balansga qaytariladi</li>
+<li>Eski enrollment <code>TRANSFERRED</code> statusiga o'tadi</li>
+<li>Yangi enrollment yaratiladi (<code>prepaidLessonsRemaining = 0</code>)</li>
+<li>Yangi guruhda birinchi davomatda yangi balans asosida deduction yoziladi</li>
+</ol>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Bir o'quvchini bugun A guruhdan keyin esa B guruhda o'qisa A guruhda o'qiganida uni to'lovidan A guruh ustozi qancha olishi kerak bo'lsa shuncha oladi (1 ta dars uchun hisoblab). Keyin esa yangi guruhda o'qiganida undan B guruhi ustozi oladi." — Ha, bu to'liq qo'llab-quvvatlangan:
+<ul>
+  <li>A guruhdagi har dars uchun A ustoziga accrual yozilgan (transfer payti reverse qilinmaydi)</li>
+  <li>Transfer paytida qolgan prepaid pul balansga qaytariladi</li>
+  <li>B guruhda yangi deduction'dan B ustoziga accrual yoziladi</li>
+</ul>
+</div>
+
+<h3>5.4 Status o'zgarishi: ACTIVE / FROZEN / DROPPED / GRADUATED</h3>
+
+<p><strong>Endpoint:</strong> <code>PATCH /students/:id/status</code></p>
+
+<p>Statuslar:</p>
+
+<table>
+<tr><th>Status</th><th>Mazmuni</th><th>Pul oqimi ta'siri</th></tr>
+<tr><td><span class="badge green">ACTIVE</span></td><td>Faol o'qiyapti</td><td>Davomatda yechiladi</td></tr>
+<tr><td><span class="badge amber">FROZEN</span></td><td>Muzlatilgan (vaqtinchalik)</td><td>Davomatga qatnashmasa, hech narsa yechilmaydi (B.1)</td></tr>
+<tr><td><span class="badge red">DROPPED</span></td><td>Tark etgan</td><td>refundPrepaidToBalance — qolgan pul qaytariladi</td></tr>
+<tr><td><span class="badge blue">GRADUATED</span></td><td>Bitirgan</td><td>Avtomatik (manual reject qilinadi)</td></tr>
+</table>
+
+<p><strong>Cascade:</strong> Student status o'zgarsa, <code>StatusCascadeService</code> aktiv enrollmentlarni mos statusga o'tkazadi.</p>
+
+<p><strong>Status sababi (ExitReason):</strong> O'zgarish sababini tanlash kerak. <code>StudentExitReason</code> jadvalida sabablar katalogi mavjud (CEO/BD/Admin tomonidan boshqariladi). Har sababga <code>appliesTo</code> array — qaysi exit turlari uchun ishlatish mumkinligi.</p>
+
+<table>
+<tr><th>ExitType</th><th>Qachon</th></tr>
+<tr><td><code>GROUP_REMOVAL</code></td><td>Guruhdan chiqarish (enrollment level)</td></tr>
+<tr><td><code>FREEZE</code></td><td>Muzlatish (FROZEN status)</td></tr>
+<tr><td><code>EXPEL</code></td><td>Chetlatish (DROPPED, jiddiy sabab)</td></tr>
+<tr><td><code>INACTIVE</code></td><td>Nofaol bo'lib qolish</td></tr>
+<tr><td><code>ARCHIVE</code></td><td>Arxivga olish</td></tr>
+</table>
+
+<div class="callout warn">
+<strong>Migration 20260429114132:</strong> Eski <code>EnrollmentDepartureReason</code> jadvali <code>StudentExitReason</code> ga unifikatsiya qilingan. Endi bitta katalog 5 turdagi exit uchun ishlatiladi. Eski <code>departure-reasons</code> moduli o'chirilgan.
+</div>
+
+<h3>5.5 O'quvchini muzlatish (FROZEN) — to'liq oqim</h3>
+
+<div class="scenario">
+<strong>Stsenariy:</strong> Aliya 15-aprelda 500,000 so'm to'ladi va 1-maygacha o'qishini muzlatdi. 1-mayda u davomatga qatnashdi.
+</div>
+
+<p><strong>Pul oqimi:</strong></p>
+
+<table>
+<tr><th>Sana</th><th>Voqea</th><th>Balans</th><th>Prepaid</th></tr>
+<tr><td>15-apr</td><td>To'lov 500k</td><td>0 → 500,000</td><td>0</td></tr>
+<tr><td>15-apr</td><td>FROZEN qilindi</td><td>500,000</td><td>0 (davomatga kelmadi)</td></tr>
+<tr><td>16–30 apr</td><td>Davomat yo'q</td><td>500,000</td><td>0 (yechilmaydi)</td></tr>
+<tr><td>1-may</td><td>ACTIVE qilindi, PRESENT</td><td>500,000 → ?</td><td>?</td></tr>
+</table>
+
+<p>1-mayda PRESENT bo'lganida birinchi davomat sifatida bill() ishlaydi:</p>
+<ul>
+  <li>balance = 500,000 ≥ fullCycleCost (400k) → FULL_CYCLE deduction</li>
+  <li>balance → 100,000</li>
+  <li>prepaidLessonsRemaining = 11</li>
+  <li>SalaryAccrual yoziladi (1-may sanasi va o'sha kunda faol bo'lgan ustozlar uchun)</li>
+</ul>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "O'quvchi qachonki davomatda qatnashsa oyligi shundan boshlab hisoblanadi" — Ha, bu to'liq to'g'ri ishlaydi. Tizim — pull-based: faqat davomat hodisasi bo'lganida yechiladi va yoziladi.
+</div>
+
+<h3>5.6 Guruh ichida ustoz o'zgarishi</h3>
+
+<p>Agar guruh A da Botir va Sardor edi, endi Sardor o'rniga Farxod qilinsa:</p>
+
+<ol class="step-list">
+<li><code>GroupTeacher</code> jadvalida DELETE (Sardor) + INSERT (Farxod)</li>
+<li><code>GroupTeacherHistory</code> yoziladi: <code>changeType = REPLACED, previousTeacherIds = [Sardor], newTeacherIds = [Farxod]</code></li>
+<li><strong>O'tgan darslar uchun:</strong> Sardor allaqachon olgan accruallarini saqlab qoladi (reverse qilinmaydi)</li>
+<li><strong>Kelajakdagi darslar uchun:</strong> Botir va Farxod accrual oladi, Sardor — yo'q</li>
+</ol>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Guruh ma'lum bir vaqt A ustozda o'qib keyin B ustozga o'tishi" — Ha. Dars sanasidagi <em>aktiv</em> ustozlar accrual oladi. Eski ustozning o'tgan darslari saqlanadi.
+</div>
+
+<h2 id="refund">6. Pul qaytarish (refund) va to'lov bekor qilish (reverse)</h2>
+
+<h3>6.1 Refund eligibility (qaytarilishi mumkinmi?)</h3>
+
+<table>
+<tr><th>Holat</th><th>Qaytarish miqdori</th></tr>
+<tr><td>Kurs hali boshlanmagan (<code>startDate &gt; now</code>)</td><td>100% qaytariladi (oldingi refundlar minus qilinadi)</td></tr>
+<tr><td>50% va ortiq dars o'tilgan</td><td><strong>0%</strong> — refund yo'q (BadRequestException)</td></tr>
+<tr><td>50% dan kam dars o'tilgan</td><td><code>paidAmount − consumedFromLedger − previousRefunds</code></td></tr>
+</table>
+
+<p><strong>consumedFromLedger formulasi:</strong></p>
+<pre><code>consumedFromLedger = ABS(SUM(LESSON_DEDUCTION
+                          WHERE reversedAt IS NULL
+                            AND reversedTransactionId IS NULL))</code></pre>
+
+<p>Ikkita filter birgalikda ishlatiladi:</p>
+<ul>
+  <li><code>reversedTransactionId: null</code> — bu yozuv reversal entry emas</li>
+  <li><code>reversedAt: null</code> — bu yozuv o'ziga reversed bo'lmadi</li>
+</ul>
+
+<p>Bu filterlar oldingi double-counting bug'ini hal qilgan: agar admin 100k yechib, keyin dars bekor qilingan (80k teskari) bo'lsa, hozir refund'ga 20k hisoblanadi (eski bug'da 100k bolardi).</p>
+
+<p class="file-ref">server/src/refunds/refunds-create.service.ts:88-141</p>
+
+<h3>6.2 Refund jarayoni</h3>
+
+<div class="diagram">
+  ┌─────────┐
+  │ REQUEST │ ◄──── POST /refunds (CEO/BD/Admin)
+  │   ED    │       requestedAmount, reason
+  └────┬────┘
+       │
+       │  PATCH /refunds/:id/process { status: "APPROVED" }
+       ▼
+  ┌─────────┐         (pul hali yechilmagan)
+  │ APPROVED│
+  └────┬────┘
+       │
+       │  PATCH /refunds/:id/process { status: "COMPLETED" }
+       ▼
+  ┌──────────┐    1. recordRefund():
+  │COMPLETED │    REFUND tx (-amount), Student.balance--
+  │          │    2. Contract.paidAmount -= amount
+  └────┬─────┘    3. EntityHistory: PUL_QAYTARILDI
+       │
+       │  POST /refunds/:id/reverse (CEO faqat)
+       ▼
+  ┌──────────┐    REFUND tx reverse qilinadi:
+  │ Reversed │    Yangi reversal qator (+amount)
+  │          │    Asl REFUND.reversedAt = now()
+  └──────────┘    Contract.paidAmount += amount
+</div>
+
+<h3>6.3 Payment reverse (CEO faqat)</h3>
+
+<p><strong>Endpoint:</strong> <code>POST /payments/:id/reverse</code></p>
+
+<p><strong>Yangi muhim guard (Faza 8):</strong></p>
+
+<div class="callout danger">
+<strong>Block:</strong> Agar shu to'lovdan keyin (<code>createdAt &gt; payment.createdAt</code>) o'quvchi nomidan aktiv (<code>reversedAt IS NULL</code>) <code>LESSON_CONSUMPTION</code> mavjud bo'lsa — to'lovni reverse qilib bo'lmaydi. Server 400 qaytaradi: "Pul allaqachon darslarga sarflangan".
+</div>
+
+<p><strong>Idempotency:</strong> agar <code>payment.status === REVERSED</code> bo'lsa, ikkinchi marta chaqirish 400 ga yo'liqadi.</p>
+
+<p><strong>Atomik oqim:</strong></p>
+<ol class="step-list">
+<li>Payment topiladi va status tekshiriladi</li>
+<li>PAYMENT transaction topiladi (<code>reversedAt IS NULL</code>)</li>
+<li>Downstream LESSON_CONSUMPTION tekshiruvi (yuqoridagi guard)</li>
+<li><code>reverseTransaction()</code> — reversal qator yoziladi, asl <code>reversedAt</code> markeri qo'yiladi</li>
+<li><code>Student.balance -= amount</code> (pul olib tashlanadi)</li>
+<li><code>Contract.paidAmount -= amount</code></li>
+<li><code>Payment.status = REVERSED</code></li>
+<li>EntityHistory: TO'LOV_BEKOR_QILINDI</li>
+</ol>
+
+<h3>6.4 Lesson Deduction Reverse</h3>
+
+<p><strong>Endpoint:</strong> <code>POST /billing/lesson-deduction/:id/reverse</code> — CEO, BD</p>
+
+<p><strong>Maqsad:</strong> butun batch (12 yoki 20 ta dars uchun yechilgan pul)ni qaytarish.</p>
+
+<div class="diagram">
+  Misol: admin noto'g'ri 400k yechilgan
+  → POST /billing/lesson-deduction/:id/reverse
+
+  ATOMIK:
+  ┌────────────────────────────────────────────┐
+  │ 1. LESSON_DEDUCTION reverse (balance +400k)│
+  │ 2. Linked SalaryAccrual'lar reverse        │
+  │    (deductionTransactionId orqali)         │
+  │ 3. LESSON_CONSUMPTION'lar reverse          │
+  │    (createdAt &gt;= deduction.createdAt)      │
+  │ 4. Enrollment.prepaidLessonsRemaining = 0  │
+  └────────────────────────────────────────────┘
+
+  Natija:
+  - O'quvchi balansi qaytariladi
+  - Ustozlar olgan accruallar bekor qilinadi
+  - Hisoblar restart bo'ladi (yangi davomat → yangi deduction)
+</div>
+
+<h2 id="lesson-cancel">7. Dars bekor qilish (lesson cancellation) va dam olish kunlari</h2>
+
+<h3>7.1 Lesson Cancellation Cascade</h3>
+
+<p><strong>Endpoint:</strong> <code>POST /lesson-cancellations</code> — CEO, BD, Admin</p>
+
+<p>Bu — bitta guruhning bitta sanasini bekor qilish (masalan, ustoz kasal bo'lib qoldi). Holiday'dan farqi: faqat bir guruh uchun.</p>
+
+<p><strong>Atomik oqim:</strong></p>
+
+<ol class="step-list">
+<li>Guruh tekshiriladi va bu sana uchun aktiv cancellation bormi (partial unique index)</li>
+<li><code>LessonCancellation</code> qator yoziladi</li>
+<li>Shu kun va guruhdagi PRESENT/LATE attendance'lar topiladi</li>
+<li>Har biri uchun:
+  <ul>
+    <li>Status: <code>EXCUSED</code> ga o'zgartiriladi</li>
+    <li><code>cancellationId</code> set qilinadi</li>
+    <li><code>processAttendanceBilling(oldStatus=PRESENT, newStatus=EXCUSED)</code> ishga tushadi → reverse path</li>
+    <li>LESSON_CONSUMPTION reverse, prepaid +1, SalaryAccrual reverse</li>
+  </ul>
+</li>
+<li>EntityHistory: DARS_BEKOR_QILINDI</li>
+</ol>
+
+<h3>7.2 Cancellation soft-delete (qayta tiklash)</h3>
+
+<p><strong>Endpoint:</strong> <code>DELETE /lesson-cancellations/:id</code> — CEO, BD</p>
+
+<div class="callout warn">
+<strong>Muhim cheklov:</strong> Soft-delete <strong>attendance va billing'ni avtomatik tiklamaydi</strong>. <code>deletedAt</code> markeri qo'yiladi, lekin EXCUSED'ga o'zgartirilgan davomatlar EXCUSED bo'lib qoladi. Admin keyin qo'lda PRESENT bo'yicha qayta davomat olishi kerak.
+</div>
+
+<p>UI'da bu haqida ogohlantirish chiqadi: "Diqqat: bu davomat va to'lovni tiklamaydi."</p>
+
+<h3>7.3 Holiday (kompaniya bo'yicha)</h3>
+
+<p>Holiday — butun kompaniya/filial bo'yicha bekor qilingan kun (masalan, davlat bayrami). Bu Holiday jadvalida boshqariladi va davomat formasi shu sanada PRESENT'ni rad qiladi.</p>
+
+<p>Holiday yaratilsa, o'sha sanada davomat olib bo'lmaydi — shuning uchun pul yechilmaydi va ustozga oylik yozilmaydi (B.1 emas, balki davomat hodisasi yo'qligi).</p>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Dam olish kunlari, guruhning ma'lum sanadagi darsi bo'lmasligni belgilash" — Holiday va LessonCancellation orqali to'liq qo'llab-quvvatlangan. Pul yechilmaydi va ustoz oyligi yozilmaydi.
+</div>
+
+<h2 id="initial-balance">8. Initial Balance va eski tizimdan migratsiya</h2>
+
+<h3>8.1 Foydalanuvchi muammosi</h3>
+
+<p>Foydalanuvchi yozgan: "Hozir o'quv markazi avvaldan faoliyat olib boryotgan markaz hisoblanadi. Oldin tizim bo'lmagani uchun kim qachon to'lov qilgani unchalik ham aniq emas. Markaz to'lovlarni oylik tizimda qabul qilgan. Har oyning 1 sanasida misol uchun. Shunga biz buni to'liq tizimga o'tkazishimiz uchun ya'ni 12 talik yoki 20 talik (kurs sonidan kelib chiqib) qanday o'tkazishimiz mumkin."</p>
+
+<h3>8.2 Yechim — POST /students/:id/initial-balance</h3>
+
+<p><strong>Endpoint:</strong> CEO faqat. <strong>DTO:</strong></p>
+
+<pre><code>{
+  "amount": 500000,    // 0+ (manfiy emas)
+  "note": "Eski tizimdan o'tkazildi"
+}</code></pre>
+
+<p><strong>Oqim:</strong></p>
+
+<ol class="step-list">
+<li>O'quvchi topiladi (multi-tenant filter)</li>
+<li>Balans qulflanadi (<code>SELECT FOR UPDATE</code>)</li>
+<li><code>INITIAL_BALANCE</code> Transaction yoziladi (amount = +500,000)</li>
+<li><code>Student.balance += amount</code></li>
+<li>Partial unique indeks qo'llanadi: bitta o'quvchi uchun yagona aktiv (<code>reversedAt IS NULL</code>) <code>INITIAL_BALANCE</code></li>
+<li>EntityHistory: BOSHLANG'ICH_BALANS</li>
+</ol>
+
+<h3>8.3 Tavsiya etilgan ish jarayoni (workflow)</h3>
+
+<div class="scenario">
+<strong>Misol stsenariy:</strong> Eski tizimda Aliya 1-sanada 400,000 so'm to'lab, 12-talik standart kursga 8 ta dars borgan. Endi yangi tizimga o'tkazish kerak.
+</div>
+
+<table>
+<tr><th>Qadam</th><th>Harakat</th><th>Natija</th></tr>
+<tr><td>1</td><td>Aliyani tizimga qo'shish (Student CREATE)</td><td>balance = 0, status = ACTIVE</td></tr>
+<tr><td>2</td><td>Guruhga enroll qilish</td><td>Enrollment ACTIVE, prepaid = 0</td></tr>
+<tr><td>3</td><td>Eski tizimdagi qoldiqni hisoblash:<br><code>qoldiq = 400,000 − (8 × 33,333) ≈ 133,336</code></td><td>—</td></tr>
+<tr><td>4</td><td><code>POST /students/:id/initial-balance</code> { amount: 133,336 }</td><td>INITIAL_BALANCE +133k, balance = 133,336</td></tr>
+<tr><td>5</td><td>Yangi davomat boshlanganda PARTIAL deduction yoziladi:<br>floor(133,336 / 33,333) = 4 ta dars</td><td>balance = ~3, prepaid = 3</td></tr>
+</table>
+
+<h3>8.4 Initial Balance reversibility</h3>
+
+<p>Agar admin xato qilgan bo'lsa va INITIAL_BALANCE'ni qayta yozish kerak bo'lsa:</p>
+
+<ol class="step-list">
+<li><code>POST /transactions/:id/reverse</code> — reversal qator yoziladi, asl <code>reversedAt</code> markerlanadi</li>
+<li>Endi yana <code>POST /students/:id/initial-balance</code> chaqirish mumkin (eski reversed bo'lgani uchun unique constraint o'tib bo'ladi)</li>
+</ol>
+
+<div class="callout warn">
+<strong>Muhim:</strong> Agar INITIAL_BALANCE allaqachon LESSON_CONSUMPTION uchun ishlatilgan bo'lsa, payment reverse'dagi guard'ga o'xshash himoya hozircha INITIAL_BALANCE uchun <em>aniq qilib qo'ymagan</em>. CEO qo'lda tekshirishi kerak.
+</div>
+
+<h2 id="xarajatlar">9. Markaz xarajatlari va TEACHER_ADVANCE</h2>
+
+<h3>9.1 Xarajat kategoriyalari</h3>
+
+<table>
+<tr><th>Kategoriya</th><th>Mazmuni</th></tr>
+<tr><td><code>RENT</code></td><td>Ijara haqi</td></tr>
+<tr><td><code>UTILITIES</code></td><td>Kommunal (svet, suv, internet)</td></tr>
+<tr><td><code>SUPPLIES</code></td><td>Ofis ta'minoti</td></tr>
+<tr><td><code>MARKETING</code></td><td>Reklama xarajatlari</td></tr>
+<tr><td><code>TEACHER_ADVANCE</code></td><td>O'qituvchi avansi (oylik hisoblanganda ushlab qolinadi)</td></tr>
+<tr><td><code>OTHER</code></td><td>Boshqa</td></tr>
+</table>
+
+<h3>9.2 TEACHER_ADVANCE oqimi</h3>
+
+<div class="diagram">
+  AVANS BERISH:
+  POST /expenses { category: "TEACHER_ADVANCE", relatedUserId: 42, amount: 200000 }
+  ↓
+  - Expense yaratiladi (settledBySalaryPaymentId = NULL)
+  - EXPENSE Transaction yoziladi (markaz kassasidan)
+
+  OY OXIRIDA (calculateMonthlySalaries):
+  ↓
+  applyPendingAdvances(userId = 42, salaryPayment) chaqiriladi:
+  - WHERE relatedUserId = 42 AND settledBySalaryPaymentId IS NULL
+  - ORDER BY createdAt ASC (eski avans avval)
+  - Har bir avans uchun:
+    * Agar deducted + advance.amount &lt;= salaryPayment.amount → settle
+    * settledBySalaryPaymentId = salaryPayment.id
+    * deducted += advance.amount
+    * Aks holda: keyingi oyga qoldiriladi
+
+  natija:
+  finalNet = salaryPayment.amount − deducted
+  SalaryPayment yangilanadi
+</div>
+
+<h3>9.3 Xarajat tahrirlash va o'chirish</h3>
+
+<ul>
+  <li><code>PATCH /expenses/:id</code> — moliyaviy maydon o'zgarsa, eski Transaction reverse qilinadi va yangisi yoziladi</li>
+  <li><code>DELETE /expenses/:id</code> — soft delete (deletedAt) + ledger reversal</li>
+</ul>
+
+<h2 id="edge-cases">10. Maxsus holatlar (edge cases)</h2>
+
+<h3>10.1 Pul yetmasa nima bo'ladi (B.1 qoidasi)</h3>
+
+<div class="callout danger">
+<strong>Asosiy qoida:</strong> O'quvchi balansi <code>perLessonCost</code> dan kam bo'lsa, davomat PRESENT bo'lsa ham:
+<ul>
+<li>LESSON_DEDUCTION yozilmaydi</li>
+<li>LESSON_CONSUMPTION yozilmaydi (audit qator ham yo'q)</li>
+<li>SalaryAccrual yozilmaydi</li>
+<li>Davomat status'i qoladi (PRESENT), lekin moliyaviy ta'sir nol</li>
+</ul>
+Bu — markaz "qarzga sotmasligi"ning kafolati. Lekin shuni e'tiborga olish kerak: <strong>keyin pul to'lansa, o'tgan dars uchun retroaktiv accrual yozilmaydi</strong>. Bu — joriy kodning chegarasi.
+</div>
+
+<h3>10.2 Davomat keyinroq olinsa</h3>
+
+<p>Stsenariy: ustoz davomat olishni unutdi, keyin admin 2 kundan keyin oladi. PRESENT qo'yilsa:</p>
+<ul>
+  <li>O'sha vaqtda balans yetadigan bo'lsa → pul yechiladi va accrual yoziladi</li>
+  <li>Accrual <code>lessonDate</code> = asl dars sanasi (admin qo'yganida emas)</li>
+  <li>Salary versiya lookup ham asl <code>lessonDate</code> bo'yicha qilinadi</li>
+</ul>
+
+<h3>10.3 Ko'p marta to'lov qilinishi</h3>
+
+<p>Stsenariy: o'quvchi 3 marta 100k to'laydi.</p>
+<ul>
+  <li>Har biri alohida PAYMENT tx + balans qulflash</li>
+  <li>balanceBefore/After lar zanjirli: [0→100, 100→200, 200→300]</li>
+  <li>Student.balance = 300,000</li>
+  <li>Bir to'lov reverse qilinsa, faqat shu to'lov ta'sir qiladi (ledger zanjir uzilishi mumkin lekin <em>reversedAt</em> bilan filtr qilinadi)</li>
+</ul>
+
+<h3>10.4 Refund qilingan to'lovni reverse qilish</h3>
+
+<p>Refund — bu yangi REFUND transaction. Asl PAYMENT'ni reverse qilish guard'i: agar shu to'lovdan keyin LESSON_CONSUMPTION bo'lsa — block. Refund consumption emas, shuning uchun bu guard ishlamasligi mumkin.</p>
+
+<div class="callout warn">
+<strong>E'tibor talab qiluvchi joy:</strong> Refund qilingan to'lovni ham reverse qilish guarid'i hozirgi kodda aniq emas. Bu test qilinishi kerak holatlardan biri.
+</div>
+
+<h3>10.5 Concurrent davomat (race condition)</h3>
+
+<p>Stsenariy: ikkita admin bir vaqtning o'zida bir o'quvchi uchun davomat oladi.</p>
+<ul>
+  <li><code>SELECT FOR UPDATE</code> Enrollment'ni qulflaydi</li>
+  <li>Birinchi tranzaksiya yakunlanmaguncha ikkinchisi kutadi</li>
+  <li>Partial unique indeks (consumption per attendance) ikkinchi yozuvni rad qiladi</li>
+  <li>Natija: idempotent — bir attendance uchun bir LESSON_CONSUMPTION</li>
+</ul>
+
+<h3>10.6 Cycle bo'yicha multiple deductions</h3>
+
+<p>Stsenariy: o'quvchi 12 dars uchun pul yechilgan (1-tsikl), 12 dars o'tgan, prepaid = 0. 13-darsda balans yana yetadi → 2-tsikl uchun yangi LESSON_DEDUCTION.</p>
+<ul>
+  <li>Har tsikl alohida LESSON_DEDUCTION (har biri o'z metadata bilan)</li>
+  <li>SalaryAccrual'lar har biri o'z <code>deductionTransactionId</code> coverage'ga bog'lanadi</li>
+  <li>Salary breakdown'da har dars qaysi tsikldan ekanligini ko'rish mumkin</li>
+</ul>
+
+<h3>10.7 Ustoz almashtirilgandan keyin reverse</h3>
+
+<p>Stsenariy: 10-marsda Sardor 5 ta dars uchun accrual oldi. 12-marsda Farxod o'rnatildi. 11-mars sanasidagi davomat ABSENT'ga o'zgartirilsa:</p>
+<ul>
+  <li>Sardor uchun yozilgan SalaryAccrual reverse qilinadi (<code>reversedAt</code>)</li>
+  <li>Yangi accrual yozilmaydi (chunki davomat ABSENT)</li>
+  <li>Salary breakdown'da reversed qator alohida ko'rinadi</li>
+</ul>
+
+<h3>10.8 FIXED_MONTHLY ustozning past dare's</h3>
+
+<p>FIXED_MONTHLY ustoz davomat olmasin yoki olsin — oylik value to'g'ridan-to'g'ri SalaryPayment ga aylanadi. Bu administratorlar uchun qulay.</p>
+
+<div class="callout warn">
+<strong>Edge case:</strong> Agar FIXED_MONTHLY ustoz oy o'rtasida ishga kirgan/ishdan ketgan bo'lsa, hozir tizim <em>to'liq oylik</em> yozadi. Pro-rata hisoblash hozircha yo'q.
+</div>
+
+<h2 id="frontend">11. Frontend UI yo'llari va sahifalari</h2>
+
+<h3>11.1 /payments/salary — Oylik ro'yxati (CEO/BD/Admin/Cashier)</h3>
+
+<p>Asosiy moliyaviy boshqaruv sahifasi:</p>
+
+<ul>
+  <li><strong>Jadval:</strong> # · Xodim · Lavozim · Davr · Summa · Holat · Amallar</li>
+  <li><strong>Status badge:</strong> Hisoblangan (amber), Tasdiqlangan (blue), To'langan (green), Bekor qilingan (red)</li>
+  <li><strong>Amallar:</strong>
+    <ul>
+      <li>CALCULATED → "Tasdiqlash" tugmasi</li>
+      <li>APPROVED → "To'lash" tugmasi</li>
+      <li>PAID → to'langan sana</li>
+    </ul>
+  </li>
+  <li><strong>Yuqori panel (CEO faqat):</strong>
+    <ul>
+      <li>"Davrni yakunlash" — POST /salary/calculate (qo'lda trigger)</li>
+      <li>"Sozlamalar" dropdown:
+        <ul>
+          <li>Xodim stavkalari → SalaryConfigDialog</li>
+          <li>Hisoblash davri → SalaryPeriodSettingsSheet</li>
+        </ul>
+      </li>
+      <li>"Hammasini to'lash" — batch payment</li>
+    </ul>
+  </li>
+  <li><strong>Qatorga bosish:</strong> SalaryBreakdownDrawer ochilib, har dars qayerdan kelgani ko'rinadi (CSV eksport bilan)</li>
+</ul>
+
+<h3>11.2 SalaryConfigDialog — Xodim stavkalarini belgilash</h3>
+
+<p>Form maydonlari:</p>
+<ul>
+  <li>Xodim tanlash (rolga qarab forma o'zgaradi)</li>
+  <li>Oylik turi:
+    <ul>
+      <li>Barcha xodimlar uchun: FIXED_MONTHLY</li>
+      <li>Faqat o'qituvchi uchun: PERCENTAGE va FIXED_PER_STUDENT ham</li>
+    </ul>
+  </li>
+  <li>Qiymat (PriceInput, % yoki so'm)</li>
+  <li><strong>Kuchga kirish sanasi (effectiveFrom)</strong> — DatePicker, ixtiyoriy</li>
+  <li>Eslatma: "Yangi qoida shu sana va undan keyingi darslarga qo'llanadi"</li>
+</ul>
+
+<p>Mavjud konfiguratsiya bo'lsa, "Joriy sozlama:" qutida ko'rsatiladi.</p>
+
+<h3>11.3 SalaryBreakdownDrawer</h3>
+
+<p>Layout:</p>
+<ul>
+  <li>Header: "Oylik tafsilotlari" + status badge</li>
+  <li>Summary card: summa, davr, dars soni, o'quvchi soni, bekor qilinganlar</li>
+  <li>Per-dars jadvali (5 ustun): # · Sana · O'quvchi/Guruh · Stavka qoidasi · Summa</li>
+  <li>Reversed qatorlar: opacity 60%, strikethrough</li>
+  <li>CSV download: <code>oylik-tafsilotlari-{paymentId}.csv</code></li>
+  <li>Pastida: PossibleDeductionsInfo (ushlanishi mumkin bo'lgan deductionlar info'si)</li>
+</ul>
+
+<h3>11.4 SalaryPeriodSettingsSheet</h3>
+
+<ul>
+  <li>Joriy davr ko'rsatiladi: "Har oyning 8-kunidan, 01.01.2026 dan kuchda"</li>
+  <li>Yangi sozlama:
+    <ul>
+      <li>Boshlanish kuni (1-28)</li>
+      <li>Kuchga kirish sanasi</li>
+    </ul>
+  </li>
+  <li>Tarix jadvali — barcha versiyalar (faol/yopilgan)</li>
+</ul>
+
+<h3>11.5 /profile/salary — Ustozning o'z oyligini ko'rishi</h3>
+
+<p>Faqat o'qituvchilar uchun (lehrer portali):</p>
+
+<ul>
+  <li>3 ta KPI karta:
+    <ul>
+      <li>Kutilayotgan oylik (joriy davr forecast'i)</li>
+      <li>Real ishlangan (yig'ilgan accruallar)</li>
+      <li>To'langan (oxirgi PAID payment)</li>
+    </ul>
+  </li>
+  <li>Guruhlar bo'yicha (PERCENTAGE/FIXED_PER_STUDENT uchun):
+    <ul>
+      <li>Aktiv o'quvchilar soni</li>
+      <li>Oylik darslar soni</li>
+      <li>Stavka</li>
+      <li>Kutilayotgan oylik = activeStudents × lessonsPerMonth × rate</li>
+    </ul>
+  </li>
+  <li>Joriy davr — har dars tafsilot</li>
+  <li>PossibleDeductionsInfo (variant=teacher) — faqat 12% ushlanish</li>
+</ul>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Ustozlar o'z profilida oylik maoshlarlarini kuzatib borishi mumkin. Ulardagi aktiv o'quvchilar sonidan kelib chiqqan holda qancha oylik maosh kutishlari mumkinligi va qilingan to'lovlar asosida ularda real oylik maosh qancha ekanligini ko'rishlari mumkin bo'lishi kerak." — Bu to'liq amalga oshirilgan: <code>/profile/salary</code> sahifasi va <code>GET /salary/me/summary</code> endpoint kutilayotgan vs haqiqiy oylikni ko'rsatadi.
+</div>
+
+<h3>11.6 Teacher Profile — "Ish haqi" va "Taymlayn" tablari</h3>
+
+<table>
+<tr><th>Tab</th><th>Kim ko'radi</th><th>Mazmuni</th></tr>
+<tr><td>Guruhlar</td><td>Hammasi</td><td>Ustozning guruhlari</td></tr>
+<tr><td>Izohlar</td><td>Hammasi</td><td>Comment thread</td></tr>
+<tr><td>Tarix</td><td>Hammasi</td><td>EntityHistory</td></tr>
+<tr><td>Taymlayn</td><td>CEO/BD/Admin</td><td>Salary changes + group history + profile updates</td></tr>
+<tr><td>Ish haqi</td><td>CEO/BD</td><td>4 ta KPI + per-group breakdown</td></tr>
+</table>
+
+<h3>11.7 Student Profile — yangi tablar</h3>
+
+<table>
+<tr><th>Tab</th><th>Endpoint</th><th>Mazmuni</th></tr>
+<tr><td>To'lovlar</td><td>GET /transactions/student/:id?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE</td><td>Pul oqimi</td></tr>
+<tr><td>Darslar (Lesson Trail)</td><td>GET /transactions/student/:id/lesson-trail</td><td>LESSON_DEDUCTION + LESSON_CONSUMPTION</td></tr>
+</table>
+
+<p>Lesson Trail — har dars qayerdan kelgani va qaysi tsiklga kirganligini paginated jadval ko'rinishida.</p>
+
+<p><strong>Initial Balance Dialog</strong> (CEO faqat) — student profile dropdown menyusidan ochiladi.</p>
+
+<h3>11.8 Group Detail — "Bekor qilingan" tab (yangi)</h3>
+
+<ul>
+  <li>"Bu darsni bekor qilish" tugmasi (CEO/BD/Admin)</li>
+  <li>Cancellations jadvali: # · Sana · Sabab · Bekor qilgan · Vaqti · [Delete]</li>
+  <li>Delete uchun confirmation dialog: "Diqqat: bu davomat va to'lovni tiklamaydi"</li>
+</ul>
+
+<h3>11.9 Departure Reasons Manager</h3>
+
+<p>Reports → Departed Students sahifasidagi "Ketish sabablari" tugmasi orqali ochiladi:</p>
+
+<ul>
+  <li>Yangi sabab qo'shish:
+    <ul>
+      <li>Sabab nomi</li>
+      <li>Qaysi exit turlariga qo'llanishi (5 ta checkbox: GROUP_REMOVAL, FREEZE, EXPEL, INACTIVE, ARCHIVE)</li>
+    </ul>
+  </li>
+  <li>Mavjud sabablarni tahrirlash, o'chirish (soft delete)</li>
+</ul>
+
+<h3>11.10 Navigation o'zgarishlari</h3>
+
+<ul>
+  <li>Yangi: <code>/profile/salary</code> — faqat o'qituvchilar (visibleForRoles: [4])</li>
+  <li>Settings nav'dan "Tark etgan o'quvchilar" o'chirilgan (Reports'ga ko'chgan)</li>
+</ul>
+
+<h2 id="rollar">12. Rollar va ruxsatlar matritsasi</h2>
+
+<table class="role-table">
+<tr><th>Operatsiya</th><th>CEO</th><th>BD</th><th>Admin</th><th>Cashier</th><th>Teacher</th></tr>
+<tr><td>To'lov yaratish (POST /payments)</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+<tr><td>To'lov bekor qilish (reverse)</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Ledger ko'rish (transactions)</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Lesson trail (per-student)</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+<tr><td>Initial Balance qo'shish</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Manual ADJUSTMENT</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Refund yaratish</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+<tr><td>Refund tasdiqlash/to'lash</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Refund bekor qilish</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Salary config CRUD</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Salary period sozlash</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Salary calculate (manual)</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Salary approve</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Salary pay (single, batch)</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Salary breakdown (boshqa ustoz)</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+<tr><td>Lesson Deduction reverse</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Lesson Cancellation create</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>Faqat o'z guruhi</td></tr>
+<tr><td>Lesson Cancellation delete</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Expense CRUD</td><td>✅</td><td>✅</td><td>create/list</td><td>—</td><td>—</td></tr>
+<tr><td>Reports (financial)</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>O'z oyligini ko'rish (/salary/me/*)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+<tr><td>Student status change</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+<tr><td>Student exit reasons CRUD</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td></tr>
+</table>
+
+<div class="callout success">
+<strong>Foydalanuvchi savoliga javob:</strong> "Ustozlarga oylik belgilash faqat CEO tomonidan UX tomonlama ham backend tomonlama ham bu boshqalarga ko'rinmasligi va ruxsat berilmasligi shart" — Bu to'liq amalga oshirilgan. Backend'da <code>@Roles('CEO')</code> guard bilan, frontend'da <code>isCeo</code> shart bilan UI yashiriladi. BD/Admin to'g'ridan-to'g'ri API'ga so'rov yuborsa 403 oladi.
+</div>
+
+<h2 id="kamchiliklar">13. Topilgan kamchiliklar va e'tibor talab qiluvchi joylar</h2>
+
+<h3>13.1 Retroaktiv accrual yo'qligi</h3>
+
+<div class="callout warn">
+<strong>Holat:</strong> O'quvchi balansi yetmasligi sababli dars uchun pul yechilmagan bo'lsa (B.1 qoidasi), keyin pul to'lansa <em>o'tgan dars uchun</em> retroaktiv accrual yozilmaydi.<br>
+<strong>Tavsiya:</strong> CEO bilan muhokama qilib qaror qabul qilish — <em>retroaktiv accrual</em> kerakmi yoki yo'q.
+</div>
+
+<h3>13.2 FIXED_MONTHLY pro-rata yo'qligi</h3>
+
+<div class="callout warn">
+<strong>Holat:</strong> FIXED_MONTHLY xodim oy o'rtasida ishga kirgan/ketgan bo'lsa ham, oylik to'liq yoziladi.<br>
+<strong>Tavsiya:</strong> agar real ishga kirish/chiqish kuni asosida pro-rata kerak bo'lsa, <code>EmployeeSalaryConfig.startDate</code> va <code>endDate</code> qo'shish kerak.
+</div>
+
+<h3>13.3 Refund qilingan to'lovni reverse qilish guard</h3>
+
+<div class="callout warn">
+<strong>Holat:</strong> Payment reverse'da LESSON_CONSUMPTION guard bor, lekin REFUND transaction guard'i aniq emas.<br>
+<strong>Tavsiya:</strong> agar to'lov uchun refund qilingan bo'lsa, payment'ni reverse qilish hech bo'lmaganda ogohlantirish bilan amalga oshirilishi kerak.
+</div>
+
+<h3>13.4 Lesson Cancellation soft-delete qaytarish</h3>
+
+<div class="callout warn">
+<strong>Holat:</strong> LessonCancellation o'chirilsa, EXCUSED'ga o'zgartirilgan davomatlar tiklanmaydi.<br>
+<strong>Tavsiya:</strong> bu yerda ikki yo'l: (1) hozirgi UI ogohlantirish bilan saqlash, (2) soft-delete'da cascade restore qilish va admin tasdiqlashi.
+</div>
+
+<h3>13.5 Tax hisoblash olib tashlanishi</h3>
+
+<div class="callout warn">
+<strong>Holat:</strong> Tax butunlay olib tashlangan, lekin UI'da statik info'lar (12%, 4%, 2%) saqlanib qolgan.<br>
+<strong>Tavsiya:</strong> agar bu deductionlar real hisoblanishi kerak bo'lsa, ulardan birini (yoki barchasini) qaytarish uchun yangi modul ishlab chiqish kerak.
+</div>
+
+<h3>13.6 Initial Balance — birdan ko'p taroflar uchun</h3>
+
+<div class="callout warn">
+<strong>Holat:</strong> Yangi tizimga o'tkazilayotganda eski tizimdagi <em>balansga zid bo'lgan</em> qarzdorlikni qanday hisoblash aniq emas. Hozir <code>amount &gt;= 0</code> validatsiya bor.<br>
+<strong>Tavsiya:</strong> qarzdor o'quvchilar uchun <code>ADJUSTMENT</code> bilan manfiy balans yozish mumkin (CEO/BD ruxsati bor).
+</div>
+
+<h3>13.7 Davomatni o'qituvchi qo'lda olishi va frauder</h3>
+
+<div class="callout warn">
+<strong>Holat:</strong> Tizim o'qituvchining davomatni qo'lda olishi va kim olganini farqlamaydi (markedMethod). O'qituvchi o'z foydasi uchun yolg'on davomat qo'yishi mumkin.<br>
+<strong>Tavsiya:</strong> Audit log + per-attendance markedById ko'rsatish (allaqachon EntityHistory'da bor). QR davomatni majburiy qilish (ya'ni o'qituvchi qo'lda PRESENT qo'ya olmasligi) — alohida sozlama bo'lishi mumkin.
+</div>
+
+<h3>13.8 perLessonCost snapshot izchilligi</h3>
+
+<div class="callout success">
+<strong>Yaxshi xususiyat:</strong> LESSON_DEDUCTION metadata'sida <code>perLessonCost</code> snapshot saqlanadi. Kurs narxi keyin o'zgarsa ham, asl tsikl narxi saqlanadi va refund hisoblashda ishlatiladi. Bu — to'g'ri yondashuv.
+</div>
+
+<h2>14. Xulosa</h2>
+
+<p>DaF ERP tizimining moliyaviy quyi tizimi <strong>append-only ledger</strong> printsipi asosida qurilgan, atomiklik <strong>Serializable</strong> izolatsiya darajasi bilan kafolatlanadi va har bir <em>aktiv</em> yozuv <code>reversedAt IS NULL</code> filtri orqali aniqlanadi. Asosiy konseptlar:</p>
+
+<ul>
+  <li><strong>Prepaid Model:</strong> birinchi davomatda butun tsikl uchun pul yechiladi (FULL_CYCLE), keyin har dars prepaid hisobchidan kamayadi</li>
+  <li><strong>B.1 Coverage qoidasi:</strong> ustozga oylik faqat o'quvchi to'lov qilgan dars uchun yoziladi</li>
+  <li><strong>SCD2 Versioning:</strong> oylik konfiguratsiyalari va davr sozlamalari tarixi saqlanadi</li>
+  <li><strong>Atomik cascade:</strong> guruhdan chiqish, transfer, dars bekor qilish — barchasi bir tranzaksiyada</li>
+  <li><strong>Rolga asoslangan ruxsatlar:</strong> CEO eksklyuziv operatsiyalari (oylik tasdiqlash, hisoblash davri, soliq, lesson deduction reverse) bekor qilib bo'lmaydi</li>
+</ul>
+
+<p>Tizim hozirda <strong>892/892 backend testdan o'tadi</strong> va frontend ham build'dan o'tadi (CLAUDE.md ga ko'ra). Bu — production deploy uchun yetarlicha tayyorlik darajasi.</p>
+
+<p>Ushbu hujjat foydalanuvchi tomonidan so'ralgan barcha holatlarni qamrab oldi:</p>
+<ul>
+  <li>✅ Pul tushishi va yechilishi (3 xil holat: standart, intensiv, partial)</li>
+  <li>✅ Ustozga oylik (3 turi: PERCENTAGE, FIXED_PER_STUDENT, FIXED_MONTHLY)</li>
+  <li>✅ O'quvchi guruhdan chiqsa nima bo'ladi (refund prepaid)</li>
+  <li>✅ Yangi o'quvchi qo'shilsa (enroll va birinchi davomat)</li>
+  <li>✅ A guruhdan B guruhga ko'chsa (transfer)</li>
+  <li>✅ Bir guruhda ustoz o'zgarsa (GroupTeacherHistory)</li>
+  <li>✅ Muzlatish (FROZEN) va to'lov muddatining o'zgarishi</li>
+  <li>✅ Eski tizimdan migratsiya (INITIAL_BALANCE)</li>
+  <li>✅ Dam olish kunlari va dars bekor qilinishi</li>
+  <li>✅ Ustozning real vs kutilayotgan oyligini ko'rishi</li>
+  <li>✅ Effektiv sanadan boshlab oylik o'zgarishi</li>
+  <li>✅ Refund, payment reverse, lesson deduction reverse</li>
+  <li>✅ Edge case'lar (B.1 qoidasi, race condition, concurrent davomat)</li>
+</ul>
+
+<hr>
+<p style="text-align: center; color: #64748b; font-size: 9pt; margin-top: 2em;">
+DaF ERP Moliyaviy Tizim Tahlili — 2026-04-30 — Versiya 4.0<br>
+Tahlil Claude (Opus 4.7) tomonidan backend va frontend kodlari, hujjatlar va commit qilinmagan o'zgarishlar asosida tayyorlangan.
+</p>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+

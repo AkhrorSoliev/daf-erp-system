@@ -5,10 +5,15 @@ import {
   IsOptional,
   IsString,
   IsBoolean,
+  IsDateString,
   Min,
 } from 'class-validator';
 import { SalaryType } from '@prisma/client';
 
+// All three DTOs share the same effectiveFrom shape: optional YYYY-MM-DD
+// (interpreted as 00:00 Tashkent in the service). Defaults to "today" when
+// omitted. The service rejects values that go backwards or that fall inside
+// an already-closed salary payment period.
 export class CreateSalaryConfigDto {
   @IsInt()
   @IsNotEmpty()
@@ -24,6 +29,10 @@ export class CreateSalaryConfigDto {
   @IsInt()
   @Min(1)
   value: number;
+
+  @IsOptional()
+  @IsDateString()
+  effectiveFrom?: string;
 }
 
 export class GlobalSalaryConfigDto {
@@ -33,6 +42,10 @@ export class GlobalSalaryConfigDto {
   @IsInt()
   @Min(1)
   value: number;
+
+  @IsOptional()
+  @IsDateString()
+  effectiveFrom?: string;
 }
 
 export class UpdateSalaryConfigDto {
@@ -48,4 +61,8 @@ export class UpdateSalaryConfigDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsDateString()
+  effectiveFrom?: string;
 }

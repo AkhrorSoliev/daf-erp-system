@@ -144,7 +144,7 @@ export class ReportsDepartedListsService {
     );
     const reasons =
       allReasonIds.length > 0
-        ? await this.prisma.departureReason.findMany({
+        ? await this.prisma.studentExitReason.findMany({
             where: { id: { in: allReasonIds } },
             select: { id: true, name: true },
           })

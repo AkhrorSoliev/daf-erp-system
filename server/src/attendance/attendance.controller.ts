@@ -70,6 +70,25 @@ export class AttendanceController {
     );
   }
 
+  @Get(':groupId/calendar')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  async getLessonCalendar(
+    @Param('groupId') groupId: string,
+    @Query() query: AttendanceDatesQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    await this.verifyTeacherAccess(groupId, roles, userId);
+    return this.attendanceService.getLessonCalendar(
+      groupId,
+      query.month,
+      query.year,
+      companyId,
+    );
+  }
+
   @Get(':groupId/date/:date')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')

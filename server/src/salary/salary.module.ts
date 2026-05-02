@@ -7,6 +7,9 @@ import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryPaymentService } from './salary-payment.service';
 import { SalaryController } from './salary.controller';
 import { SalaryCronService } from './salary-cron.service';
+import { TeacherTimelineService } from './teacher-timeline.service';
+import { SalaryBreakdownService } from './salary-breakdown.service';
+import { SalaryPeriodSettingsService } from './salary-period-settings.service';
 import { TransactionsModule } from '../transactions/transactions.module';
 
 @Module({
@@ -20,7 +23,15 @@ import { TransactionsModule } from '../transactions/transactions.module';
     SalaryCalculationService,
     SalaryPaymentService,
     SalaryCronService,
+    TeacherTimelineService,
+    SalaryBreakdownService,
+    SalaryPeriodSettingsService,
   ],
-  exports: [SalaryService],
+  exports: [
+    SalaryService,
+    SalaryAccrualService,
+    TeacherTimelineService,
+    SalaryBreakdownService,
+  ],
 })
 export class SalaryModule {}

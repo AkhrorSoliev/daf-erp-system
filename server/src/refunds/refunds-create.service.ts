@@ -59,8 +59,12 @@ export class RefundsCreateService {
 
     let requestedAmount: number;
 
-    if (lessonsCompleted === 0) {
-      // Hali davomat yo'q — 100% qaytarish (oldingi refundlar minus)
+    if (
+      !enrollment.startDate ||
+      enrollment.startDate > new Date() ||
+      lessonsCompleted === 0
+    ) {
+      // Kurs boshlanmagan / hali davomat yo'q — 100% qaytarish
       requestedAmount = Math.max(0, paidAmount - previousRefundsTotal);
     } else if (lessonsCompleted / totalLessons >= 0.5) {
       throw new BadRequestException(
@@ -257,6 +261,7 @@ export class RefundsCreateService {
         id: true,
         groupId: true,
         status: true,
+        startDate: true,
         group: {
           select: {
             name: true,

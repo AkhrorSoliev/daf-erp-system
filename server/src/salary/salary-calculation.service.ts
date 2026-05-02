@@ -1,50 +1,41 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  SalaryPaymentStatus,
-  SalaryType,
-  TransactionType,
-  Prisma,
-} from '@prisma/client';
-import { calculateTax } from './tax.helper';
-import { getSalaryTaxRate } from './shared/get-salary-tax-rate';
+import { SalaryPaymentStatus, SalaryType, Prisma } from '@prisma/client';
+import { resolveCurrentPeriod } from './shared/resolve-current-period';
 
 @Injectable()
 export class SalaryCalculationService {
   constructor(private prisma: PrismaService) {}
 
-  async calculateMonthlySalaries(companyId: number) {
-    const now = new Date();
-    // Cutoff: 7th of current month.
-    const cutoffDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      7,
-      23,
-      59,
-      59,
+  async calculateMonthlySalaries(companyId: number, now: Date = new Date()) {
+    // Period bounds come from SalaryPeriodSetting (configurable per company).
+    // Default if no setting found: 8th→7th, preserving the legacy hardcoded behavior.
+    const { periodStart, periodEnd } = await resolveCurrentPeriod(
+      this.prisma,
+      companyId,
+      now,
     );
-    // Period start: 8th of previous month.
-    const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 8);
-
-    // Per-company tax rate (default 12% ASOT if not configured).
-    const taxRate = await getSalaryTaxRate(this.prisma, companyId);
 
     const results: {
       userId: number;
-      grossAmount: number;
-      taxAmount: number;
-      netAmount: number;
+      amount: number;
       advanceDeducted: number;
       kind: 'ACCRUAL' | 'FIXED_MONTHLY';
     }[] = [];
 
     // === ACCRUAL-BASED (teachers) ===
+    // - Both bounds: include lessons inside [periodStart, periodEnd] only.
+    //   Without `gte` we'd retroactively pull in pre-period lessons that
+    //   somehow weren't captured by an earlier run — those need an explicit
+    //   admin correction, not silent inclusion.
+    // - reversedAt: null excludes accruals that were undone (cancelled
+    //   lesson, attendance flipped to ABSENT, etc.) so we don't pay for them.
     const accruals = await this.prisma.salaryAccrual.findMany({
       where: {
         companyId,
         salaryPaymentId: null,
-        lessonDate: { lte: cutoffDate },
+        reversedAt: null,
+        lessonDate: { gte: periodStart, lte: periodEnd },
       },
       select: {
         id: true,
@@ -62,26 +53,17 @@ export class SalaryCalculationService {
     }
 
     for (const [userId, { ids, total }] of byUser) {
-      const grossAmount = total;
-      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(
-        grossAmount,
-        taxRate,
-      );
+      const amount = total;
 
-      // Atomic: SalaryPayment + accrual link + TAX ledger entry + advance
-      // settlement are all-or-nothing. Previously each was a separate
-      // await, so a crash mid-way could leave accruals orphaned or miss
-      // the tax entry.
+      // Atomic: SalaryPayment + accrual link + advance settlement are all-or-nothing.
       const { finalNet, advanceDeducted } = await this.prisma.$transaction(
         async (tx) => {
           const salaryPayment = await tx.salaryPayment.create({
             data: {
               userId,
               periodStart,
-              periodEnd: cutoffDate,
-              grossAmount,
-              taxAmount,
-              netAmount: netBeforeAdvance,
+              periodEnd,
+              amount,
               status: SalaryPaymentStatus.CALCULATED,
               companyId,
             },
@@ -92,29 +74,14 @@ export class SalaryCalculationService {
             data: { salaryPaymentId: salaryPayment.id },
           });
 
-          if (taxAmount > 0) {
-            await tx.transaction.create({
-              data: {
-                type: TransactionType.TAX,
-                amount: -taxAmount,
-                balanceBefore: 0,
-                balanceAfter: 0,
-                teacherId: userId,
-                salaryPaymentId: salaryPayment.id,
-                companyId,
-                description: 'Oylik soliqi',
-              },
-            });
-          }
-
           const advanceDeducted = await this.applyPendingAdvances(
             tx,
-            { id: salaryPayment.id, netAmount: netBeforeAdvance },
+            { id: salaryPayment.id, amount },
             userId,
             companyId,
           );
           return {
-            finalNet: netBeforeAdvance - advanceDeducted,
+            finalNet: amount - advanceDeducted,
             advanceDeducted,
           };
         },
@@ -123,45 +90,61 @@ export class SalaryCalculationService {
 
       results.push({
         userId,
-        grossAmount,
-        taxAmount,
-        netAmount: finalNet,
+        amount: finalNet,
         advanceDeducted,
         kind: 'ACCRUAL',
       });
     }
 
     // === FIXED MONTHLY (admins, cashiers, branch directors, or teachers on fixed salary) ===
+    // P1.7 — read from the version active at periodEnd (last day of the
+    // cycle being settled), NOT the parent mirror. Otherwise a future-dated
+    // FIXED_MONTHLY change would apply to payroll before its effectiveFrom.
     const fixedMonthlyConfigs = await this.prisma.employeeSalaryConfig.findMany(
       {
         where: {
           companyId,
-          salaryType: SalaryType.FIXED_MONTHLY,
           isActive: true,
           groupId: null,
+          // We still anchor on the parent mirror for "is this a fixed-monthly
+          // employee?" because that flag is the join key. The actual
+          // payment value comes from the version below.
+          salaryType: SalaryType.FIXED_MONTHLY,
         },
-        select: { userId: true, value: true },
+        select: { id: true, userId: true, value: true },
       },
     );
 
     for (const config of fixedMonthlyConfigs) {
+      // Look up the version active at periodEnd. If none (e.g. the only
+      // version's effectiveFrom is after periodEnd), skip — the employee
+      // wasn't on fixed-monthly during this cycle.
+      const activeVersion =
+        await this.prisma.employeeSalaryConfigVersion.findFirst({
+          where: {
+            configId: config.id,
+            salaryType: SalaryType.FIXED_MONTHLY,
+            effectiveFrom: { lte: periodEnd },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gt: periodEnd } }],
+          },
+          orderBy: { effectiveFrom: 'desc' },
+          select: { value: true },
+        });
+      if (!activeVersion) continue;
+
       // Skip if a payment already exists for this exact period (idempotent cron).
       const existing = await this.prisma.salaryPayment.findFirst({
         where: {
           userId: config.userId,
           companyId,
           periodStart,
-          periodEnd: cutoffDate,
+          periodEnd,
         },
         select: { id: true },
       });
       if (existing) continue;
 
-      const grossAmount = config.value;
-      const { taxAmount, netAmount: netBeforeAdvance } = calculateTax(
-        grossAmount,
-        taxRate,
-      );
+      const amount = activeVersion.value;
 
       // Atomic for the same reasons as the accrual branch above.
       const { finalNet, advanceDeducted } = await this.prisma.$transaction(
@@ -170,38 +153,21 @@ export class SalaryCalculationService {
             data: {
               userId: config.userId,
               periodStart,
-              periodEnd: cutoffDate,
-              grossAmount,
-              taxAmount,
-              netAmount: netBeforeAdvance,
+              periodEnd,
+              amount,
               status: SalaryPaymentStatus.CALCULATED,
               companyId,
             },
           });
 
-          if (taxAmount > 0) {
-            await tx.transaction.create({
-              data: {
-                type: TransactionType.TAX,
-                amount: -taxAmount,
-                balanceBefore: 0,
-                balanceAfter: 0,
-                teacherId: config.userId,
-                salaryPaymentId: salaryPayment.id,
-                companyId,
-                description: 'Oylik soliqi',
-              },
-            });
-          }
-
           const advanceDeducted = await this.applyPendingAdvances(
             tx,
-            { id: salaryPayment.id, netAmount: netBeforeAdvance },
+            { id: salaryPayment.id, amount },
             config.userId,
             companyId,
           );
           return {
-            finalNet: netBeforeAdvance - advanceDeducted,
+            finalNet: amount - advanceDeducted,
             advanceDeducted,
           };
         },
@@ -210,9 +176,7 @@ export class SalaryCalculationService {
 
       results.push({
         userId: config.userId,
-        grossAmount,
-        taxAmount,
-        netAmount: finalNet,
+        amount: finalNet,
         advanceDeducted,
         kind: 'FIXED_MONTHLY',
       });
@@ -224,16 +188,16 @@ export class SalaryCalculationService {
   /**
    * Net outstanding TEACHER_ADVANCE expenses out of a freshly-created salary
    * payment. Walks the advances in createdAt order and settles as many as
-   * fit inside the available net — remaining advances stay unsettled and
+   * fit inside the available amount — remaining advances stay unsettled and
    * roll to the next cycle. Returns the total amount deducted so the caller
-   * can update the SalaryPayment.netAmount accordingly.
+   * can update the SalaryPayment.amount accordingly.
    *
    * Must be called inside the same transaction that created the SalaryPayment
-   * so settlement and the updated net stay consistent.
+   * so settlement and the updated amount stay consistent.
    */
   private async applyPendingAdvances(
     tx: Prisma.TransactionClient,
-    salaryPayment: { id: string; netAmount: number },
+    salaryPayment: { id: string; amount: number },
     userId: number,
     companyId: number,
   ): Promise<number> {
@@ -253,7 +217,7 @@ export class SalaryCalculationService {
     const toSettle: string[] = [];
     let deducted = 0;
     for (const exp of pending) {
-      if (deducted + exp.amount > salaryPayment.netAmount) break;
+      if (deducted + exp.amount > salaryPayment.amount) break;
       toSettle.push(exp.id);
       deducted += exp.amount;
     }
@@ -265,7 +229,7 @@ export class SalaryCalculationService {
     });
     await tx.salaryPayment.update({
       where: { id: salaryPayment.id },
-      data: { netAmount: salaryPayment.netAmount - deducted },
+      data: { amount: salaryPayment.amount - deducted },
     });
 
     return deducted;

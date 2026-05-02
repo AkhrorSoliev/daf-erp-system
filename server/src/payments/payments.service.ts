@@ -75,4 +75,7 @@ export class PaymentsService {
   ) {
     return this.debtors.getPending(companyId, query);
   }
+  getDebtorsForGroup(groupId: string, companyId: number) {
+    return this.debtors.getDebtorsForGroup(groupId, companyId);
+  }
 }

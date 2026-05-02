@@ -13,8 +13,24 @@ export interface StudentAttendance {
   firstName: string;
   lastName: string;
   photo: string | null;
+  balance?: number;
+  isDebtor?: boolean;
+  debtAmount?: number;
   status: AttendanceStatus | null;
   note: string | null;
+}
+
+/**
+ * Returned by the admin variant of getByDate. Mirrors the active student
+ * shape but adds the per-group debt info needed for the "Qarzdorlar" panel.
+ */
+export interface DebtorStudent {
+  studentId: number;
+  firstName: string;
+  lastName: string;
+  photo: string | null;
+  balance: number;
+  debtAmount: number;
 }
 
 export interface AttendanceEntry {

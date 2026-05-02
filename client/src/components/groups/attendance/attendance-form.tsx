@@ -25,11 +25,13 @@ import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
 import { AttendanceStudentRow } from "./attendance-student-row";
+import { AttendanceDebtorsSection } from "./attendance-debtors-section";
 import {
   DAY_NAMES,
   STATUS_CONFIG,
   type AttendanceEntry,
   type AttendanceStatus,
+  type DebtorStudent,
   type StudentAttendance,
 } from "./attendance-form-utils";
 
@@ -53,6 +55,8 @@ export function AttendanceForm({
   const statusOptions = isAdmin ? STATUS_CONFIG : STATUS_CONFIG.slice(0, 2);
 
   const [students, setStudents] = useState<StudentAttendance[]>([]);
+  const [debtorStudents, setDebtorStudents] = useState<DebtorStudent[]>([]);
+  const [coursePrice, setCoursePrice] = useState<number>(0);
   const [entries, setEntries] = useState<Map<number, AttendanceEntry>>(
     new Map(),
   );
@@ -112,10 +116,17 @@ export function AttendanceForm({
     setLoading(true);
     try {
       const { data } = await api.get(`/attendance/${group.id}/date/${date}`);
-      setStudents(data);
+      // Backend now returns { activeStudents, debtorStudents?, perLessonCost?, coursePrice? }.
+      // Teacher view: debtorStudents is always empty array.
+      // Admin view: debtorStudents is the per-group debtor list (rendered below the form).
+      const active: StudentAttendance[] = data.activeStudents ?? [];
+      const debtors: DebtorStudent[] = data.debtorStudents ?? [];
+      setStudents(active);
+      setDebtorStudents(debtors);
+      setCoursePrice(data.coursePrice ?? 0);
 
       const map = new Map<number, AttendanceEntry>();
-      for (const s of data) {
+      for (const s of active) {
         map.set(s.studentId, {
           studentId: s.studentId,
           status: s.status ?? null,
@@ -125,6 +136,8 @@ export function AttendanceForm({
       setEntries(map);
     } catch {
       setStudents([]);
+      setDebtorStudents([]);
+      setCoursePrice(0);
       setEntries(new Map());
     } finally {
       setLoading(false);
@@ -396,6 +409,17 @@ export function AttendanceForm({
             Saqlash
           </Button>
         </div>
+      )}
+
+      {/* Admin-only debtors panel: rendered below the attendance form so the
+          admin can collect payment from students whose balance can't cover
+          the next lesson. Teacher view never receives debtorStudents. */}
+      {isAdmin && debtorStudents.length > 0 && (
+        <AttendanceDebtorsSection
+          debtors={debtorStudents}
+          suggestedAmount={coursePrice}
+          onPaymentSuccess={fetchAttendance}
+        />
       )}
 
       {/* QR Davomat Dialog */}

@@ -31,8 +31,10 @@ export const routeLabels: Record<string, string> = {
   pending: "Kutilyotgan to'lovlar",
   expenses: "Xarajatlar",
   salary: "Ish haqi",
+  // /payments/salary/config — CEO Oylik belgilash sahifasi (xodimlar ro'yxati + bulk + individual).
   // /payments/salary/settings — CEO oylik davri sozlamalari sahifasi.
   // /profile/salary — Teacher portalida ustozning o'z oyligi sahifasi.
+  config: "Oylik belgilash",
   debtors: "Qarzdorlar",
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",

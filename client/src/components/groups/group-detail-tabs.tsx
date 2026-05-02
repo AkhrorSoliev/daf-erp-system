@@ -13,6 +13,7 @@ import { CommentList, type CommentData } from "@/components/shared/comment-list"
 import { AttendanceTab } from "./attendance/attendance-tab";
 import { AttendanceStats } from "./attendance/attendance-stats";
 import { AttendanceDotsTab } from "./attendance/attendance-dots-tab";
+import { LessonChangesTab } from "./lesson-changes-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
@@ -52,6 +53,8 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
   const historyShown = useRef(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const commentsShown = useRef(false);
+  const [cancellationsVisible, setCancellationsVisible] = useState(false);
+  const cancellationsShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
 
   const handleOptimisticAdd = useCallback((comment: CommentData) => {
@@ -103,6 +106,9 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     } else if (tab === "izohlar" && !commentsShown.current) {
       commentsShown.current = true;
       setCommentsVisible(true);
+    } else if (tab === "bekor-qilingan" && !cancellationsShown.current) {
+      cancellationsShown.current = true;
+      setCancellationsVisible(true);
     }
   }, [activeTab, fetchStudents]);
 
@@ -129,6 +135,10 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       commentsShown.current = true;
       setCommentsVisible(true);
     }
+    if (value === "bekor-qilingan" && !cancellationsShown.current) {
+      cancellationsShown.current = true;
+      setCancellationsVisible(true);
+    }
   };
 
   const handleStudentSaved = useCallback(() => {
@@ -150,6 +160,9 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         <TabsTrigger value="oquvchilar">O&apos;quvchilar</TabsTrigger>
         <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
         <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
+        {canManage && (
+          <TabsTrigger value="bekor-qilingan">Dars o&apos;zgarishlari</TabsTrigger>
+        )}
         {canManage && <TabsTrigger value="tarix">Tarix</TabsTrigger>}
         {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
         <TabsTrigger value="statistika">Statistika</TabsTrigger>
@@ -196,6 +209,17 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       <TabsContent value="imtihonlar">
         <EmptyState message="Imtihonlar mavjud emas" />
       </TabsContent>
+
+      {/* Dars o'zgarishlari — bekor qilish + o'rinbosar ustoz (CEO/BD/Admin) */}
+      {canManage && (
+        <TabsContent value="bekor-qilingan">
+          {cancellationsVisible ? (
+            <LessonChangesTab group={group} />
+          ) : (
+            <EmptyState message="Dars o'zgarishlari ma'lumotlari mavjud emas" />
+          )}
+        </TabsContent>
+      )}
 
       {/* Tarix (faqat CEO, BD, Admin) */}
       {canManage && (

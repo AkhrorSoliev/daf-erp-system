@@ -203,7 +203,22 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 |-------|------|--------|
 | companyId | Int (unique) | Kompaniya |
 | salaryTaxRate | Float | Oylik solig'i (default: 12% ASOT) |
-| refundTaxRate | Float | Refund solig'i (default: 0%) |
+| refundTaxRate | Float | Refund solig'i (default: 0%) — hozir hech bir servisda o'qilmaydi (kelajak uchun zahirada) |
+| isActive | Boolean | `false` bo'lsa default 12% ishlatiladi. UI orqali o'chirib bo'lmaydi (har doim `true` qilib saqlanadi) |
+
+**API (CEO-only):**
+
+| Endpoint | Maqsad |
+|----------|--------|
+| `GET /api/salary/tax-config` | Joriy stavka. Yozuv yo'q bo'lsa default 12% va `isDefault: true` qaytaradi |
+| `PATCH /api/salary/tax-config` | Stavka yangilash (0–100). Birinchi yozuvda upsert + `EntityHistory.CREATE`, keyingilarida `UPDATE` log'lanadi |
+
+**Cheklov:** Stavka o'zgartirilganda allaqachon hisoblangan oyliklar (`CALCULATED`/`APPROVED`/`PAID`) qayta hisoblanmaydi — yangi stavka faqat keyingi `calculateMonthlySalaries()` ishlashida qo'llaniladi. UI'da bu haqida foydalanuvchiga amber eslatma ko'rsatiladi.
+
+**Hisoblovchi servislar (hammasi `getSalaryTaxRate` helper'i orqali o'qiydi):**
+- `salary-calculation.service.ts` — oylik cron'da SalaryPayment yaratayotganda
+- `salary-summary.service.ts` — Teacher profilidagi "Ish haqi" tab'i uchun expected/actual net hisoblash
+- `reports-financial.service.ts` — KPI dashboard'idagi pending salary tax forecast'i
 
 ---
 
@@ -357,6 +372,8 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | `POST` | `/api/salary/payments/:id/pay` | CEO, BD | To'lash |
 | `POST` | `/api/salary/payments/batch-pay` | CEO, BD | Ko'p oylikni bir martada to'lash |
 | `GET` | `/api/teachers/:id/salary-summary` | CEO, BD | Kutilayotgan vs haqiqiy oylik |
+| `GET` | `/api/salary/tax-config` | **CEO** | Kompaniya soliq stavkasi (yo'q bo'lsa default 12%) |
+| `PATCH` | `/api/salary/tax-config` | **CEO** | Soliq stavkasini o'zgartirish (0–100). EntityHistory'ga log'lanadi |
 
 ### 4.5 Refunds — Pul qaytarish
 
@@ -398,7 +415,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Sahifa | Yo'l | Tavsif |
 |--------|------|--------|
 | Umumiy ma'lumotlar | `/payments/overview` | KPI kartalar, davr tanlash, to'lov usullari, oxirgi to'lovlar |
-| Ish haqi | `/payments/salary` | Oylik jadval + "Oylik belgilash" dialog + batch to'lash |
+| Ish haqi | `/payments/salary` | Oylik jadval + "Oylik belgilash" dialog + batch to'lash + CEO uchun "Sozlamalar" dropdown (Xodim stavkalari, Hisoblash davri, Soliq stavkasi) |
 | Xarajatlar | `/payments/expenses` | Xarajatlar CRUD (branchId bilan) |
 | Shartnomalar | `/payments/contracts` | Shartnomalar CRUD |
 | Qarzdorlar | `/payments/debtors` | Balansi minus o'quvchilar ro'yxati |
@@ -410,6 +427,13 @@ Oylik hisoblashda (calculateMonthlySalaries):
 - O'qituvchi tanlansa → 3 xil tur: Foiz, O'quvchi boshiga, Oylik
 - Boshqa xodim tanlansa → faqat Oylik (FIXED_MONTHLY)
 - Mavjud config ko'rsatiladi (agar bor bo'lsa)
+
+**Soliq stavkasi sheet** (`salary-tax-config-sheet.tsx`) — CEO uchun "Sozlamalar" dropdown'idan ochiladi:
+- Joriy stavka ko'rsatiladi; yozuv yo'q bo'lsa "Standart" badge va default 12% (ASOT)
+- Yangi foiz kiritish: 0–100 oralig'ida, 0.1 qadam bilan
+- Saqlash → `PATCH /api/salary/tax-config` (CEO-only). `EntityHistory.CompanyTaxConfig` ga CREATE (birinchi marta) yoki UPDATE (keyingilarida) log'lanadi
+- Amber eslatma: stavka faqat **keyingi** hisoblanadigan oyliklarga ta'sir qiladi — `CALCULATED`/`APPROVED`/`PAID` SalaryPayment'lar o'zgarmaydi
+- Frontend `isCeo` bilan gated; backend GET ham PATCH ham `@Roles('CEO')` — BD/Admin to'g'ridan-to'g'ri API'ga so'rov yuborsa 403 oladi
 
 ---
 
@@ -437,6 +461,8 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Oylik hisoblash | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Oylik tasdiqlash | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Oylik to'lash | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Soliq stavkasini ko'rish/o'zgartirish | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Hisoblash davrini boshqarish | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Refund yaratish | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Refund bekor qilish | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Xarajat yaratish | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -707,4 +733,211 @@ Skeleton implementatsiya mavjud (`uzum.service.ts`).
 - [ ] Check/kvitansiya chiqarish tizimi
 - [ ] Shartnoma PDF generatsiya
 - [ ] Filial bo'yicha alohida balans hisobi
-- [ ] Salary module test coverage
+- [x] Salary module test coverage (Faza 2 — 40 yangi test)
+
+---
+
+# v3.0 ADDENDUM — Prepaid Billing Model va boshqa o'zgarishlar (Faza 0–8)
+
+**Versiya:** 3.0
+**Sana:** 2026-04-28
+**Status:** Production deploy'ga shay (testlar 892/892, frontend build ✓)
+
+Bu bo'lim v2.0 ustiga qurilgan barcha yangi xususiyatlarni hujjatlashtiradi.
+
+## 11. Prepaid Billing Model (yangi yadro)
+
+### 11.1 Eski model vs yangi
+
+**Eski (v2.0):** har attendance'da `cyclesPaid > cyclesDeducted` tekshiriladi va tsikl chegarasida bir to'liq tsikl yechiladi.
+
+**Yangi (v3.0):** har enrollment'da `prepaidLessonsRemaining` hisobchisi bor. Birinchi attended dars'da balans bo'yicha to'liq tsikl yoki qisman yechiladi va prepaid o'rnatiladi. Keyingi har dars uchun prepaid 1 ga kamayadi. 0 ga tushganda yana balans tekshiriladi.
+
+### 11.2 Schema o'zgarishlari
+
+| O'zgarish | Joy |
+|---|---|
+| `Enrollment.prepaidLessonsRemaining Int @default(0)` | yangi maydon |
+| `Transaction.metadata Json?` | LESSON_DEDUCTION/CONSUMPTION metadata |
+| `Transaction.reversedAt DateTime?`, `reversedById Int?` | "still active" markeri |
+| `TransactionType.LESSON_CONSUMPTION` | har dars uchun audit qator (amount=0) |
+| `TransactionType.INITIAL_BALANCE` | eski tizimdan ko'chirish |
+| `LessonDeductionMode` enum: `FULL_CYCLE` / `PARTIAL` | metadata.mode uchun |
+| `Attendance.cancellationId String?` | LessonCancellation FK |
+
+Ikkita partial unique index migrationda raw SQL bilan yaratiladi:
+- `tx_consumption_per_attendance_unique`: `(attendanceId) WHERE type='LESSON_CONSUMPTION' AND reversedAt IS NULL`
+- `tx_initial_balance_per_student_unique`: `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL`
+
+### 11.3 LessonBillingService
+
+`server/src/billing/lesson-billing.service.ts` — yagona pul yechish nuqtasi. Manual va QR attendance ikkalasi shu service'ga delegate qiladi.
+
+**Status transition matritsasi:**
+
+| Eski | Yangi | Harakat |
+|---|---|---|
+| (yo'q) | ABSENT/EXCUSED | hech narsa |
+| (yo'q) | PRESENT/LATE | **bill** |
+| ABS/EXC | ABS/EXC | hech narsa |
+| ABS/EXC | PRESENT/LATE | **bill** |
+| PRES/LATE | PRES/LATE | hech narsa |
+| PRES/LATE | ABS/EXC | **reverse** |
+
+**Bill algoritmi:**
+1. Idempotency: shu attendance uchun aktiv `LESSON_CONSUMPTION` bormi → bo'lsa qaytib chiqish.
+2. Enrollment FOR UPDATE lock.
+3. `prepaidLessonsRemaining > 0` → decrement, audit qator.
+4. Aks holda balans bo'yicha:
+   - `balance ≥ fullCycleCost` → to'liq tsikl yech (FULL_CYCLE), prepaid = lessonPaymentCount.
+   - `balance ≥ perLessonCost` → `floor(balance/perLessonCost)` darsga yech (PARTIAL).
+   - Yetmasa → hech narsa qilmaydi (B.1 saqlanadi).
+5. `LESSON_CONSUMPTION` audit qator (amount=0).
+6. Har ustoz uchun `SalaryAccrual` (B.1 gate).
+
+**Reverse algoritmi:**
+1. Aktiv consumption topilsa → reverseTransaction (asl `reversedAt` belgilanadi), `prepaidLessonsRemaining +=1`.
+2. SalaryAccrual `reversedAt` belgilanadi.
+3. Consumption yo'q (pul yetmagan edi) → faqat accrual reverse, prepaid +1 QILMAYDI (bepul dars yo'q).
+
+### 11.4 Atomic transaction guarantee
+
+Har attendance bitta `prisma.$transaction(Serializable, maxWait: 10s, timeout: 15s)` ichida.
+
+### 11.5 Reversal markeri (`Transaction.reversedAt`)
+
+`reverseTransaction()` ikki ish qiladi:
+1. Yangi reversal qator yaratadi (asl `reversedTransactionId` orqali).
+2. Asl qatorga `reversedAt = now()`, `reversedById` yozadi.
+
+Barcha "still active" filterlar `reversedAt: null` ishlatadi.
+
+## 12. Salary Versioning (`EmployeeSalaryConfigVersion`)
+
+Har salary config yozish yangi version qatori yaratadi (SCD2). Parent `EmployeeSalaryConfig` joriy qiymat ko'zgu sifatida qoladi.
+
+**Validatsiya:**
+- `effectiveFrom < latestVersion.effectiveFrom` → 400 (orqaga vaqt yo'q)
+- `effectiveFrom` APPROVED/PAID `SalaryPayment` davriga tushsa → 400 (yopiq period)
+
+**Lookup pattern:** ikki query — avval `groupId = X` (per-group), keyin `groupId IS NULL` (global). Postgres NULL ordering kontrakt emas.
+
+### 12.2 FIXED_PER_STUDENT semantikasi (kritik fix)
+
+**Eski (bug):** `value` har dars'da to'liq yoziladi.
+**Yangi:** per-tsikl, per-lesson = `Math.round(value / lessonPaymentCount)`.
+
+### 12.3 FIXED_MONTHLY future-dated fix
+
+`salary-calculation.service.ts` joriy davr uchun `EmployeeSalaryConfigVersion` ichidan `effectiveFrom <= periodEnd` bilan o'qiydi.
+
+## 13. Salary Period (`SalaryPeriodSetting`)
+
+Konfigurable cycle start day. Default 8.
+
+**Mid-cycle cutover policy:** agar CEO joriy davr ichida `effectiveFrom` qo'ysa, service avtomatik ravishda eski jadval bo'yicha keyingi davr boshiga ko'chiradi.
+
+**Cron:** `0 2 * * *` (har kuni 02:00 Tashkent). Har company uchun `isCycleStartDayForCompany` tekshiradi.
+
+## 14. Lesson Cancellation (`LessonCancellation`)
+
+Per-group dars bekor qilish (Holiday — company-wide). Partial unique `WHERE deletedAt IS NULL`.
+
+**Atomik cascade:** `LessonCancellationsService.create()`:
+1. `LessonCancellation` qator.
+2. PRESENT/LATE attendance'larni topish.
+3. Har biri uchun: status → EXCUSED, `cancellationId` set, billing reverse cascade.
+
+**Soft delete:** attendance/billing'ni avtomatik qaytarmaydi.
+
+**Date format:** `T00:00:00.000Z` — attendance bilan bir xil.
+
+**Teacher scope:** `groupId` majburiy, Teacher faqat o'z guruhlari.
+
+## 15. Lesson Trail (`GET /transactions/student/:id/lesson-trail`)
+
+Per-student "har so'm qayerga ketdi?" hisoboti.
+
+## 16. Initial Balance
+
+`POST /students/:id/initial-balance` (CEO-only). Eski tizimdan o'tkazilayotgan o'quvchilar uchun bir martagina kirish.
+
+## 17. Enrollment Lifecycle Prepaid Refund
+
+`EnrollmentBillingService.refundPrepaidToBalance(tx, ...)` — eng oxirgi unreversed `LESSON_DEDUCTION.metadata.perLessonCost` ishlatiladi. Chaqiriladi: removeFromGroup (DROPPED) + Transfer (TRANSFERRED + new enrollment), atomic.
+
+## 18. Payment Reverse Block
+
+`reverse()` agar shu to'lov funded qilgan aktiv `LESSON_CONSUMPTION` bo'lsa 400 qaytaradi.
+
+## 19. CEO-only restriction
+
+| Endpoint | Eski | Yangi |
+|---|---|---|
+| `POST /salary/config` | CEO + BD | CEO faqat |
+| `POST /salary/config/global` | CEO + BD | CEO faqat |
+| `PATCH /salary/config/:id` | CEO + BD | CEO faqat |
+| `POST /salary/period-settings` | yangi | CEO faqat |
+| `GET/PATCH /salary/tax-config` | yangi | CEO faqat |
+
+## 20. Yangi endpointlar
+
+| Endpoint | Role | Maqsad |
+|---|---|---|
+| `GET /salary/me/summary` | auth | Ustozning o'z oyligi |
+| `GET /salary/me/accruals` | auth | Accruals |
+| `GET /salary/me/current-cycle/breakdown` | auth | Joriy davr breakdown |
+| `GET /salary/me/payments/:id/breakdown` | auth | Salary payment (faqat o'zi) |
+| `GET /salary/payments/:id/breakdown` | CEO/BD/Admin | Boshqa ustoz |
+| `GET /salary/config-history/:userId` | CEO/BD/Admin | Salary config tarix |
+| `GET /salary/timeline/:userId` | CEO/BD/Admin | Birlashtirilgan timeline |
+| `GET /salary/period-settings` | CEO/BD/Admin | Period sozlamalar |
+| `POST /salary/period-settings` | CEO | Yangi period |
+| `GET /salary/tax-config` | CEO | Soliq stavkasi |
+| `PATCH /salary/tax-config` | CEO | Soliq update |
+| `POST /students/:id/initial-balance` | CEO | Boshlang'ich balans |
+| `GET /transactions/student/:id/lesson-trail` | CEO/BD/Admin/Cashier | Per-student ledger |
+| `POST /lesson-cancellations` | CEO/BD/Admin | Dars bekor qilish |
+| `DELETE /lesson-cancellations/:id` | CEO/BD | Soft delete |
+| `GET /lesson-cancellations` | hamma | Ro'yxat (Teacher faqat o'z guruhlari) |
+| `POST /billing/lesson-deduction/:id/reverse` | CEO/BD | Tsikl batch'ni bekor qilish |
+
+## 21. Frontend yangiliklar
+
+| Joy | Tafsilot |
+|---|---|
+| `/payments/salary` Sozlamalar dropdown | Xodim stavkalari / Hisoblash davri / Soliq stavkasi |
+| `/payments/salary` "Davrni yakunlash" tugmasi | Eski "Oylikni hisoblash" — Play ikona |
+| Salary breakdown drawer | Salary qatoriga bosish — har dars + CSV export |
+| `/profile/salary` (lehrer) | Ustozning o'z oyligi |
+| Group "Bekor qilingan" tab | Cancel + reverse cascade |
+| Teacher "Taymlayn" tab | Salary + group + profile o'zgarishlari |
+| Student "Dars-ma-dars" tab | Ledger trail |
+| Student dropdown "Boshlang'ich balans" (CEO) | Initial balance |
+| Salary config dialog `effectiveFrom` | Date picker |
+
+## 22. Test coverage
+
+| Spec | Testlar |
+|---|---|
+| `entity-history.service.spec.ts` | 6 (tx-awareness) |
+| `refunds-eligibility.service.spec.ts` | 6 (regression) |
+| `resolve-current-period.spec.ts` | 9 (period bounds) |
+| `salary-accrual.service.spec.ts` | 12 (versioning + FIXED_PER_STUDENT) |
+| `salary.controller.spec.ts` | 19 (role assertion) |
+| `lesson-billing.service.spec.ts` | 15 (matrix + scenarios) |
+| `enrollment-billing.service.spec.ts` | 5 (prepaid refund) |
+| `lesson-cancellations.service.spec.ts` | 7 (cascade) |
+| `payments.service.spec.ts` | +1 (reverse-block) |
+
+**Jami yangi:** ~80 test. Backend hozirda 892/892 muvaffaqiyatli o'tadi.
+
+## 23. Migration tartibi
+
+1. `20260427183245_financial_model_v2` — yangi schema.
+2. `20260428010035_fix_reversed_filter_and_constraints` — `Transaction.reversedAt`/`reversedById`, partial unique'larni `reversedAt IS NULL` ga, `LessonCancellation` partial unique.
+
+Backfill skriptlari:
+- `scripts/backfill-salary-config-versions.ts`
+- `scripts/backfill-salary-period-setting.ts`
+- `scripts/migrate-cycle-to-prepaid.ts`

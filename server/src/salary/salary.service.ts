@@ -26,29 +26,37 @@ export class SalaryService {
   getConfig(userId: number, companyId: number) {
     return this.config.getConfig(userId, companyId);
   }
-  createConfig(dto: CreateSalaryConfigDto, companyId: number) {
-    return this.config.createConfig(dto, companyId);
+  getConfigsForUsers(userIds: number[], companyId: number) {
+    return this.config.getConfigsForUsers(userIds, companyId);
   }
-  applyGlobalConfig(dto: GlobalSalaryConfigDto, companyId: number) {
-    return this.config.applyGlobalConfig(dto, companyId);
+  getConfigHistory(userId: number, companyId: number) {
+    return this.config.getHistory(userId, companyId);
   }
-  updateConfig(id: string, dto: UpdateSalaryConfigDto, companyId: number) {
-    return this.config.updateConfig(id, dto, companyId);
+  createConfig(
+    dto: CreateSalaryConfigDto,
+    companyId: number,
+    changedById?: number,
+  ) {
+    return this.config.createConfig(dto, companyId, changedById);
+  }
+  applyGlobalConfig(
+    dto: GlobalSalaryConfigDto,
+    companyId: number,
+    changedById?: number,
+  ) {
+    return this.config.applyGlobalConfig(dto, companyId, changedById);
+  }
+  updateConfig(
+    id: string,
+    dto: UpdateSalaryConfigDto,
+    companyId: number,
+    changedById?: number,
+  ) {
+    return this.config.updateConfig(id, dto, companyId, changedById);
   }
 
-  // Accrual
-  createAccrual(params: {
-    teacherId: number;
-    studentId: number;
-    groupId: string;
-    attendanceId: string;
-    lessonDate: Date;
-    perLessonCost: number;
-    companyId: number;
-    deductionTransactionId?: string | null;
-  }) {
-    return this.accrual.createAccrual(params);
-  }
+  // Accrual reads (writes go through SalaryAccrualService directly from
+  // LessonBillingService — keeping the facade thin to one responsibility).
   getAccruals(userId: number, companyId: number) {
     return this.accrual.getAccruals(userId, companyId);
   }

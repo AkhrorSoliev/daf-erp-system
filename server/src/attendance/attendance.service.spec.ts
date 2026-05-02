@@ -8,8 +8,7 @@ import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { TransactionsService } from '../transactions/transactions.service';
-import { SalaryService } from '../salary/salary.service';
+import { LessonBillingService } from '../billing/lesson-billing.service';
 
 const mockGroup = {
   id: 'group-uuid-1',
@@ -22,8 +21,12 @@ const mockGroup = {
   lessonStartTime: '09:00',
   lessonEndTime: '11:00',
   _count: { enrollments: 2 },
+  course: { price: 800000, lessonPaymentCount: 12 },
 };
 
+// Both students have balances above the per-lesson threshold (800000/12 ≈
+// 66,667), so neither is a debtor — keeps the existing assertions on the
+// "all students appear in the active list" path stable.
 const mockEnrollments = [
   {
     studentId: 10001,
@@ -42,7 +45,7 @@ const mockEnrollments = [
       firstName: 'Dilnoza',
       lastName: 'Rashidova',
       photo: null,
-      balance: 0,
+      balance: 100000,
     },
   },
 ];
@@ -67,6 +70,18 @@ describe('AttendanceService', () => {
       holiday: {
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockResolvedValue(null),
+      },
+      lessonCancellation: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      lessonReschedule: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      lessonTeacherOverride: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       attendance: {
         groupBy: jest.fn().mockResolvedValue([]),
@@ -101,14 +116,10 @@ describe('AttendanceService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
         {
-          provide: TransactionsService,
-          useValue: { deductLessonFee: jest.fn(), recordPayment: jest.fn() },
+          provide: LessonBillingService,
+          useValue: { processAttendanceBilling: jest.fn() },
         },
-        { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
-        {
-          provide: EventEmitter2,
-          useValue: (eventEmitter = { emit: jest.fn() }),
-        },
+        { provide: EventEmitter2, useValue: (eventEmitter = { emit: jest.fn() }) },
       ],
     }).compile();
 
@@ -385,6 +396,31 @@ describe('AttendanceService', () => {
       expect(dates).not.toContain('2026-04-01');
     });
 
+    it('drops a date that has been rescheduled away (originalDate)', async () => {
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-04T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getLessonDates('group-uuid-1', 4, 2026);
+      const dates = result.map((r) => r.date);
+      // 2026-04-01 (Wed) was a regular lesson day; lesson moved to 2026-04-04 (Sat)
+      expect(dates).not.toContain('2026-04-01');
+      // 2026-04-04 is a Saturday — outside exactDays — but reschedule lands here
+      expect(dates).toContain('2026-04-04');
+    });
+
+    it('drops a date that has an active cancellation', async () => {
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { date: new Date('2026-04-01T00:00:00Z') },
+      ]);
+
+      const result = await service.getLessonDates('group-uuid-1', 4, 2026);
+      expect(result.map((r) => r.date)).not.toContain('2026-04-01');
+    });
+
     it('should return empty array when group has no exactDays', async () => {
       prisma.group.findFirst.mockResolvedValue({
         ...mockGroup,
@@ -419,6 +455,108 @@ describe('AttendanceService', () => {
     });
   });
 
+  describe('getLessonCalendar', () => {
+    it('marks regular lesson days with type=regular', async () => {
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+      // mockGroup has exactDays Mon/Wed/Fri; April 2026 contains the usual mix
+      expect(result.cells.length).toBeGreaterThan(0);
+      const apr1 = result.cells.find((c) => c.date === '2026-04-01');
+      expect(apr1?.type).toBe('regular');
+    });
+
+    it('marks rescheduled-to dates with movedFrom (when newDate is outside exactDays)', async () => {
+      // Move Wed Apr 1 → Sat Apr 4 (Saturday is NOT in exactDays).
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-04T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const movedHere = result.cells.find((c) => c.date === '2026-04-04');
+      expect(movedHere?.type).toBe('rescheduledTo');
+      expect(movedHere?.movedFrom).toBe('2026-04-01');
+
+      const movedAway = result.cells.find((c) => c.date === '2026-04-01');
+      expect(movedAway?.type).toBe('rescheduledFrom');
+      expect(movedAway?.movedTo).toBe('2026-04-04');
+    });
+
+    it("keeps newDate as 'regular' when it's already a normal lesson day, but stores movedFrom for tooltip", async () => {
+      // Move Wed Apr 1 → Wed Apr 8 — Apr 8 is already a regular Wednesday.
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-08T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const dest = result.cells.find((c) => c.date === '2026-04-08');
+      expect(dest?.type).toBe('regular'); // not promoted to rescheduledTo
+      expect(dest?.movedFrom).toBe('2026-04-01');
+
+      const src = result.cells.find((c) => c.date === '2026-04-01');
+      expect(src?.type).toBe('rescheduledFrom');
+    });
+
+    it('marks cancelled dates with type=cancelled and reason', async () => {
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { date: new Date('2026-04-01T00:00:00Z'), reason: 'Bayram' },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const cancelled = result.cells.find((c) => c.date === '2026-04-01');
+      expect(cancelled?.type).toBe('cancelled');
+      expect(cancelled?.cancellationReason).toBe('Bayram');
+    });
+
+    it('cancellation overrides reschedule on the same date', async () => {
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        {
+          originalDate: new Date('2026-04-01T00:00:00Z'),
+          newDate: new Date('2026-04-04T00:00:00Z'),
+        },
+      ]);
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { date: new Date('2026-04-01T00:00:00Z'), reason: 'Test' },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const apr1 = result.cells.find((c) => c.date === '2026-04-01');
+      expect(apr1?.type).toBe('cancelled');
+    });
+
+    it('merges attendance counts only for live cells (regular/rescheduledTo)', async () => {
+      prisma.attendance.groupBy.mockResolvedValue([
+        {
+          date: new Date('2026-04-01T00:00:00Z'),
+          status: 'PRESENT',
+          _count: 5,
+        },
+      ]);
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      const apr1 = result.cells.find((c) => c.date === '2026-04-01');
+      expect(apr1?.hasAttendance).toBe(true);
+      expect(apr1?.presentCount).toBe(5);
+    });
+
+    it('throws NotFoundException when group is missing', async () => {
+      prisma.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getLessonCalendar('non-existent', 4, 2026),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('getByDate', () => {
     it('should return students with attendance status', async () => {
       prisma.attendance.findMany.mockResolvedValue([
@@ -431,17 +569,23 @@ describe('AttendanceService', () => {
 
       const result = await service.getByDate('group-uuid-1', '2026-04-01');
 
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        studentId: 10001,
-        firstName: 'Ahmad',
-        lastName: 'Karimov',
-        photo: null,
-        status: 'PRESENT',
-        note: null,
-      });
-      // Second student has no attendance record
-      expect(result[1].status).toBeNull();
+      // New shape: { activeStudents, debtorStudents, perLessonCost, coursePrice }
+      expect(result.activeStudents).toHaveLength(2);
+      expect(result.activeStudents[0]).toEqual(
+        expect.objectContaining({
+          studentId: 10001,
+          firstName: 'Ahmad',
+          lastName: 'Karimov',
+          photo: null,
+          status: 'PRESENT',
+          note: null,
+          isDebtor: false,
+        }),
+      );
+      expect(result.activeStudents[1].status).toBeNull();
+      // No debtors in the seed (both balances > perLessonCost = 66,667)
+      expect(result.debtorStudents).toEqual([]);
+      expect(result.coursePrice).toBe(800000);
     });
 
     it('should throw NotFoundException when group not found', async () => {
@@ -493,7 +637,7 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue(
-        mockEnrollments.map((e) => ({ studentId: e.studentId })),
+        mockEnrollments.map((e) => ({ studentId: e.studentId, student: { balance: e.student.balance } })),
       );
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert
@@ -544,7 +688,9 @@ describe('AttendanceService', () => {
     });
 
     it('should throw BadRequestException for unenrolled student', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
 
       const dto = {
         entries: [{ studentId: 99999, status: 'PRESENT' }],
@@ -676,7 +822,7 @@ describe('AttendanceService', () => {
         },
       ];
 
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
+      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001, student: { balance: 500000 } }]);
       prisma.attendance.findMany.mockResolvedValue(existingRecords);
       prisma.attendance.upsert.mockResolvedValue(mockResults[0]);
 
@@ -781,7 +927,7 @@ describe('AttendanceService', () => {
     });
 
     it('should allow Admin to edit attendance even after it was taken', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001 }]);
+      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001, student: { balance: 500000 } }]);
       prisma.attendance.findMany.mockResolvedValue([
         {
           id: 'att-existing',
@@ -834,7 +980,7 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue(
-        mockEnrollments.map((e) => ({ studentId: e.studentId })),
+        mockEnrollments.map((e) => ({ studentId: e.studentId, student: { balance: e.student.balance } })),
       );
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert
@@ -885,8 +1031,8 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue([
-        { studentId: 10001 },
-        { studentId: 10002 },
+        { studentId: 10001, student: { balance: 500000 } },
+        { studentId: 10002, student: { balance: 500000 } },
       ]);
       prisma.attendance.findMany.mockResolvedValue(existingRecords);
       prisma.attendance.upsert
@@ -909,8 +1055,8 @@ describe('AttendanceService', () => {
       prisma.group.findUnique.mockResolvedValue({
         name: 'Deutsch A1',
         branchId: 1,
-        course: { price: 800000, lessonPaymentCount: 12 },
         teachers: [{ teacherId: 20001 }],
+        course: { price: 800000, lessonPaymentCount: 12 },
       });
 
       const dto = {
@@ -1138,6 +1284,28 @@ describe('AttendanceService', () => {
       await expect(service.getLessonSequence('non-existent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should include overrideDates for lessons with substitute teachers', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.lessonTeacherOverride.findMany.mockResolvedValue([
+        { date: new Date('2024-01-03T00:00:00.000Z') },
+        { date: new Date('2024-01-08T00:00:00.000Z') },
+      ]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.overrideDates).toEqual(['2024-01-03', '2024-01-08']);
+    });
+
+    it('should return empty overrideDates when no overrides exist', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.overrideDates).toEqual([]);
     });
 
     it('should pass companyId to group query', async () => {

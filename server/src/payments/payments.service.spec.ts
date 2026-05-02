@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentsService } from './payments.service';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
@@ -70,7 +71,12 @@ describe('PaymentsService', () => {
         count: jest.fn().mockResolvedValue(1),
       },
       transaction: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'txn-uuid-1' }),
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'txn-uuid-1', createdAt: new Date() }),
+        // Default to 0 — meaning no LESSON_CONSUMPTION downstream of the
+        // reversed payment, so the reverse() guard lets the test through.
+        count: jest.fn().mockResolvedValue(0),
       },
       $transaction: jest.fn().mockImplementation((fn) => {
         if (typeof fn === 'function') return fn(prisma);
@@ -100,6 +106,7 @@ describe('PaymentsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: EntityHistoryService, useValue: entityHistoryService },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
@@ -285,6 +292,26 @@ describe('PaymentsService', () => {
       await service.reverse(paymentId, params);
 
       expect(prisma.contract.update).not.toHaveBeenCalled();
+    });
+
+    // Faza 5.1 — when this payment funded LESSON_CONSUMPTION rows (i.e.
+    // the money is already spent on lessons), reverse() must refuse so the
+    // user is forced down the formal Refund path with proper math.
+    it('throws when downstream LESSON_CONSUMPTION exists', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        id: paymentId,
+        studentId: 10001,
+        amount: 500000,
+        contractId: 'contract-uuid-1',
+        status: PaymentStatus.COMPLETED,
+      });
+      prisma.transaction.count.mockResolvedValue(3); // 3 consumption rows
+
+      await expect(service.reverse(paymentId, params)).rejects.toThrow(
+        /sarflangan/,
+      );
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when payment is not found', async () => {

@@ -28,7 +28,7 @@ import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
-import { DepartureReasonsModule } from './departure-reasons/departure-reasons.module';
+import { StudentExitReasonsModule } from './student-exit-reasons/student-exit-reasons.module';
 import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/group-teacher-change-reasons.module';
 import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
 import { TransactionsModule } from './transactions/transactions.module';
@@ -38,6 +38,11 @@ import { SalaryModule } from './salary/salary.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
+import { LessonCancellationsModule } from './lesson-cancellations/lesson-cancellations.module';
+import { LessonTeacherOverridesModule } from './lesson-teacher-overrides/lesson-teacher-overrides.module';
+import { LessonReschedulesModule } from './lesson-reschedules/lesson-reschedules.module';
+import { BillingModule } from './billing/billing.module';
+import { ReceiptsModule } from './receipts/receipts.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -70,7 +75,7 @@ import { JwtAuthGuard } from './common/guards';
     SearchModule,
     DashboardModule,
     ReportsModule,
-    DepartureReasonsModule,
+    StudentExitReasonsModule,
     GroupTeacherChangeReasonsModule,
     EnrollmentTransferReasonsModule,
     TransactionsModule,
@@ -80,6 +85,11 @@ import { JwtAuthGuard } from './common/guards';
     RefundsModule,
     ExpensesModule,
     PaymentGatewaysModule,
+    BillingModule,
+    LessonCancellationsModule,
+    LessonTeacherOverridesModule,
+    LessonReschedulesModule,
+    ReceiptsModule,
   ],
   providers: [
     {

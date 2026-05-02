@@ -37,6 +37,12 @@ interface Props {
     lastName: string;
     balance: number;
   } | null;
+  /**
+   * Pre-fill the amount input when the caller knows the right value
+   * (e.g. opening from the attendance debtors panel: full course price).
+   * The user can still edit it before submitting.
+   */
+  suggestedAmount?: number;
 }
 
 const QUICK_AMOUNTS = [100_000, 200_000, 300_000, 400_000, 500_000, 800_000, 1_000_000];
@@ -49,7 +55,13 @@ const methodOptions = [
   { value: "TRANSFER", label: "Bank o'tkazmasi" },
 ];
 
-export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preSelectedStudent }: Props) {
+export function RecordPaymentDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+  preSelectedStudent,
+  suggestedAmount,
+}: Props) {
   const queryClient = useQueryClient();
   const { selectedBranch } = useBranchSwitcher();
   const [studentSearch, setStudentSearch] = useState("");
@@ -76,6 +88,16 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preSelected
       setSelectedStudent(preSelectedStudent);
     }
   }, [open, preSelectedStudent]);
+
+  // Pre-fill amount only on initial open. Re-syncing on every render would
+  // overwrite the user's edits — that's why we key the effect on `open`.
+  // Format with uz-UZ thousand separators (matches handleAmountChange) so
+  // the input shows e.g. "800 000" instead of bare "800000".
+  useEffect(() => {
+    if (open && suggestedAmount && suggestedAmount > 0) {
+      setAmount(suggestedAmount.toLocaleString("uz-UZ"));
+    }
+  }, [open, suggestedAmount]);
 
   // External transaction binding (Payme/Click/Uzum) is only meaningful for
   // non-cash methods. Keep the field hidden for CASH.
@@ -268,6 +290,11 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preSelected
                 so&apos;m
               </span>
             </div>
+            {suggestedAmount && suggestedAmount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Tavsiya: {formatPrice(suggestedAmount)} so&apos;m — kurs to&apos;liq tsikl narxi
+              </p>
+            )}
             <div className="flex flex-wrap gap-1.5">
               {QUICK_AMOUNTS.map((qa) => (
                 <Button

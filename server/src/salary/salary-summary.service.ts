@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryType } from '@prisma/client';
-import { calculateTax } from './tax.helper';
-import { getSalaryTaxRate } from './shared/get-salary-tax-rate';
 
 @Injectable()
 export class SalarySummaryService {
   constructor(private prisma: PrismaService) {}
 
   async getTeacherSalarySummary(teacherId: number, companyId: number) {
+    // Use the parent (mirror) values for "expected" since that's what's
+    // currently in effect. For history-aware breakdowns, callers should
+    // hit the per-payment breakdown endpoint instead.
     const configs = await this.prisma.employeeSalaryConfig.findMany({
       where: { userId: teacherId, isActive: true, companyId },
       select: {
@@ -78,7 +79,12 @@ export class SalarySummaryService {
               (perLessonCost * groupConfig.value) / 100,
             );
           } else {
-            expectedPerStudentPerLesson = groupConfig.value;
+            // FIXED_PER_STUDENT: `value` is per-student-per-cycle. Divide
+            // by lessonPaymentCount to get per-lesson. This previously
+            // returned the full value per lesson, inflating expectations.
+            expectedPerStudentPerLesson = Math.round(
+              groupConfig.value / lessonPaymentCount,
+            );
           }
         }
 
@@ -97,15 +103,38 @@ export class SalarySummaryService {
         };
       });
 
+    // Filter out reversed accruals from "actually earned" — those rows
+    // exist for audit but are not paid out by the salary cron.
+    const accrualWhere = {
+      userId: teacherId,
+      companyId,
+      salaryPaymentId: null,
+      reversedAt: null,
+    };
     const unpaidAccruals = await this.prisma.salaryAccrual.aggregate({
-      where: { userId: teacherId, companyId, salaryPaymentId: null },
+      where: accrualWhere,
       _sum: { amount: true },
       _count: true,
     });
 
+    // For the UI summary card we surface `lessonsCount` (distinct lesson
+    // dates the teacher actually held) and `studentsCount` (distinct
+    // students who attended). `accrualCount` is the cross-product
+    // (lessons × students) and is too abstract for an at-a-glance card —
+    // we keep it for downstream consumers but lead the UI with the two
+    // friendlier numbers.
+    const lessonsByDate = await this.prisma.salaryAccrual.groupBy({
+      by: ['lessonDate'],
+      where: accrualWhere,
+    });
+    const studentsByStudent = await this.prisma.salaryAccrual.groupBy({
+      by: ['studentId'],
+      where: accrualWhere,
+    });
+
     const paidTotal = await this.prisma.salaryPayment.aggregate({
       where: { userId: teacherId, companyId, status: 'PAID' },
-      _sum: { netAmount: true },
+      _sum: { amount: true },
     });
 
     const fixedMonthlyConfig = configs.find(
@@ -115,24 +144,13 @@ export class SalarySummaryService {
       ? fixedMonthlyConfig.value
       : groupsBreakdown.reduce((sum, g) => sum + g.expectedMonthly, 0);
 
-    // Show the teacher what they'd actually take home after tax, not just gross.
-    const taxRate = await getSalaryTaxRate(this.prisma, companyId);
-    const actualEarnedGross = unpaidAccruals._sum.amount ?? 0;
-    const expectedTax = calculateTax(expectedMonthlyTotal, taxRate).taxAmount;
-    const expectedNet = expectedMonthlyTotal - expectedTax;
-    const actualEarnedTax = calculateTax(actualEarnedGross, taxRate).taxAmount;
-    const actualEarnedNet = actualEarnedGross - actualEarnedTax;
-
     return {
       expectedMonthly: expectedMonthlyTotal,
-      expectedTax,
-      expectedNet,
-      actualEarned: actualEarnedGross,
-      actualEarnedTax,
-      actualEarnedNet,
+      actualEarned: unpaidAccruals._sum.amount ?? 0,
       accrualCount: unpaidAccruals._count,
-      paidTotal: paidTotal._sum.netAmount ?? 0,
-      taxRate,
+      lessonsCount: lessonsByDate.length,
+      studentsCount: studentsByStudent.length,
+      paidTotal: paidTotal._sum.amount ?? 0,
       groups: groupsBreakdown,
       hasConfig: configs.length > 0,
       isFixedMonthly: !!fixedMonthlyConfig,

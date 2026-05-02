@@ -9,8 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
-import { TransactionsService } from '../transactions/transactions.service';
-import { SalaryService } from '../salary/salary.service';
+import { LessonBillingService } from '../billing/lesson-billing.service';
 
 const validatedGroup = {
   id: 'group-1',
@@ -38,7 +37,11 @@ describe('QrAttendanceService', () => {
           exactDays: ['monday', 'wednesday', 'friday'],
           startDate: new Date('2026-03-01'),
         }),
-        findUnique: jest.fn().mockResolvedValue({ name: 'A1-1' }),
+        findUnique: jest.fn().mockResolvedValue({
+          name: 'A1-1',
+          branchId: 1,
+          course: { price: 400000, lessonPaymentCount: 12 },
+        }),
       },
       enrollment: {
         count: jest.fn().mockResolvedValue(10),
@@ -46,6 +49,7 @@ describe('QrAttendanceService', () => {
           id: 'enroll-1',
           studentId: 10001,
           groupId: 'group-1',
+          startDate: null,
         }),
       },
       attendance: {
@@ -70,7 +74,14 @@ describe('QrAttendanceService', () => {
       },
       holiday: {
         findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
+      lessonCancellation: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      // Interactive transaction: callback gets prisma itself as tx so all
+      // model mocks are reachable inside the $transaction block.
+      $transaction: jest.fn((cb) => cb(prisma)),
     };
 
     redis = {
@@ -110,10 +121,9 @@ describe('QrAttendanceService', () => {
         { provide: EntityHistoryService, useValue: entityHistory },
         { provide: AttendanceService, useValue: attendanceService },
         {
-          provide: TransactionsService,
-          useValue: { deductLessonFee: jest.fn() },
+          provide: LessonBillingService,
+          useValue: { processAttendanceBilling: jest.fn() },
         },
-        { provide: SalaryService, useValue: { createAccrual: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();

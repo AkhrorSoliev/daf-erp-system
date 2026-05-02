@@ -61,13 +61,15 @@ interface StudentProfileCardProps {
   onPaymentClick?: () => void;
   onPaymentHistoryClick?: () => void;
   onRefundClick?: () => void;
+  onInitialBalanceClick?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onInitialBalanceClick }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const router = useRouter();
   const authUser = useAuth((s) => s.user);
   const canManage = authUser?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const isCeo = authUser?.roles.some((r) => r.id === 1) ?? false;
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
@@ -194,6 +196,11 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                 <DropdownMenuItem onClick={onPaymentClick}>To&apos;lov qo&apos;shish</DropdownMenuItem>
                 <DropdownMenuItem onClick={onPaymentHistoryClick}>To&apos;lov tarixi</DropdownMenuItem>
                 <DropdownMenuItem onClick={onRefundClick}>Pulni qaytarish</DropdownMenuItem>
+                {isCeo && onInitialBalanceClick && (
+                  <DropdownMenuItem onClick={onInitialBalanceClick}>
+                    Boshlang&apos;ich balans
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { StudentGroupCard } from "./student-group-card";
 import { StudentPaymentsTable } from "./student-payments-table";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
+import { LessonTrailTab } from "./lesson-trail-tab";
 import type { StudentTransaction } from "./student-profile-tabs-utils";
 
 function EmptyState({ message }: { message: string }) {
@@ -103,33 +104,45 @@ export function StudentProfileTabs({
     );
   }, []);
 
-  const handleTabChange = (value: string) => {
-    if (value === "tarix" && !historyShown.current) {
-      historyShown.current = true;
-      setHistoryVisible(true);
-    }
-    if (value === "izohlar" && !commentsShown.current) {
-      commentsShown.current = true;
-      setCommentsVisible(true);
-    }
-    if (value === "sms" && !smsShown.current) {
-      smsShown.current = true;
-      setSmsVisible(true);
-    }
-    if (value === "tolovlar" && !paymentsShown.current) {
-      paymentsShown.current = true;
-      setPaymentsVisible(true);
-      setPaymentsLoading(true);
-      // Single fetch — /transactions/student includes PAYMENT rows (with
-      // payment.method) plus all other ledger operations (deductions, refunds,
-      // adjustments). No need for a separate /payments call.
-      api
-        .get(`/transactions/student/${student.id}`, { params: { pageSize: 20 } })
-        .then((res) => setTransactions(res.data.data))
-        .catch(() => {})
-        .finally(() => setPaymentsLoading(false));
-    }
-  };
+  const handleTabChange = useCallback(
+    (value: string) => {
+      if (value === "tarix" && !historyShown.current) {
+        historyShown.current = true;
+        setHistoryVisible(true);
+      }
+      if (value === "izohlar" && !commentsShown.current) {
+        commentsShown.current = true;
+        setCommentsVisible(true);
+      }
+      if (value === "sms" && !smsShown.current) {
+        smsShown.current = true;
+        setSmsVisible(true);
+      }
+      if (value === "tolovlar" && !paymentsShown.current) {
+        paymentsShown.current = true;
+        setPaymentsVisible(true);
+        setPaymentsLoading(true);
+        // Money-flow rows only — lesson deductions/consumption belong to
+        // the "Darslar" tab, not here.
+        api
+          .get(`/transactions/student/${student.id}`, {
+            params: {
+              pageSize: 20,
+              types: "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE",
+            },
+          })
+          .then((res) => setTransactions(res.data.data))
+          .catch(() => {})
+          .finally(() => setPaymentsLoading(false));
+      }
+    },
+    [student.id],
+  );
+
+  // Trigger lazy-load on direct URL navigation (e.g. ?tab=tolovlar on first load).
+  useEffect(() => {
+    if (activeTab) handleTabChange(activeTab);
+  }, [activeTab, handleTabChange]);
 
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [removeEnrollmentId, setRemoveEnrollmentId] = useState<string | null>(
@@ -140,10 +153,12 @@ export function StudentProfileTabs({
   const [removing, setRemoving] = useState(false);
 
   const { data: departureReasons } = useQuery<{ id: string; name: string }[]>({
-    queryKey: ["departure-reasons"],
+    queryKey: ["student-exit-reasons", "GROUP_REMOVAL"],
     queryFn: () =>
       api
-        .get<{ id: string; name: string }[]>("/departure-reasons")
+        .get<{ id: string; name: string }[]>("/student-exit-reasons", {
+          params: { appliesTo: "GROUP_REMOVAL" },
+        })
         .then((r) => r.data),
     enabled: removeDialogOpen,
   });
@@ -201,6 +216,7 @@ export function StudentProfileTabs({
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
           {canManage && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
+          {canManage && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
           {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
           {canManage && (
             <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
@@ -267,6 +283,13 @@ export function StudentProfileTabs({
             <EmptyState message="To'lov ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
+
+        {/* Darslar */}
+        {canManage && (
+          <TabsContent value="darslar">
+            <LessonTrailTab studentId={student.id} />
+          </TabsContent>
+        )}
 
         {/* Izohlar */}
         <TabsContent value="izohlar">

@@ -183,5 +183,27 @@ describe('DashboardService', () => {
         }),
       );
     });
+
+    it('should query attendance with UTC-midnight date (matches save path)', async () => {
+      // Regression test: previously, dateOnly was built with local-time
+      // components, so on a Tashkent-timezone server the query date was off
+      // by one day from what attendance-validation.service.ts:36 stores
+      // (`new Date(date + 'T00:00:00.000Z')`). Result: dashboard always
+      // showed "davomat olinmagan" even when attendance had been saved.
+      await service.getTodaySchedule(1, 1001, '2026-05-01');
+
+      const expectedUtcMidnight = new Date('2026-05-01T00:00:00.000Z');
+
+      expect(prisma.attendance.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ date: expectedUtcMidnight }),
+        }),
+      );
+      expect(prisma.holiday.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ date: expectedUtcMidnight }),
+        }),
+      );
+    });
   });
 });

@@ -4,10 +4,10 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { StudentStatus } from '@prisma/client';
+import { Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { TransactionsService } from '../transactions/transactions.service';
+import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class StudentEnrollmentService {
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
-    private transactionsService: TransactionsService,
+    private enrollmentBillingService: EnrollmentBillingService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -26,7 +26,7 @@ export class StudentEnrollmentService {
     groupId: string,
     userId: number,
     companyId: number,
-    options: { transferReasonId?: string } = {},
+    options: { transferReasonId?: string; startDate?: string } = {},
   ) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, deletedAt: null, companyId },
@@ -59,6 +59,35 @@ export class StudentEnrollmentService {
       );
     }
 
+    // Resolve startDate. The dropdown sends "YYYY-MM-DD" (Tashkent calendar);
+    // omitted means "from today". We don't validate that the date matches
+    // the group's exactDays here — admins may legitimately want to enroll
+    // someone "starting from the next lesson" and let attendance/billing
+    // gates do the rest. Loose validation: must be a real date, not in the
+    // distant future or past.
+    let resolvedStartDate: Date;
+    if (options.startDate) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(options.startDate)) {
+        throw new BadRequestException(
+          "Boshlanish sanasi YYYY-MM-DD formatida bo'lishi kerak",
+        );
+      }
+      const parsed = new Date(`${options.startDate}T00:00:00.000Z`);
+      if (isNaN(parsed.getTime())) {
+        throw new BadRequestException("Noto'g'ri boshlanish sanasi");
+      }
+      resolvedStartDate = parsed;
+    } else {
+      // Default: today's date in Tashkent (UTC+5, no DST), truncated to
+      // midnight. Matches the convention used by attendance.date.
+      const now = new Date();
+      const tashkent = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+      const y = tashkent.getUTCFullYear();
+      const m = String(tashkent.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(tashkent.getUTCDate()).padStart(2, '0');
+      resolvedStartDate = new Date(`${y}-${m}-${d}T00:00:00.000Z`);
+    }
+
     const sameGroup = await this.prisma.enrollment.findFirst({
       where: { studentId, groupId, deletedAt: null, status: 'ACTIVE' },
     });
@@ -78,6 +107,7 @@ export class StudentEnrollmentService {
     // Transfer reason validation — only applies when this is a transfer
     // (i.e. there's an existing active enrollment being moved).
     let transferReasonId: string | null = null;
+    let enrollment: { id: string; createdAt?: Date };
     if (currentEnrollment) {
       const oldTeachers = new Set(
         currentEnrollment.group.teachers.map((t) => t.teacherId),
@@ -119,44 +149,77 @@ export class StudentEnrollmentService {
         transferReasonId = reason.id;
       }
 
-      await this.prisma.enrollment.update({
-        where: { id: currentEnrollment.id },
+      // P1.5 — Transfer is fully atomic now: refund + close old enrollment
+      // + create new enrollment + state log all in one transaction. If any
+      // step fails, the student is left with their original enrollment
+      // intact (instead of having no active enrollment at all).
+      const transferred = await this.prisma.$transaction(
+        async (tx) => {
+          await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
+            enrollmentId: currentEnrollment.id,
+            performedById: userId,
+            reason: "Guruh o'zgartirilganda qoldiq darslar uchun balans tiklash",
+          });
+          await tx.enrollment.update({
+            where: { id: currentEnrollment.id },
+            data: {
+              status: 'TRANSFERRED',
+              statusChangedAt: new Date(),
+              statusChangedById: userId,
+              statusChangeReason: `Guruh o'zgartirildi`,
+              transferredToId: groupId,
+              transferReasonId,
+            },
+          });
+          await tx.enrollmentStateLog.create({
+            data: {
+              enrollmentId: currentEnrollment.id,
+              status: 'TRANSFERRED',
+              transitionAt: new Date(),
+              reason: `Guruh o'zgartirildi`,
+              changedById: userId,
+            },
+          });
+
+          const fresh = await tx.enrollment.create({
+            data: { studentId, groupId, startDate: resolvedStartDate },
+          });
+          await tx.enrollmentStateLog.create({
+            data: {
+              enrollmentId: fresh.id,
+              status: 'ACTIVE',
+              transitionAt: fresh.createdAt,
+              changedById: userId,
+            },
+          });
+          return fresh;
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10_000,
+          timeout: 15_000,
+        },
+      );
+      // Atomic block already created the new enrollment + state log.
+      enrollment = transferred;
+    } else {
+      enrollment = await this.prisma.enrollment.create({
         data: {
-          status: 'TRANSFERRED',
-          statusChangedAt: new Date(),
-          statusChangedById: userId,
-          statusChangeReason: `Guruh o'zgartirildi`,
-          transferredToId: groupId,
-          transferReasonId,
+          studentId,
+          groupId,
+          startDate: resolvedStartDate,
         },
       });
+
       await this.prisma.enrollmentStateLog.create({
         data: {
-          enrollmentId: currentEnrollment.id,
-          status: 'TRANSFERRED',
-          transitionAt: new Date(),
-          reason: `Guruh o'zgartirildi`,
+          enrollmentId: enrollment.id,
+          status: 'ACTIVE',
+          transitionAt: enrollment.createdAt!,
           changedById: userId,
         },
       });
     }
-
-    const enrollment = await this.prisma.enrollment.create({
-      data: {
-        studentId,
-        groupId,
-      },
-    });
-
-    // Activity report — initial state log entry
-    await this.prisma.enrollmentStateLog.create({
-      data: {
-        enrollmentId: enrollment.id,
-        status: 'ACTIVE',
-        transitionAt: enrollment.createdAt,
-        changedById: userId,
-      },
-    });
 
     // Prepaid model (post-audit): do NOT deduct a cycle at enrollment.
     // Deduction only happens in attendance when the student actually has
@@ -267,16 +330,19 @@ export class StudentEnrollmentService {
       throw new NotFoundException("O'quvchi topilmadi");
     }
 
-    // Resolve the reason: prefer the configured DepartureReason (id + name),
-    // fall back to free-text, and finally to the default label.
+    // Resolve the reason: prefer the configured StudentExitReason (id + name),
+    // fall back to free-text. Reason is required — service-level validation
+    // is enforced after we know whether configured reasons exist for this
+    // company under the GROUP_REMOVAL exit type.
     let departureReasonId: string | null = null;
     let reasonText: string;
     if (input.departureReasonId) {
-      const reason = await this.prisma.departureReason.findFirst({
+      const reason = await this.prisma.studentExitReason.findFirst({
         where: {
           id: input.departureReasonId,
           companyId: student.companyId,
           deletedAt: null,
+          appliesTo: { has: 'GROUP_REMOVAL' },
         },
       });
       if (!reason) {
@@ -285,29 +351,65 @@ export class StudentEnrollmentService {
       departureReasonId = reason.id;
       reasonText = reason.name;
     } else {
-      reasonText = input.reason?.trim() || 'Guruhdan chiqarildi';
+      // No reasonId — check whether the company has any GROUP_REMOVAL
+      // reasons configured. If yes, force the user to pick one.
+      const configured = await this.prisma.studentExitReason.count({
+        where: {
+          companyId: student.companyId,
+          deletedAt: null,
+          appliesTo: { has: 'GROUP_REMOVAL' },
+        },
+      });
+      if (configured > 0) {
+        throw new BadRequestException(
+          "Ketish sababini tanlash majburiy",
+        );
+      }
+      const trimmed = input.reason?.trim();
+      if (!trimmed) {
+        throw new BadRequestException(
+          "Ketish sababini kiritish majburiy",
+        );
+      }
+      reasonText = trimmed;
     }
 
-    await this.prisma.enrollmentStateLog.create({
-      data: {
-        enrollmentId,
-        status: 'DROPPED',
-        transitionAt: new Date(),
-        reason: reasonText,
-        changedById: userId,
+    // Atomic: refund unused prepaid lessons + flip enrollment to DROPPED
+    // + write the state log. Order matters — refund first so we read the
+    // pre-DROPPED prepaidLessonsRemaining; the flip then closes the row.
+    await this.prisma.$transaction(
+      async (tx) => {
+        await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
+          enrollmentId,
+          performedById: userId,
+          reason: 'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
+        });
+        await tx.enrollmentStateLog.create({
+          data: {
+            enrollmentId,
+            status: 'DROPPED',
+            transitionAt: new Date(),
+            reason: reasonText,
+            changedById: userId,
+          },
+        });
+        await tx.enrollment.update({
+          where: { id: enrollmentId },
+          data: {
+            status: 'DROPPED',
+            statusChangedAt: new Date(),
+            statusChangedById: userId,
+            statusChangeReason: reasonText,
+            departureReasonId,
+          },
+        });
       },
-    });
-
-    await this.prisma.enrollment.update({
-      where: { id: enrollmentId },
-      data: {
-        status: 'DROPPED',
-        statusChangedAt: new Date(),
-        statusChangedById: userId,
-        statusChangeReason: reasonText,
-        departureReasonId,
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 15_000,
       },
-    });
+    );
 
     // Mirror the latest departure reason onto the student so it's visible
     // on the student record without joining enrollments.

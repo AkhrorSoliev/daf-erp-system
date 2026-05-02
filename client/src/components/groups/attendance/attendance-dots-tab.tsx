@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -42,6 +42,7 @@ interface StudentSequence {
 
 interface SequenceResponse {
   lessonDates: string[];
+  overrideDates: string[];
   expectedCount: number;
   students: StudentSequence[];
 }
@@ -83,18 +84,21 @@ function getPercentageColor(attended: number, expected: number): string {
 function AttendanceDots({
   dots,
   expectedCount,
+  overrideDateSet,
 }: {
   dots: Dot[];
   expectedCount: number;
+  overrideDateSet: Set<string>;
 }) {
   const placeholders = Math.max(0, expectedCount - dots.length);
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1.5">
       {dots.map((dot, i) => {
         const statusLabel = dot.status
           ? STATUS_LABEL[dot.status]
           : "Belgilanmagan";
+        const hasOverride = overrideDateSet.has(dot.date);
         return (
           <Tooltip key={`${dot.date}-${i}`}>
             <TooltipTrigger asChild>
@@ -102,8 +106,10 @@ function AttendanceDots({
                 className={cn(
                   "inline-block size-3 rounded-full border",
                   getDotClass(dot.status),
+                  hasOverride &&
+                    "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
                 )}
-                aria-label={`${format(new Date(dot.date + "T00:00:00"), "dd.MM.yyyy")} — ${statusLabel}`}
+                aria-label={`${format(new Date(dot.date + "T00:00:00"), "dd.MM.yyyy")} — ${statusLabel}${hasOverride ? " — O'rinbosar ustoz" : ""}`}
               />
             </TooltipTrigger>
             <TooltipContent>
@@ -112,6 +118,11 @@ function AttendanceDots({
               </span>
               {" — "}
               {statusLabel}
+              {hasOverride && (
+                <span className="text-blue-600 dark:text-blue-400">
+                  {" • O'rinbosar ustoz"}
+                </span>
+              )}
             </TooltipContent>
           </Tooltip>
         );
@@ -135,26 +146,20 @@ function AttendanceDots({
 }
 
 export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
-  const [data, setData] = useState<SequenceResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchSequence = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get(
-        `/attendance/${group.id}/lesson-sequence`,
-      );
-      setData(data);
-    } catch {
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [group.id]);
-
-  useEffect(() => {
-    fetchSequence();
-  }, [fetchSequence]);
+  // react-query so reschedule / cancellation / override mutations elsewhere
+  // can `invalidateQueries(["attendance-lesson-sequence", id])` and refresh
+  // this view automatically.
+  const sequenceQuery = useQuery<SequenceResponse | null>({
+    queryKey: ["attendance-lesson-sequence", group.id],
+    queryFn: () =>
+      api
+        .get<SequenceResponse>(`/attendance/${group.id}/lesson-sequence`)
+        .then((r) => r.data)
+        .catch(() => null),
+  });
+  const data = sequenceQuery.data ?? null;
+  const loading = sequenceQuery.isLoading;
+  const overrideDateSet = new Set(data?.overrideDates ?? []);
 
   if (loading) {
     return (
@@ -201,6 +206,10 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
             <span className="inline-block size-3 rounded-full border border-dashed border-muted-foreground/50" />
             Belgilanmagan / Kelajakdagi
           </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block size-3 rounded-full bg-emerald-500 ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background" />
+            O&apos;rinbosar ustoz
+          </span>
         </div>
 
         <div className="overflow-x-auto rounded-md border">
@@ -241,6 +250,7 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
                     <AttendanceDots
                       dots={student.dots}
                       expectedCount={data.expectedCount}
+                      overrideDateSet={overrideDateSet}
                     />
                   </TableCell>
                   <TableCell className="text-center">

@@ -1,10 +1,10 @@
-export type PortalType = "admin" | "lehrer" | "student";
+export type PortalType = "admin" | "lehrer" | "student" | "invoice";
 
 interface PortalConfig {
   title: string;
   subtitle: string;
   footerText: string;
-  icon: "shield" | "graduation-cap" | "book-open";
+  icon: "shield" | "graduation-cap" | "book-open" | "file-text";
   allowedRoleIds: number[];
 }
 
@@ -32,9 +32,20 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
     icon: "book-open",
     allowedRoleIds: [6], // Student
   },
+  // Public document portal — no login, no role checks. Receipt verification
+  // pages live here so QR scans and Telegram receipt links open directly
+  // without an auth wall.
+  invoice: {
+    title: "DaF Sprachzentrum hujjatlari",
+    subtitle: "Hujjatni tekshirish",
+    footerText: "DaF Sprachzentrum — Hujjatlarni tekshirish portali.",
+    icon: "file-text",
+    allowedRoleIds: [],
+  },
 };
 
 export function getPortalType(host: string): PortalType {
+  if (host.startsWith("invoice.")) return "invoice";
   if (host.startsWith("lehrer.")) return "lehrer";
   if (host.startsWith("student.")) return "student";
   return "admin";
@@ -42,4 +53,9 @@ export function getPortalType(host: string): PortalType {
 
 export function getPortalConfig(portal: PortalType): PortalConfig {
   return portalConfigs[portal];
+}
+
+// True for portals that have no login wall — every path is public.
+export function isPublicPortal(portal: PortalType): boolean {
+  return portal === "invoice";
 }
