@@ -56,7 +56,7 @@ export class TransactionsReadService {
           // without a second round-trip — PAYMENT rows show Payme/Click/Cash,
           // other types get null.
           payment: {
-            select: { method: true },
+            select: { id: true, method: true, status: true },
           },
           attendanceId: true,
           enrollmentId: true,

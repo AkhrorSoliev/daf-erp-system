@@ -1084,6 +1084,7 @@ model Payment {
   receivedBy         User?         @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
   branchId           Int?
   companyId          Int
+  receiptCode        String?       @unique
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -1471,6 +1472,7 @@ model Refund {
   processedAt      DateTime?
   dueDate          DateTime?
   companyId        Int
+  receiptCode      String?        @unique
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 

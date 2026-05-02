@@ -79,6 +79,10 @@ describe('AttendanceService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      lessonTeacherOverride: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       attendance: {
         groupBy: jest.fn().mockResolvedValue([]),
         findMany: jest.fn().mockResolvedValue([]),
@@ -1280,6 +1284,28 @@ describe('AttendanceService', () => {
       await expect(service.getLessonSequence('non-existent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should include overrideDates for lessons with substitute teachers', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.lessonTeacherOverride.findMany.mockResolvedValue([
+        { date: new Date('2024-01-03T00:00:00.000Z') },
+        { date: new Date('2024-01-08T00:00:00.000Z') },
+      ]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.overrideDates).toEqual(['2024-01-03', '2024-01-08']);
+    });
+
+    it('should return empty overrideDates when no overrides exist', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.overrideDates).toEqual([]);
     });
 
     it('should pass companyId to group query', async () => {

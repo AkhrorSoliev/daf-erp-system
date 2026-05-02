@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { SmsMessageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
@@ -24,6 +25,7 @@ export class PaymentEventsListener {
   constructor(
     private prisma: PrismaService,
     private smsService: SmsService,
+    private config: ConfigService,
   ) {}
 
   @OnEvent('payment.received')
@@ -40,7 +42,20 @@ export class PaymentEventsListener {
         return;
       }
 
-      const body = composeBody(payload, student.firstName);
+      // Receipt links go to the public invoice subdomain — no auth wall,
+      // single-segment URL (`invoice.dafzentrum.uz/<id>`) so the message
+      // looks clean in Telegram and the recipient can open it without an
+      // ERP login. Falls back to the admin host with `/r/<id>` when
+      // `INVOICE_BASE_URL` isn't configured (dev / older deploys).
+      const invoiceBase = this.config.get<string>('INVOICE_BASE_URL');
+      const fallbackBase =
+        this.config.get<string>('PUBLIC_BASE_URL') ??
+        this.config.get<string>('APP_URL') ??
+        'https://admin.dafzentrum.uz';
+      const receiptUrl = invoiceBase
+        ? `${invoiceBase}/${payload.paymentId}`
+        : `${fallbackBase}/r/${payload.paymentId}`;
+      const body = composeBody(payload, student.firstName, receiptUrl);
       await this.smsService.sendToStudent(
         payload.studentId,
         body,
@@ -58,7 +73,11 @@ export class PaymentEventsListener {
   }
 }
 
-function composeBody(p: PaymentReceivedPayload, firstName: string): string {
+function composeBody(
+  p: PaymentReceivedPayload,
+  firstName: string,
+  receiptUrl: string,
+): string {
   const methodLabel = PAYMENT_METHOD_LABEL[p.method] ?? p.method;
   const lines: string[] = [];
   lines.push(`Salom, ${firstName}!`);
@@ -68,6 +87,9 @@ function composeBody(p: PaymentReceivedPayload, firstName: string): string {
   if (p.studentBalance !== null) {
     lines.push(`Joriy balansingiz: ${formatSom(p.studentBalance)} so'm.`);
   }
+  lines.push('');
+  lines.push(`📄 Kvitansiya: ${receiptUrl}`);
+  lines.push('');
   lines.push('Rahmat!');
   return lines.join('\n');
 }

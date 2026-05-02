@@ -674,6 +674,16 @@ Skills are specialized knowledge modules that **must** be activated when working
 | `shadcn` | shadcn/ui component usage, customization, theming |
 | `documentation-writer` | Writing technical documentation |
 
+### Document Skills (`.claude/skills/`)
+
+Project-scoped Claude Code skills installed via the `npx skills` CLI. Use the Skill tool to invoke them.
+
+| Skill | When to use |
+|-------|-------------|
+| `pdf` | Any task that touches PDF files — generating PDFs (e.g. receipts, invoices, reports), reading or extracting text/tables, merging/splitting, rotating pages, watermarking, filling forms, encryption/decryption, OCR on scanned PDFs |
+
+**Always invoke the `pdf` skill before working on PDF code** — receipt templates (`server/src/receipts/pdf/`), any new PDF generation, or any task that reads/produces a `.pdf` file. The skill brings up-to-date references for `pdfmake`, `pypdf`, font embedding, table layouts, watermarks, and form filling so we don't reinvent patterns. To install or update: `npx skills add anthropics/skills@pdf -a claude-code -y`.
+
 ### Context7 Skills (auto-triggered)
 
 | Skill | When to use |
@@ -694,3 +704,4 @@ Skills are specialized knowledge modules that **must** be activated when working
 6. **Deploying** → `/deploy`
 7. **Working with Prisma models (frontend types)** → `prisma-client-api`
 8. **Working with Docker** → `docker-expert`
+9. **Anything PDF-related** (generating receipts/invoices, reading/extracting from a `.pdf`, merging/splitting, watermarks, OCR, forms) → `pdf`. Mandatory before touching `server/src/receipts/pdf/` or any new PDF generation work.

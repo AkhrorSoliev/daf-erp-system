@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Shield,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import {
   Tooltip,
@@ -25,6 +26,7 @@ const portalIcons = {
   shield: Shield,
   "graduation-cap": GraduationCap,
   "book-open": BookOpen,
+  "file-text": FileText,
 } as const;
 
 interface LoginFormProps {

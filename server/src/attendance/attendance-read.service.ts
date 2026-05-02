@@ -743,6 +743,29 @@ export class AttendanceReadService {
       attendanceMap.set(key, rec.status);
     }
 
+    // Mark which lesson dates had a substitute teacher assigned (LessonTeacherOverride)
+    // so the frontend can color those dots distinctly. Only active overrides count.
+    const overrideRows =
+      lessonDates.length > 0
+        ? await this.prisma.lessonTeacherOverride.findMany({
+            where: {
+              groupId,
+              deletedAt: null,
+              date: {
+                gte: utcMidnightFromDateStr(lessonDates[0]),
+                lte: utcMidnightFromDateStr(
+                  lessonDates[lessonDates.length - 1],
+                ),
+              },
+            },
+            select: { date: true },
+          })
+        : [];
+    const overrideDateSet = new Set(
+      overrideRows.map((r) => tashkentDateStr(r.date)),
+    );
+    const overrideDates = Array.from(overrideDateSet).sort();
+
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         groupId,
@@ -783,6 +806,6 @@ export class AttendanceReadService {
       };
     });
 
-    return { lessonDates, expectedCount, students };
+    return { lessonDates, overrideDates, expectedCount, students };
   }
 }

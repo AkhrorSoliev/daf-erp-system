@@ -22,6 +22,7 @@ async function bootstrap() {
       'https://admin.dafzentrum.uz',
       'https://lehrer.dafzentrum.uz',
       'https://student.dafzentrum.uz',
+      'https://invoice.dafzentrum.uz',
     ],
     credentials: true,
   });

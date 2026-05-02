@@ -42,6 +42,7 @@ import { LessonCancellationsModule } from './lesson-cancellations/lesson-cancell
 import { LessonTeacherOverridesModule } from './lesson-teacher-overrides/lesson-teacher-overrides.module';
 import { LessonReschedulesModule } from './lesson-reschedules/lesson-reschedules.module';
 import { BillingModule } from './billing/billing.module';
+import { ReceiptsModule } from './receipts/receipts.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -88,6 +89,7 @@ import { JwtAuthGuard } from './common/guards';
     LessonCancellationsModule,
     LessonTeacherOverridesModule,
     LessonReschedulesModule,
+    ReceiptsModule,
   ],
   providers: [
     {

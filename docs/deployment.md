@@ -4,13 +4,14 @@ Deploy frontend to **Vercel** and backend to **Railway**.
 
 ## Domains
 
-| Service         | Domain                  | Platform         |
-| --------------- | ----------------------- | ---------------- |
-| Main website    | `dafzentrum.uz`         | Separate project |
-| Admin panel     | `admin.dafzentrum.uz`   | Vercel           |
-| Teacher portal  | `lehrer.dafzentrum.uz`  | Vercel           |
-| Student portal  | `student.dafzentrum.uz` | Vercel           |
-| API             | `api.dafzentrum.uz`     | Railway          |
+| Service         | Domain                   | Platform         |
+| --------------- | ------------------------ | ---------------- |
+| Main website    | `dafzentrum.uz`          | Separate project |
+| Admin panel     | `admin.dafzentrum.uz`    | Vercel           |
+| Teacher portal  | `lehrer.dafzentrum.uz`   | Vercel           |
+| Student portal  | `student.dafzentrum.uz`  | Vercel           |
+| Invoice / receipts | `invoice.dafzentrum.uz` | Vercel (public, no auth) |
+| API             | `api.dafzentrum.uz`      | Railway          |
 
 DNS is managed via **Cloudflare** (Full SSL mode).
 
@@ -38,7 +39,11 @@ vercel --prod --yes
 
 ### Custom Domain
 
-`admin.dafzentrum.uz` — configured in Vercel Dashboard → Settings → Domains
+`admin.dafzentrum.uz` — configured in Vercel Dashboard → Settings → Domains.
+Same project also serves `invoice.dafzentrum.uz` (added as a domain alias) for
+public receipt verification pages — the `middleware.ts` short-circuits all
+auth checks when the host starts with `invoice.` and rewrites `/<id>` to
+`/r/<id>` so QR scans / Telegram receipt links open without a login wall.
 
 ## Backend — Railway
 
@@ -66,6 +71,11 @@ railway up --detach
 | `REDIS_PASSWORD` | Railway Redis password               |
 | `PORT`           | `4000` (or Railway default)          |
 | `NODE_ENV`       | `production`                         |
+| `INVOICE_BASE_URL` | `https://invoice.dafzentrum.uz`    |
+
+`INVOICE_BASE_URL` controls the public link sent in Telegram payment receipts
+and the QR target embedded in PDF receipts. When omitted the code falls back
+to `<PUBLIC_BASE_URL or APP_URL>/r/<id>` for backward compat.
 
 ### Custom Domain
 
@@ -94,6 +104,7 @@ app.enableCors({
     "https://admin.dafzentrum.uz",
     "https://lehrer.dafzentrum.uz",
     "https://student.dafzentrum.uz",
+    "https://invoice.dafzentrum.uz",
   ],
   credentials: true,
 });

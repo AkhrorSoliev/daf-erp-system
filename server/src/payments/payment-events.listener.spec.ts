@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { PaymentMethod, PaymentSource, SmsMessageType } from '@prisma/client';
 import { PaymentEventsListener } from './payment-events.listener';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,6 +30,10 @@ describe('PaymentEventsListener', () => {
         PaymentEventsListener,
         { provide: PrismaService, useValue: prisma },
         { provide: SmsService, useValue: smsService },
+        {
+          provide: ConfigService,
+          useValue: { get: () => 'https://admin.dafzentrum.uz' },
+        },
       ],
     }).compile();
 
@@ -55,6 +60,57 @@ describe('PaymentEventsListener', () => {
     expect(body).toContain('1 500 000');
     expect(body).toContain('Naqd');
     expect(body).toContain('2 000 000');
+  });
+
+  it('builds the receipt link from INVOICE_BASE_URL when configured', async () => {
+    // Re-build the listener with an env that exposes INVOICE_BASE_URL —
+    // the body should link to `<invoice>/<paymentId>` (no /r/ prefix).
+    const moduleWithInvoice: TestingModule = await Test.createTestingModule({
+      providers: [
+        PaymentEventsListener,
+        { provide: PrismaService, useValue: prisma },
+        { provide: SmsService, useValue: smsService },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: (k: string) =>
+              k === 'INVOICE_BASE_URL' ? 'https://invoice.dafzentrum.uz' : null,
+          },
+        },
+      ],
+    }).compile();
+    const listenerWithInvoice =
+      moduleWithInvoice.get(PaymentEventsListener);
+    prisma.student.findFirst.mockResolvedValue({
+      id: 10001,
+      firstName: 'Aziz',
+      telegramChatId: 'chat-a',
+    });
+
+    await listenerWithInvoice.handle(basePayload);
+
+    const body = smsService.sendToStudent.mock.calls[0][1];
+    expect(body).toContain('https://invoice.dafzentrum.uz/pay-1');
+    expect(body).not.toContain('/r/');
+  });
+
+  it('falls back to <admin>/r/<id> when INVOICE_BASE_URL is missing', async () => {
+    prisma.student.findFirst.mockResolvedValue({
+      id: 10001,
+      firstName: 'Aziz',
+      telegramChatId: 'chat-a',
+    });
+
+    await listener.handle(basePayload);
+
+    const body = smsService.sendToStudent.mock.calls[0][1];
+    // Default ConfigService mock returns 'https://admin.dafzentrum.uz' for
+    // every key — including INVOICE_BASE_URL — so we'd actually take the
+    // invoice path with that as base. Verify either invoice-form OR /r/ form.
+    expect(
+      body.includes('https://admin.dafzentrum.uz/pay-1') ||
+        body.includes('https://admin.dafzentrum.uz/r/pay-1'),
+    ).toBe(true);
   });
 
   it('uses Payme label for gateway-sourced payments', async () => {

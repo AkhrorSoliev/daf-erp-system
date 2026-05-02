@@ -36,7 +36,7 @@ export interface StudentTransaction {
   balanceBefore: number;
   balanceAfter: number;
   description: string | null;
-  payment: { method: string } | null;
+  payment: { id: string; method: string; status: string } | null;
   performedBy: { firstName: string; lastName: string } | null;
   createdAt: string;
 }
