@@ -11,7 +11,18 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import { EntityHistoryService } from '../common/entity-history';
 import { UpsertLessonTeacherOverrideDto } from './dto/upsert-lesson-teacher-override.dto';
+
+const DAY_NAME_BY_JS_DAY: Record<number, string> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday',
+};
 
 /**
  * Per-(groupId, date) substitute teacher override. Mirrors LessonCancellation:
@@ -31,6 +42,7 @@ export class LessonTeacherOverridesService {
   constructor(
     private prisma: PrismaService,
     private salaryAccrualService: SalaryAccrualService,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   async findByGroup(
@@ -83,13 +95,14 @@ export class LessonTeacherOverridesService {
     userId: number,
   ) {
     const date = this.parseDate(dateStr);
-    await this.ensureGroupBelongsToCompany(groupId, companyId);
     await this.ensureTeachersValid(dto.teacherIds, companyId);
 
     const newTeacherIds = [...new Set(dto.teacherIds)].sort((a, b) => a - b);
 
     return this.prisma.$transaction(
       async (tx) => {
+        await this.assertOverrideDateValid(tx, groupId, date, companyId);
+
         const existing = await tx.lessonTeacherOverride.findFirst({
           where: { groupId, date, deletedAt: null },
         });
@@ -132,6 +145,46 @@ export class LessonTeacherOverridesService {
           });
         }
 
+        // Record under entityType: 'Group' so the change appears in the
+        // group's "Tarix" tab (cross-entity audit, CLAUDE.md requirement).
+        const action = existing
+          ? 'ORINBOSAR_USTOZ_YANGILANDI'
+          : 'ORINBOSAR_USTOZ_TAYINLANDI';
+        if (existing) {
+          await this.entityHistoryService.recordUpdate({
+            entityType: 'Group',
+            entityId: groupId,
+            oldValues: {
+              action,
+              sana: dateStr,
+              ustozlar: oldTeacherIds.join(','),
+            },
+            newValues: {
+              action,
+              sana: dateStr,
+              ustozlar: newTeacherIds.join(','),
+              sabab: dto.reason ?? null,
+            },
+            changedById: userId,
+            companyId,
+            tx,
+          });
+        } else {
+          await this.entityHistoryService.recordCreate({
+            entityType: 'Group',
+            entityId: groupId,
+            newValues: {
+              action,
+              sana: dateStr,
+              ustozlar: newTeacherIds.join(','),
+              sabab: dto.reason ?? null,
+            },
+            changedById: userId,
+            companyId,
+            tx,
+          });
+        }
+
         return row;
       },
       {
@@ -171,6 +224,20 @@ export class LessonTeacherOverridesService {
             performedById: userId,
           });
         }
+
+        await this.entityHistoryService.recordDelete({
+          entityType: 'Group',
+          entityId: existing.groupId,
+          oldValues: {
+            action: 'ORINBOSAR_USTOZ_BEKOR_QILINDI',
+            sana: existing.date.toISOString().slice(0, 10),
+            ustozlar: oldTeacherIds.join(','),
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+
         return { id, deletedAt: new Date() };
       },
       {
@@ -311,13 +378,62 @@ export class LessonTeacherOverridesService {
     return teachers.map((t) => t.teacherId).sort((a, b) => a - b);
   }
 
-  private async ensureGroupBelongsToCompany(groupId: string, companyId: number) {
-    const group = await this.prisma.group.findFirst({
-      where: { id: groupId, companyId },
+  /**
+   * Asserts the date is a valid lesson day for the group, considering
+   * reschedules + cancellations. Rejects:
+   *   - non-existent group
+   *   - active cancellation on this date (lesson is gone)
+   *   - reschedule where this date is the originalDate (lesson moved AWAY —
+   *     the override would be orphaned because attendance can't happen here)
+   *   - dates that are neither in `exactDays` nor a reschedule.newDate
+   */
+  private async assertOverrideDateValid(
+    tx: Prisma.TransactionClient,
+    groupId: string,
+    date: Date,
+    companyId: number,
+  ): Promise<void> {
+    const group = await tx.group.findFirst({
+      where: { id: groupId, companyId, deletedAt: null },
+      select: { id: true, exactDays: true, startDate: true, endDate: true },
+    });
+    if (!group) throw new NotFoundException('Guruh topilmadi');
+
+    const cancellation = await tx.lessonCancellation.findFirst({
+      where: { groupId, date, deletedAt: null },
       select: { id: true },
     });
-    if (!group) {
-      throw new NotFoundException('Guruh topilmadi');
+    if (cancellation) {
+      throw new BadRequestException(
+        "Bu sana darsi bekor qilingan — avval bekor qilishni o'chiring",
+      );
+    }
+
+    const movedAway = await tx.lessonReschedule.findFirst({
+      where: { groupId, originalDate: date, deletedAt: null },
+      select: { newDate: true },
+    });
+    if (movedAway) {
+      const newDateStr = movedAway.newDate.toISOString().slice(0, 10);
+      throw new BadRequestException(
+        `Bu sana boshqa kunga ko'chirilgan (${newDateStr}). O'rinbosar yangi sanaga tayinlanishi kerak.`,
+      );
+    }
+
+    const dayName = DAY_NAME_BY_JS_DAY[date.getUTCDay()];
+    const inExactDays = (group.exactDays ?? []).includes(dayName);
+    if (!inExactDays) {
+      // Date is outside the group's normal schedule — it's only a valid
+      // lesson day if a reschedule has moved a lesson onto it.
+      const movedHere = await tx.lessonReschedule.findFirst({
+        where: { groupId, newDate: date, deletedAt: null },
+        select: { id: true },
+      });
+      if (!movedHere) {
+        throw new BadRequestException(
+          "Bu sana bu guruh uchun dars kuni emas — o'rinbosar tayinlash mumkin emas",
+        );
+      }
     }
   }
 

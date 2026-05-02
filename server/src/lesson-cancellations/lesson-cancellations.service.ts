@@ -5,10 +5,35 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AttendanceStatus, Prisma } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
+
+/**
+ * Payload emitted on cancellation create — consumed by
+ * `LessonCancellationEventsListener` to fan out Telegram + 4-channel
+ * notifications.
+ */
+export interface LessonCancellationPayload {
+  groupId: string;
+  cancellationId: string;
+  date: string; // YYYY-MM-DD
+  reason: string;
+  cancelledById: number;
+  companyId: number;
+}
+
+const DAY_NAME_BY_JS_DAY: Record<number, string> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday',
+};
 
 @Injectable()
 export class LessonCancellationsService {
@@ -18,6 +43,7 @@ export class LessonCancellationsService {
     private prisma: PrismaService,
     private lessonBillingService: LessonBillingService,
     private entityHistoryService: EntityHistoryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -92,11 +118,16 @@ export class LessonCancellationsService {
   ) {
     const date = this.parseDate(dto.date);
 
-    return this.prisma.$transaction(
+    const cancellation = await this.prisma.$transaction(
       async (tx) => {
         const group = await tx.group.findFirst({
           where: { id: dto.groupId, companyId, deletedAt: null },
-          select: { id: true, branchId: true, name: true },
+          select: {
+            id: true,
+            branchId: true,
+            name: true,
+            exactDays: true,
+          },
         });
         if (!group) throw new NotFoundException('Guruh topilmadi');
 
@@ -110,6 +141,38 @@ export class LessonCancellationsService {
           throw new BadRequestException(
             'Bu kungi dars allaqachon bekor qilingan',
           );
+        }
+
+        // Stsenariy D — date is the originalDate of an active reschedule:
+        // the lesson has already moved away, cancelling here is meaningless
+        // (and would orphan the cancellation row). Steer the admin to the
+        // newDate or to deleting the reschedule first.
+        const movedAway = await tx.lessonReschedule.findFirst({
+          where: { groupId: dto.groupId, originalDate: date, deletedAt: null },
+          select: { newDate: true },
+        });
+        if (movedAway) {
+          const newDateStr = movedAway.newDate.toISOString().slice(0, 10);
+          throw new BadRequestException(
+            `Bu sana boshqa kunga ko'chirilgan (${newDateStr}). Bekor qilish uchun avval ko'chirishni o'chiring yoki yangi sanani (${newDateStr}) bekor qiling.`,
+          );
+        }
+
+        // Reject dates that aren't actually lesson days: not in exactDays
+        // AND not a reschedule.newDate. Cancelling a non-lesson day is a
+        // no-op that just clutters the table.
+        const dayName = DAY_NAME_BY_JS_DAY[date.getUTCDay()];
+        const inExactDays = (group.exactDays ?? []).includes(dayName);
+        if (!inExactDays) {
+          const movedHere = await tx.lessonReschedule.findFirst({
+            where: { groupId: dto.groupId, newDate: date, deletedAt: null },
+            select: { id: true },
+          });
+          if (!movedHere) {
+            throw new BadRequestException(
+              "Bu sana bu guruh uchun dars kuni emas — bekor qilish ma'nosiz",
+            );
+          }
         }
 
         const cancellation = await tx.lessonCancellation.create({
@@ -174,6 +237,22 @@ export class LessonCancellationsService {
           });
         }
 
+        // Cascade (Stsenariy B / E): if a substitute-teacher override was
+        // active on this date, soft-delete it. Salary accruals for those
+        // teachers were already reversed by the billing cascade above
+        // (processAttendanceBilling reverses each linked SalaryAccrual,
+        // regardless of override-routed vs default-routed teachers).
+        const overrideOnDate = await tx.lessonTeacherOverride.findFirst({
+          where: { groupId: dto.groupId, date, deletedAt: null },
+          select: { id: true, teacherIds: true },
+        });
+        if (overrideOnDate) {
+          await tx.lessonTeacherOverride.update({
+            where: { id: overrideOnDate.id },
+            data: { deletedAt: new Date(), deletedById: cancelledById },
+          });
+        }
+
         await this.entityHistoryService.recordCreate({
           entityType: 'LessonCancellation',
           entityId: cancellation.id,
@@ -183,6 +262,7 @@ export class LessonCancellationsService {
             sana: dto.date,
             sabab: dto.reason,
             tegilganDavomatlar: billable.length,
+            orinbosarBekorQilindi: overrideOnDate ? 'ha' : null,
           },
           changedById: cancelledById,
           companyId,
@@ -197,6 +277,19 @@ export class LessonCancellationsService {
         timeout: 15_000,
       },
     );
+
+    // Fire-and-forget event after the tx commits — listener handles
+    // Telegram + 4-channel teacher notifications.
+    this.eventEmitter.emit('lesson-cancellation.created', {
+      groupId: dto.groupId,
+      cancellationId: cancellation.id,
+      date: dto.date,
+      reason: dto.reason,
+      cancelledById,
+      companyId,
+    } satisfies LessonCancellationPayload);
+
+    return cancellation;
   }
 
   /**
