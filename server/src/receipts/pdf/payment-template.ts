@@ -463,18 +463,24 @@ function paymentMethodRow(method: PaymentMethod, label: string): TableCell[] {
   return [
     { text: "To'lov turi", color: COLOR.muted, border: NB },
     {
-      // Right-aligned columns — fixed-width logo on the right of the text.
+      // Right-aligned columns — fixed-size logo right of the text label.
+      // Provider logos are square (1:1); we constrain both axes equally so
+      // they render at a useful size, not the 14pt-tall slivers a height-
+      // dominant fit produced.
       columns: [
-        { text: label, alignment: 'right' },
+        {
+          text: label,
+          alignment: 'right',
+          margin: [0, 5, 0, 0] as [number, number, number, number],
+        },
         {
           image: logoDataUrl,
-          fit: [40, 14],
-          width: 'auto',
+          width: 22,
+          height: 22,
           alignment: 'right',
-          margin: [4, -1, 0, 0] as [number, number, number, number],
         },
       ],
-      columnGap: 4,
+      columnGap: 6,
       border: NB,
     } as unknown as TableCell,
   ];
