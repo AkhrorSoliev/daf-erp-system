@@ -7,7 +7,7 @@ import type {
   TableCell,
   TDocumentDefinitions,
 } from 'pdfmake/interfaces';
-import { getCompanyLogoDataUrl, getProviderLogoDataUrl } from './render';
+import { getCompanyLogoDataUrl } from './render';
 
 const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   CASH: 'Naqd',
@@ -95,7 +95,7 @@ export async function buildPaymentReceiptDoc(
   const metaRows: TableCell[][] = [
     metaRow('Kvitansiya №', input.receiptCode),
     metaRow('Sana', formatDate(payment.createdAt)),
-    paymentMethodRow(payment.method, methodLabel),
+    metaRow("To'lov turi", methodLabel),
   ];
   if (externalIdRow) metaRows.push(externalIdRow);
   metaRows.push([
@@ -449,56 +449,6 @@ function metaRow(label: string, value: string): TableCell[] {
   ];
 }
 
-/**
- * "To'lov turi" meta row — for gateway methods (Payme/Click/Uzum) we render
- * the provider's logo alongside the text label so the receipt matches the
- * gateway's visual brand. Cash/Transfer fall back to a plain text row.
- */
-function paymentMethodRow(method: PaymentMethod, label: string): TableCell[] {
-  const logoFile = providerLogoFor(method);
-  const logoDataUrl = logoFile ? getProviderLogoDataUrl(logoFile) : null;
-  if (!logoDataUrl) {
-    return metaRow("To'lov turi", label);
-  }
-  return [
-    { text: "To'lov turi", color: COLOR.muted, border: NB },
-    {
-      // Right-aligned columns — large square logo to the right of the text
-      // label. Provider PNGs are 1:1 (2250×2250) so we set explicit
-      // width/height to control their on-page size.
-      columns: [
-        {
-          text: label,
-          alignment: 'right',
-          margin: [0, 14, 0, 0] as [number, number, number, number],
-        },
-        {
-          image: logoDataUrl,
-          width: 42,
-          height: 42,
-          alignment: 'right',
-        },
-      ],
-      columnGap: 8,
-      border: NB,
-    } as unknown as TableCell,
-  ];
-}
-
-function providerLogoFor(
-  method: PaymentMethod,
-): 'payme-logo.png' | 'click-logo.png' | 'uzum-logo.png' | null {
-  switch (method) {
-    case PaymentMethod.PAYME:
-      return 'payme-logo.png';
-    case PaymentMethod.CLICK:
-      return 'click-logo.png';
-    case PaymentMethod.UZUM:
-      return 'uzum-logo.png';
-    default:
-      return null;
-  }
-}
 
 function lineItemDescription(input: PaymentReceiptInput): TableCell {
   const title = input.courseLabel ?? "To'lov uchun";
