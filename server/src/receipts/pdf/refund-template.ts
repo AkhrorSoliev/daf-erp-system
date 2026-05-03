@@ -219,7 +219,7 @@ function headerRow(
 
 function issuerAddress(company: RefundReceiptInput['company']): Content {
   const lines: Content[] = [{ text: company.name }];
-  if (company.phone) lines.push({ text: company.phone });
+  if (company.phone) lines.push({ text: formatPhone(company.phone) });
   return { stack: lines, margin: [0, 0, 0, 28] };
 }
 

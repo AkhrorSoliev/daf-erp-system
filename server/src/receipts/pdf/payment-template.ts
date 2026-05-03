@@ -227,7 +227,10 @@ function issuerAddress(
   if (branch?.name) lines.push({ text: branch.name });
   if (branch?.address) lines.push({ text: branch.address });
   const phone = branch?.phone ?? company.phone;
-  if (phone) lines.push({ text: phone });
+  // Branch / company phone numbers are stored as raw 9-digit strings in
+  // the DB (Uzbek convention); render them in the canonical
+  // `+998 XX XXX XX XX` form for consistency with student phone display.
+  if (phone) lines.push({ text: formatPhone(phone) });
   return { stack: lines, margin: [0, 0, 0, 28] };
 }
 
