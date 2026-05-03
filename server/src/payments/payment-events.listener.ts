@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { ConfigService } from '@nestjs/config';
 import { SmsMessageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
@@ -25,7 +24,6 @@ export class PaymentEventsListener {
   constructor(
     private prisma: PrismaService,
     private smsService: SmsService,
-    private config: ConfigService,
   ) {}
 
   @OnEvent('payment.received')
@@ -45,16 +43,17 @@ export class PaymentEventsListener {
       // Receipt links go to the public invoice subdomain — no auth wall,
       // single-segment URL (`invoice.dafzentrum.uz/<id>`) so the message
       // looks clean in Telegram and the recipient can open it without an
-      // ERP login. Falls back to the admin host with `/r/<id>` when
-      // `INVOICE_BASE_URL` isn't configured (dev / older deploys).
-      const invoiceBase = this.config.get<string>('INVOICE_BASE_URL');
+      // ERP login. Read `INVOICE_BASE_URL` directly from `process.env` to
+      // avoid any NestJS ConfigService caching surprises.
+      const invoiceBase = process.env.INVOICE_BASE_URL?.trim();
       const fallbackBase =
-        this.config.get<string>('PUBLIC_BASE_URL') ??
-        this.config.get<string>('APP_URL') ??
+        process.env.PUBLIC_BASE_URL?.trim() ??
+        process.env.APP_URL?.trim() ??
         'https://admin.dafzentrum.uz';
       const receiptUrl = invoiceBase
         ? `${invoiceBase}/${payload.paymentId}`
         : `${fallbackBase}/r/${payload.paymentId}`;
+      this.logger.log(`[receipt] sending ${receiptUrl}`);
       const body = composeBody(payload, student.firstName, receiptUrl);
       await this.smsService.sendToStudent(
         payload.studentId,
