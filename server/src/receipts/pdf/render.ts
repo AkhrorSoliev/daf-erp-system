@@ -51,6 +51,25 @@ export function getCompanyLogoDataUrl(): string | null {
   }
 }
 
+// Payment-provider logos (Payme, Click, Uzum). Read once and cached.
+const providerLogoCache = new Map<string, string>();
+export function getProviderLogoDataUrl(
+  filename: 'payme-logo.png' | 'click-logo.png' | 'uzum-logo.png',
+): string | null {
+  const cached = providerLogoCache.get(filename);
+  if (cached !== undefined) return cached || null;
+  try {
+    const p = path.join(ASSETS_ROOT, 'img', filename);
+    const buf = fs.readFileSync(p);
+    const url = `data:image/png;base64,${buf.toString('base64')}`;
+    providerLogoCache.set(filename, url);
+    return url;
+  } catch {
+    providerLogoCache.set(filename, '');
+    return null;
+  }
+}
+
 /**
  * Render a pdfmake doc-definition to a single Buffer. Streams the PDF
  * doc to a buffer-collecting array and resolves once the doc emits 'end'.

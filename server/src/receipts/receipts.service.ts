@@ -146,6 +146,8 @@ export class ReceiptsService {
         group: {
           select: {
             name: true,
+            groupNumber: true,
+            level: true,
             exactDays: true,
             lessonStartTime: true,
             lessonEndTime: true,
@@ -207,6 +209,8 @@ export class ReceiptsService {
       branch,
       company,
       groupName: enrollment?.group?.name ?? null,
+      groupNumber: enrollment?.group?.groupNumber ?? null,
+      groupLevel: enrollment?.group?.level ?? null,
       courseLabel: enrollment?.group?.course?.name ?? null,
       teacherNames,
       lessonSchedule: groupSchedule,
@@ -240,6 +244,8 @@ export class ReceiptsService {
             group: {
               select: {
                 name: true,
+                groupNumber: true,
+                level: true,
                 exactDays: true,
                 lessonStartTime: true,
                 lessonEndTime: true,
@@ -297,6 +303,8 @@ export class ReceiptsService {
         : null,
       company,
       groupName: refund.enrollment?.group?.name ?? null,
+      groupNumber: refund.enrollment?.group?.groupNumber ?? null,
+      groupLevel: refund.enrollment?.group?.level ?? null,
       courseLabel: refund.enrollment?.group?.course?.name ?? null,
       teacherNames: refund.enrollment?.group?.teachers?.length
         ? refund.enrollment.group.teachers
@@ -441,14 +449,14 @@ function nextSequence(lastCode: string | null, prefix: string): string {
   return String(num + 1).padStart(5, '0');
 }
 
-const DAY_SHORT_UZ: Record<string, string> = {
-  monday: 'Du',
-  tuesday: 'Se',
-  wednesday: 'Cho',
-  thursday: 'Pa',
-  friday: 'Ju',
-  saturday: 'Sh',
-  sunday: 'Ya',
+const DAY_FULL_UZ: Record<string, string> = {
+  monday: 'Dushanba',
+  tuesday: 'Seshanba',
+  wednesday: 'Chorshanba',
+  thursday: 'Payshanba',
+  friday: 'Juma',
+  saturday: 'Shanba',
+  sunday: 'Yakshanba',
 };
 
 const DAY_ORDER: Record<string, number> = {
@@ -473,9 +481,9 @@ function buildGroupSchedule(
 ): { daysLabel: string; timeLabel: string | null } | null {
   if (!exactDays?.length && !lessonStartTime) return null;
   const dayParts = (exactDays ?? [])
-    .filter((d) => DAY_SHORT_UZ[d])
+    .filter((d) => DAY_FULL_UZ[d])
     .sort((a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99))
-    .map((d) => DAY_SHORT_UZ[d]);
+    .map((d) => DAY_FULL_UZ[d]);
   const daysLabel = dayParts.join('-');
   const timeLabel =
     lessonStartTime && lessonEndTime

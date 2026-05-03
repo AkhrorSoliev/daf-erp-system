@@ -54,6 +54,8 @@ export interface RefundReceiptInput {
     logo: string | null;
   };
   groupName: string | null;
+  groupNumber: number | null;
+  groupLevel: string | null;
   courseLabel: string | null;
   teacherNames: string | null;
   lessonSchedule: { daysLabel: string; timeLabel: string | null } | null;
@@ -154,6 +156,8 @@ export async function buildRefundReceiptDoc(
         student,
         input.courseLabel,
         input.groupName,
+        input.groupNumber,
+        input.groupLevel,
         input.contractNumber,
         input.teacherNames,
         input.lessonSchedule,
@@ -223,6 +227,8 @@ function metaSection(
   student: RefundReceiptInput['student'],
   courseLabel: string | null,
   groupName: string | null,
+  groupNumber: number | null,
+  groupLevel: string | null,
   contractNumber: string | null,
   teacherNames: string | null,
   lessonSchedule: RefundReceiptInput['lessonSchedule'],
@@ -232,13 +238,19 @@ function metaSection(
     { text: 'Mijoz:', bold: true, margin: [0, 0, 0, 4] },
     { text: `${student.firstName} ${student.lastName}` },
   ];
-  if (courseLabel) billTo.push({ text: courseLabel, color: COLOR.muted });
-  if (groupName) billTo.push({ text: groupName, color: COLOR.muted });
-  if (teacherNames) {
+  if (courseLabel) billTo.push({ text: `Kurs: ${courseLabel}`, color: COLOR.muted });
+  const groupDisplay = groupLevel ?? groupName;
+  if (groupDisplay) {
+    billTo.push({ text: `Guruh: ${groupDisplay}`, color: COLOR.muted });
+  }
+  if (groupNumber !== null) {
     billTo.push({
-      text: `O'qituvchi: ${teacherNames}`,
+      text: `Guruh raqami: #${String(groupNumber).padStart(3, '0')}`,
       color: COLOR.muted,
     });
+  }
+  if (teacherNames) {
+    billTo.push({ text: `O'qituvchi: ${teacherNames}`, color: COLOR.muted });
   }
   if (lessonSchedule) {
     const parts = [lessonSchedule.daysLabel, lessonSchedule.timeLabel].filter(
@@ -254,7 +266,7 @@ function metaSection(
   if (contractNumber) {
     billTo.push({ text: `Shartnoma: ${contractNumber}`, color: COLOR.muted });
   }
-  billTo.push({ text: `ID: ${student.id}`, color: COLOR.muted });
+  billTo.push({ text: `O'quvchining ID'si: ${student.id}`, color: COLOR.muted });
   if (student.phone) {
     billTo.push({ text: formatPhone(student.phone), color: COLOR.muted });
   }
@@ -457,8 +469,11 @@ function formatDate(d: Date): string {
 }
 
 function formatPhone(raw: string): string {
-  if (raw.length === 9) {
-    return `+998 ${raw.slice(0, 2)} ${raw.slice(2, 5)} ${raw.slice(5, 7)} ${raw.slice(7, 9)}`;
+  const digits = raw.replace(/\D/g, '');
+  const local =
+    digits.length === 12 && digits.startsWith('998') ? digits.slice(3) : digits;
+  if (local.length === 9) {
+    return `+998 ${local.slice(0, 2)} ${local.slice(2, 5)} ${local.slice(5, 7)} ${local.slice(7, 9)}`;
   }
   return raw;
 }

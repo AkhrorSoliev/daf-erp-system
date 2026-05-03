@@ -7,7 +7,7 @@ import type {
   TableCell,
   TDocumentDefinitions,
 } from 'pdfmake/interfaces';
-import { getCompanyLogoDataUrl } from './render';
+import { getCompanyLogoDataUrl, getProviderLogoDataUrl } from './render';
 
 const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   CASH: 'Naqd',
@@ -63,6 +63,8 @@ export interface PaymentReceiptInput {
     logo: string | null;
   };
   groupName: string | null;
+  groupNumber: number | null;
+  groupLevel: string | null;
   courseLabel: string | null;
   teacherNames: string | null;
   lessonSchedule: { daysLabel: string; timeLabel: string | null } | null;
@@ -93,7 +95,7 @@ export async function buildPaymentReceiptDoc(
   const metaRows: TableCell[][] = [
     metaRow('Kvitansiya №', input.receiptCode),
     metaRow('Sana', formatDate(payment.createdAt)),
-    metaRow("To'lov turi", methodLabel),
+    paymentMethodRow(payment.method, methodLabel),
   ];
   if (externalIdRow) metaRows.push(externalIdRow);
   metaRows.push([
@@ -165,6 +167,8 @@ export async function buildPaymentReceiptDoc(
         student,
         input.courseLabel,
         input.groupName,
+        input.groupNumber,
+        input.groupLevel,
         input.contractNumber,
         input.teacherNames,
         input.lessonSchedule,
@@ -173,11 +177,12 @@ export async function buildPaymentReceiptDoc(
       // 4. Line items — header row, hairline divider, then data table
       ...lineItemsHeader(),
       lineItemsTable(lineItemRows),
-      // 5. Totals (right-aligned)
+      // 5. Totals (right-aligned). "To'langan summa" is the actual cash
+      // movement of *this* receipt; balans rows show the wallet effect.
       totalsBlock([
         { label: 'Avvalgi balans', value: `${formatSom(balanceBefore)} so'm`, muted: true },
         { label: 'Joriy balans', value: `${formatSom(input.balanceAfter)} so'm`, muted: true },
-        { label: 'Jami', value: `${formatSom(payment.amount)} so'm`, bold: true },
+        { label: "To'langan summa", value: `${formatSom(payment.amount)} so'm`, bold: true },
       ]),
       // 6. Memo + QR row at the bottom
       memoQrBlock(
@@ -230,6 +235,8 @@ function metaSection(
   student: PaymentReceiptInput['student'],
   courseLabel: string | null,
   groupName: string | null,
+  groupNumber: number | null,
+  groupLevel: string | null,
   contractNumber: string | null,
   teacherNames: string | null,
   lessonSchedule: PaymentReceiptInput['lessonSchedule'],
@@ -239,13 +246,21 @@ function metaSection(
     { text: 'Mijoz:', bold: true, margin: [0, 0, 0, 4] },
     { text: `${student.firstName} ${student.lastName}` },
   ];
-  if (courseLabel) billTo.push({ text: courseLabel, color: COLOR.muted });
-  if (groupName) billTo.push({ text: groupName, color: COLOR.muted });
-  if (teacherNames) {
+  if (courseLabel) billTo.push({ text: `Kurs: ${courseLabel}`, color: COLOR.muted });
+  // "Guruh" prefers the explicit `level` (e.g. "Standart") over the raw
+  // group name when both are present — matches what receptionists call out.
+  const groupDisplay = groupLevel ?? groupName;
+  if (groupDisplay) {
+    billTo.push({ text: `Guruh: ${groupDisplay}`, color: COLOR.muted });
+  }
+  if (groupNumber !== null) {
     billTo.push({
-      text: `O'qituvchi: ${teacherNames}`,
+      text: `Guruh raqami: #${String(groupNumber).padStart(3, '0')}`,
       color: COLOR.muted,
     });
+  }
+  if (teacherNames) {
+    billTo.push({ text: `O'qituvchi: ${teacherNames}`, color: COLOR.muted });
   }
   if (lessonSchedule) {
     const parts = [lessonSchedule.daysLabel, lessonSchedule.timeLabel].filter(
@@ -261,7 +276,7 @@ function metaSection(
   if (contractNumber) {
     billTo.push({ text: `Shartnoma: ${contractNumber}`, color: COLOR.muted });
   }
-  billTo.push({ text: `ID: ${student.id}`, color: COLOR.muted });
+  billTo.push({ text: `O'quvchining ID'si: ${student.id}`, color: COLOR.muted });
   if (student.phone) {
     billTo.push({ text: formatPhone(student.phone), color: COLOR.muted });
   }
@@ -434,6 +449,52 @@ function metaRow(label: string, value: string): TableCell[] {
   ];
 }
 
+/**
+ * "To'lov turi" meta row — for gateway methods (Payme/Click/Uzum) we render
+ * the provider's logo alongside the text label so the receipt matches the
+ * gateway's visual brand. Cash/Transfer fall back to a plain text row.
+ */
+function paymentMethodRow(method: PaymentMethod, label: string): TableCell[] {
+  const logoFile = providerLogoFor(method);
+  const logoDataUrl = logoFile ? getProviderLogoDataUrl(logoFile) : null;
+  if (!logoDataUrl) {
+    return metaRow("To'lov turi", label);
+  }
+  return [
+    { text: "To'lov turi", color: COLOR.muted, border: NB },
+    {
+      // Right-aligned columns — fixed-width logo on the right of the text.
+      columns: [
+        { text: label, alignment: 'right' },
+        {
+          image: logoDataUrl,
+          fit: [40, 14],
+          width: 'auto',
+          alignment: 'right',
+          margin: [4, -1, 0, 0] as [number, number, number, number],
+        },
+      ],
+      columnGap: 4,
+      border: NB,
+    } as unknown as TableCell,
+  ];
+}
+
+function providerLogoFor(
+  method: PaymentMethod,
+): 'payme-logo.png' | 'click-logo.png' | 'uzum-logo.png' | null {
+  switch (method) {
+    case PaymentMethod.PAYME:
+      return 'payme-logo.png';
+    case PaymentMethod.CLICK:
+      return 'click-logo.png';
+    case PaymentMethod.UZUM:
+      return 'uzum-logo.png';
+    default:
+      return null;
+  }
+}
+
 function lineItemDescription(input: PaymentReceiptInput): TableCell {
   const title = input.courseLabel ?? "To'lov uchun";
   const subParts: string[] = [];
@@ -499,8 +560,14 @@ function formatDate(d: Date): string {
 }
 
 function formatPhone(raw: string): string {
-  if (raw.length === 9) {
-    return `+998 ${raw.slice(0, 2)} ${raw.slice(2, 5)} ${raw.slice(5, 7)} ${raw.slice(7, 9)}`;
+  // Strip everything except digits, then trim a leading `998` country code.
+  // Result is the bare 9-digit subscriber number, which we re-format with
+  // the canonical `+998 XX XXX XX XX` Uzbek convention.
+  const digits = raw.replace(/\D/g, '');
+  const local =
+    digits.length === 12 && digits.startsWith('998') ? digits.slice(3) : digits;
+  if (local.length === 9) {
+    return `+998 ${local.slice(0, 2)} ${local.slice(2, 5)} ${local.slice(5, 7)} ${local.slice(7, 9)}`;
   }
   return raw;
 }
