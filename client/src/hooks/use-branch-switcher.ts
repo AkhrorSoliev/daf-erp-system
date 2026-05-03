@@ -4,7 +4,6 @@ import api from "@/lib/api";
 interface BranchItem {
   id: number;
   name: string;
-  workingDays?: string[];
   startOfWorkingDay?: string | null;
   endOfWorkingDay?: string | null;
 }

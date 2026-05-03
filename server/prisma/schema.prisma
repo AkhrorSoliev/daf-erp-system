@@ -371,10 +371,6 @@ model Branch {
   phone             String?
   isActive          Boolean      @default(true)
   status            BranchStatus @default(ACTIVE)
-  /// Days of the week the branch is open. Each entry is a lowercase day
-  /// name (`monday`..`sunday`) — same shape as `Group.exactDays`.
-  /// Group lesson days must be a subset of this set.
-  workingDays       String[]     @default(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"])
   startOfWorkingDay String?
   endOfWorkingDay   String?
   createdAt         DateTime     @default(now())
