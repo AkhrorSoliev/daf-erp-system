@@ -64,6 +64,7 @@ export function BranchesSettingsClient() {
             address: b.address ?? "",
             phone: b.phone ?? "",
             status: b.isActive ? "active" : "inactive",
+            workingDays: b.workingDays ?? [],
             startOfWorkingDay: b.startOfWorkingDay ?? "",
             endOfWorkingDay: b.endOfWorkingDay ?? "",
           })),

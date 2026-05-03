@@ -31,6 +31,7 @@ export class BranchesService {
         phone: true,
         isActive: true,
         status: true,
+        workingDays: true,
         startOfWorkingDay: true,
         endOfWorkingDay: true,
       },
@@ -105,6 +106,9 @@ export class BranchesService {
         name: dto.name,
         address: dto.address,
         phone: dto.phone,
+        startOfWorkingDay: dto.startOfWorkingDay,
+        endOfWorkingDay: dto.endOfWorkingDay,
+        ...(dto.workingDays ? { workingDays: dto.workingDays } : {}),
         companyId,
       },
     });

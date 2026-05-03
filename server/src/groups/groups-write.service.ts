@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -25,6 +29,8 @@ export class GroupsWriteService {
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
+
+    assertDaysSubsetOfBranch(dto.exactDays ?? [], branch.workingDays);
 
     const course = await this.prisma.course.findFirst({
       where: { id: dto.courseId, deletedAt: null },
@@ -178,6 +184,21 @@ export class GroupsWriteService {
           "Ba'zi o'qituvchilar topilmadi yoki o'qituvchi emas",
         );
       }
+    }
+
+    // If exactDays or branchId is being updated, validate the resulting
+    // (final) days fall within the (possibly new) branch's workingDays.
+    if (dto.exactDays !== undefined || dto.branchId !== undefined) {
+      const targetBranchId = dto.branchId ?? existing.branchId;
+      const targetBranch = await this.prisma.branch.findFirst({
+        where: { id: targetBranchId, deletedAt: null },
+        select: { workingDays: true },
+      });
+      if (!targetBranch) {
+        throw new NotFoundException(`Filial #${targetBranchId} topilmadi`);
+      }
+      const targetDays = dto.exactDays ?? existing.exactDays;
+      assertDaysSubsetOfBranch(targetDays, targetBranch.workingDays);
     }
 
     let endDate: Date | undefined;
@@ -411,5 +432,40 @@ export class GroupsWriteService {
     });
 
     return { message: "Guruh muvaffaqiyatli o'chirildi" };
+  }
+}
+
+const DAY_LABEL_UZ: Record<string, string> = {
+  monday: 'Dushanba',
+  tuesday: 'Seshanba',
+  wednesday: 'Chorshanba',
+  thursday: 'Payshanba',
+  friday: 'Juma',
+  saturday: 'Shanba',
+  sunday: 'Yakshanba',
+};
+
+/**
+ * Reject a group whose lesson days fall on a day the branch is closed.
+ * `branchWorkingDays` is the array stored on `Branch.workingDays` — typically
+ * Mon-Sat. The check is "every day in `groupDays` must appear in
+ * `branchWorkingDays`"; passing an empty `groupDays` array is a no-op.
+ */
+function assertDaysSubsetOfBranch(
+  groupDays: string[],
+  branchWorkingDays: string[] | undefined,
+): void {
+  if (!groupDays.length) return;
+  // If the branch has no explicit policy (empty array or undefined — legacy
+  // rows pre-dating the workingDays field, or tests that don't mock it),
+  // skip the check rather than rejecting the write.
+  if (!branchWorkingDays?.length) return;
+  const allowed = new Set(branchWorkingDays);
+  const offenders = groupDays.filter((d) => !allowed.has(d));
+  if (offenders.length) {
+    const labels = offenders.map((d) => DAY_LABEL_UZ[d] ?? d).join(', ');
+    throw new BadRequestException(
+      `Filial bu kunlarda ishlamaydi: ${labels}. Iltimos, faqat filialning ish kunlaridan tanlang.`,
+    );
   }
 }

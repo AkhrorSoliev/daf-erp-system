@@ -18,7 +18,7 @@ const WEEKDAYS = [
   { value: "thursday", label: "Pay" },
   { value: "friday", label: "Ju" },
   { value: "saturday", label: "Sha" },
-];
+] as const;
 
 export const ODD_DAYS = ["monday", "wednesday", "friday"];
 export const EVEN_DAYS = ["tuesday", "thursday", "saturday"];
@@ -37,18 +37,33 @@ interface GroupDaysPickerProps {
   value: string[];
   onChange: (days: string[]) => void;
   error?: string;
+  /**
+   * If set, only days in this list can be selected. Presets that include
+   * days outside the list are hidden, and individual day checkboxes for
+   * disallowed days are shown disabled. Useful for restricting group days
+   * to the parent branch's `workingDays`.
+   */
+  allowedDays?: string[];
+  /** Custom label override (default: "Dars kunlari"). */
+  label?: string;
 }
 
 export function GroupDaysPicker({
   value,
   onChange,
   error,
+  allowedDays,
+  label = "Dars kunlari",
 }: GroupDaysPickerProps) {
   const [preset, setPreset] = useState(() => detectDayPreset(value));
 
+  const allowedSet = allowedDays ? new Set(allowedDays) : null;
+  const isPresetAllowed = (preset: readonly string[]) =>
+    !allowedSet || preset.every((d) => allowedSet.has(d));
+
   return (
     <div className="space-y-2">
-      <Label>Dars kunlari</Label>
+      <Label>{label}</Label>
       <Select
         value={preset}
         onValueChange={(v) => {
@@ -66,9 +81,15 @@ export function GroupDaysPicker({
           position="popper"
           className="w-(--radix-select-trigger-width)"
         >
-          <SelectItem value="odd">Toq kunlar (Du, Chor, Ju)</SelectItem>
-          <SelectItem value="even">Juft kunlar (Se, Pay, Sha)</SelectItem>
-          <SelectItem value="every">Har kun (Du–Ju)</SelectItem>
+          {isPresetAllowed(ODD_DAYS) && (
+            <SelectItem value="odd">Toq kunlar (Du, Chor, Ju)</SelectItem>
+          )}
+          {isPresetAllowed(EVEN_DAYS) && (
+            <SelectItem value="even">Juft kunlar (Se, Pay, Sha)</SelectItem>
+          )}
+          {isPresetAllowed(EVERY_DAY) && (
+            <SelectItem value="every">Har kun (Du–Ju)</SelectItem>
+          )}
           <SelectItem value="custom">Boshqa</SelectItem>
         </SelectContent>
       </Select>
@@ -77,13 +98,17 @@ export function GroupDaysPicker({
         <div className="flex flex-wrap gap-3 pt-1">
           {WEEKDAYS.map((day) => {
             const checked = value?.includes(day.value) ?? false;
+            const disabled = allowedSet !== null && !allowedSet.has(day.value);
             return (
               <label
                 key={day.value}
-                className="flex items-center gap-1.5 text-sm"
+                className={`flex items-center gap-1.5 text-sm ${
+                  disabled ? "text-muted-foreground/60 cursor-not-allowed" : ""
+                }`}
               >
                 <Checkbox
                   checked={checked}
+                  disabled={disabled}
                   onCheckedChange={(c) => {
                     const current = value ?? [];
                     onChange(
@@ -98,6 +123,12 @@ export function GroupDaysPicker({
             );
           })}
         </div>
+      )}
+
+      {allowedSet && (
+        <p className="text-xs text-muted-foreground">
+          Filial faqat tanlangan kunlarda ishlaydi.
+        </p>
       )}
 
       {error && <p className="text-destructive text-sm">{error}</p>}

@@ -330,6 +330,7 @@ export function EditGroupForm({
               value={field.value ?? []}
               onChange={field.onChange}
               error={form.formState.errors.exactDays?.message}
+              allowedDays={selectedBranch?.workingDays}
             />
           )}
         />

@@ -6,6 +6,7 @@ export interface Branch {
   address: string;
   phone: string;
   status: "active" | "inactive";
+  workingDays?: string[];
   startOfWorkingDay: string;
   endOfWorkingDay: string;
 }

@@ -13,9 +13,19 @@ import {
 } from "@/components/ui/select";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TimePicker } from "@/components/ui/time-picker";
+import { GroupDaysPicker } from "@/components/groups/group-days-picker";
 import { useEditBranch, type Branch } from "@/hooks/use-edit-branch";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
+
+const DEFAULT_WORKING_DAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
 
 interface EditBranchFormProps {
   branch: Branch | null;
@@ -41,6 +51,7 @@ export function EditBranchForm({
       address: branch?.address ?? "",
       phone: branch?.phone ?? "",
       status: branch?.status ?? ("active" as const),
+      workingDays: branch?.workingDays ?? DEFAULT_WORKING_DAYS,
       startOfWorkingDay: branch?.startOfWorkingDay ?? "",
       endOfWorkingDay: branch?.endOfWorkingDay ?? "",
     },
@@ -51,6 +62,7 @@ export function EditBranchForm({
     address: string;
     phone: string;
     status: "active" | "inactive";
+    workingDays: string[];
     startOfWorkingDay: string;
     endOfWorkingDay: string;
   }) => {
@@ -62,6 +74,7 @@ export function EditBranchForm({
           name: values.name,
           address: values.address || undefined,
           phone: values.phone || undefined,
+          workingDays: values.workingDays,
           startOfWorkingDay: values.startOfWorkingDay || undefined,
           endOfWorkingDay: values.endOfWorkingDay || undefined,
           companyId: companyId ? Number(companyId) : undefined,
@@ -73,6 +86,7 @@ export function EditBranchForm({
           address: data.address ?? "",
           phone: data.phone ?? "",
           status: data.isActive ? "active" : "inactive",
+          workingDays: data.workingDays ?? [],
           startOfWorkingDay: data.startOfWorkingDay ?? "",
           endOfWorkingDay: data.endOfWorkingDay ?? "",
         };
@@ -87,6 +101,7 @@ export function EditBranchForm({
           address: values.address || undefined,
           phone: values.phone || undefined,
           isActive: values.status === "active",
+          workingDays: values.workingDays,
           startOfWorkingDay: values.startOfWorkingDay || undefined,
           endOfWorkingDay: values.endOfWorkingDay || undefined,
         });
@@ -97,6 +112,7 @@ export function EditBranchForm({
           address: data.address ?? "",
           phone: data.phone ?? "",
           status: data.isActive ? "active" : "inactive",
+          workingDays: data.workingDays ?? [],
           startOfWorkingDay: data.startOfWorkingDay ?? "",
           endOfWorkingDay: data.endOfWorkingDay ?? "",
         };
@@ -185,6 +201,18 @@ export function EditBranchForm({
             />
           </div>
         </div>
+
+        <Controller
+          control={form.control}
+          name="workingDays"
+          render={({ field }) => (
+            <GroupDaysPicker
+              label="Ish kunlari"
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        />
 
         {!isAdd && (
           <div className="space-y-1.5">
