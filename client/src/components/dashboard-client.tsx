@@ -55,7 +55,7 @@ export function DashboardClient() {
   const isTodaySelected = isToday(selectedDate);
   const dateParam = format(selectedDate, "yyyy-MM-dd");
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["dashboard", "today-schedule", selectedBranch?.id, dateParam],
     queryFn: () =>
       api
@@ -65,6 +65,14 @@ export function DashboardClient() {
         .then((r) => r.data),
     enabled: !!selectedBranch,
   });
+
+  // isPending stays true while the query is `enabled: false` (waiting for the
+  // branch switcher to hydrate from the /branches request) AND while it's
+  // actually fetching, so the skeleton appears immediately on page load —
+  // not only after the branch is resolved. Without this, in production the
+  // /branches network round-trip leaves a visible gap where only the
+  // DatePicker is rendered. See `useBranchSwitcher`.
+  const showSkeleton = isPending;
 
   // Teacher sees only their own lessons in the schedule table
   const myLessons = useMemo(() => {
@@ -122,7 +130,7 @@ export function DashboardClient() {
         />
       </div>
 
-      {isLoading && <DashboardScheduleSkeleton />}
+      {showSkeleton && <DashboardScheduleSkeleton />}
 
       {data?.isHoliday && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-900/50 dark:bg-orange-950/20 p-4">
@@ -144,7 +152,7 @@ export function DashboardClient() {
         </div>
       )}
 
-      {data && !isLoading && (
+      {data && !showSkeleton && (
         <>
           {/* Stats */}
           <div
