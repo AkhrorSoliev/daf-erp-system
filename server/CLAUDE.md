@@ -331,7 +331,7 @@ The financial system is built on an **append-only ledger** principle — financi
 - **PaymentMethod**: `CASH`, `PAYME`, `CLICK`, `UZUM`, `TRANSFER`
 - **PaymentStatus**: `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`, `CANCELLED`, `REVERSED`
 - **PaymentSource**: `ADMIN_MANUAL`, `STUDENT_PORTAL`, `GATEWAY_WEBHOOK`, `MANUAL_ATTACH`
-- **TransactionType**: `PAYMENT`, `LESSON_DEDUCTION`, `REFUND`, `SALARY_ACCRUAL`, `SALARY_PAYMENT`, `EXPENSE`, `ADJUSTMENT`, `TAX`
+- **TransactionType**: `PAYMENT`, `LESSON_DEDUCTION`, `LESSON_CONSUMPTION`, `INITIAL_BALANCE`, `REFUND`, `SALARY_ACCRUAL`, `SALARY_PAYMENT`, `EXPENSE`, `ADJUSTMENT`, `TAX`, `BALANCE_WITHDRAWAL`
 - **ContractStatus**: `DRAFT`, `ACTIVE`, `COMPLETED`, `CANCELLED`, `REFUNDED`
 - **SalaryType**: `PERCENTAGE`, `FIXED_PER_STUDENT`, `FIXED_MONTHLY`
 - **SalaryPaymentStatus**: `CALCULATED`, `APPROVED`, `PAID`, `CANCELLED`
@@ -604,13 +604,26 @@ Per-group lesson cancellation distinct from `Holiday` (company-wide).
 
 CEO-only one-shot for centers transitioning to the new finance system. Writes a single `INITIAL_BALANCE` Transaction; the partial unique index enforces "at most one per student". P2002 is translated to `BadRequestException("Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan")`.
 
+#### Balance Withdrawal (`src/withdrawals/`)
+
+Admin-driven drain of a student's positive balance into the system as recognized revenue for a chosen accounting month — distinct from `Refunds`, which return money to the student. Used during onboarding/transition when a student paid in advance, the teacher took attendance for a few cycles, and the rest of the balance must still be recognised manually rather than left "muallaq" (floating).
+
+- **Endpoints**: `GET /withdrawals/preview/:studentId`, `POST /withdrawals`
+- **Roles**: `CEO, Branch Director, Administrator` (class-level `@Roles`)
+- **Transaction type**: `BALANCE_WITHDRAWAL` — reduces student balance, metadata stores `{ targetMonth, creditTeacher, teacherUserId, groupId, reason }` for audit
+- **`creditTeacher` flag**: when true, also writes a `SalaryAccrual` linked via `deductionTransactionId` to the new BALANCE_WITHDRAWAL row. The accrual has `attendanceId IS NULL` (no underlying lesson) and `lessonDate = first of targetMonth`. The teacher must be on one of the student's active enrollments — service validates this via a `groupTeachers` join and throws `ForbiddenException` otherwise.
+- **`SalaryAccrual` schema relax**: `attendanceId` is nullable; the previous unique constraint `(userId, studentId, groupId, lessonDate)` is replaced with `(userId, studentId, groupId, lessonDate, attendanceId)` so withdrawal accruals (NULL attendanceId) can stack within a month — Postgres treats NULLs as distinct in UNIQUE.
+- **Atomicity**: balance check + transaction write + student balance update + optional accrual + EntityHistory record run inside one `Serializable` `prisma.$transaction` (10s maxWait, 15s timeout).
+- **`To'lovlar` tab**: `BALANCE_WITHDRAWAL` is a money-flow type — included in the comma-separated `?types=` filter (`PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL`). The `Lesson Trail` endpoint continues to scope strictly to `LESSON_DEDUCTION` + `LESSON_CONSUMPTION`.
+- **Salary calculation**: existing `salary-summary` and `salary-calculation` queries pick up withdrawal accruals automatically (filter is `salaryPaymentId: null, reversedAt: null` + `lessonDate` range), so no special-case logic. The `lessonDate = YYYY-MM-01` date determines which salary cycle the accrual lands in based on each company's `cycleStartDay`.
+
 #### Lesson Trail (`GET /transactions/student/:id/lesson-trail`)
 
 Per-student "where did each so'm go for lessons?" report. Strictly scoped to `LESSON_DEDUCTION` (prepaid-batch allocation rows) and `LESSON_CONSUMPTION` (per-lesson use rows) — money-flow types (PAYMENT/REFUND/ADJUSTMENT/INITIAL_BALANCE) are filtered out at the service level so this endpoint never overlaps with the To'lovlar tab's data. Paginated (`page`, `pageSize`). Returns rows in ASC order (chronological story) enriched with attendance metadata (date, group, course) and reversal markers. Drives the "Darslar" tab (URL `?tab=darslar`) on the student profile.
 
 #### Student transactions list (`GET /transactions/student/:id`)
 
-Used by the "To'lovlar" tab. Accepts a `types` query parameter — a comma-separated list of `TransactionType` values (e.g. `?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE`) — so the tab can request only the money-flow rows it cares about. Validated against the enum at the DTO boundary; invalid tokens reject. The legacy single-`type` parameter still works as a fallback for one type.
+Used by the "To'lovlar" tab. Accepts a `types` query parameter — a comma-separated list of `TransactionType` values (e.g. `?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL`) — so the tab can request only the money-flow rows it cares about. Validated against the enum at the DTO boundary; invalid tokens reject. The legacy single-`type` parameter still works as a fallback for one type.
 
 #### Enrollment Lifecycle Prepaid Refund (`EnrollmentBillingService`)
 

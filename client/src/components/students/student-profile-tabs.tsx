@@ -128,7 +128,7 @@ export function StudentProfileTabs({
           .get(`/transactions/student/${student.id}`, {
             params: {
               pageSize: 20,
-              types: "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE",
+              types: "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL",
             },
           })
           .then((res) => setTransactions(res.data.data))

@@ -61,10 +61,11 @@ interface StudentProfileCardProps {
   onPaymentClick?: () => void;
   onPaymentHistoryClick?: () => void;
   onRefundClick?: () => void;
+  onWithdrawalClick?: () => void;
   onInitialBalanceClick?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onInitialBalanceClick }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onWithdrawalClick, onInitialBalanceClick }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const router = useRouter();
   const authUser = useAuth((s) => s.user);
@@ -196,6 +197,9 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                 <DropdownMenuItem onClick={onPaymentClick}>To&apos;lov qo&apos;shish</DropdownMenuItem>
                 <DropdownMenuItem onClick={onPaymentHistoryClick}>To&apos;lov tarixi</DropdownMenuItem>
                 <DropdownMenuItem onClick={onRefundClick}>Pulni qaytarish</DropdownMenuItem>
+                {onWithdrawalClick && (
+                  <DropdownMenuItem onClick={onWithdrawalClick}>Yechib olish</DropdownMenuItem>
+                )}
                 {isCeo && onInitialBalanceClick && (
                   <DropdownMenuItem onClick={onInitialBalanceClick}>
                     Boshlang&apos;ich balans

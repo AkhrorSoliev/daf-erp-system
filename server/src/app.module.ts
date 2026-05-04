@@ -36,6 +36,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { ContractsModule } from './contracts/contracts.module';
 import { SalaryModule } from './salary/salary.module';
 import { RefundsModule } from './refunds/refunds.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
 import { LessonCancellationsModule } from './lesson-cancellations/lesson-cancellations.module';
@@ -83,6 +84,7 @@ import { JwtAuthGuard } from './common/guards';
     ContractsModule,
     SalaryModule,
     RefundsModule,
+    WithdrawalsModule,
     ExpensesModule,
     PaymentGatewaysModule,
     BillingModule,

@@ -101,11 +101,12 @@ export class SalaryAccrualService {
 
     const accrual = await db.salaryAccrual.upsert({
       where: {
-        userId_studentId_groupId_lessonDate: {
+        userId_studentId_groupId_lessonDate_attendanceId: {
           userId: params.teacherId,
           studentId: params.studentId,
           groupId: params.groupId,
           lessonDate: params.lessonDate,
+          attendanceId: params.attendanceId,
         },
       },
       create: {
@@ -215,14 +216,15 @@ export class SalaryAccrualService {
     tx?: Prisma.TransactionClient;
   }) {
     const db = params.tx ?? this.prisma;
-    const existing = await db.salaryAccrual.findUnique({
+    // Lesson-based accruals always have attendanceId set; withdrawal accruals
+    // (attendanceId IS NULL) are not the target of this reversal flow.
+    const existing = await db.salaryAccrual.findFirst({
       where: {
-        userId_studentId_groupId_lessonDate: {
-          userId: params.teacherId,
-          studentId: params.studentId,
-          groupId: params.groupId,
-          lessonDate: params.lessonDate,
-        },
+        userId: params.teacherId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        lessonDate: params.lessonDate,
+        attendanceId: { not: null },
       },
       select: { id: true, reversedAt: true, attendanceId: true, amount: true },
     });
