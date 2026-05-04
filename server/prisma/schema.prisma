@@ -186,6 +186,7 @@ enum TransactionType {
   EXPENSE
   ADJUSTMENT
   TAX
+  BALANCE_WITHDRAWAL
 }
 
 enum LessonDeductionMode {
@@ -1383,7 +1384,10 @@ model SalaryAccrual {
   student         Student        @relation("StudentSalaryAccruals", fields: [studentId], references: [id])
   groupId         String
   group           Group          @relation("GroupSalaryAccruals", fields: [groupId], references: [id])
-  attendanceId    String
+  // Nullable for non-lesson accruals (e.g. BALANCE_WITHDRAWAL where the admin
+  // manually credits a teacher for prepaid balance that wasn't consumed by a
+  // real lesson). For real lessons, this is always set.
+  attendanceId    String?
   lessonDate      DateTime       @db.Date
   amount          Int
   // Frozen per-lesson cost at write time. Future course price changes
@@ -1415,7 +1419,12 @@ model SalaryAccrual {
   companyId Int
   createdAt DateTime @default(now())
 
-  @@unique([userId, studentId, groupId, lessonDate])
+  // attendanceId is part of the unique key so withdrawal-based accruals
+  // (where attendanceId IS NULL) can stack within the same month — Postgres
+  // treats NULLs as distinct in UNIQUE constraints. For lesson accruals,
+  // attendanceId is always set, so the original "one accrual per
+  // (user, student, group, lessonDate)" semantic is preserved.
+  @@unique([userId, studentId, groupId, lessonDate, attendanceId])
   @@index([userId, salaryPaymentId])
   @@index([companyId])
   @@index([deductionTransactionId])

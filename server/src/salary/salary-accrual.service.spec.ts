@@ -26,7 +26,12 @@ describe('SalaryAccrualService', () => {
           course: { lessonPaymentCount: 12 },
         }),
       },
-      salaryAccrual: { upsert: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+      salaryAccrual: {
+        upsert: jest.fn(),
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
       // Defaults so applyAccrualToBalance / reverseAccrualBalance run silently
       // in tests that don't care about balance side-effects.
       transaction: {
@@ -239,7 +244,7 @@ describe('SalaryAccrualService', () => {
 
   describe('reverseAccrualForAttendance', () => {
     it('marks the accrual reversed when one exists and is not already reversed', async () => {
-      prisma.salaryAccrual.findUnique.mockResolvedValue({
+      prisma.salaryAccrual.findFirst.mockResolvedValue({
         id: 'a-1',
         reversedAt: null,
       });
@@ -264,7 +269,7 @@ describe('SalaryAccrualService', () => {
     });
 
     it('returns null when accrual already reversed (idempotent)', async () => {
-      prisma.salaryAccrual.findUnique.mockResolvedValue({
+      prisma.salaryAccrual.findFirst.mockResolvedValue({
         id: 'a-1',
         reversedAt: new Date(),
       });
