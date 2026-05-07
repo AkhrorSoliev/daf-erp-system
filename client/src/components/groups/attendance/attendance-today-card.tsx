@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { tashkentNow } from "@/lib/tashkent-time";
 import { formatShortDate, type LessonDate } from "./attendance-cycle-utils";
 
 interface AttendanceTodayCardProps {
@@ -35,8 +36,7 @@ export function AttendanceTodayCard({
     const endMins = eh * 60 + em;
 
     const tick = () => {
-      const n = new Date();
-      const nowSecs = n.getHours() * 3600 + n.getMinutes() * 60 + n.getSeconds();
+      const nowSecs = tashkentNow().seconds;
       const startSecs = startMins * 60;
       const endSecs = endMins * 60;
 
@@ -70,14 +70,13 @@ export function AttendanceTodayCard({
 
   const isLessonTime = (() => {
     if (!lessonStartTime || !lessonEndTime) return false;
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const nowMinutes = tashkentNow().minutes;
     const [sh, sm] = lessonStartTime.split(":").map(Number);
     const [eh, em] = lessonEndTime.split(":").map(Number);
     return nowMinutes >= sh * 60 + sm && nowMinutes <= eh * 60 + em;
   })();
 
-  const dateLabel = `${todayLesson.dayName}, ${formatShortDate(todayStr)}.${new Date().getFullYear()}`;
+  const dateLabel = `${todayLesson.dayName}, ${formatShortDate(todayStr)}.${todayStr.slice(0, 4)}`;
 
   // Variant 1: attendance NOT yet taken
   if (!todayLesson.hasAttendance) {

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
+import { tashkentNow } from "@/lib/tashkent-time";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import {
@@ -48,13 +49,6 @@ function lessonDateFromCell(c: LessonCalendarCell): LessonDateLike {
   };
 }
 
-function dateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 export function AttendanceCycleDashboard({
   group,
   onSelectDate,
@@ -62,13 +56,17 @@ export function AttendanceCycleDashboard({
   const user = useAuth((s) => s.user);
   const isAdmin = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
 
-  const now = new Date();
-  const todayStr = dateKey(now);
+  // "Today" is the Tashkent calendar date (not the browser's local date) —
+  // backend lesson queries are scoped to Tashkent days, so a Berlin user
+  // opening the dashboard near midnight should still see the same day a
+  // Tashkent user does.
+  const todayStr = tashkentNow().dateStr;
+  const [todayY, todayM] = todayStr.split("-").map(Number);
 
   // Visible month: drives the calendar query. Defaults to current month so
   // the user sees today by default, with the today card matching.
   const [visibleMonth, setVisibleMonth] = useState<Date>(
-    () => new Date(now.getFullYear(), now.getMonth(), 1),
+    () => new Date(todayY, todayM - 1, 1),
   );
 
   // Calendar cells for the visible month — drives both the calendar grid
@@ -95,7 +93,7 @@ export function AttendanceCycleDashboard({
   // accurate even when the admin is browsing a different month. Deduped
   // by react-query when current === visible.
   const currentMonthKey = useMemo(
-    () => ({ year: now.getFullYear(), month: now.getMonth() + 1 }),
+    () => ({ year: todayY, month: todayM }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );

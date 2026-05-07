@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { tashkentNow } from "@/lib/tashkent-time";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
@@ -70,13 +71,14 @@ export function AttendanceForm({
   const dayName = DAY_NAMES[dateObj.getDay()] ?? "";
   const formattedDate = `${d}.${m}.${y}`;
 
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const isToday = date === todayStr;
+  // All time logic runs in Tashkent (UTC+5) — backend validates against the
+  // same zone, so a teacher in Berlin sees the same banner as one in Tashkent.
+  const tashkent = tashkentNow();
+  const isToday = date === tashkent.dateStr;
 
   const lessonTimeInfo = (() => {
     if (!isToday || !group.lessonStartTime || !group.lessonEndTime) return null;
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const nowMinutes = tashkent.minutes;
     const [sh, sm] = group.lessonStartTime.split(":").map(Number);
     const [eh, em] = group.lessonEndTime.split(":").map(Number);
     const start = sh * 60 + sm;
@@ -88,16 +90,16 @@ export function AttendanceForm({
     if (nowMinutes < windowStart)
       return {
         status: "before" as const,
-        message: `Dars ${group.lessonStartTime} da boshlanadi. Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
+        message: `Dars ${group.lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
       };
     if (nowMinutes > end)
       return {
         status: "after" as const,
-        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime}). Davomat olish yopilgan`,
+        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti). Davomat olish yopilgan`,
       };
     return {
       status: "during" as const,
-      message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime})`,
+      message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti)`,
     };
   })();
 
