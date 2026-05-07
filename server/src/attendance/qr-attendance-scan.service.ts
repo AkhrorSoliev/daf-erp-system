@@ -11,7 +11,6 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
-import { calculatePerLessonCost } from '../billing/debtor-check.helper';
 import { QrSession, QrToken } from './shared/qr-types';
 
 @Injectable()
@@ -64,38 +63,17 @@ export class QrAttendanceScanService {
 
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
-      select: {
-        name: true,
-        branchId: true,
-        course: { select: { price: true, lessonPaymentCount: true } },
-      },
+      select: { name: true, branchId: true },
     });
     if (!group) {
       throw new BadRequestException('Guruh topilmadi');
     }
 
-    // Balance gate: block scans when the balance can't cover one lesson at
-    // this group's per-lesson cost. The structured response lets the student
-    // portal surface a clear "balance short by N" message instead of a
-    // generic error — and stops the QR flow before any side effects run.
-    const perLessonCost = calculatePerLessonCost(
-      group.course.price,
-      group.course.lessonPaymentCount,
-    );
-    const studentBalance = await this.prisma.student.findUnique({
-      where: { id: studentId },
-      select: { balance: true },
-    });
-    if (studentBalance && studentBalance.balance < perLessonCost) {
-      return {
-        success: false,
-        balanceInsufficient: true,
-        message:
-          "Balansingiz dars uchun yetmadi. Iltimos, ma'muriyatga murojaat qiling",
-        balance: studentBalance.balance,
-        debtAmount: perLessonCost - studentBalance.balance,
-      };
-    }
+    // No balance gate: a student with insufficient balance is allowed to
+    // scan and be marked PRESENT. The lesson is recorded but no consumption
+    // / deduction / accrual is written by LessonBillingService (B.1 rule).
+    // When the student later tops up, payments-write triggers retroactive
+    // billing to settle the unpaid lessons and accrue teacher salary.
 
     // Cache the lesson number from the session so the early-return path
     // (already-marked) and the success path both surface the same value.

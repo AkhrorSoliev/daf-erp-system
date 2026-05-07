@@ -354,4 +354,234 @@ describe('LessonBillingService', () => {
       expect(salaryAccrualService.reverseAccrualForAttendance).toHaveBeenCalled();
     });
   });
+
+  // ============================================================
+  // Retroactive billing (catch-up after a payment lands)
+  // ============================================================
+
+  describe('processRetroactiveBillingForStudent', () => {
+    // The mock for $queryRaw is shared across calls in beforeEach. Each test
+    // wires it explicitly to control how many unpaid attendances are found
+    // for each enrollment.
+    const studentId = 10001;
+    const companyId = 1;
+    const enrollmentId = 'enroll-1';
+    const groupId = 'group-1';
+
+    function setupOneEnrollmentWith(
+      unpaidDates: string[],
+      enrollmentRows: Array<{
+        id: string;
+        groupId: string;
+        group: { branchId: number };
+      }> = [{ id: enrollmentId, groupId, group: { branchId: 1 } }],
+    ) {
+      // First call returns enrollments via findMany (NOT $queryRaw — keep
+      // it explicit). Mock the active-enrollment lookup.
+      tx.enrollment.findMany = jest.fn().mockResolvedValue(enrollmentRows);
+      // The unpaid-attendance query inside the service uses $queryRaw —
+      // model the rows it returns. Per-enrollment, we shift one batch off.
+      const queues: Array<Array<{ id: string; date: Date }>> = [
+        unpaidDates.map((d, i) => ({ id: `att-${i + 1}`, date: new Date(d) })),
+      ];
+      tx.$queryRaw = jest.fn().mockImplementation(() => {
+        const next = queues.shift();
+        return Promise.resolve(next ?? []);
+      });
+    }
+
+    it('returns { billedAttendances: 0 } when student has no enrollments', async () => {
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+      expect(result.billedAttendances).toBe(0);
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+    });
+
+    it('returns 0 when student has enrollments but no unpaid attendance', async () => {
+      setupOneEnrollmentWith([]);
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+      expect(result.billedAttendances).toBe(0);
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Shared harness — wires up tx mocks so the live bill() flow can run
+     * against an in-memory state machine. Tracks balance, prepaid, and which
+     * attendances have a recorded consumption.
+     */
+    function wireLiveBillingMocks(initialBalance: number) {
+      let balance = initialBalance;
+      let prepaid = 0;
+      const consumedAttIds = new Set<string>();
+      let lastDeductionId: string | null = null;
+      let deductionCounter = 0;
+
+      tx.student.findUnique = jest
+        .fn()
+        .mockImplementation(() => Promise.resolve({ balance }));
+      tx.enrollment.findUnique = jest
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve({ prepaidLessonsRemaining: prepaid }),
+        );
+
+      // Inside bill() the SELECT FOR UPDATE on Enrollment is a $queryRaw —
+      // intercept by checking the SQL for "FOR UPDATE". Fall through to
+      // the unpaid-attendance query for everything else.
+      const innerQueryRaw = tx.$queryRaw;
+      tx.$queryRaw = jest.fn().mockImplementation((strings: any) => {
+        const sql = Array.isArray(strings)
+          ? strings.join(' ')
+          : String(strings);
+        if (sql.includes('FOR UPDATE')) {
+          return Promise.resolve([
+            {
+              id: enrollmentId,
+              prepaidLessonsRemaining: prepaid,
+              startDate: null,
+            },
+          ]);
+        }
+        return innerQueryRaw(strings);
+      });
+
+      // findFirst inside bill() does TWO things:
+      //   1. idempotency check (LESSON_CONSUMPTION on attendanceId)
+      //   2. recent-batch lookup (LESSON_DEDUCTION on enrollmentId, when
+      //      prepaid > 0 path runs)
+      tx.transaction.findFirst = jest.fn().mockImplementation(({ where }: any) => {
+        if (where?.type === 'LESSON_CONSUMPTION') {
+          return Promise.resolve(
+            consumedAttIds.has(where.attendanceId) ? { id: 'cons-x' } : null,
+          );
+        }
+        if (where?.type === 'LESSON_DEDUCTION') {
+          return Promise.resolve(lastDeductionId ? { id: lastDeductionId } : null);
+        }
+        return Promise.resolve(null);
+      });
+
+      transactionsService.deductLessonFee = jest.fn().mockImplementation((args: any) => {
+        balance -= args.amount;
+        deductionCounter += 1;
+        lastDeductionId = `ded-${deductionCounter}`;
+        return Promise.resolve({ id: lastDeductionId });
+      });
+      transactionsService.recordLessonConsumption = jest
+        .fn()
+        .mockImplementation((args: any) => {
+          consumedAttIds.add(args.attendanceId);
+          return Promise.resolve({ id: `cons-${consumedAttIds.size}` });
+        });
+
+      tx.enrollment.update = jest.fn().mockImplementation(({ data }: any) => {
+        if (typeof data.prepaidLessonsRemaining === 'number') {
+          prepaid = data.prepaidLessonsRemaining;
+        } else if (data.prepaidLessonsRemaining?.decrement) {
+          prepaid -= data.prepaidLessonsRemaining.decrement;
+        }
+        return Promise.resolve({});
+      });
+
+      return {
+        getBalance: () => balance,
+        getPrepaid: () => prepaid,
+        getConsumed: () => consumedAttIds,
+      };
+    }
+
+    it('settles 9 unpaid lessons after a full-cycle payment', async () => {
+      setupOneEnrollmentWith([
+        '2026-03-02',
+        '2026-03-04',
+        '2026-03-06',
+        '2026-03-09',
+        '2026-03-11',
+        '2026-03-13',
+        '2026-03-16',
+        '2026-03-18',
+        '2026-03-20',
+      ]);
+
+      const state = wireLiveBillingMocks(400_000);
+
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      expect(result.billedAttendances).toBe(9);
+      expect(transactionsService.deductLessonFee).toHaveBeenCalledTimes(1);
+      expect(transactionsService.deductLessonFee).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: LessonDeductionMode.FULL_CYCLE,
+          amount: 400_000,
+          lessonsCovered: 12,
+        }),
+        expect.anything(),
+      );
+      expect(transactionsService.recordLessonConsumption).toHaveBeenCalledTimes(
+        9,
+      );
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledTimes(9);
+      // 12 prepaid units after refill, 9 consumed (1 inside bill() refill +
+      // 8 standalone decrements) → 3 remaining.
+      expect(state.getPrepaid()).toBe(3);
+      expect(state.getBalance()).toBe(0);
+    });
+
+    it('stops after partial pay when balance and prepaid are exhausted', async () => {
+      // 4 unpaid lessons; balance covers exactly 1 (perLessonCost = 33_333).
+      setupOneEnrollmentWith([
+        '2026-03-02',
+        '2026-03-04',
+        '2026-03-06',
+        '2026-03-09',
+      ]);
+      const state = wireLiveBillingMocks(33_333);
+
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      expect(result.billedAttendances).toBe(1);
+      expect(transactionsService.deductLessonFee).toHaveBeenCalledTimes(1);
+      expect(transactionsService.deductLessonFee).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: LessonDeductionMode.PARTIAL,
+          amount: 33_333,
+          lessonsCovered: 1,
+        }),
+        expect.anything(),
+      );
+      expect(transactionsService.recordLessonConsumption).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(state.getPrepaid()).toBe(0);
+    });
+
+    it('opens a Serializable tx in runRetroactiveBilling', async () => {
+      // Arrange a no-enrollments fast path so the tx body returns 0.
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      prisma.$transaction = jest.fn().mockImplementation((cb) => cb(prisma));
+
+      const result = await service.runRetroactiveBilling({
+        studentId,
+        companyId,
+      });
+
+      expect(result.billedAttendances).toBe(0);
+      expect(prisma.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ isolationLevel: 'Serializable' }),
+      );
+    });
+  });
 });

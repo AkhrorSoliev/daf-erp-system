@@ -16,7 +16,6 @@ import {
 } from '@prisma/client';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
-import { calculatePerLessonCost } from '../billing/debtor-check.helper';
 
 @Injectable()
 export class AttendanceSaveService {
@@ -60,25 +59,18 @@ export class AttendanceSaveService {
     // it's a stable property of the group, not a contended row.
     const groupMeta = await this.prisma.group.findUnique({
       where: { id: groupId },
-      select: {
-        branchId: true,
-        course: { select: { price: true, lessonPaymentCount: true } },
-      },
+      select: { branchId: true },
     });
     if (!groupMeta) {
       throw new NotFoundException('Guruh topilmadi');
     }
-    const perLessonCost = calculatePerLessonCost(
-      groupMeta.course.price,
-      groupMeta.course.lessonPaymentCount,
-    );
 
     const results = await this.prisma.$transaction(
       async (tx) => {
-        // Validate all students are enrolled in this group. The expected-set
-        // logic below mirrors getByDate exactly so the two layers stay in
-        // sync — teacher view excludes debtors and not-yet-started enrollments,
-        // admin view sees everything except not-yet-started.
+        // Validate all students are enrolled in this group. Debtors are now
+        // part of the main roster — anyone (teacher or admin) can mark them.
+        // When they later top up their balance, payments-write triggers
+        // retroactive billing to settle the unpaid lessons.
         const enrolledStudents = await tx.enrollment.findMany({
           where: {
             groupId,
@@ -89,7 +81,6 @@ export class AttendanceSaveService {
           select: {
             id: true,
             studentId: true,
-            student: { select: { balance: true } },
           },
         });
         const enrollmentIdByStudent = new Map(
@@ -98,17 +89,6 @@ export class AttendanceSaveService {
         const enrolledStudentIds = new Set(
           enrolledStudents.map((r) => r.studentId),
         );
-        // Per-group debtor set: balance below the per-lesson cost. The
-        // attendance form renders debtors in a separate "Qarzdorlar" panel
-        // outside the main roster — they are NEVER required to be marked,
-        // for any role. Admins/CEO can still optionally include a debtor
-        // entry (e.g. after collecting payment in the same session); we
-        // accept it. Teachers cannot send debtor entries at all.
-        const debtorIds = new Set(
-          enrolledStudents
-            .filter((r) => r.student.balance < perLessonCost)
-            .map((r) => r.studentId),
-        );
 
         for (const entry of dto.entries) {
           if (!enrolledStudentIds.has(entry.studentId)) {
@@ -116,21 +96,12 @@ export class AttendanceSaveService {
               `O'quvchi #${entry.studentId} bu guruhga yozilmagan yoki dars sanasi uning boshlanish sanasidan oldin`,
             );
           }
-          if (isTeacherOnly && debtorIds.has(entry.studentId)) {
-            throw new BadRequestException(
-              `O'quvchi #${entry.studentId} balansi dars uchun yetmaydi — davomat olish mumkin emas`,
-            );
-          }
         }
 
-        // "Expected" set: every student the frontend renders in the main
-        // attendance form. Debtors live in a separate panel and are not
-        // required for any role.
-        const expectedStudentIds = new Set(
-          enrolledStudents
-            .filter((r) => r.student.balance >= perLessonCost)
-            .map((r) => r.studentId),
-        );
+        // Full-roster requirement: every active student (debtors included)
+        // must be marked. The frontend renders all of them in one list now,
+        // so the expected set matches the rendered set exactly.
+        const expectedStudentIds = enrolledStudentIds;
 
         const submittedStudentIds = new Set(
           dto.entries.map((e) => e.studentId),
