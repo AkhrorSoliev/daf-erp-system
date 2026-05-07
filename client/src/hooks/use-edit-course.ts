@@ -7,6 +7,7 @@ export interface Course {
   lessonDuration: number | null;
   lessonMinutes: number | null;
   courseDuration: number | null;
+  lessonPaymentCount: number | null;
   price: number;
   isActive: boolean;
   branchId: number | null;

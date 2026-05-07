@@ -85,6 +85,7 @@ export class CoursesService {
         description: dto.description,
         lessonDuration: dto.lessonDuration,
         courseDuration: dto.courseDuration,
+        lessonPaymentCount: dto.lessonPaymentCount,
         price: dto.price,
         branchId: dto.branchId,
         companyId,

@@ -12,6 +12,7 @@ import {
   FileText,
   ClipboardList,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
           lessonDuration: data.lessonDuration,
           lessonMinutes: data.lessonMinutes ?? null,
           courseDuration: data.courseDuration,
+          lessonPaymentCount: data.lessonPaymentCount ?? null,
           price: data.price,
           isActive: data.isActive,
           branchId: data.branchId,
@@ -172,6 +174,15 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               value={
                 course.lessonDuration
                   ? `${course.lessonDuration} ta`
+                  : "—"
+              }
+            />
+            <InfoRow
+              icon={<RefreshCw className="h-4 w-4 text-muted-foreground" />}
+              label="Sikl darslari"
+              value={
+                course.lessonPaymentCount
+                  ? `${course.lessonPaymentCount} ta`
                   : "—"
               }
             />

@@ -2,11 +2,17 @@
 
 import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
+import { HelpCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { PriceInput } from "@/components/ui/price-input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
@@ -35,6 +41,7 @@ export function EditCourseForm({
       description: course?.description ?? "",
       courseDuration: course?.courseDuration ?? (3 as number),
       lessonDuration: course?.lessonDuration ?? (36 as number),
+      lessonPaymentCount: course?.lessonPaymentCount ?? (12 as number),
       lessonMinutes: course?.lessonMinutes ?? (90 as number),
       price: course ? String(course.price) : "",
       isActive: course?.isActive ?? true,
@@ -46,6 +53,7 @@ export function EditCourseForm({
     description: string;
     courseDuration: number;
     lessonDuration: number;
+    lessonPaymentCount: number;
     lessonMinutes: number;
     price: string;
     isActive: boolean;
@@ -63,6 +71,7 @@ export function EditCourseForm({
           description: values.description || undefined,
           courseDuration: values.courseDuration || undefined,
           lessonDuration: values.lessonDuration || undefined,
+          lessonPaymentCount: values.lessonPaymentCount || undefined,
           lessonMinutes: values.lessonMinutes || undefined,
           price: priceNum,
           branchId,
@@ -76,6 +85,7 @@ export function EditCourseForm({
           lessonDuration: data.lessonDuration,
           lessonMinutes: data.lessonMinutes,
           courseDuration: data.courseDuration,
+          lessonPaymentCount: data.lessonPaymentCount,
           price: data.price,
           isActive: data.isActive,
           branchId: data.branchId,
@@ -90,6 +100,7 @@ export function EditCourseForm({
           description: values.description || undefined,
           courseDuration: values.courseDuration || undefined,
           lessonDuration: values.lessonDuration || undefined,
+          lessonPaymentCount: values.lessonPaymentCount || undefined,
           lessonMinutes: values.lessonMinutes || undefined,
           price: priceNum,
           isActive: values.isActive,
@@ -102,6 +113,7 @@ export function EditCourseForm({
           lessonDuration: data.lessonDuration,
           lessonMinutes: data.lessonMinutes,
           courseDuration: data.courseDuration,
+          lessonPaymentCount: data.lessonPaymentCount,
           price: data.price,
           isActive: data.isActive,
           branchId: data.branchId,
@@ -159,7 +171,7 @@ export function EditCourseForm({
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="courseDuration">Davomiyligi (oy)</Label>
             <Input
@@ -178,6 +190,29 @@ export function EditCourseForm({
               min={1}
               placeholder="36"
               {...form.register("lessonDuration", { valueAsNumber: true })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="lessonPaymentCount"
+              className="flex items-center gap-1.5"
+            >
+              Sikl darslari
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="size-3.5 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Bir to&apos;lov nechta darsni qoplaydi (masalan 12)
+                </TooltipContent>
+              </Tooltip>
+            </Label>
+            <Input
+              id="lessonPaymentCount"
+              type="number"
+              min={1}
+              placeholder="12"
+              {...form.register("lessonPaymentCount", { valueAsNumber: true })}
             />
           </div>
           <div className="space-y-1.5">
