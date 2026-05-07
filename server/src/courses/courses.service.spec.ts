@@ -159,4 +159,50 @@ describe('CoursesService — status methods', () => {
       );
     });
   });
+
+  describe('create — lessonPaymentCount passthrough', () => {
+    beforeEach(() => {
+      prisma.branch.findFirst.mockResolvedValue({ id: 1, companyId: 1001 });
+      prisma.course.create.mockResolvedValue({
+        ...mockCourse,
+        lessonPaymentCount: 8,
+        price: 600_000,
+        createdAt: new Date(),
+      });
+      prisma.coursePriceSnapshot = { create: jest.fn().mockResolvedValue({}) };
+    });
+
+    it('persists lessonPaymentCount when provided in create DTO', async () => {
+      await service.create(
+        {
+          name: 'Intensive',
+          price: 600_000,
+          branchId: 1,
+          lessonPaymentCount: 8,
+        } as any,
+        1,
+        1001,
+      );
+
+      expect(prisma.course.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lessonPaymentCount: 8 }),
+        }),
+      );
+    });
+
+    it('passes undefined when lessonPaymentCount omitted (DB default applies)', async () => {
+      await service.create(
+        { name: 'Standard', price: 400_000, branchId: 1 } as any,
+        1,
+        1001,
+      );
+
+      expect(prisma.course.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lessonPaymentCount: undefined }),
+        }),
+      );
+    });
+  });
 });

@@ -158,6 +158,7 @@ export function CoursesSettingsClient() {
               <TableHead>Kurs nomi</TableHead>
               <TableHead>Davomiyligi</TableHead>
               <TableHead>Darslar soni</TableHead>
+              <TableHead>Sikl darslari</TableHead>
               <TableHead>Narxi</TableHead>
               <TableHead>Holati</TableHead>
               <TableHead className="w-10" />
@@ -166,14 +167,14 @@ export function CoursesSettingsClient() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -203,6 +204,11 @@ export function CoursesSettingsClient() {
                   <TableCell>
                     {course.lessonDuration
                       ? `${course.lessonDuration} ta`
+                      : "—"}
+                  </TableCell>
+                  <TableCell>
+                    {course.lessonPaymentCount
+                      ? `${course.lessonPaymentCount} ta`
                       : "—"}
                   </TableCell>
                   <TableCell>{formatPrice(course.price)} so&apos;m</TableCell>
