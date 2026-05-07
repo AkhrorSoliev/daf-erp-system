@@ -66,9 +66,10 @@ export function AttendanceDebtorsSection({
             Qarzdorlar — {debtors.length} ta
           </CardTitle>
           <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
-            Bu o&apos;quvchilarning balansi keyingi dars uchun yetmaydi. Davomatda
-            ko&apos;rinmaydi va QR scan rad etiladi. To&apos;lov qabul qilingach
-            avtomatik qaytadan ko&apos;rinadi.
+            Bu o&apos;quvchilarning balansi keyingi dars uchun yetmaydi.
+            Ular davomat ro&apos;yxatida qoladi va belgilanaveradi — to&apos;lov
+            kelganda o&apos;tilgan darslar avtomatik hisoblanadi va ustozning
+            oyligiga yoziladi.
           </CardDescription>
         </CardHeader>
         <CardContent>

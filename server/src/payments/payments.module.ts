@@ -6,10 +6,11 @@ import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { BillingModule } from '../billing/billing.module';
 import { SmsModule } from '../sms/sms.module';
 
 @Module({
-  imports: [TransactionsModule, SmsModule],
+  imports: [TransactionsModule, BillingModule, SmsModule],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,

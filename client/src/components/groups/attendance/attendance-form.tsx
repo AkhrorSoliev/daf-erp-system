@@ -116,9 +116,11 @@ export function AttendanceForm({
     setLoading(true);
     try {
       const { data } = await api.get(`/attendance/${group.id}/date/${date}`);
-      // Backend now returns { activeStudents, debtorStudents?, perLessonCost?, coursePrice? }.
-      // Teacher view: debtorStudents is always empty array.
-      // Admin view: debtorStudents is the per-group debtor list (rendered below the form).
+      // Backend returns { activeStudents, debtorStudents?, perLessonCost?, coursePrice? }.
+      // activeStudents now includes EVERYONE (teacher and admin alike) — debtors
+      // appear inline with an indicator on the row, and the teacher must mark
+      // them too. debtorStudents is still returned to admins as a quick-action
+      // collection list rendered below the form.
       const active: StudentAttendance[] = data.activeStudents ?? [];
       const debtors: DebtorStudent[] = data.debtorStudents ?? [];
       setStudents(active);
@@ -411,9 +413,11 @@ export function AttendanceForm({
         </div>
       )}
 
-      {/* Admin-only debtors panel: rendered below the attendance form so the
-          admin can collect payment from students whose balance can't cover
-          the next lesson. Teacher view never receives debtorStudents. */}
+      {/* Admin-only debtors quick-action panel: same students already appear
+          (with an inline "Qarz" badge) in the main roster above. This panel
+          adds a "To'lov qabul qilish" shortcut so the admin can collect the
+          full cycle in one click. After payment, retroactive billing settles
+          all the unpaid attendance silently. */}
       {isAdmin && debtorStudents.length > 0 && (
         <AttendanceDebtorsSection
           debtors={debtorStudents}

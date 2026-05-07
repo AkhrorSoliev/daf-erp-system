@@ -7,6 +7,7 @@ import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
+import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PaymentStatus, Prisma } from '@prisma/client';
 
@@ -46,6 +47,7 @@ describe('PaymentsService', () => {
   let prisma: any;
   let transactionsService: any;
   let entityHistoryService: any;
+  let lessonBillingService: any;
 
   beforeEach(async () => {
     prisma = {
@@ -97,6 +99,15 @@ describe('PaymentsService', () => {
       recordRestore: jest.fn().mockResolvedValue(undefined),
     };
 
+    lessonBillingService = {
+      processRetroactiveBillingForStudent: jest
+        .fn()
+        .mockResolvedValue({ billedAttendances: 0 }),
+      runRetroactiveBilling: jest
+        .fn()
+        .mockResolvedValue({ billedAttendances: 0 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
@@ -105,6 +116,7 @@ describe('PaymentsService', () => {
         PaymentsDebtorsService,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
+        { provide: LessonBillingService, useValue: lessonBillingService },
         { provide: EntityHistoryService, useValue: entityHistoryService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
@@ -230,6 +242,23 @@ describe('PaymentsService', () => {
 
       const createCall = prisma.payment.create.mock.calls[0][0];
       expect(createCall.data.branchId).toBe(3);
+    });
+
+    it('should trigger retroactive billing inside the payment tx', async () => {
+      await service.create(dto, userId, companyId);
+
+      // `processRetroactiveBillingForStudent` must run with the student id
+      // and the tx the payment opened — same tx, same atomic boundary.
+      expect(
+        lessonBillingService.processRetroactiveBillingForStudent,
+      ).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          studentId: dto.studentId,
+          companyId,
+          performedById: userId,
+        }),
+      );
     });
   });
 

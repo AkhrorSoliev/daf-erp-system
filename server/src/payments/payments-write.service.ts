@@ -6,6 +6,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
+import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
 import {
   PaymentMethod,
@@ -36,6 +37,7 @@ export class PaymentsWriteService {
   constructor(
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
+    private lessonBillingService: LessonBillingService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
   ) {}
@@ -110,6 +112,20 @@ export class PaymentsWriteService {
             data: { paidAmount: { increment: dto.amount } },
           });
         }
+
+        // Retroactive billing: now that the balance is topped up, settle any
+        // PRESENT/LATE/ABSENT attendance whose lesson was held while the
+        // student was a debtor (no LESSON_DEDUCTION/CONSUMPTION/SalaryAccrual
+        // got written at the time). Idempotent — re-running on a payment
+        // where everything is already settled is a no-op.
+        await this.lessonBillingService.processRetroactiveBillingForStudent(
+          tx,
+          {
+            studentId: dto.studentId,
+            companyId,
+            performedById: userId,
+          },
+        );
 
         const updatedStudent = await tx.student.findUnique({
           where: { id: dto.studentId },
@@ -420,6 +436,18 @@ export class PaymentsWriteService {
           data: { paidAmount: { increment: params.amount } },
         });
       }
+
+      // Same retroactive billing hook as the manual `create()` path —
+      // gateway payments (Payme/Click) and admin attach-external also
+      // need to settle past unpaid attendance the moment funds land.
+      await this.lessonBillingService.processRetroactiveBillingForStudent(
+        tx,
+        {
+          studentId: params.studentId,
+          companyId: params.companyId,
+          performedById: params.performedById,
+        },
+      );
 
       const updatedStudent = await tx.student.findUnique({
         where: { id: params.studentId },

@@ -604,14 +604,15 @@ export class AttendanceReadService {
     );
 
     // Per-group debt classification: a student is a debtor if their balance
-    // can't cover even one lesson at this group's per-lesson cost. The
-    // teacher view hides them entirely (so they can't be PRESENT-marked by
-    // mistake); the admin view surfaces them in a separate panel for
-    // collection follow-up.
+    // can't cover even one lesson at this group's per-lesson cost. Debtors
+    // now appear in the main roster for everyone (with an inline indicator)
+    // so attendance can still be taken; their unpaid lessons get settled
+    // retroactively when they next top up their balance. `debtorStudents`
+    // is still returned to admins as a quick-action collection list.
     const isTeacherOnly =
       roles && roles.length > 0 && roles.every((r) => r === 'Teacher');
 
-    const mapped = enrollments.map((e) => {
+    const activeStudents = enrollments.map((e) => {
       const att = attendanceMap.get(e.studentId);
       const isDebtor = e.student.balance < perLessonCost;
       return {
@@ -631,15 +632,9 @@ export class AttendanceReadService {
       };
     });
 
-    const activeStudents = mapped.filter((s) => !s.isDebtor);
-    const debtorStudents = mapped.filter((s) => s.isDebtor);
-
-    if (isTeacherOnly) {
-      // Teacher portal never sees debtors — they aren't part of the
-      // expected-set in attendance-save either, so omitting them from the
-      // payload keeps the two layers in sync.
-      return { activeStudents, debtorStudents: [] };
-    }
+    const debtorStudents = isTeacherOnly
+      ? []
+      : activeStudents.filter((s) => s.isDebtor);
 
     return {
       activeStudents,

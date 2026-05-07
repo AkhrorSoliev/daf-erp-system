@@ -1,4 +1,11 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { LessonBillingService } from './lesson-billing.service';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
@@ -29,6 +36,35 @@ export class BillingController {
       performedById: userId,
       reason: dto.reason,
       companyId,
+    });
+  }
+
+  /**
+   * Manual catch-up endpoint. Settles every still-unpaid PRESENT/LATE/ABSENT
+   * attendance for a student by reusing the same fullCycle/partial billing
+   * logic the live attendance flow uses. Idempotent — calling it again on a
+   * student with nothing left to settle is a no-op.
+   *
+   * Use cases:
+   *   - Migration / legacy data cleanup: students who had unpaid attendance
+   *     before this feature shipped.
+   *   - Recovery: an admin notices a salary accrual was missed and wants to
+   *     force a recompute after the student tops up.
+   *
+   * The regular payment pipeline already invokes this automatically, so
+   * this endpoint is mostly for one-off corrections.
+   */
+  @Post('retroactive/:studentId')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  runRetroactiveBilling(
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.lessonBillingService.runRetroactiveBilling({
+      studentId,
+      companyId,
+      performedById: userId,
     });
   }
 }

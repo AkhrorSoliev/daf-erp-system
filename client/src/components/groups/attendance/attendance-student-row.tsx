@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/format-utils";
 import {
   STATUS_CONFIG,
   type AttendanceEntry,
@@ -68,9 +70,32 @@ export function AttendanceStudentRow({
         </Avatar>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">
-            {student.firstName} {student.lastName}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-sm font-medium">
+              {student.firstName} {student.lastName}
+            </p>
+            {student.isDebtor && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                    <AlertTriangle className="size-3" />
+                    Qarz
+                    {typeof student.debtAmount === "number" &&
+                      student.debtAmount > 0 && (
+                        <span className="ml-0.5 font-mono tabular-nums">
+                          {formatPrice(student.debtAmount)}
+                        </span>
+                      )}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Balans dars uchun yetmaydi. Davomat olinaveradi —
+                  to&apos;lov kelganda o&apos;tilgan darslar avtomatik
+                  hisoblanadi.
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           {isAdmin && entry?.note && !isNoteOpen && (
             <p className="truncate text-[11px] text-purple-600 dark:text-purple-400">
               {entry.note}

@@ -261,8 +261,7 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 
 - **Manual attendance is all-or-nothing.** `AttendanceSaveService.save()` rejects the request unless `dto.entries` covers every active enrollment the role would render via `getByDate` — partial saves are not allowed. A previous bug let admins/teachers leave students "na bor — na yo'q": only the marked subset was persisted and the rest stayed `null` forever.
 - "Expected" set per role (must mirror `getByDate` exactly):
-  - **Teacher** — every active enrollment with `student.balance >= 0` (negative-balance students are hidden from the teacher view, so they are NOT required in entries).
-  - **CEO / Branch Director / Administrator** — every active enrollment in the group.
+  - **Every role** (Teacher, Admin, BD, CEO) — every active enrollment in the group, debtors included. Debtors used to be hidden from the teacher view; that block was removed when retroactive billing on payment shipped, so the roster is the same shape for everyone now.
 - On miss → `BadRequestException("Davomat saqlash uchun barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan o'quvchilar: N ta")`. Validation runs **inside** the `Serializable` tx, so a concurrent enrollment add can't race past it.
 - The frontend (`attendance-form.tsx`) mirrors this: the `Saqlash` button is disabled while any visible student has `status === null`, an amber "Belgilanmagan: N ta" badge sits next to it, and `handleSave()` no longer auto-coerces `null → "PRESENT"`. Both layers must stay in sync — never weaken the backend check thinking the UI already prevents the case (API is callable directly).
 
@@ -561,6 +560,22 @@ Two partial unique indexes back this:
 - Resets `enrollment.prepaidLessonsRemaining = 0`.
 
 Use case: admin entered the wrong cycle, wrong group, or wrong amount. Distinct from the per-attendance flip (which handles "this single lesson didn't happen").
+
+##### Retroactive billing on payment
+
+Debtors (`balance < perLessonCost`) can be marked PRESENT/LATE just like any other student — `attendance-save` and `qr-attendance-scan` no longer block them, and the teacher attendance roster shows them inline with a "Qarz" badge. When the lesson is held the billing layer skips deduction/consumption/accrual (B.1 still preserved), so nothing financial happens at the time.
+
+The catch-up runs the moment money lands: `PaymentsWriteService.create()` and `createFromExternal()` both invoke `LessonBillingService.processRetroactiveBillingForStudent(tx, ...)` from inside the same Serializable payment transaction. It walks every active enrollment, picks unpaid PRESENT/LATE/ABSENT attendance (no active `LESSON_CONSUMPTION`) **oldest-first**, and iteratively delegates to `bill()` — the same private method the live attendance flow uses. Each iteration:
+
+- Re-reads the live balance and `prepaidLessonsRemaining`.
+- Picks full / partial / insufficient just like a fresh attendance write would.
+- Verifies a `LESSON_CONSUMPTION` was actually written; if not (balance ran out), breaks out of the loop for that enrollment.
+
+Idempotent — calling it on a student with everything already settled is a no-op (the `LESSON_CONSUMPTION` idempotency guard inside `bill()` short-circuits).
+
+Manual trigger: `POST /billing/retroactive/:studentId` (CEO/BD/Admin) opens its own Serializable tx via `runRetroactiveBilling()`. Used for legacy/migration cleanup or admin-driven recovery; the regular payment pipeline already invokes it automatically.
+
+**Salary period closed**: if a settled lesson date falls inside an APPROVED/PAID `SalaryPayment` window, `createAccrual` logs+skips (existing closed-period guard). The student gets billed but the teacher accrual is missed — admin handles via balance-withdrawal or manual adjustment.
 
 #### Salary Versioning (`EmployeeSalaryConfigVersion`)
 

@@ -85,6 +85,148 @@ export class LessonBillingService {
     // Other transitions: no-op.
   }
 
+  /**
+   * Retroactively settle every billable attendance for a student that has
+   * no active LESSON_CONSUMPTION row yet (B.1: lesson held but balance was
+   * insufficient at the time). Called from the payments pipeline right after
+   * a top-up lands so the new balance immediately covers past unpaid lessons
+   * and accrues the corresponding teacher salary.
+   *
+   * Iteration is per-enrollment, oldest attendance first. For each unpaid
+   * attendance we delegate to `bill()` which re-reads the live balance and
+   * picks full / partial / insufficient — exactly the same branching the
+   * normal attendance flow uses. Idempotent via the LESSON_CONSUMPTION guard
+   * inside `bill()`, so calling it twice is harmless.
+   *
+   * Caller is expected to hand us a Serializable tx (the payment write
+   * transaction). When invoked from outside a payment, use
+   * `runRetroactiveBilling()` which opens its own Serializable tx.
+   */
+  async processRetroactiveBillingForStudent(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      companyId: number;
+      performedById?: number;
+    },
+  ): Promise<{ billedAttendances: number }> {
+    const enrollments = await tx.enrollment.findMany({
+      where: {
+        studentId: params.studentId,
+        deletedAt: null,
+        status: 'ACTIVE',
+        group: { companyId: params.companyId, deletedAt: null },
+      },
+      select: {
+        id: true,
+        groupId: true,
+        group: { select: { branchId: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (enrollments.length === 0) {
+      return { billedAttendances: 0 };
+    }
+
+    let billedCount = 0;
+
+    for (const enr of enrollments) {
+      // Unpaid = PRESENT/LATE/ABSENT attendance with no active
+      // LESSON_CONSUMPTION row. Order by date so we settle the oldest first
+      // (FIFO) — matches what an admin would do manually.
+      const unpaidRows = await tx.$queryRaw<
+        { id: string; date: Date }[]
+      >`
+        SELECT a.id, a.date
+        FROM "Attendance" a
+        WHERE a."studentId" = ${params.studentId}
+          AND a."groupId" = ${enr.groupId}
+          AND a.status::text IN ('PRESENT', 'LATE', 'ABSENT')
+          AND NOT EXISTS (
+            SELECT 1 FROM "Transaction" t
+            WHERE t."attendanceId" = a.id
+              AND t.type = 'LESSON_CONSUMPTION'
+              AND t."reversedAt" IS NULL
+          )
+        ORDER BY a.date ASC
+      `;
+
+      for (const att of unpaidRows) {
+        // Snapshot the live balance before each attempt — `bill()` refuses
+        // when balance < perLessonCost, but we don't want to keep calling
+        // it once we know the student can't cover any more lessons in this
+        // group. Cheap fast-path so we don't burn queries on a hopeless
+        // refill loop.
+        const studentRow = await tx.student.findUnique({
+          where: { id: params.studentId },
+          select: { balance: true },
+        });
+        const balance = studentRow?.balance ?? 0;
+
+        const enrollmentRow = await tx.enrollment.findUnique({
+          where: { id: enr.id },
+          select: { prepaidLessonsRemaining: true },
+        });
+        const prepaid = enrollmentRow?.prepaidLessonsRemaining ?? 0;
+
+        if (prepaid <= 0 && balance <= 0) {
+          // Out of prepaid AND no balance → no point trying further lessons
+          // in this enrollment. Move on.
+          break;
+        }
+
+        await this.bill(tx, {
+          attendanceId: att.id,
+          enrollmentId: enr.id,
+          studentId: params.studentId,
+          groupId: enr.groupId,
+          branchId: enr.group.branchId,
+          lessonDate: att.date,
+          oldStatus: null,
+          newStatus: AttendanceStatus.PRESENT,
+          companyId: params.companyId,
+          performedById: params.performedById,
+        });
+
+        // Verify a consumption row was actually written; if not (insufficient
+        // balance), `bill()` returned early and continuing is pointless.
+        const consumed = await tx.transaction.findFirst({
+          where: {
+            attendanceId: att.id,
+            type: TransactionType.LESSON_CONSUMPTION,
+            reversedAt: null,
+          },
+          select: { id: true },
+        });
+        if (!consumed) break;
+        billedCount += 1;
+      }
+    }
+
+    return { billedAttendances: billedCount };
+  }
+
+  /**
+   * Public entry point for the manual "qaytadan hisobla" admin endpoint.
+   * Opens its own Serializable transaction (matching the rest of the
+   * financial layer) and delegates to `processRetroactiveBillingForStudent`.
+   */
+  async runRetroactiveBilling(params: {
+    studentId: number;
+    companyId: number;
+    performedById?: number;
+  }): Promise<{ billedAttendances: number }> {
+    return this.prisma.$transaction(
+      (tx) => this.processRetroactiveBillingForStudent(tx, params),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 15_000,
+        timeout: 60_000,
+      },
+    );
+  }
+
   // ===== BILL (charge a lesson) =====
   private async bill(
     tx: Prisma.TransactionClient,

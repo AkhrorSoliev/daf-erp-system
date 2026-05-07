@@ -738,37 +738,61 @@ describe('AttendanceService', () => {
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
     });
 
-    it('should not require entries for negative-balance students when role is Teacher', async () => {
-      // Two students: one with positive balance (visible to teacher), one
-      // with negative balance (hidden from teacher view). Teacher should only
-      // need to provide an entry for the visible student.
+    it('should require Teacher to mark debtors (negative-balance students) too', async () => {
+      // Two students — one positive, one negative balance. Debtors are now
+      // part of the main roster: a teacher must mark every active student,
+      // including those who can't afford the lesson. Their unpaid attendance
+      // gets settled retroactively when they next top up.
       prisma.enrollment.findMany.mockResolvedValue([
         { studentId: 10001, student: { balance: 500000 } },
         { studentId: 10002, student: { balance: -10000 } },
       ]);
       prisma.attendance.findMany.mockResolvedValue([]);
-      prisma.attendance.upsert.mockResolvedValue({
-        id: 'att-1',
-        groupId: 'group-uuid-1',
-        studentId: 10001,
-        date: new Date('2026-04-01'),
-        status: 'PRESENT',
-        note: null,
-      });
 
-      const dto = { entries: [{ studentId: 10001, status: 'PRESENT' }] };
+      // Submitting only the positive-balance student must fail — the
+      // negative-balance one is now expected as well.
+      const partialDto = { entries: [{ studentId: 10001, status: 'PRESENT' }] };
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', partialDto, 1, ['Teacher'], 1),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
 
+      // With both students marked, the teacher save succeeds.
+      prisma.attendance.upsert
+        .mockResolvedValueOnce({
+          id: 'att-1',
+          groupId: 'group-uuid-1',
+          studentId: 10001,
+          date: new Date('2026-04-01'),
+          status: 'PRESENT',
+          note: null,
+        })
+        .mockResolvedValueOnce({
+          id: 'att-2',
+          groupId: 'group-uuid-1',
+          studentId: 10002,
+          date: new Date('2026-04-01'),
+          status: 'PRESENT',
+          note: null,
+        });
+
+      const fullDto = {
+        entries: [
+          { studentId: 10001, status: 'PRESENT' },
+          { studentId: 10002, status: 'PRESENT' },
+        ],
+      };
       const result = await service.save(
         'group-uuid-1',
         '2026-04-01',
-        dto,
+        fullDto,
         1,
         ['Teacher'],
         1,
       );
 
       expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
-      expect(prisma.attendance.upsert).toHaveBeenCalledTimes(1);
+      expect(prisma.attendance.upsert).toHaveBeenCalledTimes(2);
     });
 
     it('should strip notes from teacher-only users', async () => {
