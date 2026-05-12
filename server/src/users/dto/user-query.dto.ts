@@ -15,9 +15,4 @@ export class UserQueryDto extends PaginationDto {
   @Type(() => Number)
   @IsInt()
   branch_id?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  company_id?: number;
 }

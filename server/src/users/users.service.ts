@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -53,6 +54,9 @@ function formatUser(user: any) {
   };
 }
 
+const CEO_ROLE_ID = 1;
+const TEACHER_ROLE_ID = 4;
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -61,22 +65,93 @@ export class UsersService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async findAll(query: UserQueryDto) {
-    const {
-      user_type,
-      search,
-      branch_id,
-      company_id,
-      page = 1,
-      pageSize = 10,
-    } = query;
+  private async assertRoleAndBranchRules(
+    roleIds: number[] | undefined,
+    branchIds: number[] | undefined,
+    mainBranch: number | null | undefined,
+    companyId: number,
+    callerUserId?: number,
+  ) {
+    // Role escalation guard: only CEO can grant CEO role
+    if (callerUserId && roleIds?.includes(CEO_ROLE_ID)) {
+      const caller = await this.prisma.user.findUnique({
+        where: { id: callerUserId },
+        select: {
+          roles: { select: { role: { select: { name: true } } } },
+        },
+      });
+      const callerIsCeo =
+        caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
+      if (!callerIsCeo) {
+        throw new ForbiddenException(
+          'CEO rolini faqat CEO tayinlashi mumkin',
+        );
+      }
+    }
+
+    if (!roleIds?.length) return;
+
+    const hasCeoRole = roleIds.includes(CEO_ROLE_ID);
+    const hasTeacherRole = roleIds.includes(TEACHER_ROLE_ID);
+    const hasBranches = !!branchIds && branchIds.length > 0;
+
+    // Teacher must have at least one branch (more specific error first)
+    if (hasTeacherRole && !hasCeoRole && !hasBranches) {
+      throw new BadRequestException(
+        "O'qituvchi uchun kamida bitta filial tanlanishi shart",
+      );
+    }
+
+    // Non-CEO employees must have at least one branch
+    if (!hasCeoRole && !hasBranches) {
+      throw new BadRequestException(
+        "CEO bo'lmagan xodim uchun kamida bitta filial tanlanishi shart",
+      );
+    }
+
+    // Branches must belong to the same company
+    if (hasBranches) {
+      const validCount = await this.prisma.branch.count({
+        where: {
+          id: { in: branchIds! },
+          companyId,
+          deletedAt: null,
+        },
+      });
+      if (validCount !== branchIds!.length) {
+        throw new BadRequestException(
+          "Tanlangan filiallar bu kompaniyaga tegishli emas",
+        );
+      }
+    }
+
+    // mainBranch must be one of the selected branches
+    if (mainBranch && hasBranches && !branchIds!.includes(mainBranch)) {
+      throw new BadRequestException(
+        "Asosiy filial tanlangan filiallar orasida bo'lishi kerak",
+      );
+    }
+  }
+
+  private assertSameCompany(
+    targetCompanyId: number,
+    callerCompanyId: number | undefined,
+  ) {
+    if (callerCompanyId !== undefined && targetCompanyId !== callerCompanyId) {
+      throw new ForbiddenException(
+        "Bu xodimga nisbatan amal bajarish huquqi yo'q",
+      );
+    }
+  }
+
+  async findAll(query: UserQueryDto, companyId: number) {
+    const { user_type, search, branch_id, page = 1, pageSize = 10 } = query;
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.UserWhereInput = { deletedAt: null };
-
-    if (company_id) {
-      where.companyId = company_id;
-    }
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      companyId,
+    };
 
     if (user_type) {
       const types = user_type
@@ -231,21 +306,24 @@ export class UsersService {
     return { message: "Parol muvaffaqiyatli o'zgartirildi" };
   }
 
-  async create(data: {
-    id?: number;
-    firstName: string;
-    lastName: string;
-    companyId: number;
-    login?: string;
-    password?: string;
-    phone?: string;
-    photo?: string;
-    gender?: 'MALE' | 'FEMALE';
-    mainBranch?: number;
-    telegramChatId?: string;
-    roleIds?: number[];
-    branchIds?: number[];
-  }) {
+  async create(
+    data: {
+      id?: number;
+      firstName: string;
+      lastName: string;
+      companyId: number;
+      login?: string;
+      password?: string;
+      phone?: string;
+      photo?: string;
+      gender?: 'MALE' | 'FEMALE';
+      mainBranch?: number;
+      telegramChatId?: string;
+      roleIds?: number[];
+      branchIds?: number[];
+    },
+    callerUserId?: number,
+  ) {
     // Validate role IDs exist
     if (data.roleIds?.length) {
       const validRoles = await this.prisma.role.findMany({
@@ -260,6 +338,14 @@ export class UsersService {
         );
       }
     }
+
+    await this.assertRoleAndBranchRules(
+      data.roleIds,
+      data.branchIds,
+      data.mainBranch,
+      data.companyId,
+      callerUserId,
+    );
 
     const hashedPassword = data.password
       ? await bcrypt.hash(data.password, 10)
@@ -311,7 +397,12 @@ export class UsersService {
     return formatUser(user);
   }
 
-  async updateUser(id: number, dto: UpdateUserDto, changedById: number) {
+  async updateUser(
+    id: number,
+    dto: UpdateUserDto,
+    changedById: number,
+    callerCompanyId?: number,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
       select: userSelect,
@@ -319,6 +410,25 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException(`Xodim #${id} topilmadi`);
+    }
+
+    this.assertSameCompany(user.companyId, callerCompanyId);
+
+    // If roles or branches are being modified, re-validate combined state
+    if (dto.roleIds !== undefined || dto.branchIds !== undefined) {
+      const nextRoleIds =
+        dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
+      const nextBranchIds =
+        dto.branchIds ?? user.branches.map((ub: any) => ub.branch.id);
+      const nextMainBranch =
+        dto.mainBranch !== undefined ? dto.mainBranch : user.mainBranch;
+      await this.assertRoleAndBranchRules(
+        nextRoleIds,
+        nextBranchIds,
+        nextMainBranch,
+        user.companyId,
+        changedById,
+      );
     }
 
     const updateData: any = {};
@@ -374,7 +484,11 @@ export class UsersService {
     return formatUser(updated);
   }
 
-  async softDelete(id: number, deletedById: number) {
+  async softDelete(
+    id: number,
+    deletedById: number,
+    callerCompanyId?: number,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
@@ -382,6 +496,8 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`Xodim #${id} topilmadi`);
     }
+
+    this.assertSameCompany(user.companyId, callerCompanyId);
 
     await this.prisma.user.update({
       where: { id },

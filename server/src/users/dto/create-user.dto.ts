@@ -4,6 +4,7 @@ import {
   IsArray,
   IsInt,
   IsIn,
+  IsNotEmpty,
   MinLength,
   Matches,
 } from 'class-validator';
@@ -28,10 +29,10 @@ export class CreateUserDto {
   @IsString()
   login?: string;
 
-  @IsOptional()
   @IsString()
-  @MinLength(4)
-  password?: string;
+  @IsNotEmpty({ message: 'Parol majburiy' })
+  @MinLength(4, { message: "Parol kamida 4 ta belgidan iborat bo'lishi kerak" })
+  password: string;
 
   @IsOptional()
   @IsIn(['MALE', 'FEMALE'])

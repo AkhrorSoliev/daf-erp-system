@@ -28,11 +28,14 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 
+const CEO_ROLE_ID = 1;
+const TEACHER_ROLE_ID = 4;
+
 const ROLES = [
-  { id: 1, label: "CEO", icon: Crown },
+  { id: CEO_ROLE_ID, label: "CEO", icon: Crown },
   { id: 2, label: "Direktor", icon: Building2 },
   { id: 3, label: "Administrator", icon: Shield },
-  { id: 4, label: "O'qituvchi", icon: GraduationCap },
+  { id: TEACHER_ROLE_ID, label: "O'qituvchi", icon: GraduationCap },
   { id: 5, label: "Kassir", icon: Wallet },
 ];
 
@@ -43,21 +46,61 @@ const STATUS_OPTIONS = [
   { value: "TERMINATED", label: "Ishdan bo'shatilgan" },
 ];
 
-const schema = z.object({
-  firstName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
-  lastName: z.string().min(2, "Familiya kamida 2 ta belgidan iborat bo'lishi kerak"),
-  phone: z
-    .string()
-    .regex(/^\d{9}$/, "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak")
-    .or(z.literal("")),
-  login: z.string().optional().or(z.literal("")),
-  password: z.string().min(4, "Parol kamida 4 ta belgi").optional().or(z.literal("")),
-  gender: z.enum(["MALE", "FEMALE", ""]).optional(),
-  status: z.string().optional(),
-  mainBranch: z.string().optional(),
-  roleIds: z.array(z.number()).min(1, "Kamida bitta lavozim tanlang"),
-  branchIds: z.array(z.number()),
-});
+const schema = z
+  .object({
+    firstName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+    lastName: z.string().min(2, "Familiya kamida 2 ta belgidan iborat bo'lishi kerak"),
+    phone: z
+      .string()
+      .regex(/^\d{9}$/, "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak")
+      .or(z.literal("")),
+    login: z.string().optional().or(z.literal("")),
+    password: z.string().optional().or(z.literal("")),
+    gender: z.enum(["MALE", "FEMALE", ""]).optional(),
+    status: z.string().optional(),
+    mainBranch: z.string().optional(),
+    roleIds: z.array(z.number()).min(1, "Kamida bitta lavozim tanlang"),
+    branchIds: z.array(z.number()),
+    isEdit: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    const hasCeoRole = data.roleIds.includes(CEO_ROLE_ID);
+    const hasTeacherRole = data.roleIds.includes(TEACHER_ROLE_ID);
+
+    if (!hasCeoRole && data.branchIds.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["branchIds"],
+        message: hasTeacherRole
+          ? "O'qituvchi uchun kamida bitta filial tanlang"
+          : "Kamida bitta filial tanlang",
+      });
+    }
+
+    if (!data.isEdit) {
+      if (!data.password || data.password.length < 4) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["password"],
+          message: "Yangi xodim uchun parol majburiy (kamida 4 ta belgi)",
+        });
+      }
+    } else if (data.password && data.password.length < 4) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["password"],
+        message: "Parol kamida 4 ta belgidan iborat bo'lishi kerak",
+      });
+    }
+
+    if (data.branchIds.length > 1 && !data.mainBranch) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["mainBranch"],
+        message: "Bir nechta filial tanlanganda asosiy filial tanlanishi shart",
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -92,6 +135,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       mainBranch: employee?.mainBranch ? String(employee.mainBranch) : "",
       roleIds: employee?.roles.map((r) => r.id) ?? [],
       branchIds: employee?.branches.map((b) => b.id) ?? [],
+      isEdit,
     },
   });
 
@@ -101,8 +145,9 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       const { data } = await api.get("/branches");
       const list = Array.isArray(data) ? data : (data.data || []);
       setBranches(list.map((b: any) => ({ id: b.id, name: b.name })));
-    } catch {
+    } catch (error) {
       setBranches([]);
+      toast.error(getErrorMessage(error, "Filiallarni yuklashda xatolik"));
     } finally {
       setBranchesLoading(false);
     }
@@ -118,6 +163,10 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       ? current.filter((id) => id !== roleId)
       : [...current, roleId];
     form.setValue("roleIds", next, { shouldValidate: true });
+    // Role changes affect branchIds requirement (non-CEO needs branches)
+    if (form.formState.isSubmitted) {
+      void form.trigger("branchIds");
+    }
   };
 
   const toggleBranch = (branchId: number) => {
@@ -125,7 +174,11 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
     const next = current.includes(branchId)
       ? current.filter((id) => id !== branchId)
       : [...current, branchId];
-    form.setValue("branchIds", next);
+    form.setValue("branchIds", next, { shouldValidate: form.formState.isSubmitted });
+    // Branch count affects mainBranch requirement
+    if (form.formState.isSubmitted && next.length > 1) {
+      void form.trigger("mainBranch");
+    }
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -263,7 +316,9 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="password">{isEdit ? "Yangi parol" : "Parol"}</Label>
+            <Label htmlFor="password">
+              {isEdit ? "Yangi parol" : "Parol *"}
+            </Label>
             <Input
               id="password"
               type="password"
@@ -320,7 +375,10 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
 
         {/* Branches */}
         <div className="space-y-2.5">
-          <Label>Filiallar</Label>
+          <Label>
+            Filiallar
+            {!watchRoleIds.includes(CEO_ROLE_ID) && " *"}
+          </Label>
           <div className="space-y-1.5">
             {branches.map((branch) => {
               const checked = watchBranchIds.includes(branch.id);
@@ -348,11 +406,14 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
               );
             })}
           </div>
+          {form.formState.errors.branchIds && (
+            <p className="text-xs text-destructive">{form.formState.errors.branchIds.message}</p>
+          )}
         </div>
 
         {watchBranchIds.length > 1 && (
           <div className="space-y-1.5">
-            <Label>Asosiy filial</Label>
+            <Label>Asosiy filial *</Label>
             <Controller
               control={form.control}
               name="mainBranch"
@@ -373,6 +434,9 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
                 </Select>
               )}
             />
+            {form.formState.errors.mainBranch && (
+              <p className="text-xs text-destructive">{form.formState.errors.mainBranch.message}</p>
+            )}
           </div>
         )}
       </section>
