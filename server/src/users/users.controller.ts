@@ -27,8 +27,13 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  findAll(@Query() query: UserQueryDto) {
-    return this.usersService.findAll(query);
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  findAll(
+    @Query() query: UserQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.usersService.findAll(query, companyId);
   }
 
   @Get(':id')
@@ -42,11 +47,12 @@ export class UsersController {
   async create(
     @Body() dto: CreateUserDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') callerId: number,
   ) {
     this.logger.log(
       `Creating user: ${JSON.stringify({ ...dto, password: dto.password ? '***' : undefined, companyId })}`,
     );
-    return this.usersService.create({ ...dto, companyId });
+    return this.usersService.create({ ...dto, companyId }, callerId);
   }
 
   @Patch('profile')
@@ -72,8 +78,9 @@ export class UsersController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.usersService.updateUser(id, dto, userId);
+    return this.usersService.updateUser(id, dto, userId, companyId);
   }
 
   @Delete(':id')
@@ -82,7 +89,8 @@ export class UsersController {
   remove(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.usersService.softDelete(id, userId);
+    return this.usersService.softDelete(id, userId, companyId);
   }
 }

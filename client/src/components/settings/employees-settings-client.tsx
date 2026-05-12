@@ -26,6 +26,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SettingsPageHeader } from "./settings-page-header";
@@ -76,6 +86,8 @@ export function EmployeesSettingsClient() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<EmployeeUser | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
 
@@ -123,14 +135,19 @@ export function EmployeesSettingsClient() {
     setTotal((t) => t + (employees.some((e) => e.id === saved.id) ? 0 : 1));
   };
 
-  const handleDeleted = async (id: number) => {
+  const performDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
     try {
-      await api.delete(`/users/${id}`);
-      setEmployees((prev) => prev.filter((e) => e.id !== id));
+      await api.delete(`/users/${confirmDelete.id}`);
+      setEmployees((prev) => prev.filter((e) => e.id !== confirmDelete.id));
       setTotal((t) => t - 1);
-      toast.success("Xodim o'chirildi");
+      toast.success("Xodim arxivga o'tkazildi");
+      setConfirmDelete(null);
     } catch (err) {
       toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -267,7 +284,7 @@ export function EmployeesSettingsClient() {
                         </p>
                       )}
                     </div>
-                    <EmployeeRowActions employee={emp} onDelete={handleDeleted} />
+                    <EmployeeRowActions employee={emp} onDeleteRequest={setConfirmDelete} />
                   </div>
                 </Link>
               );
@@ -345,7 +362,7 @@ export function EmployeesSettingsClient() {
                       </Badge>
                     </TableCell>
                     <TableCell className="relative z-10">
-                      <EmployeeRowActions employee={emp} onDelete={handleDeleted} />
+                      <EmployeeRowActions employee={emp} onDeleteRequest={setConfirmDelete} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -388,6 +405,35 @@ export function EmployeesSettingsClient() {
         open={telegramDialogOpen}
         onOpenChange={setTelegramDialogOpen}
       />
+
+      <AlertDialog
+        open={!!confirmDelete}
+        onOpenChange={(open) => !open && !deleting && setConfirmDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xodimni o&apos;chirishni tasdiqlaysizmi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete
+                ? `${confirmDelete.firstName} ${confirmDelete.lastName} arxivga o'tkaziladi. Uning hisobi nofaol bo'ladi, lekin tarixiy ma'lumotlar saqlanadi.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void performDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "O'chirilmoqda..." : "O'chirish"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

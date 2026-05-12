@@ -18,10 +18,10 @@ import { useAuth } from "@/hooks/use-auth";
 
 interface EmployeeRowActionsProps {
   employee: EmployeeUser;
-  onDelete?: (id: number) => void;
+  onDeleteRequest?: (employee: EmployeeUser) => void;
 }
 
-export function EmployeeRowActions({ employee, onDelete }: EmployeeRowActionsProps) {
+export function EmployeeRowActions({ employee, onDeleteRequest }: EmployeeRowActionsProps) {
   const { openDrawer } = useEditEmployee();
   const user = useAuth((s) => s.user);
   const canDelete = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
@@ -51,7 +51,7 @@ export function EmployeeRowActions({ employee, onDelete }: EmployeeRowActionsPro
         {canDelete && employee.id !== user?.id && (
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
-            onClick={() => onDelete?.(employee.id)}
+            onClick={() => onDeleteRequest?.(employee)}
           >
             <Trash2 className="mr-2 size-4" />
             O&apos;chirish
