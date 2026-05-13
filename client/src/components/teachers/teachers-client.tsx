@@ -72,13 +72,11 @@ export function TeachersClient() {
     if (!branchLoaded) return;
     setLoading(true);
     try {
-      const companyId = localStorage.getItem("companyId");
       const params: Record<string, any> = {
         user_type: "Teacher",
         page: filters.page,
         pageSize: filters.pageSize,
       };
-      if (companyId) params.company_id = companyId;
       if (selectedBranch) params.branch_id = selectedBranch.id;
       if (filters.search.trim()) params.search = filters.search.trim();
       const { data } = await api.get("/users", { params });
