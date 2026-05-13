@@ -25,11 +25,14 @@ function formatHms(secondsOfDay: number): string {
  * the system says it's already over.
  */
 export function TashkentClock() {
-  const [label, setLabel] = useState(() => formatHms(tashkentNow().seconds));
+  const [label, setLabel] = useState("");
 
   useEffect(() => {
-    const tick = () => setLabel(formatHms(tashkentNow().seconds));
-    const interval = setInterval(tick, 1000);
+    setLabel(formatHms(tashkentNow().seconds));
+    const interval = setInterval(
+      () => setLabel(formatHms(tashkentNow().seconds)),
+      1000,
+    );
     return () => clearInterval(interval);
   }, []);
 
@@ -38,7 +41,7 @@ export function TashkentClock() {
       <TooltipTrigger asChild>
         <div className="hidden md:flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs font-medium tabular-nums text-muted-foreground">
           <Clock className="size-3.5" />
-          <span>{label}</span>
+          <span suppressHydrationWarning>{label || "--:--:--"}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent>Toshkent vaqti (UTC+5)</TooltipContent>
