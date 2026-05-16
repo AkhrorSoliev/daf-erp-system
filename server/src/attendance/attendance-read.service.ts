@@ -614,7 +614,12 @@ export class AttendanceReadService {
 
     const activeStudents = enrollments.map((e) => {
       const att = attendanceMap.get(e.studentId);
-      const isDebtor = e.student.balance < perLessonCost;
+      // A student is flagged as a debtor when their balance has already
+      // gone negative — i.e. one or more past lessons remain uncovered.
+      // The billing layer now charges the per-lesson cost on every
+      // attended lesson, so a positive-but-low balance is no longer a
+      // "warning state"; it will simply go negative on the next save.
+      const isDebtor = e.student.balance < 0;
       return {
         studentId: e.student.id,
         firstName: e.student.firstName,

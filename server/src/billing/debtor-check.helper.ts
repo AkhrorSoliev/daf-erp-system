@@ -1,11 +1,12 @@
 /**
  * Pure helpers shared across attendance, billing, and debtors services.
  *
- * "Per-lesson cost" is the price of one lesson within a course's prepaid
- * cycle. A student is considered a debtor for a group when their balance
- * cannot cover even one lesson at that group's per-lesson cost — at which
- * point they are hidden from the teacher's attendance view, blocked from
- * QR scans, and surfaced in the admin's debtors panel for follow-up.
+ * A student is a "debtor" when their balance has actually gone negative —
+ * the billing layer now deducts the per-lesson cost on every attended
+ * lesson, so a negative balance is the canonical signal that one or more
+ * past lessons remain uncovered. (Previously a positive but small balance
+ * was flagged as "debtor"; that ceiling-at-one-lesson display masked the
+ * real accumulating debt and is the bug we are fixing.)
  *
  * Kept as pure functions (no DI, no Prisma) so they can be called from any
  * layer — spec tests included — without setup.
@@ -26,21 +27,20 @@ export function calculatePerLessonCost(
 
 export function isStudentDebtorForGroup(
   studentBalance: number,
-  coursePrice: number,
-  lessonPaymentCount: number | null | undefined,
+  _coursePrice: number,
+  _lessonPaymentCount: number | null | undefined,
 ): boolean {
-  return studentBalance < calculatePerLessonCost(coursePrice, lessonPaymentCount);
+  return studentBalance < 0;
 }
 
 /**
- * How much short the student is for one more lesson. Always >= 0 — when the
- * balance covers the lesson, this returns 0 rather than a negative "credit".
+ * The student's actual debt — the absolute value of a negative balance.
+ * Always >= 0; a non-negative balance means no debt.
  */
 export function calculateDebtAmount(
   studentBalance: number,
-  coursePrice: number,
-  lessonPaymentCount: number | null | undefined,
+  _coursePrice: number,
+  _lessonPaymentCount: number | null | undefined,
 ): number {
-  const perLessonCost = calculatePerLessonCost(coursePrice, lessonPaymentCount);
-  return Math.max(0, perLessonCost - studentBalance);
+  return studentBalance < 0 ? -studentBalance : 0;
 }

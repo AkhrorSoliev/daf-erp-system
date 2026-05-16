@@ -40,11 +40,11 @@ interface AttendanceDebtorsSectionProps {
 
 /**
  * Admin-only panel rendered below the attendance form. Surfaces students
- * whose balance can't cover the next lesson at this group's per-lesson cost,
- * with a one-click "to'lov qabul qilish" button that pre-selects them in
- * the standard payment dialog. Closes the loop between "this student
- * disappeared from attendance" and "collect their payment to bring them
- * back" without forcing the admin to navigate to a separate debtors page.
+ * whose balance has gone negative (real debt accumulated from previously
+ * attended lessons), with a one-click "to'lov qabul qilish" button that
+ * pre-selects them in the standard payment dialog. Closes the loop
+ * between "this student keeps attending without paying" and "collect
+ * their payment" without forcing the admin to navigate elsewhere.
  */
 export function AttendanceDebtorsSection({
   debtors,
@@ -66,10 +66,10 @@ export function AttendanceDebtorsSection({
             Qarzdorlar — {debtors.length} ta
           </CardTitle>
           <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
-            Bu o&apos;quvchilarning balansi keyingi dars uchun yetmaydi.
-            Ular davomat ro&apos;yxatida qoladi va belgilanaveradi — to&apos;lov
-            kelganda o&apos;tilgan darslar avtomatik hisoblanadi va ustozning
-            oyligiga yoziladi.
+            Bu o&apos;quvchilarning balansi manfiyga tushgan. Davomat
+            olinishi davom etadi va har bir dars bahosi balansdan
+            ushlanmoqda — to&apos;lov qabul qilingach, ustozning oyligiga
+            ham hisoblanadi.
           </CardDescription>
         </CardHeader>
         <CardContent>

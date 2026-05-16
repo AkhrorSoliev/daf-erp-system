@@ -100,6 +100,14 @@ export class TransactionsWriteService {
       mode?: LessonDeductionMode;
       perLessonCost?: number;
       lessonsCovered?: number;
+      discountPercent?: number;
+      fullAmount?: number;
+      // SINGLE_UNCOVERED rows ride the same deduction path but defer the
+      // teacher's salary accrual until a payment lands and `uncoveredAmount`
+      // drains to zero. Stored in metadata so the retroactive-billing
+      // walker can find and settle them oldest-first.
+      salaryDeferred?: boolean;
+      uncoveredAmount?: number;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -116,6 +124,18 @@ export class TransactionsWriteService {
             }),
             ...(params.lessonsCovered !== undefined && {
               lessonsCovered: params.lessonsCovered,
+            }),
+            ...(params.discountPercent !== undefined && {
+              discountPercent: params.discountPercent,
+            }),
+            ...(params.fullAmount !== undefined && {
+              fullAmount: params.fullAmount,
+            }),
+            ...(params.salaryDeferred !== undefined && {
+              salaryDeferred: params.salaryDeferred,
+            }),
+            ...(params.uncoveredAmount !== undefined && {
+              uncoveredAmount: params.uncoveredAmount,
             }),
           }
         : undefined;
@@ -571,6 +591,67 @@ export class TransactionsWriteService {
           companyId: params.companyId,
           performedById: params.performedById,
           description: params.description,
+        },
+      });
+
+      await client.student.update({
+        where: { id: params.studentId },
+        data: { balance: balanceAfter },
+      });
+
+      return transaction;
+    }, tx);
+  }
+
+  /**
+   * Retroactive discount-rebalance entry. Written by StudentsWriteService
+   * when an admin changes `Student.discountPercent`. `amount` is signed:
+   * positive = credit the student (they were over-charged under the old
+   * discount), negative = debit (they were under-charged). The accompanying
+   * metadata records the old/new discount and the totals used to compute
+   * the delta, so the audit trail is self-describing.
+   */
+  async recordDiscountAdjustment(
+    params: {
+      studentId: number;
+      amount: number;
+      oldDiscountPercent: number;
+      newDiscountPercent: number;
+      totalFullAmount: number;
+      targetCharge: number;
+      previousNetDeducted: number;
+      companyId: number;
+      branchId?: number;
+      performedById?: number;
+      description?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const student = await this.lockStudent(client, params.studentId);
+      const balanceBefore = student.balance;
+      const balanceAfter = balanceBefore + params.amount;
+
+      const transaction = await client.transaction.create({
+        data: {
+          type: TransactionType.DISCOUNT_ADJUSTMENT,
+          amount: params.amount,
+          balanceBefore,
+          balanceAfter,
+          studentId: params.studentId,
+          branchId: params.branchId,
+          companyId: params.companyId,
+          performedById: params.performedById,
+          description:
+            params.description ??
+            `Chegirma o'zgartirildi: ${params.oldDiscountPercent}% → ${params.newDiscountPercent}%`,
+          metadata: {
+            oldDiscountPercent: params.oldDiscountPercent,
+            newDiscountPercent: params.newDiscountPercent,
+            totalFullAmount: params.totalFullAmount,
+            targetCharge: params.targetCharge,
+            previousNetDeducted: params.previousNetDeducted,
+          },
         },
       });
 
