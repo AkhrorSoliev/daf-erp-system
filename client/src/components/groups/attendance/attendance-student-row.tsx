@@ -89,9 +89,10 @@ export function AttendanceStudentRow({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Balans dars uchun yetmaydi. Davomat olinaveradi —
-                  to&apos;lov kelganda o&apos;tilgan darslar avtomatik
-                  hisoblanadi.
+                  Balans manfiy. Davomat olinaveradi va har bir dars
+                  uchun bahosi to&apos;g&apos;ridan-to&apos;g&apos;ri
+                  balansdan ushlanmoqda. To&apos;lov kelganda
+                  o&apos;tilgan darslar hisobi yopiladi.
                 </TooltipContent>
               </Tooltip>
             )}

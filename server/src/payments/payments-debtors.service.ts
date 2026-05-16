@@ -112,11 +112,9 @@ export class PaymentsDebtorsService {
   /**
    * Per-group debtor list for the attendance "qarzdorlar" panel.
    *
-   * Distinct from `getDebtors()`: that one is the global "balance < 0" list
-   * across the whole company. This one is scoped to a single group and uses
-   * the per-group `perLessonCost` threshold (a student with 5,000 so'm balance
-   * is a debtor in a 33,333-so'm/lesson group but not in a 5,000-so'm/lesson
-   * group). It also surfaces `suggestedPayment` (the full-cycle course price)
+   * Scoped to a single group: returns the enrolled students whose balance
+   * has already gone negative (real debt). `perLessonCost` and
+   * `suggestedPayment` (the full-cycle course price) are still surfaced
    * so the admin's payment dialog can pre-fill the right amount.
    */
   async getDebtorsForGroup(groupId: string, companyId: number) {
@@ -150,7 +148,12 @@ export class PaymentsDebtorsService {
         deletedAt: null,
         status: EnrollmentStatus.ACTIVE,
         OR: [{ startDate: null }, { startDate: { lte: todayUtc } }],
-        student: { balance: { lt: perLessonCost } },
+        // Debtor = balance has already gone negative. The billing layer
+        // now writes a SINGLE_UNCOVERED LESSON_DEDUCTION on every attended
+        // lesson when the student can't cover it, so a low but positive
+        // balance is no longer the "needs to pay" signal — only an
+        // actually-negative balance is.
+        student: { balance: { lt: 0 } },
       },
       select: {
         student: {

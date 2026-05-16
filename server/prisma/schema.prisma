@@ -187,11 +187,13 @@ enum TransactionType {
   ADJUSTMENT
   TAX
   BALANCE_WITHDRAWAL
+  DISCOUNT_ADJUSTMENT
 }
 
 enum LessonDeductionMode {
   FULL_CYCLE
   PARTIAL
+  SINGLE_UNCOVERED
 }
 
 enum ContractStatus {
@@ -479,6 +481,11 @@ model Student {
   photo          String?
   comment        String?
   balance        Int           @default(0)
+  // Per-student discount (0–100) applied at lesson-billing time. Discount
+  // shrinks ONLY the center's share — the LESSON_DEDUCTION metadata still
+  // stores the full perLessonCost so SalaryAccrual computes the teacher's
+  // pay from the un-discounted price.
+  discountPercent Int          @default(0)
   placeOfStudy   String?
   address        String?
   passportSeries String?

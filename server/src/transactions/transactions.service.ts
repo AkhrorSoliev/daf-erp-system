@@ -38,6 +38,10 @@ export class TransactionsService {
       mode?: LessonDeductionMode;
       perLessonCost?: number;
       lessonsCovered?: number;
+      discountPercent?: number;
+      fullAmount?: number;
+      salaryDeferred?: boolean;
+      uncoveredAmount?: number;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -139,6 +143,24 @@ export class TransactionsService {
     tx?: Prisma.TransactionClient,
   ) {
     return this.write.createAdjustment(params, tx);
+  }
+  recordDiscountAdjustment(
+    params: {
+      studentId: number;
+      amount: number;
+      oldDiscountPercent: number;
+      newDiscountPercent: number;
+      totalFullAmount: number;
+      targetCharge: number;
+      previousNetDeducted: number;
+      companyId: number;
+      branchId?: number;
+      performedById?: number;
+      description?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.write.recordDiscountAdjustment(params, tx);
   }
 
   // Reads

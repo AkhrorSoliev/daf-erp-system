@@ -26,50 +26,45 @@ describe('debtor-check helper', () => {
   });
 
   describe('isStudentDebtorForGroup', () => {
-    it('balance equal to perLessonCost is NOT a debtor (boundary)', () => {
-      // 33,333 covers exactly one 33,333 lesson — student can attend.
-      expect(isStudentDebtorForGroup(33333, 400000, 12)).toBe(false);
+    it('positive balance is NOT a debtor (even when below perLessonCost)', () => {
+      // The billing layer now deducts on every attended lesson, so a
+      // low-but-positive balance is no longer a "needs to pay" signal.
+      expect(isStudentDebtorForGroup(10_000, 400_000, 12)).toBe(false);
     });
 
-    it('balance one som below perLessonCost IS a debtor', () => {
-      expect(isStudentDebtorForGroup(33332, 400000, 12)).toBe(true);
+    it('zero balance is NOT a debtor (no actual debt yet)', () => {
+      expect(isStudentDebtorForGroup(0, 400_000, 12)).toBe(false);
     });
 
-    it('zero balance is a debtor when course has price', () => {
-      expect(isStudentDebtorForGroup(0, 400000, 12)).toBe(true);
+    it('negative balance IS a debtor (real accumulated debt)', () => {
+      expect(isStudentDebtorForGroup(-50_000, 400_000, 12)).toBe(true);
     });
 
-    it('large balance is not a debtor', () => {
-      expect(isStudentDebtorForGroup(1_000_000, 400000, 12)).toBe(false);
-    });
-
-    it('negative balance is a debtor', () => {
-      expect(isStudentDebtorForGroup(-50000, 400000, 12)).toBe(true);
-    });
-
-    it('zero-price course: even zero balance is not a debtor', () => {
-      // perLessonCost = 0, so any balance >= 0 covers it.
+    it('zero-price course: zero balance is not a debtor', () => {
       expect(isStudentDebtorForGroup(0, 0, 12)).toBe(false);
+    });
+
+    it('large positive balance is not a debtor', () => {
+      expect(isStudentDebtorForGroup(1_000_000, 400_000, 12)).toBe(false);
     });
   });
 
   describe('calculateDebtAmount', () => {
-    it('returns the gap when balance is below perLessonCost', () => {
-      // perLessonCost = 33,333; balance = 10,000 → debt = 23,333
-      expect(calculateDebtAmount(10_000, 400_000, 12)).toBe(23333);
+    it('returns 0 when balance is positive', () => {
+      expect(calculateDebtAmount(10_000, 400_000, 12)).toBe(0);
     });
 
-    it('returns 0 when balance covers the lesson exactly', () => {
-      expect(calculateDebtAmount(33333, 400_000, 12)).toBe(0);
+    it('returns 0 when balance is exactly zero', () => {
+      expect(calculateDebtAmount(0, 400_000, 12)).toBe(0);
     });
 
-    it('returns 0 (never negative) when balance exceeds perLessonCost', () => {
-      expect(calculateDebtAmount(500_000, 400_000, 12)).toBe(0);
+    it('returns the absolute value of a negative balance', () => {
+      // -150,000 balance = 150,000 so'm of debt.
+      expect(calculateDebtAmount(-150_000, 400_000, 12)).toBe(150_000);
     });
 
-    it('handles negative balance correctly (debt = perLessonCost + |balance|)', () => {
-      // perLessonCost = 33,333; balance = -10,000 → debt = 43,333
-      expect(calculateDebtAmount(-10_000, 400_000, 12)).toBe(43333);
+    it('handles large debt', () => {
+      expect(calculateDebtAmount(-1_000_000, 400_000, 12)).toBe(1_000_000);
     });
   });
 });

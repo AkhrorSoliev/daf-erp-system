@@ -20,6 +20,17 @@ const BILLABLE: ReadonlySet<AttendanceStatus> = new Set([
   AttendanceStatus.ABSENT,
 ]);
 
+function clampDiscount(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.trunc(value)));
+}
+
+function applyDiscount(fullAmount: number, discountPercent: number): number {
+  if (discountPercent <= 0) return fullAmount;
+  if (discountPercent >= 100) return 0;
+  return Math.round((fullAmount * (100 - discountPercent)) / 100);
+}
+
 export interface ProcessAttendanceBillingParams {
   attendanceId: string;
   enrollmentId: string;
@@ -153,29 +164,14 @@ export class LessonBillingService {
       `;
 
       for (const att of unpaidRows) {
-        // Snapshot the live balance before each attempt — `bill()` refuses
-        // when balance < perLessonCost, but we don't want to keep calling
-        // it once we know the student can't cover any more lessons in this
-        // group. Cheap fast-path so we don't burn queries on a hopeless
-        // refill loop.
-        const studentRow = await tx.student.findUnique({
-          where: { id: params.studentId },
-          select: { balance: true },
-        });
-        const balance = studentRow?.balance ?? 0;
-
-        const enrollmentRow = await tx.enrollment.findUnique({
-          where: { id: enr.id },
-          select: { prepaidLessonsRemaining: true },
-        });
-        const prepaid = enrollmentRow?.prepaidLessonsRemaining ?? 0;
-
-        if (prepaid <= 0 && balance <= 0) {
-          // Out of prepaid AND no balance → no point trying further lessons
-          // in this enrollment. Move on.
-          break;
-        }
-
+        // Every unpaid attendance gets billed — `bill()` picks the right
+        // branch (full cycle / partial / SINGLE_UNCOVERED) based on the
+        // live balance + prepaid snapshot it reads internally. If balance
+        // runs out, Path D writes a SINGLE_UNCOVERED row and balance goes
+        // negative so the real debt is preserved in the ledger (this is
+        // the whole point of the change — "aniq raqamlar"). The previous
+        // `break` on insufficient balance hid the debt and led to the
+        // single-lesson display ceiling bug.
         await this.bill(tx, {
           attendanceId: att.id,
           enrollmentId: enr.id,
@@ -189,8 +185,10 @@ export class LessonBillingService {
           performedById: params.performedById,
         });
 
-        // Verify a consumption row was actually written; if not (insufficient
-        // balance), `bill()` returned early and continuing is pointless.
+        // bill() always writes a LESSON_CONSUMPTION now (audit row), so
+        // the count reflects every settled attendance. The only case
+        // where consumption is skipped is the defensive zero-price guard
+        // — treat that as "couldn't bill, stop trying for this enrollment".
         const consumed = await tx.transaction.findFirst({
           where: {
             attendanceId: att.id,
@@ -204,7 +202,140 @@ export class LessonBillingService {
       }
     }
 
+    // Phase 2: settle deferred teacher salary accruals for SINGLE_UNCOVERED
+    // deductions whose debt has now been covered (FIFO).
+    //
+    // Each SINGLE_UNCOVERED row records an uncovered slice in metadata.
+    // After a payment lands, walk those rows oldest-first and apply the
+    // newly-available coverage. A row is fully covered → write the missing
+    // SalaryAccrual + flip the metadata flags. A row is partially covered →
+    // shrink uncoveredAmount only; the teacher still waits.
+    await this.settleDeferredAccruals(tx, params);
+
     return { billedAttendances: billedCount };
+  }
+
+  private async settleDeferredAccruals(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      companyId: number;
+      performedById?: number;
+    },
+  ): Promise<void> {
+    const deferredRows = await tx.transaction.findMany({
+      where: {
+        studentId: params.studentId,
+        type: TransactionType.LESSON_DEDUCTION,
+        reversedAt: null,
+        metadata: { path: ['salaryDeferred'], equals: true },
+      },
+      select: {
+        id: true,
+        attendanceId: true,
+        enrollmentId: true,
+        branchId: true,
+        metadata: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (deferredRows.length === 0) return;
+
+    let totalUncovered = 0;
+    for (const row of deferredRows) {
+      const md = (row.metadata ?? {}) as Record<string, unknown>;
+      const uncovered = Number(md.uncoveredAmount ?? 0);
+      if (Number.isFinite(uncovered) && uncovered > 0) {
+        totalUncovered += uncovered;
+      }
+    }
+
+    const studentRow = await tx.student.findUnique({
+      where: { id: params.studentId },
+      select: { balance: true },
+    });
+    const finalBalance = studentRow?.balance ?? 0;
+    const currentDebt = finalBalance < 0 ? -finalBalance : 0;
+    let amountToApply = Math.max(0, totalUncovered - currentDebt);
+
+    if (amountToApply <= 0) return;
+
+    for (const row of deferredRows) {
+      if (amountToApply <= 0) break;
+      if (!row.attendanceId) continue;
+
+      const md = (row.metadata ?? {}) as Record<string, unknown>;
+      const rowUncovered = Number(md.uncoveredAmount ?? 0);
+      if (!Number.isFinite(rowUncovered) || rowUncovered <= 0) continue;
+
+      const applied = Math.min(rowUncovered, amountToApply);
+      const newUncovered = rowUncovered - applied;
+      amountToApply -= applied;
+
+      if (newUncovered > 0) {
+        // Partial coverage — keep deferred, just shrink the remaining debt.
+        await tx.transaction.update({
+          where: { id: row.id },
+          data: {
+            metadata: { ...md, uncoveredAmount: newUncovered },
+          },
+        });
+        continue;
+      }
+
+      // Fully covered: write the missing SalaryAccrual rows + clear flags.
+      const attendance = await tx.attendance.findUnique({
+        where: { id: row.attendanceId },
+        select: { date: true, groupId: true },
+      });
+      if (!attendance) {
+        // Defensive — attendance shouldn't disappear, but if it did, just
+        // clear the flag and move on. Without the lesson context we can't
+        // resolve teachers anyway.
+        await tx.transaction.update({
+          where: { id: row.id },
+          data: {
+            metadata: { ...md, uncoveredAmount: 0, salaryDeferred: false },
+          },
+        });
+        continue;
+      }
+
+      const perLessonCost = Number(md.perLessonCost ?? 0);
+      const teacherIds = await this.resolveTeachersForLesson(
+        tx,
+        attendance.groupId,
+        attendance.date,
+      );
+      for (const teacherId of teacherIds) {
+        try {
+          await this.salaryAccrualService.createAccrual({
+            teacherId,
+            studentId: params.studentId,
+            groupId: attendance.groupId,
+            attendanceId: row.attendanceId,
+            lessonDate: attendance.date,
+            perLessonCost,
+            companyId: params.companyId,
+            deductionTransactionId: row.id,
+            tx,
+          });
+        } catch (err) {
+          this.logger.error(
+            `Deferred salary accrual failed for teacher ${teacherId}`,
+            err,
+          );
+        }
+      }
+
+      await tx.transaction.update({
+        where: { id: row.id },
+        data: {
+          metadata: { ...md, uncoveredAmount: 0, salaryDeferred: false },
+        },
+      });
+    }
   }
 
   /**
@@ -283,6 +414,17 @@ export class LessonBillingService {
     });
     if (!group) return;
 
+    // Per-student discount (0–100). Applied at billing time: shrinks the
+    // amount deducted from balance but keeps `perLessonCost` (and therefore
+    // the teacher's salary accrual) at the full, un-discounted rate.
+    const studentRowForDiscount = await tx.student.findUnique({
+      where: { id: p.studentId },
+      select: { discountPercent: true },
+    });
+    const discountPercent = clampDiscount(
+      studentRowForDiscount?.discountPercent ?? 0,
+    );
+
     // Effective teacher list for THIS lesson (override-aware). Falls back to
     // GroupTeacher when no override is set for (groupId, lessonDate).
     const teacherIds = await this.resolveTeachersForLesson(
@@ -294,6 +436,8 @@ export class LessonBillingService {
     const lessonPaymentCount = group.course.lessonPaymentCount || 12;
     const fullCycleCost = group.course.price;
     const perLessonCost = Math.round(fullCycleCost / lessonPaymentCount);
+    const discountedFullCycleCost = applyDiscount(fullCycleCost, discountPercent);
+    const discountedPerLessonCost = applyDiscount(perLessonCost, discountPercent);
     const contractId = group.contracts[0]?.id;
 
     let coverageTransactionId: string | undefined;
@@ -326,11 +470,11 @@ export class LessonBillingService {
       });
       const balance = student?.balance ?? 0;
 
-      if (balance >= fullCycleCost) {
+      if (balance >= discountedFullCycleCost) {
         const deduction = await this.transactionsService.deductLessonFee(
           {
             studentId: p.studentId,
-            amount: fullCycleCost,
+            amount: discountedFullCycleCost,
             attendanceId: p.attendanceId,
             enrollmentId: p.enrollmentId,
             contractId,
@@ -339,6 +483,8 @@ export class LessonBillingService {
             mode: LessonDeductionMode.FULL_CYCLE,
             perLessonCost,
             lessonsCovered: lessonPaymentCount,
+            discountPercent,
+            fullAmount: fullCycleCost,
           },
           tx,
         );
@@ -347,9 +493,13 @@ export class LessonBillingService {
           data: { prepaidLessonsRemaining: lessonPaymentCount - 1 },
         });
         coverageTransactionId = deduction.id;
-      } else if (balance >= perLessonCost) {
-        const lessonsCovered = Math.floor(balance / perLessonCost);
-        const partialAmount = lessonsCovered * perLessonCost;
+      } else if (
+        discountedPerLessonCost > 0 &&
+        balance >= discountedPerLessonCost
+      ) {
+        const lessonsCovered = Math.floor(balance / discountedPerLessonCost);
+        const partialAmount = lessonsCovered * discountedPerLessonCost;
+        const fullAmount = lessonsCovered * perLessonCost;
         const deduction = await this.transactionsService.deductLessonFee(
           {
             studentId: p.studentId,
@@ -362,6 +512,8 @@ export class LessonBillingService {
             mode: LessonDeductionMode.PARTIAL,
             perLessonCost,
             lessonsCovered,
+            discountPercent,
+            fullAmount,
           },
           tx,
         );
@@ -370,14 +522,42 @@ export class LessonBillingService {
           data: { prepaidLessonsRemaining: lessonsCovered - 1 },
         });
         coverageTransactionId = deduction.id;
-      } else {
-        // Not enough to cover even one lesson. The attendance is recorded
-        // but nothing is charged and the teacher does NOT accrue salary
-        // for this lesson (B.1). The student will need to top up before
-        // the next attended lesson is paid.
-        this.logger.warn(
-          `Insufficient balance for student ${p.studentId} (${balance} < ${perLessonCost}) — no consumption written`,
+      } else if (discountedPerLessonCost > 0) {
+        // Balance can't cover even one (discounted) lesson. Previously this
+        // branch silently no-op'd and the UI showed a static one-lesson
+        // shortfall — masking the real debt as more lessons piled up. We now
+        // deduct the full per-lesson cost anyway, letting balance go
+        // negative, so each unpaid attendance accumulates real debt.
+        //
+        // B.1 is preserved by deferring the teacher's salary accrual:
+        // `salaryDeferred: true` + `uncoveredAmount` mark the deduction so
+        // `processRetroactiveBillingForStudent()` can settle it (and write
+        // the missing accrual) when a payment lands.
+        await this.transactionsService.deductLessonFee(
+          {
+            studentId: p.studentId,
+            amount: discountedPerLessonCost,
+            attendanceId: p.attendanceId,
+            enrollmentId: p.enrollmentId,
+            contractId,
+            companyId: p.companyId,
+            branchId: p.branchId,
+            mode: LessonDeductionMode.SINGLE_UNCOVERED,
+            perLessonCost,
+            lessonsCovered: 1,
+            discountPercent,
+            fullAmount: perLessonCost,
+            salaryDeferred: true,
+            uncoveredAmount: discountedPerLessonCost,
+          },
+          tx,
         );
+        // Leave coverageTransactionId undefined: the consumption row below
+        // still gets written (audit + idempotency), but the SalaryAccrual
+        // loop short-circuits — accrual is deferred per B.1.
+      } else {
+        // perLessonCost is zero (free course) — nothing to deduct, nothing
+        // to accrue, no consumption row. Defensive guard for edge data.
         return;
       }
     }

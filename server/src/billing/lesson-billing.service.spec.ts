@@ -41,10 +41,20 @@ describe('LessonBillingService', () => {
     // share the same jest.fn instances across the inner and outer scope.
     tx = {
       $queryRaw: jest.fn(),
-      transaction: { findFirst: jest.fn().mockResolvedValue(null) },
+      transaction: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        // `settleDeferredAccruals` walks deferred SINGLE_UNCOVERED rows;
+        // default to none so unrelated tests don't trip on its query.
+        findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn().mockResolvedValue({}),
+      },
       enrollment: { update: jest.fn().mockResolvedValue({}) },
       group: { findUnique: jest.fn().mockResolvedValue(baseGroup) },
       student: { findUnique: jest.fn() },
+      // `settleDeferredAccruals` resolves the deduction's linked Attendance
+      // to look up groupId + date for the teacher resolver. Default null
+      // because most tests don't trigger that branch.
+      attendance: { findUnique: jest.fn().mockResolvedValue(null) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue(baseGroup.teachers) },
       // Default: no per-lesson substitute override → resolver falls back
       // to GroupTeacher list above. Tests that exercise the override
@@ -235,24 +245,70 @@ describe('LessonBillingService', () => {
   });
 
   // ============================================================
-  // Insufficient balance — no billing, no accrual (B.1)
+  // Insufficient balance — SINGLE_UNCOVERED deduction, deferred accrual (B.1)
+  //
+  // The previous "no-op when broke" branch is gone: every attended lesson
+  // now writes a real deduction (balance is allowed to go negative) so the
+  // UI can show the actual accumulating debt instead of a static
+  // one-lesson ceiling. Teacher salary is held in metadata until a
+  // payment lands and clears the uncovered amount.
   // ============================================================
 
-  describe('insufficient balance — no consumption, no accrual', () => {
+  describe('insufficient balance — SINGLE_UNCOVERED, deferred accrual', () => {
     beforeEach(() => {
       tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 0 }]);
       tx.student.findUnique.mockResolvedValue({ balance: 1_000 });
     });
 
-    it('does not deduct, does not write consumption, does not accrue', async () => {
+    it('deducts the per-lesson cost with mode=SINGLE_UNCOVERED and salaryDeferred=true', async () => {
       await service.processAttendanceBilling(tx, {
         ...baseParams,
         oldStatus: null,
         newStatus: AttendanceStatus.PRESENT,
       });
-      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
-      expect(transactionsService.recordLessonConsumption).not.toHaveBeenCalled();
+      expect(transactionsService.deductLessonFee).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 33_333,
+          mode: LessonDeductionMode.SINGLE_UNCOVERED,
+          lessonsCovered: 1,
+          salaryDeferred: true,
+          uncoveredAmount: 33_333,
+        }),
+        tx,
+      );
+    });
+
+    it('writes the LESSON_CONSUMPTION audit row (idempotency anchor)', async () => {
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
+      expect(transactionsService.recordLessonConsumption).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attendanceId: 'att-1',
+          enrollmentId: 'enroll-1',
+        }),
+        tx,
+      );
+    });
+
+    it('does NOT write a salary accrual (deferred until payment lands)', async () => {
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
       expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+    });
+
+    it('does NOT change the prepaid counter (no batch was refilled)', async () => {
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
+      expect(tx.enrollment.update).not.toHaveBeenCalled();
     });
   });
 
@@ -536,8 +592,10 @@ describe('LessonBillingService', () => {
       expect(state.getBalance()).toBe(0);
     });
 
-    it('stops after partial pay when balance and prepaid are exhausted', async () => {
+    it('bills every unpaid lesson — covered ones partial, the rest SINGLE_UNCOVERED into negative', async () => {
       // 4 unpaid lessons; balance covers exactly 1 (perLessonCost = 33_333).
+      // The previous behaviour stopped at the first uncovered lesson; now
+      // every attended lesson is billed so the ledger shows the real debt.
       setupOneEnrollmentWith([
         '2026-03-02',
         '2026-03-04',
@@ -551,9 +609,11 @@ describe('LessonBillingService', () => {
         companyId,
       });
 
-      expect(result.billedAttendances).toBe(1);
-      expect(transactionsService.deductLessonFee).toHaveBeenCalledTimes(1);
-      expect(transactionsService.deductLessonFee).toHaveBeenCalledWith(
+      expect(result.billedAttendances).toBe(4);
+      expect(transactionsService.deductLessonFee).toHaveBeenCalledTimes(4);
+      // First lesson: balance exactly covers it (PARTIAL, lessonsCovered=1).
+      expect(transactionsService.deductLessonFee).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           mode: LessonDeductionMode.PARTIAL,
           amount: 33_333,
@@ -561,10 +621,149 @@ describe('LessonBillingService', () => {
         }),
         expect.anything(),
       );
+      // Remaining three drop into SINGLE_UNCOVERED — balance goes negative.
+      for (const n of [2, 3, 4]) {
+        expect(transactionsService.deductLessonFee).toHaveBeenNthCalledWith(
+          n,
+          expect.objectContaining({
+            mode: LessonDeductionMode.SINGLE_UNCOVERED,
+            amount: 33_333,
+            salaryDeferred: true,
+          }),
+          expect.anything(),
+        );
+      }
       expect(transactionsService.recordLessonConsumption).toHaveBeenCalledTimes(
-        1,
+        4,
       );
-      expect(state.getPrepaid()).toBe(0);
+      // 33_333 (initial) − 33_333 (PARTIAL) − 3 × 33_333 (SINGLE_UNCOVERED) = −99_999.
+      expect(state.getBalance()).toBe(-99_999);
+    });
+
+    it('settles deferred salary accruals when balance is non-negative after payment', async () => {
+      // No legacy unpaid attendances. Two SINGLE_UNCOVERED deductions
+      // already exist (total uncovered = 60k). A payment brings the
+      // balance back to 0 — both rows should accrue and clear.
+      tx.enrollment.findMany = jest
+        .fn()
+        .mockResolvedValue([{ id: enrollmentId, groupId, group: { branchId: 1 } }]);
+      tx.$queryRaw = jest.fn().mockResolvedValue([]);
+
+      const deferredRows = [
+        {
+          id: 'ded-1',
+          attendanceId: 'att-1',
+          enrollmentId,
+          branchId: 1,
+          metadata: { uncoveredAmount: 30_000, perLessonCost: 30_000 },
+        },
+        {
+          id: 'ded-2',
+          attendanceId: 'att-2',
+          enrollmentId,
+          branchId: 1,
+          metadata: { uncoveredAmount: 30_000, perLessonCost: 30_000 },
+        },
+      ];
+      tx.transaction.findMany = jest.fn().mockResolvedValue(deferredRows);
+      tx.transaction.update = jest.fn().mockResolvedValue({});
+      tx.attendance.findUnique = jest.fn().mockImplementation(({ where }: any) =>
+        Promise.resolve({
+          date: new Date(where.id === 'att-1' ? '2026-04-01' : '2026-04-03'),
+          groupId,
+        }),
+      );
+      tx.student.findUnique = jest
+        .fn()
+        .mockResolvedValue({ balance: 0 });
+
+      await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledTimes(2);
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deductionTransactionId: 'ded-1',
+          attendanceId: 'att-1',
+        }),
+      );
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deductionTransactionId: 'ded-2',
+          attendanceId: 'att-2',
+        }),
+      );
+      // Both rows flagged settled.
+      expect(tx.transaction.update).toHaveBeenCalledTimes(2);
+    });
+
+    it('partially settles deferred accruals (oldest first) when balance is still negative', async () => {
+      // Old row 30k + new row 50k = 80k total uncovered.
+      // Balance is -30k → 50k of debt has been covered.
+      // FIFO: oldest 30k clears fully (accrual fires), newest 50k shrinks
+      // by the remaining 20k to 30k (no accrual yet).
+      tx.enrollment.findMany = jest
+        .fn()
+        .mockResolvedValue([{ id: enrollmentId, groupId, group: { branchId: 1 } }]);
+      tx.$queryRaw = jest.fn().mockResolvedValue([]);
+
+      const oldRow = {
+        id: 'ded-old',
+        attendanceId: 'att-old',
+        enrollmentId,
+        branchId: 1,
+        metadata: { uncoveredAmount: 30_000, perLessonCost: 30_000 },
+      };
+      const newRow = {
+        id: 'ded-new',
+        attendanceId: 'att-new',
+        enrollmentId,
+        branchId: 1,
+        metadata: { uncoveredAmount: 50_000, perLessonCost: 50_000 },
+      };
+      tx.transaction.findMany = jest.fn().mockResolvedValue([oldRow, newRow]);
+      tx.transaction.update = jest.fn().mockResolvedValue({});
+      tx.attendance.findUnique = jest.fn().mockResolvedValue({
+        date: new Date('2026-04-01'),
+        groupId,
+      });
+      tx.student.findUnique = jest
+        .fn()
+        .mockResolvedValue({ balance: -30_000 });
+
+      await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      // Oldest row fully covered → accrual + clear flag.
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledTimes(1);
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({ deductionTransactionId: 'ded-old' }),
+      );
+      // Two updates: oldest row cleared, newest row's uncovered shrunk.
+      expect(tx.transaction.update).toHaveBeenCalledTimes(2);
+      expect(tx.transaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ded-old' },
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              uncoveredAmount: 0,
+              salaryDeferred: false,
+            }),
+          }),
+        }),
+      );
+      expect(tx.transaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ded-new' },
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({ uncoveredAmount: 30_000 }),
+          }),
+        }),
+      );
     });
 
     it('opens a Serializable tx in runRetroactiveBilling', async () => {
