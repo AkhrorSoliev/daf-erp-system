@@ -312,9 +312,12 @@ export function SalaryConfigPageClient() {
                       {(filters.page - 1) * filters.pageSize + idx + 1}
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">
+                      <Link
+                        href={`/teachers/profile/${emp.id}`}
+                        className="font-medium hover:underline"
+                      >
                         {emp.firstName} {emp.lastName}
-                      </div>
+                      </Link>
                       <div className="text-xs text-muted-foreground">#{emp.id}</div>
                     </TableCell>
                     <TableCell className="text-sm">{branch}</TableCell>
