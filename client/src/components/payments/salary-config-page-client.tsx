@@ -56,14 +56,6 @@ interface ActiveConfig {
   group: { id: string; name: string } | null;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  CEO: "Direktor",
-  "Branch Director": "Filial direktori",
-  Administrator: "Administrator",
-  Teacher: "O'qituvchi",
-  Cashier: "Kassir",
-};
-
 const SALARY_TYPE_SHORT: Record<string, string> = {
   PERCENTAGE: "Foiz",
   FIXED_PER_STUDENT: "O'quvchi boshiga",
@@ -74,7 +66,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
-  role: { type: "string" as const, defaultValue: "all" },
   status: { type: "string" as const, defaultValue: "all" }, // all|configured|unconfigured
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 20 },
@@ -101,7 +92,6 @@ export function SalaryConfigPageClient() {
     queryKey: [
       "salary-config-employees",
       filters.search,
-      filters.role,
       filters.page,
       filters.pageSize,
     ],
@@ -109,9 +99,9 @@ export function SalaryConfigPageClient() {
       const params: Record<string, string | number> = {
         page: filters.page,
         pageSize: filters.pageSize,
+        user_type: "Teacher",
       };
       if (filters.search.trim()) params.search = filters.search.trim();
-      if (filters.role !== "all") params.user_type = filters.role;
       const { data } = await api.get<{ data: Employee[]; total: number }>(
         "/users",
         { params },
@@ -154,7 +144,7 @@ export function SalaryConfigPageClient() {
   // Reset selection when filters change
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [filters.search, filters.role, filters.status, filters.page]);
+  }, [filters.search, filters.status, filters.page]);
 
   const refetchAll = useCallback(() => {
     employeesQuery.refetch();
@@ -204,8 +194,8 @@ export function SalaryConfigPageClient() {
         <div>
           <h1 className="text-2xl font-bold">Oylik belgilash</h1>
           <p className="text-sm text-muted-foreground">
-            Xodimlar uchun foiz, oylik yoki o&apos;quvchi boshiga oylik
-            qoidalarini boshqarish
+            O&apos;qituvchilar uchun foiz, oylik yoki o&apos;quvchi boshiga
+            oylik qoidalarini boshqarish
           </p>
         </div>
       </div>
@@ -225,22 +215,6 @@ export function SalaryConfigPageClient() {
           />
         </div>
         <Select
-          value={filters.role}
-          onValueChange={(v) => setUrlFilters({ role: v, page: 1 })}
-        >
-          <SelectTrigger className="md:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha rollar</SelectItem>
-            <SelectItem value="Teacher">O&apos;qituvchilar</SelectItem>
-            <SelectItem value="Administrator">Administratorlar</SelectItem>
-            <SelectItem value="Branch Director">Filial direktorlari</SelectItem>
-            <SelectItem value="Cashier">Kassirlar</SelectItem>
-            <SelectItem value="CEO">Direktorlar</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
           value={filters.status}
           onValueChange={(v) => setUrlFilters({ status: v, page: 1 })}
         >
@@ -259,7 +233,7 @@ export function SalaryConfigPageClient() {
       {selectedIds.size > 0 && (
         <div className="flex items-center justify-between gap-3 rounded-md border bg-accent/50 px-4 py-2">
           <span className="text-sm font-medium">
-            {selectedIds.size} ta xodim tanlandi
+            {selectedIds.size} ta o&apos;qituvchi tanlandi
           </span>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => setBulkType("percent")}>
@@ -297,7 +271,6 @@ export function SalaryConfigPageClient() {
               </TableHead>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Ism Familiya</TableHead>
-              <TableHead className="w-40">Rol</TableHead>
               <TableHead className="w-44">Filial</TableHead>
               <TableHead>Joriy oylik</TableHead>
               <TableHead className="w-16"></TableHead>
@@ -307,20 +280,19 @@ export function SalaryConfigPageClient() {
             {employeesQuery.isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={6}>
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
               ))
             ) : visibleEmployees.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  Xodim topilmadi
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  O&apos;qituvchi topilmadi
                 </TableCell>
               </TableRow>
             ) : (
               visibleEmployees.map((emp, idx) => {
-                const role = ROLE_LABELS[emp.roles[0]?.name ?? ""] ?? "—";
                 const branch = emp.branches[0]?.name ?? "—";
                 const cfgs = configsByUser[emp.id] ?? [];
                 const checked = selectedIds.has(emp.id);
@@ -345,7 +317,6 @@ export function SalaryConfigPageClient() {
                       </div>
                       <div className="text-xs text-muted-foreground">#{emp.id}</div>
                     </TableCell>
-                    <TableCell>{role}</TableCell>
                     <TableCell className="text-sm">{branch}</TableCell>
                     <TableCell>
                       {configsQuery.isLoading ? (
