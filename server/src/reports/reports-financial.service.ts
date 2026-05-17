@@ -48,33 +48,66 @@ export class ReportsFinancialService {
       _count: true,
     });
 
-    // Recognized revenue forecast: for each active contract in scope,
-    // estimate monthly recognition from the negotiated contract amount
-    // (honors discounts) and the group's weekly cadence. Using contracts
-    // instead of enrollments means chegirmali shartnomalar are priced
-    // correctly and students without an active contract (test enrollments,
-    // incomplete setup) don't inflate the forecast.
-    const activeContracts = await this.prisma.contract.findMany({
+    // Recognized revenue forecast: walks every active enrollment in scope
+    // and estimates monthly recognition from the group's weekly cadence.
+    //
+    // Per-enrollment pricing falls back through three sources:
+    //   1. Active Contract (studentId + groupId) — negotiated totalAmount /
+    //      lessonPaymentCount, so chegirmali shartnomalar are priced
+    //      exactly as agreed.
+    //   2. Course.price × (100 - Student.discountPercent) / 100 — the
+    //      per-student discount is the modern lever and is honored when no
+    //      contract is on file.
+    //   3. Course.price alone — defensive fallback if discountPercent is
+    //      missing/null.
+    //
+    // Walking enrollments instead of contracts means production data without
+    // any Contract rows (the common case today) still produces an honest
+    // forecast — and centers that adopt contracts later get per-contract
+    // pricing automatically for those enrollments, with the rest still
+    // estimated from course price.
+    const activeEnrollments = await this.prisma.enrollment.findMany({
       where: {
         status: 'ACTIVE',
         deletedAt: null,
-        companyId,
-        ...(query.branchId && { branchId: query.branchId }),
         group: {
           deletedAt: null,
           statusEnum: 'ACTIVE',
+          companyId,
+          ...(query.branchId && { branchId: query.branchId }),
         },
       },
       select: {
-        totalAmount: true,
-        course: { select: { lessonPaymentCount: true } },
-        group: { select: { exactDays: true } },
+        studentId: true,
+        groupId: true,
+        student: { select: { discountPercent: true } },
+        group: {
+          select: {
+            exactDays: true,
+            course: { select: { price: true, lessonPaymentCount: true } },
+            contracts: {
+              where: { status: 'ACTIVE', deletedAt: null },
+              select: { studentId: true, totalAmount: true },
+            },
+          },
+        },
       },
     });
-    const recognizedRevenueForecast = activeContracts.reduce((sum, c) => {
-      const lpc = c.course.lessonPaymentCount || 12;
-      const perLesson = Math.round(c.totalAmount / lpc);
-      const lessonsPerMonth = (c.group?.exactDays?.length ?? 0) * 4;
+    const recognizedRevenueForecast = activeEnrollments.reduce((sum, e) => {
+      const lpc = e.group.course.lessonPaymentCount || 12;
+      const lessonsPerMonth = (e.group.exactDays?.length ?? 0) * 4;
+      const contract = e.group.contracts.find(
+        (c) => c.studentId === e.studentId,
+      );
+      let perLesson: number;
+      if (contract) {
+        perLesson = Math.round(contract.totalAmount / lpc);
+      } else {
+        const discount = e.student?.discountPercent ?? 0;
+        const fullPerLesson = Math.round(e.group.course.price / lpc);
+        const clamped = Math.max(0, Math.min(100, discount));
+        perLesson = Math.round((fullPerLesson * (100 - clamped)) / 100);
+      }
       return sum + perLesson * lessonsPerMonth;
     }, 0);
     const expectedIncome = recognizedRevenueForecast;
