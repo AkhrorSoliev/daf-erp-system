@@ -469,6 +469,23 @@ export class TransactionsWriteService {
         }
       }
 
+      // Mark the original reversed FIRST so the partial unique indexes
+      // (`tx_consumption_per_attendance_unique` on attendanceId,
+      // `tx_initial_balance_per_student_unique` on studentId, both scoped
+      // to `reversedAt IS NULL`) see only the new reversal row when we
+      // insert it below. If we created the reversal first, both the
+      // original and the reversal would be active for an instant and the
+      // partial unique would reject the insert with P2002 — the bug that
+      // bit the backfill reverse script the first time it had real data
+      // to undo.
+      await client.transaction.update({
+        where: { id: original.id },
+        data: {
+          reversedAt: new Date(),
+          reversedById: params.performedById,
+        },
+      });
+
       const reversal = await client.transaction.create({
         data: {
           type: original.type,
@@ -491,19 +508,6 @@ export class TransactionsWriteService {
           description: params.reason
             ? `Bekor qilindi: ${params.reason}`
             : `Bekor qilindi (${original.id})`,
-        },
-      });
-
-      // Mark the original as reversed so all "still-active?" filters and
-      // partial unique indexes (LESSON_CONSUMPTION idempotency,
-      // INITIAL_BALANCE per student, etc) see it as gone in O(1). Without
-      // this, ABSENT→PRESENT after a reverse would no-op because the
-      // idempotency check would still find the original consumption row.
-      await client.transaction.update({
-        where: { id: original.id },
-        data: {
-          reversedAt: new Date(),
-          reversedById: params.performedById,
         },
       });
 
