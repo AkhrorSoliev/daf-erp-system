@@ -119,6 +119,11 @@ export class LessonBillingService {
       studentId: number;
       companyId: number;
       performedById?: number;
+      // Optional date floor — when set, only unpaid attendances on/after
+      // this date are billed. Used by the backfill script to scope the
+      // catch-up to a specific month (e.g. May 2026 only, skipping older
+      // unpaid lessons admins decided to write off).
+      fromDate?: Date;
     },
   ): Promise<{ billedAttendances: number }> {
     const enrollments = await tx.enrollment.findMany({
@@ -146,6 +151,9 @@ export class LessonBillingService {
       // Unpaid = PRESENT/LATE/ABSENT attendance with no active
       // LESSON_CONSUMPTION row. Order by date so we settle the oldest first
       // (FIFO) — matches what an admin would do manually.
+      const fromFilter = params.fromDate
+        ? Prisma.sql`AND a.date >= ${params.fromDate}`
+        : Prisma.empty;
       const unpaidRows = await tx.$queryRaw<
         { id: string; date: Date }[]
       >`
@@ -160,6 +168,7 @@ export class LessonBillingService {
               AND t.type = 'LESSON_CONSUMPTION'
               AND t."reversedAt" IS NULL
           )
+          ${fromFilter}
         ORDER BY a.date ASC
       `;
 
