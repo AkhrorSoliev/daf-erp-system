@@ -422,7 +422,7 @@ export class TelegramGroupStatsService {
       `• Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b>`,
       `• Qarzdorlar: <b>${formatNumber(debtorAgg._count)}</b> ta — <b>${formatSum(Math.abs(debtorAgg._sum.balance ?? 0))}</b>`,
       ``,
-      `<b>Oylik tushum (1-bugun):</b> ${formatSum(monthlyIncome._sum.amount ?? 0)}`,
+      `<b>Bu oydagi tushum:</b> ${formatSum(monthlyIncome._sum.amount ?? 0)}`,
     ].join('\n');
   }
 }
