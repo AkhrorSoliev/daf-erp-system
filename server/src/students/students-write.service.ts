@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StudentStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,6 +27,7 @@ export class StudentsWriteService {
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateStudentDto, companyId: number, userId?: number) {
@@ -106,6 +108,19 @@ export class StudentsWriteService {
     );
 
     const formatted = formatStudent(student);
+
+    // Notify approved Telegram admin groups (best-effort)
+    const branchName = formatted.branches?.[0]?.name ?? null;
+    const branchId = formatted.branches?.[0]?.id ?? null;
+    this.eventEmitter.emit('student.created', {
+      studentId: student.id,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      branchId,
+      branchName,
+      companyId,
+    });
+
     return { ...formatted, generatedPassword: plainPassword };
   }
 

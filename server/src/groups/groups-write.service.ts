@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -16,6 +17,7 @@ export class GroupsWriteService {
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateGroupDto, companyId: number, userId?: number) {
@@ -136,6 +138,16 @@ export class GroupsWriteService {
             validFrom: group.createdAt,
             changedById: userId,
           },
+        });
+
+        // Notify approved Telegram admin groups (best-effort)
+        this.eventEmitter.emit('group.created', {
+          groupId: group.id,
+          name: group.name,
+          branchId: group.branchId,
+          branchName: branch.name,
+          startDate: group.startDate,
+          companyId,
         });
 
         return formatGroup(group);

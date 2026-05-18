@@ -345,6 +345,8 @@ model User {
   deletedLessonReschedules      LessonReschedule[]            @relation("LessonRescheduleDeletedBy")
   reversedSalaryAccruals       SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
 
+  approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
+
   @@index([deletedAt])
   @@index([status])
 }
@@ -396,6 +398,7 @@ model Branch {
   rooms           Room[]
   groups          Group[]
   courses         Course[]
+  telegramGroups  TelegramGroup[]
 
   @@index([deletedAt])
   @@index([status])
@@ -856,6 +859,44 @@ model Company {
   studentExitReasons        StudentExitReason[]
   groupTeacherChangeReasons GroupTeacherChangeReason[]
   enrollmentTransferReasons EnrollmentTransferReason[]
+  telegramGroups            TelegramGroup[]
+}
+
+enum TelegramGroupStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model TelegramGroup {
+  id     String              @id @default(uuid())
+  chatId BigInt              @unique
+  title  String
+  status TelegramGroupStatus @default(PENDING)
+
+  // Filled by the bot when it is added to the group (my_chat_member event).
+  addedByTelegramUserId BigInt?
+  addedAt               DateTime @default(now())
+
+  // Filled when an admin-panel CEO/BD approves the pending row — the group is
+  // bound to their company at that moment and commands start working.
+  companyId    Int?
+  company      Company?  @relation(fields: [companyId], references: [id])
+  branchId     Int?
+  branch       Branch?   @relation(fields: [branchId], references: [id])
+  approvedById Int?
+  approvedBy   User?     @relation("TelegramGroupApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  isActive          Boolean   @default(true)
+  lastDailyReportAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  @@index([companyId])
+  @@index([status])
+  @@index([deletedAt])
 }
 
 model StudentExitReason {

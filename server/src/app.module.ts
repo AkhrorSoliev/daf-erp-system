@@ -17,6 +17,7 @@ import { HolidaysModule } from './holidays/holidays.module';
 import { CompanyModule } from './company/company.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { TelegramGroupsModule } from './telegram-groups/telegram-groups.module';
 import { ArchiveModule } from './archive/archive.module';
 import { StatusHistoryModule } from './common/status';
 import { EntityHistoryModule } from './common/entity-history';
@@ -66,6 +67,7 @@ import { JwtAuthGuard } from './common/guards';
     CompanyModule,
     UploadModule,
     TelegramModule,
+    TelegramGroupsModule,
     ArchiveModule,
     StatusHistoryModule,
     EntityHistoryModule,
