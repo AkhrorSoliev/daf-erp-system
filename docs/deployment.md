@@ -72,6 +72,10 @@ railway up --detach
 | `PORT`           | `4000` (or Railway default)          |
 | `NODE_ENV`       | `production`                         |
 | `INVOICE_BASE_URL` | `https://invoice.dafzentrum.uz`    |
+| `TELEGRAM_BOT_TOKEN` | Student/teacher/employee registration bot token (BotFather) |
+| `TELEGRAM_ADMIN_BOT_TOKEN` | Admin/management bot token (separate BotFather bot — used for company group stats, broadcasts, daily reports) |
+
+`TELEGRAM_ADMIN_BOT_TOKEN` powers the admin group bot at `/settings/telegram-groups`. It must be a **separate** bot from `TELEGRAM_BOT_TOKEN` so a leaked token cannot reach student DMs. The bot needs Privacy Mode **disabled** (`/setprivacy` in BotFather) so it can read slash commands in groups; admin rights inside the group are optional.
 
 `INVOICE_BASE_URL` controls the public link sent in Telegram payment receipts
 and the QR target embedded in PDF receipts. When omitted the code falls back
