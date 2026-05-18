@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GroupsService } from './groups.service';
 import { GroupsReadService } from './groups-read.service';
 import { GroupsWriteService } from './groups-write.service';
@@ -98,6 +99,7 @@ describe('GroupsService — status methods', () => {
             recordRestore: jest.fn(),
           },
         },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 

@@ -6,6 +6,7 @@ import {
   Users,
   Building,
   Building2,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +46,12 @@ export const settingsNavSections: SettingsNavSection[] = [
       },
       { title: "Xodimlar", url: "/settings/employees", icon: Users, visibleForRoles: [1, 2] },
       { title: "Filiallar", url: "/settings/branches", icon: Building2, visibleForRoles: [1, 2] },
+      {
+        title: "Telegram guruhlar",
+        url: "/settings/telegram-groups",
+        icon: Send,
+        visibleForRoles: [1, 2],
+      },
     ],
   },
 ];
