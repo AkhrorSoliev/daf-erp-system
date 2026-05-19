@@ -4,12 +4,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { StudentStatus } from '@prisma/client';
+import { Prisma, StudentStatus, TransactionType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsService } from '../transactions/transactions.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { generatePassword } from '../common/utils/password.util';
@@ -28,6 +29,7 @@ export class StudentsWriteService {
     private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
+    private transactionsService: TransactionsService,
   ) {}
 
   async create(dto: CreateStudentDto, companyId: number, userId?: number) {
@@ -162,58 +164,85 @@ export class StudentsWriteService {
       }
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const result = await tx.student.update({
-        where: { id },
-        data: {
-          ...(dto.firstName !== undefined && { firstName: dto.firstName }),
-          ...(dto.lastName !== undefined && { lastName: dto.lastName }),
-          ...(dto.phone !== undefined && { phone: dto.phone }),
-          ...(dto.extraPhone !== undefined && { extraPhone: dto.extraPhone }),
-          ...(dto.parentPhone !== undefined && {
-            parentPhone: dto.parentPhone,
-          }),
-          ...(dto.parentName !== undefined && { parentName: dto.parentName }),
-          ...(dto.telegram !== undefined && { telegram: dto.telegram }),
-          ...(dto.gender !== undefined && { gender: dto.gender }),
-          ...(dto.dateOfBirth !== undefined && {
-            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
-          }),
-          ...(dto.photo !== undefined && { photo: dto.photo }),
-          ...(dto.comment !== undefined && { comment: dto.comment }),
-          ...(dto.placeOfStudy !== undefined && {
-            placeOfStudy: dto.placeOfStudy,
-          }),
-          ...(dto.address !== undefined && { address: dto.address }),
-          ...(dto.passportSeries !== undefined && {
-            passportSeries: dto.passportSeries,
-          }),
-          ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-          ...(dto.discountPercent !== undefined && {
-            discountPercent: dto.discountPercent,
-          }),
-        },
-        select: studentSelect,
-      });
+    const oldDiscount = student.discountPercent ?? 0;
+    const newDiscount = dto.discountPercent;
+    const isDiscountChanging =
+      newDiscount !== undefined && newDiscount !== oldDiscount;
 
-      if (dto.branchIds !== undefined) {
-        await tx.studentBranch.deleteMany({ where: { studentId: id } });
-        if (dto.branchIds.length) {
-          await tx.studentBranch.createMany({
-            data: dto.branchIds.map((branchId) => ({
-              studentId: id,
-              branchId,
-            })),
-          });
-        }
-        return tx.student.findUniqueOrThrow({
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const result = await tx.student.update({
           where: { id },
+          data: {
+            ...(dto.firstName !== undefined && { firstName: dto.firstName }),
+            ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+            ...(dto.phone !== undefined && { phone: dto.phone }),
+            ...(dto.extraPhone !== undefined && { extraPhone: dto.extraPhone }),
+            ...(dto.parentPhone !== undefined && {
+              parentPhone: dto.parentPhone,
+            }),
+            ...(dto.parentName !== undefined && { parentName: dto.parentName }),
+            ...(dto.telegram !== undefined && { telegram: dto.telegram }),
+            ...(dto.gender !== undefined && { gender: dto.gender }),
+            ...(dto.dateOfBirth !== undefined && {
+              dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+            }),
+            ...(dto.photo !== undefined && { photo: dto.photo }),
+            ...(dto.comment !== undefined && { comment: dto.comment }),
+            ...(dto.placeOfStudy !== undefined && {
+              placeOfStudy: dto.placeOfStudy,
+            }),
+            ...(dto.address !== undefined && { address: dto.address }),
+            ...(dto.passportSeries !== undefined && {
+              passportSeries: dto.passportSeries,
+            }),
+            ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+            ...(dto.discountPercent !== undefined && {
+              discountPercent: dto.discountPercent,
+            }),
+          },
           select: studentSelect,
         });
-      }
 
-      return result;
-    });
+        if (dto.branchIds !== undefined) {
+          await tx.studentBranch.deleteMany({ where: { studentId: id } });
+          if (dto.branchIds.length) {
+            await tx.studentBranch.createMany({
+              data: dto.branchIds.map((branchId) => ({
+                studentId: id,
+                branchId,
+              })),
+            });
+          }
+        }
+
+        if (isDiscountChanging) {
+          await this.applyRetroactiveDiscountAdjustment(tx, {
+            studentId: id,
+            oldDiscount,
+            newDiscount: newDiscount!,
+            companyId: student.companyId!,
+            performedById: userId,
+          });
+        }
+
+        if (dto.branchIds !== undefined) {
+          return tx.student.findUniqueOrThrow({
+            where: { id },
+            select: studentSelect,
+          });
+        }
+
+        return result;
+      },
+      isDiscountChanging
+        ? {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 10_000,
+            timeout: 15_000,
+          }
+        : undefined,
+    );
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'Student',
@@ -281,6 +310,73 @@ export class StudentsWriteService {
     );
 
     return { message: "O'quvchi muvaffaqiyatli o'chirildi" };
+  }
+
+  /**
+   * Walks every active LESSON_DEDUCTION on this student, sums what was actually
+   * charged (`previousNetDeducted`) vs. the un-discounted total
+   * (`totalFullAmount`), recomputes what the new discount would have charged
+   * (`targetCharge`), and writes a single signed `DISCOUNT_ADJUSTMENT`
+   * transaction for the delta. Positive credits the student, negative debits.
+   *
+   * Legacy LESSON_DEDUCTION rows that pre-date the discount feature won't have
+   * `metadata.fullAmount` — we fall back to `transaction.amount` (which is the
+   * un-discounted full price for those rows, since no discount existed yet).
+   *
+   * Caller must invoke from inside a Serializable tx. `recordDiscountAdjustment`
+   * does its own `SELECT FOR UPDATE` on the student row — the surrounding tx
+   * keeps the read-then-write atomic.
+   */
+  private async applyRetroactiveDiscountAdjustment(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      oldDiscount: number;
+      newDiscount: number;
+      companyId: number;
+      performedById?: number;
+    },
+  ): Promise<void> {
+    const pastDeductions = await tx.transaction.findMany({
+      where: {
+        studentId: params.studentId,
+        type: TransactionType.LESSON_DEDUCTION,
+        reversedAt: null,
+      },
+      select: { amount: true, metadata: true },
+    });
+
+    if (pastDeductions.length === 0) return;
+
+    let previousNetDeducted = 0;
+    let totalFullAmount = 0;
+    for (const t of pastDeductions) {
+      previousNetDeducted += t.amount;
+      const md = (t.metadata ?? {}) as { fullAmount?: number };
+      totalFullAmount += Number(md.fullAmount ?? t.amount);
+    }
+
+    const targetCharge = Math.round(
+      (totalFullAmount * (100 - params.newDiscount)) / 100,
+    );
+    const adjustmentAmount = previousNetDeducted - targetCharge;
+
+    if (adjustmentAmount === 0) return;
+
+    await this.transactionsService.recordDiscountAdjustment(
+      {
+        studentId: params.studentId,
+        amount: adjustmentAmount,
+        oldDiscountPercent: params.oldDiscount,
+        newDiscountPercent: params.newDiscount,
+        totalFullAmount,
+        targetCharge,
+        previousNetDeducted,
+        companyId: params.companyId,
+        performedById: params.performedById,
+      },
+      tx,
+    );
   }
 
   /**
