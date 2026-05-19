@@ -189,6 +189,9 @@ export class StudentsWriteService {
             passportSeries: dto.passportSeries,
           }),
           ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+          ...(dto.discountPercent !== undefined && {
+            discountPercent: dto.discountPercent,
+          }),
         },
         select: studentSelect,
       });

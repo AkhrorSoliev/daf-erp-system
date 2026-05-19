@@ -61,6 +61,7 @@ function toStudent(gs: GroupStudent): Student {
     createdAt: "",
     updatedAt: "",
     lastTransactionType: null,
+    discountPercent: 0,
   };
 }
 

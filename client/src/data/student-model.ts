@@ -50,4 +50,5 @@ export interface Student {
   createdAt: string;
   updatedAt: string;
   lastTransactionType: string | null;
+  discountPercent: number;
 }

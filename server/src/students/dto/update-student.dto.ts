@@ -7,6 +7,8 @@ import {
   IsInt,
   IsDateString,
   Matches,
+  Max,
+  Min,
   MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -88,4 +90,11 @@ export class UpdateStudentDto {
   @IsInt({ each: true })
   @Type(() => Number)
   branchIds?: number[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  discountPercent?: number;
 }

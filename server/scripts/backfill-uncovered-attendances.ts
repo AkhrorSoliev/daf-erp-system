@@ -132,17 +132,17 @@ async function main() {
       const companyId = candidate.companyId;
       const expected = Number(candidate.unpaidCount);
 
-      const before = await prisma.student.findUnique({
-        where: { id: studentId },
-        select: { firstName: true, lastName: true, balance: true },
-      });
-      if (!before) {
-        skipped += 1;
-        logger.warn(`Student ${studentId} not found — skipping.`);
-        continue;
-      }
-
       try {
+        const before = await prisma.student.findUnique({
+          where: { id: studentId },
+          select: { firstName: true, lastName: true, balance: true },
+        });
+        if (!before) {
+          skipped += 1;
+          logger.warn(`Student ${studentId} not found — skipping.`);
+          continue;
+        }
+
         let result: { billedAttendances: number };
         let after: { balance: number };
 

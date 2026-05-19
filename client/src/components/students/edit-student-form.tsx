@@ -25,6 +25,7 @@ import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useAuth } from "@/hooks/use-auth";
 
 function stripPhonePrefix(phone: string): string {
   return phone.replace(/^\+998/, "").replace(/\s/g, "");
@@ -48,6 +49,7 @@ function mapStudentToForm(student: Student): EditStudentFormValues {
     passportSeries: student.passportSeries ?? "",
     login: "",
     password: "",
+    discountPercent: student.discountPercent ?? 0,
   };
 }
 
@@ -68,6 +70,10 @@ export function EditStudentForm({
     resolver: zodResolver(editStudentSchema),
     defaultValues: mapStudentToForm(student),
   });
+
+  const user = useAuth((s) => s.user);
+  const canSetDiscount =
+    user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState(student.photo);
@@ -116,6 +122,10 @@ export function EditStudentForm({
         passportSeries: values.passportSeries || null,
         photo: photoUrl ?? (student.photo || undefined),
       };
+
+      if (canSetDiscount && values.discountPercent !== undefined) {
+        payload.discountPercent = values.discountPercent;
+      }
 
       const { data } = await api.patch(`/students/${student.id}`, payload);
       toast.success("O'quvchi muvaffaqiyatli yangilandi");
@@ -290,6 +300,35 @@ export function EditStudentForm({
             {...form.register("comment")}
           />
         </div>
+
+        {canSetDiscount && (
+          <div className="space-y-1.5">
+            <Label htmlFor="discountPercent">Chegirma (%)</Label>
+            <div className="relative">
+              <Input
+                id="discountPercent"
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="0"
+                className="pr-8"
+                {...form.register("discountPercent", { valueAsNumber: true })}
+              />
+              <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
+                %
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Chegirma har bir darsda balansdan ushlanadigan summaga qo&apos;llanadi. O&apos;zgarish keyingi darslarga ta&apos;sir qiladi — eski darslar qayta hisoblanmaydi.
+            </p>
+            {form.formState.errors.discountPercent && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.discountPercent.message}
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Kirish ma'lumotlari */}

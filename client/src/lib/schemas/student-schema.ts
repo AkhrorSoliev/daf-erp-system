@@ -33,6 +33,14 @@ export const editStudentSchema = z.object({
   // Autentifikatsiya
   login: z.string().optional().or(z.literal("")),
   password: z.string().optional().or(z.literal("")),
+
+  // Chegirma (faqat CEO/BD ko'radi)
+  discountPercent: z
+    .number()
+    .int()
+    .min(0, "Chegirma 0 dan kichik bo'lishi mumkin emas")
+    .max(100, "Chegirma 100 dan katta bo'lishi mumkin emas")
+    .optional(),
 });
 
 export type EditStudentFormValues = z.infer<typeof editStudentSchema>;
