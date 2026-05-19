@@ -17,6 +17,7 @@ export const studentSelect = {
   photo: true,
   comment: true,
   balance: true,
+  discountPercent: true,
   placeOfStudy: true,
   address: true,
   passportSeries: true,

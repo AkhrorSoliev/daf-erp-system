@@ -25,7 +25,7 @@ The frontend is deployed to multiple subdomains — each portal restricts which 
 |--------|--------|---------------|
 | Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
 | Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
-| Student portal | `student.dafzentrum.uz` | Not yet implemented |
+| Student portal | `student.dafzentrum.uz` | Student (6) — implemented in `src/components/student-portal/` (home, profile, schedule, attendance history, payments via Payme + Click, QR scanner) |
 
 - **Restriction is enforced server-side** — the backend checks the `Origin` header on login and rejects users whose roles don't match the portal (see `portal-roles.config.ts`)
 - **Error handling:** If login is rejected due to role mismatch, the API returns `403 Forbidden` with message "Sizning rolingiz bu portalga kirish huquqiga ega emas"
@@ -65,7 +65,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **Conditionally render** UI elements (buttons, tabs, columns) based on role — do not just disable them, **hide** them entirely
 - **Salary/financial data** (ish haqi, balans) is visible **only to CEO (1) and Branch Director (2)**
 - **Group create/update/delete** is allowed for **CEO (1), Branch Director (2), Administrator (3)**
-- Navigation items use `hideForTeacher` flag in `src/lib/nav-items.ts` — filtered in `AppSidebar` based on user roles
+- Navigation items use `visibleForRoles?: number[]` whitelist in `src/lib/nav-items.ts` — `AppSidebar` shows the item only when the user has one of the listed role IDs. Items without the field are visible to everyone.
 - When adding a new role-restricted feature: always add the restriction in both the component (frontend) and the controller (backend). **Never** add a frontend-only restriction without a corresponding backend guard
 
 ## Tech Stack
@@ -502,7 +502,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 #### Key Components
 
-- **`salary-config-dialog.tsx`** — CEO assigns salary to any employee: select employee → choose type (FIXED_MONTHLY / PERCENTAGE / FIXED_PER_STUDENT) → enter value → save. Shows existing config if present. PERCENTAGE and FIXED_PER_STUDENT only shown for teachers (role id 4).
+- **`salary-config-bulk-dialog.tsx`** + **`salary-config-row-sheet.tsx`** — CEO assigns salary to employees: bulk dialog lists all employees with their current config; row sheet edits one employee (select type FIXED_MONTHLY / PERCENTAGE / FIXED_PER_STUDENT → enter value → save). PERCENTAGE and FIXED_PER_STUDENT only shown for teachers (role id 4).
 - **`salary-period-settings-sheet.tsx`** — CEO-only side sheet for managing the salary cycle start day (1–28). Renders only when `isCeo` — backend write is `@Roles('CEO')`.
 - **`possible-deductions-info.tsx`** — pure-static info card listing the deductions that may be applied outside the system. Takes a `variant` prop: `"teacher"` shows only "Ustoz oyligidan — 12%", `"all"` (default) shows all six items (Ustoz 12%, Markaz qo'shimchasi 12%, Markaz daromad 4%, Click/Payme/Uzum 2%). Rendered in: salary-breakdown-drawer (default `"all"` — part of the company-wide /payments/salary admin page), teacher-salary-client (lehrer portal, `"teacher"` — teacher viewing their own salary), teacher-profile-tabs (admin Ish haqi tab, `"teacher"` — view scoped to one teacher's salary). Has no state, no API calls, no calculations. Numbers are documentation, not configuration — not enforced by any code.
 - **`record-payment-dialog.tsx`** — Manual payment entry: student select, amount, method, contract (optional), receipt number
@@ -519,7 +519,7 @@ The financial section lives under `/payments/*` with these sub-pages:
   - CEO: "Oylik belgilash" + "Oylikni hisoblash" + "Tasdiqlash" + "Sozlamalar" dropdown (Xodim stavkalari, Hisoblash davri)
   - CEO + BD: "To'lash" + "Hammasini to'lash"
 - **Salary settings dropdown (`Sozlamalar`)**: rendered only when `isCeo`. Two items, each opens a separate side sheet:
-  1. **Xodim stavkalari** → `salary-config-dialog` (per-employee salary type + value)
+  1. **Xodim stavkalari** → `salary-config-bulk-dialog` + `salary-config-row-sheet` (per-employee salary type + value)
   2. **Hisoblash davri** → `salary-period-settings-sheet` (cycle start day, 1–28)
 - **No tax UI** — the system does not compute or apply taxes anywhere. Possible deductions (Ustoz 12%, Markaz qo'shimchasi 12%, Markaz daromad 4%, gateway 2%) are surfaced as a static info note via `possible-deductions-info.tsx` only. Do not re-introduce a tax config sheet or any "Soliqdan keyin" / "Brutto" / "Netto" columns in salary views.
 
@@ -538,9 +538,9 @@ The financial section lives under `/payments/*` with these sub-pages:
 - Sidebar nav item "Mening oyligim" with `visibleForRoles: [4]` so it appears only on the lehrer portal.
 - Endpoints: `GET /salary/me/summary`, `GET /salary/me/current-cycle/breakdown`. The summary endpoint returns the same shape as the admin's per-teacher salary view (so the existing component is largely shared logic).
 
-### Lesson Cancellations Tab (Group Detail)
+### Lesson Changes Tab (Group Detail)
 
-- **Tab "Bekor qilingan"** on `/groups/[id]` → `lesson-cancellations-tab.tsx`. Visible to CEO / BD / Administrator (`canManage` gate).
+- **Tab "Dars o'zgarishlari"** (URL value `bekor-qilingan`) on `/groups/[id]` → `lesson-changes-tab.tsx`. Visible to CEO / BD / Administrator (`canManage` gate). Covers both cancellations and reschedules.
 - Lists active cancellations for the group (date, reason, who cancelled, when).
 - "Bu darsni bekor qilish" button (CEO/BD/Admin) opens a dialog with `DatePicker` + reason `Textarea`. Submission triggers atomic backend cascade — if any students were marked PRESENT for that day, their attendance is flipped to EXCUSED, prepaid restored, salary accruals reversed.
 - Delete (`Trash2` icon, CEO/BD only) is **soft delete** — the confirm dialog explicitly warns: "Diqqat: bu davomat va to'lovni tiklamaydi. Agar dars haqiqatda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak."
@@ -553,15 +553,28 @@ The financial section lives under `/payments/*` with these sub-pages:
 - Merged chronological feed of three streams from `GET /salary/timeline/:userId`: salary config version changes, group teacher history (added/removed/replaced), profile updates (EntityHistory).
 - Each event renders with a kind-specific icon (CircleDollarSign / UserPlus / UserMinus / Users / PencilLine) and color, the actor name, and a localized summary string.
 
-### Student Profile Tabs — To'lovlar vs Darslar
+### Student Profile Tabs
 
-The student profile (`/students/profile/[id]`) has two related but **non-overlapping** transaction tabs. Every `Transaction` row appears in exactly one of them — never both. This separation is the rule; do not re-introduce types into the wrong tab.
+The student profile (`/students/profile/[id]`) has **8 tabs** (URL `?tab=<value>`):
+
+| Tab | URL value | Purpose |
+|-----|-----------|---------|
+| Guruhlar | `guruhlar` (default) | Enrollments list |
+| To'lovlar | `tolovlar` | Money-flow transactions — see deep-dive below |
+| Darslar | `darslar` | Lesson trail (LESSON_DEDUCTION + LESSON_CONSUMPTION) — see deep-dive below |
+| Izohlar | `izohlar` | Comments + task assignment (shared `CommentList` / `CommentForm`) |
+| Qo'ng'iroq | `qongiroq` | Call history |
+| SMS | `sms` | SMS history |
+| Tarix | `tarix` | Entity history (shared `EntityHistoryTable`) |
+| Lid | `lid` | Lead/source info |
+
+The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth below because they share an endpoint family and have a strict non-overlap contract. Every `Transaction` row appears in exactly one of them — never both. This separation is the rule; do not re-introduce types into the wrong tab.
 
 #### "To'lovlar" tab (`?tab=tolovlar`)
 
 - Component: `student-payments-table.tsx`. Visible to CEO / BD / Administrator (`canManage`).
 - Question it answers: **"Where did money flow in/out of the student's balance?"**
-- Reads `GET /transactions/student/:id?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE&pageSize=20`. The `types` query param is required to scope the tab to money-flow rows; without it the endpoint would return everything.
+- Reads `GET /transactions/student/:id?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL&pageSize=20`. The `types` query param is required to scope the tab to money-flow rows; without it the endpoint would return everything.
 - Sort: DESC (newest first), paginated by 20.
 - Header: balance card, then a "Balans operatsiyalari" table.
 - Type badges live in `student-profile-tabs-utils.ts` → `TRANSACTION_TYPE_INFO` (only the four money-flow types are mapped — adding lesson types here is a smell that will cause overlap).

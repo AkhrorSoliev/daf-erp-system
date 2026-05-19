@@ -5,7 +5,7 @@
 An ERP system for **DaF Sprachzentrum** language school. Backend API serving the frontend client.
 
 > **Roles:** CEO, Branch Director, Administrator, Teacher, Cashier. The system supports **multiple branches** (filials).
-> Roles are stored in a `Role` table with fixed IDs (1–5), linked to users via `UserRole` join table (many-to-many).
+> Roles are stored in a `Role` table with fixed IDs (1–6: CEO=1, Branch Director=2, Administrator=3, Teacher=4, Cashier=5, **Student=6**), linked to users via `UserRole` join table (many-to-many). The Student role id is exposed as `STUDENT_ROLE_ID` constant in `src/students/shared/student-select.ts`.
 
 ## Tech Stack
 
@@ -24,7 +24,7 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 
 - Every domain entity gets its own NestJS module (module + controller + service + dto/)
 - Services contain business logic; controllers are thin (validation + delegation)
-- Use `PrismaService` for all database access — no raw SQL
+- Use `PrismaService` for all database access — no raw SQL (exception: one-off backfill scripts in `server/scripts/` may use raw `PrismaClient` + `$executeRaw` where bulk SQL is required for performance)
 - `PrismaModule` is global — no need to import it per module
 
 ### Naming Conventions
@@ -61,7 +61,7 @@ The system uses **subdomain-based portals** — each subdomain restricts login t
 |--------|--------|---------------|
 | Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
 | Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
-| Student portal | `student.dafzentrum.uz` | Not yet implemented |
+| Student portal | `student.dafzentrum.uz` | Student (6) — implemented via `student-portal.controller.ts` (profile, schedule, attendance stats/history/scan, payments via Payme + Click) |
 
 - Configuration: `src/auth/portal-roles.config.ts` — `PORTAL_ROLES` mapping
 - **How it works:** On login, `AuthService.login()` reads the `Origin` header, calls `getAllowedRoleIds(origin)` to get allowed role IDs for that portal, and throws `ForbiddenException` if the user has no matching role
@@ -277,7 +277,7 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 
 #### Attendance Reminder Notifications
 
-- `AttendanceReminderService` (`src/attendance/attendance-reminder.service.ts`) — `@Cron('0 * * * * *')` running in `Asia/Tashkent` fires six lesson-attendance notifications
+- `AttendanceReminderService` (`src/attendance/attendance-reminder.service.ts`) — `@Cron('0 0,30 7-22 * * 1-6', { timeZone: 'Asia/Tashkent' })` (every 30 min, 07:00–22:00, Mon–Sat) fires six lesson-attendance notifications
 - `AttendanceEventsListener` (`src/attendance/attendance-events.listener.ts`) — handles the `attendance.completed` event emitted from `AttendanceService.save()` on the first save of the day
 - **Triggers:**
 
@@ -330,7 +330,7 @@ The financial system is built on an **append-only ledger** principle — financi
 - **PaymentMethod**: `CASH`, `PAYME`, `CLICK`, `UZUM`, `TRANSFER`
 - **PaymentStatus**: `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`, `CANCELLED`, `REVERSED`
 - **PaymentSource**: `ADMIN_MANUAL`, `STUDENT_PORTAL`, `GATEWAY_WEBHOOK`, `MANUAL_ATTACH`
-- **TransactionType**: `PAYMENT`, `LESSON_DEDUCTION`, `LESSON_CONSUMPTION`, `INITIAL_BALANCE`, `REFUND`, `SALARY_ACCRUAL`, `SALARY_PAYMENT`, `EXPENSE`, `ADJUSTMENT`, `TAX`, `BALANCE_WITHDRAWAL`
+- **TransactionType**: `PAYMENT`, `LESSON_DEDUCTION`, `LESSON_CONSUMPTION`, `INITIAL_BALANCE`, `REFUND`, `SALARY_ACCRUAL`, `SALARY_PAYMENT`, `EXPENSE`, `ADJUSTMENT`, `TAX`, `BALANCE_WITHDRAWAL`, `DISCOUNT_ADJUSTMENT`
 - **ContractStatus**: `DRAFT`, `ACTIVE`, `COMPLETED`, `CANCELLED`, `REFUNDED`
 - **SalaryType**: `PERCENTAGE`, `FIXED_PER_STUDENT`, `FIXED_MONTHLY`
 - **SalaryPaymentStatus**: `CALCULATED`, `APPROVED`, `PAID`, `CANCELLED`
@@ -369,7 +369,7 @@ The financial system is built on an **append-only ledger** principle — financi
   - Fixed-monthly: creates payment from config.value (idempotent — skips if exists)
   - TEACHER_ADVANCE expenses settled against salary in `createdAt` order
   - Atomic per user: SalaryPayment + accrual links + advance settlement
-- **Cron**: `0 2 8 * *` (8th of month at 2:00 AM Tashkent) — iterates all companies
+- **Cron**: `0 2 * * *` (daily at 2:00 AM Tashkent) — each company-tick checks `isCycleStartDayForCompany()` before triggering calculation (per-company configurable `cycleStartDay`, see `SalaryPeriodSetting` section below)
 - **Batch pay**: pays multiple APPROVED salaries; Branch Directors scoped to their `mainBranch`
 - **No tax calculation** — the system does not compute or apply taxes. Possible deductions (Ustoz oyligidan 12%, Markaz qo'shimchasi 12%, Markaz daromad solig'i 4%, gateway commissions 2%) are surfaced as a static informational note in the salary UI only — they are not stored, not aggregated, not deducted from any payment
 

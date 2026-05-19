@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -58,22 +59,31 @@ export function AttendanceStudentRow({
           {index + 1}
         </span>
 
-        <Avatar className="size-9 shrink-0 sm:size-10">
-          <AvatarImage
-            src={student.photo ?? undefined}
-            alt={`${student.firstName} ${student.lastName}`}
-          />
-          <AvatarFallback className="text-xs">
-            {student.firstName[0]}
-            {student.lastName[0]}
-          </AvatarFallback>
-        </Avatar>
+        <Link
+          href={`/students/profile/${student.studentId}`}
+          className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${student.firstName} ${student.lastName} profilini ochish`}
+        >
+          <Avatar className="size-9 sm:size-10">
+            <AvatarImage
+              src={student.photo ?? undefined}
+              alt={`${student.firstName} ${student.lastName}`}
+            />
+            <AvatarFallback className="text-xs">
+              {student.firstName[0]}
+              {student.lastName[0]}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-medium">
+            <Link
+              href={`/students/profile/${student.studentId}`}
+              className="truncate text-sm font-medium hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+            >
               {student.firstName} {student.lastName}
-            </p>
+            </Link>
             {student.isDebtor && (
               <Tooltip>
                 <TooltipTrigger asChild>
