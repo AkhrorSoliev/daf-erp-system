@@ -7,9 +7,12 @@ import { TelegramGroupStatsService } from './telegram-group-stats.service';
 import { tashkentDayRange } from './utils/format.util';
 
 /**
- * Runs daily at 09:00 Tashkent and sends each approved group its daily
- * report. Idempotent — guards via `TelegramGroup.lastDailyReportAt` so
- * a restart loop or manual re-run on the same day is safe.
+ * Runs daily at 21:00 Tashkent (end of workday) and sends each approved
+ * group its daily report. Evening time captures the day's final numbers
+ * for new students, payments, and lessons.
+ *
+ * Idempotent — guards via `TelegramGroup.lastDailyReportAt` so a restart
+ * loop or manual re-run on the same day is safe.
  */
 @Injectable()
 export class TelegramGroupDailyCronService {
@@ -21,7 +24,7 @@ export class TelegramGroupDailyCronService {
     private readonly adminBot: TelegramAdminBotService,
   ) {}
 
-  @Cron('0 9 * * *', { timeZone: 'Asia/Tashkent' })
+  @Cron('0 21 * * *', { timeZone: 'Asia/Tashkent' })
   async sendDailyReports() {
     const bot = this.adminBot.getBot();
     if (!bot) {
