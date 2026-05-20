@@ -104,6 +104,42 @@ export function StudentProfileTabs({
     );
   }, []);
 
+  // Money-flow rows — every transaction type that moves the balance.
+  // LESSON_DEDUCTION is included so the tab explains where a payment went
+  // (e.g. a +400 000 payment immediately consumed by retroactive billing).
+  // LESSON_CONSUMPTION (amount=0) stays exclusive to the "Darslar" tab.
+  // Reused by the lazy-load and after a payment correction.
+  const loadPayments = useCallback(() => {
+    setPaymentsLoading(true);
+    api
+      .get(`/transactions/student/${student.id}`, {
+        params: {
+          pageSize: 20,
+          types:
+            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION",
+        },
+      })
+      .then((res) => setTransactions(res.data.data))
+      .catch(() => {})
+      .finally(() => setPaymentsLoading(false));
+  }, [student.id]);
+
+  // After a correction the tab shows this fresh balance until the parent
+  // student refetch lands (which then clears the override — see effect).
+  const [balanceOverride, setBalanceOverride] = useState<number | null>(null);
+  useEffect(() => {
+    setBalanceOverride(null);
+  }, [student.balance]);
+
+  const handlePaymentCorrected = useCallback(
+    (newBalance: number | null) => {
+      if (newBalance !== null) setBalanceOverride(newBalance);
+      loadPayments();
+      onEnrollmentChange?.();
+    },
+    [loadPayments, onEnrollmentChange],
+  );
+
   const handleTabChange = useCallback(
     (value: string) => {
       if (value === "tarix" && !historyShown.current) {
@@ -121,22 +157,10 @@ export function StudentProfileTabs({
       if (value === "tolovlar" && !paymentsShown.current) {
         paymentsShown.current = true;
         setPaymentsVisible(true);
-        setPaymentsLoading(true);
-        // Money-flow rows only — lesson deductions/consumption belong to
-        // the "Darslar" tab, not here.
-        api
-          .get(`/transactions/student/${student.id}`, {
-            params: {
-              pageSize: 20,
-              types: "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL",
-            },
-          })
-          .then((res) => setTransactions(res.data.data))
-          .catch(() => {})
-          .finally(() => setPaymentsLoading(false));
+        loadPayments();
       }
     },
-    [student.id],
+    [loadPayments],
   );
 
   // Trigger lazy-load on direct URL navigation (e.g. ?tab=tolovlar on first load).
@@ -276,8 +300,9 @@ export function StudentProfileTabs({
           {paymentsVisible ? (
             <StudentPaymentsTable
               isLoading={paymentsLoading}
-              balance={student.balance}
+              balance={balanceOverride ?? student.balance}
               transactions={transactions}
+              onCorrected={handlePaymentCorrected}
             />
           ) : (
             <EmptyState message="To'lov ma'lumotlari mavjud emas" />

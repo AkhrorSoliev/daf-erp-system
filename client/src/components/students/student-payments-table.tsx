@@ -1,8 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
-import { FileText } from "lucide-react";
+import { FileText, MoreHorizontal, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -12,23 +20,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAuth } from "@/hooks/use-auth";
 import {
+  CorrectPaymentDialog,
+  type CorrectablePayment,
+} from "./correct-payment-dialog";
+import {
+  LESSON_DEDUCTION_MODE_LABELS,
   PAYMENT_METHOD_LABELS,
   TRANSACTION_TYPE_INFO,
   type StudentTransaction,
 } from "./student-profile-tabs-utils";
 
+/** Non-CEO operators may correct a payment only within 72h of it landing. */
+const CORRECTION_WINDOW_MS = 72 * 60 * 60 * 1000;
+
 interface StudentPaymentsTableProps {
   isLoading: boolean;
   balance: number;
   transactions: StudentTransaction[];
+  /** Called after a payment is corrected — refresh balance + transactions. */
+  onCorrected?: (newBalance: number | null) => void;
 }
 
 export function StudentPaymentsTable({
   isLoading,
   balance,
   transactions,
+  onCorrected,
 }: StudentPaymentsTableProps) {
+  const user = useAuth((s) => s.user);
+  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  // CEO, Branch Director, Administrator may correct a wrong payment amount.
+  const canCorrect =
+    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+
+  const [correctTarget, setCorrectTarget] = useState<CorrectablePayment | null>(
+    null,
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -38,6 +68,20 @@ export function StudentPaymentsTable({
       </div>
     );
   }
+
+  /**
+   * A row is correctable when it is the original, still-active payment
+   * (positive amount, COMPLETED status). Reversal entries (negative
+   * amount) and already-reversed payments are excluded. Non-CEO callers
+   * are additionally bound to the 72h window; the backend enforces both.
+   */
+  const isCorrectable = (t: StudentTransaction): boolean => {
+    if (t.type !== "PAYMENT" || !t.payment?.id) return false;
+    if (t.payment.status !== "COMPLETED" || t.amount <= 0) return false;
+    if (!canCorrect) return false;
+    if (isCeo) return true;
+    return Date.now() - new Date(t.createdAt).getTime() <= CORRECTION_WINDOW_MS;
+  };
 
   return (
     <div className="space-y-6">
@@ -67,6 +111,7 @@ export function StudentPaymentsTable({
                 <TableHead className="text-right">Balans</TableHead>
                 <TableHead>Sana</TableHead>
                 <TableHead className="w-24 text-center">Hujjat</TableHead>
+                <TableHead className="w-12 text-center">Amal</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,15 +121,23 @@ export function StudentPaymentsTable({
                   variant: "outline" as const,
                 };
                 const isPayment = t.type === "PAYMENT";
+                // Lesson charges are automatic, system-generated rows — they
+                // get a muted background so the eye separates them from the
+                // manual money flows (payments, refunds, adjustments).
+                const isLessonDeduction = t.type === "LESSON_DEDUCTION";
                 const methodLabel = t.payment?.method
                   ? (PAYMENT_METHOD_LABELS[t.payment.method] ?? t.payment.method)
                   : null;
                 const cashier = t.performedBy
                   ? `${t.performedBy.firstName} ${t.performedBy.lastName}`
                   : null;
+                const correctable = isCorrectable(t);
 
                 return (
-                  <TableRow key={t.id}>
+                  <TableRow
+                    key={t.id}
+                    className={isLessonDeduction ? "bg-muted/30" : ""}
+                  >
                     <TableCell className="border-r text-muted-foreground">
                       {i + 1}
                     </TableCell>
@@ -100,6 +153,24 @@ export function StudentPaymentsTable({
                           {cashier && <span>Qabul qildi: {cashier}</span>}
                           {!methodLabel && !cashier && "—"}
                         </span>
+                      ) : isLessonDeduction ? (
+                        <div>
+                          <div>
+                            {t.metadata?.lessonsCovered != null
+                              ? `${t.metadata.lessonsCovered} ta dars uchun yechildi`
+                              : (t.description ?? "Dars uchun yechildi")}
+                          </div>
+                          {t.metadata?.mode && (
+                            <div className="text-xs text-muted-foreground">
+                              {LESSON_DEDUCTION_MODE_LABELS[t.metadata.mode] ??
+                                t.metadata.mode}
+                              {t.metadata.perLessonCost != null &&
+                                ` · 1 dars = ${t.metadata.perLessonCost.toLocaleString(
+                                  "uz-UZ",
+                                )} so'm`}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         (t.description ?? "—")
                       )}
@@ -121,6 +192,38 @@ export function StudentPaymentsTable({
                     <TableCell className="text-center">
                       <ReceiptLink transaction={t} />
                     </TableCell>
+                    <TableCell className="text-center">
+                      {correctable ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                            >
+                              <MoreHorizontal className="size-4" />
+                              <span className="sr-only">Amallar</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setCorrectTarget({
+                                  id: t.payment!.id,
+                                  amount: t.amount,
+                                  method: t.payment!.method,
+                                })
+                              }
+                            >
+                              <Pencil className="mr-2 size-4" />
+                              Summani to&apos;g&apos;rilash
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -132,6 +235,18 @@ export function StudentPaymentsTable({
           Hali to&apos;lov yoki tranzaksiya mavjud emas
         </p>
       )}
+
+      <CorrectPaymentDialog
+        open={correctTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setCorrectTarget(null);
+        }}
+        payment={correctTarget}
+        onCorrected={(newBalance) => {
+          onCorrected?.(newBalance);
+          setCorrectTarget(null);
+        }}
+      />
     </div>
   );
 }

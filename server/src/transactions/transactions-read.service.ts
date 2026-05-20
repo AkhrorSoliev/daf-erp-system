@@ -20,8 +20,11 @@ export class TransactionsReadService {
 
     // `types` (comma-separated) takes precedence over single `type` so the
     // student profile's "To'lovlar" tab can ask for {PAYMENT, REFUND,
-    // ADJUSTMENT, INITIAL_BALANCE} in one call. Validation already happened
-    // in the DTO regex.
+    // ADJUSTMENT, INITIAL_BALANCE, BALANCE_WITHDRAWAL, LESSON_DEDUCTION} in
+    // one call. LESSON_DEDUCTION is a money-flow row (it moves the balance)
+    // so it belongs on this tab too — it is the one type intentionally
+    // shared with the "Darslar" tab. LESSON_CONSUMPTION (amount=0) is not
+    // requested here. Validation already happened in the DTO regex.
     const typesFilter = query.types
       ? (query.types.split(',') as TransactionType[])
       : query.type
@@ -51,6 +54,9 @@ export class TransactionsReadService {
           balanceBefore: true,
           balanceAfter: true,
           description: true,
+          // LESSON_DEDUCTION rows carry { mode, perLessonCost, lessonsCovered }
+          // — the "To'lovlar" tab reads it to label the row ("5 ta dars uchun").
+          metadata: true,
           paymentId: true,
           // Join Payment.method so the frontend can render a unified ledger
           // without a second round-trip — PAYMENT rows show Payme/Click/Cash,
@@ -128,9 +134,10 @@ export class TransactionsReadService {
   /**
    * Lesson-trail report: lesson deductions + per-lesson consumption rows for
    * one student, enriched with attendance metadata. The endpoint is scoped
-   * strictly to LESSON_DEDUCTION and LESSON_CONSUMPTION so the "Darslar" tab
-   * never overlaps with the "To'lovlar" tab (which shows the money-flow
-   * types). Paginated because active students can produce hundreds of
+   * strictly to LESSON_DEDUCTION and LESSON_CONSUMPTION. LESSON_DEDUCTION is
+   * intentionally shared with the "To'lovlar" tab (it is a money-flow row);
+   * LESSON_CONSUMPTION (amount=0) is exclusive to this "Darslar" tab.
+   * Paginated because active students can produce hundreds of
    * LESSON_CONSUMPTION rows.
    */
   async getLessonTrail(

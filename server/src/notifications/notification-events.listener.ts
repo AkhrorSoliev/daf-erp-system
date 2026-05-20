@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { PushService } from './push.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { formatSom } from '../payments/shared/format-som';
+import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
 
 @Injectable()
 export class NotificationEventsListener {
@@ -199,6 +201,88 @@ export class NotificationEventsListener {
     } catch (error) {
       this.logger.error(
         `Failed to notify author ${comment.authorId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Alerts the company's CEO(s) when a non-CEO operator corrects a payment
+   * amount — a financial-control guardrail. Fans out to all four channels
+   * like the task handlers above.
+   */
+  @OnEvent('payment.corrected')
+  async handlePaymentCorrected(payload: PaymentCorrectedPayload) {
+    try {
+      const [performer, student, ceos] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: payload.performedById },
+          select: { firstName: true, lastName: true },
+        }),
+        this.prisma.student.findUnique({
+          where: { id: payload.studentId },
+          select: { firstName: true, lastName: true },
+        }),
+        this.prisma.user.findMany({
+          where: {
+            deletedAt: null,
+            isActive: true,
+            status: UserStatus.ACTIVE,
+            companyId: payload.companyId,
+            roles: { some: { role: { name: 'CEO' } } },
+          },
+          select: { id: true },
+        }),
+      ]);
+
+      if (ceos.length === 0) return;
+
+      const performerName = performer
+        ? `${performer.firstName} ${performer.lastName}`
+        : "Noma'lum xodim";
+      const studentName = student
+        ? `${student.firstName} ${student.lastName}`
+        : "o'quvchi";
+      const studentId = String(payload.studentId);
+
+      const title = "To'lov to'g'rilandi";
+      const message =
+        `${performerName} ${studentName}ning to'lovini to'g'riladi: ` +
+        `${formatSom(payload.oldAmount)} → ${formatSom(payload.newAmount)} so'm. ` +
+        `Sabab: ${payload.reason}`;
+
+      for (const ceo of ceos) {
+        try {
+          const notification = await this.notificationsService.create({
+            userId: ceo.id,
+            type: NotificationType.SYSTEM,
+            title,
+            message,
+            relatedEntityType: 'Student',
+            relatedEntityId: studentId,
+            companyId: payload.companyId,
+          });
+
+          this.gateway.sendToUser(ceo.id, {
+            type: 'notification',
+            notification,
+          });
+
+          await this.pushService.sendToUser(ceo.id, {
+            title,
+            body: message,
+            url: `/students/${studentId}`,
+          });
+
+          await this.sendTelegram(ceo.id, title, message);
+        } catch (error) {
+          this.logger.error(
+            `Failed to notify CEO ${ceo.id} of payment correction: ${error.message}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `payment.corrected handler failed: ${error.message}`,
       );
     }
   }

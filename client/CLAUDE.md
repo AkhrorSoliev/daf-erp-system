@@ -568,16 +568,17 @@ The student profile (`/students/profile/[id]`) has **8 tabs** (URL `?tab=<value>
 | Tarix | `tarix` | Entity history (shared `EntityHistoryTable`) |
 | Lid | `lid` | Lead/source info |
 
-The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth below because they share an endpoint family and have a strict non-overlap contract. Every `Transaction` row appears in exactly one of them — never both. This separation is the rule; do not re-introduce types into the wrong tab.
+The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth below because they share an endpoint family and have a near-strict separation contract: every `Transaction` type belongs to exactly one tab — **except `LESSON_DEDUCTION`, which intentionally appears on both**. `LESSON_DEDUCTION` is a real money-flow row (it moves the balance), so it shows on "To'lovlar" to explain balance drops; it is also part of the lesson story, so it stays on "Darslar". `LESSON_CONSUMPTION` (amount=0) stays exclusive to "Darslar". Do not move any other type across tabs.
 
 #### "To'lovlar" tab (`?tab=tolovlar`)
 
 - Component: `student-payments-table.tsx`. Visible to CEO / BD / Administrator (`canManage`).
 - Question it answers: **"Where did money flow in/out of the student's balance?"**
-- Reads `GET /transactions/student/:id?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL&pageSize=20`. The `types` query param is required to scope the tab to money-flow rows; without it the endpoint would return everything.
-- Sort: DESC (newest first), paginated by 20.
+- Reads `GET /transactions/student/:id?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION&pageSize=20`. The `types` query param is required to scope the tab to balance-moving rows; without it the endpoint would return everything.
+- Sort: DESC (newest first), limited to the latest 20 rows.
 - Header: balance card, then a "Balans operatsiyalari" table.
-- Type badges live in `student-profile-tabs-utils.ts` → `TRANSACTION_TYPE_INFO` (only the four money-flow types are mapped — adding lesson types here is a smell that will cause overlap).
+- Type badges live in `student-profile-tabs-utils.ts` → `TRANSACTION_TYPE_INFO`. It maps every balance-moving type, including `LESSON_DEDUCTION` ("Darsga yechildi"). `LESSON_DEDUCTION` rows get a muted row background, render their `metadata` (`mode` → `LESSON_DEDUCTION_MODE_LABELS`, `lessonsCovered`, `perLessonCost`) in the "Tafsilot" column, and carry no receipt / no "Amal" action. **Never add `LESSON_CONSUMPTION` here** — it has no balance movement and belongs only on "Darslar".
+- **"Amal" column** — a 3-dot dropdown with "Summani to'g'rilash" (`correct-payment-dialog.tsx`). Shown only on the original, still-active PAYMENT row (positive amount, `COMPLETED` status) for CEO / BD / Administrator. Non-CEO callers only see it within 72h of the payment (`CORRECTION_WINDOW_MS`); the backend re-checks. The dialog posts `POST /payments/:id/correct` (reverse + re-post). On success the tab refreshes transactions and shows the returned `studentBalance` until the parent student refetch lands.
 
 #### "Darslar" tab (`?tab=darslar`)
 

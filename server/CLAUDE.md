@@ -339,8 +339,8 @@ The financial system is built on an **append-only ledger** principle — financi
 
 #### Payment Module (`src/payments/`)
 
-- **Endpoints**: `POST /payments` (create), `POST /payments/attach-external` (gateway attach), `POST /payments/:id/reverse` (CEO-only), `GET /payments`, `GET /payments/:id`, `GET /payments/student/:studentId`, `GET /payments/debtors`, `GET /payments/pending-students`
-- **Roles**: CEO, BD, Admin, Cashier — except reverse (CEO-only)
+- **Endpoints**: `POST /payments` (create), `POST /payments/attach-external` (gateway attach), `POST /payments/:id/reverse` (CEO-only), `POST /payments/:id/correct` (CEO/BD/Admin), `GET /payments`, `GET /payments/:id`, `GET /payments/student/:studentId`, `GET /payments/debtors`, `GET /payments/pending-students`
+- **Roles**: CEO, BD, Admin, Cashier — except reverse (CEO-only) and correct (CEO/BD/Admin, no Cashier)
 - **Key rules**:
   - Payment create atomically: creates Payment → records Transaction (PAYMENT) → increments Student.balance → increments Contract.paidAmount
   - Contract-student ownership validated: `contractId` must belong to `studentId`
@@ -349,6 +349,7 @@ The financial system is built on an **append-only ledger** principle — financi
   - Reversed payments excluded from list by default (`status: { not: REVERSED }`); can be queried explicitly with `?status=REVERSED`
   - `source` field returned in all read endpoints for audit
   - Reverse writes Student entity history (`TO'LOV_BEKOR_QILINDI`)
+  - Reverse emits `payment.reversed` → `PaymentEventsListener` Telegrams the student that their payment was rolled back
   - `getPending()` uses `balance: { lt: 0 }` (strictly negative, not `lte`)
 
 #### Salary Module (`src/salary/`)
@@ -629,16 +630,18 @@ Admin-driven drain of a student's positive balance into the system as recognized
 - **`creditTeacher` flag**: when true, also writes a `SalaryAccrual` linked via `deductionTransactionId` to the new BALANCE_WITHDRAWAL row. The accrual has `attendanceId IS NULL` (no underlying lesson) and `lessonDate = first of targetMonth`. The teacher must be on one of the student's active enrollments — service validates this via a `groupTeachers` join and throws `ForbiddenException` otherwise.
 - **`SalaryAccrual` schema relax**: `attendanceId` is nullable; the previous unique constraint `(userId, studentId, groupId, lessonDate)` is replaced with `(userId, studentId, groupId, lessonDate, attendanceId)` so withdrawal accruals (NULL attendanceId) can stack within a month — Postgres treats NULLs as distinct in UNIQUE.
 - **Atomicity**: balance check + transaction write + student balance update + optional accrual + EntityHistory record run inside one `Serializable` `prisma.$transaction` (10s maxWait, 15s timeout).
-- **`To'lovlar` tab**: `BALANCE_WITHDRAWAL` is a money-flow type — included in the comma-separated `?types=` filter (`PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL`). The `Lesson Trail` endpoint continues to scope strictly to `LESSON_DEDUCTION` + `LESSON_CONSUMPTION`.
+- **`To'lovlar` tab**: `BALANCE_WITHDRAWAL` is a money-flow type — included in the comma-separated `?types=` filter (`PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION`). The `Lesson Trail` endpoint continues to scope strictly to `LESSON_DEDUCTION` + `LESSON_CONSUMPTION`.
 - **Salary calculation**: existing `salary-summary` and `salary-calculation` queries pick up withdrawal accruals automatically (filter is `salaryPaymentId: null, reversedAt: null` + `lessonDate` range), so no special-case logic. The `lessonDate = YYYY-MM-01` date determines which salary cycle the accrual lands in based on each company's `cycleStartDay`.
 
 #### Lesson Trail (`GET /transactions/student/:id/lesson-trail`)
 
-Per-student "where did each so'm go for lessons?" report. Strictly scoped to `LESSON_DEDUCTION` (prepaid-batch allocation rows) and `LESSON_CONSUMPTION` (per-lesson use rows) — money-flow types (PAYMENT/REFUND/ADJUSTMENT/INITIAL_BALANCE) are filtered out at the service level so this endpoint never overlaps with the To'lovlar tab's data. Paginated (`page`, `pageSize`). Returns rows in ASC order (chronological story) enriched with attendance metadata (date, group, course) and reversal markers. Drives the "Darslar" tab (URL `?tab=darslar`) on the student profile.
+Per-student "where did each so'm go for lessons?" report. Strictly scoped to `LESSON_DEDUCTION` (prepaid-batch allocation rows) and `LESSON_CONSUMPTION` (per-lesson use rows) — money-flow types (PAYMENT/REFUND/ADJUSTMENT/INITIAL_BALANCE) are filtered out at the service level. Paginated (`page`, `pageSize`). Returns rows in ASC order (chronological story) enriched with attendance metadata (date, group, course) and reversal markers. Drives the "Darslar" tab (URL `?tab=darslar`) on the student profile.
 
 #### Student transactions list (`GET /transactions/student/:id`)
 
-Used by the "To'lovlar" tab. Accepts a `types` query parameter — a comma-separated list of `TransactionType` values (e.g. `?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL`) — so the tab can request only the money-flow rows it cares about. Validated against the enum at the DTO boundary; invalid tokens reject. The legacy single-`type` parameter still works as a fallback for one type.
+Used by the "To'lovlar" tab. Accepts a `types` query parameter — a comma-separated list of `TransactionType` values (e.g. `?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION`) — so the tab can request only the rows that move the balance. Validated against the enum at the DTO boundary; invalid tokens reject. The legacy single-`type` parameter still works as a fallback for one type.
+
+**Tab overlap on `LESSON_DEDUCTION` (intentional).** `LESSON_DEDUCTION` is a real money-flow row — it decreases the student balance — so it appears on **both** the "To'lovlar" tab (so a balance drop is never unexplained, e.g. a payment immediately consumed by retroactive billing) **and** the "Darslar" tab (where it shows which prepaid batch covered which lessons). It is the **one** `TransactionType` deliberately shared between the two tabs. `LESSON_CONSUMPTION` (amount=0, no balance movement) stays exclusive to the "Darslar" tab. Every other type belongs to exactly one tab.
 
 #### Enrollment Lifecycle Prepaid Refund (`EnrollmentBillingService`)
 
@@ -651,6 +654,16 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 
 `payments-write.service.ts:reverse()` refuses if any non-reversed `LESSON_CONSUMPTION` exists for the student dated AFTER the payment landed. The funds are already spent on lessons — admins must use the formal `Refund` flow (which has proper math for partial completion + deductions). Force-reverse is intentionally not provided to prevent ledger drift.
 
+#### Payment Amount Correction
+
+`payments-write.service.ts:correctAmount()` (`POST /payments/:id/correct`) fixes a wrong amount on a manual payment (e.g. cashier typed 4 000 000 instead of 400 000). It is **reverse + re-post**, not an in-place edit — the append-only ledger rule holds. The original payment becomes `REVERSED`; a fresh payment is created at the correct amount. The two steps run as separate Serializable transactions (not one atomic unit); if the re-post fails, a precise recovery message is surfaced.
+
+- **Roles**: CEO, BD, Admin (`@Roles` on the endpoint excludes Cashier).
+- **Guardrails** (all enforced in the service): only `ADMIN_MANUAL` source (gateway amounts are provider-owned); only `COMPLETED` status; new amount must differ; non-CEO callers bound to a **72h window** after the payment landed (`ADMIN_CORRECTION_WINDOW_HOURS`, CEOs bypass); blocked when funds were already spent on lessons (`LESSON_CONSUMPTION` exists) — that needs the CEO lesson-deduction unwind flow.
+- A `reason` is **mandatory** (`CorrectPaymentDto`) and lands in the audit trail. The re-posted payment's `note` records the previous amount + reason.
+- **Student notifications**: two Telegram messages — `payment.reversed` (old payment rolled back) then `payment.received` (new payment posted).
+- **CEO alert**: when a non-CEO performs the correction, `payment.corrected` is emitted → `NotificationEventsListener` notifies all company CEOs (DB + SSE + Push + Telegram, `NotificationType.SYSTEM`).
+
 #### Status Transitions (centralized in `src/common/finance/status-transitions.ts`)
 
 - `assertValidTransition(entityType, map, fromStatus, toStatus)` — throws `BadRequestException` if invalid
@@ -662,6 +675,7 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 |---------|:---:|:--:|:-----:|:-------:|:-------:|
 | Create payment | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Reverse payment | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Correct payment amount | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Salary config | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Calculate salary | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Approve salary | ✅ | ❌ | ❌ | ❌ | ❌ |

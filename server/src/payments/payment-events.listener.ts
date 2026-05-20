@@ -4,7 +4,11 @@ import { SmsMessageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
 import { PAYMENT_METHOD_LABEL } from './shared/method-label';
-import type { PaymentReceivedPayload } from './payments-write.service';
+import { formatSom } from './shared/format-som';
+import type {
+  PaymentReceivedPayload,
+  PaymentReversedPayload,
+} from './payments-write.service';
 
 /**
  * Sends a Telegram receipt to the student after a payment commits.
@@ -70,6 +74,40 @@ export class PaymentEventsListener {
       );
     }
   }
+
+  /**
+   * Sends a Telegram notice to the student when one of their payments is
+   * rolled back (standalone reverse, or the first leg of an amount
+   * correction). Same fire-and-forget, swallow-errors contract as the
+   * receipt handler above.
+   */
+  @OnEvent('payment.reversed')
+  async handleReversed(payload: PaymentReversedPayload) {
+    try {
+      const student = await this.prisma.student.findFirst({
+        where: { id: payload.studentId, deletedAt: null },
+        select: { id: true, firstName: true, telegramChatId: true },
+      });
+      if (!student?.telegramChatId) {
+        return;
+      }
+
+      const body = composeReversedBody(payload, student.firstName);
+      await this.smsService.sendToStudent(
+        payload.studentId,
+        body,
+        SmsMessageType.AUTO,
+        payload.performedById,
+        payload.companyId,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Payment reversal Telegram failed for student ${payload.studentId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
 }
 
 function composeBody(
@@ -93,11 +131,20 @@ function composeBody(
   return lines.join('\n');
 }
 
-function formatSom(value: number): string {
-  // Uzbek locale: space as thousand separator (matches client formatBalance).
-  // Negative values keep the leading minus.
-  const sign = value < 0 ? '-' : '';
-  const abs = Math.abs(value).toFixed(0);
-  const withSeparators = abs.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return sign + withSeparators;
+function composeReversedBody(
+  p: PaymentReversedPayload,
+  firstName: string,
+): string {
+  const lines: string[] = [];
+  lines.push(`Salom, ${firstName}!`);
+  lines.push(`${formatSom(p.amount)} so'm to'lovingiz bekor qilindi.`);
+  if (p.reason) {
+    lines.push(`Sabab: ${p.reason}`);
+  }
+  if (p.studentBalance !== null) {
+    lines.push(`Joriy balansingiz: ${formatSom(p.studentBalance)} so'm.`);
+  }
+  lines.push('');
+  lines.push("Savollar bo'lsa, markazga murojaat qiling.");
+  return lines.join('\n');
 }

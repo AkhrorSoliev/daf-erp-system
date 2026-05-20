@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentMethod, PaymentSource, Prisma } from '@prisma/client';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
@@ -23,6 +24,15 @@ export class PaymentsService {
     params: { reason?: string; performedById: number; companyId: number },
   ) {
     return this.write.reverse(id, params);
+  }
+  correctAmount(
+    id: string,
+    dto: CorrectPaymentDto,
+    userId: number,
+    companyId: number,
+    roles: string[],
+  ) {
+    return this.write.correctAmount(id, dto, userId, companyId, roles);
   }
   resolveStudentBranchId(
     studentId: number,
