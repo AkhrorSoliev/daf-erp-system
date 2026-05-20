@@ -32,7 +32,28 @@ export class GroupsReadService {
     }
 
     if (query.search?.trim()) {
-      where.name = { contains: query.search.trim(), mode: 'insensitive' };
+      // Search matches the group name OR a teacher's first/last name, so an
+      // admin can find a group by who teaches it. Multi-word terms ("Ali
+      // Valiyev") are split into tokens; every token must match somewhere
+      // (the name or a teacher) so the result narrows as more is typed.
+      const tokens = query.search.trim().split(/\s+/);
+      where.AND = tokens.map((token) => ({
+        OR: [
+          { name: { contains: token, mode: 'insensitive' } },
+          {
+            teachers: {
+              some: {
+                teacher: {
+                  OR: [
+                    { firstName: { contains: token, mode: 'insensitive' } },
+                    { lastName: { contains: token, mode: 'insensitive' } },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }));
     }
 
     if (query.teacher_id) {

@@ -572,4 +572,59 @@ describe('GroupsService — status methods', () => {
       );
     });
   });
+
+  describe('findAll — search by group name or teacher', () => {
+    function whereOf() {
+      return prisma.group.findMany.mock.calls[0][0].where;
+    }
+
+    it('matches a single term against the group name OR a teacher name', async () => {
+      await service.findAll({ search: 'Valiyev' } as any, 1001);
+
+      expect(whereOf().AND).toEqual([
+        {
+          OR: [
+            { name: { contains: 'Valiyev', mode: 'insensitive' } },
+            {
+              teachers: {
+                some: {
+                  teacher: {
+                    OR: [
+                      {
+                        firstName: { contains: 'Valiyev', mode: 'insensitive' },
+                      },
+                      {
+                        lastName: { contains: 'Valiyev', mode: 'insensitive' },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ]);
+      // The legacy single-key `where.name` filter must be gone.
+      expect(whereOf().name).toBeUndefined();
+    });
+
+    it('splits a multi-word term so every token must match (AND of ORs)', async () => {
+      await service.findAll({ search: '  Ali   Valiyev ' } as any, 1001);
+
+      const and = whereOf().AND;
+      expect(and).toHaveLength(2);
+      expect(and[0].OR[0]).toEqual({
+        name: { contains: 'Ali', mode: 'insensitive' },
+      });
+      expect(and[1].OR[0]).toEqual({
+        name: { contains: 'Valiyev', mode: 'insensitive' },
+      });
+    });
+
+    it('does not attach a search clause when search is absent or blank', async () => {
+      await service.findAll({ search: '   ' } as any, 1001);
+      expect(whereOf().AND).toBeUndefined();
+      expect(whereOf().name).toBeUndefined();
+    });
+  });
 });
