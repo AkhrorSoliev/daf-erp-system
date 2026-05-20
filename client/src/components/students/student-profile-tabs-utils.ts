@@ -8,9 +8,11 @@ export const STATUS_MAP: Record<number, { label: string; variant: BadgeVariant }
     4: { label: "To'xtatilgan", variant: "destructive" },
   };
 
-// Only the money-flow types the "To'lovlar" tab actually requests live here.
-// Lesson-related types (LESSON_DEDUCTION/LESSON_CONSUMPTION) are scoped to
-// the "Darslar" tab via lesson-trail-tab.tsx — they have their own labels.
+// The money-flow types the "To'lovlar" tab requests — every type that moves
+// the student balance. LESSON_DEDUCTION is included on purpose: it is a real
+// outflow, so the tab can explain a balance drop (retroactive billing after a
+// payment). It is the one type intentionally shared with the "Darslar" tab.
+// LESSON_CONSUMPTION (amount=0, no balance movement) stays Darslar-only.
 export const TRANSACTION_TYPE_INFO: Record<
   string,
   { label: string; variant: BadgeVariant }
@@ -20,6 +22,14 @@ export const TRANSACTION_TYPE_INFO: Record<
   ADJUSTMENT: { label: "Tuzatish", variant: "secondary" },
   INITIAL_BALANCE: { label: "Boshlang'ich balans", variant: "outline" },
   BALANCE_WITHDRAWAL: { label: "Yechib olish", variant: "destructive" },
+  LESSON_DEDUCTION: { label: "Darsga yechildi", variant: "outline" },
+};
+
+// LESSON_DEDUCTION metadata `mode` → human label for the "Tafsilot" column.
+export const LESSON_DEDUCTION_MODE_LABELS: Record<string, string> = {
+  FULL_CYCLE: "To'liq tsikl",
+  PARTIAL: "Qisman",
+  SINGLE_UNCOVERED: "Qarzga yozildi",
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -37,6 +47,12 @@ export interface StudentTransaction {
   balanceBefore: number;
   balanceAfter: number;
   description: string | null;
+  // Present on LESSON_DEDUCTION rows — drives the "Tafsilot" label.
+  metadata: {
+    mode?: string;
+    perLessonCost?: number;
+    lessonsCovered?: number;
+  } | null;
   payment: { id: string; method: string; status: string } | null;
   performedBy: { firstName: string; lastName: string } | null;
   createdAt: string;

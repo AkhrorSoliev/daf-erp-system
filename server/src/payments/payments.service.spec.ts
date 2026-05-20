@@ -48,6 +48,7 @@ describe('PaymentsService', () => {
   let transactionsService: any;
   let entityHistoryService: any;
   let lessonBillingService: any;
+  let eventEmitter: any;
 
   beforeEach(async () => {
     prisma = {
@@ -123,6 +124,7 @@ describe('PaymentsService', () => {
     }).compile();
 
     service = module.get(PaymentsService);
+    eventEmitter = module.get(EventEmitter2);
   });
 
   describe('create()', () => {
@@ -630,6 +632,155 @@ describe('PaymentsService', () => {
         }),
       );
       expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
+    });
+  });
+
+  describe('correctAmount()', () => {
+    // A recent, admin-entered cash payment of 5 000 000 — the typo we want
+    // to correct down to 400 000.
+    const recentPayment = {
+      id: 'payment-uuid-1',
+      studentId: 10001,
+      amount: 5000000,
+      method: 'CASH',
+      contractId: 'contract-uuid-1',
+      branchId: 1,
+      status: PaymentStatus.COMPLETED,
+      source: 'ADMIN_MANUAL',
+      createdAt: new Date(),
+    };
+    const dto = { correctAmount: 400000, reason: 'Ortiqcha nol kiritilgan' };
+
+    beforeEach(() => {
+      prisma.payment.findFirst.mockResolvedValue(recentPayment);
+    });
+
+    it('reverses the wrong payment and re-posts at the correct amount', async () => {
+      const result = await service.correctAmount(
+        'payment-uuid-1',
+        dto,
+        99,
+        1001,
+        ['Administrator'],
+      );
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-uuid-1' },
+        data: { status: PaymentStatus.REVERSED },
+      });
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ amount: 400000 }),
+        }),
+      );
+      expect(result).toEqual(
+        expect.objectContaining({ reversedPaymentId: 'payment-uuid-1' }),
+      );
+    });
+
+    it('emits payment.corrected when a non-CEO performs the correction', async () => {
+      await service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+        'Administrator',
+      ]);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.corrected',
+        expect.objectContaining({
+          studentId: 10001,
+          oldAmount: 5000000,
+          newAmount: 400000,
+          performedById: 99,
+        }),
+      );
+    });
+
+    it('does NOT emit payment.corrected when a CEO performs the correction', async () => {
+      await service.correctAmount('payment-uuid-1', dto, 1, 1001, ['CEO']);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'payment.corrected',
+        expect.anything(),
+      );
+    });
+
+    it('throws when the payment is a gateway payment (not admin-entered)', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        ...recentPayment,
+        source: 'GATEWAY_WEBHOOK',
+      });
+
+      await expect(
+        service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+          'Administrator',
+        ]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws when the payment is already reversed', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        ...recentPayment,
+        status: PaymentStatus.REVERSED,
+      });
+
+      await expect(
+        service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+          'Administrator',
+        ]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws when the new amount equals the current amount', async () => {
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 5000000, reason: 'x' },
+          99,
+          1001,
+          ['Administrator'],
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('blocks a non-CEO from correcting a payment older than 72h', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        ...recentPayment,
+        createdAt: new Date(Date.now() - 80 * 60 * 60 * 1000),
+      });
+
+      await expect(
+        service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+          'Administrator',
+        ]),
+      ).rejects.toThrow(/72 soat/);
+    });
+
+    it('allows a CEO to correct a payment older than 72h', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        ...recentPayment,
+        createdAt: new Date(Date.now() - 80 * 60 * 60 * 1000),
+      });
+
+      await expect(
+        service.correctAmount('payment-uuid-1', dto, 1, 1001, ['CEO']),
+      ).resolves.toBeDefined();
+    });
+
+    it('blocks correction when the funds were already spent on lessons', async () => {
+      prisma.transaction.count.mockResolvedValue(2);
+
+      await expect(
+        service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+          'Administrator',
+        ]),
+      ).rejects.toThrow(/sarflangan/);
+    });
+
+    it('throws NotFoundException when the payment does not exist', async () => {
+      prisma.payment.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.correctAmount('nope', dto, 99, 1001, ['Administrator']),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -15,7 +16,9 @@ import {
   Prisma,
 } from '@prisma/client';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PAYMENT_METHOD_LABEL } from './shared/method-label';
+import { formatSom } from './shared/format-som';
 
 /**
  * Emitted after a successful payment commit (manual or gateway). Consumed
@@ -32,8 +35,44 @@ export interface PaymentReceivedPayload {
   performedById?: number;
 }
 
+/**
+ * Emitted after a payment is reversed (standalone reverse, or the first
+ * leg of an amount correction). Consumed by `PaymentEventsListener` to
+ * tell the student their payment was rolled back.
+ */
+export interface PaymentReversedPayload {
+  paymentId: string;
+  studentId: number;
+  amount: number;
+  studentBalance: number | null;
+  reason: string | null;
+  companyId: number;
+  performedById?: number;
+}
+
+/**
+ * Emitted when a non-CEO operator corrects a payment amount. Consumed by
+ * `NotificationEventsListener` to alert the CEO(s) of the company.
+ */
+export interface PaymentCorrectedPayload {
+  studentId: number;
+  oldAmount: number;
+  newAmount: number;
+  reason: string;
+  performedById: number;
+  companyId: number;
+}
+
 @Injectable()
 export class PaymentsWriteService {
+  private readonly logger = new Logger(PaymentsWriteService.name);
+
+  /**
+   * Hours after a payment lands during which a non-CEO operator may still
+   * correct its amount. CEOs are not bound by this window.
+   */
+  private static readonly ADMIN_CORRECTION_WINDOW_HOURS = 72;
+
   constructor(
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
@@ -240,7 +279,7 @@ export class PaymentsWriteService {
       );
     }
 
-    return this.prisma.$transaction(
+    const result = await this.prisma.$transaction(
       async (tx) => {
         await this.transactionsService.reverseTransaction(
           ledgerEntry.id,
@@ -297,7 +336,11 @@ export class PaymentsWriteService {
           tx,
         });
 
-        return { reversedPaymentId: id, amount: payment.amount };
+        return {
+          reversedPaymentId: id,
+          amount: payment.amount,
+          studentBalance: updatedStudent?.balance ?? null,
+        };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -305,6 +348,178 @@ export class PaymentsWriteService {
         timeout: 15000,
       },
     );
+
+    // Tell the student their payment was rolled back. Fire-and-forget,
+    // post-commit — mirrors the `payment.received` receipt flow.
+    this.eventEmitter.emit('payment.reversed', {
+      paymentId: id,
+      studentId: payment.studentId,
+      amount: payment.amount,
+      studentBalance: result.studentBalance,
+      reason: params.reason ?? null,
+      companyId: params.companyId,
+      performedById: params.performedById,
+    } satisfies PaymentReversedPayload);
+
+    return { reversedPaymentId: id, amount: result.amount };
+  }
+
+  /**
+   * Corrects the amount of an already-posted manual payment (e.g. cashier
+   * typed 4 000 000 instead of 400 000). Reverses the wrong payment and
+   * re-posts a new one at `dto.correctAmount` — the append-only ledger
+   * rule means we never edit the Payment row in place.
+   *
+   * Guardrails:
+   *  - only `ADMIN_MANUAL` payments (gateway amounts are provider-owned);
+   *  - only `COMPLETED` payments;
+   *  - non-CEO callers limited to a {@link ADMIN_CORRECTION_WINDOW_HOURS}h
+   *    window after the payment landed (CEOs bypass);
+   *  - blocked once the funds were spent on lessons — that needs the CEO
+   *    lesson-deduction unwind flow, not a plain reverse.
+   */
+  async correctAmount(
+    id: string,
+    dto: CorrectPaymentDto,
+    userId: number,
+    companyId: number,
+    roles: string[],
+  ) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { id, companyId },
+      select: {
+        id: true,
+        studentId: true,
+        amount: true,
+        method: true,
+        contractId: true,
+        branchId: true,
+        status: true,
+        source: true,
+        createdAt: true,
+      },
+    });
+    if (!payment) throw new NotFoundException("To'lov topilmadi");
+
+    if (payment.status !== PaymentStatus.COMPLETED) {
+      throw new BadRequestException(
+        "Faqat amaldagi (COMPLETED) to'lovni to'g'rilash mumkin",
+      );
+    }
+
+    // Gateway payments (Payme/Click/Uzum) and manually-attached gateway
+    // transactions carry a real external amount — hand-editing them would
+    // desync the ledger from the provider.
+    if (payment.source !== PaymentSource.ADMIN_MANUAL) {
+      throw new BadRequestException(
+        "Faqat qo'lda kiritilgan to'lovni to'g'rilash mumkin",
+      );
+    }
+
+    if (dto.correctAmount === payment.amount) {
+      throw new BadRequestException(
+        "Yangi summa joriy summa bilan bir xil — to'g'rilash shart emas",
+      );
+    }
+
+    // Time window — admins/BDs may only correct recent payments; CEOs bypass.
+    const isCeo = roles?.includes('CEO') ?? false;
+    if (!isCeo) {
+      const ageMs = Date.now() - payment.createdAt.getTime();
+      const windowMs =
+        PaymentsWriteService.ADMIN_CORRECTION_WINDOW_HOURS * 60 * 60 * 1000;
+      if (ageMs > windowMs) {
+        throw new BadRequestException(
+          `To'lov ${PaymentsWriteService.ADMIN_CORRECTION_WINDOW_HOURS} soatdan oldin qilingan — uni faqat direktor (CEO) to'g'rilay oladi`,
+        );
+      }
+    }
+
+    // Simple-case guard: if the funds were already spent on lessons, a
+    // reverse+repost can't represent the correction. Surface a clear
+    // message before touching anything (reverse() re-checks as a backstop).
+    const ledgerEntry = await this.prisma.transaction.findFirst({
+      where: {
+        paymentId: id,
+        type: 'PAYMENT',
+        reversedTransactionId: null,
+        reversedAt: null,
+      },
+      select: { createdAt: true },
+    });
+    if (ledgerEntry) {
+      const consumed = await this.prisma.transaction.count({
+        where: {
+          studentId: payment.studentId,
+          type: 'LESSON_CONSUMPTION',
+          reversedAt: null,
+          createdAt: { gt: ledgerEntry.createdAt },
+        },
+      });
+      if (consumed > 0) {
+        throw new BadRequestException(
+          "To'lov mablag'i allaqachon darslarga sarflangan — bu holatda summani admin to'g'rilay olmaydi. Iltimos, CEO bilan bog'laning.",
+        );
+      }
+    }
+
+    // Step 1 — reverse the wrong payment (its own atomic tx). reverse()
+    // emits `payment.reversed`, so the student gets the first message.
+    await this.reverse(id, {
+      reason: `Summa to'g'rilandi: ${dto.reason}`,
+      performedById: userId,
+      companyId,
+    });
+
+    // Step 2 — re-post at the correct amount (its own atomic tx). create()
+    // emits `payment.received`, so the student gets the second message.
+    const noteForCorrection = `To'g'rilangan to'lov (avvalgi summa: ${formatSom(
+      payment.amount,
+    )} so'm). Sabab: ${dto.reason}`;
+    let newPayment: Awaited<ReturnType<PaymentsWriteService['create']>>;
+    try {
+      newPayment = await this.create(
+        {
+          studentId: payment.studentId,
+          amount: dto.correctAmount,
+          method: payment.method,
+          contractId: payment.contractId ?? undefined,
+          branchId: payment.branchId ?? undefined,
+          note: noteForCorrection,
+        },
+        userId,
+        companyId,
+      );
+    } catch (err) {
+      // The reverse already committed. We don't have an atomic rollback
+      // across the two transactions, so surface a precise recovery hint.
+      this.logger.error(
+        `Correction re-post failed for payment ${id}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      throw new BadRequestException(
+        "To'lov bekor qilindi, lekin yangi summa qayd etilmadi. Iltimos, to'g'ri summani qo'lda kiriting.",
+      );
+    }
+
+    // Alert the CEO when a non-CEO performed the correction.
+    if (!isCeo) {
+      this.eventEmitter.emit('payment.corrected', {
+        studentId: payment.studentId,
+        oldAmount: payment.amount,
+        newAmount: dto.correctAmount,
+        reason: dto.reason,
+        performedById: userId,
+        companyId,
+      } satisfies PaymentCorrectedPayload);
+    }
+
+    return {
+      reversedPaymentId: id,
+      newPayment,
+      studentBalance: newPayment.studentBalance ?? null,
+    };
   }
 
   /**

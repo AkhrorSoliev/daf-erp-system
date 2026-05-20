@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { AttachExternalPaymentDto } from './dto/attach-external.dto';
 import { CurrentUser, Roles } from '../common/decorators';
@@ -55,6 +56,32 @@ export class PaymentsController {
       performedById: userId,
       companyId,
     });
+  }
+
+  /**
+   * Correct a wrong amount on a manual payment (e.g. cashier typed an
+   * extra zero). Reverses the wrong payment and re-posts it at the right
+   * amount. Allowed for CEO / Branch Director / Administrator — non-CEO
+   * callers are bound to a 72h window (enforced in the service). The
+   * service also rejects gateway payments and funds already spent on
+   * lessons. A `reason` is mandatory and lands in the audit trail.
+   */
+  @Post(':id/correct')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  correct(
+    @Param('id') id: string,
+    @Body() dto: CorrectPaymentDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.paymentsService.correctAmount(
+      id,
+      dto,
+      userId,
+      companyId,
+      roles,
+    );
   }
 
   @Post('attach-external')

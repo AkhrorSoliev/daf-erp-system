@@ -154,4 +154,72 @@ describe('PaymentEventsListener', () => {
     const body = smsService.sendToStudent.mock.calls[0][1];
     expect(body).not.toMatch(/balansingiz/i);
   });
+
+  describe('handleReversed', () => {
+    const reversedPayload = {
+      paymentId: 'pay-1',
+      studentId: 10001,
+      amount: 5000000,
+      studentBalance: 100000,
+      reason: 'Summa ortiqcha kiritilgan',
+      companyId: 1,
+      performedById: 99,
+    };
+
+    it('sends a Telegram notice with the reversed amount and reason', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        firstName: 'Aziz',
+        telegramChatId: 'chat-a',
+      });
+
+      await listener.handleReversed(reversedPayload);
+
+      expect(smsService.sendToStudent).toHaveBeenCalledTimes(1);
+      const body = smsService.sendToStudent.mock.calls[0][1];
+      expect(body).toContain('Aziz');
+      expect(body).toContain('5 000 000');
+      expect(body).toContain('bekor qilindi');
+      expect(body).toContain('Summa ortiqcha kiritilgan');
+      expect(body).toContain('100 000');
+    });
+
+    it('omits the reason line when reason is null', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        firstName: 'Aziz',
+        telegramChatId: 'chat-a',
+      });
+
+      await listener.handleReversed({ ...reversedPayload, reason: null });
+
+      const body = smsService.sendToStudent.mock.calls[0][1];
+      expect(body).not.toMatch(/Sabab:/);
+    });
+
+    it('skips delivery for students without telegramChatId', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        firstName: 'Aziz',
+        telegramChatId: null,
+      });
+
+      await listener.handleReversed(reversedPayload);
+
+      expect(smsService.sendToStudent).not.toHaveBeenCalled();
+    });
+
+    it('swallows SmsService errors without throwing', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        firstName: 'Aziz',
+        telegramChatId: 'chat-a',
+      });
+      smsService.sendToStudent.mockRejectedValueOnce(new Error('boom'));
+
+      await expect(
+        listener.handleReversed(reversedPayload),
+      ).resolves.toBeUndefined();
+    });
+  });
 });
