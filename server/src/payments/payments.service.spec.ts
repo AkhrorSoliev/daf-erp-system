@@ -345,6 +345,30 @@ describe('PaymentsService', () => {
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
+    // The guard must count genuine consumption only — reversal entries
+    // (reversedTransactionId set) are the undoing of a consumption.
+    it('consumption guard query excludes reversal entries', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        id: paymentId,
+        studentId: 10001,
+        amount: 500000,
+        contractId: 'contract-uuid-1',
+        status: PaymentStatus.COMPLETED,
+      });
+
+      await service.reverse(paymentId, params);
+
+      const consumptionCall = prisma.transaction.count.mock.calls.find(
+        (call: any) => call[0]?.where?.type === 'LESSON_CONSUMPTION',
+      );
+      expect(consumptionCall?.[0].where).toEqual(
+        expect.objectContaining({
+          reversedAt: null,
+          reversedTransactionId: null,
+        }),
+      );
+    });
+
     it('should throw NotFoundException when payment is not found', async () => {
       prisma.payment.findFirst.mockResolvedValue(null);
 
@@ -773,6 +797,25 @@ describe('PaymentsService', () => {
           'Administrator',
         ]),
       ).rejects.toThrow(/sarflangan/);
+    });
+
+    // Regression: a prior lesson-deduction unwind leaves reversal-entry
+    // consumption rows. The guard must NOT count them, or the correction
+    // is wrongly blocked. Query must filter reversedTransactionId: null.
+    it('consumption pre-check query excludes reversal entries', async () => {
+      await service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+        'Administrator',
+      ]);
+
+      const consumptionCall = prisma.transaction.count.mock.calls.find(
+        (call: any) => call[0]?.where?.type === 'LESSON_CONSUMPTION',
+      );
+      expect(consumptionCall?.[0].where).toEqual(
+        expect.objectContaining({
+          reversedAt: null,
+          reversedTransactionId: null,
+        }),
+      );
     });
 
     it('throws NotFoundException when the payment does not exist', async () => {

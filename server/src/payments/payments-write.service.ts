@@ -269,7 +269,12 @@ export class PaymentsWriteService {
       where: {
         studentId: payment.studentId,
         type: 'LESSON_CONSUMPTION',
+        // Genuine, still-active consumption only. Exclude reversal entries
+        // (reversedTransactionId set) — they represent the *undoing* of a
+        // consumption (e.g. after a lesson-deduction unwind), not money
+        // currently spent on lessons.
         reversedAt: null,
+        reversedTransactionId: null,
         createdAt: { gt: ledgerEntry.createdAt },
       },
     });
@@ -452,7 +457,12 @@ export class PaymentsWriteService {
         where: {
           studentId: payment.studentId,
           type: 'LESSON_CONSUMPTION',
+          // Active consumption only — a reversal entry (reversedTransactionId
+          // set) is the undoing of a consumption, not spent money. Without
+          // this, a prior lesson-deduction unwind would wrongly block the
+          // correction.
           reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gt: ledgerEntry.createdAt },
         },
       });
