@@ -48,6 +48,22 @@ export class ReportsFinancialService {
       _count: true,
     });
 
+    // Recognized revenue (actual): total lesson value billed to students in
+    // the period — the sum of every LESSON_DEDUCTION prepaid batch. Unlike
+    // recognizedRevenueForecast (a schedule-based projection), this is what
+    // was really charged. Summing signed amounts nets reversed batches out,
+    // since a reversal is itself a LESSON_DEDUCTION row with the opposite sign.
+    const billedLessonsAgg = await this.prisma.transaction.aggregate({
+      where: {
+        companyId,
+        type: 'LESSON_DEDUCTION',
+        createdAt: dateFilter,
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      _sum: { amount: true },
+    });
+    const billedLessons = Math.abs(billedLessonsAgg._sum.amount ?? 0);
+
     // Recognized revenue forecast: walks every active enrollment in scope
     // and estimates monthly recognition from the group's weekly cadence.
     //
@@ -222,6 +238,7 @@ export class ReportsFinancialService {
       income: {
         expected: expectedIncome,
         actual: totalIncome,
+        billed: billedLessons,
         paymentCount: actualIncome._count,
         byMethod: incomeByMethod.map((m) => ({
           method: m.method,

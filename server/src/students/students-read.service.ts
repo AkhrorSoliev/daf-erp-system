@@ -88,13 +88,26 @@ export class StudentsReadService {
     } else if (status === 'frozen') {
       where.status = StudentStatus.FROZEN;
     } else if (status === 'ungrouped') {
+      // "Guruhsiz" = active student not currently in any active group. Covers
+      // both never-enrolled students AND students whose enrollments are all
+      // DROPPED/FROZEN/TRANSFERRED or in finished groups — every one of them
+      // still needs to be placed into a group. (Previously this matched only
+      // students with zero enrollment rows, hiding the dropped-out students.)
       where.status = StudentStatus.ACTIVE;
-      const noEnrollmentFilter = { enrollments: { none: { deletedAt: null } } };
+      const noActiveGroupFilter: Prisma.StudentWhereInput = {
+        enrollments: {
+          none: {
+            deletedAt: null,
+            status: 'ACTIVE',
+            group: { deletedAt: null, statusEnum: 'ACTIVE' },
+          },
+        },
+      };
       if (where.enrollments) {
-        where.AND = [{ enrollments: where.enrollments }, noEnrollmentFilter];
+        where.AND = [{ enrollments: where.enrollments }, noActiveGroupFilter];
         delete where.enrollments;
       } else {
-        where.enrollments = noEnrollmentFilter.enrollments;
+        where.enrollments = noActiveGroupFilter.enrollments;
       }
     } else if (status === 'graduated') {
       where.status = StudentStatus.GRADUATED;

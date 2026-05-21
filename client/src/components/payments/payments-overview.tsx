@@ -33,6 +33,8 @@ interface FinancialOverview {
   income: {
     expected: number;
     actual: number;
+    /** Real lesson value billed in the period (Σ LESSON_DEDUCTION). */
+    billed: number;
     paymentCount: number;
     byMethod: { method: string; amount: number; count: number }[];
   };
@@ -113,7 +115,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
   }
 
   const empty: FinancialOverview = {
-    income: { expected: 0, actual: 0, paymentCount: 0, byMethod: [] },
+    income: { expected: 0, actual: 0, billed: 0, paymentCount: 0, byMethod: [] },
     forecast: {
       recognizedRevenueForecast: 0,
       outstandingReceivable: 0,
@@ -141,11 +143,6 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     forecast: { ...empty.forecast, ...data?.forecast, debtorExposure: { ...empty.forecast.debtorExposure, ...data?.forecast?.debtorExposure } },
     salary: { ...empty.salary, ...data?.salary },
   };
-
-  const incomePercent =
-    d.forecast.recognizedRevenueForecast > 0
-      ? Math.round((d.income.actual / d.forecast.recognizedRevenueForecast) * 100)
-      : 0;
 
   return (
     <div className="space-y-6">
@@ -231,39 +228,67 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
 
       {/* ===== Pastki qator: Prognoz, Oyliklar, Qarzdorlik, To'lov usullari ===== */}
       <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
-        {/* Prognoz vs Haqiqiy — backend D.2: income.expected is now cycle-based forecast */}
+        {/* Tushum ko'rsatkichlari — Prognoz (bashorat) + Hisoblangan darslar (real) + Tushgan */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <p className="text-sm font-medium text-muted-foreground">
-            Prognoz vs Haqiqiy tushum
+            Tushum ko&apos;rsatkichlari
           </p>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <ArrowDownRight className="size-3 text-amber-500" />
-                Prognoz (oylik)
-              </span>
-              <span className="font-medium">
-                {fmt(d.forecast.recognizedRevenueForecast)} so&apos;m
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <ArrowUpRight className="size-3 text-green-500" />
-                Haqiqiy
-              </span>
-              <span className="font-medium text-green-600">
-                {fmt(d.income.actual)} so&apos;m
-              </span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: `${Math.min(incomePercent, 100)}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              {incomePercent}% yig&apos;ildi
-            </p>
+          <div className="space-y-2.5">
+            {/* Prognoz — schedule-based projection, not a real figure */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-between text-sm cursor-help">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <ArrowDownRight className="size-3.5 text-amber-500" />
+                    Prognoz (bashorat)
+                  </span>
+                  <span className="font-medium">
+                    {fmt(d.forecast.recognizedRevenueForecast)} so&apos;m
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-64">
+                Taxminiy reja — barcha aktiv o&apos;quvchi to&apos;liq oy dars
+                olsa kutiladigan summa. Haqiqiy hisob emas, shuning uchun
+                tushgan to&apos;lov va qarz bilan teng kelmaydi.
+              </TooltipContent>
+            </Tooltip>
+            {/* Hisoblangan darslar — real billed (Σ LESSON_DEDUCTION) */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-between text-sm cursor-help">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Receipt className="size-3.5 text-sky-500" />
+                    Hisoblangan darslar
+                  </span>
+                  <span className="font-medium">
+                    {fmt(d.income.billed)} so&apos;m
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-64">
+                Bu davrda o&apos;quvchilarga real hisoblab yozilgan darslar
+                puli. Tushgan to&apos;lov va qarz aynan shu summadan kelib
+                chiqadi.
+              </TooltipContent>
+            </Tooltip>
+            {/* Tushgan tushum — real payments received */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-between text-sm cursor-help">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <ArrowUpRight className="size-3.5 text-green-500" />
+                    Tushgan tushum
+                  </span>
+                  <span className="font-medium text-green-600">
+                    {fmt(d.income.actual)} so&apos;m
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-64">
+                Bu davrda kassaga real tushgan to&apos;lovlar.
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
