@@ -1,10 +1,24 @@
-// Throttling / batching (used in Phase 3)
+// Throttling
 export const TG_GROUP_THROTTLE_KEY_PREFIX = 'tg-group:throttle:';
-export const TG_GROUP_BATCH_KEY_PREFIX = 'tg-group:batch:';
 export const TG_GROUP_THROTTLE_SECONDS = 30;
 
+// Digest buffering
+// Per-company Redis list of pending events; flushed every 3h by
+// TelegramGroupDigestCronService into a single consolidated message.
+export const TG_GROUP_BATCH_KEY_PREFIX = 'tg-group:batch:';
+// Safety TTL on the buffer key — if the flush cron is down, a stale buffer
+// self-expires instead of growing without bound.
+export const TG_GROUP_DIGEST_BUFFER_TTL_SECONDS = 26 * 60 * 60;
+// Per-section cap in the digest message — extra items collapse to "+N ta".
+export const TG_GROUP_DIGEST_MAX_ITEMS = 30;
+
 // Broadcast thresholds
+// At/above this a payment is broadcast to the digest (small cash/transfer
+// payments below it are left to the daily report).
 export const LARGE_PAYMENT_THRESHOLD_SUM = 500_000;
+// At/above this a payment is "juda yirik" — sent to the group instantly
+// instead of waiting for the next digest flush.
+export const INSTANT_PAYMENT_THRESHOLD_SUM = 5_000_000;
 
 // Reply messages (Uzbek)
 export const MSG_NOT_APPROVED =

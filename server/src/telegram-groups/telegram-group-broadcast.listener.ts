@@ -3,8 +3,12 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { PaymentMethod, PaymentSource } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramGroupBroadcastService } from './telegram-group-broadcast.service';
-import { formatSum, formatDate } from './utils/format.util';
-import { LARGE_PAYMENT_THRESHOLD_SUM } from './constants';
+import { TelegramGroupDigestBufferService } from './telegram-group-digest-buffer.service';
+import { formatSum } from './utils/format.util';
+import {
+  INSTANT_PAYMENT_THRESHOLD_SUM,
+  LARGE_PAYMENT_THRESHOLD_SUM,
+} from './constants';
 
 export interface StudentCreatedEvent {
   studentId: number;
@@ -45,10 +49,27 @@ interface EntityStatusChangedEvent {
   companyId?: number;
 }
 
+const METHOD_LABELS: Record<string, string> = {
+  CASH: 'Naqd',
+  PAYME: 'Payme',
+  CLICK: 'Click',
+  UZUM: 'Uzum',
+  TRANSFER: "O'tkazma",
+};
+
 /**
- * Subscribes to domain events and broadcasts user-friendly messages to
- * approved Telegram groups. All handlers are best-effort — broadcast
- * failures never throw back into the originating transaction.
+ * Subscribes to domain events and routes them to approved Telegram groups.
+ *
+ * Routing policy:
+ *  - High-signal, low-frequency events (status changes, very large payments)
+ *    are broadcast **instantly**.
+ *  - High-frequency, low-signal events (new student, new payment, new group)
+ *    are **buffered** and flushed every 3 hours as one digest message by
+ *    `TelegramGroupDigestCronService`. This stops the group being flooded
+ *    with a separate message per student/payment.
+ *
+ * All handlers are best-effort — failures never throw back into the
+ * originating transaction.
  */
 @Injectable()
 export class TelegramGroupBroadcastListener {
@@ -57,46 +78,40 @@ export class TelegramGroupBroadcastListener {
   constructor(
     private readonly prisma: PrismaService,
     private readonly broadcast: TelegramGroupBroadcastService,
+    private readonly digestBuffer: TelegramGroupDigestBufferService,
   ) {}
 
   @OnEvent('student.created')
   async onStudentCreated(payload: StudentCreatedEvent) {
     try {
-      const branchLine = payload.branchName
-        ? `\nFilial: <b>${payload.branchName}</b>`
-        : '';
-      await this.broadcast.broadcast({
-        companyId: payload.companyId,
+      // Buffered — folded into the next 3-hourly digest.
+      await this.digestBuffer.push(payload.companyId, {
+        kind: 'student',
         branchId: payload.branchId ?? null,
-        message:
-          `👨‍🎓 <b>Yangi o'quvchi</b>\n\n` +
-          `${payload.firstName} ${payload.lastName} (ID: ${payload.studentId})${branchLine}`,
-        eventClass: 'student.created',
+        studentId: payload.studentId,
+        name: `${payload.firstName} ${payload.lastName}`,
+        branchName: payload.branchName ?? null,
       });
     } catch (err: any) {
-      this.logger.warn(`student.created broadcast failed: ${err?.message}`);
+      this.logger.warn(`student.created buffering failed: ${err?.message}`);
     }
   }
 
   @OnEvent('group.created')
   async onGroupCreated(payload: GroupCreatedEvent) {
     try {
-      const branchLine = payload.branchName
-        ? `\nFilial: <b>${payload.branchName}</b>`
-        : '';
-      const startLine = payload.startDate
-        ? `\nBoshlanish: <b>${formatDate(payload.startDate)}</b>`
-        : '';
-      await this.broadcast.broadcast({
-        companyId: payload.companyId,
+      // Buffered — folded into the next 3-hourly digest.
+      await this.digestBuffer.push(payload.companyId, {
+        kind: 'group',
         branchId: payload.branchId,
-        message:
-          `👥 <b>Yangi guruh</b>\n\n` +
-          `${payload.name}${branchLine}${startLine}`,
-        eventClass: 'group.created',
+        name: payload.name,
+        branchName: payload.branchName ?? null,
+        startDate: payload.startDate
+          ? new Date(payload.startDate).toISOString()
+          : null,
       });
     } catch (err: any) {
-      this.logger.warn(`group.created broadcast failed: ${err?.message}`);
+      this.logger.warn(`group.created buffering failed: ${err?.message}`);
     }
   }
 
@@ -112,7 +127,7 @@ export class TelegramGroupBroadcastListener {
         return; // small cash/transfer payments — daily report covers them
       }
 
-      // Resolve student name + branch for the message
+      // Resolve student name + branch for the message / digest entry.
       const student = await this.prisma.student.findUnique({
         where: { id: payload.studentId },
         select: {
@@ -128,24 +143,31 @@ export class TelegramGroupBroadcastListener {
       const studentName = student
         ? `${student.firstName} ${student.lastName}`
         : `O'quvchi ID ${payload.studentId}`;
+      const branchId = student?.branches[0]?.branch?.id ?? null;
+      const methodLabel = METHOD_LABELS[payload.method] ?? payload.method;
 
-      const methodLabels: Record<string, string> = {
-        CASH: 'Naqd',
-        PAYME: 'Payme',
-        CLICK: 'Click',
-        UZUM: 'Uzum',
-        TRANSFER: "O'tkazma",
-      };
+      // Very large payments are notable — send instantly. No throttle bucket,
+      // so two big payments close together both reach the group.
+      if (payload.amount >= INSTANT_PAYMENT_THRESHOLD_SUM) {
+        await this.broadcast.broadcast({
+          companyId: payload.companyId,
+          branchId,
+          message:
+            `💳 <b>Yangi to'lov</b>\n\n` +
+            `${studentName}\n` +
+            `Summa: <b>${formatSum(payload.amount)}</b>\n` +
+            `Usul: ${methodLabel}`,
+        });
+        return;
+      }
 
-      await this.broadcast.broadcast({
-        companyId: payload.companyId,
-        branchId: student?.branches[0]?.branch?.id ?? null,
-        message:
-          `💳 <b>Yangi to'lov</b>\n\n` +
-          `${studentName}\n` +
-          `Summa: <b>${formatSum(payload.amount)}</b>\n` +
-          `Usul: ${methodLabels[payload.method] ?? payload.method}`,
-        eventClass: 'payment.received',
+      // Ordinary large / external payments — buffered into the digest.
+      await this.digestBuffer.push(payload.companyId, {
+        kind: 'payment',
+        branchId,
+        studentName,
+        amount: payload.amount,
+        method: payload.method,
       });
     } catch (err: any) {
       this.logger.warn(`payment.received broadcast failed: ${err?.message}`);
@@ -158,13 +180,18 @@ export class TelegramGroupBroadcastListener {
       if (!payload.companyId) return;
       const message = this.formatStatusChangeMessage(payload);
       if (!message) return; // not a status transition we broadcast
+      // Status changes stay instant. The throttle bucket includes the entity
+      // id so two different entities changing within 30s don't collide — only
+      // a genuine duplicate of the same entity is deduped.
       await this.broadcast.broadcast({
         companyId: payload.companyId,
         message,
-        eventClass: `entity.status.changed:${payload.entityType}`,
+        eventClass: `entity.status.changed:${payload.entityType}:${payload.entityId}`,
       });
     } catch (err: any) {
-      this.logger.warn(`entity.status.changed broadcast failed: ${err?.message}`);
+      this.logger.warn(
+        `entity.status.changed broadcast failed: ${err?.message}`,
+      );
     }
   }
 
