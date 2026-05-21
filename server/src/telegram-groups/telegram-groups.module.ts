@@ -8,6 +8,9 @@ import { TelegramGroupBroadcastService } from './telegram-group-broadcast.servic
 import { TelegramGroupBroadcastListener } from './telegram-group-broadcast.listener';
 import { TelegramGroupDailyCronService } from './telegram-group-daily-cron.service';
 import { TelegramGroupAnnouncementService } from './telegram-group-announcement.service';
+import { TelegramGroupDigestBufferService } from './telegram-group-digest-buffer.service';
+import { TelegramGroupDigestService } from './telegram-group-digest.service';
+import { TelegramGroupDigestCronService } from './telegram-group-digest-cron.service';
 
 @Module({
   controllers: [TelegramGroupsController],
@@ -18,6 +21,9 @@ import { TelegramGroupAnnouncementService } from './telegram-group-announcement.
     TelegramGroupBroadcastListener,
     TelegramGroupDailyCronService,
     TelegramGroupAnnouncementService,
+    TelegramGroupDigestBufferService,
+    TelegramGroupDigestService,
+    TelegramGroupDigestCronService,
     TelegramAdminBotRegistrar,
     TelegramAdminBotService,
   ],

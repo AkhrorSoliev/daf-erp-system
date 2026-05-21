@@ -1,0 +1,117 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { TelegramGroupDigestCronService } from './telegram-group-digest-cron.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { TelegramAdminBotService } from './telegram-admin-bot.service';
+import { TelegramGroupDigestBufferService } from './telegram-group-digest-buffer.service';
+import { TelegramGroupDigestService } from './telegram-group-digest.service';
+import { DigestEntry } from './telegram-group-digest-buffer.service';
+
+describe('TelegramGroupDigestCronService', () => {
+  let service: TelegramGroupDigestCronService;
+  const sendMessage = jest.fn();
+  const bot = { telegram: { sendMessage } };
+  const getBot = jest.fn(() => bot as any);
+  const drain = jest.fn();
+  const build = jest.fn();
+  const prisma = {
+    telegramGroup: { findMany: jest.fn(), update: jest.fn() },
+    company: { findMany: jest.fn() },
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    getBot.mockReturnValue(bot as any);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TelegramGroupDigestCronService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: TelegramAdminBotService, useValue: { getBot } },
+        { provide: TelegramGroupDigestBufferService, useValue: { drain } },
+        { provide: TelegramGroupDigestService, useValue: { build } },
+      ],
+    }).compile();
+    service = module.get(TelegramGroupDigestCronService);
+  });
+
+  const studentEntry = (branchId: number | null): DigestEntry => ({
+    kind: 'student',
+    at: '2026-05-21T09:00:00.000Z',
+    branchId,
+    studentId: 1,
+    name: 'A B',
+  });
+
+  it('does nothing when the admin bot is not initialized', async () => {
+    getBot.mockReturnValue(null);
+    await service.flushDigests();
+    expect(prisma.telegramGroup.findMany).not.toHaveBeenCalled();
+    expect(drain).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when there are no approved groups', async () => {
+    prisma.telegramGroup.findMany.mockResolvedValue([]);
+    await service.flushDigests();
+    expect(drain).not.toHaveBeenCalled();
+  });
+
+  it('skips companies with an empty buffer', async () => {
+    prisma.telegramGroup.findMany.mockResolvedValue([
+      { id: 'g1', chatId: 111n, companyId: 1001, branchId: null },
+    ]);
+    prisma.company.findMany.mockResolvedValue([{ id: 1001, name: 'DaF' }]);
+    drain.mockResolvedValue([]);
+    await service.flushDigests();
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('sends one digest message per group', async () => {
+    prisma.telegramGroup.findMany.mockResolvedValue([
+      { id: 'g1', chatId: 111n, companyId: 1001, branchId: null },
+    ]);
+    prisma.company.findMany.mockResolvedValue([{ id: 1001, name: 'DaF' }]);
+    drain.mockResolvedValue([studentEntry(1)]);
+    build.mockReturnValue('digest message');
+    await service.flushDigests();
+    expect(sendMessage).toHaveBeenCalledWith('111', 'digest message', {
+      parse_mode: 'HTML',
+    });
+  });
+
+  it('shows a branch-scoped group only its own branch events', async () => {
+    prisma.telegramGroup.findMany.mockResolvedValue([
+      { id: 'wide', chatId: 100n, companyId: 1001, branchId: null },
+      { id: 'br5', chatId: 200n, companyId: 1001, branchId: 5 },
+    ]);
+    prisma.company.findMany.mockResolvedValue([{ id: 1001, name: 'DaF' }]);
+    drain.mockResolvedValue([studentEntry(5), studentEntry(9)]);
+    build.mockReturnValue('msg');
+    await service.flushDigests();
+
+    // Company-wide group: both entries.
+    const wideCall = build.mock.calls.find((c) => (c[1] as DigestEntry[]).length === 2);
+    expect(wideCall).toBeDefined();
+    // Branch-5 group: only the branch-5 entry.
+    const branchCall = build.mock.calls.find(
+      (c) =>
+        (c[1] as DigestEntry[]).length === 1 &&
+        (c[1] as DigestEntry[])[0].branchId === 5,
+    );
+    expect(branchCall).toBeDefined();
+  });
+
+  it('marks a group inactive when the bot was kicked (403)', async () => {
+    prisma.telegramGroup.findMany.mockResolvedValue([
+      { id: 'g1', chatId: 111n, companyId: 1001, branchId: null },
+    ]);
+    prisma.company.findMany.mockResolvedValue([{ id: 1001, name: 'DaF' }]);
+    drain.mockResolvedValue([studentEntry(1)]);
+    build.mockReturnValue('msg');
+    sendMessage.mockRejectedValue({ response: { error_code: 403 } });
+    prisma.telegramGroup.update.mockResolvedValue({});
+    await service.flushDigests();
+    expect(prisma.telegramGroup.update).toHaveBeenCalledWith({
+      where: { id: 'g1' },
+      data: { isActive: false },
+    });
+  });
+});
