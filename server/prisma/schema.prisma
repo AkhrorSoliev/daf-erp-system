@@ -292,6 +292,9 @@ model User {
   deletedCourses                   Course[]                   @relation("CourseDeletedBy")
   deletedStudents                  Student[]                  @relation("StudentDeletedBy")
   deletedLeads                     Lead[]                     @relation("LeadDeletedBy")
+  deletedLeadColumns               LeadColumn[]               @relation("LeadColumnDeletedBy")
+  deletedLeadSections              LeadSection[]              @relation("LeadSectionDeletedBy")
+  deletedLeadSources               LeadSource[]               @relation("LeadSourceDeletedBy")
   deletedGroups                    Group[]                    @relation("GroupDeletedBy")
   deletedEnrollments               Enrollment[]               @relation("EnrollmentDeletedBy")
   deletedHolidays                  Holiday[]                  @relation("HolidayDeletedBy")
@@ -335,15 +338,15 @@ model User {
   enrollmentStateLogs    EnrollmentStateLog[]    @relation("EnrollmentStateLogChangedBy")
 
   // Financial v2 authorship (Faza 1 — version + period + cancellation + accrual reversal)
-  salaryConfigVersionsAuthored EmployeeSalaryConfigVersion[] @relation("SalaryConfigVersionChangedBy")
-  salaryPeriodsAuthored        SalaryPeriodSetting[]         @relation("SalaryPeriodChangedBy")
+  salaryConfigVersionsAuthored  EmployeeSalaryConfigVersion[] @relation("SalaryConfigVersionChangedBy")
+  salaryPeriodsAuthored         SalaryPeriodSetting[]         @relation("SalaryPeriodChangedBy")
   cancelledLessons              LessonCancellation[]          @relation("LessonCancelledBy")
   deletedLessonCancellations    LessonCancellation[]          @relation("LessonCancellationDeletedBy")
   setLessonTeacherOverrides     LessonTeacherOverride[]       @relation("LessonTeacherOverrideSetBy")
   deletedLessonTeacherOverrides LessonTeacherOverride[]       @relation("LessonTeacherOverrideDeletedBy")
   scheduledLessonReschedules    LessonReschedule[]            @relation("LessonRescheduleScheduledBy")
   deletedLessonReschedules      LessonReschedule[]            @relation("LessonRescheduleDeletedBy")
-  reversedSalaryAccruals       SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
+  reversedSalaryAccruals        SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
 
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
 
@@ -425,9 +428,9 @@ model Room {
   deletedBy       User?     @relation("RoomDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  groups              Group[]
-  capacitySnapshots   RoomCapacitySnapshot[]
-  lessonReschedules   LessonReschedule[]      @relation("LessonRescheduleNewRoom")
+  groups            Group[]
+  capacitySnapshots RoomCapacitySnapshot[]
+  lessonReschedules LessonReschedule[]     @relation("LessonRescheduleNewRoom")
 
   @@index([deletedAt])
   @@index([status])
@@ -470,32 +473,32 @@ model Course {
 }
 
 model Student {
-  id             Int           @id @default(autoincrement())
-  firstName      String
-  lastName       String
-  phone          String
-  extraPhone     String?
-  parentPhone    String?
-  parentName     String?
-  telegram       String?
-  telegramChatId String?
-  gender         Gender?
-  dateOfBirth    DateTime?
-  photo          String?
-  comment        String?
-  balance        Int           @default(0)
+  id              Int           @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  phone           String
+  extraPhone      String?
+  parentPhone     String?
+  parentName      String?
+  telegram        String?
+  telegramChatId  String?
+  gender          Gender?
+  dateOfBirth     DateTime?
+  photo           String?
+  comment         String?
+  balance         Int           @default(0)
   // Per-student discount (0–100) applied at lesson-billing time. Discount
   // shrinks ONLY the center's share — the LESSON_DEDUCTION metadata still
   // stores the full perLessonCost so SalaryAccrual computes the teacher's
   // pay from the un-discounted price.
-  discountPercent Int          @default(0)
-  placeOfStudy   String?
-  address        String?
-  passportSeries String?
-  isActive       Boolean       @default(true)
-  status         StudentStatus @default(ACTIVE)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  discountPercent Int           @default(0)
+  placeOfStudy    String?
+  address         String?
+  passportSeries  String?
+  isActive        Boolean       @default(true)
+  status          StudentStatus @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -555,6 +558,18 @@ model Lead {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // Board placement — column is derived via section.column
+  sectionId String?
+  section   LeadSection? @relation(fields: [sectionId], references: [id])
+  order     Int          @default(0)
+
+  // Lead source (where the lead came from)
+  sourceId String?
+  source   LeadSource? @relation(fields: [sourceId], references: [id])
+
+  // Set to the Student id once the lead is converted into a real student.
+  convertedStudentId Int?
+
   statusChangedAt    DateTime?
   statusChangedById  Int?
   statusChangeReason String?
@@ -566,6 +581,70 @@ model Lead {
 
   @@index([deletedAt])
   @@index([statusEnum])
+  @@index([sectionId])
+  @@index([sourceId])
+}
+
+// Leads board column. Two rows are seeded as fixed/system columns
+// (systemKey "NEW" and "CONTACTED") and cannot be renamed, moved or deleted.
+model LeadColumn {
+  id        String   @id @default(uuid())
+  name      String
+  order     Int      @default(0)
+  isSystem  Boolean  @default(false)
+  systemKey String? // "NEW" | "CONTACTED" for the two fixed columns
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("LeadColumnDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  sections LeadSection[]
+
+  @@index([deletedAt])
+  @@index([order])
+}
+
+// Collapsible section inside a board column; holds the leads.
+model LeadSection {
+  id        String     @id @default(uuid())
+  name      String
+  order     Int        @default(0)
+  columnId  String
+  column    LeadColumn @relation(fields: [columnId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("LeadSectionDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  leads Lead[]
+
+  @@index([deletedAt])
+  @@index([columnId])
+}
+
+// Managed reference list — where leads come from (Instagram, tavsiya, ...).
+model LeadSource {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("LeadSourceDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  leads Lead[]
+
+  @@index([deletedAt])
 }
 
 model Group {
@@ -1361,16 +1440,16 @@ model LessonCancellation {
 /// partial unique index in raw SQL of the migration so a soft-deleted
 /// override doesn't block re-creating one.
 model LessonTeacherOverride {
-  id          String    @id @default(uuid())
-  groupId     String
-  group       Group     @relation("LessonTeacherOverrideGroup", fields: [groupId], references: [id])
-  date        DateTime  @db.Date
-  teacherIds  Int[]
-  reason      String?
-  setById     Int
-  setBy       User      @relation("LessonTeacherOverrideSetBy", fields: [setById], references: [id])
-  companyId   Int
-  createdAt   DateTime  @default(now())
+  id         String   @id @default(uuid())
+  groupId    String
+  group      Group    @relation("LessonTeacherOverrideGroup", fields: [groupId], references: [id])
+  date       DateTime @db.Date
+  teacherIds Int[]
+  reason     String?
+  setById    Int
+  setBy      User     @relation("LessonTeacherOverrideSetBy", fields: [setById], references: [id])
+  companyId  Int
+  createdAt  DateTime @default(now())
 
   deletedAt   DateTime?
   deletedById Int?
@@ -1396,22 +1475,22 @@ model LessonTeacherOverride {
 ///   - one active reschedule per (groupId, newDate) — prevents two
 ///     moved lessons landing on the same destination day.
 model LessonReschedule {
-  id            String    @id @default(uuid())
-  groupId       String
-  group         Group     @relation("LessonRescheduleGroup", fields: [groupId], references: [id])
-  originalDate  DateTime  @db.Date
-  newDate       DateTime  @db.Date
+  id                 String   @id @default(uuid())
+  groupId            String
+  group              Group    @relation("LessonRescheduleGroup", fields: [groupId], references: [id])
+  originalDate       DateTime @db.Date
+  newDate            DateTime @db.Date
   // Optional per-lesson room/time override on the new date. When NULL,
   // the group's default room and times are used.
-  newRoomId            String?
-  newRoom              Room?    @relation("LessonRescheduleNewRoom", fields: [newRoomId], references: [id])
-  newLessonStartTime   String?
-  newLessonEndTime     String?
-  reason               String?
-  scheduledById        Int
-  scheduledBy          User     @relation("LessonRescheduleScheduledBy", fields: [scheduledById], references: [id])
-  companyId            Int
-  createdAt            DateTime @default(now())
+  newRoomId          String?
+  newRoom            Room?    @relation("LessonRescheduleNewRoom", fields: [newRoomId], references: [id])
+  newLessonStartTime String?
+  newLessonEndTime   String?
+  reason             String?
+  scheduledById      Int
+  scheduledBy        User     @relation("LessonRescheduleScheduledBy", fields: [scheduledById], references: [id])
+  companyId          Int
+  createdAt          DateTime @default(now())
 
   deletedAt   DateTime?
   deletedById Int?
@@ -1514,8 +1593,8 @@ model Refund {
   // this system and most active students never have one.
   contractId       String?
   contract         Contract?      @relation(fields: [contractId], references: [id])
-  enrollmentId    String?
-  enrollment      Enrollment? @relation(fields: [enrollmentId], references: [id])
+  enrollmentId     String?
+  enrollment       Enrollment?    @relation(fields: [enrollmentId], references: [id])
   requestedAmount  Int
   approvedAmount   Int?
   lessonsCompleted Int

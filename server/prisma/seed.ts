@@ -118,7 +118,9 @@ async function main() {
       effectiveFrom: new Date('2020-01-01T00:00:00.000Z'),
     },
   });
-  console.log('✓ Roles + company + tax config + salary period\n');
+  // Leads board — two fixed (system) columns
+  await seedLeadColumns();
+  console.log('✓ Roles + company + salary period + lead columns\n');
 
   // 2. Courses (global, branchId null)
   console.log('📚 Kurslar ...');
@@ -213,6 +215,10 @@ async function cleanDb() {
   await prisma.groupScheduleSnapshot.deleteMany().catch(() => {});
   await prisma.roomCapacitySnapshot.deleteMany().catch(() => {});
   await prisma.lead.deleteMany().catch(() => {});
+  // lead board — sections reference columns; leads (just deleted) reference both
+  await prisma.leadSection.deleteMany().catch(() => {});
+  await prisma.leadColumn.deleteMany().catch(() => {});
+  await prisma.leadSource.deleteMany().catch(() => {});
   await prisma.group.deleteMany().catch(() => {});
   await prisma.room.deleteMany().catch(() => {});
   await prisma.userBranch.deleteMany().catch(() => {});
@@ -240,6 +246,27 @@ async function seedRoles() {
     { id: 6, name: 'Student' },
   ];
   for (const r of roles) await prisma.role.create({ data: r });
+}
+
+// ============================================================================
+// LEADS BOARD — FIXED COLUMNS
+// ============================================================================
+
+async function seedLeadColumns() {
+  const fixed = [
+    { name: 'Yangi Lidlar', systemKey: 'NEW', order: 0 },
+    { name: 'Aloqaga chiqilgan Lidlar', systemKey: 'CONTACTED', order: 1 },
+  ];
+  for (const c of fixed) {
+    await prisma.leadColumn.create({
+      data: {
+        name: c.name,
+        systemKey: c.systemKey,
+        order: c.order,
+        isSystem: true,
+      },
+    });
+  }
 }
 
 // ============================================================================

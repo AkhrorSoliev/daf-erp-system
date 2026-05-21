@@ -1,17 +1,10 @@
-import { LeadsClient } from "@/components/leads/leads-client";
+import { Suspense } from "react";
+import { LeadsBoardClient } from "@/components/leads/leads-board-client";
 
 export default function LeadsPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-          Lidlar
-        </h1>
-        <p className="text-muted-foreground">
-          Telegram bot orqali ro&apos;yxatdan o&apos;tgan lidlar
-        </p>
-      </div>
-      <LeadsClient />
-    </div>
+    <Suspense>
+      <LeadsBoardClient />
+    </Suspense>
   );
 }

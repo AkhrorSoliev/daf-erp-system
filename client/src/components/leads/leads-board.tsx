@@ -4,137 +4,98 @@ import { useState } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
-  type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
-import { LEAD_STAGES } from "@/data/lead-model";
-import type { Lead, LeadStage } from "@/data/lead-model";
-import { useLeadsBoard } from "@/hooks/use-leads-board";
-import { LeadsColumn } from "./leads-column";
-import { LeadCard } from "./lead-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
+import { LeadColumn } from "./lead-column";
+import { LeadCardOverlay } from "./lead-card";
 
 export function LeadsBoard() {
-  const { leads, moveLead, reorderLead } = useLeadsBoard();
-  const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(
-    new Set()
-  );
+  const board = useLeadsBoard((s) => s.board);
+  const loading = useLeadsBoard((s) => s.loadingBoard);
+  const leadsBySection = useLeadsBoard((s) => s.leadsBySection);
+  const moveLead = useLeadsBoard((s) => s.moveLead);
 
-  function toggleColumn(stageId: string) {
-    setCollapsedColumns((prev) => {
-      const next = new Set(prev);
-      if (next.has(stageId)) {
-        next.delete(stageId);
-      } else {
-        next.add(stageId);
-      }
-      return next;
-    });
-  }
+  const [activeLead, setActiveLead] = useState<LeadCard | null>(null);
 
+  // A small drag threshold so a click on a card still opens its detail.
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
-
-  function findStageId(id: string): LeadStage | null {
-    // Check if it's a stage ID
-    const stage = LEAD_STAGES.find((s) => s.id === id);
-    if (stage) return stage.id;
-
-    // Otherwise it's a lead ID — find which stage it belongs to
-    const lead = leads.find((l) => l.id === id);
-    return lead?.stage ?? null;
-  }
 
   function handleDragStart(event: DragStartEvent) {
-    const lead = leads.find((l) => l.id === event.active.id);
+    const sectionId = event.active.data.current?.sectionId as
+      | string
+      | undefined;
+    if (!sectionId) return;
+    const lead = (leadsBySection[sectionId] ?? []).find(
+      (l) => l.id === event.active.id,
+    );
     setActiveLead(lead ?? null);
   }
 
-  function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event;
-    if (!over || !activeLead) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    const activeStage = activeLead.stage;
-    const overStage = findStageId(overId);
-
-    if (!overStage || activeStage === overStage) return;
-
-    // Moving to a different column — find insert index
-    const overStageLeads = leads.filter((l) => l.stage === overStage);
-    const overLeadIndex = overStageLeads.findIndex((l) => l.id === overId);
-    const insertIndex = overLeadIndex === -1 ? 0 : overLeadIndex;
-
-    moveLead(activeId, overStage, insertIndex);
-
-    // Update activeLead stage so subsequent dragOver calls use correct stage
-    setActiveLead((prev) => (prev ? { ...prev, stage: overStage } : null));
-  }
-
   function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
     setActiveLead(null);
-
+    const { active, over } = event;
     if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    if (activeId === overId) return;
-
-    // If over a stage (empty column), move to top
-    const isStage = LEAD_STAGES.some((s) => s.id === overId);
-    if (isStage) {
-      const lead = leads.find((l) => l.id === activeId);
-      if (lead && lead.stage !== overId) {
-        moveLead(activeId, overId as LeadStage, 0);
-      }
-      return;
-    }
-
-    // Reorder within the same column
-    const activeLead2 = leads.find((l) => l.id === activeId);
-    const overLead = leads.find((l) => l.id === overId);
-    if (activeLead2 && overLead && activeLead2.stage === overLead.stage) {
-      reorderLead(activeId, overId);
-    }
+    const fromSectionId = active.data.current?.sectionId as string | undefined;
+    const toSectionId = over.id as string;
+    if (!fromSectionId || fromSectionId === toSectionId) return;
+    moveLead(active.id as string, fromSectionId, toSectionId);
   }
+
+  if (loading) {
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="flex w-80 min-w-80 shrink-0 flex-col gap-3 rounded-lg border bg-muted/30 p-3"
+          >
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const customColumns = board.filter((c) => !c.isSystem);
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {LEAD_STAGES.map((stage) => {
-          const stageLeads = leads.filter((l) => l.stage === stage.id);
+        {board.map((column) => {
+          const customIdx = customColumns.findIndex(
+            (c) => c.id === column.id,
+          );
           return (
-            <LeadsColumn
-              key={stage.id}
-              stage={stage}
-              leads={stageLeads}
-              collapsed={collapsedColumns.has(stage.id)}
-              onToggle={() => toggleColumn(stage.id)}
+            <LeadColumn
+              key={column.id}
+              column={column}
+              canMoveLeft={customIdx > 0}
+              canMoveRight={
+                customIdx >= 0 && customIdx < customColumns.length - 1
+              }
             />
           );
         })}
       </div>
 
       <DragOverlay>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay /> : null}
+        {activeLead ? <LeadCardOverlay lead={activeLead} /> : null}
       </DragOverlay>
     </DndContext>
   );
