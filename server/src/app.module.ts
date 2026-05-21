@@ -32,6 +32,7 @@ import { ReportsModule } from './reports/reports.module';
 import { StudentExitReasonsModule } from './student-exit-reasons/student-exit-reasons.module';
 import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/group-teacher-change-reasons.module';
 import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
+import { LeadsModule } from './leads/leads.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ContractsModule } from './contracts/contracts.module';
@@ -81,6 +82,7 @@ import { JwtAuthGuard } from './common/guards';
     StudentExitReasonsModule,
     GroupTeacherChangeReasonsModule,
     EnrollmentTransferReasonsModule,
+    LeadsModule,
     TransactionsModule,
     PaymentsModule,
     ContractsModule,
