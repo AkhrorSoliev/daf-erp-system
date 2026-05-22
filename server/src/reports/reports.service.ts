@@ -168,6 +168,7 @@ export class ReportsService {
     params: {
       branchId?: number;
       status?: StudentStatus;
+      debtorsOnly?: boolean;
       page?: number;
       pageSize?: number;
     },

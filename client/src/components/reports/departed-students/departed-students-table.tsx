@@ -19,8 +19,10 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatPhone } from "@/lib/format-utils";
+import { formatPhone, formatBalance } from "@/lib/format-utils";
+import { cn } from "@/lib/utils";
 
 export type DepartedStudentStatusFilter = "all" | "ACTIVE" | "FROZEN" | "EXPELLED";
 
@@ -30,6 +32,8 @@ export interface DepartedStudentRow {
   student: { id: number; fullName: string };
   phone: string;
   status: string;
+  /** Student balance in so'm. Negative = the student owes money (qarz). */
+  balance: number;
   lastGroup: { id: string; name: string } | null;
   branch: { id: number; name: string } | null;
   course: { id: string; name: string } | null;
@@ -41,7 +45,7 @@ export interface DepartedStudentRow {
 const LINK_CLS =
   "hover:underline underline-offset-2 hover:text-foreground transition-colors";
 
-const COLSPAN = 10;
+const COLSPAN = 11;
 
 const STATUS_FILTER_OPTIONS: { value: DepartedStudentStatusFilter; label: string }[] =
   [
@@ -58,6 +62,8 @@ interface Props {
   pageSize: number;
   statusFilter: DepartedStudentStatusFilter;
   onStatusFilterChange: (next: DepartedStudentStatusFilter) => void;
+  debtorsOnly: boolean;
+  onDebtorsOnlyChange: (next: boolean) => void;
 }
 
 export function DepartedStudentsTable({
@@ -67,6 +73,8 @@ export function DepartedStudentsTable({
   pageSize,
   statusFilter,
   onStatusFilterChange,
+  debtorsOnly,
+  onDebtorsOnlyChange,
 }: Props) {
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
@@ -74,23 +82,32 @@ export function DepartedStudentsTable({
         <h3 className="font-semibold text-base">
           Ketgan o&apos;quvchilar ro&apos;yxati
         </h3>
-        <Select
-          value={statusFilter}
-          onValueChange={(v) =>
-            onStatusFilterChange(v as DepartedStudentStatusFilter)
-          }
-        >
-          <SelectTrigger className="h-9 w-auto min-w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_FILTER_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <Checkbox
+              checked={debtorsOnly}
+              onCheckedChange={(v) => onDebtorsOnlyChange(v === true)}
+            />
+            Faqat qarzdorlar
+          </label>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) =>
+              onStatusFilterChange(v as DepartedStudentStatusFilter)
+            }
+          >
+            <SelectTrigger className="h-9 w-auto min-w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTER_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <Table>
@@ -101,6 +118,7 @@ export function DepartedStudentsTable({
               <TableHead>O&apos;quvchi</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>Holati</TableHead>
+              <TableHead className="text-right">Balans</TableHead>
               <TableHead>Oxirgi guruh</TableHead>
               <TableHead>Kurs</TableHead>
               <TableHead>Filial</TableHead>
@@ -123,9 +141,11 @@ export function DepartedStudentsTable({
                   colSpan={COLSPAN}
                   className="text-center py-8 text-sm text-muted-foreground"
                 >
-                  {statusFilter === "all"
-                    ? "Ketgan o'quvchilar yo'q — barcha o'quvchilar biror guruhda o'qimoqda"
-                    : "Bu holat bo'yicha ketgan o'quvchi topilmadi — boshqa holatni tanlang"}
+                  {debtorsOnly
+                    ? "Qarzdor ketgan o'quvchi topilmadi"
+                    : statusFilter === "all"
+                      ? "Ketgan o'quvchilar yo'q — barcha o'quvchilar biror guruhda o'qimoqda"
+                      : "Bu holat bo'yicha ketgan o'quvchi topilmadi — boshqa holatni tanlang"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -167,6 +187,16 @@ export function DepartedStudentsTable({
                     </TableCell>
                     <TableCell>
                       <StatusBadge entityType="students" status={row.status} />
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums text-sm",
+                        row.balance < 0
+                          ? "text-red-600 dark:text-red-400 font-medium"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {formatBalance(row.balance)}
                     </TableCell>
                     <TableCell>
                       {row.lastGroup ? (

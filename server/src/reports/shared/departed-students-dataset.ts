@@ -25,6 +25,8 @@ export interface DepartedStudentRecord {
   fullName: string;
   phone: string;
   status: StudentStatus;
+  /** Student balance in so'm. Negative means the student owes money (qarz). */
+  balance: number;
   /** When the student lost their last group (best-effort). */
   leftAt: Date | null;
   departureReasonId: string | null;
@@ -71,6 +73,7 @@ export async function loadDepartedStudents(
       lastName: true,
       phone: true,
       status: true,
+      balance: true,
       statusChangedAt: true,
       statusExitReason: { select: { id: true, name: true } },
       // The most recent enrollment = the last group the student belonged to.
@@ -122,6 +125,7 @@ export async function loadDepartedStudents(
       fullName: `${s.firstName} ${s.lastName}`,
       phone: s.phone,
       status: s.status,
+      balance: s.balance,
       leftAt: lastEnr?.statusChangedAt ?? s.statusChangedAt ?? null,
       departureReasonId: reason?.id ?? null,
       departureReasonName: reason?.name ?? null,

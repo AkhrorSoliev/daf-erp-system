@@ -6,6 +6,7 @@ import {
   Info,
   TrendingDown,
   UserMinus,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +22,8 @@ export interface DepartedStudentsSummary {
   departedCount: number;
   totalStudents: number;
   lostRevenue: number;
+  totalDebt: number;
+  debtorCount: number;
   avgDurationMonths: number;
   totalTeacherChanges: number;
   departedAfterTeacherChange: number;
@@ -82,8 +85,8 @@ interface Props {
 export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
   if (isLoading || !data) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-[104px] rounded-xl" />
         ))}
       </div>
@@ -108,8 +111,12 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
     "Ketgan o'quvchilar markazda o'rtacha necha oy o'qiganini ko'rsatadi. " +
     "Har bir yozuv uchun: Chiqarilgan sana − Qo'shilgan sana (oylarda). Keyin o'rtacha olinadi.";
 
+  const debtTooltip =
+    "Ketgan o'quvchilarning markazga qarzi (balansi manfiy bo'lganlar).\n" +
+    `${data.debtorCount} ta ketgan o'quvchida qarz bor.`;
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <KpiCard
         icon={UserMinus}
         label="Ketganlar soni"
@@ -143,6 +150,15 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
         label="O'rtacha o'qish davomiyligi"
         value={formatMonths(data.avgDurationMonths)}
         tooltip={avgDurationTooltip}
+      />
+      <KpiCard
+        icon={Wallet}
+        label="Ketganlar qarzi"
+        value={formatMoney(Math.abs(data.totalDebt))}
+        valueColor={
+          data.totalDebt < 0 ? "text-red-600 dark:text-red-400" : undefined
+        }
+        tooltip={debtTooltip}
       />
     </div>
   );
