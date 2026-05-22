@@ -205,18 +205,21 @@ export function DepartedStudentsClient() {
   })();
 
   // The "Ketgan o'quvchilar" list is a student-level snapshot — students with
-  // no group they currently study in. It is filtered only by branch + status,
-  // not by the date range / course / teacher (those drive the charts above).
+  // no group they currently study in. It is filtered only by branch + status
+  // + debtors, not by the date range / course / teacher (those drive the
+  // charts above).
   const statusRaw = searchParams.get("status");
   const statusFilter: DepartedStudentStatusFilter =
     statusRaw &&
     VALID_STATUS_FILTERS.includes(statusRaw as DepartedStudentStatusFilter)
       ? (statusRaw as DepartedStudentStatusFilter)
       : "all";
+  const debtorsOnly = searchParams.get("debtors") === "1";
 
   const listParams = {
     branchId: filter.branchId ?? undefined,
     status: statusFilter === "all" ? undefined : statusFilter,
+    debtorsOnly: debtorsOnly ? true : undefined,
     page: tablePage,
     pageSize: tablePageSize,
   };
@@ -224,6 +227,13 @@ export function DepartedStudentsClient() {
   const handleStatusFilterChange = (next: DepartedStudentStatusFilter) => {
     writeParams({
       status: next === "all" ? undefined : next,
+      page: undefined,
+    });
+  };
+
+  const handleDebtorsOnlyChange = (next: boolean) => {
+    writeParams({
+      debtors: next ? "1" : undefined,
       page: undefined,
     });
   };
@@ -321,6 +331,8 @@ export function DepartedStudentsClient() {
         pageSize={tablePageSize}
         statusFilter={statusFilter}
         onStatusFilterChange={handleStatusFilterChange}
+        debtorsOnly={debtorsOnly}
+        onDebtorsOnlyChange={handleDebtorsOnlyChange}
       />
 
 

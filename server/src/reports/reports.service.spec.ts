@@ -779,12 +779,17 @@ describe('ReportsService', () => {
     const baseParams = { startDate: '2026-03-01', endDate: '2026-03-31' };
 
     // Raw departed-student row shaped like loadDepartedStudents' query result.
-    const makeDeparted = (id: number, leftAt: Date | null) => ({
+    const makeDeparted = (
+      id: number,
+      leftAt: Date | null,
+      balance = 0,
+    ) => ({
       id,
       firstName: 'Test',
       lastName: String(id),
       phone: '900000000',
       status: 'ACTIVE',
+      balance,
       statusChangedAt: leftAt,
       statusExitReason: null,
       enrollments: leftAt
@@ -811,6 +816,22 @@ describe('ReportsService', () => {
       expect(result.churnRate).toBe(10); // 1 / 10 * 100
       expect(result.lostRevenue).toBe(400_000);
       expect(result.avgDurationMonths).toBeGreaterThan(0);
+    });
+
+    it('sums debt from departed students with a negative balance', async () => {
+      prisma.student.findMany.mockResolvedValueOnce([
+        makeDeparted(10001, new Date('2026-03-10'), -50_000),
+        makeDeparted(10002, new Date('2026-03-11'), -30_000),
+        makeDeparted(10003, new Date('2026-03-12'), 0),
+        makeDeparted(10004, new Date('2026-03-13'), 120_000), // not a debtor
+      ]);
+      prisma.student.count.mockResolvedValueOnce(0);
+      prisma.contract.findMany.mockResolvedValueOnce([]);
+      prisma.enrollment.groupBy.mockResolvedValueOnce([]);
+
+      const result = await service.getDepartedStudentsSummary(1, baseParams);
+      expect(result.debtorCount).toBe(2);
+      expect(result.totalDebt).toBe(-80_000);
     });
 
     it('returns zeros when there are no departed students', async () => {
@@ -1024,6 +1045,7 @@ describe('ReportsService', () => {
         lastName: 'Valiyev',
         phone: '901234567',
         status: 'FROZEN',
+        balance: -75000,
         statusChangedAt: new Date('2026-03-10'),
         enrollments: [
           {
@@ -1053,6 +1075,7 @@ describe('ReportsService', () => {
         student: { id: 10001, fullName: 'Ali Valiyev' },
         phone: '901234567',
         status: 'FROZEN',
+        balance: -75000,
         lastGroup: { id: 'g1', name: 'B1-01' },
         branch: { id: 1, name: 'Bosh' },
         course: { id: 'c1', name: 'A1' },
@@ -1068,6 +1091,7 @@ describe('ReportsService', () => {
         lastName: 'Tursunov',
         phone: '907654321',
         status: 'ACTIVE',
+        balance: 0,
         statusChangedAt: null,
         enrollments: [],
       };
@@ -1077,12 +1101,29 @@ describe('ReportsService', () => {
       expect(result.data[0]).toMatchObject({
         student: { id: 10002, fullName: 'Hasan Tursunov' },
         status: 'ACTIVE',
+        balance: 0,
         lastGroup: null,
         branch: null,
         course: null,
         teachers: [],
         leftAt: null,
       });
+    });
+
+    it('filters to debtors only when debtorsOnly is set', async () => {
+      prisma.$transaction.mockResolvedValueOnce([[], 0]);
+      await service.getDepartedStudentsList(1, { debtorsOnly: true });
+
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.balance).toEqual({ lt: 0 });
+    });
+
+    it('does not filter by balance when debtorsOnly is unset', async () => {
+      prisma.$transaction.mockResolvedValueOnce([[], 0]);
+      await service.getDepartedStudentsList(1, {});
+
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.balance).toBeUndefined();
     });
 
     it('clamps pageSize to 100 and page to >= 1', async () => {

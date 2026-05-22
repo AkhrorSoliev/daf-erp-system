@@ -26,6 +26,12 @@ export class ReportsDepartedStudentsService {
     });
     const departedCount = departed.length;
 
+    // Qarzdorlik — departed students whose balance is negative (they owe
+    // money). totalDebt is a negative number (sum of those balances).
+    const debtors = departed.filter((d) => d.balance < 0);
+    const debtorCount = debtors.length;
+    const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
+
     // Churn = departed share of all non-graduated students. The denominator
     // is departed + currently-studying (students with an ACTIVE enrollment).
     const studyingWhere: Prisma.StudentWhereInput = {
@@ -106,6 +112,8 @@ export class ReportsDepartedStudentsService {
       departedCount,
       totalStudents,
       lostRevenue,
+      totalDebt,
+      debtorCount,
       avgDurationMonths: Math.round(avgDurationMonths * 10) / 10,
       totalTeacherChanges,
       departedAfterTeacherChange,

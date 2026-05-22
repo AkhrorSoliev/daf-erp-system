@@ -28,6 +28,7 @@ export class ReportsDepartedListsService {
     params: {
       branchId?: number;
       status?: StudentStatus;
+      debtorsOnly?: boolean;
       page?: number;
       pageSize?: number;
     },
@@ -51,6 +52,10 @@ export class ReportsDepartedListsService {
     if (params.branchId !== undefined) {
       where.branches = { some: { branchId: params.branchId } };
     }
+    // "Faqat qarzdorlar" — only students who owe money (negative balance).
+    if (params.debtorsOnly) {
+      where.balance = { lt: 0 };
+    }
 
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.student.findMany({
@@ -64,6 +69,7 @@ export class ReportsDepartedListsService {
           lastName: true,
           phone: true,
           status: true,
+          balance: true,
           statusChangedAt: true,
           // The most recent enrollment = the last group the student was
           // attached to. Used to show "where they were" + when they left.
@@ -107,6 +113,7 @@ export class ReportsDepartedListsService {
         },
         phone: s.phone,
         status: s.status,
+        balance: s.balance,
         lastGroup: g ? { id: g.id, name: g.name } : null,
         branch: g?.branch ?? null,
         course: g?.course ?? null,

@@ -262,6 +262,7 @@ export class ReportsController {
     return this.reportsService.getDepartedStudentsList(companyId, {
       branchId: query.branchId,
       status: query.status,
+      debtorsOnly: query.debtorsOnly,
       page: query.page,
       pageSize: query.pageSize,
     });

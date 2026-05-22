@@ -1,5 +1,5 @@
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { StudentStatus } from '@prisma/client';
 
 /**
@@ -21,6 +21,12 @@ export class DepartedStudentsListQueryDto {
   @IsOptional()
   @IsEnum(StudentStatus)
   status?: StudentStatus;
+
+  /** "Faqat qarzdorlar" — when true, only students with a negative balance. */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  debtorsOnly?: boolean;
 
   @IsOptional()
   @Type(() => Number)

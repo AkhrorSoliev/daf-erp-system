@@ -37,6 +37,7 @@ describe('loadDepartedStudents', () => {
         lastName: 'Valiyev',
         phone: '901234567',
         status: 'FROZEN',
+        balance: -50000,
         statusChangedAt: new Date('2026-03-10'),
         statusExitReason: { id: 'sr1', name: 'Moliyaviy' },
         enrollments: [
@@ -66,6 +67,7 @@ describe('loadDepartedStudents', () => {
       studentId: 10001,
       fullName: 'Ali Valiyev',
       status: 'FROZEN',
+      balance: -50000,
       departureReasonId: 'sr1',
       departureReasonName: 'Moliyaviy',
       lastGroup: { id: 'g1', name: 'B1-01' },
@@ -84,6 +86,7 @@ describe('loadDepartedStudents', () => {
         lastName: 'Tursunov',
         phone: '907654321',
         status: 'ACTIVE',
+        balance: 0,
         statusChangedAt: null,
         statusExitReason: null,
         enrollments: [
@@ -112,6 +115,7 @@ describe('loadDepartedStudents', () => {
         lastName: 'Olimov',
         phone: '900000000',
         status: 'ACTIVE',
+        balance: 0,
         statusChangedAt: null,
         statusExitReason: null,
         enrollments: [],
