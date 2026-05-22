@@ -19,4 +19,5 @@ server/audit-output/
 
 # Editor / agent runtime state
 .claude/scheduled_tasks.lock
+.claude/review-output/
 .windsurf/
