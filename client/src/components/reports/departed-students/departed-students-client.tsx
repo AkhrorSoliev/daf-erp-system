@@ -30,6 +30,7 @@ import {
 import {
   DepartedStudentsTable,
   type DepartedStudentRow,
+  type DepartedStudentStatusFilter,
 } from "./departed-students-table";
 import { TeacherChangeRetentionCards } from "./teacher-change-retention-cards";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -53,6 +54,12 @@ const VALID_GROUP_BY: readonly GroupByDimension[] = [
   "course",
   "teacher",
   "branch",
+];
+
+const VALID_STATUS_FILTERS: readonly DepartedStudentStatusFilter[] = [
+  "ACTIVE",
+  "FROZEN",
+  "EXPELLED",
 ];
 
 function parseDate(raw: string | null): Date | null {
@@ -197,10 +204,28 @@ export function DepartedStudentsClient() {
     return [10, 20, 30, 40, 50].includes(raw) ? raw : 10;
   })();
 
+  // The "Ketgan o'quvchilar" list is a student-level snapshot — students with
+  // no group they currently study in. It is filtered only by branch + status,
+  // not by the date range / course / teacher (those drive the charts above).
+  const statusRaw = searchParams.get("status");
+  const statusFilter: DepartedStudentStatusFilter =
+    statusRaw &&
+    VALID_STATUS_FILTERS.includes(statusRaw as DepartedStudentStatusFilter)
+      ? (statusRaw as DepartedStudentStatusFilter)
+      : "all";
+
   const listParams = {
-    ...summaryParams,
+    branchId: filter.branchId ?? undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
     page: tablePage,
     pageSize: tablePageSize,
+  };
+
+  const handleStatusFilterChange = (next: DepartedStudentStatusFilter) => {
+    writeParams({
+      status: next === "all" ? undefined : next,
+      page: undefined,
+    });
   };
 
   const { data: listData, isLoading: listLoading } = useQuery<{
@@ -310,6 +335,8 @@ export function DepartedStudentsClient() {
         isLoading={listLoading}
         page={clampedPage}
         pageSize={tablePageSize}
+        statusFilter={statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
       />
 
 

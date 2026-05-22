@@ -799,6 +799,8 @@ describe('ReportsService', () => {
         },
       ]);
       prisma.enrollment.count.mockResolvedValueOnce(50);
+      // departedCount — student-level snapshot, decoupled from dropped.length.
+      prisma.student.count.mockResolvedValueOnce(80);
       prisma.contract.findMany.mockResolvedValueOnce([
         {
           studentId: 101,
@@ -811,9 +813,10 @@ describe('ReportsService', () => {
 
       const result = await service.getDepartedStudentsSummary(1, baseParams);
 
-      expect(result.departedCount).toBe(2);
+      // departedCount is the student-level count (80), NOT dropped.length (2).
+      expect(result.departedCount).toBe(80);
       expect(result.activeAtStart).toBe(50);
-      expect(result.churnRate).toBe(4); // 2/50 * 100 = 4.0
+      expect(result.churnRate).toBe(4); // dropped.length 2 / 50 * 100 = 4.0
       expect(result.lostRevenue).toBe(1_500_000); // only one has a contract
       expect(result.avgDurationMonths).toBeGreaterThan(0);
     });
@@ -821,6 +824,7 @@ describe('ReportsService', () => {
     it('returns zero churnRate when no active enrollments exist', async () => {
       prisma.enrollment.findMany.mockResolvedValueOnce([]);
       prisma.enrollment.count.mockResolvedValueOnce(0);
+      prisma.student.count.mockResolvedValueOnce(0);
 
       const result = await service.getDepartedStudentsSummary(1, baseParams);
       expect(result.churnRate).toBe(0);
@@ -829,9 +833,31 @@ describe('ReportsService', () => {
       expect(result.avgDurationMonths).toBe(0);
     });
 
+    it('counts departed students with no active enrollment, GRADUATED excluded', async () => {
+      prisma.enrollment.findMany.mockResolvedValueOnce([]);
+      prisma.enrollment.count.mockResolvedValueOnce(0);
+      prisma.student.count.mockResolvedValueOnce(108);
+
+      const result = await service.getDepartedStudentsSummary(1, {
+        ...baseParams,
+        branchId: 7,
+      });
+
+      expect(result.departedCount).toBe(108);
+      const countWhere = prisma.student.count.mock.calls[0][0].where;
+      expect(countWhere).toMatchObject({
+        companyId: 1,
+        deletedAt: null,
+        enrollments: { none: { status: 'ACTIVE', deletedAt: null } },
+        status: { not: 'GRADUATED' },
+        branches: { some: { branchId: 7 } },
+      });
+    });
+
     it('applies branch/course/teacher filters to the group filter', async () => {
       prisma.enrollment.findMany.mockResolvedValueOnce([]);
       prisma.enrollment.count.mockResolvedValueOnce(0);
+      prisma.student.count.mockResolvedValueOnce(0);
 
       await service.getDepartedStudentsSummary(1, {
         ...baseParams,
@@ -852,6 +878,7 @@ describe('ReportsService', () => {
     it('returns totalTeacherChanges and departedAfterTeacherChange', async () => {
       prisma.enrollment.findMany.mockResolvedValueOnce([]); // dropped
       prisma.enrollment.count.mockResolvedValueOnce(0); // activeAtStart
+      prisma.student.count.mockResolvedValueOnce(0); // departedCount
 
       // One teacher change event
       prisma.groupTeacherHistory.findMany.mockResolvedValueOnce([
@@ -1030,12 +1057,92 @@ describe('ReportsService', () => {
   });
 
   describe('getDepartedStudentsList', () => {
+    it('returns a student-level row with last group/branch/course/teachers', async () => {
+      const row = {
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        phone: '901234567',
+        status: 'FROZEN',
+        statusChangedAt: new Date('2026-03-10'),
+        enrollments: [
+          {
+            status: 'FROZEN',
+            statusChangedAt: new Date('2026-03-10'),
+            group: {
+              id: 'g1',
+              name: 'B1-01',
+              branch: { id: 1, name: 'Bosh' },
+              course: { id: 'c1', name: 'A1' },
+              teachers: [
+                {
+                  teacher: { id: 30001, firstName: 'Feruz', lastName: 'Ustoz' },
+                },
+              ],
+            },
+          },
+        ],
+      };
+      prisma.$transaction.mockResolvedValueOnce([[row], 1]);
+
+      const result = await service.getDepartedStudentsList(1, {});
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(10);
+      expect(result.data[0]).toMatchObject({
+        student: { id: 10001, fullName: 'Ali Valiyev' },
+        phone: '901234567',
+        status: 'FROZEN',
+        lastGroup: { id: 'g1', name: 'B1-01' },
+        branch: { id: 1, name: 'Bosh' },
+        course: { id: 'c1', name: 'A1' },
+        teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
+        leftAt: new Date('2026-03-10').toISOString(),
+      });
+    });
+
+    it('returns null group fields for a student with no enrollments', async () => {
+      const row = {
+        id: 10002,
+        firstName: 'Hasan',
+        lastName: 'Tursunov',
+        phone: '907654321',
+        status: 'ACTIVE',
+        statusChangedAt: null,
+        enrollments: [],
+      };
+      prisma.$transaction.mockResolvedValueOnce([[row], 1]);
+
+      const result = await service.getDepartedStudentsList(1, {});
+      expect(result.data[0]).toMatchObject({
+        student: { id: 10002, fullName: 'Hasan Tursunov' },
+        status: 'ACTIVE',
+        lastGroup: null,
+        branch: null,
+        course: null,
+        teachers: [],
+        leftAt: null,
+      });
+    });
+
+    it('clamps pageSize to 100 and page to >= 1', async () => {
+      prisma.$transaction.mockResolvedValueOnce([[], 0]);
+      const result = await service.getDepartedStudentsList(1, {
+        page: 0,
+        pageSize: 9999,
+      });
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(100);
+    });
+  });
+
+  describe('getDepartedStudentsByReason', () => {
     const baseParams = {
       startDate: '2026-03-01',
       endDate: '2026-03-31',
     };
 
-    it('returns paginated rows with flattened student/group/teachers', async () => {
+    it('returns enrollment-level DROPPED rows flattened', async () => {
       const row = {
         id: 'e1',
         createdAt: new Date('2026-01-01'),
@@ -1055,10 +1162,8 @@ describe('ReportsService', () => {
       };
       prisma.$transaction.mockResolvedValueOnce([[row], 1]);
 
-      const result = await service.getDepartedStudentsList(1, baseParams);
+      const result = await service.getDepartedStudentsByReason(1, baseParams);
       expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(10);
       expect(result.data[0]).toMatchObject({
         id: 'e1',
         student: { id: 10001, fullName: 'Ali Valiyev' },
@@ -1067,12 +1172,14 @@ describe('ReportsService', () => {
         course: { id: 'c1', name: 'A1' },
         teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
         reason: 'Moliyaviy',
+        departureReasonId: 'r1',
+        departedAt: new Date('2026-03-10').toISOString(),
       });
     });
 
     it('clamps pageSize to 100 and page to >= 1', async () => {
       prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      const result = await service.getDepartedStudentsList(1, {
+      const result = await service.getDepartedStudentsByReason(1, {
         ...baseParams,
         page: 0,
         pageSize: 9999,

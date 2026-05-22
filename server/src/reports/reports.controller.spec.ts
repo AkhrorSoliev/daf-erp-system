@@ -30,6 +30,7 @@ describe('ReportsController — role guards', () => {
     getDepartedStudentsReasons: jest.fn().mockResolvedValue({}),
     getDepartedStudentsGroupBy: jest.fn().mockResolvedValue({}),
     getDepartedStudentsList: jest.fn().mockResolvedValue({}),
+    getDepartedStudentsByReason: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -76,6 +77,7 @@ describe('ReportsController — role guards', () => {
     'getDepartedStudentsReasons',
     'getDepartedStudentsGroupBy',
     'getDepartedStudentsList',
+    'getDepartedStudentsByReason',
   ] as const;
 
   for (const method of endpoints) {

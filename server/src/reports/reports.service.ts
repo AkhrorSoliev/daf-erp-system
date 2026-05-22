@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { StudentStatus } from '@prisma/client';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsOverviewService } from './reports-overview.service';
 import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytics.service';
@@ -178,6 +179,17 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
+      status?: StudentStatus;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    return this.departedLists.getDepartedStudentsList(companyId, params);
+  }
+  getDepartedStudentsByReason(
+    companyId: number,
+    params: {
+      branchId?: number;
       courseId?: string;
       teacherIds?: number[];
       startDate: string;
@@ -187,7 +199,7 @@ export class ReportsService {
       departureReasonId?: string;
     },
   ) {
-    return this.departedLists.getDepartedStudentsList(companyId, params);
+    return this.departedLists.getDepartedStudentsByReason(companyId, params);
   }
   getDepartedStudentsGroupBy(
     companyId: number,

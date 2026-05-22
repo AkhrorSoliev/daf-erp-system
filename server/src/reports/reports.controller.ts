@@ -13,6 +13,7 @@ import { StudentPaymentsReportQueryDto } from './dto/student-payments-report-que
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
+import { DepartedStudentsByReasonQueryDto } from './dto/departed-students-by-reason-query.dto';
 import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import {
   AttendanceAnalyticsQueryDto,
@@ -254,6 +255,19 @@ export class ReportsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.reportsService.getDepartedStudentsList(companyId, {
+      branchId: query.branchId,
+      status: query.status,
+      page: query.page,
+      pageSize: query.pageSize,
+    });
+  }
+
+  @Get('departed-students/by-reason')
+  getDepartedStudentsByReason(
+    @Query() query: DepartedStudentsByReasonQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedStudentsByReason(companyId, {
       branchId: query.branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
