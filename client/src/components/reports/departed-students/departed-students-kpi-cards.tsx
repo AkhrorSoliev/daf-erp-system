@@ -68,7 +68,10 @@ function KpiCard({ icon: Icon, label, value, tooltip, valueColor }: KpiCardProps
 }
 
 function formatMoney(n: number): string {
-  return `${n.toLocaleString("uz-UZ")} so'm`;
+  // Guard against undefined / NaN (e.g. an older API response missing a
+  // field) so the card never renders "NaN so'm".
+  const safe = Number.isFinite(n) ? n : 0;
+  return `${safe.toLocaleString("uz-UZ")} so'm`;
 }
 
 function formatMonths(n: number): string {
