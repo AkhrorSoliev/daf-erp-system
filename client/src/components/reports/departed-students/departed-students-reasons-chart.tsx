@@ -317,7 +317,7 @@ function ReasonStudentsDialog({
     queryKey: ["departed-students-list-drilldown", queryParams],
     queryFn: () =>
       api
-        .get<StudentListResponse>("/reports/departed-students/list", {
+        .get<StudentListResponse>("/reports/departed-students/by-reason", {
           params: queryParams,
         })
         .then((r) => r.data),

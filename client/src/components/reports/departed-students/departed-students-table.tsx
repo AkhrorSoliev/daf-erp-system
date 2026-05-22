@@ -10,39 +10,87 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatPhone } from "@/lib/format-utils";
+
+export type DepartedStudentStatusFilter = "all" | "ACTIVE" | "FROZEN" | "EXPELLED";
 
 export interface DepartedStudentRow {
+  /** Student id as a string — used as the React key. */
   id: string;
   student: { id: number; fullName: string };
-  group: { id: string; name: string } | null;
+  phone: string;
+  status: string;
+  lastGroup: { id: string; name: string } | null;
   branch: { id: number; name: string } | null;
   course: { id: string; name: string } | null;
   teachers: { id: number; fullName: string }[];
-  enrolledAt: string;
-  departedAt: string | null;
-  reason: string | null;
-  departureReasonId: string | null;
+  /** When the student lost their last group. */
+  leftAt: string | null;
 }
 
 const LINK_CLS =
   "hover:underline underline-offset-2 hover:text-foreground transition-colors";
 
-const COLSPAN = 9;
+const COLSPAN = 10;
+
+const STATUS_FILTER_OPTIONS: { value: DepartedStudentStatusFilter; label: string }[] =
+  [
+    { value: "all", label: "Barcha holatlar" },
+    { value: "ACTIVE", label: "Faol (guruhsiz)" },
+    { value: "FROZEN", label: "Muzlatilgan" },
+    { value: "EXPELLED", label: "Chetlatilgan" },
+  ];
 
 interface Props {
   data: DepartedStudentRow[] | undefined;
   isLoading: boolean;
   page: number;
   pageSize: number;
+  statusFilter: DepartedStudentStatusFilter;
+  onStatusFilterChange: (next: DepartedStudentStatusFilter) => void;
 }
 
-export function DepartedStudentsTable({ data, isLoading, page, pageSize }: Props) {
+export function DepartedStudentsTable({
+  data,
+  isLoading,
+  page,
+  pageSize,
+  statusFilter,
+  onStatusFilterChange,
+}: Props) {
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
-      <div className="px-4 py-3 border-b">
-        <h3 className="font-semibold text-base">Ketgan o&apos;quvchilar ro&apos;yxati</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b">
+        <h3 className="font-semibold text-base">
+          Ketgan o&apos;quvchilar ro&apos;yxati
+        </h3>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) =>
+            onStatusFilterChange(v as DepartedStudentStatusFilter)
+          }
+        >
+          <SelectTrigger className="h-9 w-auto min-w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTER_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="overflow-x-auto">
         <Table>
@@ -51,12 +99,13 @@ export function DepartedStudentsTable({ data, isLoading, page, pageSize }: Props
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>ID</TableHead>
               <TableHead>O&apos;quvchi</TableHead>
-              <TableHead>Guruh</TableHead>
+              <TableHead>Telefon</TableHead>
+              <TableHead>Holati</TableHead>
+              <TableHead>Oxirgi guruh</TableHead>
               <TableHead>Kurs</TableHead>
               <TableHead>Filial</TableHead>
               <TableHead>O&apos;qituvchi</TableHead>
-              <TableHead>Chiqqan sana</TableHead>
-              <TableHead>Sabab</TableHead>
+              <TableHead>Guruhsiz qoldi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -74,12 +123,15 @@ export function DepartedStudentsTable({ data, isLoading, page, pageSize }: Props
                   colSpan={COLSPAN}
                   className="text-center py-8 text-sm text-muted-foreground"
                 >
-                  Tanlangan davrda ketgan o&apos;quvchilar yo&apos;q — davrni kengaytiring yoki filtrni o&apos;zgartiring
+                  {statusFilter === "all"
+                    ? "Ketgan o'quvchilar yo'q — barcha o'quvchilar biror guruhda o'qimoqda"
+                    : "Bu holat bo'yicha ketgan o'quvchi topilmadi — boshqa holatni tanlang"}
                 </TableCell>
               </TableRow>
             ) : (
               data.map((row, i) => {
                 const rowNumber = (page - 1) * pageSize + i + 1;
+                const phoneDigits = row.phone?.replace(/\D/g, "") ?? "";
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="border-r text-muted-foreground tabular-nums">
@@ -101,10 +153,28 @@ export function DepartedStudentsTable({ data, isLoading, page, pageSize }: Props
                         {row.student.fullName}
                       </Link>
                     </TableCell>
+                    <TableCell className="tabular-nums text-sm">
+                      {phoneDigits ? (
+                        <a
+                          href={`tel:+998${phoneDigits.slice(-9)}`}
+                          className={LINK_CLS}
+                        >
+                          {formatPhone(row.phone)}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
-                      {row.group ? (
-                        <Link href={`/groups/${row.group.id}`} className={LINK_CLS}>
-                          {row.group.name}
+                      <StatusBadge entityType="students" status={row.status} />
+                    </TableCell>
+                    <TableCell>
+                      {row.lastGroup ? (
+                        <Link
+                          href={`/groups/${row.lastGroup.id}`}
+                          className={LINK_CLS}
+                        >
+                          {row.lastGroup.name}
                         </Link>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -145,14 +215,9 @@ export function DepartedStudentsTable({ data, isLoading, page, pageSize }: Props
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs tabular-nums">
-                      {row.departedAt
-                        ? format(new Date(row.departedAt), "dd.MM.yyyy")
+                      {row.leftAt
+                        ? format(new Date(row.leftAt), "dd.MM.yyyy")
                         : "—"}
-                    </TableCell>
-                    <TableCell className="max-w-[260px] truncate text-sm">
-                      {row.reason || (
-                        <span className="text-muted-foreground">—</span>
-                      )}
                     </TableCell>
                   </TableRow>
                 );

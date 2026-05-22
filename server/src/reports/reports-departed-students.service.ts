@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
 
@@ -76,9 +77,30 @@ export class ReportsDepartedStudentsService {
       },
     });
 
-    const departedCount = dropped.length;
+    // "Ketganlar soni" — a student-level snapshot: students who currently
+    // study in no group (zero ACTIVE enrollments), GRADUATED excluded. This is
+    // deliberately NOT `dropped.length` (the count of DROPPED enrollment
+    // events): a DROPPED enrollment can belong to a student who was simply
+    // moved to another group and is still active. See getDepartedStudentsList
+    // for the matching definition.
+    const departedWhere: Prisma.StudentWhereInput = {
+      companyId,
+      deletedAt: null,
+      enrollments: { none: { status: 'ACTIVE', deletedAt: null } },
+      status: { not: StudentStatus.GRADUATED },
+    };
+    if (params.branchId !== undefined) {
+      departedWhere.branches = { some: { branchId: params.branchId } };
+    }
+    const departedCount = await this.prisma.student.count({
+      where: departedWhere,
+    });
+
+    // Churn rate stays enrollment-based (Faza 2 will revisit it): it measures
+    // how many enrollments alive at the period start were DROPPED within the
+    // period — so it keeps using `dropped.length`, not `departedCount`.
     const churnRate =
-      activeAtStart > 0 ? (departedCount / activeAtStart) * 100 : 0;
+      activeAtStart > 0 ? (dropped.length / activeAtStart) * 100 : 0;
 
     // Lost revenue: for each dropped enrollment, find the contract that was
     // most likely "in effect" at the time of departure (latest contract whose

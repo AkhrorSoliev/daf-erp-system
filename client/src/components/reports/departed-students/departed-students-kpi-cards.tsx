@@ -91,12 +91,13 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
   }
 
   const churnTooltip =
-    "Ketish koeffitsienti = (Ketganlar soni ÷ Davr boshidagi faol yozuvlar) × 100.\n" +
-    `Misol: davr boshida ${data.activeAtStart} ta faol yozuv bo'lgan, ${data.departedCount} tasi ketdi → ${data.churnRate.toFixed(1)}%.`;
+    "Ketish koeffitsienti = (Davr ichida guruhdan chiqishlar ÷ Davr boshidagi faol yozuvlar) × 100.\n" +
+    "Bu yozuv (enrollment) darajasidagi ko'rsatkich — yuqoridagi \"Ketganlar soni\" bilan bir xil emas.";
 
   const departedTooltip =
-    "Tanlangan davrda guruhdan chiqarilgan yozuvlar soni. " +
-    "Bir o'quvchi bir nechta guruhdan chiqsa — har biri alohida sanaymiz.";
+    "Hozir hech qaysi faol guruhda o'qimayotgan o'quvchilar soni — " +
+    "chetlashtirilgan, muzlatilgan va guruhsiz qolgan faol o'quvchilar. " +
+    "Bitirgan o'quvchilar hisobga olinmaydi.";
 
   const lostRevenueTooltip =
     "Agar ketgan o'quvchilar qolishganida, yana qancha so'm keltirishardi.\n" +
