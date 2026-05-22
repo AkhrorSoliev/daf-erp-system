@@ -1,185 +1,110 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, StudentStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
+import { loadDepartedStudents } from './shared/departed-students-dataset';
 
 @Injectable()
 export class ReportsDepartedStudentsService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * KPI cards for the "Ketgan o'quvchilar" page.
+   *
+   * The departed-count / churn / lost-revenue / avg-duration figures are built
+   * from the student-level snapshot (loadDepartedStudents) — current-state,
+   * date-range-independent — so they reconcile with the list and the charts.
+   *
+   * The teacher-change retention figures are event analytics: they DO honour
+   * the `startDate`/`endDate` range, like the teacher-change / transfer charts.
+   */
   async getDepartedStudentsSummary(
     companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string;
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
+    params: { branchId?: number; startDate: string; endDate: string },
   ) {
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
-
-    const groupFilter: any = {};
-    if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
-    if (params.courseId) groupFilter.courseId = params.courseId;
-    if (params.teacherIds && params.teacherIds.length > 0) {
-      groupFilter.teachers = {
-        some: { teacherId: { in: params.teacherIds } },
-      };
-    }
-    const baseWhere: any = {
-      deletedAt: null,
-      student: { companyId, deletedAt: null },
-    };
-    if (Object.keys(groupFilter).length > 0) {
-      baseWhere.group = groupFilter;
-    }
-
-    const dropped = await this.prisma.enrollment.findMany({
-      where: {
-        ...baseWhere,
-        status: 'DROPPED',
-        statusChangedAt: { gte: start, lte: end },
-      },
-      select: {
-        id: true,
-        studentId: true,
-        groupId: true,
-        createdAt: true,
-        statusChangedAt: true,
-      },
+    const departed = await loadDepartedStudents(this.prisma, companyId, {
+      branchId: params.branchId,
     });
+    const departedCount = departed.length;
 
-    // Enrollments that were still "alive" (ACTIVE or FROZEN) at the start of
-    // the period. These form the churn-rate denominator.
-    //
-    // An enrollment counts if:
-    //   - it was created before `start` (existed at that moment), AND
-    //   - it was not already terminated (DROPPED/COMPLETED/TRANSFERRED) by `start`
-    //
-    // We approximate the second condition as:
-    //   - current status is ACTIVE or FROZEN (so it hasn't been terminated yet), OR
-    //   - current status is terminated but the transition happened after `start`
-    //     (meaning it was still alive at `start`).
-    //
-    // Note: without StatusHistory we cannot distinguish FROZEN->ACTIVE mid-period
-    // transitions; this is a known minor approximation.
-    const activeAtStart = await this.prisma.enrollment.count({
-      where: {
-        ...baseWhere,
-        createdAt: { lt: start },
-        OR: [
-          { status: { in: ['ACTIVE', 'FROZEN'] } },
-          { statusChangedAt: { gte: start } },
-        ],
-      },
-    });
-
-    // "Ketganlar soni" — a student-level snapshot: students who currently
-    // study in no group (zero ACTIVE enrollments), GRADUATED excluded. This is
-    // deliberately NOT `dropped.length` (the count of DROPPED enrollment
-    // events): a DROPPED enrollment can belong to a student who was simply
-    // moved to another group and is still active. See getDepartedStudentsList
-    // for the matching definition.
-    const departedWhere: Prisma.StudentWhereInput = {
+    // Churn = departed share of all non-graduated students. The denominator
+    // is departed + currently-studying (students with an ACTIVE enrollment).
+    const studyingWhere: Prisma.StudentWhereInput = {
       companyId,
       deletedAt: null,
-      enrollments: { none: { status: 'ACTIVE', deletedAt: null } },
-      status: { not: StudentStatus.GRADUATED },
+      enrollments: { some: { status: 'ACTIVE', deletedAt: null } },
     };
     if (params.branchId !== undefined) {
-      departedWhere.branches = { some: { branchId: params.branchId } };
+      studyingWhere.branches = { some: { branchId: params.branchId } };
     }
-    const departedCount = await this.prisma.student.count({
-      where: departedWhere,
+    const studyingCount = await this.prisma.student.count({
+      where: studyingWhere,
     });
-
-    // Churn rate stays enrollment-based (Faza 2 will revisit it): it measures
-    // how many enrollments alive at the period start were DROPPED within the
-    // period — so it keeps using `dropped.length`, not `departedCount`.
+    const totalStudents = departedCount + studyingCount;
     const churnRate =
-      activeAtStart > 0 ? (dropped.length / activeAtStart) * 100 : 0;
+      totalStudents > 0 ? (departedCount / totalStudents) * 100 : 0;
 
-    // Lost revenue: for each dropped enrollment, find the contract that was
-    // most likely "in effect" at the time of departure (latest contract whose
-    // createdAt <= the enrollment's departure date) and sum the unpaid
-    // remainder. Cancelled/refunded contracts are excluded — they're not lost
-    // revenue, they've been explicitly closed out.
+    // Lost revenue + average study duration — both need per-student data, so
+    // they run only when there is at least one departed student.
     let lostRevenue = 0;
-    if (dropped.length > 0) {
-      const studentIds = Array.from(new Set(dropped.map((d) => d.studentId)));
-      const groupIds = Array.from(new Set(dropped.map((d) => d.groupId)));
+    let avgDurationMonths = 0;
+    if (departedCount > 0) {
+      const studentIds = departed.map((d) => d.studentId);
+
+      // Lost revenue: unpaid remainder of every still-open contract belonging
+      // to a departed student. Cancelled/refunded contracts are excluded.
       const contracts = await this.prisma.contract.findMany({
         where: {
           companyId,
           deletedAt: null,
           studentId: { in: studentIds },
-          groupId: { in: groupIds },
           status: { notIn: ['CANCELLED', 'REFUNDED'] },
         },
-        select: {
-          studentId: true,
-          groupId: true,
-          totalAmount: true,
-          paidAmount: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
+        select: { totalAmount: true, paidAmount: true },
       });
-
-      const byKey = new Map<
-        string,
-        {
-          totalAmount: number;
-          paidAmount: number;
-          createdAt: Date;
-        }[]
-      >();
       for (const c of contracts) {
-        const key = `${c.studentId}:${c.groupId}`;
-        const list = byKey.get(key);
-        if (list) list.push(c);
-        else byKey.set(key, [c]);
-      }
-
-      for (const d of dropped) {
-        const key = `${d.studentId}:${d.groupId}`;
-        const list = byKey.get(key);
-        if (!list) continue;
-        const departureAt = d.statusChangedAt ?? d.createdAt;
-        // Pick the latest contract created on or before the departure. If none
-        // is old enough, fall back to the oldest available contract.
-        const contract =
-          list.find((c) => c.createdAt.getTime() <= departureAt.getTime()) ??
-          list[list.length - 1];
-        const unpaid = contract.totalAmount - contract.paidAmount;
+        const unpaid = c.totalAmount - c.paidAmount;
         if (unpaid > 0) lostRevenue += unpaid;
       }
+
+      // Average study duration: leftAt − earliest enrollment createdAt.
+      const firstEnrollments = await this.prisma.enrollment.groupBy({
+        by: ['studentId'],
+        where: { studentId: { in: studentIds }, deletedAt: null },
+        _min: { createdAt: true },
+      });
+      const firstByStudent = new Map(
+        firstEnrollments.map((e) => [e.studentId, e._min.createdAt]),
+      );
+      const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
+      let durationSum = 0;
+      let durationCount = 0;
+      for (const d of departed) {
+        const first = firstByStudent.get(d.studentId);
+        if (!first || !d.leftAt) continue;
+        const ms = d.leftAt.getTime() - first.getTime();
+        if (ms > 0) {
+          durationSum += ms;
+          durationCount += 1;
+        }
+      }
+      avgDurationMonths =
+        durationCount > 0 ? durationSum / durationCount / MS_PER_MONTH : 0;
     }
 
-    const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
-    let avgDurationMonths = 0;
-    if (dropped.length > 0) {
-      const totalMs = dropped.reduce((sum, d) => {
-        const end = d.statusChangedAt ?? d.createdAt;
-        return sum + (end.getTime() - d.createdAt.getTime());
-      }, 0);
-      avgDurationMonths = totalMs / dropped.length / MS_PER_MONTH;
-    }
-
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    end.setHours(23, 59, 59, 999);
     const { totalTeacherChanges, departedAfterTeacherChange } =
       await this.getTeacherChangeRetentionMetrics(companyId, {
+        branchId: params.branchId,
         start,
         end,
-        groupFilter,
       });
 
     return {
       churnRate: Math.round(churnRate * 10) / 10,
       departedCount,
-      activeAtStart,
+      totalStudents,
       lostRevenue,
       avgDurationMonths: Math.round(avgDurationMonths * 10) / 10,
       totalTeacherChanges,
@@ -188,33 +113,31 @@ export class ReportsDepartedStudentsService {
   }
 
   /**
-   * Tanlangan davrda ustoz almashishlari va o'sha o'zgarishdan keyin
-   * guruhning 5 ta dars ichida ketgan o'quvchilar sonini hisoblaydi.
+   * Counts teacher changes within the period and how many students "left"
+   * within 5 lessons of one — where "left" means the enrollment went DROPPED
+   * (guruhsiz qoldi) or FROZEN (muzlatildi).
    *
-   * 5-dars sanasi `Attendance` jadvalidagi noyob sanalardan olinadi
-   * (tizimda alohida Lesson modeli yo'q).
+   * The 5th-lesson date is read from the distinct `Attendance` dates after
+   * the change (the system has no separate Lesson model).
    */
   private async getTeacherChangeRetentionMetrics(
     companyId: number,
-    params: { start: Date; end: Date; groupFilter: any },
+    params: { branchId?: number; start: Date; end: Date },
   ) {
-    const { start, end, groupFilter } = params;
     const LESSON_WINDOW = 5;
+
+    const groupWhere: Prisma.GroupWhereInput = {
+      companyId,
+      deletedAt: null,
+    };
+    if (params.branchId !== undefined) groupWhere.branchId = params.branchId;
 
     const changes = await this.prisma.groupTeacherHistory.findMany({
       where: {
-        createdAt: { gte: start, lte: end },
-        group: {
-          companyId,
-          deletedAt: null,
-          ...groupFilter,
-        },
+        createdAt: { gte: params.start, lte: params.end },
+        group: groupWhere,
       },
-      select: {
-        id: true,
-        groupId: true,
-        createdAt: true,
-      },
+      select: { id: true, groupId: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -243,7 +166,7 @@ export class ReportsDepartedStudentsService {
       const departed = await this.prisma.enrollment.findMany({
         where: {
           groupId: change.groupId,
-          status: 'DROPPED',
+          status: { in: ['DROPPED', 'FROZEN'] },
           deletedAt: null,
           createdAt: { lt: change.createdAt },
           statusChangedAt: { gte: change.createdAt, lte: cutoffDate },
@@ -261,108 +184,65 @@ export class ReportsDepartedStudentsService {
     };
   }
 
+  /**
+   * "Ketish dinamikasi" — how many of the currently-departed students lost
+   * their group in each month. Buckets the student-level snapshot
+   * (loadDepartedStudents) by `leftAt`, so the chart total reconciles with the
+   * "Ketgan o'quvchilar" list instead of counting DROPPED enrollment events.
+   */
   async getDepartedStudentsDynamics(
     companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string;
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
+    params: { branchId?: number },
   ) {
-    // Format date in Asia/Tashkent (UTC+5) regardless of server timezone.
-    // `en-CA` locale gives ISO-like yyyy-MM-dd.
     const TZ = 'Asia/Tashkent';
-    const fmtDay = (d: Date) =>
-      new Intl.DateTimeFormat('en-CA', {
+    // yyyy-MM-01 key for the month a date falls in (Tashkent time).
+    const monthKey = (d: Date): string => {
+      const ym = new Intl.DateTimeFormat('en-CA', {
         timeZone: TZ,
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit',
       }).format(d);
+      return `${ym}-01`;
+    };
 
-    const start = new Date(params.startDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
-
-    const rangeMs = end.getTime() - start.getTime();
-    const rangeDays = Math.ceil(rangeMs / (1000 * 60 * 60 * 24));
-    // Choose bucket size so the chart always has ~10–45 bars.
-    //   <= 45 days  → daily
-    //   <= 6 months → weekly (7-day buckets starting from Monday)
-    //   otherwise   → monthly
-    const granularity: 'day' | 'week' | 'month' =
-      rangeDays <= 45 ? 'day' : rangeDays <= 186 ? 'week' : 'month';
-
-    const rows = await this.prisma.enrollment.findMany({
-      where: {
-        ...buildDepartedEnrollmentWhere(companyId, params),
-        status: 'DROPPED',
-        statusChangedAt: { gte: start, lte: end },
-      },
-      select: { statusChangedAt: true },
+    const departed = await loadDepartedStudents(this.prisma, companyId, {
+      branchId: params.branchId,
     });
 
-    const bucketKey = (d: Date): string => {
-      if (granularity === 'day') return fmtDay(d);
-      if (granularity === 'month') {
-        const parts = new Intl.DateTimeFormat('en-CA', {
-          timeZone: TZ,
-          year: 'numeric',
-          month: '2-digit',
-        }).format(d);
-        return `${parts}-01`;
-      }
-      const dayStr = fmtDay(d);
-      const [y, m, day] = dayStr.split('-').map(Number);
-      const tzDate = new Date(Date.UTC(y, m - 1, day));
-      const dayOfWeek = (tzDate.getUTCDay() + 6) % 7;
-      tzDate.setUTCDate(tzDate.getUTCDate() - dayOfWeek);
-      return tzDate.toISOString().slice(0, 10);
-    };
-
-    const addDays = (d: Date, n: number): Date => {
-      const next = new Date(d);
-      next.setDate(next.getDate() + n);
-      return next;
-    };
-    const addMonths = (d: Date, n: number): Date => {
-      const next = new Date(d);
-      next.setMonth(next.getMonth() + n);
-      return next;
-    };
-
-    const countByBucket = new Map<string, number>();
-    for (const r of rows) {
-      if (!r.statusChangedAt) continue;
-      const key = bucketKey(r.statusChangedAt);
-      countByBucket.set(key, (countByBucket.get(key) ?? 0) + 1);
+    const countByMonth = new Map<string, number>();
+    for (const r of departed) {
+      if (!r.leftAt) continue;
+      const key = monthKey(r.leftAt);
+      countByMonth.set(key, (countByMonth.get(key) ?? 0) + 1);
     }
+
+    if (countByMonth.size === 0) {
+      return { data: [], granularity: 'month' as const };
+    }
+
+    // Emit every month from the earliest departure through the current month
+    // so the line has no gaps.
+    const sortedKeys = [...countByMonth.keys()].sort();
+    const [firstYear, firstMonth] = sortedKeys[0].split('-').map(Number);
+    const [nowYear, nowMonth] = monthKey(new Date()).split('-').map(Number);
 
     const data: { date: string; count: number }[] = [];
-    let cursor: Date;
-    if (granularity === 'day') {
-      cursor = new Date(start);
-    } else if (granularity === 'month') {
-      cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    } else {
-      const dayOfWeek = (start.getDay() + 6) % 7;
-      cursor = addDays(start, -dayOfWeek);
-    }
+    let year = firstYear;
+    let month = firstMonth;
     let safety = 0;
-    while (cursor.getTime() <= end.getTime() && safety++ < 500) {
-      const key = bucketKey(cursor);
-      data.push({ date: key, count: countByBucket.get(key) ?? 0 });
-      cursor =
-        granularity === 'day'
-          ? addDays(cursor, 1)
-          : granularity === 'week'
-            ? addDays(cursor, 7)
-            : addMonths(cursor, 1);
+    while (
+      (year < nowYear || (year === nowYear && month <= nowMonth)) &&
+      safety++ < 240
+    ) {
+      const key = `${year}-${String(month).padStart(2, '0')}-01`;
+      data.push({ date: key, count: countByMonth.get(key) ?? 0 });
+      month += 1;
+      if (month > 12) {
+        month = 1;
+        year += 1;
+      }
     }
 
-    return { data, granularity };
+    return { data, granularity: 'month' as const };
   }
 }

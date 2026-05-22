@@ -26,15 +26,17 @@ import { ChartCard } from "./chart-card";
 
 export type GroupByDimension = "course" | "teacher" | "branch";
 
+interface GroupBySegment {
+  status: string;
+  label: string;
+  count: number;
+}
+
 interface GroupByRow {
   id: string;
   name: string;
   total: number;
-  segments: {
-    reasonId: string | null;
-    reasonName: string;
-    count: number;
-  }[];
+  segments: GroupBySegment[];
 }
 
 interface GroupByResponse {
@@ -44,10 +46,6 @@ interface GroupByResponse {
 
 interface Props {
   branchId: number | null;
-  courseId: string | null;
-  teacherIds: number[];
-  startDate: string;
-  endDate: string;
   groupBy: GroupByDimension;
   onGroupByChange: (next: GroupByDimension) => void;
 }
@@ -61,29 +59,19 @@ const TAB_LABELS: Record<GroupByDimension, string> = {
 const TAB_ORDER: GroupByDimension[] = ["course", "teacher", "branch"];
 
 const TOP_N_BUCKETS = 10;
-// Intentionally small — stacked bars with more than ~4 segments become
-// unreadable. Extra reasons collapse into "Boshqalar".
-const TOP_N_REASONS = 3;
 const OTHERS_BUCKET = "__others_bucket__";
-const OTHERS_REASON = "__others_reason__";
-const NULL_REASON = "__null__";
 
-// Coordinated 3-color palette + neutral grey for "Boshqalar".
-// Matches the product mockup: warm → cool progression for the top 3 reasons.
-const PALETTE = [
-  "#f59e0b", // amber-500 — primary / top reason
-  "#8b5cf6", // violet-500 — second
-  "#06b6d4", // cyan-500 — third
-];
-const OTHERS_COLOR = "#94a3b8"; // slate-400 — "Boshqalar"
-const NULL_COLOR = "#cbd5e1"; // slate-300 — "Sababi ko'rsatilmagan"
+// Fixed status colours — match the "Holat bo'yicha" chart for visual harmony.
+const STATUS_COLOR: Record<string, string> = {
+  ACTIVE: "#f59e0b", // amber-500 — Faol (guruhsiz)
+  FROZEN: "#06b6d4", // cyan-500 — Muzlatilgan
+  EXPELLED: "#ef4444", // red-500 — Chetlatilgan
+  INACTIVE: "#94a3b8", // slate-400 — Nofaol
+};
+const FALLBACK_COLOR = "#94a3b8";
 
 export function DepartedStudentsGroupByChart({
   branchId,
-  courseId,
-  teacherIds,
-  startDate,
-  endDate,
   groupBy,
   onGroupByChange,
 }: Props) {
@@ -91,10 +79,6 @@ export function DepartedStudentsGroupByChart({
 
   const params = {
     branchId: branchId ?? undefined,
-    courseId: courseId ?? undefined,
-    teacherIds: teacherIds.length > 0 ? teacherIds.join(",") : undefined,
-    startDate,
-    endDate,
     groupBy,
   };
 
@@ -109,108 +93,77 @@ export function DepartedStudentsGroupByChart({
     staleTime: 0,
   });
 
-  const {
-    chartRows,
-    reasonKeys,
-    reasonLabels,
-    reasonColors,
-    rowByName,
-  } = useMemo(() => {
-    const rawRows = data?.data ?? [];
+  const { chartRows, statusKeys, statusLabels, statusColors, rowByName } =
+    useMemo(() => {
+      const rawRows = data?.data ?? [];
 
-    // Collapse the long tail of buckets into an "Boshqalar" bucket.
-    let displayRows: GroupByRow[];
-    if (rawRows.length <= TOP_N_BUCKETS) {
-      displayRows = rawRows;
-    } else {
-      const top = rawRows.slice(0, TOP_N_BUCKETS);
-      const tail = rawRows.slice(TOP_N_BUCKETS);
-      const merged = new Map<string, GroupByRow["segments"][number]>();
-      for (const r of tail) {
+      // Collapse the long tail of buckets into a "Boshqalar" bucket.
+      let displayRows: GroupByRow[];
+      if (rawRows.length <= TOP_N_BUCKETS) {
+        displayRows = rawRows;
+      } else {
+        const top = rawRows.slice(0, TOP_N_BUCKETS);
+        const tail = rawRows.slice(TOP_N_BUCKETS);
+        const merged = new Map<string, GroupBySegment>();
+        for (const r of tail) {
+          for (const s of r.segments) {
+            const existing = merged.get(s.status);
+            if (existing) existing.count += s.count;
+            else merged.set(s.status, { ...s });
+          }
+        }
+        displayRows = [
+          ...top,
+          {
+            id: OTHERS_BUCKET,
+            name: `Boshqalar (${tail.length})`,
+            total: tail.reduce((sum, r) => sum + r.total, 0),
+            segments: Array.from(merged.values()),
+          },
+        ];
+      }
+
+      // Collect every status that appears, ordered by overall frequency.
+      const statusTotals = new Map<string, { label: string; count: number }>();
+      for (const r of displayRows) {
         for (const s of r.segments) {
-          const k = s.reasonId ?? NULL_REASON;
-          const existing = merged.get(k);
+          const existing = statusTotals.get(s.status);
           if (existing) existing.count += s.count;
-          else merged.set(k, { ...s });
+          else statusTotals.set(s.status, { label: s.label, count: s.count });
         }
       }
-      displayRows = [
-        ...top,
-        {
-          id: OTHERS_BUCKET,
-          name: `Boshqalar (${tail.length})`,
-          total: tail.reduce((sum, r) => sum + r.total, 0),
-          segments: Array.from(merged.values()),
-        },
-      ];
-    }
+      const sortedStatuses = Array.from(statusTotals.entries()).sort(
+        (a, b) => b[1].count - a[1].count,
+      );
 
-    // Rank reasons by overall frequency, keep top N, merge the rest.
-    const reasonTotals = new Map<string, { name: string; count: number }>();
-    for (const r of displayRows) {
-      for (const s of r.segments) {
-        const k = s.reasonId ?? NULL_REASON;
-        const existing = reasonTotals.get(k);
-        if (existing) existing.count += s.count;
-        else reasonTotals.set(k, { name: s.reasonName, count: s.count });
-      }
-    }
-    const sortedReasons = Array.from(reasonTotals.entries()).sort(
-      (a, b) => b[1].count - a[1].count,
-    );
-    let keptReasons: [string, { name: string; count: number }][];
-    if (sortedReasons.length <= TOP_N_REASONS) {
-      keptReasons = sortedReasons;
-    } else {
-      const top = sortedReasons.slice(0, TOP_N_REASONS);
-      const tail = sortedReasons.slice(TOP_N_REASONS);
-      const othersCount = tail.reduce((s, [, v]) => s + v.count, 0);
-      keptReasons = [
-        ...top,
-        [
-          OTHERS_REASON,
-          { name: `Boshqalar (${tail.length} ta sabab)`, count: othersCount },
-        ],
-      ];
-    }
-    const keptKeys = new Set(keptReasons.map(([k]) => k));
-
-    // Pivot: one row per bucket, one numeric field per reason key.
-    const rows = displayRows.map((r) => {
-      const pivot: Record<string, number | string> = { name: r.name };
-      for (const [k] of keptReasons) pivot[k] = 0;
-      for (const s of r.segments) {
-        const k = s.reasonId ?? NULL_REASON;
-        if (keptKeys.has(k)) {
-          pivot[k] = (pivot[k] as number) + s.count;
-        } else {
-          pivot[OTHERS_REASON] =
-            ((pivot[OTHERS_REASON] as number) ?? 0) + s.count;
+      // Pivot: one row per bucket, one numeric field per status.
+      const rows = displayRows.map((r) => {
+        const pivot: Record<string, number | string> = { name: r.name };
+        for (const [status] of sortedStatuses) pivot[status] = 0;
+        for (const s of r.segments) {
+          pivot[s.status] = ((pivot[s.status] as number) ?? 0) + s.count;
         }
+        pivot._total = r.total;
+        return pivot;
+      });
+
+      const labels: Record<string, string> = {};
+      const colors: Record<string, string> = {};
+      for (const [status, v] of sortedStatuses) {
+        labels[status] = v.label;
+        colors[status] = STATUS_COLOR[status] ?? FALLBACK_COLOR;
       }
-      pivot._total = r.total;
-      return pivot;
-    });
 
-    const labels: Record<string, string> = {};
-    const colors: Record<string, string> = {};
-    keptReasons.forEach(([k, v], i) => {
-      labels[k] = v.name;
-      if (k === OTHERS_REASON) colors[k] = OTHERS_COLOR;
-      else if (k === NULL_REASON) colors[k] = NULL_COLOR;
-      else colors[k] = PALETTE[i % PALETTE.length];
-    });
+      const byName = new Map(displayRows.map((r) => [r.name, r]));
 
-    const byName = new Map(displayRows.map((r) => [r.name, r]));
-
-    return {
-      chartRows: rows,
-      reasonKeys: keptReasons.map(([k]) => k),
-      reasonLabels: labels,
-      reasonColors: colors,
-      rowByName: byName,
-    };
-  }, [data]);
+      return {
+        chartRows: rows,
+        statusKeys: sortedStatuses.map(([k]) => k),
+        statusLabels: labels,
+        statusColors: colors,
+        rowByName: byName,
+      };
+    }, [data]);
 
   const isEmpty = chartRows.length === 0;
   const chartHeight = 360;
@@ -238,16 +191,16 @@ export function DepartedStudentsGroupByChart({
   return (
     <>
       <ChartCard
-        title="Sabablarni chuqur tahlil qilish"
-        subtitle="Yo'nalishlar va sabablar bo'yicha taqsimot"
+        title="Kesim bo'yicha tahlil"
+        subtitle="Yo'nalishlar bo'yicha ketgan o'quvchilar, holat kesimida"
         tooltip={
-          "Tanlangan kesim bo'yicha ketgan o'quvchilar, ichida ketish sabablari bo'yicha segmentlarga bo'lingan.\n" +
+          "Tanlangan kesim bo'yicha ketgan o'quvchilar, ichida holat (guruhsiz / muzlatilgan / chetlatilgan) bo'yicha segmentlarga bo'lingan.\n" +
           `Eng ko'p ${TOP_N_BUCKETS} ta element alohida, qolganlari "Boshqalar"ga yig'ilgan.\n` +
-          "Ustun ustiga bosing — shu kesimdagi sabab taqsimotini batafsil ko'rasiz."
+          "Ustun ustiga bosing — shu kesimdagi holat taqsimotini batafsil ko'rasiz."
         }
         isLoading={isLoading}
         isEmpty={isEmpty}
-        emptyMessage="Tanlangan davrda ketganlar yo'q — davrni kengaytirib ko'ring"
+        emptyMessage="Hozircha ketgan o'quvchilar yo'q"
         headerAction={headerAction}
         bodyHeightClass={isEmpty || isLoading ? "h-[240px]" : ""}
       >
@@ -265,8 +218,12 @@ export function DepartedStudentsGroupByChart({
               <BarChart
                 data={chartRows}
                 margin={{ top: 24, right: 8, bottom: 8, left: -8 }}
-                onClick={(e: any) => {
-                  const name = e?.activePayload?.[0]?.payload?.name;
+                onClick={(e: unknown) => {
+                  const name = (
+                    e as {
+                      activePayload?: { payload?: { name?: string } }[];
+                    }
+                  )?.activePayload?.[0]?.payload?.name;
                   if (!name) return;
                   const row = rowByName.get(name);
                   if (row && row.id !== OTHERS_BUCKET) setDrilldownRow(row);
@@ -293,10 +250,7 @@ export function DepartedStudentsGroupByChart({
                     value: "Soni",
                     position: "insideTopLeft",
                     offset: -4,
-                    style: {
-                      fontSize: 11,
-                      fill: "#64748b", // slate-500 — matches muted-foreground in both themes
-                    },
+                    style: { fontSize: 11, fill: "#64748b" },
                   }}
                 />
                 <Tooltip
@@ -304,24 +258,24 @@ export function DepartedStudentsGroupByChart({
                   content={(props) => (
                     <GroupByTooltip
                       {...props}
-                      reasonLabels={reasonLabels}
-                      reasonColors={reasonColors}
+                      statusLabels={statusLabels}
+                      statusColors={statusColors}
                     />
                   )}
                 />
                 <Legend
-                  formatter={(v) => reasonLabels[String(v)] ?? String(v)}
+                  formatter={(v) => statusLabels[String(v)] ?? String(v)}
                   wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                   iconType="circle"
                 />
-                {reasonKeys.map((key, i) => {
-                  const isLast = i === reasonKeys.length - 1;
+                {statusKeys.map((key, i) => {
+                  const isLast = i === statusKeys.length - 1;
                   return (
                     <Bar
                       key={key}
                       dataKey={key}
-                      stackId="reasons"
-                      fill={reasonColors[key]}
+                      stackId="statuses"
+                      fill={statusColors[key]}
                       name={key}
                       style={{ cursor: "pointer" }}
                       radius={isLast ? [6, 6, 0, 0] : [0, 0, 0, 0]}
@@ -378,21 +332,26 @@ function GroupByTooltip({
   active,
   payload,
   label,
-  reasonLabels,
-  reasonColors,
+  statusLabels,
+  statusColors,
 }: {
   active?: boolean;
+  // Recharts injects its own loosely-typed payload here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: ReadonlyArray<any>;
   label?: string | number;
-  reasonLabels: Record<string, string>;
-  reasonColors: Record<string, string>;
+  statusLabels: Record<string, string>;
+  statusColors: Record<string, string>;
 }) {
   if (!active || !payload || payload.length === 0) return null;
-  const visible = payload.filter(
-    (p) => typeof p.value === "number" && p.value > 0,
-  );
+  const visible = payload
+    .map((p) => ({
+      ...p,
+      value: typeof p.value === "number" ? p.value : 0,
+    }))
+    .filter((p) => p.value > 0);
   if (visible.length === 0) return null;
-  const total = visible.reduce((sum, p) => sum + (p.value ?? 0), 0);
+  const total = visible.reduce((sum, p) => sum + p.value, 0);
 
   return (
     <div className="rounded-md border bg-popover text-popover-foreground px-3 py-2 text-xs shadow-md min-w-[200px]">
@@ -404,10 +363,10 @@ function GroupByTooltip({
             <div key={key} className="flex items-center gap-2">
               <span
                 className="size-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: reasonColors[key] ?? p.color }}
+                style={{ backgroundColor: statusColors[key] ?? p.color }}
               />
               <span className="text-muted-foreground truncate flex-1">
-                {reasonLabels[key] ?? key}
+                {statusLabels[key] ?? key}
               </span>
               <span className="font-medium tabular-nums shrink-0">
                 {p.value} ta
@@ -439,7 +398,7 @@ function GroupBySegmentsDialog({
         <DialogHeader>
           <DialogTitle>{row?.name ?? ""}</DialogTitle>
           <DialogDescription>
-            {groupByLabel} — sabab kesimida: jami {row?.total ?? 0} ta
+            {groupByLabel} — holat kesimida: jami {row?.total ?? 0} ta
           </DialogDescription>
         </DialogHeader>
         {row && (
@@ -448,10 +407,19 @@ function GroupBySegmentsDialog({
               const percent = row.total > 0 ? (s.count / row.total) * 100 : 0;
               return (
                 <div
-                  key={s.reasonId ?? "null"}
+                  key={s.status}
                   className="flex items-center justify-between gap-2 rounded-md border px-3 py-2"
                 >
-                  <span className="text-sm">{s.reasonName}</span>
+                  <span className="flex items-center gap-2 text-sm">
+                    <span
+                      className="size-3 rounded-sm shrink-0"
+                      style={{
+                        backgroundColor:
+                          STATUS_COLOR[s.status] ?? FALLBACK_COLOR,
+                      }}
+                    />
+                    {s.label}
+                  </span>
                   <span className="text-sm tabular-nums text-muted-foreground">
                     {s.count} ta ({percent.toFixed(1)}%)
                   </span>

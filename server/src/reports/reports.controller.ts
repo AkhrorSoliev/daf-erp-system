@@ -14,6 +14,7 @@ import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 import { DepartedStudentsByReasonQueryDto } from './dto/departed-students-by-reason-query.dto';
+import { DepartedStudentsBranchQueryDto } from './dto/departed-students-branch-query.dto';
 import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import {
   AttendanceAnalyticsQueryDto,
@@ -186,8 +187,6 @@ export class ReportsController {
   ) {
     return this.reportsService.getDepartedStudentsSummary(companyId, {
       branchId: query.branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -195,15 +194,21 @@ export class ReportsController {
 
   @Get('departed-students/dynamics')
   getDepartedStudentsDynamics(
-    @Query() query: DepartedStudentsSummaryQueryDto,
+    @Query() query: DepartedStudentsBranchQueryDto,
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.reportsService.getDepartedStudentsDynamics(companyId, {
       branchId: query.branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
-      startDate: query.startDate,
-      endDate: query.endDate,
+    });
+  }
+
+  @Get('departed-students/by-status')
+  getDepartedStudentsByStatus(
+    @Query() query: DepartedStudentsBranchQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getDepartedStudentsByStatus(companyId, {
+      branchId: query.branchId,
     });
   }
 
@@ -286,10 +291,6 @@ export class ReportsController {
   ) {
     return this.reportsService.getDepartedStudentsGroupBy(companyId, {
       branchId: query.branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
-      startDate: query.startDate,
-      endDate: query.endDate,
       groupBy: query.groupBy,
     });
   }
@@ -338,8 +339,6 @@ export class ReportsController {
   ) {
     return this.reportsService.getDepartedAfterTeacherChangeList(companyId, {
       branchId: query.branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
     });

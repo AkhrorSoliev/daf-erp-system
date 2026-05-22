@@ -201,31 +201,23 @@ export class ReportsTeacherChangesService {
   }
 
   /**
-   * Drill-down: ustoz almashgandan keyin 5 dars ichida ketgan o'quvchilar.
+   * Drill-down for the teacher-change retention card: students who "left"
+   * within 5 lessons of a teacher change — where "left" means the enrollment
+   * went DROPPED (guruhsiz qoldi) or FROZEN (muzlatildi). Date-ranged; mirrors
+   * getTeacherChangeRetentionMetrics.
    */
   async getDepartedAfterTeacherChangeList(
     companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string;
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
+    params: { branchId?: number; startDate: string; endDate: string },
   ) {
+    const LESSON_WINDOW = 5;
+
     const start = new Date(params.startDate);
     const end = new Date(params.endDate);
     end.setHours(23, 59, 59, 999);
-    const LESSON_WINDOW = 5;
 
     const groupFilter: any = { companyId, deletedAt: null };
     if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
-    if (params.courseId) groupFilter.courseId = params.courseId;
-    if (params.teacherIds && params.teacherIds.length > 0) {
-      groupFilter.teachers = {
-        some: { teacherId: { in: params.teacherIds } },
-      };
-    }
 
     const changes = await this.prisma.groupTeacherHistory.findMany({
       where: {
@@ -253,6 +245,7 @@ export class ReportsTeacherChangesService {
       branchName: string;
       teacherChangeAt: Date;
       departedAt: Date;
+      departureStatus: 'DROPPED' | 'FROZEN';
       lessonNumber: number;
       previousTeachers: string[];
       newTeachers: string[];
@@ -295,7 +288,7 @@ export class ReportsTeacherChangesService {
       const departed = await this.prisma.enrollment.findMany({
         where: {
           groupId: change.groupId,
-          status: 'DROPPED',
+          status: { in: ['DROPPED', 'FROZEN'] },
           deletedAt: null,
           createdAt: { lt: change.createdAt },
           statusChangedAt: { gte: change.createdAt, lte: cutoffDate },
@@ -304,6 +297,7 @@ export class ReportsTeacherChangesService {
         select: {
           id: true,
           studentId: true,
+          status: true,
           statusChangedAt: true,
           student: { select: { firstName: true, lastName: true } },
           group: {
@@ -335,6 +329,7 @@ export class ReportsTeacherChangesService {
           branchName: e.group.branch.name,
           teacherChangeAt: change.createdAt,
           departedAt,
+          departureStatus: e.status as 'DROPPED' | 'FROZEN',
           lessonNumber,
           previousTeachers: change.previousTeacherIds.map(
             (id) => teacherMap.get(id) ?? `#${id}`,

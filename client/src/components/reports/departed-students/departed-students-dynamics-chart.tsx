@@ -22,10 +22,6 @@ interface DynamicsResponse {
 
 interface Props {
   branchId: number | null;
-  courseId: string | null;
-  teacherIds: number[];
-  startDate: string;
-  endDate: string;
 }
 
 const GRANULARITY_LABEL: Record<DynamicsResponse["granularity"], string> = {
@@ -37,19 +33,9 @@ const GRANULARITY_LABEL: Record<DynamicsResponse["granularity"], string> = {
 const BAR_COLOR = "#ef4444"; // red-500 — literal so SVG renders reliably
 const BAR_COLOR_HOVER = "#dc2626"; // red-600
 
-export function DepartedStudentsDynamicsChart({
-  branchId,
-  courseId,
-  teacherIds,
-  startDate,
-  endDate,
-}: Props) {
+export function DepartedStudentsDynamicsChart({ branchId }: Props) {
   const params = {
     branchId: branchId ?? undefined,
-    courseId: courseId ?? undefined,
-    teacherIds: teacherIds.length > 0 ? teacherIds.join(",") : undefined,
-    startDate,
-    endDate,
   };
 
   const { data, isLoading } = useQuery<DynamicsResponse>({
@@ -97,13 +83,12 @@ export function DepartedStudentsDynamicsChart({
         total > 0 ? ` — jami ${total} ta` : ""
       }${peakCount > 0 ? `, eng yuqori: ${peakLabel} (${peakCount} ta)` : ""}`}
       tooltip={
-        "Tanlangan davr bo'yicha ketganlar dinamikasi.\n" +
-        "Davr uzunligiga qarab avtomatik kunlik / haftalik / oylik kesimda ko'rsatiladi.\n" +
-        "Sahifa filtriga bo'ysunadi."
+        "Har oyda nechta o'quvchi guruhsiz qolgani — ketgan o'quvchilarning oxirgi guruhdan chiqqan oyi bo'yicha.\n" +
+        "Filial filtriga bo'ysunadi."
       }
       isLoading={isLoading}
       isEmpty={isEmpty}
-      emptyMessage="Tanlangan davrda ketganlar yo'q — davrni kengaytirib ko'ring"
+      emptyMessage="Hozircha ketgan o'quvchilar yo'q"
       bodyHeightClass="h-[260px]"
     >
       <ResponsiveContainer width="100%" height="100%">

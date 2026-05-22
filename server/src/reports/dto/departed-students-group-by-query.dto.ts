@@ -1,7 +1,16 @@
-import { IsIn } from 'class-validator';
-import { DepartedStudentsSummaryQueryDto } from './departed-students-summary-query.dto';
+import { IsIn, IsInt, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class DepartedStudentsGroupByQueryDto extends DepartedStudentsSummaryQueryDto {
+/**
+ * Query for the departed-students "group-by" chart. Snapshot-based — only an
+ * optional branch filter plus the grouping dimension.
+ */
+export class DepartedStudentsGroupByQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  branchId?: number;
+
   @IsIn(['course', 'teacher', 'branch'])
   groupBy: 'course' | 'teacher' | 'branch';
 }
