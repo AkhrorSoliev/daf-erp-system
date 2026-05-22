@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 export interface DepartedStudentsSummary {
   churnRate: number;
   departedCount: number;
-  activeAtStart: number;
+  totalStudents: number;
   lostRevenue: number;
   avgDurationMonths: number;
   totalTeacherChanges: number;
@@ -91,8 +91,9 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
   }
 
   const churnTooltip =
-    "Ketish koeffitsienti = (Davr ichida guruhdan chiqishlar ÷ Davr boshidagi faol yozuvlar) × 100.\n" +
-    "Bu yozuv (enrollment) darajasidagi ko'rsatkich — yuqoridagi \"Ketganlar soni\" bilan bir xil emas.";
+    "Ketgan o'quvchilar ulushi = Ketganlar ÷ Barcha o'quvchilar × 100.\n" +
+    `Misol: ${data.departedCount} ketgan ÷ ${data.totalStudents} jami → ${data.churnRate.toFixed(1)}%.\n` +
+    "Barcha o'quvchilar = ketganlar + hozir guruhda o'qiyotganlar.";
 
   const departedTooltip =
     "Hozir hech qaysi faol guruhda o'qimayotgan o'quvchilar soni — " +

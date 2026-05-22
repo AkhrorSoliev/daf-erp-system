@@ -153,25 +153,13 @@ export class ReportsService {
   // Departed students — core
   getDepartedStudentsSummary(
     companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string;
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
+    params: { branchId?: number; startDate: string; endDate: string },
   ) {
     return this.departedStudents.getDepartedStudentsSummary(companyId, params);
   }
   getDepartedStudentsDynamics(
     companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string;
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
+    params: { branchId?: number },
   ) {
     return this.departedStudents.getDepartedStudentsDynamics(companyId, params);
   }
@@ -201,14 +189,16 @@ export class ReportsService {
   ) {
     return this.departedLists.getDepartedStudentsByReason(companyId, params);
   }
+  getDepartedStudentsByStatus(
+    companyId: number,
+    params: { branchId?: number },
+  ) {
+    return this.departedLists.getDepartedStudentsByStatus(companyId, params);
+  }
   getDepartedStudentsGroupBy(
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
       groupBy: 'course' | 'teacher' | 'branch';
     },
   ) {
@@ -284,13 +274,7 @@ export class ReportsService {
   }
   getDepartedAfterTeacherChangeList(
     companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string;
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
+    params: { branchId?: number; startDate: string; endDate: string },
   ) {
     return this.teacherChanges.getDepartedAfterTeacherChangeList(
       companyId,

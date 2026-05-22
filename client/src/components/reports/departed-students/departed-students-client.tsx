@@ -22,7 +22,7 @@ import {
   type DepartedStudentsSummary,
 } from "./departed-students-kpi-cards";
 import { DepartedStudentsDynamicsChart } from "./departed-students-dynamics-chart";
-import { DepartedStudentsReasonsChart } from "./departed-students-reasons-chart";
+import { DepartedStudentsByStatusChart } from "./departed-students-status-chart";
 import {
   DepartedStudentsGroupByChart,
   type GroupByDimension,
@@ -291,28 +291,12 @@ export function DepartedStudentsClient() {
       <DepartedStudentsKpiCards data={summary} isLoading={summaryLoading} />
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <DepartedStudentsDynamicsChart
-          branchId={filter.branchId}
-          courseId={filter.courseId}
-          teacherIds={filter.teacherIds}
-          startDate={startStr}
-          endDate={endStr}
-        />
-        <DepartedStudentsReasonsChart
-          branchId={filter.branchId}
-          courseId={filter.courseId}
-          teacherIds={filter.teacherIds}
-          startDate={startStr}
-          endDate={endStr}
-        />
+        <DepartedStudentsDynamicsChart branchId={filter.branchId} />
+        <DepartedStudentsByStatusChart branchId={filter.branchId} />
       </div>
 
       <DepartedStudentsGroupByChart
         branchId={filter.branchId}
-        courseId={filter.courseId}
-        teacherIds={filter.teacherIds}
-        startDate={startStr}
-        endDate={endStr}
         groupBy={groupBy}
         onGroupByChange={handleGroupByChange}
       />
