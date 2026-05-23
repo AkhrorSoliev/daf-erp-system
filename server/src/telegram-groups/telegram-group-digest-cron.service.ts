@@ -8,6 +8,7 @@ import {
   TelegramGroupDigestBufferService,
 } from './telegram-group-digest-buffer.service';
 import { TelegramGroupDigestService } from './telegram-group-digest.service';
+import { HolidaysService } from '../holidays/holidays.service';
 
 /**
  * Flushes each company's buffered group events into a single consolidated
@@ -30,6 +31,7 @@ export class TelegramGroupDigestCronService {
     private readonly adminBot: TelegramAdminBotService,
     private readonly buffer: TelegramGroupDigestBufferService,
     private readonly digest: TelegramGroupDigestService,
+    private readonly holidaysService: HolidaysService,
   ) {}
 
   @Cron('0 9,12,15,18,21 * * *', { timeZone: 'Asia/Tashkent' })
@@ -37,6 +39,19 @@ export class TelegramGroupDigestCronService {
     const bot = this.adminBot.getBot();
     if (!bot) {
       this.logger.warn('Skipped digest flush — admin bot not initialized');
+      return;
+    }
+
+    // Skip on holidays — the digest is "system activity stats", and
+    // bayram days are non-working. Whatever's already in the buffer
+    // stays — the next post-holiday tick will pick it up.
+    const holiday = await this.holidaysService.findActiveHolidayCovering(
+      new Date(),
+    );
+    if (holiday) {
+      this.logger.log(
+        `Skipped digest flush — today is a holiday (${holiday.name})`,
+      );
       return;
     }
 

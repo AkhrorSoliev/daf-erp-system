@@ -298,6 +298,7 @@ model User {
   deletedGroups                    Group[]                    @relation("GroupDeletedBy")
   deletedEnrollments               Enrollment[]               @relation("EnrollmentDeletedBy")
   deletedHolidays                  Holiday[]                  @relation("HolidayDeletedBy")
+  createdGroupHolidayExtensions    GroupHolidayExtension[]    @relation("GroupHolidayExtensionCreatedBy")
   deletedStudentExitReasons        StudentExitReason[]        @relation("StudentExitReasonDeletedBy")
   deletedGroupTeacherChangeReasons GroupTeacherChangeReason[] @relation("GroupTeacherChangeReasonDeletedBy")
   deletedEnrollmentTransferReasons EnrollmentTransferReason[] @relation("EnrollmentTransferReasonDeletedBy")
@@ -698,6 +699,7 @@ model Group {
   lessonCancellations    LessonCancellation[]    @relation("LessonCancellationGroup")
   lessonTeacherOverrides LessonTeacherOverride[] @relation("LessonTeacherOverrideGroup")
   lessonReschedules      LessonReschedule[]      @relation("LessonRescheduleGroup")
+  holidayExtensions      GroupHolidayExtension[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -784,10 +786,11 @@ model Enrollment {
 }
 
 model Holiday {
-  id     String        @id @default(uuid())
-  name   String
-  date   DateTime
-  status HolidayStatus @default(ACTIVE)
+  id      String        @id @default(uuid())
+  name    String
+  date    DateTime
+  endDate DateTime
+  status  HolidayStatus @default(ACTIVE)
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -798,8 +801,28 @@ model Holiday {
   deletedBy       User?     @relation("HolidayDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  groupExtensions GroupHolidayExtension[]
+
   @@index([deletedAt])
-  @@index([status])
+  @@index([deletedAt, status, date, endDate])
+}
+
+model GroupHolidayExtension {
+  id           String   @id @default(uuid())
+  groupId      String
+  group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  holidayId    String
+  holiday      Holiday  @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  daysExtended Int
+  oldEndDate   DateTime
+  newEndDate   DateTime
+  createdAt    DateTime @default(now())
+  createdById  Int?
+  createdBy    User?    @relation("GroupHolidayExtensionCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([groupId, holidayId])
+  @@index([holidayId])
+  @@index([groupId])
 }
 
 // ---------------------------------------------------------------------------

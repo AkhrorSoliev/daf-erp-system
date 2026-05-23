@@ -12,4 +12,11 @@ export class UpdateHolidayDto {
     { message: "Sana to'g'ri formatda bo'lishi kerak (YYYY-MM-DD)" },
   )
   date?: string;
+
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: "Tugash sanasi to'g'ri formatda bo'lishi kerak (YYYY-MM-DD)" },
+  )
+  endDate?: string;
 }

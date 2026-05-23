@@ -55,6 +55,7 @@ describe('AttendanceService', () => {
   let prisma: any;
   let entityHistoryService: any;
   let eventEmitter: { emit: jest.Mock };
+  let holidaysService: any;
 
   beforeEach(async () => {
     prisma = {
@@ -106,6 +107,12 @@ describe('AttendanceService', () => {
       recordRestore: jest.fn(),
     };
 
+    holidaysService = {
+      findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+      buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+      getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AttendanceService,
@@ -120,6 +127,10 @@ describe('AttendanceService', () => {
           useValue: { processAttendanceBilling: jest.fn() },
         },
         { provide: EventEmitter2, useValue: (eventEmitter = { emit: jest.fn() }) },
+        {
+          provide: require('../holidays/holidays.service').HolidaysService,
+          useValue: holidaysService,
+        },
       ],
     }).compile();
 
@@ -180,7 +191,12 @@ describe('AttendanceService', () => {
     });
 
     it('should throw BadRequestException when date is a holiday', async () => {
-      prisma.holiday.findFirst.mockResolvedValue({ name: "Navro'z" });
+      holidaysService.findActiveHolidayCovering.mockResolvedValue({
+        id: 'h-1',
+        name: "Navro'z",
+        date: new Date('2026-04-01'),
+        endDate: new Date('2026-04-01'),
+      });
 
       // 2026-04-01 is Wednesday — a scheduled day but a holiday
       await expect(
@@ -387,9 +403,9 @@ describe('AttendanceService', () => {
     });
 
     it('should exclude holidays', async () => {
-      prisma.holiday.findMany.mockResolvedValue([
-        { date: new Date('2026-04-01') }, // Chorshanba - should be excluded
-      ]);
+      holidaysService.buildHolidayDateSet.mockResolvedValue(
+        new Set(['2026-04-01']),
+      );
 
       const result = await service.getLessonDates('group-uuid-1', 4, 2026);
       const dates = result.map((r) => r.date);

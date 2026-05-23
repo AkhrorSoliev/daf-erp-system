@@ -21,13 +21,20 @@ interface EditHolidayFormProps {
 interface FormValues {
   name: string;
   date: Date | null;
+  endDate: Date | null;
 }
 
-function mapHoliday(data: { id: string; name: string; date: string }): Holiday {
+function mapHoliday(data: {
+  id: string;
+  name: string;
+  date: string;
+  endDate: string;
+}): Holiday {
   return {
     id: data.id,
     name: data.name,
     date: data.date,
+    endDate: data.endDate,
   };
 }
 
@@ -44,8 +51,12 @@ export function EditHolidayForm({
     defaultValues: {
       name: holiday?.name ?? "",
       date: holiday?.date ? new Date(holiday.date) : null,
+      endDate: holiday?.endDate ? new Date(holiday.endDate) : null,
     },
   });
+
+  const startDate = form.watch("date");
+  const endDate = form.watch("endDate");
 
   const onSubmit = async (values: FormValues) => {
     if (!values.date) {
@@ -56,10 +67,26 @@ export function EditHolidayForm({
       return;
     }
 
-    const payload = {
+    if (values.endDate && values.endDate < values.date) {
+      form.setError("endDate", {
+        type: "invalid",
+        message: "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
+      });
+      return;
+    }
+
+    const startStr = format(values.date, "yyyy-MM-dd");
+    const endStr = values.endDate
+      ? format(values.endDate, "yyyy-MM-dd")
+      : null;
+
+    const payload: { name: string; date: string; endDate?: string } = {
       name: values.name.trim(),
-      date: format(values.date, "yyyy-MM-dd"),
+      date: startStr,
     };
+    if (endStr && endStr !== startStr) {
+      payload.endDate = endStr;
+    }
 
     setSubmitting(true);
     try {
@@ -116,27 +143,59 @@ export function EditHolidayForm({
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="date">Sana</Label>
-          <Controller
-            name="date"
-            control={form.control}
-            rules={{ required: "Sana tanlanishi shart" }}
-            render={({ field }) => (
-              <DatePicker
-                id="date"
-                value={field.value}
-                onChange={(d) => field.onChange(d ?? null)}
-                placeholder="Sanani tanlang"
-              />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="date">Boshlanish sanasi</Label>
+            <Controller
+              name="date"
+              control={form.control}
+              rules={{ required: "Sana tanlanishi shart" }}
+              render={({ field }) => (
+                <DatePicker
+                  id="date"
+                  value={field.value}
+                  onChange={(d) => field.onChange(d ?? null)}
+                  placeholder="Sanani tanlang"
+                  maxDate={endDate ?? undefined}
+                  defaultMonth={endDate ?? undefined}
+                />
+              )}
+            />
+            {form.formState.errors.date && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.date.message}
+              </p>
             )}
-          />
-          {form.formState.errors.date && (
-            <p className="text-sm text-destructive">
-              {form.formState.errors.date.message}
-            </p>
-          )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="endDate">Tugash sanasi (ixtiyoriy)</Label>
+            <Controller
+              name="endDate"
+              control={form.control}
+              render={({ field }) => (
+                <DatePicker
+                  id="endDate"
+                  value={field.value}
+                  onChange={(d) => field.onChange(d ?? null)}
+                  placeholder="Bir kunlik bayram"
+                  minDate={startDate ?? undefined}
+                  defaultMonth={startDate ?? undefined}
+                />
+              )}
+            />
+            {form.formState.errors.endDate && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.endDate.message}
+              </p>
+            )}
+          </div>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          Bayram bir necha kun davom etsa, tugash sanasini tanlang. Bir kunlik
+          bayram uchun tugash sanasini bo&apos;sh qoldiring.
+        </p>
       </section>
     </form>
   );

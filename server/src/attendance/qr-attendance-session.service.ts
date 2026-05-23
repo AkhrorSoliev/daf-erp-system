@@ -4,11 +4,12 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { EnrollmentStatus, HolidayStatus } from '@prisma/client';
+import { EnrollmentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { AttendanceService } from './attendance.service';
-import { DAY_NAME_TO_JS, toLocalDateStr } from './shared/date-utils';
+import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
+import { HolidaysService } from '../holidays/holidays.service';
 import {
   QrSession,
   QrToken,
@@ -23,6 +24,7 @@ export class QrAttendanceSessionService {
     private prisma: PrismaService,
     private redis: RedisService,
     private attendanceService: AttendanceService,
+    private holidaysService: HolidaysService,
   ) {}
 
   async startSession(
@@ -210,20 +212,15 @@ export class QrAttendanceSessionService {
     const allowedDays = new Set(
       exactDays.map((d) => DAY_NAME_TO_JS[d.toLowerCase()]),
     );
-    const holidays = await this.prisma.holiday.findMany({
-      where: {
-        status: HolidayStatus.ACTIVE,
-        deletedAt: null,
-        date: { gte: startDate, lte: parsedDate },
-      },
-      select: { date: true },
-    });
-    const holidaySet = new Set(holidays.map((h) => toLocalDateStr(h.date)));
+    const holidaySet = await this.holidaysService.buildHolidayDateSet(
+      startDate,
+      parsedDate,
+    );
 
     let count = 0;
     const current = new Date(startDate);
     while (current <= parsedDate) {
-      const dateStr = toLocalDateStr(current);
+      const dateStr = tashkentDateStr(current);
       if (allowedDays.has(current.getDay()) && !holidaySet.has(dateStr)) {
         count++;
       }

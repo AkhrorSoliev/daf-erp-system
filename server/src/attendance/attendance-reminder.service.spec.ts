@@ -58,6 +58,12 @@ describe('AttendanceReminderService', () => {
     pushService = { sendToUser: jest.fn().mockResolvedValue(undefined) };
     telegramService = { getBot: jest.fn().mockReturnValue(bot) };
 
+    const holidaysService = {
+      findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+      buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+      getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AttendanceReminderService,
@@ -66,6 +72,10 @@ describe('AttendanceReminderService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: PushService, useValue: pushService },
         { provide: TelegramService, useValue: telegramService },
+        {
+          provide: require('../holidays/holidays.service').HolidaysService,
+          useValue: holidaysService,
+        },
       ],
     }).compile();
 

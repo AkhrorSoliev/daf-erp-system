@@ -1,16 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import {
-  GroupStatus,
-  HolidayStatus,
-  NotificationType,
-  UserStatus,
-} from '@prisma/client';
+import { GroupStatus, NotificationType, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { HolidaysService } from '../holidays/holidays.service';
 
 const DAY_NAME_TO_JS: Record<string, number> = {
   sunday: 0,
@@ -80,6 +76,7 @@ export class AttendanceReminderService {
     private gateway: NotificationsGateway,
     private pushService: PushService,
     private telegramService: TelegramService,
+    private holidaysService: HolidaysService,
   ) {}
 
   @Cron('0 0,30 7-22 * * 1-6', { timeZone: 'Asia/Tashkent' })
@@ -158,14 +155,9 @@ export class AttendanceReminderService {
 
     if (groups.length === 0) return;
 
-    const isHoliday = !!(await this.prisma.holiday.findFirst({
-      where: {
-        status: HolidayStatus.ACTIVE,
-        deletedAt: null,
-        date: parsedDate,
-      },
-      select: { id: true },
-    }));
+    const isHoliday = !!(await this.holidaysService.findActiveHolidayCovering(
+      parsedDate,
+    ));
     if (isHoliday) return;
 
     for (const group of groups) {

@@ -176,6 +176,20 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 | User | ✅ | ✅ (profile) | — | — | — |
 | Holiday | ✅ | ✅ | ✅ | ✅ | — |
 
+### Holidays (Multi-day + Group endDate cascade)
+
+- `Holiday` schema carries `date` + `endDate` (both NOT NULL). Single-day holidays store `endDate = date`. Frontend sends `"YYYY-MM-DD"` strings; the service coerces missing `endDate` to `date`. Hard cap: 60 days per holiday.
+- **All callers must use `HolidaysService` helpers** instead of `prisma.holiday.*` directly:
+  - `findActiveHolidayCovering(date)` — range-overlap check (`date <= X AND endDate >= X`). Replaces exact-date `findFirst` lookups.
+  - `buildHolidayDateSet(start, end)` — Tashkent calendar dates covered by any active holiday in the range. Pads ±1 day for UTC/Tashkent midnight skew.
+  - `getActiveHolidaysInRange(start, end)` — raw row list with overlap.
+- **`GroupHolidayExtension` cascade**: when a holiday is created and overlaps an ACTIVE/FORMING group's `[startDate, endDate]`, `GroupHolidayCascadeService.extendGroupEndDateForHoliday(groupId, holidayId)` advances `Group.endDate` by the number of scheduled-day lessons (`exactDays`) the holiday "eats" inside the group's lifecycle. The new tail walks forward day-by-day, skipping `exactDays` matches that are themselves on other active holidays. Each extension is recorded in `GroupHolidayExtension { oldEndDate, newEndDate, daysExtended }` so deletion / `ACTIVE → CANCELLED` can reverse it. Unique `(groupId, holidayId)` guarantees idempotency.
+- **Overlap rule**: when multiple holidays overlap on the same scheduled day, only the holiday with the **earlier `date`** claims it — prevents double-counting.
+- **Reversal safety**: if `Group.endDate` was manually edited between extension and reversal, the cascade logs a warning and drops the extension row without clobbering the manual change.
+- **`HolidaysService.update` cannot change `date` / `endDate`** once any extension exists for that holiday — admins must delete and recreate. Name edits are always allowed. Comparison is done with `tashkentDateStr` so the frontend's `"YYYY-MM-DD"` form payload matches the DB Date.
+- **Dashboard short-circuit**: `getTodaySchedule` returns empty `lessons` (like Sunday) when the target date is covered by a holiday — the orange banner from `isHoliday` + `holidayName` is the only signal the UI shows.
+- **Telegram stats crons skip holidays**: `TelegramGroupDailyCronService` (21:00 daily report) and `TelegramGroupDigestCronService` (every 3h digest of buffered events) both call `findActiveHolidayCovering(new Date())` first and return early on bayram days. Event-driven Telegram messages (attendance, debt, lesson cancellation, payment, task) are NOT gated — they fire whenever the underlying user action happens. The attendance-reminder cron has had its own holiday short-circuit since the original implementation.
+
 ### Activity Report Snapshots (Point-in-Time History)
 
 Powers the `/reports/activity` page so historical periods (e.g. "Feb 2-20" before a capacity change) reflect the **state as of that date**, not the current state.

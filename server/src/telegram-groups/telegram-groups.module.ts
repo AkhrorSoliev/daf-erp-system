@@ -11,8 +11,10 @@ import { TelegramGroupAnnouncementService } from './telegram-group-announcement.
 import { TelegramGroupDigestBufferService } from './telegram-group-digest-buffer.service';
 import { TelegramGroupDigestService } from './telegram-group-digest.service';
 import { TelegramGroupDigestCronService } from './telegram-group-digest-cron.service';
+import { HolidaysModule } from '../holidays/holidays.module';
 
 @Module({
+  imports: [HolidaysModule],
   controllers: [TelegramGroupsController],
   providers: [
     TelegramGroupsService,

@@ -1,6 +1,7 @@
 import {
   IsDateString,
   IsNotEmpty,
+  IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
@@ -17,4 +18,11 @@ export class CreateHolidayDto {
     { message: "Sana to'g'ri formatda bo'lishi kerak (YYYY-MM-DD)" },
   )
   date: string;
+
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: "Tugash sanasi to'g'ri formatda bo'lishi kerak (YYYY-MM-DD)" },
+  )
+  endDate?: string;
 }

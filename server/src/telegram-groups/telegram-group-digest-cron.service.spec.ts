@@ -13,6 +13,7 @@ describe('TelegramGroupDigestCronService', () => {
   const getBot = jest.fn(() => bot as any);
   const drain = jest.fn();
   const build = jest.fn();
+  const findActiveHolidayCovering = jest.fn();
   const prisma = {
     telegramGroup: { findMany: jest.fn(), update: jest.fn() },
     company: { findMany: jest.fn() },
@@ -21,6 +22,7 @@ describe('TelegramGroupDigestCronService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     getBot.mockReturnValue(bot as any);
+    findActiveHolidayCovering.mockResolvedValue(null);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramGroupDigestCronService,
@@ -28,6 +30,11 @@ describe('TelegramGroupDigestCronService', () => {
         { provide: TelegramAdminBotService, useValue: { getBot } },
         { provide: TelegramGroupDigestBufferService, useValue: { drain } },
         { provide: TelegramGroupDigestService, useValue: { build } },
+        {
+          provide:
+            require('../holidays/holidays.service').HolidaysService,
+          useValue: { findActiveHolidayCovering },
+        },
       ],
     }).compile();
     service = module.get(TelegramGroupDigestCronService);
@@ -39,6 +46,19 @@ describe('TelegramGroupDigestCronService', () => {
     branchId,
     studentId: 1,
     name: 'A B',
+  });
+
+  it("skips the entire flush on a holiday — no DB query, no digest sent", async () => {
+    findActiveHolidayCovering.mockResolvedValue({
+      id: 'h-1',
+      name: "Navro'z",
+      date: new Date('2026-03-21'),
+      endDate: new Date('2026-03-23'),
+    });
+    await service.flushDigests();
+    expect(prisma.telegramGroup.findMany).not.toHaveBeenCalled();
+    expect(drain).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it('does nothing when the admin bot is not initialized', async () => {

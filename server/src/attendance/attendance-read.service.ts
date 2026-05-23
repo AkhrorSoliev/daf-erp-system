@@ -4,11 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  AttendanceStatus,
-  EnrollmentStatus,
-  HolidayStatus,
-} from '@prisma/client';
+import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
 import {
   DAY_NAME_TO_JS,
   JS_TO_DAY_NAME,
@@ -21,10 +17,14 @@ import {
   calculateDebtAmount,
   calculatePerLessonCost,
 } from '../billing/debtor-check.helper';
+import { HolidaysService } from '../holidays/holidays.service';
 
 @Injectable()
 export class AttendanceReadService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private holidaysService: HolidaysService,
+  ) {}
 
   /**
    * Layers `LessonReschedule` + `LessonCancellation` rows over a base list of
@@ -167,23 +167,12 @@ export class AttendanceReadService {
     if (rangeStartStr > rangeEndStr) return [];
 
     // Holiday query bounds: pad ±1 day so that holidays stored as either
-    // UTC midnight or Tashkent midnight (= prior-day 19:00 UTC) are both
-    // captured. We dedupe by Tashkent calendar date afterwards.
-    const holidayQueryStart = new Date(
-      utcMidnightFromDateStr(rangeStartStr).getTime() - 24 * 60 * 60 * 1000,
+    // HolidaysService internally pads ±1 day for UTC vs Tashkent midnight skew
+    // and walks each holiday's [date, endDate] range to build the date set.
+    const holidaySet = await this.holidaysService.buildHolidayDateSet(
+      utcMidnightFromDateStr(rangeStartStr),
+      utcMidnightFromDateStr(rangeEndStr),
     );
-    const holidayQueryEnd = new Date(
-      utcMidnightFromDateStr(rangeEndStr).getTime() + 24 * 60 * 60 * 1000,
-    );
-    const holidays = await this.prisma.holiday.findMany({
-      where: {
-        status: HolidayStatus.ACTIVE,
-        deletedAt: null,
-        date: { gte: holidayQueryStart, lte: holidayQueryEnd },
-      },
-      select: { date: true },
-    });
-    const holidaySet = new Set(holidays.map((h) => tashkentDateStr(h.date)));
 
     const baseLessonDateStrs: string[] = [];
     let cursorStr = rangeStartStr;
@@ -345,22 +334,12 @@ export class AttendanceReadService {
       .map((d) => DAY_NAME_TO_JS[d])
       .filter((d) => d !== undefined);
 
-    // Holidays — skip these from the base regular days.
-    const holidayQueryStart = new Date(
-      utcMidnightFromDateStr(monthStartStr).getTime() - 24 * 60 * 60 * 1000,
+    // Holidays — skip these from the base regular days. HolidaysService pads
+    // ±1 day internally for UTC vs Tashkent midnight skew.
+    const holidaySet = await this.holidaysService.buildHolidayDateSet(
+      utcMidnightFromDateStr(monthStartStr),
+      utcMidnightFromDateStr(monthEndStr),
     );
-    const holidayQueryEnd = new Date(
-      utcMidnightFromDateStr(monthEndStr).getTime() + 24 * 60 * 60 * 1000,
-    );
-    const holidays = await this.prisma.holiday.findMany({
-      where: {
-        status: HolidayStatus.ACTIVE,
-        deletedAt: null,
-        date: { gte: holidayQueryStart, lte: holidayQueryEnd },
-      },
-      select: { date: true },
-    });
-    const holidaySet = new Set(holidays.map((h) => tashkentDateStr(h.date)));
 
     // Pull all modifications that touch this month — any reschedule whose
     // originalDate OR newDate falls in the month, and any cancellation.
@@ -682,21 +661,10 @@ export class AttendanceReadService {
       .map((d) => DAY_NAME_TO_JS[d])
       .filter((d) => d !== undefined);
 
-    const holidayQueryStart = new Date(
-      utcMidnightFromDateStr(rangeStartStr).getTime() - 24 * 60 * 60 * 1000,
+    const holidaySet = await this.holidaysService.buildHolidayDateSet(
+      utcMidnightFromDateStr(rangeStartStr),
+      utcMidnightFromDateStr(rangeEndStr),
     );
-    const holidayQueryEnd = new Date(
-      utcMidnightFromDateStr(rangeEndStr).getTime() + 24 * 60 * 60 * 1000,
-    );
-    const holidays = await this.prisma.holiday.findMany({
-      where: {
-        status: HolidayStatus.ACTIVE,
-        deletedAt: null,
-        date: { gte: holidayQueryStart, lte: holidayQueryEnd },
-      },
-      select: { date: true },
-    });
-    const holidaySet = new Set(holidays.map((h) => tashkentDateStr(h.date)));
 
     const baseLessonDates: string[] = [];
     if (rangeStartStr <= rangeEndStr) {

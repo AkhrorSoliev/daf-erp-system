@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TelegramAdminBotService } from './telegram-admin-bot.service';
 import { TelegramGroupStatsService } from './telegram-group-stats.service';
 import { tashkentDayRange } from './utils/format.util';
+import { HolidaysService } from '../holidays/holidays.service';
 
 /**
  * Runs daily at 21:00 Tashkent (end of workday) and sends each approved
@@ -22,6 +23,7 @@ export class TelegramGroupDailyCronService {
     private readonly prisma: PrismaService,
     private readonly statsService: TelegramGroupStatsService,
     private readonly adminBot: TelegramAdminBotService,
+    private readonly holidaysService: HolidaysService,
   ) {}
 
   @Cron('0 21 * * *', { timeZone: 'Asia/Tashkent' })
@@ -30,6 +32,18 @@ export class TelegramGroupDailyCronService {
     if (!bot) {
       this.logger.warn(
         'Skipped daily report cron — admin bot not initialized',
+      );
+      return;
+    }
+
+    // Skip on holidays — no business activity, the report would be all
+    // zeros and would spam groups with empty stats on Navro'z / Mustaqillik.
+    const holiday = await this.holidaysService.findActiveHolidayCovering(
+      new Date(),
+    );
+    if (holiday) {
+      this.logger.log(
+        `Skipped daily report cron — today is a holiday (${holiday.name})`,
       );
       return;
     }

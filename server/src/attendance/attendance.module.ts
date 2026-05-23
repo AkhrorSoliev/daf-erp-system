@@ -14,9 +14,10 @@ import { StudentAttendanceNotificationListener } from './student-attendance-noti
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { BillingModule } from '../billing/billing.module';
+import { HolidaysModule } from '../holidays/holidays.module';
 
 @Module({
-  imports: [NotificationsModule, TelegramModule, BillingModule],
+  imports: [NotificationsModule, TelegramModule, BillingModule, HolidaysModule],
   controllers: [AttendanceController],
   providers: [
     AttendanceService,

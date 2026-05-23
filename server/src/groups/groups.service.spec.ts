@@ -37,6 +37,14 @@ describe('GroupsService — status methods', () => {
     prisma = {
       group: {
         findFirst: jest.fn().mockResolvedValue(mockGroup),
+        findUnique: jest.fn().mockResolvedValue({
+          ...mockGroup,
+          course: { id: 'c1', name: 'Test' },
+          room: null,
+          branch: { id: 1, name: 'Branch' },
+          teachers: [],
+          _count: { enrollments: 0 },
+        }),
         update: jest.fn().mockResolvedValue({
           ...mockGroup,
           course: { id: 'c1', name: 'Test' },
@@ -80,6 +88,14 @@ describe('GroupsService — status methods', () => {
       cascade: jest.fn().mockResolvedValue([]),
     };
 
+    const cascadeService = {
+      extendGroupEndDateForHoliday: jest
+        .fn()
+        .mockResolvedValue({ extended: false }),
+      revertGroupEndDateForHoliday: jest.fn(),
+      applyHolidayImpactOnNewGroup: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GroupsService,
@@ -100,6 +116,11 @@ describe('GroupsService — status methods', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide:
+            require('./group-holiday-cascade.service').GroupHolidayCascadeService,
+          useValue: cascadeService,
+        },
       ],
     }).compile();
 

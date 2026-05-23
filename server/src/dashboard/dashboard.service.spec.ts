@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 describe('DashboardService', () => {
   let service: DashboardService;
   let prisma: any;
+  let holidaysService: any;
 
   const mockRooms = [
     { id: 'room-1', name: 'Room 1', capacity: 20 },
@@ -60,10 +61,20 @@ describe('DashboardService', () => {
       },
     };
 
+    holidaysService = {
+      findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+      buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+      getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DashboardService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: require('../holidays/holidays.service').HolidaysService,
+          useValue: holidaysService,
+        },
       ],
     }).compile();
 
@@ -103,13 +114,23 @@ describe('DashboardService', () => {
       expect(result.date).toBe('2026-04-13');
     });
 
-    it('should return isHoliday=true when holiday exists', async () => {
-      prisma.holiday.findFirst.mockResolvedValue({ name: "Navro'z" });
+    it('should return isHoliday=true AND empty lessons on a holiday', async () => {
+      holidaysService.findActiveHolidayCovering.mockResolvedValue({
+        id: 'h-1',
+        name: "Navro'z",
+        date: new Date('2026-03-21T00:00:00.000Z'),
+        endDate: new Date('2026-03-23T00:00:00.000Z'),
+      });
 
       const result = await service.getTodaySchedule(1, 1001, '2026-03-21');
 
       expect(result.isHoliday).toBe(true);
       expect(result.holidayName).toBe("Navro'z");
+      // Regression: holiday day must render like Sunday — no lessons even
+      // though groups have the weekday in exactDays.
+      expect(result.lessons).toEqual([]);
+      // Group query must NOT be issued on a holiday — it's a wasted DB call.
+      expect(prisma.group.findMany).not.toHaveBeenCalled();
     });
 
     it('should return empty lessons when no groups match', async () => {
@@ -199,10 +220,28 @@ describe('DashboardService', () => {
           where: expect.objectContaining({ date: expectedUtcMidnight }),
         }),
       );
-      expect(prisma.holiday.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ date: expectedUtcMidnight }),
-        }),
+      expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
+        expectedUtcMidnight,
+      );
+    });
+
+    it("regression: multi-day holiday is detected on its middle days (bug #2)", async () => {
+      // Holiday Mar 21 — Mar 23. On Mar 22 the dashboard must still show
+      // isHoliday=true. The previous implementation used `findFirst({ date: X })`
+      // which only matched the holiday's start day.
+      holidaysService.findActiveHolidayCovering.mockResolvedValue({
+        id: 'h-1',
+        name: "Navro'z",
+        date: new Date('2026-03-21T00:00:00.000Z'),
+        endDate: new Date('2026-03-23T00:00:00.000Z'),
+      });
+
+      const result = await service.getTodaySchedule(1, 1001, '2026-03-22');
+
+      expect(result.isHoliday).toBe(true);
+      expect(result.holidayName).toBe("Navro'z");
+      expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
+        new Date('2026-03-22T00:00:00.000Z'),
       );
     });
   });

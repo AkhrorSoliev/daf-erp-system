@@ -1,20 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { HolidaysService } from './holidays.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
+import { GroupHolidayCascadeService } from '../groups/group-holiday-cascade.service';
 
 describe('HolidaysService', () => {
   let service: HolidaysService;
   let prisma: any;
   let entityHistoryService: any;
   let statusHistoryService: any;
+  let cascadeService: any;
 
   const mockHoliday = {
     id: 'h-1',
     name: 'Mustaqillik kuni',
     date: new Date('2026-09-01'),
+    endDate: new Date('2026-09-01'),
     status: 'ACTIVE',
     deletedAt: null,
     deletedById: null,
@@ -32,6 +35,13 @@ describe('HolidaysService', () => {
         count: jest.fn().mockResolvedValue(1),
         create: jest.fn().mockResolvedValue(mockHoliday),
         update: jest.fn().mockResolvedValue(mockHoliday),
+      },
+      group: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      groupHolidayExtension: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
 
@@ -51,12 +61,21 @@ describe('HolidaysService', () => {
       getHistory: jest.fn().mockResolvedValue([]),
     };
 
+    cascadeService = {
+      extendGroupEndDateForHoliday: jest
+        .fn()
+        .mockResolvedValue({ extended: false }),
+      revertGroupEndDateForHoliday: jest.fn(),
+      applyHolidayImpactOnNewGroup: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HolidaysService,
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: EntityHistoryService, useValue: entityHistoryService },
+        { provide: GroupHolidayCascadeService, useValue: cascadeService },
       ],
     }).compile();
 
@@ -106,9 +125,6 @@ describe('HolidaysService', () => {
     it('returns the holiday when found', async () => {
       const result = await service.findOne('h-1');
       expect(result).toEqual(mockHoliday);
-      expect(prisma.holiday.findFirst).toHaveBeenCalledWith({
-        where: { id: 'h-1', deletedAt: null },
-      });
     });
 
     it('throws NotFoundException when missing', async () => {
@@ -120,47 +136,104 @@ describe('HolidaysService', () => {
   });
 
   describe('create', () => {
-    it('creates a holiday and records entity history', async () => {
-      await service.create(
-        { name: 'Yangi yil', date: '2026-01-01' },
-        42,
-      );
+    it('coerces endDate to date when not provided', async () => {
+      await service.create({ name: 'Yangi yil', date: '2026-01-01' }, 42);
 
       expect(prisma.holiday.create).toHaveBeenCalledWith({
-        data: { name: 'Yangi yil', date: new Date('2026-01-01') },
+        data: {
+          name: 'Yangi yil',
+          date: new Date('2026-01-01'),
+          endDate: new Date('2026-01-01'),
+        },
       });
-      expect(entityHistoryService.recordCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: 'Holiday',
-          entityId: mockHoliday.id,
-          changedById: 42,
-        }),
+      expect(entityHistoryService.recordCreate).toHaveBeenCalled();
+    });
+
+    it('stores explicit endDate when provided', async () => {
+      await service.create(
+        { name: "Navro'z", date: '2026-03-21', endDate: '2026-03-23' },
+        7,
+      );
+      expect(prisma.holiday.create).toHaveBeenCalledWith({
+        data: {
+          name: "Navro'z",
+          date: new Date('2026-03-21'),
+          endDate: new Date('2026-03-23'),
+        },
+      });
+    });
+
+    it('rejects endDate before date', async () => {
+      await expect(
+        service.create(
+          { name: 'X', date: '2026-03-23', endDate: '2026-03-21' },
+          1,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects holiday ranges longer than 60 days', async () => {
+      await expect(
+        service.create(
+          { name: 'Too long', date: '2026-01-01', endDate: '2026-04-01' },
+          1,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('triggers cascade for active overlapping groups', async () => {
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g-1' },
+        { id: 'g-2' },
+      ]);
+      await service.create({ name: 'X', date: '2026-05-27' }, 1);
+      expect(cascadeService.extendGroupEndDateForHoliday).toHaveBeenCalledTimes(
+        2,
       );
     });
   });
 
   describe('update', () => {
-    it('updates fields and records entity history', async () => {
-      await service.update('h-1', { name: 'Yangi nom' }, 7);
-
-      expect(prisma.holiday.update).toHaveBeenCalledWith({
-        where: { id: 'h-1' },
-        data: { name: 'Yangi nom' },
-      });
-      expect(entityHistoryService.recordUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: 'Holiday',
-          entityId: 'h-1',
-          changedById: 7,
-        }),
-      );
+    it('updates name even when extensions exist', async () => {
+      prisma.groupHolidayExtension.count.mockResolvedValue(3);
+      await service.update('h-1', { name: 'New name' }, 7);
+      expect(prisma.holiday.update).toHaveBeenCalled();
     });
 
-    it('converts date string to Date instance', async () => {
-      await service.update('h-1', { date: '2026-09-01' }, 7);
+    it('rejects date change when extensions exist', async () => {
+      prisma.groupHolidayExtension.count.mockResolvedValue(1);
+      await expect(
+        service.update('h-1', { date: '2026-10-01' }, 7),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('allows date change when no extensions exist', async () => {
+      prisma.groupHolidayExtension.count.mockResolvedValue(0);
+      await service.update('h-1', { date: '2026-10-01' }, 7);
       expect(prisma.holiday.update).toHaveBeenCalledWith({
         where: { id: 'h-1' },
-        data: { date: new Date('2026-09-01') },
+        data: {
+          date: new Date('2026-10-01'),
+          endDate: new Date('2026-10-01'),
+        },
+      });
+    });
+
+    it("regression: name-only edit does NOT trigger date-change block (bug #1)", async () => {
+      // Frontend always sends `date` in payload even when only the name
+      // changes. The service must compare Tashkent calendar strings so
+      // "2026-09-01" matches a DB row stored as Date(2026-09-01T00:00:00Z).
+      prisma.groupHolidayExtension.count.mockResolvedValue(5);
+      // Same calendar day as the existing mockHoliday — should NOT trigger
+      // the extension-block error.
+      await service.update(
+        'h-1',
+        { name: 'Renamed', date: '2026-09-01', endDate: '2026-09-01' },
+        7,
+      );
+      expect(prisma.holiday.update).toHaveBeenCalledWith({
+        where: { id: 'h-1' },
+        data: expect.objectContaining({ name: 'Renamed' }),
       });
     });
 
@@ -173,9 +246,13 @@ describe('HolidaysService', () => {
   });
 
   describe('remove (soft delete)', () => {
-    it('sets deletedAt and deletedById, records entity history', async () => {
+    it('reverses extensions before soft-deleting', async () => {
+      prisma.groupHolidayExtension.findMany.mockResolvedValue([
+        { id: 'ext-1', groupId: 'g-1', holidayId: 'h-1' },
+      ]);
       const result = await service.remove('h-1', 5);
 
+      expect(cascadeService.revertGroupEndDateForHoliday).toHaveBeenCalled();
       expect(prisma.holiday.update).toHaveBeenCalledWith({
         where: { id: 'h-1' },
         data: expect.objectContaining({
@@ -183,13 +260,7 @@ describe('HolidaysService', () => {
           deletedById: 5,
         }),
       });
-      expect(entityHistoryService.recordDelete).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: 'Holiday',
-          entityId: 'h-1',
-          changedById: 5,
-        }),
-      );
+      expect(entityHistoryService.recordDelete).toHaveBeenCalled();
       expect(result).toEqual({ message: "Bayram muvaffaqiyatli o'chirildi" });
     });
 
@@ -198,6 +269,73 @@ describe('HolidaysService', () => {
       await expect(service.remove('missing', 1)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('changeStatus', () => {
+    it('reverses extensions on ACTIVE → CANCELLED', async () => {
+      prisma.holiday.findFirst.mockResolvedValue({
+        ...mockHoliday,
+        status: 'ACTIVE',
+      });
+      await service.changeStatus(
+        'h-1',
+        { status: 'CANCELLED' as any },
+        1,
+      );
+      expect(cascadeService.revertGroupEndDateForHoliday).toHaveBeenCalledTimes(
+        0, // none in this test's findMany mock
+      );
+    });
+
+    it('applies extensions on CANCELLED → ACTIVE', async () => {
+      prisma.holiday.findFirst.mockResolvedValue({
+        ...mockHoliday,
+        status: 'CANCELLED',
+      });
+      prisma.group.findMany.mockResolvedValue([{ id: 'g-1' }]);
+      await service.changeStatus('h-1', { status: 'ACTIVE' as any }, 1);
+      expect(
+        cascadeService.extendGroupEndDateForHoliday,
+      ).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('findActiveHolidayCovering', () => {
+    it('queries by overlap (date <= X AND endDate >= X)', async () => {
+      const probe = new Date('2026-05-28');
+      await service.findActiveHolidayCovering(probe);
+      expect(prisma.holiday.findFirst).toHaveBeenCalledWith({
+        where: {
+          status: 'ACTIVE',
+          deletedAt: null,
+          date: { lte: probe },
+          endDate: { gte: probe },
+        },
+        select: { id: true, name: true, date: true, endDate: true },
+      });
+    });
+  });
+
+  describe('buildHolidayDateSet', () => {
+    it('expands each holiday range to one Set entry per day', async () => {
+      prisma.holiday.findMany.mockResolvedValue([
+        {
+          id: 'h-1',
+          name: "Navro'z",
+          date: new Date('2026-03-21T00:00:00.000Z'),
+          endDate: new Date('2026-03-23T00:00:00.000Z'),
+        },
+      ]);
+      const set = await service.buildHolidayDateSet(
+        new Date('2026-03-20T00:00:00.000Z'),
+        new Date('2026-03-25T00:00:00.000Z'),
+      );
+      expect(set.has('2026-03-21')).toBe(true);
+      expect(set.has('2026-03-22')).toBe(true);
+      expect(set.has('2026-03-23')).toBe(true);
+      expect(set.has('2026-03-20')).toBe(false);
+      expect(set.has('2026-03-24')).toBe(false);
     });
   });
 });

@@ -44,10 +44,20 @@ interface ApiHoliday {
   id: string;
   name: string;
   date: string;
+  endDate: string;
 }
 
 function mapHoliday(h: ApiHoliday): Holiday {
-  return { id: h.id, name: h.name, date: h.date };
+  return { id: h.id, name: h.name, date: h.date, endDate: h.endDate };
+}
+
+function formatHolidayRange(holiday: Holiday): string {
+  const startStr = format(new Date(holiday.date), "dd.MM.yyyy");
+  if (!holiday.endDate || holiday.endDate === holiday.date) {
+    return startStr;
+  }
+  const endStr = format(new Date(holiday.endDate), "dd.MM.yyyy");
+  return `${startStr} — ${endStr}`;
 }
 
 export function HolidaysSettingsClient() {
@@ -194,9 +204,7 @@ export function HolidaysSettingsClient() {
                     {(filters.page - 1) * filters.pageSize + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">{holiday.name}</TableCell>
-                  <TableCell>
-                    {format(new Date(holiday.date), "dd.MM.yyyy")}
-                  </TableCell>
+                  <TableCell>{formatHolidayRange(holiday)}</TableCell>
                   <TableCell>
                     <HolidayRowActions
                       holiday={holiday}

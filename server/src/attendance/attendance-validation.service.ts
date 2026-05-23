@@ -4,12 +4,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { GroupStatus, HolidayStatus } from '@prisma/client';
+import { GroupStatus } from '@prisma/client';
 import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
+import { HolidaysService } from '../holidays/holidays.service';
 
 @Injectable()
 export class AttendanceValidationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private holidaysService: HolidaysService,
+  ) {}
 
   /** Roles that bypass lesson time restriction */
   private static readonly TIME_BYPASS_ROLES = new Set([
@@ -116,14 +120,8 @@ export class AttendanceValidationService {
       }
     }
 
-    const holiday = await this.prisma.holiday.findFirst({
-      where: {
-        status: HolidayStatus.ACTIVE,
-        deletedAt: null,
-        date: parsedDate,
-      },
-      select: { name: true },
-    });
+    const holiday =
+      await this.holidaysService.findActiveHolidayCovering(parsedDate);
     if (holiday) {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
     }
