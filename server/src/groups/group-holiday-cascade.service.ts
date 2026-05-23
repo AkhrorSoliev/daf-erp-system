@@ -108,12 +108,21 @@ export class GroupHolidayCascadeService {
       };
     }
 
-    const eatenWindowStart =
-      group.startDate > holiday.date ? group.startDate : holiday.date;
-    const eatenWindowEnd =
-      group.endDate < holiday.endDate ? group.endDate : holiday.endDate;
+    // Compute the eaten window in Tashkent calendar strings up front so
+    // boundaries don't depend on how each Date instant happens to be
+    // stored (UTC midnight vs Tashkent midnight). The Date instants below
+    // are derived purely for downstream Prisma queries.
+    const groupStartStr = tashkentDateStr(group.startDate);
+    const groupEndStr = tashkentDateStr(group.endDate);
+    const holidayStartStr = tashkentDateStr(holiday.date);
+    const holidayEndStr = tashkentDateStr(holiday.endDate);
 
-    if (eatenWindowEnd < eatenWindowStart) {
+    const eatenStartStr =
+      groupStartStr > holidayStartStr ? groupStartStr : holidayStartStr;
+    const eatenEndStr =
+      groupEndStr < holidayEndStr ? groupEndStr : holidayEndStr;
+
+    if (eatenEndStr < eatenStartStr) {
       return {
         extended: false,
         oldEndDate: group.endDate,
@@ -122,23 +131,35 @@ export class GroupHolidayCascadeService {
       };
     }
 
-    // Other active holidays may cover some of these candidate dates — skip
-    // them so two overlapping holidays don't both claim the same lesson.
-    const otherHolidaysSet = await this.holidaysService.buildHolidayDateSet(
-      eatenWindowStart,
-      eatenWindowEnd,
-    );
+    // Collect Tashkent calendar dates owned by OTHER active holidays that
+    // started strictly EARLIER than this one — they get first claim on any
+    // overlapping day so a single lesson isn't extended twice. Holidays
+    // starting on the same day or later don't block this one.
+    const overlappingHolidays =
+      await this.holidaysService.getActiveHolidaysInRange(
+        utcMidnightFromDateStr(eatenStartStr),
+        utcMidnightFromDateStr(eatenEndStr),
+      );
+    const earlierClaimedDates = new Set<string>();
+    for (const other of overlappingHolidays) {
+      if (other.id === holiday.id) continue;
+      if (other.date >= holiday.date) continue;
+      let oc = tashkentDateStr(other.date);
+      const oe = tashkentDateStr(other.endDate);
+      while (oc <= oe) {
+        if (oc >= eatenStartStr && oc <= eatenEndStr) {
+          earlierClaimedDates.add(oc);
+        }
+        oc = addDaysToDateStr(oc, 1);
+      }
+    }
 
     const eatenDates: string[] = [];
-    let cursor = tashkentDateStr(eatenWindowStart);
-    const endStr = tashkentDateStr(eatenWindowEnd);
-    while (cursor <= endStr) {
+    let cursor = eatenStartStr;
+    while (cursor <= eatenEndStr) {
       if (
         scheduledDayNums.has(dayOfWeekForDateStr(cursor)) &&
-        // The current holiday IS in the set, but so are other overlapping
-        // ones. We accept dates the current holiday covers; reject only when
-        // another holiday's range starts earlier (so it already claimed it).
-        this.isFirstClaimingHoliday(cursor, holiday, otherHolidaysSet)
+        !earlierClaimedDates.has(cursor)
       ) {
         eatenDates.push(cursor);
       }
@@ -332,30 +353,4 @@ export class GroupHolidayCascadeService {
     }
   }
 
-  /**
-   * Returns true when `cursor` is NOT already covered by another active
-   * holiday whose range starts strictly before the current holiday's.
-   * (Other holidays in the set that start later don't yet own the day.)
-   */
-  private isFirstClaimingHoliday(
-    cursor: string,
-    currentHoliday: { id: string; date: Date; endDate: Date },
-    _otherHolidaysSet: Set<string>,
-  ): boolean {
-    // For v1: trust the set built from active holidays in the eaten window.
-    // If `_otherHolidaysSet` includes this date, it means SOMEONE covers it.
-    // We claim the date iff the current holiday's start <= cursor (already
-    // true by construction since we iterate within the holiday's range).
-    // To avoid double-counting across overlaps, we do a second lookup: was
-    // this cursor day owned by an EARLIER holiday? If yes, skip.
-    //
-    // Implementation: query for earlier active holidays covering `cursor`.
-    // For simplicity and to avoid extra DB calls in a tight loop, we treat
-    // the v1 invariant as "if two holidays overlap, the earlier one (lower
-    // date) wins". Practical impact is minimal because admins rarely create
-    // overlapping ranges.
-    void currentHoliday;
-    void _otherHolidaysSet;
-    return true;
-  }
 }

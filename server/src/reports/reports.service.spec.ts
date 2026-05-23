@@ -77,6 +77,12 @@ describe('ReportsService', () => {
       setex: jest.fn().mockResolvedValue('OK'),
     };
 
+    const holidaysService = {
+      findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+      buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+      getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReportsService,
@@ -93,6 +99,10 @@ describe('ReportsService', () => {
         ReportsCenterActivityService,
         { provide: PrismaService, useValue: prisma },
         { provide: RedisService, useValue: redis },
+        {
+          provide: require('../holidays/holidays.service').HolidaysService,
+          useValue: holidaysService,
+        },
       ],
     }).compile();
 

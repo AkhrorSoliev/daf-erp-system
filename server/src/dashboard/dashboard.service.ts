@@ -4,6 +4,7 @@ import {
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';
+import { HolidaysService } from '../holidays/holidays.service';
 
 const DAY_NAMES = [
   'sunday',
@@ -17,7 +18,10 @@ const DAY_NAMES = [
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private holidaysService: HolidaysService,
+  ) {}
 
   async getTodaySchedule(branchId: number, companyId: number, date?: string) {
     // Calendar date in Asia/Tashkent — stable across UTC vs Tashkent servers.
@@ -27,16 +31,43 @@ export class DashboardService {
     const dateOnly = utcMidnightFromDateStr(targetStr);
     const dayName = DAY_NAMES[dateOnly.getUTCDay()];
 
-    const [holiday, branch, rooms, groups] = await Promise.all([
-      this.prisma.holiday.findFirst({
-        where: {
-          date: dateOnly,
-          status: 'ACTIVE',
-          deletedAt: null,
+    // If the target date is a holiday (including any day of a multi-day
+    // range), there are no lessons. Short-circuit so the schedule renders
+    // empty exactly like Sunday — the holiday banner from `isHoliday` /
+    // `holidayName` is the only thing the UI shows for that day.
+    const holiday =
+      await this.holidaysService.findActiveHolidayCovering(dateOnly);
+    if (holiday) {
+      const [branch, rooms] = await Promise.all([
+        this.prisma.branch.findFirst({
+          where: { id: branchId, companyId },
+          select: { startOfWorkingDay: true, endOfWorkingDay: true },
+        }),
+        this.prisma.room.findMany({
+          where: {
+            branchId,
+            companyId,
+            deletedAt: null,
+            status: 'ACTIVE',
+          },
+          select: { id: true, name: true, capacity: true },
+          orderBy: { name: 'asc' },
+        }),
+      ]);
+      return {
+        lessons: [],
+        rooms,
+        workingHours: {
+          start: branch?.startOfWorkingDay ?? '08:00',
+          end: branch?.endOfWorkingDay ?? '20:00',
         },
-        select: { name: true },
-      }),
+        isHoliday: true,
+        holidayName: holiday.name,
+        date: targetStr,
+      };
+    }
 
+    const [branch, rooms, groups] = await Promise.all([
       this.prisma.branch.findFirst({
         where: { id: branchId, companyId },
         select: { startOfWorkingDay: true, endOfWorkingDay: true },
@@ -200,8 +231,8 @@ export class DashboardService {
         start: branch?.startOfWorkingDay ?? '08:00',
         end: branch?.endOfWorkingDay ?? '20:00',
       },
-      isHoliday: !!holiday,
-      holidayName: holiday?.name ?? null,
+      isHoliday: false,
+      holidayName: null,
       date: targetStr,
     };
   }

@@ -5,6 +5,7 @@ import {
   CenterActivityBucket,
   CenterActivityQueryDto,
 } from './dto/center-activity-query.dto';
+import { HolidaysService } from '../holidays/holidays.service';
 
 const DEFAULT_WORK_START = '09:00';
 const DEFAULT_WORK_END = '21:00';
@@ -113,6 +114,7 @@ export class ReportsCenterActivityService {
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
+    private holidaysService: HolidaysService,
   ) {}
 
   async getCenterActivity(companyId: number, query: CenterActivityQueryDto) {
@@ -126,7 +128,7 @@ export class ReportsCenterActivityService {
 
     const branchFilter = query.branchId ? { branchId: query.branchId } : {};
 
-    const [rooms, groups, holidays] = await Promise.all([
+    const [rooms, groups, holidayDates] = await Promise.all([
       this.prisma.room.findMany({
         where: {
           companyId,
@@ -183,19 +185,10 @@ export class ReportsCenterActivityService {
         },
       }),
 
-      this.prisma.holiday.findMany({
-        where: {
-          deletedAt: null,
-          status: 'ACTIVE',
-          date: { gte: range.start, lte: range.end },
-        },
-        select: { date: true },
-      }),
+      // Multi-day-aware: expands each active holiday's [date, endDate]
+      // range into a Set of Tashkent calendar days that intersect [start, end].
+      this.holidaysService.buildHolidayDateSet(range.start, range.end),
     ]);
-
-    const holidayDates = new Set(
-      holidays.map((h) => this.toIsoDate(h.date)),
-    );
 
     const workingDaysInPeriod = this.countWorkingDays(range, holidayDates);
     const periodScale = workingDaysInPeriod / 7;

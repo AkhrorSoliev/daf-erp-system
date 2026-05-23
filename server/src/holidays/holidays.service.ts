@@ -168,10 +168,15 @@ export class HolidaysService {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
     }
 
+    // Compare Tashkent calendar strings — the frontend sends "YYYY-MM-DD",
+    // but the DB row could be UTC midnight or Tashkent midnight depending on
+    // how it was stored. Squash both sides to the calendar day so a name-only
+    // edit doesn't accidentally count as a date change.
+    const currentDateStr = tashkentDateStr(holiday.date);
+    const currentEndDateStr = tashkentDateStr(holiday.endDate);
     const wantsDateChange =
-      (dto.date !== undefined && dto.date !== holiday.date.toISOString()) ||
-      (dto.endDate !== undefined &&
-        dto.endDate !== holiday.endDate.toISOString());
+      (dto.date !== undefined && dto.date !== currentDateStr) ||
+      (dto.endDate !== undefined && dto.endDate !== currentEndDateStr);
 
     if (wantsDateChange) {
       const extensionCount = await this.prisma.groupHolidayExtension.count({

@@ -7,6 +7,7 @@ describe('ReportsCenterActivityService', () => {
   let service: ReportsCenterActivityService;
   let prisma: any;
   let redis: any;
+  let holidaysService: any;
 
   const branch = {
     name: 'Markaziy',
@@ -29,11 +30,21 @@ describe('ReportsCenterActivityService', () => {
       setex: jest.fn().mockResolvedValue('OK'),
     };
 
+    holidaysService = {
+      findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+      buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+      getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReportsCenterActivityService,
         { provide: PrismaService, useValue: prisma },
         { provide: RedisService, useValue: redis },
+        {
+          provide: require('../holidays/holidays.service').HolidaysService,
+          useValue: holidaysService,
+        },
       ],
     }).compile();
 
@@ -48,6 +59,22 @@ describe('ReportsCenterActivityService', () => {
       ...overrides,
     };
   }
+
+  it("regression: queries the multi-day-aware holiday helper (bug #3)", async () => {
+    // The previous implementation filtered `date: { gte, lte }` on Holiday
+    // (single-day match), and built the Set from `h.date` only — so multi-day
+    // holidays were truncated to their start. The fix delegates to
+    // HolidaysService.buildHolidayDateSet which expands [date, endDate] into
+    // the full set of covered Tashkent calendar days.
+    prisma.room.findMany.mockResolvedValue([]);
+    prisma.group.findMany.mockResolvedValue([]);
+    await service.getCenterActivity(1, {
+      startDate: '2026-04-01',
+      endDate: '2026-04-30',
+      bucket: 'daily' as const,
+    });
+    expect(holidaysService.buildHolidayDateSet).toHaveBeenCalled();
+  });
 
   it('returns cached payload when present', async () => {
     redis.get.mockResolvedValueOnce(JSON.stringify({ cached: true }));

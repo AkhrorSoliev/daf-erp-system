@@ -219,6 +219,24 @@ describe('HolidaysService', () => {
       });
     });
 
+    it("regression: name-only edit does NOT trigger date-change block (bug #1)", async () => {
+      // Frontend always sends `date` in payload even when only the name
+      // changes. The service must compare Tashkent calendar strings so
+      // "2026-09-01" matches a DB row stored as Date(2026-09-01T00:00:00Z).
+      prisma.groupHolidayExtension.count.mockResolvedValue(5);
+      // Same calendar day as the existing mockHoliday — should NOT trigger
+      // the extension-block error.
+      await service.update(
+        'h-1',
+        { name: 'Renamed', date: '2026-09-01', endDate: '2026-09-01' },
+        7,
+      );
+      expect(prisma.holiday.update).toHaveBeenCalledWith({
+        where: { id: 'h-1' },
+        data: expect.objectContaining({ name: 'Renamed' }),
+      });
+    });
+
     it('throws NotFoundException when holiday is missing', async () => {
       prisma.holiday.findFirst.mockResolvedValue(null);
       await expect(

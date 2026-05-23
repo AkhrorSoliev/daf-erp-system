@@ -179,6 +179,40 @@ describe('GroupHolidayCascadeService', () => {
       );
       expect(result.extended).toBe(false);
     });
+
+    it("regression: overlapping holidays don't double-count (bug #4)", async () => {
+      // Two overlapping holidays — earlier one (A) claims any shared days.
+      // When processing B, the shared days must NOT be counted again.
+      // A: May 25 (Mon) — May 27 (Wed)  → claims May 25 + May 27 (M, W)
+      // B: May 27 (Wed) — May 29 (Fri)  → must only claim May 29 (May 27 is A's)
+      const holidayB = {
+        id: 'h-B',
+        date: new Date('2026-05-27T00:00:00.000Z'),
+        endDate: new Date('2026-05-29T00:00:00.000Z'),
+      };
+      const holidayA = {
+        id: 'h-A',
+        name: 'A',
+        date: new Date('2026-05-25T00:00:00.000Z'),
+        endDate: new Date('2026-05-27T00:00:00.000Z'),
+      };
+      prisma.holiday.findUnique.mockResolvedValue(holidayB);
+      holidaysService.getActiveHolidaysInRange.mockResolvedValue([
+        holidayA,
+        holidayB,
+      ]);
+
+      const result = await service.extendGroupEndDateForHoliday(
+        'g-1',
+        'h-B',
+        99,
+      );
+
+      // B sees overlap on May 27, but May 27 is claimed by earlier A.
+      // So B's eaten lessons = just May 29 (Fri). daysExtended must be 1, not 2.
+      expect(result.extended).toBe(true);
+      expect(result.daysExtended).toBe(1);
+    });
   });
 
   describe('revertGroupEndDateForHoliday', () => {
