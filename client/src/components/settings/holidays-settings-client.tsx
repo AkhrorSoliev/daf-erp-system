@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, CalendarOff } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CalendarOff, Plus } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,49 +25,124 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsPageHeader } from "./settings-page-header";
 import { HolidayRowActions } from "./holiday-row-actions";
 import { EditHolidayDrawer } from "./edit-holiday-drawer";
-import type { Holiday } from "@/hooks/use-edit-holiday";
+import { useEditHoliday, type Holiday } from "@/hooks/use-edit-holiday";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import api from "@/lib/api";
 
-const mockHolidays: Holiday[] = [
-  { id: "1", name: "Yangi yil", startDate: "01.01.2026", endDate: "03.01.2026" },
-  { id: "2", name: "Xalqaro xotin-qizlar kuni", startDate: "08.03.2026", endDate: "08.03.2026" },
-  { id: "3", name: "Navro'z bayrami", startDate: "21.03.2026", endDate: "23.03.2026" },
-  { id: "4", name: "Xotira va qadrlash kuni", startDate: "09.05.2026", endDate: "09.05.2026" },
-  { id: "5", name: "Mustaqillik kuni", startDate: "01.09.2026", endDate: "01.09.2026" },
-];
+const holidaysSchema = {
+  search: { type: "string" as const, defaultValue: "" },
+  page: { type: "number" as const, defaultValue: 1 },
+  pageSize: { type: "number" as const, defaultValue: 10 },
+};
+
+interface ApiHoliday {
+  id: string;
+  name: string;
+  date: string;
+}
+
+function mapHoliday(h: ApiHoliday): Holiday {
+  return { id: h.id, name: h.name, date: h.date };
+}
 
 export function HolidaysSettingsClient() {
-  const [search, setSearch] = useState("");
+  const {
+    filters,
+    setFilter,
+    setFilters: setUrlFilters,
+  } = useUrlFilters(holidaysSchema);
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const openAddDrawer = useEditHoliday((s) => s.openAddDrawer);
 
-  const filtered = mockHolidays.filter((h) =>
-    h.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setUrlFilters({ search: value, page: 1 });
+  }, 300);
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
+
+  const fetchHolidays = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get<{
+        data: ApiHoliday[];
+        total: number;
+      }>("/holidays", {
+        params: {
+          page: filters.page,
+          pageSize: filters.pageSize,
+          ...(filters.search ? { search: filters.search } : {}),
+        },
+      });
+      setHolidays(data.data.map(mapHoliday));
+      setTotal(data.total);
+    } catch {
+      setHolidays([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters.page, filters.pageSize, filters.search]);
+
+  useEffect(() => {
+    fetchHolidays();
+  }, [fetchHolidays]);
+
+  const handleSaved = (saved: Holiday) => {
+    setHolidays((prev) => {
+      const idx = prev.findIndex((h) => h.id === saved.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = saved;
+        return next;
+      }
+      return prev;
+    });
+    fetchHolidays();
+  };
+
+  const handleDeleted = (id: string) => {
+    setHolidays((prev) => prev.filter((h) => h.id !== id));
+    setTotal((prev) => Math.max(0, prev - 1));
+  };
+
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
   return (
     <div className="space-y-4">
       <SettingsPageHeader
         title="Dam olish kunlari"
         description="Rasmiy bayramlar va dam olish kunlarini boshqarish"
+        action={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="sm" onClick={() => openAddDrawer()}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Yangi bayram
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Yangi dam olish kuni qo&apos;shish</TooltipContent>
+          </Tooltip>
+        }
       />
 
       <div className="flex items-center gap-3">
         <Input
           placeholder="Bayram nomi bo'yicha qidirish..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full sm:max-w-sm"
         />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-1.5 h-4 w-4" />
-              Yangi bayram
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Yangi dam olish kuni qo&apos;shish</TooltipContent>
-        </Tooltip>
       </div>
 
       <div className="rounded-md border">
@@ -68,30 +151,57 @@ export function HolidaysSettingsClient() {
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Bayram nomi</TableHead>
-              <TableHead>Boshlanish sanasi</TableHead>
-              <TableHead>Tugash sanasi</TableHead>
+              <TableHead>Sana</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell className="border-r">
+                    <Skeleton className="h-4 w-6" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-6" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : holidays.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={4}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   <div className="flex flex-col items-center gap-2">
                     <CalendarOff className="h-8 w-8 text-muted-foreground/50" />
-                    Dam olish kunlari topilmadi
+                    {filters.search
+                      ? "Qidiruv bo'yicha bayram topilmadi"
+                      : "Hali bayram qo'shilmagan — \"Yangi bayram\" tugmasini bosing"}
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((holiday, index) => (
+              holidays.map((holiday, index) => (
                 <TableRow key={holiday.id}>
-                  <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="border-r text-muted-foreground">
+                    {(filters.page - 1) * filters.pageSize + index + 1}
+                  </TableCell>
                   <TableCell className="font-medium">{holiday.name}</TableCell>
-                  <TableCell>{holiday.startDate}</TableCell>
-                  <TableCell>{holiday.endDate}</TableCell>
                   <TableCell>
-                    <HolidayRowActions holiday={holiday} />
+                    {format(new Date(holiday.date), "dd.MM.yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    <HolidayRowActions
+                      holiday={holiday}
+                      onDeleted={handleDeleted}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -100,7 +210,55 @@ export function HolidaysSettingsClient() {
         </Table>
       </div>
 
-      <EditHolidayDrawer />
+      {total > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Jami: {total} ta bayram
+          </p>
+          <div className="flex items-center gap-3">
+            <Select
+              value={String(filters.pageSize)}
+              onValueChange={(v) => {
+                setUrlFilters({ pageSize: Number(v), page: 1 });
+              }}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 30, 40, 50].map((s) => (
+                  <SelectItem key={s} value={String(s)}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={filters.page <= 1 || loading}
+                onClick={() => setFilter("page", filters.page - 1)}
+              >
+                Oldingi
+              </Button>
+              <span className="px-2 text-sm text-muted-foreground">
+                {filters.page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={filters.page >= totalPages || loading}
+                onClick={() => setFilter("page", filters.page + 1)}
+              >
+                Keyingi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <EditHolidayDrawer onSaved={handleSaved} />
     </div>
   );
 }

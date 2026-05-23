@@ -174,7 +174,7 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 | Room | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Course | ✅ | ✅ | ✅ | ✅ | ✅ |
 | User | ✅ | ✅ (profile) | — | — | — |
-| Holiday | — | — | ✅ | — | — |
+| Holiday | ✅ | ✅ | ✅ | ✅ | — |
 
 ### Activity Report Snapshots (Point-in-Time History)
 
