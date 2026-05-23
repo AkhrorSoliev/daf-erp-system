@@ -110,6 +110,12 @@ describe('QrAttendanceService', () => {
       }),
     };
 
+    const holidaysService = {
+      findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+      buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+      getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QrAttendanceService,
@@ -125,6 +131,10 @@ describe('QrAttendanceService', () => {
           useValue: { processAttendanceBilling: jest.fn() },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: require('../holidays/holidays.service').HolidaysService,
+          useValue: holidaysService,
+        },
       ],
     }).compile();
 

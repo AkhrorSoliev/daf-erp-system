@@ -4,6 +4,7 @@ export interface Holiday {
   id: string;
   name: string;
   date: string;
+  endDate: string;
 }
 
 type DrawerMode = "add" | "edit";

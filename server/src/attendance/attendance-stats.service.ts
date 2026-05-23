@@ -1,15 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
 import {
-  AttendanceStatus,
-  EnrollmentStatus,
-  HolidayStatus,
-} from '@prisma/client';
-import { DAY_NAME_TO_JS, toLocalDateStr } from './shared/date-utils';
+  DAY_NAME_TO_JS,
+  tashkentDateStr,
+  toLocalDateStr,
+} from './shared/date-utils';
+import { HolidaysService } from '../holidays/holidays.service';
 
 @Injectable()
 export class AttendanceStatsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private holidaysService: HolidaysService,
+  ) {}
 
   /**
    * Get attendance statistics for a group within a date range.
@@ -41,22 +45,17 @@ export class AttendanceStatsService {
       .map((d) => DAY_NAME_TO_JS[d])
       .filter((d) => d !== undefined);
 
-    const holidays = await this.prisma.holiday.findMany({
-      where: {
-        status: HolidayStatus.ACTIVE,
-        deletedAt: null,
-        date: { gte: rangeStart, lte: rangeEnd },
-      },
-      select: { date: true },
-    });
-    const holidaySet = new Set(holidays.map((h) => toLocalDateStr(h.date)));
+    const holidaySet = await this.holidaysService.buildHolidayDateSet(
+      rangeStart,
+      rangeEnd,
+    );
 
     let totalLessons = 0;
     const cursor = new Date(rangeStart);
     while (cursor <= rangeEnd) {
       if (
         scheduleDays.includes(cursor.getDay()) &&
-        !holidaySet.has(toLocalDateStr(cursor))
+        !holidaySet.has(tashkentDateStr(cursor))
       ) {
         totalLessons++;
       }

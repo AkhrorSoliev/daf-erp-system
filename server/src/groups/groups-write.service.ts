@@ -11,6 +11,7 @@ import {
   formatGroup,
   INT_TO_GROUP_STATUS,
 } from './shared/group-include';
+import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
 
 @Injectable()
 export class GroupsWriteService {
@@ -18,6 +19,7 @@ export class GroupsWriteService {
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
+    private groupHolidayCascadeService: GroupHolidayCascadeService,
   ) {}
 
   async create(dto: CreateGroupDto, companyId: number, userId?: number) {
@@ -150,7 +152,28 @@ export class GroupsWriteService {
           companyId,
         });
 
-        return formatGroup(group);
+        // Apply any currently-active holiday ranges to the new group's
+        // endDate so a group born into a holiday-laden window doesn't
+        // silently lose lessons. Best-effort: failures log and don't
+        // block group creation.
+        if (group.startDate && group.endDate && userId) {
+          try {
+            await this.groupHolidayCascadeService.applyHolidayImpactOnNewGroup(
+              group.id,
+              userId,
+            );
+          } catch (err) {
+            // Swallow — group is created; admin can re-trigger or fix
+            // endDate manually if needed.
+            void err;
+          }
+        }
+
+        const refreshed = await this.prisma.group.findUnique({
+          where: { id: group.id },
+          include: groupInclude,
+        });
+        return formatGroup(refreshed ?? group);
       } catch (error: any) {
         // Unique constraint violation — retry with next number
         if (error.code === 'P2002') continue;

@@ -59,9 +59,13 @@ export function HolidayRowActions({
     }
   };
 
-  const formattedDate = holiday.date
-    ? format(new Date(holiday.date), "dd.MM.yyyy")
-    : "";
+  const formattedDate = (() => {
+    if (!holiday.date) return "";
+    const startStr = format(new Date(holiday.date), "dd.MM.yyyy");
+    if (!holiday.endDate || holiday.endDate === holiday.date) return startStr;
+    const endStr = format(new Date(holiday.endDate), "dd.MM.yyyy");
+    return `${startStr} — ${endStr}`;
+  })();
 
   return (
     <>
@@ -113,8 +117,9 @@ export function HolidayRowActions({
             <AlertDialogDescription>
               <span className="font-medium">{holiday.name}</span>
               {formattedDate ? ` (${formattedDate})` : ""} bayrami o&apos;chiriladi.
-              Bu amalni keyinroq qaytarib bo&apos;lmaydi. Bayram arxivga
-              ko&apos;chadi va davomat tekshiruvi uchun ishlatilmaydi.
+              Agar bu bayram tufayli ba&apos;zi guruhlarning tugash sanasi
+              avtomatik uzaytirilgan bo&apos;lsa, ular asl tugash sanasiga
+              qaytariladi. Bu amalni keyinroq qaytarib bo&apos;lmaydi.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
