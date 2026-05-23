@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -9,16 +10,22 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useEditHoliday } from "@/hooks/use-edit-holiday";
+import { useEditHoliday, type Holiday } from "@/hooks/use-edit-holiday";
 import { EditHolidayForm } from "./edit-holiday-form";
 
-export function EditHolidayDrawer() {
-  const { open, holiday, closeDrawer } = useEditHoliday();
+interface EditHolidayDrawerProps {
+  onSaved?: (holiday: Holiday) => void;
+}
 
-  if (!holiday) return null;
+export function EditHolidayDrawer({ onSaved }: EditHolidayDrawerProps) {
+  const { open, mode, holiday, submitting, closeDrawer } = useEditHoliday();
+  const isAdd = mode === "add";
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && closeDrawer()}>
+    <Sheet
+      open={open}
+      onOpenChange={(isOpen) => !isOpen && !submitting && closeDrawer()}
+    >
       <SheetContent
         side="right"
         className="sm:max-w-lg flex flex-col overflow-hidden p-0"
@@ -26,10 +33,14 @@ export function EditHolidayDrawer() {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            Dam olish kunini tahrirlash
+            {isAdd
+              ? "Yangi dam olish kuni qo'shish"
+              : "Dam olish kunini tahrirlash"}
           </SheetTitle>
           <SheetDescription>
-            Bayram ma&apos;lumotlarini o&apos;zgartirish
+            {isAdd
+              ? "Yangi bayram ma'lumotlarini kiriting"
+              : "Bayram ma'lumotlarini o'zgartirish"}
           </SheetDescription>
         </SheetHeader>
 
@@ -37,17 +48,31 @@ export function EditHolidayDrawer() {
           <EditHolidayForm
             holiday={holiday}
             onClose={closeDrawer}
+            onSaved={onSaved}
             formId="edit-holiday-form"
+            isAdd={isAdd}
           />
         </div>
 
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
-            <Button type="button" variant="outline" onClick={closeDrawer}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeDrawer}
+              disabled={submitting}
+            >
               Bekor qilish
             </Button>
-            <Button type="submit" form="edit-holiday-form">
-              Saqlash
+            <Button
+              type="submit"
+              form="edit-holiday-form"
+              disabled={submitting}
+            >
+              {submitting && (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              )}
+              {isAdd ? "Qo'shish" : "Saqlash"}
             </Button>
           </div>
         </SheetFooter>
