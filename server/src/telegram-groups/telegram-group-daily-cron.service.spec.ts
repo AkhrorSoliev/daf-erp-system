@@ -20,6 +20,9 @@ describe('TelegramGroupDailyCronService', () => {
     jest.clearAllMocks();
     getBot.mockReturnValue(bot as any);
     findActiveHolidayCovering.mockResolvedValue(null);
+    // Pin "now" to a known weekday (2026-05-18 = Monday in Tashkent) so the
+    // Sunday-skip guard never triggers in the non-Sunday tests below.
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-18T12:00:00Z'));
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramGroupDailyCronService,
@@ -36,6 +39,19 @@ describe('TelegramGroupDailyCronService', () => {
       ],
     }).compile();
     service = module.get(TelegramGroupDailyCronService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('skips the cron entirely on a Sunday — no holiday lookup, no report sent', async () => {
+    // 2026-05-24 is a Sunday in Asia/Tashkent.
+    jest.setSystemTime(new Date('2026-05-24T12:00:00Z'));
+    await service.sendDailyReports();
+    expect(findActiveHolidayCovering).not.toHaveBeenCalled();
+    expect(prisma.telegramGroup.findMany).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it("skips the cron entirely on a holiday — no DB query, no report sent", async () => {

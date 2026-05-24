@@ -62,3 +62,14 @@ export function firstOfThisMonthUtc(now: Date = new Date()): Date {
   const m = tashkentNow.getUTCMonth();
   return new Date(Date.UTC(y, m, 1) - TASHKENT_OFFSET_MS);
 }
+
+/**
+ * True when `now` falls on a Sunday in Asia/Tashkent (UTC+5). Used by the
+ * Telegram report crons to skip the weekly day off — the center has no
+ * business activity on Sundays so any stats report would be all zeros.
+ */
+export function isTashkentSunday(now: Date = new Date()): boolean {
+  const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+  const tashkentNow = new Date(now.getTime() + TASHKENT_OFFSET_MS);
+  return tashkentNow.getUTCDay() === 0;
+}
