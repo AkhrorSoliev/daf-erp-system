@@ -39,8 +39,8 @@ export function LeadColumn({
   const totalLeads = column.sections.reduce((sum, s) => sum + s.leadCount, 0);
 
   return (
-    <div className="flex w-80 min-w-80 shrink-0 flex-col rounded-lg border bg-muted/30">
-      <div className="flex items-center justify-between gap-1 border-b px-3 py-2">
+    <div className="flex h-full w-80 min-w-80 shrink-0 flex-col rounded-lg border bg-muted/30">
+      <div className="flex shrink-0 items-center justify-between gap-1 border-b px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="truncate text-sm font-semibold">{column.name}</h2>
           <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
@@ -112,7 +112,7 @@ export function LeadColumn({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 p-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
         {column.sections.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-8 text-center">
             <p className="text-sm text-muted-foreground">
