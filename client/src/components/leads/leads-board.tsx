@@ -52,7 +52,7 @@ export function LeadsBoard() {
 
   if (loading) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex h-full gap-4 overflow-x-auto pb-4">
         {[1, 2].map((i) => (
           <div
             key={i}
@@ -76,7 +76,7 @@ export function LeadsBoard() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex h-full gap-4 overflow-x-auto pb-4">
         {board.map((column) => {
           const customIdx = customColumns.findIndex(
             (c) => c.id === column.id,

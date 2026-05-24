@@ -36,8 +36,8 @@ export function LeadsBoardClient() {
   const filtering = leadFiltersActive(filters);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="flex h-[calc(100svh-6.5rem)] flex-col gap-4 sm:h-[calc(100svh-8.5rem)]">
+      <div className="flex shrink-0 items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Lidlarni ustun va bo&apos;limlar bo&apos;yicha boshqaring
         </p>
@@ -61,9 +61,19 @@ export function LeadsBoardClient() {
         </div>
       </div>
 
-      <LeadsFilterBar />
+      <div className="shrink-0">
+        <LeadsFilterBar />
+      </div>
 
-      {filtering ? <LeadsList /> : <LeadsBoard />}
+      <div className="min-h-0 flex-1">
+        {filtering ? (
+          <div className="h-full overflow-y-auto">
+            <LeadsList />
+          </div>
+        ) : (
+          <LeadsBoard />
+        )}
+      </div>
 
       <AddLeadDrawer />
       <EditLeadDrawer />
