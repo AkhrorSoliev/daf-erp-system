@@ -4,7 +4,7 @@ import { TelegramGroupStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramAdminBotService } from './telegram-admin-bot.service';
 import { TelegramGroupStatsService } from './telegram-group-stats.service';
-import { tashkentDayRange } from './utils/format.util';
+import { isTashkentSunday, tashkentDayRange } from './utils/format.util';
 import { HolidaysService } from '../holidays/holidays.service';
 
 /**
@@ -33,6 +33,12 @@ export class TelegramGroupDailyCronService {
       this.logger.warn(
         'Skipped daily report cron — admin bot not initialized',
       );
+      return;
+    }
+
+    // Skip Sundays — weekly day off, no business activity.
+    if (isTashkentSunday()) {
+      this.logger.log('Skipped daily report cron — today is Sunday');
       return;
     }
 

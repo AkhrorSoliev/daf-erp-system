@@ -23,6 +23,9 @@ describe('TelegramGroupDigestCronService', () => {
     jest.clearAllMocks();
     getBot.mockReturnValue(bot as any);
     findActiveHolidayCovering.mockResolvedValue(null);
+    // Pin "now" to a known weekday (2026-05-18 = Monday in Tashkent) so the
+    // Sunday-skip guard never triggers in the non-Sunday tests below.
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-18T12:00:00Z'));
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramGroupDigestCronService,
@@ -40,12 +43,26 @@ describe('TelegramGroupDigestCronService', () => {
     service = module.get(TelegramGroupDigestCronService);
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   const studentEntry = (branchId: number | null): DigestEntry => ({
     kind: 'student',
     at: '2026-05-21T09:00:00.000Z',
     branchId,
     studentId: 1,
     name: 'A B',
+  });
+
+  it('skips the entire flush on a Sunday — no holiday lookup, no digest sent', async () => {
+    // 2026-05-24 is a Sunday in Asia/Tashkent.
+    jest.setSystemTime(new Date('2026-05-24T12:00:00Z'));
+    await service.flushDigests();
+    expect(findActiveHolidayCovering).not.toHaveBeenCalled();
+    expect(prisma.telegramGroup.findMany).not.toHaveBeenCalled();
+    expect(drain).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it("skips the entire flush on a holiday — no DB query, no digest sent", async () => {

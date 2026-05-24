@@ -9,6 +9,7 @@ import {
 } from './telegram-group-digest-buffer.service';
 import { TelegramGroupDigestService } from './telegram-group-digest.service';
 import { HolidaysService } from '../holidays/holidays.service';
+import { isTashkentSunday } from './utils/format.util';
 
 /**
  * Flushes each company's buffered group events into a single consolidated
@@ -39,6 +40,12 @@ export class TelegramGroupDigestCronService {
     const bot = this.adminBot.getBot();
     if (!bot) {
       this.logger.warn('Skipped digest flush — admin bot not initialized');
+      return;
+    }
+
+    // Skip Sundays — weekly day off. The buffer is preserved for Monday.
+    if (isTashkentSunday()) {
+      this.logger.log('Skipped digest flush — today is Sunday');
       return;
     }
 
