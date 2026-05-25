@@ -295,6 +295,8 @@ model User {
   deletedLeadColumns               LeadColumn[]               @relation("LeadColumnDeletedBy")
   deletedLeadSections              LeadSection[]              @relation("LeadSectionDeletedBy")
   deletedLeadSources               LeadSource[]               @relation("LeadSourceDeletedBy")
+  createdCustomForms               CustomForm[]               @relation("CustomFormCreatedBy")
+  deletedCustomForms               CustomForm[]               @relation("CustomFormDeletedBy")
   deletedGroups                    Group[]                    @relation("GroupDeletedBy")
   deletedEnrollments               Enrollment[]               @relation("EnrollmentDeletedBy")
   deletedHolidays                  Holiday[]                  @relation("HolidayDeletedBy")
@@ -580,6 +582,8 @@ model Lead {
   deletedBy       User?     @relation("LeadDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  formSubmissions CustomFormSubmission[]
+
   @@index([deletedAt])
   @@index([statusEnum])
   @@index([sectionId])
@@ -623,7 +627,8 @@ model LeadSection {
   deletedBy       User?     @relation("LeadSectionDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  leads Lead[]
+  leads       Lead[]
+  customForms CustomForm[]
 
   @@index([deletedAt])
   @@index([columnId])
@@ -643,9 +648,73 @@ model LeadSource {
   deletedBy       User?     @relation("LeadSourceDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  leads Lead[]
+  leads       Lead[]
+  customForms CustomForm[]
 
   @@index([deletedAt])
+}
+
+// Public custom form (Google-Forms-like). Admin builds the field schema,
+// gets a shareable public slug, and every submission lands as a Lead in the
+// configured section.
+model CustomForm {
+  id             String  @id @default(uuid())
+  slug           String  @unique
+  title          String
+  description    String?
+  successMessage String?
+
+  // Routing: every submission becomes a Lead in this section / source.
+  sectionId String
+  section   LeadSection @relation(fields: [sectionId], references: [id])
+  sourceId  String?
+  source    LeadSource? @relation(fields: [sourceId], references: [id])
+
+  // Field schema (FormField[] — see DTO). Custom-typed entries beyond
+  // firstName/lastName/phone are surfaced on the lead detail drawer.
+  fields Json @default("[]")
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdById Int?
+  createdBy   User? @relation("CustomFormCreatedBy", fields: [createdById], references: [id])
+
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("CustomFormDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+
+  submissions CustomFormSubmission[]
+
+  @@index([slug])
+  @@index([companyId])
+  @@index([sectionId])
+  @@index([deletedAt])
+}
+
+// One submission of a CustomForm. Stores the raw submitter payload alongside
+// the Lead it produced — admins can inspect the original answers.
+model CustomFormSubmission {
+  id     String     @id @default(uuid())
+  formId String
+  form   CustomForm @relation(fields: [formId], references: [id])
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  // { [fieldId]: value } — keyed by FormField.id from CustomForm.fields.
+  data        Json
+  ipAddress   String?
+  userAgent   String?
+  submittedAt DateTime @default(now())
+
+  @@index([formId])
+  @@index([leadId])
 }
 
 model Group {
@@ -962,6 +1031,7 @@ model Company {
   groupTeacherChangeReasons GroupTeacherChangeReason[]
   enrollmentTransferReasons EnrollmentTransferReason[]
   telegramGroups            TelegramGroup[]
+  customForms               CustomForm[]
 }
 
 enum TelegramGroupStatus {

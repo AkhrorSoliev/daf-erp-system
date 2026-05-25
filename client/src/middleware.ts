@@ -8,32 +8,51 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ── Public portal short-circuit ─────────────────────────────────────
-  // The invoice subdomain serves receipt verification pages with NO auth
-  // wall. We also rewrite single-segment paths (`/<id>`) to the existing
-  // verification route (`/r/<id>`) so the URL stays clean for end users.
+  // Two subdomains live here with NO auth wall:
+  //   invoice.dafzentrum.uz/<id>   → rewrites to /r/<id> (receipt verify)
+  //   form.dafzentrum.uz/<slug>    → rewrites to /f/<slug> (public form)
+  // The bare URL stays clean while Next.js still resolves the underlying
+  // app route.
   const host =
     request.headers.get("x-forwarded-host") ||
     request.headers.get("host") ||
     "";
   const portal = getPortalType(host);
   if (isPublicPortal(portal)) {
+    const publicPrefix = portal === "form" ? "/f" : "/r";
     if (
-      pathname === "/" ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/api") ||
-      pathname.startsWith("/r/")
+      pathname.startsWith(`${publicPrefix}/`) ||
+      pathname === publicPrefix
     ) {
       return NextResponse.next();
     }
-    // /<paymentOrRefundId> → /r/<id>
+    // Root `/`: form portal has an info landing page at `/f`. The invoice
+    // portal had no index page historically — let it pass through so we
+    // don't regress old behaviour.
+    if (pathname === "/") {
+      if (portal === "form") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/f";
+        return NextResponse.rewrite(url);
+      }
+      return NextResponse.next();
+    }
+    // /<id-or-slug> → /<publicPrefix>/<id-or-slug>
     const url = request.nextUrl.clone();
-    url.pathname = `/r${pathname}`;
+    url.pathname = `${publicPrefix}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
   // Receipt verification pages on every other host stay public too —
   // existing receipts already in circulation may QR-link to admin.* /r/<id>.
   if (pathname.startsWith("/r/")) {
+    return NextResponse.next();
+  }
+
+  // Public custom form pages — anyone with the slug can fill them out.
+  if (pathname.startsWith("/f/")) {
     return NextResponse.next();
   }
 

@@ -33,6 +33,7 @@ import { StudentExitReasonsModule } from './student-exit-reasons/student-exit-re
 import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/group-teacher-change-reasons.module';
 import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
 import { LeadsModule } from './leads/leads.module';
+import { CustomFormsModule } from './custom-forms/custom-forms.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ContractsModule } from './contracts/contracts.module';
@@ -83,6 +84,7 @@ import { JwtAuthGuard } from './common/guards';
     GroupTeacherChangeReasonsModule,
     EnrollmentTransferReasonsModule,
     LeadsModule,
+    CustomFormsModule,
     TransactionsModule,
     PaymentsModule,
     ContractsModule,

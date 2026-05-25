@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Columns3, Megaphone, Plus } from "lucide-react";
+import Link from "next/link";
+import { Columns3, FileEdit, Megaphone, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
@@ -42,6 +43,12 @@ export function LeadsBoardClient() {
           Lidlarni ustun va bo&apos;limlar bo&apos;yicha boshqaring
         </p>
         <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/leads/forms">
+              <FileEdit className="size-4" />
+              Formalar
+            </Link>
+          </Button>
           <Button
             size="sm"
             variant="ghost"

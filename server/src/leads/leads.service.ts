@@ -132,6 +132,15 @@ export class LeadsService {
             column: { select: { id: true, name: true, systemKey: true } },
           },
         },
+        formSubmissions: {
+          orderBy: { submittedAt: 'desc' },
+          select: {
+            id: true,
+            data: true,
+            submittedAt: true,
+            form: { select: { id: true, title: true, fields: true } },
+          },
+        },
       },
     });
     if (!lead) {
@@ -140,7 +149,13 @@ export class LeadsService {
     return lead;
   }
 
-  async create(dto: CreateLeadDto, companyId: number, userId: number) {
+  // `userId` is nullable because public-form submissions create leads with no
+  // authenticated user — the audit row records `changedBy = NULL` (system).
+  async create(
+    dto: CreateLeadDto,
+    companyId: number,
+    userId: number | null,
+  ) {
     const firstName = dto.firstName.trim();
     const lastName = dto.lastName.trim();
     if (!firstName || !lastName) {
@@ -201,7 +216,7 @@ export class LeadsService {
         phone: created.phone,
         statusEnum: created.statusEnum,
       },
-      changedById: userId,
+      changedById: userId ?? undefined,
       companyId,
     });
 
