@@ -2,6 +2,7 @@ export const SCENES = {
   TEACHER_REGISTRATION: 'teacher-registration',
   STUDENT_REGISTRATION: 'student-registration',
   EMPLOYEE_REGISTRATION: 'employee-registration',
+  PASSWORD_RESET: 'password-reset',
 } as const;
 
 export const TEACHER_DEEP_LINK_PREFIX = 'teacher_';

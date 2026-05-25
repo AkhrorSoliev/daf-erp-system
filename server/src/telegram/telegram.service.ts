@@ -22,6 +22,7 @@ import {
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
+import { createPasswordResetScene } from './scenes/password-reset.scene';
 import {
   signEmployeePayload,
   verifyEmployeePayload,
@@ -128,10 +129,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.bot,
     );
 
+    const passwordResetScene = createPasswordResetScene(
+      this.prisma,
+      this.redis,
+      this.entityHistoryService,
+      this.bot,
+    );
+
     const stage = new Scenes.Stage<BotContext>([
       teacherScene,
       studentScene,
       employeeScene,
+      passwordResetScene,
     ]);
     this.bot.use(stage.middleware());
 
@@ -322,9 +331,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.reply('Bekor qilindi. Qayta boshlash uchun /start bosing.');
     });
 
-    // Menu action handlers — "Tez kunda" responses
+    // Parolni tiklash — sahnaga kirish
+    this.bot.action('menu_password', async (ctx) => {
+      await ctx.answerCbQuery();
+      await ctx.scene.enter(SCENES.PASSWORD_RESET);
+    });
+
+    // Menu action handlers — "Tez kunda" responses (boshqa tugmalar uchun)
     this.bot.action(
-      /^menu_(registration|level|platform|payments|groups|password)$/,
+      /^menu_(registration|level|platform|payments|groups)$/,
       async (ctx) => {
         await ctx.answerCbQuery('Bu funksiya tez kunda ishga tushadi! ⏳', {
           show_alert: true,
