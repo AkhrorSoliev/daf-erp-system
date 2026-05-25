@@ -75,14 +75,14 @@ export function LeadSection({
         className="rounded-md border bg-card"
       >
         <div className="flex items-center gap-0.5 px-1">
-          <CollapsibleTrigger className="flex flex-1 items-center gap-1.5 rounded-md px-2 py-2 text-left hover:bg-muted/50">
+          <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-2 text-left hover:bg-muted/50">
             <ChevronRight
               className={cn(
                 "size-4 shrink-0 text-muted-foreground transition-transform",
                 open && "rotate-90",
               )}
             />
-            <span className="truncate text-sm font-medium">
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">
               {section.name}
             </span>
             <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
