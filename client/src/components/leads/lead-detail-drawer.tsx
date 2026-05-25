@@ -28,6 +28,14 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
 import { LEAD_STATUS_LABELS, type LeadStatus } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
+
+interface LeadFormSubmission {
+  id: string;
+  data: Record<string, unknown>;
+  submittedAt: string;
+  form: { id: string; title: string; fields: FormFieldShape[] };
+}
 
 interface LeadDetail {
   id: string;
@@ -43,6 +51,7 @@ interface LeadDetail {
     name: string;
     column: { id: string; name: string };
   } | null;
+  formSubmissions: LeadFormSubmission[];
 }
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
@@ -51,6 +60,76 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm">{value || "—"}</span>
     </div>
+  );
+}
+
+function FormSubmissionsBlock({
+  submissions,
+}: {
+  submissions: LeadFormSubmission[];
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <h4 className="text-sm font-semibold">Forma orqali kelgan</h4>
+      </div>
+      {submissions.map((sub) => {
+        const fieldLabels = new Map(sub.form.fields.map((f) => [f.id, f]));
+        const entries = Object.entries(sub.data).filter(
+          ([key]) => fieldLabels.get(key)?.mapsTo == null,
+        );
+        return (
+          <div
+            key={sub.id}
+            className="space-y-2 rounded-md border bg-muted/30 p-3"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs font-medium">{sub.form.title}</span>
+              <span className="text-[11px] text-muted-foreground">
+                {format(parseISO(sub.submittedAt), "dd.MM.yyyy")}
+              </span>
+            </div>
+            {entries.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Qo&apos;shimcha javoblar yo&apos;q
+              </p>
+            ) : (
+              <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1.5 text-xs">
+                {entries.map(([key, value]) => {
+                  const field = fieldLabels.get(key);
+                  return (
+                    <FormSubmissionEntry
+                      key={key}
+                      label={field?.label ?? key}
+                      value={value}
+                    />
+                  );
+                })}
+              </dl>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FormSubmissionEntry({
+  label,
+  value,
+}: {
+  label: string;
+  value: unknown;
+}) {
+  let display: string;
+  if (value === null || value === undefined || value === "") display = "—";
+  else if (typeof value === "boolean") display = value ? "Ha" : "Yo'q";
+  else display = String(value);
+  return (
+    <>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="break-words">{display}</dd>
+    </>
   );
 }
 
@@ -168,6 +247,10 @@ export function LeadDetailDrawer() {
                     value={format(parseISO(lead.createdAt), "dd.MM.yyyy")}
                   />
                 </div>
+
+                {lead.formSubmissions.length > 0 && (
+                  <FormSubmissionsBlock submissions={lead.formSubmissions} />
+                )}
 
                 {lead.statusEnum === "CONVERTED" &&
                 lead.convertedStudentId ? (

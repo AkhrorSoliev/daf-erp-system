@@ -1,4 +1,9 @@
-export type PortalType = "admin" | "lehrer" | "student" | "invoice";
+export type PortalType =
+  | "admin"
+  | "lehrer"
+  | "student"
+  | "invoice"
+  | "form";
 
 interface PortalConfig {
   title: string;
@@ -42,10 +47,20 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
     icon: "file-text",
     allowedRoleIds: [],
   },
+  // Public form portal — `form.dafzentrum.uz/<slug>` lets anyone fill out
+  // a custom lead-collection form. No auth, no roles.
+  form: {
+    title: "DaF Sprachzentrum formalari",
+    subtitle: "",
+    footerText: "DaF Sprachzentrum — Public formalar portali.",
+    icon: "file-text",
+    allowedRoleIds: [],
+  },
 };
 
 export function getPortalType(host: string): PortalType {
   if (host.startsWith("invoice.")) return "invoice";
+  if (host.startsWith("form.")) return "form";
   if (host.startsWith("lehrer.")) return "lehrer";
   if (host.startsWith("student.")) return "student";
   return "admin";
@@ -57,5 +72,5 @@ export function getPortalConfig(portal: PortalType): PortalConfig {
 
 // True for portals that have no login wall — every path is public.
 export function isPublicPortal(portal: PortalType): boolean {
-  return portal === "invoice";
+  return portal === "invoice" || portal === "form";
 }

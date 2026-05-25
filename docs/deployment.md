@@ -11,6 +11,7 @@ Deploy frontend to **Vercel** and backend to **Railway**.
 | Teacher portal  | `lehrer.dafzentrum.uz`   | Vercel           |
 | Student portal  | `student.dafzentrum.uz`  | Vercel           |
 | Invoice / receipts | `invoice.dafzentrum.uz` | Vercel (public, no auth) |
+| Public forms    | `form.dafzentrum.uz`     | Vercel (public, no auth) |
 | API             | `api.dafzentrum.uz`      | Railway          |
 
 DNS is managed via **Cloudflare** (Full SSL mode).
@@ -40,10 +41,13 @@ vercel --prod --yes
 ### Custom Domain
 
 `admin.dafzentrum.uz` — configured in Vercel Dashboard → Settings → Domains.
-Same project also serves `invoice.dafzentrum.uz` (added as a domain alias) for
-public receipt verification pages — the `middleware.ts` short-circuits all
-auth checks when the host starts with `invoice.` and rewrites `/<id>` to
-`/r/<id>` so QR scans / Telegram receipt links open without a login wall.
+Same project also serves `invoice.dafzentrum.uz` and `form.dafzentrum.uz` (added
+as domain aliases) for public, no-auth pages. The `middleware.ts` short-circuits
+all auth checks when the host starts with `invoice.` or `form.` and rewrites
+the bare path to the appropriate internal route:
+- `invoice.dafzentrum.uz/<id>` → `/r/<id>` (receipt verification)
+- `form.dafzentrum.uz/<slug>` → `/f/<slug>` (public custom form)
+- `form.dafzentrum.uz/` → `/f` (info page: "access via link only")
 
 ## Backend — Railway
 
@@ -109,6 +113,7 @@ app.enableCors({
     "https://lehrer.dafzentrum.uz",
     "https://student.dafzentrum.uz",
     "https://invoice.dafzentrum.uz",
+    "https://form.dafzentrum.uz",
   ],
   credentials: true,
 });
