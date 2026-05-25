@@ -30,9 +30,13 @@ export const editStudentSchema = z.object({
   address: z.string().optional().or(z.literal("")),
   passportSeries: z.string().optional().or(z.literal("")),
 
-  // Autentifikatsiya
-  login: z.string().optional().or(z.literal("")),
-  password: z.string().optional().or(z.literal("")),
+  // Autentifikatsiya — student.dafzentrum.uz uchun parolni admin yangilashi mumkin.
+  // Login = telefon raqami (yuqorida); shu sababli alohida login maydoni yo'q.
+  password: z
+    .string()
+    .min(4, "Parol kamida 4 ta belgidan iborat bo'lishi kerak")
+    .optional()
+    .or(z.literal("")),
 
   // Chegirma (faqat CEO/BD ko'radi)
   discountPercent: z

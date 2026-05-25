@@ -164,6 +164,17 @@ export class StudentsWriteService {
       }
     }
 
+    if (dto.password !== undefined && !student.userId) {
+      throw new BadRequestException(
+        "O'quvchining portal hisobi mavjud emas — parolni o'zgartirib bo'lmaydi",
+      );
+    }
+
+    const hashedPassword =
+      dto.password !== undefined
+        ? await bcrypt.hash(dto.password, 10)
+        : undefined;
+
     const oldDiscount = student.discountPercent ?? 0;
     const newDiscount = dto.discountPercent;
     const isDiscountChanging =
@@ -214,6 +225,13 @@ export class StudentsWriteService {
               })),
             });
           }
+        }
+
+        if (hashedPassword && student.userId) {
+          await tx.user.update({
+            where: { id: student.userId },
+            data: { password: hashedPassword },
+          });
         }
 
         if (isDiscountChanging) {

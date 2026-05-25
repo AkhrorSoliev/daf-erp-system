@@ -97,4 +97,13 @@ export class UpdateStudentDto {
   @Max(100)
   @Type(() => Number)
   discountPercent?: number;
+
+  // Admin tomonidan o'quvchining portal paroli yangilanadi.
+  // Login = telefon raqami (alohida login yo'q).
+  @IsOptional()
+  @IsString()
+  @MinLength(4, {
+    message: "Parol kamida 4 ta belgidan iborat bo'lishi kerak",
+  })
+  password?: string;
 }
