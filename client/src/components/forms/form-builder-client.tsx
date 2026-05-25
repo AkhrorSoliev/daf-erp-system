@@ -98,6 +98,9 @@ export function FormBuilderClient({ formId }: Props) {
   // Column tracked locally so users can pick a column with 0 sections without
   // the cascading select snapping back to empty.
   const [selectedColumnId, setSelectedColumnId] = useState<string>("");
+  // ID of the most-recently-added field — used to scroll it into view so the
+  // admin sees what just appeared (the list can be long).
+  const [lastAddedFieldId, setLastAddedFieldId] = useState<string | null>(null);
 
   const {
     control,
@@ -192,16 +195,29 @@ export function FormBuilderClient({ formId }: Props) {
   );
 
   function addField(type: FormFieldType) {
+    const id = makeFieldId();
     append({
-      id: makeFieldId(),
+      id,
       type,
       label: "",
-      required: false,
+      required: true,
       ...(TYPES_WITH_OPTIONS.includes(type)
         ? { options: [{ value: "opt-1", label: "" }] }
         : {}),
     } satisfies FormFieldShape);
+    setLastAddedFieldId(id);
   }
+
+  // Scroll the newly-added field into view (and softly highlight via the data
+  // attribute) after React paints the new row.
+  useEffect(() => {
+    if (!lastAddedFieldId) return;
+    const el = document.getElementById(`field-${lastAddedFieldId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    setLastAddedFieldId(null);
+  }, [lastAddedFieldId, fields.length]);
 
   async function onSubmit(values: CustomFormFormValues) {
     setSaving(true);
@@ -290,6 +306,35 @@ export function FormBuilderClient({ formId }: Props) {
             />
           </div>
         </div>
+      </Section>
+
+      <Section
+        title="Forma maydonlari"
+        titleHint="Ism, Familya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing."
+      >
+        {typeof errors.fields?.message === "string" && (
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {errors.fields.message}
+          </p>
+        )}
+
+        <div className="space-y-3">
+          {fields.map((f, i) => {
+            const myId = watchedFields?.[i]?.id;
+            return (
+              <div key={f.id} id={myId ? `field-${myId}` : undefined}>
+                <FormFieldEditor
+                  control={control}
+                  index={i}
+                  onRemove={() => remove(i)}
+                  canRemove={!mappedIndices.has(i)}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <AddFieldMenu onPick={addField} />
       </Section>
 
       <Section title="Submission qayerga tushadi">
@@ -421,33 +466,9 @@ export function FormBuilderClient({ formId }: Props) {
         />
       </Section>
 
-      <Section
-        title="Forma maydonlari"
-        titleHint="Ism, Familya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing."
-      >
-        {typeof errors.fields?.message === "string" && (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            {errors.fields.message}
-          </p>
-        )}
-
-        <div className="space-y-3">
-          {fields.map((f, i) => (
-            <FormFieldEditor
-              key={f.id}
-              control={control}
-              index={i}
-              onRemove={() => remove(i)}
-              canRemove={!mappedIndices.has(i)}
-            />
-          ))}
         </div>
 
-        <AddFieldMenu onPick={addField} />
-      </Section>
-        </div>
-
-        <aside className="lg:sticky lg:top-4 lg:self-start">
+        <aside className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <FormPreview
             title={watchedTitle || ""}
             description={watchedDescription || ""}

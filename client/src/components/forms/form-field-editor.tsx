@@ -20,7 +20,6 @@ import {
   type Control,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -62,13 +61,8 @@ export function FormFieldEditor({ control, index, onRemove, canRemove }: Props) 
     control,
     name: `fields.${index}.type`,
   }) as FormFieldType;
-  const mapsTo = useWatch({
-    control,
-    name: `fields.${index}.mapsTo`,
-  }) as CustomFormFormValues["fields"][number]["mapsTo"];
 
   const showOptions = TYPES_WITH_OPTIONS.includes(fieldType);
-  const isMapped = !!mapsTo;
 
   return (
     <div className="rounded-lg border bg-background">
@@ -113,50 +107,20 @@ export function FormFieldEditor({ control, index, onRemove, canRemove }: Props) 
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b bg-muted/20 px-3 py-2 text-xs">
-        <span className="text-muted-foreground">
+      <div className="flex items-center gap-2 border-b bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
+        <span>
           Tur:{" "}
           <span className="font-medium text-foreground">
             {FIELD_TYPE_LABELS[fieldType]}
           </span>
         </span>
-        <Controller
-          control={control}
-          name={`fields.${index}.required`}
-          render={({ field }) => (
-            <label
-              className={`flex items-center gap-1.5 ${
-                isMapped ? "opacity-60" : "cursor-pointer"
-              }`}
-            >
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={(v) => field.onChange(Boolean(v))}
-                disabled={isMapped}
-              />
-              <span>Majburiy</span>
-            </label>
-          )}
-        />
       </div>
 
-      <div className="space-y-2 px-3 py-2.5">
-        <Controller
-          control={control}
-          name={`fields.${index}.placeholder`}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value ?? ""}
-              placeholder="Placeholder (ixtiyoriy — input ichida ko'rinadi)"
-              className="h-8 text-xs"
-              maxLength={200}
-            />
-          )}
-        />
-
-        {showOptions && <OptionsEditor control={control} fieldIndex={index} />}
-      </div>
+      {showOptions && (
+        <div className="px-3 py-2.5">
+          <OptionsEditor control={control} fieldIndex={index} />
+        </div>
+      )}
     </div>
   );
 }
