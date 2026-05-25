@@ -112,7 +112,7 @@ export function LeadColumn({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2">
         {column.sections.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-8 text-center">
             <p className="text-sm text-muted-foreground">
