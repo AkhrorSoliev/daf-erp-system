@@ -47,7 +47,6 @@ function mapStudentToForm(student: Student): EditStudentFormValues {
     placeOfStudy: student.placeOfStudy ?? "",
     address: student.address ?? "",
     passportSeries: student.passportSeries ?? "",
-    login: "",
     password: "",
     discountPercent: student.discountPercent ?? 0,
   };
@@ -125,6 +124,10 @@ export function EditStudentForm({
 
       if (canSetDiscount && values.discountPercent !== undefined) {
         payload.discountPercent = values.discountPercent;
+      }
+
+      if (values.password) {
+        payload.password = values.password;
       }
 
       const { data } = await api.patch(`/students/${student.id}`, payload);
@@ -337,49 +340,46 @@ export function EditStudentForm({
           Kirish ma&apos;lumotlari
         </h3>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="login">Login</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Yangi parol</Label>
+          <div className="relative">
             <Input
-              id="login"
-              placeholder="Login"
-              {...form.register("login")}
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
+              className="pr-9"
+              autoComplete="new-password"
+              {...form.register("password")}
             />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="absolute top-1/2 right-1.5 -translate-y-1/2"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+              </TooltipContent>
+            </Tooltip>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Parol</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Parol"
-                className="pr-9"
-                {...form.register("password")}
-              />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    className="absolute top-1/2 right-1.5 -translate-y-1/2"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {showPassword
-                    ? "Parolni yashirish"
-                    : "Parolni ko'rsatish"}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+          {form.formState.errors.password && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.password.message}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            O&apos;quvchi student.dafzentrum.uz tizimiga telefon raqami va parol bilan kiradi.
+          </p>
         </div>
       </section>
 
