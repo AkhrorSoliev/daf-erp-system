@@ -17,11 +17,13 @@ import {
   STUDENT_DEEP_LINK_PREFIX,
   STUDENT_GROUP_DEEP_LINK_RE,
   EMPLOYEE_DEEP_LINK_RE,
+  MOCK_EXAM_DEEP_LINK_PREFIX,
   VALID_ROLE_IDS,
 } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
+import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
 import { createPasswordResetScene } from './scenes/password-reset.scene';
 import {
   signEmployeePayload,
@@ -31,6 +33,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
+import { PaymentLinkService } from '../payment-gateways/payment-link.service';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -44,6 +48,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private uploadService: UploadService,
     private usersService: UsersService,
     private entityHistoryService: EntityHistoryService,
+    private mockExamBilling: MockExamBillingService,
+    private paymentLinkService: PaymentLinkService,
   ) {}
 
   async onModuleInit() {
@@ -129,6 +135,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.bot,
     );
 
+    const mockExamScene = createMockExamRegistrationScene(
+      this.prisma,
+      this.mockExamBilling,
+      this.paymentLinkService,
+      this.bot,
+    );
+
     const passwordResetScene = createPasswordResetScene(
       this.prisma,
       this.redis,
@@ -140,6 +153,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       teacherScene,
       studentScene,
       employeeScene,
+      mockExamScene,
       passwordResetScene,
     ]);
     this.bot.use(stage.middleware());
@@ -279,6 +293,37 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
+      // mock_<botStartPayload> — mock exam registration
+      if (payload.startsWith(MOCK_EXAM_DEEP_LINK_PREFIX)) {
+        ctx.session.processing = true;
+        const botStartPayload = payload.slice(
+          MOCK_EXAM_DEEP_LINK_PREFIX.length,
+        );
+
+        if (!botStartPayload) {
+          ctx.session.processing = false;
+          await ctx.reply("Noto'g'ri havola.");
+          return;
+        }
+
+        const exam = await this.prisma.mockExam.findFirst({
+          where: { botStartPayload, deletedAt: null },
+          select: { id: true, title: true },
+        });
+        if (!exam) {
+          ctx.session.processing = false;
+          await ctx.reply(
+            'Imtihon topilmadi yoki havola eskirgan. Administrator bilan bog\'laning.',
+          );
+          return;
+        }
+
+        ctx.session.data = { examId: exam.id };
+        ctx.session.processing = false;
+        await ctx.scene.enter(SCENES.MOCK_EXAM_REGISTRATION);
+        return;
+      }
+
       if (payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) {
         ctx.session.processing = true;
         const branchIdStr = payload.slice(STUDENT_DEEP_LINK_PREFIX.length);
@@ -321,6 +366,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
             Markup.button.callback("👥 Guruhlarga qo'shilish", 'menu_groups'),
             Markup.button.callback('🔐 Parolni tiklash', 'menu_password'),
           ],
+          [
+            Markup.button.callback(
+              '📄 Mock imtihon natijalari',
+              'menu_mock_results',
+            ),
+          ],
         ]),
       );
     });
@@ -335,6 +386,22 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.action('menu_password', async (ctx) => {
       await ctx.answerCbQuery();
       await ctx.scene.enter(SCENES.PASSWORD_RESET);
+    });
+
+    // Mock imtihon natijalari — foydalanuvchi qatnashgan ANNOUNCED imtihonlar
+    // ro'yxati. Tanlanganida PDFni shaxsiy xabar bilan jo'natadi.
+    this.bot.action('menu_mock_results', async (ctx) => {
+      await ctx.answerCbQuery();
+      const chatId = String(ctx.chat!.id);
+      await this.showMockResultsMenu(ctx, chatId);
+    });
+
+    // Foydalanuvchi imtihon tanladi → PDFni jo'natamiz.
+    this.bot.action(/^mock_result:(.+)$/, async (ctx) => {
+      await ctx.answerCbQuery();
+      const examId = ctx.match[1];
+      const chatId = String(ctx.chat!.id);
+      await this.sendMockResultPdf(ctx, chatId, examId);
     });
 
     // Menu action handlers — "Tez kunda" responses (boshqa tugmalar uchun)
@@ -368,6 +435,253 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   getBot(): Telegraf<BotContext> {
     return this.bot;
+  }
+
+  // ─── Mock exam results delivery ───────────────────────────────
+
+  /**
+   * Pushes the announced results PDF to every participant of `examId`
+   * that has a registered Telegram chat. Idempotent — participants with
+   * `resultSentAt` already set are skipped. Per-participant errors are
+   * logged on the row (`resultSendError`) and do not abort the loop.
+   *
+   * Called from `MockExamsService.changeStatus` once the PDF generation
+   * succeeds and the exam enters ANNOUNCED.
+   */
+  async broadcastMockResults(examId: string): Promise<{
+    sent: number;
+    skipped: number;
+    failed: number;
+  }> {
+    const exam = await this.prisma.mockExam.findFirst({
+      where: { id: examId, deletedAt: null },
+      select: {
+        title: true,
+        status: true,
+        resultsPdfFileKey: true,
+      },
+    });
+    if (!exam) {
+      this.logger.warn(`broadcastMockResults: exam ${examId} not found`);
+      return { sent: 0, skipped: 0, failed: 0 };
+    }
+    if (exam.status !== 'ANNOUNCED' || !exam.resultsPdfFileKey) {
+      this.logger.warn(
+        `broadcastMockResults: exam ${examId} not ready (status=${exam.status}, hasPdf=${!!exam.resultsPdfFileKey})`,
+      );
+      return { sent: 0, skipped: 0, failed: 0 };
+    }
+
+    const recipients = await this.prisma.mockExamParticipant.findMany({
+      where: {
+        examId,
+        deletedAt: null,
+        telegramChatId: { not: null },
+        resultSentAt: null,
+      },
+      select: { id: true, publicId: true, telegramChatId: true },
+    });
+
+    let sent = 0;
+    let failed = 0;
+    const caption =
+      `📄 <b>${this.escapeHtml(exam.title)}</b> — natijalar e'lon qilindi\n\n` +
+      `Sizning identifikatoringizni PDFdan toping va o'z ballaringizni ko'ring.`;
+    // Without an explicit filename Telegraf/Telegram serves the URL fetch as
+    // `document.dat`. The R2 key has a random suffix, so we synthesize a
+    // friendly title from the exam name (Latin/word chars only, trimmed).
+    const safeFilename = this.buildPdfFilename(exam.title);
+
+    for (const r of recipients) {
+      try {
+        const msg = await this.bot.telegram.sendDocument(
+          r.telegramChatId!,
+          { url: exam.resultsPdfFileKey, filename: safeFilename },
+          {
+            caption: `${caption}\n\n🆔 Sizning ID: <b>${r.publicId}</b>`,
+            parse_mode: 'HTML',
+          },
+        );
+        await this.prisma.mockExamParticipant.update({
+          where: { id: r.id },
+          data: {
+            resultSentAt: new Date(),
+            resultMessageId: String(msg.message_id),
+            resultSendError: null,
+          },
+        });
+        sent++;
+      } catch (err) {
+        const reason = (err as Error).message;
+        this.logger.warn(
+          `broadcastMockResults: failed to send to chat=${r.telegramChatId} participant=${r.id}: ${reason}`,
+        );
+        await this.prisma.mockExamParticipant.update({
+          where: { id: r.id },
+          data: { resultSendError: reason.slice(0, 500) },
+        });
+        failed++;
+      }
+    }
+
+    const skipped = 0;
+    this.logger.log(
+      `broadcastMockResults: exam=${examId} sent=${sent} failed=${failed} (total recipients=${recipients.length})`,
+    );
+    return { sent, skipped, failed };
+  }
+
+  /**
+   * Lists ANNOUNCED mock exams the user has participated in, with their
+   * `publicId`. Pure read — no state changes. If the user hasn't
+   * registered for any announced exam, shows an empty-state message.
+   */
+  private async showMockResultsMenu(
+    ctx: BotContext,
+    chatId: string,
+  ): Promise<void> {
+    const participations = await this.prisma.mockExamParticipant.findMany({
+      where: {
+        telegramChatId: chatId,
+        deletedAt: null,
+        exam: { status: 'ANNOUNCED', deletedAt: null },
+      },
+      orderBy: { exam: { examDate: 'desc' } },
+      select: {
+        publicId: true,
+        exam: {
+          select: { id: true, title: true, examDate: true },
+        },
+      },
+    });
+
+    if (participations.length === 0) {
+      await ctx.reply(
+        "Sizda hali natijalari e'lon qilingan mock imtihonlar yo'q.\n\n" +
+          "Imtihonlarga ro'yxatga olish uchun adminstratordan havola so'rang.",
+      );
+      return;
+    }
+
+    const buttons = participations.map((p) => {
+      const date = p.exam.examDate
+        ? this.formatDdMmYyyy(p.exam.examDate)
+        : '—';
+      const label = `📅 ${date} · ${p.exam.title}`;
+      return [Markup.button.callback(label, `mock_result:${p.exam.id}`)];
+    });
+
+    await ctx.reply(
+      "Qaysi imtihon natijasini ko'rmoqchisiz?\n\n" +
+        "Tanlangan imtihon uchun PDF fayl yuboriladi. PDFda sizning " +
+        "identifikatoringizni toping va shu raqam yonidagi ballarni ko'ring.",
+      Markup.inlineKeyboard(buttons),
+    );
+  }
+
+  /**
+   * Sends the cached results PDF for `examId` to the user, along with a
+   * reminder of their `publicId` so they can find their row in the PDF.
+   */
+  private async sendMockResultPdf(
+    ctx: BotContext,
+    chatId: string,
+    examId: string,
+  ): Promise<void> {
+    const participant = await this.prisma.mockExamParticipant.findFirst({
+      where: {
+        examId,
+        telegramChatId: chatId,
+        deletedAt: null,
+      },
+      select: {
+        publicId: true,
+        exam: {
+          select: {
+            title: true,
+            status: true,
+            resultsPdfFileKey: true,
+          },
+        },
+      },
+    });
+
+    if (!participant) {
+      await ctx.reply(
+        "Bu imtihonda sizning ishtirokingiz topilmadi.",
+      );
+      return;
+    }
+
+    if (participant.exam.status !== 'ANNOUNCED') {
+      await ctx.reply(
+        `"${participant.exam.title}" imtihoni natijalari hali e'lon qilinmagan.`,
+      );
+      return;
+    }
+
+    if (!participant.exam.resultsPdfFileKey) {
+      await ctx.reply(
+        "PDF fayl hali tayyor emas. Administrator bilan bog'laning.",
+      );
+      return;
+    }
+
+    try {
+      // The `resultsPdfFileKey` is stored as a full URL — Telegram can
+      // fetch documents from a URL directly. Pass an explicit `filename`
+      // so Telegram doesn't fall back to `document.dat` when the URL
+      // tail has a random R2 key.
+      await ctx.replyWithDocument(
+        {
+          url: participant.exam.resultsPdfFileKey,
+          filename: this.buildPdfFilename(participant.exam.title),
+        },
+        {
+          caption:
+            `📄 <b>${this.escapeHtml(participant.exam.title)}</b>\n\n` +
+            `🆔 Sizning identifikatoringiz: <b>${participant.publicId}</b>\n\n` +
+            `PDFda shu raqamni toping va o'z ballaringizni ko'ring.`,
+          parse_mode: 'HTML',
+        },
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to send mock results PDF (exam=${examId}, chat=${chatId}): ${(err as Error).message}`,
+      );
+      await ctx.reply(
+        "PDF jo'natishda xatolik. Keyinroq qayta urinib ko'ring yoki administrator bilan bog'laning.",
+      );
+    }
+  }
+
+  private formatDdMmYyyy(d: Date): string {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
+  }
+
+  private escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /**
+   * Builds a Telegram-safe download filename from an exam title. Telegram
+   * rejects most special chars in filenames, so we strip everything except
+   * letters / digits / dash / underscore / space and append the `.pdf`
+   * extension.
+   */
+  private buildPdfFilename(title: string): string {
+    const clean = title
+      .replace(/[^\p{L}\p{N}\-_ ]+/gu, '')
+      .trim()
+      .replace(/\s+/g, '_')
+      .slice(0, 80);
+    return `${clean || 'mock-exam-natijalar'}.pdf`;
   }
 
   async handleWebhook(req: any, res: any) {

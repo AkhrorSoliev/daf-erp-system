@@ -26,6 +26,7 @@ enum StudentStatus {
   GRADUATED
   EXPELLED
   ARCHIVED
+  PROSPECT // Mock-only registrant who hasn't enrolled in a real course/group
 }
 
 enum SmsMessageType {
@@ -188,6 +189,7 @@ enum TransactionType {
   TAX
   BALANCE_WITHDRAWAL
   DISCOUNT_ADJUSTMENT
+  MOCK_EXAM_FEE
 }
 
 enum LessonDeductionMode {
@@ -297,6 +299,11 @@ model User {
   deletedLeadSources               LeadSource[]               @relation("LeadSourceDeletedBy")
   createdCustomForms               CustomForm[]               @relation("CustomFormCreatedBy")
   deletedCustomForms               CustomForm[]               @relation("CustomFormDeletedBy")
+  createdMockExamSections          MockExamSection[]          @relation("MockExamSectionCreatedBy")
+  deletedMockExamSections          MockExamSection[]          @relation("MockExamSectionDeletedBy")
+  createdMockExams                 MockExam[]                 @relation("MockExamCreatedBy")
+  deletedMockExams                 MockExam[]                 @relation("MockExamDeletedBy")
+  announcedMockExams               MockExam[]                 @relation("MockExamAnnouncedBy")
   deletedGroups                    Group[]                    @relation("GroupDeletedBy")
   deletedEnrollments               Enrollment[]               @relation("EnrollmentDeletedBy")
   deletedHolidays                  Holiday[]                  @relation("HolidayDeletedBy")
@@ -527,6 +534,8 @@ model Student {
   attendances     Attendance[]
   aiConversations AiConversation[] @relation("StudentAiConversations")
 
+  mockExamParticipations MockExamParticipant[] @relation("StudentMockExamParticipations")
+
   // Financial relations
   payments       Payment[]
   transactions   Transaction[]   @relation("StudentTransactions")
@@ -715,6 +724,268 @@ model CustomFormSubmission {
 
   @@index([formId])
   @@index([leadId])
+}
+
+// =============================================================================
+// Mock Exams (Mock imtihonlar)
+// Lifecycle: DRAFT → REGISTRATION_OPEN → REGISTRATION_CLOSED → GRADING → ANNOUNCED → ARCHIVED
+// Registration: Telegram-gated via bot deep-link (no public REST endpoint).
+// Plan: docs/mock-exams-plan.md
+// =============================================================================
+
+enum MockExamStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  GRADING
+  ANNOUNCED
+  ARCHIVED
+}
+
+// Grouping of mock exams (e.g. "IELTS", "SAT", "DTM", "Ichki testlar").
+model MockExamSection {
+  id              String     @id @default(uuid())
+  name            String
+  order           Int        @default(0)
+  color           String?
+  createdById     Int?
+  createdBy       User?      @relation("MockExamSectionCreatedBy", fields: [createdById], references: [id])
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?      @relation("MockExamSectionDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  exams           MockExam[]
+
+  @@index([deletedAt])
+  @@index([order])
+}
+
+// One concrete mock exam event (e.g. "IELTS Mock — Yanvar 2026").
+// Holds its own registration form schema and Telegram deep-link payload.
+model MockExam {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  status      MockExamStatus @default(DRAFT)
+
+  sectionId String
+  section   MockExamSection @relation(fields: [sectionId], references: [id])
+
+  examDate              DateTime?
+  registrationDeadline  DateTime?
+  durationMinutes       Int?
+  maxScore              Float     @default(100)
+  passingScore          Float?
+  // Mock fee (so'm). 0 = bepul. Auto-deducted from Student.balance when
+  // payment lands or balance becomes sufficient (MockExamBillingService).
+  price                 Int       @default(0)
+  // Cached results PDF — regenerated on announce or any score edit.
+  resultsPdfFileKey     String?
+  resultsPdfGeneratedAt DateTime?
+
+  // Form field schema (FormFieldShape[] — same shape as CustomForm.fields).
+  // Defaults firstName/lastName/phone are appended at render time; this stores extras.
+  formFields Json @default("[]")
+
+  // Telegram bot deep-link entry: t.me/<BOT>?start=mock_<botStartPayload>
+  botStartPayload String @unique
+
+  // Announcement
+  announcedAt             DateTime?
+  announcedById           Int?
+  announcedBy             User?     @relation("MockExamAnnouncedBy", fields: [announcedById], references: [id])
+  announceMessageTemplate String?
+
+  // Audit
+  createdById     Int?
+  createdBy       User?     @relation("MockExamCreatedBy", fields: [createdById], references: [id])
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletedBy       User?     @relation("MockExamDeletedBy", fields: [deletedById], references: [id])
+  deletionBatchId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  subjects     MockExamSubject[]
+  participants MockExamParticipant[]
+
+  @@index([sectionId, status])
+  @@index([deletedAt])
+  @@index([registrationDeadline])
+  @@index([status])
+}
+
+// Sub-sections within an exam (e.g. IELTS → Reading / Writing / Listening / Speaking).
+model MockExamSubject {
+  id           String                 @id @default(uuid())
+  examId       String
+  exam         MockExam               @relation(fields: [examId], references: [id], onDelete: Cascade)
+  name         String
+  maxScore     Float
+  // Optional per-subject pass threshold. When set, the score-entry UI and
+  // PDF mark this subject as passed when participant's score >= passingScore.
+  // For Goethe B1+ format each section has its own pass bar (typically 60/100).
+  passingScore Float?
+  order        Int                    @default(0)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  scores       MockExamSubjectScore[]
+
+  @@index([examId])
+}
+
+// A registered participant in a mock exam. Each registration ties the
+// participant to a Telegram chat (telegramChatId) so the result can be
+// delivered back via the bot. May optionally be linked to an existing Student
+// (manual conversion, mirroring the Lead → Student flow).
+model MockExamParticipant {
+  id     String   @id @default(uuid())
+  examId String
+  exam   MockExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  // Telegram identity — set when the participant registered via the bot
+  // deep-link. Nullable because admins can also add participants manually
+  // (no bot involvement, no chat id).
+  telegramChatId    String?
+  telegramUsername  String?
+  telegramFirstName String?
+  telegramLastName  String?
+
+  // Form payload — what the participant typed when registering.
+  firstName String
+  lastName  String
+  phone     String
+  formData  Json   @default("{}")
+
+  // 5-digit public identifier. Drawn from the same Postgres sequence as
+  // `Student.id` (`Student_id_seq`) so values never collide. If the
+  // participant is a real DaF student, publicId equals their Student.id
+  // (reused across every mock they sign up for); for outsiders, a fresh
+  // sequence value is allocated per registration. The same number is used
+  // as the Click/Payme account id when paying for this mock, and (if
+  // later converted) becomes the new Student.id.
+  //
+  // Uniqueness is enforced per-exam via `@@unique([examId, publicId])` —
+  // a DaF student must be able to register for multiple exams reusing the
+  // same publicId. Outsider publicIds never repeat (allocated from the
+  // sequence) so the gateway-resolver lookup by publicId alone is still
+  // unambiguous for the gateway-paying audience.
+  publicId Int
+
+  // Optional link to a real DaF student. Set when the participant is a
+  // known DaF student at registration time, OR when an admin later
+  // converts the (outside) participant to a student via the participants
+  // tab. Mock results stay attached even after deletion via SetNull.
+  studentId     Int?
+  student       Student?  @relation("StudentMockExamParticipations", fields: [studentId], references: [id], onDelete: SetNull)
+  convertedAt   DateTime?
+  convertedById Int?
+
+  registeredAt DateTime @default(now())
+
+  // Payment for this specific mock exam. When a non-DaF participant pays
+  // via Click/Payme using their publicId, `paid` flips to true directly
+  // (no Transaction). DaF students pay through the normal balance flow;
+  // a billing hook then flips this flag.
+  paid   Boolean   @default(false)
+  paidAt DateTime?
+
+  // Result
+  totalScore Float?
+  percentage Float?
+  passed     Boolean?
+  feedback   String?
+  rank       Int?
+  gradedAt   DateTime?
+  gradedById Int?
+
+  // Announcement delivery tracking
+  resultSentAt    DateTime?
+  resultMessageId String?
+  resultSendError String?
+
+  // Audit
+  deletedAt       DateTime?
+  deletedById     Int?
+  deletionBatchId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  subjectScores       MockExamSubjectScore[]
+  gatewayTransactions MockExamGatewayTransaction[]
+
+  // One person can register for each MockExam only once. publicId is the
+  // canonical identity (works whether they're a DaF student or not).
+  @@unique([examId, publicId])
+  @@index([examId, deletedAt])
+  @@index([studentId])
+  @@index([telegramChatId])
+  @@index([phone])
+}
+
+// Score for a single subject within a participant's exam result.
+model MockExamSubjectScore {
+  id            String              @id @default(uuid())
+  participantId String
+  subjectId     String
+  participant   MockExamParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  subject       MockExamSubject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  score         Float
+  feedback      String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([participantId, subjectId])
+  @@index([subjectId])
+}
+
+/// Gateway-state tracking for mock exam payments routed through Click /
+/// Payme. Kept separate from `ClickTransaction` / `PaymeTransaction` (which
+/// stay Student-only) so the two payment domains don't mix: a Student row
+/// always reflects course-money flow, while this table is purely about
+/// mock fees. State semantics mirror the gateway-specific tables to keep
+/// the dispatcher simple — 1=prepared/created, 2=completed, -1=cancelled.
+model MockExamGatewayTransaction {
+  id                String              @id @default(uuid())
+  provider          String // 'CLICK' or 'PAYME'
+  externalId        String // Click click_trans_id / Payme paymeId
+  mockParticipantId String
+  mockParticipant   MockExamParticipant @relation(fields: [mockParticipantId], references: [id], onDelete: Restrict)
+
+  // Money. `amount` keeps the gateway's native unit (tiyin for Payme,
+  // so'm for Click); `amountInSom` is the canonical so'm value used for
+  // matching against the mock exam price.
+  amount      Float
+  amountInSom Int
+
+  state Int // 1=prepared/created, 2=completed, -1=cancelled, -2=refunded
+
+  preparedAt  DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+
+  // Gateway-specific extras
+  clickPaydocId BigInt?
+  paymeTime     BigInt? // Payme's "time" field (epoch ms)
+
+  // Error / cancel tracking
+  error     Int?
+  errorNote String?
+  reason    Int? // Payme cancel reason code
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@unique([provider, externalId, companyId])
+  @@index([mockParticipantId])
+  @@index([state])
+  @@index([createdAt])
+  @@index([companyId])
 }
 
 model Group {
@@ -1019,19 +1290,20 @@ model Company {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  users                     User[]
-  branches                  Branch[]
-  students                  Student[]
-  courses                   Course[]
-  rooms                     Room[]
-  groups                    Group[]
-  comments                  Comment[]
-  attendances               Attendance[]
-  studentExitReasons        StudentExitReason[]
-  groupTeacherChangeReasons GroupTeacherChangeReason[]
-  enrollmentTransferReasons EnrollmentTransferReason[]
-  telegramGroups            TelegramGroup[]
-  customForms               CustomForm[]
+  users                       User[]
+  branches                    Branch[]
+  students                    Student[]
+  courses                     Course[]
+  rooms                       Room[]
+  groups                      Group[]
+  comments                    Comment[]
+  attendances                 Attendance[]
+  studentExitReasons          StudentExitReason[]
+  groupTeacherChangeReasons   GroupTeacherChangeReason[]
+  enrollmentTransferReasons   EnrollmentTransferReason[]
+  telegramGroups              TelegramGroup[]
+  customForms                 CustomForm[]
+  mockExamGatewayTransactions MockExamGatewayTransaction[]
 }
 
 enum TelegramGroupStatus {

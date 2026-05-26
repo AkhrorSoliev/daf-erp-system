@@ -146,7 +146,36 @@ export class LeadsService {
     if (!lead) {
       throw new NotFoundException('Lid topilmadi');
     }
-    return lead;
+
+    // Phone-based marker: surface every mock exam this person also signed
+    // up for. The Lead and MockExamParticipant tables have no FK between
+    // them — they're separate funnels — but matching by phone lets the
+    // sales team see at a glance that a lead has converted interest into a
+    // concrete mock signup.
+    const mockParticipations = await this.prisma.mockExamParticipant.findMany(
+      {
+        where: { phone: lead.phone, deletedAt: null },
+        orderBy: { registeredAt: 'desc' },
+        select: {
+          id: true,
+          publicId: true,
+          paid: true,
+          registeredAt: true,
+          totalScore: true,
+          exam: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              examDate: true,
+              section: { select: { name: true, color: true } },
+            },
+          },
+        },
+      },
+    );
+
+    return { ...lead, mockParticipations };
   }
 
   // `userId` is nullable because public-form submissions create leads with no

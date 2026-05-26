@@ -120,7 +120,9 @@ async function main() {
   });
   // Leads board — two fixed (system) columns
   await seedLeadColumns();
-  console.log('✓ Roles + company + salary period + lead columns\n');
+  // Mock exams — starter sections (user can rename/delete)
+  await seedMockExamSections();
+  console.log('✓ Roles + company + salary period + lead columns + mock exam sections\n');
 
   // 2. Courses (global, branchId null)
   console.log('📚 Kurslar ...');
@@ -219,6 +221,12 @@ async function cleanDb() {
   await prisma.leadSection.deleteMany().catch(() => {});
   await prisma.leadColumn.deleteMany().catch(() => {});
   await prisma.leadSource.deleteMany().catch(() => {});
+  // mock exams — scores → subjects/participants → exam → section
+  await prisma.mockExamSubjectScore.deleteMany().catch(() => {});
+  await prisma.mockExamParticipant.deleteMany().catch(() => {});
+  await prisma.mockExamSubject.deleteMany().catch(() => {});
+  await prisma.mockExam.deleteMany().catch(() => {});
+  await prisma.mockExamSection.deleteMany().catch(() => {});
   await prisma.group.deleteMany().catch(() => {});
   await prisma.room.deleteMany().catch(() => {});
   await prisma.userBranch.deleteMany().catch(() => {});
@@ -266,6 +274,22 @@ async function seedLeadColumns() {
         isSystem: true,
       },
     });
+  }
+}
+
+// ============================================================================
+// MOCK EXAMS — STARTER SECTIONS
+// ============================================================================
+
+async function seedMockExamSections() {
+  const starter = [
+    { name: 'IELTS Mock', color: '#3b82f6', order: 0 },
+    { name: 'SAT Mock', color: '#8b5cf6', order: 1 },
+    { name: 'DTM Mashqlari', color: '#ef4444', order: 2 },
+    { name: 'Ichki testlar', color: '#10b981', order: 3 },
+  ];
+  for (const s of starter) {
+    await prisma.mockExamSection.create({ data: s });
   }
 }
 

@@ -3,6 +3,10 @@ import { PaymentMethod, PaymentSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
 import {
+  GATEWAY_STATE,
+  MockExamGatewayBillingService,
+} from '../../mock-exams/mock-exam-gateway-billing.service';
+import {
   ACCOUNT_BUSY,
   CANNOT_PERFORM,
   INVALID_AMOUNT,
@@ -41,6 +45,7 @@ export class PaymeMethodsService {
   constructor(
     private prisma: PrismaService,
     private payments: PaymentsService,
+    private mockGateway: MockExamGatewayBillingService,
   ) {}
 
   // ─── CheckPerformTransaction ──────────────────────────────────
@@ -69,8 +74,23 @@ export class PaymeMethodsService {
       select: { id: true },
     });
 
+    // Fallback to mock participant when no Student matches — non-DaF
+    // mock-only registrants pay via their publicId, which lives in the
+    // shared sequence but doesn't have a Student row.
     if (!student) {
-      return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');
+      const mockTarget = await this.mockGateway.resolveTarget(studentId);
+      if (!mockTarget) {
+        return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');
+      }
+      if (mockTarget.alreadyPaid) {
+        return paymeError(rpcId, CANNOT_PERFORM);
+      }
+      // Mock fees must match the exam price exactly (in tiyin).
+      const expectedTiyin = mockTarget.examPrice * 100;
+      if (p.amount !== expectedTiyin) {
+        return paymeError(rpcId, INVALID_AMOUNT);
+      }
+      return paymeSuccess(rpcId, { allow: true });
     }
 
     // Verify amount matches a live payment intent (if any exists)
@@ -101,18 +121,17 @@ export class PaymeMethodsService {
   ): Promise<PaymeRpcResponse> {
     const p = params as unknown as CreateTransactionParams;
 
-    // Check for existing transaction with this paymeId
+    // 1. Idempotency — check BOTH student and mock tables. Payme can
+    //    resend CreateTransaction with the same paymeId.
     const existing = await this.prisma.paymeTransaction.findUnique({
       where: { unique_payme_transaction: { paymeId: p.id, companyId } },
     });
 
     if (existing) {
-      // Idempotent: same account + amount → return existing
       if (
         existing.studentId === Number(p.account?.student_id) &&
         existing.amount === p.amount
       ) {
-        // Check if expired
         if (existing.state === 1 && this.isExpired(existing.createTime)) {
           await this.cancelExpired(existing.id);
           return paymeError(rpcId, CANNOT_PERFORM);
@@ -123,11 +142,36 @@ export class PaymeMethodsService {
           state: existing.state,
         });
       }
-      // Same paymeId but different account/amount → conflict
       return paymeError(rpcId, CANNOT_PERFORM);
     }
 
-    // Validate via CheckPerformTransaction logic
+    const existingMock = await this.mockGateway.findByExternalId(
+      'PAYME',
+      p.id,
+      companyId,
+    );
+    if (existingMock) {
+      // Idempotent for mock — return whatever state it's in.
+      if (
+        existingMock.state === GATEWAY_STATE.PREPARED &&
+        existingMock.paymeTime &&
+        Date.now() - Number(existingMock.paymeTime) > TWELVE_HOURS_MS
+      ) {
+        await this.mockGateway.markErrored(
+          existingMock.id,
+          -1,
+          'Transaction expired',
+        );
+        return paymeError(rpcId, CANNOT_PERFORM);
+      }
+      return paymeSuccess(rpcId, {
+        create_time: Number(existingMock.paymeTime ?? existingMock.createdAt.getTime()),
+        transaction: existingMock.id,
+        state: existingMock.state,
+      });
+    }
+
+    // 2. Fresh transaction — validate via CheckPerformTransaction logic.
     const checkResult = await this.checkPerformTransaction(
       params,
       companyId,
@@ -135,41 +179,70 @@ export class PaymeMethodsService {
     );
     if ('error' in checkResult) return checkResult;
 
-    const studentId = Number(p.account.student_id);
+    const accountId = Number(p.account.student_id);
     const now = BigInt(Date.now());
 
-    // Reject if another pending transaction exists for this student
-    const pendingTxn = await this.prisma.paymeTransaction.findFirst({
-      where: { studentId, companyId, state: 1 },
+    // 3. Dispatch: is this account a real Student or a mock participant?
+    const student = await this.prisma.student.findFirst({
+      where: { id: accountId, deletedAt: null, companyId },
+      select: { id: true },
     });
 
-    if (pendingTxn) {
-      // If expired, cancel it and allow new one; otherwise reject
-      if (this.isExpired(pendingTxn.createTime)) {
-        await this.cancelExpired(pendingTxn.id);
-      } else {
-        return paymeError(rpcId, ACCOUNT_BUSY);
+    if (student) {
+      // ── Student path (existing) ──
+      const pendingTxn = await this.prisma.paymeTransaction.findFirst({
+        where: { studentId: accountId, companyId, state: 1 },
+      });
+
+      if (pendingTxn) {
+        if (this.isExpired(pendingTxn.createTime)) {
+          await this.cancelExpired(pendingTxn.id);
+        } else {
+          return paymeError(rpcId, ACCOUNT_BUSY);
+        }
       }
+
+      const txn = await this.prisma.paymeTransaction.create({
+        data: {
+          paymeId: p.id,
+          paymeTime: BigInt(p.time),
+          amount: p.amount,
+          amountInSom: Math.floor(p.amount / 100),
+          state: 1,
+          studentId: accountId,
+          createTime: now,
+          companyId,
+        },
+      });
+
+      return paymeSuccess(rpcId, {
+        create_time: Number(txn.createTime),
+        transaction: txn.id,
+        state: txn.state,
+      });
     }
 
-    // Create new PaymeTransaction
-    const txn = await this.prisma.paymeTransaction.create({
-      data: {
-        paymeId: p.id,
-        paymeTime: BigInt(p.time),
-        amount: p.amount,
-        amountInSom: Math.floor(p.amount / 100),
-        state: 1,
-        studentId,
-        createTime: now,
-        companyId,
-      },
+    // ── Mock participant path ──
+    const target = await this.mockGateway.resolveTarget(accountId);
+    if (!target) {
+      // Shouldn't happen — checkPerform already validated existence.
+      return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');
+    }
+
+    const mockTxn = await this.mockGateway.findOrCreatePending({
+      provider: 'PAYME',
+      externalId: p.id,
+      mockParticipantId: target.participantId,
+      amount: p.amount,
+      amountInSom: Math.floor(p.amount / 100),
+      paymeTime: BigInt(p.time),
+      companyId,
     });
 
     return paymeSuccess(rpcId, {
-      create_time: Number(txn.createTime),
-      transaction: txn.id,
-      state: txn.state,
+      create_time: Number(now),
+      transaction: mockTxn.id,
+      state: mockTxn.state,
     });
   }
 
@@ -187,6 +260,15 @@ export class PaymeMethodsService {
     });
 
     if (!txn) {
+      // Try mock fallback before giving up.
+      const mockTxn = await this.mockGateway.findByExternalId(
+        'PAYME',
+        p.id,
+        companyId,
+      );
+      if (mockTxn) {
+        return this.performMockTransaction(mockTxn, rpcId);
+      }
       return paymeError(rpcId, TRANSACTION_NOT_FOUND);
     }
 
@@ -276,6 +358,14 @@ export class PaymeMethodsService {
     });
 
     if (!txn) {
+      const mockTxn = await this.mockGateway.findByExternalId(
+        'PAYME',
+        p.id,
+        companyId,
+      );
+      if (mockTxn) {
+        return this.cancelMockTransaction(mockTxn, p.reason, rpcId);
+      }
       return paymeError(rpcId, TRANSACTION_NOT_FOUND);
     }
 
@@ -350,6 +440,27 @@ export class PaymeMethodsService {
     });
 
     if (!txn) {
+      const mockTxn = await this.mockGateway.findByExternalId(
+        'PAYME',
+        p.id,
+        companyId,
+      );
+      if (mockTxn) {
+        return paymeSuccess(rpcId, {
+          create_time: mockTxn.paymeTime
+            ? Number(mockTxn.paymeTime)
+            : mockTxn.createdAt.getTime(),
+          perform_time: mockTxn.completedAt
+            ? mockTxn.completedAt.getTime()
+            : 0,
+          cancel_time: mockTxn.cancelledAt
+            ? mockTxn.cancelledAt.getTime()
+            : 0,
+          transaction: mockTxn.id,
+          state: mockTxn.state,
+          reason: mockTxn.reason ?? null,
+        });
+      }
       return paymeError(rpcId, TRANSACTION_NOT_FOUND);
     }
 
@@ -372,18 +483,18 @@ export class PaymeMethodsService {
   ): Promise<PaymeRpcResponse> {
     const p = params as unknown as GetStatementParams;
 
-    const txns = await this.prisma.paymeTransaction.findMany({
-      where: {
-        companyId,
-        createTime: {
-          gte: BigInt(p.from),
-          lte: BigInt(p.to),
+    const [txns, mockTxns] = await Promise.all([
+      this.prisma.paymeTransaction.findMany({
+        where: {
+          companyId,
+          createTime: { gte: BigInt(p.from), lte: BigInt(p.to) },
         },
-      },
-      orderBy: { createTime: 'asc' },
-    });
+        orderBy: { createTime: 'asc' },
+      }),
+      this.mockGateway.listInTimeRange('PAYME', companyId, p.from, p.to),
+    ]);
 
-    const transactions: StatementTransaction[] = txns.map((txn) => ({
+    const studentTransactions: StatementTransaction[] = txns.map((txn) => ({
       id: txn.paymeId,
       time: Number(txn.paymeTime),
       amount: txn.amount,
@@ -396,7 +507,124 @@ export class PaymeMethodsService {
       reason: txn.reason ?? null,
     }));
 
+    const mockTransactions: StatementTransaction[] = mockTxns.map((mtxn) => ({
+      id: mtxn.externalId,
+      time: mtxn.paymeTime
+        ? Number(mtxn.paymeTime)
+        : mtxn.createdAt.getTime(),
+      amount: mtxn.amount,
+      // Mock participants use publicId in the same account field — Payme
+      // doesn't distinguish; the publicId / Student.id space is shared.
+      account: { student_id: mtxn.mockParticipant.publicId },
+      create_time: mtxn.createdAt.getTime(),
+      perform_time: mtxn.completedAt ? mtxn.completedAt.getTime() : 0,
+      cancel_time: mtxn.cancelledAt ? mtxn.cancelledAt.getTime() : 0,
+      transaction: mtxn.id,
+      state: mtxn.state,
+      reason: mtxn.reason ?? null,
+    }));
+
+    const transactions = [...studentTransactions, ...mockTransactions].sort(
+      (a, b) => a.create_time - b.create_time,
+    );
+
     return paymeSuccess(rpcId, { transactions });
+  }
+
+  // ─── Mock-only fallback paths ──────────────────────────────────
+
+  private async performMockTransaction(
+    mockTxn: {
+      id: string;
+      state: number;
+      paymeTime: bigint | null;
+      createdAt: Date;
+      completedAt: Date | null;
+    },
+    rpcId: number,
+  ): Promise<PaymeRpcResponse> {
+    // Idempotent
+    if (mockTxn.state === GATEWAY_STATE.COMPLETED) {
+      return paymeSuccess(rpcId, {
+        transaction: mockTxn.id,
+        perform_time: mockTxn.completedAt
+          ? mockTxn.completedAt.getTime()
+          : 0,
+        state: GATEWAY_STATE.COMPLETED,
+      });
+    }
+    if (mockTxn.state !== GATEWAY_STATE.PREPARED) {
+      return paymeError(rpcId, CANNOT_PERFORM);
+    }
+    if (
+      mockTxn.paymeTime &&
+      Date.now() - Number(mockTxn.paymeTime) > TWELVE_HOURS_MS
+    ) {
+      await this.mockGateway.markErrored(
+        mockTxn.id,
+        -1,
+        'Transaction expired',
+      );
+      return paymeError(rpcId, CANNOT_PERFORM);
+    }
+
+    const now = Date.now();
+    await this.mockGateway.markCompleted(mockTxn.id);
+
+    return paymeSuccess(rpcId, {
+      transaction: mockTxn.id,
+      perform_time: now,
+      state: GATEWAY_STATE.COMPLETED,
+    });
+  }
+
+  private async cancelMockTransaction(
+    mockTxn: {
+      id: string;
+      state: number;
+      cancelledAt: Date | null;
+    },
+    reason: number | undefined,
+    rpcId: number,
+  ): Promise<PaymeRpcResponse> {
+    // Idempotent — already cancelled or refunded.
+    if (
+      mockTxn.state === GATEWAY_STATE.CANCELLED ||
+      mockTxn.state === GATEWAY_STATE.REFUNDED
+    ) {
+      return paymeSuccess(rpcId, {
+        transaction: mockTxn.id,
+        cancel_time: mockTxn.cancelledAt
+          ? mockTxn.cancelledAt.getTime()
+          : 0,
+        state: mockTxn.state,
+      });
+    }
+
+    const now = Date.now();
+    if (mockTxn.state === GATEWAY_STATE.PREPARED) {
+      await this.mockGateway.markCancelled(mockTxn.id, {
+        wasPerformed: false,
+        reason,
+      });
+      return paymeSuccess(rpcId, {
+        transaction: mockTxn.id,
+        cancel_time: now,
+        state: GATEWAY_STATE.CANCELLED,
+      });
+    }
+    if (mockTxn.state === GATEWAY_STATE.COMPLETED) {
+      await this.mockGateway.markCancelled(mockTxn.id, {
+        wasPerformed: true,
+        reason,
+      });
+      return paymeSuccess(rpcId, {
+        transaction: mockTxn.id,
+        cancel_time: now,
+        state: GATEWAY_STATE.REFUNDED,
+      });
+    }
+    return paymeError(rpcId, CANNOT_PERFORM);
   }
 
   // ─── Helpers ──────────────────────────────────────────────────

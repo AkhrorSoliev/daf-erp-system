@@ -12,6 +12,7 @@ export const DEPARTED_STATUS_LABELS: Record<StudentStatus, string> = {
   INACTIVE: 'Nofaol',
   GRADUATED: 'Bitirgan',
   ARCHIVED: 'Arxivlangan',
+  PROSPECT: 'Mock orqali kelgan',
 };
 
 /**

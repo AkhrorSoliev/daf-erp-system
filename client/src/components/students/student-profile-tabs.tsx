@@ -8,6 +8,7 @@ import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import { CommentForm } from "@/components/shared/comment-form";
 import { SmsTab } from "@/components/students/sms-tab";
+import { StudentMockExamsTab } from "@/components/students/student-mock-exams-tab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
@@ -259,6 +260,9 @@ export function StudentProfileTabs({
             </TabsTrigger>
           )}
           {canManage && <TabsTrigger value="lid">Lid tarixi</TabsTrigger>}
+          {canManage && (
+            <TabsTrigger value="mock-imtihonlar">Mock imtihonlar</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Guruhlar */}
@@ -368,6 +372,11 @@ export function StudentProfileTabs({
         {/* Lid tarixi */}
         <TabsContent value="lid">
           <EmptyState message="Lid tarixi mavjud emas" />
+        </TabsContent>
+
+        {/* Mock imtihonlar */}
+        <TabsContent value="mock-imtihonlar">
+          <StudentMockExamsTab studentId={student.id} />
         </TabsContent>
       </Tabs>
 
