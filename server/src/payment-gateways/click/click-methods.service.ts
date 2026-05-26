@@ -3,6 +3,10 @@ import { PaymentMethod, PaymentSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
 import {
+  GATEWAY_STATE,
+  MockExamGatewayBillingService,
+} from '../../mock-exams/mock-exam-gateway-billing.service';
+import {
   CLICK_ALREADY_PAID,
   CLICK_INVALID_AMOUNT,
   CLICK_TRANSACTION_CANCELLED,
@@ -33,6 +37,7 @@ export class ClickMethodsService {
   constructor(
     private prisma: PrismaService,
     private payments: PaymentsService,
+    private mockGateway: MockExamGatewayBillingService,
   ) {}
 
   private isPrepareExpired(prepareTime: Date | null): boolean {
@@ -73,8 +78,20 @@ export class ClickMethodsService {
       select: { id: true },
     });
 
+    // Fallback to mock participant when no Student matches. This handles
+    // non-DaF participants paying for a mock — they have a publicId from
+    // the shared Student_id_seq but no Student row. Routed through a
+    // separate gateway state table (MockExamGatewayTransaction) so the
+    // student and mock domains stay clean.
     if (!student) {
-      return clickError(clickTransId, merchantTransId, CLICK_USER_NOT_FOUND);
+      return this.preparePathMock({
+        publicId: studentId,
+        clickTransId,
+        merchantTransId,
+        amount,
+        clickPaydocId: body.click_paydoc_id,
+        companyId,
+      });
     }
 
     // Verify amount matches a live payment intent (if any exists)
@@ -174,7 +191,25 @@ export class ClickMethodsService {
       where: { id: merchantPrepareId },
     });
 
-    if (!txn || txn.companyId !== companyId) {
+    // Not a Student-side transaction → try the mock fallback.
+    if (!txn) {
+      const mockTxn = await this.mockGateway.findById(merchantPrepareId);
+      if (mockTxn && mockTxn.companyId === companyId) {
+        return this.completePathMock({
+          mockTxn,
+          clickTransId,
+          merchantTransId,
+          body,
+        });
+      }
+      return clickError(
+        clickTransId,
+        merchantTransId,
+        CLICK_TRANSACTION_NOT_FOUND,
+      );
+    }
+
+    if (txn.companyId !== companyId) {
       return clickError(
         clickTransId,
         merchantTransId,
@@ -300,5 +335,189 @@ export class ClickMethodsService {
       );
       throw err;
     }
+  }
+
+  // ─── Mock-only fallback paths ──────────────────────────────────
+
+  /** Prepare path for non-DaF mock participants. */
+  private async preparePathMock(args: {
+    publicId: number;
+    clickTransId: number;
+    merchantTransId: string;
+    amount: number;
+    clickPaydocId: number | string;
+    companyId: number;
+  }): Promise<ClickWebhookResponse> {
+    const target = await this.mockGateway.resolveTarget(args.publicId);
+    if (!target) {
+      return clickError(
+        args.clickTransId,
+        args.merchantTransId,
+        CLICK_USER_NOT_FOUND,
+      );
+    }
+    if (target.alreadyPaid) {
+      return clickError(
+        args.clickTransId,
+        args.merchantTransId,
+        CLICK_ALREADY_PAID,
+      );
+    }
+    // Mock fee must match exactly. Free mocks never reach this code path
+    // (the bot doesn't show a payment prompt for price=0).
+    if (Math.floor(args.amount) !== target.examPrice) {
+      return clickError(
+        args.clickTransId,
+        args.merchantTransId,
+        CLICK_INVALID_AMOUNT,
+      );
+    }
+
+    const existing = await this.mockGateway.findByExternalId(
+      'CLICK',
+      String(args.clickTransId),
+      args.companyId,
+    );
+    if (existing) {
+      if (existing.state === GATEWAY_STATE.COMPLETED) {
+        return clickError(
+          args.clickTransId,
+          args.merchantTransId,
+          CLICK_ALREADY_PAID,
+        );
+      }
+      if (existing.state === GATEWAY_STATE.CANCELLED) {
+        return clickError(
+          args.clickTransId,
+          args.merchantTransId,
+          CLICK_TRANSACTION_CANCELLED,
+        );
+      }
+      if (existing.state === GATEWAY_STATE.PREPARED) {
+        if (this.isPrepareExpired(existing.preparedAt)) {
+          await this.mockGateway.markErrored(
+            existing.id,
+            -9,
+            'Transaction expired',
+          );
+          return clickError(
+            args.clickTransId,
+            args.merchantTransId,
+            CLICK_TRANSACTION_CANCELLED,
+          );
+        }
+        return {
+          click_trans_id: args.clickTransId,
+          merchant_trans_id: args.merchantTransId,
+          merchant_prepare_id: existing.id,
+          merchant_confirm_id: null,
+          error: 0,
+          error_note: 'Success',
+        };
+      }
+    }
+
+    const txn = await this.mockGateway.findOrCreatePending({
+      provider: 'CLICK',
+      externalId: String(args.clickTransId),
+      mockParticipantId: target.participantId,
+      amount: args.amount,
+      amountInSom: Math.floor(args.amount),
+      clickPaydocId: BigInt(args.clickPaydocId),
+      companyId: args.companyId,
+    });
+
+    return {
+      click_trans_id: args.clickTransId,
+      merchant_trans_id: args.merchantTransId,
+      merchant_prepare_id: txn.id,
+      merchant_confirm_id: null,
+      error: 0,
+      error_note: 'Success',
+    };
+  }
+
+  /** Complete path for non-DaF mock participants. */
+  private async completePathMock(args: {
+    mockTxn: { id: string; state: number; amountInSom: number; preparedAt: Date | null };
+    clickTransId: number;
+    merchantTransId: string;
+    body: ClickCompleteRequest;
+  }): Promise<ClickWebhookResponse> {
+    const { mockTxn, clickTransId, merchantTransId, body } = args;
+
+    // Idempotent
+    if (mockTxn.state === GATEWAY_STATE.COMPLETED) {
+      return {
+        click_trans_id: clickTransId,
+        merchant_trans_id: merchantTransId,
+        merchant_prepare_id: mockTxn.id,
+        merchant_confirm_id: mockTxn.id,
+        error: 0,
+        error_note: 'Success',
+      };
+    }
+
+    if (mockTxn.state !== GATEWAY_STATE.PREPARED) {
+      if (
+        mockTxn.state === GATEWAY_STATE.CANCELLED ||
+        mockTxn.state === GATEWAY_STATE.REFUNDED
+      ) {
+        return clickError(
+          clickTransId,
+          merchantTransId,
+          CLICK_TRANSACTION_CANCELLED,
+        );
+      }
+      return clickError(
+        clickTransId,
+        merchantTransId,
+        CLICK_TRANSACTION_NOT_FOUND,
+      );
+    }
+
+    if (this.isPrepareExpired(mockTxn.preparedAt)) {
+      await this.mockGateway.markErrored(
+        mockTxn.id,
+        -9,
+        'Transaction expired',
+      );
+      return clickError(
+        clickTransId,
+        merchantTransId,
+        CLICK_TRANSACTION_CANCELLED,
+      );
+    }
+
+    if (body.error < 0) {
+      await this.mockGateway.markErrored(
+        mockTxn.id,
+        body.error,
+        body.error_note || 'Cancelled by Click',
+      );
+      return {
+        click_trans_id: clickTransId,
+        merchant_trans_id: merchantTransId,
+        merchant_prepare_id: mockTxn.id,
+        merchant_confirm_id: null,
+        error: 0,
+        error_note: 'Success',
+      };
+    }
+
+    if (Math.floor(Number(body.amount)) !== mockTxn.amountInSom) {
+      return clickError(clickTransId, merchantTransId, CLICK_INVALID_AMOUNT);
+    }
+
+    await this.mockGateway.markCompleted(mockTxn.id);
+
+    return {
+      click_trans_id: clickTransId,
+      merchant_trans_id: merchantTransId,
+      merchant_prepare_id: mockTxn.id,
+      merchant_confirm_id: mockTxn.id,
+      error: 0,
+      error_note: 'Success',
+    };
   }
 }

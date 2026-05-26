@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PaymeMethodsService } from './payme-methods.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
+import { MockExamGatewayBillingService } from '../../mock-exams/mock-exam-gateway-billing.service';
 import {
   ACCOUNT_BUSY,
   CANNOT_PERFORM,
@@ -77,11 +78,25 @@ describe('PaymeMethodsService', () => {
       reverse: jest.fn().mockResolvedValue(undefined),
     };
 
+    // Mock fallback billing — default stubs return null so Student path
+    // is exercised; tests that hit the mock path can override per-test.
+    const mockGateway = {
+      resolveTarget: jest.fn().mockResolvedValue(null),
+      findByExternalId: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockResolvedValue(null),
+      findOrCreatePending: jest.fn(),
+      markCompleted: jest.fn(),
+      markCancelled: jest.fn(),
+      markErrored: jest.fn(),
+      listInTimeRange: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymeMethodsService,
         { provide: PrismaService, useValue: prisma },
         { provide: PaymentsService, useValue: payments },
+        { provide: MockExamGatewayBillingService, useValue: mockGateway },
       ],
     }).compile();
 

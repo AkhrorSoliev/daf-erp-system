@@ -8,9 +8,10 @@ import { PaymentEventsListener } from './payment-events.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { BillingModule } from '../billing/billing.module';
 import { SmsModule } from '../sms/sms.module';
+import { MockExamsModule } from '../mock-exams/mock-exams.module';
 
 @Module({
-  imports: [TransactionsModule, BillingModule, SmsModule],
+  imports: [TransactionsModule, BillingModule, SmsModule, MockExamsModule],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,

@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
 import {
   PaymentMethod,
   PaymentSource,
@@ -79,6 +80,7 @@ export class PaymentsWriteService {
     private lessonBillingService: LessonBillingService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
+    private mockExamBilling: MockExamBillingService,
   ) {}
 
   async create(dto: CreatePaymentDto, userId: number, companyId: number) {
@@ -164,6 +166,19 @@ export class PaymentsWriteService {
             companyId,
             performedById: userId,
           },
+        );
+
+        // After lesson fees, auto-settle any pending mock exam fees this
+        // student has registered for. Uses the same balance-walk pattern
+        // — oldest mock first, stops when balance can't cover the next
+        // one. Idempotent: already-paid mocks are filtered out.
+        await this.mockExamBilling.tryDeductForStudent(
+          {
+            studentId: dto.studentId,
+            companyId,
+            performedById: userId,
+          },
+          tx,
         );
 
         const updatedStudent = await tx.student.findUnique({
@@ -672,6 +687,18 @@ export class PaymentsWriteService {
           companyId: params.companyId,
           performedById: params.performedById,
         },
+      );
+
+      // And settle any pending mock exam fees too — DaF student paid via
+      // Payme/Click using their student id; this drains the freshly-topped
+      // balance into any unpaid mocks they're registered for.
+      await this.mockExamBilling.tryDeductForStudent(
+        {
+          studentId: params.studentId,
+          companyId: params.companyId,
+          performedById: params.performedById,
+        },
+        tx,
       );
 
       const updatedStudent = await tx.student.findUnique({

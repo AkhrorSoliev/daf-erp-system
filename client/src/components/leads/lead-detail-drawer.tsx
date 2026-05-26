@@ -37,6 +37,21 @@ interface LeadFormSubmission {
   form: { id: string; title: string; fields: FormFieldShape[] };
 }
 
+interface LeadMockParticipation {
+  id: string;
+  publicId: number;
+  paid: boolean;
+  registeredAt: string;
+  totalScore: number | null;
+  exam: {
+    id: string;
+    title: string;
+    status: string;
+    examDate: string | null;
+    section: { name: string; color: string | null };
+  };
+}
+
 interface LeadDetail {
   id: string;
   firstName: string;
@@ -52,6 +67,7 @@ interface LeadDetail {
     column: { id: string; name: string };
   } | null;
   formSubmissions: LeadFormSubmission[];
+  mockParticipations: LeadMockParticipation[];
 }
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
@@ -59,6 +75,87 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm">{value || "—"}</span>
+    </div>
+  );
+}
+
+const MOCK_EXAM_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Qoralama",
+  REGISTRATION_OPEN: "Ro'yxat ochiq",
+  REGISTRATION_CLOSED: "Ro'yxat yopiq",
+  GRADING: "Baholanmoqda",
+  ANNOUNCED: "E'lon qilingan",
+  ARCHIVED: "Arxivlangan",
+};
+
+function MockParticipationsBlock({
+  participations,
+}: {
+  participations: LeadMockParticipation[];
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <h4 className="text-sm font-semibold">🎯 Mock imtihonlarga yozilgan</h4>
+        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          {participations.length}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Bu lid telefon raqami orqali quyidagi mock imtihonlarga ro&apos;yxatga
+        olingan
+      </p>
+      <ul className="space-y-2">
+        {participations.map((p) => (
+          <li
+            key={p.id}
+            className="flex items-start justify-between gap-3 rounded-md border bg-muted/30 p-3"
+          >
+            <div className="min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{p.exam.title}</span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px]"
+                  style={{
+                    backgroundColor: `${p.exam.section.color ?? "#94a3b8"}20`,
+                    color: p.exam.section.color ?? "#475569",
+                  }}
+                >
+                  {p.exam.section.name}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                <span>🆔 #{p.publicId}</span>
+                <span>
+                  📅{" "}
+                  {p.exam.examDate
+                    ? format(parseISO(p.exam.examDate), "dd.MM.yyyy")
+                    : "sanasi yo'q"}
+                </span>
+                <span>
+                  Yozildi:{" "}
+                  {format(parseISO(p.registeredAt), "dd.MM.yyyy")}
+                </span>
+                {p.paid ? (
+                  <span className="text-emerald-600">✓ To&apos;langan</span>
+                ) : (
+                  <span className="text-amber-600">To&apos;lov kutilmoqda</span>
+                )}
+              </div>
+            </div>
+            <div className="shrink-0 text-right text-xs">
+              <div className="text-muted-foreground">
+                {MOCK_EXAM_STATUS_LABELS[p.exam.status] ?? p.exam.status}
+              </div>
+              {p.totalScore !== null && (
+                <div className="mt-1 font-medium tabular-nums">
+                  {p.totalScore} ball
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -247,6 +344,12 @@ export function LeadDetailDrawer() {
                     value={format(parseISO(lead.createdAt), "dd.MM.yyyy")}
                   />
                 </div>
+
+                {lead.mockParticipations.length > 0 && (
+                  <MockParticipationsBlock
+                    participations={lead.mockParticipations}
+                  />
+                )}
 
                 {lead.formSubmissions.length > 0 && (
                   <FormSubmissionsBlock submissions={lead.formSubmissions} />

@@ -3,6 +3,7 @@ import {
   GraduationCap,
   BookOpen,
   UserPlus,
+  ClipboardCheck,
 
   DollarSign,
   BarChart3,
@@ -44,6 +45,7 @@ export const navItems: NavItem[] = [
   { title: "O'qituvchilar", url: "/teachers", icon: GraduationCap, visibleForRoles: [1, 2, 3] },
   { title: "O'quvchilar", url: "/students", icon: BookOpen, visibleForRoles: [1, 2, 3] },
   { title: "Lidlar", url: "/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
+  { title: "Mock imtihonlar", url: "/mock-exams", icon: ClipboardCheck, visibleForRoles: [1, 2, 3] },
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
   // Lehrer portal — only Teachers see this. Backend `/salary/me/*`

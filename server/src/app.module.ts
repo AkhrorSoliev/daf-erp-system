@@ -34,6 +34,7 @@ import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/
 import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
 import { LeadsModule } from './leads/leads.module';
 import { CustomFormsModule } from './custom-forms/custom-forms.module';
+import { MockExamsModule } from './mock-exams/mock-exams.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ContractsModule } from './contracts/contracts.module';
@@ -85,6 +86,7 @@ import { JwtAuthGuard } from './common/guards';
     EnrollmentTransferReasonsModule,
     LeadsModule,
     CustomFormsModule,
+    MockExamsModule,
     TransactionsModule,
     PaymentsModule,
     ContractsModule,

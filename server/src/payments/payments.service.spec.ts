@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
 import { PaymentStatus, Prisma } from '@prisma/client';
 
 const mockStudent = {
@@ -109,6 +110,12 @@ describe('PaymentsService', () => {
         .mockResolvedValue({ billedAttendances: 0 }),
     };
 
+    const mockExamBilling = {
+      tryDeductForStudent: jest
+        .fn()
+        .mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
@@ -120,6 +127,7 @@ describe('PaymentsService', () => {
         { provide: LessonBillingService, useValue: lessonBillingService },
         { provide: EntityHistoryService, useValue: entityHistoryService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: MockExamBillingService, useValue: mockExamBilling },
       ],
     }).compile();
 

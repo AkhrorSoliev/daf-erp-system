@@ -47,6 +47,32 @@ export class UploadService {
     return `${this.publicUrl}/${key}`;
   }
 
+  /**
+   * Uploads a raw buffer with an explicit content type. Used for
+   * server-generated documents (mock exam results PDFs, contract PDFs, …)
+   * that don't go through a multipart upload.
+   */
+  async uploadBuffer(
+    buffer: Buffer,
+    folder: string,
+    ext: string,
+    contentType: string,
+  ): Promise<string> {
+    const normalizedExt = ext.startsWith('.') ? ext : `.${ext}`;
+    const key = `${folder}/${randomUUID()}${normalizedExt}`;
+
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      }),
+    );
+
+    return `${this.publicUrl}/${key}`;
+  }
+
   async deleteFile(fileUrl: string): Promise<void> {
     try {
       const key = fileUrl.replace(`${this.publicUrl}/`, '');
