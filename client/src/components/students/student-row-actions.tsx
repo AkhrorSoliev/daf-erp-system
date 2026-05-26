@@ -25,6 +25,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import type { Student } from "@/data/student-model";
+import type { DebtWriteOffEligibility } from "@/components/students/debt-write-off-types";
 
 interface StudentRowActionsProps {
   student: Student;
@@ -43,6 +44,8 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
   const [removing, setRemoving] = useState(false);
   const [removeReason, setRemoveReason] = useState("");
   const [removeReasonId, setRemoveReasonId] = useState<string | null>(null);
+  const [writeOff, setWriteOff] = useState(false);
+  const [writeOffReason, setWriteOffReason] = useState("");
 
   const { data: departureReasons } = useQuery<
     { id: string; name: string }[]
@@ -57,11 +60,27 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
     enabled: showRemove && !!enrollmentId,
   });
 
+  const { data: eligibility, isFetching: eligibilityLoading } =
+    useQuery<DebtWriteOffEligibility>({
+      queryKey: ["debt-write-off-eligibility", student.id, enrollmentId],
+      queryFn: () =>
+        api
+          .get<DebtWriteOffEligibility>(
+            `/students/${student.id}/enrollments/${enrollmentId}/debt-write-off-eligibility`,
+          )
+          .then((r) => r.data),
+      enabled: showRemove && !!enrollmentId,
+      staleTime: 0,
+    });
+
   const hasConfiguredReasons = (departureReasons?.length ?? 0) > 0;
   const trimmedReason = removeReason.trim();
-  const canRemove = hasConfiguredReasons
-    ? removeReasonId !== null
-    : trimmedReason.length > 0;
+  const writeOffReady =
+    !writeOff || (writeOffReason.trim().length >= 5 && !!eligibility?.eligible);
+  const canRemove =
+    (hasConfiguredReasons
+      ? removeReasonId !== null
+      : trimmedReason.length > 0) && writeOffReady;
 
   const handleRemoveFromGroup = async () => {
     if (!enrollmentId || !canRemove) return;
@@ -69,19 +88,36 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
     setShowRemove(false);
     onDeleted?.(student.id);
     try {
-      const payload: { departureReasonId?: string; reason?: string } = {};
+      const payload: {
+        departureReasonId?: string;
+        reason?: string;
+        writeOffCycleDebt?: boolean;
+        writeOffReason?: string;
+        writeOffConfirmAmount?: number;
+      } = {};
       if (removeReasonId) payload.departureReasonId = removeReasonId;
       if (trimmedReason) payload.reason = trimmedReason;
+      if (writeOff && eligibility?.eligible) {
+        payload.writeOffCycleDebt = true;
+        payload.writeOffReason = writeOffReason.trim();
+        payload.writeOffConfirmAmount = eligibility.details.suggestedWriteOff;
+      }
       await api.delete(`/students/${student.id}/enroll/${enrollmentId}`, {
         data: payload,
       });
-      toast.success("O'quvchi guruhdan chiqarildi");
+      toast.success(
+        writeOff && eligibility?.eligible
+          ? "O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi"
+          : "O'quvchi guruhdan chiqarildi",
+      );
     } catch (error) {
       toast.error(getErrorMessage(error, "Chiqarishda xatolik yuz berdi"));
     } finally {
       setRemoving(false);
       setRemoveReason("");
       setRemoveReasonId(null);
+      setWriteOff(false);
+      setWriteOffReason("");
     }
   };
 
@@ -154,6 +190,8 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
             if (!open) {
               setRemoveReason("");
               setRemoveReasonId(null);
+              setWriteOff(false);
+              setWriteOffReason("");
             }
           }}
           reasons={departureReasons}
@@ -164,6 +202,12 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
           removing={removing}
           canSubmit={canRemove}
           onConfirm={handleRemoveFromGroup}
+          eligibility={eligibility}
+          eligibilityLoading={eligibilityLoading}
+          writeOff={writeOff}
+          onWriteOffChange={setWriteOff}
+          writeOffReason={writeOffReason}
+          onWriteOffReasonChange={setWriteOffReason}
         />
       )}
 

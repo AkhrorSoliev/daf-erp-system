@@ -190,6 +190,7 @@ enum TransactionType {
   BALANCE_WITHDRAWAL
   DISCOUNT_ADJUSTMENT
   MOCK_EXAM_FEE
+  DEBT_WRITE_OFF
 }
 
 enum LessonDeductionMode {

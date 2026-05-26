@@ -608,6 +608,73 @@ export class TransactionsWriteService {
   }
 
   /**
+   * Write off a "yo'qolgan o'quvchi" debt: the current-cycle portion of a
+   * student's negative balance, when the student never attended any lesson
+   * in the current billing cycle. `amount` is always positive (credit) —
+   * the caller (DebtWriteOffService) computes it as
+   * `min(currentCycleAbsentCount × perLessonCost, |currentBalance|)` and
+   * surfaces the breakdown via `metadata` so the audit trail is self-
+   * describing. Distinct from a generic ADJUSTMENT so reports/filters can
+   * isolate write-offs cleanly.
+   */
+  async recordDebtWriteOff(
+    params: {
+      studentId: number;
+      amount: number;
+      enrollmentId: string;
+      description: string;
+      metadata: Prisma.InputJsonValue;
+      branchId?: number;
+      companyId: number;
+      performedById: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      if (params.amount <= 0) {
+        throw new BadRequestException(
+          "Hisobdan chiqarish summasi musbat bo'lishi kerak",
+        );
+      }
+
+      const studentCheck = await client.student.findFirst({
+        where: { id: params.studentId, companyId: params.companyId },
+        select: { id: true },
+      });
+      if (!studentCheck) {
+        throw new NotFoundException("O'quvchi topilmadi");
+      }
+
+      const student = await this.lockStudent(client, params.studentId);
+      const balanceBefore = student.balance;
+      const balanceAfter = balanceBefore + params.amount;
+
+      const transaction = await client.transaction.create({
+        data: {
+          type: TransactionType.DEBT_WRITE_OFF,
+          amount: params.amount,
+          balanceBefore,
+          balanceAfter,
+          studentId: params.studentId,
+          enrollmentId: params.enrollmentId,
+          branchId: params.branchId,
+          companyId: params.companyId,
+          performedById: params.performedById,
+          description: params.description,
+          metadata: params.metadata,
+        },
+      });
+
+      await client.student.update({
+        where: { id: params.studentId },
+        data: { balance: balanceAfter },
+      });
+
+      return transaction;
+    }, tx);
+  }
+
+  /**
    * Retroactive discount-rebalance entry. Written by StudentsWriteService
    * when an admin changes `Student.discountPercent`. `amount` is signed:
    * positive = credit the student (they were over-charged under the old

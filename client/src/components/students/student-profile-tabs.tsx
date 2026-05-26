@@ -18,8 +18,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { StudentGroupCard } from "./student-group-card";
 import { StudentPaymentsTable } from "./student-payments-table";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
+import { StudentClosedEnrollmentsSection } from "./student-closed-enrollments-section";
 import { LessonTrailTab } from "./lesson-trail-tab";
 import type { StudentTransaction } from "./student-profile-tabs-utils";
+import type { DebtWriteOffEligibility } from "./debt-write-off-types";
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -176,6 +178,10 @@ export function StudentProfileTabs({
   const [removeReason, setRemoveReason] = useState("");
   const [removeReasonId, setRemoveReasonId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+  // "Yo'qolgan o'quvchi" write-off state — only meaningful when the
+  // server-side eligibility check for the targeted enrollment passes.
+  const [writeOff, setWriteOff] = useState(false);
+  const [writeOffReason, setWriteOffReason] = useState("");
 
   const { data: departureReasons } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["student-exit-reasons", "GROUP_REMOVAL"],
@@ -188,15 +194,34 @@ export function StudentProfileTabs({
     enabled: removeDialogOpen,
   });
 
+  const { data: eligibility, isFetching: eligibilityLoading } =
+    useQuery<DebtWriteOffEligibility>({
+      queryKey: ["debt-write-off-eligibility", student.id, removeEnrollmentId],
+      queryFn: () =>
+        api
+          .get<DebtWriteOffEligibility>(
+            `/students/${student.id}/enrollments/${removeEnrollmentId}/debt-write-off-eligibility`,
+          )
+          .then((r) => r.data),
+      enabled: removeDialogOpen && !!removeEnrollmentId && canManage,
+      staleTime: 0,
+    });
+
   const hasConfiguredReasons = (departureReasons?.length ?? 0) > 0;
-  const canSubmitRemove = hasConfiguredReasons
-    ? removeReasonId !== null
-    : removeReason.trim().length > 0;
+  const writeOffReady =
+    !writeOff || // unchecked → no extra requirements
+    (writeOffReason.trim().length >= 5 && !!eligibility?.eligible);
+  const canSubmitRemove =
+    (hasConfiguredReasons
+      ? removeReasonId !== null
+      : removeReason.trim().length > 0) && writeOffReady;
 
   const openRemoveDialog = (enrollmentId: string) => {
     setRemoveEnrollmentId(enrollmentId);
     setRemoveReason("");
     setRemoveReasonId(null);
+    setWriteOff(false);
+    setWriteOffReason("");
     setRemoveDialogOpen(true);
   };
 
@@ -209,13 +234,28 @@ export function StudentProfileTabs({
     );
     setRemoveDialogOpen(false);
     try {
-      const payload: { departureReasonId?: string; reason?: string } = {};
+      const payload: {
+        departureReasonId?: string;
+        reason?: string;
+        writeOffCycleDebt?: boolean;
+        writeOffReason?: string;
+        writeOffConfirmAmount?: number;
+      } = {};
       if (removeReasonId) payload.departureReasonId = removeReasonId;
       if (removeReason.trim()) payload.reason = removeReason.trim();
+      if (writeOff && eligibility?.eligible) {
+        payload.writeOffCycleDebt = true;
+        payload.writeOffReason = writeOffReason.trim();
+        payload.writeOffConfirmAmount = eligibility.details.suggestedWriteOff;
+      }
       await api.delete(`/students/${student.id}/enroll/${removeEnrollmentId}`, {
         data: payload,
       });
-      toast.success("O'quvchi guruhdan chiqarildi");
+      toast.success(
+        writeOff && eligibility?.eligible
+          ? "O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi"
+          : "O'quvchi guruhdan chiqarildi",
+      );
       onEnrollmentChange?.();
     } catch (err) {
       setLocalGroups(student.groups);
@@ -225,6 +265,8 @@ export function StudentProfileTabs({
       setRemoveEnrollmentId(null);
       setRemoveReason("");
       setRemoveReasonId(null);
+      setWriteOff(false);
+      setWriteOffReason("");
     }
   };
 
@@ -296,6 +338,14 @@ export function StudentProfileTabs({
             <div className="mb-6">
               <EmptyState message="Guruhlar mavjud emas" />
             </div>
+          )}
+
+          {canManage && (
+            <StudentClosedEnrollmentsSection
+              studentId={student.id}
+              visible={student.balance < 0}
+              onWroteOff={onEnrollmentChange}
+            />
           )}
         </TabsContent>
 
@@ -391,6 +441,12 @@ export function StudentProfileTabs({
         removing={removing}
         canSubmit={canSubmitRemove}
         onConfirm={confirmRemove}
+        eligibility={eligibility}
+        eligibilityLoading={eligibilityLoading}
+        writeOff={writeOff}
+        onWriteOffChange={setWriteOff}
+        writeOffReason={writeOffReason}
+        onWriteOffReasonChange={setWriteOffReason}
       />
     </>
   );

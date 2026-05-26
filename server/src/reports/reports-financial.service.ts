@@ -1,9 +1,72 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ReportsFinancialService {
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * Summary aggregate for the "yo'qolgan o'quvchi" debt write-off flow:
+   * how much debt was forgiven in the selected period, broken into the
+   * total amount and operation count. CEO sees the whole company; BD is
+   * branch-scoped at the controller layer (pass `branchIds`).
+   *
+   * Defaults to the current calendar month when no period is given so the
+   * Payments Overview KPI card has a sensible "this month" value.
+   */
+  async getDebtWriteOffsSummary(
+    companyId: number,
+    options: {
+      branchId?: number;
+      branchIds?: number[];
+      startDate?: string;
+      endDate?: string;
+    } = {},
+  ): Promise<{
+    totalAmount: number;
+    count: number;
+    periodStart: string;
+    periodEnd: string;
+  }> {
+    const now = new Date();
+    const periodStart =
+      options.startDate ??
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const periodEnd =
+      options.endDate ??
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+        new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(),
+      ).padStart(2, '0')}`;
+
+    const where: Prisma.TransactionWhereInput = {
+      companyId,
+      type: TransactionType.DEBT_WRITE_OFF,
+      reversedAt: null,
+      createdAt: {
+        gte: new Date(periodStart),
+        lte: new Date(periodEnd + 'T23:59:59.999Z'),
+      },
+      ...(options.branchId && { branchId: options.branchId }),
+      ...(options.branchIds &&
+        options.branchIds.length > 0 && {
+          branchId: { in: options.branchIds },
+        }),
+    };
+
+    const agg = await this.prisma.transaction.aggregate({
+      where,
+      _sum: { amount: true },
+      _count: true,
+    });
+
+    return {
+      totalAmount: agg._sum.amount ?? 0,
+      count: agg._count,
+      periodStart,
+      periodEnd,
+    };
+  }
 
   /**
    * Financial overview: expected vs actual income, salary, expenses.

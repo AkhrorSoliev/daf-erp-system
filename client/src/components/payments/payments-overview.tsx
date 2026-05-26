@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDownRight,
@@ -9,6 +10,7 @@ import {
   BarChart3,
   CreditCard,
   DollarSign,
+  Eraser,
   Megaphone,
   Receipt,
   Target,
@@ -27,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 interface FinancialOverview {
@@ -83,6 +86,9 @@ interface PaymentsOverviewProps {
 
 export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOverviewProps) {
   const { selectedBranch } = useBranchSwitcher();
+  const user = useAuth((s) => s.user);
+  const canSeeWriteOffSummary =
+    user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   const { data, isLoading } = useQuery({
     queryKey: ["financial-overview", selectedBranch?.id, startDate, endDate, refreshKey],
@@ -92,6 +98,27 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           params: { branchId: selectedBranch?.id, startDate, endDate },
         })
         .then((r) => r.data),
+    staleTime: 0,
+  });
+
+  const { data: writeOffSummary } = useQuery<{
+    totalAmount: number;
+    count: number;
+  }>({
+    queryKey: [
+      "debt-write-offs-summary",
+      selectedBranch?.id,
+      startDate,
+      endDate,
+      refreshKey,
+    ],
+    queryFn: () =>
+      api
+        .get("/reports/debt-write-offs-summary", {
+          params: { branchId: selectedBranch?.id, startDate, endDate },
+        })
+        .then((r) => r.data),
+    enabled: canSeeWriteOffSummary,
     staleTime: 0,
   });
 
@@ -339,6 +366,36 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                 {fmt(d.forecast.debtorExposure.avgDebt)} so&apos;m
               </span>
             </div>
+            {canSeeWriteOffSummary && writeOffSummary && (
+              <div className="mt-2 border-t pt-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href="/payments/debt-write-offs"
+                      className="flex justify-between text-sm group cursor-help"
+                    >
+                      <span className="text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground">
+                        <Eraser className="size-3 text-amber-500" />
+                        Hisobdan chiqarilgan
+                      </span>
+                      <span className="font-medium text-amber-600 dark:text-amber-400">
+                        {fmt(writeOffSummary.totalAmount)} so&apos;m
+                        {writeOffSummary.count > 0 && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            ({writeOffSummary.count} ta)
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-64">
+                    &quot;Yo&apos;qolgan o&apos;quvchi&quot; flow ostida joriy
+                    sikldan hisobdan chiqarilgan qarzlar. Jurnalga o&apos;tish
+                    uchun bosing.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import { StudentEnrollmentService } from './student-enrollment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
+import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('StudentEnrollmentService', () => {
@@ -92,6 +93,18 @@ describe('StudentEnrollmentService', () => {
         {
           provide: EnrollmentBillingService,
           useValue: { refundPrepaidToBalance: jest.fn().mockResolvedValue(null) },
+        },
+        {
+          provide: DebtWriteOffService,
+          useValue: {
+            computeEligibility: jest.fn(),
+            executeWriteOff: jest.fn().mockResolvedValue({
+              transaction: { id: 'tx-1' },
+              balanceBefore: -100_000,
+              balanceAfter: 0,
+            }),
+            reverseWriteOff: jest.fn(),
+          },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],

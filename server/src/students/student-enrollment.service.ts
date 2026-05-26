@@ -8,6 +8,7 @@ import { Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
+import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class StudentEnrollmentService {
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
     private enrollmentBillingService: EnrollmentBillingService,
+    private debtWriteOffService: DebtWriteOffService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -308,7 +310,13 @@ export class StudentEnrollmentService {
     enrollmentId: string,
     userId: number,
     companyId: number,
-    input: { departureReasonId?: string; reason?: string },
+    input: {
+      departureReasonId?: string;
+      reason?: string;
+      writeOffCycleDebt?: boolean;
+      writeOffReason?: string;
+      writeOffConfirmAmount?: number;
+    },
   ) {
     const enrollment = await this.prisma.enrollment.findFirst({
       where: {
@@ -374,9 +382,37 @@ export class StudentEnrollmentService {
       reasonText = trimmed;
     }
 
-    // Atomic: refund unused prepaid lessons + flip enrollment to DROPPED
-    // + write the state log. Order matters — refund first so we read the
-    // pre-DROPPED prepaidLessonsRemaining; the flip then closes the row.
+    // Validate write-off inputs upfront (cheap check, before the tx).
+    // Eligibility itself is re-verified inside the tx for race safety.
+    if (input.writeOffCycleDebt) {
+      if (!input.writeOffReason || input.writeOffReason.trim().length < 5) {
+        throw new BadRequestException(
+          "Hisobdan chiqarish izohi majburiy (kamida 5 belgi)",
+        );
+      }
+      if (
+        input.writeOffConfirmAmount === undefined ||
+        input.writeOffConfirmAmount <= 0
+      ) {
+        throw new BadRequestException(
+          "Hisobdan chiqarish summasi noto'g'ri",
+        );
+      }
+    }
+
+    // Atomic: refund unused prepaid lessons + (optional) write off the
+    // current-cycle debt + flip enrollment to DROPPED + write the state
+    // log. Order matters:
+    //   1. Refund first — reads pre-DROPPED prepaidLessonsRemaining and
+    //      credits the balance. May shrink the negative balance the
+    //      write-off then targets, which is correct (we never write off
+    //      more than the post-refund debt).
+    //   2. Write-off (if requested) — clears the joriy-sikl portion.
+    //      DebtWriteOffService.executeWriteOff recomputes eligibility
+    //      inside the same tx and compares the freshly-suggested amount
+    //      against `writeOffConfirmAmount`. Mismatch → 400, full rollback.
+    //   3. State log + status flip — close the enrollment with reason
+    //      and audit metadata.
     await this.prisma.$transaction(
       async (tx) => {
         await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
@@ -384,6 +420,20 @@ export class StudentEnrollmentService {
           performedById: userId,
           reason: 'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
         });
+
+        if (input.writeOffCycleDebt) {
+          await this.debtWriteOffService.executeWriteOff(
+            {
+              enrollmentId,
+              companyId,
+              performedById: userId,
+              reason: input.writeOffReason!.trim(),
+              confirmAmount: input.writeOffConfirmAmount!,
+            },
+            tx,
+          );
+        }
+
         await tx.enrollmentStateLog.create({
           data: {
             enrollmentId,
@@ -472,5 +522,72 @@ export class StudentEnrollmentService {
     });
 
     return { message: "O'quvchi guruhdan chiqarildi" };
+  }
+
+  /**
+   * Eligibility check for the "yo'qolgan o'quvchi" write-off flow.
+   * Frontend calls this when opening the remove-from-group modal (ACTIVE)
+   * or the profile-page write-off modal (DROPPED/FROZEN) to decide
+   * whether to render the write-off block at all.
+   *
+   * Multi-tenant scoping happens inside DebtWriteOffService via the
+   * `group.companyId` filter; an enrollment from another company surfaces
+   * as 404.
+   */
+  async getDebtWriteOffEligibility(
+    _studentId: number,
+    enrollmentId: string,
+    companyId: number,
+  ) {
+    return this.debtWriteOffService.computeEligibility(enrollmentId, companyId);
+  }
+
+  /**
+   * Standalone write-off for an enrollment that is already DROPPED (or
+   * FROZEN). Does NOT change enrollment status — purely a balance
+   * correction so the lingering negative balance disappears from the
+   * "qarzdor" reports. For ACTIVE enrollments the write-off must be
+   * bundled with `removeFromGroup` instead so the audit trail captures
+   * one combined operation.
+   */
+  async writeOffDroppedEnrollmentDebt(
+    _studentId: number,
+    enrollmentId: string,
+    userId: number,
+    companyId: number,
+    input: { reason: string; confirmAmount: number },
+  ) {
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        id: enrollmentId,
+        deletedAt: null,
+        group: { companyId },
+      },
+      select: { id: true, status: true, studentId: true },
+    });
+    if (!enrollment) {
+      throw new NotFoundException('Yozuv topilmadi');
+    }
+
+    if (enrollment.status === 'ACTIVE') {
+      throw new BadRequestException(
+        "Faol yozuv uchun hisobdan chiqarish 'Guruhdan chiqarish' oynasi orqali bajariladi",
+      );
+    }
+
+    const result = await this.debtWriteOffService.executeWriteOff({
+      enrollmentId,
+      companyId,
+      performedById: userId,
+      reason: input.reason.trim(),
+      confirmAmount: input.confirmAmount,
+    });
+
+    return {
+      message: "Joriy sikl qarzi hisobdan chiqarildi",
+      transactionId: result.transaction.id,
+      balanceBefore: result.balanceBefore,
+      balanceAfter: result.balanceAfter,
+    };
   }
 }

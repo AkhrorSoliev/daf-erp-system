@@ -297,4 +297,67 @@ export class StudentsReadService {
       };
     });
   }
+
+  /**
+   * Closed enrollments (DROPPED / FROZEN) of a student — surfaces them in
+   * the profile UI so admins can write off lingering current-cycle debt
+   * on already-closed enrollments. The endpoint returns only the metadata
+   * the profile section needs to render row + decide whether to show the
+   * write-off button; eligibility per row is computed on-demand by the
+   * dedicated eligibility endpoint when the modal opens.
+   */
+  async getClosedEnrollments(id: number, companyId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException(`O'quvchi topilmadi`);
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        studentId: id,
+        deletedAt: null,
+        status: { in: ['DROPPED', 'FROZEN'] },
+      },
+      orderBy: { statusChangedAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        statusChangedAt: true,
+        statusChangeReason: true,
+        createdAt: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+            level: true,
+            course: {
+              select: { name: true, lessonPaymentCount: true },
+            },
+            teachers: {
+              select: {
+                teacher: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return enrollments.map((e) => ({
+      enrollmentId: e.id,
+      groupId: e.group.id,
+      groupName: e.group.name,
+      level: e.group.level,
+      courseName: e.group.course?.name ?? null,
+      lessonPaymentCount: e.group.course?.lessonPaymentCount ?? 12,
+      status: e.status,
+      statusChangedAt: e.statusChangedAt?.toISOString() ?? null,
+      statusChangeReason: e.statusChangeReason,
+      enrolledAt: e.createdAt.toISOString(),
+      teachers: (e.group.teachers ?? []).map((gt) => gt.teacher),
+    }));
+  }
 }

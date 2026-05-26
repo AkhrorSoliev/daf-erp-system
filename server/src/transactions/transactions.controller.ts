@@ -8,16 +8,21 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from './transactions.service';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
+import { DebtWriteOffQueryDto } from './dto/debt-write-off-query.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
 @Controller('transactions')
 @UseGuards(RolesGuard)
 export class TransactionsController {
-  constructor(private transactionsService: TransactionsService) {}
+  constructor(
+    private transactionsService: TransactionsService,
+    private prisma: PrismaService,
+  ) {}
 
   @Get()
   @Roles('CEO', 'Branch Director', 'Administrator')
@@ -86,5 +91,45 @@ export class TransactionsController {
       companyId,
       performedById: userId,
     });
+  }
+
+  // Audit log for the "yo'qolgan o'quvchi" write-off flow. CEO sees the
+  // whole company; Branch Director is auto-scoped to their UserBranch
+  // rows. Cashier/Teacher have no business reading financial corrections,
+  // hence the explicit role list.
+  @Get('debt-write-offs')
+  @Roles('CEO', 'Branch Director')
+  async findDebtWriteOffs(
+    @Query() query: DebtWriteOffQueryDto,
+    @CurrentUser()
+    user: { id: number; companyId: number; roles: string[] },
+  ) {
+    const branchIds = await this.resolveBranchScopeForUser(user);
+    return this.transactionsService.findDebtWriteOffs(user.companyId, {
+      branchId: query.branchId,
+      branchIds: branchIds ?? undefined,
+      performedById: query.performedById,
+      from: query.from,
+      to: query.to,
+      page: query.page,
+      pageSize: query.pageSize,
+      includeReversed: query.includeReversed === 'true',
+    });
+  }
+
+  /**
+   * CEO: full company access (null = no branch filter).
+   * Branch Director: explicit UserBranch rows.
+   */
+  private async resolveBranchScopeForUser(user: {
+    id: number;
+    roles: string[];
+  }): Promise<number[] | null> {
+    if (user.roles.includes('CEO')) return null;
+    const rows = await this.prisma.userBranch.findMany({
+      where: { userId: user.id },
+      select: { branchId: true },
+    });
+    return rows.map((r) => r.branchId);
   }
 }
