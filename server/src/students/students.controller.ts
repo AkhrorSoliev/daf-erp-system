@@ -18,6 +18,7 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
 import { RemoveFromGroupDto } from './dto/remove-from-group.dto';
+import { WriteOffCycleDebtDto } from './dto/write-off-cycle-debt.dto';
 import { EnrollToGroupDto } from './dto/enroll-to-group.dto';
 import { DeleteStudentDto } from './dto/delete-student.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
@@ -147,6 +148,64 @@ export class StudentsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.studentEnrollmentService.removeFromGroup(
+      id,
+      enrollmentId,
+      userId,
+      companyId,
+      dto,
+    );
+  }
+
+  // Closed enrollments (DROPPED / FROZEN) of a student — surfaces them
+  // in the profile UI so admins can write off lingering current-cycle
+  // debt on already-closed enrollments. The list is metadata only; per-
+  // enrollment eligibility is fetched on-demand when the modal opens.
+  @Get(':id/closed-enrollments')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getClosedEnrollments(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentsService.getClosedEnrollments(id, companyId);
+  }
+
+  // Eligibility check for the "yo'qolgan o'quvchi" write-off flow. Returns
+  // whether the student qualifies (joriy siklda PRESENT/LATE=0 + ABSENT>0
+  // + balance<0) and the suggested write-off amount. Frontend uses this
+  // to decide whether to render the write-off block inside the
+  // remove-from-group dialog (ACTIVE) or as a button on the profile page
+  // (DROPPED/FROZEN).
+  @Get(':id/enrollments/:enrollmentId/debt-write-off-eligibility')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getDebtWriteOffEligibility(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('enrollmentId') enrollmentId: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentEnrollmentService.getDebtWriteOffEligibility(
+      id,
+      enrollmentId,
+      companyId,
+    );
+  }
+
+  // Standalone write-off for an enrollment that is already DROPPED/FROZEN.
+  // Does NOT change enrollment status — purely a balance correction.
+  // ACTIVE enrollments must use removeFromGroup with writeOffCycleDebt=true
+  // so the audit trail captures one combined operation.
+  @Post(':id/enrollments/:enrollmentId/write-off-cycle-debt')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  writeOffCycleDebt(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('enrollmentId') enrollmentId: string,
+    @Body() dto: WriteOffCycleDebtDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentEnrollmentService.writeOffDroppedEnrollmentDebt(
       id,
       enrollmentId,
       userId,

@@ -295,4 +295,89 @@ export class TransactionsReadService {
 
     return { data, total, page, pageSize };
   }
+
+  /**
+   * Audit log for the "yo'qolgan o'quvchi" write-off flow.
+   * Returns only active (non-reversed) DEBT_WRITE_OFF rows, enriched with
+   * the metadata each entry carries (cycleNumber, cycleAbsentCount,
+   * perLessonCost, actualWriteOff, previousBalance, newBalance, reason).
+   *
+   * Branch Directors should be scoped to their own branches at the
+   * controller layer (pass branchIds; we fan-in `branchId IN (...)`).
+   */
+  async findDebtWriteOffs(
+    companyId: number,
+    options: {
+      branchId?: number;
+      branchIds?: number[];
+      from?: string;
+      to?: string;
+      performedById?: number;
+      page?: number;
+      pageSize?: number;
+      includeReversed?: boolean;
+    } = {},
+  ) {
+    const page = options.page ?? 1;
+    const pageSize = options.pageSize ?? 20;
+
+    const where: Prisma.TransactionWhereInput = {
+      companyId,
+      type: TransactionType.DEBT_WRITE_OFF,
+      ...(options.includeReversed ? {} : { reversedAt: null }),
+      ...(options.branchId && { branchId: options.branchId }),
+      ...(options.branchIds &&
+        options.branchIds.length > 0 && {
+          branchId: { in: options.branchIds },
+        }),
+      ...(options.performedById && { performedById: options.performedById }),
+      ...(options.from &&
+        options.to && {
+          createdAt: {
+            gte: new Date(options.from),
+            lte: new Date(options.to + 'T23:59:59.999Z'),
+          },
+        }),
+    };
+
+    const [data, total, sumAggregate] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where,
+        select: {
+          id: true,
+          amount: true,
+          balanceBefore: true,
+          balanceAfter: true,
+          description: true,
+          metadata: true,
+          enrollmentId: true,
+          branchId: true,
+          createdAt: true,
+          reversedAt: true,
+          student: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          performedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.transaction.count({ where }),
+      this.prisma.transaction.aggregate({
+        where,
+        _sum: { amount: true },
+      }),
+    ]);
+
+    return {
+      data,
+      total,
+      totalAmount: sumAggregate._sum.amount ?? 0,
+      page,
+      pageSize,
+    };
+  }
 }

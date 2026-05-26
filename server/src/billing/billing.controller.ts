@@ -7,9 +7,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { LessonBillingService } from './lesson-billing.service';
+import { DebtWriteOffService } from './debt-write-off.service';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { ReverseConsumptionDto } from '../transactions/dto/reverse-consumption.dto';
+import { ReverseDebtWriteOffDto } from '../transactions/dto/reverse-debt-write-off.dto';
 
 /**
  * Q4 — Admin-only correction endpoint for un-billing a LESSON_DEDUCTION
@@ -22,7 +24,10 @@ import { ReverseConsumptionDto } from '../transactions/dto/reverse-consumption.d
 @Controller('billing')
 @UseGuards(RolesGuard)
 export class BillingController {
-  constructor(private lessonBillingService: LessonBillingService) {}
+  constructor(
+    private lessonBillingService: LessonBillingService,
+    private debtWriteOffService: DebtWriteOffService,
+  ) {}
 
   @Post('lesson-deduction/:id/reverse')
   @Roles('CEO', 'Branch Director')
@@ -65,6 +70,32 @@ export class BillingController {
       studentId,
       companyId,
       performedById: userId,
+    });
+  }
+
+  /**
+   * CEO-only reversal of a `DEBT_WRITE_OFF` audit row — restores the
+   * original debt by writing the inverse Transaction. Used when an admin
+   * wrote off a student that turned out to have a valid disputed payment
+   * or any other case where the write-off was a mistake.
+   *
+   * Append-only ledger: this does NOT mutate the original row's amount;
+   * the original gets `reversedAt` set, an inverse row is added, and the
+   * student's balance returns to its pre-write-off state.
+   */
+  @Post('debt-write-offs/:id/reverse')
+  @Roles('CEO')
+  reverseDebtWriteOff(
+    @Param('id') id: string,
+    @Body() dto: ReverseDebtWriteOffDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.debtWriteOffService.reverseWriteOff({
+      transactionId: id,
+      companyId,
+      performedById: userId,
+      reason: dto.reason,
     });
   }
 }

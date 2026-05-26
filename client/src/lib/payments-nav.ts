@@ -6,6 +6,7 @@ import {
   UserMinus,
   FileText,
   Activity,
+  Eraser,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,4 +26,5 @@ export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Qarzdorlar", url: "/payments/debtors", icon: UserMinus },
   { title: "Shartnomalar", url: "/payments/contracts", icon: FileText },
   { title: "To'lov tizimlari jurnali", url: "/payments/gateway-events", icon: Activity, visibleForRoles: [1] },
+  { title: "Qarz hisobdan chiqarishlar", url: "/payments/debt-write-offs", icon: Eraser, visibleForRoles: [1, 2] },
 ];

@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -32,12 +33,25 @@ describe('ReportsController — role guards', () => {
     getDepartedStudentsList: jest.fn().mockResolvedValue({}),
     getDepartedStudentsByReason: jest.fn().mockResolvedValue({}),
     getDepartedStudentsByStatus: jest.fn().mockResolvedValue({}),
+    getDebtWriteOffsSummary: jest.fn().mockResolvedValue({
+      totalAmount: 0,
+      count: 0,
+      periodStart: '',
+      periodEnd: '',
+    }),
   };
+
+  const mockPrisma = {
+    userBranch: { findMany: jest.fn().mockResolvedValue([]) },
+  } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ReportsController],
-      providers: [{ provide: ReportsService, useValue: mockService }],
+      providers: [
+        { provide: ReportsService, useValue: mockService },
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
     }).compile();
 
     controller = module.get(ReportsController);
@@ -225,6 +239,66 @@ describe('ReportsController — role guards', () => {
         'Teacher',
       ]);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('getDebtWriteOffsSummary() guard — CEO + BD only', () => {
+    it('allows CEO', () => {
+      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
+        'CEO',
+      ]);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+    it('allows Branch Director', () => {
+      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
+        'Branch Director',
+      ]);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+    it('denies Administrator (financial-correction aggregate hidden from Admin)', () => {
+      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
+        'Administrator',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+    it('denies Cashier', () => {
+      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
+        'Cashier',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+    it('denies Teacher', () => {
+      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
+        'Teacher',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('branch scope resolver (private)', () => {
+    it('CEO gets null (no branch filter)', async () => {
+      mockPrisma.userBranch.findMany.mockResolvedValue([
+        { branchId: 99 }, // ignored for CEO
+      ]);
+      const result = await (controller as any).resolveBranchScopeForUser({
+        id: 1,
+        roles: ['CEO'],
+      });
+      expect(result).toBeNull();
+      expect(mockPrisma.userBranch.findMany).not.toHaveBeenCalled();
+    });
+
+    it('Branch Director gets their UserBranch rows', async () => {
+      mockPrisma.userBranch.findMany.mockReset();
+      mockPrisma.userBranch.findMany.mockResolvedValue([
+        { branchId: 3 },
+        { branchId: 7 },
+      ]);
+      const result = await (controller as any).resolveBranchScopeForUser({
+        id: 2,
+        roles: ['Branch Director'],
+      });
+      expect(result).toEqual([3, 7]);
     });
   });
 });

@@ -24,12 +24,16 @@ import {
 } from './dto/attendance-reports-query.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('reports')
 @UseGuards(RolesGuard)
 @Roles('CEO', 'Branch Director', 'Administrator')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('kpis')
   getKpis(
@@ -118,6 +122,43 @@ export class ReportsController {
       startDate: query.startDate,
       endDate: query.endDate,
     });
+  }
+
+  // KPI summary for the "yo'qolgan o'quvchi" write-off flow — total
+  // amount + operation count for the period. CEO sees the whole company;
+  // Branch Director is auto-scoped to their UserBranch rows. Restricted
+  // tighter than the class default since Administrators should not see
+  // financial-correction aggregates.
+  @Get('debt-write-offs-summary')
+  @Roles('CEO', 'Branch Director')
+  async getDebtWriteOffsSummary(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser()
+    user: { id: number; companyId: number; roles: string[] },
+  ) {
+    const branchIds = await this.resolveBranchScopeForUser(user);
+    return this.reportsService.getDebtWriteOffsSummary(user.companyId, {
+      branchId: query.branchId,
+      branchIds: branchIds ?? undefined,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  /**
+   * CEO: full company access (null = no branch filter).
+   * Branch Director: explicit UserBranch rows.
+   */
+  private async resolveBranchScopeForUser(user: {
+    id: number;
+    roles: string[];
+  }): Promise<number[] | null> {
+    if (user.roles.includes('CEO')) return null;
+    const rows = await this.prisma.userBranch.findMany({
+      where: { userId: user.id },
+      select: { branchId: true },
+    });
+    return rows.map((r) => r.branchId);
   }
 
   @Get('payment-reports')

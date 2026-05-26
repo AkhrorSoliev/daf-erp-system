@@ -28,6 +28,9 @@ export class StudentsService {
   getActiveEnrollmentsWithPrepaid(id: number, companyId: number) {
     return this.read.getActiveEnrollmentsWithPrepaid(id, companyId);
   }
+  getClosedEnrollments(id: number, companyId: number) {
+    return this.read.getClosedEnrollments(id, companyId);
+  }
 
   // Writes
   create(dto: CreateStudentDto, companyId: number, userId?: number) {

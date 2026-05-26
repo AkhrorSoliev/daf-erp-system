@@ -144,6 +144,21 @@ export class TransactionsService {
   ) {
     return this.write.createAdjustment(params, tx);
   }
+  recordDebtWriteOff(
+    params: {
+      studentId: number;
+      amount: number;
+      enrollmentId: string;
+      description: string;
+      metadata: Prisma.InputJsonValue;
+      branchId?: number;
+      companyId: number;
+      performedById: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.write.recordDebtWriteOff(params, tx);
+  }
   recordDiscountAdjustment(
     params: {
       studentId: number;
@@ -193,5 +208,11 @@ export class TransactionsService {
   }
   findAll(query: TransactionQueryDto, companyId: number) {
     return this.read.findAll(query, companyId);
+  }
+  findDebtWriteOffs(
+    companyId: number,
+    options?: Parameters<TransactionsReadService['findDebtWriteOffs']>[1],
+  ) {
+    return this.read.findDebtWriteOffs(companyId, options);
   }
 }
