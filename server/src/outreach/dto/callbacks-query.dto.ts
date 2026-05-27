@@ -17,6 +17,14 @@ export class CallbacksQueryDto {
   // Comma-separated assignee statuses to include. Defaults to PENDING,SEEN
   // — DONE tasks are hidden from the active callback list.
   @IsOptional()
-  @IsIn(['PENDING', 'SEEN', 'DONE', 'PENDING,SEEN', 'PENDING,DONE', 'SEEN,DONE', 'PENDING,SEEN,DONE'])
+  @IsIn([
+    'PENDING',
+    'SEEN',
+    'DONE',
+    'PENDING,SEEN',
+    'PENDING,DONE',
+    'SEEN,DONE',
+    'PENDING,SEEN,DONE',
+  ])
   status?: string;
 }

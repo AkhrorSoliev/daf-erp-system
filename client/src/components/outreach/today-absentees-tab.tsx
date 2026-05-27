@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PhoneCall, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,24 +20,44 @@ import type {
   TodayAbsenteeItem,
 } from "./outreach-types";
 import type { AddCallbackPrefill } from "./add-callback-dialog";
+import { TablePagination } from "./table-pagination";
 
 interface TodayAbsenteesTabProps {
+  isActive: boolean;
   onAddCallback: (prefill: AddCallbackPrefill | null) => void;
 }
 
-export function TodayAbsenteesTab({ onAddCallback }: TodayAbsenteesTabProps) {
+export function TodayAbsenteesTab({
+  isActive,
+  onAddCallback,
+}: TodayAbsenteesTabProps) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const { data, isLoading } = useQuery({
     queryKey: ["outreach", "today-absentees"],
     queryFn: () =>
       api
         .get<TodayAbsenteesResponse>("/outreach/today-absentees")
         .then((r) => r.data),
+    enabled: isActive,
+    staleTime: 0,
   });
+
+  // Client-side pagination — the endpoint returns the full day's list
+  // (bounded by per-center daily attendance, typically a few hundred rows).
+  // Depend on data?.items directly so the memo doesn't bust on every render.
+  const items = data?.items;
+  const total = items?.length ?? 0;
+  const paged = useMemo(() => {
+    if (!items) return [];
+    const start = (page - 1) * pageSize;
+    return items.slice(start, start + pageSize);
+  }, [items, page, pageSize]);
 
   if (isLoading) return <SkeletonRows />;
 
-  const items = data?.items ?? [];
-  if (items.length === 0) {
+  if (total === 0) {
     return (
       <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
         Bugun darsga kelmagan o&apos;quvchi yo&apos;q
@@ -45,27 +66,41 @@ export function TodayAbsenteesTab({ onAddCallback }: TodayAbsenteesTabProps) {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12 border-r">#</TableHead>
-            <TableHead>O&apos;quvchi</TableHead>
-            <TableHead>Telefon</TableHead>
-            <TableHead>Guruh</TableHead>
-            <TableHead>Kurs</TableHead>
-            <TableHead>Dars vaqti</TableHead>
-            <TableHead>O&apos;qituvchi</TableHead>
-            <TableHead>Izoh</TableHead>
-            <TableHead className="w-40">Amal</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((row, idx) => (
-            <Row key={row.attendanceId} row={row} index={idx} onAddCallback={onAddCallback} />
-          ))}
-        </TableBody>
-      </Table>
+    <div className="space-y-3">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
+              <TableHead>O&apos;quvchi</TableHead>
+              <TableHead>Telefon</TableHead>
+              <TableHead>Guruh</TableHead>
+              <TableHead>Kurs</TableHead>
+              <TableHead>Dars vaqti</TableHead>
+              <TableHead>O&apos;qituvchi</TableHead>
+              <TableHead>Izoh</TableHead>
+              <TableHead className="w-40">Amal</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paged.map((row, idx) => (
+              <Row
+                key={row.attendanceId}
+                row={row}
+                index={(page - 1) * pageSize + idx}
+                onAddCallback={onAddCallback}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <TablePagination
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

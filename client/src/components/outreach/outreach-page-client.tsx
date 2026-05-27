@@ -52,14 +52,23 @@ export function OutreachPageClient() {
           <TabsTrigger value="removals">Chiqarish navbati</TabsTrigger>
         </TabsList>
 
+        {/* Pass `isActive` so each tab can defer its useQuery until activated.
+         * Radix mounts all TabsContent children regardless of `value`, so the
+         * `enabled` flag is the only way to actually skip the fetch. */}
         <TabsContent value="absentees" className="mt-4">
-          <TodayAbsenteesTab onAddCallback={openAddCallback} />
+          <TodayAbsenteesTab
+            isActive={activeTab === "absentees"}
+            onAddCallback={openAddCallback}
+          />
         </TabsContent>
         <TabsContent value="callbacks" className="mt-4">
-          <CallbacksTab />
+          <CallbacksTab isActive={activeTab === "callbacks"} />
         </TabsContent>
         <TabsContent value="removals" className="mt-4">
-          <RemovalQueueTab onAddCallback={openAddCallback} />
+          <RemovalQueueTab
+            isActive={activeTab === "removals"}
+            onAddCallback={openAddCallback}
+          />
         </TabsContent>
       </Tabs>
 

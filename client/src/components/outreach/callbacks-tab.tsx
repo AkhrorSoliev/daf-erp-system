@@ -35,6 +35,8 @@ import type {
   CallbackEntityLead,
   CallbackEntityStudent,
 } from "./outreach-types";
+import { TablePagination } from "./table-pagination";
+
 const PRIORITY_LABEL: Record<NonNullable<CallbackItem["priority"]>, string> = {
   LOW: "Past",
   MEDIUM: "O'rta",
@@ -54,20 +56,28 @@ const STATUS_FILTERS: { value: "active" | "done"; label: string; query: string }
   { value: "done", label: "Bajarilgan", query: "DONE" },
 ];
 
-export function CallbacksTab() {
+interface CallbacksTabProps {
+  isActive: boolean;
+}
+
+export function CallbacksTab({ isActive }: CallbacksTabProps) {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"active" | "done">("active");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const currentQuery =
     STATUS_FILTERS.find((s) => s.value === filter)?.query ?? "PENDING,SEEN";
 
   const { data, isLoading } = useQuery({
-    queryKey: ["outreach", "callbacks", filter],
+    queryKey: ["outreach", "callbacks", filter, page, pageSize],
     queryFn: () =>
       api
         .get<CallbacksResponse>("/outreach/my-callbacks", {
-          params: { status: currentQuery, pageSize: 50 },
+          params: { status: currentQuery, page, pageSize },
         })
         .then((r) => r.data),
+    enabled: isActive,
+    staleTime: 0,
   });
 
   const markAssignee = useMutation({
@@ -88,7 +98,13 @@ export function CallbacksTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as "active" | "done")}>
+        <Tabs
+          value={filter}
+          onValueChange={(v) => {
+            setFilter(v as "active" | "done");
+            setPage(1);
+          }}
+        >
           <TabsList>
             {STATUS_FILTERS.map((s) => (
               <TabsTrigger key={s.value} value={s.value}>
@@ -108,35 +124,44 @@ export function CallbacksTab() {
             : "Bajarilgan qo'ng'iroqlar yo'q"}
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Muddat</TableHead>
-                <TableHead>Muhimlik</TableHead>
-                <TableHead>Kim bilan</TableHead>
-                <TableHead>Telefon</TableHead>
-                <TableHead>Matn</TableHead>
-                <TableHead className="w-44">Amal</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data!.items.map((row, idx) => (
-                <Row
-                  key={row.commentId}
-                  row={row}
-                  index={idx}
-                  onMark={(status) =>
-                    markAssignee.mutate({ commentId: row.commentId, status })
-                  }
-                  marking={markAssignee.isPending}
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12 border-r">#</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Muddat</TableHead>
+                  <TableHead>Muhimlik</TableHead>
+                  <TableHead>Kim bilan</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Matn</TableHead>
+                  <TableHead className="w-44">Amal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data!.items.map((row, idx) => (
+                  <Row
+                    key={row.commentId}
+                    row={row}
+                    index={(page - 1) * pageSize + idx}
+                    onMark={(status) =>
+                      markAssignee.mutate({ commentId: row.commentId, status })
+                    }
+                    marking={markAssignee.isPending}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <TablePagination
+            total={data!.total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
       )}
     </div>
   );

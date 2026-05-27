@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, PhoneCall, UserMinus } from "lucide-react";
@@ -25,8 +25,10 @@ import type {
   RemovalQueueResponse,
 } from "./outreach-types";
 import type { AddCallbackPrefill } from "./add-callback-dialog";
+import { TablePagination } from "./table-pagination";
 
 interface RemovalQueueTabProps {
+  isActive: boolean;
   onAddCallback: (prefill: AddCallbackPrefill | null) => void;
 }
 
@@ -36,7 +38,10 @@ interface RemoveTarget {
   studentName: string;
 }
 
-export function RemovalQueueTab({ onAddCallback }: RemovalQueueTabProps) {
+export function RemovalQueueTab({
+  isActive,
+  onAddCallback,
+}: RemovalQueueTabProps) {
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<RemoveTarget | null>(null);
   const [reasonId, setReasonId] = useState<string | null>(null);
@@ -44,6 +49,8 @@ export function RemovalQueueTab({ onAddCallback }: RemovalQueueTabProps) {
   const [writeOff, setWriteOff] = useState(false);
   const [writeOffReason, setWriteOffReason] = useState("");
   const [removing, setRemoving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data, isLoading } = useQuery({
     queryKey: ["outreach", "removal-queue"],
@@ -51,6 +58,8 @@ export function RemovalQueueTab({ onAddCallback }: RemovalQueueTabProps) {
       api
         .get<RemovalQueueResponse>("/outreach/removal-queue")
         .then((r) => r.data),
+    enabled: isActive,
+    staleTime: 0,
   });
 
   const { data: reasons } = useQuery<{ id: string; name: string }[]>({
@@ -124,7 +133,12 @@ export function RemovalQueueTab({ onAddCallback }: RemovalQueueTabProps) {
           ? "O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi"
           : "O'quvchi guruhdan chiqarildi",
       );
+      // Invalidate both queues — the removed student likely appears in the
+      // today-absentees list too (since 3-strike implies they were ABSENT today).
       queryClient.invalidateQueries({ queryKey: ["outreach", "removal-queue"] });
+      queryClient.invalidateQueries({
+        queryKey: ["outreach", "today-absentees"],
+      });
       resetForm();
     } catch (error) {
       toast.error(getErrorMessage(error, "Chiqarishda xatolik yuz berdi"));
@@ -133,56 +147,75 @@ export function RemovalQueueTab({ onAddCallback }: RemovalQueueTabProps) {
     }
   }
 
+  // useMemo must run before any conditional return (React hooks rules).
+  // Depend on data?.items directly so the dep is stable when data is set;
+  // wrapping in `?? []` per-render would bust memoization on every render.
+  const items = data?.items;
+  const total = items?.length ?? 0;
+  const paged = useMemo(() => {
+    if (!items) return [];
+    const start = (page - 1) * pageSize;
+    return items.slice(start, start + pageSize);
+  }, [items, page, pageSize]);
+
   if (isLoading) return <SkeletonRows />;
-  const items = data?.items ?? [];
 
   return (
     <>
-      {items.length === 0 ? (
+      {total === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           Ketma-ket 3 va undan ko&apos;p marta darsga kelmagan o&apos;quvchi yo&apos;q
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>O&apos;quvchi</TableHead>
-                <TableHead>Telefon</TableHead>
-                <TableHead>Ota-ona telefoni</TableHead>
-                <TableHead>Guruh / kurs</TableHead>
-                <TableHead>O&apos;qituvchi</TableHead>
-                <TableHead>Ketma-ket ABSENT</TableHead>
-                <TableHead>Oxirgi yo&apos;qlik</TableHead>
-                <TableHead className="w-56">Amal</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((row, idx) => (
-                <Row
-                  key={row.enrollmentId}
-                  row={row}
-                  index={idx}
-                  onCall={() =>
-                    onAddCallback({
-                      entityType: "Student",
-                      entityId: String(row.student.id),
-                      entityLabel: `${row.student.firstName} ${row.student.lastName}`,
-                      entityPhone: row.student.phone,
-                    })
-                  }
-                  onRemove={() =>
-                    setTarget({
-                      studentId: row.student.id,
-                      enrollmentId: row.enrollmentId,
-                      studentName: `${row.student.firstName} ${row.student.lastName}`,
-                    })
-                  }
-                />
-              ))}
-            </TableBody>
-          </Table>
+        <div className="space-y-3">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12 border-r">#</TableHead>
+                  <TableHead>O&apos;quvchi</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Ota-ona telefoni</TableHead>
+                  <TableHead>Guruh / kurs</TableHead>
+                  <TableHead>O&apos;qituvchi</TableHead>
+                  <TableHead>Ketma-ket ABSENT</TableHead>
+                  <TableHead>Oxirgi yo&apos;qlik</TableHead>
+                  <TableHead className="w-56">Amal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paged.map((row, idx) => (
+                  <Row
+                    key={row.enrollmentId}
+                    row={row}
+                    index={(page - 1) * pageSize + idx}
+                    onCall={() =>
+                      onAddCallback({
+                        entityType: "Student",
+                        entityId: String(row.student.id),
+                        entityLabel: `${row.student.firstName} ${row.student.lastName}`,
+                        entityPhone: row.student.phone,
+                      })
+                    }
+                    onRemove={() =>
+                      setTarget({
+                        studentId: row.student.id,
+                        enrollmentId: row.enrollmentId,
+                        studentName: `${row.student.firstName} ${row.student.lastName}`,
+                      })
+                    }
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <TablePagination
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 

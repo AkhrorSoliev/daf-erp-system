@@ -704,7 +704,7 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 - `CommentsModule` (`src/comments/`) — comments and task assignment system
 - **Comment** table: polymorphic `entityType`/`entityId` (same pattern as EntityHistory)
 - **CommentAssignee** table: users assigned to a task, each with their own status (PENDING → SEEN → DONE)
-- **Permissions**: Regular comments — CEO, BD, Admin. Task comments — CEO and BD only
+- **Permissions**: Regular comments — CEO, BD, Admin. Task comments — CEO, BD, and Admin. Administrator was added to the task-creation gate so the /outreach (Aloqa markazi) workflow is usable for the role that actually runs it day-to-day.
 - **Endpoints:**
   - `POST /api/comments` — create comment/task
   - `GET /api/comments?entityType=Student&entityId=12345&page=1&pageSize=20` — list by entity

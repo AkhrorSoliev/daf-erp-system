@@ -16,7 +16,9 @@ describe('CommentsController.create — task permission gate', () => {
     controller = module.get(CommentsController);
   });
 
-  function taskDto(overrides: Partial<CreateCommentDto> = {}): CreateCommentDto {
+  function taskDto(
+    overrides: Partial<CreateCommentDto> = {},
+  ): CreateCommentDto {
     return {
       entityType: 'Student',
       entityId: '10100',

@@ -6,7 +6,10 @@ import {
   consecutiveAbsentCount,
 } from './absence-streak.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { tashkentDateStr, utcMidnightFromDateStr } from '../attendance/shared/date-utils';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../attendance/shared/date-utils';
 
 describe('consecutiveAbsentCount', () => {
   it('returns 0 when latest is PRESENT', () => {

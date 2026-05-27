@@ -35,7 +35,7 @@ function assertDueDateInWorkingWindow(dueDate: string) {
 
   if (dayOfWeek === 0) {
     throw new BadRequestException(
-      "Vazifa muddati ish kunlarida belgilanishi kerak (yakshanba dam olish kuni)",
+      'Vazifa muddati ish kunlarida belgilanishi kerak (yakshanba dam olish kuni)',
     );
   }
   if (
@@ -44,7 +44,7 @@ function assertDueDateInWorkingWindow(dueDate: string) {
     (hour === WORK_END_HOUR && minute > 0)
   ) {
     throw new BadRequestException(
-      "Vazifa muddati ish soati ichida belgilanishi kerak (08:00 dan 18:00 gacha, Toshkent vaqti)",
+      'Vazifa muddati ish soati ichida belgilanishi kerak (08:00 dan 18:00 gacha, Toshkent vaqti)',
     );
   }
 }

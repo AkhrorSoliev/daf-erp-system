@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { AttendanceStatus, EnrollmentStatus, GroupStatus } from '@prisma/client';
+import {
+  AttendanceStatus,
+  EnrollmentStatus,
+  GroupStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface StreakRow {
