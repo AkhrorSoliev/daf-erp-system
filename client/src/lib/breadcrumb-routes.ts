@@ -7,6 +7,7 @@ export const routeLabels: Record<string, string> = {
   teachers: "O'qituvchilar",
   students: "O'quvchilar",
   leads: "Lidlar",
+  outreach: "Aloqa markazi",
   "mock-exams": "Mock imtihonlar",
   form: "Forma sozlash",
   forms: "Formalar",

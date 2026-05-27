@@ -167,6 +167,81 @@ describe('CommentsService', () => {
         BadRequestException,
       );
     });
+
+    // DueDate must fall inside Asia/Tashkent working window:
+    // Monday–Saturday, 08:00–18:00 inclusive. Sundays and off-hours are
+    // rejected so every task is guaranteed a TaskReminder cron tick.
+    describe('dueDate working-window validation', () => {
+      function taskDto(dueDate: string) {
+        return {
+          entityType: 'Student',
+          entityId: '10001',
+          content: 'Call back',
+          isTask: true,
+          assigneeIds: [10001],
+          dueDate,
+        };
+      }
+
+      it('accepts dueDate at 08:00 Tashkent on a Monday', async () => {
+        // Monday 2026-06-01 08:00 Tashkent = 03:00 UTC
+        await expect(
+          service.create(taskDto('2026-06-01T03:00:00.000Z'), 1, 1001),
+        ).resolves.toBeDefined();
+      });
+
+      it('accepts dueDate at 18:00 Tashkent on a Saturday', async () => {
+        // Saturday 2026-06-06 18:00 Tashkent = 13:00 UTC
+        await expect(
+          service.create(taskDto('2026-06-06T13:00:00.000Z'), 1, 1001),
+        ).resolves.toBeDefined();
+      });
+
+      it('rejects dueDate on Sunday', async () => {
+        // Sunday 2026-06-07 10:00 Tashkent = 05:00 UTC
+        await expect(
+          service.create(taskDto('2026-06-07T05:00:00.000Z'), 1, 1001),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('rejects dueDate before 08:00 Tashkent', async () => {
+        // Monday 2026-06-01 07:30 Tashkent = 02:30 UTC
+        await expect(
+          service.create(taskDto('2026-06-01T02:30:00.000Z'), 1, 1001),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('rejects dueDate after 18:00 Tashkent', async () => {
+        // Monday 2026-06-01 18:30 Tashkent = 13:30 UTC
+        await expect(
+          service.create(taskDto('2026-06-01T13:30:00.000Z'), 1, 1001),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('rejects dueDate at midnight (00:00) — off-hours', async () => {
+        // Monday 2026-06-01 00:00 Tashkent = Sunday 2026-05-31 19:00 UTC
+        await expect(
+          service.create(taskDto('2026-05-31T19:00:00.000Z'), 1, 1001),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('does NOT validate when isTask=false (regular comments unaffected)', async () => {
+        // Sunday with a dueDate — but isTask is false, so the field is ignored
+        await expect(
+          service.create(
+            {
+              entityType: 'Student',
+              entityId: '10001',
+              content: 'Just a note',
+              isTask: false,
+              dueDate: '2026-06-07T05:00:00.000Z',
+            },
+            1,
+            1001,
+          ),
+        ).resolves.toBeDefined();
+      });
+    });
   });
 
   describe('findByEntity', () => {

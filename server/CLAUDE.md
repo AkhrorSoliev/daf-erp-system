@@ -713,7 +713,7 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
   - `PATCH /api/comments/:id/assignee-status` — assigned user updates their own status
 - Comment creation/deletion is recorded in the audit log via `EntityHistoryService`
 - Events are emitted via `@nestjs/event-emitter`: `comment.created`, `task.assigned`, `task.status.changed`
-- `TaskReminderService` cron sends "deadline approaching" notifications 1h before `dueDate`. Runs every 30 min only during business hours (`'0 */30 8-22 * * *'`, Asia/Tashkent) to let the DB autosuspend at night — late-evening tasks get their first reminder at 08:00 the next day
+- `TaskReminderService` cron sends "deadline approaching" notifications 1h before `dueDate`. Runs once per hour on the hour, only during business hours and on working days (`'0 0 8-18 * * 1-6'`, Asia/Tashkent — fires at 08:00, 09:00, …, 18:00 Monday–Saturday). Sundays and active holidays (via `HolidaysService.findActiveHolidayCovering`) are skipped. The DB autosuspends outside this window. **Task dueDate is enforced to fall inside this same window** — `CommentsService.create` and `update` reject any `isTask=true` task with `dueDate` outside 08:00–18:00 Tashkent or on a Sunday with `BadRequestException`, so every task reminder is guaranteed a cron tick within 1h of its deadline.
 
 ### Notifications (4 channels)
 

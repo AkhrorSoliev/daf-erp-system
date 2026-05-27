@@ -26,6 +26,8 @@ interface DatePickerProps {
   maxDate?: Date;
   /** Month to open the calendar on when `value` is not set (e.g. the other end of a range). */
   defaultMonth?: Date;
+  /** Day-of-week numbers (0=Sun, 1=Mon, …, 6=Sat) to disable in the calendar. */
+  disabledDaysOfWeek?: number[];
 }
 
 export function DatePicker({
@@ -38,15 +40,21 @@ export function DatePicker({
   minDate,
   maxDate,
   defaultMonth,
+  disabledDaysOfWeek,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
   const disabledMatcher = React.useMemo(() => {
-    const matchers: Array<{ before: Date } | { after: Date }> = [];
+    const matchers: Array<
+      { before: Date } | { after: Date } | { dayOfWeek: number[] }
+    > = [];
     if (minDate) matchers.push({ before: minDate });
     if (maxDate) matchers.push({ after: maxDate });
+    if (disabledDaysOfWeek && disabledDaysOfWeek.length > 0) {
+      matchers.push({ dayOfWeek: disabledDaysOfWeek });
+    }
     return matchers.length > 0 ? matchers : undefined;
-  }, [minDate, maxDate]);
+  }, [minDate, maxDate, disabledDaysOfWeek]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

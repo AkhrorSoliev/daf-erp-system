@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
+import { HolidaysService } from '../holidays/holidays.service';
 
 @Injectable()
 export class TaskReminderService {
@@ -15,13 +16,28 @@ export class TaskReminderService {
     private notificationsService: NotificationsService,
     private gateway: NotificationsGateway,
     private pushService: PushService,
+    private holidaysService: HolidaysService,
   ) {}
 
-  // Ish vaqtida har 30 daqiqada ishlaydi (08:00–22:59 Asia/Tashkent).
-  // Tunda DB ni uyg'otmaslik uchun cheklangan — kechqurun yangi qo'yilgan
-  // topshiriq deadline'i ertaga ertalab 08:00 dagi birinchi tekshiruvda olinadi.
-  @Cron('0 */30 8-22 * * *', { timeZone: 'Asia/Tashkent' })
+  // Ish vaqtida har soatda ishlaydi (08:00–18:00 Asia/Tashkent, daqiqa = 0).
+  // Dushanba–shanba (yakshanba dam) va bayram kunlari ham o'tkazib yuboriladi.
+  // Vazifa muddati shu deraza ichida bo'lishi shart (CommentsService.create
+  // tekshiradi) — shuning uchun bu cron har bir vazifaning 1-soatlik
+  // eslatmasini ushlab oladi.
+  @Cron('0 0 8-18 * * 1-6', { timeZone: 'Asia/Tashkent' })
   async checkUpcomingDeadlines() {
+    // Bayram kunini o'tkazib yuborish — Holiday jadvalidagi har qanday
+    // faol bayram bugungi sanani qoplasa, cron hech narsa qilmaydi.
+    const holiday = await this.holidaysService.findActiveHolidayCovering(
+      new Date(),
+    );
+    if (holiday) {
+      this.logger.debug(
+        `Bayram kuni (${holiday.name}) — task reminder o'tkazib yuborildi`,
+      );
+      return;
+    }
+
     const now = new Date();
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 

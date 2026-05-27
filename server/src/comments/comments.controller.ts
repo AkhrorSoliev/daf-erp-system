@@ -35,10 +35,14 @@ export class CommentsController {
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
   ) {
-    // Only CEO and BD can create task comments
+    // CEO, BD, and Administrator can create task comments. Administrator was
+    // added so the "Aloqa markazi" (/outreach) callback flow works for the
+    // role that actually runs it day-to-day.
     if (dto.isTask) {
       const canAssign =
-        roles.includes('CEO') || roles.includes('Branch Director');
+        roles.includes('CEO') ||
+        roles.includes('Branch Director') ||
+        roles.includes('Administrator');
       if (!canAssign) {
         dto.isTask = false;
         dto.assigneeIds = undefined;

@@ -16,6 +16,39 @@ import {
 } from './dto/comment-query.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
 
+// Asia/Tashkent ish kuni va ish soati cheklovi (08:00 dan 18:00 gacha,
+// dushanba–shanba, yakshanba dam). DueDate ushbu deraza tashqarisida
+// bo'lishi rad etiladi. Texnik sabab: TaskReminderService cron faqat shu
+// oraliqda ishlaydi — boshqa vaqtda berilgan vazifaga 1-soatlik eslatma
+// kelmaydi.
+const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+const WORK_START_HOUR = 8;
+const WORK_END_HOUR = 18;
+
+function assertDueDateInWorkingWindow(dueDate: string) {
+  const d = new Date(dueDate);
+  if (Number.isNaN(d.getTime())) return; // class-validator already rejects bad date strings
+  const tashkent = new Date(d.getTime() + TASHKENT_OFFSET_MS);
+  const hour = tashkent.getUTCHours();
+  const minute = tashkent.getUTCMinutes();
+  const dayOfWeek = tashkent.getUTCDay(); // 0=Sunday, 1=Monday, …, 6=Saturday
+
+  if (dayOfWeek === 0) {
+    throw new BadRequestException(
+      "Vazifa muddati ish kunlarida belgilanishi kerak (yakshanba dam olish kuni)",
+    );
+  }
+  if (
+    hour < WORK_START_HOUR ||
+    hour > WORK_END_HOUR ||
+    (hour === WORK_END_HOUR && minute > 0)
+  ) {
+    throw new BadRequestException(
+      "Vazifa muddati ish soati ichida belgilanishi kerak (08:00 dan 18:00 gacha, Toshkent vaqti)",
+    );
+  }
+}
+
 const commentInclude = {
   author: {
     select: { id: true, firstName: true, lastName: true, photo: true },
@@ -41,6 +74,10 @@ export class CommentsService {
       throw new BadRequestException(
         "Topshiriq uchun kamida bitta mas'ul shaxs tanlang",
       );
+    }
+
+    if (dto.isTask && dto.dueDate) {
+      assertDueDateInWorkingWindow(dto.dueDate);
     }
 
     const comment = await this.prisma.comment.create({
@@ -155,8 +192,12 @@ export class CommentsService {
 
     const updateData: any = {};
     if (dto.content !== undefined) updateData.content = dto.content;
-    if (dto.dueDate !== undefined)
+    if (dto.dueDate !== undefined) {
+      if (dto.dueDate && comment.isTask) {
+        assertDueDateInWorkingWindow(dto.dueDate);
+      }
       updateData.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+    }
     if (dto.priority !== undefined) updateData.priority = dto.priority || null;
 
     const updated = await this.prisma.comment.update({

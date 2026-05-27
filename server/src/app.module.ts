@@ -48,6 +48,7 @@ import { LessonTeacherOverridesModule } from './lesson-teacher-overrides/lesson-
 import { LessonReschedulesModule } from './lesson-reschedules/lesson-reschedules.module';
 import { BillingModule } from './billing/billing.module';
 import { ReceiptsModule } from './receipts/receipts.module';
+import { OutreachModule } from './outreach/outreach.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -100,6 +101,7 @@ import { JwtAuthGuard } from './common/guards';
     LessonTeacherOverridesModule,
     LessonReschedulesModule,
     ReceiptsModule,
+    OutreachModule,
   ],
   providers: [
     {
