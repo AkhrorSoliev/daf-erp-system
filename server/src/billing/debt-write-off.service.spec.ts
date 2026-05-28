@@ -115,34 +115,34 @@ describe('DebtWriteOffService.computeEligibility', () => {
     expect(result.details.suggestedWriteOff).toBe(0);
   });
 
-  it('returns STUDENT_ATTENDED when current cycle has any PRESENT', async () => {
+  // STUDENT_ATTENDED was removed when eligibility was relaxed. Students with
+  // 1+ PRESENT/LATE in current cycle are now eligible (admin picks amount).
+  // The breakdown fields surface kelgan/kelmagan/jami so admin can decide.
+  it('eligible when student attended a few + has ABSENT — breakdown reflects mix', async () => {
     client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -450_000 }),
+      makeEnrollment({ balance: -450_000, price: 600_000, lessonPaymentCount: 12 }),
     );
     client.attendance.findMany.mockResolvedValue([
       attendance(AttendanceStatus.PRESENT, 1),
-      attendance(AttendanceStatus.ABSENT, 2),
+      attendance(AttendanceStatus.LATE, 2),
       attendance(AttendanceStatus.ABSENT, 3),
+      attendance(AttendanceStatus.ABSENT, 4),
+      attendance(AttendanceStatus.ABSENT, 5),
     ]);
 
     const result = await service.computeEligibility(ENROLLMENT_ID, COMPANY_ID);
 
-    expect(result.eligible).toBe(false);
-    expect(result.reason).toBe('STUDENT_ATTENDED');
-  });
-
-  it('returns STUDENT_ATTENDED when current cycle has any LATE', async () => {
-    client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -100_000 }),
-    );
-    client.attendance.findMany.mockResolvedValue([
-      attendance(AttendanceStatus.LATE, 1),
-    ]);
-
-    const result = await service.computeEligibility(ENROLLMENT_ID, COMPANY_ID);
-
-    expect(result.eligible).toBe(false);
-    expect(result.reason).toBe('STUDENT_ATTENDED');
+    // 600 000 / 12 = 50 000 per lesson
+    expect(result.eligible).toBe(true);
+    expect(result.details.cyclePresentCount).toBe(1);
+    expect(result.details.cycleLateCount).toBe(1);
+    expect(result.details.cycleAbsentCount).toBe(3);
+    expect(result.details.attendedCost).toBe(100_000); // 2 × 50 000
+    expect(result.details.absentCost).toBe(150_000); // 3 × 50 000
+    expect(result.details.realDebtAmount).toBe(150_000);
+    expect(result.details.totalDebtAmount).toBe(450_000);
+    expect(result.details.maxWriteOff).toBe(450_000);
+    expect(result.details.suggestedWriteOff).toBe(150_000); // = realDebtAmount
   });
 
   it('returns NO_ABSENT_IN_CYCLE when only EXCUSED records exist', async () => {

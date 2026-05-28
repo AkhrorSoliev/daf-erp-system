@@ -2,10 +2,9 @@
 // write-off button. Mirrors the shape returned by:
 //   GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility
 
-export type DebtWriteOffEligibilityReason =
-  | "NO_DEBT"
-  | "STUDENT_ATTENDED"
-  | "NO_ABSENT_IN_CYCLE";
+// STUDENT_ATTENDED was removed when eligibility was relaxed — admin now
+// makes the call via the UI even when the student attended a few lessons.
+export type DebtWriteOffEligibilityReason = "NO_DEBT" | "NO_ABSENT_IN_CYCLE";
 
 export interface DebtWriteOffEligibilityDetails {
   studentId: number;
@@ -22,7 +21,13 @@ export interface DebtWriteOffEligibilityDetails {
   lessonPaymentCount: number;
   perLessonCost: number;
   theoreticalCycleDebt: number;
+  // Kept for backward compatibility — equals realDebtAmount.
   suggestedWriteOff: number;
+  attendedCost: number;
+  absentCost: number;
+  realDebtAmount: number;
+  totalDebtAmount: number;
+  maxWriteOff: number;
 }
 
 export interface DebtWriteOffEligibility {

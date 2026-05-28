@@ -16,7 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StudentRemoveFromGroupDialog } from "@/components/students/student-remove-from-group-dialog";
+import {
+  StudentRemoveFromGroupDialog,
+  resolveWriteOffAmount,
+  type WriteOffChoice,
+} from "@/components/students/student-remove-from-group-dialog";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { DebtWriteOffEligibility } from "@/components/students/debt-write-off-types";
@@ -47,6 +51,8 @@ export function RemovalQueueTab({
   const [reasonId, setReasonId] = useState<string | null>(null);
   const [reasonText, setReasonText] = useState("");
   const [writeOff, setWriteOff] = useState(false);
+  const [writeOffChoice, setWriteOffChoice] = useState<WriteOffChoice>("real");
+  const [writeOffCustomAmount, setWriteOffCustomAmount] = useState("");
   const [writeOffReason, setWriteOffReason] = useState("");
   const [removing, setRemoving] = useState(false);
   const [page, setPage] = useState(1);
@@ -92,8 +98,19 @@ export function RemovalQueueTab({
 
   const hasConfiguredReasons = (reasons?.length ?? 0) > 0;
   const trimmedReason = reasonText.trim();
+  const resolvedWriteOffAmount =
+    writeOff && eligibility?.eligible
+      ? resolveWriteOffAmount(
+          writeOffChoice,
+          writeOffCustomAmount,
+          eligibility.details,
+        )
+      : null;
   const writeOffReady =
-    !writeOff || (writeOffReason.trim().length >= 5 && !!eligibility?.eligible);
+    !writeOff ||
+    (writeOffReason.trim().length >= 5 &&
+      !!eligibility?.eligible &&
+      resolvedWriteOffAmount !== null);
   const canSubmit =
     (hasConfiguredReasons ? reasonId !== null : trimmedReason.length > 0) &&
     writeOffReady;
@@ -103,6 +120,8 @@ export function RemovalQueueTab({
     setReasonId(null);
     setReasonText("");
     setWriteOff(false);
+    setWriteOffChoice("real");
+    setWriteOffCustomAmount("");
     setWriteOffReason("");
   }
 
@@ -119,10 +138,10 @@ export function RemovalQueueTab({
       } = {};
       if (reasonId) payload.departureReasonId = reasonId;
       if (trimmedReason) payload.reason = trimmedReason;
-      if (writeOff && eligibility?.eligible) {
+      if (writeOff && eligibility?.eligible && resolvedWriteOffAmount !== null) {
         payload.writeOffCycleDebt = true;
         payload.writeOffReason = writeOffReason.trim();
-        payload.writeOffConfirmAmount = eligibility.details.suggestedWriteOff;
+        payload.writeOffConfirmAmount = resolvedWriteOffAmount;
       }
       await api.delete(
         `/students/${target.studentId}/enroll/${target.enrollmentId}`,
@@ -130,7 +149,7 @@ export function RemovalQueueTab({
       );
       toast.success(
         writeOff && eligibility?.eligible
-          ? "O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi"
+          ? "O'quvchi chiqarildi va qarz hisobdan chiqarildi"
           : "O'quvchi guruhdan chiqarildi",
       );
       // Invalidate all 3 list queries + the stats widget — the removed student
@@ -238,6 +257,10 @@ export function RemovalQueueTab({
         eligibilityLoading={eligibilityLoading}
         writeOff={writeOff}
         onWriteOffChange={setWriteOff}
+        writeOffChoice={writeOffChoice}
+        onWriteOffChoiceChange={setWriteOffChoice}
+        writeOffCustomAmount={writeOffCustomAmount}
+        onWriteOffCustomAmountChange={setWriteOffCustomAmount}
         writeOffReason={writeOffReason}
         onWriteOffReasonChange={setWriteOffReason}
       />

@@ -19,7 +19,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { EnrollToGroupDialog } from "@/components/students/enroll-to-group-dialog";
-import { StudentRemoveFromGroupDialog } from "@/components/students/student-remove-from-group-dialog";
+import {
+  StudentRemoveFromGroupDialog,
+  resolveWriteOffAmount,
+  type WriteOffChoice,
+} from "@/components/students/student-remove-from-group-dialog";
 import { useEditStudent } from "@/hooks/use-edit-student";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -45,6 +49,8 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
   const [removeReason, setRemoveReason] = useState("");
   const [removeReasonId, setRemoveReasonId] = useState<string | null>(null);
   const [writeOff, setWriteOff] = useState(false);
+  const [writeOffChoice, setWriteOffChoice] = useState<WriteOffChoice>("real");
+  const [writeOffCustomAmount, setWriteOffCustomAmount] = useState("");
   const [writeOffReason, setWriteOffReason] = useState("");
 
   const { data: departureReasons } = useQuery<
@@ -75,8 +81,19 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
 
   const hasConfiguredReasons = (departureReasons?.length ?? 0) > 0;
   const trimmedReason = removeReason.trim();
+  const resolvedWriteOffAmount =
+    writeOff && eligibility?.eligible
+      ? resolveWriteOffAmount(
+          writeOffChoice,
+          writeOffCustomAmount,
+          eligibility.details,
+        )
+      : null;
   const writeOffReady =
-    !writeOff || (writeOffReason.trim().length >= 5 && !!eligibility?.eligible);
+    !writeOff ||
+    (writeOffReason.trim().length >= 5 &&
+      !!eligibility?.eligible &&
+      resolvedWriteOffAmount !== null);
   const canRemove =
     (hasConfiguredReasons
       ? removeReasonId !== null
@@ -97,17 +114,17 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
       } = {};
       if (removeReasonId) payload.departureReasonId = removeReasonId;
       if (trimmedReason) payload.reason = trimmedReason;
-      if (writeOff && eligibility?.eligible) {
+      if (writeOff && eligibility?.eligible && resolvedWriteOffAmount !== null) {
         payload.writeOffCycleDebt = true;
         payload.writeOffReason = writeOffReason.trim();
-        payload.writeOffConfirmAmount = eligibility.details.suggestedWriteOff;
+        payload.writeOffConfirmAmount = resolvedWriteOffAmount;
       }
       await api.delete(`/students/${student.id}/enroll/${enrollmentId}`, {
         data: payload,
       });
       toast.success(
         writeOff && eligibility?.eligible
-          ? "O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi"
+          ? "O'quvchi chiqarildi va qarz hisobdan chiqarildi"
           : "O'quvchi guruhdan chiqarildi",
       );
     } catch (error) {
@@ -117,6 +134,8 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
       setRemoveReason("");
       setRemoveReasonId(null);
       setWriteOff(false);
+      setWriteOffChoice("real");
+      setWriteOffCustomAmount("");
       setWriteOffReason("");
     }
   };
@@ -191,6 +210,8 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
               setRemoveReason("");
               setRemoveReasonId(null);
               setWriteOff(false);
+              setWriteOffChoice("real");
+              setWriteOffCustomAmount("");
               setWriteOffReason("");
             }
           }}
@@ -206,6 +227,10 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
           eligibilityLoading={eligibilityLoading}
           writeOff={writeOff}
           onWriteOffChange={setWriteOff}
+          writeOffChoice={writeOffChoice}
+          onWriteOffChoiceChange={setWriteOffChoice}
+          writeOffCustomAmount={writeOffCustomAmount}
+          onWriteOffCustomAmountChange={setWriteOffCustomAmount}
           writeOffReason={writeOffReason}
           onWriteOffReasonChange={setWriteOffReason}
         />

@@ -16,17 +16,22 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history/entity-history.service';
 
 /**
- * "Yo'qolgan o'quvchi" — joriy siklda umuman kelmagan o'quvchining
- * shu sikldan kelib chiqqan qarzini hisobdan chiqarish.
+ * "Yo'qolgan o'quvchi" — joriy siklda kam yoki umuman kelmagan o'quvchining
+ * qarzini hisobdan chiqarish.
  *
  * Biznes qoidasi:
  *   - "Sikl" = Course.lessonPaymentCount ta ketma-ket davomat (LessonCancellation
  *     orqali EXCUSED qilinganlar sanalmaydi — bekor qilingan dars o'tmagan).
  *   - "Joriy sikl" = oxirgi davomat tushgan sikl.
- *   - Hisobdan chiqarish ruxsat etiladi, agar: balance < 0 AND joriy siklda
- *     PRESENT/LATE = 0 AND ABSENT > 0.
- *   - Summa = min(currentCycleAbsentCount × perLessonCost, |balance|).
- *     Oldingi sikllar qarzi (xizmat olgan, to'lamagan) — qoldiriladi.
+ *   - Eligibility: balance < 0 AND joriy siklda ABSENT > 0.
+ *     (Avval "PRESENT/LATE = 0" sharti ham bor edi — admin "1-2 kelgan
+ *     o'quvchi" stsenariysida ham qaror qabul qila olsin uchun olib
+ *     tashlandi. Admin UI orqali qancha summani aniq tanlaydi.)
+ *   - Admin 3 ta variant orasidan tanlaydi:
+ *       Real qarz  = min(absentCost = absentCount × perLessonCost, |balance|)
+ *       Jami qarz  = |balance|  (eski sikllardagi qarzni ham qoplaydi)
+ *       Boshqa     = admin qo'lda kiritadi, [1, |balance|] oralig'ida
+ *   - Tasdiqlangan summa shu uchta variantdan birortasi bo'lishi shart.
  *
  * Append-only ledger: yangi Transaction { type: DEBT_WRITE_OFF, amount: +X }
  * yoziladi; balansga qo'shiladi (minusga yaqinlashadi). Audit izi metadata da.
@@ -94,6 +99,13 @@ export class DebtWriteOffService {
 
     const counts = countByStatus(cycle.attendances);
 
+    const attendedCost = (counts.present + counts.late) * perLessonCost;
+    const absentCost = counts.absent * perLessonCost;
+    const theoreticalCycleDebt = absentCost;
+    const totalDebtAmount = balance < 0 ? -balance : 0;
+    const realDebtAmount = Math.min(absentCost, totalDebtAmount);
+    const maxWriteOff = totalDebtAmount;
+
     const detailsBase = {
       studentId: enrollment.studentId,
       enrollmentId: enrollment.id,
@@ -108,24 +120,17 @@ export class DebtWriteOffService {
       cycleExcusedCount: counts.excused,
       lessonPaymentCount,
       perLessonCost,
+      attendedCost,
+      absentCost,
+      realDebtAmount,
+      totalDebtAmount,
+      maxWriteOff,
     };
 
     if (balance >= 0) {
       return {
         eligible: false,
         reason: 'NO_DEBT',
-        details: {
-          ...detailsBase,
-          theoreticalCycleDebt: 0,
-          suggestedWriteOff: 0,
-        },
-      };
-    }
-
-    if (counts.present > 0 || counts.late > 0) {
-      return {
-        eligible: false,
-        reason: 'STUDENT_ATTENDED',
         details: {
           ...detailsBase,
           theoreticalCycleDebt: 0,
@@ -146,8 +151,10 @@ export class DebtWriteOffService {
       };
     }
 
-    const theoreticalCycleDebt = counts.absent * perLessonCost;
-    const suggestedWriteOff = Math.min(theoreticalCycleDebt, -balance);
+    // Backward-compatible field: "suggestedWriteOff" defaults to the
+    // "Real qarz" preset. Callers that don't know about the new presets
+    // (legacy frontends) still get the conservative-correct amount.
+    const suggestedWriteOff = realDebtAmount;
 
     return {
       eligible: true,
@@ -192,10 +199,19 @@ export class DebtWriteOffService {
         );
       }
 
-      const expected = eligibility.details.suggestedWriteOff;
-      if (params.confirmAmount !== expected) {
+      // Validate the confirmed amount is in range [1, maxWriteOff]. The
+      // frontend supplies one of three values (realDebtAmount, totalDebtAmount,
+      // or an admin-typed custom amount); all three live in the same window
+      // so a single bounded-range check covers them.
+      const maxAllowed = eligibility.details.maxWriteOff;
+      if (
+        !Number.isFinite(params.confirmAmount) ||
+        !Number.isInteger(params.confirmAmount) ||
+        params.confirmAmount < 1 ||
+        params.confirmAmount > maxAllowed
+      ) {
         throw new BadRequestException(
-          `Tasdiqlangan summa noto'g'ri. Kutilgan: ${expected}, kelgan: ${params.confirmAmount}`,
+          `Tasdiqlangan summa noto'g'ri. Oraliq: 1 — ${maxAllowed}, kelgan: ${params.confirmAmount}`,
         );
       }
 
@@ -421,10 +437,10 @@ function countByStatus(records: { status: AttendanceStatus }[]) {
   return { present, late, absent, excused };
 }
 
-export type DebtWriteOffEligibilityReason =
-  | 'NO_DEBT'
-  | 'STUDENT_ATTENDED'
-  | 'NO_ABSENT_IN_CYCLE';
+// STUDENT_ATTENDED was removed when eligibility was relaxed — admin now
+// makes the decision via the UI even when the student attended a few
+// lessons. The constant is no longer emitted by the service.
+export type DebtWriteOffEligibilityReason = 'NO_DEBT' | 'NO_ABSENT_IN_CYCLE';
 
 export interface DebtWriteOffEligibilityDetails {
   studentId: number;
@@ -441,7 +457,19 @@ export interface DebtWriteOffEligibilityDetails {
   lessonPaymentCount: number;
   perLessonCost: number;
   theoreticalCycleDebt: number;
+  // Kept for backward compatibility — equal to realDebtAmount.
   suggestedWriteOff: number;
+  // Joriy siklda kelgan darslarning umumiy narxi.
+  attendedCost: number;
+  // Joriy siklda kelmagan darslarning umumiy narxi.
+  absentCost: number;
+  // "Real qarz" preseti — joriy sikldagi kelmagan darslar narxi (lekin
+  // balansdan ko'p emas).
+  realDebtAmount: number;
+  // "Jami qarz" preseti — balansdagi to'liq qarz (eski sikllar ham qoplanadi).
+  totalDebtAmount: number;
+  // Admin "Boshqa" variantida kiritishi mumkin bo'lgan maksimal summa.
+  maxWriteOff: number;
 }
 
 export interface DebtWriteOffEligibility {

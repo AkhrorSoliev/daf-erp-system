@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { PriceInput } from "@/components/ui/price-input";
 import { AlertTriangle } from "lucide-react";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
@@ -37,18 +38,23 @@ interface StudentRemoveFromGroupDialogProps {
   canSubmit: boolean;
   onConfirm: () => void;
 
-  // "Yo'qolgan o'quvchi" write-off — joriy siklda biror dars qatnashmagan
-  // o'quvchining qarzini bir vaqtning o'zida hisobdan chiqarish. All four
-  // props are optional so legacy callers that don't yet thread the
-  // eligibility query continue to work — when omitted, the write-off
-  // block is simply hidden.
+  // "Yo'qolgan o'quvchi" write-off — joriy siklda yo'qotgan o'quvchining
+  // qarzini chiqarish bilan birga hisobdan chiqarish. All seven write-off
+  // props are optional so legacy callers continue to work — when handlers
+  // are omitted the write-off block is hidden.
   eligibility?: DebtWriteOffEligibility | null;
   eligibilityLoading?: boolean;
   writeOff?: boolean;
   onWriteOffChange?: (v: boolean) => void;
+  writeOffChoice?: WriteOffChoice;
+  onWriteOffChoiceChange?: (choice: WriteOffChoice) => void;
+  writeOffCustomAmount?: string;
+  onWriteOffCustomAmountChange?: (raw: string) => void;
   writeOffReason?: string;
   onWriteOffReasonChange?: (text: string) => void;
 }
+
+export type WriteOffChoice = "real" | "jami" | "custom";
 
 export function StudentRemoveFromGroupDialog({
   open,
@@ -65,6 +71,10 @@ export function StudentRemoveFromGroupDialog({
   eligibilityLoading,
   writeOff = false,
   onWriteOffChange,
+  writeOffChoice = "real",
+  onWriteOffChoiceChange,
+  writeOffCustomAmount = "",
+  onWriteOffCustomAmountChange,
   writeOffReason = "",
   onWriteOffReasonChange,
 }: StudentRemoveFromGroupDialogProps) {
@@ -133,6 +143,10 @@ export function StudentRemoveFromGroupDialog({
             eligibility={eligibility!}
             writeOff={writeOff}
             onWriteOffChange={onWriteOffChange!}
+            writeOffChoice={writeOffChoice}
+            onWriteOffChoiceChange={onWriteOffChoiceChange!}
+            writeOffCustomAmount={writeOffCustomAmount}
+            onWriteOffCustomAmountChange={onWriteOffCustomAmountChange!}
             writeOffReason={writeOffReason}
             onWriteOffReasonChange={onWriteOffReasonChange!}
             disabled={removing}
@@ -158,6 +172,10 @@ function WriteOffBlock({
   eligibility,
   writeOff,
   onWriteOffChange,
+  writeOffChoice,
+  onWriteOffChoiceChange,
+  writeOffCustomAmount,
+  onWriteOffCustomAmountChange,
   writeOffReason,
   onWriteOffReasonChange,
   disabled,
@@ -165,6 +183,10 @@ function WriteOffBlock({
   eligibility: DebtWriteOffEligibility;
   writeOff: boolean;
   onWriteOffChange: (v: boolean) => void;
+  writeOffChoice: WriteOffChoice;
+  onWriteOffChoiceChange: (choice: WriteOffChoice) => void;
+  writeOffCustomAmount: string;
+  onWriteOffCustomAmountChange: (raw: string) => void;
   writeOffReason: string;
   onWriteOffReasonChange: (text: string) => void;
   disabled: boolean;
@@ -172,6 +194,10 @@ function WriteOffBlock({
   const d = eligibility.details;
   const balanceClass =
     d.currentBalance < 0 ? "text-destructive" : "text-emerald-600";
+  const customAmountNumber = parseInt(
+    writeOffCustomAmount.replace(/\D/g, ""),
+    10,
+  );
 
   return (
     <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50/50 p-3 dark:bg-amber-950/20">
@@ -179,57 +205,49 @@ function WriteOffBlock({
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
         <div className="space-y-1">
           <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-            Joriy siklda yo&apos;qolgan o&apos;quvchi
+            Qarzni hisobdan chiqarish
           </p>
           <p className="text-xs text-muted-foreground">
-            Bu o&apos;quvchi joriy ({d.lessonPaymentCount} darslik) siklda biror
-            marta darsga kelmagan. Shu sikldan yig&apos;ilgan qarzni hisobdan
-            chiqarish mumkin.
+            Joriy ({d.lessonPaymentCount} darslik) sikl bo&apos;yicha kelgan va
+            kelmagan darslar narxi. Admin qaysi summani hisobdan chiqarishni
+            tanlaydi.
           </p>
         </div>
       </div>
 
       <div className="rounded-md border bg-background/80 p-3 text-xs">
         <div className="grid grid-cols-[1fr_auto] gap-y-1">
-          <span className="text-muted-foreground">
-            Sikl raqami:
-          </span>
+          <span className="text-muted-foreground">Sikl raqami:</span>
           <span className="text-right font-medium">#{d.cycleNumber}</span>
-
-          <span className="text-muted-foreground">Qatnashgan (PRESENT/LATE):</span>
-          <span className="text-right font-medium">
-            {d.cyclePresentCount + d.cycleLateCount} dars
-          </span>
-
-          <span className="text-muted-foreground">Kelmagan (ABSENT):</span>
-          <span className="text-right font-medium">
-            {d.cycleAbsentCount} dars
-          </span>
 
           <span className="text-muted-foreground">Bir dars narxi:</span>
           <span className="text-right font-medium">
             {formatBalance(d.perLessonCost)}
           </span>
 
-          <span className="text-muted-foreground">Joriy balans:</span>
-          <span className={`text-right font-medium ${balanceClass}`}>
-            {formatBalance(d.currentBalance)}
+          <span className="text-muted-foreground">
+            Kelgan darslar ({d.cyclePresentCount + d.cycleLateCount} ta):
+          </span>
+          <span className="text-right font-medium text-emerald-700 dark:text-emerald-400">
+            {formatBalance(d.attendedCost)}
+          </span>
+
+          <span className="text-muted-foreground">
+            Kelmagan darslar ({d.cycleAbsentCount} ta):
+          </span>
+          <span className="text-right font-medium text-amber-700 dark:text-amber-300">
+            {formatBalance(d.absentCost)}
           </span>
 
           <span className="mt-1 border-t pt-1 text-muted-foreground">
-            Hisobdan chiqariladigan summa:
+            Joriy balans:
           </span>
-          <span className="mt-1 border-t pt-1 text-right font-semibold text-amber-700 dark:text-amber-300">
-            {formatBalance(d.suggestedWriteOff)}
+          <span
+            className={`mt-1 border-t pt-1 text-right font-semibold ${balanceClass}`}
+          >
+            {formatBalance(d.currentBalance)}
           </span>
         </div>
-        {d.theoreticalCycleDebt > d.suggestedWriteOff && (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Nazariy qarz {formatNumber(d.theoreticalCycleDebt)} so&apos;m, lekin
-            joriy balansdan ko&apos;p emas — faqat haqiqiy qarz miqdorida
-            chiqariladi.
-          </p>
-        )}
       </div>
 
       <div className="flex items-start gap-2">
@@ -244,30 +262,147 @@ function WriteOffBlock({
           htmlFor="write-off-debt"
           className="text-sm leading-relaxed cursor-pointer"
         >
-          Joriy sikl qarzini ({formatBalance(d.suggestedWriteOff)}) hisobdan
-          chiqarish
+          Qarzni hisobdan chiqarish
         </Label>
       </div>
 
       {writeOff && (
-        <div className="space-y-1">
-          <Label
-            htmlFor="write-off-reason"
-            className="text-xs text-muted-foreground"
-          >
-            Izoh (majburiy, kamida 5 belgi)
-          </Label>
-          <Textarea
-            id="write-off-reason"
-            placeholder="Masalan: O'quvchi yo'qolib qoldi, aloqaga chiqmadi..."
-            value={writeOffReason}
-            onChange={(e) => onWriteOffReasonChange(e.target.value)}
-            rows={2}
-            className="resize-none"
-            disabled={disabled}
-          />
+        <div className="space-y-3 rounded-md border bg-background/60 p-3">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">
+              Qancha summani hisobdan chiqarish kerak?
+            </Label>
+            <PresetOption
+              checked={writeOffChoice === "real"}
+              onSelect={() => onWriteOffChoiceChange("real")}
+              disabled={disabled}
+              label="Real qarz"
+              hint="Faqat kelmagan darslar narxi"
+              amount={d.realDebtAmount}
+            />
+            <PresetOption
+              checked={writeOffChoice === "jami"}
+              onSelect={() => onWriteOffChoiceChange("jami")}
+              disabled={disabled}
+              label="Jami qarz"
+              hint="Balansdagi to'liq qarzdorlik"
+              amount={d.totalDebtAmount}
+            />
+            <PresetOption
+              checked={writeOffChoice === "custom"}
+              onSelect={() => onWriteOffChoiceChange("custom")}
+              disabled={disabled}
+              label="Boshqa summa"
+              hint={`1 — ${formatNumber(d.maxWriteOff)} so'm oralig'ida`}
+            >
+              {writeOffChoice === "custom" && (
+                <div className="mt-2">
+                  <PriceInput
+                    value={writeOffCustomAmount}
+                    onChange={(e) =>
+                      onWriteOffCustomAmountChange(e.target.value)
+                    }
+                    disabled={disabled}
+                    placeholder="Summani kiriting"
+                  />
+                  {writeOffCustomAmount.trim().length > 0 &&
+                    (!Number.isFinite(customAmountNumber) ||
+                      customAmountNumber < 1 ||
+                      customAmountNumber > d.maxWriteOff) && (
+                      <p className="mt-1 text-[11px] text-destructive">
+                        Summa 1 dan {formatNumber(d.maxWriteOff)} so&apos;m
+                        gacha bo&apos;lishi kerak
+                      </p>
+                    )}
+                </div>
+              )}
+            </PresetOption>
+          </div>
+
+          <div className="space-y-1">
+            <Label
+              htmlFor="write-off-reason"
+              className="text-xs text-muted-foreground"
+            >
+              Izoh (majburiy, kamida 5 belgi)
+            </Label>
+            <Textarea
+              id="write-off-reason"
+              placeholder="Masalan: O'quvchi yo'qolib qoldi, aloqaga chiqmadi..."
+              value={writeOffReason}
+              onChange={(e) => onWriteOffReasonChange(e.target.value)}
+              rows={2}
+              className="resize-none"
+              disabled={disabled}
+            />
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+function PresetOption({
+  checked,
+  onSelect,
+  disabled,
+  label,
+  hint,
+  amount,
+  children,
+}: {
+  checked: boolean;
+  onSelect: () => void;
+  disabled: boolean;
+  label: string;
+  hint: string;
+  amount?: number;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`rounded-md border p-2 transition-colors ${
+        checked ? "border-amber-400 bg-amber-50/60 dark:bg-amber-950/30" : ""
+      }`}
+    >
+      <label className="flex cursor-pointer items-start gap-2">
+        <input
+          type="radio"
+          checked={checked}
+          onChange={onSelect}
+          disabled={disabled}
+          className="mt-1"
+        />
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium">{label}</span>
+            {typeof amount === "number" && (
+              <span className="text-sm font-semibold tabular-nums">
+                {formatBalance(amount)}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">{hint}</p>
+        </div>
+      </label>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Compute the final write-off amount from the choice + custom input. Returns
+ * null when no valid amount could be derived (caller should disable submit).
+ */
+export function resolveWriteOffAmount(
+  choice: WriteOffChoice,
+  customAmount: string,
+  details: DebtWriteOffEligibility["details"],
+): number | null {
+  if (choice === "real") return details.realDebtAmount;
+  if (choice === "jami") return details.totalDebtAmount;
+  // custom
+  const n = parseInt(customAmount.replace(/\D/g, ""), 10);
+  if (!Number.isFinite(n) || n < 1 || n > details.maxWriteOff) return null;
+  return n;
 }
