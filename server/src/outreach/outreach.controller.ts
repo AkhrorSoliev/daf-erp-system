@@ -11,6 +11,15 @@ import { CallbacksQueryDto } from './dto/callbacks-query.dto';
 export class OutreachController {
   constructor(private outreach: OutreachService) {}
 
+  @Get('stats')
+  getStats(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.outreach.getStats({ userId, companyId, roles });
+  }
+
   @Get('today-absentees')
   getTodayAbsentees(
     @CurrentUser('id') userId: number,

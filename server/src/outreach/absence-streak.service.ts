@@ -12,6 +12,11 @@ export interface StreakRow {
   groupId: string;
   consecutiveAbsentCount: number;
   lastAbsenceDate: Date;
+  // Most recent PRESENT or LATE attendance date. null = no record of ever
+  // attending this group's lessons. Used in the UI to show "Oxirgi marta
+  // dars kelgan sanasi" so the admin can judge how long the student has
+  // been MIA.
+  lastPresentDate: Date | null;
 }
 
 @Injectable()
@@ -73,12 +78,39 @@ export class AbsenceStreakService {
         const streak = consecutiveAbsentCount(lastTen);
         if (streak < threshold) return null;
 
+        // lastPresentDate: walk the same 10 rows first; fall back to a
+        // single targeted query if none of the last 10 are PRESENT/LATE.
+        // The fallback runs only for the small subset of enrollments that
+        // qualify for the removal queue, so total queries stay bounded.
+        const inLastTen = lastTen.find(
+          (a) =>
+            a.status === AttendanceStatus.PRESENT ||
+            a.status === AttendanceStatus.LATE,
+        );
+        let lastPresentDate: Date | null = inLastTen?.date ?? null;
+        if (!lastPresentDate) {
+          const earlier = await this.prisma.attendance.findFirst({
+            where: {
+              studentId: e.studentId,
+              groupId: e.groupId,
+              companyId: params.companyId,
+              status: {
+                in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE],
+              },
+            },
+            orderBy: { date: 'desc' },
+            select: { date: true },
+          });
+          lastPresentDate = earlier?.date ?? null;
+        }
+
         return {
           enrollmentId: e.id,
           studentId: e.studentId,
           groupId: e.groupId,
           consecutiveAbsentCount: streak,
           lastAbsenceDate: lastTen[0].date,
+          lastPresentDate,
         };
       }),
     );

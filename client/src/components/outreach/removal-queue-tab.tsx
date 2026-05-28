@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, PhoneCall, UserMinus } from "lucide-react";
+import { PhoneCall, UserMinus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,12 +133,14 @@ export function RemovalQueueTab({
           ? "O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi"
           : "O'quvchi guruhdan chiqarildi",
       );
-      // Invalidate both queues — the removed student likely appears in the
-      // today-absentees list too (since 3-strike implies they were ABSENT today).
+      // Invalidate all 3 list queries + the stats widget — the removed student
+      // likely appears in the today-absentees list too (since 3-strike implies
+      // they were ABSENT today).
       queryClient.invalidateQueries({ queryKey: ["outreach", "removal-queue"] });
       queryClient.invalidateQueries({
         queryKey: ["outreach", "today-absentees"],
       });
+      queryClient.invalidateQueries({ queryKey: ["outreach", "stats"] });
       resetForm();
     } catch (error) {
       toast.error(getErrorMessage(error, "Chiqarishda xatolik yuz berdi"));
@@ -178,8 +180,8 @@ export function RemovalQueueTab({
                   <TableHead>Ota-ona telefoni</TableHead>
                   <TableHead>Guruh / kurs</TableHead>
                   <TableHead>O&apos;qituvchi</TableHead>
-                  <TableHead>Ketma-ket ABSENT</TableHead>
-                  <TableHead>Oxirgi yo&apos;qlik</TableHead>
+                  <TableHead>Ketma-ket kelmagan</TableHead>
+                  <TableHead>Oxirgi marta kelgan</TableHead>
                   <TableHead className="w-56">Amal</TableHead>
                 </TableRow>
               </TableHeader>
@@ -258,27 +260,43 @@ function Row({
     <TableRow>
       <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
       <TableCell className="font-medium">
-        {row.student.firstName} {row.student.lastName}
+        <Link
+          href={`/students/profile/${row.student.id}`}
+          className="hover:underline"
+        >
+          {row.student.firstName} {row.student.lastName}
+        </Link>
         <div className="text-xs text-muted-foreground">#{row.student.id}</div>
       </TableCell>
       <TableCell>{formatPhone(row.student.phone)}</TableCell>
       <TableCell>{formatPhone(row.student.parentPhone)}</TableCell>
       <TableCell>
-        {row.group.name}
+        <Link href={`/groups/${row.group.id}`} className="hover:underline">
+          {row.group.name}
+        </Link>
         {row.group.course?.name && (
-          <div className="text-xs text-muted-foreground">{row.group.course.name}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.group.course.name}
+          </div>
         )}
       </TableCell>
       <TableCell>
-        {row.teacher
-          ? `${row.teacher.firstName} ${row.teacher.lastName}`
-          : "—"}
+        {row.teacher ? (
+          <Link
+            href={`/teachers/profile/${row.teacher.id}`}
+            className="hover:underline"
+          >
+            {row.teacher.firstName} {row.teacher.lastName}
+          </Link>
+        ) : (
+          "—"
+        )}
       </TableCell>
       <TableCell>
         <StreakBadge count={row.consecutiveAbsentCount} />
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
-        {formatDate(row.lastAbsenceDate)}
+        {row.lastPresentDate ? formatDate(row.lastPresentDate) : "Hech qachon"}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
@@ -289,11 +307,6 @@ function Row({
           <Button size="sm" variant="destructive" onClick={onRemove}>
             <UserMinus className="mr-1 size-3.5" />
             Chiqarish
-          </Button>
-          <Button asChild size="sm" variant="ghost">
-            <Link href={`/students/profile/${row.student.id}`}>
-              <ExternalLink className="size-3.5" />
-            </Link>
           </Button>
         </div>
       </TableCell>

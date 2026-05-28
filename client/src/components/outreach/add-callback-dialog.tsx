@@ -128,6 +128,7 @@ function CallbackForm({
     onSuccess: () => {
       toast.success("Qo'ng'iroq vazifasi yaratildi");
       queryClient.invalidateQueries({ queryKey: ["outreach", "callbacks"] });
+      queryClient.invalidateQueries({ queryKey: ["outreach", "stats"] });
       onSuccess();
     },
     onError: (error) =>

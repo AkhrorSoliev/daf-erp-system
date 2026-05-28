@@ -3,12 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  ExternalLink,
-  Eye,
-  Loader2,
-} from "lucide-react";
+import { CheckCircle2, Eye, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +85,7 @@ export function CallbacksTab({ isActive }: CallbacksTabProps) {
         variables.status === "DONE" ? "Bajarildi deb belgilandi" : "Ko'rildi deb belgilandi",
       );
       queryClient.invalidateQueries({ queryKey: ["outreach", "callbacks"] });
+      queryClient.invalidateQueries({ queryKey: ["outreach", "stats"] });
     },
     onError: (error) =>
       toast.error(getErrorMessage(error, "Holatni o'zgartirishda xatolik")),
@@ -211,7 +207,15 @@ function Row({
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="font-medium">{entityLabel}</TableCell>
+      <TableCell className="font-medium">
+        {entityHref ? (
+          <Link href={entityHref} className="hover:underline">
+            {entityLabel}
+          </Link>
+        ) : (
+          entityLabel
+        )}
+      </TableCell>
       <TableCell>{formatPhone(entityPhone)}</TableCell>
       <TableCell className="max-w-[260px] text-sm">
         <span className="line-clamp-2">{row.text}</span>
@@ -242,13 +246,6 @@ function Row({
                 <CheckCircle2 className="mr-1 size-3.5" />
               )}
               Bajarildi
-            </Button>
-          )}
-          {entityHref && (
-            <Button asChild size="sm" variant="ghost">
-              <Link href={entityHref}>
-                <ExternalLink className="size-3.5" />
-              </Link>
             </Button>
           )}
         </div>

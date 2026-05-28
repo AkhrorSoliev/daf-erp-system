@@ -228,6 +228,7 @@ describe('OutreachService', () => {
           groupId: 'g1',
           consecutiveAbsentCount: 3,
           lastAbsenceDate: new Date('2026-05-20'),
+          lastPresentDate: null,
         },
         {
           enrollmentId: 'e2',
@@ -235,6 +236,7 @@ describe('OutreachService', () => {
           groupId: 'g2',
           consecutiveAbsentCount: 5,
           lastAbsenceDate: new Date('2026-05-20'),
+          lastPresentDate: null,
         },
       ]);
       prisma.enrollment.findMany.mockResolvedValue([
@@ -247,6 +249,54 @@ describe('OutreachService', () => {
         roles: ['CEO'],
       });
       expect(res.items.map((i) => i.enrollmentId)).toEqual(['e2', 'e1']);
+    });
+  });
+
+  describe('getStats', () => {
+    it('returns counts for the 4 KPIs', async () => {
+      prisma.attendance.count = jest.fn().mockResolvedValue(7);
+      prisma.commentAssignee.count = jest
+        .fn()
+        .mockResolvedValueOnce(12) // pendingCallbacks
+        .mockResolvedValueOnce(3); // overdueCallbacks
+      jest.spyOn(streak, 'computeStreaks').mockResolvedValue([
+        {
+          enrollmentId: 'e1',
+          studentId: 1,
+          groupId: 'g1',
+          consecutiveAbsentCount: 4,
+          lastAbsenceDate: new Date(),
+          lastPresentDate: null,
+        },
+      ]);
+
+      const res = await service.getStats({
+        userId: 10001,
+        companyId: 1,
+        roles: ['CEO'],
+      });
+
+      expect(res).toEqual({
+        todayAbsentees: 7,
+        pendingCallbacks: 12,
+        overdueCallbacks: 3,
+        removalQueue: 1,
+      });
+    });
+
+    it('returns zeros when Branch Director has no mainBranch', async () => {
+      prisma.user.findUnique.mockResolvedValue({ mainBranch: null });
+      const res = await service.getStats({
+        userId: 10001,
+        companyId: 1,
+        roles: ['Branch Director'],
+      });
+      expect(res).toEqual({
+        todayAbsentees: 0,
+        pendingCallbacks: 0,
+        overdueCallbacks: 0,
+        removalQueue: 0,
+      });
     });
   });
 });

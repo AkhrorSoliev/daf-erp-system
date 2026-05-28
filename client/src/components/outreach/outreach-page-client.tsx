@@ -7,6 +7,7 @@ import { TodayAbsenteesTab } from "./today-absentees-tab";
 import { CallbacksTab } from "./callbacks-tab";
 import { RemovalQueueTab } from "./removal-queue-tab";
 import { AddCallbackDialog, type AddCallbackPrefill } from "./add-callback-dialog";
+import { OutreachStatsWidget } from "./outreach-stats";
 
 const DEFAULT_TAB = "absentees";
 const VALID_TABS = new Set(["absentees", "callbacks", "removals"]);
@@ -44,6 +45,8 @@ export function OutreachPageClient() {
           Darsga kelmagan o&apos;quvchilar, qo&apos;ng&apos;iroq vazifalari va guruhdan chiqarish navbati
         </p>
       </div>
+
+      <OutreachStatsWidget />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

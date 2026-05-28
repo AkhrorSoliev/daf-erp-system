@@ -79,6 +79,9 @@ export interface RemovalQueueItem {
   enrollmentId: string;
   consecutiveAbsentCount: number;
   lastAbsenceDate: string;
+  // Oxirgi marta PRESENT/LATE bo'lgan dars sanasi (null = hech qachon
+  // kelmagan).
+  lastPresentDate: string | null;
   student: OutreachStudentWithParent;
   group: OutreachGroupSummary;
   teacher: OutreachTeacher | null;
@@ -87,4 +90,11 @@ export interface RemovalQueueItem {
 export interface RemovalQueueResponse {
   total: number;
   items: RemovalQueueItem[];
+}
+
+export interface OutreachStats {
+  todayAbsentees: number;
+  pendingCallbacks: number;
+  overdueCallbacks: number;
+  removalQueue: number;
 }

@@ -232,6 +232,75 @@ export class OutreachService {
     return { total, page, pageSize, items };
   }
 
+  // Lightweight summary for the /outreach landing widget. Three counts come
+  // from cheap SQL aggregates; removalQueueCount reuses the same fan-out as
+  // getRemovalQueue (acceptable because the page only fetches stats once).
+  async getStats(ctx: UserContext) {
+    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    if (branchIds && branchIds.length === 0) {
+      return {
+        todayAbsentees: 0,
+        pendingCallbacks: 0,
+        overdueCallbacks: 0,
+        removalQueue: 0,
+      };
+    }
+
+    const todayStr = tashkentDateStr(new Date());
+    const today = utcMidnightFromDateStr(todayStr);
+    const now = new Date();
+
+    const [todayAbsentees, pendingCallbacks, overdueCallbacks, streaks] =
+      await Promise.all([
+        this.prisma.attendance.count({
+          where: {
+            date: today,
+            status: AttendanceStatus.ABSENT,
+            companyId: ctx.companyId,
+            group: {
+              deletedAt: null,
+              ...(branchIds ? { branchId: { in: branchIds } } : {}),
+            },
+            student: { deletedAt: null },
+          },
+        }),
+        this.prisma.commentAssignee.count({
+          where: {
+            userId: ctx.userId,
+            status: { in: ['PENDING', 'SEEN'] },
+            comment: {
+              isTask: true,
+              dueDate: { not: null },
+              companyId: ctx.companyId,
+            },
+          },
+        }),
+        this.prisma.commentAssignee.count({
+          where: {
+            userId: ctx.userId,
+            status: { in: ['PENDING', 'SEEN'] },
+            comment: {
+              isTask: true,
+              dueDate: { lt: now },
+              companyId: ctx.companyId,
+            },
+          },
+        }),
+        this.absenceStreak.computeStreaks({
+          companyId: ctx.companyId,
+          branchIds,
+          threshold: 3,
+        }),
+      ]);
+
+    return {
+      todayAbsentees,
+      pendingCallbacks,
+      overdueCallbacks,
+      removalQueue: streaks.length,
+    };
+  }
+
   async getRemovalQueue(ctx: UserContext) {
     const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
     if (branchIds && branchIds.length === 0) {
@@ -288,6 +357,7 @@ export class OutreachService {
           enrollmentId: s.enrollmentId,
           consecutiveAbsentCount: s.consecutiveAbsentCount,
           lastAbsenceDate: s.lastAbsenceDate.toISOString(),
+          lastPresentDate: s.lastPresentDate?.toISOString() ?? null,
           student: e.student,
           group: {
             id: e.group.id,

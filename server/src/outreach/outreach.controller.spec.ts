@@ -12,6 +12,7 @@ describe('OutreachController — role guards', () => {
   let guard: RolesGuard;
 
   const mockService = {
+    getStats: jest.fn().mockResolvedValue({}),
     getTodayAbsentees: jest.fn().mockResolvedValue({}),
     getMyCallbacks: jest.fn().mockResolvedValue({}),
     getRemovalQueue: jest.fn().mockResolvedValue({}),
@@ -52,6 +53,7 @@ describe('OutreachController — role guards', () => {
     name: string;
     handler: (...args: unknown[]) => unknown;
   }> = [
+    { name: 'getStats', handler: () => null },
     { name: 'getTodayAbsentees', handler: () => null },
     { name: 'getMyCallbacks', handler: () => null },
     { name: 'getRemovalQueue', handler: () => null },
@@ -114,6 +116,15 @@ describe('OutreachController — role guards', () => {
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],
+      });
+    });
+
+    it('getStats delegates to service with user context', async () => {
+      await controller.getStats(10001, 1, ['Administrator']);
+      expect(mockService.getStats).toHaveBeenCalledWith({
+        userId: 10001,
+        companyId: 1,
+        roles: ['Administrator'],
       });
     });
   });

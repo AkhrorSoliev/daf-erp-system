@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PhoneCall, ExternalLink } from "lucide-react";
+import { PhoneCall } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -118,11 +118,20 @@ function Row({
     <TableRow>
       <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
       <TableCell className="font-medium">
-        {row.student.firstName} {row.student.lastName}
+        <Link
+          href={`/students/profile/${row.student.id}?tab=davomat`}
+          className="hover:underline"
+        >
+          {row.student.firstName} {row.student.lastName}
+        </Link>
         <div className="text-xs text-muted-foreground">#{row.student.id}</div>
       </TableCell>
       <TableCell>{formatPhone(row.student.phone)}</TableCell>
-      <TableCell>{row.group.name}</TableCell>
+      <TableCell>
+        <Link href={`/groups/${row.group.id}`} className="hover:underline">
+          {row.group.name}
+        </Link>
+      </TableCell>
       <TableCell>{row.group.course?.name ?? "—"}</TableCell>
       <TableCell>
         {row.group.lessonStartTime && row.group.lessonEndTime
@@ -130,36 +139,36 @@ function Row({
           : "—"}
       </TableCell>
       <TableCell>
-        {row.teacher
-          ? `${row.teacher.firstName} ${row.teacher.lastName}`
-          : "—"}
+        {row.teacher ? (
+          <Link
+            href={`/teachers/profile/${row.teacher.id}`}
+            className="hover:underline"
+          >
+            {row.teacher.firstName} {row.teacher.lastName}
+          </Link>
+        ) : (
+          "—"
+        )}
       </TableCell>
       <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
         {row.note || "—"}
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              onAddCallback({
-                entityType: "Student",
-                entityId: String(row.student.id),
-                entityLabel: `${row.student.firstName} ${row.student.lastName}`,
-                entityPhone: row.student.phone,
-              })
-            }
-          >
-            <PhoneCall className="mr-1 size-3.5" />
-            Qo&apos;ng&apos;iroq
-          </Button>
-          <Button asChild size="sm" variant="ghost">
-            <Link href={`/students/profile/${row.student.id}?tab=davomat`}>
-              <ExternalLink className="size-3.5" />
-            </Link>
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            onAddCallback({
+              entityType: "Student",
+              entityId: String(row.student.id),
+              entityLabel: `${row.student.firstName} ${row.student.lastName}`,
+              entityPhone: row.student.phone,
+            })
+          }
+        >
+          <PhoneCall className="mr-1 size-3.5" />
+          Qo&apos;ng&apos;iroq
+        </Button>
       </TableCell>
     </TableRow>
   );
