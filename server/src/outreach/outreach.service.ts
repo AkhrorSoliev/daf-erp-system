@@ -203,8 +203,8 @@ export class OutreachService {
           })
         : Promise.resolve([]),
     ]);
-    const leadMap = new Map(leads.map((l) => [l.id, l]));
-    const studentMap = new Map(students.map((s) => [s.id, s]));
+    const leadMap = new Map(leads.map((l) => [l.id, l] as const));
+    const studentMap = new Map(students.map((s) => [s.id, s] as const));
 
     const now = Date.now();
     const items = rows.map((r) => {
@@ -278,7 +278,7 @@ export class OutreachService {
         },
       },
     });
-    const enrollMap = new Map(enrollments.map((e) => [e.id, e]));
+    const enrollMap = new Map(enrollments.map((e) => [e.id, e] as const));
 
     const items = streaks
       .map((s) => {
