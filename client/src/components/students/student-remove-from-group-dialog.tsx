@@ -86,8 +86,11 @@ export function StudentRemoveFromGroupDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-lg">
-        <AlertDialogHeader>
+      {/* max-h: cap dialog at viewport height so the middle scrolls instead of
+       * overflowing. The default grid layout is replaced with flex so the
+       * middle child can claim the remaining height (`flex-1 min-h-0`). */}
+      <AlertDialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-4">
+        <AlertDialogHeader className="shrink-0">
           <AlertDialogTitle>Guruhdan chiqarish</AlertDialogTitle>
           <AlertDialogDescription>
             {hasConfiguredReasons
@@ -95,65 +98,70 @@ export function StudentRemoveFromGroupDialog({
               : "O'quvchini guruhdan chiqarish sababini kiriting"}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {hasConfiguredReasons ? (
-          <div className="space-y-2">
-            <Select
-              value={reasonId ?? undefined}
-              onValueChange={(v) => onReasonIdChange(v)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sababni tanlang" />
-              </SelectTrigger>
-              <SelectContent>
-                {reasons?.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+        {/* Scrollable middle. `-mr-2 pr-2` leaves room for the scrollbar
+         * without shifting content. */}
+        <div className="-mr-2 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-2">
+          {hasConfiguredReasons ? (
+            <div className="space-y-2">
+              <Select
+                value={reasonId ?? undefined}
+                onValueChange={(v) => onReasonIdChange(v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sababni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reasons?.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Textarea
+                placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                value={reasonText}
+                onChange={(e) => onReasonTextChange(e.target.value)}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+          ) : (
             <Textarea
-              placeholder="Qo'shimcha izoh (ixtiyoriy)"
+              placeholder="Sabab yozing..."
               value={reasonText}
               onChange={(e) => onReasonTextChange(e.target.value)}
-              rows={2}
+              rows={3}
               className="resize-none"
             />
-          </div>
-        ) : (
-          <Textarea
-            placeholder="Sabab yozing..."
-            value={reasonText}
-            onChange={(e) => onReasonTextChange(e.target.value)}
-            rows={3}
-            className="resize-none"
-          />
-        )}
+          )}
 
-        {eligibilityLoading && (
-          <div className="space-y-2 rounded-md border border-dashed p-3">
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        )}
+          {eligibilityLoading && (
+            <div className="space-y-2 rounded-md border border-dashed p-3">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          )}
 
-        {showWriteOffBlock && (
-          <WriteOffBlock
-            eligibility={eligibility!}
-            writeOff={writeOff}
-            onWriteOffChange={onWriteOffChange!}
-            writeOffChoice={writeOffChoice}
-            onWriteOffChoiceChange={onWriteOffChoiceChange!}
-            writeOffCustomAmount={writeOffCustomAmount}
-            onWriteOffCustomAmountChange={onWriteOffCustomAmountChange!}
-            writeOffReason={writeOffReason}
-            onWriteOffReasonChange={onWriteOffReasonChange!}
-            disabled={removing}
-          />
-        )}
+          {showWriteOffBlock && (
+            <WriteOffBlock
+              eligibility={eligibility!}
+              writeOff={writeOff}
+              onWriteOffChange={onWriteOffChange!}
+              writeOffChoice={writeOffChoice}
+              onWriteOffChoiceChange={onWriteOffChoiceChange!}
+              writeOffCustomAmount={writeOffCustomAmount}
+              onWriteOffCustomAmountChange={onWriteOffCustomAmountChange!}
+              writeOffReason={writeOffReason}
+              onWriteOffReasonChange={onWriteOffReasonChange!}
+              disabled={removing}
+            />
+          )}
+        </div>
 
-        <AlertDialogFooter>
+        <AlertDialogFooter className="shrink-0">
           <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
