@@ -186,6 +186,9 @@ export class TransactionsService {
   ) {
     return this.read.findByStudent(studentId, query, companyId);
   }
+  getBalanceSummary(studentId: number, companyId: number) {
+    return this.read.getBalanceSummary(studentId, companyId);
+  }
   getLessonTrail(
     studentId: number,
     companyId: number,

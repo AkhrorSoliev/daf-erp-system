@@ -6,6 +6,7 @@ import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
 import { StudentsReadService } from './students-read.service';
 import { StudentsWriteService } from './students-write.service';
 import { StudentsStatusService } from './students-status.service';
+import { TransactionsService } from '../transactions/transactions.service';
 
 @Injectable()
 export class StudentsService {
@@ -13,6 +14,7 @@ export class StudentsService {
     private read: StudentsReadService,
     private write: StudentsWriteService,
     private statusService: StudentsStatusService,
+    private transactions: TransactionsService,
   ) {}
 
   // Reads
@@ -30,6 +32,9 @@ export class StudentsService {
   }
   getClosedEnrollments(id: number, companyId: number) {
     return this.read.getClosedEnrollments(id, companyId);
+  }
+  getBalanceSummary(id: number, companyId: number) {
+    return this.transactions.getBalanceSummary(id, companyId);
   }
 
   // Writes
