@@ -420,28 +420,29 @@ export class TelegramGroupStatsService {
       attendanceBreakdown.find((r) => r.status === s)?._count ?? 0;
     const attended = countFor('PRESENT') + countFor('LATE');
     const absent = countFor('ABSENT');
-    const excused = countFor('EXCUSED');
-    const totalMarked = attended + absent + excused;
+    // EXCUSED (officially excused) is intentionally excluded from both the
+    // numerator and the denominator — it's neither "came" nor "missed".
+    const attendanceDenom = attended + absent;
     const attendancePct =
-      totalMarked > 0 ? Math.round((attended / totalMarked) * 100) : 0;
+      attendanceDenom > 0 ? Math.round((attended / attendanceDenom) * 100) : 0;
     const lessonsToday = lessonGroupsToday.length;
 
     return [
       `📊 <b>${formatDate(new Date())} — ${company?.name ?? 'Hisobot'}</b>`,
       ``,
       `<b>Bugun:</b>`,
-      `• Yangi o'quvchilar: <b>${formatNumber(todayNewStudents)}</b> 🆕`,
-      `• To'lovlar: <b>${formatNumber(todayPayments._count ?? 0)}</b> ta · <b>${formatSum(todayPayments._sum.amount ?? 0)}</b> 💰`,
-      `• Darslar: <b>${formatNumber(lessonsToday)}</b> ta 📚`,
-      `• Davomat: <b>${formatNumber(attended)}/${formatNumber(totalMarked)}</b> keldi (${attendancePct}%) · <b>${formatNumber(absent)}</b> kelmadi · <b>${formatNumber(excused)}</b> bekor ✅`,
+      `• Yangi o'quvchilar: <b>${formatNumber(todayNewStudents)}</b>`,
+      `• To'lovlar: <b>${formatNumber(todayPayments._count ?? 0)}</b> ta · <b>${formatSum(todayPayments._sum.amount ?? 0)}</b>`,
+      `• Darslar: <b>${formatNumber(lessonsToday)}</b> ta`,
+      `• Keldi: <b>${formatNumber(attended)}</b> ta · Kelmadi: <b>${formatNumber(absent)}</b> ta (${attendancePct}% qatnashish)`,
       ``,
       `<b>Hozirgi holat:</b>`,
-      `• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b> 👨‍🎓`,
-      `• Faol guruhlar: <b>${formatNumber(activeGroups)}</b> (bugun dars: <b>${formatNumber(lessonsToday)}</b>) 👥`,
-      `• Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b> 👨‍🏫`,
-      `• Qarzdorlar: <b>${formatNumber(debtorAgg._count)}</b> ta — <b>${formatSum(Math.abs(debtorAgg._sum.balance ?? 0))}</b> 💸`,
+      `• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b>`,
+      `• Faol guruhlar: <b>${formatNumber(activeGroups)}</b> ta`,
+      `• Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b>`,
+      `• Qarzdorlar: <b>${formatNumber(debtorAgg._count)}</b> ta — <b>${formatSum(Math.abs(debtorAgg._sum.balance ?? 0))}</b>`,
       ``,
-      `💵 <b>Oy boshidan bugungacha tushum:</b> ${formatSum(monthlyIncome._sum.amount ?? 0)}`,
+      `<b>Oy boshidan bugungacha tushum:</b> ${formatSum(monthlyIncome._sum.amount ?? 0)}`,
     ].join('\n');
   }
 }
