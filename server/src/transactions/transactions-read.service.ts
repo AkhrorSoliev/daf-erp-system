@@ -8,6 +8,140 @@ export class TransactionsReadService {
   constructor(private prisma: PrismaService) {}
 
   /**
+   * "Nega balans shunday?" summary for the student profile. Aggregates the
+   * full ledger into a handful of numbers the To'lovlar tab can show in a
+   * single card so admins don't have to scroll the feed (or ask Claude) to
+   * understand a 253 000 so'm debt.
+   *
+   * Returns:
+   *   - lessonsAttended      — count of LESSON_CONSUMPTION rows (active)
+   *   - totalLessonCost      — sum of |amount| of LESSON_DEDUCTION (active)
+   *   - totalPaid            — sum of COMPLETED PAYMENT amounts (active)
+   *   - paymentCount         — number of COMPLETED payments
+   *   - currentBalance       — student.balance (the canonical number)
+   *   - perLessonCost        — primary enrollment's price / lessonPaymentCount
+   *   - lastPaymentDate      — most recent COMPLETED PAYMENT createdAt
+   *   - firstNegativeDate    — first ledger row where balanceAfter < 0
+   *   - unpaidLessonsCount   — LESSON_CONSUMPTION rows on/after firstNegativeDate
+   *
+   * Pure projection — no mutation. The "active" filter excludes reversed
+   * rows everywhere so the totals always reconcile with the live balance.
+   */
+  async getBalanceSummary(studentId: number, companyId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, companyId, deletedAt: null },
+      select: { id: true, balance: true },
+    });
+    if (!student) {
+      // Caller (controller) translates this — keep service-level errors
+      // generic.
+      throw new Error("O'quvchi topilmadi");
+    }
+
+    // Chronological ledger walk — single round-trip covers every aggregate
+    // we need including the "first time balance went negative" lookup.
+    const ledger = await this.prisma.transaction.findMany({
+      where: {
+        studentId,
+        companyId,
+        reversedAt: null,
+        type: {
+          in: [
+            TransactionType.PAYMENT,
+            TransactionType.LESSON_DEDUCTION,
+            TransactionType.LESSON_CONSUMPTION,
+          ],
+        },
+        // PAYMENT rows must be COMPLETED — pending/failed gateway txns
+        // shouldn't inflate "to'langan" totals.
+        OR: [
+          { type: TransactionType.LESSON_DEDUCTION },
+          { type: TransactionType.LESSON_CONSUMPTION },
+          { payment: { status: 'COMPLETED' } },
+        ],
+      },
+      select: {
+        type: true,
+        amount: true,
+        balanceAfter: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let lessonsAttended = 0;
+    let totalLessonCost = 0;
+    let totalPaid = 0;
+    let paymentCount = 0;
+    let lastPaymentDate: Date | null = null;
+    let firstNegativeDate: Date | null = null;
+    let unpaidLessonsCount = 0;
+
+    for (const row of ledger) {
+      if (row.type === TransactionType.PAYMENT) {
+        totalPaid += row.amount;
+        paymentCount += 1;
+        if (!lastPaymentDate || row.createdAt > lastPaymentDate) {
+          lastPaymentDate = row.createdAt;
+        }
+      } else if (row.type === TransactionType.LESSON_DEDUCTION) {
+        totalLessonCost += Math.abs(row.amount);
+      } else if (row.type === TransactionType.LESSON_CONSUMPTION) {
+        lessonsAttended += 1;
+      }
+
+      if (firstNegativeDate === null && row.balanceAfter < 0) {
+        firstNegativeDate = row.createdAt;
+      }
+      if (
+        firstNegativeDate !== null &&
+        row.type === TransactionType.LESSON_CONSUMPTION &&
+        row.createdAt >= firstNegativeDate
+      ) {
+        unpaidLessonsCount += 1;
+      }
+    }
+
+    // Per-lesson cost comes from the primary active enrollment (matches the
+    // PaymentsPreviewService convention — the "first ACTIVE enrollment"
+    // gets to drive the per-lesson context shown to admins).
+    const primaryEnrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId,
+        status: 'ACTIVE',
+        deletedAt: null,
+        group: { companyId, deletedAt: null },
+      },
+      select: {
+        group: {
+          select: {
+            course: { select: { price: true, lessonPaymentCount: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    const perLessonCost = primaryEnrollment
+      ? Math.round(
+          primaryEnrollment.group.course.price /
+            (primaryEnrollment.group.course.lessonPaymentCount || 1),
+        )
+      : null;
+
+    return {
+      lessonsAttended,
+      totalLessonCost,
+      totalPaid,
+      paymentCount,
+      currentBalance: student.balance,
+      perLessonCost,
+      lastPaymentDate,
+      firstNegativeDate,
+      unpaidLessonsCount,
+    };
+  }
+
+  /**
    * Get paginated transaction history for a student.
    */
   async findByStudent(

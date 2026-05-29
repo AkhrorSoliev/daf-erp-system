@@ -20,6 +20,7 @@ import { StudentPaymentsTable } from "./student-payments-table";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
 import { StudentClosedEnrollmentsSection } from "./student-closed-enrollments-section";
 import type { StudentTransaction } from "./student-profile-tabs-utils";
+import type { BalanceSummary } from "./balance-summary-card";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
 
 function EmptyState({ message }: { message: string }) {
@@ -57,6 +58,8 @@ export function StudentProfileTabs({
   const [paymentsVisible, setPaymentsVisible] = useState(false);
   const paymentsShown = useRef(false);
   const [transactions, setTransactions] = useState<StudentTransaction[]>([]);
+  const [balanceSummary, setBalanceSummary] =
+    useState<BalanceSummary | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
@@ -110,9 +113,13 @@ export function StudentProfileTabs({
   // the "Ketdi" breakdown rendered on each PAYMENT card already tells the
   // admin where the money went, so showing the inverse-view deduction rows
   // is redundant and makes the feed noisier than necessary.
+  //
+  // Parallel call to /balance-summary so the top "Qarz tushuntirishi" card
+  // populates at the same time. Failures on either request are tolerated —
+  // the card just hides on null summary.
   const loadPayments = useCallback(() => {
     setPaymentsLoading(true);
-    api
+    const txReq = api
       .get(`/transactions/student/${student.id}`, {
         params: {
           pageSize: 20,
@@ -121,8 +128,12 @@ export function StudentProfileTabs({
         },
       })
       .then((res) => setTransactions(res.data.data))
-      .catch(() => {})
-      .finally(() => setPaymentsLoading(false));
+      .catch(() => {});
+    const summaryReq = api
+      .get(`/students/${student.id}/balance-summary`)
+      .then((res) => setBalanceSummary(res.data))
+      .catch(() => setBalanceSummary(null));
+    Promise.all([txReq, summaryReq]).finally(() => setPaymentsLoading(false));
   }, [student.id]);
 
   // After a correction the tab shows this fresh balance until the parent
@@ -353,6 +364,7 @@ export function StudentProfileTabs({
               isLoading={paymentsLoading}
               balance={balanceOverride ?? student.balance}
               transactions={transactions}
+              summary={balanceSummary}
               onCorrected={handlePaymentCorrected}
             />
           ) : (

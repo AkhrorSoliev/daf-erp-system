@@ -116,6 +116,21 @@ export class StudentsController {
     return this.studentsService.getActiveEnrollmentsWithPrepaid(id, companyId);
   }
 
+  /**
+   * Aggregate ledger summary for the To'lovlar tab debt-explanation card.
+   * Pure projection — no mutation. Cashier role is included because
+   * cashiers see the same tab.
+   */
+  @Get(':id/balance-summary')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  getBalanceSummary(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentsService.getBalanceSummary(id, companyId);
+  }
+
   @Post(':id/enroll')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')

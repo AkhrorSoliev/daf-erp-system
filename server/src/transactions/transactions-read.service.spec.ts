@@ -8,6 +8,8 @@ describe('TransactionsReadService', () => {
   let prisma: {
     transaction: { findMany: jest.Mock; count: jest.Mock };
     attendance: { findMany: jest.Mock };
+    student: { findFirst: jest.Mock };
+    enrollment: { findFirst: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -17,6 +19,8 @@ describe('TransactionsReadService', () => {
         count: jest.fn().mockResolvedValue(0),
       },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      student: { findFirst: jest.fn().mockResolvedValue(null) },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -193,6 +197,115 @@ describe('TransactionsReadService', () => {
       expect(res.total).toBe(1);
       expect(res.page).toBe(2);
       expect(res.pageSize).toBe(5);
+    });
+  });
+
+  describe('getBalanceSummary', () => {
+    const ts = (s: string) => new Date(`${s}T00:00:00Z`);
+
+    it('captures firstNegativeDate and counts unpaid lessons when student is in debt', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10260, balance: -253000 });
+      // Ledger ordered ASC: payment, deduction, consumption, then the
+      // attendance that pushes balance below zero, then more consumptions
+      // after that point.
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          type: 'PAYMENT',
+          amount: 300000,
+          balanceAfter: 300000,
+          createdAt: ts('2026-05-05'),
+        },
+        {
+          type: 'LESSON_DEDUCTION',
+          amount: -287500,
+          balanceAfter: 12500,
+          createdAt: ts('2026-05-05'),
+        },
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: 12500,
+          createdAt: ts('2026-05-05'),
+        },
+        {
+          type: 'LESSON_DEDUCTION',
+          amount: -34500,
+          balanceAfter: -22000,
+          createdAt: ts('2026-05-20'),
+        },
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: -22000,
+          createdAt: ts('2026-05-20'),
+        },
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: -56500,
+          createdAt: ts('2026-05-21'),
+        },
+      ]);
+      prisma.enrollment.findFirst.mockResolvedValue({
+        group: { course: { price: 690000, lessonPaymentCount: 20 } },
+      });
+
+      const res = await service.getBalanceSummary(10260, 1001);
+
+      expect(res).toEqual({
+        lessonsAttended: 3,
+        totalLessonCost: 322000,
+        totalPaid: 300000,
+        paymentCount: 1,
+        currentBalance: -253000,
+        perLessonCost: 34500,
+        lastPaymentDate: ts('2026-05-05'),
+        firstNegativeDate: ts('2026-05-20'),
+        // The deduction at 2026-05-20 took balance below zero. The
+        // consumption at that same instant and the one on 05-21 both fall
+        // on/after firstNegativeDate.
+        unpaidLessonsCount: 2,
+      });
+    });
+
+    it('returns null firstNegativeDate when the balance has never been negative', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 155000 });
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          type: 'PAYMENT',
+          amount: 500000,
+          balanceAfter: 500000,
+          createdAt: ts('2026-05-01'),
+        },
+        {
+          type: 'LESSON_DEDUCTION',
+          amount: -345000,
+          balanceAfter: 155000,
+          createdAt: ts('2026-05-01'),
+        },
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: 155000,
+          createdAt: ts('2026-05-01'),
+        },
+      ]);
+      prisma.enrollment.findFirst.mockResolvedValue({
+        group: { course: { price: 414000, lessonPaymentCount: 12 } },
+      });
+
+      const res = await service.getBalanceSummary(10001, 1001);
+
+      expect(res.firstNegativeDate).toBeNull();
+      expect(res.unpaidLessonsCount).toBe(0);
+      expect(res.lessonsAttended).toBe(1);
+      expect(res.totalPaid).toBe(500000);
+      expect(res.perLessonCost).toBe(34500);
+    });
+
+    it('throws when student is not found', async () => {
+      prisma.student.findFirst.mockResolvedValue(null);
+      await expect(service.getBalanceSummary(99999, 1001)).rejects.toThrow();
     });
   });
 

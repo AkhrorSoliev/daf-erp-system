@@ -24,6 +24,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import {
+  BalanceSummaryCard,
+  type BalanceSummary,
+} from "./balance-summary-card";
+import {
   CorrectPaymentDialog,
   type CorrectablePayment,
 } from "./correct-payment-dialog";
@@ -39,6 +43,9 @@ interface StudentPaymentsTableProps {
   isLoading: boolean;
   balance: number;
   transactions: StudentTransaction[];
+  /** Aggregate "why is the balance like this?" data from the new
+   *  /students/:id/balance-summary endpoint. Null while loading. */
+  summary: BalanceSummary | null;
   /** Called after a payment is corrected — refresh balance + transactions. */
   onCorrected?: (newBalance: number | null) => void;
 }
@@ -98,6 +105,7 @@ export function StudentPaymentsTable({
   isLoading,
   balance,
   transactions,
+  summary,
   onCorrected,
 }: StudentPaymentsTableProps) {
   const user = useAuth((s) => s.user);
@@ -130,19 +138,18 @@ export function StudentPaymentsTable({
     );
   }
 
+  // Compose a "live" summary that respects optimistic balance changes from
+  // payment corrections. The server-side summary won't include an
+  // in-flight correction until the parent refetches, so we override
+  // currentBalance from the prop. Other fields lag for a moment, which is
+  // acceptable (cents-level lag, not a correctness issue).
+  const liveSummary: BalanceSummary | null = summary
+    ? { ...summary, currentBalance: balance }
+    : null;
+
   return (
     <div className="space-y-6">
-      {/* Balans karta */}
-      <div className="rounded-lg border bg-card p-4">
-        <p className="text-sm text-muted-foreground">Joriy balans</p>
-        <p
-          className={`text-2xl font-bold ${
-            balance >= 0 ? "text-emerald-600" : "text-red-600"
-          }`}
-        >
-          {fmt(balance)} so&apos;m
-        </p>
-      </div>
+      <BalanceSummaryCard data={liveSummary} />
 
       {/* Oy-oy feed */}
       {months.length === 0 ? (
