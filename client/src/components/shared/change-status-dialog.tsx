@@ -65,12 +65,12 @@ interface StatusCardConfig {
 
 const STATUS_CARD_CONFIG: Record<string, StatusCardConfig> = {
   // Student
-  ACTIVE: { icon: CircleCheck, label: "Faol", description: "Qayta faollashtirish", color: "emerald" },
-  INACTIVE: { icon: PauseCircle, label: "Nofaol", description: "Vaqtincha to'xtatish", color: "amber" },
-  FROZEN: { icon: Snowflake, label: "Muzlatilgan", description: "O'qishni muzlatish", color: "blue" },
+  ACTIVE: { icon: CircleCheck, label: "Faol", description: "Qayta o'qishni davom ettiradi", color: "emerald" },
+  INACTIVE: { icon: PauseCircle, label: "Nofaol", description: "Aloqaga chiqmayapti", color: "amber" },
+  FROZEN: { icon: Snowflake, label: "Muzlatilgan", description: "Vaqtincha to'xtadi, keyin qaytadi", color: "blue" },
   GRADUATED: { icon: GraduationCap, label: "Bitirgan", description: "Kursni muvaffaqiyatli tugatdi", color: "emerald" },
-  EXPELLED: { icon: Ban, label: "Chetlatilgan", description: "Sabab bilan chetlatish", color: "red" },
-  ARCHIVED: { icon: Archive, label: "Arxivlash", description: "Xato/duplikat yozuvni yashirish", color: "red" },
+  EXPELLED: { icon: Ban, label: "Chetlatilgan", description: "O'qishni butunlay tashlab ketdi", color: "red" },
+  ARCHIVED: { icon: Archive, label: "Arxivlash", description: "Faqat xato/duplikat yozuv uchun", color: "red" },
   // User/Teacher
   SUSPENDED: { icon: ShieldOff, label: "To'xtatilgan", description: "Vaqtincha to'xtatish", color: "amber" },
   TERMINATED: { icon: UserX, label: "Ishdan bo'shatilgan", description: "Butunlay to'xtatish", color: "red" },
