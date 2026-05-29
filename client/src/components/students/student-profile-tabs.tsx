@@ -106,11 +106,10 @@ export function StudentProfileTabs({
     );
   }, []);
 
-  // Money-flow rows — every transaction type that moves the balance.
-  // LESSON_DEDUCTION is included so the tab explains where a payment went
-  // (e.g. a +400 000 payment immediately consumed by retroactive billing).
-  // LESSON_CONSUMPTION (amount=0) stays exclusive to the "Darslar" tab.
-  // Reused by the lazy-load and after a payment correction.
+  // Money-flow events only. LESSON_DEDUCTION is intentionally excluded —
+  // the "Ketdi" breakdown rendered on each PAYMENT card already tells the
+  // admin where the money went, so showing the inverse-view deduction rows
+  // is redundant and makes the feed noisier than necessary.
   const loadPayments = useCallback(() => {
     setPaymentsLoading(true);
     api
@@ -118,7 +117,7 @@ export function StudentProfileTabs({
         params: {
           pageSize: 20,
           types:
-            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION",
+            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL",
         },
       })
       .then((res) => setTransactions(res.data.data))
