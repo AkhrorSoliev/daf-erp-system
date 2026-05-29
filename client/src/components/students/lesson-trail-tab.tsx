@@ -31,6 +31,14 @@ import {
 } from "@/components/ui/table";
 import api from "@/lib/api";
 
+interface DeductionCoverage {
+  cycleSequenceNumber: number;
+  coveredCount: number;
+  capacity: number;
+  firstCoveredDate: string | null;
+  lastCoveredDate: string | null;
+}
+
 interface TrailRow {
   id: string;
   type: string;
@@ -48,6 +56,7 @@ interface TrailRow {
   isReversal: boolean;
   performedBy: { id: number; firstName: string; lastName: string } | null;
   createdAt: string;
+  coverage: DeductionCoverage | null;
 }
 
 interface TrailResponse {
@@ -152,11 +161,45 @@ export function LessonTrailTab({ studentId }: Props) {
                     </TableCell>
                     <TableCell className="text-sm">
                       <div>{r.description ?? "—"}</div>
-                      {r.metadata?.mode && (
-                        <div className="text-xs text-muted-foreground">
-                          {r.metadata.mode === "FULL_CYCLE"
-                            ? `To'liq tsikl (${r.metadata.lessonsCovered} dars)`
-                            : `Qisman (${r.metadata.lessonsCovered} dars)`}
+                      {r.type === "LESSON_DEDUCTION" && (r.metadata?.mode || r.coverage) && (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
+                          {r.coverage && r.metadata?.mode !== "SINGLE_UNCOVERED" && (
+                            <Badge variant="outline" className="font-mono">
+                              Sikl #{r.coverage.cycleSequenceNumber}
+                            </Badge>
+                          )}
+                          {r.metadata?.mode === "FULL_CYCLE" && (
+                            <span className="text-muted-foreground">
+                              To&apos;liq tsikl ({r.metadata.lessonsCovered} dars)
+                            </span>
+                          )}
+                          {r.metadata?.mode === "PARTIAL" && (
+                            <span className="text-amber-700 dark:text-amber-400">
+                              Qisman ({r.metadata.lessonsCovered} dars)
+                            </span>
+                          )}
+                          {r.metadata?.mode === "SINGLE_UNCOVERED" && (
+                            <span className="text-red-700 dark:text-red-400">
+                              Qarz darsi (1 dars)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {r.coverage && r.coverage.coveredCount > 0 && (
+                        <div className="mt-0.5 text-xs text-muted-foreground">
+                          Qopladi:{" "}
+                          <span className="font-medium text-foreground">
+                            {r.coverage.firstCoveredDate &&
+                              format(new Date(r.coverage.firstCoveredDate), "dd.MM")}
+                            {r.coverage.firstCoveredDate !== r.coverage.lastCoveredDate &&
+                              ` → ${r.coverage.lastCoveredDate ? format(new Date(r.coverage.lastCoveredDate), "dd.MM") : ""}`}
+                          </span>{" "}
+                          ({r.coverage.coveredCount}/{r.coverage.capacity} dars)
+                        </div>
+                      )}
+                      {r.coverage && r.coverage.coveredCount === 0 && r.coverage.capacity > 0 && (
+                        <div className="mt-0.5 text-xs text-muted-foreground italic">
+                          Hali dars qoplanmagan (0/{r.coverage.capacity})
                         </div>
                       )}
                       {r.contractNumber && (
@@ -164,7 +207,7 @@ export function LessonTrailTab({ studentId }: Props) {
                           {r.contractNumber}
                         </div>
                       )}
-                      {r.lessonDate && (
+                      {r.type === "LESSON_CONSUMPTION" && r.lessonDate && (
                         <div className="text-xs text-muted-foreground">
                           Dars sanasi: {format(new Date(r.lessonDate), "dd.MM.yyyy")}
                         </div>

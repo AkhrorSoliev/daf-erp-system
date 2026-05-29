@@ -353,7 +353,7 @@ The financial system is built on an **append-only ledger** principle — financi
 
 #### Payment Module (`src/payments/`)
 
-- **Endpoints**: `POST /payments` (create), `POST /payments/attach-external` (gateway attach), `POST /payments/:id/reverse` (CEO-only), `POST /payments/:id/correct` (CEO/BD/Admin), `GET /payments`, `GET /payments/:id`, `GET /payments/student/:studentId`, `GET /payments/debtors`, `GET /payments/pending-students`
+- **Endpoints**: `POST /payments` (create), `POST /payments/attach-external` (gateway attach), `POST /payments/:id/reverse` (CEO-only), `POST /payments/:id/correct` (CEO/BD/Admin), `GET /payments`, `GET /payments/:id`, `GET /payments/student/:studentId`, `GET /payments/debtors`, `GET /payments/pending-students`, `GET /payments/preview?studentId=X&amount=Y` (pure projection — no mutation; powers the live breakdown card in the record-payment dialog)
 - **Roles**: CEO, BD, Admin, Cashier — except reverse (CEO-only) and correct (CEO/BD/Admin, no Cashier)
 - **Key rules**:
   - Payment create atomically: creates Payment → records Transaction (PAYMENT) → increments Student.balance → increments Contract.paidAmount

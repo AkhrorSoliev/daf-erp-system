@@ -5,6 +5,7 @@ import { PaymentsService } from './payments.service';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
+import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
@@ -122,6 +123,7 @@ describe('PaymentsService', () => {
         PaymentsWriteService,
         PaymentsReadService,
         PaymentsDebtorsService,
+        PaymentsPreviewService,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: LessonBillingService, useValue: lessonBillingService },

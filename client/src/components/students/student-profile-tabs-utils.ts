@@ -53,6 +53,15 @@ export interface StudentTransaction {
     perLessonCost?: number;
     lessonsCovered?: number;
   } | null;
+  // Computed server-side for LESSON_DEDUCTION rows. Tells admin "this batch
+  // is sikl #N for the enrollment and has paid for these lessons so far".
+  coverage: {
+    cycleSequenceNumber: number;
+    coveredCount: number;
+    capacity: number;
+    firstCoveredDate: string | null;
+    lastCoveredDate: string | null;
+  } | null;
   payment: { id: string; method: string; status: string } | null;
   performedBy: { firstName: string; lastName: string } | null;
   createdAt: string;
