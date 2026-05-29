@@ -69,6 +69,68 @@ describe('TransactionsReadService', () => {
       );
     });
 
+    it('computes FIFO PAYMENT destination across the full timeline', async () => {
+      const ts = (s: string) => new Date(`${s}T00:00:00Z`);
+
+      // Page returns one PAYMENT row.
+      const pageRows = [
+        {
+          id: 'p1',
+          type: 'PAYMENT',
+          amount: 300000,
+          balanceBefore: 0,
+          balanceAfter: 300000,
+          description: 'To\'lov',
+          metadata: null,
+          paymentId: 'pmt-1',
+          payment: { id: 'pmt-1', method: 'CASH', status: 'COMPLETED' },
+          attendanceId: null,
+          enrollmentId: null,
+          performedBy: null,
+          createdAt: ts('2026-05-05'),
+        },
+      ];
+
+      // Full timeline: payment 300k → deduction 287.5k (Sikl #1, 8 dars).
+      const timeline = [
+        { ...pageRows[0] },
+        {
+          id: 'd1',
+          type: 'LESSON_DEDUCTION',
+          amount: -287500,
+          enrollmentId: 'enr-1',
+          metadata: { lessonsCovered: 8 },
+          createdAt: ts('2026-05-05'),
+        },
+      ];
+
+      // findMany call order: 1) page slice 2) computePaymentDestination
+      // timeline. computeDeductionCoverage early-returns (no deductions
+      // in the page) so it doesn't hit findMany.
+      prisma.transaction.findMany
+        .mockResolvedValueOnce(pageRows)
+        .mockResolvedValueOnce(timeline);
+      prisma.transaction.count.mockResolvedValueOnce(1);
+
+      const res = await service.findByStudent(
+        10329,
+        {} as TransactionQueryDto,
+        1001,
+      );
+
+      expect(res.data[0].destination).toEqual({
+        allocations: [
+          expect.objectContaining({
+            deductionId: 'd1',
+            amount: 287500,
+            cycleSequenceNumber: 1,
+            lessonsCovered: 8,
+          }),
+        ],
+        remainderInBalance: 12500,
+      });
+    });
+
     it('returns the paginated envelope', async () => {
       prisma.transaction.findMany.mockResolvedValue([
         { id: 't1', type: 'PAYMENT', enrollmentId: null },
@@ -81,11 +143,17 @@ describe('TransactionsReadService', () => {
         1001,
       );
 
-      // Non-LESSON_DEDUCTION rows get coverage=null. The findByStudent path
-      // pipes every row through the coverage enrichment helper, which is a
-      // no-op for non-deduction types and rows without an enrollmentId.
+      // Non-LESSON_DEDUCTION rows get coverage=null. PAYMENT rows pick up
+      // an empty destination from the FIFO walk (no timeline available in
+      // this test fixture — prisma is fully mocked).
       expect(res.data).toEqual([
-        { id: 't1', type: 'PAYMENT', enrollmentId: null, coverage: null },
+        {
+          id: 't1',
+          type: 'PAYMENT',
+          enrollmentId: null,
+          coverage: null,
+          destination: { allocations: [], remainderInBalance: 0 },
+        },
       ]);
       expect(res.total).toBe(1);
       expect(res.page).toBe(2);

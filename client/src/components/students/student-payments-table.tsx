@@ -146,68 +146,64 @@ export function StudentPaymentsTable({
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {isPayment ? (
-                        <span className="flex flex-wrap items-center gap-2">
-                          {methodLabel && (
-                            <Badge variant="secondary">{methodLabel}</Badge>
-                          )}
-                          {cashier && <span>Qabul qildi: {cashier}</span>}
-                          {!methodLabel && !cashier && "—"}
-                        </span>
-                      ) : isLessonDeduction ? (
-                        <div>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {t.coverage && t.metadata?.mode !== "SINGLE_UNCOVERED" && (
-                              <Badge variant="outline" className="font-mono">
-                                Sikl #{t.coverage.cycleSequenceNumber}
-                              </Badge>
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {methodLabel && (
+                              <Badge variant="secondary">{methodLabel}</Badge>
                             )}
-                            <span>
-                              {t.metadata?.lessonsCovered != null
-                                ? `${t.metadata.lessonsCovered} ta dars uchun yechildi`
-                                : (t.description ?? "Dars uchun yechildi")}
-                            </span>
+                            {cashier && <span>Qabul: {cashier}</span>}
+                            {!methodLabel && !cashier && "—"}
                           </div>
-                          {t.metadata?.mode && (
-                            <div className="text-xs text-muted-foreground">
-                              {LESSON_DEDUCTION_MODE_LABELS[t.metadata.mode] ??
-                                t.metadata.mode}
-                              {t.metadata.perLessonCost != null &&
-                                ` · 1 dars = ${t.metadata.perLessonCost.toLocaleString(
-                                  "uz-UZ",
-                                )} so'm`}
-                            </div>
+                          {t.destination &&
+                            (t.destination.allocations.length > 0 ||
+                              t.destination.remainderInBalance > 0) && (
+                              <PaymentDestinationLine
+                                destination={t.destination}
+                              />
+                            )}
+                        </div>
+                      ) : isLessonDeduction ? (
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                          {t.coverage && t.metadata?.mode !== "SINGLE_UNCOVERED" && (
+                            <Badge variant="outline" className="font-mono">
+                              Sikl #{t.coverage.cycleSequenceNumber}
+                            </Badge>
+                          )}
+                          <span className="text-foreground">
+                            {t.metadata?.lessonsCovered ?? "?"} dars
+                          </span>
+                          {t.metadata?.perLessonCost != null && (
+                            <span className="text-muted-foreground">
+                              · {t.metadata.perLessonCost.toLocaleString("uz-UZ")}{" "}
+                              so&apos;m/dars
+                            </span>
                           )}
                           {t.coverage && t.coverage.coveredCount > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              Qopladi:{" "}
-                              <span className="font-medium text-foreground">
-                                {t.coverage.firstCoveredDate &&
-                                  format(
-                                    new Date(t.coverage.firstCoveredDate),
-                                    "dd.MM",
-                                  )}
-                                {t.coverage.firstCoveredDate !==
-                                  t.coverage.lastCoveredDate &&
-                                  ` → ${
-                                    t.coverage.lastCoveredDate
-                                      ? format(
-                                          new Date(t.coverage.lastCoveredDate),
-                                          "dd.MM",
-                                        )
-                                      : ""
-                                  }`}
-                              </span>{" "}
-                              ({t.coverage.coveredCount}/{t.coverage.capacity}{" "}
-                              dars)
-                            </div>
+                            <span className="text-muted-foreground">
+                              ·{" "}
+                              {t.coverage.firstCoveredDate &&
+                                format(
+                                  new Date(t.coverage.firstCoveredDate),
+                                  "dd.MM",
+                                )}
+                              {t.coverage.firstCoveredDate !==
+                                t.coverage.lastCoveredDate &&
+                                ` → ${
+                                  t.coverage.lastCoveredDate
+                                    ? format(
+                                        new Date(t.coverage.lastCoveredDate),
+                                        "dd.MM",
+                                      )
+                                    : ""
+                                }`}{" "}
+                              ({t.coverage.coveredCount}/{t.coverage.capacity})
+                            </span>
                           )}
-                          {t.coverage &&
-                            t.coverage.coveredCount === 0 &&
-                            t.coverage.capacity > 0 && (
-                              <div className="text-xs text-muted-foreground italic">
-                                Hali dars qoplanmagan (0/{t.coverage.capacity})
-                              </div>
-                            )}
+                          {t.metadata?.mode === "SINGLE_UNCOVERED" && (
+                            <span className="text-red-700 dark:text-red-400">
+                              · Qarz
+                            </span>
+                          )}
                         </div>
                       ) : (
                         (t.description ?? "—")
@@ -309,5 +305,40 @@ function ReceiptLink({ transaction }: { transaction: StudentTransaction }) {
       <FileText className="size-3.5" />
       Kvitansiya
     </a>
+  );
+}
+
+/**
+ * One-line summary of where a payment went. Backend computes FIFO across the
+ * student's full timeline; here we render a compact "Ketdi: Sikl #1 287 500
+ * · Balansga 12 500" string. Adjacent allocations to the same cycle are
+ * already merged server-side.
+ */
+function PaymentDestinationLine({
+  destination,
+}: {
+  destination: NonNullable<StudentTransaction["destination"]>;
+}) {
+  const fmt = (n: number) => n.toLocaleString("uz-UZ");
+  const parts: string[] = [];
+  for (const a of destination.allocations) {
+    if (a.cycleSequenceNumber > 0) {
+      parts.push(
+        `Sikl #${a.cycleSequenceNumber}${a.lessonsCovered ? ` (${a.lessonsCovered} dars)` : ""} — ${fmt(a.amount)}`,
+      );
+    } else {
+      // Defensive: deduction without cycle metadata (legacy rows).
+      parts.push(`Dars uchun — ${fmt(a.amount)}`);
+    }
+  }
+  if (destination.remainderInBalance > 0) {
+    parts.push(`Balansga — ${fmt(destination.remainderInBalance)}`);
+  }
+  if (parts.length === 0) return null;
+  return (
+    <div className="text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">Ketdi:</span>{" "}
+      {parts.join(" · ")}
+    </div>
   );
 }

@@ -79,15 +79,180 @@ export class TransactionsReadService {
     ]);
 
     // Attach coverage info to LESSON_DEDUCTION rows so the To'lovlar tab can
-    // tell admins "this 287 500 so'm covered these 8 lessons" — same source of
-    // truth as the Darslar tab.
+    // tell admins "this 287 500 so'm covered these 8 lessons".
     const coverageMap = await this.computeDeductionCoverage(rows);
+
+    // Attach "destination" info to PAYMENT rows so the admin sees, on the
+    // same row, where the money went: FIFO across the student's full
+    // payment + deduction timeline.
+    const destinationMap = await this.computePaymentDestination(
+      studentId,
+      rows,
+    );
+
     const data = rows.map((r) => ({
       ...r,
       coverage: coverageMap.get(r.id) ?? null,
+      destination: destinationMap.get(r.id) ?? null,
     }));
 
     return { data, total, page, pageSize };
+  }
+
+  /**
+   * For every PAYMENT row on the page, compute where the money went via
+   * FIFO allocation over the student's full timeline (all completed
+   * payments + non-reversed lesson deductions, ASC).
+   *
+   * Returns for each PAYMENT:
+   *   - allocations: which deduction batches consumed slices of this
+   *     payment, plus the cycle number + capacity of each batch
+   *   - remainderInBalance: leftover slice that's still sitting on the
+   *     student's balance at the end of the walk
+   *
+   * REVERSED payments and reversed deductions are excluded from the walk —
+   * they don't affect the real money trail.
+   */
+  private async computePaymentDestination(
+    studentId: number,
+    pageRows: Array<{ id: string; type: TransactionType }>,
+  ): Promise<
+    Map<
+      string,
+      {
+        allocations: Array<{
+          deductionId: string;
+          amount: number;
+          cycleSequenceNumber: number;
+          lessonsCovered: number;
+        }>;
+        remainderInBalance: number;
+      }
+    >
+  > {
+    const result = new Map<
+      string,
+      {
+        allocations: Array<{
+          deductionId: string;
+          amount: number;
+          cycleSequenceNumber: number;
+          lessonsCovered: number;
+        }>;
+        remainderInBalance: number;
+      }
+    >();
+
+    const paymentIdsInPage = pageRows
+      .filter((r) => r.type === TransactionType.PAYMENT)
+      .map((r) => r.id);
+    if (paymentIdsInPage.length === 0) return result;
+
+    // Full student timeline: PAYMENT (COMPLETED, not reversed) + non-reversed
+    // LESSON_DEDUCTION rows, oldest first.
+    const timeline = await this.prisma.transaction.findMany({
+      where: {
+        studentId,
+        type: {
+          in: [TransactionType.PAYMENT, TransactionType.LESSON_DEDUCTION],
+        },
+        reversedAt: null,
+        OR: [
+          { type: TransactionType.LESSON_DEDUCTION },
+          { payment: { status: 'COMPLETED' } },
+        ],
+      },
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        enrollmentId: true,
+        metadata: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Cycle sequence number per deduction — same per-enrollment ASC count
+    // used by computeDeductionCoverage.
+    const cycleSeqMap = new Map<string, number>();
+    const perEnrollmentCount = new Map<string, number>();
+    for (const tx of timeline) {
+      if (tx.type !== TransactionType.LESSON_DEDUCTION || !tx.enrollmentId)
+        continue;
+      const next = (perEnrollmentCount.get(tx.enrollmentId) ?? 0) + 1;
+      perEnrollmentCount.set(tx.enrollmentId, next);
+      cycleSeqMap.set(tx.id, next);
+    }
+
+    // FIFO queue of remaining payment amounts.
+    const queue: Array<{ paymentId: string; remaining: number }> = [];
+
+    for (const tx of timeline) {
+      if (tx.type === TransactionType.PAYMENT) {
+        queue.push({ paymentId: tx.id, remaining: Number(tx.amount) || 0 });
+        // Seed an empty entry for every page payment so the UI can render
+        // "no allocations yet — fully on balance".
+        if (paymentIdsInPage.includes(tx.id) && !result.has(tx.id)) {
+          result.set(tx.id, { allocations: [], remainderInBalance: 0 });
+        }
+        continue;
+      }
+
+      // LESSON_DEDUCTION — consume from queue head FIFO.
+      let needed = Math.abs(tx.amount);
+      const md = (tx.metadata ?? {}) as Record<string, unknown>;
+      const lessonsCovered = Number(md.lessonsCovered) || 0;
+      const cycleSeq = cycleSeqMap.get(tx.id) ?? 0;
+
+      while (needed > 0 && queue.length > 0) {
+        const head = queue[0];
+        const take = Math.min(needed, head.remaining);
+
+        if (paymentIdsInPage.includes(head.paymentId)) {
+          const entry = result.get(head.paymentId) ?? {
+            allocations: [],
+            remainderInBalance: 0,
+          };
+          // Merge consecutive allocations to the same deduction (shouldn't
+          // happen often, but defends against split-fill ordering).
+          const last = entry.allocations[entry.allocations.length - 1];
+          if (last && last.deductionId === tx.id) {
+            last.amount += take;
+          } else {
+            entry.allocations.push({
+              deductionId: tx.id,
+              amount: take,
+              cycleSequenceNumber: cycleSeq,
+              lessonsCovered,
+            });
+          }
+          result.set(head.paymentId, entry);
+        }
+
+        head.remaining -= take;
+        needed -= take;
+        if (head.remaining === 0) queue.shift();
+      }
+      // If `needed` > 0 at this point, the deduction outran available
+      // payments (i.e. the student went into debt). The leftover comes from
+      // an INITIAL_BALANCE or pushes balance negative; either way it's not
+      // funded by a page-payment.
+    }
+
+    // Anything left in the queue is still on balance — surface as
+    // remainderInBalance on the corresponding page payments.
+    for (const head of queue) {
+      if (!paymentIdsInPage.includes(head.paymentId)) continue;
+      const entry = result.get(head.paymentId) ?? {
+        allocations: [],
+        remainderInBalance: 0,
+      };
+      entry.remainderInBalance += head.remaining;
+      result.set(head.paymentId, entry);
+    }
+
+    return result;
   }
 
   /**
