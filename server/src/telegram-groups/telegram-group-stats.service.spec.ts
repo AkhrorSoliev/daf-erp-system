@@ -25,7 +25,10 @@ describe('TelegramGroupStatsService', () => {
       payment: {
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 }, _count: 0 }),
       },
-      attendance: { count: jest.fn().mockResolvedValue(0) },
+      attendance: {
+        count: jest.fn().mockResolvedValue(0),
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
       company: { findUnique: jest.fn().mockResolvedValue({ name: 'Test' }) },
       role: { findFirst: jest.fn().mockResolvedValue({ id: 4 }) },
     };
@@ -50,22 +53,25 @@ describe('TelegramGroupStatsService', () => {
 
       await service.buildDailyReport(1001);
 
-      expect(prisma.attendance.count).toHaveBeenCalledTimes(1);
-      const arg = prisma.attendance.count.mock.calls[0][0];
-      expect(arg.where.date).toBeInstanceOf(Date);
-      // Critical: it must NOT be a { gte, lt } range — that was the bug.
-      expect(arg.where.date).not.toEqual(
-        expect.objectContaining({ gte: expect.anything(), lt: expect.anything() }),
-      );
-      expect(arg.where.status).toEqual({ in: ['PRESENT', 'LATE'] });
-      expect(arg.where.companyId).toBe(1001);
+      expect(prisma.attendance.groupBy).toHaveBeenCalledTimes(2);
+      for (const call of prisma.attendance.groupBy.mock.calls) {
+        const arg = call[0];
+        expect(arg.where.date).toBeInstanceOf(Date);
+        // Critical: it must NOT be a { gte, lt } range — that was the bug.
+        expect(arg.where.date).not.toEqual(
+          expect.objectContaining({
+            gte: expect.anything(),
+            lt: expect.anything(),
+          }),
+        );
+        expect(arg.where.companyId).toBe(1001);
+      }
     });
 
     it('uses a UTC-midnight Date (no -5h Tashkent shift)', async () => {
       await service.buildDailyReport(1001);
 
-      const date: Date = prisma.attendance.count.mock.calls[0][0].where.date;
-      // UTC midnight = hours/minutes/seconds/ms all 0 in UTC.
+      const date: Date = prisma.attendance.groupBy.mock.calls[0][0].where.date;
       expect(date.getUTCHours()).toBe(0);
       expect(date.getUTCMinutes()).toBe(0);
       expect(date.getUTCSeconds()).toBe(0);
@@ -73,15 +79,78 @@ describe('TelegramGroupStatsService', () => {
     });
   });
 
-  describe('buildDailyReport — output composition', () => {
-    it("renders the Darslar line with the attendance count", async () => {
-      prisma.attendance.count.mockResolvedValue(102);
-      prisma.student.count.mockResolvedValue(0);
-      prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: 0 }, _count: 0 });
+  describe('buildDailyReport — Darslar + Davomat composition', () => {
+    it('renders distinct group count for Darslar, status breakdown for Davomat', async () => {
+      prisma.attendance.groupBy
+        .mockResolvedValueOnce([
+          { status: 'PRESENT', _count: 102 },
+          { status: 'ABSENT', _count: 118 },
+          { status: 'EXCUSED', _count: 1 },
+        ])
+        .mockResolvedValueOnce(
+          Array.from({ length: 18 }, (_, i) => ({ groupId: `g${i}` })),
+        );
 
       const out = await service.buildDailyReport(1001);
 
-      expect(out).toContain('• Darslar: <b>102</b>');
+      expect(out).toContain('• Darslar: <b>18</b> ta 📚');
+      expect(out).toContain(
+        '• Davomat: <b>102/221</b> keldi (46%) · <b>118</b> kelmadi · <b>1</b> bekor ✅',
+      );
+    });
+
+    it('shows 0% Davomat with zero divisor guard when no attendance taken', async () => {
+      prisma.attendance.groupBy
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const out = await service.buildDailyReport(1001);
+
+      expect(out).toContain('• Darslar: <b>0</b> ta 📚');
+      expect(out).toContain(
+        '• Davomat: <b>0/0</b> keldi (0%) · <b>0</b> kelmadi · <b>0</b> bekor ✅',
+      );
+    });
+
+    it('counts LATE as attended for the keldi numerator', async () => {
+      prisma.attendance.groupBy
+        .mockResolvedValueOnce([
+          { status: 'PRESENT', _count: 50 },
+          { status: 'LATE', _count: 10 },
+          { status: 'ABSENT', _count: 40 },
+        ])
+        .mockResolvedValueOnce([{ groupId: 'a' }, { groupId: 'b' }]);
+
+      const out = await service.buildDailyReport(1001);
+
+      // attended = 60, total marked = 100, pct = 60%.
+      expect(out).toContain(
+        '• Davomat: <b>60/100</b> keldi (60%) · <b>40</b> kelmadi · <b>0</b> bekor ✅',
+      );
+    });
+
+    it('shows lessonsToday inside "Faol guruhlar" line', async () => {
+      prisma.group.count.mockResolvedValueOnce(38);
+      prisma.attendance.groupBy
+        .mockResolvedValueOnce([{ status: 'PRESENT', _count: 1 }])
+        .mockResolvedValueOnce(
+          Array.from({ length: 18 }, (_, i) => ({ groupId: `g${i}` })),
+        );
+
+      const out = await service.buildDailyReport(1001);
+
+      expect(out).toContain('• Faol guruhlar: <b>38</b> (bugun dars: <b>18</b>) 👥');
+    });
+  });
+
+  describe('buildDailyReport — full message shape', () => {
+    it('contains all section headers and icons in order', async () => {
+      const out = await service.buildDailyReport(1001);
+
+      expect(out).toContain('<b>Bugun:</b>');
+      expect(out).toContain('<b>Hozirgi holat:</b>');
+      expect(out).toMatch(/🆕[\s\S]*💰[\s\S]*📚[\s\S]*✅/);
+      expect(out).toMatch(/👨‍🎓[\s\S]*👥[\s\S]*👨‍🏫[\s\S]*💸[\s\S]*💵/);
     });
   });
 });
