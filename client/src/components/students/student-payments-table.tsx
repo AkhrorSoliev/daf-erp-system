@@ -6,11 +6,11 @@ import {
   AlertTriangle,
   ArrowDownToLine,
   ArrowUpFromLine,
+  BookOpen,
   FileText,
   MoreHorizontal,
   Pencil,
   RotateCcw,
-  Sparkles,
   Wallet,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -238,10 +238,9 @@ function PaymentCard({
   const cashier = t.performedBy
     ? `${t.performedBy.firstName} ${t.performedBy.lastName}`
     : null;
+  const dest = t.destination;
   const hasDestination =
-    !!t.destination &&
-    (t.destination.allocations.length > 0 ||
-      t.destination.remainderInBalance > 0);
+    !!dest && (dest.toLessons > 0 || dest.remainderInBalance > 0);
 
   return (
     <article className="rounded-lg border bg-card p-4">
@@ -302,40 +301,43 @@ function PaymentCard({
         </div>
       </div>
 
-      {/* Ketdi: ... */}
+      {/* Ketdi: 2-3 qatorlik aniq summary */}
       {hasDestination && (
         <div className="mt-3 border-t pt-3">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Bu pul ketdi:
           </p>
           <ul className="space-y-1.5 text-sm">
-            {t.destination!.allocations.map((a, idx) => (
-              <li
-                key={`${a.deductionId}-${idx}`}
-                className="flex items-center justify-between gap-3"
-              >
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Sparkles className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
-                  {a.cycleSequenceNumber > 0
-                    ? `Sikl #${a.cycleSequenceNumber}`
-                    : "Dars uchun"}
-                  {a.lessonsCovered > 0 && (
-                    <span className="text-xs">({a.lessonsCovered} dars)</span>
-                  )}
+            {dest!.toLessons > 0 && (
+              <li className="flex items-baseline justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2 text-foreground">
+                  <BookOpen className="size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <span>
+                    Darslarga
+                    {dest!.firstLessonDate && (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        ({format(new Date(dest!.firstLessonDate), "dd.MM")}
+                        {dest!.lastLessonDate &&
+                          dest!.firstLessonDate !== dest!.lastLessonDate &&
+                          ` — ${format(new Date(dest!.lastLessonDate), "dd.MM")}`}
+                        )
+                      </span>
+                    )}
+                  </span>
                 </span>
-                <span className="font-mono tabular-nums">
-                  {fmt(a.amount)} so&apos;m
+                <span className="shrink-0 font-mono tabular-nums">
+                  {fmt(dest!.toLessons)} so&apos;m
                 </span>
               </li>
-            ))}
-            {t.destination!.remainderInBalance > 0 && (
-              <li className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Wallet className="size-3.5 shrink-0 text-slate-500" />
-                  Balansga qoldi
+            )}
+            {dest!.remainderInBalance > 0 && (
+              <li className="flex items-baseline justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2 text-foreground">
+                  <Wallet className="size-4 shrink-0 text-slate-500" />
+                  <span>Balansga qoldi</span>
                 </span>
-                <span className="font-mono tabular-nums">
-                  {fmt(t.destination!.remainderInBalance)} so&apos;m
+                <span className="shrink-0 font-mono tabular-nums">
+                  {fmt(dest!.remainderInBalance)} so&apos;m
                 </span>
               </li>
             )}

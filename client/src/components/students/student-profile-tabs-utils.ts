@@ -62,16 +62,15 @@ export interface StudentTransaction {
     firstCoveredDate: string | null;
     lastCoveredDate: string | null;
   } | null;
-  // Computed server-side for PAYMENT rows. FIFO allocation across the
-  // student's full payment + deduction timeline. Answers "qayerga ketdi?".
+  // Computed server-side for PAYMENT rows. Flat summary aimed at admins
+  // who just want to know "darslarga necha so'm ketdi va balansda necha
+  // qoldi" without Sikl-number jargon. Dates come from the covered lessons
+  // that the payment's FIFO slice funded.
   destination: {
-    allocations: Array<{
-      deductionId: string;
-      amount: number;
-      cycleSequenceNumber: number;
-      lessonsCovered: number;
-    }>;
+    toLessons: number;
     remainderInBalance: number;
+    firstLessonDate: string | null;
+    lastLessonDate: string | null;
   } | null;
   payment: { id: string; method: string; status: string } | null;
   performedBy: { firstName: string; lastName: string } | null;

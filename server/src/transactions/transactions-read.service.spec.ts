@@ -69,10 +69,9 @@ describe('TransactionsReadService', () => {
       );
     });
 
-    it('computes FIFO PAYMENT destination across the full timeline', async () => {
+    it('aggregates PAYMENT destination into a flat toLessons + remainder summary', async () => {
       const ts = (s: string) => new Date(`${s}T00:00:00Z`);
 
-      // Page returns one PAYMENT row.
       const pageRows = [
         {
           id: 'p1',
@@ -80,7 +79,7 @@ describe('TransactionsReadService', () => {
           amount: 300000,
           balanceBefore: 0,
           balanceAfter: 300000,
-          description: 'To\'lov',
+          description: "To'lov",
           metadata: null,
           paymentId: 'pmt-1',
           payment: { id: 'pmt-1', method: 'CASH', status: 'COMPLETED' },
@@ -91,7 +90,8 @@ describe('TransactionsReadService', () => {
         },
       ];
 
-      // Full timeline: payment 300k → deduction 287.5k (Sikl #1, 8 dars).
+      // Timeline drives the FIFO walk: 300k payment → 287.5k deduction
+      // (8 lessons), leaves 12.5k on balance.
       const timeline = [
         { ...pageRows[0] },
         {
@@ -104,13 +104,48 @@ describe('TransactionsReadService', () => {
         },
       ];
 
-      // findMany call order: 1) page slice 2) computePaymentDestination
-      // timeline. computeDeductionCoverage early-returns (no deductions
-      // in the page) so it doesn't hit findMany.
+      // The deduction-dates helper runs a second findMany over
+      // LESSON_DEDUCTION + LESSON_CONSUMPTION rows for the enrollments
+      // touched by the timeline. Same deduction + two consumption rows so
+      // first/last covered dates come back populated.
+      const enrollmentTxs = [
+        {
+          id: 'd1',
+          type: 'LESSON_DEDUCTION',
+          enrollmentId: 'enr-1',
+          attendanceId: null,
+          metadata: { lessonsCovered: 8 },
+          createdAt: ts('2026-05-05'),
+        },
+        {
+          id: 'c1',
+          type: 'LESSON_CONSUMPTION',
+          enrollmentId: 'enr-1',
+          attendanceId: 'a1',
+          metadata: null,
+          createdAt: ts('2026-05-05'),
+        },
+        {
+          id: 'c2',
+          type: 'LESSON_CONSUMPTION',
+          enrollmentId: 'enr-1',
+          attendanceId: 'a2',
+          metadata: null,
+          createdAt: ts('2026-05-13'),
+        },
+      ];
+
+      // findMany call order:
+      // 1) page slice 2) destination timeline 3) computeDeductionDates
       prisma.transaction.findMany
         .mockResolvedValueOnce(pageRows)
-        .mockResolvedValueOnce(timeline);
+        .mockResolvedValueOnce(timeline)
+        .mockResolvedValueOnce(enrollmentTxs);
       prisma.transaction.count.mockResolvedValueOnce(1);
+      prisma.attendance.findMany.mockResolvedValueOnce([
+        { id: 'a1', date: ts('2026-05-05') },
+        { id: 'a2', date: ts('2026-05-13') },
+      ]);
 
       const res = await service.findByStudent(
         10329,
@@ -119,15 +154,10 @@ describe('TransactionsReadService', () => {
       );
 
       expect(res.data[0].destination).toEqual({
-        allocations: [
-          expect.objectContaining({
-            deductionId: 'd1',
-            amount: 287500,
-            cycleSequenceNumber: 1,
-            lessonsCovered: 8,
-          }),
-        ],
+        toLessons: 287500,
         remainderInBalance: 12500,
+        firstLessonDate: ts('2026-05-05'),
+        lastLessonDate: ts('2026-05-13'),
       });
     });
 
@@ -144,15 +174,20 @@ describe('TransactionsReadService', () => {
       );
 
       // Non-LESSON_DEDUCTION rows get coverage=null. PAYMENT rows pick up
-      // an empty destination from the FIFO walk (no timeline available in
-      // this test fixture — prisma is fully mocked).
+      // a zero-summary destination (no LESSON_DEDUCTION fired in the
+      // fully-mocked timeline).
       expect(res.data).toEqual([
         {
           id: 't1',
           type: 'PAYMENT',
           enrollmentId: null,
           coverage: null,
-          destination: { allocations: [], remainderInBalance: 0 },
+          destination: {
+            toLessons: 0,
+            remainderInBalance: 0,
+            firstLessonDate: null,
+            lastLessonDate: null,
+          },
         },
       ]);
       expect(res.total).toBe(1);
