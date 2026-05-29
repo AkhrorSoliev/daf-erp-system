@@ -19,7 +19,6 @@ import { StudentGroupCard } from "./student-group-card";
 import { StudentPaymentsTable } from "./student-payments-table";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
 import { StudentClosedEnrollmentsSection } from "./student-closed-enrollments-section";
-import { LessonTrailTab } from "./lesson-trail-tab";
 import type { StudentTransaction } from "./student-profile-tabs-utils";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
 
@@ -283,7 +282,6 @@ export function StudentProfileTabs({
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
           {canManage && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
-          {canManage && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
           {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
           {canManage && (
             <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
@@ -362,13 +360,6 @@ export function StudentProfileTabs({
             <EmptyState message="To'lov ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
-
-        {/* Darslar */}
-        {canManage && (
-          <TabsContent value="darslar">
-            <LessonTrailTab studentId={student.id} />
-          </TabsContent>
-        )}
 
         {/* Izohlar */}
         <TabsContent value="izohlar">
