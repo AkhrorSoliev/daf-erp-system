@@ -100,18 +100,24 @@ export class TransactionsReadService {
   }
 
   /**
-   * For every PAYMENT row on the page, compute where the money went via
-   * FIFO allocation over the student's full timeline (all completed
-   * payments + non-reversed lesson deductions, ASC).
+   * For every PAYMENT row on the page, compute a flat "where did the money
+   * go?" summary admins can scan in one glance:
    *
-   * Returns for each PAYMENT:
-   *   - allocations: which deduction batches consumed slices of this
-   *     payment, plus the cycle number + capacity of each batch
-   *   - remainderInBalance: leftover slice that's still sitting on the
-   *     student's balance at the end of the walk
+   *   - toLessons          — total so'm the payment funded for lessons
+   *   - remainderInBalance — leftover that's still sitting on the balance
+   *   - firstLessonDate    — earliest covered lesson date across allocations
+   *   - lastLessonDate     — latest covered lesson date across allocations
    *
-   * REVERSED payments and reversed deductions are excluded from the walk —
-   * they don't affect the real money trail.
+   * Implementation: FIFO-allocate each PAYMENT slice against the student's
+   * full LESSON_DEDUCTION timeline, then aggregate by payment. Per-deduction
+   * coverage dates come from the same FIFO-over-consumptions logic used by
+   * the LESSON_DEDUCTION coverage map. Reversed rows are excluded.
+   *
+   * Earlier iterations exposed per-Sikl bullet allocations on the UI, but
+   * admins found "Sikl #3" / "Sikl #4" jargon confusing — especially when
+   * the same payment funded two different cycle numbers and the next
+   * payment funded different ones again. The summary shape drops the
+   * jargon entirely.
    */
   private async computePaymentDestination(
     studentId: number,
@@ -120,26 +126,20 @@ export class TransactionsReadService {
     Map<
       string,
       {
-        allocations: Array<{
-          deductionId: string;
-          amount: number;
-          cycleSequenceNumber: number;
-          lessonsCovered: number;
-        }>;
+        toLessons: number;
         remainderInBalance: number;
+        firstLessonDate: Date | null;
+        lastLessonDate: Date | null;
       }
     >
   > {
     const result = new Map<
       string,
       {
-        allocations: Array<{
-          deductionId: string;
-          amount: number;
-          cycleSequenceNumber: number;
-          lessonsCovered: number;
-        }>;
+        toLessons: number;
         remainderInBalance: number;
+        firstLessonDate: Date | null;
+        lastLessonDate: Date | null;
       }
     >();
 
@@ -173,85 +173,194 @@ export class TransactionsReadService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Cycle sequence number per deduction — same per-enrollment ASC count
-    // used by computeDeductionCoverage.
-    const cycleSeqMap = new Map<string, number>();
-    const perEnrollmentCount = new Map<string, number>();
-    for (const tx of timeline) {
-      if (tx.type !== TransactionType.LESSON_DEDUCTION || !tx.enrollmentId)
-        continue;
-      const next = (perEnrollmentCount.get(tx.enrollmentId) ?? 0) + 1;
-      perEnrollmentCount.set(tx.enrollmentId, next);
-      cycleSeqMap.set(tx.id, next);
+    // Per-deduction covered date range — fetched once for every enrollment
+    // referenced by the timeline so we can aggregate first/last dates on
+    // the payment side without re-walking consumptions per page-PAYMENT.
+    const enrollmentIdsInTimeline = Array.from(
+      new Set(
+        timeline
+          .filter(
+            (t) =>
+              t.type === TransactionType.LESSON_DEDUCTION && !!t.enrollmentId,
+          )
+          .map((t) => t.enrollmentId as string),
+      ),
+    );
+    const deductionDates =
+      enrollmentIdsInTimeline.length > 0
+        ? await this.computeDeductionDates(enrollmentIdsInTimeline)
+        : new Map<string, { firstDate: Date | null; lastDate: Date | null }>();
+
+    // Seed an empty entry for every page payment so the UI gets a stable
+    // shape even when nothing has been deducted yet.
+    for (const id of paymentIdsInPage) {
+      result.set(id, {
+        toLessons: 0,
+        remainderInBalance: 0,
+        firstLessonDate: null,
+        lastLessonDate: null,
+      });
     }
 
     // FIFO queue of remaining payment amounts.
     const queue: Array<{ paymentId: string; remaining: number }> = [];
 
+    const widenDateRange = (
+      paymentId: string,
+      first: Date | null,
+      last: Date | null,
+    ) => {
+      const entry = result.get(paymentId);
+      if (!entry) return;
+      if (first) {
+        if (
+          entry.firstLessonDate === null ||
+          first.getTime() < entry.firstLessonDate.getTime()
+        ) {
+          entry.firstLessonDate = first;
+        }
+      }
+      if (last) {
+        if (
+          entry.lastLessonDate === null ||
+          last.getTime() > entry.lastLessonDate.getTime()
+        ) {
+          entry.lastLessonDate = last;
+        }
+      }
+    };
+
     for (const tx of timeline) {
       if (tx.type === TransactionType.PAYMENT) {
         queue.push({ paymentId: tx.id, remaining: Number(tx.amount) || 0 });
-        // Seed an empty entry for every page payment so the UI can render
-        // "no allocations yet — fully on balance".
-        if (paymentIdsInPage.includes(tx.id) && !result.has(tx.id)) {
-          result.set(tx.id, { allocations: [], remainderInBalance: 0 });
-        }
         continue;
       }
 
-      // LESSON_DEDUCTION — consume from queue head FIFO.
+      // LESSON_DEDUCTION — drain from queue head FIFO.
       let needed = Math.abs(tx.amount);
-      const md = (tx.metadata ?? {}) as Record<string, unknown>;
-      const lessonsCovered = Number(md.lessonsCovered) || 0;
-      const cycleSeq = cycleSeqMap.get(tx.id) ?? 0;
+      const dates = deductionDates.get(tx.id) ?? {
+        firstDate: null,
+        lastDate: null,
+      };
 
       while (needed > 0 && queue.length > 0) {
         const head = queue[0];
         const take = Math.min(needed, head.remaining);
 
         if (paymentIdsInPage.includes(head.paymentId)) {
-          const entry = result.get(head.paymentId) ?? {
-            allocations: [],
-            remainderInBalance: 0,
-          };
-          // Merge consecutive allocations to the same deduction (shouldn't
-          // happen often, but defends against split-fill ordering).
-          const last = entry.allocations[entry.allocations.length - 1];
-          if (last && last.deductionId === tx.id) {
-            last.amount += take;
-          } else {
-            entry.allocations.push({
-              deductionId: tx.id,
-              amount: take,
-              cycleSequenceNumber: cycleSeq,
-              lessonsCovered,
-            });
-          }
-          result.set(head.paymentId, entry);
+          const entry = result.get(head.paymentId)!;
+          entry.toLessons += take;
+          widenDateRange(head.paymentId, dates.firstDate, dates.lastDate);
         }
 
         head.remaining -= take;
         needed -= take;
         if (head.remaining === 0) queue.shift();
       }
-      // If `needed` > 0 at this point, the deduction outran available
-      // payments (i.e. the student went into debt). The leftover comes from
-      // an INITIAL_BALANCE or pushes balance negative; either way it's not
-      // funded by a page-payment.
     }
 
     // Anything left in the queue is still on balance — surface as
     // remainderInBalance on the corresponding page payments.
     for (const head of queue) {
       if (!paymentIdsInPage.includes(head.paymentId)) continue;
-      const entry = result.get(head.paymentId) ?? {
-        allocations: [],
-        remainderInBalance: 0,
-      };
+      const entry = result.get(head.paymentId)!;
       entry.remainderInBalance += head.remaining;
-      result.set(head.paymentId, entry);
     }
 
+    return result;
+  }
+
+  /**
+   * Per-deduction first/last covered lesson date for a set of enrollments.
+   * Same FIFO-over-consumptions logic as computeDeductionCoverage, scoped
+   * down to just the dates we need for the PAYMENT destination summary.
+   */
+  private async computeDeductionDates(
+    enrollmentIds: string[],
+  ): Promise<Map<string, { firstDate: Date | null; lastDate: Date | null }>> {
+    const result = new Map<
+      string,
+      { firstDate: Date | null; lastDate: Date | null }
+    >();
+    if (enrollmentIds.length === 0) return result;
+
+    const allTxs = await this.prisma.transaction.findMany({
+      where: {
+        enrollmentId: { in: enrollmentIds },
+        type: {
+          in: [
+            TransactionType.LESSON_DEDUCTION,
+            TransactionType.LESSON_CONSUMPTION,
+          ],
+        },
+        reversedAt: null,
+      },
+      select: {
+        id: true,
+        type: true,
+        enrollmentId: true,
+        attendanceId: true,
+        metadata: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const consumptionAttIds = allTxs
+      .filter(
+        (t) =>
+          t.type === TransactionType.LESSON_CONSUMPTION && !!t.attendanceId,
+      )
+      .map((t) => t.attendanceId as string);
+    const attendanceDates = consumptionAttIds.length
+      ? await this.prisma.attendance.findMany({
+          where: { id: { in: consumptionAttIds } },
+          select: { id: true, date: true },
+        })
+      : [];
+    const attDateMap = new Map(attendanceDates.map((a) => [a.id, a.date]));
+
+    const byEnrollment = new Map<string, typeof allTxs>();
+    for (const tx of allTxs) {
+      if (!tx.enrollmentId) continue;
+      const list = byEnrollment.get(tx.enrollmentId) ?? [];
+      list.push(tx);
+      byEnrollment.set(tx.enrollmentId, list);
+    }
+
+    for (const [, txs] of byEnrollment) {
+      const buckets: Array<{
+        deductionId: string;
+        capacity: number;
+        consumedDates: Date[];
+      }> = [];
+      for (const tx of txs) {
+        if (tx.type === TransactionType.LESSON_DEDUCTION) {
+          const md = (tx.metadata ?? {}) as Record<string, unknown>;
+          const capacity = Number(md.lessonsCovered) || 0;
+          buckets.push({ deductionId: tx.id, capacity, consumedDates: [] });
+          result.set(tx.id, { firstDate: null, lastDate: null });
+        } else if (tx.type === TransactionType.LESSON_CONSUMPTION) {
+          const bucket = buckets.find(
+            (b) => b.consumedDates.length < b.capacity,
+          );
+          if (!bucket) continue;
+          const date = tx.attendanceId
+            ? attDateMap.get(tx.attendanceId)
+            : undefined;
+          bucket.consumedDates.push(date ?? tx.createdAt);
+        }
+      }
+      for (const bucket of buckets) {
+        const entry = result.get(bucket.deductionId);
+        if (!entry) continue;
+        const sorted = [...bucket.consumedDates].sort(
+          (a, b) => a.getTime() - b.getTime(),
+        );
+        entry.firstDate = sorted[0] ?? null;
+        entry.lastDate = sorted[sorted.length - 1] ?? null;
+      }
+    }
     return result;
   }
 
