@@ -44,7 +44,7 @@ export class TransactionsReadService {
         }),
     };
 
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.transaction.findMany({
         where,
         select: {
@@ -77,6 +77,15 @@ export class TransactionsReadService {
       }),
       this.prisma.transaction.count({ where }),
     ]);
+
+    // Attach coverage info to LESSON_DEDUCTION rows so the To'lovlar tab can
+    // tell admins "this 287 500 so'm covered these 8 lessons" — same source of
+    // truth as the Darslar tab.
+    const coverageMap = await this.computeDeductionCoverage(rows);
+    const data = rows.map((r) => ({
+      ...r,
+      coverage: coverageMap.get(r.id) ?? null,
+    }));
 
     return { data, total, page, pageSize };
   }
@@ -182,6 +191,7 @@ export class TransactionsReadService {
           description: true,
           metadata: true,
           attendanceId: true,
+          enrollmentId: true,
           contractId: true,
           reversedTransactionId: true,
           createdAt: true,
@@ -221,8 +231,15 @@ export class TransactionsReadService {
       : [];
     const attendanceMap = new Map(attendances.map((a) => [a.id, a]));
 
+    // Coverage map: for each LESSON_DEDUCTION row on the page, compute which
+    // LESSON_CONSUMPTION rows it covered via FIFO allocation across the full
+    // enrollment history (not just the page slice). Answers the admin's
+    // question "qaysi 8 darsni bu 287 500 so'm qopladi?".
+    const coverageMap = await this.computeDeductionCoverage(rows);
+
     const data = rows.map((r) => {
       const attendance = r.attendanceId ? attendanceMap.get(r.attendanceId) : null;
+      const coverage = coverageMap.get(r.id) ?? null;
       return {
         id: r.id,
         type: r.type,
@@ -240,10 +257,159 @@ export class TransactionsReadService {
         isReversal: !!r.reversedTransactionId,
         performedBy: r.performedBy,
         createdAt: r.createdAt,
+        coverage,
       };
     });
 
     return { data, total, page, pageSize };
+  }
+
+  /**
+   * For every LESSON_DEDUCTION row on the page, compute:
+   *   - cycleSequenceNumber — index among non-reversed deductions for this
+   *     enrollment (1-based)
+   *   - coveredCount — how many LESSON_CONSUMPTION rows this batch paid for
+   *   - firstCoveredDate / lastCoveredDate — date range of those lessons
+   *
+   * Allocation is FIFO across the FULL enrollment history (not just the
+   * paginated slice): we walk all deductions + consumptions ASC and pour
+   * each consumption into the oldest non-full deduction bucket. Reversed
+   * rows are excluded.
+   */
+  private async computeDeductionCoverage(
+    pageRows: Array<{
+      id: string;
+      type: TransactionType;
+      enrollmentId: string | null;
+    }>,
+  ): Promise<
+    Map<
+      string,
+      {
+        cycleSequenceNumber: number;
+        coveredCount: number;
+        capacity: number;
+        firstCoveredDate: Date | null;
+        lastCoveredDate: Date | null;
+      }
+    >
+  > {
+    const enrollmentIds = Array.from(
+      new Set(
+        pageRows
+          .filter(
+            (r) =>
+              r.type === TransactionType.LESSON_DEDUCTION && !!r.enrollmentId,
+          )
+          .map((r) => r.enrollmentId as string),
+      ),
+    );
+
+    const result = new Map<
+      string,
+      {
+        cycleSequenceNumber: number;
+        coveredCount: number;
+        capacity: number;
+        firstCoveredDate: Date | null;
+        lastCoveredDate: Date | null;
+      }
+    >();
+    if (enrollmentIds.length === 0) return result;
+
+    const allTxs = await this.prisma.transaction.findMany({
+      where: {
+        enrollmentId: { in: enrollmentIds },
+        type: {
+          in: [
+            TransactionType.LESSON_DEDUCTION,
+            TransactionType.LESSON_CONSUMPTION,
+          ],
+        },
+        reversedAt: null,
+      },
+      select: {
+        id: true,
+        type: true,
+        enrollmentId: true,
+        attendanceId: true,
+        metadata: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // One round-trip for all consumption attendance dates.
+    const consumptionAttIds = allTxs
+      .filter(
+        (t) =>
+          t.type === TransactionType.LESSON_CONSUMPTION && !!t.attendanceId,
+      )
+      .map((t) => t.attendanceId as string);
+    const attendanceDates = consumptionAttIds.length
+      ? await this.prisma.attendance.findMany({
+          where: { id: { in: consumptionAttIds } },
+          select: { id: true, date: true },
+        })
+      : [];
+    const attDateMap = new Map(attendanceDates.map((a) => [a.id, a.date]));
+
+    // Group by enrollment, allocate FIFO.
+    const byEnrollment = new Map<string, typeof allTxs>();
+    for (const tx of allTxs) {
+      if (!tx.enrollmentId) continue;
+      const list = byEnrollment.get(tx.enrollmentId) ?? [];
+      list.push(tx);
+      byEnrollment.set(tx.enrollmentId, list);
+    }
+
+    for (const [, txs] of byEnrollment) {
+      let cycleSeq = 0;
+      const buckets: Array<{
+        deductionId: string;
+        capacity: number;
+        consumedDates: Date[];
+      }> = [];
+
+      for (const tx of txs) {
+        if (tx.type === TransactionType.LESSON_DEDUCTION) {
+          cycleSeq += 1;
+          const md = (tx.metadata ?? {}) as Record<string, unknown>;
+          const capacity = Number(md.lessonsCovered) || 0;
+          buckets.push({ deductionId: tx.id, capacity, consumedDates: [] });
+          result.set(tx.id, {
+            cycleSequenceNumber: cycleSeq,
+            coveredCount: 0,
+            capacity,
+            firstCoveredDate: null,
+            lastCoveredDate: null,
+          });
+        } else if (tx.type === TransactionType.LESSON_CONSUMPTION) {
+          const bucket = buckets.find(
+            (b) => b.consumedDates.length < b.capacity,
+          );
+          if (!bucket) continue;
+          const date = tx.attendanceId
+            ? attDateMap.get(tx.attendanceId)
+            : undefined;
+          bucket.consumedDates.push(date ?? tx.createdAt);
+        }
+      }
+
+      // Settle final stats per bucket.
+      for (const bucket of buckets) {
+        const entry = result.get(bucket.deductionId);
+        if (!entry) continue;
+        const sorted = [...bucket.consumedDates].sort(
+          (a, b) => a.getTime() - b.getTime(),
+        );
+        entry.coveredCount = sorted.length;
+        entry.firstCoveredDate = sorted[0] ?? null;
+        entry.lastCoveredDate = sorted[sorted.length - 1] ?? null;
+      }
+    }
+
+    return result;
   }
 
   /**

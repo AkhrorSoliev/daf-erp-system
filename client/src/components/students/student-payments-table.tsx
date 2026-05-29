@@ -155,10 +155,17 @@ export function StudentPaymentsTable({
                         </span>
                       ) : isLessonDeduction ? (
                         <div>
-                          <div>
-                            {t.metadata?.lessonsCovered != null
-                              ? `${t.metadata.lessonsCovered} ta dars uchun yechildi`
-                              : (t.description ?? "Dars uchun yechildi")}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {t.coverage && t.metadata?.mode !== "SINGLE_UNCOVERED" && (
+                              <Badge variant="outline" className="font-mono">
+                                Sikl #{t.coverage.cycleSequenceNumber}
+                              </Badge>
+                            )}
+                            <span>
+                              {t.metadata?.lessonsCovered != null
+                                ? `${t.metadata.lessonsCovered} ta dars uchun yechildi`
+                                : (t.description ?? "Dars uchun yechildi")}
+                            </span>
                           </div>
                           {t.metadata?.mode && (
                             <div className="text-xs text-muted-foreground">
@@ -170,6 +177,37 @@ export function StudentPaymentsTable({
                                 )} so'm`}
                             </div>
                           )}
+                          {t.coverage && t.coverage.coveredCount > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              Qopladi:{" "}
+                              <span className="font-medium text-foreground">
+                                {t.coverage.firstCoveredDate &&
+                                  format(
+                                    new Date(t.coverage.firstCoveredDate),
+                                    "dd.MM",
+                                  )}
+                                {t.coverage.firstCoveredDate !==
+                                  t.coverage.lastCoveredDate &&
+                                  ` → ${
+                                    t.coverage.lastCoveredDate
+                                      ? format(
+                                          new Date(t.coverage.lastCoveredDate),
+                                          "dd.MM",
+                                        )
+                                      : ""
+                                  }`}
+                              </span>{" "}
+                              ({t.coverage.coveredCount}/{t.coverage.capacity}{" "}
+                              dars)
+                            </div>
+                          )}
+                          {t.coverage &&
+                            t.coverage.coveredCount === 0 &&
+                            t.coverage.capacity > 0 && (
+                              <div className="text-xs text-muted-foreground italic">
+                                Hali dars qoplanmagan (0/{t.coverage.capacity})
+                              </div>
+                            )}
                         </div>
                       ) : (
                         (t.description ?? "—")
