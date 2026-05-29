@@ -64,6 +64,25 @@ export function firstOfThisMonthUtc(now: Date = new Date()): Date {
 }
 
 /**
+ * Today's Tashkent calendar date as a Date at 00:00 UTC. Use this when
+ * filtering against PostgreSQL `DATE` columns (e.g. `Attendance.date`).
+ *
+ * `tashkentDayRange` returns a UTC-timestamp window shifted by -5h to mark
+ * Tashkent midnight. That window is correct for TIMESTAMP columns
+ * (`createdAt` etc.), but Prisma coerces timestamps to the UTC calendar
+ * date when comparing against a DATE column, so the -5h shift produces an
+ * off-by-one and silently selects "yesterday in Tashkent" instead of today.
+ */
+export function tashkentTodayDate(now: Date = new Date()): Date {
+  const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+  const tashkentNow = new Date(now.getTime() + TASHKENT_OFFSET_MS);
+  const y = tashkentNow.getUTCFullYear();
+  const m = tashkentNow.getUTCMonth();
+  const d = tashkentNow.getUTCDate();
+  return new Date(Date.UTC(y, m, d));
+}
+
+/**
  * True when `now` falls on a Sunday in Asia/Tashkent (UTC+5). Used by the
  * Telegram report crons to skip the weekly day off — the center has no
  * business activity on Sundays so any stats report would be all zeros.
