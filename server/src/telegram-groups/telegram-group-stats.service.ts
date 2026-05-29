@@ -328,6 +328,7 @@ export class TelegramGroupStatsService {
   async buildDailyReport(companyId: number): Promise<string> {
     const today = tashkentDayRange();
     const firstOfMonth = firstOfThisMonthUtc();
+    const todayDate = tashkentTodayDate();
 
     const teacherRole = await this.prisma.role.findFirst({
       where: { name: { in: ['Teacher', TEACHER_ROLE_NAME] } },
@@ -341,7 +342,8 @@ export class TelegramGroupStatsService {
       activeGroups,
       activeTeachers,
       todayPayments,
-      todayLessons,
+      attendanceBreakdown,
+      lessonGroupsToday,
       debtorAgg,
       monthlyIncome,
       company,
@@ -378,15 +380,17 @@ export class TelegramGroupStatsService {
         _sum: { amount: true },
         _count: true,
       }),
-      this.prisma.attendance.count({
-        where: {
-          companyId,
-          // Attendance.date is a PostgreSQL DATE column — compare against
-          // the Tashkent calendar date directly, not the shifted
-          // tashkentDayRange window. See tashkentTodayDate() for why.
-          date: tashkentTodayDate(),
-          status: { in: ['PRESENT', 'LATE'] },
-        },
+      // Attendance.date is a PostgreSQL DATE column — compare against the
+      // Tashkent calendar date directly, not the shifted tashkentDayRange
+      // window. See tashkentTodayDate() for why.
+      this.prisma.attendance.groupBy({
+        by: ['status'],
+        where: { companyId, date: todayDate },
+        _count: true,
+      }),
+      this.prisma.attendance.groupBy({
+        by: ['groupId'],
+        where: { companyId, date: todayDate },
       }),
       this.prisma.student.aggregate({
         where: {
@@ -412,21 +416,32 @@ export class TelegramGroupStatsService {
       }),
     ]);
 
+    const countFor = (s: 'PRESENT' | 'LATE' | 'ABSENT' | 'EXCUSED'): number =>
+      attendanceBreakdown.find((r) => r.status === s)?._count ?? 0;
+    const attended = countFor('PRESENT') + countFor('LATE');
+    const absent = countFor('ABSENT');
+    const excused = countFor('EXCUSED');
+    const totalMarked = attended + absent + excused;
+    const attendancePct =
+      totalMarked > 0 ? Math.round((attended / totalMarked) * 100) : 0;
+    const lessonsToday = lessonGroupsToday.length;
+
     return [
       `📊 <b>${formatDate(new Date())} — ${company?.name ?? 'Hisobot'}</b>`,
       ``,
       `<b>Bugun:</b>`,
-      `• Yangi o'quvchilar: <b>${formatNumber(todayNewStudents)}</b>`,
-      `• To'lovlar: <b>${formatNumber(todayPayments._count ?? 0)}</b> ta · <b>${formatSum(todayPayments._sum.amount ?? 0)}</b>`,
-      `• Darslar: <b>${formatNumber(todayLessons)}</b>`,
+      `• Yangi o'quvchilar: <b>${formatNumber(todayNewStudents)}</b> 🆕`,
+      `• To'lovlar: <b>${formatNumber(todayPayments._count ?? 0)}</b> ta · <b>${formatSum(todayPayments._sum.amount ?? 0)}</b> 💰`,
+      `• Darslar: <b>${formatNumber(lessonsToday)}</b> ta 📚`,
+      `• Davomat: <b>${formatNumber(attended)}/${formatNumber(totalMarked)}</b> keldi (${attendancePct}%) · <b>${formatNumber(absent)}</b> kelmadi · <b>${formatNumber(excused)}</b> bekor ✅`,
       ``,
       `<b>Hozirgi holat:</b>`,
-      `• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b>`,
-      `• Faol guruhlar: <b>${formatNumber(activeGroups)}</b>`,
-      `• Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b>`,
-      `• Qarzdorlar: <b>${formatNumber(debtorAgg._count)}</b> ta — <b>${formatSum(Math.abs(debtorAgg._sum.balance ?? 0))}</b>`,
+      `• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b> 👨‍🎓`,
+      `• Faol guruhlar: <b>${formatNumber(activeGroups)}</b> (bugun dars: <b>${formatNumber(lessonsToday)}</b>) 👥`,
+      `• Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b> 👨‍🏫`,
+      `• Qarzdorlar: <b>${formatNumber(debtorAgg._count)}</b> ta — <b>${formatSum(Math.abs(debtorAgg._sum.balance ?? 0))}</b> 💸`,
       ``,
-      `<b>Oy boshidan bugungacha tushum:</b> ${formatSum(monthlyIncome._sum.amount ?? 0)}`,
+      `💵 <b>Oy boshidan bugungacha tushum:</b> ${formatSum(monthlyIncome._sum.amount ?? 0)}`,
     ].join('\n');
   }
 }
