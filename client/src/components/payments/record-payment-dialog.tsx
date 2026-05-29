@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowRight,
+  CheckCircle2,
+  CircleDollarSign,
+  Loader2,
+  Sparkles,
+  Wallet,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import {
@@ -46,6 +53,69 @@ interface Props {
 }
 
 const QUICK_AMOUNTS = [100_000, 200_000, 300_000, 400_000, 500_000, 800_000, 1_000_000];
+
+interface PaymentBreakdownItem {
+  kind: "DEBT_REPAY" | "CYCLE_FULL" | "CYCLE_PARTIAL" | "REMAINDER";
+  amount: number;
+  label: string;
+  lessons?: number;
+  cycleSequenceNumber?: number;
+}
+
+interface PrimaryEnrollment {
+  groupName: string;
+  courseName: string;
+  perLessonCost: number;
+  fullCycleCost: number;
+  lessonPaymentCount: number;
+  currentPrepaid: number;
+  currentCycleSequence: number;
+}
+
+interface PaymentPreview {
+  amount: number;
+  currentBalance: number;
+  newBalance: number;
+  scenario: "SINGLE_ENROLLMENT" | "MULTI_ENROLLMENT" | "NO_ENROLLMENT";
+  primaryEnrollment: PrimaryEnrollment | null;
+  breakdown: PaymentBreakdownItem[];
+}
+
+interface AmountSuggestions {
+  // Recommended amount: covers the debt + tops up the next cycle just enough
+  // so the student isn't immediately in debt again.
+  recommended: { amount: number; label: string } | null;
+  oneFullCycle: { amount: number; label: string };
+  twoFullCycles: { amount: number; label: string };
+}
+
+function buildAmountSuggestions(
+  enr: PrimaryEnrollment,
+  currentBalance: number,
+): AmountSuggestions {
+  const debt = Math.max(0, -currentBalance);
+  const recommendedRaw = debt + enr.fullCycleCost;
+  return {
+    recommended:
+      debt > 0
+        ? {
+            amount: recommendedRaw,
+            label: `Qarz + 1 sikl (${enr.lessonPaymentCount} dars)`,
+          }
+        : {
+            amount: enr.fullCycleCost,
+            label: `1 to'liq sikl (${enr.lessonPaymentCount} dars)`,
+          },
+    oneFullCycle: {
+      amount: enr.fullCycleCost,
+      label: `+1 sikl (${enr.lessonPaymentCount} dars)`,
+    },
+    twoFullCycles: {
+      amount: enr.fullCycleCost * 2,
+      label: `+2 sikl (${enr.lessonPaymentCount * 2} dars)`,
+    },
+  };
+}
 
 const methodOptions = [
   { value: "CASH", label: "Naqd" },
@@ -131,6 +201,36 @@ export function RecordPaymentDialog({
   }, []);
 
   const rawAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
+
+  // Debounce the live preview request so we don't fire one query per
+  // keystroke. 350ms keeps the breakdown card responsive without hammering
+  // the API while the cashier types a multi-digit amount.
+  const [debouncedAmount, setDebouncedAmount] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedAmount(rawAmount), 350);
+    return () => clearTimeout(t);
+  }, [rawAmount]);
+
+  const previewQuery = useQuery<PaymentPreview>({
+    queryKey: ["payment-preview", selectedStudent?.id, debouncedAmount],
+    queryFn: () =>
+      api
+        .get<PaymentPreview>("/payments/preview", {
+          params: { studentId: selectedStudent!.id, amount: debouncedAmount },
+        })
+        .then((r) => r.data),
+    enabled: !!selectedStudent && debouncedAmount >= 1000,
+    staleTime: 10_000,
+  });
+  const preview = previewQuery.data;
+
+  // Smart suggestion: "qolgan darslar uchun" — when the primary enrollment has
+  // prepaid drained and the next attendance would refill, suggest the partial
+  // amount that fits the cycle's remaining lessons exactly. Falls back to
+  // perLessonCost × N for cycle-aware refill.
+  const suggestion = preview?.primaryEnrollment
+    ? buildAmountSuggestions(preview.primaryEnrollment, preview.currentBalance)
+    : null;
 
   const handleSubmit = async () => {
     if (!selectedStudent || rawAmount < 1000) return;
@@ -295,20 +395,85 @@ export function RecordPaymentDialog({
                 Tavsiya: {formatPrice(suggestedAmount)} so&apos;m — kurs to&apos;liq tsikl narxi
               </p>
             )}
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_AMOUNTS.map((qa) => (
+
+            {/* Smart per-student suggestions powered by /payments/preview.
+                Falls back to the static QUICK_AMOUNTS grid when there's no
+                primary enrollment (multi-enrollment / no-enrollment cases). */}
+            {suggestion ? (
+              <div className="flex flex-wrap gap-1.5">
+                {suggestion.recommended && (
+                  <Button
+                    variant={
+                      rawAmount === suggestion.recommended.amount
+                        ? "default"
+                        : "outline"
+                    }
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() =>
+                      handleAmountChange(String(suggestion.recommended!.amount))
+                    }
+                  >
+                    <Sparkles className="mr-1 size-3" />
+                    {suggestion.recommended.label} ·{" "}
+                    {formatPrice(suggestion.recommended.amount)}
+                  </Button>
+                )}
                 <Button
-                  key={qa}
-                  variant={rawAmount === qa ? "default" : "outline"}
+                  variant={
+                    rawAmount === suggestion.oneFullCycle.amount
+                      ? "default"
+                      : "outline"
+                  }
                   size="sm"
                   className="text-xs h-7"
-                  onClick={() => handleAmountChange(String(qa))}
+                  onClick={() =>
+                    handleAmountChange(String(suggestion.oneFullCycle.amount))
+                  }
                 >
-                  {formatPrice(qa)}
+                  {suggestion.oneFullCycle.label} ·{" "}
+                  {formatPrice(suggestion.oneFullCycle.amount)}
                 </Button>
-              ))}
-            </div>
+                <Button
+                  variant={
+                    rawAmount === suggestion.twoFullCycles.amount
+                      ? "default"
+                      : "outline"
+                  }
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() =>
+                    handleAmountChange(String(suggestion.twoFullCycles.amount))
+                  }
+                >
+                  {suggestion.twoFullCycles.label} ·{" "}
+                  {formatPrice(suggestion.twoFullCycles.amount)}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_AMOUNTS.map((qa) => (
+                  <Button
+                    key={qa}
+                    variant={rawAmount === qa ? "default" : "outline"}
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => handleAmountChange(String(qa))}
+                  >
+                    {formatPrice(qa)}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Live preview: what does this payment buy? */}
+          {selectedStudent && rawAmount >= 1000 && (
+            <PaymentPreviewCard
+              loading={previewQuery.isFetching}
+              preview={preview}
+            />
+          )}
 
           {/* Method */}
           <div className="space-y-2">
@@ -412,5 +577,113 @@ export function RecordPaymentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PaymentPreviewCard({
+  loading,
+  preview,
+}: {
+  loading: boolean;
+  preview: PaymentPreview | undefined;
+}) {
+  if (!preview) {
+    return (
+      <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+        {loading ? "Hisoblanmoqda…" : "Summa kiriting"}
+      </div>
+    );
+  }
+
+  const balanceDelta = preview.newBalance - preview.currentBalance;
+  return (
+    <div className="rounded-md border bg-card p-3 space-y-3">
+      {/* Balance summary */}
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Wallet className="size-4" />
+          <span>Balans</span>
+        </div>
+        <div className="flex items-center gap-1.5 font-mono tabular-nums">
+          <span
+            className={
+              preview.currentBalance < 0 ? "text-red-600" : "text-foreground"
+            }
+          >
+            {formatPrice(preview.currentBalance)}
+          </span>
+          <ArrowRight className="size-3 text-muted-foreground" />
+          <span
+            className={
+              preview.newBalance < 0
+                ? "text-red-600 font-semibold"
+                : "text-green-600 font-semibold"
+            }
+          >
+            {formatPrice(preview.newBalance)}
+          </span>
+          <span className="text-muted-foreground">so&apos;m</span>
+        </div>
+      </div>
+
+      {/* Primary enrollment context */}
+      {preview.primaryEnrollment && (
+        <div className="rounded-md bg-muted/40 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">
+            {preview.primaryEnrollment.groupName}
+          </span>{" "}
+          · {preview.primaryEnrollment.courseName} ·{" "}
+          {formatPrice(preview.primaryEnrollment.perLessonCost)} so&apos;m/dars
+          {preview.primaryEnrollment.currentPrepaid > 0 && (
+            <>
+              {" "}
+              · oldindan {preview.primaryEnrollment.currentPrepaid} dars
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Breakdown */}
+      {preview.breakdown.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Bu pul nimaga yetadi:
+          </p>
+          {preview.breakdown.map((item, idx) => (
+            <div
+              key={idx}
+              className="flex items-start justify-between gap-3 text-xs"
+            >
+              <div className="flex items-start gap-1.5">
+                {item.kind === "DEBT_REPAY" ? (
+                  <CircleDollarSign className="mt-0.5 size-3 shrink-0 text-amber-600" />
+                ) : item.kind === "REMAINDER" ? (
+                  <Wallet className="mt-0.5 size-3 shrink-0 text-slate-500" />
+                ) : (
+                  <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-emerald-600" />
+                )}
+                <span>{item.label}</span>
+              </div>
+              <span className="font-mono tabular-nums">
+                {formatPrice(item.amount)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {preview.scenario === "MULTI_ENROLLMENT" && (
+        <p className="text-[11px] text-muted-foreground italic">
+          O&apos;quvchi 2+ guruhda — qaysi sikl uchun yechilishini sistema
+          avtomatik tanlaydi.
+        </p>
+      )}
+
+      {balanceDelta > 0 && preview.newBalance < 0 && (
+        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+          ⚠ To&apos;lovdan keyin ham qarz qoladi
+        </p>
+      )}
+    </div>
   );
 }

@@ -113,6 +113,21 @@ export class PaymentsController {
     return this.paymentsService.findAll(query, companyId);
   }
 
+  /**
+   * Preview "what will this payment buy?" — pure projection over the
+   * student's current balance and prepaid state. No mutation. Used by the
+   * RecordPaymentDialog to show admins a live breakdown
+   * (debt repaid → new cycles → leftover balance) as they type the amount.
+   */
+  @Get('preview')
+  preview(
+    @Query('studentId', ParseIntPipe) studentId: number,
+    @Query('amount', ParseIntPipe) amount: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.paymentsService.previewPayment(studentId, amount, companyId);
+  }
+
   @Get('debtors')
   getDebtors(
     @Query() query: PaymentQueryDto,

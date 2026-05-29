@@ -6,6 +6,7 @@ import { PaymentQueryDto } from './dto/payment-query.dto';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
+import { PaymentsPreviewService } from './payments-preview.service';
 
 @Injectable()
 export class PaymentsService {
@@ -13,6 +14,7 @@ export class PaymentsService {
     private write: PaymentsWriteService,
     private read: PaymentsReadService,
     private debtors: PaymentsDebtorsService,
+    private preview: PaymentsPreviewService,
   ) {}
 
   // Writes
@@ -87,5 +89,10 @@ export class PaymentsService {
   }
   getDebtorsForGroup(groupId: string, companyId: number) {
     return this.debtors.getDebtorsForGroup(groupId, companyId);
+  }
+
+  // Preview
+  previewPayment(studentId: number, amount: number, companyId: number) {
+    return this.preview.preview(studentId, amount, companyId);
   }
 }
