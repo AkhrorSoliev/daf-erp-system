@@ -6,6 +6,7 @@ import {
   formatNumber,
   formatSum,
   tashkentDayRange,
+  tashkentTodayDate,
 } from './utils/format.util';
 
 const TEACHER_ROLE_NAME = 'O\'qituvchi';
@@ -380,7 +381,10 @@ export class TelegramGroupStatsService {
       this.prisma.attendance.count({
         where: {
           companyId,
-          date: { gte: today.start, lt: today.end },
+          // Attendance.date is a PostgreSQL DATE column — compare against
+          // the Tashkent calendar date directly, not the shifted
+          // tashkentDayRange window. See tashkentTodayDate() for why.
+          date: tashkentTodayDate(),
           status: { in: ['PRESENT', 'LATE'] },
         },
       }),
