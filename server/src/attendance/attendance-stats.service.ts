@@ -2,10 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
 import {
-  DAY_NAME_TO_JS,
+  dayOfWeekForDateStr,
   tashkentDateStr,
   toLocalDateStr,
 } from './shared/date-utils';
+import { buildScheduleDayResolver } from './shared/schedule-resolver';
 import { HolidaysService } from '../holidays/holidays.service';
 
 @Injectable()
@@ -31,6 +32,9 @@ export class AttendanceStatsService {
         exactDays: true,
         startDate: true,
         endDate: true,
+        scheduleSnapshots: {
+          select: { exactDays: true, validFrom: true, validTo: true },
+        },
       },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
@@ -41,26 +45,43 @@ export class AttendanceStatsService {
       : (group.startDate ?? new Date(now.getFullYear(), 0, 1));
     const rangeEnd = endDate ? new Date(endDate + 'T00:00:00.000Z') : now;
 
-    const scheduleDays = group.exactDays
-      .map((d) => DAY_NAME_TO_JS[d])
-      .filter((d) => d !== undefined);
+    // Schedule-change aware: resolve lesson weekdays per date so the lesson
+    // count for a past range reflects the schedule in effect then, not today's.
+    const resolveScheduleDays = buildScheduleDayResolver(
+      group.scheduleSnapshots,
+      group.exactDays,
+    );
 
     const holidaySet = await this.holidaysService.buildHolidayDateSet(
       rangeStart,
       rangeEnd,
     );
 
-    let totalLessons = 0;
+    // Ground truth: any date with attendance counts as a lesson, even outside
+    // the (possibly changed) schedule — so a schedule change never drops past
+    // lessons from the denominator.
+    const attendanceDateRows = await this.prisma.attendance.groupBy({
+      by: ['date'],
+      where: { groupId, date: { gte: rangeStart, lte: rangeEnd } },
+    });
+    const lessonDateSet = new Set<string>(
+      attendanceDateRows.map((r) => tashkentDateStr(r.date)),
+    );
+
     const cursor = new Date(rangeStart);
     while (cursor <= rangeEnd) {
+      const dateStr = tashkentDateStr(cursor);
+      const sched = resolveScheduleDays(dateStr);
       if (
-        scheduleDays.includes(cursor.getDay()) &&
-        !holidaySet.has(tashkentDateStr(cursor))
+        sched &&
+        sched.includes(dayOfWeekForDateStr(dateStr)) &&
+        !holidaySet.has(dateStr)
       ) {
-        totalLessons++;
+        lessonDateSet.add(dateStr);
       }
       cursor.setDate(cursor.getDate() + 1);
     }
+    const totalLessons = lessonDateSet.size;
 
     const attendanceData = await this.prisma.attendance.groupBy({
       by: ['studentId', 'status'],

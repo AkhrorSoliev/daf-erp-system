@@ -6,13 +6,13 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
 import {
-  DAY_NAME_TO_JS,
   JS_TO_DAY_NAME,
   tashkentDateStr,
   utcMidnightFromDateStr,
   dayOfWeekForDateStr,
   addDaysToDateStr,
 } from './shared/date-utils';
+import { buildScheduleDayResolver } from './shared/schedule-resolver';
 import {
   calculateDebtAmount,
   calculatePerLessonCost,
@@ -119,6 +119,9 @@ export class AttendanceReadService {
         exactDays: true,
         startDate: true,
         endDate: true,
+        scheduleSnapshots: {
+          select: { exactDays: true, validFrom: true, validTo: true },
+        },
         _count: {
           select: {
             enrollments: {
@@ -140,11 +143,13 @@ export class AttendanceReadService {
     const targetMonth = month ? month - 1 : now.getMonth();
     const targetYear = year ?? now.getFullYear();
 
-    const scheduleDays = group.exactDays
-      .map((d) => DAY_NAME_TO_JS[d])
-      .filter((d) => d !== undefined);
-
-    if (scheduleDays.length === 0) return [];
+    // Schedule-change aware: resolve the lesson weekdays per date so a month
+    // before a schedule change is rebuilt under the schedule that was actually
+    // in effect then (see buildScheduleDayResolver).
+    const resolveScheduleDays = buildScheduleDayResolver(
+      group.scheduleSnapshots,
+      group.exactDays,
+    );
 
     const monthStartStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(
@@ -177,8 +182,10 @@ export class AttendanceReadService {
     const baseLessonDateStrs: string[] = [];
     let cursorStr = rangeStartStr;
     while (cursorStr <= rangeEndStr) {
+      const sched = resolveScheduleDays(cursorStr);
       if (
-        scheduleDays.includes(dayOfWeekForDateStr(cursorStr)) &&
+        sched &&
+        sched.includes(dayOfWeekForDateStr(cursorStr)) &&
         !holidaySet.has(cursorStr)
       ) {
         baseLessonDateStrs.push(cursorStr);
@@ -186,28 +193,35 @@ export class AttendanceReadService {
       cursorStr = addDaysToDateStr(cursorStr, 1);
     }
 
+    // Ground truth: any date in range that actually has attendance is a lesson
+    // day, even if it sits outside the (possibly changed) schedule. Unioning
+    // these into the base list guarantees attendance taken under an old
+    // schedule is never hidden. Cancellations/reschedules still apply on top.
+    const attendanceCounts = await this.prisma.attendance.groupBy({
+      by: ['date', 'status'],
+      where: {
+        groupId,
+        date: {
+          gte: utcMidnightFromDateStr(rangeStartStr),
+          lte: utcMidnightFromDateStr(rangeEndStr),
+        },
+      },
+      _count: true,
+    });
+    const attendanceDateStrs = Array.from(
+      new Set(attendanceCounts.map((row) => tashkentDateStr(row.date))),
+    );
+
     // Layer reschedules + cancellations: drop moved-away / cancelled dates,
     // include moved-here dates (even if outside exactDays).
     const lessonDateStrs = await this.applyLessonModifications(
       groupId,
-      baseLessonDateStrs,
+      Array.from(new Set([...baseLessonDateStrs, ...attendanceDateStrs])),
       rangeStartStr,
       rangeEndStr,
     );
 
     if (lessonDateStrs.length === 0) return [];
-
-    // Attendance.date is stored as UTC midnight (see attendance-validation
-    // line 36: `new Date(date + 'T00:00:00.000Z')`).
-    const lessonDateObjs = lessonDateStrs.map(utcMidnightFromDateStr);
-    const attendanceCounts = await this.prisma.attendance.groupBy({
-      by: ['date', 'status'],
-      where: {
-        groupId,
-        date: { in: lessonDateObjs },
-      },
-      _count: true,
-    });
 
     const countMap: Record<
       string,
@@ -294,6 +308,9 @@ export class AttendanceReadService {
         exactDays: true,
         startDate: true,
         endDate: true,
+        scheduleSnapshots: {
+          select: { exactDays: true, validFrom: true, validTo: true },
+        },
         _count: {
           select: {
             enrollments: {
@@ -330,9 +347,10 @@ export class AttendanceReadService {
     const baseRangeEndStr =
       groupEndStr && groupEndStr < monthEndStr ? groupEndStr : monthEndStr;
 
-    const scheduleDays = group.exactDays
-      .map((d) => DAY_NAME_TO_JS[d])
-      .filter((d) => d !== undefined);
+    const resolveScheduleDays = buildScheduleDayResolver(
+      group.scheduleSnapshots,
+      group.exactDays,
+    );
 
     // Holidays — skip these from the base regular days. HolidaysService pads
     // ±1 day internally for UTC vs Tashkent midnight skew.
@@ -393,15 +411,14 @@ export class AttendanceReadService {
       }
     };
 
-    // 1. Regular lesson days.
-    if (
-      baseRangeStartStr <= baseRangeEndStr &&
-      scheduleDays.length > 0
-    ) {
+    // 1. Regular lesson days (schedule-change aware per date).
+    if (baseRangeStartStr <= baseRangeEndStr) {
       let cursorStr = baseRangeStartStr;
       while (cursorStr <= baseRangeEndStr) {
+        const sched = resolveScheduleDays(cursorStr);
         if (
-          scheduleDays.includes(dayOfWeekForDateStr(cursorStr)) &&
+          sched &&
+          sched.includes(dayOfWeekForDateStr(cursorStr)) &&
           !holidaySet.has(cursorStr)
         ) {
           setCell(cursorStr, { type: 'regular' });
@@ -442,55 +459,59 @@ export class AttendanceReadService {
       setCell(key, { type: 'cancelled', cancellationReason: c.reason });
     }
 
-    // 4. Attendance counts — only meaningful for cells that host a lesson
-    //    (regular | rescheduledTo). Pull in one query.
-    const liveCellKeys = Array.from(cellMap.entries())
-      .filter(([, c]) => c.type === 'regular' || c.type === 'rescheduledTo')
-      .map(([k]) => k);
-    let countMap: Record<
+    // 4. Attendance across the whole month — used both to surface orphaned
+    //    lesson days (attendance taken on a date that no longer matches the
+    //    schedule, e.g. after a schedule change) and to count statuses.
+    const attendanceCounts = await this.prisma.attendance.groupBy({
+      by: ['date', 'status'],
+      where: { groupId, date: { gte: monthStartDate, lte: monthEndDate } },
+      _count: true,
+    });
+    const countMap: Record<
       string,
       { present: number; absent: number; late: number; excused: number; total: number }
     > = {};
-    if (liveCellKeys.length > 0) {
-      const dateObjs = liveCellKeys.map(utcMidnightFromDateStr);
-      const counts = await this.prisma.attendance.groupBy({
-        by: ['date', 'status'],
-        where: { groupId, date: { in: dateObjs } },
-        _count: true,
-      });
-      countMap = {};
-      for (const row of counts) {
-        const dateStr = tashkentDateStr(row.date);
-        if (!countMap[dateStr]) {
-          countMap[dateStr] = {
-            present: 0,
-            absent: 0,
-            late: 0,
-            excused: 0,
-            total: 0,
-          };
-        }
-        countMap[dateStr].total += row._count;
-        switch (row.status) {
-          case AttendanceStatus.PRESENT:
-            countMap[dateStr].present += row._count;
-            break;
-          case AttendanceStatus.ABSENT:
-            countMap[dateStr].absent += row._count;
-            break;
-          case AttendanceStatus.LATE:
-            countMap[dateStr].late += row._count;
-            break;
-          case AttendanceStatus.EXCUSED:
-            countMap[dateStr].excused += row._count;
-            break;
-        }
+    for (const row of attendanceCounts) {
+      const dateStr = tashkentDateStr(row.date);
+      // A date that has attendance but produced no cell from the schedule /
+      // reschedule passes is an orphaned lesson day — show it as a regular
+      // lesson. setCell respects priority, so cancelled / rescheduledFrom
+      // cells (already present) are never downgraded.
+      if (!cellMap.has(dateStr)) {
+        setCell(dateStr, { type: 'regular' });
+      }
+      if (!countMap[dateStr]) {
+        countMap[dateStr] = {
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          total: 0,
+        };
+      }
+      countMap[dateStr].total += row._count;
+      switch (row.status) {
+        case AttendanceStatus.PRESENT:
+          countMap[dateStr].present += row._count;
+          break;
+        case AttendanceStatus.ABSENT:
+          countMap[dateStr].absent += row._count;
+          break;
+        case AttendanceStatus.LATE:
+          countMap[dateStr].late += row._count;
+          break;
+        case AttendanceStatus.EXCUSED:
+          countMap[dateStr].excused += row._count;
+          break;
       }
     }
 
     const totalStudents = group._count.enrollments;
     const cells = Array.from(cellMap.entries()).map(([dateStr, draft]) => {
-      const counts = countMap[dateStr];
+      // Counts are only meaningful for cells that host a lesson
+      // (regular | rescheduledTo); cancelled / rescheduledFrom show none.
+      const isLive = draft.type === 'regular' || draft.type === 'rescheduledTo';
+      const counts = isLive ? countMap[dateStr] : undefined;
       return {
         date: dateStr,
         dayName: JS_TO_DAY_NAME[dayOfWeekForDateStr(dateStr)] ?? '',
@@ -640,6 +661,9 @@ export class AttendanceReadService {
         exactDays: true,
         startDate: true,
         endDate: true,
+        scheduleSnapshots: {
+          select: { exactDays: true, validFrom: true, validTo: true },
+        },
         course: { select: { lessonPaymentCount: true } },
       },
     });
@@ -657,9 +681,10 @@ export class AttendanceReadService {
     const rangeEndStr =
       groupEndStr && groupEndStr < todayStr ? groupEndStr : todayStr;
 
-    const scheduleDays = group.exactDays
-      .map((d) => DAY_NAME_TO_JS[d])
-      .filter((d) => d !== undefined);
+    const resolveScheduleDays = buildScheduleDayResolver(
+      group.scheduleSnapshots,
+      group.exactDays,
+    );
 
     const holidaySet = await this.holidaysService.buildHolidayDateSet(
       utcMidnightFromDateStr(rangeStartStr),
@@ -670,8 +695,10 @@ export class AttendanceReadService {
     if (rangeStartStr <= rangeEndStr) {
       let cursorStr = rangeStartStr;
       while (cursorStr <= rangeEndStr) {
+        const sched = resolveScheduleDays(cursorStr);
         if (
-          scheduleDays.includes(dayOfWeekForDateStr(cursorStr)) &&
+          sched &&
+          sched.includes(dayOfWeekForDateStr(cursorStr)) &&
           !holidaySet.has(cursorStr)
         ) {
           baseLessonDates.push(cursorStr);
@@ -680,9 +707,29 @@ export class AttendanceReadService {
       }
     }
 
+    // Ground truth: surface any date with attendance even if it falls outside
+    // the (possibly changed) schedule, so a schedule change never hides past
+    // lessons from the dots view.
+    const attendanceDates =
+      rangeStartStr <= rangeEndStr
+        ? await this.prisma.attendance.groupBy({
+            by: ['date'],
+            where: {
+              groupId,
+              date: {
+                gte: utcMidnightFromDateStr(rangeStartStr),
+                lte: utcMidnightFromDateStr(rangeEndStr),
+              },
+            },
+          })
+        : [];
+    const attendanceDateStrs = attendanceDates.map((r) =>
+      tashkentDateStr(r.date),
+    );
+
     const allLessonDates = await this.applyLessonModifications(
       groupId,
-      baseLessonDates,
+      Array.from(new Set([...baseLessonDates, ...attendanceDateStrs])),
       rangeStartStr,
       rangeEndStr,
     );
