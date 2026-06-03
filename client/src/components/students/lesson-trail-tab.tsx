@@ -18,16 +18,17 @@ import {
 
 interface Cycle {
   cycleSequenceNumber: number;
-  capacity: number;
-  coveredCount: number;
-  firstCoveredDate: string | null;
-  lastCoveredDate: string | null;
+  capacity: number; // = kurs lessonPaymentCount (sikl blok o'lchami)
+  lessonCount: number; // shu blokdagi haqiqiy darslar soni
+  attended: number;
+  firstDate: string;
+  lastDate: string;
 }
 
 interface Lesson {
   date: string;
   status: DotStatus;
-  cycleSequenceNumber: number | null;
+  cycleSequenceNumber: number;
 }
 
 interface GroupOverview {
@@ -62,14 +63,16 @@ function shortDate(date: string): string {
 }
 
 function cycleLabel(c: Cycle): string {
-  if (c.firstCoveredDate) {
-    const range =
-      c.lastCoveredDate && c.lastCoveredDate !== c.firstCoveredDate
-        ? `${shortDate(c.firstCoveredDate)} — ${shortDate(c.lastCoveredDate)}`
-        : shortDate(c.firstCoveredDate);
-    return `${range} (${c.coveredCount}/${c.capacity} dars)`;
-  }
-  return `${c.capacity} dars — boshlanmagan`;
+  const range =
+    c.lastDate && c.lastDate !== c.firstDate
+      ? `${shortDate(c.firstDate)} — ${shortDate(c.lastDate)}`
+      : shortDate(c.firstDate);
+  // To'liq blok → "(12 dars)"; davom etayotgan oxirgi blok → "(4/12 dars)".
+  const count =
+    c.lessonCount < c.capacity
+      ? `${c.lessonCount}/${c.capacity} dars`
+      : `${c.lessonCount} dars`;
+  return `${range} (${count})`;
 }
 
 function LessonTimeline({ lessons }: { lessons: Lesson[] }) {

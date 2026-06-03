@@ -387,7 +387,7 @@ function SimpleEventCard({
             <BookOpen className="size-3.5" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-medium">Sikl darslarga yechildi</p>
+            <p className="text-sm font-medium">Darslar uchun yechildi</p>
             <p className="text-xs text-muted-foreground">
               {deductionDetail(t)}
               <span className="mx-1.5">·</span>

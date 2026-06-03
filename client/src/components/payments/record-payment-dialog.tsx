@@ -304,12 +304,13 @@ export function RecordPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!submitting) { onOpenChange(v); if (!v) resetForm(); } }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-md">
+        <DialogHeader className="shrink-0">
           <DialogTitle>To&apos;lov qayd qilish</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        {/* Scroll'li tana — ma'lumot ko'paysa sarlavha va footer joyida qoladi. */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
           {/* Student Search */}
           {!selectedStudent ? (
             <div className="space-y-2">
@@ -564,7 +565,7 @@ export function RecordPaymentDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button
             variant="outline"
             onClick={() => { onOpenChange(false); resetForm(); }}
@@ -681,7 +682,7 @@ function PaymentPreviewCard({
                 </span>
               </div>
               <span className="font-mono tabular-nums">
-                {formatPrice(item.amount)}
+                {formatPrice(item.amount)} so&apos;m
               </span>
             </div>
           ))}
