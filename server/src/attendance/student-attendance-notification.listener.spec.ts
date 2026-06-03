@@ -27,6 +27,10 @@ describe('StudentAttendanceNotificationListener', () => {
   });
 
   beforeEach(async () => {
+    // The listener is gated behind this flag (temporarily disabled in prod).
+    // Enable it for the behavioural tests below; the default-off path has its
+    // own dedicated test.
+    process.env.STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED = 'true';
     bot = { telegram: { sendMessage: jest.fn().mockResolvedValue(undefined) } };
     getBot = jest.fn().mockReturnValue(bot);
     prisma = {
@@ -64,6 +68,20 @@ describe('StudentAttendanceNotificationListener', () => {
     }).compile();
 
     listener = module.get(StudentAttendanceNotificationListener);
+  });
+
+  afterEach(() => {
+    delete process.env.STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED;
+  });
+
+  it('does NOT send anything when the feature flag is disabled (default)', async () => {
+    delete process.env.STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED;
+
+    await listener.handle(basePayload());
+
+    expect(getBot).not.toHaveBeenCalled();
+    expect(prisma.student.findUnique).not.toHaveBeenCalled();
+    expect(bot.telegram.sendMessage).not.toHaveBeenCalled();
   });
 
   it('sends a rich PRESENT message with name, group, teacher, room, lesson, time, portal', async () => {

@@ -313,6 +313,7 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 
 #### Per-Student Attendance Telegram Notifications
 
+- **Currently disabled (temporary).** The listener is gated behind the `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED` env flag and short-circuits unless it equals `'true'`. Default (unset) = no messages sent. Set `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED=true` to re-enable without any code change. The behaviour described below applies only when the flag is on.
 - `StudentAttendanceNotificationListener` (`src/attendance/student-attendance-notification.listener.ts`) sends a personal Telegram message to the **student themselves** whenever their attendance status changes to `PRESENT`, `LATE`, or `ABSENT`
 - `EXCUSED` is intentionally skipped (no notification when an absence is officially excused)
 - **Trigger:** `attendance.student.recorded` event emitted per-entry from both manual `AttendanceSaveService.save()` (post-tx, only for entries where `oldStatus !== newStatus` so idempotent re-saves don't spam) and `QrAttendanceScanService.scanQr()` (per scan, after the early-return for already-PRESENT)
@@ -896,3 +897,4 @@ Skills are specialized knowledge modules that **must** be activated when working
 | `CLICK_MERCHANT_ID` | Click merchant ID | — |
 | `CLICK_SERVICE_ID` | Click service ID | — |
 | `CLICK_SECRET_KEY` | Click secret key for MD5 signature verification | — |
+| `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED` | Gate for per-student attendance Telegram messages (`'true'` to enable) | _disabled_ |

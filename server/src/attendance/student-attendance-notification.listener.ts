@@ -42,6 +42,13 @@ export class StudentAttendanceNotificationListener {
 
   @OnEvent('attendance.student.recorded')
   async handle(payload: AttendanceStudentRecordedPayload) {
+    // Temporarily disabled: per-student attendance Telegram notifications are
+    // paused. Set STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED=true to re-enable
+    // (no code change needed when we turn this back on).
+    if (process.env.STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED !== 'true') {
+      return;
+    }
+
     const { studentId, groupId, groupName, date, newStatus } = payload;
 
     if (
