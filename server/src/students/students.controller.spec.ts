@@ -152,7 +152,46 @@ describe('StudentsController — debt write-off role guards', () => {
     });
   });
 
+  describe('getLessonsOverview() guard (GET /:id/lessons-overview)', () => {
+    it('allows CEO', () => {
+      const ctx = mockExecutionContext(controller.getLessonsOverview, ['CEO']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+    it('allows Branch Director', () => {
+      const ctx = mockExecutionContext(controller.getLessonsOverview, [
+        'Branch Director',
+      ]);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+    it('allows Administrator', () => {
+      const ctx = mockExecutionContext(controller.getLessonsOverview, [
+        'Administrator',
+      ]);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+    // Monitoring ko'rinishi — Cashier ataylab KIRITILMAGAN.
+    it('denies Cashier', () => {
+      const ctx = mockExecutionContext(controller.getLessonsOverview, [
+        'Cashier',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+    it('denies Teacher', () => {
+      const ctx = mockExecutionContext(controller.getLessonsOverview, [
+        'Teacher',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
   describe('endpoint metadata sanity', () => {
+    it('getLessonsOverview is annotated with the three admin roles', () => {
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getLessonsOverview,
+      );
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
     it('removeFromGroup is annotated with the three admin roles', () => {
       const roles = reflector.get<string[]>(
         ROLES_KEY,

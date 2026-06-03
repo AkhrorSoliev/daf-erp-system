@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { StudentsReadService } from './students-read.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
@@ -13,7 +14,11 @@ describe('StudentsReadService', () => {
       student: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
+        findFirst: jest.fn(),
       },
+      enrollment: { findMany: jest.fn().mockResolvedValue([]) },
+      attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      transaction: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -54,6 +59,131 @@ describe('StudentsReadService', () => {
 
       const where = prisma.student.findMany.mock.calls[0][0].where;
       expect(where.enrollments).toBeUndefined();
+      expect(where.status).toBeUndefined();
+    });
+  });
+
+  describe('getLessonsOverview', () => {
+    it('throws NotFound when the student does not exist', async () => {
+      prisma.student.findFirst.mockResolvedValue(null);
+      await expect(
+        service.getLessonsOverview(10001, 1001),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('returns empty groups when the student has no enrollments', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.enrollment.findMany.mockResolvedValue([]);
+      const res = await service.getLessonsOverview(10001, 1001);
+      expect(res).toEqual({ studentId: 10001, groups: [] });
+    });
+
+    it('builds per-group lessons + cycles; ABSENT gets null cycle; ACTIVE-only by default', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'enr-1',
+          status: 'ACTIVE',
+          startDate: new Date('2026-06-01'),
+          group: {
+            id: 'grp-1',
+            name: '#001',
+            course: { name: 'A1', lessonPaymentCount: 12 },
+          },
+        },
+      ]);
+      prisma.transaction.findMany.mockResolvedValue([
+        {
+          id: 'ded-1',
+          type: 'LESSON_DEDUCTION',
+          enrollmentId: 'enr-1',
+          attendanceId: null,
+          metadata: { lessonsCovered: 12 },
+          createdAt: new Date('2026-06-01'),
+        },
+        {
+          id: 'lc-1',
+          type: 'LESSON_CONSUMPTION',
+          enrollmentId: 'enr-1',
+          attendanceId: 'att-1',
+          metadata: {},
+          createdAt: new Date('2026-06-01'),
+        },
+        {
+          id: 'lc-3',
+          type: 'LESSON_CONSUMPTION',
+          enrollmentId: 'enr-1',
+          attendanceId: 'att-3',
+          metadata: {},
+          createdAt: new Date('2026-06-05'),
+        },
+      ]);
+      // Discriminate the two attendance.findMany call shapes:
+      //  - coverage join: where.id.in (select id+date)
+      //  - student lessons: where.studentId + groupId.in (id, groupId, date, status)
+      prisma.attendance.findMany.mockImplementation((args: any) => {
+        if (args?.where?.id?.in) {
+          return Promise.resolve([
+            { id: 'att-1', date: new Date('2026-06-01') },
+            { id: 'att-3', date: new Date('2026-06-05') },
+          ]);
+        }
+        return Promise.resolve([
+          {
+            id: 'att-1',
+            groupId: 'grp-1',
+            date: new Date('2026-06-01'),
+            status: 'PRESENT',
+          },
+          {
+            id: 'att-2',
+            groupId: 'grp-1',
+            date: new Date('2026-06-03'),
+            status: 'ABSENT',
+          },
+          {
+            id: 'att-3',
+            groupId: 'grp-1',
+            date: new Date('2026-06-05'),
+            status: 'LATE',
+          },
+        ]);
+      });
+
+      const res = await service.getLessonsOverview(10001, 1001);
+
+      // Default: ACTIVE-only enrollment filter.
+      expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ status: 'ACTIVE' }),
+        }),
+      );
+
+      expect(res.groups).toHaveLength(1);
+      const g = res.groups[0];
+      expect(g.lessonPaymentCount).toBe(12);
+      expect(g.attended).toBe(2); // PRESENT + LATE
+      expect(g.total).toBe(3);
+      expect(g.cycles).toEqual([
+        expect.objectContaining({
+          cycleSequenceNumber: 1,
+          capacity: 12,
+          coveredCount: 2,
+        }),
+      ]);
+
+      const byDate = Object.fromEntries(g.lessons.map((l: any) => [l.date, l]));
+      expect(byDate['2026-06-01'].cycleSequenceNumber).toBe(1);
+      expect(byDate['2026-06-05'].cycleSequenceNumber).toBe(1);
+      expect(byDate['2026-06-03'].status).toBe('ABSENT');
+      expect(byDate['2026-06-03'].cycleSequenceNumber).toBeNull();
+    });
+
+    it('includeClosed=true drops the ACTIVE-only status filter', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.enrollment.findMany.mockResolvedValue([]);
+      await service.getLessonsOverview(10001, 1001, true);
+      const where = prisma.enrollment.findMany.mock.calls[0][0].where;
       expect(where.status).toBeUndefined();
     });
   });

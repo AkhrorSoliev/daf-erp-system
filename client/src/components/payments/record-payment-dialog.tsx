@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -60,6 +61,10 @@ interface PaymentBreakdownItem {
   label: string;
   lessons?: number;
   cycleSequenceNumber?: number;
+  // DEBT_REPAY uchun — qoplanadigan o'tgan darslar sana oralig'i (ISO).
+  // CYCLE_* kelgusi sikllar uchun null (darslar hali o'tilmagan).
+  firstLessonDate?: string | null;
+  lastLessonDate?: string | null;
 }
 
 interface PrimaryEnrollment {
@@ -662,7 +667,18 @@ function PaymentPreviewCard({
                 ) : (
                   <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-emerald-600" />
                 )}
-                <span>{item.label}</span>
+                <span>
+                  {item.label}
+                  {item.firstLessonDate && (
+                    <span className="ml-1 text-muted-foreground">
+                      ({format(new Date(item.firstLessonDate), "dd.MM")}
+                      {item.lastLessonDate &&
+                        item.lastLessonDate !== item.firstLessonDate &&
+                        ` — ${format(new Date(item.lastLessonDate), "dd.MM")}`}
+                      )
+                    </span>
+                  )}
+                </span>
               </div>
               <span className="font-mono tabular-nums">
                 {formatPrice(item.amount)}

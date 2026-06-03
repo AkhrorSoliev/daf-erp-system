@@ -17,6 +17,7 @@ import type { Student } from "@/data/student-model";
 import { useAuth } from "@/hooks/use-auth";
 import { StudentGroupCard } from "./student-group-card";
 import { StudentPaymentsTable } from "./student-payments-table";
+import { LessonTrailTab } from "./lesson-trail-tab";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
 import { StudentClosedEnrollmentsSection } from "./student-closed-enrollments-section";
 import type { StudentTransaction } from "./student-profile-tabs-utils";
@@ -57,6 +58,8 @@ export function StudentProfileTabs({
   const [smsVisible, setSmsVisible] = useState(false);
   const [paymentsVisible, setPaymentsVisible] = useState(false);
   const paymentsShown = useRef(false);
+  const [darslarVisible, setDarslarVisible] = useState(false);
+  const darslarShown = useRef(false);
   const [transactions, setTransactions] = useState<StudentTransaction[]>([]);
   const [balanceSummary, setBalanceSummary] =
     useState<BalanceSummary | null>(null);
@@ -109,10 +112,11 @@ export function StudentProfileTabs({
     );
   }, []);
 
-  // Money-flow events only. LESSON_DEDUCTION is intentionally excluded —
-  // the "Ketdi" breakdown rendered on each PAYMENT card already tells the
-  // admin where the money went, so showing the inverse-view deduction rows
-  // is redundant and makes the feed noisier than necessary.
+  // Money-flow events. LESSON_DEDUCTION is included on purpose: it is a real
+  // balance outflow (a prepaid sikl batch), so the feed can explain a drop and
+  // show — by DATE — which lessons each sikl covered (coverage.first/lastCoveredDate).
+  // It is the one type intentionally shared with the "Darslar" tab.
+  // LESSON_CONSUMPTION (amount=0, no balance movement) stays Darslar-only.
   //
   // Parallel call to /balance-summary so the top "Qarz tushuntirishi" card
   // populates at the same time. Failures on either request are tolerated —
@@ -124,7 +128,7 @@ export function StudentProfileTabs({
         params: {
           pageSize: 20,
           types:
-            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL",
+            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION",
         },
       })
       .then((res) => setTransactions(res.data.data))
@@ -170,6 +174,10 @@ export function StudentProfileTabs({
         paymentsShown.current = true;
         setPaymentsVisible(true);
         loadPayments();
+      }
+      if (value === "darslar" && !darslarShown.current) {
+        darslarShown.current = true;
+        setDarslarVisible(true);
       }
     },
     [loadPayments],
@@ -292,6 +300,7 @@ export function StudentProfileTabs({
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
           {canManage && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
+          {canManage && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
           {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
           {canManage && (
             <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
@@ -369,6 +378,15 @@ export function StudentProfileTabs({
             />
           ) : (
             <EmptyState message="To'lov ma'lumotlari mavjud emas" />
+          )}
+        </TabsContent>
+
+        {/* Darslar — davomat + sikl/to'lov monitoringi */}
+        <TabsContent value="darslar">
+          {darslarVisible ? (
+            <LessonTrailTab studentId={student.id} />
+          ) : (
+            <EmptyState message="Dars ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
 

@@ -203,7 +203,8 @@ export function EditCourseForm({
                   <HelpCircle className="size-3.5 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  Bir to&apos;lov nechta darsni qoplaydi (masalan 12)
+                  Bitta to&apos;lov sikli necha darsni qoplaydi (odatda 12,
+                  intensiv kurslar uchun 20)
                 </TooltipContent>
               </Tooltip>
             </Label>
@@ -211,9 +212,20 @@ export function EditCourseForm({
               id="lessonPaymentCount"
               type="number"
               min={1}
+              max={50}
               placeholder="12"
               {...form.register("lessonPaymentCount", { valueAsNumber: true })}
             />
+            {/* Yumshoq ogohlantirish — bloklamaydi, faqat odatiy bo'lmagan
+                qiymat (12/20 emas) kiritilganda diqqatni tortadi. */}
+            {(() => {
+              const v = form.watch("lessonPaymentCount");
+              return typeof v === "number" && v > 0 && v !== 12 && v !== 20 ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Odatiy emas — odatda 12 yoki 20. Tekshiring.
+                </p>
+              ) : null;
+            })()}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="lessonMinutes">Dars davomiyligi (daq)</Label>

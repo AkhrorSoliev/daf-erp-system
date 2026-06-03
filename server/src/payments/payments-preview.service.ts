@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TransactionType } from '@prisma/client';
+import { AttendanceStatus, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface PaymentBreakdownItem {
@@ -10,6 +10,11 @@ export interface PaymentBreakdownItem {
   // Optional contextual numbers admins look at.
   lessons?: number;
   cycleSequenceNumber?: number;
+  // Sikl sana oralig'i. DEBT_REPAY uchun — qoplanadigan o'tgan darslarning
+  // haqiqiy sanalari (ISO). CYCLE_FULL/PARTIAL uchun null — bu darslar hali
+  // o'tilmagan (kelgusi sikl), shuning uchun sana yo'q, faqat dars soni.
+  firstLessonDate?: string | null;
+  lastLessonDate?: string | null;
 }
 
 export interface PaymentPreview {
@@ -72,6 +77,7 @@ export class PaymentsPreviewService {
         prepaidLessonsRemaining: true,
         group: {
           select: {
+            id: true,
             name: true,
             course: {
               select: { name: true, price: true, lessonPaymentCount: true },
@@ -158,11 +164,49 @@ export class PaymentsPreviewService {
         discountedPerLesson > 0
           ? Math.floor(debtRepay / discountedPerLesson)
           : 0;
+
+      // Qarz qaysi SANALARDAGI darslarni qoplaydi — retroaktiv billing eng
+      // eskidan boshlab to'lanmagan (active LESSON_CONSUMPTION'siz) PRESENT/LATE
+      // darslarni hisoblaydi (B.1: ABSENT/EXCUSED sarflanmaydi). Eng eski
+      // debtLessons ta darsning sana oralig'ini ko'rsatamiz.
+      let firstLessonDate: Date | null = null;
+      let lastLessonDate: Date | null = null;
+      if (debtLessons > 0) {
+        const consumed = await this.prisma.transaction.findMany({
+          where: {
+            enrollmentId: primary.id,
+            type: TransactionType.LESSON_CONSUMPTION,
+            reversedAt: null,
+          },
+          select: { attendanceId: true },
+        });
+        const consumedIds = consumed
+          .map((c) => c.attendanceId)
+          .filter((id): id is string => !!id);
+        const unpaid = await this.prisma.attendance.findMany({
+          where: {
+            groupId: primary.group.id,
+            studentId,
+            status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
+            ...(consumedIds.length > 0 && { id: { notIn: consumedIds } }),
+          },
+          select: { date: true },
+          orderBy: { date: 'asc' },
+          take: debtLessons,
+        });
+        if (unpaid.length > 0) {
+          firstLessonDate = unpaid[0].date;
+          lastLessonDate = unpaid[unpaid.length - 1].date;
+        }
+      }
+
       breakdown.push({
         kind: 'DEBT_REPAY',
         amount: debtRepay,
         label: 'Mavjud qarz qoplanadi',
         lessons: debtLessons,
+        firstLessonDate: firstLessonDate?.toISOString() ?? null,
+        lastLessonDate: lastLessonDate?.toISOString() ?? null,
       });
       remaining -= debtRepay;
     }
@@ -197,14 +241,19 @@ export class PaymentsPreviewService {
       };
     }
 
+    // Kelgusi sikllar — bu darslar HALI o'tilmagan, shuning uchun sana yo'q,
+    // faqat dars soni ko'rsatiladi (admin'lar "Sikl #N" jargonidan chalkashgan
+    // edi). Sanalar keyin, darslar o'tilgach, To'lovlar/Darslar tabida chiqadi.
     let nextCycle = currentCycleSequence + 1;
     while (remaining >= discountedFullCycle) {
       breakdown.push({
         kind: 'CYCLE_FULL',
         amount: discountedFullCycle,
-        label: `Sikl #${nextCycle}: to'liq tsikl`,
+        label: `Kelgusi sikl — ${lessonPaymentCount} dars (oldindan)`,
         lessons: lessonPaymentCount,
         cycleSequenceNumber: nextCycle,
+        firstLessonDate: null,
+        lastLessonDate: null,
       });
       remaining -= discountedFullCycle;
       nextCycle += 1;
@@ -216,9 +265,11 @@ export class PaymentsPreviewService {
       breakdown.push({
         kind: 'CYCLE_PARTIAL',
         amount: partialAmount,
-        label: `Sikl #${nextCycle}: qisman (${partialLessons} dars)`,
+        label: `Kelgusi sikl — ${partialLessons} dars (qisman, oldindan)`,
         lessons: partialLessons,
         cycleSequenceNumber: nextCycle,
+        firstLessonDate: null,
+        lastLessonDate: null,
       });
       remaining -= partialAmount;
     }

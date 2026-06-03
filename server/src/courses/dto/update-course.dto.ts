@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsInt, IsBoolean, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  IsBoolean,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateCourseDto {
@@ -34,9 +41,13 @@ export class UpdateCourseDto {
   @Type(() => Number)
   price?: number;
 
+  // Sikl darslari soni — create-course.dto bilan bir xil guardrail. @Max(50)
+  // xato kiritilgan qiymatlar (13/21/120) sikl o'lchami va per-lesson narxni
+  // buzishining oldini oladi.
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(50)
   @Type(() => Number)
   lessonPaymentCount?: number;
 

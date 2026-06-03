@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { format } from "date-fns";
 import { AlertTriangle, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,24 @@ import {
 } from "@/components/ui/table";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
-import type { DebtorStudent } from "./attendance-form-utils";
+import type { DebtorCurrentCycle, DebtorStudent } from "./attendance-form-utils";
+
+/** "YYYY-MM-DD" → "dd.MM" (Tashkent kunini siljitmasdan). */
+function shortDate(date: string): string {
+  return format(new Date(date + "T00:00:00"), "dd.MM");
+}
+
+function currentCycleText(cycle: DebtorCurrentCycle | null | undefined): string {
+  if (!cycle) return "Sikl boshlanmagan";
+  if (cycle.firstCoveredDate) {
+    const range =
+      cycle.lastCoveredDate && cycle.lastCoveredDate !== cycle.firstCoveredDate
+        ? `${shortDate(cycle.firstCoveredDate)} — ${shortDate(cycle.lastCoveredDate)}`
+        : shortDate(cycle.firstCoveredDate);
+    return `${range} (${cycle.coveredCount}/${cycle.capacity})`;
+  }
+  return `${cycle.capacity} dars — boshlanmagan`;
+}
 
 interface AttendanceDebtorsSectionProps {
   debtors: DebtorStudent[];
@@ -79,6 +97,7 @@ export function AttendanceDebtorsSection({
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
                   <TableHead>O&apos;quvchi</TableHead>
+                  <TableHead>Joriy sikl</TableHead>
                   <TableHead className="text-right">Balans</TableHead>
                   <TableHead className="text-right">Yetmaydi</TableHead>
                   <TableHead className="text-right">Tavsiya</TableHead>
@@ -96,6 +115,9 @@ export function AttendanceDebtorsSection({
                       <span className="ml-2 text-xs text-muted-foreground">
                         #{d.studentId}
                       </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {currentCycleText(d.currentCycle)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums text-destructive">
                       {formatBalance(d.balance)}

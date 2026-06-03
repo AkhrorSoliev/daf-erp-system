@@ -355,11 +355,53 @@ function PaymentCard({
   );
 }
 
+/** Build the "qaysi sikl, qaysi sanalar" detail line for a LESSON_DEDUCTION. */
+function deductionDetail(t: StudentTransaction): string {
+  const cov = t.coverage;
+  const capacity = cov?.capacity ?? t.metadata?.lessonsCovered ?? 0;
+  const covered = cov?.coveredCount ?? 0;
+  if (cov?.firstCoveredDate) {
+    const first = format(new Date(cov.firstCoveredDate), "dd.MM");
+    const last = cov.lastCoveredDate
+      ? format(new Date(cov.lastCoveredDate), "dd.MM")
+      : first;
+    const range = first === last ? first : `${first} — ${last}`;
+    return covered < capacity && capacity > 0
+      ? `${range} (${covered}/${capacity} dars)`
+      : `${range} (${capacity} dars)`;
+  }
+  return capacity > 0 ? `${capacity} dars — hali boshlanmagan` : "Sikl";
+}
+
 function SimpleEventCard({
   transaction: t,
 }: {
   transaction: StudentTransaction;
 }) {
+  // LESSON_DEDUCTION — sikl darslariga yechilgan summa, SANALAR bilan.
+  if (t.type === "LESSON_DEDUCTION") {
+    return (
+      <article className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 p-3">
+        <div className="flex items-center gap-3">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+            <BookOpen className="size-3.5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Sikl darslarga yechildi</p>
+            <p className="text-xs text-muted-foreground">
+              {deductionDetail(t)}
+              <span className="mx-1.5">·</span>
+              {format(new Date(t.createdAt), "dd.MM.yyyy")}
+            </p>
+          </div>
+        </div>
+        <div className="font-mono text-sm font-medium tabular-nums text-red-600">
+          {fmt(t.amount)} so&apos;m
+        </div>
+      </article>
+    );
+  }
+
   const negative = t.amount < 0;
   const isRefund = t.type === "REFUND";
   const isInitial = t.type === "INITIAL_BALANCE";

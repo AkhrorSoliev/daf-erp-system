@@ -10,6 +10,7 @@ const baseEnrollment = (overrides: Partial<{
   id: 'enr-1',
   prepaidLessonsRemaining: overrides.prepaid ?? 0,
   group: {
+    id: 'grp-1',
     name: '#029',
     course: {
       name: 'Intensive',
@@ -24,14 +25,19 @@ describe('PaymentsPreviewService', () => {
   let prisma: {
     student: { findFirst: jest.Mock };
     enrollment: { findMany: jest.Mock };
-    transaction: { count: jest.Mock };
+    transaction: { count: jest.Mock; findMany: jest.Mock };
+    attendance: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
       student: { findFirst: jest.fn() },
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
-      transaction: { count: jest.fn().mockResolvedValue(0) },
+      transaction: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      attendance: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const mod = await Test.createTestingModule({
       providers: [
@@ -132,6 +138,59 @@ describe('PaymentsPreviewService', () => {
     expect(res.breakdown).toEqual([
       expect.objectContaining({ kind: 'REMAINDER', amount: 500000 }),
     ]);
+  });
+
+  it('surfaces the past unpaid lesson date range on DEBT_REPAY', async () => {
+    prisma.student.findFirst.mockResolvedValue({
+      balance: -69000, // 2 ta to'lanmagan dars (34_500 * 2)
+      discountPercent: 0,
+    });
+    prisma.enrollment.findMany.mockResolvedValue([
+      baseEnrollment({ price: 414000, lpc: 12 }),
+    ]);
+    prisma.transaction.count.mockResolvedValue(2);
+    // Hech qaysi dars qoplanmagan (consumption yo'q)
+    prisma.transaction.findMany.mockResolvedValue([]);
+    prisma.attendance.findMany.mockResolvedValue([
+      { date: new Date('2026-05-04') },
+      { date: new Date('2026-05-06') },
+    ]);
+
+    const res = await service.preview(10001, 69000, 1001);
+
+    const debt = res.breakdown.find((b) => b.kind === 'DEBT_REPAY');
+    expect(debt).toMatchObject({
+      kind: 'DEBT_REPAY',
+      amount: 69000,
+      lessons: 2,
+    });
+    expect(debt?.firstLessonDate).toBe(new Date('2026-05-04').toISOString());
+    expect(debt?.lastLessonDate).toBe(new Date('2026-05-06').toISOString());
+    // Faqat eng eski 2 ta to'lanmagan darsni so'raydi
+    expect(prisma.attendance.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 2, orderBy: { date: 'asc' } }),
+    );
+  });
+
+  it('labels future cycles forward-looking (no "Sikl #N") with null dates', async () => {
+    prisma.student.findFirst.mockResolvedValue({
+      balance: 0,
+      discountPercent: 0,
+    });
+    prisma.enrollment.findMany.mockResolvedValue([
+      baseEnrollment({ price: 414000, lpc: 12 }),
+    ]);
+    prisma.transaction.count.mockResolvedValue(2);
+
+    const res = await service.preview(10001, 414000, 1001);
+
+    const full = res.breakdown.find((b) => b.kind === 'CYCLE_FULL');
+    expect(full?.label).toContain('Kelgusi sikl');
+    expect(full?.label).not.toContain('#');
+    expect(full?.firstLessonDate).toBeNull();
+    expect(full?.lastLessonDate).toBeNull();
+    // cycleSequenceNumber hali ham mavjud (ichki foydalanish uchun)
+    expect(full?.cycleSequenceNumber).toBe(3);
   });
 
   it("applies the student's discount the same way bill() does", async () => {
