@@ -20,6 +20,7 @@ const mockGroup = {
   companyId: 1,
   lessonStartTime: '09:00',
   lessonEndTime: '11:00',
+  scheduleSnapshots: [],
   _count: { enrollments: 2 },
   course: { price: 800000, lessonPaymentCount: 12 },
 };
@@ -468,6 +469,45 @@ describe('AttendanceService', () => {
         expect(apr1.presentCount).toBe(8);
         expect(apr1.absentCount).toBe(2);
       }
+    });
+
+    it('surfaces attendance taken under an old schedule after a schedule change', async () => {
+      // Group #005 production bug: schedule changed to Mon/Wed/Fri on Jun 2,
+      // but May lessons were actually held Tue/Thu/Sat. The single snapshot
+      // (validFrom Jun 2) means May predates all snapshots → resolver returns
+      // null → May rows must come from actual attendance, not the new schedule.
+      prisma.group.findFirst.mockResolvedValue({
+        ...mockGroup,
+        exactDays: ['friday', 'monday', 'wednesday'],
+        startDate: new Date('2026-04-13T19:00:00Z'),
+        endDate: new Date('2026-10-13T19:00:00Z'),
+        scheduleSnapshots: [
+          {
+            exactDays: ['friday', 'monday', 'wednesday'],
+            validFrom: new Date('2026-06-02T06:07:24Z'),
+            validTo: null,
+          },
+        ],
+      });
+      // Real May attendance: a Tuesday and a Saturday.
+      prisma.attendance.groupBy.mockResolvedValue([
+        { date: new Date('2026-05-05'), status: 'PRESENT', _count: 9 }, // Tue
+        { date: new Date('2026-05-09'), status: 'PRESENT', _count: 9 }, // Sat
+      ]);
+
+      const result = await service.getLessonDates('group-uuid-1', 5, 2026);
+      const dates = result.map((r) => r.date);
+
+      // The real lesson days appear and are flagged as attended.
+      expect(dates).toContain('2026-05-05');
+      expect(dates).toContain('2026-05-09');
+      expect(result.find((r) => r.date === '2026-05-05')?.hasAttendance).toBe(
+        true,
+      );
+      // No phantom Mon/Wed/Fri "olinmagan" rows projected from the new schedule.
+      expect(result.every((r) => ['Seshanba', 'Shanba'].includes(r.dayName))).toBe(
+        true,
+      );
     });
   });
 
@@ -1126,13 +1166,22 @@ describe('AttendanceService', () => {
 
   describe('getStats', () => {
     it('should return attendance statistics per student with notes', async () => {
-      prisma.attendance.groupBy.mockResolvedValue([
-        { studentId: 10001, status: 'PRESENT', _count: 10 },
-        { studentId: 10001, status: 'ABSENT', _count: 2 },
-        { studentId: 10002, status: 'PRESENT', _count: 8 },
-        { studentId: 10002, status: 'LATE', _count: 3 },
-        { studentId: 10002, status: 'ABSENT', _count: 1 },
-      ]);
+      // getStats issues two groupBy calls: one by ['date'] (lesson-day
+      // discovery) and one by ['studentId','status'] (per-student tallies).
+      prisma.attendance.groupBy.mockImplementation(({ by }: any) =>
+        by?.includes('studentId')
+          ? Promise.resolve([
+              { studentId: 10001, status: 'PRESENT', _count: 10 },
+              { studentId: 10001, status: 'ABSENT', _count: 2 },
+              { studentId: 10002, status: 'PRESENT', _count: 8 },
+              { studentId: 10002, status: 'LATE', _count: 3 },
+              { studentId: 10002, status: 'ABSENT', _count: 1 },
+            ])
+          : Promise.resolve([
+              { date: new Date('2026-03-10') },
+              { date: new Date('2026-03-12') },
+            ]),
+      );
       prisma.attendance.findMany.mockResolvedValue([
         {
           studentId: 10001,
