@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Pencil,
@@ -40,8 +40,25 @@ interface CourseDetailClientProps {
 
 export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "groups";
   const openDrawer = useEditCourse((s) => s.openDrawer);
   const setName = useBreadcrumbName((s) => s.setName);
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "groups") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
   const [course, setCourse] = useState<Course | null>(null);
   const [groupCount, setGroupCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -190,7 +207,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
         </div>
 
         {/* Right: Tabs */}
-        <Tabs defaultValue="groups">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="groups">Guruhlar</TabsTrigger>
             <TabsTrigger value="materials">Materiallar</TabsTrigger>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { Loader2, Pencil } from "lucide-react";
 import { EmployeeProfileCard } from "./employee-profile-card";
@@ -23,7 +24,25 @@ const ROLE_LABELS: Record<string, string> = {
 export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   const setName = useBreadcrumbName((s) => s.setName);
   const isMobile = useIsMobile();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "izohlar";
   const { openDrawer } = useEditEmployee();
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "izohlar") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
   const [employee, setEmployee] = useState<EmployeeUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -132,7 +151,12 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
               },
             ]}
           />
-          <EmployeeProfileTabs employee={employee} onCommentChange={handleCommentChange} />
+          <EmployeeProfileTabs
+            employee={employee}
+            onCommentChange={handleCommentChange}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
         </div>
       ) : (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -140,7 +164,12 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
             <EmployeeProfileCard employee={employee} commentKey={commentKey} />
           </div>
           <div className="min-w-0 flex-1">
-            <EmployeeProfileTabs employee={employee} onCommentChange={handleCommentChange} />
+            <EmployeeProfileTabs
+            employee={employee}
+            onCommentChange={handleCommentChange}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
           </div>
         </div>
       )}

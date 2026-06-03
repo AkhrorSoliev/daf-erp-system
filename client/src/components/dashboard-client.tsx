@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format, isToday } from "date-fns";
 import {
@@ -47,6 +48,24 @@ interface TodayScheduleResponse {
 export function DashboardClient() {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const user = useAuth((s) => s.user);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const scheduleView = searchParams.get("view") === "list" ? "list" : "grid";
+
+  const handleViewChange = useCallback(
+    (view: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (view === "grid") {
+        params.delete("view");
+      } else {
+        params.set("view", view);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
   const isTeacher =
     user?.roles.some((r) => r.id === 4) &&
     !user?.roles.some((r) => [1, 2, 3].includes(r.id));
@@ -244,7 +263,11 @@ export function DashboardClient() {
           </div>
 
           {/* Schedule card with Grid / List tabs */}
-          <Tabs defaultValue="grid" className="rounded-lg border bg-card overflow-hidden gap-0">
+          <Tabs
+            value={scheduleView}
+            onValueChange={handleViewChange}
+            className="rounded-lg border bg-card overflow-hidden gap-0"
+          >
             <div className="flex items-center justify-between border-b px-3 py-2 gap-3 flex-wrap">
               <h2 className="flex items-center gap-2 text-sm font-semibold">
                 <CalendarDays className="size-4 text-muted-foreground" />

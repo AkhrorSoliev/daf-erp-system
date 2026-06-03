@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Eye, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -57,11 +58,31 @@ interface CallbacksTabProps {
 
 export function CallbacksTab({ isActive }: CallbacksTabProps) {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"active" | "done">("active");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Nested filter — lives under the outreach page's own `?tab=callbacks`, so it
+  // uses its own `?cb=` param to avoid colliding with the page-level tab.
+  const filter: "active" | "done" = searchParams.get("cb") === "done" ? "done" : "active";
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const currentQuery =
     STATUS_FILTERS.find((s) => s.value === filter)?.query ?? "PENDING,SEEN";
+
+  const handleFilterChange = useCallback(
+    (value: "active" | "done") => {
+      setPage(1);
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "active") {
+        params.delete("cb");
+      } else {
+        params.set("cb", value);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const { data, isLoading } = useQuery({
     queryKey: ["outreach", "callbacks", filter, page, pageSize],
@@ -96,10 +117,7 @@ export function CallbacksTab({ isActive }: CallbacksTabProps) {
       <div className="flex items-center justify-between">
         <Tabs
           value={filter}
-          onValueChange={(v) => {
-            setFilter(v as "active" | "done");
-            setPage(1);
-          }}
+          onValueChange={(v) => handleFilterChange(v as "active" | "done")}
         >
           <TabsList>
             {STATUS_FILTERS.map((s) => (
