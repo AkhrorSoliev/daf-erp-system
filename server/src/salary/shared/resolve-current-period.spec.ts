@@ -1,4 +1,7 @@
-import { computePeriodBounds } from './resolve-current-period';
+import {
+  computePeriodBounds,
+  resolveCompletedPeriod,
+} from './resolve-current-period';
 
 describe('computePeriodBounds (Asia/Tashkent +05:00)', () => {
   // Helper: build a UTC date that represents the given Tashkent wall-clock.
@@ -82,5 +85,59 @@ describe('computePeriodBounds (Asia/Tashkent +05:00)', () => {
       expect(periodStart.toISOString()).toBe('2026-12-07T19:00:00.000Z');
       expect(periodEnd.toISOString()).toBe('2027-01-07T18:59:59.999Z');
     });
+  });
+});
+
+describe('resolveCompletedPeriod (payroll settles the period that just ended)', () => {
+  const tashkentDate = (
+    year: number,
+    month: number,
+    day: number,
+    hour = 12,
+  ): Date => new Date(Date.UTC(year, month - 1, day, hour - 5, 0, 0));
+
+  // null setting → default cycleStartDay (8).
+  const mkPrisma = (cycleStartDay: number | null = null): any => ({
+    salaryPeriodSetting: {
+      findFirst: jest
+        .fn()
+        .mockResolvedValue(cycleStartDay === null ? null : { cycleStartDay }),
+    },
+  });
+
+  it('on the cycleStartDay (cron day) settles the period that just CLOSED, not the new one', async () => {
+    // June 8, cycleStartDay=8 → current period is [Jun 8 → Jul 7] (just
+    // starting). Payroll must settle the previous, completed [May 8 → Jun 7].
+    const now = tashkentDate(2026, 6, 8, 2);
+    const { periodStart, periodEnd } = await resolveCompletedPeriod(
+      mkPrisma(),
+      1,
+      now,
+    );
+    expect(periodStart.toISOString()).toBe('2026-05-07T19:00:00.000Z');
+    expect(periodEnd.toISOString()).toBe('2026-06-07T18:59:59.999Z');
+  });
+
+  it('mid-cycle (e.g. day 20) also settles the last completed period', async () => {
+    const now = tashkentDate(2026, 6, 20, 10);
+    const { periodStart, periodEnd } = await resolveCompletedPeriod(
+      mkPrisma(),
+      1,
+      now,
+    );
+    expect(periodStart.toISOString()).toBe('2026-05-07T19:00:00.000Z');
+    expect(periodEnd.toISOString()).toBe('2026-06-07T18:59:59.999Z');
+  });
+
+  it('respects a custom cycleStartDay (5th → pays on the 5th for the prior cycle)', async () => {
+    // cycleStartDay=5, now = Jun 5 (payday). Completed cycle = [May 5 → Jun 4].
+    const now = tashkentDate(2026, 6, 5, 2);
+    const { periodStart, periodEnd } = await resolveCompletedPeriod(
+      mkPrisma(5),
+      1,
+      now,
+    );
+    expect(periodStart.toISOString()).toBe('2026-05-04T19:00:00.000Z'); // May 5 00:00 Tashkent
+    expect(periodEnd.toISOString()).toBe('2026-06-04T18:59:59.999Z'); // Jun 5 00:00 Tashkent − 1ms
   });
 });

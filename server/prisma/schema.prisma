@@ -1912,6 +1912,17 @@ model SalaryAccrual {
   companyId Int
   createdAt DateTime @default(now())
 
+  // Carry-over anchor. NULL = this accrual belongs to the salary period that
+  // contains `lessonDate` (the default — unchanged behaviour). When SET, the
+  // accrual is bucketed into THIS period instead, because `lessonDate` fell
+  // inside an already APPROVED/PAID (closed) period when the accrual was first
+  // written (e.g. a student paid late, after the teacher's payroll for that
+  // month was already closed). `lessonDate` is preserved so the salary-config
+  // RATE version and the breakdown display still reflect the real lesson date.
+  // Written exactly ONCE (only in the upsert `create` branch) so re-running
+  // retroactive billing never drifts the target period.
+  creditPeriodDate DateTime?
+
   // attendanceId is part of the unique key so withdrawal-based accruals
   // (where attendanceId IS NULL) can stack within the same month — Postgres
   // treats NULLs as distinct in UNIQUE constraints. For lesson accruals,

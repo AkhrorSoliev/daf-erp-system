@@ -378,10 +378,10 @@ The financial system is built on an **append-only ledger** principle — financi
 - **Config lookup**: group-specific config takes priority over global (`groupId DESC` — non-null first)
 - **FIXED_MONTHLY** cannot be group-scoped (validated on create/update)
 - **Accrual coverage rule (B.1)**: `createAccrual()` only writes if `deductionTransactionId` is provided — teachers don't earn for lessons where the student didn't have a paid cycle
-- **Period-closed guard**: refuses accrual if lesson date falls inside an APPROVED/PAID SalaryPayment period
+- **Period-closed guard → carry-over**: if a lesson date falls inside an APPROVED/PAID (closed) SalaryPayment period, `createAccrual()` no longer refuses. It resolves the current open period and sets `SalaryAccrual.creditPeriodDate` to that period's start so the accrual is paid in the next cycle (labelled "Oldingi oydan" in the UI). `lessonDate` is preserved (still drives the rate version + breakdown display). `creditPeriodDate` is **write-once** (set only in the upsert `create` branch) so re-running retroactive billing can't drift the target. Fallback: if the current period is itself closed (should never happen), it logs an error and returns null. See "Salary carry-over" below.
 - **Monthly calculation** (`calculateMonthlySalaries()`):
-  - Cutoff: 7th of current month; Period: 8th previous month → 7th current
-  - Accrual-based: sums unpaid accruals ≤ cutoff
+  - Settles the period that just **COMPLETED**, via `resolveCompletedPeriod()` — NOT the in-progress period `now` is inside. The cron fires on `cycleStartDay`, when the "current" period is the one just starting; settling that would pay an almost-empty window and strand the month that just ended. So on cycleStartDay=8 it pays `[8th previous month → 7th current]` (the closed cycle). Triggering manually any day settles the last completed cycle — you can never accidentally pay an unfinished period. (The teacher's live "joriy davr" breakdown still uses `resolveCurrentPeriod` — that view wants the in-progress period.)
+  - Accrual-based: sums unpaid accruals by effective payroll date (`COALESCE(creditPeriodDate, lessonDate)` ∈ period) — see carry-over below
   - Fixed-monthly: creates payment from config.value (idempotent — skips if exists)
   - TEACHER_ADVANCE expenses settled against salary in `createdAt` order
   - Atomic per user: SalaryPayment + accrual links + advance settlement
@@ -591,7 +591,18 @@ Idempotent — calling it on a student with everything already settled is a no-o
 
 Manual trigger: `POST /billing/retroactive/:studentId` (CEO/BD/Admin) opens its own Serializable tx via `runRetroactiveBilling()`. Used for legacy/migration cleanup or admin-driven recovery; the regular payment pipeline already invokes it automatically.
 
-**Salary period closed**: if a settled lesson date falls inside an APPROVED/PAID `SalaryPayment` window, `createAccrual` logs+skips (existing closed-period guard). The student gets billed but the teacher accrual is missed — admin handles via balance-withdrawal or manual adjustment.
+**Salary period closed → carry-over**: if a retroactively-settled lesson date falls inside an APPROVED/PAID `SalaryPayment` window, `createAccrual` no longer skips. It carries the accrual into the current open period via `creditPeriodDate` (see "Salary carry-over (late payment)" below) so the teacher is paid automatically in the next cycle. Only if the current period is also closed does it log an error and skip (then admin handles via balance-withdrawal).
+
+#### Salary carry-over (late payment) — `SalaryAccrual.creditPeriodDate`
+
+When a student pays late and retroactive billing settles a lesson whose own payroll period is already closed (APPROVED/PAID), the teacher's accrual would otherwise be lost. Instead it is **carried over** to the current open period.
+
+- **Schema**: `SalaryAccrual.creditPeriodDate DateTime?` (full timestamp, NOT `@db.Date` — avoids Tashkent-offset truncation breaking range comparisons). NULL = bucket by `lessonDate` (default, unchanged). Non-null = bucket into the period containing this date instead.
+- **Bucketing**: every payroll query that slices accruals by period uses an effective-date OR — `OR: [{ creditPeriodDate: { gte, lte } }, { creditPeriodDate: null, lessonDate: { gte, lte } }]`. Applied in `salary-calculation.service.ts` (the monthly sweep) and `salary-breakdown.service.ts` (`getCurrentCycleBreakdown`). Summary/reports queries have no period filter so they pick up carry-overs automatically.
+- **Rate is unaffected**: `findActiveVersion` still keys off the original `lessonDate`, so a past lesson keeps its past rate.
+- **Notification**: `createAccrual` pushes a `CarriedOverAccrual` into an optional `carriedOverSink` (threaded from `LessonBillingService.processRetroactiveBillingForStudent` → `bill()`/`settleDeferredAccruals`). `PaymentsWriteService.create()`/`createFromExternal()` collect the list and emit `salary.carried-over` **after the tx commits** (gated on `!outerTx`, like the receipt). `NotificationEventsListener` groups by teacher and fans out one message per teacher across all four channels.
+- **UI**: breakdown lines expose `isCarriedOver`; totals expose `carriedOverTotal`/`carriedOverCount`. A purple "Oldingi oydan" badge + a "shundan oldingi oydan" subtotal show on both the admin `salary-breakdown-drawer.tsx` and the teacher `teacher-salary-client.tsx`.
+- **Limitation**: accruals lost to the *old* refuse-and-log behaviour (before this shipped) can't be auto-recovered — admin uses Balance Withdrawal `creditTeacher`.
 
 #### Salary Versioning (`EmployeeSalaryConfigVersion`)
 

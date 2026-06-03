@@ -7,7 +7,10 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
-import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import {
+  SalaryAccrualService,
+  CarriedOverAccrual,
+} from '../salary/salary-accrual.service';
 
 // Business rule: a lesson held = a lesson paid. The student's prepaid
 // quota is consumed (and the teacher earns) for any status that confirms
@@ -125,7 +128,13 @@ export class LessonBillingService {
       // unpaid lessons admins decided to write off).
       fromDate?: Date;
     },
-  ): Promise<{ billedAttendances: number }> {
+  ): Promise<{ billedAttendances: number; carriedOver: CarriedOverAccrual[] }> {
+    // Collects accruals that had to be carried over into the current open
+    // period because their lesson fell in an already-closed payroll window
+    // (late payment). Bubbled up so the payment pipeline can notify the
+    // teacher AFTER the transaction commits.
+    const carriedOver: CarriedOverAccrual[] = [];
+
     const enrollments = await tx.enrollment.findMany({
       where: {
         studentId: params.studentId,
@@ -142,7 +151,7 @@ export class LessonBillingService {
     });
 
     if (enrollments.length === 0) {
-      return { billedAttendances: 0 };
+      return { billedAttendances: 0, carriedOver };
     }
 
     let billedCount = 0;
@@ -181,18 +190,22 @@ export class LessonBillingService {
         // the whole point of the change — "aniq raqamlar"). The previous
         // `break` on insufficient balance hid the debt and led to the
         // single-lesson display ceiling bug.
-        await this.bill(tx, {
-          attendanceId: att.id,
-          enrollmentId: enr.id,
-          studentId: params.studentId,
-          groupId: enr.groupId,
-          branchId: enr.group.branchId,
-          lessonDate: att.date,
-          oldStatus: null,
-          newStatus: AttendanceStatus.PRESENT,
-          companyId: params.companyId,
-          performedById: params.performedById,
-        });
+        await this.bill(
+          tx,
+          {
+            attendanceId: att.id,
+            enrollmentId: enr.id,
+            studentId: params.studentId,
+            groupId: enr.groupId,
+            branchId: enr.group.branchId,
+            lessonDate: att.date,
+            oldStatus: null,
+            newStatus: AttendanceStatus.PRESENT,
+            companyId: params.companyId,
+            performedById: params.performedById,
+          },
+          carriedOver,
+        );
 
         // bill() always writes a LESSON_CONSUMPTION now (audit row), so
         // the count reflects every settled attendance. The only case
@@ -219,9 +232,9 @@ export class LessonBillingService {
     // newly-available coverage. A row is fully covered → write the missing
     // SalaryAccrual + flip the metadata flags. A row is partially covered →
     // shrink uncoveredAmount only; the teacher still waits.
-    await this.settleDeferredAccruals(tx, params);
+    await this.settleDeferredAccruals(tx, params, carriedOver);
 
-    return { billedAttendances: billedCount };
+    return { billedAttendances: billedCount, carriedOver };
   }
 
   private async settleDeferredAccruals(
@@ -231,6 +244,7 @@ export class LessonBillingService {
       companyId: number;
       performedById?: number;
     },
+    carriedOverSink?: CarriedOverAccrual[],
   ): Promise<void> {
     const deferredRows = await tx.transaction.findMany({
       where: {
@@ -329,6 +343,7 @@ export class LessonBillingService {
             companyId: params.companyId,
             deductionTransactionId: row.id,
             tx,
+            carriedOverSink,
           });
         } catch (err) {
           this.logger.error(
@@ -371,6 +386,7 @@ export class LessonBillingService {
   private async bill(
     tx: Prisma.TransactionClient,
     p: ProcessAttendanceBillingParams,
+    carriedOverSink?: CarriedOverAccrual[],
   ): Promise<void> {
     // Idempotency: if a non-reversed LESSON_CONSUMPTION already exists for
     // this attendance, the lesson was already billed. Re-saves of the same
@@ -604,6 +620,7 @@ export class LessonBillingService {
             companyId: p.companyId,
             deductionTransactionId: coverageTransactionId,
             tx,
+            carriedOverSink,
           });
         } catch (err) {
           this.logger.error(

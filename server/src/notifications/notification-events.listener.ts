@@ -8,6 +8,7 @@ import { PushService } from './push.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { formatSom } from '../payments/shared/format-som';
 import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
+import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
 
 @Injectable()
 export class NotificationEventsListener {
@@ -284,6 +285,78 @@ export class NotificationEventsListener {
       this.logger.error(
         `payment.corrected handler failed: ${error.message}`,
       );
+    }
+  }
+
+  /**
+   * Tells each teacher when a student's late payment carried lessons from an
+   * already-closed payroll period into their current cycle. Aggregates per
+   * teacher (one message covering all carried-over lessons in this payment)
+   * and fans out to all four channels. Recipient filter follows the standard
+   * rule — only active, non-archived users.
+   */
+  @OnEvent('salary.carried-over')
+  async handleSalaryCarriedOver(payload: SalaryCarriedOverPayload) {
+    try {
+      if (!payload.items?.length) return;
+
+      // One notification per teacher, summing amount + lesson count.
+      const byTeacher = new Map<number, { total: number; count: number }>();
+      for (const item of payload.items) {
+        const entry = byTeacher.get(item.teacherId) ?? { total: 0, count: 0 };
+        entry.total += item.amount;
+        entry.count += 1;
+        byTeacher.set(item.teacherId, entry);
+      }
+
+      for (const [teacherId, { total, count }] of byTeacher) {
+        const teacher = await this.prisma.user.findFirst({
+          where: {
+            id: teacherId,
+            deletedAt: null,
+            isActive: true,
+            status: UserStatus.ACTIVE,
+          },
+          select: { id: true },
+        });
+        if (!teacher) continue;
+
+        const title = 'Oldingi oydan ish haqi';
+        const message =
+          `Kechikkan to'lov tufayli oldingi (yopilgan) oydagi ${count} ta dars uchun ` +
+          `${formatSom(total)} so'm joriy oyligingizga qo'shildi.`;
+
+        try {
+          const notification = await this.notificationsService.create({
+            userId: teacherId,
+            type: NotificationType.SYSTEM,
+            title,
+            message,
+            relatedEntityType: 'User',
+            relatedEntityId: String(teacherId),
+            companyId: payload.companyId,
+          });
+
+          this.gateway.sendToUser(teacherId, {
+            type: 'notification',
+            notification,
+          });
+
+          await this.pushService.sendToUser(teacherId, {
+            title,
+            body: message,
+            url: '/profile/salary',
+          });
+
+          await this.sendTelegram(teacherId, title, message);
+        } catch (error) {
+          this.logger.error(
+            `Failed to notify teacher ${teacherId} of carried-over salary: ${error.message}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(`salary.carried-over handler failed: ${error.message}`);
     }
   }
 

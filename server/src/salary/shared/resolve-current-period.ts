@@ -1,4 +1,11 @@
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+
+// Accept either the root client or a transaction client so callers running
+// inside a `prisma.$transaction(...)` (e.g. createAccrual during retroactive
+// billing) can resolve the period from the same Serializable snapshot. Both
+// expose `.salaryPeriodSetting.findFirst`, which is all this module uses.
+type PrismaLike = PrismaService | Prisma.TransactionClient;
 
 const DEFAULT_CYCLE_START_DAY = 8;
 // Asia/Tashkent has no DST and is fixed at +05:00. Conversion is a flat
@@ -17,7 +24,7 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
  * Returns the legacy 8th→7th window if no setting exists for the company.
  */
 export async function resolveCurrentPeriod(
-  prisma: PrismaService,
+  prisma: PrismaLike,
   companyId: number,
   now: Date,
 ): Promise<{ periodStart: Date; periodEnd: Date; cycleStartDay: number }> {
@@ -33,6 +40,36 @@ export async function resolveCurrentPeriod(
 
   const cycleStartDay = setting?.cycleStartDay ?? DEFAULT_CYCLE_START_DAY;
   return { ...computePeriodBounds(now, cycleStartDay), cycleStartDay };
+}
+
+/**
+ * The salary period that has most recently FINISHED as of `now` — i.e. the
+ * one payroll should settle. `resolveCurrentPeriod` returns the period `now`
+ * is currently INSIDE (still in progress); this returns the one right before
+ * it.
+ *
+ * Why payroll needs this: the cron fires on `cycleStartDay`, and on that day
+ * the "current" period is the one just STARTING — settling it would pay an
+ * almost-empty window and strand the month that just ended. Settling the
+ * completed period instead means "pay for the cycle that just finished",
+ * which is correct whether triggered by the cron on the start day or manually
+ * a few days later. (A teacher's live "joriy davr" breakdown still uses
+ * `resolveCurrentPeriod` — that view genuinely wants the in-progress period.)
+ *
+ * Resolves the previous period from the instant just before the current one
+ * started, so a `cycleStartDay` cutover that just took effect still settles
+ * the closed period on its OLD schedule.
+ */
+export async function resolveCompletedPeriod(
+  prisma: PrismaLike,
+  companyId: number,
+  now: Date,
+): Promise<{ periodStart: Date; periodEnd: Date; cycleStartDay: number }> {
+  const current = await resolveCurrentPeriod(prisma, companyId, now);
+  const lastInstantOfPreviousPeriod = new Date(
+    current.periodStart.getTime() - 1,
+  );
+  return resolveCurrentPeriod(prisma, companyId, lastInstantOfPreviousPeriod);
 }
 
 /**
@@ -81,7 +118,7 @@ export function computePeriodBounds(
  * Used by the daily cron to decide whether to run the calculation today.
  */
 export async function isCycleStartDayForCompany(
-  prisma: PrismaService,
+  prisma: PrismaLike,
   companyId: number,
   now: Date,
 ): Promise<boolean> {

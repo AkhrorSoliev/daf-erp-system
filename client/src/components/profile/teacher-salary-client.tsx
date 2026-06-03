@@ -53,6 +53,8 @@ interface BreakdownLine {
     value: number;
     scope: "GROUP" | "GLOBAL";
   } | null;
+  isCarriedOver?: boolean;
+  creditPeriodDate?: string | null;
   reversedAt: string | null;
   reversalReason: string | null;
 }
@@ -65,6 +67,8 @@ interface BreakdownResponse {
     amountTotal: number;
     reversedCount: number;
     reversedTotal: number;
+    carriedOverCount: number;
+    carriedOverTotal: number;
   };
 }
 
@@ -261,7 +265,19 @@ function BreakdownTable({
               <TableCell>
                 {l.student.firstName} {l.student.lastName}
               </TableCell>
-              <TableCell>{l.group.name}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span>{l.group.name}</span>
+                  {l.isCarriedOver && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] py-0 h-4 no-underline border-purple-300 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
+                    >
+                      Oldingi oydan
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>{l.perLessonCost.toLocaleString("uz-UZ")}</TableCell>
               <TableCell>
                 {l.configVersion ? (
@@ -291,6 +307,16 @@ function BreakdownTable({
             {totals.amountTotal.toLocaleString("uz-UZ")} so&apos;m
           </span>
         </div>
+        {totals.carriedOverCount > 0 && (
+          <div className="flex justify-between text-purple-700 dark:text-purple-300">
+            <span>
+              Shundan oldingi oydan ({totals.carriedOverCount} ta dars):
+            </span>
+            <span className="font-medium">
+              {totals.carriedOverTotal.toLocaleString("uz-UZ")} so&apos;m
+            </span>
+          </div>
+        )}
         {totals.reversedCount > 0 && (
           <div className="flex justify-between text-muted-foreground">
             <span>Bekor qilingan ({totals.reversedCount} ta):</span>

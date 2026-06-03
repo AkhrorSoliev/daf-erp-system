@@ -699,6 +699,58 @@ describe('LessonBillingService', () => {
       expect(tx.transaction.update).toHaveBeenCalledTimes(2);
     });
 
+    it('bubbles up carried-over accruals from deferred settlement (sink wiring)', async () => {
+      tx.enrollment.findMany = jest
+        .fn()
+        .mockResolvedValue([{ id: enrollmentId, groupId, group: { branchId: 1 } }]);
+      tx.$queryRaw = jest.fn().mockResolvedValue([]);
+      tx.transaction.findMany = jest.fn().mockResolvedValue([
+        {
+          id: 'ded-1',
+          attendanceId: 'att-1',
+          enrollmentId,
+          branchId: 1,
+          metadata: { uncoveredAmount: 30_000, perLessonCost: 30_000 },
+        },
+      ]);
+      tx.transaction.update = jest.fn().mockResolvedValue({});
+      tx.attendance.findUnique = jest
+        .fn()
+        .mockResolvedValue({ date: new Date('2026-04-01'), groupId });
+      tx.student.findUnique = jest.fn().mockResolvedValue({ balance: 0 });
+
+      // Simulate createAccrual hitting the closed-period redirect: it pushes
+      // a carry-over event into whatever sink it was handed.
+      salaryAccrualService.createAccrual.mockImplementation((p: any) => {
+        p.carriedOverSink?.push({
+          teacherId: 20001,
+          studentId,
+          groupId,
+          amount: 9_000,
+          lessonDate: p.lessonDate,
+          creditPeriodDate: new Date('2026-06-08'),
+          companyId,
+        });
+        return Promise.resolve({});
+      });
+
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      // The sink is threaded down to createAccrual...
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({ carriedOverSink: expect.any(Array) }),
+      );
+      // ...and bubbles all the way back up to the return value.
+      expect(result.carriedOver).toHaveLength(1);
+      expect(result.carriedOver[0]).toMatchObject({
+        teacherId: 20001,
+        amount: 9_000,
+      });
+    });
+
     it('partially settles deferred accruals (oldest first) when balance is still negative', async () => {
       // Old row 30k + new row 50k = 80k total uncovered.
       // Balance is -30k → 50k of debt has been covered.

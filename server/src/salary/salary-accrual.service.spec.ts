@@ -20,6 +20,8 @@ describe('SalaryAccrualService', () => {
   beforeEach(async () => {
     prisma = {
       salaryPayment: { findFirst: jest.fn().mockResolvedValue(null) },
+      // resolveCurrentPeriod reads this; null → default cycleStartDay (8).
+      salaryPeriodSetting: { findFirst: jest.fn().mockResolvedValue(null) },
       employeeSalaryConfigVersion: { findFirst: jest.fn() },
       group: {
         findUnique: jest.fn().mockResolvedValue({
@@ -229,16 +231,70 @@ describe('SalaryAccrualService', () => {
     });
   });
 
-  describe('period-closed guard', () => {
-    it('refuses to write when lesson date is inside an APPROVED period', async () => {
-      prisma.salaryPayment.findFirst.mockResolvedValueOnce({
-        id: 'sp-1',
-        status: 'APPROVED',
+  describe('period-closed guard → carry-over', () => {
+    it('carries the accrual into the current open period when lessonDate is in a closed (APPROVED) period', async () => {
+      // 1st findFirst: the lesson's own period is closed (APPROVED).
+      // 2nd findFirst: the current period is open (null) → safe to credit.
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'sp-1', status: 'APPROVED' })
+        .mockResolvedValueOnce(null);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'PERCENTAGE',
+        value: 30,
       });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      await service.createAccrual(baseParams);
+
+      // Carry-over does NOT skip the accrual — the rate is still resolved.
+      expect(prisma.employeeSalaryConfigVersion.findFirst).toHaveBeenCalled();
+
+      const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
+      // lessonDate is preserved (drives rate version + breakdown display).
+      expect(call.create.lessonDate).toEqual(baseParams.lessonDate);
+      // creditPeriodDate set to the current open period start.
+      expect(call.create.creditPeriodDate).toBeInstanceOf(Date);
+      // Write-once: the update branch must NEVER touch creditPeriodDate, so a
+      // re-run can't drift the carry-over target to a later period.
+      expect(call.update).not.toHaveProperty('creditPeriodDate');
+    });
+
+    it('pushes a carry-over event into the provided sink', async () => {
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'sp-1', status: 'PAID' })
+        .mockResolvedValueOnce(null);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'PERCENTAGE',
+        value: 30,
+      });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      const sink: any[] = [];
+      await service.createAccrual({ ...baseParams, carriedOverSink: sink });
+
+      expect(sink).toHaveLength(1);
+      expect(sink[0]).toMatchObject({
+        teacherId: 1,
+        studentId: 100,
+        groupId: 'group-1',
+        amount: 10_000, // 33,333 × 30%
+      });
+      expect(sink[0].creditPeriodDate).toBeInstanceOf(Date);
+    });
+
+    it('falls back to null when the current period is ALSO closed (no open period to credit)', async () => {
+      // Both the lesson period and the current period are closed — there is
+      // nowhere safe to credit, so preserve the old refuse-and-log behaviour.
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'sp-1', status: 'APPROVED' })
+        .mockResolvedValueOnce({ id: 'sp-2', status: 'PAID' });
 
       const result = await service.createAccrual(baseParams);
       expect(result).toBeNull();
       expect(prisma.employeeSalaryConfigVersion.findFirst).not.toHaveBeenCalled();
+      expect(prisma.salaryAccrual.upsert).not.toHaveBeenCalled();
     });
   });
 

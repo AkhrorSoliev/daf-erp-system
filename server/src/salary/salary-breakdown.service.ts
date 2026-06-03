@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
 
@@ -83,14 +84,29 @@ export class SalaryBreakdownService {
       | { salaryPaymentId: string }
       | { periodStart: Date; periodEnd: Date },
   ) {
-    const where =
+    const where: Prisma.SalaryAccrualWhereInput =
       'salaryPaymentId' in filter
         ? { userId, companyId, salaryPaymentId: filter.salaryPaymentId }
         : {
             userId,
             companyId,
             salaryPaymentId: null,
-            lessonDate: { gte: filter.periodStart, lte: filter.periodEnd },
+            // Effective payroll date = COALESCE(creditPeriodDate, lessonDate).
+            // Mirrors salary-calculation so a carried-over accrual (late
+            // payment for a closed period) shows in the period it's actually
+            // credited to, not the one its lessonDate falls in.
+            OR: [
+              {
+                creditPeriodDate: {
+                  gte: filter.periodStart,
+                  lte: filter.periodEnd,
+                },
+              },
+              {
+                creditPeriodDate: null,
+                lessonDate: { gte: filter.periodStart, lte: filter.periodEnd },
+              },
+            ],
           };
 
     const rows = await this.prisma.salaryAccrual.findMany({
@@ -100,6 +116,7 @@ export class SalaryBreakdownService {
         amount: true,
         perLessonCost: true,
         lessonDate: true,
+        creditPeriodDate: true,
         attendanceId: true,
         reversedAt: true,
         reversalReason: true,
@@ -131,6 +148,12 @@ export class SalaryBreakdownService {
 
     const activeTotal = active.reduce((s, r) => s + r.amount, 0);
     const reversedTotal = reversed.reduce((s, r) => s + r.amount, 0);
+
+    // Carried-over slice: active accruals whose lesson fell in a closed period
+    // and were redirected into this one (late payment). Surfaced separately so
+    // the UI can show "shundan oldingi oydan: X".
+    const carriedOver = active.filter((r) => !!r.creditPeriodDate);
+    const carriedOverTotal = carriedOver.reduce((s, r) => s + r.amount, 0);
 
     // Mark which (groupId, lessonDate) pairs had a substitute teacher override
     // active. Build a Set of "groupId|date" keys so each line gets an O(1)
@@ -171,6 +194,11 @@ export class SalaryBreakdownService {
         isSubstitute: overrideKeys.has(
           `${r.group.id}|${r.lessonDate.toISOString()}`,
         ),
+        // Carried over from a closed (previous) period into this one because
+        // the student paid late. `creditPeriodDate` is the period it was
+        // credited to; `lessonDate` remains the real lesson date.
+        isCarriedOver: !!r.creditPeriodDate,
+        creditPeriodDate: r.creditPeriodDate,
         reversedAt: r.reversedAt,
         reversalReason: r.reversalReason,
         reversedBy: r.reversedBy,
@@ -180,6 +208,8 @@ export class SalaryBreakdownService {
         amountTotal: activeTotal,
         reversedCount: reversed.length,
         reversedTotal,
+        carriedOverCount: carriedOver.length,
+        carriedOverTotal,
       },
     };
   }

@@ -21,6 +21,11 @@ export class SalaryCronService {
    * "is today your cycleStartDay?". Only matching companies get their
    * calculation. This way a company that switches from 8→1 takes effect on
    * the next 1st without redeploying or re-scheduling the cron.
+   *
+   * On the cycleStartDay the cron settles the period that just FINISHED
+   * (yesterday was its last day) — see `resolveCompletedPeriod`. Firing on
+   * the start day is intentional: payroll is "pay for the cycle that just
+   * closed", so the teacher is paid on the very first day of the new cycle.
    */
   @Cron('0 2 * * *', { timeZone: 'Asia/Tashkent' })
   async calculateMonthlySalaries() {
