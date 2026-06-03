@@ -185,6 +185,25 @@ export class StudentsController {
     return this.studentsService.getClosedEnrollments(id, companyId);
   }
 
+  // O'quvchi monitoringi uchun "Darslar" ko'rinishi — har guruh bo'yicha
+  // davomat (kelgan/kelmagan) + har dars qaysi siklga tegishli + sikl sana
+  // oraliqlari. Operatsion monitoring bo'lgani uchun Cashier KIRITILMAYDI
+  // (bu balance-summary/lesson-trail'dan ataylab farq qiladi).
+  @Get(':id/lessons-overview')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getLessonsOverview(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('includeClosed') includeClosed: string | undefined,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.studentsService.getLessonsOverview(
+      id,
+      companyId,
+      includeClosed === 'true',
+    );
+  }
+
   // Eligibility check for the "yo'qolgan o'quvchi" write-off flow. Returns
   // whether the student qualifies (joriy siklda PRESENT/LATE=0 + ABSENT>0
   // + balance<0) and the suggested write-off amount. Frontend uses this

@@ -391,6 +391,7 @@ describe('TransactionsReadService', () => {
 
       expect(res.data).toHaveLength(1);
       expect(res.data[0].coverage).toEqual({
+        enrollmentId: 'enr-1',
         cycleSequenceNumber: 1,
         coveredCount: 3,
         capacity: 8,

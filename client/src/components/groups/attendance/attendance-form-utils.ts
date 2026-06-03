@@ -20,6 +20,15 @@ export interface StudentAttendance {
   note: string | null;
 }
 
+/** Qarzdorning joriy (eng so'nggi) sikli — sana oralig'i bilan. */
+export interface DebtorCurrentCycle {
+  cycleSequenceNumber: number;
+  capacity: number;
+  coveredCount: number;
+  firstCoveredDate: string | null;
+  lastCoveredDate: string | null;
+}
+
 /**
  * Returned by the admin variant of getByDate. Mirrors the active student
  * shape but adds the per-group debt info needed for the "Qarzdorlar" panel.
@@ -31,6 +40,8 @@ export interface DebtorStudent {
   photo: string | null;
   balance: number;
   debtAmount: number;
+  // null = hech qachon to'liq sikl ochilmagan (sof qarz).
+  currentCycle?: DebtorCurrentCycle | null;
 }
 
 export interface AttendanceEntry {

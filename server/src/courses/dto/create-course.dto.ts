@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, Min } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateCourseDto {
@@ -32,9 +32,14 @@ export class CreateCourseDto {
   @Type(() => Number)
   price: number;
 
+  // Bitta to'lov sikli qoplaydigan darslar soni. Odatda 12 (standart) yoki 20
+  // (intensiv). @Max guardrail bo'lib, xato kiritilgan 13/21/120 kabi qiymatlar
+  // sikl o'lchami va per-lesson narxni buzib yuborishining oldini oladi. Aniq
+  // {12,20} enum emas — maydon ataylab o'zgaruvchan, faqat aqlli chegara.
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(50)
   @Type(() => Number)
   lessonPaymentCount?: number;
 

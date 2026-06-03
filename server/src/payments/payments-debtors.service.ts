@@ -5,6 +5,11 @@ import {
   calculateDebtAmount,
   calculatePerLessonCost,
 } from '../billing/debtor-check.helper';
+import {
+  computeEnrollmentCoverage,
+  type CoveragePrismaLike,
+} from '../billing/lesson-coverage.helper';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
 
 @Injectable()
 export class PaymentsDebtorsService {
@@ -156,6 +161,7 @@ export class PaymentsDebtorsService {
         student: { balance: { lt: 0 } },
       },
       select: {
+        id: true,
         student: {
           select: {
             id: true,
@@ -170,6 +176,42 @@ export class PaymentsDebtorsService {
       orderBy: { student: { firstName: 'asc' } },
     });
 
+    // Joriy sikl: har qarzdor enrollment'ining eng so'nggi (eng katta seq)
+    // siklini shared coverage dvigateli orqali topamiz, shunda admin
+    // "qaysi sikl, qaysi sanalardagi darslar to'lanmagan" ekanini ko'radi.
+    const { byDeduction } = await computeEnrollmentCoverage(
+      this.prisma as unknown as CoveragePrismaLike,
+      enrollments.map((e) => e.id),
+    );
+    const latestCycleByEnrollment = new Map<
+      string,
+      {
+        cycleSequenceNumber: number;
+        capacity: number;
+        coveredCount: number;
+        firstCoveredDate: string | null;
+        lastCoveredDate: string | null;
+      }
+    >();
+    for (const cov of byDeduction.values()) {
+      if (!cov.enrollmentId) continue;
+      const existing = latestCycleByEnrollment.get(cov.enrollmentId);
+      if (existing && existing.cycleSequenceNumber >= cov.cycleSequenceNumber) {
+        continue;
+      }
+      latestCycleByEnrollment.set(cov.enrollmentId, {
+        cycleSequenceNumber: cov.cycleSequenceNumber,
+        capacity: cov.capacity,
+        coveredCount: cov.coveredCount,
+        firstCoveredDate: cov.firstCoveredDate
+          ? tashkentDateStr(cov.firstCoveredDate)
+          : null,
+        lastCoveredDate: cov.lastCoveredDate
+          ? tashkentDateStr(cov.lastCoveredDate)
+          : null,
+      });
+    }
+
     return {
       perLessonCost,
       suggestedPayment: group.course.price,
@@ -182,6 +224,8 @@ export class PaymentsDebtorsService {
           group.course.price,
           group.course.lessonPaymentCount,
         ),
+        // null = hech qachon to'liq sikl ochilmagan (sof SINGLE_UNCOVERED qarz).
+        currentCycle: latestCycleByEnrollment.get(e.id) ?? null,
       })),
     };
   }

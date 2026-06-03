@@ -33,6 +33,9 @@ export class StudentsService {
   getClosedEnrollments(id: number, companyId: number) {
     return this.read.getClosedEnrollments(id, companyId);
   }
+  getLessonsOverview(id: number, companyId: number, includeClosed?: boolean) {
+    return this.read.getLessonsOverview(id, companyId, includeClosed);
+  }
   getBalanceSummary(id: number, companyId: number) {
     return this.transactions.getBalanceSummary(id, companyId);
   }

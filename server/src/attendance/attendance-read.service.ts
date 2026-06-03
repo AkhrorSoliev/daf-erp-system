@@ -17,6 +17,10 @@ import {
   calculateDebtAmount,
   calculatePerLessonCost,
 } from '../billing/debtor-check.helper';
+import {
+  computeEnrollmentCoverage,
+  type CoveragePrismaLike,
+} from '../billing/lesson-coverage.helper';
 import { HolidaysService } from '../holidays/holidays.service';
 
 @Injectable()
@@ -576,6 +580,7 @@ export class AttendanceReadService {
         OR: [{ startDate: null }, { startDate: { lte: parsedDate } }],
       },
       select: {
+        id: true,
         studentId: true,
         student: {
           select: {
@@ -621,6 +626,7 @@ export class AttendanceReadService {
       // "warning state"; it will simply go negative on the next save.
       const isDebtor = e.student.balance < 0;
       return {
+        enrollmentId: e.id,
         studentId: e.student.id,
         firstName: e.student.firstName,
         lastName: e.student.lastName,
@@ -637,9 +643,55 @@ export class AttendanceReadService {
       };
     });
 
-    const debtorStudents = isTeacherOnly
+    const debtorBase = isTeacherOnly
       ? []
       : activeStudents.filter((s) => s.isDebtor);
+
+    // Har qarzdorga JORIY SIKL (eng so'nggi LESSON_DEDUCTION) sana oralig'ini
+    // biriktiramiz — admin "qaysi sikl, qaysi sanalardagi darslar to'lanmagan"
+    // ekanini ko'radi. Shared coverage dvigateli (lesson-coverage.helper).
+    const latestCycleByEnrollment = new Map<
+      string,
+      {
+        cycleSequenceNumber: number;
+        capacity: number;
+        coveredCount: number;
+        firstCoveredDate: string | null;
+        lastCoveredDate: string | null;
+      }
+    >();
+    if (debtorBase.length > 0) {
+      const { byDeduction } = await computeEnrollmentCoverage(
+        this.prisma as unknown as CoveragePrismaLike,
+        debtorBase.map((s) => s.enrollmentId),
+      );
+      for (const cov of byDeduction.values()) {
+        if (!cov.enrollmentId) continue;
+        const existing = latestCycleByEnrollment.get(cov.enrollmentId);
+        if (
+          existing &&
+          existing.cycleSequenceNumber >= cov.cycleSequenceNumber
+        ) {
+          continue;
+        }
+        latestCycleByEnrollment.set(cov.enrollmentId, {
+          cycleSequenceNumber: cov.cycleSequenceNumber,
+          capacity: cov.capacity,
+          coveredCount: cov.coveredCount,
+          firstCoveredDate: cov.firstCoveredDate
+            ? tashkentDateStr(cov.firstCoveredDate)
+            : null,
+          lastCoveredDate: cov.lastCoveredDate
+            ? tashkentDateStr(cov.lastCoveredDate)
+            : null,
+        });
+      }
+    }
+
+    const debtorStudents = debtorBase.map((s) => ({
+      ...s,
+      currentCycle: latestCycleByEnrollment.get(s.enrollmentId) ?? null,
+    }));
 
     return {
       activeStudents,

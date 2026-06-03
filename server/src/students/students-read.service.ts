@@ -1,9 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, StudentStatus } from '@prisma/client';
+import {
+  AttendanceStatus,
+  EnrollmentStatus,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
+import {
+  computeEnrollmentCoverage,
+  type CoveragePrismaLike,
+} from '../billing/lesson-coverage.helper';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
 
 @Injectable()
 export class StudentsReadService {
@@ -359,5 +369,137 @@ export class StudentsReadService {
       enrolledAt: e.createdAt.toISOString(),
       teachers: (e.group.teachers ?? []).map((gt) => gt.teacher),
     }));
+  }
+
+  /**
+   * O'quvchi monitoringi uchun "Darslar" ko'rinishi: har bir guruh bo'yicha
+   * o'quvchining DAVOMATI (kelgan/kelmagan/kech/sababli) + har dars qaysi
+   * SIKL'ga tegishli ekani, va sikllarning sana oraliqlari. Davomat + sikl/
+   * to'lov bog'lanishini bitta joyda birlashtiradi.
+   *
+   * Nima uchun alohida endpoint:
+   *   - getLessonSequence guruh-scoped (barcha o'quvchilar, ortiqcha) va sikl
+   *     qoplamasini bermaydi;
+   *   - getLessonTrail flat ledger bo'lib, ABSENT/EXCUSED (consumptionsiz)
+   *     darslarni o'tkazib yuboradi.
+   *
+   * Sikl qoplamasi yagona FIFO dvigateli (lesson-coverage.helper) orqali
+   * hisoblanadi — Transactions/Payments-debtors bilan bir xil mantiq.
+   *
+   * `includeClosed=false` (default) — faqat ACTIVE enrollment'lar. true bo'lsa
+   * yopilganlar (FROZEN/COMPLETED/DROPPED/TRANSFERRED) ham qo'shiladi.
+   */
+  async getLessonsOverview(
+    id: number,
+    companyId: number,
+    includeClosed = false,
+  ) {
+    const student = await this.prisma.student.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException(`O'quvchi topilmadi`);
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        studentId: id,
+        deletedAt: null,
+        ...(includeClosed ? {} : { status: EnrollmentStatus.ACTIVE }),
+        group: { companyId, deletedAt: null },
+      },
+      orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        status: true,
+        startDate: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+            course: { select: { name: true, lessonPaymentCount: true } },
+          },
+        },
+      },
+    });
+
+    if (enrollments.length === 0) {
+      return { studentId: id, groups: [] };
+    }
+
+    const groupIds = enrollments.map((e) => e.group.id);
+    const enrollmentIds = enrollments.map((e) => e.id);
+
+    // O'quvchining shu guruhlardagi haqiqiy davomat qatorlari (faqat shu
+    // o'quvchi — getLessonSequence'ning butun-guruh fetch'idan ancha kichik).
+    const attendances = await this.prisma.attendance.findMany({
+      where: { studentId: id, groupId: { in: groupIds } },
+      select: { id: true, groupId: true, date: true, status: true },
+      orderBy: { date: 'asc' },
+    });
+
+    // Sikl qoplamasi: deduction -> sikl, va attendanceId -> sikl raqami.
+    const { byDeduction, cycleByAttendanceId } = await computeEnrollmentCoverage(
+      this.prisma as unknown as CoveragePrismaLike,
+      enrollmentIds,
+    );
+
+    // Sikllarni enrollment bo'yicha guruhlash.
+    const cyclesByEnrollment = new Map<
+      string,
+      Array<{
+        cycleSequenceNumber: number;
+        capacity: number;
+        coveredCount: number;
+        firstCoveredDate: string | null;
+        lastCoveredDate: string | null;
+      }>
+    >();
+    for (const cov of byDeduction.values()) {
+      if (!cov.enrollmentId) continue;
+      const list = cyclesByEnrollment.get(cov.enrollmentId) ?? [];
+      list.push({
+        cycleSequenceNumber: cov.cycleSequenceNumber,
+        capacity: cov.capacity,
+        coveredCount: cov.coveredCount,
+        firstCoveredDate: cov.firstCoveredDate
+          ? tashkentDateStr(cov.firstCoveredDate)
+          : null,
+        lastCoveredDate: cov.lastCoveredDate
+          ? tashkentDateStr(cov.lastCoveredDate)
+          : null,
+      });
+      cyclesByEnrollment.set(cov.enrollmentId, list);
+    }
+
+    const groups = enrollments.map((e) => {
+      const groupAtts = attendances.filter((a) => a.groupId === e.group.id);
+      const lessons = groupAtts.map((a) => ({
+        date: tashkentDateStr(a.date),
+        status: a.status,
+        cycleSequenceNumber: cycleByAttendanceId.get(a.id) ?? null,
+      }));
+      const attended = lessons.filter(
+        (l) =>
+          l.status === AttendanceStatus.PRESENT ||
+          l.status === AttendanceStatus.LATE,
+      ).length;
+      const cycles = (cyclesByEnrollment.get(e.id) ?? []).sort(
+        (a, b) => a.cycleSequenceNumber - b.cycleSequenceNumber,
+      );
+      return {
+        enrollmentId: e.id,
+        groupId: e.group.id,
+        groupName: e.group.name,
+        courseName: e.group.course?.name ?? null,
+        lessonPaymentCount: e.group.course?.lessonPaymentCount ?? 12,
+        status: e.status,
+        attended,
+        total: lessons.length,
+        cycles,
+        lessons,
+      };
+    });
+
+    return { studentId: id, groups };
   }
 }

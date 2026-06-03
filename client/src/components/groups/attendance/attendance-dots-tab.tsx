@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -22,8 +21,12 @@ import {
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import type { GroupData } from "@/hooks/use-edit-group";
-
-type DotStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | null;
+import {
+  AttendanceDot,
+  getDotClass,
+  getPercentageColor,
+  type DotStatus,
+} from "@/components/shared/attendance-dot";
 
 interface Dot {
   date: string;
@@ -51,36 +54,6 @@ interface AttendanceDotsTabProps {
   group: GroupData;
 }
 
-const STATUS_LABEL: Record<Exclude<DotStatus, null>, string> = {
-  PRESENT: "Keldi",
-  LATE: "Kech",
-  EXCUSED: "Sababli",
-  ABSENT: "Kelmadi",
-};
-
-function getDotClass(status: DotStatus): string {
-  switch (status) {
-    case "PRESENT":
-      return "bg-emerald-500 border-emerald-500";
-    case "LATE":
-      return "bg-amber-500 border-amber-500";
-    case "EXCUSED":
-      return "bg-sky-400 border-sky-400";
-    case "ABSENT":
-      return "bg-red-500 border-red-500";
-    default:
-      return "border-dashed border-muted-foreground/50";
-  }
-}
-
-function getPercentageColor(attended: number, expected: number): string {
-  if (expected === 0) return "text-muted-foreground";
-  const pct = (attended / expected) * 100;
-  if (pct >= 80) return "text-emerald-600 dark:text-emerald-400";
-  if (pct >= 60) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
-}
-
 function AttendanceDots({
   dots,
   expectedCount,
@@ -94,39 +67,14 @@ function AttendanceDots({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {dots.map((dot, i) => {
-        const statusLabel = dot.status
-          ? STATUS_LABEL[dot.status]
-          : "Belgilanmagan";
-        const hasOverride = overrideDateSet.has(dot.date);
-        return (
-          <Tooltip key={`${dot.date}-${i}`}>
-            <TooltipTrigger asChild>
-              <span
-                className={cn(
-                  "inline-block size-3 rounded-full border",
-                  getDotClass(dot.status),
-                  hasOverride &&
-                    "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
-                )}
-                aria-label={`${format(new Date(dot.date + "T00:00:00"), "dd.MM.yyyy")} — ${statusLabel}${hasOverride ? " — O'rinbosar ustoz" : ""}`}
-              />
-            </TooltipTrigger>
-            <TooltipContent>
-              <span className="font-medium">
-                {format(new Date(dot.date + "T00:00:00"), "dd.MM.yyyy")}
-              </span>
-              {" — "}
-              {statusLabel}
-              {hasOverride && (
-                <span className="text-blue-600 dark:text-blue-400">
-                  {" • O'rinbosar ustoz"}
-                </span>
-              )}
-            </TooltipContent>
-          </Tooltip>
-        );
-      })}
+      {dots.map((dot, i) => (
+        <AttendanceDot
+          key={`${dot.date}-${i}`}
+          status={dot.status}
+          date={dot.date}
+          hasOverride={overrideDateSet.has(dot.date)}
+        />
+      ))}
       {Array.from({ length: placeholders }).map((_, i) => (
         <Tooltip key={`placeholder-${i}`}>
           <TooltipTrigger asChild>
