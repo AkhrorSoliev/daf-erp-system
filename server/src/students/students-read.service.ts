@@ -9,10 +9,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
-import {
-  computeEnrollmentCoverage,
-  type CoveragePrismaLike,
-} from '../billing/lesson-coverage.helper';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 
 @Injectable()
@@ -373,18 +369,14 @@ export class StudentsReadService {
 
   /**
    * O'quvchi monitoringi uchun "Darslar" ko'rinishi: har bir guruh bo'yicha
-   * o'quvchining DAVOMATI (kelgan/kelmagan/kech/sababli) + har dars qaysi
-   * SIKL'ga tegishli ekani, va sikllarning sana oraliqlari. Davomat + sikl/
-   * to'lov bog'lanishini bitta joyda birlashtiradi.
+   * o'quvchining DAVOMATI (kelgan/kelmagan/kech/sababli), darslar sana bo'yicha
+   * tartibda, har `lessonPaymentCount` tasi bitta SIKL bloki qilib guruhlangan.
    *
-   * Nima uchun alohida endpoint:
-   *   - getLessonSequence guruh-scoped (barcha o'quvchilar, ortiqcha) va sikl
-   *     qoplamasini bermaydi;
-   *   - getLessonTrail flat ledger bo'lib, ABSENT/EXCUSED (consumptionsiz)
-   *     darslarni o'tkazib yuboradi.
-   *
-   * Sikl qoplamasi yagona FIFO dvigateli (lesson-coverage.helper) orqali
-   * hisoblanadi — Transactions/Payments-debtors bilan bir xil mantiq.
+   * MUHIM: sikl bu yerda = kurs darslari soni (lessonPaymentCount, 12/20) talik
+   * BLOK — moliyaviy LESSON_DEDUCTION bo'lagi EMAS. Qarzdor o'quvchida deduction
+   * bo'laklari 1 talikka parchalanadi (SINGLE_UNCOVERED) va sana tartibi
+   * buziladi; monitoring uchun bu chalkash. To'lov-dars bog'lanishi (deduction
+   * coverage) To'lovlar tabida ko'rsatiladi, bu yerda emas.
    *
    * `includeClosed=false` (default) — faqat ACTIVE enrollment'lar. true bo'lsa
    * yopilganlar (FROZEN/COMPLETED/DROPPED/TRANSFERRED) ham qo'shiladi.
@@ -427,7 +419,6 @@ export class StudentsReadService {
     }
 
     const groupIds = enrollments.map((e) => e.group.id);
-    const enrollmentIds = enrollments.map((e) => e.id);
 
     // O'quvchining shu guruhlardagi haqiqiy davomat qatorlari (faqat shu
     // o'quvchi — getLessonSequence'ning butun-guruh fetch'idan ancha kichik).
@@ -437,61 +428,69 @@ export class StudentsReadService {
       orderBy: { date: 'asc' },
     });
 
-    // Sikl qoplamasi: deduction -> sikl, va attendanceId -> sikl raqami.
-    const { byDeduction, cycleByAttendanceId } = await computeEnrollmentCoverage(
-      this.prisma as unknown as CoveragePrismaLike,
-      enrollmentIds,
-    );
-
-    // Sikllarni enrollment bo'yicha guruhlash.
-    const cyclesByEnrollment = new Map<
-      string,
-      Array<{
-        cycleSequenceNumber: number;
-        capacity: number;
-        coveredCount: number;
-        firstCoveredDate: string | null;
-        lastCoveredDate: string | null;
-      }>
-    >();
-    for (const cov of byDeduction.values()) {
-      if (!cov.enrollmentId) continue;
-      const list = cyclesByEnrollment.get(cov.enrollmentId) ?? [];
-      list.push({
-        cycleSequenceNumber: cov.cycleSequenceNumber,
-        capacity: cov.capacity,
-        coveredCount: cov.coveredCount,
-        firstCoveredDate: cov.firstCoveredDate
-          ? tashkentDateStr(cov.firstCoveredDate)
-          : null,
-        lastCoveredDate: cov.lastCoveredDate
-          ? tashkentDateStr(cov.lastCoveredDate)
-          : null,
-      });
-      cyclesByEnrollment.set(cov.enrollmentId, list);
-    }
-
     const groups = enrollments.map((e) => {
+      // lpc = kurs darslari soni (NEVER hardcoded 12) — sikl blok o'lchami.
+      const lpc = e.group.course?.lessonPaymentCount || 12;
       const groupAtts = attendances.filter((a) => a.groupId === e.group.id);
-      const lessons = groupAtts.map((a) => ({
+
+      // Darslarni sana bo'yicha tartibda lpc talik bloklarga ajratamiz; har
+      // darsning sikl raqami = floor(index / lpc) + 1.
+      const lessons = groupAtts.map((a, index) => ({
         date: tashkentDateStr(a.date),
         status: a.status,
-        cycleSequenceNumber: cycleByAttendanceId.get(a.id) ?? null,
+        cycleSequenceNumber: Math.floor(index / lpc) + 1,
       }));
+
       const attended = lessons.filter(
         (l) =>
           l.status === AttendanceStatus.PRESENT ||
           l.status === AttendanceStatus.LATE,
       ).length;
-      const cycles = (cyclesByEnrollment.get(e.id) ?? []).sort(
+
+      // Har blok uchun: sana oralig'i + dars soni + kelgan soni.
+      const cyclesMap = new Map<
+        number,
+        {
+          cycleSequenceNumber: number;
+          capacity: number;
+          lessonCount: number;
+          attended: number;
+          firstDate: string;
+          lastDate: string;
+        }
+      >();
+      for (const l of lessons) {
+        const seq = l.cycleSequenceNumber;
+        const existing = cyclesMap.get(seq);
+        const isAttended =
+          l.status === AttendanceStatus.PRESENT ||
+          l.status === AttendanceStatus.LATE;
+        if (!existing) {
+          cyclesMap.set(seq, {
+            cycleSequenceNumber: seq,
+            capacity: lpc,
+            lessonCount: 1,
+            attended: isAttended ? 1 : 0,
+            firstDate: l.date,
+            lastDate: l.date,
+          });
+        } else {
+          existing.lessonCount += 1;
+          if (isAttended) existing.attended += 1;
+          // lessons sana bo'yicha tartibda → oxirgisi eng kech.
+          existing.lastDate = l.date;
+        }
+      }
+      const cycles = Array.from(cyclesMap.values()).sort(
         (a, b) => a.cycleSequenceNumber - b.cycleSequenceNumber,
       );
+
       return {
         enrollmentId: e.id,
         groupId: e.group.id,
         groupName: e.group.name,
         courseName: e.group.course?.name ?? null,
-        lessonPaymentCount: e.group.course?.lessonPaymentCount ?? 12,
+        lessonPaymentCount: lpc,
         status: e.status,
         attended,
         total: lessons.length,
