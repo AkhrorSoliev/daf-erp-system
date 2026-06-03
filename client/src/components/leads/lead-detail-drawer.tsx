@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import toast from "react-hot-toast";
 import { ArrowRightLeft, GraduationCap, Pencil, Trash2 } from "lucide-react";
@@ -238,20 +238,47 @@ export function LeadDetailDrawer() {
   const openDelete = useLeadsUi((s) => s.openDelete);
   const openConvertLead = useLeadsUi((s) => s.openConvertLead);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Drawer-scoped tab. Uses its own `?lead_tab=` param so it never clashes with
+  // the leads board's own URL state; cleared when the drawer closes.
+  const tab = searchParams.get("lead_tab") ?? "malumot";
 
   const [lead, setLead] = useState<LeadDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState("malumot");
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
+
+  const setTab = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "malumot") {
+        params.delete("lead_tab");
+      } else {
+        params.set("lead_tab", value);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const handleCloseDetail = useCallback(() => {
+    closeLeadDetail();
+    if (searchParams.has("lead_tab")) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("lead_tab");
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    }
+  }, [closeLeadDetail, pathname, router, searchParams]);
 
   useEffect(() => {
     if (!leadId) return;
     let cancelled = false;
     setLoading(true);
     setLead(null);
-    setTab("malumot");
     setOptimisticComments([]);
     api
       .get<LeadDetail>(`/leads/${leadId}`)
@@ -288,7 +315,7 @@ export function LeadDetailDrawer() {
   }, []);
 
   return (
-    <Sheet open={!!leadId} onOpenChange={(o) => !o && closeLeadDetail()}>
+    <Sheet open={!!leadId} onOpenChange={(o) => !o && handleCloseDetail()}>
       <SheetContent
         side="right"
         className="flex flex-col overflow-hidden p-0 sm:max-w-md"
@@ -382,7 +409,7 @@ export function LeadDetailDrawer() {
                         id: lead.id,
                         sectionId: lead.section?.id ?? "",
                       });
-                      closeLeadDetail();
+                      handleCloseDetail();
                     }}
                   >
                     <GraduationCap className="size-4" />
@@ -427,7 +454,7 @@ export function LeadDetailDrawer() {
                     name: `${lead.firstName} ${lead.lastName}`,
                     sectionId: lead.section?.id ?? "",
                   });
-                  closeLeadDetail();
+                  handleCloseDetail();
                 }}
               >
                 <Trash2 className="size-4" />
@@ -437,19 +464,20 @@ export function LeadDetailDrawer() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
+                  onClick={() => {
                     openMoveLead({
                       id: lead.id,
                       sectionId: lead.section?.id ?? "",
-                    })
-                  }
+                    });
+                    handleCloseDetail();
+                  }}
                 >
                   <ArrowRightLeft className="size-4" />
                   Ko&apos;chirish
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() =>
+                  onClick={() => {
                     openEditLead({
                       id: lead.id,
                       sectionId: lead.section?.id ?? "",
@@ -457,8 +485,9 @@ export function LeadDetailDrawer() {
                       lastName: lead.lastName,
                       phone: lead.phone,
                       sourceId: lead.source?.id ?? "",
-                    })
-                  }
+                    });
+                    handleCloseDetail();
+                  }}
                 >
                   <Pencil className="size-4" />
                   Tahrirlash

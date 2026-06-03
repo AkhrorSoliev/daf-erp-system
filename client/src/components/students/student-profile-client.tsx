@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
@@ -14,6 +15,10 @@ import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
 
 export function StudentProfileClient({ studentId }: { studentId: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "guruhlar";
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -23,8 +28,21 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [refundOpen, setRefundOpen] = useState(false);
   const [withdrawalOpen, setWithdrawalOpen] = useState(false);
   const [groupsRefreshing, setGroupsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState("guruhlar");
   const setName = useBreadcrumbName((s) => s.setName);
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "guruhlar") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const handleCommentChange = useCallback(() => {
     setCommentKey((k) => k + 1);
@@ -92,9 +110,9 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             student={student}
             commentKey={commentKey}
             onEnrollClick={() => setEnrollOpen(true)}
-            onHistoryClick={() => setActiveTab("tarix")}
+            onHistoryClick={() => handleTabChange("tarix")}
             onPaymentClick={() => setPaymentOpen(true)}
-            onPaymentHistoryClick={() => setActiveTab("tolovlar")}
+            onPaymentHistoryClick={() => handleTabChange("tolovlar")}
             onRefundClick={() => setRefundOpen(true)}
             onWithdrawalClick={() => setWithdrawalOpen(true)}
           />
@@ -106,7 +124,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             onEnrollmentChange={refreshStudent}
             groupsRefreshing={groupsRefreshing}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
           />
         </div>
       </div>

@@ -252,16 +252,20 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 ### URL-Persisted Tab State
 
-- **Every detail/profile page that uses tabs must persist the active tab in the URL via `?tab=<value>`.** Reload, share, and back/forward navigation must restore the same tab the user was on.
+- **Every `<Tabs>` set in the app must persist its active tab in the URL — never `defaultValue` + local `useState`.** Reload, share, and back/forward navigation must restore the same tab the user was on. This applies to detail/profile pages, list/report pages, dashboards, nested sub-tabs, and tabs inside drawers/sheets alike.
 - **Why:** users link colleagues to a specific tab (`/teachers/profile/10239?tab=ish-haqi`), and reloading the page must not drop them back to the default tab.
-- **Scope:** detail pages with internal tabs — currently `/groups/[id]`, `/students/profile/[id]`, `/teachers/profile/[id]`. Add the same pattern to any new detail page that introduces tabs.
+- **Scope:** all tabbed UIs. Current coverage — `/groups/[id]`, `/students/profile/[id]`, `/teachers/profile/[id]`, `/settings/courses/[id]`, `/settings/employees/[id]`, `/mock-exams/[id]`, `/tasks`, `/outreach`, `/reports/attendance`, the home dashboard schedule view, the leads detail drawer, and the outreach callbacks sub-filter. The only exemption is a `<Tabs>` with a **single** trigger (no navigation choice — e.g. `/reports/payment-reports`); it may stay uncontrolled. Add the pattern to any new tab set you introduce.
 - **Implementation:** the parent `*-client.tsx` owns the URL ↔ tab state and passes `activeTab` + `onTabChange` to the tabs component:
   - Read: `const activeTab = searchParams.get("tab") ?? "<default>"`.
   - Write: `useCallback((tab) => { ... router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false }) }, [...])`.
   - **Omit the default tab from the URL** — when tab equals the default (e.g. `"guruhlar"`), `delete` the param so the URL stays clean.
   - The tabs component uses `<Tabs value={activeTab} onValueChange={handleTabChange}>` (NOT `defaultValue`).
+- **Param naming — avoid collisions.** The plain `?tab=` belongs to the page-level tab set. Any tab set that can coexist with another in the same URL gets its own distinct param:
+  - A second/nested tab set on the same page uses a prefixed name — e.g. attendance rankings use `?att_tab=`, the outreach callbacks sub-filter (nested under `?tab=callbacks`) uses `?cb=`.
+  - A **view-mode toggle** (grid/list, not real navigation) uses a semantic name — the dashboard schedule uses `?view=`.
+  - **Tabs inside a drawer/sheet** use their own param (the leads detail drawer uses `?lead_tab=`) and **must delete that param when the drawer closes** (clear it from every close path — the `onOpenChange` handler and any action button that dismisses the sheet) so it never lingers in the URL while the drawer is shut.
 - **Lazy-load on direct URL navigation:** if any tab fetches data on first activation (history, izohlar, ish-haqi, tolovlar, etc.), wrap the fetch logic in a `useCallback` and call it from BOTH the click handler AND a `useEffect` keyed on `activeTab`. Without the effect, reloading on `?tab=ish-haqi` shows an empty tab because the click handler never fired. The `*Shown.current` ref guards keep it idempotent.
-- Reference implementation: `group-detail-client.tsx` ↔ `group-detail-tabs.tsx`.
+- Reference implementation: `group-detail-client.tsx` ↔ `group-detail-tabs.tsx` (page-level); `attendance-section.tsx` (prefixed param); `lead-detail-drawer.tsx` (drawer-scoped param with close cleanup).
 
 ### Sidebar Active State
 

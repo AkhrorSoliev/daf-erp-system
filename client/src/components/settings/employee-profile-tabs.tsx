@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
@@ -18,9 +18,16 @@ function EmptyState({ message }: { message: string }) {
 interface EmployeeProfileTabsProps {
   employee: EmployeeUser;
   onCommentChange?: () => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export function EmployeeProfileTabs({ employee, onCommentChange }: EmployeeProfileTabsProps) {
+export function EmployeeProfileTabs({
+  employee,
+  onCommentChange,
+  activeTab,
+  onTabChange,
+}: EmployeeProfileTabsProps) {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
@@ -42,7 +49,7 @@ export function EmployeeProfileTabs({ employee, onCommentChange }: EmployeeProfi
     );
   }, []);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = useCallback((value: string) => {
     if (value === "tarix" && !historyShown.current) {
       historyShown.current = true;
       setHistoryVisible(true);
@@ -51,10 +58,22 @@ export function EmployeeProfileTabs({ employee, onCommentChange }: EmployeeProfi
       commentsShown.current = true;
       setCommentsVisible(true);
     }
-  };
+  }, []);
+
+  // Trigger lazy-load on direct URL navigation (e.g. ?tab=tarix on first load).
+  useEffect(() => {
+    if (activeTab) handleTabChange(activeTab);
+  }, [activeTab, handleTabChange]);
 
   return (
-    <Tabs defaultValue="izohlar" className="w-full" onValueChange={handleTabChange}>
+    <Tabs
+      value={activeTab ?? "izohlar"}
+      className="w-full"
+      onValueChange={(v) => {
+        onTabChange?.(v);
+        handleTabChange(v);
+      }}
+    >
       <TabsList className="w-full justify-start overflow-x-auto sticky top-0 z-10 bg-background md:static">
         <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
         <TabsTrigger value="tarix">Tarix</TabsTrigger>
