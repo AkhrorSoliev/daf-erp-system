@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Download, RotateCcw } from "lucide-react";
+import { Download, RotateCcw, History } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -39,6 +39,8 @@ interface BreakdownLine {
     scope: "GROUP" | "GLOBAL";
   } | null;
   isSubstitute?: boolean;
+  isCarriedOver?: boolean;
+  creditPeriodDate?: string | null;
   reversedAt: string | null;
   reversalReason: string | null;
   reversedBy: { firstName: string; lastName: string } | null;
@@ -59,6 +61,8 @@ interface BreakdownResponse {
     amountTotal: number;
     reversedCount: number;
     reversedTotal: number;
+    carriedOverCount: number;
+    carriedOverTotal: number;
   };
 }
 
@@ -227,6 +231,17 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
                     value={`${summary?.uniqueStudents ?? 0} ta`}
                   />
                 </div>
+                {data.totals.carriedOverCount > 0 && (
+                  <div className="mt-4 flex items-start gap-2 rounded-md bg-purple-50 dark:bg-purple-950/30 px-3 py-2 text-xs text-purple-900 dark:text-purple-300">
+                    <History className="size-3.5 mt-0.5 shrink-0" />
+                    <div>
+                      Shundan <b>{fmt(data.totals.carriedOverTotal)} so&apos;m</b>{" "}
+                      ({data.totals.carriedOverCount} ta dars) — oldingi
+                      (yopilgan) oydan o&apos;tkazilgan, kechikkan to&apos;lov
+                      tufayli
+                    </div>
+                  </div>
+                )}
                 {data.totals.reversedCount > 0 && (
                   <div className="mt-4 flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-300">
                     <RotateCcw className="size-3.5 mt-0.5 shrink-0" />
@@ -354,6 +369,14 @@ function BreakdownRow({ line, index }: { line: BreakdownLine; index: number }) {
               className="text-[10px] py-0 h-4 border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
             >
               O&apos;rinbosar
+            </Badge>
+          )}
+          {line.isCarriedOver && (
+            <Badge
+              variant="outline"
+              className="text-[10px] py-0 h-4 border-purple-300 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
+            >
+              Oldingi oydan
             </Badge>
           )}
         </div>

@@ -16,6 +16,7 @@ import {
   PaymentStatus,
   Prisma,
 } from '@prisma/client';
+import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PAYMENT_METHOD_LABEL } from './shared/method-label';
@@ -117,7 +118,7 @@ export class PaymentsWriteService {
       resolvedBranchId = contract.branchId;
     }
 
-    const { payment, studentBalance } = await this.prisma.$transaction(
+    const { payment, studentBalance, carriedOver } = await this.prisma.$transaction(
       async (tx) => {
         const payment = await tx.payment.create({
           data: {
@@ -159,14 +160,15 @@ export class PaymentsWriteService {
         // student was a debtor (no LESSON_DEDUCTION/CONSUMPTION/SalaryAccrual
         // got written at the time). Idempotent — re-running on a payment
         // where everything is already settled is a no-op.
-        await this.lessonBillingService.processRetroactiveBillingForStudent(
-          tx,
-          {
-            studentId: dto.studentId,
-            companyId,
-            performedById: userId,
-          },
-        );
+        const retro =
+          await this.lessonBillingService.processRetroactiveBillingForStudent(
+            tx,
+            {
+              studentId: dto.studentId,
+              companyId,
+              performedById: userId,
+            },
+          );
 
         // After lesson fees, auto-settle any pending mock exam fees this
         // student has registered for. Uses the same balance-walk pattern
@@ -210,7 +212,11 @@ export class PaymentsWriteService {
           tx,
         });
 
-        return { payment, studentBalance: updatedStudent?.balance };
+        return {
+          payment,
+          studentBalance: updatedStudent?.balance,
+          carriedOver: retro.carriedOver ?? [],
+        };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -232,6 +238,15 @@ export class PaymentsWriteService {
       companyId,
       performedById: userId,
     } satisfies PaymentReceivedPayload);
+
+    // Tell affected teachers when this (late) payment carried lessons from an
+    // already-closed payroll into the current cycle. Emitted post-commit.
+    if (carriedOver.length > 0) {
+      this.eventEmitter.emit('salary.carried-over', {
+        companyId,
+        items: carriedOver,
+      } satisfies SalaryCarriedOverPayload);
+    }
 
     return { ...payment, studentBalance };
   }
@@ -680,14 +695,15 @@ export class PaymentsWriteService {
       // Same retroactive billing hook as the manual `create()` path —
       // gateway payments (Payme/Click) and admin attach-external also
       // need to settle past unpaid attendance the moment funds land.
-      await this.lessonBillingService.processRetroactiveBillingForStudent(
-        tx,
-        {
-          studentId: params.studentId,
-          companyId: params.companyId,
-          performedById: params.performedById,
-        },
-      );
+      const retro =
+        await this.lessonBillingService.processRetroactiveBillingForStudent(
+          tx,
+          {
+            studentId: params.studentId,
+            companyId: params.companyId,
+            performedById: params.performedById,
+          },
+        );
 
       // And settle any pending mock exam fees too — DaF student paid via
       // Payme/Click using their student id; this drains the freshly-topped
@@ -721,12 +737,16 @@ export class PaymentsWriteService {
         tx,
       });
 
-      return { payment, studentBalance: updatedStudent?.balance };
+      return {
+        payment,
+        studentBalance: updatedStudent?.balance,
+        carriedOver: retro.carriedOver ?? [],
+      };
     };
 
     try {
       // If an outer transaction was provided, run within it; otherwise create our own
-      const { payment, studentBalance } = outerTx
+      const { payment, studentBalance, carriedOver } = outerTx
         ? await executeInTx(outerTx)
         : await this.prisma.$transaction(executeInTx, {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -749,6 +769,16 @@ export class PaymentsWriteService {
           companyId: params.companyId,
           performedById: params.performedById,
         } satisfies PaymentReceivedPayload);
+
+        // Same post-commit gate as the receipt: only emit when we owned the
+        // tx. Carry-over notifications for an outerTx caller are that caller's
+        // responsibility after their own commit.
+        if (carriedOver.length > 0) {
+          this.eventEmitter.emit('salary.carried-over', {
+            companyId: params.companyId,
+            items: carriedOver,
+          } satisfies SalaryCarriedOverPayload);
+        }
       }
 
       return { ...payment, studentBalance };

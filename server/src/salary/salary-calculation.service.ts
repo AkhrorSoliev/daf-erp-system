@@ -1,16 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryPaymentStatus, SalaryType, Prisma } from '@prisma/client';
-import { resolveCurrentPeriod } from './shared/resolve-current-period';
+import { resolveCompletedPeriod } from './shared/resolve-current-period';
 
 @Injectable()
 export class SalaryCalculationService {
   constructor(private prisma: PrismaService) {}
 
   async calculateMonthlySalaries(companyId: number, now: Date = new Date()) {
-    // Period bounds come from SalaryPeriodSetting (configurable per company).
-    // Default if no setting found: 8th→7th, preserving the legacy hardcoded behavior.
-    const { periodStart, periodEnd } = await resolveCurrentPeriod(
+    // Settle the period that has just FINISHED, not the one `now` is inside.
+    // The cron fires on cycleStartDay, when the "current" period is the one
+    // just starting — paying that would settle an almost-empty window and
+    // strand the month that just ended. `resolveCompletedPeriod` returns the
+    // previous (closed) period. Bounds come from SalaryPeriodSetting
+    // (configurable per company); default 8th→7th if no setting exists.
+    const { periodStart, periodEnd } = await resolveCompletedPeriod(
       this.prisma,
       companyId,
       now,
@@ -24,10 +28,11 @@ export class SalaryCalculationService {
     }[] = [];
 
     // === ACCRUAL-BASED (teachers) ===
-    // - Both bounds: include lessons inside [periodStart, periodEnd] only.
-    //   Without `gte` we'd retroactively pull in pre-period lessons that
-    //   somehow weren't captured by an earlier run — those need an explicit
-    //   admin correction, not silent inclusion.
+    // - Effective payroll date = COALESCE(creditPeriodDate, lessonDate),
+    //   expressed as a two-branch OR. Most accruals have creditPeriodDate=NULL
+    //   and bucket by their lessonDate (unchanged). Carry-over accruals (a late
+    //   payment settled a lesson whose own period was already closed) have
+    //   creditPeriodDate set to an open-period start, so they land in THIS run.
     // - reversedAt: null excludes accruals that were undone (cancelled
     //   lesson, attendance flipped to ABSENT, etc.) so we don't pay for them.
     const accruals = await this.prisma.salaryAccrual.findMany({
@@ -35,7 +40,13 @@ export class SalaryCalculationService {
         companyId,
         salaryPaymentId: null,
         reversedAt: null,
-        lessonDate: { gte: periodStart, lte: periodEnd },
+        OR: [
+          { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
+          {
+            creditPeriodDate: null,
+            lessonDate: { gte: periodStart, lte: periodEnd },
+          },
+        ],
       },
       select: {
         id: true,

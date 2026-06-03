@@ -6,6 +6,36 @@ import {
   SalaryType,
   TransactionType,
 } from '@prisma/client';
+import { resolveCurrentPeriod } from './shared/resolve-current-period';
+
+/**
+ * Emitted (collected, not sent) when an accrual is carried over into the
+ * current open period because its `lessonDate` fell in an already-closed
+ * (APPROVED/PAID) period — e.g. a student paid late. The billing layer
+ * bubbles these up so the payment pipeline can notify the teacher AFTER the
+ * financial transaction commits (never inside it).
+ */
+export interface CarriedOverAccrual {
+  teacherId: number;
+  studentId: number;
+  groupId: string;
+  amount: number;
+  lessonDate: Date;
+  creditPeriodDate: Date;
+  companyId: number;
+}
+
+/**
+ * Aggregate event payload emitted (post-commit) by the payment pipeline when
+ * one or more accruals were carried over for a student's late payment.
+ * Consumed by `NotificationEventsListener`, which groups by teacher and tells
+ * each affected teacher how much of their current payslip came from a prior,
+ * already-closed month.
+ */
+export interface SalaryCarriedOverPayload {
+  companyId: number;
+  items: CarriedOverAccrual[];
+}
 
 @Injectable()
 export class SalaryAccrualService {
@@ -41,6 +71,9 @@ export class SalaryAccrualService {
     companyId: number;
     deductionTransactionId?: string | null;
     tx?: Prisma.TransactionClient;
+    // When provided, a carry-over (closed-period redirect) pushes an event
+    // here so the caller can notify the teacher post-commit.
+    carriedOverSink?: CarriedOverAccrual[];
   }) {
     if (!params.deductionTransactionId) {
       // Student has no active payment cycle — teacher does not earn for this lesson.
@@ -49,11 +82,14 @@ export class SalaryAccrualService {
 
     const db = params.tx ?? this.prisma;
 
-    // Period-closed policy (audit #17): if the lesson date falls inside a
-    // SalaryPayment period that is already APPROVED or PAID for this teacher,
-    // the period is closed and a new accrual would never be picked up by
-    // any salary run. Refuse to write and log — admins should use an
-    // explicit correction flow instead of silently leaving orphan rows.
+    // Period-closed policy: if the lesson date falls inside a SalaryPayment
+    // period that is already APPROVED or PAID for this teacher, that payroll
+    // is closed and an accrual dated there would never be swept by any run.
+    // Instead of refusing (which silently lost late-payment earnings), we
+    // CARRY THE ACCRUAL OVER to the current open period: keep `lessonDate`
+    // (so the rate version + breakdown still reflect the real lesson) but set
+    // `creditPeriodDate` to the current period start so the calc buckets it
+    // there. The teacher is paid in the next cycle, labelled "oldingi oydan".
     const closedPeriod = await db.salaryPayment.findFirst({
       where: {
         userId: params.teacherId,
@@ -66,11 +102,42 @@ export class SalaryAccrualService {
       },
       select: { id: true, status: true },
     });
+
+    let creditPeriodDate: Date | undefined;
     if (closedPeriod) {
-      this.logger.warn(
-        `Refusing accrual for closed period: teacher ${params.teacherId}, lessonDate ${params.lessonDate.toISOString()} (SalaryPayment ${closedPeriod.id} is ${closedPeriod.status})`,
+      const current = await resolveCurrentPeriod(
+        db,
+        params.companyId,
+        new Date(),
       );
-      return null;
+
+      // Safety net: if the CURRENT period is itself already APPROVED/PAID
+      // (should never happen — payroll closes at period end, not mid-cycle),
+      // there is no open period to credit. Preserve the old refuse-and-log
+      // behaviour so the accrual isn't dumped into another closed window.
+      const currentClosed = await db.salaryPayment.findFirst({
+        where: {
+          userId: params.teacherId,
+          companyId: params.companyId,
+          status: {
+            in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID],
+          },
+          periodStart: { lte: current.periodEnd },
+          periodEnd: { gte: current.periodStart },
+        },
+        select: { id: true, status: true },
+      });
+      if (currentClosed) {
+        this.logger.error(
+          `Cannot carry over accrual: both the lesson period and the current period are closed. teacher ${params.teacherId}, lessonDate ${params.lessonDate.toISOString()}, current [${current.periodStart.toISOString()}..${current.periodEnd.toISOString()}] (SalaryPayment ${currentClosed.id} is ${currentClosed.status}). Admin must credit manually (Balance Withdrawal).`,
+        );
+        return null;
+      }
+
+      creditPeriodDate = current.periodStart;
+      this.logger.log(
+        `Carrying over accrual for teacher ${params.teacherId}: lessonDate ${params.lessonDate.toISOString()} is in closed SalaryPayment ${closedPeriod.id} (${closedPeriod.status}); crediting current period starting ${creditPeriodDate.toISOString()}.`,
+      );
     }
 
     // Two-query lookup. Per-group beats global at the same effective range.
@@ -120,6 +187,9 @@ export class SalaryAccrualService {
         companyId: params.companyId,
         deductionTransactionId: params.deductionTransactionId,
         salaryConfigVersionId: version.id,
+        // Write-once: only set on the initial create. `undefined` here means
+        // "no carry-over" (column stays NULL → bucket by lessonDate as usual).
+        creditPeriodDate,
       },
       update: {
         amount,
@@ -131,8 +201,28 @@ export class SalaryAccrualService {
         reversedAt: null,
         reversedById: null,
         reversalReason: null,
+        // `creditPeriodDate` intentionally NOT updated here — the carry-over
+        // target is decided exactly once, on first write, so re-running
+        // retroactive billing can never drift the accrual to a later period.
       },
     });
+
+    // Surface a fresh carry-over so the caller can notify the teacher after
+    // the financial transaction commits. The upstream idempotency guards
+    // (LESSON_CONSUMPTION check in bill(), salaryDeferred flag in
+    // settleDeferredAccruals) ensure this branch runs once per accrual, so we
+    // don't double-notify on re-runs.
+    if (creditPeriodDate && params.carriedOverSink) {
+      params.carriedOverSink.push({
+        teacherId: params.teacherId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        amount,
+        lessonDate: params.lessonDate,
+        creditPeriodDate,
+        companyId: params.companyId,
+      });
+    }
 
     // Mirror the accrual into User.balance via a SALARY_ACCRUAL Transaction.
     // Idempotent: skip if a non-reversed transaction already exists for this

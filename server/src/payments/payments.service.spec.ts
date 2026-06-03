@@ -105,10 +105,10 @@ describe('PaymentsService', () => {
     lessonBillingService = {
       processRetroactiveBillingForStudent: jest
         .fn()
-        .mockResolvedValue({ billedAttendances: 0 }),
+        .mockResolvedValue({ billedAttendances: 0, carriedOver: [] }),
       runRetroactiveBilling: jest
         .fn()
-        .mockResolvedValue({ billedAttendances: 0 }),
+        .mockResolvedValue({ billedAttendances: 0, carriedOver: [] }),
     };
 
     const mockExamBilling = {
