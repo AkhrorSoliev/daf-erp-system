@@ -226,6 +226,28 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - For a list/table with multiple destructive actions sharing the same look-and-feel, hold a single `useState<{ title, description, onConfirm } | null>` and render one `<AlertDialog>` controlled by that state — each row's handler just calls `setConfirmDelete({ ... })`. Avoids one AlertDialog per row.
 - Reference implementations: `src/components/teachers/teacher-profile-client.tsx` (single-action archive), `src/components/groups/lesson-changes-tab.tsx` (shared confirmDelete state across three different delete flows).
 
+### Dialog / Modal Scroll Safety (MANDATORY — check before every dialog task)
+
+- **Every Dialog and Sheet must stay scroll-safe when its content grows.** A centered modal that exceeds the viewport height must scroll **internally** — it must NEVER clip its top/bottom off-screen (the title and the action buttons must always be reachable). This is a recurring bug; **verify it before building or editing any dialog.**
+- The base `<DialogContent>` (`src/components/ui/dialog.tsx`) already enforces a safety floor: `max-h-[90dvh] overflow-y-auto`. **Do not remove these** — without them tall dialogs get cut off. Short dialogs are unaffected (the cap simply never triggers).
+- For any dialog with a **form, a list, or otherwise variable/long content**, use the **fixed header/footer + scrolling body** pattern so the title and buttons always stay visible while the middle scrolls:
+  - `<DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">`
+  - `<DialogHeader className="border-b px-6 py-4">` — fixed top
+  - `<div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">…fields…</div>` — the ONLY scroll container
+  - `<DialogFooter className="border-t px-6 py-4">…buttons…</DialogFooter>` — fixed bottom
+- Reference: `src/components/payments/expenses-client.tsx`. The same skeleton applies to Sheets/drawers (`SheetContent p-0 flex flex-col` → header `border-b` → scrollable body → footer `border-t`).
+
+### Searchable Select / Combobox (long option lists)
+
+- A plain shadcn `<Select>` is fine for **short, fixed** option sets (payment method, status, category, yes/no).
+- When a select lists **entities that can grow long** (employees, teachers, students, groups, rooms, courses), use a **searchable combobox**, not a bare `<Select>`:
+  - A `<Popover modal>` trigger button showing the current selection (avatar + name for people).
+  - A scrollable list: `max-h-60 overflow-y-auto overscroll-contain` — a few options (≤ ~7) render directly with no scroll; many options scroll.
+  - A search `<Input>` shown **only when the list is long** (e.g. `length > 7`) — don't force a search box onto a 4-item list. Few → just show; many → scroll + search.
+  - Keep `modal` on the `<Popover>` + `overscroll-contain` on the scroll area (touchpad scroll fix — same as TimePicker / group teacher select).
+- Show **avatars** (photo + initials fallback) for person options.
+- Reference: `src/components/groups/group-teacher-select.tsx`, `src/components/payments/employee-advance-select.tsx`.
+
 ### Filter Bars
 
 - **No labels** — filter bars must not use `<Label>` elements above inputs or selects. The UI should be self-explanatory through placeholders and select option text alone.
