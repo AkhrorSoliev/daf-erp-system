@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,24 @@ interface EmployeeOption {
   id: number;
   firstName: string;
   lastName: string;
+  photo: string | null;
+  roles: { id: number; name: string }[];
+}
+
+const roleLabels: Record<number, string> = {
+  1: "Direktor",
+  2: "Filial direktori",
+  3: "Administrator",
+  4: "O'qituvchi",
+  5: "Kassir",
+};
+
+function employeeRoleLabel(roles: { id: number; name: string }[]): string {
+  if (!roles?.length) return "";
+  // Prefer the teaching role when present — the category is "Ustozga avans".
+  const teacher = roles.find((r) => r.id === 4);
+  const primary = teacher ?? roles[0];
+  return roleLabels[primary.id] ?? primary.name;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -99,13 +118,14 @@ export function ExpensesClient() {
   });
 
   // Fetch employees only when the advance category is selected — avoids
-  // hitting /users on every expense dialog open.
-  const { data: employees } = useQuery({
+  // hitting /users on every expense dialog open. pageSize is capped at 100
+  // by the backend PaginationDto (@Max(100)) — sending more returns 400.
+  const { data: employees, isLoading: employeesLoading } = useQuery({
     queryKey: ["expense-employees"],
     queryFn: () =>
       api
         .get<{ data: EmployeeOption[]; total: number }>("/users", {
-          params: { pageSize: 200 },
+          params: { pageSize: 100 },
         })
         .then((r) => r.data.data),
     enabled: isTeacherAdvance,
@@ -293,18 +313,50 @@ export function ExpensesClient() {
             {isTeacherAdvance && (
               <div className="space-y-2">
                 <Label>Xodim</Label>
-                <Select value={relatedUserId} onValueChange={setRelatedUserId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Avans oluvchi xodimni tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(employees ?? []).map((u) => (
-                      <SelectItem key={u.id} value={String(u.id)}>
-                        #{u.id} {u.firstName} {u.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {employeesLoading ? (
+                  <Skeleton className="h-9 w-full rounded-md" />
+                ) : (
+                  <Select
+                    value={relatedUserId}
+                    onValueChange={setRelatedUserId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Avans oluvchi xodimni tanlang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(employees ?? []).length === 0 ? (
+                        <p className="px-2 py-3 text-center text-sm text-muted-foreground">
+                          Xodimlar topilmadi
+                        </p>
+                      ) : (
+                        (employees ?? []).map((u) => {
+                          const fullName = `${u.firstName} ${u.lastName}`;
+                          const initials =
+                            `${u.firstName[0] ?? ""}${u.lastName[0] ?? ""}`.toUpperCase();
+                          const role = employeeRoleLabel(u.roles);
+                          return (
+                            <SelectItem key={u.id} value={String(u.id)}>
+                              <span className="flex items-center gap-2">
+                                <Avatar size="sm">
+                                  {u.photo && (
+                                    <AvatarImage src={u.photo} alt={fullName} />
+                                  )}
+                                  <AvatarFallback>{initials}</AvatarFallback>
+                                </Avatar>
+                                <span>{fullName}</span>
+                                {role && (
+                                  <span className="text-xs text-muted-foreground">
+                                    · {role}
+                                  </span>
+                                )}
+                              </span>
+                            </SelectItem>
+                          );
+                        })
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Avans keyingi oylik hisobida ushbu xodimning oyligidan
                   avtomatik ushlab qolinadi
