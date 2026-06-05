@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
+import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import {
   dayOfWeekForDateStr,
   tashkentDateStr,
@@ -173,7 +174,7 @@ export class AttendanceStatsService {
           },
         },
       },
-      orderBy: { student: { firstName: 'asc' } },
+      orderBy: STUDENT_ROSTER_ORDER_BY,
     });
 
     const students = enrollments.map((e) => {

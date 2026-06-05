@@ -10,6 +10,7 @@ import {
   type CoveragePrismaLike,
 } from '../billing/lesson-coverage.helper';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 
 @Injectable()
 export class PaymentsDebtorsService {
@@ -173,7 +174,7 @@ export class PaymentsDebtorsService {
           },
         },
       },
-      orderBy: { student: { firstName: 'asc' } },
+      orderBy: STUDENT_ROSTER_ORDER_BY,
     });
 
     // Joriy sikl: har qarzdor enrollment'ining eng so'nggi (eng katta seq)

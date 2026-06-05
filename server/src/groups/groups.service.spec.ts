@@ -8,6 +8,7 @@ import { GroupsStatusService } from './groups-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
+import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 
 describe('GroupsService — status methods', () => {
   let service: GroupsService;
@@ -61,6 +62,7 @@ describe('GroupsService — status methods', () => {
       branch: { findFirst: jest.fn() },
       course: { findFirst: jest.fn() },
       room: { findFirst: jest.fn() },
+      enrollment: { findMany: jest.fn().mockResolvedValue([]) },
       user: { count: jest.fn() },
       groupTeacher: {
         deleteMany: jest.fn(),
@@ -370,6 +372,23 @@ describe('GroupsService — status methods', () => {
 
       // A fixed user name can't be auto-incremented — fail fast, no retries.
       expect(prisma.group.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('findStudentsByGroupId — roster order', () => {
+    it('orders the roster by the shared canonical order (matches Darslar/Davomat tabs)', async () => {
+      // Regression: this tab used `createdAt desc` (newest enrollment first)
+      // while the attendance/lesson tabs used firstName-asc, so the same group
+      // showed students in two different orders. All roster queries must use
+      // the one shared STUDENT_ROSTER_ORDER_BY.
+      prisma.group.findFirst.mockResolvedValue({ id: 'g1', companyId: 1001 });
+      prisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.findStudentsByGroupId('g1', 1001);
+
+      expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: STUDENT_ROSTER_ORDER_BY }),
+      );
     });
   });
 
