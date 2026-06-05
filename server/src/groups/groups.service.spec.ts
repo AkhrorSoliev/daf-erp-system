@@ -209,36 +209,54 @@ describe('GroupsService — status methods', () => {
 
   describe('getNextName', () => {
     it('returns #001 when no groups exist', async () => {
-      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: null } });
+      prisma.group.findMany.mockResolvedValue([]);
 
       const result = await service.getNextName(1, 1001);
 
       expect(result).toEqual({ nextName: '#001' });
-      expect(prisma.group.aggregate).toHaveBeenCalledWith({
-        where: {
-          branchId: 1,
-          name: { startsWith: '#' },
-          deletedAt: null,
-          companyId: 1001,
-        },
-        _max: { groupNumber: true },
+      // Scoped by branchId only, matching @@unique([name, branchId]); no
+      // deletedAt filter so archived names are still counted.
+      expect(prisma.group.findMany).toHaveBeenCalledWith({
+        where: { branchId: 1, name: { startsWith: '#' } },
+        select: { name: true, groupNumber: true },
       });
     });
 
-    it('returns #004 when max groupNumber is 3', async () => {
-      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 3 } });
+    it('returns #004 when the highest #NNN name is #003', async () => {
+      prisma.group.findMany.mockResolvedValue([
+        { name: '#001', groupNumber: 1 },
+        { name: '#003', groupNumber: 3 },
+        { name: '#002', groupNumber: 2 },
+      ]);
 
       const result = await service.getNextName(1, 1001);
 
       expect(result).toEqual({ nextName: '#004' });
     });
 
-    it('returns #1000 when max groupNumber is 999', async () => {
-      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 999 } });
+    it('returns #1000 when the highest #NNN name is #999', async () => {
+      prisma.group.findMany.mockResolvedValue([
+        { name: '#999', groupNumber: 999 },
+      ]);
 
       const result = await service.getNextName(1, 1001);
 
       expect(result).toEqual({ nextName: '#1000' });
+    });
+
+    it('derives the number from the name even when groupNumber is NULL (legacy rows)', async () => {
+      // Regression: groupNumber was added nullable with no backfill, so legacy
+      // #NNN groups carry NULL. The old MAX(groupNumber) logic reset to #001
+      // and collided forever; deriving from the name suffix avoids that.
+      prisma.group.findMany.mockResolvedValue([
+        { name: '#001', groupNumber: null },
+        { name: '#005', groupNumber: null },
+        { name: '#003', groupNumber: null },
+      ]);
+
+      const result = await service.getNextName(1, 1001);
+
+      expect(result).toEqual({ nextName: '#006' });
     });
   });
 
@@ -252,55 +270,42 @@ describe('GroupsService — status methods', () => {
       lessonEndTime: '10:30',
     };
 
-    it('generates name in #001 format', async () => {
+    const mockCreated = (name: string, groupNumber: number) => ({
+      ...mockGroup,
+      name,
+      groupNumber,
+      course: { id: 'course-1', name: 'Deutsch' },
+      room: null,
+      branch: { id: 1, name: 'Branch' },
+      teachers: [],
+      _count: { enrollments: 0 },
+    });
+
+    beforeEach(() => {
       prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
       prisma.course.findFirst.mockResolvedValue({
         id: 'course-1',
         name: 'Deutsch',
         deletedAt: null,
       });
-      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: null } });
-      prisma.group.create.mockResolvedValue({
-        ...mockGroup,
-        name: '#001',
-        groupNumber: 1,
-        course: { id: 'course-1', name: 'Deutsch' },
-        room: null,
-        branch: { id: 1, name: 'Branch' },
-        teachers: [],
-        _count: { enrollments: 0 },
-      });
+    });
+
+    it('generates name in #001 format', async () => {
+      prisma.group.findMany.mockResolvedValue([]);
+      prisma.group.create.mockResolvedValue(mockCreated('#001', 1));
 
       await service.create(createDto as any, 1001, 1);
 
       expect(prisma.group.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            name: '#001',
-            groupNumber: 1,
-          }),
+          data: expect.objectContaining({ name: '#001', groupNumber: 1 }),
         }),
       );
     });
 
     it('uses custom name when dto.name is provided', async () => {
-      prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
-      prisma.course.findFirst.mockResolvedValue({
-        id: 'course-1',
-        name: 'Deutsch',
-        deletedAt: null,
-      });
-      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 5 } });
-      prisma.group.create.mockResolvedValue({
-        ...mockGroup,
-        name: 'Custom Group',
-        groupNumber: 6,
-        course: { id: 'course-1', name: 'Deutsch' },
-        room: null,
-        branch: { id: 1, name: 'Branch' },
-        teachers: [],
-        _count: { enrollments: 0 },
-      });
+      prisma.group.findMany.mockResolvedValue([{ name: '#005', groupNumber: 5 }]);
+      prisma.group.create.mockResolvedValue(mockCreated('Custom Group', 6));
 
       await service.create(
         { ...createDto, name: 'Custom Group' } as any,
@@ -310,43 +315,61 @@ describe('GroupsService — status methods', () => {
 
       expect(prisma.group.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            name: 'Custom Group',
-          }),
+          data: expect.objectContaining({ name: 'Custom Group' }),
         }),
       );
     });
 
-    it('queries aggregate with startsWith # (not level prefix)', async () => {
-      prisma.branch.findFirst.mockResolvedValue({ id: 1, deletedAt: null });
-      prisma.course.findFirst.mockResolvedValue({
-        id: 'course-1',
-        name: 'Deutsch',
-        deletedAt: null,
-      });
-      prisma.group.aggregate.mockResolvedValue({ _max: { groupNumber: 10 } });
-      prisma.group.create.mockResolvedValue({
-        ...mockGroup,
-        name: '#011',
-        groupNumber: 11,
-        course: { id: 'course-1', name: 'Deutsch' },
-        room: null,
-        branch: { id: 1, name: 'Branch' },
-        teachers: [],
-        _count: { enrollments: 0 },
-      });
+    it('derives the next number from existing #NNN names, ignoring NULL groupNumber', async () => {
+      // Regression for "Guruh nomini generatsiya qilib bo'lmadi": the branch
+      // has a legacy #010 whose groupNumber is NULL. Old logic computed #001
+      // and collided on @@unique([name, branchId]); now we get #011.
+      prisma.group.findMany.mockResolvedValue([
+        { name: '#010', groupNumber: null },
+      ]);
+      prisma.group.create.mockResolvedValue(mockCreated('#011', 11));
 
       await service.create(createDto as any, 1001, 1);
 
-      expect(prisma.group.aggregate).toHaveBeenCalledWith({
-        where: {
-          branchId: 1,
-          name: { startsWith: '#' },
-          deletedAt: null,
-          companyId: 1001,
-        },
-        _max: { groupNumber: true },
+      expect(prisma.group.findMany).toHaveBeenCalledWith({
+        where: { branchId: 1, name: { startsWith: '#' } },
+        select: { name: true, groupNumber: true },
       });
+      expect(prisma.group.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ name: '#011', groupNumber: 11 }),
+        }),
+      );
+    });
+
+    it('increments the number on a P2002 collision instead of repeating it', async () => {
+      // Safety net for concurrent inserts: a unique-name clash must advance to
+      // the next slot, not retry the same name (the old infinite-loop bug).
+      prisma.group.findMany.mockResolvedValue([{ name: '#005', groupNumber: 5 }]);
+      prisma.group.create
+        .mockRejectedValueOnce({ code: 'P2002' })
+        .mockResolvedValueOnce(mockCreated('#007', 7));
+
+      await service.create(createDto as any, 1001, 1);
+
+      expect(prisma.group.create).toHaveBeenCalledTimes(2);
+      expect(prisma.group.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ name: '#007', groupNumber: 7 }),
+        }),
+      );
+    });
+
+    it('throws a clear conflict (no retry) when a custom name is already taken', async () => {
+      prisma.group.findMany.mockResolvedValue([]);
+      prisma.group.create.mockRejectedValue({ code: 'P2002' });
+
+      await expect(
+        service.create({ ...createDto, name: 'Dup' } as any, 1001, 1),
+      ).rejects.toThrow('allaqachon mavjud');
+
+      // A fixed user name can't be auto-incremented — fail fast, no retries.
+      expect(prisma.group.create).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -580,15 +603,15 @@ describe('GroupsService — status methods', () => {
       );
     });
 
-    it('getNextName scopes aggregate to companyId', async () => {
+    it('getNextName scopes the name scan to the branch', async () => {
+      // A branch belongs to exactly one company, so scoping by branchId is the
+      // tenant boundary here — and it matches @@unique([name, branchId]) exactly,
+      // which is what makes the generated number collision-proof.
+      prisma.group.findMany.mockResolvedValue([]);
       await service.getNextName(1, 1001);
-      expect(prisma.group.aggregate).toHaveBeenCalledWith(
+      expect(prisma.group.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            branchId: 1,
-            deletedAt: null,
-            companyId: 1001,
-          }),
+          where: { branchId: 1, name: { startsWith: '#' } },
         }),
       );
     });
