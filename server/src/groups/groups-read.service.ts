@@ -5,6 +5,7 @@ import { GroupQueryDto } from './dto/group-query.dto';
 import { Prisma } from '@prisma/client';
 import { groupInclude, formatGroup } from './shared/group-include';
 import { computeNextGroupNumber } from './shared/next-group-number';
+import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 
 @Injectable()
 export class GroupsReadService {
@@ -164,7 +165,7 @@ export class GroupsReadService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: STUDENT_ROSTER_ORDER_BY,
     });
 
     return enrollments.map((e) => ({

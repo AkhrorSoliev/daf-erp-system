@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
+import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import {
   JS_TO_DAY_NAME,
   tashkentDateStr,
@@ -592,7 +593,7 @@ export class AttendanceReadService {
           },
         },
       },
-      orderBy: { student: { firstName: 'asc' } },
+      orderBy: STUDENT_ROSTER_ORDER_BY,
     });
 
     const existingAttendance = await this.prisma.attendance.findMany({
@@ -849,7 +850,7 @@ export class AttendanceReadService {
           },
         },
       },
-      orderBy: { student: { firstName: 'asc' } },
+      orderBy: STUDENT_ROSTER_ORDER_BY,
     });
 
     const students = enrollments.map((e) => {
