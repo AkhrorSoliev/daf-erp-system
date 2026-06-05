@@ -235,15 +235,22 @@ describe('AttendanceService', () => {
     });
 
     describe('lesson time check', () => {
+      // validateLessonDate resolves "today" + the weekday in Asia/Tashkent
+      // (UTC+5). Compute these helpers in the same zone so the lesson date /
+      // weekday don't drift to the previous day when CI runs in the
+      // 19:00–23:59 UTC window — that drift made the time-check tests below
+      // flaky (the date stopped matching "today", so the check was skipped).
+      const tashkentNow = () => new Date(Date.now() + 5 * 60 * 60 * 1000);
+
       // Today's date string for time tests
       const getTodayStr = () => {
-        const now = new Date();
-        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const now = tashkentNow();
+        return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
       };
 
       // Mock group that matches today's day-of-week
       const getTodayMockGroup = () => {
-        const now = new Date();
+        const now = tashkentNow();
         const dayNames = [
           'sunday',
           'monday',
@@ -255,9 +262,9 @@ describe('AttendanceService', () => {
         ];
         return {
           ...mockGroup,
-          exactDays: [dayNames[now.getDay()]],
-          startDate: new Date(now.getFullYear(), 0, 1),
-          endDate: new Date(now.getFullYear(), 11, 31),
+          exactDays: [dayNames[now.getUTCDay()]],
+          startDate: new Date(Date.UTC(now.getUTCFullYear(), 0, 1)),
+          endDate: new Date(Date.UTC(now.getUTCFullYear(), 11, 31)),
         };
       };
 
