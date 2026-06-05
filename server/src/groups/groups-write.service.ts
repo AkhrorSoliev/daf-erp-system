@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -12,6 +16,7 @@ import {
   INT_TO_GROUP_STATUS,
 } from './shared/group-include';
 import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
+import { computeNextGroupNumber } from './shared/next-group-number';
 
 @Injectable()
 export class GroupsWriteService {
@@ -72,19 +77,13 @@ export class GroupsWriteService {
       ? { create: dto.teacherIds.map((teacherId) => ({ teacherId })) }
       : undefined;
 
-    // Retry loop to handle race conditions on unique name
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const nameWhere = {
-        branchId: dto.branchId,
-        name: { startsWith: '#' },
-        deletedAt: null,
-        companyId,
-      };
-      const maxGroupNumber = await this.prisma.group.aggregate({
-        where: nameWhere,
-        _max: { groupNumber: true },
-      });
-      const groupNumber = (maxGroupNumber._max?.groupNumber ?? 0) + 1;
+    // Derive the starting number from existing `#NNN` names (active + archived)
+    // so the generated name can't collide with one still held by the unique
+    // index. See computeNextGroupNumber for why the groupNumber column alone is
+    // unreliable. On a P2002 collision (only a concurrent insert should reach
+    // here now) we increment and retry instead of recomputing the same number.
+    let groupNumber = await computeNextGroupNumber(this.prisma, dto.branchId);
+    for (let attempt = 0; attempt < 25; attempt++, groupNumber++) {
       const autoName = dto.name || `#${String(groupNumber).padStart(3, '0')}`;
 
       try {
@@ -175,13 +174,22 @@ export class GroupsWriteService {
         });
         return formatGroup(refreshed ?? group);
       } catch (error: any) {
-        // Unique constraint violation — retry with next number
-        if (error.code === 'P2002') continue;
+        if (error.code === 'P2002') {
+          // A user-supplied name is fixed — incrementing won't help, so report
+          // the real conflict instead of the cryptic generation error.
+          if (dto.name) {
+            throw new ConflictException(
+              `"${dto.name}" nomli guruh bu filialda allaqachon mavjud`,
+            );
+          }
+          // Auto-name collided (concurrent insert) — for-loop bumps the number.
+          continue;
+        }
         throw error;
       }
     }
 
-    throw new NotFoundException(
+    throw new ConflictException(
       "Guruh nomini generatsiya qilib bo'lmadi, qayta urinib ko'ring",
     );
   }

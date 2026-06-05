@@ -4,6 +4,7 @@ import { StatusHistoryService } from '../common/status';
 import { GroupQueryDto } from './dto/group-query.dto';
 import { Prisma } from '@prisma/client';
 import { groupInclude, formatGroup } from './shared/group-include';
+import { computeNextGroupNumber } from './shared/next-group-number';
 
 @Injectable()
 export class GroupsReadService {
@@ -126,17 +127,8 @@ export class GroupsReadService {
     };
   }
 
-  async getNextName(branchId: number, companyId: number) {
-    const maxGroupNumber = await this.prisma.group.aggregate({
-      where: {
-        branchId,
-        name: { startsWith: '#' },
-        deletedAt: null,
-        companyId,
-      },
-      _max: { groupNumber: true },
-    });
-    const nextNumber = (maxGroupNumber._max?.groupNumber ?? 0) + 1;
+  async getNextName(branchId: number, _companyId: number) {
+    const nextNumber = await computeNextGroupNumber(this.prisma, branchId);
     return { nextName: `#${String(nextNumber).padStart(3, '0')}` };
   }
 
