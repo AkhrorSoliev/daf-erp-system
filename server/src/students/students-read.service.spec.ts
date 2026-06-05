@@ -19,6 +19,10 @@ describe('StudentsReadService', () => {
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
+      // systemStartDate floor lookup — default null = no floor (legacy behaviour).
+      company: {
+        findUnique: jest.fn().mockResolvedValue({ systemStartDate: null }),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -228,6 +232,56 @@ describe('StudentsReadService', () => {
       await service.getLessonsOverview(10001, 1001, true);
       const where = prisma.enrollment.findMany.mock.calls[0][0].where;
       expect(where.status).toBeUndefined();
+    });
+
+    it('floors the attendance query to company.systemStartDate (April hidden)', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.company.findUnique.mockResolvedValue({
+        systemStartDate: new Date('2026-05-01T00:00:00.000Z'),
+      });
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'enr-1',
+          status: 'ACTIVE',
+          startDate: new Date('2026-05-01'),
+          group: {
+            id: 'grp-1',
+            name: '#020',
+            course: { name: 'A1', lessonPaymentCount: 12 },
+          },
+        },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      await service.getLessonsOverview(10001, 1001);
+
+      const where = prisma.attendance.findMany.mock.calls[0][0].where;
+      expect(where.date).toEqual({
+        gte: new Date('2026-05-01T00:00:00.000Z'),
+      });
+    });
+
+    it('applies no date floor when systemStartDate is null', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.company.findUnique.mockResolvedValue({ systemStartDate: null });
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'enr-1',
+          status: 'ACTIVE',
+          startDate: null,
+          group: {
+            id: 'grp-1',
+            name: '#020',
+            course: { name: 'A1', lessonPaymentCount: 12 },
+          },
+        },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      await service.getLessonsOverview(10001, 1001);
+
+      const where = prisma.attendance.findMany.mock.calls[0][0].where;
+      expect(where.date).toBeUndefined();
     });
   });
 });

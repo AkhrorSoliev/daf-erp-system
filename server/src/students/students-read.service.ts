@@ -10,6 +10,7 @@ import { StatusHistoryService } from '../common/status';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { getSystemStartDate } from '../common/finance/system-start-date';
 
 @Injectable()
 export class StudentsReadService {
@@ -420,10 +421,20 @@ export class StudentsReadService {
 
     const groupIds = enrollments.map((e) => e.group.id);
 
+    // Cutover floor: don't surface lessons before the company's
+    // systemStartDate (mid-April 2026 go-live). Lessons stay in the DB (still
+    // queryable elsewhere) — they just don't appear in the Darslar tab, so
+    // cycles re-group cleanly from May 1. NULL floor => unchanged.
+    const systemStart = await getSystemStartDate(this.prisma, companyId);
+
     // O'quvchining shu guruhlardagi haqiqiy davomat qatorlari (faqat shu
     // o'quvchi — getLessonSequence'ning butun-guruh fetch'idan ancha kichik).
     const attendances = await this.prisma.attendance.findMany({
-      where: { studentId: id, groupId: { in: groupIds } },
+      where: {
+        studentId: id,
+        groupId: { in: groupIds },
+        ...(systemStart ? { date: { gte: systemStart } } : {}),
+      },
       select: { id: true, groupId: true, date: true, status: true },
       orderBy: { date: 'asc' },
     });
