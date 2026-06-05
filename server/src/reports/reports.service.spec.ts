@@ -22,6 +22,10 @@ describe('ReportsService', () => {
   beforeEach(async () => {
     prisma = {
       student: { count: jest.fn(), findMany: jest.fn() },
+      // systemStartDate floor lookup — default null = no floor (legacy behaviour).
+      company: {
+        findUnique: jest.fn().mockResolvedValue({ systemStartDate: null }),
+      },
       group: {
         count: jest.fn(),
         findMany: jest.fn(),
