@@ -8,6 +8,10 @@ import {
   AttendanceByGroupQueryDto,
   AttendanceTeacherPerfQueryDto,
 } from './dto/attendance-reports-query.dto';
+import {
+  getSystemStartDate,
+  floorStart,
+} from '../common/finance/system-start-date';
 
 const MONTH_LABELS_UZ = [
   'Yan',
@@ -110,8 +114,9 @@ export class ReportsAttendanceAnalyticsService {
 
     const allGroupIds = [...new Set(groupTeachers.map((gt) => gt.groupId))];
 
-    const dateFilter = this.buildDateFilter(query);
-    const period = this.resolvePeriod(query);
+    const systemStart = await getSystemStartDate(this.prisma, companyId);
+    const dateFilter = this.buildDateFilter(query, systemStart);
+    const period = this.resolvePeriod(query, systemStart);
 
     const [attendanceByGroup, enrollmentSnapshots] = await Promise.all([
       allGroupIds.length > 0
@@ -230,8 +235,9 @@ export class ReportsAttendanceAnalyticsService {
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
-    const dateFilter = this.buildDateFilter(query);
-    const period = this.resolvePeriod(query);
+    const systemStart = await getSystemStartDate(this.prisma, companyId);
+    const dateFilter = this.buildDateFilter(query, systemStart);
+    const period = this.resolvePeriod(query, systemStart);
     const branchGroupIds = await this.getBranchGroupIds(
       companyId,
       query.branchId,
@@ -559,8 +565,9 @@ export class ReportsAttendanceAnalyticsService {
     }
 
     const groupIds = groups.map((g) => g.id);
-    const dateFilter = this.buildDateFilter(query);
-    const period = this.resolvePeriod(query);
+    const systemStart = await getSystemStartDate(this.prisma, companyId);
+    const dateFilter = this.buildDateFilter(query, systemStart);
+    const period = this.resolvePeriod(query, systemStart);
 
     const [attendance, lessonCounts, enrollmentSnapshots] = await Promise.all([
       this.prisma.attendance.groupBy({
@@ -724,8 +731,9 @@ export class ReportsAttendanceAnalyticsService {
     }
 
     const groupIds = groups.map((g) => g.id);
-    const dateFilter = this.buildDateFilter(query);
-    const period = this.resolvePeriod(query);
+    const systemStart = await getSystemStartDate(this.prisma, companyId);
+    const dateFilter = this.buildDateFilter(query, systemStart);
+    const period = this.resolvePeriod(query, systemStart);
 
     const [attendance, lessonCounts, enrollmentSnapshots] = await Promise.all([
       this.prisma.attendance.groupBy({
@@ -858,12 +866,23 @@ export class ReportsAttendanceAnalyticsService {
     return result;
   }
 
-  private buildDateFilter(query: ReportsQueryDto): any {
+  private buildDateFilter(
+    query: ReportsQueryDto,
+    systemStart: Date | null,
+  ): any {
     const filter: any = {};
-    if (query.startDate || query.endDate) {
+    // Floor the lower bound to the company's systemStartDate so pre-cutover
+    // (mid-April go-live) data never surfaces — even when an explicit
+    // startDate before the floor is requested, or no startDate is given.
+    const gte = floorStart(
+      query.startDate ? new Date(query.startDate) : undefined,
+      systemStart,
+    );
+    const lte = query.endDate ? new Date(query.endDate) : undefined;
+    if (gte || lte) {
       filter.date = {};
-      if (query.startDate) filter.date.gte = new Date(query.startDate);
-      if (query.endDate) filter.date.lte = new Date(query.endDate);
+      if (gte) filter.date.gte = gte;
+      if (lte) filter.date.lte = lte;
     }
     return filter;
   }
@@ -872,11 +891,18 @@ export class ReportsAttendanceAnalyticsService {
   // startDate/endDate parsing but returns concrete Date objects with sensible
   // defaults — start = epoch (so all enrollments count as "before start"),
   // end = now.
-  private resolvePeriod(query: {
-    startDate?: string;
-    endDate?: string;
-  }): { start: Date; end: Date } {
-    const start = query.startDate ? new Date(query.startDate) : new Date(0);
+  private resolvePeriod(
+    query: {
+      startDate?: string;
+      endDate?: string;
+    },
+    systemStart: Date | null,
+  ): { start: Date; end: Date } {
+    const start =
+      floorStart(
+        query.startDate ? new Date(query.startDate) : undefined,
+        systemStart,
+      ) ?? new Date(0);
     const end = query.endDate ? new Date(query.endDate) : new Date();
     return { start, end };
   }

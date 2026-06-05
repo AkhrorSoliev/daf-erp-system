@@ -60,6 +60,10 @@ describe('AttendanceService', () => {
 
   beforeEach(async () => {
     prisma = {
+      // systemStartDate floor lookup — default null = no floor (legacy behaviour).
+      company: {
+        findUnique: jest.fn().mockResolvedValue({ systemStartDate: null }),
+      },
       group: {
         findFirst: jest.fn().mockResolvedValue(mockGroup),
         findUnique: jest.fn().mockResolvedValue({

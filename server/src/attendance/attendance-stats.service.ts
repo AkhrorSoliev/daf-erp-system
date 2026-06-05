@@ -9,6 +9,10 @@ import {
 } from './shared/date-utils';
 import { buildScheduleDayResolver } from './shared/schedule-resolver';
 import { HolidaysService } from '../holidays/holidays.service';
+import {
+  getSystemStartDate,
+  floorStart,
+} from '../common/finance/system-start-date';
 
 @Injectable()
 export class AttendanceStatsService {
@@ -41,9 +45,15 @@ export class AttendanceStatsService {
     if (!group) throw new NotFoundException('Guruh topilmadi');
 
     const now = new Date();
-    const rangeStart = startDate
+    const requestedStart = startDate
       ? new Date(startDate + 'T00:00:00.000Z')
       : (group.startDate ?? new Date(now.getFullYear(), 0, 1));
+    // Floor to the company's systemStartDate so pre-cutover lessons are never
+    // counted in stats (May-1 2026 go-live). NULL floor => unchanged.
+    const systemStart = companyId
+      ? await getSystemStartDate(this.prisma, companyId)
+      : null;
+    const rangeStart = floorStart(requestedStart, systemStart) ?? requestedStart;
     const rangeEnd = endDate ? new Date(endDate + 'T00:00:00.000Z') : now;
 
     // Schedule-change aware: resolve lesson weekdays per date so the lesson

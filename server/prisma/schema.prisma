@@ -1288,6 +1288,10 @@ model Company {
   customCss       String?
   customCssLead   String?
   leadSuccessText String?
+  // Global reporting floor. When set, attendance stats / analytics reports do
+  // not count or display data before this date — used at the May-1 cutover so
+  // mid-April go-live noise never surfaces. NULL = no floor (count everything).
+  systemStartDate DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
