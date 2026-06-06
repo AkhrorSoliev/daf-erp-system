@@ -609,6 +609,23 @@ export class AttendanceReadService {
       existingAttendance.map((a) => [a.studentId, a]),
     );
 
+    // Oldindan belgilangan (hali consume bo'lmagan) kelmasliklar — admin dars
+    // boshlanmasidan oldin "kelmaydi" deb belgilab qo'ygan o'quvchilar. Bular
+    // haqiqiy davomat emas (status baribir null qoladi); frontend ulardan
+    // formani EXCUSED bilan oldindan to'ldiradi va "Oldindan" belgisini
+    // ko'rsatadi. Yakuniy davomat olinganda save xizmati consume qiladi.
+    const plannedAbsences = await this.prisma.plannedAbsence.findMany({
+      where: { groupId, date: parsedDate, consumedAt: null },
+      select: {
+        id: true,
+        studentId: true,
+        kind: true,
+        note: true,
+        createdBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+    const plannedMap = new Map(plannedAbsences.map((p) => [p.studentId, p]));
+
     // Per-group debt classification: a student is a debtor if their balance
     // can't cover even one lesson at this group's per-lesson cost. Debtors
     // now appear in the main roster for everyone (with an inline indicator)
@@ -620,6 +637,7 @@ export class AttendanceReadService {
 
     const activeStudents = enrollments.map((e) => {
       const att = attendanceMap.get(e.studentId);
+      const planned = plannedMap.get(e.studentId);
       // A student is flagged as a debtor when their balance has already
       // gone negative — i.e. one or more past lessons remain uncovered.
       // The billing layer now charges the per-lesson cost on every
@@ -641,6 +659,12 @@ export class AttendanceReadService {
         ),
         status: att?.status ?? null,
         note: att?.note ?? null,
+        // Pre-mark (oldindan belgilash) — null when the lesson has no pending
+        // pre-mark for this student.
+        plannedId: planned?.id ?? null,
+        plannedKind: planned?.kind ?? null,
+        plannedNote: planned?.note ?? null,
+        plannedBy: planned?.createdBy ?? null,
       };
     });
 

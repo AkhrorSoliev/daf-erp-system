@@ -49,6 +49,7 @@ import { LessonReschedulesModule } from './lesson-reschedules/lesson-reschedules
 import { BillingModule } from './billing/billing.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 import { OutreachModule } from './outreach/outreach.module';
+import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -102,6 +103,7 @@ import { JwtAuthGuard } from './common/guards';
     LessonReschedulesModule,
     ReceiptsModule,
     OutreachModule,
+    PlannedAbsencesModule,
   ],
   providers: [
     {

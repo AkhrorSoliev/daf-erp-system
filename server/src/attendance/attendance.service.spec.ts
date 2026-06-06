@@ -93,6 +93,13 @@ describe('AttendanceService', () => {
         groupBy: jest.fn().mockResolvedValue([]),
         findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn(),
+        update: jest.fn(),
+      },
+      // Oldindan belgilash (pre-mark) — default empty so existing getByDate /
+      // save tests are unaffected.
+      plannedAbsence: {
+        findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       enrollment: {
         findMany: jest.fn().mockResolvedValue(mockEnrollments),
@@ -655,6 +662,45 @@ describe('AttendanceService', () => {
       expect(result.coursePrice).toBe(800000);
     });
 
+    it('pre-fills plannedKind/plannedId for a pending pre-mark (real status stays null)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.plannedAbsence.findMany.mockResolvedValue([
+        {
+          id: 'pa-1',
+          studentId: 10001,
+          kind: 'SABABSIZ',
+          note: 'ertalab qo’ng’iroq qildi',
+          createdBy: { id: 9, firstName: 'Admin', lastName: 'A' },
+        },
+      ]);
+
+      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+
+      const s1 = result.activeStudents.find(
+        (s: { studentId: number }) => s.studentId === 10001,
+      );
+      expect(s1).toEqual(
+        expect.objectContaining({
+          plannedId: 'pa-1',
+          plannedKind: 'SABABSIZ',
+          plannedNote: 'ertalab qo’ng’iroq qildi',
+          status: null, // pre-mark is NOT a real attendance row yet
+        }),
+      );
+      // Students without a pre-mark expose null planned fields.
+      const s2 = result.activeStudents.find(
+        (s: { studentId: number }) => s.studentId === 10002,
+      );
+      expect(s2.plannedKind).toBeNull();
+      expect(s2.plannedId).toBeNull();
+      // Only unconsumed pre-marks are loaded.
+      expect(prisma.plannedAbsence.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ consumedAt: null }),
+        }),
+      );
+    });
+
     it('should throw NotFoundException when group not found', async () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
@@ -752,6 +798,67 @@ describe('AttendanceService', () => {
           changedById: 1,
         }),
       );
+    });
+
+    it('consumes pending pre-marks on finalize and keeps the teacher unlocked', async () => {
+      prisma.enrollment.findMany.mockResolvedValue(
+        mockEnrollments.map((e) => ({
+          studentId: e.studentId,
+          student: { balance: e.student.balance },
+        })),
+      );
+      // No real attendance exists yet — a pre-mark must NOT lock the teacher
+      // out (the lock keys off attendance rows, not planned rows).
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.plannedAbsence.findMany.mockResolvedValue([
+        { studentId: 10001, kind: 'SABABSIZ', note: null },
+      ]);
+      prisma.attendance.upsert
+        .mockResolvedValueOnce({
+          id: 'att-1',
+          studentId: 10001,
+          status: 'EXCUSED',
+          note: null,
+        })
+        .mockResolvedValueOnce({
+          id: 'att-2',
+          studentId: 10002,
+          status: 'PRESENT',
+          note: null,
+        });
+
+      const dto = {
+        entries: [
+          { studentId: 10001, status: 'EXCUSED' },
+          { studentId: 10002, status: 'PRESENT' },
+        ],
+      };
+
+      const result = await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        dto,
+        1,
+        ['Teacher'],
+        1,
+      );
+
+      expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
+      // Pre-marks for the date are stamped consumed.
+      expect(prisma.plannedAbsence.updateMany).toHaveBeenCalledWith({
+        where: {
+          groupId: 'group-uuid-1',
+          date: expect.any(Date),
+          consumedAt: null,
+        },
+        data: { consumedAt: expect.any(Date) },
+      });
+      // EXCUSED row with an empty note gets the "Oldindan" marker written
+      // server-side (teachers can't write notes themselves).
+      expect(prisma.attendance.update).toHaveBeenCalledWith({
+        where: { id: 'att-1' },
+        data: { note: 'Oldindan: sababsiz' },
+      });
     });
 
     it('should throw BadRequestException for unenrolled student', async () => {

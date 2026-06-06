@@ -32,6 +32,13 @@ import { HolidaysModule } from '../holidays/holidays.module';
     AttendanceEventsListener,
     StudentAttendanceNotificationListener,
   ],
-  exports: [AttendanceService, QrAttendanceService],
+  exports: [
+    AttendanceService,
+    QrAttendanceService,
+    // Exported so PlannedAbsencesModule can reuse the exact same lesson-date
+    // validation (format / ACTIVE / range / schedule / cancellation / holiday)
+    // without duplicating the rules.
+    AttendanceValidationService,
+  ],
 })
 export class AttendanceModule {}

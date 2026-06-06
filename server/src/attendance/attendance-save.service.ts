@@ -195,6 +195,44 @@ export class AttendanceSaveService {
           }
         }
 
+        // Oldindan belgilangan kelmasliklarni "consume" qilamiz — yakuniy
+        // davomat olingach ular formada qayta ko'rinmasligi uchun. Pre-mark
+        // hech qachon bill qilmagan (u Attendance emas edi); yakuniy status
+        // odatda EXCUSED bo'ladi va u mavjud "EXCUSED bill qilmaydi" yo'lidan
+        // o'tadi.
+        const plannedToConsume = await tx.plannedAbsence.findMany({
+          where: { groupId, date: parsedDate, consumedAt: null },
+          select: { studentId: true, kind: true, note: true },
+        });
+        if (plannedToConsume.length > 0) {
+          await tx.plannedAbsence.updateMany({
+            where: { groupId, date: parsedDate, consumedAt: null },
+            data: { consumedAt: new Date() },
+          });
+
+          // Sababli/sababsiz belgisini saqlab qolamiz: oldindan belgilangan
+          // o'quvchi yakuniy davomatda EXCUSED bo'lsa va izoh bo'sh bo'lsa
+          // (ustoz izoh yoza olmaydi), izohga "Oldindan: sababli/sababsiz"
+          // markerini yozamiz. Mavjud (admin yozgan) izohni hech qachon
+          // ustiga yozmaymiz.
+          const upsertByStudent = new Map(
+            upsertResults.map((r) => [r.studentId, r]),
+          );
+          for (const planned of plannedToConsume) {
+            const saved = upsertByStudent.get(planned.studentId);
+            if (!saved || saved.status !== AttendanceStatus.EXCUSED) continue;
+            if (saved.note && saved.note.trim().length > 0) continue;
+            const label = planned.kind === 'SABABSIZ' ? 'sababsiz' : 'sababli';
+            const note = planned.note
+              ? `Oldindan: ${label} — ${planned.note}`
+              : `Oldindan: ${label}`;
+            await tx.attendance.update({
+              where: { id: saved.id },
+              data: { note },
+            });
+          }
+        }
+
         return { upsertResults, existingMap, statusChanges };
       },
       {
