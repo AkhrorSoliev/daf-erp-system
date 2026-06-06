@@ -9,6 +9,7 @@ import {
   UserX,
   Check,
   QrCode,
+  CalendarClock,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ import {
   type AttendanceEntry,
   type AttendanceStatus,
   type DebtorStudent,
+  type PlannedAbsenceKind,
   type StudentAttendance,
 } from "./attendance-form-utils";
 
@@ -65,6 +67,10 @@ export function AttendanceForm({
   const [submitting, setSubmitting] = useState(false);
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  // Oldindan belgilash rejimida admin "Hozir to'liq davomat olish" bossa,
+  // bu bayroq finalize rejimiga o'tkazadi.
+  const [forceFinalizeMode, setForceFinalizeMode] = useState(false);
+  const [planSubmitting, setPlanSubmitting] = useState<number | null>(null);
 
   const [y, m, d] = date.split("-");
   const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
@@ -114,6 +120,17 @@ export function AttendanceForm({
       lessonTimeInfo != null &&
       lessonTimeInfo.status !== "during");
 
+  // Oldindan belgilash konteksti: admin, davomat hali umuman olinmagan
+  // (barcha real status null) va dars bugun yoki kelajakda. Bu holatda
+  // admin to'liq ro'yxatni saqlamasdan, bitta o'quvchini oldindan
+  // "kelmaydi" deb belgilab qo'yishi mumkin — ustoz qulflanmaydi.
+  const isPlanningContext =
+    isAdmin &&
+    students.length > 0 &&
+    students.every((s) => s.status === null) &&
+    date >= tashkent.dateStr;
+  const planningMode = isPlanningContext && !forceFinalizeMode;
+
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
     try {
@@ -131,10 +148,16 @@ export function AttendanceForm({
 
       const map = new Map<number, AttendanceEntry>();
       for (const s of active) {
+        // Oldindan belgilangan (lekin hali davomat olinmagan) o'quvchini
+        // EXCUSED bilan urug'lantiramiz — yakuniy davomatda u "Sababli" bo'lib
+        // turadi (pul yechilmaydi). Ustoz/admin baribir boshqa holatga
+        // o'zgartira oladi (masalan o'quvchi kelib qolsa — "Keldi").
+        const seededStatus: AttendanceStatus | null =
+          s.status ?? (s.plannedKind ? "EXCUSED" : null);
         map.set(s.studentId, {
           studentId: s.studentId,
-          status: s.status ?? null,
-          note: s.note ?? undefined,
+          status: seededStatus,
+          note: s.note ?? s.plannedNote ?? undefined,
         });
       }
       setEntries(map);
@@ -183,6 +206,84 @@ export function AttendanceForm({
       }
       return next;
     });
+  };
+
+  // Oldindan belgilash (pre-mark) — bitta o'quvchini darhol belgilaydi,
+  // to'liq ro'yxat shart emas, ustoz qulflanmaydi.
+  const planMark = async (studentId: number, kind: PlannedAbsenceKind) => {
+    setPlanSubmitting(studentId);
+    try {
+      const { data } = await api.post(
+        `/planned-absences/${group.id}/date/${date}`,
+        { studentId, kind },
+      );
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.studentId === studentId
+            ? {
+                ...s,
+                plannedId: data.id,
+                plannedKind: data.kind,
+                plannedNote: data.note ?? null,
+                plannedBy: data.createdBy ?? null,
+              }
+            : s,
+        ),
+      );
+      // Keep the batch entry in sync so toggling to "Hozir to'liq davomat
+      // olish" shows the pre-marked student as EXCUSED (Sababli) by default.
+      setEntries((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(studentId);
+        if (!existing?.status) {
+          next.set(studentId, { ...existing, studentId, status: "EXCUSED" });
+        }
+        return next;
+      });
+      toast.success("Oldindan belgilandi");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Belgilashda xatolik yuz berdi"));
+    } finally {
+      setPlanSubmitting(null);
+    }
+  };
+
+  const planRemove = async (studentId: number) => {
+    const target = students.find((s) => s.studentId === studentId);
+    if (!target?.plannedId) return;
+    setPlanSubmitting(studentId);
+    try {
+      await api.delete(`/planned-absences/${target.plannedId}`);
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.studentId === studentId
+            ? {
+                ...s,
+                plannedId: null,
+                plannedKind: null,
+                plannedNote: null,
+                plannedBy: null,
+              }
+            : s,
+        ),
+      );
+      // Clear the auto-seeded EXCUSED so a removed pre-mark doesn't leave the
+      // student silently marked when finalizing. (Planning mode never exposes
+      // batch buttons, so an EXCUSED here can only be the seed.)
+      setEntries((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(studentId);
+        if (existing?.status === "EXCUSED") {
+          next.set(studentId, { ...existing, studentId, status: null });
+        }
+        return next;
+      });
+      toast.success("Oldindan belgilash o'chirildi");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "O'chirishda xatolik yuz berdi"));
+    } finally {
+      setPlanSubmitting(null);
+    }
   };
 
   const unmarkedStudents = students.filter((s) => {
@@ -288,8 +389,31 @@ export function AttendanceForm({
         </div>
       )}
 
+      {/* Oldindan belgilash rejimi banneri */}
+      {!loading && planningMode && (
+        <div className="flex flex-col gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-400 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <CalendarClock className="mt-0.5 size-4 shrink-0" />
+            <span>
+              Oldindan belgilash rejimi — bugun kelmaydigan o&apos;quvchini
+              hozir belgilang. Dars vaqtida ustoz davomatni oladi; belgilangan
+              o&apos;quvchilar &quot;Sababli&quot; bo&apos;lib turadi (pul
+              yechilmaydi).
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setForceFinalizeMode(true)}
+            className="shrink-0"
+          >
+            Hozir to&apos;liq davomat olish
+          </Button>
+        </div>
+      )}
+
       {/* Quick actions */}
-      {!loading && students.length > 0 && (
+      {!loading && students.length > 0 && !planningMode && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Tooltip>
@@ -383,6 +507,8 @@ export function AttendanceForm({
               isAdmin={isAdmin}
               isLocked={isLocked}
               isNoteOpen={expandedNote === student.studentId}
+              planningMode={planningMode}
+              planSubmitting={planSubmitting === student.studentId}
               onSetStatus={setStatus}
               onSetNote={setNote}
               onToggleNote={() =>
@@ -390,13 +516,15 @@ export function AttendanceForm({
                   expandedNote === student.studentId ? null : student.studentId,
                 )
               }
+              onPlanMark={planMark}
+              onPlanRemove={planRemove}
             />
           ))}
         </div>
       )}
 
       {/* Save button */}
-      {!loading && students.length > 0 && !alreadyTakenForTeacher && (
+      {!loading && students.length > 0 && !alreadyTakenForTeacher && !planningMode && (
         <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
           {unmarkedStudents.length > 0 && !isLocked && (
             <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">

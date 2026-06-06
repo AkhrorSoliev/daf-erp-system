@@ -357,6 +357,7 @@ model User {
   deletedLessonTeacherOverrides LessonTeacherOverride[]       @relation("LessonTeacherOverrideDeletedBy")
   scheduledLessonReschedules    LessonReschedule[]            @relation("LessonRescheduleScheduledBy")
   deletedLessonReschedules      LessonReschedule[]            @relation("LessonRescheduleDeletedBy")
+  plannedAbsences               PlannedAbsence[]              @relation("PlannedAbsenceCreatedBy")
   reversedSalaryAccruals        SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
 
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
@@ -533,6 +534,7 @@ model Student {
   branches        StudentBranch[]
   smsMessages     SmsMessage[]
   attendances     Attendance[]
+  plannedAbsences PlannedAbsence[]
   aiConversations AiConversation[] @relation("StudentAiConversations")
 
   mockExamParticipations MockExamParticipant[] @relation("StudentMockExamParticipations")
@@ -1041,6 +1043,7 @@ model Group {
   lessonTeacherOverrides LessonTeacherOverride[] @relation("LessonTeacherOverrideGroup")
   lessonReschedules      LessonReschedule[]      @relation("LessonRescheduleGroup")
   holidayExtensions      GroupHolidayExtension[]
+  plannedAbsences        PlannedAbsence[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1303,6 +1306,7 @@ model Company {
   groups                      Group[]
   comments                    Comment[]
   attendances                 Attendance[]
+  plannedAbsences             PlannedAbsence[]
   studentExitReasons          StudentExitReason[]
   groupTeacherChangeReasons   GroupTeacherChangeReason[]
   enrollmentTransferReasons   EnrollmentTransferReason[]
@@ -1525,6 +1529,42 @@ model Attendance {
   @@index([studentId])
   @@index([companyId])
   @@index([cancellationId])
+}
+
+// Admin pre-marks a student as not-coming BEFORE the lesson is taken (e.g. the
+// student calls in the morning for an afternoon lesson). This is intent, not a
+// lesson record — it deliberately is NOT an Attendance row so it neither bills
+// nor locks the teacher out of taking attendance later. When the full roster is
+// finally saved, the matching planned rows are stamped `consumedAt`. Same
+// "side-table overlay" pattern as LessonCancellation / LessonReschedule.
+enum PlannedAbsenceKind {
+  SABABLI // excused — uzrli sabab
+  SABABSIZ // unexcused — umuman kelmaydi (lekin oldindan ogohlantirgan)
+}
+
+model PlannedAbsence {
+  id          String             @id @default(uuid())
+  groupId     String
+  group       Group              @relation(fields: [groupId], references: [id])
+  studentId   Int
+  student     Student            @relation(fields: [studentId], references: [id])
+  date        DateTime           @db.Date
+  kind        PlannedAbsenceKind
+  note        String?
+  createdById Int?
+  createdBy   User?              @relation("PlannedAbsenceCreatedBy", fields: [createdById], references: [id])
+  // Set when the lesson's full attendance is finally saved — marks the pre-mark
+  // as merged into the real Attendance row so it stops pre-filling the form.
+  consumedAt  DateTime?
+  companyId   Int
+  company     Company            @relation(fields: [companyId], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([groupId, studentId, date])
+  @@index([groupId, date])
+  @@index([companyId, date])
+  @@index([studentId])
 }
 
 model AiConversation {

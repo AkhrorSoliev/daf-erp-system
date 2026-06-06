@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2, ShieldCheck, UserX, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,6 +15,7 @@ import {
   STATUS_CONFIG,
   type AttendanceEntry,
   type AttendanceStatus,
+  type PlannedAbsenceKind,
   type StatusOption,
   type StudentAttendance,
 } from "./attendance-form-utils";
@@ -27,9 +28,16 @@ interface AttendanceStudentRowProps {
   isAdmin: boolean;
   isLocked: boolean;
   isNoteOpen: boolean;
+  // Oldindan belgilash rejimi: davomat o'rniga bitta o'quvchini darhol
+  // "kelmaydi" deb belgilash. true bo'lsa batch status tugmalari o'rniga
+  // "Oldindan" boshqaruvi ko'rsatiladi.
+  planningMode?: boolean;
+  planSubmitting?: boolean;
   onSetStatus: (studentId: number, status: AttendanceStatus) => void;
   onSetNote: (studentId: number, note: string) => void;
   onToggleNote: () => void;
+  onPlanMark?: (studentId: number, kind: PlannedAbsenceKind) => void;
+  onPlanRemove?: (studentId: number) => void;
 }
 
 export function AttendanceStudentRow({
@@ -40,9 +48,13 @@ export function AttendanceStudentRow({
   isAdmin,
   isLocked,
   isNoteOpen,
+  planningMode = false,
+  planSubmitting = false,
   onSetStatus,
   onSetNote,
   onToggleNote,
+  onPlanMark,
+  onPlanRemove,
 }: AttendanceStudentRowProps) {
   const statusCfg = STATUS_CONFIG.find((s) => s.value === entry?.status);
   const rowBg = statusCfg?.activeBg ?? "";
@@ -106,6 +118,26 @@ export function AttendanceStudentRow({
                 </TooltipContent>
               </Tooltip>
             )}
+            {/* Yakuniy davomat olayotganda: bu o'quvchi oldindan belgilanganini
+                ko'rsatuvchi belgi (planning rejimida belgi alohida ko'rinadi). */}
+            {!planningMode && student.plannedKind && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-indigo-300 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
+                    <ShieldCheck className="size-3" />
+                    {student.plannedKind === "SABABLI"
+                      ? "Oldindan: Sababli"
+                      : "Oldindan: sababsiz"}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {student.plannedBy
+                    ? `${student.plannedBy.firstName} ${student.plannedBy.lastName} oldindan belgilagan.`
+                    : "Oldindan belgilangan."}{" "}
+                  Kerak bo&apos;lsa holatni o&apos;zgartiring.
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
           {isAdmin && entry?.note && !isNoteOpen && (
             <p className="truncate text-[11px] text-purple-600 dark:text-purple-400">
@@ -114,6 +146,14 @@ export function AttendanceStudentRow({
           )}
         </div>
 
+        {planningMode ? (
+          <PlanMarkInline
+            student={student}
+            planSubmitting={planSubmitting}
+            onPlanMark={onPlanMark}
+            onPlanRemove={onPlanRemove}
+          />
+        ) : (
         <div className="flex shrink-0 gap-1.5">
           {statusOptions.map((opt) => (
             <Tooltip key={opt.value}>
@@ -171,6 +211,7 @@ export function AttendanceStudentRow({
             </Tooltip>
           )}
         </div>
+        )}
       </div>
 
       {isAdmin && isNoteOpen && (
@@ -184,6 +225,86 @@ export function AttendanceStudentRow({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Oldindan belgilash boshqaruvi — davomat o'rniga bitta o'quvchini "kelmaydi"
+ * deb darhol belgilash. Allaqachon belgilangan bo'lsa: belgi + o'chirish;
+ * aks holda: ikki tugma (Sababli / Kelmaydi).
+ */
+function PlanMarkInline({
+  student,
+  planSubmitting,
+  onPlanMark,
+  onPlanRemove,
+}: {
+  student: StudentAttendance;
+  planSubmitting: boolean;
+  onPlanMark?: (studentId: number, kind: PlannedAbsenceKind) => void;
+  onPlanRemove?: (studentId: number) => void;
+}) {
+  if (student.plannedKind) {
+    const isSababli = student.plannedKind === "SABABLI";
+    return (
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium",
+            isSababli
+              ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
+              : "border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400",
+          )}
+        >
+          {isSababli ? (
+            <ShieldCheck className="size-3.5" />
+          ) : (
+            <UserX className="size-3.5" />
+          )}
+          {isSababli ? "Sababli" : "Kelmaydi"}
+        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              disabled={planSubmitting}
+              onClick={() => onPlanRemove?.(student.studentId)}
+              className="flex items-center justify-center rounded-lg border border-muted p-2 text-muted-foreground transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {planSubmitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <X className="size-4" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Oldindan belgilashni o&apos;chirish</TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <button
+        type="button"
+        disabled={planSubmitting}
+        onClick={() => onPlanMark?.(student.studentId, "SABABLI")}
+        className="flex items-center gap-1 rounded-lg border border-blue-200 px-2.5 py-2 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+      >
+        <ShieldCheck className="size-4" />
+        Sababli
+      </button>
+      <button
+        type="button"
+        disabled={planSubmitting}
+        onClick={() => onPlanMark?.(student.studentId, "SABABSIZ")}
+        className="flex items-center gap-1 rounded-lg border border-orange-200 px-2.5 py-2 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/30"
+      >
+        <UserX className="size-4" />
+        Kelmaydi
+      </button>
     </div>
   );
 }

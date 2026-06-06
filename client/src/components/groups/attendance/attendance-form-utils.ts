@@ -8,6 +8,9 @@ import {
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
+/** Oldindan belgilash turi — sababli (uzrli) yoki sababsiz (umuman kelmaydi). */
+export type PlannedAbsenceKind = "SABABLI" | "SABABSIZ";
+
 export interface StudentAttendance {
   studentId: number;
   firstName: string;
@@ -18,6 +21,12 @@ export interface StudentAttendance {
   debtAmount?: number;
   status: AttendanceStatus | null;
   note: string | null;
+  // Oldindan davomat belgilash (pre-mark) — dars boshlanmasidan oldin admin
+  // belgilab qo'ygan kelmaslik. status === null bo'lganda formani urug'lantiradi.
+  plannedId?: string | null;
+  plannedKind?: PlannedAbsenceKind | null;
+  plannedNote?: string | null;
+  plannedBy?: { id: number; firstName: string; lastName: string } | null;
 }
 
 /** Qarzdorning joriy (eng so'nggi) sikli — sana oralig'i bilan. */
