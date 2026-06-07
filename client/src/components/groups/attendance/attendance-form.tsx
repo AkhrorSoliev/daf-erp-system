@@ -210,12 +210,16 @@ export function AttendanceForm({
 
   // Oldindan belgilash (pre-mark) — bitta o'quvchini darhol belgilaydi,
   // to'liq ro'yxat shart emas, ustoz qulflanmaydi.
-  const planMark = async (studentId: number, kind: PlannedAbsenceKind) => {
+  const planMark = async (
+    studentId: number,
+    kind: PlannedAbsenceKind,
+    note?: string,
+  ) => {
     setPlanSubmitting(studentId);
     try {
       const { data } = await api.post(
         `/planned-absences/${group.id}/date/${date}`,
-        { studentId, kind },
+        { studentId, kind, ...(note ? { note } : {}) },
       );
       setStudents((prev) =>
         prev.map((s) =>

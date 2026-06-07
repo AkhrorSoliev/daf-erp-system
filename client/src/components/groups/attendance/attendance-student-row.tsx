@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Loader2, ShieldCheck, UserX, X } from "lucide-react";
+import { useState } from "react";
+import {
+  AlertTriangle,
+  Check,
+  Loader2,
+  ShieldCheck,
+  UserX,
+  X,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,7 +44,11 @@ interface AttendanceStudentRowProps {
   onSetStatus: (studentId: number, status: AttendanceStatus) => void;
   onSetNote: (studentId: number, note: string) => void;
   onToggleNote: () => void;
-  onPlanMark?: (studentId: number, kind: PlannedAbsenceKind) => void;
+  onPlanMark?: (
+    studentId: number,
+    kind: PlannedAbsenceKind,
+    note?: string,
+  ) => void;
   onPlanRemove?: (studentId: number) => void;
 }
 
@@ -133,7 +145,8 @@ export function AttendanceStudentRow({
                 <TooltipContent>
                   {student.plannedBy
                     ? `${student.plannedBy.firstName} ${student.plannedBy.lastName} oldindan belgilagan.`
-                    : "Oldindan belgilangan."}{" "}
+                    : "Oldindan belgilangan."}
+                  {student.plannedNote ? ` Sabab: ${student.plannedNote}.` : ""}{" "}
                   Kerak bo&apos;lsa holatni o&apos;zgartiring.
                 </TooltipContent>
               </Tooltip>
@@ -242,28 +255,44 @@ function PlanMarkInline({
 }: {
   student: StudentAttendance;
   planSubmitting: boolean;
-  onPlanMark?: (studentId: number, kind: PlannedAbsenceKind) => void;
+  onPlanMark?: (
+    studentId: number,
+    kind: PlannedAbsenceKind,
+    note?: string,
+  ) => void;
   onPlanRemove?: (studentId: number) => void;
 }) {
+  const [editingReason, setEditingReason] = useState(false);
+  const [reason, setReason] = useState("");
+
+  // Already pre-marked → badge (reason shown in tooltip) + remove.
   if (student.plannedKind) {
     const isSababli = student.plannedKind === "SABABLI";
     return (
       <div className="flex shrink-0 items-center gap-1.5">
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium",
-            isSababli
-              ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
-              : "border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400",
-          )}
-        >
-          {isSababli ? (
-            <ShieldCheck className="size-3.5" />
-          ) : (
-            <UserX className="size-3.5" />
-          )}
-          {isSababli ? "Sababli" : "Kelmaydi"}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium",
+                isSababli
+                  ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
+                  : "border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400",
+              )}
+            >
+              {isSababli ? (
+                <ShieldCheck className="size-3.5" />
+              ) : (
+                <UserX className="size-3.5" />
+              )}
+              {isSababli ? "Sababli" : "Kelmaydi"}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {isSababli ? "Sababli (uzrli)" : "Kelmaydi (sababsiz)"}
+            {student.plannedNote ? ` — ${student.plannedNote}` : ""}
+          </TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -285,12 +314,79 @@ function PlanMarkInline({
     );
   }
 
+  // "Sababli" tanlangach — sabab kiritish majburiy.
+  if (editingReason) {
+    const submit = () => {
+      const trimmed = reason.trim();
+      if (!trimmed) return;
+      onPlanMark?.(student.studentId, "SABABLI", trimmed);
+      setEditingReason(false);
+      setReason("");
+    };
+    const cancel = () => {
+      setEditingReason(false);
+      setReason("");
+    };
+    return (
+      <div className="flex shrink-0 items-center gap-1.5">
+        <Input
+          autoFocus
+          placeholder="Sababni yozing..."
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              submit();
+            } else if (e.key === "Escape") {
+              cancel();
+            }
+          }}
+          className="h-8 w-36 text-xs sm:w-44"
+        />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              disabled={!reason.trim() || planSubmitting}
+              onClick={submit}
+              className="flex items-center justify-center rounded-lg border border-blue-300 bg-blue-50 p-2 text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
+            >
+              {planSubmitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Check className="size-4" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Sababli deb saqlash</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={cancel}
+              className="flex items-center justify-center rounded-lg border border-muted p-2 text-muted-foreground transition-colors hover:bg-muted/50"
+            >
+              <X className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Bekor qilish</TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  }
+
+  // Default — kind tanlash. "Sababli" avval sabab so'raydi; "Kelmaydi" bir bosishda.
   return (
     <div className="flex shrink-0 items-center gap-1.5">
       <button
         type="button"
         disabled={planSubmitting}
-        onClick={() => onPlanMark?.(student.studentId, "SABABLI")}
+        onClick={() => {
+          setReason("");
+          setEditingReason(true);
+        }}
         className="flex items-center gap-1 rounded-lg border border-blue-200 px-2.5 py-2 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
       >
         <ShieldCheck className="size-4" />

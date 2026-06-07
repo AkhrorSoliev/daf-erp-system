@@ -43,6 +43,15 @@ export class PlannedAbsencesService {
     roles: string[],
     companyId: number,
   ) {
+    // A reason is mandatory for SABABLI (excused) — the admin must record WHY
+    // the absence is excused. SABABSIZ ("won't come, no excuse") needs none.
+    const note = dto.note?.trim() || undefined;
+    if (dto.kind === PlannedAbsenceKind.SABABLI && !note) {
+      throw new BadRequestException(
+        'Sababli (uzrli) belgilash uchun sabab kiritilishi shart',
+      );
+    }
+
     // 1. Reuse the attendance lesson-date validation. The caller is always
     // CEO / Branch Director / Administrator (controller @Roles), so the lesson
     // time window is bypassed — pre-marking today-before-the-lesson and any
@@ -109,13 +118,13 @@ export class PlannedAbsencesService {
         studentId: dto.studentId,
         date: parsedDate,
         kind: dto.kind,
-        note: dto.note ?? null,
+        note: note ?? null,
         createdById: userId,
         companyId,
       },
       update: {
         kind: dto.kind,
-        note: dto.note ?? null,
+        note: note ?? null,
         createdById: userId,
         consumedAt: null,
       },
@@ -142,6 +151,7 @@ export class PlannedAbsencesService {
       sana: date,
       oquvchiId: dto.studentId,
       holat: this.kindLabel(dto.kind),
+      ...(note ? { sabab: note } : {}),
     };
     await this.entityHistory.recordCreate({
       entityType: 'Group',
