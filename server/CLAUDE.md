@@ -279,6 +279,14 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 - On miss → `BadRequestException("Davomat saqlash uchun barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan o'quvchilar: N ta")`. Validation runs **inside** the `Serializable` tx, so a concurrent enrollment add can't race past it.
 - The frontend (`attendance-form.tsx`) mirrors this: the `Saqlash` button is disabled while any visible student has `status === null`, an amber "Belgilanmagan: N ta" badge sits next to it, and `handleSave()` no longer auto-coerces `null → "PRESENT"`. Both layers must stay in sync — never weaken the backend check thinking the UI already prevents the case (API is callable directly).
 
+#### Lesson-sequence dots — enrollment-coverage aware (`getLessonSequence`)
+
+The group "Davomat (nuqtalar)" tab (`attendance-dots-tab.tsx`) renders one dot per recent lesson date per **currently-ACTIVE** student. Unlike `getByDate`, it shows a student against the whole group's lesson history, so a student who **joined mid-stream** or **transferred out and back** would otherwise show a misleading "Belgilanmagan" (unmarked) on lessons held while they were not in the group.
+
+- `getLessonSequence` fetches **all** enrollments for the group (any status, not just ACTIVE) and builds per-student membership **windows** `[startDate, end]` where `end = statusChangedAt` for a closed (DROPPED/TRANSFERRED) enrollment, or open for an ACTIVE one. Tashkent date strings; a `null` start/end means unbounded. A student is "enrolled on date D" if D falls in **any** window (union — handles the transfer-out-then-back gap).
+- Each dot carries an `enrolled: boolean`. A blank dot (`status === null`) renders as the actionable **"Belgilanmagan"** only when the student was enrolled that day; otherwise it renders as a distinct, faint **"Guruhda bo'lmagan"** marker (`AttendanceDot`'s `enrolled` prop). An attendance row is itself proof of membership, so non-null statuses are always `enrolled: true`. The roster is still ACTIVE-only, deduped to one row per student.
+- This is display-only — it does NOT bill, mark, or alter attendance. It just stops a transferred/re-enrolled student (e.g. transfer out `#032 → #031 → #032`) from looking like the teacher forgot to mark them on dates they were elsewhere.
+
 #### Attendance Method Tracking (`markedMethod`)
 
 - `AttendanceMethod` enum: `MANUAL` | `QR` — stored in `Attendance.markedMethod` field

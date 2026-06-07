@@ -52,6 +52,13 @@ interface AttendanceDotProps {
   hasOverride?: boolean;
   /** Tooltip'ga qo'shimcha satr — masalan "1-sikl". */
   cycleLabel?: string | null;
+  /**
+   * O'quvchi shu sanada guruhga a'zo bo'lganmi. `false` bo'lsa (va status yo'q
+   * bo'lsa) — bu "Belgilanmagan" emas, "Guruhda bo'lmagan": o'quvchi o'sha
+   * darsda guruhda bo'lmagan (keyinroq qo'shilgan yoki vaqtincha boshqa guruhga
+   * o'tgan). Default `true` — boshqa joylarda (lesson-trail) bu farq yo'q.
+   */
+  enrolled?: boolean;
 }
 
 export function AttendanceDot({
@@ -59,8 +66,15 @@ export function AttendanceDot({
   date,
   hasOverride = false,
   cycleLabel,
+  enrolled = true,
 }: AttendanceDotProps) {
-  const statusLabel = status ? STATUS_LABEL[status] : "Belgilanmagan";
+  // Bo'sh nuqta + a'zo emas → "Guruhda bo'lmagan" (Belgilanmagan'dan farqli).
+  const notEnrolled = status === null && !enrolled;
+  const statusLabel = status
+    ? STATUS_LABEL[status]
+    : notEnrolled
+      ? "Guruhda bo'lmagan"
+      : "Belgilanmagan";
   const formatted = format(new Date(date + "T00:00:00"), "dd.MM.yyyy");
   return (
     <Tooltip>
@@ -68,7 +82,9 @@ export function AttendanceDot({
         <span
           className={cn(
             "inline-block size-3 rounded-full border",
-            getDotClass(status),
+            notEnrolled
+              ? "border-dotted border-muted-foreground/25 bg-muted/30 opacity-50"
+              : getDotClass(status),
             hasOverride &&
               "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
           )}

@@ -32,6 +32,8 @@ import {
 interface Dot {
   date: string;
   status: DotStatus;
+  /** O'quvchi shu sanada guruhga a'zo bo'lganmi (backend coverage oynasi). */
+  enrolled: boolean;
 }
 
 interface StudentSequence {
@@ -73,6 +75,7 @@ function AttendanceDots({
           key={`${dot.date}-${i}`}
           status={dot.status}
           date={dot.date}
+          enrolled={dot.enrolled}
           hasOverride={overrideDateSet.has(dot.date)}
         />
       ))}
@@ -154,6 +157,10 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full border border-dashed border-muted-foreground/50" />
             Belgilanmagan / Kelajakdagi
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block size-3 rounded-full border border-dotted border-muted-foreground/25 bg-muted/30 opacity-50" />
+            Guruhda bo&apos;lmagan
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full bg-emerald-500 ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background" />
