@@ -858,13 +858,23 @@ export class AttendanceReadService {
     );
     const overrideDates = Array.from(overrideDateSet).sort();
 
+    // Fetch ALL enrollments (any status), not just the currently-ACTIVE ones.
+    // We need the inactive rows to reconstruct each student's membership
+    // *windows*: a student who transferred out and back, or joined mid-stream,
+    // was not in the group on lessons held outside their window. Those dots
+    // must read as "guruhda bo'lmagan" (not enrolled), NOT as the actionable
+    // "Belgilanmagan" (enrolled but unmarked) — otherwise the dots grid shows
+    // a false "you forgot to mark this student" on dates they weren't here.
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         groupId,
         deletedAt: null,
-        status: EnrollmentStatus.ACTIVE,
       },
       select: {
+        studentId: true,
+        status: true,
+        startDate: true,
+        statusChangedAt: true,
         student: {
           select: {
             id: true,
@@ -877,10 +887,56 @@ export class AttendanceReadService {
       orderBy: STUDENT_ROSTER_ORDER_BY,
     });
 
-    const students = enrollments.map((e) => {
+    // Membership windows per student as Tashkent date strings: [start, end].
+    //   start = null → no lower bound (legacy/un-backfilled startDate)
+    //   end   = null → open-ended (still ACTIVE, or a closed enrollment whose
+    //                  change time is unknown — treated as covered so we never
+    //                  invent a false "not enrolled")
+    // A student is "enrolled on date D" when D falls inside ANY of their
+    // windows (union — handles transfer-out-then-back-in gaps correctly).
+    const coverageByStudent = new Map<
+      number,
+      Array<{ start: string | null; end: string | null }>
+    >();
+    for (const e of enrollments) {
+      const start = e.startDate ? tashkentDateStr(e.startDate) : null;
+      const end =
+        e.status === EnrollmentStatus.ACTIVE
+          ? null
+          : e.statusChangedAt
+            ? tashkentDateStr(e.statusChangedAt)
+            : null;
+      const list = coverageByStudent.get(e.studentId) ?? [];
+      list.push({ start, end });
+      coverageByStudent.set(e.studentId, list);
+    }
+    const isEnrolledOn = (studentId: number, date: string): boolean => {
+      const windows = coverageByStudent.get(studentId);
+      if (!windows || windows.length === 0) return true; // defensive: never hide
+      return windows.some(
+        (w) =>
+          (w.start === null || w.start <= date) &&
+          (w.end === null || date <= w.end),
+      );
+    };
+
+    // Roster = currently-active members only, deduped to one row per student.
+    const seenStudent = new Set<number>();
+    const rosterEnrollments = enrollments.filter((e) => {
+      if (e.status !== EnrollmentStatus.ACTIVE) return false;
+      if (seenStudent.has(e.studentId)) return false;
+      seenStudent.add(e.studentId);
+      return true;
+    });
+
+    const students = rosterEnrollments.map((e) => {
       const dots = lessonDates.map((date) => {
         const status = attendanceMap.get(`${e.student.id}:${date}`) ?? null;
-        return { date, status };
+        // An attendance row is itself proof of membership; only fall back to
+        // the coverage windows for blank dots.
+        const enrolled =
+          status !== null ? true : isEnrolledOn(e.student.id, date);
+        return { date, status, enrolled };
       });
       const attended = dots.filter(
         (d) =>

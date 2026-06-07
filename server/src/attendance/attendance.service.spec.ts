@@ -31,6 +31,9 @@ const mockGroup = {
 const mockEnrollments = [
   {
     studentId: 10001,
+    status: 'ACTIVE',
+    startDate: null,
+    statusChangedAt: null,
     student: {
       id: 10001,
       firstName: 'Ahmad',
@@ -41,6 +44,9 @@ const mockEnrollments = [
   },
   {
     studentId: 10002,
+    status: 'ACTIVE',
+    startDate: null,
+    statusChangedAt: null,
     student: {
       id: 10002,
       firstName: 'Dilnoza',
@@ -1401,9 +1407,22 @@ describe('AttendanceService', () => {
       const ahmad = result.students.find((s) => s.id === 10001);
       expect(ahmad).toBeDefined();
       expect(ahmad!.dots).toHaveLength(9);
-      expect(ahmad!.dots[0]).toEqual({ date: '2024-01-01', status: 'PRESENT' });
-      expect(ahmad!.dots[1]).toEqual({ date: '2024-01-03', status: 'ABSENT' });
-      expect(ahmad!.dots[2]).toEqual({ date: '2024-01-05', status: null });
+      expect(ahmad!.dots[0]).toEqual({
+        date: '2024-01-01',
+        status: 'PRESENT',
+        enrolled: true,
+      });
+      expect(ahmad!.dots[1]).toEqual({
+        date: '2024-01-03',
+        status: 'ABSENT',
+        enrolled: true,
+      });
+      // No attendance row + startDate null (no lower bound) → still enrolled.
+      expect(ahmad!.dots[2]).toEqual({
+        date: '2024-01-05',
+        status: null,
+        enrolled: true,
+      });
     });
 
     it('should respect custom lessonPaymentCount (e.g. 20)', async () => {
@@ -1473,6 +1492,79 @@ describe('AttendanceService', () => {
       const result = await service.getLessonSequence('group-uuid-1');
       const ahmad = result.students.find((s) => s.id === 10001);
       expect(ahmad!.attended).toBe(2);
+    });
+
+    it('should mark dots before a mid-stream joiner\'s startDate as not enrolled', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+      // Joined 2024-01-15 → lessons on 01-01..01-12 predate membership.
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          studentId: 10001,
+          status: 'ACTIVE',
+          startDate: new Date('2024-01-15'),
+          statusChangedAt: null,
+          student: {
+            id: 10001,
+            firstName: 'Ahmad',
+            lastName: 'Karimov',
+            photo: null,
+          },
+        },
+      ]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+      const ahmad = result.students.find((s) => s.id === 10001)!;
+      const dotOn = (d: string) => ahmad.dots.find((x) => x.date === d)!;
+
+      // Before join → not enrolled (rendered as "Guruhda bo'lmagan").
+      expect(dotOn('2024-01-01').enrolled).toBe(false);
+      expect(dotOn('2024-01-12').enrolled).toBe(false);
+      // On/after join → enrolled (blank dots here are real "Belgilanmagan").
+      expect(dotOn('2024-01-15').enrolled).toBe(true);
+      expect(dotOn('2024-01-19').enrolled).toBe(true);
+    });
+
+    it('should treat a transfer-out-then-back gap as not enrolled (union of windows, deduped roster)', async () => {
+      prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
+      prisma.attendance.findMany.mockResolvedValue([]);
+      // Same student, two enrollments: in [01-01..01-08], out, back in from 01-15.
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          studentId: 10001,
+          status: 'DROPPED',
+          startDate: new Date('2024-01-01'),
+          statusChangedAt: new Date('2024-01-08T12:00:00.000Z'),
+          student: {
+            id: 10001,
+            firstName: 'Ahmad',
+            lastName: 'Karimov',
+            photo: null,
+          },
+        },
+        {
+          studentId: 10001,
+          status: 'ACTIVE',
+          startDate: new Date('2024-01-15'),
+          statusChangedAt: null,
+          student: {
+            id: 10001,
+            firstName: 'Ahmad',
+            lastName: 'Karimov',
+            photo: null,
+          },
+        },
+      ]);
+
+      const result = await service.getLessonSequence('group-uuid-1');
+      // Deduped to a single roster row despite two enrollment rows.
+      expect(result.students).toHaveLength(1);
+      const ahmad = result.students[0];
+      const dotOn = (d: string) => ahmad.dots.find((x) => x.date === d)!;
+
+      expect(dotOn('2024-01-03').enrolled).toBe(true); // first window
+      expect(dotOn('2024-01-10').enrolled).toBe(false); // gap between windows
+      expect(dotOn('2024-01-17').enrolled).toBe(true); // second window
     });
 
     it('should return empty students when no enrollments', async () => {
