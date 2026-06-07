@@ -120,6 +120,49 @@ describe('PlannedAbsencesService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.plannedAbsence.upsert).not.toHaveBeenCalled();
     });
+
+    it('requires a reason for SABABLI (excused) before any DB work', async () => {
+      await expect(
+        service.upsert(
+          'g1',
+          '2026-06-10',
+          { studentId: 10001, kind: PlannedAbsenceKind.SABABLI },
+          99,
+          ['Administrator'],
+          1,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(validation.validateLessonDate).not.toHaveBeenCalled();
+      expect(prisma.plannedAbsence.upsert).not.toHaveBeenCalled();
+    });
+
+    it('accepts SABABLI with a reason and stores the trimmed note', async () => {
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'enr1' });
+      prisma.attendance.findUnique.mockResolvedValue(null);
+      prisma.plannedAbsence.upsert.mockResolvedValue({ id: 'pa2' });
+
+      await service.upsert(
+        'g1',
+        '2026-06-10',
+        {
+          studentId: 10001,
+          kind: PlannedAbsenceKind.SABABLI,
+          note: '  kasal bo‘lib qoldi  ',
+        },
+        99,
+        ['Administrator'],
+        1,
+      );
+
+      expect(prisma.plannedAbsence.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            note: 'kasal bo‘lib qoldi',
+            kind: PlannedAbsenceKind.SABABLI,
+          }),
+        }),
+      );
+    });
   });
 
   describe('remove', () => {
