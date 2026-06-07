@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -180,19 +181,30 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
                     {index + 1}
                   </TableCell>
                   <TableCell>
-                    <Avatar className="size-8">
-                      <AvatarImage
-                        src={student.photo ?? undefined}
-                        alt={`${student.firstName} ${student.lastName}`}
-                      />
-                      <AvatarFallback className="text-xs">
-                        {student.firstName[0]}
-                        {student.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                    <Link
+                      href={`/students/profile/${student.id}`}
+                      className="inline-block shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={`${student.firstName} ${student.lastName} profilini ochish`}
+                    >
+                      <Avatar className="size-8">
+                        <AvatarImage
+                          src={student.photo ?? undefined}
+                          alt={`${student.firstName} ${student.lastName}`}
+                        />
+                        <AvatarFallback className="text-xs">
+                          {student.firstName[0]}
+                          {student.lastName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {student.firstName} {student.lastName}
+                    <Link
+                      href={`/students/profile/${student.id}`}
+                      className="rounded-sm hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {student.firstName} {student.lastName}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <AttendanceDots
