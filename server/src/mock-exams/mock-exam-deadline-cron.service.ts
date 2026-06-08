@@ -12,14 +12,21 @@ const DEFAULT_COMPANY_ID = 1001;
 
 /**
  * Auto-closes mock exam registrations whose `registrationDeadline` has
- * passed. Runs every 5 minutes — short enough that the form goes "yopiq"
- * almost in real time after the deadline, light enough that we don't
- * hammer the DB.
+ * passed. Runs once daily at 03:00 Tashkent — this flip is purely cosmetic
+ * (the admin "Ro'yxat yopiq" badge) + an audit row. It is NOT the real
+ * enforcement gate: the Telegram registration scene rejects late sign-ups
+ * with its own live `registrationDeadline < now` check on every scene entry
+ * (see telegram/scenes/mock-exam-registration.scene.ts), so a student can
+ * never register after the deadline regardless of how stale this status is.
+ * A frequent poll therefore bought nothing but DB wake-ups; daily is enough.
+ * (Admin manual-add via `addManual` is intentionally allowed post-deadline —
+ * an admin can still register a walk-in — so this cron never gated that path.)
  *
  * Only `REGISTRATION_OPEN` exams are considered; any exam already in a
  * later lifecycle stage (`REGISTRATION_CLOSED` / `GRADING` / ...) is
- * skipped. Each transition writes an `EntityHistory` row so the audit
- * log shows the system as the actor.
+ * skipped. The `lte` filter makes the tick idempotent, so a missed day or a
+ * restart-skipped run self-heals on the next tick. Each transition writes an
+ * `EntityHistory` row so the audit log shows the system as the actor.
  */
 @Injectable()
 export class MockExamDeadlineCronService {
@@ -30,7 +37,7 @@ export class MockExamDeadlineCronService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  @Cron('0 */5 * * * *', { timeZone: 'Asia/Tashkent' })
+  @Cron('0 0 3 * * *', { timeZone: 'Asia/Tashkent' })
   async tick() {
     const now = new Date();
     const due = await this.prisma.mockExam.findMany({

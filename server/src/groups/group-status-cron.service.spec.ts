@@ -123,12 +123,20 @@ describe('GroupStatusCronService', () => {
         }),
       );
 
+      // F-02 regression: the completion cascade must run as a "system" action
+      // with userId = undefined. Passing the old magic `0` wrote changedById:0
+      // into nullable FK columns (no User id 0 exists) → P2003, which the cron
+      // swallowed — silently leaving enrollments un-completed and students
+      // un-graduated.
       expect(statusCascadeService.cascade).toHaveBeenCalledWith(
         'Group',
         'group-2',
         GroupStatus.COMPLETED,
-        0,
+        undefined,
       );
+      const lastArgs = statusCascadeService.cascade.mock.calls.at(-1);
+      expect(lastArgs?.[3]).toBeUndefined();
+      expect(lastArgs?.[3]).not.toBe(0);
     });
 
     it('should do nothing when no groups need status change', async () => {

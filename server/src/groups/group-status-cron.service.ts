@@ -24,11 +24,23 @@ export class GroupStatusCronService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  // Har kuni soat 00:05 da ishlaydi
-  @Cron('0 5 0 * * *')
+  // Har kuni Asia/Tashkent vaqti bilan 00:05 da ishlaydi.
+  @Cron('0 5 0 * * *', { timeZone: 'Asia/Tashkent' })
   async autoUpdateGroupStatuses() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // "Bugun" — Toshkent kalendar kunining 00:00 (UTC ko'rinishida). Server
+    // qaysi vaqt zonasida bo'lsa ham bir xil natija beradi. Avvalgi
+    // `new Date().setHours(0,0,0,0)` server-lokal edi va cron Toshkent yarim
+    // tunida (UTC bo'yicha oldingi kun 19:05) ishga tushganda "bugun" bir kun
+    // orqada qolardi. Asia/Tashkent — UTC+5, DST yo'q.
+    const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const tashkentNow = new Date(Date.now() + TASHKENT_OFFSET_MS);
+    const today = new Date(
+      Date.UTC(
+        tashkentNow.getUTCFullYear(),
+        tashkentNow.getUTCMonth(),
+        tashkentNow.getUTCDate(),
+      ),
+    );
 
     await this.activateGroups(today);
     await this.completeGroups(today);
@@ -93,12 +105,16 @@ export class GroupStatusCronService {
           "Avtomatik: guruh tugash sanasi o'tdi",
         );
 
-        // COMPLETED → enrollment va studentlarni cascade qilish
+        // COMPLETED → enrollment va studentlarni cascade qilish.
+        // userId = undefined (system action): audit FK ustunlari (changedById /
+        // statusChangedById) nullable, shuning uchun `0` (mavjud bo'lmagan User)
+        // o'rniga undefined uzatamiz — aks holda P2003 FK violation cascade'ni
+        // jimgina sindiradi (enrollmentlar yopilmay, studentlar bitirilmay qoladi).
         await this.statusCascadeService.cascade(
           'Group',
           group.id,
           GroupStatus.COMPLETED,
-          0,
+          undefined,
         );
       } catch (error) {
         this.logger.error(

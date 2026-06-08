@@ -33,7 +33,7 @@ export class StatusCascadeService {
     filter: Prisma.EnrollmentWhereInput,
     newStatus: EnrollmentStatus,
     reason: string | null,
-    userId: number,
+    userId: number | undefined,
     auditFields: Prisma.EnrollmentUncheckedUpdateManyInput,
   ): Promise<{ count: number }> {
     const matches = await this.prisma.enrollment.findMany({
@@ -70,7 +70,7 @@ export class StatusCascadeService {
     studentId: number,
     enrollmentFilter: Prisma.EnrollmentWhereInput,
     action: string,
-    userId: number,
+    userId: number | undefined,
     type: 'add' | 'remove' = 'remove',
   ): Promise<void> {
     const enrollments = await this.prisma.enrollment.findMany({
@@ -118,7 +118,7 @@ export class StatusCascadeService {
     filter: Prisma.GroupWhereInput,
     toStatus: string,
     reason: string,
-    userId: number,
+    userId: number | undefined,
   ): Promise<void> {
     const groups = await this.prisma.group.findMany({
       where: filter,
@@ -144,7 +144,7 @@ export class StatusCascadeService {
     filter: Prisma.RoomWhereInput,
     toStatus: string,
     reason: string,
-    userId: number,
+    userId: number | undefined,
   ): Promise<void> {
     const rooms = await this.prisma.room.findMany({
       where: filter,
@@ -166,7 +166,7 @@ export class StatusCascadeService {
     entityType: string,
     entityId: string,
     newStatus: string,
-    userId: number,
+    userId: number | undefined,
   ): Promise<CascadeResult[]> {
     const results: CascadeResult[] = [];
     const now = new Date();
