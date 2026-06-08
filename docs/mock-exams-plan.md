@@ -327,9 +327,10 @@ Hech qanday **public REST endpoint yo'q** — ro'yxatga olish faqat Telegram bot
 
 ### 4.3 Avtomatik yopish (Cron)
 
-`MockExamDeadlineCronService` — har 5 daqiqada ishlaydi:
+`MockExamDeadlineCronService` — kuniga 1 marta (03:00 Toshkent) ishlaydi:
 - `WHERE status = 'REGISTRATION_OPEN' AND registrationDeadline < NOW()` — barchasini `REGISTRATION_CLOSED` ga o'tkazadi
-- NestJS `@Cron('*/5 * * * *')` (mavjud `@nestjs/schedule` paketidan)
+- NestJS `@Cron('0 0 3 * * *', { timeZone: 'Asia/Tashkent' })` (mavjud `@nestjs/schedule` paketidan)
+- Bu flip faqat kosmetik (admin "Ro'yxat yopiq" belgisi) + audit yozuvi. Haqiqiy himoya — Telegram sahnasidagi jonli `registrationDeadline < now` tekshiruvi, shuning uchun tez-tez ishga tushirish shart emas.
 
 ### 4.4 Konvertatsiya (Lidlardan o'rganib)
 
@@ -475,7 +476,7 @@ Har Faza alohida PR. Faza nomenklaturasi `leads-rebuild-plan.md` bilan birxil.
 ### **Faza 8 — Konvertatsiya + cron + arxiv** (1 PR, ~400 qator)
 - `convert-to-student-dialog.tsx` — Lidlardagi `convert-lead-dialog.tsx` patternidan
 - Ishtirokchini `Student` ga aylantirish (branch, course, group tanlash)
-- `MockExamDeadlineCronService` — har 5 daqiqada deadline tekshirib avtomatik yopish
+- `MockExamDeadlineCronService` — kuniga 1 marta (03:00 Toshkent) deadline tekshirib avtomatik yopish (kosmetik/audit; haqiqiy himoya Telegram sahnasidagi jonli tekshiruv)
 - `ARCHIVED` statusga o'tish (manual)
 - Filter bar: status, sana oralig'i, section
 - Imtihon detalida solishtirma (avvalgi mock'lar bilan o'rtacha ball)
