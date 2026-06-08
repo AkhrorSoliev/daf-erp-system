@@ -9,7 +9,6 @@ export interface PaymentPromiseOverduePayload {
   studentId: number;
   companyId: number;
   branchId: number | null;
-  promisedAmount: number | null;
   promiseDate: string; // ISO
 }
 
@@ -60,7 +59,6 @@ export class PaymentPromiseCronService {
         studentId: true,
         companyId: true,
         branchId: true,
-        promisedAmount: true,
         promiseDate: true,
       },
     });
@@ -76,7 +74,6 @@ export class PaymentPromiseCronService {
           studentId: p.studentId,
           companyId: p.companyId,
           branchId: p.branchId,
-          promisedAmount: p.promisedAmount,
           promiseDate: p.promiseDate.toISOString(),
         } satisfies PaymentPromiseOverduePayload);
       } catch (err) {

@@ -95,7 +95,6 @@ export interface RemovalQueueResponse {
 export interface OverduePromiseItem {
   promiseId: string;
   promiseDate: string;
-  promisedAmount: number | null;
   comment: string | null;
   createdAt: string;
   student: OutreachStudentWithParent & { balance: number };

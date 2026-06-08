@@ -353,14 +353,10 @@ export class NotificationEventsListener {
       const studentId = String(payload.studentId);
       const [y, m, d] = tashkentDateStr(new Date(payload.promiseDate)).split('-');
       const dateStr = `${d}.${m}.${y}`;
-      const amountPart =
-        payload.promisedAmount != null
-          ? ` (${formatSom(payload.promisedAmount)} so'm)`
-          : '';
 
       const title = "To'lov sanasi o'tib ketdi";
       const message =
-        `${studentName} ${dateStr} sanasiga to'lov qilishni belgilagan edi${amountPart}, ` +
+        `${studentName} ${dateStr} sanasiga to'lov qilishni belgilagan edi, ` +
         `lekin hali ham qarzdor. Iltimos, bog'laning.`;
 
       for (const r of recipients) {

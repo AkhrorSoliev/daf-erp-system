@@ -92,7 +92,6 @@ export function PaymentPromisesTab({
               <TableHead>Telefon</TableHead>
               <TableHead>Guruh</TableHead>
               <TableHead>To&apos;lov sanasi</TableHead>
-              <TableHead className="text-right">Summa</TableHead>
               <TableHead className="text-right">Joriy qarz</TableHead>
               <TableHead>Izoh</TableHead>
               <TableHead className="w-48">Amal</TableHead>
@@ -173,9 +172,6 @@ function Row({
         <Badge variant="destructive" className="text-[11px]">
           {format(new Date(row.promiseDate), "dd.MM.yyyy")}
         </Badge>
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {row.promisedAmount != null ? formatBalance(row.promisedAmount) : "—"}
       </TableCell>
       <TableCell className="text-right font-medium text-red-600 tabular-nums">
         {formatBalance(Math.abs(row.student.balance))}
