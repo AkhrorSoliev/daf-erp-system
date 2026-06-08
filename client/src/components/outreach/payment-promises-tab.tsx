@@ -54,7 +54,7 @@ export function PaymentPromisesTab({
     mutationFn: (promiseId: string) =>
       api.patch(`/payment-promises/${promiseId}/cancel`),
     onSuccess: () => {
-      toast.success("Va'da bekor qilindi");
+      toast.success("To'lov sanasi bekor qilindi");
       queryClient.invalidateQueries({ queryKey: ["outreach", "overdue-promises"] });
       queryClient.invalidateQueries({ queryKey: ["outreach", "stats"] });
       queryClient.invalidateQueries({ queryKey: ["debtors"] });
@@ -76,7 +76,7 @@ export function PaymentPromisesTab({
   if (total === 0) {
     return (
       <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Muddati o&apos;tgan to&apos;lov va&apos;dasi yo&apos;q
+        Muddati o&apos;tgan to&apos;lov sanasi yo&apos;q
       </div>
     );
   }
@@ -91,8 +91,8 @@ export function PaymentPromisesTab({
               <TableHead>O&apos;quvchi</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>Guruh</TableHead>
-              <TableHead>Va&apos;da sanasi</TableHead>
-              <TableHead className="text-right">Va&apos;da summasi</TableHead>
+              <TableHead>To&apos;lov sanasi</TableHead>
+              <TableHead className="text-right">Summa</TableHead>
               <TableHead className="text-right">Joriy qarz</TableHead>
               <TableHead>Izoh</TableHead>
               <TableHead className="w-48">Amal</TableHead>

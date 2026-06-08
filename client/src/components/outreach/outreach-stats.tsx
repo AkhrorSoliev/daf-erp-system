@@ -56,7 +56,7 @@ export function OutreachStatsWidget() {
       />
       <StatCard
         icon={CalendarX2}
-        label="Buzilgan va'dalar"
+        label="Muddati o'tgan to'lovlar"
         value={data.overduePromises}
         accentColor={data.overduePromises > 0 ? "text-red-600" : undefined}
       />

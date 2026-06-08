@@ -358,9 +358,9 @@ export class NotificationEventsListener {
           ? ` (${formatSom(payload.promisedAmount)} so'm)`
           : '';
 
-      const title = "To'lov va'dasi buzildi";
+      const title = "To'lov sanasi o'tib ketdi";
       const message =
-        `${studentName} ${dateStr} sanasida to'lov va'da qilgan edi${amountPart}, ` +
+        `${studentName} ${dateStr} sanasiga to'lov qilishni belgilagan edi${amountPart}, ` +
         `lekin hali ham qarzdor. Iltimos, bog'laning.`;
 
       for (const r of recipients) {

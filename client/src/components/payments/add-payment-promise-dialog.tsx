@@ -102,7 +102,7 @@ function PromiseForm({
       });
     },
     onSuccess: () => {
-      toast.success("To'lov va'dasi saqlandi");
+      toast.success("To'lov sanasi belgilandi");
       queryClient.invalidateQueries({ queryKey: ["debtors"] });
       queryClient.invalidateQueries({ queryKey: ["outreach", "stats"] });
       onSuccess();
@@ -114,7 +114,7 @@ function PromiseForm({
   return (
     <>
       <DialogHeader className="border-b px-6 py-4">
-        <DialogTitle>To&apos;lov va&apos;dasi</DialogTitle>
+        <DialogTitle>To&apos;lov sanasini belgilash</DialogTitle>
       </DialogHeader>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
@@ -131,7 +131,7 @@ function PromiseForm({
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs">Va&apos;da sanasi</Label>
+          <Label className="text-xs">To&apos;lov sanasi</Label>
           <DatePicker
             value={date}
             onChange={(d) => setDate(d ?? null)}
@@ -140,7 +140,7 @@ function PromiseForm({
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs">Va&apos;da qilingan summa (ixtiyoriy)</Label>
+          <Label className="text-xs">Summa (ixtiyoriy)</Label>
           <PriceInput
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
