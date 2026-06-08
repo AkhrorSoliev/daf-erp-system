@@ -98,6 +98,8 @@ export class SalarySummaryService {
           lessonsPerMonth,
           salaryType: groupConfig?.salaryType ?? null,
           salaryValue: groupConfig?.value ?? 0,
+          // Kurs narxi — guruh o'quvchisi kurs uchun qancha to'lashi
+          coursePrice: tg.group.course.price,
           expectedPerLesson: expectedPerStudentPerLesson * activeStudents,
           expectedMonthly,
         };
