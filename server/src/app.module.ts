@@ -50,6 +50,7 @@ import { BillingModule } from './billing/billing.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 import { OutreachModule } from './outreach/outreach.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
+import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
 import { JwtAuthGuard } from './common/guards';
 
 @Module({
@@ -104,6 +105,7 @@ import { JwtAuthGuard } from './common/guards';
     ReceiptsModule,
     OutreachModule,
     PlannedAbsencesModule,
+    PaymentPromisesModule,
   ],
   providers: [
     {

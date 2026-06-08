@@ -4,6 +4,7 @@ import { Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CallbacksQueryDto } from './dto/callbacks-query.dto';
+import { TodayAbsenteesQueryDto } from './dto/today-absentees-query.dto';
 
 @Controller('outreach')
 @UseGuards(RolesGuard)
@@ -22,11 +23,17 @@ export class OutreachController {
 
   @Get('today-absentees')
   getTodayAbsentees(
+    @Query() query: TodayAbsenteesQueryDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
   ) {
-    return this.outreach.getTodayAbsentees({ userId, companyId, roles });
+    return this.outreach.getTodayAbsentees({
+      userId,
+      companyId,
+      roles,
+      date: query.date,
+    });
   }
 
   @Get('my-callbacks')
@@ -45,5 +52,14 @@ export class OutreachController {
     @CurrentUser('roles') roles: string[],
   ) {
     return this.outreach.getRemovalQueue({ userId, companyId, roles });
+  }
+
+  @Get('overdue-promises')
+  getOverduePromises(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.outreach.getOverduePromises({ userId, companyId, roles });
   }
 }

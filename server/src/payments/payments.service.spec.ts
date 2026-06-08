@@ -83,6 +83,9 @@ describe('PaymentsService', () => {
         // reversed payment, so the reverse() guard lets the test through.
         count: jest.fn().mockResolvedValue(0),
       },
+      paymentPromise: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       $transaction: jest.fn().mockImplementation((fn) => {
         if (typeof fn === 'function') return fn(prisma);
         return Promise.all(fn);
@@ -623,7 +626,10 @@ describe('PaymentsService', () => {
       prisma.student.findMany.mockResolvedValue([]);
       prisma.student.count.mockResolvedValue(0);
 
-      const result = await service.getDebtors(1001, {});
+      const result = await service.getDebtors(1001, {
+        userId: 1,
+        roles: ['CEO'],
+      });
 
       const findManyCall = prisma.student.findMany.mock.calls[0][0];
       expect(findManyCall.where).toEqual(
@@ -640,11 +646,11 @@ describe('PaymentsService', () => {
       prisma.student.findMany.mockResolvedValue([]);
       prisma.student.count.mockResolvedValue(0);
 
-      await service.getDebtors(1001, { branchId: 5 });
+      await service.getDebtors(1001, { branchId: 5, userId: 1, roles: ['CEO'] });
 
       const findManyCall = prisma.student.findMany.mock.calls[0][0];
       expect(findManyCall.where.branches).toEqual({
-        some: { branchId: 5 },
+        some: { branchId: { in: [5] } },
       });
     });
   });

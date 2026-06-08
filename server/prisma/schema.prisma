@@ -141,6 +141,7 @@ enum NotificationType {
   ATTENDANCE_COMPLETED
   LESSON_RESCHEDULED
   LESSON_CANCELLED
+  PAYMENT_PROMISE_OVERDUE
 }
 
 enum TaskPriority {
@@ -359,6 +360,8 @@ model User {
   deletedLessonReschedules      LessonReschedule[]            @relation("LessonRescheduleDeletedBy")
   plannedAbsences               PlannedAbsence[]              @relation("PlannedAbsenceCreatedBy")
   reversedSalaryAccruals        SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
+  createdPaymentPromises        PaymentPromise[]              @relation("PaymentPromiseCreatedBy")
+  resolvedPaymentPromises       PaymentPromise[]              @relation("PaymentPromiseResolvedBy")
 
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
 
@@ -540,11 +543,12 @@ model Student {
   mockExamParticipations MockExamParticipant[] @relation("StudentMockExamParticipations")
 
   // Financial relations
-  payments       Payment[]
-  transactions   Transaction[]   @relation("StudentTransactions")
-  contracts      Contract[]
-  refunds        Refund[]
-  salaryAccruals SalaryAccrual[] @relation("StudentSalaryAccruals")
+  payments        Payment[]
+  transactions    Transaction[]    @relation("StudentTransactions")
+  contracts       Contract[]
+  refunds         Refund[]
+  salaryAccruals  SalaryAccrual[]  @relation("StudentSalaryAccruals")
+  paymentPromises PaymentPromise[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1307,6 +1311,7 @@ model Company {
   comments                    Comment[]
   attendances                 Attendance[]
   plannedAbsences             PlannedAbsence[]
+  paymentPromises             PaymentPromise[]
   studentExitReasons          StudentExitReason[]
   groupTeacherChangeReasons   GroupTeacherChangeReason[]
   enrollmentTransferReasons   EnrollmentTransferReason[]
@@ -1565,6 +1570,51 @@ model PlannedAbsence {
   @@index([groupId, date])
   @@index([companyId, date])
   @@index([studentId])
+}
+
+enum PaymentPromiseStatus {
+  OPEN // o'quvchi to'lov va'da berdi, hali hal bo'lmagan
+  KEPT // to'lov kelib balans tiklandi — va'da bajarildi
+  BROKEN // va'da sanasi o'tdi, o'quvchi hali ham qarzdor
+  CANCELLED // admin qo'lda bekor qildi
+}
+
+// A debtor's commitment to pay by a date. Recorded by an admin/cashier after
+// contacting the student. Auto-resolves to KEPT when a payment restores the
+// balance; the daily cron flips it to BROKEN (and notifies branch admins) if
+// the date passes while the student is still in debt. One OPEN promise per
+// student (partial unique index, mirrors the INITIAL_BALANCE precedent).
+model PaymentPromise {
+  id               String               @id @default(uuid())
+  studentId        Int
+  student          Student              @relation(fields: [studentId], references: [id])
+  promisedAmount   Int? // so'm; nullable for "to'layman" promises without a figure
+  // Full timestamp, NOT @db.Date — avoids Tashkent-offset truncation breaking
+  // `promiseDate < now` range comparisons (same lesson as creditPeriodDate).
+  promiseDate      DateTime
+  comment          String?
+  status           PaymentPromiseStatus @default(OPEN)
+  // Snapshot of Student.balance when the promise was made, so "kept" can be
+  // judged against the state at promise time.
+  balanceAtPromise Int
+  // Idempotency marker for the daily reminder cron (mirrors
+  // CommentAssignee.lastRemindedAt) — set when the overdue reminder fired.
+  reminderFiredAt  DateTime?
+  resolvedAt       DateTime?
+  resolvedById     Int?
+  resolvedBy       User?                @relation("PaymentPromiseResolvedBy", fields: [resolvedById], references: [id])
+  createdById      Int
+  createdBy        User                 @relation("PaymentPromiseCreatedBy", fields: [createdById], references: [id])
+  branchId         Int? // for Branch Director scoping on /outreach
+  companyId        Int
+  company          Company              @relation(fields: [companyId], references: [id])
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([studentId])
+  @@index([companyId, status])
+  @@index([status, promiseDate])
+  @@index([branchId])
 }
 
 model AiConversation {

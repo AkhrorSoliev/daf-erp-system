@@ -92,9 +92,25 @@ export interface RemovalQueueResponse {
   items: RemovalQueueItem[];
 }
 
+export interface OverduePromiseItem {
+  promiseId: string;
+  promiseDate: string;
+  promisedAmount: number | null;
+  comment: string | null;
+  createdAt: string;
+  student: OutreachStudentWithParent & { balance: number };
+  groups: { id: string; name: string }[];
+}
+
+export interface OverduePromisesResponse {
+  total: number;
+  items: OverduePromiseItem[];
+}
+
 export interface OutreachStats {
   todayAbsentees: number;
   pendingCallbacks: number;
   overdueCallbacks: number;
   removalQueue: number;
+  overduePromises: number;
 }

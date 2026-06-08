@@ -188,6 +188,13 @@ export class PaymentsWriteService {
           select: { balance: true },
         });
 
+        // If this payment cleared the debt, any OPEN payment promise is KEPT.
+        await this.settleKeptPromises(tx, {
+          studentId: dto.studentId,
+          balance: updatedStudent?.balance,
+          performedById: userId,
+        });
+
         await this.entityHistoryService.recordCreate({
           entityType: 'Payment',
           entityId: payment.id,
@@ -253,7 +260,11 @@ export class PaymentsWriteService {
 
   async reverse(
     id: string,
-    params: { reason?: string; performedById: number; companyId: number },
+    // `performedById` is optional: gateway-initiated reversals (Payme cancel)
+    // are system actions with no real user — pass undefined so the audit
+    // `changedById` is null rather than a non-existent user id 0 (which trips
+    // the FK). (F-40)
+    params: { reason?: string; performedById?: number; companyId: number },
   ) {
     const payment = await this.prisma.payment.findFirst({
       where: { id, companyId: params.companyId },
@@ -599,6 +610,32 @@ export class PaymentsWriteService {
     return studentBranch?.branchId ?? null;
   }
 
+  /**
+   * Auto-resolve payment promises after a payment lands. When the payment has
+   * restored the student's balance to non-negative, any OPEN promise is
+   * considered KEPT. Runs inside the caller's payment transaction so it
+   * commits atomically with the balance change. `performedById` may be null
+   * for gateway payments (resolvedById is nullable).
+   */
+  private async settleKeptPromises(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      balance: number | null | undefined;
+      performedById: number | null | undefined;
+    },
+  ) {
+    if (params.balance == null || params.balance < 0) return;
+    await tx.paymentPromise.updateMany({
+      where: { studentId: params.studentId, status: 'OPEN' },
+      data: {
+        status: 'KEPT',
+        resolvedAt: new Date(),
+        resolvedById: params.performedById ?? null,
+      },
+    });
+  }
+
   async createFromExternal(
     params: {
       studentId: number;
@@ -720,6 +757,13 @@ export class PaymentsWriteService {
       const updatedStudent = await tx.student.findUnique({
         where: { id: params.studentId },
         select: { balance: true },
+      });
+
+      // If this payment cleared the debt, any OPEN payment promise is KEPT.
+      await this.settleKeptPromises(tx, {
+        studentId: params.studentId,
+        balance: updatedStudent?.balance,
+        performedById: params.performedById,
       });
 
       await this.entityHistoryService.recordStatusChange({
