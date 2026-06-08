@@ -7,8 +7,10 @@ import { NotificationsGateway } from './notifications.gateway';
 import { PushService } from './push.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { formatSom } from '../payments/shared/format-som';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
 import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
 import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
+import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-promise-cron.service';
 
 @Injectable()
 export class NotificationEventsListener {
@@ -22,6 +24,26 @@ export class NotificationEventsListener {
     private telegramService: TelegramService,
   ) {}
 
+  /**
+   * Resolve which of the given user ids are still active recipients
+   * (deletedAt:null AND isActive:true AND status:ACTIVE). Deactivated /
+   * suspended / terminated / archived users must NOT receive notifications —
+   * the same filter the payment/salary handlers already apply. (F-05)
+   */
+  private async filterActiveRecipientIds(userIds: number[]): Promise<number[]> {
+    if (userIds.length === 0) return [];
+    const active = await this.prisma.user.findMany({
+      where: {
+        id: { in: userIds },
+        deletedAt: null,
+        isActive: true,
+        status: UserStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+    return active.map((u) => u.id);
+  }
+
   @OnEvent('task.assigned')
   async handleTaskAssigned(payload: { comment: any; assigneeIds: number[] }) {
     const { comment, assigneeIds } = payload;
@@ -29,7 +51,7 @@ export class NotificationEventsListener {
       ? `${comment.author.firstName} ${comment.author.lastName}`
       : "Noma'lum";
 
-    for (const assigneeId of assigneeIds) {
+    for (const assigneeId of await this.filterActiveRecipientIds(assigneeIds)) {
       try {
         const title = 'Yangi topshiriq';
         const message = `${authorName} sizga topshiriq berdi: "${this.truncate(comment.content, 80)}"`;
@@ -76,7 +98,7 @@ export class NotificationEventsListener {
       ? `${comment.author.firstName} ${comment.author.lastName}`
       : "Noma'lum";
 
-    for (const assigneeId of assigneeIds) {
+    for (const assigneeId of await this.filterActiveRecipientIds(assigneeIds)) {
       try {
         const title = "Topshiriq o'chirildi";
         const message = `${authorName} topshiriqni o'chirdi: "${this.truncate(comment.content, 80)}"`;
@@ -118,7 +140,7 @@ export class NotificationEventsListener {
       ? `${comment.author.firstName} ${comment.author.lastName}`
       : "Noma'lum";
 
-    for (const assigneeId of assigneeIds) {
+    for (const assigneeId of await this.filterActiveRecipientIds(assigneeIds)) {
       try {
         const title = 'Topshiriq yangilandi';
         const message = `${authorName} topshiriqni yangiladi: "${this.truncate(comment.content, 80)}"`;
@@ -284,6 +306,96 @@ export class NotificationEventsListener {
     } catch (error) {
       this.logger.error(
         `payment.corrected handler failed: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * A debtor's payment promise passed its date while the student is still in
+   * debt (flipped to BROKEN by the daily cron). Notifies the branch's
+   * Administrators plus the company CEOs so any of them can follow up — the
+   * branch-wide visibility the /outreach "To'lov va'dalari" tab mirrors.
+   * Fans out to all four channels; recipient filter follows the standard rule.
+   */
+  @OnEvent('payment-promise.overdue')
+  async handlePaymentPromiseOverdue(payload: PaymentPromiseOverduePayload) {
+    try {
+      const [student, recipients] = await Promise.all([
+        this.prisma.student.findUnique({
+          where: { id: payload.studentId },
+          select: { firstName: true, lastName: true },
+        }),
+        this.prisma.user.findMany({
+          where: {
+            deletedAt: null,
+            isActive: true,
+            status: UserStatus.ACTIVE,
+            companyId: payload.companyId,
+            OR: [
+              { roles: { some: { role: { name: 'CEO' } } } },
+              {
+                roles: { some: { role: { name: 'Administrator' } } },
+                ...(payload.branchId
+                  ? { branches: { some: { branchId: payload.branchId } } }
+                  : {}),
+              },
+            ],
+          },
+          select: { id: true },
+        }),
+      ]);
+
+      if (recipients.length === 0) return;
+
+      const studentName = student
+        ? `${student.firstName} ${student.lastName}`
+        : "o'quvchi";
+      const studentId = String(payload.studentId);
+      const [y, m, d] = tashkentDateStr(new Date(payload.promiseDate)).split('-');
+      const dateStr = `${d}.${m}.${y}`;
+      const amountPart =
+        payload.promisedAmount != null
+          ? ` (${formatSom(payload.promisedAmount)} so'm)`
+          : '';
+
+      const title = "To'lov va'dasi buzildi";
+      const message =
+        `${studentName} ${dateStr} sanasida to'lov va'da qilgan edi${amountPart}, ` +
+        `lekin hali ham qarzdor. Iltimos, bog'laning.`;
+
+      for (const r of recipients) {
+        try {
+          const notification = await this.notificationsService.create({
+            userId: r.id,
+            type: NotificationType.PAYMENT_PROMISE_OVERDUE,
+            title,
+            message,
+            relatedEntityType: 'Student',
+            relatedEntityId: studentId,
+            companyId: payload.companyId,
+          });
+
+          this.gateway.sendToUser(r.id, {
+            type: 'notification',
+            notification,
+          });
+
+          await this.pushService.sendToUser(r.id, {
+            title,
+            body: message,
+            url: `/students/profile/${studentId}`,
+          });
+
+          await this.sendTelegram(r.id, title, message);
+        } catch (error) {
+          this.logger.error(
+            `Failed to notify ${r.id} of overdue promise: ${error.message}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `payment-promise.overdue handler failed: ${error.message}`,
       );
     }
   }

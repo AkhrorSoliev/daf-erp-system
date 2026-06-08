@@ -1,7 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, PhoneCall, UserMinus, XCircle, type LucideIcon } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarX2,
+  PhoneCall,
+  UserMinus,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/format-utils";
@@ -18,8 +25,8 @@ export function OutreachStatsWidget() {
 
   if (isLoading || !data) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {[0, 1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-[88px] rounded-xl" />
         ))}
       </div>
@@ -27,7 +34,7 @@ export function OutreachStatsWidget() {
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <StatCard
         icon={XCircle}
         label="Bugun kelmadi"
@@ -46,6 +53,12 @@ export function OutreachStatsWidget() {
         accentColor={
           data.overdueCallbacks > 0 ? "text-amber-700" : undefined
         }
+      />
+      <StatCard
+        icon={CalendarX2}
+        label="Buzilgan va'dalar"
+        value={data.overduePromises}
+        accentColor={data.overduePromises > 0 ? "text-red-600" : undefined}
       />
       <StatCard
         icon={UserMinus}

@@ -16,6 +16,7 @@ describe('OutreachController — role guards', () => {
     getTodayAbsentees: jest.fn().mockResolvedValue({}),
     getMyCallbacks: jest.fn().mockResolvedValue({}),
     getRemovalQueue: jest.fn().mockResolvedValue({}),
+    getOverduePromises: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -57,6 +58,7 @@ describe('OutreachController — role guards', () => {
     { name: 'getTodayAbsentees', handler: () => null },
     { name: 'getMyCallbacks', handler: () => null },
     { name: 'getRemovalQueue', handler: () => null },
+    { name: 'getOverduePromises', handler: () => null },
   ];
 
   handlers.forEach(({ name }) => {
@@ -91,12 +93,25 @@ describe('OutreachController — role guards', () => {
   // Sanity check that the controller actually delegates to the service —
   // catches accidental param-decorator typos.
   describe('handler wiring', () => {
-    it('getTodayAbsentees delegates to service with user context', async () => {
-      await controller.getTodayAbsentees(10001, 1, ['CEO']);
+    it('getTodayAbsentees delegates to service with user context and no date', async () => {
+      await controller.getTodayAbsentees({}, 10001, 1, ['CEO']);
       expect(mockService.getTodayAbsentees).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        date: undefined,
+      });
+    });
+
+    it('getTodayAbsentees forwards the date query param', async () => {
+      await controller.getTodayAbsentees({ date: '2026-06-01' }, 10001, 1, [
+        'CEO',
+      ]);
+      expect(mockService.getTodayAbsentees).toHaveBeenCalledWith({
+        userId: 10001,
+        companyId: 1,
+        roles: ['CEO'],
+        date: '2026-06-01',
       });
     });
 
@@ -125,6 +140,15 @@ describe('OutreachController — role guards', () => {
         userId: 10001,
         companyId: 1,
         roles: ['Administrator'],
+      });
+    });
+
+    it('getOverduePromises delegates to service with user context', async () => {
+      await controller.getOverduePromises(10001, 1, ['Branch Director']);
+      expect(mockService.getOverduePromises).toHaveBeenCalledWith({
+        userId: 10001,
+        companyId: 1,
+        roles: ['Branch Director'],
       });
     });
   });

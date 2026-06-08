@@ -23,7 +23,7 @@ export class PaymentsService {
   }
   reverse(
     id: string,
-    params: { reason?: string; performedById: number; companyId: number },
+    params: { reason?: string; performedById?: number; companyId: number },
   ) {
     return this.write.reverse(id, params);
   }
@@ -77,9 +77,25 @@ export class PaymentsService {
   // Debtors
   getDebtors(
     companyId: number,
-    query: { branchId?: number; page?: number; pageSize?: number },
+    query: {
+      branchId?: number;
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      sortBy?: 'balance' | 'firstName' | 'lastName';
+      order?: 'asc' | 'desc';
+      promise?: 'has_open' | 'overdue';
+      userId: number;
+      roles: string[];
+    },
   ) {
     return this.debtors.getDebtors(companyId, query);
+  }
+  getDebtorSummary(
+    companyId: number,
+    query: { branchId?: number; userId: number; roles: string[] },
+  ) {
+    return this.debtors.getDebtorSummary(companyId, query);
   }
   getPending(
     companyId: number,

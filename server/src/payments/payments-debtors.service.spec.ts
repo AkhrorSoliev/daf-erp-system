@@ -1,0 +1,118 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { PaymentsDebtorsService } from './payments-debtors.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+describe('PaymentsDebtorsService', () => {
+  let service: PaymentsDebtorsService;
+  let prisma: {
+    student: { findMany: jest.Mock; count: jest.Mock; aggregate: jest.Mock };
+    user: { findUnique: jest.Mock };
+    paymentPromise: { count: jest.Mock };
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      student: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { balance: 0 }, _count: 0 }),
+      },
+      user: { findUnique: jest.fn().mockResolvedValue({ mainBranch: 7 }) },
+      paymentPromise: { count: jest.fn().mockResolvedValue(0) },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        PaymentsDebtorsService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+
+    service = module.get(PaymentsDebtorsService);
+  });
+
+  describe('getDebtors', () => {
+    it('filters by negative balance + active + company, no branch filter for CEO', async () => {
+      await service.getDebtors(1001, { userId: 1, roles: ['CEO'] });
+      const arg = prisma.student.findMany.mock.calls[0][0];
+      expect(arg.where).toEqual(
+        expect.objectContaining({
+          companyId: 1001,
+          deletedAt: null,
+          status: 'ACTIVE',
+          balance: { lt: 0 },
+        }),
+      );
+      expect(arg.where.branches).toBeUndefined();
+      expect(arg.orderBy).toEqual({ balance: 'asc' });
+    });
+
+    it('builds a unified search OR (name/phone) and adds id for numeric input', async () => {
+      await service.getDebtors(1001, {
+        userId: 1,
+        roles: ['CEO'],
+        search: '10264',
+      });
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.OR).toEqual(
+        expect.arrayContaining([
+          { firstName: { contains: '10264', mode: 'insensitive' } },
+          { phone: { contains: '10264' } },
+          { id: { equals: 10264 } },
+        ]),
+      );
+    });
+
+    it('maps debtAmount as the absolute value of the negative balance', async () => {
+      prisma.student.findMany.mockResolvedValueOnce([
+        { id: 1, balance: -50000, enrollments: [] },
+      ]);
+      prisma.student.count.mockResolvedValueOnce(1);
+      const res = await service.getDebtors(1001, { userId: 1, roles: ['CEO'] });
+      expect(res.data[0].debtAmount).toBe(50000);
+    });
+
+    it('scopes a Branch Director to their own mainBranch', async () => {
+      await service.getDebtors(1001, { userId: 9, roles: ['Branch Director'] });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 9 },
+        select: { mainBranch: true },
+      });
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.branches).toEqual({ some: { branchId: { in: [7] } } });
+    });
+
+    it('returns empty for a Branch Director with no branch (never queries students)', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({ mainBranch: null });
+      const res = await service.getDebtors(1001, {
+        userId: 9,
+        roles: ['Branch Director'],
+      });
+      expect(res).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
+      expect(prisma.student.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getDebtorSummary', () => {
+    it('returns total/avg debt + promise counts over the same where', async () => {
+      prisma.student.aggregate.mockResolvedValueOnce({
+        _sum: { balance: -300000 },
+        _count: 3,
+      });
+      prisma.paymentPromise.count
+        .mockResolvedValueOnce(5) // open
+        .mockResolvedValueOnce(2); // overdue
+      const res = await service.getDebtorSummary(1001, {
+        userId: 1,
+        roles: ['CEO'],
+      });
+      expect(res).toEqual({
+        totalDebt: 300000,
+        debtorCount: 3,
+        avgDebt: 100000,
+        openPromises: 5,
+        overduePromises: 2,
+      });
+    });
+  });
+});

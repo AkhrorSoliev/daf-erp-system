@@ -40,19 +40,21 @@ export class OutreachService {
     return caller?.mainBranch ? [caller.mainBranch] : [];
   }
 
-  async getTodayAbsentees(ctx: UserContext) {
-    const todayStr = tashkentDateStr(new Date());
-    const today = utcMidnightFromDateStr(todayStr);
+  async getTodayAbsentees(ctx: UserContext & { date?: string }) {
+    // Defaults to Tashkent calendar today when caller omits the date — keeps
+    // backward compatibility with the no-arg endpoint.
+    const dateStr = ctx.date ?? tashkentDateStr(new Date());
+    const date = utcMidnightFromDateStr(dateStr);
     const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
     // Empty array means "no branches assigned" — return nothing instead of
     // matching every branch via Prisma's missing-filter shortcut.
     if (branchIds && branchIds.length === 0) {
-      return { date: todayStr, total: 0, items: [] };
+      return { date: dateStr, total: 0, items: [] };
     }
 
     const rows = await this.prisma.attendance.findMany({
       where: {
-        date: today,
+        date,
         status: AttendanceStatus.ABSENT,
         companyId: ctx.companyId,
         group: {
@@ -122,7 +124,7 @@ export class OutreachService {
       return at.localeCompare(bt);
     });
 
-    return { date: todayStr, total: items.length, items };
+    return { date: dateStr, total: items.length, items };
   }
 
   async getMyCallbacks(params: {
@@ -243,6 +245,7 @@ export class OutreachService {
         pendingCallbacks: 0,
         overdueCallbacks: 0,
         removalQueue: 0,
+        overduePromises: 0,
       };
     }
 
@@ -250,8 +253,13 @@ export class OutreachService {
     const today = utcMidnightFromDateStr(todayStr);
     const now = new Date();
 
-    const [todayAbsentees, pendingCallbacks, overdueCallbacks, streaks] =
-      await Promise.all([
+    const [
+      todayAbsentees,
+      pendingCallbacks,
+      overdueCallbacks,
+      streaks,
+      overduePromises,
+    ] = await Promise.all([
         this.prisma.attendance.count({
           where: {
             date: today,
@@ -291,6 +299,14 @@ export class OutreachService {
           branchIds,
           threshold: 3,
         }),
+        this.prisma.paymentPromise.count({
+          where: {
+            companyId: ctx.companyId,
+            status: 'BROKEN',
+            student: { balance: { lt: 0 }, deletedAt: null },
+            ...(branchIds ? { branchId: { in: branchIds } } : {}),
+          },
+        }),
       ]);
 
     return {
@@ -298,7 +314,70 @@ export class OutreachService {
       pendingCallbacks,
       overdueCallbacks,
       removalQueue: streaks.length,
+      overduePromises,
     };
+  }
+
+  /**
+   * Branch-scoped list of broken payment promises whose student still owes.
+   * Mirrors getRemovalQueue's shape so the /outreach "To'lov va'dalari" tab
+   * reuses the same row/link patterns. Oldest broken promise first.
+   */
+  async getOverduePromises(ctx: UserContext) {
+    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    if (branchIds && branchIds.length === 0) return { total: 0, items: [] };
+
+    const promises = await this.prisma.paymentPromise.findMany({
+      where: {
+        companyId: ctx.companyId,
+        status: 'BROKEN',
+        student: { balance: { lt: 0 }, deletedAt: null },
+        ...(branchIds ? { branchId: { in: branchIds } } : {}),
+      },
+      select: {
+        id: true,
+        promiseDate: true,
+        promisedAmount: true,
+        comment: true,
+        createdAt: true,
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            parentPhone: true,
+            photo: true,
+            balance: true,
+            enrollments: {
+              where: { status: 'ACTIVE', deletedAt: null },
+              select: { group: { select: { id: true, name: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { promiseDate: 'asc' },
+    });
+
+    const items = promises.map((p) => ({
+      promiseId: p.id,
+      promiseDate: p.promiseDate.toISOString(),
+      promisedAmount: p.promisedAmount,
+      comment: p.comment,
+      createdAt: p.createdAt.toISOString(),
+      student: {
+        id: p.student.id,
+        firstName: p.student.firstName,
+        lastName: p.student.lastName,
+        phone: p.student.phone,
+        parentPhone: p.student.parentPhone,
+        photo: p.student.photo,
+        balance: p.student.balance,
+      },
+      groups: p.student.enrollments.map((e) => e.group),
+    }));
+
+    return { total: items.length, items };
   }
 
   async getRemovalQueue(ctx: UserContext) {

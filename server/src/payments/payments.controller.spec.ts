@@ -20,6 +20,7 @@ describe('PaymentsController — role guards', () => {
     findOne: jest.fn().mockResolvedValue({}),
     findByStudent: jest.fn().mockResolvedValue({}),
     getDebtors: jest.fn().mockResolvedValue({}),
+    getDebtorSummary: jest.fn().mockResolvedValue({}),
     getPending: jest.fn().mockResolvedValue({}),
     getDebtorsForGroup: jest.fn().mockResolvedValue({}),
   };
@@ -91,6 +92,38 @@ describe('PaymentsController — role guards', () => {
         1001,
         ['Administrator'],
       );
+    });
+  });
+
+  describe('debtors list + summary', () => {
+    it('delegates getDebtors with branch scope (userId + roles)', () => {
+      controller.getDebtors(
+        { branchId: 5, page: 2, pageSize: 20, search: 'ali', sortBy: 'balance' } as any,
+        99,
+        1001,
+        ['Branch Director'],
+      );
+      expect(mockService.getDebtors).toHaveBeenCalledWith(
+        1001,
+        expect.objectContaining({
+          branchId: 5,
+          page: 2,
+          pageSize: 20,
+          search: 'ali',
+          sortBy: 'balance',
+          userId: 99,
+          roles: ['Branch Director'],
+        }),
+      );
+    });
+
+    it('delegates getDebtorSummary with userId + roles', () => {
+      controller.getDebtorSummary({ branchId: 5 } as any, 99, 1001, ['CEO']);
+      expect(mockService.getDebtorSummary).toHaveBeenCalledWith(1001, {
+        branchId: 5,
+        userId: 99,
+        roles: ['CEO'],
+      });
     });
   });
 

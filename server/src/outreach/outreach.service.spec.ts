@@ -76,6 +76,7 @@ describe('OutreachService', () => {
       enrollment: { findMany: jest.fn() },
       lead: { findMany: jest.fn() },
       student: { findMany: jest.fn() },
+      paymentPromise: { findMany: jest.fn(), count: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -145,6 +146,24 @@ describe('OutreachService', () => {
       });
       const call = prisma.attendance.findMany.mock.calls[0][0];
       expect(call.where.group.branchId).toBeUndefined();
+    });
+
+    it('uses the explicit date when provided instead of today', async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      const res = await service.getTodayAbsentees({
+        userId: 10001,
+        companyId: 1,
+        roles: ['CEO'],
+        date: '2026-05-15',
+      });
+      expect(res.date).toBe('2026-05-15');
+      expect(prisma.attendance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            date: utcMidnightFromDateStr('2026-05-15'),
+          }),
+        }),
+      );
     });
 
     it('sorts by lesson start time', async () => {
@@ -253,12 +272,13 @@ describe('OutreachService', () => {
   });
 
   describe('getStats', () => {
-    it('returns counts for the 4 KPIs', async () => {
+    it('returns counts for the KPIs', async () => {
       prisma.attendance.count = jest.fn().mockResolvedValue(7);
       prisma.commentAssignee.count = jest
         .fn()
         .mockResolvedValueOnce(12) // pendingCallbacks
         .mockResolvedValueOnce(3); // overdueCallbacks
+      prisma.paymentPromise.count = jest.fn().mockResolvedValue(2);
       jest.spyOn(streak, 'computeStreaks').mockResolvedValue([
         {
           enrollmentId: 'e1',
@@ -281,6 +301,7 @@ describe('OutreachService', () => {
         pendingCallbacks: 12,
         overdueCallbacks: 3,
         removalQueue: 1,
+        overduePromises: 2,
       });
     });
 
@@ -296,6 +317,7 @@ describe('OutreachService', () => {
         pendingCallbacks: 0,
         overdueCallbacks: 0,
         removalQueue: 0,
+        overduePromises: 0,
       });
     });
   });

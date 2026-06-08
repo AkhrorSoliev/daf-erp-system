@@ -16,22 +16,116 @@ import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 export class PaymentsDebtorsService {
   constructor(private prisma: PrismaService) {}
 
-  async getDebtors(
-    companyId: number,
-    query: { branchId?: number; page?: number; pageSize?: number },
-  ) {
-    const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 10;
+  /**
+   * Resolve the effective branch scope for a debtors query.
+   * - CEO / Administrator: company-wide; an explicit `requestedBranchId`
+   *   (from the branch switcher) narrows the result.
+   * - Branch Director: hard-restricted to their own `mainBranch`; an explicit
+   *   branch filter must intersect it (else nothing — RBAC rule).
+   * - Other roles (Cashier): company-wide, honoring an explicit filter.
+   * Returns `undefined` for "all branches", or a concrete id list (possibly
+   * empty → the caller short-circuits to an empty result).
+   */
+  private async resolveBranchScope(
+    userId: number,
+    roles: string[],
+    requestedBranchId?: number,
+  ): Promise<number[] | undefined> {
+    const isBd =
+      roles.includes('Branch Director') &&
+      !roles.includes('CEO') &&
+      !roles.includes('Administrator');
+    if (isBd) {
+      const caller = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { mainBranch: true },
+      });
+      const own = caller?.mainBranch ? [caller.mainBranch] : [];
+      if (requestedBranchId) {
+        return own.includes(requestedBranchId) ? [requestedBranchId] : [];
+      }
+      return own;
+    }
+    return requestedBranchId ? [requestedBranchId] : undefined;
+  }
 
-    const where: Prisma.StudentWhereInput = {
+  /**
+   * Canonical "active debtor" predicate, shared by the list, the count and
+   * the summary aggregate so the page's table and cards can never drift.
+   */
+  private debtorWhere(
+    companyId: number,
+    branchIds?: number[],
+  ): Prisma.StudentWhereInput {
+    return {
       companyId,
       deletedAt: null,
       status: StudentStatus.ACTIVE,
       balance: { lt: 0 },
-      ...(query.branchId && {
-        branches: { some: { branchId: query.branchId } },
-      }),
+      ...(branchIds
+        ? { branches: { some: { branchId: { in: branchIds } } } }
+        : {}),
     };
+  }
+
+  async getDebtors(
+    companyId: number,
+    query: {
+      branchId?: number;
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      sortBy?: 'balance' | 'firstName' | 'lastName';
+      order?: 'asc' | 'desc';
+      promise?: 'has_open' | 'overdue';
+      userId: number;
+      roles: string[];
+    },
+  ) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
+
+    const branchIds = await this.resolveBranchScope(
+      query.userId,
+      query.roles,
+      query.branchId,
+    );
+    if (branchIds && branchIds.length === 0) {
+      return { data: [], total: 0, page, pageSize };
+    }
+
+    const where = this.debtorWhere(companyId, branchIds);
+
+    // Payment-promise filter — students with an active / broken promise.
+    if (query.promise === 'has_open') {
+      where.paymentPromises = { some: { status: 'OPEN' } };
+    } else if (query.promise === 'overdue') {
+      where.paymentPromises = { some: { status: 'BROKEN' } };
+    }
+
+    // Unified search across name / phone / id — same OR shape as
+    // StudentsRead so the two pages behave identically.
+    const search = query.search?.trim();
+    if (search) {
+      const conditions: Prisma.StudentWhereInput[] = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search } },
+      ];
+      const asNumber = Number(search);
+      if (!Number.isNaN(asNumber) && Number.isInteger(asNumber)) {
+        conditions.push({ id: { equals: asNumber } });
+      }
+      where.OR = conditions;
+    }
+
+    const dir: Prisma.SortOrder = query.order === 'desc' ? 'desc' : 'asc';
+    const orderBy: Prisma.StudentOrderByWithRelationInput =
+      query.sortBy === 'firstName'
+        ? { firstName: dir }
+        : query.sortBy === 'lastName'
+          ? { lastName: dir }
+          : { balance: query.order ? dir : 'asc' };
 
     const [data, total] = await Promise.all([
       this.prisma.student.findMany({
@@ -41,12 +135,14 @@ export class PaymentsDebtorsService {
           firstName: true,
           lastName: true,
           phone: true,
+          photo: true,
           balance: true,
           enrollments: {
             where: { status: 'ACTIVE', deletedAt: null },
             select: {
               group: {
                 select: {
+                  id: true,
                   name: true,
                   course: { select: { name: true } },
                 },
@@ -54,14 +150,80 @@ export class PaymentsDebtorsService {
             },
           },
         },
-        orderBy: { balance: 'asc' },
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
       this.prisma.student.count({ where }),
     ]);
 
-    return { data, total, page, pageSize };
+    return {
+      data: data.map((s) => ({
+        ...s,
+        debtAmount: s.balance < 0 ? -s.balance : 0,
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  /**
+   * Card-ready aggregate for the debtors page: total owed, debtor count and
+   * average debt (lifted from reports-financial), plus the payment-promise
+   * counts that power the "Va'da / muddati o'tgan" card. Same `where` and
+   * branch scope as the list so the cards always reconcile with the table.
+   */
+  async getDebtorSummary(
+    companyId: number,
+    query: { branchId?: number; userId: number; roles: string[] },
+  ) {
+    const branchIds = await this.resolveBranchScope(
+      query.userId,
+      query.roles,
+      query.branchId,
+    );
+    if (branchIds && branchIds.length === 0) {
+      return {
+        totalDebt: 0,
+        debtorCount: 0,
+        avgDebt: 0,
+        openPromises: 0,
+        overduePromises: 0,
+      };
+    }
+
+    const where = this.debtorWhere(companyId, branchIds);
+    const promiseScope: Prisma.PaymentPromiseWhereInput = {
+      companyId,
+      ...(branchIds ? { branchId: { in: branchIds } } : {}),
+    };
+
+    const [agg, openPromises, overduePromises] = await Promise.all([
+      this.prisma.student.aggregate({
+        where,
+        _sum: { balance: true },
+        _count: true,
+      }),
+      // Active commitments ("Va'da bergan").
+      this.prisma.paymentPromise.count({
+        where: { ...promiseScope, status: 'OPEN' },
+      }),
+      // Broken by the cron and the student still owes ("Muddati o'tgan").
+      this.prisma.paymentPromise.count({
+        where: {
+          ...promiseScope,
+          status: 'BROKEN',
+          student: { balance: { lt: 0 } },
+        },
+      }),
+    ]);
+
+    const totalDebt = Math.abs(agg._sum.balance ?? 0);
+    const debtorCount = agg._count;
+    const avgDebt = debtorCount > 0 ? Math.round(totalDebt / debtorCount) : 0;
+
+    return { totalDebt, debtorCount, avgDebt, openPromises, overduePromises };
   }
 
   async getPending(

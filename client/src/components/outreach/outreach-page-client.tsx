@@ -6,11 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TodayAbsenteesTab } from "./today-absentees-tab";
 import { CallbacksTab } from "./callbacks-tab";
 import { RemovalQueueTab } from "./removal-queue-tab";
+import { PaymentPromisesTab } from "./payment-promises-tab";
 import { AddCallbackDialog, type AddCallbackPrefill } from "./add-callback-dialog";
 import { OutreachStatsWidget } from "./outreach-stats";
 
 const DEFAULT_TAB = "absentees";
-const VALID_TABS = new Set(["absentees", "callbacks", "removals"]);
+const VALID_TABS = new Set(["absentees", "callbacks", "promises", "removals"]);
 
 export function OutreachPageClient() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export function OutreachPageClient() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Aloqa markazi</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Darsga kelmagan o&apos;quvchilar, qo&apos;ng&apos;iroq vazifalari va guruhdan chiqarish navbati
+          Darsga kelmagan o&apos;quvchilar, qo&apos;ng&apos;iroq vazifalari, to&apos;lov va&apos;dalari va guruhdan chiqarish navbati
         </p>
       </div>
 
@@ -52,6 +53,7 @@ export function OutreachPageClient() {
         <TabsList>
           <TabsTrigger value="absentees">Bugungi kelmaganlar</TabsTrigger>
           <TabsTrigger value="callbacks">Qo&apos;ng&apos;iroqlar</TabsTrigger>
+          <TabsTrigger value="promises">To&apos;lov va&apos;dalari</TabsTrigger>
           <TabsTrigger value="removals">Chiqarish navbati</TabsTrigger>
         </TabsList>
 
@@ -66,6 +68,12 @@ export function OutreachPageClient() {
         </TabsContent>
         <TabsContent value="callbacks" className="mt-4">
           <CallbacksTab isActive={activeTab === "callbacks"} />
+        </TabsContent>
+        <TabsContent value="promises" className="mt-4">
+          <PaymentPromisesTab
+            isActive={activeTab === "promises"}
+            onAddCallback={openAddCallback}
+          />
         </TabsContent>
         <TabsContent value="removals" className="mt-4">
           <RemovalQueueTab

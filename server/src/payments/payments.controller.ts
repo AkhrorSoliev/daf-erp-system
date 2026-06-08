@@ -131,12 +131,39 @@ export class PaymentsController {
   @Get('debtors')
   getDebtors(
     @Query() query: PaymentQueryDto,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
     return this.paymentsService.getDebtors(companyId, {
       branchId: query.branchId,
       page: query.page,
       pageSize: query.pageSize,
+      search: query.search,
+      sortBy: query.sortBy,
+      order: query.order,
+      promise: query.promise,
+      userId,
+      roles,
+    });
+  }
+
+  /**
+   * Card-ready debtor aggregate (total owed, debtor count, avg debt, open /
+   * overdue payment-promise counts) for the debtors page summary cards.
+   * Same branch scope as the list.
+   */
+  @Get('debtors/summary')
+  getDebtorSummary(
+    @Query() query: PaymentQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.paymentsService.getDebtorSummary(companyId, {
+      branchId: query.branchId,
+      userId,
+      roles,
     });
   }
 
