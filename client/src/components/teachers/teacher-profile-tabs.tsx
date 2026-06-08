@@ -53,7 +53,7 @@ export function TeacherProfileTabs({
     lessonsCount?: number;
     studentsCount?: number;
     paidTotal: number;
-    groups: { groupName: string; activeStudents: number; salaryType: string | null; salaryValue: number; expectedMonthly: number }[];
+    groups: { groupName: string; activeStudents: number; salaryType: string | null; salaryValue: number; coursePrice: number; expectedMonthly: number }[];
     hasConfig: boolean;
   } | null>(null);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
@@ -250,6 +250,7 @@ export function TeacherProfileTabs({
                           <p className="text-xs text-muted-foreground">
                             {g.activeStudents} o&apos;quvchi
                             {g.salaryType ? ` · ${g.salaryType === "PERCENTAGE" ? `${g.salaryValue}%` : `${g.salaryValue.toLocaleString("en-US")} so'm`}` : ""}
+                            {` · ${g.coursePrice.toLocaleString("en-US")} so'm`}
                           </p>
                         </div>
                         <p className="font-medium text-amber-600">
