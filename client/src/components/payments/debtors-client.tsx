@@ -23,7 +23,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -81,8 +80,8 @@ const SORT_OPTIONS = [
 
 const PROMISE_OPTIONS = [
   { value: "all", label: "Barcha qarzdorlar" },
-  { value: "has_open", label: "Va'da berganlar" },
-  { value: "overdue", label: "Muddati o'tgan va'da" },
+  { value: "has_open", label: "Sana belgilangan" },
+  { value: "overdue", label: "Muddati o'tgan" },
 ] as const;
 
 const FILTER_SCHEMA = {
@@ -200,7 +199,7 @@ export function DebtorsClient() {
         <SummaryCard
           icon={<CalendarClock className="size-5 text-violet-700 dark:text-violet-300" />}
           tone="violet"
-          label="Va'da / muddati o'tgan"
+          label="Belgilangan / muddati o'tgan"
           value={
             summary
               ? `${formatNumber(summary.openPromises)} / ${formatNumber(summary.overduePromises)}`
@@ -421,14 +420,7 @@ function DebtorRow({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onAddPromise}>
               <CalendarPlus className="mr-2 size-4" />
-              To&apos;lov va&apos;dasi qo&apos;shish
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href={`/students/profile/${debtor.id}`}>
-                <Users className="mr-2 size-4" />
-                Profilga o&apos;tish
-              </Link>
+              To&apos;lov sanasini belgilash
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

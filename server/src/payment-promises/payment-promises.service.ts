@@ -66,7 +66,7 @@ export class PaymentPromisesService {
         err.code === 'P2002'
       ) {
         throw new BadRequestException(
-          "Bu o'quvchida ochiq to'lov va'dasi allaqachon mavjud",
+          "Bu o'quvchida belgilangan to'lov sanasi allaqachon mavjud",
         );
       }
       throw err;
@@ -77,7 +77,7 @@ export class PaymentPromisesService {
     const promise = await this.prisma.paymentPromise.findFirst({
       where: { id, companyId, status: 'OPEN' },
     });
-    if (!promise) throw new NotFoundException("Ochiq to'lov va'dasi topilmadi");
+    if (!promise) throw new NotFoundException("Belgilangan to'lov sanasi topilmadi");
 
     const updated = await this.prisma.paymentPromise.update({
       where: { id },

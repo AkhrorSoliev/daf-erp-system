@@ -43,7 +43,7 @@ export function OutreachPageClient() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Aloqa markazi</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Darsga kelmagan o&apos;quvchilar, qo&apos;ng&apos;iroq vazifalari, to&apos;lov va&apos;dalari va guruhdan chiqarish navbati
+          Darsga kelmagan o&apos;quvchilar, qo&apos;ng&apos;iroq vazifalari, to&apos;lov sanalari va guruhdan chiqarish navbati
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export function OutreachPageClient() {
         <TabsList>
           <TabsTrigger value="absentees">Bugungi kelmaganlar</TabsTrigger>
           <TabsTrigger value="callbacks">Qo&apos;ng&apos;iroqlar</TabsTrigger>
-          <TabsTrigger value="promises">To&apos;lov va&apos;dalari</TabsTrigger>
+          <TabsTrigger value="promises">To&apos;lov sanalari</TabsTrigger>
           <TabsTrigger value="removals">Chiqarish navbati</TabsTrigger>
         </TabsList>
 
