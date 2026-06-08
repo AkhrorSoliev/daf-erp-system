@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatBalance } from "@/lib/format-utils";
@@ -74,7 +73,6 @@ function PromiseForm({
     d.setDate(d.getDate() + 1);
     return d;
   });
-  const [amount, setAmount] = useState<string>("");
   const [comment, setComment] = useState("");
 
   const today = useMemo(() => new Date(), []);
@@ -97,7 +95,6 @@ function PromiseForm({
       await api.post("/payment-promises", {
         studentId: student.id,
         promiseDate: promiseDateIso,
-        promisedAmount: amount ? Number(amount) : undefined,
         comment: trimmed,
       });
     },
@@ -136,14 +133,6 @@ function PromiseForm({
             value={date}
             onChange={(d) => setDate(d ?? null)}
             minDate={today}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label className="text-xs">Summa (ixtiyoriy)</Label>
-          <PriceInput
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
           />
         </div>
 

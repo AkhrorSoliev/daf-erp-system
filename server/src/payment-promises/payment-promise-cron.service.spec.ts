@@ -49,7 +49,6 @@ describe('PaymentPromiseCronService', () => {
         studentId: 10264,
         companyId: 1001,
         branchId: 3,
-        promisedAmount: 200000,
         promiseDate: new Date('2026-06-05T00:00:00.000Z'),
       },
     ]);

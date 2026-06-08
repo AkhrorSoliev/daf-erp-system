@@ -36,7 +36,6 @@ export class PaymentPromisesService {
         data: {
           studentId: dto.studentId,
           promiseDate: new Date(dto.promiseDate),
-          promisedAmount: dto.promisedAmount ?? null,
           comment: dto.comment.trim(),
           status: 'OPEN',
           balanceAtPromise: student.balance,
@@ -52,7 +51,6 @@ export class PaymentPromisesService {
         newValues: {
           action: "TO'LOV_VA'DASI_BERILDI",
           sana: dto.promiseDate,
-          ...(dto.promisedAmount != null ? { summa: dto.promisedAmount } : {}),
           izoh: dto.comment.trim(),
         },
         changedById: userId,

@@ -1,9 +1,7 @@
 import {
   IsInt,
-  IsOptional,
   IsString,
   IsNotEmpty,
-  Min,
   IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -17,13 +15,7 @@ export class CreatePaymentPromiseDto {
   @IsDateString()
   promiseDate: string;
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  promisedAmount?: number;
-
-  // Izoh majburiy — har bir va'da konteksti bilan yoziladi.
+  // Izoh majburiy — har bir to'lov sanasi konteksti bilan yoziladi.
   @IsString()
   @IsNotEmpty({ message: 'Izoh kiritilishi shart' })
   comment: string;

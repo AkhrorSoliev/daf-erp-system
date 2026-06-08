@@ -337,7 +337,6 @@ export class OutreachService {
       select: {
         id: true,
         promiseDate: true,
-        promisedAmount: true,
         comment: true,
         createdAt: true,
         student: {
@@ -362,7 +361,6 @@ export class OutreachService {
     const items = promises.map((p) => ({
       promiseId: p.id,
       promiseDate: p.promiseDate.toISOString(),
-      promisedAmount: p.promisedAmount,
       comment: p.comment,
       createdAt: p.createdAt.toISOString(),
       student: {
