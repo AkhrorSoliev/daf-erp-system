@@ -18,6 +18,8 @@ describe('NotificationEventsListener — handlePaymentCorrected', () => {
     studentId: 10001,
     oldAmount: 5000000,
     newAmount: 400000,
+    oldMethod: 'CASH' as any,
+    newMethod: 'CASH' as any,
     reason: 'Ortiqcha nol kiritilgan',
     performedById: 99,
     companyId: 1,
@@ -86,6 +88,20 @@ describe('NotificationEventsListener — handlePaymentCorrected', () => {
     expect(message).toContain('5 000 000');
     expect(message).toContain('400 000');
     expect(message).toContain('Ortiqcha nol kiritilgan');
+  });
+
+  it('includes the method change in the message when the method was corrected', async () => {
+    await listener.handlePaymentCorrected({
+      ...payload,
+      oldAmount: 400000,
+      newAmount: 400000,
+      oldMethod: 'CASH' as any,
+      newMethod: 'TRANSFER' as any,
+    });
+
+    const { message } = notificationsService.create.mock.calls[0][0];
+    expect(message).toContain('Naqd');
+    expect(message).toContain("Bank o'tkazmasi");
   });
 
   it('does nothing when the company has no CEO', async () => {

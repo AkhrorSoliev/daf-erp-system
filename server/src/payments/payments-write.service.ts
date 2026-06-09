@@ -53,13 +53,15 @@ export interface PaymentReversedPayload {
 }
 
 /**
- * Emitted when a non-CEO operator corrects a payment amount. Consumed by
- * `NotificationEventsListener` to alert the CEO(s) of the company.
+ * Emitted when a non-CEO operator corrects a payment amount and/or method.
+ * Consumed by `NotificationEventsListener` to alert the CEO(s) of the company.
  */
 export interface PaymentCorrectedPayload {
   studentId: number;
   oldAmount: number;
   newAmount: number;
+  oldMethod: PaymentMethod;
+  newMethod: PaymentMethod;
   reason: string;
   performedById: number;
   companyId: number;
@@ -411,10 +413,12 @@ export class PaymentsWriteService {
   }
 
   /**
-   * Corrects the amount of an already-posted manual payment (e.g. cashier
-   * typed 4 000 000 instead of 400 000). Reverses the wrong payment and
-   * re-posts a new one at `dto.correctAmount` — the append-only ledger
-   * rule means we never edit the Payment row in place.
+   * Corrects the amount and/or method of an already-posted manual payment
+   * (e.g. cashier typed 4 000 000 instead of 400 000, or recorded CASH for a
+   * bank TRANSFER). Reverses the wrong payment and re-posts a new one at
+   * `dto.correctAmount` with `dto.method` (or the original method when the
+   * caller omits it) — the append-only ledger rule means we never edit the
+   * Payment row in place.
    *
    * Guardrails:
    *  - only `ADMIN_MANUAL` payments (gateway amounts are provider-owned);
@@ -462,9 +466,13 @@ export class PaymentsWriteService {
       );
     }
 
-    if (dto.correctAmount === payment.amount) {
+    // Method is optional — keep the original when the caller doesn't change it.
+    const newMethod = dto.method ?? payment.method;
+    const sameAmount = dto.correctAmount === payment.amount;
+    const sameMethod = newMethod === payment.method;
+    if (sameAmount && sameMethod) {
       throw new BadRequestException(
-        "Yangi summa joriy summa bilan bir xil — to'g'rilash shart emas",
+        "Summa va to'lov usuli o'zgarmadi — to'g'rilash shart emas",
       );
     }
 
@@ -522,18 +530,21 @@ export class PaymentsWriteService {
       companyId,
     });
 
-    // Step 2 — re-post at the correct amount (its own atomic tx). create()
-    // emits `payment.received`, so the student gets the second message.
+    // Step 2 — re-post at the correct amount/method (its own atomic tx).
+    // create() emits `payment.received`, so the student gets the second message.
+    const methodChangeNote = sameMethod
+      ? ''
+      : ` To'lov usuli: ${PAYMENT_METHOD_LABEL[payment.method]} → ${PAYMENT_METHOD_LABEL[newMethod]}.`;
     const noteForCorrection = `To'g'rilangan to'lov (avvalgi summa: ${formatSom(
       payment.amount,
-    )} so'm). Sabab: ${dto.reason}`;
+    )} so'm).${methodChangeNote} Sabab: ${dto.reason}`;
     let newPayment: Awaited<ReturnType<PaymentsWriteService['create']>>;
     try {
       newPayment = await this.create(
         {
           studentId: payment.studentId,
           amount: dto.correctAmount,
-          method: payment.method,
+          method: newMethod,
           contractId: payment.contractId ?? undefined,
           branchId: payment.branchId ?? undefined,
           note: noteForCorrection,
@@ -560,6 +571,8 @@ export class PaymentsWriteService {
         studentId: payment.studentId,
         oldAmount: payment.amount,
         newAmount: dto.correctAmount,
+        oldMethod: payment.method,
+        newMethod,
         reason: dto.reason,
         performedById: userId,
         companyId,
