@@ -20,7 +20,7 @@ const OUTCOME_LABEL: Record<CallOutcome, string> = {
   PROMISED: 'Keladi / to‘laydi dedi', // legacy
   WILL_COME: 'Keladi dedi',
   WILL_PAY: 'To‘laydi dedi',
-  LEFT: 'Tashlab ketdi',
+  LEFT: 'O‘qishni tashladi',
 };
 
 interface ListContext {
