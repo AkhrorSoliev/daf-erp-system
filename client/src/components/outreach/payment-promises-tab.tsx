@@ -197,7 +197,7 @@ function Row({
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" onClick={onCall}>
             <PhoneCall className="mr-1 size-3.5" />
-            Aloqa qilindi
+            Natija kiritish
           </Button>
           <Button
             size="sm"
