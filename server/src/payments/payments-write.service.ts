@@ -476,6 +476,16 @@ export class PaymentsWriteService {
       );
     }
 
+    // A reason is mandatory only when the amount changes — an amount fix must
+    // be explained in the audit trail. A method-only change (money unchanged)
+    // doesn't require one.
+    const reason = dto.reason?.trim() || null;
+    if (!sameAmount && !reason) {
+      throw new BadRequestException(
+        "Summani to'g'rilash uchun sabab ko'rsatilishi shart",
+      );
+    }
+
     // Time window — admins/BDs may only correct recent payments; CEOs bypass.
     const isCeo = roles?.includes('CEO') ?? false;
     if (!isCeo) {
@@ -525,7 +535,9 @@ export class PaymentsWriteService {
     // Step 1 — reverse the wrong payment (its own atomic tx). reverse()
     // emits `payment.reversed`, so the student gets the first message.
     await this.reverse(id, {
-      reason: `Summa to'g'rilandi: ${dto.reason}`,
+      reason: reason
+        ? `Summa to'g'rilandi: ${reason}`
+        : "To'lov usuli to'g'rilandi",
       performedById: userId,
       companyId,
     });
@@ -535,9 +547,10 @@ export class PaymentsWriteService {
     const methodChangeNote = sameMethod
       ? ''
       : ` To'lov usuli: ${PAYMENT_METHOD_LABEL[payment.method]} → ${PAYMENT_METHOD_LABEL[newMethod]}.`;
+    const reasonNote = reason ? ` Sabab: ${reason}` : '';
     const noteForCorrection = `To'g'rilangan to'lov (avvalgi summa: ${formatSom(
       payment.amount,
-    )} so'm).${methodChangeNote} Sabab: ${dto.reason}`;
+    )} so'm).${methodChangeNote}${reasonNote}`;
     let newPayment: Awaited<ReturnType<PaymentsWriteService['create']>>;
     try {
       newPayment = await this.create(
@@ -573,7 +586,7 @@ export class PaymentsWriteService {
         newAmount: dto.correctAmount,
         oldMethod: payment.method,
         newMethod,
-        reason: dto.reason,
+        reason: reason ?? '',
         performedById: userId,
         companyId,
       } satisfies PaymentCorrectedPayload);
