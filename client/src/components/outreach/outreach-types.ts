@@ -44,7 +44,13 @@ export interface TodayAbsenteeItem {
 
 // Qo'ng'iroq sababi (qaysi ro'yxatdan chiqilgan) va natijasi.
 export type CallReason = "ABSENCE" | "DEBT" | "REMOVAL" | "OTHER";
-export type CallOutcome = "ANSWERED" | "NO_ANSWER" | "PROMISED" | "LEFT";
+export type CallOutcome =
+  | "ANSWERED"
+  | "NO_ANSWER"
+  | "PROMISED" // legacy combined "keladi / to'laydi"
+  | "WILL_COME"
+  | "WILL_PAY"
+  | "LEFT";
 
 export interface CallLogItem {
   id: string;

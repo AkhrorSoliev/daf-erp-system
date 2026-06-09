@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -35,7 +36,8 @@ interface LogCallDialogProps {
 const OUTCOME_OPTIONS: { value: CallOutcome; label: string }[] = [
   { value: "ANSWERED", label: "Gaplashildi" },
   { value: "NO_ANSWER", label: "Javob bermadi" },
-  { value: "PROMISED", label: "Keladi / to'laydi dedi" },
+  { value: "WILL_COME", label: "Keladi" },
+  { value: "WILL_PAY", label: "To'laydi" },
   { value: "LEFT", label: "Tashlab ketdi" },
 ];
 
@@ -67,22 +69,38 @@ function CallForm({
   const queryClient = useQueryClient();
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [note, setNote] = useState("");
+  const [promiseDate, setPromiseDate] = useState<Date | null>(null);
 
   const submit = useMutation({
     mutationFn: async () => {
       if (!outcome) throw new Error("Natija tanlanmagan");
+      // For "To'laydi" with a chosen date, send it (server creates/updates the
+      // payment promise). End-of-day so it isn't flagged overdue the same day.
+      let promiseIso: string | undefined;
+      if (outcome === "WILL_PAY" && promiseDate) {
+        const d = new Date(promiseDate);
+        d.setHours(23, 59, 59, 0);
+        promiseIso = d.toISOString();
+      }
       await api.post("/call-logs", {
         studentId: prefill.studentId,
         reason: prefill.reason,
         outcome,
         note: note.trim() || undefined,
+        promiseDate: promiseIso,
       });
     },
     onSuccess: () => {
-      toast.success("Qo'ng'iroq qayd qilindi");
-      // Prefix-invalidate every outreach list + stats, plus the history tab.
+      toast.success(
+        outcome === "WILL_PAY" && promiseDate
+          ? "Qo'ng'iroq qayd qilindi, to'lov sanasi belgilandi"
+          : "Qo'ng'iroq qayd qilindi",
+      );
+      // Prefix-invalidate every outreach list + stats, plus the history tab and
+      // the debtors page (a payment promise may have been created/updated).
       queryClient.invalidateQueries({ queryKey: ["outreach"] });
       queryClient.invalidateQueries({ queryKey: ["call-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["debtors"] });
       onSuccess();
     },
     onError: (error) =>
@@ -125,6 +143,21 @@ function CallForm({
             ))}
           </div>
         </div>
+
+        {outcome === "WILL_PAY" && (
+          <div className="space-y-1">
+            <Label className="text-xs">To&apos;lov sanasi (ixtiyoriy)</Label>
+            <DatePicker
+              value={promiseDate}
+              onChange={(d) => setPromiseDate(d ?? null)}
+              minDate={new Date()}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Sana kiritilsa, &quot;To&apos;lov sanalari&quot; bo&apos;limiga
+              qo&apos;shiladi.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-1">
           <Label className="text-xs">Izoh (ixtiyoriy)</Label>

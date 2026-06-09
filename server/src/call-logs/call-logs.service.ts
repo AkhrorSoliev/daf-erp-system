@@ -3,6 +3,7 @@ import { CallOutcome, CallReason, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { tashkentDayRangeUtc } from '../attendance/shared/date-utils';
+import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
 import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { ListCallLogsQueryDto } from './dto/list-call-logs-query.dto';
 
@@ -16,7 +17,9 @@ const REASON_LABEL: Record<CallReason, string> = {
 const OUTCOME_LABEL: Record<CallOutcome, string> = {
   ANSWERED: 'Gaplashildi',
   NO_ANSWER: 'Javob bermadi',
-  PROMISED: 'Keladi / to‘laydi dedi',
+  PROMISED: 'Keladi / to‘laydi dedi', // legacy
+  WILL_COME: 'Keladi dedi',
+  WILL_PAY: 'To‘laydi dedi',
   LEFT: 'Tashlab ketdi',
 };
 
@@ -32,6 +35,7 @@ export class CallLogsService {
   constructor(
     private prisma: PrismaService,
     private entityHistory: EntityHistoryService,
+    private paymentPromises: PaymentPromisesService,
   ) {}
 
   /**
@@ -73,6 +77,20 @@ export class CallLogsService {
       changedById: userId,
       companyId,
     });
+
+    // "To'laydi" + sana → create/refresh the student's OPEN payment promise so
+    // it surfaces on the "To'lov sanalari" tab. Date is optional.
+    if (dto.outcome === 'WILL_PAY' && dto.promiseDate) {
+      await this.paymentPromises.upsertOpenPromise(
+        {
+          studentId: dto.studentId,
+          promiseDate: dto.promiseDate,
+          comment: note ?? "Qo'ng'iroqda to'layman dedi",
+        },
+        userId,
+        companyId,
+      );
+    }
 
     return log;
   }

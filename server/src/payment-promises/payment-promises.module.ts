@@ -11,5 +11,6 @@ import { HolidaysModule } from '../holidays/holidays.module';
   imports: [HolidaysModule],
   controllers: [PaymentPromisesController],
   providers: [PaymentPromisesService, PaymentPromiseCronService],
+  exports: [PaymentPromisesService],
 })
 export class PaymentPromisesModule {}
