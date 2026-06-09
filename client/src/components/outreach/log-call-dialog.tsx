@@ -38,7 +38,7 @@ const OUTCOME_OPTIONS: { value: CallOutcome; label: string }[] = [
   { value: "NO_ANSWER", label: "Javob bermadi" },
   { value: "WILL_COME", label: "Keladi" },
   { value: "WILL_PAY", label: "To'laydi" },
-  { value: "LEFT", label: "Tashlab ketdi" },
+  { value: "LEFT", label: "O'qishni tashladi" },
 ];
 
 export function LogCallDialog({

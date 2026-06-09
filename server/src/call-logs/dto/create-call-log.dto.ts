@@ -19,7 +19,7 @@ export class CreateCallLogDto {
   reason: CallReason;
 
   // Quick-pick result of the call (Gaplashildi / Javob bermadi / Keladi /
-  // To'laydi / Tashlab ketdi).
+  // To'laydi / O'qishni tashladi).
   @IsEnum(CallOutcome)
   outcome: CallOutcome;
 
