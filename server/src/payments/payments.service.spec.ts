@@ -729,8 +729,68 @@ describe('PaymentsService', () => {
           studentId: 10001,
           oldAmount: 5000000,
           newAmount: 400000,
+          oldMethod: 'CASH',
+          newMethod: 'CASH',
           performedById: 99,
         }),
+      );
+    });
+
+    it('re-posts with the new method when method is changed', async () => {
+      await service.correctAmount(
+        'payment-uuid-1',
+        { correctAmount: 400000, method: 'TRANSFER' as any, reason: 'Usul xato' },
+        99,
+        1001,
+        ['Administrator'],
+      );
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            amount: 400000,
+            method: 'TRANSFER',
+          }),
+        }),
+      );
+    });
+
+    it('keeps the original method when method is omitted', async () => {
+      await service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+        'Administrator',
+      ]);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ method: 'CASH' }),
+        }),
+      );
+    });
+
+    it('allows a method-only correction (amount unchanged)', async () => {
+      await service.correctAmount(
+        'payment-uuid-1',
+        {
+          correctAmount: 5000000,
+          method: 'TRANSFER' as any,
+          reason: 'Naqd emas, o’tkazma edi',
+        },
+        99,
+        1001,
+        ['Administrator'],
+      );
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            amount: 5000000,
+            method: 'TRANSFER',
+          }),
+        }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.corrected',
+        expect.objectContaining({ oldMethod: 'CASH', newMethod: 'TRANSFER' }),
       );
     });
 

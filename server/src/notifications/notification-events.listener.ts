@@ -7,6 +7,7 @@ import { NotificationsGateway } from './notifications.gateway';
 import { PushService } from './push.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { formatSom } from '../payments/shared/format-som';
+import { PAYMENT_METHOD_LABEL } from '../payments/shared/method-label';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
 import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
@@ -268,9 +269,22 @@ export class NotificationEventsListener {
       const studentId = String(payload.studentId);
 
       const title = "To'lov to'g'rilandi";
+      const amountChanged = payload.oldAmount !== payload.newAmount;
+      const methodChanged = payload.oldMethod !== payload.newMethod;
+      const changeParts: string[] = [];
+      if (amountChanged) {
+        changeParts.push(
+          `${formatSom(payload.oldAmount)} → ${formatSom(payload.newAmount)} so'm`,
+        );
+      }
+      if (methodChanged) {
+        changeParts.push(
+          `${PAYMENT_METHOD_LABEL[payload.oldMethod]} → ${PAYMENT_METHOD_LABEL[payload.newMethod]}`,
+        );
+      }
       const message =
         `${performerName} ${studentName}ning to'lovini to'g'riladi: ` +
-        `${formatSom(payload.oldAmount)} → ${formatSom(payload.newAmount)} so'm. ` +
+        `${changeParts.join(', ')}. ` +
         `Sabab: ${payload.reason}`;
 
       for (const ceo of ceos) {
