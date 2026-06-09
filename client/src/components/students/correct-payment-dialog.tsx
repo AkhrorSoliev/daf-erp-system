@@ -90,9 +90,13 @@ export function CorrectPaymentDialog({
         ...(trimmedReason ? { reason: trimmedReason } : {}),
       });
       toast.success(
-        `To'lov to'g'rilandi: ${formatPrice(payment.amount)} → ${formatPrice(
-          rawAmount,
-        )} so'm`,
+        sameAmount
+          ? `To'lov usuli o'zgartirildi: ${
+              PAYMENT_METHOD_LABELS[payment.method] ?? payment.method
+            } → ${PAYMENT_METHOD_LABELS[method] ?? method}`
+          : `To'lov to'g'rilandi: ${formatPrice(payment.amount)} → ${formatPrice(
+              rawAmount,
+            )} so'm`,
       );
       onCorrected(
         typeof data?.studentBalance === "number" ? data.studentBalance : null,
