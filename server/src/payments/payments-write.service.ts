@@ -499,6 +499,64 @@ export class PaymentsWriteService {
       }
     }
 
+    // Method-only correction (amount unchanged): the student balance never
+    // moves, so the reverse+re-post machinery — and its "funds already spent
+    // on lessons" guard — doesn't apply. The ledger tracks balances, not the
+    // payment method, so we just relabel the method on the Payment row in
+    // place. This lets an admin fix a mis-recorded method (e.g. CASH →
+    // TRANSFER) even after the money was already consumed by lessons.
+    if (sameAmount) {
+      const studentBalance = await this.prisma.$transaction(
+        async (tx) => {
+          await tx.payment.update({
+            where: { id },
+            data: { method: newMethod },
+          });
+
+          await this.entityHistoryService.recordUpdate({
+            entityType: 'Payment',
+            entityId: id,
+            oldValues: { method: payment.method },
+            newValues: { method: newMethod },
+            changedById: userId,
+            companyId,
+            tx,
+          });
+
+          const student = await tx.student.findUnique({
+            where: { id: payment.studentId },
+            select: { balance: true },
+          });
+          return student?.balance ?? null;
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10000,
+          timeout: 15000,
+        },
+      );
+
+      // Alert the CEO when a non-CEO relabels a payment method.
+      if (!isCeo) {
+        this.eventEmitter.emit('payment.corrected', {
+          studentId: payment.studentId,
+          oldAmount: payment.amount,
+          newAmount: payment.amount,
+          oldMethod: payment.method,
+          newMethod,
+          reason: reason ?? "To'lov usuli o'zgartirildi",
+          performedById: userId,
+          companyId,
+        } satisfies PaymentCorrectedPayload);
+      }
+
+      return {
+        reversedPaymentId: null,
+        newPayment: null,
+        studentBalance,
+      };
+    }
+
     // Simple-case guard: if the funds were already spent on lessons, a
     // reverse+repost can't represent the correction. Surface a clear
     // message before touching anything (reverse() re-checks as a backstop).

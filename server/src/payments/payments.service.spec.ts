@@ -767,7 +767,7 @@ describe('PaymentsService', () => {
       );
     });
 
-    it('allows a method-only correction (amount unchanged)', async () => {
+    it('relabels the method in place for a method-only correction (no reverse/re-post)', async () => {
       await service.correctAmount(
         'payment-uuid-1',
         {
@@ -780,12 +780,18 @@ describe('PaymentsService', () => {
         ['Administrator'],
       );
 
-      expect(prisma.payment.create).toHaveBeenCalledWith(
+      // In-place method update — NOT a reverse + re-post.
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-uuid-1' },
+        data: { method: 'TRANSFER' },
+      });
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      expect(entityHistoryService.recordUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            amount: 5000000,
-            method: 'TRANSFER',
-          }),
+          entityType: 'Payment',
+          oldValues: { method: 'CASH' },
+          newValues: { method: 'TRANSFER' },
         }),
       );
       expect(eventEmitter.emit).toHaveBeenCalledWith(
@@ -805,11 +811,31 @@ describe('PaymentsService', () => {
         ),
       ).resolves.toBeDefined();
 
-      expect(prisma.payment.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ amount: 5000000, method: 'TRANSFER' }),
-        }),
-      );
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-uuid-1' },
+        data: { method: 'TRANSFER' },
+      });
+    });
+
+    it('allows a method-only correction even when funds were spent on lessons', async () => {
+      // A method relabel never moves money, so the "funds already spent on
+      // lessons" guard must NOT block it (the reverse-block bug we fixed).
+      prisma.transaction.count.mockResolvedValue(5);
+
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 5000000, method: 'TRANSFER' as any },
+          99,
+          1001,
+          ['Administrator'],
+        ),
+      ).resolves.toBeDefined();
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-uuid-1' },
+        data: { method: 'TRANSFER' },
+      });
     });
 
     it('throws when the amount changes but no reason is given', async () => {
