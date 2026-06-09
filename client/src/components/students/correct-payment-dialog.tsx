@@ -71,8 +71,14 @@ export function CorrectPaymentDialog({
   const sameAmount = rawAmount === payment.amount;
   const sameMethod = method === payment.method;
   const noChange = sameAmount && sameMethod;
+  // A reason is only required when the amount changes. A method-only fix
+  // (e.g. CASH → TRANSFER) doesn't move money, so no reason is needed.
+  const reasonRequired = !sameAmount;
   const canSubmit =
-    rawAmount >= 1000 && trimmedReason.length > 0 && !noChange && !submitting;
+    rawAmount >= 1000 &&
+    (!reasonRequired || trimmedReason.length > 0) &&
+    !noChange &&
+    !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -81,7 +87,7 @@ export function CorrectPaymentDialog({
       const { data } = await api.post(`/payments/${payment.id}/correct`, {
         correctAmount: rawAmount,
         method,
-        reason: trimmedReason,
+        ...(trimmedReason ? { reason: trimmedReason } : {}),
       });
       toast.success(
         `To'lov to'g'rilandi: ${formatPrice(payment.amount)} → ${formatPrice(
@@ -167,7 +173,12 @@ export function CorrectPaymentDialog({
 
           <div className="space-y-2">
             <Label htmlFor="correct-reason">
-              Sabab <span className="text-destructive">*</span>
+              Sabab{" "}
+              {reasonRequired ? (
+                <span className="text-destructive">*</span>
+              ) : (
+                <span className="text-muted-foreground">(ixtiyoriy)</span>
+              )}
             </Label>
             <Textarea
               id="correct-reason"

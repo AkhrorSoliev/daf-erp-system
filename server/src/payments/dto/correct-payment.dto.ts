@@ -19,8 +19,10 @@ import { PaymentMethod } from '@prisma/client';
  * `method` is optional — when omitted, the original payment's method is kept,
  * so an amount-only correction works unchanged.
  *
- * A `reason` is mandatory: every correction must be explained in the audit
- * trail (Student/Payment EntityHistory + the CEO notification).
+ * `reason` is mandatory only when the amount changes — an amount correction
+ * must be explained in the audit trail (Student/Payment EntityHistory + the
+ * CEO notification). A method-only fix (e.g. CASH → TRANSFER) doesn't change
+ * the money, so no reason is required; the service enforces this rule.
  */
 export class CorrectPaymentDto {
   @IsInt()
@@ -31,8 +33,9 @@ export class CorrectPaymentDto {
   @IsEnum(PaymentMethod)
   method?: PaymentMethod;
 
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)
-  reason: string;
+  reason?: string;
 }

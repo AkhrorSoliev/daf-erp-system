@@ -794,6 +794,36 @@ describe('PaymentsService', () => {
       );
     });
 
+    it('allows a method-only correction without a reason', async () => {
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 5000000, method: 'TRANSFER' as any },
+          99,
+          1001,
+          ['Administrator'],
+        ),
+      ).resolves.toBeDefined();
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ amount: 5000000, method: 'TRANSFER' }),
+        }),
+      );
+    });
+
+    it('throws when the amount changes but no reason is given', async () => {
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 400000 },
+          99,
+          1001,
+          ['Administrator'],
+        ),
+      ).rejects.toThrow(/sabab/i);
+    });
+
     it('does NOT emit payment.corrected when a CEO performs the correction', async () => {
       await service.correctAmount('payment-uuid-1', dto, 1, 1001, ['CEO']);
 
