@@ -18,7 +18,11 @@ describe('PaymentPromisesService', () => {
       findMany: jest.Mock;
     };
   };
-  let history: { recordCreate: jest.Mock; recordStatusChange: jest.Mock };
+  let history: {
+    recordCreate: jest.Mock;
+    recordStatusChange: jest.Mock;
+    recordUpdate: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -39,6 +43,7 @@ describe('PaymentPromisesService', () => {
     history = {
       recordCreate: jest.fn().mockResolvedValue(undefined),
       recordStatusChange: jest.fn().mockResolvedValue(undefined),
+      recordUpdate: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -125,6 +130,61 @@ describe('PaymentPromisesService', () => {
       await expect(service.cancel('nope', 99, 1001)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('upsertOpenPromise', () => {
+    it('creates a new OPEN promise when none exists', async () => {
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce(null);
+      await service.upsertOpenPromise(
+        { studentId: 10264, promiseDate: '2026-06-15', comment: '15-iyun' },
+        99,
+        1001,
+      );
+      expect(prisma.paymentPromise.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          studentId: 10264,
+          status: 'OPEN',
+          comment: '15-iyun',
+          createdById: 99,
+          branchId: 3,
+          companyId: 1001,
+        }),
+      });
+      expect(prisma.paymentPromise.update).not.toHaveBeenCalled();
+      expect(history.recordCreate).toHaveBeenCalled();
+    });
+
+    it('updates the existing OPEN promise date instead of creating', async () => {
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce({
+        id: 'p1',
+        promiseDate: new Date('2026-06-10'),
+      });
+      await service.upsertOpenPromise(
+        { studentId: 10264, promiseDate: '2026-06-20', comment: 'yangi sana' },
+        99,
+        1001,
+      );
+      expect(prisma.paymentPromise.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: expect.objectContaining({
+          comment: 'yangi sana',
+          reminderFiredAt: null,
+        }),
+      });
+      expect(prisma.paymentPromise.create).not.toHaveBeenCalled();
+      expect(history.recordUpdate).toHaveBeenCalled();
+    });
+
+    it('throws NotFound when the student does not exist', async () => {
+      prisma.student.findFirst.mockResolvedValueOnce(null);
+      await expect(
+        service.upsertOpenPromise(
+          { studentId: 1, promiseDate: '2026-06-20', comment: 'x' },
+          99,
+          1001,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

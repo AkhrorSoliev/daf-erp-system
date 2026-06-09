@@ -1,4 +1,11 @@
-import { IsEnum, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CallOutcome, CallReason } from '@prisma/client';
 
@@ -11,7 +18,8 @@ export class CreateCallLogDto {
   @IsEnum(CallReason)
   reason: CallReason;
 
-  // Quick-pick result of the call (Gaplashildi / Javob bermadi / Va'da / Tashlab ketdi).
+  // Quick-pick result of the call (Gaplashildi / Javob bermadi / Keladi /
+  // To'laydi / Tashlab ketdi).
   @IsEnum(CallOutcome)
   outcome: CallOutcome;
 
@@ -20,4 +28,10 @@ export class CreateCallLogDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  // Optional payment date — only honored when outcome is WILL_PAY. Creates or
+  // updates the student's OPEN payment promise so it shows on "To'lov sanalari".
+  @IsOptional()
+  @IsDateString()
+  promiseDate?: string;
 }

@@ -71,6 +71,81 @@ export class PaymentPromisesService {
     }
   }
 
+  /**
+   * Create-or-update the student's OPEN payment promise. Used by the outreach
+   * call flow ("To'laydi" + sana): an admin re-calling a debtor can set a new
+   * date without first cancelling the old one. If an OPEN promise exists its
+   * date/comment are refreshed (and the overdue cron re-armed); otherwise a new
+   * one is created. Returns the promise.
+   */
+  async upsertOpenPromise(
+    params: { studentId: number; promiseDate: string; comment: string },
+    userId: number,
+    companyId: number,
+  ) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: params.studentId, companyId, deletedAt: null },
+      select: { id: true, balance: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+
+    const comment = params.comment.trim();
+    const promiseDate = new Date(params.promiseDate);
+
+    const existing = await this.prisma.paymentPromise.findFirst({
+      where: { studentId: params.studentId, companyId, status: 'OPEN' },
+      select: { id: true, promiseDate: true },
+    });
+
+    if (existing) {
+      const updated = await this.prisma.paymentPromise.update({
+        where: { id: existing.id },
+        data: {
+          promiseDate,
+          comment,
+          balanceAtPromise: student.balance,
+          // Re-arm the overdue reminder cron for the new date.
+          reminderFiredAt: null,
+        },
+      });
+      await this.entityHistory.recordUpdate({
+        entityType: 'Student',
+        entityId: String(params.studentId),
+        oldValues: { toLovSanasi: existing.promiseDate.toISOString() },
+        newValues: { toLovSanasi: promiseDate.toISOString() },
+        changedById: userId,
+        companyId,
+      });
+      return updated;
+    }
+
+    const branchId = await this.resolveStudentBranch(params.studentId, companyId);
+    const created = await this.prisma.paymentPromise.create({
+      data: {
+        studentId: params.studentId,
+        promiseDate,
+        comment,
+        status: 'OPEN',
+        balanceAtPromise: student.balance,
+        createdById: userId,
+        branchId,
+        companyId,
+      },
+    });
+    await this.entityHistory.recordCreate({
+      entityType: 'Student',
+      entityId: String(params.studentId),
+      newValues: {
+        action: "TO'LOV_VA'DASI_BERILDI",
+        sana: params.promiseDate,
+        izoh: comment,
+      },
+      changedById: userId,
+      companyId,
+    });
+    return created;
+  }
+
   async cancel(id: string, userId: number, companyId: number) {
     const promise = await this.prisma.paymentPromise.findFirst({
       where: { id, companyId, status: 'OPEN' },

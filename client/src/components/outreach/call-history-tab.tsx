@@ -34,7 +34,9 @@ const REASON_INFO: Record<CallReason, { label: string; className: string }> = {
 const OUTCOME_INFO: Record<CallOutcome, { label: string; className: string }> = {
   ANSWERED: { label: "Gaplashildi", className: "bg-emerald-100 text-emerald-700" },
   NO_ANSWER: { label: "Javob bermadi", className: "bg-slate-100 text-slate-700" },
-  PROMISED: { label: "Va'da berdi", className: "bg-blue-100 text-blue-700" },
+  WILL_COME: { label: "Keladi", className: "bg-indigo-100 text-indigo-700" },
+  WILL_PAY: { label: "To'laydi", className: "bg-blue-100 text-blue-700" },
+  PROMISED: { label: "Keladi / to'laydi", className: "bg-violet-100 text-violet-700" },
   LEFT: { label: "Tashlab ketdi", className: "bg-red-100 text-red-700" },
 };
 

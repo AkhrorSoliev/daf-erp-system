@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CallLogsService } from './call-logs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
 
 describe('CallLogsService', () => {
   let service: CallLogsService;
@@ -14,6 +15,7 @@ describe('CallLogsService', () => {
     callLog: { create: jest.Mock; findMany: jest.Mock; count: jest.Mock };
   };
   let history: { recordCreate: jest.Mock };
+  let promises: { upsertOpenPromise: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -30,12 +32,14 @@ describe('CallLogsService', () => {
       },
     };
     history = { recordCreate: jest.fn().mockResolvedValue(undefined) };
+    promises = { upsertOpenPromise: jest.fn().mockResolvedValue({ id: 'p1' }) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CallLogsService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: history },
+        { provide: PaymentPromisesService, useValue: promises },
       ],
     }).compile();
 
@@ -86,6 +90,70 @@ describe('CallLogsService', () => {
           1001,
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('upserts a payment promise when outcome is WILL_PAY with a date', async () => {
+      await service.create(
+        {
+          studentId: 10264,
+          reason: 'DEBT',
+          outcome: 'WILL_PAY',
+          promiseDate: '2026-06-15T18:59:59.000Z',
+          note: '15-iyunda',
+        },
+        99,
+        1001,
+      );
+      expect(promises.upsertOpenPromise).toHaveBeenCalledWith(
+        {
+          studentId: 10264,
+          promiseDate: '2026-06-15T18:59:59.000Z',
+          comment: '15-iyunda',
+        },
+        99,
+        1001,
+      );
+    });
+
+    it('falls back to a default promise comment when note is empty', async () => {
+      await service.create(
+        {
+          studentId: 10264,
+          reason: 'DEBT',
+          outcome: 'WILL_PAY',
+          promiseDate: '2026-06-15T18:59:59.000Z',
+        },
+        99,
+        1001,
+      );
+      expect(promises.upsertOpenPromise).toHaveBeenCalledWith(
+        expect.objectContaining({ comment: "Qo'ng'iroqda to'layman dedi" }),
+        99,
+        1001,
+      );
+    });
+
+    it('does NOT create a promise for WILL_PAY without a date', async () => {
+      await service.create(
+        { studentId: 10264, reason: 'DEBT', outcome: 'WILL_PAY' },
+        99,
+        1001,
+      );
+      expect(promises.upsertOpenPromise).not.toHaveBeenCalled();
+    });
+
+    it('does NOT create a promise for non-WILL_PAY outcomes', async () => {
+      await service.create(
+        {
+          studentId: 10264,
+          reason: 'ABSENCE',
+          outcome: 'WILL_COME',
+          promiseDate: '2026-06-15T18:59:59.000Z',
+        },
+        99,
+        1001,
+      );
+      expect(promises.upsertOpenPromise).not.toHaveBeenCalled();
     });
   });
 

@@ -1630,7 +1630,9 @@ enum CallReason {
 enum CallOutcome {
   ANSWERED // gaplashildi
   NO_ANSWER // javob bermadi
-  PROMISED // keladi / to'laydi dedi
+  PROMISED // LEGACY: eski "keladi / to'laydi dedi" — endi WILL_COME/WILL_PAY ga ajratildi
+  WILL_COME // keladi dedi
+  WILL_PAY // to'laydi dedi — ixtiyoriy to'lov sanasi belgilanadi
   LEFT // tashlab ketdi
 }
 
