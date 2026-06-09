@@ -341,7 +341,7 @@ function Row({
             onClick={onCall}
           >
             <PhoneCall className="mr-1 size-3.5" />
-            Aloqa qilindi
+            Natija kiritish
           </Button>
           <Button size="sm" variant="destructive" onClick={onRemove}>
             <UserMinus className="mr-1 size-3.5" />

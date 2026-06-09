@@ -211,7 +211,7 @@ function Row({
             }
           >
             <PhoneCall className="mr-1 size-3.5" />
-            Aloqa qilindi
+            Natija kiritish
           </Button>
         </div>
       </TableCell>
