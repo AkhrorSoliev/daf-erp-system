@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { PhoneCall } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -19,26 +22,34 @@ import type {
   TodayAbsenteesResponse,
   TodayAbsenteeItem,
 } from "./outreach-types";
-import type { AddCallbackPrefill } from "./add-callback-dialog";
+import type { LogCallPrefill } from "./log-call-dialog";
 import { TablePagination } from "./table-pagination";
 
 interface TodayAbsenteesTabProps {
   isActive: boolean;
-  onAddCallback: (prefill: AddCallbackPrefill | null) => void;
+  onLogCall: (prefill: LogCallPrefill | null) => void;
 }
 
 export function TodayAbsenteesTab({
   isActive,
-  onAddCallback,
+  onLogCall,
 }: TodayAbsenteesTabProps) {
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Frozen at mount so the calendar's "no future dates" rule doesn't flap
+  // with the wall clock during a session.
+  const today = useMemo(() => new Date(), []);
+  const dateStr = format(selectedDate, "yyyy-MM-dd");
+
   const { data, isLoading } = useQuery({
-    queryKey: ["outreach", "today-absentees"],
+    queryKey: ["outreach", "today-absentees", dateStr],
     queryFn: () =>
       api
-        .get<TodayAbsenteesResponse>("/outreach/today-absentees")
+        .get<TodayAbsenteesResponse>("/outreach/today-absentees", {
+          params: { date: dateStr },
+        })
         .then((r) => r.data),
     enabled: isActive,
     staleTime: 0,
@@ -55,52 +66,79 @@ export function TodayAbsenteesTab({
     return items.slice(start, start + pageSize);
   }, [items, page, pageSize]);
 
-  if (isLoading) return <SkeletonRows />;
+  // Clamp the page if the list shrank (e.g. after a student was removed) so the
+  // user never lands on an out-of-range empty page.
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [total, pageSize, page]);
 
-  if (total === 0) {
-    return (
-      <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Bugun darsga kelmagan o&apos;quvchi yo&apos;q
-      </div>
-    );
-  }
+  const handleDateChange = (date: Date | undefined) => {
+    if (!date) return;
+    setSelectedDate(date);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-3">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>O&apos;quvchi</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead>Guruh</TableHead>
-              <TableHead>Kurs</TableHead>
-              <TableHead>Dars vaqti</TableHead>
-              <TableHead>O&apos;qituvchi</TableHead>
-              <TableHead>Izoh</TableHead>
-              <TableHead className="w-40">Amal</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paged.map((row, idx) => (
-              <Row
-                key={row.attendanceId}
-                row={row}
-                index={(page - 1) * pageSize + idx}
-                onAddCallback={onAddCallback}
-              />
-            ))}
-          </TableBody>
-        </Table>
+      <div className="flex items-center gap-2">
+        <div className="w-48">
+          <DatePicker
+            value={selectedDate}
+            onChange={handleDateChange}
+            maxDate={today}
+          />
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {isLoading ? "Yuklanmoqda…" : `Jami: ${total} ta`}
+        </span>
       </div>
-      <TablePagination
-        total={total}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+
+      {isLoading ? (
+        <SkeletonRows />
+      ) : total === 0 ? (
+        <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+          {format(selectedDate, "dd.MM.yyyy")} sanasida darsga kelmagan
+          o&apos;quvchi yo&apos;q
+        </div>
+      ) : (
+        <>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12 border-r">#</TableHead>
+                  <TableHead>O&apos;quvchi</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Guruh</TableHead>
+                  <TableHead>Kurs</TableHead>
+                  <TableHead>Dars vaqti</TableHead>
+                  <TableHead>O&apos;qituvchi</TableHead>
+                  <TableHead>Izoh</TableHead>
+                  <TableHead className="w-60">Amal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paged.map((row, idx) => (
+                  <Row
+                    key={row.attendanceId}
+                    row={row}
+                    index={(page - 1) * pageSize + idx}
+                    onLogCall={onLogCall}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <TablePagination
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -108,11 +146,11 @@ export function TodayAbsenteesTab({
 function Row({
   row,
   index,
-  onAddCallback,
+  onLogCall,
 }: {
   row: TodayAbsenteeItem;
   index: number;
-  onAddCallback: (prefill: AddCallbackPrefill | null) => void;
+  onLogCall: (prefill: LogCallPrefill | null) => void;
 }) {
   return (
     <TableRow>
@@ -154,21 +192,28 @@ function Row({
         {row.note || "—"}
       </TableCell>
       <TableCell>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() =>
-            onAddCallback({
-              entityType: "Student",
-              entityId: String(row.student.id),
-              entityLabel: `${row.student.firstName} ${row.student.lastName}`,
-              entityPhone: row.student.phone,
-            })
-          }
-        >
-          <PhoneCall className="mr-1 size-3.5" />
-          Qo&apos;ng&apos;iroq
-        </Button>
+        <div className="flex items-center gap-2">
+          {row.calledToday && (
+            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+              Bog&apos;lanildi
+            </Badge>
+          )}
+          <Button
+            size="sm"
+            variant={row.calledToday ? "ghost" : "outline"}
+            onClick={() =>
+              onLogCall({
+                studentId: row.student.id,
+                studentLabel: `${row.student.firstName} ${row.student.lastName}`,
+                studentPhone: row.student.phone,
+                reason: "ABSENCE",
+              })
+            }
+          >
+            <PhoneCall className="mr-1 size-3.5" />
+            Aloqa qilindi
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );

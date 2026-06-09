@@ -4,14 +4,14 @@ import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TodayAbsenteesTab } from "./today-absentees-tab";
-import { CallbacksTab } from "./callbacks-tab";
 import { RemovalQueueTab } from "./removal-queue-tab";
 import { PaymentPromisesTab } from "./payment-promises-tab";
-import { AddCallbackDialog, type AddCallbackPrefill } from "./add-callback-dialog";
+import { CallHistoryTab } from "./call-history-tab";
+import { LogCallDialog, type LogCallPrefill } from "./log-call-dialog";
 import { OutreachStatsWidget } from "./outreach-stats";
 
 const DEFAULT_TAB = "absentees";
-const VALID_TABS = new Set(["absentees", "callbacks", "promises", "removals"]);
+const VALID_TABS = new Set(["absentees", "removals", "promises", "history"]);
 
 export function OutreachPageClient() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export function OutreachPageClient() {
   const tabFromUrl = searchParams.get("tab") ?? DEFAULT_TAB;
   const activeTab = VALID_TABS.has(tabFromUrl) ? tabFromUrl : DEFAULT_TAB;
 
-  const [callbackPrefill, setCallbackPrefill] = useState<AddCallbackPrefill | null>(null);
+  const [callPrefill, setCallPrefill] = useState<LogCallPrefill | null>(null);
 
   const setActiveTab = useCallback(
     (tab: string) => {
@@ -34,8 +34,8 @@ export function OutreachPageClient() {
     [searchParams, router, pathname],
   );
 
-  const openAddCallback = useCallback((prefill: AddCallbackPrefill | null) => {
-    setCallbackPrefill(prefill);
+  const openLogCall = useCallback((prefill: LogCallPrefill | null) => {
+    setCallPrefill(prefill);
   }, []);
 
   return (
@@ -43,7 +43,9 @@ export function OutreachPageClient() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Aloqa markazi</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Darsga kelmagan o&apos;quvchilar, qo&apos;ng&apos;iroq vazifalari, to&apos;lov sanalari va guruhdan chiqarish navbati
+          Darsga kelmaganlar, ko&apos;p dars qoldirganlar va to&apos;lov
+          sanalari bilan ishlang — qo&apos;ng&apos;iroq qiling va natijasini qayd
+          eting
         </p>
       </div>
 
@@ -52,9 +54,9 @@ export function OutreachPageClient() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="absentees">Bugungi kelmaganlar</TabsTrigger>
-          <TabsTrigger value="callbacks">Qo&apos;ng&apos;iroqlar</TabsTrigger>
+          <TabsTrigger value="removals">Ko&apos;p dars qoldirganlar</TabsTrigger>
           <TabsTrigger value="promises">To&apos;lov sanalari</TabsTrigger>
-          <TabsTrigger value="removals">Chiqarish navbati</TabsTrigger>
+          <TabsTrigger value="history">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
         </TabsList>
 
         {/* Pass `isActive` so each tab can defer its useQuery until activated.
@@ -63,32 +65,32 @@ export function OutreachPageClient() {
         <TabsContent value="absentees" className="mt-4">
           <TodayAbsenteesTab
             isActive={activeTab === "absentees"}
-            onAddCallback={openAddCallback}
-          />
-        </TabsContent>
-        <TabsContent value="callbacks" className="mt-4">
-          <CallbacksTab isActive={activeTab === "callbacks"} />
-        </TabsContent>
-        <TabsContent value="promises" className="mt-4">
-          <PaymentPromisesTab
-            isActive={activeTab === "promises"}
-            onAddCallback={openAddCallback}
+            onLogCall={openLogCall}
           />
         </TabsContent>
         <TabsContent value="removals" className="mt-4">
           <RemovalQueueTab
             isActive={activeTab === "removals"}
-            onAddCallback={openAddCallback}
+            onLogCall={openLogCall}
           />
+        </TabsContent>
+        <TabsContent value="promises" className="mt-4">
+          <PaymentPromisesTab
+            isActive={activeTab === "promises"}
+            onLogCall={openLogCall}
+          />
+        </TabsContent>
+        <TabsContent value="history" className="mt-4">
+          <CallHistoryTab isActive={activeTab === "history"} />
         </TabsContent>
       </Tabs>
 
-      <AddCallbackDialog
-        open={callbackPrefill !== null}
+      <LogCallDialog
+        open={callPrefill !== null}
         onOpenChange={(open) => {
-          if (!open) setCallbackPrefill(null);
+          if (!open) setCallPrefill(null);
         }}
-        prefill={callbackPrefill}
+        prefill={callPrefill}
       />
     </div>
   );

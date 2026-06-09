@@ -3,7 +3,6 @@ import { OutreachService } from './outreach.service';
 import { Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { CallbacksQueryDto } from './dto/callbacks-query.dto';
 import { TodayAbsenteesQueryDto } from './dto/today-absentees-query.dto';
 
 @Controller('outreach')
@@ -36,15 +35,6 @@ export class OutreachController {
     });
   }
 
-  @Get('my-callbacks')
-  getMyCallbacks(
-    @Query() query: CallbacksQueryDto,
-    @CurrentUser('id') userId: number,
-    @CurrentUser('companyId') companyId: number,
-  ) {
-    return this.outreach.getMyCallbacks({ userId, companyId, query });
-  }
-
   @Get('removal-queue')
   getRemovalQueue(
     @CurrentUser('id') userId: number,
@@ -54,12 +44,12 @@ export class OutreachController {
     return this.outreach.getRemovalQueue({ userId, companyId, roles });
   }
 
-  @Get('overdue-promises')
-  getOverduePromises(
+  @Get('promises')
+  getActivePromises(
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
   ) {
-    return this.outreach.getOverduePromises({ userId, companyId, roles });
+    return this.outreach.getActivePromises({ userId, companyId, roles });
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PhoneCall, UserMinus } from "lucide-react";
@@ -28,12 +28,12 @@ import type {
   RemovalQueueItem,
   RemovalQueueResponse,
 } from "./outreach-types";
-import type { AddCallbackPrefill } from "./add-callback-dialog";
+import type { LogCallPrefill } from "./log-call-dialog";
 import { TablePagination } from "./table-pagination";
 
 interface RemovalQueueTabProps {
   isActive: boolean;
-  onAddCallback: (prefill: AddCallbackPrefill | null) => void;
+  onLogCall: (prefill: LogCallPrefill | null) => void;
 }
 
 interface RemoveTarget {
@@ -44,7 +44,7 @@ interface RemoveTarget {
 
 export function RemovalQueueTab({
   isActive,
-  onAddCallback,
+  onLogCall,
 }: RemovalQueueTabProps) {
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<RemoveTarget | null>(null);
@@ -179,6 +179,13 @@ export function RemovalQueueTab({
     return items.slice(start, start + pageSize);
   }, [items, page, pageSize]);
 
+  // Clamp the page if the list shrank (e.g. after removing a student) so the
+  // user never lands on an out-of-range empty page.
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [total, pageSize, page]);
+
   if (isLoading) return <SkeletonRows />;
 
   return (
@@ -201,7 +208,7 @@ export function RemovalQueueTab({
                   <TableHead>O&apos;qituvchi</TableHead>
                   <TableHead>Ketma-ket kelmagan</TableHead>
                   <TableHead>Oxirgi marta kelgan</TableHead>
-                  <TableHead className="w-56">Amal</TableHead>
+                  <TableHead className="w-72">Amal</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,11 +218,11 @@ export function RemovalQueueTab({
                     row={row}
                     index={(page - 1) * pageSize + idx}
                     onCall={() =>
-                      onAddCallback({
-                        entityType: "Student",
-                        entityId: String(row.student.id),
-                        entityLabel: `${row.student.firstName} ${row.student.lastName}`,
-                        entityPhone: row.student.phone,
+                      onLogCall({
+                        studentId: row.student.id,
+                        studentLabel: `${row.student.firstName} ${row.student.lastName}`,
+                        studentPhone: row.student.phone,
+                        reason: "REMOVAL",
                       })
                     }
                     onRemove={() =>
@@ -323,9 +330,18 @@ function Row({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
-          <Button size="sm" variant="outline" onClick={onCall}>
+          {row.calledToday && (
+            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+              Bog&apos;lanildi
+            </Badge>
+          )}
+          <Button
+            size="sm"
+            variant={row.calledToday ? "ghost" : "outline"}
+            onClick={onCall}
+          >
             <PhoneCall className="mr-1 size-3.5" />
-            Aloqa
+            Aloqa qilindi
           </Button>
           <Button size="sm" variant="destructive" onClick={onRemove}>
             <UserMinus className="mr-1 size-3.5" />

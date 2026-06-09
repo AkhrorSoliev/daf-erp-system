@@ -362,6 +362,7 @@ model User {
   reversedSalaryAccruals        SalaryAccrual[]               @relation("SalaryAccrualReversedBy")
   createdPaymentPromises        PaymentPromise[]              @relation("PaymentPromiseCreatedBy")
   resolvedPaymentPromises       PaymentPromise[]              @relation("PaymentPromiseResolvedBy")
+  callLogs                      CallLog[]                     @relation("CallLogCalledBy")
 
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
 
@@ -549,6 +550,7 @@ model Student {
   refunds         Refund[]
   salaryAccruals  SalaryAccrual[]  @relation("StudentSalaryAccruals")
   paymentPromises PaymentPromise[]
+  callLogs        CallLog[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1312,6 +1314,7 @@ model Company {
   attendances                 Attendance[]
   plannedAbsences             PlannedAbsence[]
   paymentPromises             PaymentPromise[]
+  callLogs                    CallLog[]
   studentExitReasons          StudentExitReason[]
   groupTeacherChangeReasons   GroupTeacherChangeReason[]
   enrollmentTransferReasons   EnrollmentTransferReason[]
@@ -1614,6 +1617,44 @@ model PaymentPromise {
   @@index([studentId])
   @@index([companyId, status])
   @@index([status, promiseDate])
+  @@index([branchId])
+}
+
+enum CallReason {
+  ABSENCE // darsga kelmagani uchun (bugungi kelmaganlar)
+  DEBT // qarz / to'lov sanasi uchun
+  REMOVAL // ko'p dars qoldirgani (chiqarish navbati) uchun
+  OTHER
+}
+
+enum CallOutcome {
+  ANSWERED // gaplashildi
+  NO_ANSWER // javob bermadi
+  PROMISED // keladi / to'laydi dedi
+  LEFT // tashlab ketdi
+}
+
+// A logged phone call an admin made to a student from the /outreach (Aloqa
+// markazi) workflow. Unlike the old Comment-task flow, this records a call that
+// already happened — who called, the reason (which list it came from), the
+// outcome, and an optional note. Powers the "Qo'ng'iroq tarixi" tab and the
+// student profile call-history tab. Student-only (outreach never targets Leads).
+model CallLog {
+  id         String      @id @default(uuid())
+  studentId  Int
+  student    Student     @relation(fields: [studentId], references: [id])
+  reason     CallReason
+  outcome    CallOutcome
+  note       String?
+  calledById Int
+  calledBy   User        @relation("CallLogCalledBy", fields: [calledById], references: [id])
+  branchId   Int? // for Branch Director scoping on /outreach
+  companyId  Int
+  company    Company     @relation(fields: [companyId], references: [id])
+  createdAt  DateTime    @default(now())
+
+  @@index([studentId])
+  @@index([companyId, createdAt])
   @@index([branchId])
 }
 

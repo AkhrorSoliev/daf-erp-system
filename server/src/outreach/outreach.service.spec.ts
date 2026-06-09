@@ -68,15 +68,15 @@ describe('OutreachService', () => {
   beforeEach(async () => {
     prisma = {
       user: { findUnique: jest.fn() },
-      attendance: { findMany: jest.fn() },
-      commentAssignee: {
-        findMany: jest.fn(),
-        count: jest.fn(),
-      },
+      attendance: { findMany: jest.fn(), count: jest.fn() },
       enrollment: { findMany: jest.fn() },
       lead: { findMany: jest.fn() },
       student: { findMany: jest.fn() },
       paymentPromise: { findMany: jest.fn(), count: jest.fn() },
+      callLog: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -181,50 +181,55 @@ describe('OutreachService', () => {
     });
   });
 
-  describe('getMyCallbacks', () => {
-    it('filters by user, isTask, dueDate IS NOT NULL, default PENDING+SEEN', async () => {
-      prisma.commentAssignee.findMany.mockResolvedValue([]);
-      prisma.commentAssignee.count.mockResolvedValue(0);
-      await service.getMyCallbacks({
-        userId: 10001,
-        companyId: 1,
-        query: {},
-      });
-      const where = prisma.commentAssignee.findMany.mock.calls[0][0].where;
-      expect(where.userId).toBe(10001);
-      expect(where.status).toEqual({ in: ['PENDING', 'SEEN'] });
-      expect(where.comment.isTask).toBe(true);
-      expect(where.comment.dueDate).toEqual({ not: null });
-      expect(where.comment.companyId).toBe(1);
-    });
-
-    it('marks overdue tasks', async () => {
-      const past = new Date(Date.now() - 60_000);
-      prisma.commentAssignee.findMany.mockResolvedValue([
+  describe('getActivePromises', () => {
+    it('queries OPEN+BROKEN promises for debtors and marks overdue, overdue first', async () => {
+      const past = new Date(Date.now() - 86_400_000);
+      const future = new Date(Date.now() + 86_400_000);
+      prisma.paymentPromise.findMany.mockResolvedValue([
         {
-          status: 'PENDING',
-          comment: {
-            id: 'c1',
-            content: 'call',
-            entityType: 'Student',
-            entityId: '10100',
-            priority: 'HIGH',
-            dueDate: past,
-            author: { id: 1, firstName: 'A', lastName: 'B' },
+          id: 'fut',
+          promiseDate: future,
+          comment: null,
+          createdAt: new Date(),
+          student: {
+            id: 1,
+            firstName: 'A',
+            lastName: 'B',
+            phone: '',
+            parentPhone: null,
+            photo: null,
+            balance: -1000,
+            enrollments: [],
+          },
+        },
+        {
+          id: 'past',
+          promiseDate: past,
+          comment: null,
+          createdAt: new Date(),
+          student: {
+            id: 2,
+            firstName: 'C',
+            lastName: 'D',
+            phone: '',
+            parentPhone: null,
+            photo: null,
+            balance: -2000,
+            enrollments: [],
           },
         },
       ]);
-      prisma.commentAssignee.count.mockResolvedValue(1);
-      prisma.student.findMany.mockResolvedValue([
-        { id: 10100, firstName: 'Ali', lastName: 'V', phone: '', photo: null },
-      ]);
-      const res = await service.getMyCallbacks({
+      const res = await service.getActivePromises({
         userId: 10001,
         companyId: 1,
-        query: {},
+        roles: ['CEO'],
       });
+      const where = prisma.paymentPromise.findMany.mock.calls[0][0].where;
+      expect(where.status).toEqual({ in: ['OPEN', 'BROKEN'] });
+      // Overdue ('past') sorts before the upcoming promise.
+      expect(res.items.map((i) => i.promiseId)).toEqual(['past', 'fut']);
       expect(res.items[0].isOverdue).toBe(true);
-      expect(res.items[0].entity).toMatchObject({ id: 10100 });
+      expect(res.items[1].isOverdue).toBe(false);
     });
   });
 
@@ -274,11 +279,8 @@ describe('OutreachService', () => {
   describe('getStats', () => {
     it('returns counts for the KPIs', async () => {
       prisma.attendance.count = jest.fn().mockResolvedValue(7);
-      prisma.commentAssignee.count = jest
-        .fn()
-        .mockResolvedValueOnce(12) // pendingCallbacks
-        .mockResolvedValueOnce(3); // overdueCallbacks
-      prisma.paymentPromise.count = jest.fn().mockResolvedValue(2);
+      prisma.paymentPromise.count = jest.fn().mockResolvedValue(2); // activePromises
+      prisma.callLog.count = jest.fn().mockResolvedValue(5); // callsToday
       jest.spyOn(streak, 'computeStreaks').mockResolvedValue([
         {
           enrollmentId: 'e1',
@@ -298,10 +300,9 @@ describe('OutreachService', () => {
 
       expect(res).toEqual({
         todayAbsentees: 7,
-        pendingCallbacks: 12,
-        overdueCallbacks: 3,
         removalQueue: 1,
-        overduePromises: 2,
+        activePromises: 2,
+        callsToday: 5,
       });
     });
 
@@ -314,10 +315,9 @@ describe('OutreachService', () => {
       });
       expect(res).toEqual({
         todayAbsentees: 0,
-        pendingCallbacks: 0,
-        overdueCallbacks: 0,
         removalQueue: 0,
-        overduePromises: 0,
+        activePromises: 0,
+        callsToday: 0,
       });
     });
   });

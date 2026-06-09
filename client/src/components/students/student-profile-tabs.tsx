@@ -8,6 +8,7 @@ import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import { CommentForm } from "@/components/shared/comment-form";
 import { SmsTab } from "@/components/students/sms-tab";
+import { StudentCallHistoryTab } from "@/components/students/student-call-history-tab";
 import { StudentMockExamsTab } from "@/components/students/student-mock-exams-tab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,6 +57,8 @@ export function StudentProfileTabs({
   const [historyVisible, setHistoryVisible] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [smsVisible, setSmsVisible] = useState(false);
+  const [qongiroqVisible, setQongiroqVisible] = useState(false);
+  const qongiroqShown = useRef(false);
   const [paymentsVisible, setPaymentsVisible] = useState(false);
   const paymentsShown = useRef(false);
   const [darslarVisible, setDarslarVisible] = useState(false);
@@ -169,6 +172,10 @@ export function StudentProfileTabs({
       if (value === "sms" && !smsShown.current) {
         smsShown.current = true;
         setSmsVisible(true);
+      }
+      if (value === "qongiroq" && !qongiroqShown.current) {
+        qongiroqShown.current = true;
+        setQongiroqVisible(true);
       }
       if (value === "tolovlar" && !paymentsShown.current) {
         paymentsShown.current = true;
@@ -415,7 +422,11 @@ export function StudentProfileTabs({
 
         {/* Qo'ng'iroq tarixi */}
         <TabsContent value="qongiroq">
-          <EmptyState message="Qo'ng'iroq tarixi mavjud emas" />
+          {qongiroqVisible ? (
+            <StudentCallHistoryTab studentId={student.id} />
+          ) : (
+            <EmptyState message="Qo'ng'iroq tarixi mavjud emas" />
+          )}
         </TabsContent>
 
         {/* SMS */}

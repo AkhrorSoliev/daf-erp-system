@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -21,30 +21,30 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatBalance, formatPhone } from "@/lib/format-utils";
 import type {
-  OverduePromiseItem,
-  OverduePromisesResponse,
+  ActivePromiseItem,
+  ActivePromisesResponse,
 } from "./outreach-types";
-import type { AddCallbackPrefill } from "./add-callback-dialog";
+import type { LogCallPrefill } from "./log-call-dialog";
 import { TablePagination } from "./table-pagination";
 
 interface PaymentPromisesTabProps {
   isActive: boolean;
-  onAddCallback: (prefill: AddCallbackPrefill | null) => void;
+  onLogCall: (prefill: LogCallPrefill | null) => void;
 }
 
 export function PaymentPromisesTab({
   isActive,
-  onAddCallback,
+  onLogCall,
 }: PaymentPromisesTabProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["outreach", "overdue-promises"],
+    queryKey: ["outreach", "active-promises"],
     queryFn: () =>
       api
-        .get<OverduePromisesResponse>("/outreach/overdue-promises")
+        .get<ActivePromisesResponse>("/outreach/promises")
         .then((r) => r.data),
     enabled: isActive,
     staleTime: 0,
@@ -55,8 +55,7 @@ export function PaymentPromisesTab({
       api.patch(`/payment-promises/${promiseId}/cancel`),
     onSuccess: () => {
       toast.success("To'lov sanasi bekor qilindi");
-      queryClient.invalidateQueries({ queryKey: ["outreach", "overdue-promises"] });
-      queryClient.invalidateQueries({ queryKey: ["outreach", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["outreach"] });
       queryClient.invalidateQueries({ queryKey: ["debtors"] });
     },
     onError: (error) =>
@@ -71,12 +70,19 @@ export function PaymentPromisesTab({
     return items.slice(start, start + pageSize);
   }, [items, page, pageSize]);
 
+  // Clamp the page if the list shrank (e.g. after cancelling a promise) so the
+  // user never lands on an out-of-range empty page.
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [total, pageSize, page]);
+
   if (isLoading) return <SkeletonRows />;
 
   if (total === 0) {
     return (
       <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Muddati o&apos;tgan to&apos;lov sanasi yo&apos;q
+        Faol to&apos;lov sanasi yo&apos;q
       </div>
     );
   }
@@ -94,7 +100,7 @@ export function PaymentPromisesTab({
               <TableHead>To&apos;lov sanasi</TableHead>
               <TableHead className="text-right">Joriy qarz</TableHead>
               <TableHead>Izoh</TableHead>
-              <TableHead className="w-48">Amal</TableHead>
+              <TableHead className="w-56">Amal</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -104,15 +110,17 @@ export function PaymentPromisesTab({
                 row={row}
                 index={(page - 1) * pageSize + idx}
                 onCall={() =>
-                  onAddCallback({
-                    entityType: "Student",
-                    entityId: String(row.student.id),
-                    entityLabel: `${row.student.firstName} ${row.student.lastName}`,
-                    entityPhone: row.student.phone,
+                  onLogCall({
+                    studentId: row.student.id,
+                    studentLabel: `${row.student.firstName} ${row.student.lastName}`,
+                    studentPhone: row.student.phone,
+                    reason: "DEBT",
                   })
                 }
                 onCancel={() => cancel.mutate(row.promiseId)}
-                cancelling={cancel.isPending}
+                cancelling={
+                  cancel.isPending && cancel.variables === row.promiseId
+                }
               />
             ))}
           </TableBody>
@@ -136,14 +144,16 @@ function Row({
   onCancel,
   cancelling,
 }: {
-  row: OverduePromiseItem;
+  row: ActivePromiseItem;
   index: number;
   onCall: () => void;
   onCancel: () => void;
   cancelling: boolean;
 }) {
   return (
-    <TableRow className="bg-red-50/40 dark:bg-red-950/10">
+    <TableRow
+      className={row.isOverdue ? "bg-red-50/40 dark:bg-red-950/10" : ""}
+    >
       <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
       <TableCell className="font-medium">
         <Link
@@ -169,8 +179,12 @@ function Row({
         )}
       </TableCell>
       <TableCell>
-        <Badge variant="destructive" className="text-[11px]">
+        <Badge
+          variant={row.isOverdue ? "destructive" : "secondary"}
+          className="text-[11px]"
+        >
           {format(new Date(row.promiseDate), "dd.MM.yyyy")}
+          {row.isOverdue ? " — muddati o'tgan" : ""}
         </Badge>
       </TableCell>
       <TableCell className="text-right font-medium text-red-600 tabular-nums">
@@ -183,7 +197,7 @@ function Row({
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" onClick={onCall}>
             <PhoneCall className="mr-1 size-3.5" />
-            Aloqa
+            Aloqa qilindi
           </Button>
           <Button
             size="sm"
