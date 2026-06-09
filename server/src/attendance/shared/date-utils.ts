@@ -49,6 +49,24 @@ export function utcMidnightFromDateStr(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00.000Z`);
 }
 
+/**
+ * UTC instant bounds of a Tashkent calendar day, as `{ gte, lt }`. Use this to
+ * filter a real-timestamp column (e.g. createdAt @default(now())) by Tashkent
+ * day — utcMidnightFromDateStr is only correct for fields already pinned to
+ * UTC-midnight (Attendance.date @db.Date). The Tashkent day YYYY-MM-DD starts at
+ * (UTC-midnight − 5h) and ends at the next day's start.
+ */
+export function tashkentDayRangeUtc(dateStr: string): { gte: Date; lt: Date } {
+  const gte = new Date(
+    utcMidnightFromDateStr(dateStr).getTime() - TASHKENT_OFFSET_MS,
+  );
+  const lt = new Date(
+    utcMidnightFromDateStr(addDaysToDateStr(dateStr, 1)).getTime() -
+      TASHKENT_OFFSET_MS,
+  );
+  return { gte, lt };
+}
+
 /** Day of week (0=Sun..6=Sat) for a YYYY-MM-DD calendar date. */
 export function dayOfWeekForDateStr(dateStr: string): number {
   return utcMidnightFromDateStr(dateStr).getUTCDay();

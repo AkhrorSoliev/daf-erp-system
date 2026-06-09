@@ -32,6 +32,8 @@ export interface TodayAbsenteesResponse {
 export interface TodayAbsenteeItem {
   attendanceId: string;
   note: string | null;
+  // Bu o'quvchiga ko'rilayotgan sanada qo'ng'iroq qilinganmi.
+  calledToday: boolean;
   student: OutreachStudent;
   group: OutreachGroupSummary & {
     lessonStartTime: string | null;
@@ -40,39 +42,30 @@ export interface TodayAbsenteeItem {
   teacher: OutreachTeacher | null;
 }
 
-export interface CallbackEntityLead {
+// Qo'ng'iroq sababi (qaysi ro'yxatdan chiqilgan) va natijasi.
+export type CallReason = "ABSENCE" | "DEBT" | "REMOVAL" | "OTHER";
+export type CallOutcome = "ANSWERED" | "NO_ANSWER" | "PROMISED" | "LEFT";
+
+export interface CallLogItem {
   id: string;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
+  reason: CallReason;
+  outcome: CallOutcome;
+  note: string | null;
+  createdAt: string;
+  student: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+  };
+  calledBy: { id: number; firstName: string; lastName: string };
 }
 
-export interface CallbackEntityStudent {
-  id: number;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-  photo: string | null;
-}
-
-export interface CallbackItem {
-  commentId: string;
-  assigneeStatus: "PENDING" | "SEEN" | "DONE";
-  dueDate: string;
-  isOverdue: boolean;
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT" | null;
-  text: string;
-  entityType: string;
-  entityId: string;
-  entity: CallbackEntityLead | CallbackEntityStudent | null;
-  author: { id: number; firstName: string; lastName: string };
-}
-
-export interface CallbacksResponse {
+export interface CallLogsResponse {
   total: number;
   page: number;
   pageSize: number;
-  items: CallbackItem[];
+  items: CallLogItem[];
 }
 
 export interface RemovalQueueItem {
@@ -82,6 +75,8 @@ export interface RemovalQueueItem {
   // Oxirgi marta PRESENT/LATE bo'lgan dars sanasi (null = hech qachon
   // kelmagan).
   lastPresentDate: string | null;
+  // Bugun bu o'quvchiga qo'ng'iroq qilinganmi.
+  calledToday: boolean;
   student: OutreachStudentWithParent;
   group: OutreachGroupSummary;
   teacher: OutreachTeacher | null;
@@ -92,24 +87,25 @@ export interface RemovalQueueResponse {
   items: RemovalQueueItem[];
 }
 
-export interface OverduePromiseItem {
+export interface ActivePromiseItem {
   promiseId: string;
   promiseDate: string;
+  // Va'da sanasi o'tib ketganmi (qizil belgilanadi).
+  isOverdue: boolean;
   comment: string | null;
   createdAt: string;
   student: OutreachStudentWithParent & { balance: number };
   groups: { id: string; name: string }[];
 }
 
-export interface OverduePromisesResponse {
+export interface ActivePromisesResponse {
   total: number;
-  items: OverduePromiseItem[];
+  items: ActivePromiseItem[];
 }
 
 export interface OutreachStats {
   todayAbsentees: number;
-  pendingCallbacks: number;
-  overdueCallbacks: number;
   removalQueue: number;
-  overduePromises: number;
+  activePromises: number;
+  callsToday: number;
 }

@@ -14,9 +14,8 @@ describe('OutreachController — role guards', () => {
   const mockService = {
     getStats: jest.fn().mockResolvedValue({}),
     getTodayAbsentees: jest.fn().mockResolvedValue({}),
-    getMyCallbacks: jest.fn().mockResolvedValue({}),
     getRemovalQueue: jest.fn().mockResolvedValue({}),
-    getOverduePromises: jest.fn().mockResolvedValue({}),
+    getActivePromises: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -56,9 +55,8 @@ describe('OutreachController — role guards', () => {
   }> = [
     { name: 'getStats', handler: () => null },
     { name: 'getTodayAbsentees', handler: () => null },
-    { name: 'getMyCallbacks', handler: () => null },
     { name: 'getRemovalQueue', handler: () => null },
-    { name: 'getOverduePromises', handler: () => null },
+    { name: 'getActivePromises', handler: () => null },
   ];
 
   handlers.forEach(({ name }) => {
@@ -115,16 +113,6 @@ describe('OutreachController — role guards', () => {
       });
     });
 
-    it('getMyCallbacks delegates to service with user context and query', async () => {
-      const query = { page: 1, pageSize: 20 } as any;
-      await controller.getMyCallbacks(query, 10001, 1);
-      expect(mockService.getMyCallbacks).toHaveBeenCalledWith({
-        userId: 10001,
-        companyId: 1,
-        query,
-      });
-    });
-
     it('getRemovalQueue delegates to service with user context', async () => {
       await controller.getRemovalQueue(10001, 1, ['Branch Director']);
       expect(mockService.getRemovalQueue).toHaveBeenCalledWith({
@@ -143,9 +131,9 @@ describe('OutreachController — role guards', () => {
       });
     });
 
-    it('getOverduePromises delegates to service with user context', async () => {
-      await controller.getOverduePromises(10001, 1, ['Branch Director']);
-      expect(mockService.getOverduePromises).toHaveBeenCalledWith({
+    it('getActivePromises delegates to service with user context', async () => {
+      await controller.getActivePromises(10001, 1, ['Branch Director']);
+      expect(mockService.getActivePromises).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],

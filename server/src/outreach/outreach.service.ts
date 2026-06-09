@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { AssigneeStatus, AttendanceStatus } from '@prisma/client';
+import { AttendanceStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   tashkentDateStr,
+  tashkentDayRangeUtc,
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';
 import { AbsenceStreakService } from './absence-streak.service';
-import { CallbacksQueryDto } from './dto/callbacks-query.dto';
 
 interface UserContext {
   userId: number;
@@ -95,9 +95,18 @@ export class OutreachService {
       },
     });
 
+    // "Bog'lanildi" badge — was this student already called (any reason) on the
+    // viewed date? Lets the admin skip students they've already worked through.
+    const calledSet = await this.getCalledStudentIds(
+      ctx.companyId,
+      rows.map((r) => r.student.id),
+      dateStr,
+    );
+
     const items = rows.map((r) => ({
       attendanceId: r.id,
       note: r.note,
+      calledToday: calledSet.has(r.student.id),
       student: r.student,
       group: {
         id: r.group.id,
@@ -127,139 +136,26 @@ export class OutreachService {
     return { date: dateStr, total: items.length, items };
   }
 
-  async getMyCallbacks(params: {
-    userId: number;
-    companyId: number;
-    query: CallbacksQueryDto;
-  }) {
-    const page = params.query.page ?? 1;
-    const pageSize = params.query.pageSize ?? 20;
-    const skip = (page - 1) * pageSize;
-    const statuses = (params.query.status ?? 'PENDING,SEEN')
-      .split(',')
-      .map((s) => s.trim() as AssigneeStatus);
-
-    const where = {
-      userId: params.userId,
-      status: { in: statuses },
-      comment: {
-        isTask: true,
-        dueDate: { not: null },
-        companyId: params.companyId,
-      },
-    };
-
-    const [rows, total] = await Promise.all([
-      this.prisma.commentAssignee.findMany({
-        where,
-        include: {
-          comment: {
-            include: {
-              author: {
-                select: { id: true, firstName: true, lastName: true },
-              },
-            },
-          },
-        },
-        orderBy: { comment: { dueDate: 'asc' } },
-        skip,
-        take: pageSize,
-      }),
-      this.prisma.commentAssignee.count({ where }),
-    ]);
-
-    // Bulk-load referenced Lead / Student entities. We resolve entityId →
-    // entity in two batched queries instead of fan-out-per-row.
-    const leadIds = new Set<string>();
-    const studentIds = new Set<number>();
-    for (const r of rows) {
-      if (r.comment.entityType === 'Lead') {
-        leadIds.add(r.comment.entityId);
-      } else if (r.comment.entityType === 'Student') {
-        const id = Number(r.comment.entityId);
-        if (!Number.isNaN(id)) studentIds.add(id);
-      }
-    }
-    const [leads, students] = await Promise.all([
-      leadIds.size > 0
-        ? this.prisma.lead.findMany({
-            where: { id: { in: [...leadIds] } },
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              phone: true,
-            },
-          })
-        : Promise.resolve([]),
-      studentIds.size > 0
-        ? this.prisma.student.findMany({
-            where: { id: { in: [...studentIds] } },
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              phone: true,
-              photo: true,
-            },
-          })
-        : Promise.resolve([]),
-    ]);
-    const leadMap = new Map(leads.map((l) => [l.id, l] as const));
-    const studentMap = new Map(students.map((s) => [s.id, s] as const));
-
-    const now = Date.now();
-    const items = rows.map((r) => {
-      const dueAt = r.comment.dueDate!.getTime();
-      const entity =
-        r.comment.entityType === 'Lead'
-          ? (leadMap.get(r.comment.entityId) ?? null)
-          : r.comment.entityType === 'Student'
-            ? (studentMap.get(Number(r.comment.entityId)) ?? null)
-            : null;
-      return {
-        commentId: r.comment.id,
-        assigneeStatus: r.status,
-        dueDate: r.comment.dueDate!.toISOString(),
-        isOverdue: dueAt < now,
-        priority: r.comment.priority,
-        text: r.comment.content,
-        entityType: r.comment.entityType,
-        entityId: r.comment.entityId,
-        entity,
-        author: r.comment.author,
-      };
-    });
-
-    return { total, page, pageSize, items };
-  }
-
-  // Lightweight summary for the /outreach landing widget. Three counts come
-  // from cheap SQL aggregates; removalQueueCount reuses the same fan-out as
+  // Lightweight summary for the /outreach landing widget. Counts come from
+  // cheap SQL aggregates; removalQueue reuses the same fan-out as
   // getRemovalQueue (acceptable because the page only fetches stats once).
   async getStats(ctx: UserContext) {
     const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
     if (branchIds && branchIds.length === 0) {
       return {
         todayAbsentees: 0,
-        pendingCallbacks: 0,
-        overdueCallbacks: 0,
         removalQueue: 0,
-        overduePromises: 0,
+        activePromises: 0,
+        callsToday: 0,
       };
     }
 
     const todayStr = tashkentDateStr(new Date());
+    // Attendance.date is stored at UTC-midnight, so it uses the plain date.
     const today = utcMidnightFromDateStr(todayStr);
-    const now = new Date();
 
-    const [
-      todayAbsentees,
-      pendingCallbacks,
-      overdueCallbacks,
-      streaks,
-      overduePromises,
-    ] = await Promise.all([
+    const [todayAbsentees, streaks, activePromises, callsToday] =
+      await Promise.all([
         this.prisma.attendance.count({
           where: {
             date: today,
@@ -272,28 +168,6 @@ export class OutreachService {
             student: { deletedAt: null },
           },
         }),
-        this.prisma.commentAssignee.count({
-          where: {
-            userId: ctx.userId,
-            status: { in: ['PENDING', 'SEEN'] },
-            comment: {
-              isTask: true,
-              dueDate: { not: null },
-              companyId: ctx.companyId,
-            },
-          },
-        }),
-        this.prisma.commentAssignee.count({
-          where: {
-            userId: ctx.userId,
-            status: { in: ['PENDING', 'SEEN'] },
-            comment: {
-              isTask: true,
-              dueDate: { lt: now },
-              companyId: ctx.companyId,
-            },
-          },
-        }),
         this.absenceStreak.computeStreaks({
           companyId: ctx.companyId,
           branchIds,
@@ -302,8 +176,16 @@ export class OutreachService {
         this.prisma.paymentPromise.count({
           where: {
             companyId: ctx.companyId,
-            status: 'BROKEN',
+            status: { in: ['OPEN', 'BROKEN'] },
             student: { balance: { lt: 0 }, deletedAt: null },
+            ...(branchIds ? { branchId: { in: branchIds } } : {}),
+          },
+        }),
+        this.prisma.callLog.count({
+          where: {
+            companyId: ctx.companyId,
+            // createdAt is a real instant — bound by the Tashkent day, not UTC.
+            createdAt: tashkentDayRangeUtc(todayStr),
             ...(branchIds ? { branchId: { in: branchIds } } : {}),
           },
         }),
@@ -311,26 +193,26 @@ export class OutreachService {
 
     return {
       todayAbsentees,
-      pendingCallbacks,
-      overdueCallbacks,
       removalQueue: streaks.length,
-      overduePromises,
+      activePromises,
+      callsToday,
     };
   }
 
   /**
-   * Branch-scoped list of broken payment promises whose student still owes.
-   * Mirrors getRemovalQueue's shape so the /outreach "To'lov va'dalari" tab
-   * reuses the same row/link patterns. Oldest broken promise first.
+   * Branch-scoped list of ACTIVE payment promises (OPEN + BROKEN) whose student
+   * still owes — so a date set from the debtors page shows up here immediately,
+   * not only after the cron flips it to BROKEN. `isOverdue` marks promises whose
+   * date has passed. Overdue first, then by promise date ascending.
    */
-  async getOverduePromises(ctx: UserContext) {
+  async getActivePromises(ctx: UserContext) {
     const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
     if (branchIds && branchIds.length === 0) return { total: 0, items: [] };
 
     const promises = await this.prisma.paymentPromise.findMany({
       where: {
         companyId: ctx.companyId,
-        status: 'BROKEN',
+        status: { in: ['OPEN', 'BROKEN'] },
         student: { balance: { lt: 0 }, deletedAt: null },
         ...(branchIds ? { branchId: { in: branchIds } } : {}),
       },
@@ -358,22 +240,28 @@ export class OutreachService {
       orderBy: { promiseDate: 'asc' },
     });
 
-    const items = promises.map((p) => ({
-      promiseId: p.id,
-      promiseDate: p.promiseDate.toISOString(),
-      comment: p.comment,
-      createdAt: p.createdAt.toISOString(),
-      student: {
-        id: p.student.id,
-        firstName: p.student.firstName,
-        lastName: p.student.lastName,
-        phone: p.student.phone,
-        parentPhone: p.student.parentPhone,
-        photo: p.student.photo,
-        balance: p.student.balance,
-      },
-      groups: p.student.enrollments.map((e) => e.group),
-    }));
+    const now = Date.now();
+    const items = promises
+      .map((p) => ({
+        promiseId: p.id,
+        promiseDate: p.promiseDate.toISOString(),
+        isOverdue: p.promiseDate.getTime() < now,
+        comment: p.comment,
+        createdAt: p.createdAt.toISOString(),
+        student: {
+          id: p.student.id,
+          firstName: p.student.firstName,
+          lastName: p.student.lastName,
+          phone: p.student.phone,
+          parentPhone: p.student.parentPhone,
+          photo: p.student.photo,
+          balance: p.student.balance,
+        },
+        groups: p.student.enrollments.map((e) => e.group),
+      }))
+      // Overdue first; the findMany already ordered by promiseDate asc, so a
+      // stable partition keeps each bucket in date order.
+      .sort((a, b) => Number(b.isOverdue) - Number(a.isOverdue));
 
     return { total: items.length, items };
   }
@@ -426,6 +314,13 @@ export class OutreachService {
     });
     const enrollMap = new Map(enrollments.map((e) => [e.id, e] as const));
 
+    // "Bog'lanildi" badge — students already called today (any reason).
+    const calledSet = await this.getCalledStudentIds(
+      ctx.companyId,
+      enrollments.map((e) => e.student.id),
+      tashkentDateStr(new Date()),
+    );
+
     const items = streaks
       .map((s) => {
         const e = enrollMap.get(s.enrollmentId);
@@ -435,6 +330,7 @@ export class OutreachService {
           consecutiveAbsentCount: s.consecutiveAbsentCount,
           lastAbsenceDate: s.lastAbsenceDate.toISOString(),
           lastPresentDate: s.lastPresentDate?.toISOString() ?? null,
+          calledToday: calledSet.has(e.student.id),
           student: e.student,
           group: {
             id: e.group.id,
@@ -455,5 +351,26 @@ export class OutreachService {
       .sort((a, b) => b.consecutiveAbsentCount - a.consecutiveAbsentCount);
 
     return { total: items.length, items };
+  }
+
+  // Set of student IDs called (any reason) on the given Tashkent day — powers
+  // the "Bog'lanildi" badge on the absentees / removal lists. Returns empty for
+  // an empty input to avoid a needless `IN ()` query.
+  private async getCalledStudentIds(
+    companyId: number,
+    studentIds: number[],
+    dateStr: string,
+  ): Promise<Set<number>> {
+    if (studentIds.length === 0) return new Set();
+    const rows = await this.prisma.callLog.findMany({
+      where: {
+        companyId,
+        studentId: { in: studentIds },
+        // createdAt is a real instant — bound by the Tashkent day, not UTC.
+        createdAt: tashkentDayRangeUtc(dateStr),
+      },
+      select: { studentId: true },
+    });
+    return new Set(rows.map((r) => r.studentId));
   }
 }

@@ -2,8 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle,
-  CalendarX2,
+  CalendarClock,
   PhoneCall,
   UserMinus,
   XCircle,
@@ -25,8 +24,8 @@ export function OutreachStatsWidget() {
 
   if (isLoading || !data) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {[0, 1, 2, 3, 4].map((i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-[88px] rounded-xl" />
         ))}
       </div>
@@ -34,7 +33,7 @@ export function OutreachStatsWidget() {
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         icon={XCircle}
         label="Bugun kelmadi"
@@ -42,29 +41,22 @@ export function OutreachStatsWidget() {
         accentColor={data.todayAbsentees > 0 ? "text-red-600" : undefined}
       />
       <StatCard
-        icon={PhoneCall}
-        label="Faol qo'ng'iroqlar"
-        value={data.pendingCallbacks}
-      />
-      <StatCard
-        icon={AlertCircle}
-        label="Muddati o'tib ketdi"
-        value={data.overdueCallbacks}
-        accentColor={
-          data.overdueCallbacks > 0 ? "text-amber-700" : undefined
-        }
-      />
-      <StatCard
-        icon={CalendarX2}
-        label="Muddati o'tgan to'lovlar"
-        value={data.overduePromises}
-        accentColor={data.overduePromises > 0 ? "text-red-600" : undefined}
-      />
-      <StatCard
         icon={UserMinus}
-        label="Chiqarish navbati"
+        label="Ko'p dars qoldirgan"
         value={data.removalQueue}
         accentColor={data.removalQueue > 0 ? "text-orange-600" : undefined}
+      />
+      <StatCard
+        icon={CalendarClock}
+        label="To'lov sanalari"
+        value={data.activePromises}
+        accentColor={data.activePromises > 0 ? "text-red-600" : undefined}
+      />
+      <StatCard
+        icon={PhoneCall}
+        label="Bugun bog'lanildi"
+        value={data.callsToday}
+        accentColor={data.callsToday > 0 ? "text-emerald-600" : undefined}
       />
     </div>
   );

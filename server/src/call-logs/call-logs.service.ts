@@ -1,0 +1,182 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { CallOutcome, CallReason, Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { EntityHistoryService } from '../common/entity-history';
+import { tashkentDayRangeUtc } from '../attendance/shared/date-utils';
+import { CreateCallLogDto } from './dto/create-call-log.dto';
+import { ListCallLogsQueryDto } from './dto/list-call-logs-query.dto';
+
+// Uzbek labels for the audit trail (EntityHistory is read by humans).
+const REASON_LABEL: Record<CallReason, string> = {
+  ABSENCE: 'Darsga kelmagani',
+  DEBT: 'Qarz / to‘lov',
+  REMOVAL: 'Ko‘p dars qoldirgani',
+  OTHER: 'Boshqa',
+};
+const OUTCOME_LABEL: Record<CallOutcome, string> = {
+  ANSWERED: 'Gaplashildi',
+  NO_ANSWER: 'Javob bermadi',
+  PROMISED: 'Keladi / to‘laydi dedi',
+  LEFT: 'Tashlab ketdi',
+};
+
+interface ListContext {
+  userId: number;
+  companyId: number;
+  roles: string[];
+  query: ListCallLogsQueryDto;
+}
+
+@Injectable()
+export class CallLogsService {
+  constructor(
+    private prisma: PrismaService,
+    private entityHistory: EntityHistoryService,
+  ) {}
+
+  /**
+   * Record a phone call an admin just made to a student from /outreach. Unlike
+   * the old Comment-task flow, this logs a call that already happened (who,
+   * reason, outcome, optional note). Also writes a Student EntityHistory row.
+   */
+  async create(dto: CreateCallLogDto, userId: number, companyId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: dto.studentId, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+
+    const branchId = await this.resolveStudentBranch(dto.studentId, companyId);
+    const note = dto.note?.trim() || null;
+
+    const log = await this.prisma.callLog.create({
+      data: {
+        studentId: dto.studentId,
+        reason: dto.reason,
+        outcome: dto.outcome,
+        note,
+        calledById: userId,
+        branchId,
+        companyId,
+      },
+    });
+
+    await this.entityHistory.recordCreate({
+      entityType: 'Student',
+      entityId: String(dto.studentId),
+      newValues: {
+        action: "QO'NG'IROQ_QILINDI",
+        sabab: REASON_LABEL[dto.reason],
+        natija: OUTCOME_LABEL[dto.outcome],
+        ...(note ? { izoh: note } : {}),
+      },
+      changedById: userId,
+      companyId,
+    });
+
+    return log;
+  }
+
+  /**
+   * Branch-scoped, paginated call history. No `studentId` → the /outreach
+   * "Qo'ng'iroq tarixi" tab (all calls in scope). With `studentId` → one
+   * student's history (profile tab). Newest first.
+   */
+  async list(ctx: ListContext) {
+    const page = ctx.query.page ?? 1;
+    const pageSize = ctx.query.pageSize ?? 20;
+    const skip = (page - 1) * pageSize;
+
+    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    if (branchIds && branchIds.length === 0) {
+      return { total: 0, page, pageSize, items: [] };
+    }
+
+    const where: Prisma.CallLogWhereInput = {
+      companyId: ctx.companyId,
+      ...(branchIds ? { branchId: { in: branchIds } } : {}),
+      ...(ctx.query.studentId ? { studentId: ctx.query.studentId } : {}),
+      ...(ctx.query.date
+        ? { createdAt: tashkentDayRangeUtc(ctx.query.date) }
+        : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.callLog.findMany({
+        where,
+        select: {
+          id: true,
+          reason: true,
+          outcome: true,
+          note: true,
+          createdAt: true,
+          student: {
+            select: { id: true, firstName: true, lastName: true, phone: true },
+          },
+          calledBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.callLog.count({ where }),
+    ]);
+
+    const items = rows.map((r) => ({
+      id: r.id,
+      reason: r.reason,
+      outcome: r.outcome,
+      note: r.note,
+      createdAt: r.createdAt.toISOString(),
+      student: r.student,
+      calledBy: r.calledBy,
+    }));
+
+    return { total, page, pageSize, items };
+  }
+
+  // Branch Director sees only their own branch. CEO/Administrator see all
+  // branches in the company. Mirrors OutreachService.resolveBranchScope.
+  private async resolveBranchScope(
+    userId: number,
+    roles: string[],
+  ): Promise<number[] | undefined> {
+    const isCeo = roles.includes('CEO');
+    const isAdmin = roles.includes('Administrator');
+    const isBd = roles.includes('Branch Director');
+    if (isCeo || isAdmin) return undefined;
+    if (!isBd) return [];
+
+    const caller = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { mainBranch: true },
+    });
+    return caller?.mainBranch ? [caller.mainBranch] : [];
+  }
+
+  // Same branch-resolution order as PaymentPromisesService: active enrollment's
+  // group branch first, then the student's branch link.
+  private async resolveStudentBranch(
+    studentId: number,
+    companyId: number,
+  ): Promise<number | null> {
+    const activeEnrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId,
+        deletedAt: null,
+        status: 'ACTIVE',
+        group: { companyId, deletedAt: null },
+      },
+      select: { group: { select: { branchId: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (activeEnrollment?.group?.branchId) {
+      return activeEnrollment.group.branchId;
+    }
+    const studentBranch = await this.prisma.studentBranch.findFirst({
+      where: { studentId, student: { companyId } },
+      select: { branchId: true },
+    });
+    return studentBranch?.branchId ?? null;
+  }
+}
