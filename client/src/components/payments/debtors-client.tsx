@@ -45,6 +45,7 @@ import { formatBalance, formatNumber, formatPhone } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { TablePagination } from "@/components/outreach/table-pagination";
+import { SummaryCard } from "./summary-card";
 import { RecordPaymentDialog } from "./record-payment-dialog";
 import {
   AddPaymentPromiseDialog,
@@ -429,34 +430,3 @@ function DebtorRow({
   );
 }
 
-function SummaryCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone: "red" | "slate" | "amber" | "violet";
-}) {
-  const toneClass: Record<typeof tone, string> = {
-    red: "bg-red-100 dark:bg-red-900/40",
-    slate: "bg-slate-100 dark:bg-slate-800/60",
-    amber: "bg-amber-100 dark:bg-amber-900/40",
-    violet: "bg-violet-100 dark:bg-violet-900/40",
-  };
-  return (
-    <div className="flex items-center gap-3 rounded-lg border p-4">
-      <div className={`rounded-md p-2 ${toneClass[tone]}`}>{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-          {label}
-        </p>
-        <p className="truncate font-heading text-xl font-semibold tabular-nums">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}

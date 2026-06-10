@@ -38,6 +38,16 @@ export class ExpensesController {
     return this.expensesService.findAll(query, companyId);
   }
 
+  // Full filtered list (no pagination) for CSV export. Placed before no dynamic
+  // ':id' GET exists, so the literal 'export' path never collides.
+  @Get('export')
+  exportAll(
+    @Query() query: ExpenseQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.expensesService.exportAll(query, companyId);
+  }
+
   @Patch(':id')
   @Roles('CEO', 'Branch Director', 'Administrator')
   update(
