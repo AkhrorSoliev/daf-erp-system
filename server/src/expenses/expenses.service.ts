@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { ExpenseCategory, Prisma } from '@prisma/client';
+import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 
@@ -88,47 +88,98 @@ export class ExpensesService {
     return expense;
   }
 
+  // Shared filter builder for the paginated list, the summary aggregation, and
+  // the CSV export — all three must scope to the SAME rows so the cards reconcile
+  // with the table and the export matches what the user sees. `deletedAt: null`
+  // keeps soft-deleted expenses out of every read.
+  private buildWhere(
+    query: ExpenseQueryDto,
+    companyId: number,
+  ): Prisma.ExpenseWhereInput {
+    return {
+      companyId,
+      deletedAt: null,
+      ...(query.category && { category: query.category }),
+      ...(query.paymentMethod && { paymentMethod: query.paymentMethod }),
+      ...(query.search && {
+        description: { contains: query.search, mode: 'insensitive' },
+      }),
+      // Date is a date-only column, so a midnight `lte` correctly includes the
+      // whole `endDate`. Either bound works on its own (one-sided range).
+      ...((query.startDate || query.endDate) && {
+        date: {
+          ...(query.startDate && { gte: new Date(query.startDate) }),
+          ...(query.endDate && { lte: new Date(query.endDate) }),
+        },
+      }),
+    };
+  }
+
+  private readonly listSelect = {
+    id: true,
+    category: true,
+    paymentMethod: true,
+    amount: true,
+    description: true,
+    date: true,
+    branchId: true,
+    receiptUrl: true,
+    createdAt: true,
+    createdBy: { select: { id: true, firstName: true, lastName: true } },
+  } satisfies Prisma.ExpenseSelect;
+
   async findAll(query: ExpenseQueryDto, companyId: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
-    const where: Prisma.ExpenseWhereInput = {
-      companyId,
-      deletedAt: null,
-      ...(query.category && { category: query.category }),
-      ...(query.branchId && { branchId: query.branchId }),
-      ...(query.startDate &&
-        query.endDate && {
-          date: {
-            gte: new Date(query.startDate),
-            lte: new Date(query.endDate),
-          },
-        }),
-    };
+    const where = this.buildWhere(query, companyId);
 
-    const [data, total] = await Promise.all([
+    const [data, total, agg, byMethod] = await Promise.all([
       this.prisma.expense.findMany({
         where,
-        select: {
-          id: true,
-          category: true,
-          paymentMethod: true,
-          amount: true,
-          description: true,
-          date: true,
-          branchId: true,
-          receiptUrl: true,
-          createdAt: true,
-          createdBy: { select: { id: true, firstName: true, lastName: true } },
-        },
+        select: this.listSelect,
         orderBy: { date: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
       this.prisma.expense.count({ where }),
+      this.prisma.expense.aggregate({ where, _sum: { amount: true } }),
+      this.prisma.expense.groupBy({
+        by: ['paymentMethod'],
+        where,
+        _sum: { amount: true },
+      }),
     ]);
 
-    return { data, total, page, pageSize };
+    // Summary spans the WHOLE filtered set (not just this page) so the cards
+    // stay correct as the user pages through.
+    const sumFor = (method: ExpensePaymentMethod) =>
+      byMethod.find((g) => g.paymentMethod === method)?._sum.amount ?? 0;
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+      summary: {
+        totalAmount: agg._sum.amount ?? 0,
+        count: total,
+        cashTotal: sumFor(ExpensePaymentMethod.CASH),
+        cardTotal: sumFor(ExpensePaymentMethod.CARD),
+      },
+    };
+  }
+
+  // CSV export: returns every row matching the current filters, ignoring
+  // pagination (the list endpoint caps pageSize at 100). Used by the frontend
+  // "CSV yuklab olish" button.
+  async exportAll(query: ExpenseQueryDto, companyId: number) {
+    const where = this.buildWhere(query, companyId);
+    return this.prisma.expense.findMany({
+      where,
+      select: this.listSelect,
+      orderBy: { date: 'desc' },
+    });
   }
 
   async update(

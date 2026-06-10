@@ -1,0 +1,132 @@
+"use client";
+
+import { Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
+  RENT: "Ijara",
+  UTILITIES: "Kommunal",
+  SUPPLIES: "Ta'minot",
+  MARKETING: "Marketing",
+  TEACHER_ADVANCE: "Ustozga avans",
+  OTHER: "Boshqa",
+};
+
+export const EXPENSE_METHOD_LABELS: Record<string, string> = {
+  CASH: "Naqt",
+  CARD: "Karta",
+};
+
+interface ExpensesFilterBarProps {
+  category: string;
+  paymentMethod: string;
+  searchValue: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  hasActiveFilters: boolean;
+  onCategoryChange: (v: string) => void;
+  onPaymentMethodChange: (v: string) => void;
+  onSearchChange: (v: string) => void;
+  onStartDateChange: (d: Date | null) => void;
+  onEndDateChange: (d: Date | null) => void;
+  onReset: () => void;
+}
+
+export function ExpensesFilterBar({
+  category,
+  paymentMethod,
+  searchValue,
+  startDate,
+  endDate,
+  hasActiveFilters,
+  onCategoryChange,
+  onPaymentMethodChange,
+  onSearchChange,
+  onStartDateChange,
+  onEndDateChange,
+  onReset,
+}: ExpensesFilterBarProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative w-full sm:w-64">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={searchValue}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Tavsif bo'yicha qidirish..."
+          className="pl-9"
+        />
+      </div>
+
+      <Select value={category} onValueChange={onCategoryChange}>
+        <SelectTrigger className="h-9 w-auto min-w-[150px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Barcha turlar</SelectItem>
+          {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
+            <SelectItem key={k} value={k}>
+              {v}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={paymentMethod} onValueChange={onPaymentMethodChange}>
+        <SelectTrigger className="h-9 w-auto min-w-[160px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Barcha to&apos;lov turlari</SelectItem>
+          {Object.entries(EXPENSE_METHOD_LABELS).map(([k, v]) => (
+            <SelectItem key={k} value={k}>
+              {v}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <div className="flex items-center gap-1">
+        <DatePicker
+          value={startDate}
+          onChange={(d) => onStartDateChange(d ?? null)}
+          placeholder="Boshi"
+          className="h-9 w-[140px]"
+          maxDate={endDate ?? undefined}
+          defaultMonth={endDate ?? undefined}
+        />
+        <span className="text-muted-foreground text-sm">—</span>
+        <DatePicker
+          value={endDate}
+          onChange={(d) => onEndDateChange(d ?? null)}
+          placeholder="Oxiri"
+          className="h-9 w-[140px]"
+          minDate={startDate ?? undefined}
+          defaultMonth={startDate ?? undefined}
+        />
+      </div>
+
+      {hasActiveFilters && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onReset}
+          className="h-9"
+          aria-label="Filtrlarni tozalash"
+        >
+          <X className="size-4 mr-1" />
+          Tozalash
+        </Button>
+      )}
+    </div>
+  );
+}
