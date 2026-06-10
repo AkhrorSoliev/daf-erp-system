@@ -729,9 +729,125 @@ describe('PaymentsService', () => {
           studentId: 10001,
           oldAmount: 5000000,
           newAmount: 400000,
+          oldMethod: 'CASH',
+          newMethod: 'CASH',
           performedById: 99,
         }),
       );
+    });
+
+    it('re-posts with the new method when method is changed', async () => {
+      await service.correctAmount(
+        'payment-uuid-1',
+        { correctAmount: 400000, method: 'TRANSFER' as any, reason: 'Usul xato' },
+        99,
+        1001,
+        ['Administrator'],
+      );
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            amount: 400000,
+            method: 'TRANSFER',
+          }),
+        }),
+      );
+    });
+
+    it('keeps the original method when method is omitted', async () => {
+      await service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+        'Administrator',
+      ]);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ method: 'CASH' }),
+        }),
+      );
+    });
+
+    it('relabels the method in place for a method-only correction (no reverse/re-post)', async () => {
+      await service.correctAmount(
+        'payment-uuid-1',
+        {
+          correctAmount: 5000000,
+          method: 'TRANSFER' as any,
+          reason: 'Naqd emas, o’tkazma edi',
+        },
+        99,
+        1001,
+        ['Administrator'],
+      );
+
+      // In-place method update — NOT a reverse + re-post.
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-uuid-1' },
+        data: { method: 'TRANSFER' },
+      });
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      expect(entityHistoryService.recordUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Payment',
+          oldValues: { method: 'CASH' },
+          newValues: { method: 'TRANSFER' },
+        }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.corrected',
+        expect.objectContaining({ oldMethod: 'CASH', newMethod: 'TRANSFER' }),
+      );
+    });
+
+    it('allows a method-only correction without a reason', async () => {
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 5000000, method: 'TRANSFER' as any },
+          99,
+          1001,
+          ['Administrator'],
+        ),
+      ).resolves.toBeDefined();
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-uuid-1' },
+        data: { method: 'TRANSFER' },
+      });
+    });
+
+    it('allows a method-only correction even when funds were spent on lessons', async () => {
+      // A method relabel never moves money, so the "funds already spent on
+      // lessons" guard must NOT block it (the reverse-block bug we fixed).
+      prisma.transaction.count.mockResolvedValue(5);
+
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 5000000, method: 'TRANSFER' as any },
+          99,
+          1001,
+          ['Administrator'],
+        ),
+      ).resolves.toBeDefined();
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-uuid-1' },
+        data: { method: 'TRANSFER' },
+      });
+    });
+
+    it('throws when the amount changes but no reason is given', async () => {
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 400000 },
+          99,
+          1001,
+          ['Administrator'],
+        ),
+      ).rejects.toThrow(/sabab/i);
     });
 
     it('does NOT emit payment.corrected when a CEO performs the correction', async () => {

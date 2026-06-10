@@ -15,6 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PriceInput } from "@/components/ui/price-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -41,13 +48,17 @@ export function CorrectPaymentDialog({
   onCorrected,
 }: CorrectPaymentDialogProps) {
   const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Reset the form whenever a new payment is targeted or the dialog reopens.
+  // Amount and method are pre-filled with the current values so an admin can
+  // change just one of them (e.g. fix only the method) without retyping.
   useEffect(() => {
-    if (open) {
-      setAmount("");
+    if (open && payment) {
+      setAmount(String(payment.amount));
+      setMethod(payment.method);
       setReason("");
       setSubmitting(false);
     }
@@ -58,8 +69,16 @@ export function CorrectPaymentDialog({
   const rawAmount = Number(amount) || 0;
   const trimmedReason = reason.trim();
   const sameAmount = rawAmount === payment.amount;
+  const sameMethod = method === payment.method;
+  const noChange = sameAmount && sameMethod;
+  // A reason is only required when the amount changes. A method-only fix
+  // (e.g. CASH → TRANSFER) doesn't move money, so no reason is needed.
+  const reasonRequired = !sameAmount;
   const canSubmit =
-    rawAmount >= 1000 && trimmedReason.length > 0 && !sameAmount && !submitting;
+    rawAmount >= 1000 &&
+    (!reasonRequired || trimmedReason.length > 0) &&
+    !noChange &&
+    !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -67,12 +86,17 @@ export function CorrectPaymentDialog({
     try {
       const { data } = await api.post(`/payments/${payment.id}/correct`, {
         correctAmount: rawAmount,
-        reason: trimmedReason,
+        method,
+        ...(trimmedReason ? { reason: trimmedReason } : {}),
       });
       toast.success(
-        `To'lov to'g'rilandi: ${formatPrice(payment.amount)} → ${formatPrice(
-          rawAmount,
-        )} so'm`,
+        sameAmount
+          ? `To'lov usuli o'zgartirildi: ${
+              PAYMENT_METHOD_LABELS[payment.method] ?? payment.method
+            } → ${PAYMENT_METHOD_LABELS[method] ?? method}`
+          : `To'lov to'g'rilandi: ${formatPrice(payment.amount)} → ${formatPrice(
+              rawAmount,
+            )} so'm`,
       );
       onCorrected(
         typeof data?.studentBalance === "number" ? data.studentBalance : null,
@@ -94,11 +118,12 @@ export function CorrectPaymentDialog({
     <Dialog open={open} onOpenChange={(o) => !submitting && onOpenChange(o)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>To&apos;lov summasini to&apos;g&apos;rilash</DialogTitle>
+          <DialogTitle>To&apos;lovni to&apos;g&apos;rilash</DialogTitle>
           <DialogDescription>
-            Noto&apos;g&apos;ri summa kiritilgan bo&apos;lsa, uni shu yerda
-            to&apos;g&apos;rilang. Eski to&apos;lov bekor qilinadi va to&apos;g&apos;ri
-            summada qayta qayd etiladi.
+            Noto&apos;g&apos;ri summa yoki to&apos;lov usuli kiritilgan
+            bo&apos;lsa, ularni shu yerda to&apos;g&apos;rilang. Eski to&apos;lov
+            bekor qilinadi va to&apos;g&apos;ri ma&apos;lumotlar bilan qayta qayd
+            etiladi.
           </DialogDescription>
         </DialogHeader>
 
@@ -125,16 +150,39 @@ export function CorrectPaymentDialog({
                 Minimal summa — 1 000 so&apos;m
               </p>
             )}
-            {sameAmount && rawAmount > 0 && (
-              <p className="text-xs text-destructive">
-                Yangi summa joriy summa bilan bir xil
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="correct-method">To&apos;lov usuli</Label>
+            <Select value={method} onValueChange={setMethod}>
+              <SelectTrigger id="correct-method">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {noChange && (
+            <p className="text-xs text-destructive">
+              Summa va to&apos;lov usuli o&apos;zgarmadi — kamida bittasini
+              o&apos;zgartiring
+            </p>
+          )}
+
+          <div className="space-y-2">
             <Label htmlFor="correct-reason">
-              Sabab <span className="text-destructive">*</span>
+              Sabab{" "}
+              {reasonRequired ? (
+                <span className="text-destructive">*</span>
+              ) : (
+                <span className="text-muted-foreground">(ixtiyoriy)</span>
+              )}
             </Label>
             <Textarea
               id="correct-reason"
