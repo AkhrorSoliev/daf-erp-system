@@ -5,6 +5,7 @@ import { PaymentsService } from '../../payments/payments.service';
 import { MockExamGatewayBillingService } from '../../mock-exams/mock-exam-gateway-billing.service';
 import {
   ACCOUNT_BUSY,
+  CANNOT_CANCEL,
   CANNOT_PERFORM,
   INVALID_AMOUNT,
   STUDENT_NOT_FOUND,
@@ -452,11 +453,31 @@ describe('PaymeMethodsService', () => {
       );
       expect(payments.reverse).toHaveBeenCalledWith(
         'payment-uuid',
-        expect.objectContaining({
-          companyId: COMPANY_ID,
-          performedById: 0,
-        }),
+        expect.objectContaining({ companyId: COMPANY_ID }),
       );
+      // F-40: gateway reversal is a system action — never the fake user id 0.
+      expect(payments.reverse.mock.calls[0][1].performedById).toBeUndefined();
+    });
+
+    // F-19: if the ERP reversal is blocked (e.g. funds already spent on
+    // lessons), we must NOT report the transaction as refunded.
+    it('returns CANNOT_CANCEL and does NOT mark -2 when the ERP reversal fails', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(
+        mockTxn({ state: 2, paymentId: 'payment-uuid' }),
+      );
+      payments.reverse.mockRejectedValueOnce(
+        new Error("To'lov allaqachon darslarga sarflangan"),
+      );
+
+      const result = await service.cancelTransaction(
+        params as any,
+        COMPANY_ID,
+        1,
+      );
+
+      expect(result).toMatchObject({ error: { code: CANNOT_CANCEL } });
+      // The Payme transaction must stay performed — never flipped to refunded.
+      expect(prisma.paymeTransaction.update).not.toHaveBeenCalled();
     });
 
     it('should return idempotent result for already cancelled transaction', async () => {

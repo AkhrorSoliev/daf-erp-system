@@ -8,6 +8,7 @@ import {
 } from '../../mock-exams/mock-exam-gateway-billing.service';
 import {
   ACCOUNT_BUSY,
+  CANNOT_CANCEL,
   CANNOT_PERFORM,
   INVALID_AMOUNT,
   STUDENT_NOT_FOUND,
@@ -394,27 +395,36 @@ export class PaymeMethodsService {
       });
     }
 
-    // Performed (state=2) → cancel with reversal (state=-2)
+    // Performed (state=2) → cancel with reversal (state=-2).
     if (txn.state === 2) {
-      await this.prisma.paymeTransaction.update({
-        where: { id: txn.id },
-        data: { state: -2, cancelTime: now, reason: p.reason },
-      });
-
-      // Reverse the ERP payment if it was linked
+      // Reverse the linked ERP payment FIRST, and mark the Payme transaction
+      // refunded (-2) only if that actually succeeds. Previously the -2 was
+      // written first and the reversal ran in a swallowed try/catch — so when
+      // the reversal was blocked (funds already spent on lessons) Payme was told
+      // the money was returned while the ERP payment stayed COMPLETED and the
+      // balance was never clawed back. (F-19) `performedById` is left undefined:
+      // this is a system action, not user id 0 (which doesn't exist and trips
+      // the audit FK, making every such reversal fail). (F-40)
       if (txn.paymentId) {
         try {
           await this.payments.reverse(txn.paymentId, {
             reason: 'Payme CancelTransaction',
-            performedById: 0,
             companyId,
           });
         } catch (err) {
-          this.logger.warn(
-            `Failed to reverse ERP payment ${txn.paymentId} for Payme cancel: ${err}`,
+          this.logger.error(
+            `Payme cancel: ERP reversal failed for payment ${txn.paymentId}, not reporting refunded: ${err}`,
           );
+          // Do NOT mark -2 — the money was not returned. Payme retries / the
+          // admin resolves the cancellation via the panel.
+          return paymeError(rpcId, CANNOT_CANCEL);
         }
       }
+
+      await this.prisma.paymeTransaction.update({
+        where: { id: txn.id },
+        data: { state: -2, cancelTime: now, reason: p.reason },
+      });
 
       return paymeSuccess(rpcId, {
         transaction: txn.id,

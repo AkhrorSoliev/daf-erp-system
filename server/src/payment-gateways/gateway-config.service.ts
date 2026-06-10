@@ -41,15 +41,23 @@ export class GatewayConfigService {
       where: { companyId_provider: { companyId, provider } },
     });
 
-    if (dbConfig?.isActive) {
+    if (dbConfig) {
+      // A config row exists for this company+provider. An INACTIVE row means
+      // the gateway is intentionally OFF — do NOT silently fall back to the
+      // deploy-wide env credentials, which would process this company's
+      // webhooks under keys that don't belong to it. (F-20)
+      if (!dbConfig.isActive) return null;
       return {
         merchantId: dbConfig.merchantId,
         secretKey: dbConfig.secretKey,
-        secretKeyTest: dbConfig.secretKeyTest,
+        // Never expose the sandbox key on the production code path — a request
+        // signed with the (less-protected, shared) test key must not
+        // authenticate a real prod webhook. (F-18)
+        secretKeyTest: isProduction(this.config) ? null : dbConfig.secretKeyTest,
       };
     }
 
-    // 2. Fall back to global env vars
+    // 2. No DB row → global env fallback (gradual-migration path).
     return this.getEnvFallback(provider);
   }
 
@@ -69,7 +77,8 @@ export class GatewayConfigService {
         return {
           merchantId,
           secretKey: prodKey ?? testKey!,
-          secretKeyTest: testKey,
+          // Never expose the sandbox key on the production code path. (F-18)
+          secretKeyTest: isProduction(this.config) ? null : testKey,
         };
       }
       case PaymentMethod.CLICK: {
