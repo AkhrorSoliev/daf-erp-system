@@ -40,15 +40,37 @@ describe('TelegramGroupDigestService', () => {
     expect(msg).toContain('14:05 – 17:00');
   });
 
-  it('lists each new student with branch context', () => {
+  it('lists each new student under a branch sub-header', () => {
     const msg = service.build(
       'DaF',
       [student('Ali Valiyev', 'Chilonzor'), student('Dilnoza Rashidova')],
       NOW,
     )!;
     expect(msg).toContain("Yangi o'quvchilar (2)");
-    expect(msg).toContain('• Ali Valiyev — Chilonzor');
+    expect(msg).toContain('🏢 <b>Chilonzor</b> (1)');
+    expect(msg).toContain('• Ali Valiyev');
+    // branchless students stay as plain bullets (no header)
     expect(msg).toContain('• Dilnoza Rashidova');
+    // the branch is no longer repeated inline on every bullet
+    expect(msg).not.toContain('• Ali Valiyev — Chilonzor');
+  });
+
+  it('groups many students of one branch under a single sub-header', () => {
+    const msg = service.build(
+      'DaF',
+      [
+        student('A One', 'Chilonzor'),
+        student('B Two', 'Chilonzor'),
+        student('C Three', 'Chilonzor'),
+      ],
+      NOW,
+    )!;
+    // branch name printed exactly once, not once per student
+    expect(msg.match(/Chilonzor/g)?.length).toBe(1);
+    expect(msg).toContain('🏢 <b>Chilonzor</b> (3)');
+    expect(msg).toContain('• A One');
+    expect(msg).toContain('• B Two');
+    expect(msg).toContain('• C Three');
   });
 
   it('lists payments with a total sum', () => {

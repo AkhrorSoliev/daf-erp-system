@@ -31,6 +31,24 @@ export function formatDate(d: Date | string): string {
 }
 
 /**
+ * `dd.MM.yyyy, HH:mm` in Asia/Tashkent (fixed UTC+5, no DST). Used for
+ * event-time stamps in instant Telegram messages (e.g. when an admin freezes
+ * or reactivates a student). Defaults to "now" since the status-change event
+ * carries no timestamp of its own.
+ */
+export function formatDateTime(d: Date | string = new Date()): string {
+  const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+  const date = d instanceof Date ? d : new Date(d);
+  const tz = new Date(date.getTime() + TASHKENT_OFFSET_MS);
+  const dd = String(tz.getUTCDate()).padStart(2, '0');
+  const mm = String(tz.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = tz.getUTCFullYear();
+  const hh = String(tz.getUTCHours()).padStart(2, '0');
+  const min = String(tz.getUTCMinutes()).padStart(2, '0');
+  return `${dd}.${mm}.${yyyy}, ${hh}:${min}`;
+}
+
+/**
  * "Today" in Asia/Tashkent (UTC+5). Returns [startUtc, endUtc) so we can
  * filter Postgres timestamps that are stored in UTC.
  */
