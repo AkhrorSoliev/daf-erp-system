@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
@@ -52,6 +52,13 @@ export class TaskReminderService {
             gt: now,
             lte: oneHourLater,
           },
+        },
+        // F-05: never remind a deactivated / suspended / terminated / archived
+        // assignee — mirror the recipient filter used everywhere else.
+        user: {
+          deletedAt: null,
+          isActive: true,
+          status: UserStatus.ACTIVE,
         },
       },
       include: {
