@@ -20,6 +20,50 @@ import {
   formatStudent,
 } from './shared/student-select';
 
+/**
+ * Pure recompute of the retroactive discount adjustment.
+ *
+ * `deductions` are the student's still-active LESSON_DEDUCTION rows; their
+ * `amount` is stored NEGATIVE, so `netCharged` (its magnitude) is what was
+ * actually charged. `targetCharge` is what the NEW discount should have charged
+ * against the un-discounted total. A POSITIVE result credits the student
+ * (discount went up), a negative result debits (discount went down).
+ *
+ * Exported for unit testing — this math is where a sign bug previously summed
+ * the negative `amount`s and compared them against the positive `targetCharge`,
+ * inverting the sign and inflating the magnitude of every adjustment (F-01).
+ */
+export function computeDiscountAdjustment(
+  deductions: { amount: number; metadata: Prisma.JsonValue | null }[],
+  newDiscountPercent: number,
+): {
+  adjustmentAmount: number;
+  netCharged: number;
+  totalFullAmount: number;
+  targetCharge: number;
+} {
+  let signedNetDeducted = 0;
+  let totalFullAmount = 0;
+  for (const t of deductions) {
+    signedNetDeducted += t.amount;
+    const md = (t.metadata ?? {}) as { fullAmount?: number };
+    // Legacy LESSON_DEDUCTION rows (pre-discount feature) have no
+    // `metadata.fullAmount`; their full price is the magnitude of `amount`
+    // (stored negative). Falling back to the raw negative `amount` here would
+    // corrupt `totalFullAmount` for those rows — use the magnitude.
+    totalFullAmount += Number(md.fullAmount ?? Math.abs(t.amount));
+  }
+
+  const targetCharge = Math.round(
+    (totalFullAmount * (100 - newDiscountPercent)) / 100,
+  );
+  // Amount actually charged = magnitude of the (negative) signed sum.
+  const netCharged = Math.abs(signedNetDeducted);
+  const adjustmentAmount = netCharged - targetCharge;
+
+  return { adjustmentAmount, netCharged, totalFullAmount, targetCharge };
+}
+
 @Injectable()
 export class StudentsWriteService {
   constructor(
@@ -366,18 +410,8 @@ export class StudentsWriteService {
 
     if (pastDeductions.length === 0) return;
 
-    let previousNetDeducted = 0;
-    let totalFullAmount = 0;
-    for (const t of pastDeductions) {
-      previousNetDeducted += t.amount;
-      const md = (t.metadata ?? {}) as { fullAmount?: number };
-      totalFullAmount += Number(md.fullAmount ?? t.amount);
-    }
-
-    const targetCharge = Math.round(
-      (totalFullAmount * (100 - params.newDiscount)) / 100,
-    );
-    const adjustmentAmount = previousNetDeducted - targetCharge;
+    const { adjustmentAmount, netCharged, totalFullAmount, targetCharge } =
+      computeDiscountAdjustment(pastDeductions, params.newDiscount);
 
     if (adjustmentAmount === 0) return;
 
@@ -389,7 +423,7 @@ export class StudentsWriteService {
         newDiscountPercent: params.newDiscount,
         totalFullAmount,
         targetCharge,
-        previousNetDeducted,
+        previousNetDeducted: netCharged,
         companyId: params.companyId,
         performedById: params.performedById,
       },

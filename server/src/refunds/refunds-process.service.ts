@@ -69,6 +69,18 @@ export class RefundsProcessService {
 
       const approvedAmount = dto.approvedAmount ?? refund.requestedAmount;
 
+      // F-16: bound the approved amount. `requestedAmount` was computed by the
+      // eligibility logic at create time (paid − consumed − prior refunds); a
+      // completion must never pay out MORE than that — otherwise an admin (or a
+      // direct API call) could drive the student balance arbitrarily negative
+      // and disburse real money beyond what is owed. Partial approval (less) is
+      // allowed.
+      if (approvedAmount < 0 || approvedAmount > refund.requestedAmount) {
+        throw new BadRequestException(
+          `Tasdiqlangan summa 0 va so'ralgan summa (${refund.requestedAmount} so'm) oralig'ida bo'lishi kerak`,
+        );
+      }
+
       // Calculate due date (15 business days from now)
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 21); // ~15 business days
