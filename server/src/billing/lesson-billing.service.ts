@@ -670,6 +670,8 @@ export class LessonBillingService {
     }
 
     if (consumption) {
+      // Always undo the consumption audit row so a future re-mark re-bills
+      // (the partial unique index keys off `reversedAt IS NULL`).
       await this.transactionsService.reverseLessonConsumption(
         consumption.id,
         {
@@ -678,11 +680,43 @@ export class LessonBillingService {
         },
         tx,
       );
-      // Restore one prepaid unit — the student gets that lesson back.
-      await tx.enrollment.update({
-        where: { id: p.enrollmentId },
-        data: { prepaidLessonsRemaining: { increment: 1 } },
+
+      // Was this lesson billed via a SINGLE_UNCOVERED deduction (debtor path,
+      // Path D)? That path writes a real balance-decreasing LESSON_DEDUCTION
+      // tied to THIS attendance and never sets up a prepaid batch. Reversing
+      // such a lesson must restore the balance (undo the debt) — it must NOT
+      // hand back a prepaid unit the student never paid for. The old code only
+      // looked at the consumption row (which Path D also writes) and always did
+      // `prepaid += 1`, leaving a phantom debt AND a free lesson.
+      const uncoveredDeduction = await tx.transaction.findFirst({
+        where: {
+          attendanceId: p.attendanceId,
+          type: TransactionType.LESSON_DEDUCTION,
+          reversedAt: null,
+        },
+        select: { id: true, metadata: true },
       });
+      const isUncovered =
+        (uncoveredDeduction?.metadata as { mode?: string } | null)?.mode ===
+        LessonDeductionMode.SINGLE_UNCOVERED;
+
+      if (isUncovered && uncoveredDeduction) {
+        // Restore balance, remove the debt. No prepaid increment.
+        await this.transactionsService.reverseTransaction(
+          uncoveredDeduction.id,
+          {
+            performedById: p.performedById,
+            reason: 'attendance status changed',
+          },
+          tx,
+        );
+      } else {
+        // Normal prepaid / refill path: give the consumed prepaid unit back.
+        await tx.enrollment.update({
+          where: { id: p.enrollmentId },
+          data: { prepaidLessonsRemaining: { increment: 1 } },
+        });
+      }
     }
   }
 

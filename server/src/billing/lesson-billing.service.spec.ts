@@ -31,6 +31,7 @@ describe('LessonBillingService', () => {
       deductLessonFee: jest.fn().mockResolvedValue({ id: 'ded-1' }),
       recordLessonConsumption: jest.fn().mockResolvedValue({ id: 'cons-1' }),
       reverseLessonConsumption: jest.fn().mockResolvedValue({ id: 'rev-1' }),
+      reverseTransaction: jest.fn().mockResolvedValue({ id: 'rev-ded-1' }),
     };
     salaryAccrualService = {
       createAccrual: jest.fn().mockResolvedValue(null),
@@ -408,6 +409,38 @@ describe('LessonBillingService', () => {
       expect(tx.enrollment.update).not.toHaveBeenCalled();
       // Accrual reverse still attempted (returns null inside the service if missing)
       expect(salaryAccrualService.reverseAccrualForAttendance).toHaveBeenCalled();
+    });
+
+    // F-03 regression: a debtor's SINGLE_UNCOVERED lesson (Path D) writes a real
+    // balance-decreasing LESSON_DEDUCTION *and* a consumption row. Reversing it
+    // must undo the deduction (restore balance) and must NOT hand back a prepaid
+    // unit the student never paid for. The old code saw only the consumption row
+    // and always did `prepaid += 1`, leaving a phantom debt + a free lesson.
+    it('debtor SINGLE_UNCOVERED reverse: reverses the deduction, NO prepaid increment', async () => {
+      tx.transaction.findFirst
+        .mockResolvedValueOnce({ id: 'cons-existing' }) // consumption lookup
+        .mockResolvedValueOnce({
+          id: 'ded-uncovered',
+          metadata: { mode: LessonDeductionMode.SINGLE_UNCOVERED },
+        }); // uncovered deduction lookup
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: AttendanceStatus.PRESENT,
+        newStatus: AttendanceStatus.EXCUSED,
+      });
+      expect(transactionsService.reverseLessonConsumption).toHaveBeenCalledWith(
+        'cons-existing',
+        expect.objectContaining({ performedById: 99 }),
+        tx,
+      );
+      // The debt-creating deduction is reversed → balance restored.
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'ded-uncovered',
+        expect.objectContaining({ performedById: 99 }),
+        tx,
+      );
+      // No free prepaid lesson.
+      expect(tx.enrollment.update).not.toHaveBeenCalled();
     });
   });
 
