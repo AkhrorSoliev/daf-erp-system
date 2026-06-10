@@ -7,17 +7,22 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 export class CompanyService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(paginationDto: PaginationDto, companyId: number) {
     const { page = 1, pageSize = 10 } = paginationDto;
     const skip = (page - 1) * pageSize;
 
+    // Multi-tenant: scope to the caller's own company only — never list every
+    // tenant's company row.
+    const where = { id: companyId };
+
     const [data, total] = await Promise.all([
       this.prisma.company.findMany({
+        where,
         skip,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.company.count(),
+      this.prisma.company.count({ where }),
     ]);
 
     return { data, total, page, pageSize };

@@ -235,9 +235,9 @@ export class UsersService {
     return { data, total, page, pageSize };
   }
 
-  async findById(id: number) {
+  async findById(id: number, companyId: number) {
     const user = await this.prisma.user.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, companyId, deletedAt: null },
       select: userSelect,
     });
 
