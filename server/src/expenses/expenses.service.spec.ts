@@ -9,6 +9,9 @@ import { ExpenseQueryDto } from './dto/expense-query.dto';
 describe('ExpensesService — findAll filters + summary', () => {
   let service: ExpensesService;
 
+  // tx client handed to the $transaction callback.
+  const tx = { expense: { update: jest.fn() } };
+
   const prisma = {
     expense: {
       findMany: jest.fn(),
@@ -19,6 +22,10 @@ describe('ExpensesService — findAll filters + summary', () => {
       create: jest.fn(),
       update: jest.fn(),
     },
+    transaction: {
+      findFirst: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
   const transactionsService = {
@@ -44,6 +51,8 @@ describe('ExpensesService — findAll filters + summary', () => {
     prisma.expense.count.mockResolvedValue(0);
     prisma.expense.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
     prisma.expense.groupBy.mockResolvedValue([]);
+    // $transaction runs the callback with the tx client.
+    prisma.$transaction.mockImplementation(async (cb: any) => cb(tx));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -177,6 +186,62 @@ describe('ExpensesService — findAll filters + summary', () => {
       expect(call.skip).toBeUndefined();
       expect(call.take).toBeUndefined();
       expect(rows).toEqual([{ id: 'e1' }]);
+    });
+  });
+
+  describe('remove', () => {
+    const existing = {
+      id: 'exp-1',
+      amount: 100,
+      companyId: COMPANY_ID,
+      deletedAt: null,
+    };
+
+    it('records a delete in EntityHistory inside the transaction', async () => {
+      prisma.expense.findFirst.mockResolvedValue(existing);
+      prisma.transaction.findFirst.mockResolvedValue(null); // no ledger entry
+
+      await service.remove('exp-1', 42, COMPANY_ID);
+
+      expect(entityHistoryService.recordDelete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Expense',
+          entityId: 'exp-1',
+          oldValues: existing,
+          changedById: 42,
+          companyId: COMPANY_ID,
+          tx,
+        }),
+      );
+      // soft-delete stamped within the same tx
+      expect(tx.expense.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'exp-1' },
+          data: expect.objectContaining({ deletedById: 42 }),
+        }),
+      );
+    });
+
+    it('reverses the linked ledger entry before deleting', async () => {
+      prisma.expense.findFirst.mockResolvedValue(existing);
+      prisma.transaction.findFirst.mockResolvedValue({ id: 'tx-9' });
+
+      await service.remove('exp-1', 42, COMPANY_ID);
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'tx-9',
+        expect.objectContaining({ performedById: 42 }),
+        tx,
+      );
+      expect(entityHistoryService.recordDelete).toHaveBeenCalled();
+    });
+
+    it('throws NotFound when the expense does not exist', async () => {
+      prisma.expense.findFirst.mockResolvedValue(null);
+      await expect(service.remove('missing', 42, COMPANY_ID)).rejects.toThrow(
+        'Xarajat topilmadi',
+      );
+      expect(entityHistoryService.recordDelete).not.toHaveBeenCalled();
     });
   });
 });

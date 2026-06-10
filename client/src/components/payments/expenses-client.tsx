@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
-  Download,
+  FileText,
+  History,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -55,6 +56,14 @@ import {
   type ExpensesSummary,
 } from "./expenses-summary-cards";
 import { ExpenseFormDialog, type Expense } from "./expense-form-dialog";
+import { ExpensesPdfRangeDialog } from "./expenses-pdf-range-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 
 interface ExpensesResponse {
   data: Expense[];
@@ -85,6 +94,8 @@ export function ExpensesClient() {
   const [confirmDelete, setConfirmDelete] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [historyFor, setHistoryFor] = useState<Expense | null>(null);
+  const [pdfRangeOpen, setPdfRangeOpen] = useState(false);
 
   // Local search mirror so typing stays smooth; debounced into the URL.
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -149,18 +160,45 @@ export function ExpensesClient() {
     }
   };
 
-  const handleExport = async () => {
+  // PDF is auth-gated, so an <a href> can't carry the JWT — fetch it as a blob
+  // via axios (which attaches the token) and download that.
+  const downloadPdf = async (params: Record<string, unknown>) => {
     setExporting(true);
     try {
-      const rows = await api
-        .get<Expense[]>("/expenses/export", { params: queryParams })
-        .then((r) => r.data);
-      downloadCsv(rows);
-    } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Eksport qilishda xatolik"));
+      const res = await api.get("/expenses/pdf", {
+        params,
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `xarajatlar-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("PDF yuklab olishda xatolik");
     } finally {
       setExporting(false);
     }
+  };
+
+  const handlePdfClick = () => {
+    // When a date range is active, ask whether to honour it or export the
+    // whole period; otherwise download straight away.
+    if (filters.startDate || filters.endDate) {
+      setPdfRangeOpen(true);
+    } else {
+      downloadPdf(queryParams);
+    }
+  };
+
+  const handlePdfScope = (scope: "range" | "all") => {
+    setPdfRangeOpen(false);
+    const params =
+      scope === "all"
+        ? { ...queryParams, startDate: undefined, endDate: undefined }
+        : queryParams;
+    downloadPdf(params);
   };
 
   const openCreate = () => {
@@ -195,15 +233,15 @@ export function ExpensesClient() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={handleExport}
+            onClick={handlePdfClick}
             disabled={exporting || !data?.total}
           >
             {exporting ? (
               <Loader2 className="size-4 mr-2 animate-spin" />
             ) : (
-              <Download className="size-4 mr-2" />
+              <FileText className="size-4 mr-2" />
             )}
-            CSV
+            PDF
           </Button>
           <Button onClick={openCreate}>
             <Plus className="size-4 mr-2" />
@@ -312,6 +350,10 @@ export function ExpensesClient() {
                           <Pencil className="mr-2 size-4" />
                           Tahrirlash
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setHistoryFor(e)}>
+                          <History className="mr-2 size-4" />
+                          Tarix
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => setConfirmDelete(e)}
@@ -343,6 +385,30 @@ export function ExpensesClient() {
         expense={editing}
         branchId={selectedBranch?.id}
         onSaved={refresh}
+      />
+
+      <Dialog
+        open={!!historyFor}
+        onOpenChange={(v) => {
+          if (!v) setHistoryFor(null);
+        }}
+      >
+        <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>Xarajat tarixi</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {historyFor && (
+              <EntityHistoryTable entityType="Expense" entityId={historyFor.id} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ExpensesPdfRangeDialog
+        open={pdfRangeOpen}
+        onOpenChange={setPdfRangeOpen}
+        onSelect={handlePdfScope}
       />
 
       <AlertDialog
@@ -381,36 +447,3 @@ export function ExpensesClient() {
   );
 }
 
-// Build a UTF-8-with-BOM CSV (Excel-friendly) of the filtered expenses and
-// trigger a browser download. Mirrors the salary-breakdown-drawer export.
-function downloadCsv(rows: Expense[]) {
-  const headers = [
-    "Sana",
-    "Kategoriya",
-    "Tavsif",
-    "Summa",
-    "To'lov turi",
-    "Kim kiritgan",
-  ];
-  const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const lines = rows.map((e) =>
-    [
-      format(new Date(e.date), "dd.MM.yyyy"),
-      EXPENSE_CATEGORY_LABELS[e.category] ?? e.category,
-      e.description,
-      String(e.amount),
-      EXPENSE_METHOD_LABELS[e.paymentMethod] ?? e.paymentMethod,
-      `${e.createdBy.firstName} ${e.createdBy.lastName}`,
-    ]
-      .map((c) => esc(String(c)))
-      .join(","),
-  );
-  const csv = "﻿" + [headers.map(esc).join(","), ...lines].join("\r\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `xarajatlar-${format(new Date(), "yyyy-MM-dd")}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
