@@ -6,9 +6,38 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { ExpenseCategory, Prisma } from '@prisma/client';
+import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
+import { renderPdf } from '../receipts/pdf/render';
+import {
+  buildExpensesDoc,
+  type ExpensesPdfRow,
+} from './pdf/expenses-template';
+import { formatDate } from './pdf/format.util';
+
+const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  RENT: 'Ijara',
+  UTILITIES: 'Kommunal',
+  SUPPLIES: "Ta'minot",
+  MARKETING: 'Marketing',
+  TEACHER_ADVANCE: 'Ustozga avans',
+  OTHER: 'Boshqa',
+};
+
+const METHOD_LABELS: Record<ExpensePaymentMethod, string> = {
+  CASH: 'Naqt',
+  CARD: 'Karta',
+};
+
+// Human label for the PDF "Davr" line. Handles one-sided ranges.
+function buildDateRangeLabel(start?: string, end?: string): string {
+  if (start && end)
+    return `${formatDate(new Date(start))} — ${formatDate(new Date(end))}`;
+  if (start) return `${formatDate(new Date(start))} dan`;
+  if (end) return `${formatDate(new Date(end))} gacha`;
+  return 'Butun davr';
+}
 
 @Injectable()
 export class ExpensesService {
@@ -88,47 +117,157 @@ export class ExpensesService {
     return expense;
   }
 
+  // Shared filter builder for the paginated list, the summary aggregation, and
+  // the CSV export — all three must scope to the SAME rows so the cards reconcile
+  // with the table and the export matches what the user sees. `deletedAt: null`
+  // keeps soft-deleted expenses out of every read.
+  private buildWhere(
+    query: ExpenseQueryDto,
+    companyId: number,
+  ): Prisma.ExpenseWhereInput {
+    return {
+      companyId,
+      deletedAt: null,
+      ...(query.category && { category: query.category }),
+      ...(query.paymentMethod && { paymentMethod: query.paymentMethod }),
+      ...(query.search && {
+        description: { contains: query.search, mode: 'insensitive' },
+      }),
+      // Date is a date-only column, so a midnight `lte` correctly includes the
+      // whole `endDate`. Either bound works on its own (one-sided range).
+      ...((query.startDate || query.endDate) && {
+        date: {
+          ...(query.startDate && { gte: new Date(query.startDate) }),
+          ...(query.endDate && { lte: new Date(query.endDate) }),
+        },
+      }),
+    };
+  }
+
+  private readonly listSelect = {
+    id: true,
+    category: true,
+    paymentMethod: true,
+    amount: true,
+    description: true,
+    date: true,
+    branchId: true,
+    receiptUrl: true,
+    createdAt: true,
+    createdBy: { select: { id: true, firstName: true, lastName: true } },
+  } satisfies Prisma.ExpenseSelect;
+
   async findAll(query: ExpenseQueryDto, companyId: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
-    const where: Prisma.ExpenseWhereInput = {
-      companyId,
-      deletedAt: null,
-      ...(query.category && { category: query.category }),
-      ...(query.branchId && { branchId: query.branchId }),
-      ...(query.startDate &&
-        query.endDate && {
-          date: {
-            gte: new Date(query.startDate),
-            lte: new Date(query.endDate),
-          },
-        }),
-    };
+    const where = this.buildWhere(query, companyId);
 
-    const [data, total] = await Promise.all([
+    const [data, total, agg, byMethod] = await Promise.all([
       this.prisma.expense.findMany({
         where,
-        select: {
-          id: true,
-          category: true,
-          paymentMethod: true,
-          amount: true,
-          description: true,
-          date: true,
-          branchId: true,
-          receiptUrl: true,
-          createdAt: true,
-          createdBy: { select: { id: true, firstName: true, lastName: true } },
-        },
+        select: this.listSelect,
         orderBy: { date: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
       this.prisma.expense.count({ where }),
+      this.prisma.expense.aggregate({ where, _sum: { amount: true } }),
+      this.prisma.expense.groupBy({
+        by: ['paymentMethod'],
+        where,
+        _sum: { amount: true },
+      }),
     ]);
 
-    return { data, total, page, pageSize };
+    // Summary spans the WHOLE filtered set (not just this page) so the cards
+    // stay correct as the user pages through.
+    const sumFor = (method: ExpensePaymentMethod) =>
+      byMethod.find((g) => g.paymentMethod === method)?._sum.amount ?? 0;
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+      summary: {
+        totalAmount: agg._sum.amount ?? 0,
+        count: total,
+        cashTotal: sumFor(ExpensePaymentMethod.CASH),
+        cardTotal: sumFor(ExpensePaymentMethod.CARD),
+      },
+    };
+  }
+
+  // Returns every row matching the current filters, ignoring pagination (the
+  // list endpoint caps pageSize at 100). Reused by the PDF export.
+  async exportAll(query: ExpenseQueryDto, companyId: number) {
+    const where = this.buildWhere(query, companyId);
+    return this.prisma.expense.findMany({
+      where,
+      select: this.listSelect,
+      orderBy: { date: 'desc' },
+    });
+  }
+
+  // Builds a simple, clean PDF of the filtered expenses (same filters as the
+  // list). Reuses the receipts pdfmake infra (Inter font, A4). Auth-gated by
+  // the controller; the frontend fetches it as a blob.
+  async generateExpensesPdf(
+    query: ExpenseQueryDto,
+    companyId: number,
+  ): Promise<Buffer> {
+    const [rows, company, branch] = await Promise.all([
+      this.exportAll(query, companyId),
+      this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { name: true },
+      }),
+      query.branchId
+        ? this.prisma.branch.findFirst({
+            where: { id: query.branchId, companyId },
+            select: { name: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const pdfRows: ExpensesPdfRow[] = rows.map((r) => ({
+      date: r.date,
+      categoryLabel: CATEGORY_LABELS[r.category] ?? r.category,
+      description: r.description,
+      amount: r.amount,
+      methodLabel: METHOD_LABELS[r.paymentMethod] ?? r.paymentMethod,
+      createdByName: `${r.createdBy.firstName} ${r.createdBy.lastName}`.trim(),
+    }));
+
+    const totals = {
+      totalAmount: rows.reduce((s, r) => s + r.amount, 0),
+      cashTotal: rows
+        .filter((r) => r.paymentMethod === ExpensePaymentMethod.CASH)
+        .reduce((s, r) => s + r.amount, 0),
+      cardTotal: rows
+        .filter((r) => r.paymentMethod === ExpensePaymentMethod.CARD)
+        .reduce((s, r) => s + r.amount, 0),
+      count: rows.length,
+    };
+
+    const doc = buildExpensesDoc({
+      companyName: company?.name ?? 'DaF Sprachzentrum',
+      branchName: branch?.name ?? null,
+      categoryLabel: query.category
+        ? (CATEGORY_LABELS[query.category] ?? query.category)
+        : null,
+      methodLabel: query.paymentMethod
+        ? (METHOD_LABELS[query.paymentMethod] ?? query.paymentMethod)
+        : null,
+      search: query.search?.trim() || null,
+      dateRangeLabel: buildDateRangeLabel(query.startDate, query.endDate),
+      generatedAt: new Date(),
+      rows: pdfRows,
+      totals,
+    });
+
+    return renderPdf(doc);
   }
 
   async update(
@@ -263,6 +402,17 @@ export class ExpensesService {
         await tx.expense.update({
           where: { id },
           data: { deletedAt: new Date(), deletedById: userId },
+        });
+
+        // Audit trail: record the soft-delete so it shows in the expense's
+        // history (was previously missing — delete left no EntityHistory row).
+        await this.entityHistoryService.recordDelete({
+          entityType: 'Expense',
+          entityId: id,
+          oldValues: existing,
+          changedById: userId,
+          companyId: existing.companyId,
+          tx,
         });
       },
       {

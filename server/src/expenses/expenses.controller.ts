@@ -7,8 +7,10 @@ import {
   Body,
   Param,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
@@ -36,6 +38,27 @@ export class ExpensesController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.expensesService.findAll(query, companyId);
+  }
+
+  // Filtered expenses as a downloadable PDF (same filters as the list, no
+  // pagination). Auth-gated by the class-level @Roles; the frontend fetches it
+  // as a blob (an <a href> can't carry the JWT). No dynamic ':id' GET exists,
+  // so the literal 'pdf' path never collides.
+  @Get('pdf')
+  async exportPdf(
+    @Query() query: ExpenseQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.expensesService.generateExpensesPdf(
+      query,
+      companyId,
+    );
+    const filename = `xarajatlar-${new Date().toISOString().slice(0, 10)}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }
 
   @Patch(':id')

@@ -1,31 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  FileText,
+  History,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -36,140 +42,184 @@ import {
 } from "@/components/ui/table";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { TablePagination } from "@/components/outreach/table-pagination";
 import {
-  EmployeeAdvanceSelect,
-  type EmployeeOption,
-} from "./employee-advance-select";
+  ExpensesFilterBar,
+  EXPENSE_CATEGORY_LABELS,
+  EXPENSE_METHOD_LABELS,
+} from "./expenses-filter-bar";
+import {
+  ExpensesSummaryCards,
+  type ExpensesSummary,
+} from "./expenses-summary-cards";
+import { ExpenseFormDialog, type Expense } from "./expense-form-dialog";
+import { ExpensesPdfRangeDialog } from "./expenses-pdf-range-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 
-interface Expense {
-  id: string;
-  category: string;
-  paymentMethod: "CASH" | "CARD";
-  amount: number;
-  description: string;
-  date: string;
-  branchId: number | null;
-  relatedUserId?: number | null;
-  createdAt: string;
-  createdBy: { id: number; firstName: string; lastName: string };
+interface ExpensesResponse {
+  data: Expense[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: ExpensesSummary;
 }
 
-const categoryLabels: Record<string, string> = {
-  RENT: "Ijara",
-  UTILITIES: "Kommunal",
-  SUPPLIES: "Ta'minot",
-  MARKETING: "Marketing",
-  TEACHER_ADVANCE: "Ustozga avans",
-  OTHER: "Boshqa",
-};
-
-const paymentMethodLabels: Record<string, string> = {
-  CASH: "Naqt",
-  CARD: "Karta",
-};
+const filtersSchema = {
+  page: { type: "number", defaultValue: 1 },
+  pageSize: { type: "number", defaultValue: 10 },
+  category: { type: "string", defaultValue: "all" },
+  paymentMethod: { type: "string", defaultValue: "all" },
+  search: { type: "string", defaultValue: "" },
+  startDate: { type: "string", defaultValue: "" },
+  endDate: { type: "string", defaultValue: "" },
+} as const;
 
 export function ExpensesClient() {
   const queryClient = useQueryClient();
   const { selectedBranch } = useBranchSwitcher();
+  const { filters, setFilter, setFilters, resetFilters } =
+    useUrlFilters(filtersSchema);
+
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Expense | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [historyFor, setHistoryFor] = useState<Expense | null>(null);
+  const [pdfRangeOpen, setPdfRangeOpen] = useState(false);
 
-  // Form state
-  const [category, setCategory] = useState("OTHER");
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState<Date | null>(new Date());
-  const [relatedUserId, setRelatedUserId] = useState<string>("");
+  // Local search mirror so typing stays smooth; debounced into the URL.
+  const [searchInput, setSearchInput] = useState(filters.search);
+  useEffect(() => setSearchInput(filters.search), [filters.search]);
+  useEffect(() => {
+    if (searchInput === filters.search) return;
+    const t = setTimeout(
+      () => setFilters({ search: searchInput, page: 1 }),
+      300,
+    );
+    return () => clearTimeout(t);
+  }, [searchInput, filters.search, setFilters]);
 
-  const isTeacherAdvance = category === "TEACHER_ADVANCE";
+  const queryParams = {
+    branchId: selectedBranch?.id,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    category: filters.category === "all" ? undefined : filters.category,
+    paymentMethod:
+      filters.paymentMethod === "all" ? undefined : filters.paymentMethod,
+    search: filters.search || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["expenses", selectedBranch?.id, refreshKey],
+    queryKey: [
+      "expenses",
+      "list",
+      selectedBranch?.id,
+      filters.page,
+      filters.pageSize,
+      filters.category,
+      filters.paymentMethod,
+      filters.search,
+      filters.startDate,
+      filters.endDate,
+    ],
     queryFn: () =>
       api
-        .get<{ data: Expense[]; total: number }>("/expenses", {
-          params: { pageSize: 50, branchId: selectedBranch?.id },
-        })
+        .get<ExpensesResponse>("/expenses", { params: queryParams })
         .then((r) => r.data),
   });
 
-  // Fetch employees only when the advance category is selected — avoids
-  // hitting /users on every expense dialog open. pageSize is capped at 100
-  // by the backend PaginationDto (@Max(100)) — sending more returns 400.
-  // user_type filters by role name (backend supports comma-separated names),
-  // so the advance list shows only staff who can receive one — never students
-  // (and Cashier is excluded by request).
-  const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ["expense-employees"],
-    queryFn: () =>
-      api
-        .get<{ data: EmployeeOption[]; total: number }>("/users", {
-          params: {
-            pageSize: 100,
-            user_type: "CEO,Branch Director,Administrator,Teacher",
-          },
-        })
-        .then((r) => r.data.data),
-    enabled: isTeacherAdvance,
-  });
-
-  const rawAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
-
-  const handleSubmit = async () => {
-    if (rawAmount < 1 || !description.trim() || !date) return;
-    if (isTeacherAdvance && !relatedUserId) return;
-    setSubmitting(true);
-    try {
-      await api.post("/expenses", {
-        category,
-        paymentMethod,
-        amount: rawAmount,
-        description: description.trim(),
-        date: format(date, "yyyy-MM-dd"),
-        branchId: selectedBranch?.id,
-        ...(isTeacherAdvance && { relatedUserId: parseInt(relatedUserId, 10) }),
-      });
-      toast.success("Xarajat qayd qilindi");
-      setDialogOpen(false);
-      setAmount("");
-      setDescription("");
-      setCategory("OTHER");
-      setPaymentMethod("CASH");
-      setDate(new Date());
-      setRelatedUserId("");
-      setRefreshKey((k) => k + 1);
-      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
-    } catch (err: unknown) {
-      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Xarajatni saqlashda xatolik");
-    } finally {
-      setSubmitting(false);
-    }
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
     try {
-      await api.delete(`/expenses/${id}`);
+      await api.delete(`/expenses/${confirmDelete.id}`);
       toast.success("Xarajat o'chirildi");
-      setRefreshKey((k) => k + 1);
-      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
+      setConfirmDelete(null);
+      refresh();
     } catch (err: unknown) {
-      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "O'chirishda xatolik");
+      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const handleAmountChange = (val: string) => {
-    const digits = val.replace(/\D/g, "");
-    if (digits) {
-      setAmount(parseInt(digits, 10).toLocaleString("uz-UZ"));
+  // PDF is auth-gated, so an <a href> can't carry the JWT — fetch it as a blob
+  // via axios (which attaches the token) and download that.
+  const downloadPdf = async (params: Record<string, unknown>) => {
+    setExporting(true);
+    try {
+      const res = await api.get("/expenses/pdf", {
+        params,
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `xarajatlar-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("PDF yuklab olishda xatolik");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePdfClick = () => {
+    // When a date range is active, ask whether to honour it or export the
+    // whole period; otherwise download straight away.
+    if (filters.startDate || filters.endDate) {
+      setPdfRangeOpen(true);
     } else {
-      setAmount("");
+      downloadPdf(queryParams);
     }
   };
 
-  const totalExpenses = data?.data.reduce((s, e) => s + e.amount, 0) ?? 0;
+  const handlePdfScope = (scope: "range" | "all") => {
+    setPdfRangeOpen(false);
+    const params =
+      scope === "all"
+        ? { ...queryParams, startDate: undefined, endDate: undefined }
+        : queryParams;
+    downloadPdf(params);
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (expense: Expense) => {
+    setEditing(expense);
+    setDialogOpen(true);
+  };
+
+  const startDate = filters.startDate ? new Date(filters.startDate) : null;
+  const endDate = filters.endDate ? new Date(filters.endDate) : null;
+
+  const hasActiveFilters =
+    filters.category !== "all" ||
+    filters.paymentMethod !== "all" ||
+    filters.search !== "" ||
+    filters.startDate !== "" ||
+    filters.endDate !== "";
 
   return (
     <div className="space-y-6">
@@ -178,15 +228,51 @@ export function ExpensesClient() {
           <h2 className="font-heading text-lg font-semibold tracking-tight">
             Xarajatlar
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Jami: {formatPrice(totalExpenses)} so&apos;m
-          </p>
+          <p className="text-sm text-muted-foreground">Markaz xarajatlari</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="size-4 mr-2" />
-          Xarajat qo&apos;shish
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handlePdfClick}
+            disabled={exporting || !data?.total}
+          >
+            {exporting ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <FileText className="size-4 mr-2" />
+            )}
+            PDF
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="size-4 mr-2" />
+            Xarajat qo&apos;shish
+          </Button>
+        </div>
       </div>
+
+      <ExpensesSummaryCards summary={data?.summary} />
+
+      <ExpensesFilterBar
+        category={filters.category}
+        paymentMethod={filters.paymentMethod}
+        searchValue={searchInput}
+        startDate={startDate}
+        endDate={endDate}
+        hasActiveFilters={hasActiveFilters}
+        onCategoryChange={(v) => setFilters({ category: v, page: 1 })}
+        onPaymentMethodChange={(v) => setFilters({ paymentMethod: v, page: 1 })}
+        onSearchChange={setSearchInput}
+        onStartDateChange={(d) =>
+          setFilters({ startDate: d ? format(d, "yyyy-MM-dd") : "", page: 1 })
+        }
+        onEndDateChange={(d) =>
+          setFilters({ endDate: d ? format(d, "yyyy-MM-dd") : "", page: 1 })
+        }
+        onReset={() => {
+          setSearchInput("");
+          resetFilters();
+        }}
+      />
 
       {isLoading ? (
         <div className="space-y-2">
@@ -196,173 +282,168 @@ export function ExpensesClient() {
         </div>
       ) : !data?.data.length ? (
         <p className="text-sm text-muted-foreground py-8 text-center">
-          Hali xarajat qayd qilinmagan
+          {hasActiveFilters
+            ? "Tanlangan filtrlar bo'yicha xarajat topilmadi — filtrlarni o'zgartirib ko'ring"
+            : "Hali xarajat qayd qilinmagan"}
         </p>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Kategoriya</TableHead>
-              <TableHead>Tavsif</TableHead>
-              <TableHead>Summa</TableHead>
-              <TableHead>To&apos;lov turi</TableHead>
-              <TableHead>Sana</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.data.map((e, i) => (
-              <TableRow key={e.id}>
-                <TableCell className="border-r text-muted-foreground">
-                  {i + 1}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {categoryLabels[e.category] ?? e.category}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm">{e.description}</TableCell>
-                <TableCell className="text-red-600 font-medium">
-                  -{formatPrice(e.amount)} so&apos;m
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {paymentMethodLabels[e.paymentMethod] ?? e.paymentMethod}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {format(new Date(e.date), "dd.MM.yyyy")}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-muted-foreground hover:text-red-600"
-                    onClick={() => handleDelete(e.id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </TableCell>
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12 border-r">#</TableHead>
+                <TableHead>Kategoriya</TableHead>
+                <TableHead>Tavsif</TableHead>
+                <TableHead>Summa</TableHead>
+                <TableHead>To&apos;lov turi</TableHead>
+                <TableHead>Sana</TableHead>
+                <TableHead>Kim kiritgan</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {data.data.map((e, i) => (
+                <TableRow key={e.id}>
+                  <TableCell className="border-r text-muted-foreground">
+                    {(filters.page - 1) * filters.pageSize + i + 1}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {EXPENSE_CATEGORY_LABELS[e.category] ?? e.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{e.description}</TableCell>
+                  <TableCell className="text-red-600 font-medium">
+                    -{formatPrice(e.amount)} so&apos;m
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {EXPENSE_METHOD_LABELS[e.paymentMethod] ??
+                        e.paymentMethod}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {format(new Date(e.date), "dd.MM.yyyy")}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    <span>
+                      {e.createdBy.firstName} {e.createdBy.lastName}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {format(new Date(e.createdAt), "dd.MM.yyyy, HH:mm")}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                        >
+                          <MoreHorizontal className="size-4" />
+                          <span className="sr-only">Amallar</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(e)}>
+                          <Pencil className="mr-2 size-4" />
+                          Tahrirlash
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setHistoryFor(e)}>
+                          <History className="mr-2 size-4" />
+                          Tarix
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setConfirmDelete(e)}
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          O&apos;chirish
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          <TablePagination
+            total={data.total}
+            page={filters.page}
+            pageSize={filters.pageSize}
+            onPageChange={(p) => setFilter("page", p)}
+            onPageSizeChange={(s) => setFilters({ pageSize: s, page: 1 })}
+          />
+        </>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={(v) => { if (!submitting) setDialogOpen(v); }}>
-        <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+      <ExpenseFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        expense={editing}
+        branchId={selectedBranch?.id}
+        onSaved={refresh}
+      />
+
+      <Dialog
+        open={!!historyFor}
+        onOpenChange={(v) => {
+          if (!v) setHistoryFor(null);
+        }}
+      >
+        <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
           <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>Xarajat qo&apos;shish</DialogTitle>
+            <DialogTitle>Xarajat tarixi</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
-            <div className="space-y-2">
-              <Label>Kategoriya</Label>
-              <Select
-                value={category}
-                onValueChange={(v) => {
-                  setCategory(v);
-                  if (v !== "TEACHER_ADVANCE") setRelatedUserId("");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(categoryLabels).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>To&apos;lov turi</Label>
-              <Select
-                value={paymentMethod}
-                onValueChange={(v) => setPaymentMethod(v as "CASH" | "CARD")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(paymentMethodLabels).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {isTeacherAdvance && (
-              <div className="space-y-2">
-                <Label>Xodim</Label>
-                <EmployeeAdvanceSelect
-                  value={relatedUserId}
-                  onChange={setRelatedUserId}
-                  employees={employees ?? []}
-                  loading={employeesLoading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Avans keyingi oylik hisobida ushbu xodimning oyligidan
-                  avtomatik ushlab qolinadi
-                </p>
-              </div>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {historyFor && (
+              <EntityHistoryTable entityType="Expense" entityId={historyFor.id} />
             )}
-            <div className="space-y-2">
-              <Label>Summa</Label>
-              <div className="relative">
-                <Input
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  inputMode="numeric"
-                  className="pr-12"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  so&apos;m
-                </span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Tavsif</Label>
-              <Textarea
-                placeholder="Xarajat haqida..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Sana</Label>
-              <DatePicker
-                value={date}
-                onChange={(d) => setDate(d ?? null)}
-                placeholder="Sanani tanlang"
-              />
-            </div>
           </div>
-          <DialogFooter className="border-t px-6 py-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              Bekor qilish
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={
-                rawAmount < 1 ||
-                !description.trim() ||
-                !date ||
-                (isTeacherAdvance && !relatedUserId) ||
-                submitting
-              }
-            >
-              {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-              Saqlash
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ExpensesPdfRangeDialog
+        open={pdfRangeOpen}
+        onOpenChange={setPdfRangeOpen}
+        onSelect={handlePdfScope}
+      />
+
+      <AlertDialog
+        open={!!confirmDelete}
+        onOpenChange={(v) => {
+          if (!v && !deleting) setConfirmDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xarajatni o&apos;chirasizmi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu xarajat o&apos;chiriladi va unga bog&apos;liq moliyaviy yozuv
+              (ledger) teskari yoziladi. Bu amalni qaytarib bo&apos;lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              Bekor qilish
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(ev) => {
+                ev.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="size-4 animate-spin mr-2" />}
+              O&apos;chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
