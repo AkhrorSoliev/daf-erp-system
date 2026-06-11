@@ -282,8 +282,8 @@ export class StudentsWriteService {
           await this.applyRetroactiveDiscountAdjustment(tx, {
             studentId: id,
             oldDiscount,
-            newDiscount: newDiscount!,
-            companyId: student.companyId!,
+            newDiscount,
+            companyId: student.companyId,
             performedById: userId,
           });
         }

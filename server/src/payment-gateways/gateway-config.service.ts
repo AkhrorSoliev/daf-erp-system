@@ -53,7 +53,9 @@ export class GatewayConfigService {
         // Never expose the sandbox key on the production code path — a request
         // signed with the (less-protected, shared) test key must not
         // authenticate a real prod webhook. (F-18)
-        secretKeyTest: isProduction(this.config) ? null : dbConfig.secretKeyTest,
+        secretKeyTest: isProduction(this.config)
+          ? null
+          : dbConfig.secretKeyTest,
       };
     }
 

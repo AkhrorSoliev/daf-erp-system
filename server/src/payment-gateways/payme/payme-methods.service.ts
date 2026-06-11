@@ -171,7 +171,9 @@ export class PaymeMethodsService {
         return paymeError(rpcId, CANNOT_PERFORM);
       }
       return paymeSuccess(rpcId, {
-        create_time: Number(existingMock.paymeTime ?? existingMock.createdAt.getTime()),
+        create_time: Number(
+          existingMock.paymeTime ?? existingMock.createdAt.getTime(),
+        ),
         transaction: existingMock.id,
         state: existingMock.state,
       });
@@ -437,6 +439,15 @@ export class PaymeMethodsService {
             return paymeError(rpcId, CANNOT_CANCEL);
           }
         }
+      } else {
+        // F-5: a performed (state=2) txn should always carry a paymentId
+        // (performTransaction writes both atomically). Reaching here means a
+        // corrupted/legacy row — there is nothing to reverse, so we proceed to
+        // mark -2, but log loudly so the anomaly is investigated rather than
+        // silently reporting a refund that moved no money.
+        this.logger.warn(
+          `Payme cancel: performed txn ${txn.id} has no linked paymentId — marking -2 with nothing to reverse`,
+        );
       }
 
       await this.prisma.paymeTransaction.update({
@@ -478,12 +489,8 @@ export class PaymeMethodsService {
           create_time: mockTxn.paymeTime
             ? Number(mockTxn.paymeTime)
             : mockTxn.createdAt.getTime(),
-          perform_time: mockTxn.completedAt
-            ? mockTxn.completedAt.getTime()
-            : 0,
-          cancel_time: mockTxn.cancelledAt
-            ? mockTxn.cancelledAt.getTime()
-            : 0,
+          perform_time: mockTxn.completedAt ? mockTxn.completedAt.getTime() : 0,
+          cancel_time: mockTxn.cancelledAt ? mockTxn.cancelledAt.getTime() : 0,
           transaction: mockTxn.id,
           state: mockTxn.state,
           reason: mockTxn.reason ?? null,
@@ -537,9 +544,7 @@ export class PaymeMethodsService {
 
     const mockTransactions: StatementTransaction[] = mockTxns.map((mtxn) => ({
       id: mtxn.externalId,
-      time: mtxn.paymeTime
-        ? Number(mtxn.paymeTime)
-        : mtxn.createdAt.getTime(),
+      time: mtxn.paymeTime ? Number(mtxn.paymeTime) : mtxn.createdAt.getTime(),
       amount: mtxn.amount,
       // Mock participants use publicId in the same account field — Payme
       // doesn't distinguish; the publicId / Student.id space is shared.
@@ -575,9 +580,7 @@ export class PaymeMethodsService {
     if (mockTxn.state === GATEWAY_STATE.COMPLETED) {
       return paymeSuccess(rpcId, {
         transaction: mockTxn.id,
-        perform_time: mockTxn.completedAt
-          ? mockTxn.completedAt.getTime()
-          : 0,
+        perform_time: mockTxn.completedAt ? mockTxn.completedAt.getTime() : 0,
         state: GATEWAY_STATE.COMPLETED,
       });
     }
@@ -588,11 +591,7 @@ export class PaymeMethodsService {
       mockTxn.paymeTime &&
       Date.now() - Number(mockTxn.paymeTime) > TWELVE_HOURS_MS
     ) {
-      await this.mockGateway.markErrored(
-        mockTxn.id,
-        -1,
-        'Transaction expired',
-      );
+      await this.mockGateway.markErrored(mockTxn.id, -1, 'Transaction expired');
       return paymeError(rpcId, CANNOT_PERFORM);
     }
 
@@ -622,9 +621,7 @@ export class PaymeMethodsService {
     ) {
       return paymeSuccess(rpcId, {
         transaction: mockTxn.id,
-        cancel_time: mockTxn.cancelledAt
-          ? mockTxn.cancelledAt.getTime()
-          : 0,
+        cancel_time: mockTxn.cancelledAt ? mockTxn.cancelledAt.getTime() : 0,
         state: mockTxn.state,
       });
     }
