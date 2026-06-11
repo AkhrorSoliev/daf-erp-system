@@ -46,6 +46,9 @@ describe('PaymeMethodsService', () => {
       paymentIntent: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      payment: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
       paymeTransaction: {
         findUnique: jest.fn().mockResolvedValue(null),
         findFirst: jest.fn().mockResolvedValue(null),
@@ -478,6 +481,31 @@ describe('PaymeMethodsService', () => {
       expect(result).toMatchObject({ error: { code: CANNOT_CANCEL } });
       // The Payme transaction must stay performed — never flipped to refunded.
       expect(prisma.paymeTransaction.update).not.toHaveBeenCalled();
+    });
+
+    // F-2: self-heal a partial prior attempt. If a previous cancel reversed the
+    // payment but failed before writing -2, a retry must finish marking -2
+    // instead of looping on CANNOT_CANCEL. When the payment is already REVERSED
+    // we skip re-reversing and report success.
+    it('finishes marking -2 (no re-reverse) when the ERP payment is already REVERSED', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(
+        mockTxn({ state: 2, paymentId: 'payment-uuid' }),
+      );
+      prisma.payment.findUnique.mockResolvedValue({ status: 'REVERSED' });
+
+      const result = await service.cancelTransaction(
+        params as any,
+        COMPANY_ID,
+        1,
+      );
+
+      expect(result).toMatchObject({ result: { state: -2 } });
+      expect(payments.reverse).not.toHaveBeenCalled();
+      expect(prisma.paymeTransaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ state: -2 }),
+        }),
+      );
     });
 
     it('should return idempotent result for already cancelled transaction', async () => {

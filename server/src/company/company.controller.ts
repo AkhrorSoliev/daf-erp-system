@@ -45,7 +45,19 @@ export class CompanyController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCompanyDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCompanyDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    // Multi-tenant: a CEO may only edit their OWN company — mirror the read
+    // guard on findOne. Without this a CEO could PATCH another tenant's company
+    // row (the @Roles('CEO') guard alone doesn't bind the id to the caller).
+    if (id !== companyId) {
+      throw new ForbiddenException(
+        "Boshqa kompaniya ma'lumotini o'zgartirish mumkin emas",
+      );
+    }
     return this.companyService.update(id, dto);
   }
 }

@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PaymentMethod, PaymentSource, Prisma } from '@prisma/client';
+import {
+  PaymentMethod,
+  PaymentSource,
+  PaymentStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../../payments/payments.service';
 import {
@@ -406,18 +411,31 @@ export class PaymeMethodsService {
       // this is a system action, not user id 0 (which doesn't exist and trips
       // the audit FK, making every such reversal fail). (F-40)
       if (txn.paymentId) {
-        try {
-          await this.payments.reverse(txn.paymentId, {
-            reason: 'Payme CancelTransaction',
-            companyId,
-          });
-        } catch (err) {
-          this.logger.error(
-            `Payme cancel: ERP reversal failed for payment ${txn.paymentId}, not reporting refunded: ${err}`,
-          );
-          // Do NOT mark -2 — the money was not returned. Payme retries / the
-          // admin resolves the cancellation via the panel.
-          return paymeError(rpcId, CANNOT_CANCEL);
+        // Self-heal a partial prior attempt (F-2): the reverse and the state=-2
+        // write below are two separate writes (reverse() runs its own atomic
+        // tx). If a previous CancelTransaction reversed the payment but then
+        // failed before writing -2, the Payme txn is stuck at state=2. On
+        // Payme's retry we must NOT re-reverse — reverse() would throw "already
+        // reversed" and we'd loop on CANNOT_CANCEL forever. If the ERP payment
+        // is already REVERSED, skip straight to marking -2 and report success.
+        const payment = await this.prisma.payment.findUnique({
+          where: { id: txn.paymentId },
+          select: { status: true },
+        });
+        if (payment?.status !== PaymentStatus.REVERSED) {
+          try {
+            await this.payments.reverse(txn.paymentId, {
+              reason: 'Payme CancelTransaction',
+              companyId,
+            });
+          } catch (err) {
+            this.logger.error(
+              `Payme cancel: ERP reversal failed for payment ${txn.paymentId}, not reporting refunded: ${err}`,
+            );
+            // Do NOT mark -2 — the money was not returned. Payme retries / the
+            // admin resolves the cancellation via the panel.
+            return paymeError(rpcId, CANNOT_CANCEL);
+          }
         }
       }
 

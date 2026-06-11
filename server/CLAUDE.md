@@ -477,7 +477,7 @@ Full integration with Paycom's JSON-RPC 2.0 Merchant API. Paycom sends requests 
 | `CheckPerformTransaction` | Validate if payment is possible | Checks student exists + amount > 0 |
 | `CreateTransaction` | Create pending transaction (state=1) | Idempotent by `paymeId`; cancels existing pending txns for same student |
 | `PerformTransaction` | Complete payment (state=2) | Calls `PaymentsService.createFromExternal()` to credit student balance |
-| `CancelTransaction` | Cancel transaction | state=1→-1 (no financial impact); state=2→error -31007 (use admin panel) |
+| `CancelTransaction` | Cancel transaction | state=1→-1 (no financial impact); state=2→reverse the linked ERP payment then mark -2. Returns error -31007 (CANNOT_CANCEL) **only** when the reversal is blocked (funds already spent on lessons) — left state=2 for the admin to resolve. Reversal + the -2 write happen before responding so Payme is never told "refunded" while the balance is still out. |
 | `CheckTransaction` | Get transaction status | Returns full state |
 | `GetStatement` | List transactions in time range | For Paycom reconciliation |
 
