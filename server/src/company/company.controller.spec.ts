@@ -73,6 +73,23 @@ describe('CompanyController — role guards', () => {
     });
   });
 
+  describe('update() — tenant ownership', () => {
+    beforeEach(() => mockService.update.mockClear());
+
+    it('allows a CEO to update their OWN company', async () => {
+      await controller.update(1001, { name: 'DaF' }, 1001);
+      expect(mockService.update).toHaveBeenCalledWith(1001, { name: 'DaF' });
+    });
+
+    it('rejects updating a DIFFERENT company (cross-tenant)', () => {
+      // The id-vs-companyId check throws synchronously, before the service call.
+      expect(() => controller.update(2002, { name: 'Hacked' }, 1001)).toThrow(
+        ForbiddenException,
+      );
+      expect(mockService.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('findAll() — no guard', () => {
     it('should NOT have @Roles metadata (open to all authenticated users)', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
