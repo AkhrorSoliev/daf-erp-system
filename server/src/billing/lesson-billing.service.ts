@@ -163,9 +163,7 @@ export class LessonBillingService {
       const fromFilter = params.fromDate
         ? Prisma.sql`AND a.date >= ${params.fromDate}`
         : Prisma.empty;
-      const unpaidRows = await tx.$queryRaw<
-        { id: string; date: Date }[]
-      >`
+      const unpaidRows = await tx.$queryRaw<{ id: string; date: Date }[]>`
         SELECT a.id, a.date
         FROM "Attendance" a
         WHERE a."studentId" = ${params.studentId}
@@ -411,7 +409,9 @@ export class LessonBillingService {
       { id: string; prepaidLessonsRemaining: number; startDate: Date | null }[]
     >`SELECT id, "prepaidLessonsRemaining", "startDate" FROM "Enrollment" WHERE id = ${p.enrollmentId} FOR UPDATE`;
     if (!enrollments.length) {
-      this.logger.warn(`Enrollment ${p.enrollmentId} not found — skipping bill`);
+      this.logger.warn(
+        `Enrollment ${p.enrollmentId} not found — skipping bill`,
+      );
       return;
     }
     const enrollment = enrollments[0];
@@ -461,8 +461,14 @@ export class LessonBillingService {
     const lessonPaymentCount = group.course.lessonPaymentCount || 12;
     const fullCycleCost = group.course.price;
     const perLessonCost = Math.round(fullCycleCost / lessonPaymentCount);
-    const discountedFullCycleCost = applyDiscount(fullCycleCost, discountPercent);
-    const discountedPerLessonCost = applyDiscount(perLessonCost, discountPercent);
+    const discountedFullCycleCost = applyDiscount(
+      fullCycleCost,
+      discountPercent,
+    );
+    const discountedPerLessonCost = applyDiscount(
+      perLessonCost,
+      discountPercent,
+    );
     const contractId = group.contracts[0]?.id;
 
     let coverageTransactionId: string | undefined;
@@ -753,10 +759,10 @@ export class LessonBillingService {
           },
         });
         if (!deduction) {
-          throw new Error("LESSON_DEDUCTION yozuvi topilmadi");
+          throw new Error('LESSON_DEDUCTION yozuvi topilmadi');
         }
         if (deduction.reversedAt) {
-          throw new Error("Bu yozuv allaqachon bekor qilingan");
+          throw new Error('Bu yozuv allaqachon bekor qilingan');
         }
 
         // Reverse the deduction itself (balance is restored, original is
@@ -765,7 +771,7 @@ export class LessonBillingService {
           deduction.id,
           {
             performedById: params.performedById,
-            reason: params.reason ?? "Admin tomonidan bekor qilindi",
+            reason: params.reason ?? 'Admin tomonidan bekor qilindi',
           },
           tx,
         );
@@ -785,7 +791,7 @@ export class LessonBillingService {
               reversedAt: new Date(),
               reversedById: params.performedById,
               reversalReason:
-                params.reason ?? "Pul yechish bekor qilingani uchun",
+                params.reason ?? 'Pul yechish bekor qilingani uchun',
             },
           });
         }
@@ -799,7 +805,10 @@ export class LessonBillingService {
               enrollmentId: deduction.enrollmentId,
               type: TransactionType.LESSON_CONSUMPTION,
               reversedAt: null,
-              createdAt: { gte: (deduction as { createdAt?: Date }).createdAt ?? new Date(0) },
+              createdAt: {
+                gte:
+                  (deduction as { createdAt?: Date }).createdAt ?? new Date(0),
+              },
             },
             select: { id: true },
           });

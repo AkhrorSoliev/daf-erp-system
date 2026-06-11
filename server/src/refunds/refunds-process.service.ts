@@ -75,9 +75,19 @@ export class RefundsProcessService {
       // direct API call) could drive the student balance arbitrarily negative
       // and disburse real money beyond what is owed. Partial approval (less) is
       // allowed.
-      if (approvedAmount < 0 || approvedAmount > refund.requestedAmount) {
+      // F-6: a 0 (or negative) approval is not a refund — reject it instead of
+      // writing a 0-value REFUND ledger row and flipping the contract to
+      // REFUNDED for nothing. When there is nothing to return (e.g. the course
+      // is ≥50% consumed so requestedAmount is 0), the admin must REJECT the
+      // request rather than "complete" it.
+      if (approvedAmount <= 0) {
         throw new BadRequestException(
-          `Tasdiqlangan summa 0 va so'ralgan summa (${refund.requestedAmount} so'm) oralig'ida bo'lishi kerak`,
+          "Refund summasi 0 dan katta bo'lishi kerak — qaytariladigan mablag' yo'q (so'rovni rad eting)",
+        );
+      }
+      if (approvedAmount > refund.requestedAmount) {
+        throw new BadRequestException(
+          `Tasdiqlangan summa so'ralgan summadan (${refund.requestedAmount} so'm) oshmasligi kerak`,
         );
       }
 
