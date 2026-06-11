@@ -76,7 +76,8 @@ export class EnrollmentBillingService {
     params: {
       enrollmentId: string;
       reason?: string;
-      performedById: number;
+      // Optional: cascade-triggered refunds may have no acting user.
+      performedById?: number;
     },
   ): Promise<{ refunded: number; lessons: number } | null> {
     const enrollment = await tx.enrollment.findUnique({

@@ -138,7 +138,9 @@ export class TransactionsService {
       description: string;
       branchId?: number;
       companyId: number;
-      performedById: number;
+      // Optional: system-triggered adjustments (status cascades) may have no
+      // acting user; the ledger column is nullable.
+      performedById?: number;
     },
     tx?: Prisma.TransactionClient,
   ) {
