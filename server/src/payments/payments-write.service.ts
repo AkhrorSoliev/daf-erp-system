@@ -146,6 +146,7 @@ export class PaymentsWriteService {
             branchId: resolvedBranchId,
             companyId,
             performedById: userId,
+            method: dto.method,
           },
           tx,
         );
@@ -802,6 +803,7 @@ export class PaymentsWriteService {
           branchId: resolvedBranchId,
           companyId: params.companyId,
           performedById: params.performedById,
+          method: params.method,
         },
         tx,
       );

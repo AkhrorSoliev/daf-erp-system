@@ -12,6 +12,9 @@ import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { ReportsCenterActivityService } from './reports-center-activity.service';
+import { ReportsProfitLossService } from './reports-profit-loss.service';
+import { ReportsCashFlowService } from './reports-cash-flow.service';
+import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 
 @Module({
@@ -30,6 +33,9 @@ import { HolidaysModule } from '../holidays/holidays.module';
     ReportsDepartedReasonsService,
     ReportsTeacherChangesService,
     ReportsCenterActivityService,
+    ReportsProfitLossService,
+    ReportsCashFlowService,
+    ReportsBalanceSheetService,
   ],
 })
 export class ReportsModule {}

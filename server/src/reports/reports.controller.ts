@@ -145,6 +145,51 @@ export class ReportsController {
     });
   }
 
+  // ===== Financial statements (Phase 1) — CEO + Branch Director only =====
+
+  @Get('p-and-l')
+  @Roles('CEO', 'Branch Director')
+  async getProfitLoss(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+  ) {
+    const branchIds = await this.resolveBranchScopeForUser(user);
+    return this.reportsService.getProfitLoss(user.companyId, {
+      branchId: query.branchId,
+      branchIds: branchIds ?? undefined,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('cash-flow')
+  @Roles('CEO', 'Branch Director')
+  async getCashFlow(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+  ) {
+    const branchIds = await this.resolveBranchScopeForUser(user);
+    return this.reportsService.getCashFlow(user.companyId, {
+      branchId: query.branchId,
+      branchIds: branchIds ?? undefined,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  @Get('balance-sheet')
+  @Roles('CEO', 'Branch Director')
+  async getBalanceSheet(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+  ) {
+    const branchIds = await this.resolveBranchScopeForUser(user);
+    return this.reportsService.getBalanceSheet(user.companyId, {
+      branchId: query.branchId,
+      branchIds: branchIds ?? undefined,
+    });
+  }
+
   /**
    * CEO: full company access (null = no branch filter).
    * Branch Director: explicit UserBranch rows.

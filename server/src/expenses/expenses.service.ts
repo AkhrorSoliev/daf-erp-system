@@ -22,6 +22,9 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   SUPPLIES: "Ta'minot",
   MARKETING: 'Marketing',
   TEACHER_ADVANCE: 'Ustozga avans',
+  EQUIPMENT: 'Jihozlar',
+  MAINTENANCE: "Ta'mirlash",
+  TAXES: 'Soliqlar',
   OTHER: 'Boshqa',
 };
 
@@ -92,6 +95,7 @@ export class ExpensesService {
             performedById: userId,
             relatedUserId: dto.relatedUserId,
             description: dto.description,
+            paymentMethod: dto.paymentMethod,
           },
           tx,
         );
@@ -344,6 +348,7 @@ export class ExpensesService {
               performedById: userId,
               relatedUserId: updated.relatedUserId ?? undefined,
               description: updated.description,
+              paymentMethod: updated.paymentMethod,
             },
             tx,
           );
