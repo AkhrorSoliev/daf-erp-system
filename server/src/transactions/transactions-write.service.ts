@@ -7,12 +7,33 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   TransactionType,
   LessonDeductionMode,
+  PaymentMethod,
+  ExpensePaymentMethod,
   Prisma,
 } from '@prisma/client';
+import {
+  CashMovementsService,
+  cashTypeForPaymentMethod,
+  cashTypeForExpenseMethod,
+} from '../cash-accounts/cash-movements.service';
+
+// Transaction types that represent REAL money in/out of the center and so
+// must mirror onto a cash account. Everything else (lesson deduction /
+// consumption / adjustment / initial balance / discount / write-off /
+// withdrawal / mock fee) is an internal balance allocation — no cash moves.
+const CASH_FLOW_TYPES: ReadonlySet<TransactionType> = new Set([
+  TransactionType.PAYMENT,
+  TransactionType.EXPENSE,
+  TransactionType.SALARY_PAYMENT,
+  TransactionType.REFUND,
+]);
 
 @Injectable()
 export class TransactionsWriteService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cashMovements: CashMovementsService,
+  ) {}
 
   /**
    * Run a callback inside the given transaction client, or open a new one with Serializable isolation.
@@ -42,6 +63,9 @@ export class TransactionsWriteService {
       branchId?: number;
       companyId: number;
       performedById?: number;
+      // Drives which cash account receives the money (CASH → kassa,
+      // gateway/transfer → bank). Defaults to CASH when omitted.
+      method?: PaymentMethod;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -70,6 +94,22 @@ export class TransactionsWriteService {
         where: { id: params.studentId },
         data: { balance: balanceAfter },
       });
+
+      // Mirror real money into a cash account (no-op if none configured).
+      await this.cashMovements.recordInflow(
+        {
+          companyId: params.companyId,
+          branchId: params.branchId,
+          amount: params.amount,
+          preferType: cashTypeForPaymentMethod(
+            params.method ?? PaymentMethod.CASH,
+          ),
+          transactionId: transaction.id,
+          description: "To'lov qabul qilindi",
+          performedById: params.performedById,
+        },
+        client,
+      );
 
       return transaction;
     }, tx);
@@ -344,6 +384,18 @@ export class TransactionsWriteService {
         data: { balance: balanceAfter },
       });
 
+      // Cash out of the center to the student.
+      await this.cashMovements.recordOutflow(
+        {
+          companyId: params.companyId,
+          amount: params.amount,
+          transactionId: transaction.id,
+          description: 'Pul qaytarildi',
+          performedById: params.performedById,
+        },
+        client,
+      );
+
       return transaction;
     }, tx);
   }
@@ -391,6 +443,18 @@ export class TransactionsWriteService {
         where: { id: params.userId },
         data: { balance: balanceAfter },
       });
+
+      // Salary leaves the center cash (default kassa).
+      await this.cashMovements.recordOutflow(
+        {
+          companyId: params.companyId,
+          amount: params.amount,
+          transactionId: transaction.id,
+          description: "Oylik to'landi",
+          performedById: params.performedById,
+        },
+        client,
+      );
 
       return transaction;
     }, tx);
@@ -511,6 +575,17 @@ export class TransactionsWriteService {
         },
       });
 
+      // Unwind any cash movement linked to the original — but only for types
+      // that actually moved real money. Lesson/adjustment/etc. reversals have
+      // no cash movement, so we skip the lookup on those hot paths.
+      if (CASH_FLOW_TYPES.has(original.type)) {
+        await this.cashMovements.reverseByTransactionId(
+          original.id,
+          { performedById: params.performedById, reason: params.reason },
+          client,
+        );
+      }
+
       return reversal;
     }, tx);
   }
@@ -534,11 +609,13 @@ export class TransactionsWriteService {
       performedById?: number;
       relatedUserId?: number;
       description?: string;
+      // CASH → kassa, CARD → bank. Defaults to CASH when omitted.
+      paymentMethod?: ExpensePaymentMethod;
     },
     tx?: Prisma.TransactionClient,
   ) {
     return this.runInTx(async (client) => {
-      return client.transaction.create({
+      const transaction = await client.transaction.create({
         data: {
           type: TransactionType.EXPENSE,
           amount: -params.amount,
@@ -552,6 +629,24 @@ export class TransactionsWriteService {
           description: params.description ?? 'Xarajat',
         },
       });
+
+      // Real money leaving the center → cash account outflow.
+      await this.cashMovements.recordOutflow(
+        {
+          companyId: params.companyId,
+          branchId: params.branchId,
+          amount: params.amount,
+          preferType: cashTypeForExpenseMethod(
+            params.paymentMethod ?? ExpensePaymentMethod.CASH,
+          ),
+          transactionId: transaction.id,
+          description: params.description ?? 'Xarajat',
+          performedById: params.performedById,
+        },
+        client,
+      );
+
+      return transaction;
     }, tx);
   }
 

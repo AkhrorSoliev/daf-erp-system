@@ -42,6 +42,7 @@ import { SalaryModule } from './salary/salary.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { CashAccountsModule } from './cash-accounts/cash-accounts.module';
 import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
 import { LessonCancellationsModule } from './lesson-cancellations/lesson-cancellations.module';
 import { LessonTeacherOverridesModule } from './lesson-teacher-overrides/lesson-teacher-overrides.module';
@@ -98,6 +99,7 @@ import { JwtAuthGuard } from './common/guards';
     RefundsModule,
     WithdrawalsModule,
     ExpensesModule,
+    CashAccountsModule,
     PaymentGatewaysModule,
     BillingModule,
     LessonCancellationsModule,

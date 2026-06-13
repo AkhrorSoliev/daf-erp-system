@@ -39,6 +39,9 @@ describe('ReportsController — role guards', () => {
       periodStart: '',
       periodEnd: '',
     }),
+    getProfitLoss: jest.fn().mockResolvedValue({}),
+    getCashFlow: jest.fn().mockResolvedValue({}),
+    getBalanceSheet: jest.fn().mockResolvedValue({}),
   };
 
   const mockPrisma = {
@@ -274,6 +277,38 @@ describe('ReportsController — role guards', () => {
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
+
+  // Financial statements (Phase 1) — CEO + Branch Director only.
+  const statementEndpoints = [
+    'getProfitLoss',
+    'getCashFlow',
+    'getBalanceSheet',
+  ] as const;
+
+  for (const method of statementEndpoints) {
+    describe(`${method}() — financial statement guard (CEO + BD only)`, () => {
+      it(`should have @Roles(CEO, Branch Director) on ${method}`, () => {
+        const roles = reflector.get<string[]>(ROLES_KEY, controller[method]);
+        expect(roles).toEqual(['CEO', 'Branch Director']);
+      });
+
+      it('allows CEO and Branch Director', () => {
+        for (const role of ['CEO', 'Branch Director']) {
+          expect(
+            guard.canActivate(mockExecutionContext(controller[method], [role])),
+          ).toBe(true);
+        }
+      });
+
+      it('denies Administrator, Cashier, Teacher', () => {
+        for (const role of ['Administrator', 'Cashier', 'Teacher']) {
+          expect(() =>
+            guard.canActivate(mockExecutionContext(controller[method], [role])),
+          ).toThrow(ForbiddenException);
+        }
+      });
+    });
+  }
 
   describe('branch scope resolver (private)', () => {
     it('CEO gets null (no branch filter)', async () => {

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { LessonDeductionMode, Prisma } from '@prisma/client';
+import {
+  ExpensePaymentMethod,
+  LessonDeductionMode,
+  PaymentMethod,
+  Prisma,
+} from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { TransactionsWriteService } from './transactions-write.service';
 import { TransactionsReadService } from './transactions-read.service';
@@ -21,6 +26,7 @@ export class TransactionsService {
       branchId?: number;
       companyId: number;
       performedById?: number;
+      method?: PaymentMethod;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -126,6 +132,7 @@ export class TransactionsService {
       performedById?: number;
       relatedUserId?: number;
       description?: string;
+      paymentMethod?: ExpensePaymentMethod;
     },
     tx?: Prisma.TransactionClient,
   ) {

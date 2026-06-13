@@ -235,6 +235,20 @@ enum ExpenseCategory {
   SUPPLIES
   MARKETING
   TEACHER_ADVANCE
+  EQUIPMENT
+  MAINTENANCE
+  TAXES
+  OTHER
+}
+
+// Classifies what an incoming Payment is FOR (revenue stream). NULL on legacy
+// rows is treated as TUITION by reports. Drives revenue-by-type analytics.
+enum RevenueType {
+  TUITION
+  REGISTRATION_FEE
+  CERTIFICATE_FEE
+  MATERIAL_SALE
+  MOCK_EXAM_FEE
   OTHER
 }
 
@@ -551,6 +565,8 @@ model Student {
   salaryAccruals  SalaryAccrual[]  @relation("StudentSalaryAccruals")
   paymentPromises PaymentPromise[]
   callLogs        CallLog[]
+  discounts       Discount[]
+  scholarships    Scholarship[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1704,6 +1720,7 @@ model Payment {
   contract           Contract?     @relation(fields: [contractId], references: [id])
   amount             Int
   method             PaymentMethod
+  revenueType        RevenueType?  @default(TUITION)
   status             PaymentStatus @default(COMPLETED)
   source             PaymentSource @default(ADMIN_MANUAL)
   externalId         String?
@@ -1824,9 +1841,10 @@ model Contract {
   deletedBy       User?     @relation("ContractDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  payments     Payment[]
-  refunds      Refund[]
-  transactions Transaction[]
+  payments         Payment[]
+  refunds          Refund[]
+  transactions     Transaction[]
+  installmentPlans InstallmentPlan[]
 
   @@index([studentId])
   @@index([companyId])
@@ -2301,4 +2319,230 @@ model PaymentIntent {
   createdAt   DateTime      @default(now())
 
   @@index([studentId, companyId, provider, used])
+}
+
+// ===== FINANCE MODULE — CASH ACCOUNTS =====
+
+// Real center liquidity. Each branch typically has a CASH (kassa) and a BANK
+// account. Unlike Student/Teacher balances (tracked on the Transaction ledger),
+// cash accounts track ACTUAL money in/out of the center. balance is the
+// denormalized canonical figure; CashMovement is the append-only audit ledger.
+model CashAccount {
+  id        String          @id @default(uuid())
+  name      String // "Asosiy kassa", "Bank hisobi", ...
+  type      CashAccountType @default(CASH)
+  branchId  Int? // null = company-wide account
+  balance   Int             @default(0) // so'm
+  isActive  Boolean         @default(true)
+  companyId Int
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?
+
+  movements CashMovement[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([deletedAt])
+}
+
+enum CashAccountType {
+  CASH
+  BANK
+  CARD
+}
+
+// Append-only cash ledger. ONE row per real money movement. Cash Flow report
+// and the Cash Balance KPI read from here. Corrections are reversals
+// (reversedTransactionId + reversedAt), never destructive edits — same rule as
+// the Transaction ledger. NOTE: only REAL cash in/out is recorded here
+// (PAYMENT inflow, EXPENSE/SALARY_PAYMENT/REFUND outflow). LESSON_DEDUCTION /
+// LESSON_CONSUMPTION are internal balance allocations and are NOT cash moves.
+model CashMovement {
+  id            String           @id @default(uuid())
+  cashAccountId String
+  cashAccount   CashAccount      @relation(fields: [cashAccountId], references: [id])
+  type          CashMovementType
+  amount        Int // signed: inflow > 0, outflow < 0
+  balanceBefore Int
+  balanceAfter  Int
+  // Loose link to the source financial Transaction (no FK relation, mirrors the
+  // companyId-as-scalar convention used across the finance schema).
+  transactionId String?
+  description   String?
+
+  // Reversal markers — same pattern as Transaction.
+  reversedTransactionId String?
+  reversedAt            DateTime?
+
+  performedById Int?
+  branchId      Int?
+  companyId     Int
+  createdAt     DateTime @default(now())
+
+  @@index([cashAccountId, createdAt])
+  @@index([companyId, createdAt])
+  @@index([type])
+  @@index([reversedTransactionId])
+}
+
+enum CashMovementType {
+  INFLOW
+  OUTFLOW
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUSTMENT
+}
+
+// ===== FINANCE MODULE — DISCOUNTS & SCHOLARSHIPS =====
+
+// Auditable discount. Complements the legacy Student.discountPercent field by
+// recording who/when/why/how-long. The effective discount applied at billing
+// time is derived from active (date-bounded, non-deleted) rows.
+model Discount {
+  id          String       @id @default(uuid())
+  studentId   Int
+  student     Student      @relation(fields: [studentId], references: [id])
+  type        DiscountType @default(PERCENTAGE)
+  value       Int // percentage (0-100) or fixed amount in so'm
+  startDate   DateTime
+  endDate     DateTime?
+  scope       Json? // { courseId?, groupId?, enrollmentId? } — null = all enrollments
+  reason      String?
+  createdById Int
+  branchId    Int?
+  companyId   Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  @@index([studentId])
+  @@index([companyId])
+  @@index([deletedAt])
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+// Persistent award (e.g. academic excellence). Like Discount but approval-gated.
+model Scholarship {
+  id           String          @id @default(uuid())
+  studentId    Int
+  student      Student         @relation(fields: [studentId], references: [id])
+  type         ScholarshipType @default(PERCENTAGE)
+  value        Int // percentage (0-100) or fixed amount in so'm
+  startDate    DateTime
+  endDate      DateTime?
+  reason       String?
+  approvedById Int?
+  createdById  Int
+  branchId     Int?
+  companyId    Int
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+
+  @@index([studentId])
+  @@index([companyId])
+  @@index([deletedAt])
+}
+
+enum ScholarshipType {
+  PERCENTAGE
+  FIXED
+}
+
+// ===== FINANCE MODULE — INSTALLMENT PLANS =====
+
+// Splits a Contract.totalAmount into scheduled installments. Payments are
+// allocated to the oldest due installment as money lands.
+model InstallmentPlan {
+  id          String        @id @default(uuid())
+  contractId  String
+  contract    Contract      @relation(fields: [contractId], references: [id])
+  totalAmount Int
+  companyId   Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  installments Installment[]
+
+  @@index([contractId])
+  @@index([companyId])
+}
+
+model Installment {
+  id          String            @id @default(uuid())
+  planId      String
+  plan        InstallmentPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sequenceNum Int
+  dueDate     DateTime
+  amount      Int
+  paidAmount  Int?
+  paidAt      DateTime?
+  status      InstallmentStatus @default(PENDING)
+  companyId   Int
+
+  @@unique([planId, sequenceNum])
+  @@index([dueDate])
+  @@index([status])
+  @@index([companyId])
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// ===== FINANCE MODULE — ALERTS =====
+
+// Per-company configurable threshold rule. One row per (company, type).
+model AlertRule {
+  id         String    @id @default(uuid())
+  type       AlertType
+  threshold  Int
+  windowDays Int?
+  enabled    Boolean   @default(true)
+  companyId  Int
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([companyId, type])
+  @@index([enabled])
+}
+
+// A fired alert instance. Created by AlertsCronService; acknowledged by an admin.
+model Alert {
+  id               String        @id @default(uuid())
+  type             AlertType
+  severity         AlertSeverity @default(WARNING)
+  message          String // Latin Uzbek
+  data             Json? // { studentId, overdueAmount, daysOverdue, ... }
+  acknowledgedAt   DateTime?
+  acknowledgedById Int?
+  companyId        Int
+  branchId         Int?
+  createdAt        DateTime      @default(now())
+
+  @@index([companyId])
+  @@index([type])
+  @@index([acknowledgedAt])
+}
+
+enum AlertType {
+  OVERDUE_PAYMENT
+  LOW_CASH_BALANCE
+  UPCOMING_SALARY
+  LARGE_EXPENSE
+  ANOMALY
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
 }
