@@ -99,7 +99,10 @@ export function StudentCallHistoryTab({ studentId }: { studentId: number }) {
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        onPageSizeChange={(s) => {
+          setPageSize(s);
+          setPage(1);
+        }}
       />
     </div>
   );

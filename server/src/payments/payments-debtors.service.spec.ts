@@ -70,6 +70,45 @@ describe('PaymentsDebtorsService', () => {
       prisma.student.count.mockResolvedValueOnce(1);
       const res = await service.getDebtors(1001, { userId: 1, roles: ['CEO'] });
       expect(res.data[0].debtAmount).toBe(50000);
+      // No promise / no call → both null (rows may omit the relation arrays).
+      expect(res.data[0].promise).toBeNull();
+      expect(res.data[0].lastCall).toBeNull();
+    });
+
+    it('surfaces the active promise + last outreach call on each debtor', async () => {
+      const promiseDate = new Date('2026-06-20T23:59:59.000Z');
+      const callDate = new Date('2026-06-13T09:00:00.000Z');
+      prisma.student.findMany.mockResolvedValueOnce([
+        {
+          id: 1,
+          balance: -50000,
+          enrollments: [],
+          paymentPromises: [
+            { promiseDate, comment: '20-iyun to‘layman dedi', status: 'OPEN' },
+          ],
+          callLogs: [
+            {
+              note: 'Javob bermadi',
+              outcome: 'NO_ANSWER',
+              createdAt: callDate,
+              calledBy: { firstName: 'Ali', lastName: 'Valiyev' },
+            },
+          ],
+        },
+      ]);
+      prisma.student.count.mockResolvedValueOnce(1);
+      const res = await service.getDebtors(1001, { userId: 1, roles: ['CEO'] });
+      expect(res.data[0].promise).toEqual({
+        promiseDate: promiseDate.toISOString(),
+        comment: '20-iyun to‘layman dedi',
+        status: 'OPEN',
+      });
+      expect(res.data[0].lastCall).toEqual({
+        note: 'Javob bermadi',
+        outcome: 'NO_ANSWER',
+        createdAt: callDate.toISOString(),
+        calledByName: 'Ali Valiyev',
+      });
     });
 
     it('scopes a Branch Director to their own mainBranch', async () => {

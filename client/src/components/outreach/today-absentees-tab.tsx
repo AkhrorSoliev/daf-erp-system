@@ -18,12 +18,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import type {
   TodayAbsenteesResponse,
   TodayAbsenteeItem,
 } from "./outreach-types";
 import type { LogCallPrefill } from "./log-call-dialog";
 import { TablePagination } from "./table-pagination";
+
+// Distinct param prefix so each outreach tab's pagination persists in the URL
+// without colliding with the other tabs' params (they share one URL).
+const FILTER_SCHEMA = {
+  ab_page: { type: "number", defaultValue: 1 },
+  ab_size: { type: "number", defaultValue: 10 },
+} as const;
 
 interface TodayAbsenteesTabProps {
   isActive: boolean;
@@ -35,8 +43,9 @@ export function TodayAbsenteesTab({
   onLogCall,
 }: TodayAbsenteesTabProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { filters, setFilter, setFilters } = useUrlFilters(FILTER_SCHEMA);
+  const page = filters.ab_page;
+  const pageSize = filters.ab_size;
 
   // Frozen at mount so the calendar's "no future dates" rule doesn't flap
   // with the wall clock during a session.
@@ -67,16 +76,18 @@ export function TodayAbsenteesTab({
   }, [items, page, pageSize]);
 
   // Clamp the page if the list shrank (e.g. after a student was removed) so the
-  // user never lands on an out-of-range empty page.
+  // user never lands on an out-of-range empty page. Guard on `items` being loaded
+  // so an inactive/unloaded tab doesn't reset a page persisted in the URL.
   useEffect(() => {
+    if (!items) return;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (page > totalPages) setPage(totalPages);
-  }, [total, pageSize, page]);
+    if (page > totalPages) setFilter("ab_page", totalPages);
+  }, [items, total, pageSize, page, setFilter]);
 
   const handleDateChange = (date: Date | undefined) => {
     if (!date) return;
     setSelectedDate(date);
-    setPage(1);
+    setFilter("ab_page", 1);
   };
 
   return (
@@ -134,8 +145,8 @@ export function TodayAbsenteesTab({
             total={total}
             page={page}
             pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
+            onPageChange={(p) => setFilter("ab_page", p)}
+            onPageSizeChange={(s) => setFilters({ ab_size: s, ab_page: 1 })}
           />
         </>
       )}

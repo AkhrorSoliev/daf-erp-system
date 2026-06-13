@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import toast from "react-hot-toast";
 import {
   Dialog,
@@ -11,14 +12,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import type { CallOutcome, CallReason } from "./outreach-types";
+import {
+  CALL_OUTCOME_INFO,
+  type CallLogsResponse,
+  type CallOutcome,
+  type CallReason,
+} from "./outreach-types";
 
 export interface LogCallPrefill {
   studentId: number;
@@ -70,6 +78,19 @@ function CallForm({
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [note, setNote] = useState("");
   const [promiseDate, setPromiseDate] = useState<Date | null>(null);
+
+  // Oldingi qo'ng'iroq izohlari — admin yangi izoh yozishda kontekst ko'rsin.
+  const { data: history, isLoading: historyLoading } = useQuery({
+    queryKey: ["call-logs", "student", prefill.studentId],
+    queryFn: () =>
+      api
+        .get<CallLogsResponse>("/call-logs", {
+          params: { studentId: prefill.studentId, pageSize: 5 },
+        })
+        .then((r) => r.data),
+    staleTime: 0,
+  });
+  const previousCalls = history?.items ?? [];
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -124,6 +145,45 @@ function CallForm({
           </div>
         )}
       </div>
+
+      {(historyLoading || previousCalls.length > 0) && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Oldingi izohlar</Label>
+          {historyLoading ? (
+            <div className="space-y-1">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ) : (
+            <div className="max-h-36 space-y-2 overflow-y-auto overscroll-contain rounded-md border bg-muted/20 p-2">
+              {previousCalls.map((item) => {
+                const oc = CALL_OUTCOME_INFO[item.outcome];
+                return (
+                  <div key={item.id} className="text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`${oc.className} hover:${oc.className}`}
+                      >
+                        {oc.label}
+                      </Badge>
+                      <span className="text-[11px] text-muted-foreground">
+                        {format(new Date(item.createdAt), "dd.MM.yyyy, HH:mm")}
+                      </span>
+                    </div>
+                    {item.note && (
+                      <p className="mt-0.5 text-muted-foreground">{item.note}</p>
+                    )}
+                    <div className="text-[11px] text-muted-foreground/80">
+                      {item.calledBy.firstName} {item.calledBy.lastName}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-3">
         <div className="space-y-1.5">

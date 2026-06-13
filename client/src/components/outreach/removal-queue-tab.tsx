@@ -23,6 +23,7 @@ import {
 } from "@/components/students/student-remove-from-group-dialog";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import type { DebtWriteOffEligibility } from "@/components/students/debt-write-off-types";
 import type {
   RemovalQueueItem,
@@ -42,6 +43,13 @@ interface RemoveTarget {
   studentName: string;
 }
 
+// Distinct param prefix so this tab's pagination persists in the URL without
+// colliding with the other outreach tabs (they share one URL).
+const FILTER_SCHEMA = {
+  rm_page: { type: "number", defaultValue: 1 },
+  rm_size: { type: "number", defaultValue: 10 },
+} as const;
+
 export function RemovalQueueTab({
   isActive,
   onLogCall,
@@ -55,8 +63,9 @@ export function RemovalQueueTab({
   const [writeOffCustomAmount, setWriteOffCustomAmount] = useState("");
   const [writeOffReason, setWriteOffReason] = useState("");
   const [removing, setRemoving] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { filters, setFilter, setFilters } = useUrlFilters(FILTER_SCHEMA);
+  const page = filters.rm_page;
+  const pageSize = filters.rm_size;
 
   const { data, isLoading } = useQuery({
     queryKey: ["outreach", "removal-queue"],
@@ -180,11 +189,13 @@ export function RemovalQueueTab({
   }, [items, page, pageSize]);
 
   // Clamp the page if the list shrank (e.g. after removing a student) so the
-  // user never lands on an out-of-range empty page.
+  // user never lands on an out-of-range empty page. Guard on `items` being loaded
+  // so an inactive/unloaded tab doesn't reset a page persisted in the URL.
   useEffect(() => {
+    if (!items) return;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (page > totalPages) setPage(totalPages);
-  }, [total, pageSize, page]);
+    if (page > totalPages) setFilter("rm_page", totalPages);
+  }, [items, total, pageSize, page, setFilter]);
 
   if (isLoading) return <SkeletonRows />;
 
@@ -241,8 +252,8 @@ export function RemovalQueueTab({
             total={total}
             page={page}
             pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
+            onPageChange={(p) => setFilter("rm_page", p)}
+            onPageSizeChange={(s) => setFilters({ rm_size: s, rm_page: 1 })}
           />
         </div>
       )}
