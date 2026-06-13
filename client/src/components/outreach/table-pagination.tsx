@@ -17,6 +17,10 @@ interface TablePaginationProps {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  // Consumers must reset the page to 1 inside this handler. This component does
+  // NOT call onPageChange(1) itself — for URL-backed pagination that would fire a
+  // second router.replace in the same tick, and the stale-searchParams closure of
+  // the second call clobbers the page-size update (the size change is lost).
   onPageSizeChange: (size: number) => void;
 }
 
@@ -39,10 +43,7 @@ export function TablePagination({
           <span className="text-xs">Sahifa hajmi:</span>
           <Select
             value={String(pageSize)}
-            onValueChange={(v) => {
-              onPageSizeChange(Number(v));
-              onPageChange(1);
-            }}
+            onValueChange={(v) => onPageSizeChange(Number(v))}
           >
             <SelectTrigger className="w-20">
               <SelectValue />

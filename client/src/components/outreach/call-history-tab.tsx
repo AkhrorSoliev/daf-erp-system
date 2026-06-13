@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -16,37 +15,30 @@ import {
 } from "@/components/ui/table";
 import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
-import type {
-  CallLogItem,
-  CallLogsResponse,
-  CallOutcome,
-  CallReason,
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import {
+  CALL_OUTCOME_INFO as OUTCOME_INFO,
+  CALL_REASON_INFO as REASON_INFO,
+  type CallLogItem,
+  type CallLogsResponse,
 } from "./outreach-types";
 import { TablePagination } from "./table-pagination";
-
-const REASON_INFO: Record<CallReason, { label: string; className: string }> = {
-  ABSENCE: { label: "Kelmagan", className: "bg-amber-100 text-amber-800" },
-  DEBT: { label: "Qarz", className: "bg-red-100 text-red-700" },
-  REMOVAL: { label: "Chiqarish", className: "bg-orange-100 text-orange-800" },
-  OTHER: { label: "Boshqa", className: "bg-slate-100 text-slate-700" },
-};
-
-const OUTCOME_INFO: Record<CallOutcome, { label: string; className: string }> = {
-  ANSWERED: { label: "Gaplashildi", className: "bg-emerald-100 text-emerald-700" },
-  NO_ANSWER: { label: "Javob bermadi", className: "bg-slate-100 text-slate-700" },
-  WILL_COME: { label: "Keladi", className: "bg-indigo-100 text-indigo-700" },
-  WILL_PAY: { label: "To'laydi", className: "bg-blue-100 text-blue-700" },
-  PROMISED: { label: "Keladi / to'laydi", className: "bg-violet-100 text-violet-700" },
-  LEFT: { label: "O'qishni tashladi", className: "bg-red-100 text-red-700" },
-};
 
 interface CallHistoryTabProps {
   isActive: boolean;
 }
 
+// Distinct param prefix so this tab's pagination persists in the URL without
+// colliding with the other outreach tabs (they share one URL).
+const FILTER_SCHEMA = {
+  h_page: { type: "number", defaultValue: 1 },
+  h_size: { type: "number", defaultValue: 10 },
+} as const;
+
 export function CallHistoryTab({ isActive }: CallHistoryTabProps) {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { filters, setFilter, setFilters } = useUrlFilters(FILTER_SCHEMA);
+  const page = filters.h_page;
+  const pageSize = filters.h_size;
 
   const { data, isLoading } = useQuery({
     queryKey: ["call-logs", page, pageSize],
@@ -95,8 +87,8 @@ export function CallHistoryTab({ isActive }: CallHistoryTabProps) {
         total={data!.total}
         page={page}
         pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        onPageChange={(p) => setFilter("h_page", p)}
+        onPageSizeChange={(s) => setFilters({ h_size: s, h_page: 1 })}
       />
     </div>
   );

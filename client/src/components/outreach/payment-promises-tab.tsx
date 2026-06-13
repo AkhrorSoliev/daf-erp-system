@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatBalance, formatPhone } from "@/lib/format-utils";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import type {
   ActivePromiseItem,
   ActivePromisesResponse,
@@ -32,13 +33,21 @@ interface PaymentPromisesTabProps {
   onLogCall: (prefill: LogCallPrefill | null) => void;
 }
 
+// Distinct param prefix so this tab's pagination persists in the URL without
+// colliding with the other outreach tabs (they share one URL).
+const FILTER_SCHEMA = {
+  pr_page: { type: "number", defaultValue: 1 },
+  pr_size: { type: "number", defaultValue: 10 },
+} as const;
+
 export function PaymentPromisesTab({
   isActive,
   onLogCall,
 }: PaymentPromisesTabProps) {
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { filters, setFilter, setFilters } = useUrlFilters(FILTER_SCHEMA);
+  const page = filters.pr_page;
+  const pageSize = filters.pr_size;
 
   const { data, isLoading } = useQuery({
     queryKey: ["outreach", "active-promises"],
@@ -71,11 +80,13 @@ export function PaymentPromisesTab({
   }, [items, page, pageSize]);
 
   // Clamp the page if the list shrank (e.g. after cancelling a promise) so the
-  // user never lands on an out-of-range empty page.
+  // user never lands on an out-of-range empty page. Guard on `items` being loaded
+  // so an inactive/unloaded tab doesn't reset a page persisted in the URL.
   useEffect(() => {
+    if (!items) return;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (page > totalPages) setPage(totalPages);
-  }, [total, pageSize, page]);
+    if (page > totalPages) setFilter("pr_page", totalPages);
+  }, [items, total, pageSize, page, setFilter]);
 
   if (isLoading) return <SkeletonRows />;
 
@@ -130,8 +141,8 @@ export function PaymentPromisesTab({
         total={total}
         page={page}
         pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        onPageChange={(p) => setFilter("pr_page", p)}
+        onPageSizeChange={(s) => setFilters({ pr_size: s, pr_page: 1 })}
       />
     </div>
   );

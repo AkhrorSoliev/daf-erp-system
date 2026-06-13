@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EnrollmentStatus, Prisma, StudentStatus } from '@prisma/client';
+import {
+  EnrollmentStatus,
+  PaymentPromiseStatus,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import {
   calculateDebtAmount,
   calculatePerLessonCost,
@@ -149,6 +154,31 @@ export class PaymentsDebtorsService {
               },
             },
           },
+          // Active commitment for the "To'lov sanasi / Izoh" column — the
+          // latest still-actionable promise (OPEN or BROKEN). KEPT/CANCELLED
+          // are historical and intentionally excluded.
+          paymentPromises: {
+            where: {
+              status: {
+                in: [PaymentPromiseStatus.OPEN, PaymentPromiseStatus.BROKEN],
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { promiseDate: true, comment: true, status: true },
+          },
+          // Last outreach call so the debtors row reflects work done from the
+          // Aloqa markazi (its note / outcome / who / when).
+          callLogs: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              note: true,
+              outcome: true,
+              createdAt: true,
+              calledBy: { select: { firstName: true, lastName: true } },
+            },
+          },
         },
         orderBy,
         skip: (page - 1) * pageSize,
@@ -158,10 +188,30 @@ export class PaymentsDebtorsService {
     ]);
 
     return {
-      data: data.map((s) => ({
-        ...s,
-        debtAmount: s.balance < 0 ? -s.balance : 0,
-      })),
+      data: data.map(({ paymentPromises = [], callLogs = [], ...s }) => {
+        const promise = paymentPromises[0] ?? null;
+        const call = callLogs[0] ?? null;
+        return {
+          ...s,
+          debtAmount: s.balance < 0 ? -s.balance : 0,
+          promise: promise
+            ? {
+                promiseDate: promise.promiseDate.toISOString(),
+                comment: promise.comment,
+                status: promise.status,
+              }
+            : null,
+          lastCall: call
+            ? {
+                note: call.note,
+                outcome: call.outcome,
+                createdAt: call.createdAt.toISOString(),
+                calledByName:
+                  `${call.calledBy.firstName} ${call.calledBy.lastName}`.trim(),
+              }
+            : null,
+        };
+      }),
       total,
       page,
       pageSize,
