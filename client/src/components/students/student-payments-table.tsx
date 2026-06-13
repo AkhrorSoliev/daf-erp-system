@@ -422,9 +422,15 @@ function SimpleEventCard({
             : t.type;
 
   const Icon = negative ? ArrowUpFromLine : ArrowDownToLine;
-  const colorBg = negative
-    ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
-    : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400";
+  // ADJUSTMENT rows are balance corrections, never received money. A positive
+  // correction (e.g. the over-charge refund) must NOT read as income, so it
+  // gets a neutral slate treatment + a RotateCcw icon instead of the
+  // emerald/green "money in" styling that a real PAYMENT uses.
+  const colorBg = isAdjustment
+    ? "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300"
+    : negative
+      ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+      : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400";
   const reasonText =
     t.description && t.description !== "To'lov qabul qilindi"
       ? t.description
@@ -436,7 +442,7 @@ function SimpleEventCard({
         <span
           className={`flex size-7 shrink-0 items-center justify-center rounded-full ${colorBg}`}
         >
-          {isReversal ? (
+          {isReversal || isAdjustment ? (
             <RotateCcw className="size-3.5" />
           ) : (
             <Icon className="size-3.5" />
@@ -445,6 +451,14 @@ function SimpleEventCard({
         <div className="min-w-0">
           <p className="text-sm">
             <span className="font-medium">{label}</span>
+            {isAdjustment && (
+              <Badge
+                variant="outline"
+                className="ml-1.5 text-[10px] font-normal text-muted-foreground"
+              >
+                to&apos;lov emas
+              </Badge>
+            )}
             {reasonText && (
               <span className="ml-1.5 text-xs text-muted-foreground">
                 · {reasonText}
@@ -458,7 +472,11 @@ function SimpleEventCard({
       </div>
       <div
         className={`font-mono text-sm font-medium tabular-nums ${
-          negative ? "text-red-600" : "text-emerald-600"
+          isAdjustment
+            ? "text-slate-600 dark:text-slate-300"
+            : negative
+              ? "text-red-600"
+              : "text-emerald-600"
         }`}
       >
         {negative ? "" : "+"}

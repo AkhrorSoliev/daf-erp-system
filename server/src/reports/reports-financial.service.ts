@@ -125,7 +125,32 @@ export class ReportsFinancialService {
       },
       _sum: { amount: true },
     });
-    const billedLessons = Math.abs(billedLessonsAgg._sum.amount ?? 0);
+    // Billing corrections (the April-cutover over-charge cleanup) were booked as
+    // lump ADJUSTMENT rows, NOT as LESSON_DEDUCTION reversals. That means they
+    // do not net out of the LESSON_DEDUCTION sum above and would leave recognized
+    // revenue overstated by the phantom (double-billed) amount. Net them back in
+    // here so a balance-only correction is reflected: a correction is recognized
+    // in the period it was made (standard correction accounting). Only ADJUSTMENT
+    // rows tagged `metadata.marker = 'overcharge*'` are billing corrections —
+    // other ADJUSTMENTs (manual balance gifts, etc.) are intentionally excluded.
+    const periodAdjustments = await this.prisma.transaction.findMany({
+      where: {
+        companyId,
+        type: 'ADJUSTMENT',
+        createdAt: dateFilter,
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      select: { amount: true, metadata: true },
+    });
+    const overchargeCorrectionSum = periodAdjustments.reduce((sum, t) => {
+      const marker = (t.metadata as { marker?: string } | null)?.marker;
+      return typeof marker === 'string' && marker.startsWith('overcharge')
+        ? sum + t.amount
+        : sum;
+    }, 0);
+    const billedLessons = Math.abs(
+      (billedLessonsAgg._sum.amount ?? 0) + overchargeCorrectionSum,
+    );
 
     // Recognized revenue forecast: walks every active enrollment in scope
     // and estimates monthly recognition from the group's weekly cadence.

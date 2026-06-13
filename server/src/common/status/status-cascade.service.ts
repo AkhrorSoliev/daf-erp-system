@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../entity-history';
+import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
 
 interface CascadeResult {
   entity: string;
@@ -21,6 +22,7 @@ export class StatusCascadeService {
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
+    private enrollmentBillingService: EnrollmentBillingService,
   ) {}
 
   /**
@@ -40,6 +42,36 @@ export class StatusCascadeService {
       where: filter,
       select: { id: true },
     });
+
+    // Closing an enrollment (DROPPED/COMPLETED) strands any unused prepaid
+    // lessons — convert them back to balance first, the same rule as
+    // removeFromGroup()/transfer. Each refund runs in its own Serializable
+    // tx (createAdjustment locks the student row). Without this, cascade
+    // paths (student EXPELLED/ARCHIVED, group CANCELLED/COMPLETED, branch
+    // close, course archive) silently lose the student's money — the
+    // 2026-06 audit found 7 production victims (~630k so'm).
+    if (
+      newStatus === EnrollmentStatus.DROPPED ||
+      newStatus === EnrollmentStatus.COMPLETED
+    ) {
+      for (const m of matches) {
+        await this.prisma.$transaction(
+          (tx) =>
+            this.enrollmentBillingService.refundPrepaidToBalance(tx, {
+              enrollmentId: m.id,
+              reason: reason
+                ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
+                : undefined,
+              performedById: userId,
+            }),
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 10_000,
+            timeout: 15_000,
+          },
+        );
+      }
+    }
 
     const result = await this.prisma.enrollment.updateMany({
       where: filter,

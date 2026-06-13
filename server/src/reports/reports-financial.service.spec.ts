@@ -16,6 +16,7 @@ describe('ReportsFinancialService', () => {
       },
       transaction: {
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
       student: {
@@ -83,6 +84,39 @@ describe('ReportsFinancialService', () => {
       expect(prisma.transaction.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ branchId: 42 }),
+        }),
+      );
+    });
+
+    it('nets over-charge-correction ADJUSTMENT rows into income.billed so a balance-only correction does not leave recognized revenue overstated', async () => {
+      // LESSON_DEDUCTION sum still carries the phantom (double-billed) amount
+      // because the correction was a lump ADJUSTMENT, not a deduction reversal.
+      prisma.transaction.aggregate.mockResolvedValueOnce({
+        _sum: { amount: -966661 },
+      });
+      // The #10061 cleanup: +533,328 phantom credit and a -99,999 real re-bill,
+      // both marked `overcharge*`. A non-correction ADJUSTMENT must be ignored.
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        { amount: 533328, metadata: { marker: 'overcharge-correction-10061' } },
+        {
+          amount: -99999,
+          metadata: { marker: 'overcharge-correction-10061-v2-absent-billable' },
+        },
+        { amount: 200000, metadata: { marker: 'manual-balance-gift' } },
+        { amount: 50000, metadata: null },
+      ]);
+
+      const result = await service.getFinancialOverview(1, period);
+
+      // |(-966661) + (533328 - 99999)| = |-533332| = 533332. The manual gift and
+      // the unmarked ADJUSTMENT are excluded.
+      expect(result.income.billed).toBe(533332);
+      expect(prisma.transaction.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            companyId: 1,
+            type: 'ADJUSTMENT',
+          }),
         }),
       );
     });
