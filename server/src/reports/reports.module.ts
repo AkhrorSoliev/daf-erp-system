@@ -15,6 +15,7 @@ import { ReportsCenterActivityService } from './reports-center-activity.service'
 import { ReportsProfitLossService } from './reports-profit-loss.service';
 import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
+import { ReportsExcelService } from './reports-excel.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 
 @Module({
@@ -36,6 +37,7 @@ import { HolidaysModule } from '../holidays/holidays.module';
     ReportsProfitLossService,
     ReportsCashFlowService,
     ReportsBalanceSheetService,
+    ReportsExcelService,
   ],
 })
 export class ReportsModule {}
