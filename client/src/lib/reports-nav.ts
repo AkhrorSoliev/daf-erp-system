@@ -6,9 +6,6 @@ import {
   GraduationCap,
   Activity,
   CalendarCheck,
-  TrendingUp,
-  ArrowLeftRight,
-  Scale,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,25 +28,6 @@ export const reportsNavSections: ReportsNavSection[] = [
     items: [
       { title: "To'lov hisobotlari", url: "/reports/payment-reports", icon: Receipt },
       { title: "O'quvchi to'lovi", url: "/reports/student-payments", icon: Wallet },
-      // Financial statements — CEO (1) + Branch Director (2) only.
-      {
-        title: "Foyda va zarar (P&L)",
-        url: "/reports/financial/p-and-l",
-        icon: TrendingUp,
-        visibleForRoles: [1, 2],
-      },
-      {
-        title: "Pul oqimi (Cash Flow)",
-        url: "/reports/financial/cash-flow",
-        icon: ArrowLeftRight,
-        visibleForRoles: [1, 2],
-      },
-      {
-        title: "Balans (Balance Sheet)",
-        url: "/reports/financial/balance-sheet",
-        icon: Scale,
-        visibleForRoles: [1, 2],
-      },
     ],
   },
   {

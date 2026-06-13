@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, subDays } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Download, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { useAuth } from "@/hooks/use-auth";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PaymentsOverview } from "./payments-overview";
@@ -36,9 +41,41 @@ export function OverviewClient() {
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
   const [activePreset, setActivePreset] = useState("Bu oy");
+  const [exporting, setExporting] = useState(false);
 
   const startStr = format(startDate, "yyyy-MM-dd");
   const endStr = format(endDate, "yyyy-MM-dd");
+
+  // Excel export is CEO + Branch Director only (matches the backend @Roles).
+  const user = useAuth((s) => s.user);
+  const canExport = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+
+  // Full financial report (P&L, Cash Flow, Balance Sheet, revenue/expense,
+  // KPIs) as a multi-sheet Excel. Auth-gated, so fetched as a blob via axios.
+  const downloadExcel = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get("/reports/financial-excel", {
+        params: {
+          startDate: startStr,
+          endDate: endStr,
+          ...(selectedBranch?.id ? { branchId: selectedBranch.id } : {}),
+        },
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `moliyaviy-hisobot-${startStr}_${endStr}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handlePreset = (preset: typeof presets[number]) => {
     const { start, end } = preset.get();
@@ -65,10 +102,26 @@ export function OverviewClient() {
             Moliyaviy umumiy ko&apos;rsatkichlar va statistika
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="size-4 mr-2" />
-          To&apos;lov qayd qilish
-        </Button>
+        <div className="flex items-center gap-2">
+          {canExport && (
+            <Button
+              variant="outline"
+              onClick={downloadExcel}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="size-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="size-4 mr-2" />
+              )}
+              Excel yuklab olish
+            </Button>
+          )}
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="size-4 mr-2" />
+            To&apos;lov qayd qilish
+          </Button>
+        </div>
       </div>
 
       {/* Davr tanlash */}

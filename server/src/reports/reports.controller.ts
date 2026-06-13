@@ -4,8 +4,10 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
@@ -25,6 +27,7 @@ import {
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReportsExcelService } from './reports-excel.service';
 
 @Controller('reports')
 @UseGuards(RolesGuard)
@@ -33,6 +36,7 @@ export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
     private readonly prisma: PrismaService,
+    private readonly reportsExcelService: ReportsExcelService,
   ) {}
 
   @Get('kpis')
@@ -145,49 +149,31 @@ export class ReportsController {
     });
   }
 
-  // ===== Financial statements (Phase 1) — CEO + Branch Director only =====
-
-  @Get('p-and-l')
+  // Comprehensive financial report as a downloadable Excel workbook — CEO + BD
+  // only. Sheets: Umumiy / Foyda va zarar / Pul oqimi / Balans / Daromad /
+  // Xarajatlar. Auth-gated by @Roles; the frontend fetches it as a blob.
+  @Get('financial-excel')
   @Roles('CEO', 'Branch Director')
-  async getProfitLoss(
+  async exportFinancialExcel(
     @Query() query: ReportsQueryDto,
     @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+    @Res() res: Response,
   ) {
     const branchIds = await this.resolveBranchScopeForUser(user);
-    return this.reportsService.getProfitLoss(user.companyId, {
+    const buffer = await this.reportsExcelService.generate(user.companyId, {
       branchId: query.branchId,
       branchIds: branchIds ?? undefined,
       startDate: query.startDate,
       endDate: query.endDate,
     });
-  }
-
-  @Get('cash-flow')
-  @Roles('CEO', 'Branch Director')
-  async getCashFlow(
-    @Query() query: ReportsQueryDto,
-    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
-  ) {
-    const branchIds = await this.resolveBranchScopeForUser(user);
-    return this.reportsService.getCashFlow(user.companyId, {
-      branchId: query.branchId,
-      branchIds: branchIds ?? undefined,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
-  }
-
-  @Get('balance-sheet')
-  @Roles('CEO', 'Branch Director')
-  async getBalanceSheet(
-    @Query() query: ReportsQueryDto,
-    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
-  ) {
-    const branchIds = await this.resolveBranchScopeForUser(user);
-    return this.reportsService.getBalanceSheet(user.companyId, {
-      branchId: query.branchId,
-      branchIds: branchIds ?? undefined,
-    });
+    const filename = `moliyaviy-hisobot-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }
 
   /**
