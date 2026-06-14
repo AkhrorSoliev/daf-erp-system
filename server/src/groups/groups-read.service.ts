@@ -81,6 +81,16 @@ export class GroupsReadService {
     delete baseWhere.status;
     delete baseWhere.statusEnum;
 
+    // Filtr dropdownlari uchun JAMI sonlar — faqat filialga bog'liq, boshqa
+    // faol filtrlarga (holat/daraja/xona/o'qituvchi/qidiruv/tur) bog'liq EMAS,
+    // shunda har bir variant yonidagi son barqaror qoladi (o'quvchilar
+    // sahifasidagi daraja sanog'i bilan bir xil yondashuv).
+    const branchScope: Prisma.GroupWhereInput = {
+      deletedAt: null,
+      companyId,
+      ...(query.branch_id ? { branchId: query.branch_id } : {}),
+    };
+
     const [
       data,
       total,
@@ -89,6 +99,12 @@ export class GroupsReadService {
       formingCount,
       pausedCount,
       completedCount,
+      statusGroups,
+      levelGroups,
+      roomGroups,
+      intensiveCount,
+      standardCount,
+      teacherGroups,
     ] = await Promise.all([
       this.prisma.group.findMany({
         where,
@@ -111,7 +127,53 @@ export class GroupsReadService {
       this.prisma.group.count({
         where: { ...baseWhere, statusEnum: 'COMPLETED' },
       }),
+      this.prisma.group.groupBy({
+        by: ['statusEnum'],
+        where: branchScope,
+        _count: { _all: true },
+      }),
+      this.prisma.group.groupBy({
+        by: ['level'],
+        where: branchScope,
+        _count: { _all: true },
+      }),
+      this.prisma.group.groupBy({
+        by: ['roomId'],
+        where: branchScope,
+        _count: { _all: true },
+      }),
+      this.prisma.group.count({
+        where: { ...branchScope, course: { lessonPaymentCount: 20 } },
+      }),
+      this.prisma.group.count({
+        where: { ...branchScope, course: { lessonPaymentCount: { not: 20 } } },
+      }),
+      this.prisma.groupTeacher.groupBy({
+        by: ['teacherId'],
+        where: { group: branchScope },
+        _count: { _all: true },
+      }),
     ]);
+
+    const GROUP_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const statusCountMap: Record<string, number> = {};
+    for (const g of statusGroups) {
+      if (g.statusEnum) statusCountMap[g.statusEnum] = g._count._all;
+    }
+    const levelCountMap: Record<string, number> = {};
+    for (const g of levelGroups) {
+      if (g.level) levelCountMap[g.level] = g._count._all;
+    }
+    const roomCounts: Record<string, number> = {};
+    for (const g of roomGroups) {
+      if (g.roomId != null) roomCounts[String(g.roomId)] = g._count._all;
+    }
+    const teacherCounts: Record<string, number> = {};
+    for (const t of teacherGroups) {
+      teacherCounts[String(t.teacherId)] = t._count._all;
+    }
+    const levelCounts: Record<string, number> = {};
+    for (const lvl of GROUP_LEVELS) levelCounts[lvl] = levelCountMap[lvl] ?? 0;
 
     return {
       data: data.map(formatGroup),
@@ -124,6 +186,18 @@ export class GroupsReadService {
         forming: formingCount,
         paused: pausedCount,
         completed: completedCount,
+      },
+      filterCounts: {
+        status: {
+          ACTIVE: statusCountMap.ACTIVE ?? 0,
+          FORMING: statusCountMap.FORMING ?? 0,
+          PAUSED: statusCountMap.PAUSED ?? 0,
+          COMPLETED: statusCountMap.COMPLETED ?? 0,
+        },
+        level: levelCounts,
+        courseType: { standard: standardCount, intensive: intensiveCount },
+        room: roomCounts,
+        teacher: teacherCounts,
       },
     };
   }

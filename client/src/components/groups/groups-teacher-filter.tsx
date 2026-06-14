@@ -21,12 +21,15 @@ interface GroupsTeacherFilterProps {
   value: string;
   teachers: TeacherOption[];
   onChange: (value: string) => void;
+  /** Har bir o'qituvchidagi guruhlar soni (filial bo'yicha). */
+  counts?: Record<string, number>;
 }
 
 export function GroupsTeacherFilter({
   value,
   teachers,
   onChange,
+  counts,
 }: GroupsTeacherFilterProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -113,11 +116,14 @@ export function GroupsTeacherFilter({
                   setSearch("");
                 }}
                 className={cn(
-                  "flex w-full items-center rounded-md px-2 py-1.5 text-sm hover:bg-accent",
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
                   isSelected && "bg-accent",
                 )}
               >
                 <span className="truncate flex-1 text-left">{fullName}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {counts?.[String(teacher.id)] ?? 0} guruh
+                </span>
               </button>
             );
           })}

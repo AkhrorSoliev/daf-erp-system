@@ -45,6 +45,22 @@ interface TeacherOption {
 
 const LEVEL_OPTIONS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
+interface FilterCounts {
+  status: Record<string, number>;
+  level: Record<string, number>;
+  courseType: Record<string, number>;
+  room: Record<string, number>;
+  teacher: Record<string, number>;
+}
+
+const EMPTY_FILTER_COUNTS: FilterCounts = {
+  status: {},
+  level: {},
+  courseType: {},
+  room: {},
+  teacher: {},
+};
+
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
   status: { type: "string" as const, defaultValue: "all" },
@@ -60,6 +76,7 @@ export function GroupsClient() {
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<GroupsStatsData>({ total: 0, active: 0, forming: 0, paused: 0, completed: 0 });
+  const [filterCounts, setFilterCounts] = useState<FilterCounts>(EMPTY_FILTER_COUNTS);
   const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
@@ -119,6 +136,7 @@ export function GroupsClient() {
       setGroups(data.data);
       setTotal(data.total);
       if (data.stats) setStats(data.stats);
+      setFilterCounts(data.filterCounts ?? EMPTY_FILTER_COUNTS);
     } catch {
       // xatolik
     } finally {
@@ -184,10 +202,10 @@ export function GroupsClient() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Barcha holatlar</SelectItem>
-            <SelectItem value="ACTIVE">Faol</SelectItem>
-            <SelectItem value="FORMING">Boshlanmagan</SelectItem>
-            <SelectItem value="PAUSED">Pauza</SelectItem>
-            <SelectItem value="COMPLETED">Tugallangan</SelectItem>
+            <SelectItem value="ACTIVE">Faol ({filterCounts.status.ACTIVE ?? 0})</SelectItem>
+            <SelectItem value="FORMING">Boshlanmagan ({filterCounts.status.FORMING ?? 0})</SelectItem>
+            <SelectItem value="PAUSED">Pauza ({filterCounts.status.PAUSED ?? 0})</SelectItem>
+            <SelectItem value="COMPLETED">Tugallangan ({filterCounts.status.COMPLETED ?? 0})</SelectItem>
           </SelectContent>
         </Select>
         <Select
@@ -201,7 +219,12 @@ export function GroupsClient() {
             <SelectItem value="all">Barcha darajalar</SelectItem>
             {LEVEL_OPTIONS.map((level) => (
               <SelectItem key={level} value={level}>
-                <LevelBadge level={level} />
+                <span className="flex items-center gap-1.5">
+                  <LevelBadge level={level} />
+                  <span className="text-muted-foreground">
+                    ({filterCounts.level[level] ?? 0})
+                  </span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -217,20 +240,22 @@ export function GroupsClient() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Barcha turlar</SelectItem>
-            <SelectItem value="standard">Standart</SelectItem>
-            <SelectItem value="intensive">Intensiv</SelectItem>
+            <SelectItem value="standard">Standart ({filterCounts.courseType.standard ?? 0})</SelectItem>
+            <SelectItem value="intensive">Intensiv ({filterCounts.courseType.intensive ?? 0})</SelectItem>
           </SelectContent>
         </Select>
         <GroupsRoomFilter
           value={filters.room}
           rooms={rooms}
           onChange={handleRoomChange}
+          counts={filterCounts.room}
         />
         {!isTeacherOnly && (
           <GroupsTeacherFilter
             value={filters.teacher}
             teachers={teachers}
             onChange={handleTeacherChange}
+            counts={filterCounts.teacher}
           />
         )}
         {canManage &&
