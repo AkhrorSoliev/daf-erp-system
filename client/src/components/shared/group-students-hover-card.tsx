@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { formatBalance } from "@/lib/format-utils";
 import api from "@/lib/api";
 
 interface GroupStudent {
@@ -17,6 +18,7 @@ interface GroupStudent {
   firstName: string;
   lastName: string;
   photo: string | null;
+  balance: number;
 }
 
 interface GroupStudentsHoverCardProps {
@@ -115,9 +117,16 @@ export function GroupStudentsHoverCard({
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate text-sm">
-                    {s.firstName} {s.lastName}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">
+                      {s.firstName} {s.lastName}
+                    </p>
+                    <p
+                      className={`text-xs tabular-nums ${s.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                    >
+                      {formatBalance(s.balance)}
+                    </p>
+                  </div>
                 </Link>
               );
             })

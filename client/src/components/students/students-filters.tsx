@@ -49,6 +49,7 @@ interface Teacher {
   firstName: string;
   lastName: string;
   photo?: string | null;
+  studentCount?: number;
 }
 
 interface GroupOption {
@@ -62,6 +63,8 @@ interface StudentsFiltersProps {
   onClear?: () => void;
   isTeacher?: boolean;
   groups?: GroupOption[];
+  /** Har bir daraja bo'yicha o'quvchilar soni (dropdownda ko'rsatish uchun). */
+  levelCounts?: Record<string, number>;
 }
 
 export function StudentsFilters({
@@ -70,6 +73,7 @@ export function StudentsFilters({
   onClear,
   isTeacher,
   groups,
+  levelCounts,
 }: StudentsFiltersProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacherPopoverOpen, setTeacherPopoverOpen] = useState(false);
@@ -83,12 +87,11 @@ export function StudentsFilters({
     let cancelled = false;
     (async () => {
       try {
-        const params: Record<string, unknown> = {
-          user_type: "Teacher",
-          pageSize: 100,
-        };
+        const params: Record<string, unknown> = { pageSize: 100 };
         if (branchId) params.branch_id = branchId;
-        const { data } = await api.get("/users", { params });
+        // `/teachers` har bir o'qituvchining faol o'quvchilar sonini
+        // (`studentCount`) ham qaytaradi — dropdownda ko'rsatamiz.
+        const { data } = await api.get("/teachers", { params });
         if (!cancelled) setTeachers(data.data);
       } catch {
         // xatolik
@@ -183,7 +186,14 @@ export function StudentsFilters({
           <SelectItem value="all">Barcha darajalar</SelectItem>
           {LEVELS.map((lvl) => (
             <SelectItem key={lvl} value={lvl}>
-              {lvl}
+              <span className="flex items-center gap-1.5">
+                {lvl}
+                {levelCounts && (
+                  <span className="text-muted-foreground">
+                    ({levelCounts[lvl] ?? 0})
+                  </span>
+                )}
+              </span>
             </SelectItem>
           ))}
         </SelectContent>
@@ -261,6 +271,9 @@ export function StudentsFilters({
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                     <span className="truncate flex-1 text-left">{fullName}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {t.studentCount ?? 0} o&apos;quvchi
+                    </span>
                   </button>
                 );
               })}

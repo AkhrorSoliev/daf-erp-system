@@ -61,6 +61,11 @@ export class StudentsReadService {
       enrollmentConditions.push({ groupId: query.group_id });
     }
 
+    // Daraja bo'yicha sanoq daraja filtrining O'ZIDAN tashqari barcha scope'ni
+    // (filial + o'qituvchi + guruh) hisobga oladi — shu sabab level shartini
+    // qo'shishdan oldin nusxa olamiz.
+    const enrollmentConditionsNoLevel = [...enrollmentConditions];
+
     if (query.level) {
       enrollmentConditions.push({
         group: { deletedAt: null, level: query.level },
@@ -137,25 +142,61 @@ export class StudentsReadService {
       activeStatsWhere.enrollments = { some: { deletedAt: null } };
     }
 
-    const [data, total, statsTotal, activeCount, frozenCount, debtorCount] =
-      await Promise.all([
-        this.prisma.student.findMany({
-          where,
-          skip,
-          take: pageSize,
-          select: studentSelect,
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.student.count({ where }),
-        this.prisma.student.count({ where: baseWhere }),
-        this.prisma.student.count({ where: activeStatsWhere }),
-        this.prisma.student.count({
-          where: { ...baseWhere, status: StudentStatus.FROZEN },
-        }),
-        this.prisma.student.count({
-          where: { ...baseWhere, balance: { lt: 0 } },
-        }),
-      ]);
+    // Daraja bo'yicha o'quvchilar soni — filtrlar panelidagi daraja
+    // dropdownida har bir daraja yonida ko'rsatish uchun. Tanlangan
+    // darajaning o'ziga bog'liq emas; qolgan scope (filial/o'qituvchi/
+    // guruh/qidiruv) saqlanadi. `enrollments` (level bilan) ni olib
+    // tashlab, har daraja uchun alohida shart qo'shamiz.
+    const STUDENT_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
+    const { enrollments: _omitEnrollments, ...levelCountBase } = baseWhere;
+    const levelCountPromises = STUDENT_LEVELS.map((lvl) =>
+      this.prisma.student.count({
+        where: {
+          ...levelCountBase,
+          enrollments: {
+            some: {
+              AND: [
+                ...enrollmentConditionsNoLevel,
+                { group: { deletedAt: null, level: lvl } },
+              ],
+            },
+          },
+        },
+      }),
+    );
+
+    const [
+      data,
+      total,
+      statsTotal,
+      activeCount,
+      frozenCount,
+      debtorCount,
+      ...levelCountValues
+    ] = await Promise.all([
+      this.prisma.student.findMany({
+        where,
+        skip,
+        take: pageSize,
+        select: studentSelect,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.student.count({ where }),
+      this.prisma.student.count({ where: baseWhere }),
+      this.prisma.student.count({ where: activeStatsWhere }),
+      this.prisma.student.count({
+        where: { ...baseWhere, status: StudentStatus.FROZEN },
+      }),
+      this.prisma.student.count({
+        where: { ...baseWhere, balance: { lt: 0 } },
+      }),
+      ...levelCountPromises,
+    ]);
+
+    const levelCounts: Record<string, number> = {};
+    STUDENT_LEVELS.forEach((lvl, i) => {
+      levelCounts[lvl] = levelCountValues[i];
+    });
 
     return {
       data: data.map(formatStudent),
@@ -168,6 +209,7 @@ export class StudentsReadService {
         frozen: frozenCount,
         debtors: debtorCount,
       },
+      levelCounts,
     };
   }
 
