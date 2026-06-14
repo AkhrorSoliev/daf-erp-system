@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Flag, Pencil, Phone } from "lucide-react";
+import toast from "react-hot-toast";
+import { Flag, Pencil, Phone, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +15,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
-import { formatPhone } from "@/lib/format-utils";
+import { useAuth } from "@/hooks/use-auth";
+import { formatBalance, formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -32,6 +46,20 @@ interface EmployeeProfileCardProps {
 
 export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCardProps) {
   const { openDrawer } = useEditEmployee();
+  const router = useRouter();
+  const authUser = useAuth((s) => s.user);
+  const canSeeBalance =
+    authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  // CEO/BD xodimni arxivga o'tkaza oladi — o'zini o'chira olmaydi.
+  const canDelete = canSeeBalance && employee.id !== authUser?.id;
+
+  const handleDelete = () => {
+    router.push("/settings/employees");
+    toast.success("Xodim arxivga o'tkazildi");
+    api.delete(`/users/${employee.id}`).catch(() => {
+      toast.error("O'chirishda xatolik yuz berdi");
+    });
+  };
   const [latestComment, setLatestComment] = useState<{
     content: string;
     isTask?: boolean;
@@ -131,8 +159,24 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
 
       <Separator />
 
+      {/* Balans — faqat CEO va Branch Director */}
+      {canSeeBalance && (
+        <>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Balans</p>
+            <p
+              className={`text-lg font-bold ${employee.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+            >
+              {formatBalance(employee.balance)}
+            </p>
+          </div>
+
+          <Separator />
+        </>
+      )}
+
       {/* Actions */}
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -146,6 +190,43 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
           </TooltipTrigger>
           <TooltipContent>Tahrirlash</TooltipContent>
         </Tooltip>
+
+        {canDelete && (
+          <AlertDialog>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="size-8 p-0 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </AlertDialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>O&apos;chirish</TooltipContent>
+            </Tooltip>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xodimni o&apos;chirish</AlertDialogTitle>
+                <AlertDialogDescription>
+                  &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
+                  arxivdan tiklash mumkin.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  O&apos;chirish
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <Separator />
