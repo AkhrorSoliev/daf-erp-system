@@ -48,6 +48,7 @@ export function StudentsClient() {
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<StudentsStatsData>({ total: 0, active: 0, frozen: 0, debtors: 0 });
+  const [levelCounts, setLevelCounts] = useState<Record<string, number>>({});
   const { filters, setFilter, setFilters: setUrlFilters, resetFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
@@ -91,6 +92,7 @@ export function StudentsClient() {
       setStudents(data.data);
       setTotal(data.total);
       setStats(data.stats ?? { total: 0, active: 0, frozen: 0, debtors: 0 });
+      setLevelCounts(data.levelCounts ?? {});
     } catch {
       // xatolik
     } finally {
@@ -223,6 +225,7 @@ export function StudentsClient() {
         onClear={() => { setSearchInput(""); resetFilters(); }}
         isTeacher={isTeacher}
         groups={teacherGroups}
+        levelCounts={levelCounts}
       />
       {loading ? (
         <div className="overflow-x-auto rounded-md border">
