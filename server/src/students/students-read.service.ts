@@ -61,11 +61,6 @@ export class StudentsReadService {
       enrollmentConditions.push({ groupId: query.group_id });
     }
 
-    // Daraja bo'yicha sanoq daraja filtrining O'ZIDAN tashqari barcha scope'ni
-    // (filial + o'qituvchi + guruh) hisobga oladi — shu sabab level shartini
-    // qo'shishdan oldin nusxa olamiz.
-    const enrollmentConditionsNoLevel = [...enrollmentConditions];
-
     if (query.level) {
       enrollmentConditions.push({
         group: { deletedAt: null, level: query.level },
@@ -143,23 +138,24 @@ export class StudentsReadService {
     }
 
     // Daraja bo'yicha o'quvchilar soni — filtrlar panelidagi daraja
-    // dropdownida har bir daraja yonida ko'rsatish uchun. Tanlangan
-    // darajaning o'ziga bog'liq emas; qolgan scope (filial/o'qituvchi/
-    // guruh/qidiruv) saqlanadi. `enrollments` (level bilan) ni olib
-    // tashlab, har daraja uchun alohida shart qo'shamiz.
+    // dropdownida har bir daraja yonida ko'rsatiladi. Bu JAMI son: faqat
+    // filialga bog'liq, boshqa filtrlarga (o'qituvchi/guruh/qidiruv/holat/
+    // tanlangan daraja) bog'liq EMAS. Shunda o'qituvchi tanlanganda ham
+    // "shu darajada nechta o'quvchi bor" degan son barqaror qoladi.
     const STUDENT_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
-    const { enrollments: _omitEnrollments, ...levelCountBase } = baseWhere;
+    const levelCountBase: Prisma.StudentWhereInput = {
+      deletedAt: null,
+      companyId,
+    };
+    if (branch_id) {
+      levelCountBase.branches = { some: { branchId: branch_id } };
+    }
     const levelCountPromises = STUDENT_LEVELS.map((lvl) =>
       this.prisma.student.count({
         where: {
           ...levelCountBase,
           enrollments: {
-            some: {
-              AND: [
-                ...enrollmentConditionsNoLevel,
-                { group: { deletedAt: null, level: lvl } },
-              ],
-            },
+            some: { deletedAt: null, group: { deletedAt: null, level: lvl } },
           },
         },
       }),
