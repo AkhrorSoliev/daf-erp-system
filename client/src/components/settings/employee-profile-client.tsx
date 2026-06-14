@@ -3,13 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
-import { Loader2, Pencil } from "lucide-react";
+import toast from "react-hot-toast";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { EmployeeProfileCard } from "./employee-profile-card";
 import { EmployeeProfileTabs } from "./employee-profile-tabs";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
+import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
 
@@ -23,17 +35,43 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   const setName = useBreadcrumbName((s) => s.setName);
+  const authUser = useAuth((s) => s.user);
+  const canSeeBalance =
+    authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canSeeTimeline =
+    authUser?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const isMobile = useIsMobile();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") ?? "izohlar";
   const { openDrawer } = useEditEmployee();
+  const [employee, setEmployee] = useState<EmployeeUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  // O'qituvchilar uchun "Guruhlar", boshqa xodimlar uchun "Izohlar" —
+  // o'qituvchi profili bilan bir xil bo'lishi uchun.
+  const isTeacher = employee?.roles.some((r) => r.id === 4) ?? false;
+  const canDelete = canSeeBalance && employee != null && employee.id !== authUser?.id;
+  const defaultTab = isTeacher ? "guruhlar" : "izohlar";
+
+  // Faqat shu xodim + ko'ruvchi roli uchun mavjud tablar. Eski/qo'lda URL
+  // (masalan o'qituvchi bo'lmagan xodimda ?tab=guruhlar) bo'sh panel ko'rsatmasligi uchun.
+  const availableTabs = [
+    ...(isTeacher ? ["guruhlar"] : []),
+    "izohlar",
+    "tarix",
+    ...(canSeeTimeline ? ["taymlayn"] : []),
+    ...(canSeeBalance && isTeacher ? ["ish-haqi"] : []),
+  ];
+  const urlTab = searchParams.get("tab");
+  const activeTab = urlTab && availableTabs.includes(urlTab) ? urlTab : defaultTab;
 
   const handleTabChange = useCallback(
     (tab: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (tab === "izohlar") {
+      if (tab === defaultTab) {
         params.delete("tab");
       } else {
         params.set("tab", tab);
@@ -41,11 +79,17 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
       const qs = params.toString();
       router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams, defaultTab],
   );
-  const [employee, setEmployee] = useState<EmployeeUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+
+  const handleDelete = () => {
+    if (!employee) return;
+    router.push("/settings/employees");
+    toast.success("Xodim arxivga o'tkazildi");
+    api.delete(`/users/${employee.id}`).catch(() => {
+      toast.error("O'chirishda xatolik yuz berdi");
+    });
+  };
 
   const fetchEmployee = useCallback(async () => {
     setLoading(true);
@@ -139,6 +183,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
               name: ROLE_LABELS[r.name] || r.name,
             }))}
             isActive={employee.status === "ACTIVE"}
+            balance={canSeeBalance ? employee.balance : undefined}
             phone={employee.phone}
             branches={employee.branches}
             infoItems={mobileInfoItems}
@@ -149,6 +194,16 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
                 label: "Tahrirlash",
                 onClick: () => openDrawer(employee),
               },
+              ...(canDelete
+                ? [
+                    {
+                      icon: <Trash2 className="size-4" />,
+                      label: "O'chirish",
+                      onClick: () => setDeleteConfirmOpen(true),
+                      variant: "destructive" as const,
+                    },
+                  ]
+                : []),
             ]}
           />
           <EmployeeProfileTabs
@@ -177,6 +232,29 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
         setEmployee(updated);
         setName(employeeId, `${updated.firstName} ${updated.lastName}`);
       }} />
+
+      {canDelete && (
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xodimni o&apos;chirish</AlertDialogTitle>
+              <AlertDialogDescription>
+                &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
+                arxivdan tiklash mumkin.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                O&apos;chirish
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }
