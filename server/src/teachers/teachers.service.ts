@@ -105,7 +105,14 @@ export class TeachersService {
       this.prisma.user.count({ where }),
     ]);
 
-    // Calculate student counts per teacher
+    // O'qituvchining "O'quvchilar soni" — o'quvchilar sahifasidagi o'qituvchi
+    // filtri bilan BIR XIL bo'lishi shart: o'qituvchining o'chirilmagan
+    // guruhlaridagi o'chirilmagan enrollmentga ega ALOHIDA (distinct)
+    // o'quvchilar. Enrollment statusi bo'yicha cheklov YO'Q — filtr ham
+    // FROZEN/DROPPED o'quvchilarni ko'rsatadi, shu sabab ular ham sanaladi.
+    // (Eski mantiq faqat ACTIVE enrollmentlarni sanab, pauza qilingan
+    // guruhda 0 ko'rsatardi — filtr esa 7 ta beradi; hamda bir o'quvchini
+    // ikki guruhda ikki marta sanardi.)
     const teacherIds = data.map((t: any) => t.id);
     const studentCountMap = new Map<number, number>();
 
@@ -117,17 +124,25 @@ export class TeachersService {
           group: {
             select: {
               enrollments: {
-                where: { deletedAt: null, status: 'ACTIVE' },
-                select: { id: true },
+                where: { deletedAt: null, student: { deletedAt: null } },
+                select: { studentId: true },
               },
             },
           },
         },
       });
 
+      const studentSets = new Map<number, Set<number>>();
       for (const gt of gts) {
-        const prev = studentCountMap.get(gt.teacherId) ?? 0;
-        studentCountMap.set(gt.teacherId, prev + gt.group.enrollments.length);
+        let set = studentSets.get(gt.teacherId);
+        if (!set) {
+          set = new Set<number>();
+          studentSets.set(gt.teacherId, set);
+        }
+        for (const e of gt.group.enrollments) set.add(e.studentId);
+      }
+      for (const [tid, set] of studentSets) {
+        studentCountMap.set(tid, set.size);
       }
     }
 
@@ -156,13 +171,20 @@ export class TeachersService {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
-    const count = await this.prisma.enrollment.count({
+    // findAll bilan bir xil ta'rif: o'qituvchining o'chirilmagan
+    // guruhlaridagi o'chirilmagan enrollmentga ega ALOHIDA o'quvchilar
+    // (status bo'yicha cheklovsiz) — o'quvchilar filtri natijasiga mos.
+    const count = await this.prisma.student.count({
       where: {
         deletedAt: null,
-        status: 'ACTIVE',
-        group: {
-          deletedAt: null,
-          teachers: { some: { teacherId: id } },
+        enrollments: {
+          some: {
+            deletedAt: null,
+            group: {
+              deletedAt: null,
+              teachers: { some: { teacherId: id } },
+            },
+          },
         },
       },
     });
