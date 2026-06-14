@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
 
 export interface SalarySummary {
@@ -10,6 +11,7 @@ export interface SalarySummary {
   studentsCount?: number;
   paidTotal: number;
   groups: {
+    groupId: number;
     groupName: string;
     activeStudents: number;
     salaryType: string | null;
@@ -71,11 +73,16 @@ export function SalarySummaryView({ summary }: SalarySummaryViewProps) {
           <div className="space-y-2">
             {summary.groups.map((g) => (
               <div
-                key={g.groupName}
+                key={g.groupId}
                 className="flex items-center justify-between rounded-md border p-3 text-sm"
               >
                 <div>
-                  <p className="font-medium">{g.groupName}</p>
+                  <Link
+                    href={`/groups/${g.groupId}`}
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {g.groupName}
+                  </Link>
                   <p className="text-xs text-muted-foreground">
                     {g.activeStudents} o&apos;quvchi
                     {g.salaryType
