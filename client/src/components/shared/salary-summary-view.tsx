@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
+import { GroupStudentsHoverCard } from "@/components/shared/group-students-hover-card";
 
 export interface SalarySummary {
   expectedMonthly: number;
@@ -77,12 +78,14 @@ export function SalarySummaryView({ summary }: SalarySummaryViewProps) {
                 className="flex items-center justify-between rounded-md border p-3 text-sm"
               >
                 <div>
-                  <Link
-                    href={`/groups/${g.groupId}`}
-                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    {g.groupName}
-                  </Link>
+                  <GroupStudentsHoverCard groupId={g.groupId}>
+                    <Link
+                      href={`/groups/${g.groupId}`}
+                      className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      {g.groupName}
+                    </Link>
+                  </GroupStudentsHoverCard>
                   <p className="text-xs text-muted-foreground">
                     {g.activeStudents} o&apos;quvchi
                     {g.salaryType
