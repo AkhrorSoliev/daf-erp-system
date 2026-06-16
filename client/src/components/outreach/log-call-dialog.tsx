@@ -49,6 +49,24 @@ const OUTCOME_OPTIONS: { value: CallOutcome; label: string }[] = [
   { value: "LEFT", label: "O'qishni tashladi" },
 ];
 
+// Which outcomes reveal the optional date field, and how it's framed. "To'laydi"
+// sets a payment promise (promiseDate → "To'lov sanalari"); the others set a
+// "call again later" date (followUpAt) shown as a badge on the debtors page.
+// "O'qishni tashladi" (LEFT) has no date.
+const FOLLOW_UP_HELP =
+  "Sana kiritilsa, shu kuni qayta bog'lanish kerakligi belgilanadi.";
+const DATE_FIELD: Partial<
+  Record<CallOutcome, { label: string; help: string }>
+> = {
+  WILL_PAY: {
+    label: "To'lov sanasi (ixtiyoriy)",
+    help: 'Sana kiritilsa, "To\'lov sanalari" bo\'limiga qo\'shiladi.',
+  },
+  NO_ANSWER: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
+  ANSWERED: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
+  WILL_COME: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
+};
+
 export function LogCallDialog({
   open,
   onOpenChange,
@@ -77,7 +95,9 @@ function CallForm({
   const queryClient = useQueryClient();
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [note, setNote] = useState("");
-  const [promiseDate, setPromiseDate] = useState<Date | null>(null);
+  // Dual-purpose: a payment date for "To'laydi", else a "call again later" date.
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const dateField = outcome ? DATE_FIELD[outcome] : undefined;
 
   // Oldingi qo'ng'iroq izohlari — admin yangi izoh yozishda kontekst ko'rsin.
   const { data: history, isLoading: historyLoading } = useQuery({
@@ -95,27 +115,34 @@ function CallForm({
   const submit = useMutation({
     mutationFn: async () => {
       if (!outcome) throw new Error("Natija tanlanmagan");
-      // For "To'laydi" with a chosen date, send it (server creates/updates the
-      // payment promise). End-of-day so it isn't flagged overdue the same day.
-      let promiseIso: string | undefined;
-      if (outcome === "WILL_PAY" && promiseDate) {
-        const d = new Date(promiseDate);
+      // End-of-day so a same-day date isn't flagged overdue immediately.
+      // "To'laydi" → payment promise (promiseDate); other outcomes → callback
+      // date (followUpAt). The server keeps the two concepts separate.
+      const isPay = outcome === "WILL_PAY";
+      let dateIso: string | undefined;
+      if (selectedDate) {
+        const d = new Date(selectedDate);
         d.setHours(23, 59, 59, 0);
-        promiseIso = d.toISOString();
+        dateIso = d.toISOString();
       }
       await api.post("/call-logs", {
         studentId: prefill.studentId,
         reason: prefill.reason,
         outcome,
         note: note.trim() || undefined,
-        promiseDate: promiseIso,
+        promiseDate: isPay ? dateIso : undefined,
+        followUpAt: !isPay ? dateIso : undefined,
       });
     },
     onSuccess: () => {
+      const withDate = !!selectedDate;
+      const isPay = outcome === "WILL_PAY";
       toast.success(
-        outcome === "WILL_PAY" && promiseDate
+        withDate && isPay
           ? "Qo'ng'iroq qayd qilindi, to'lov sanasi belgilandi"
-          : "Qo'ng'iroq qayd qilindi",
+          : withDate
+            ? "Qo'ng'iroq qayd qilindi, keyingi bog'lanish sanasi belgilandi"
+            : "Qo'ng'iroq qayd qilindi",
       );
       // Prefix-invalidate every outreach list + stats, plus the history tab and
       // the debtors page (a payment promise may have been created/updated).
@@ -196,7 +223,11 @@ function CallForm({
                 size="sm"
                 variant={outcome === o.value ? "default" : "outline"}
                 className="justify-start"
-                onClick={() => setOutcome(o.value)}
+                onClick={() => {
+                  setOutcome(o.value);
+                  // Drop a stray date when switching to an outcome without one.
+                  if (!DATE_FIELD[o.value]) setSelectedDate(null);
+                }}
               >
                 {o.label}
               </Button>
@@ -204,18 +235,15 @@ function CallForm({
           </div>
         </div>
 
-        {outcome === "WILL_PAY" && (
+        {dateField && (
           <div className="space-y-1">
-            <Label className="text-xs">To&apos;lov sanasi (ixtiyoriy)</Label>
+            <Label className="text-xs">{dateField.label}</Label>
             <DatePicker
-              value={promiseDate}
-              onChange={(d) => setPromiseDate(d ?? null)}
+              value={selectedDate}
+              onChange={(d) => setSelectedDate(d ?? null)}
               minDate={new Date()}
             />
-            <p className="text-[11px] text-muted-foreground">
-              Sana kiritilsa, &quot;To&apos;lov sanalari&quot; bo&apos;limiga
-              qo&apos;shiladi.
-            </p>
+            <p className="text-[11px] text-muted-foreground">{dateField.help}</p>
           </div>
         )}
 

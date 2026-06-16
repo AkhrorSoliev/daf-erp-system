@@ -30,6 +30,8 @@ describe('LeadsService', () => {
       },
       leadSection: { findFirst: jest.fn() },
       leadSource: { findFirst: jest.fn() },
+      // Comment counts are grouped, not relation-counted (polymorphic table).
+      comment: { groupBy: jest.fn().mockResolvedValue([]) },
     };
     history = {
       recordCreate: jest.fn(),
@@ -70,6 +72,30 @@ describe('LeadsService', () => {
           where: { sectionId: 'sec-1', deletedAt: null },
         }),
       );
+    });
+
+    it('attaches a comment count to each card (0 when none)', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({ id: 'sec-1' });
+      prisma.lead.findMany.mockResolvedValue([
+        { id: 'lead-1', calledAt: null },
+        { id: 'lead-2', calledAt: null },
+      ]);
+      prisma.comment.groupBy.mockResolvedValue([
+        { entityId: 'lead-1', _count: { _all: 3 } },
+      ]);
+
+      const result = await service.getSectionLeads('sec-1');
+
+      expect(prisma.comment.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          by: ['entityId'],
+          where: { entityType: 'Lead', entityId: { in: ['lead-1', 'lead-2'] } },
+        }),
+      );
+      expect(result).toEqual([
+        { id: 'lead-1', calledAt: null, commentCount: 3 },
+        { id: 'lead-2', calledAt: null, commentCount: 0 },
+      ]);
     });
   });
 
@@ -431,6 +457,64 @@ describe('LeadsService', () => {
       );
       expect(result.studentId).toBe(10007);
       expect(history.recordStatusChange).toHaveBeenCalled();
+    });
+  });
+
+  describe('markCalled', () => {
+    it('throws NotFound when the lead is missing', async () => {
+      prisma.lead.findFirst.mockResolvedValue(null);
+      await expect(
+        service.markCalled('missing', { called: true }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('stamps calledAt/calledById when marking called and records history', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ id: 'lead-1', calledAt: null });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        calledAt: new Date('2026-06-16T10:00:00Z'),
+      });
+
+      await service.markCalled('lead-1', { called: true }, 1001, 7);
+
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'lead-1' },
+          data: expect.objectContaining({ calledById: 7 }),
+        }),
+      );
+      const data = prisma.lead.update.mock.calls[0][0].data;
+      expect(data.calledAt).toBeInstanceOf(Date);
+      expect(history.recordUpdate).toHaveBeenCalled();
+    });
+
+    it('keeps the original timestamp when re-marking an already-called lead', async () => {
+      const original = new Date('2026-06-01T08:00:00Z');
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        calledAt: original,
+      });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1', calledAt: original });
+
+      await service.markCalled('lead-1', { called: true }, 1001, 7);
+
+      expect(prisma.lead.update.mock.calls[0][0].data.calledAt).toBe(original);
+    });
+
+    it('clears the marker when called is false', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        calledAt: new Date(),
+      });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1', calledAt: null });
+
+      await service.markCalled('lead-1', { called: false }, 1001, 7);
+
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { calledAt: null, calledById: null },
+        }),
+      );
     });
   });
 });

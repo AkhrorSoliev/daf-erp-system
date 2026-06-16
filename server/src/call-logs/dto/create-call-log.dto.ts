@@ -34,4 +34,11 @@ export class CreateCallLogDto {
   @IsOptional()
   @IsDateString()
   promiseDate?: string;
+
+  // Optional "call again later" date for non-payment outcomes (NO_ANSWER /
+  // ANSWERED / WILL_COME). Stored on the CallLog only — does NOT create a
+  // payment promise. For WILL_PAY use promiseDate instead.
+  @IsOptional()
+  @IsDateString()
+  followUpAt?: string;
 }

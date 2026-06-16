@@ -90,6 +90,7 @@ describe('PaymentsDebtorsService', () => {
             {
               note: 'Javob bermadi',
               outcome: 'NO_ANSWER',
+              followUpAt: new Date('2026-06-18T18:59:59.000Z'),
               createdAt: callDate,
               calledBy: { firstName: 'Ali', lastName: 'Valiyev' },
             },
@@ -106,6 +107,7 @@ describe('PaymentsDebtorsService', () => {
       expect(res.data[0].lastCall).toEqual({
         note: 'Javob bermadi',
         outcome: 'NO_ANSWER',
+        followUpAt: '2026-06-18T18:59:59.000Z',
         createdAt: callDate.toISOString(),
         calledByName: 'Ali Valiyev',
       });
