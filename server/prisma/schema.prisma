@@ -310,6 +310,7 @@ model User {
   deletedCourses                   Course[]                   @relation("CourseDeletedBy")
   deletedStudents                  Student[]                  @relation("StudentDeletedBy")
   deletedLeads                     Lead[]                     @relation("LeadDeletedBy")
+  calledLeads                      Lead[]                     @relation("LeadCalledBy")
   deletedLeadColumns               LeadColumn[]               @relation("LeadColumnDeletedBy")
   deletedLeadSections              LeadSection[]              @relation("LeadSectionDeletedBy")
   deletedLeadSources               LeadSource[]               @relation("LeadSourceDeletedBy")
@@ -606,6 +607,13 @@ model Lead {
 
   // Set to the Student id once the lead is converted into a real student.
   convertedStudentId Int?
+
+  // Lightweight "call made" marker — set when an admin logs a call from the
+  // lead detail drawer. Drives the phone icon on the board card. Cleared when
+  // the admin un-marks it.
+  calledAt   DateTime?
+  calledById Int?
+  calledBy   User?     @relation("LeadCalledBy", fields: [calledById], references: [id])
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -1664,6 +1672,10 @@ model CallLog {
   reason     CallReason
   outcome    CallOutcome
   note       String?
+  // Optional "call again later" date for non-payment outcomes
+  // (NO_ANSWER / ANSWERED / WILL_COME). Distinct from a PaymentPromise — it is
+  // just a callback reminder and never fires the promise-broken cron/notification.
+  followUpAt DateTime?
   calledById Int
   calledBy   User        @relation("CallLogCalledBy", fields: [calledById], references: [id])
   branchId   Int? // for Branch Director scoping on /outreach
@@ -1673,6 +1685,7 @@ model CallLog {
 
   @@index([studentId])
   @@index([companyId, createdAt])
+  @@index([companyId, followUpAt])
   @@index([branchId])
 }
 

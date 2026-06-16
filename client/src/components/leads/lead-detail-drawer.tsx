@@ -4,7 +4,14 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import toast from "react-hot-toast";
-import { ArrowRightLeft, GraduationCap, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowRightLeft,
+  GraduationCap,
+  Loader2,
+  Pencil,
+  PhoneCall,
+  Trash2,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -26,7 +33,12 @@ import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
-import { LEAD_STATUS_LABELS, type LeadStatus } from "@/hooks/use-leads-board";
+import {
+  LEAD_STATUS_LABELS,
+  useLeadsBoard,
+  type LeadCard,
+  type LeadStatus,
+} from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 
@@ -60,6 +72,7 @@ interface LeadDetail {
   statusEnum: LeadStatus;
   convertedStudentId: number | null;
   createdAt: string;
+  calledAt: string | null;
   source: { id: string; name: string } | null;
   section: {
     id: string;
@@ -237,6 +250,8 @@ export function LeadDetailDrawer() {
   const openMoveLead = useLeadsUi((s) => s.openMoveLead);
   const openDelete = useLeadsUi((s) => s.openDelete);
   const openConvertLead = useLeadsUi((s) => s.openConvertLead);
+  const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
+  const bumpLeadCommentCount = useLeadsBoard((s) => s.bumpLeadCommentCount);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -246,6 +261,7 @@ export function LeadDetailDrawer() {
 
   const [lead, setLead] = useState<LeadDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [marking, setMarking] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -302,9 +318,37 @@ export function LeadDetailDrawer() {
     setOptimisticComments((prev) => [comment, ...prev]);
   }, []);
 
-  const handleCommentConfirmed = useCallback((tempId: string) => {
-    setOptimisticComments((prev) => prev.filter((c) => c.id !== tempId));
-  }, []);
+  const handleCommentConfirmed = useCallback(
+    (tempId: string) => {
+      setOptimisticComments((prev) => prev.filter((c) => c.id !== tempId));
+      // Keep the board card's comment icon/count in sync without a refetch.
+      if (lead?.section) bumpLeadCommentCount(lead.section.id, lead.id, 1);
+    },
+    [lead, bumpLeadCommentCount],
+  );
+
+  const handleToggleCalled = useCallback(async () => {
+    if (!lead) return;
+    const next = !lead.calledAt;
+    setMarking(true);
+    try {
+      const { data } = await api.patch<LeadCard>(`/leads/${lead.id}/called`, {
+        called: next,
+      });
+      setLead((prev) => (prev ? { ...prev, calledAt: data.calledAt } : prev));
+      // Reflect the new state on the board card immediately.
+      if (lead.section) applyLeadUpdate(lead.section.id, data);
+      toast.success(
+        next
+          ? "Telefon qilindi deb belgilandi"
+          : "Telefon belgisi olib tashlandi",
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+    } finally {
+      setMarking(false);
+    }
+  }, [lead, applyLeadUpdate]);
 
   const handleCommentFailed = useCallback((tempId: string) => {
     setOptimisticComments((prev) =>
@@ -370,6 +414,37 @@ export function LeadDetailDrawer() {
                     label="Qo'shilgan sana"
                     value={format(parseISO(lead.createdAt), "dd.MM.yyyy")}
                   />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Telefon holati</p>
+                    {lead.calledAt ? (
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                        <PhoneCall className="size-3.5 shrink-0" />
+                        Telefon qilingan ·{" "}
+                        {format(parseISO(lead.calledAt), "dd.MM.yyyy")}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Hali telefon qilinmagan
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant={lead.calledAt ? "outline" : "default"}
+                    size="sm"
+                    className="shrink-0"
+                    onClick={handleToggleCalled}
+                    disabled={marking}
+                  >
+                    {marking ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <PhoneCall className="size-4" />
+                    )}
+                    {lead.calledAt ? "Bekor qilish" : "Telefon qilindi"}
+                  </Button>
                 </div>
 
                 {lead.mockParticipations.length > 0 && (

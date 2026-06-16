@@ -30,6 +30,10 @@ export interface LeadCard {
   order: number;
   createdAt: string;
   source: LeadSourceOption | null;
+  /** Set once the lead has been called — drives the phone icon on the card. */
+  calledAt: string | null;
+  /** Number of comments left on the lead — drives the comment icon. */
+  commentCount: number;
 }
 
 export interface LeadBoardSection {
@@ -95,6 +99,12 @@ interface LeadsBoardState {
     direction: "up" | "down",
   ) => Promise<void>;
   applyLeadUpdate: (sectionId: string, lead: LeadCard) => void;
+  /** Adjusts a card's comment count in place (e.g. after a comment is added). */
+  bumpLeadCommentCount: (
+    sectionId: string,
+    leadId: string,
+    delta: number,
+  ) => void;
   moveLead: (
     leadId: string,
     fromSectionId: string,
@@ -300,6 +310,23 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
           }
         : s.leadsBySection;
       return { leadsBySection, revision: s.revision + 1 };
+    });
+  },
+
+  bumpLeadCommentCount: (sectionId, leadId, delta) => {
+    set((s) => {
+      const existing = s.leadsBySection[sectionId];
+      if (!existing) return {};
+      return {
+        leadsBySection: {
+          ...s.leadsBySection,
+          [sectionId]: existing.map((l) =>
+            l.id === leadId
+              ? { ...l, commentCount: Math.max(0, l.commentCount + delta) }
+              : l,
+          ),
+        },
+      };
     });
   },
 

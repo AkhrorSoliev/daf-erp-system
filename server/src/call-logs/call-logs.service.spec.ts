@@ -155,6 +155,55 @@ describe('CallLogsService', () => {
       );
       expect(promises.upsertOpenPromise).not.toHaveBeenCalled();
     });
+
+    it('stores followUpAt for a non-payment outcome without creating a promise', async () => {
+      await service.create(
+        {
+          studentId: 10264,
+          reason: 'DEBT',
+          outcome: 'NO_ANSWER',
+          followUpAt: '2026-06-18T18:59:59.000Z',
+        },
+        99,
+        1001,
+      );
+      expect(prisma.callLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          outcome: 'NO_ANSWER',
+          followUpAt: new Date('2026-06-18T18:59:59.000Z'),
+        }),
+      });
+      expect(promises.upsertOpenPromise).not.toHaveBeenCalled();
+    });
+
+    it('ignores followUpAt on a WILL_PAY call (date belongs to the promise)', async () => {
+      await service.create(
+        {
+          studentId: 10264,
+          reason: 'DEBT',
+          outcome: 'WILL_PAY',
+          promiseDate: '2026-06-20T18:59:59.000Z',
+          followUpAt: '2026-06-18T18:59:59.000Z',
+        },
+        99,
+        1001,
+      );
+      expect(prisma.callLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ followUpAt: null }),
+      });
+      expect(promises.upsertOpenPromise).toHaveBeenCalled();
+    });
+
+    it('stores null followUpAt when no date is given', async () => {
+      await service.create(
+        { studentId: 10264, reason: 'DEBT', outcome: 'ANSWERED' },
+        99,
+        1001,
+      );
+      expect(prisma.callLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ followUpAt: null }),
+      });
+    });
   });
 
   describe('list', () => {

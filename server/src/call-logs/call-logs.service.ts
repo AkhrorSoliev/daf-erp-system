@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CallOutcome, CallReason, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { tashkentDayRangeUtc } from '../attendance/shared/date-utils';
+import {
+  tashkentDateStr,
+  tashkentDayRangeUtc,
+} from '../attendance/shared/date-utils';
 import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
 import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { ListCallLogsQueryDto } from './dto/list-call-logs-query.dto';
@@ -53,12 +56,21 @@ export class CallLogsService {
     const branchId = await this.resolveStudentBranch(dto.studentId, companyId);
     const note = dto.note?.trim() || null;
 
+    // "Keyingi aloqa" (call again later) date — only for non-payment outcomes.
+    // WILL_PAY carries its date in promiseDate (→ payment promise), so a stray
+    // followUpAt there is ignored to keep the two concepts separate.
+    const followUpAt =
+      dto.outcome !== 'WILL_PAY' && dto.followUpAt
+        ? new Date(dto.followUpAt)
+        : null;
+
     const log = await this.prisma.callLog.create({
       data: {
         studentId: dto.studentId,
         reason: dto.reason,
         outcome: dto.outcome,
         note,
+        followUpAt,
         calledById: userId,
         branchId,
         companyId,
@@ -73,6 +85,7 @@ export class CallLogsService {
         sabab: REASON_LABEL[dto.reason],
         natija: OUTCOME_LABEL[dto.outcome],
         ...(note ? { izoh: note } : {}),
+        ...(followUpAt ? { keyingiAloqa: tashkentDateStr(followUpAt) } : {}),
       },
       changedById: userId,
       companyId,

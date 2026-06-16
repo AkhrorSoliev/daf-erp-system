@@ -16,6 +16,7 @@ import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
+import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -70,6 +71,17 @@ export class LeadsController {
     @CurrentUser('id') userId: number,
   ) {
     return this.leadsService.move(id, dto, companyId, userId);
+  }
+
+  // Toggle the "called" marker — declared before ':id' so it resolves here.
+  @Patch(':id/called')
+  markCalled(
+    @Param('id') id: string,
+    @Body() dto: MarkCalledLeadDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.leadsService.markCalled(id, dto, companyId, userId);
   }
 
   @Post(':id/convert')

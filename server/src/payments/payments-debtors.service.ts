@@ -175,6 +175,7 @@ export class PaymentsDebtorsService {
             select: {
               note: true,
               outcome: true,
+              followUpAt: true,
               createdAt: true,
               calledBy: { select: { firstName: true, lastName: true } },
             },
@@ -205,6 +206,9 @@ export class PaymentsDebtorsService {
             ? {
                 note: call.note,
                 outcome: call.outcome,
+                followUpAt: call.followUpAt
+                  ? call.followUpAt.toISOString()
+                  : null,
                 createdAt: call.createdAt.toISOString(),
                 calledByName:
                   `${call.calledBy.firstName} ${call.calledBy.lastName}`.trim(),

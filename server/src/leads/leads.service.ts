@@ -12,6 +12,7 @@ import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
+import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 
 // Compact shape rendered as a card on the board.
 const LEAD_CARD_SELECT = {
@@ -22,6 +23,7 @@ const LEAD_CARD_SELECT = {
   statusEnum: true,
   order: true,
   createdAt: true,
+  calledAt: true,
   source: { select: { id: true, name: true } },
 } satisfies Prisma.LeadSelect;
 
@@ -32,6 +34,32 @@ export class LeadsService {
     private entityHistoryService: EntityHistoryService,
     private studentsService: StudentsService,
   ) {}
+
+  /**
+   * Counts comments per lead in one query. Comments are polymorphic
+   * (`entityType`/`entityId`, no FK to Lead), so a Prisma `_count` relation is
+   * not available — we group the Comment table instead. Returns a Map keyed by
+   * lead id; leads with no comments are simply absent from the map.
+   */
+  private async commentCountsFor(
+    leadIds: string[],
+  ): Promise<Map<string, number>> {
+    if (leadIds.length === 0) return new Map();
+    const grouped = await this.prisma.comment.groupBy({
+      by: ['entityId'],
+      where: { entityType: 'Lead', entityId: { in: leadIds } },
+      _count: { _all: true },
+    });
+    return new Map(grouped.map((g) => [g.entityId, g._count._all]));
+  }
+
+  /** Attaches `commentCount` to a single card so the board badge stays correct. */
+  private async withCommentCount<T extends { id: string }>(
+    lead: T,
+  ): Promise<T & { commentCount: number }> {
+    const counts = await this.commentCountsFor([lead.id]);
+    return { ...lead, commentCount: counts.get(lead.id) ?? 0 };
+  }
 
   /** Filtered, paginated flat list of leads — drives the filter view. */
   async findAll(query: LeadQueryDto) {
@@ -103,11 +131,14 @@ export class LeadsService {
       throw new NotFoundException("Bo'lim topilmadi");
     }
 
-    return this.prisma.lead.findMany({
+    const leads = await this.prisma.lead.findMany({
       where: { sectionId, deletedAt: null },
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       select: LEAD_CARD_SELECT,
     });
+
+    const counts = await this.commentCountsFor(leads.map((l) => l.id));
+    return leads.map((l) => ({ ...l, commentCount: counts.get(l.id) ?? 0 }));
   }
 
   /** Full lead detail for the detail drawer. */
@@ -124,6 +155,7 @@ export class LeadsService {
         order: true,
         createdAt: true,
         updatedAt: true,
+        calledAt: true,
         source: { select: { id: true, name: true } },
         section: {
           select: {
@@ -249,7 +281,8 @@ export class LeadsService {
       companyId,
     });
 
-    return created;
+    // A brand-new lead has no comments and has not been called yet.
+    return { ...created, commentCount: 0 };
   }
 
   /** Edits a lead's own data (name, phone, source). */
@@ -322,7 +355,7 @@ export class LeadsService {
       companyId,
     });
 
-    return updated;
+    return this.withCommentCount(updated);
   }
 
   /**
@@ -383,7 +416,47 @@ export class LeadsService {
       companyId,
     });
 
-    return updated;
+    return this.withCommentCount(updated);
+  }
+
+  /**
+   * Marks a lead as "called" (or clears it). A lightweight contact marker — it
+   * stamps who called and when so the board card can show a phone icon. Setting
+   * `called: true` on an already-called lead is idempotent (keeps the original
+   * timestamp).
+   */
+  async markCalled(
+    id: string,
+    dto: MarkCalledLeadDto,
+    companyId: number,
+    userId: number,
+  ) {
+    const existing = await this.prisma.lead.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, calledAt: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Lid topilmadi');
+    }
+
+    const updated = await this.prisma.lead.update({
+      where: { id },
+      data: dto.called
+        ? { calledAt: existing.calledAt ?? new Date(), calledById: userId }
+        : { calledAt: null, calledById: null },
+      select: LEAD_CARD_SELECT,
+    });
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'Lead',
+      entityId: id,
+      oldValues: { calledAt: existing.calledAt },
+      newValues: { calledAt: updated.calledAt },
+      changedById: userId,
+      companyId,
+    });
+
+    return this.withCommentCount(updated);
   }
 
   /** Soft-deletes a lead (moves it to the archive — no hard delete). */
@@ -491,6 +564,6 @@ export class LeadsService {
       companyId,
     });
 
-    return { studentId: student.id, lead: updated };
+    return { studentId: student.id, lead: await this.withCommentCount(updated) };
   }
 }
