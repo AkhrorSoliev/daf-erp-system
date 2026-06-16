@@ -1,6 +1,7 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
 
-import { Card, EmptyState, Loading, Screen, Text } from '@/design/components';
+import { Button, Card, EmptyState, Loading, Screen, Text } from '@/design/components';
 import { useProfile } from '@/api/queries/use-profile';
 import { formatSom } from '@/lib/format';
 import { dayLabel } from '@/lib/labels';
@@ -39,6 +40,8 @@ export default function Home() {
             </Text>
             {p.balance < 0 ? <Text variant="muted" className="mt-1">Qarzdorlik mavjud</Text> : null}
           </Card>
+
+          <Button label="QR bilan davomatga belgilash" onPress={() => router.push('/scan')} />
 
           <View className="gap-2">
             <Text variant="title">Guruhlarim</Text>

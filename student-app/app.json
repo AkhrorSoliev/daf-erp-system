@@ -35,7 +35,15 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        { "cameraPermission": "QR kodni skanerlash uchun kameraga ruxsat kerak" }
+      ],
+      [
+        "expo-image-picker",
+        { "photosPermission": "Profil rasmini tanlash uchun galereyaga ruxsat kerak" }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

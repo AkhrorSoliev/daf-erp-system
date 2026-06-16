@@ -1,6 +1,7 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
 
-import { Card, EmptyState, Loading, Screen, Text } from '@/design/components';
+import { Button, Card, EmptyState, Loading, Screen, Text } from '@/design/components';
 import { useAttendanceHistory, useAttendanceStats } from '@/api/queries/use-attendance';
 import { ATT_STATUS } from '@/lib/labels';
 import { formatDate } from '@/lib/format';
@@ -39,6 +40,7 @@ export default function Attendance() {
       >
         <View className="gap-4 p-4">
           <Text variant="heading">{t.tabs.attendance}</Text>
+          <Button label="QR bilan davomatga belgilash" onPress={() => router.push('/scan')} />
 
           {s ? (
             <Card className="gap-2">
