@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { ActionSheet, Button, Card, Loading, Screen, Text } from '@/design/components';
 import { useProfile } from '@/api/queries/use-profile';
-import { uploadPhoto } from '@/api/profile';
+import { deletePhoto, uploadPhoto } from '@/api/profile';
 import { useAuth } from '@/auth/auth-store';
 import { formatPhone } from '@/lib/format';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -37,6 +37,14 @@ export default function Profile() {
     onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: () => deletePhoto(),
+    onSuccess: () => q.refetch(),
+    onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
+  });
+
+  const photoBusy = photoMut.isPending || deleteMut.isPending;
+
   async function pickFromLibrary() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
     if (!res.canceled && res.assets[0]?.uri) photoMut.mutate(res.assets[0].uri);
@@ -60,7 +68,7 @@ export default function Profile() {
             <Card className="items-center gap-3">
               <Pressable
                 onPress={() => setSheetOpen(true)}
-                disabled={photoMut.isPending}
+                disabled={photoBusy}
                 className="items-center gap-2 active:opacity-80"
               >
                 <View style={{ width: AVATAR, height: AVATAR }}>
@@ -84,7 +92,7 @@ export default function Profile() {
                     <Ionicons name="camera" size={16} color={tokens.color.primaryFg} />
                   </View>
                 </View>
-                <Text variant="muted">{photoMut.isPending ? 'Yuklanmoqda...' : 'Rasmni o‘zgartirish'}</Text>
+                <Text variant="muted">{photoBusy ? 'Yuklanmoqda...' : 'Rasmni o‘zgartirish'}</Text>
               </Pressable>
 
               <Text variant="title">{`${p.firstName} ${p.lastName}`.trim()}</Text>
@@ -118,6 +126,9 @@ export default function Profile() {
         options={[
           { label: 'Galereyadan tanlash', onPress: pickFromLibrary },
           { label: 'Kameradan olish', onPress: pickFromCamera },
+          ...(p?.photo
+            ? [{ label: "Rasmni o'chirish", onPress: () => deleteMut.mutate(), destructive: true }]
+            : []),
         ]}
       />
     </Screen>

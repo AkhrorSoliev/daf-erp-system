@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
   Body,
   UseGuards,
   UseInterceptors,
@@ -98,6 +99,17 @@ export class StudentPortalController {
   ) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.updatePhoto(studentId, file, userId);
+  }
+
+  @Delete('photo')
+  @UseGuards(RolesGuard)
+  @Roles('Student')
+  removePhoto(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    if (!studentId) throw new NotFoundException('Talaba topilmadi');
+    return this.studentPortalService.removePhoto(studentId, userId);
   }
 
   @Get('payments')

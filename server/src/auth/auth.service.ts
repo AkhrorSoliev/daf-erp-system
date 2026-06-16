@@ -3,7 +3,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { getAllowedRoleIds } from './portal-roles.config';
+import { resolveAllowedRoleIds } from './portal-roles.config';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -97,8 +97,8 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async login(user: any, origin?: string) {
-    const allowedRoleIds = getAllowedRoleIds(origin);
+  async login(user: any, origin?: string, portal?: string) {
+    const allowedRoleIds = resolveAllowedRoleIds(origin, portal);
     if (allowedRoleIds !== null) {
       const userRoleIds: number[] = user.roles.map((ur: any) => ur.role.id);
       const hasAccess = userRoleIds.some((id) => allowedRoleIds.includes(id));

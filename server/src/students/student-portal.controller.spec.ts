@@ -22,6 +22,7 @@ describe('StudentPortalController — role guards', () => {
     updateName: jest.fn().mockResolvedValue({}),
     changePassword: jest.fn().mockResolvedValue({}),
     updatePhoto: jest.fn().mockResolvedValue({}),
+    removePhoto: jest.fn().mockResolvedValue({}),
   };
 
   const mockQrService = {
@@ -262,6 +263,28 @@ describe('StudentPortalController — role guards', () => {
 
     it('should deny Teacher from accessing', () => {
       const ctx = mockExecutionContext(controller.updatePhoto, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('removePhoto()', () => {
+    it('should have @Roles(Student) metadata', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.removePhoto);
+      expect(roles).toEqual(['Student']);
+    });
+
+    it('should allow Student to access', () => {
+      const ctx = mockExecutionContext(controller.removePhoto, ['Student']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny CEO from accessing', () => {
+      const ctx = mockExecutionContext(controller.removePhoto, ['CEO']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('should deny Teacher from accessing', () => {
+      const ctx = mockExecutionContext(controller.removePhoto, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });

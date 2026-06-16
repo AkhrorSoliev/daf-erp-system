@@ -15,3 +15,9 @@ export async function uploadPhoto(uri: string) {
   });
   return data;
 }
+
+/** DELETE /api/student-portal/photo — removes the student's avatar. */
+export async function deletePhoto() {
+  const { data } = await api.delete('/student-portal/photo');
+  return data;
+}

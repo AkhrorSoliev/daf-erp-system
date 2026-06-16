@@ -14,7 +14,9 @@ export class AuthController {
   @Post('login')
   async login(@Request() req, @Body() _loginDto: LoginDto) {
     const origin = req.headers['origin'] as string | undefined;
-    return this.authService.login(req.user, origin);
+    // Native apps send X-Portal (no browser Origin) — gates the student app to role 6.
+    const portal = req.headers['x-portal'] as string | undefined;
+    return this.authService.login(req.user, origin, portal);
   }
 
   @Public()
