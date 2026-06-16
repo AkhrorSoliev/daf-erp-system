@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
@@ -465,5 +466,26 @@ describe('UsersService — findAll companyId scoping', () => {
     await service.findAll({ search: 'foo', branch_id: 5 } as any, 2002);
     const callArg = prisma.user.findMany.mock.calls[0][0];
     expect(callArg.where.companyId).toBe(2002);
+  });
+
+  it('does NOT filter by status/isActive by default (employees list shows everyone)', async () => {
+    await service.findAll({} as any, 1001);
+    const where = prisma.user.findMany.mock.calls[0][0].where;
+    expect(where.isActive).toBeUndefined();
+    expect(where.status).toBeUndefined();
+  });
+
+  it('restricts to ACTIVE users when active_only is set (assignee dropdowns)', async () => {
+    await service.findAll({ active_only: true } as any, 1001);
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          deletedAt: null,
+          companyId: 1001,
+          isActive: true,
+          status: UserStatus.ACTIVE,
+        }),
+      }),
+    );
   });
 });
