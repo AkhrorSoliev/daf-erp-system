@@ -156,6 +156,7 @@ export class LeadsService {
         createdAt: true,
         updatedAt: true,
         calledAt: true,
+        calledBy: { select: { id: true, firstName: true, lastName: true } },
         source: { select: { id: true, name: true } },
         section: {
           select: {
@@ -208,6 +209,55 @@ export class LeadsService {
     );
 
     return { ...lead, mockParticipations };
+  }
+
+  /**
+   * Lightweight hover preview for a board card — who called and when, plus the
+   * most recent comment (author + text + time). Fetched lazily on hover and
+   * cached client-side, so it never runs on the initial board/section load and
+   * never re-runs while the card stays mounted. Three small indexed reads.
+   */
+  async getHoverSummary(id: string) {
+    const lead = await this.prisma.lead.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        id: true,
+        calledAt: true,
+        calledBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+    if (!lead) {
+      throw new NotFoundException('Lid topilmadi');
+    }
+
+    const latest = await this.prisma.comment.findFirst({
+      where: { entityType: 'Lead', entityId: id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        content: true,
+        createdAt: true,
+        isTask: true,
+        author: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    const fullName = (u: { firstName: string; lastName: string }) =>
+      `${u.firstName} ${u.lastName}`.trim();
+
+    return {
+      calledAt: lead.calledAt,
+      calledBy: lead.calledBy
+        ? { id: lead.calledBy.id, name: fullName(lead.calledBy) }
+        : null,
+      latestComment: latest
+        ? {
+            authorName: fullName(latest.author),
+            content: latest.content,
+            createdAt: latest.createdAt,
+            isTask: latest.isTask,
+          }
+        : null,
+    };
   }
 
   // `userId` is nullable because public-form submissions create leads with no
@@ -439,11 +489,18 @@ export class LeadsService {
       throw new NotFoundException('Lid topilmadi');
     }
 
+    // When already called, leave BOTH calledAt and calledById untouched so the
+    // (when, who) pair stays coherent — re-marking must not relabel the caller
+    // while keeping the original timestamp.
+    const data: Prisma.LeadUncheckedUpdateInput = dto.called
+      ? existing.calledAt
+        ? {}
+        : { calledAt: new Date(), calledById: userId }
+      : { calledAt: null, calledById: null };
+
     const updated = await this.prisma.lead.update({
       where: { id },
-      data: dto.called
-        ? { calledAt: existing.calledAt ?? new Date(), calledById: userId }
-        : { calledAt: null, calledById: null },
+      data,
       select: LEAD_CARD_SELECT,
     });
 

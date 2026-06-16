@@ -141,7 +141,7 @@ export function DebtorRow({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onLogCall}>
               <PhoneCall className="mr-2 size-4" />
-              Aloqa natijasini qayd qilish
+              Natijani kiritish
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
