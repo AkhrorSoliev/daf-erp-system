@@ -1,36 +1,67 @@
-import { ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 
-import { Button, Card, Screen, Text } from '@/design/components';
-import { useAuth } from '@/auth/auth-store';
+import { Card, EmptyState, Loading, Screen, Text } from '@/design/components';
+import { useProfile } from '@/api/queries/use-profile';
 import { formatSom } from '@/lib/format';
+import { dayLabel } from '@/lib/labels';
 import { t } from '@/i18n/uz';
 
 export default function Home() {
-  const user = useAuth((s) => s.user);
+  const q = useProfile();
+
+  if (q.isLoading) return <Screen edges={['top']}><Loading /></Screen>;
+  if (q.isError || !q.data) {
+    return (
+      <Screen edges={['top']} className="justify-center">
+        <EmptyState title={t.common.error} description="Ma'lumotni yuklab bo'lmadi" />
+      </Screen>
+    );
+  }
+
+  const p = q.data;
 
   return (
     <Screen edges={['top']}>
-      <ScrollView>
+      <ScrollView
+        className="flex-1"
+        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} />}
+      >
         <View className="gap-4 p-4">
           <View className="gap-1">
             <Text variant="muted">{t.home.greeting}</Text>
-            <Text variant="heading">{user ? `${user.firstName} ${user.lastName}`.trim() : 'Talaba'}</Text>
+            <Text variant="heading">{`${p.firstName} ${p.lastName}`.trim()}</Text>
           </View>
 
           <Card>
             <Text variant="muted">{t.home.balance}</Text>
-            <Text variant="heading" className="mt-1">
-              {formatSom(user?.balance ?? 0)}
+            <Text variant="heading" className={p.balance < 0 ? 'mt-1 text-danger' : 'mt-1 text-success'}>
+              {formatSom(p.balance)}
             </Text>
+            {p.balance < 0 ? <Text variant="muted" className="mt-1">Qarzdorlik mavjud</Text> : null}
           </Card>
 
-          {/* Phase 0: primitive showcase to confirm NativeWind + tokens render. */}
-          <Card className="gap-3">
-            <Text variant="title">Dizayn primitive&apos;lari</Text>
-            <Button label="Primary" />
-            <Button label="Secondary" variant="secondary" />
-            <Button label="Ghost" variant="ghost" />
-          </Card>
+          <View className="gap-2">
+            <Text variant="title">Guruhlarim</Text>
+            {p.groups.length === 0 ? (
+              <Text variant="muted">Faol guruh yo&apos;q</Text>
+            ) : (
+              p.groups.map((g) => (
+                <Card key={g.id} className="gap-1">
+                  <Text variant="label">{g.name}</Text>
+                  {g.course_name ? <Text variant="muted">{g.course_name}</Text> : null}
+                  <Text variant="muted">
+                    {g.exactDays.map(dayLabel).join(', ')}
+                    {g.lessonStartTime ? ` · ${g.lessonStartTime}–${g.lessonEndTime ?? ''}` : ''}
+                  </Text>
+                  {g.teachers.length ? (
+                    <Text variant="muted">
+                      O&apos;qituvchi: {g.teachers.map((tt) => `${tt.firstName} ${tt.lastName}`).join(', ')}
+                    </Text>
+                  ) : null}
+                </Card>
+              ))
+            )}
+          </View>
         </View>
       </ScrollView>
     </Screen>

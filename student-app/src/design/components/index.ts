@@ -5,3 +5,4 @@ export { Input } from './input';
 export { EmptyState } from './empty-state';
 export { Skeleton } from './skeleton';
 export { Screen } from './screen';
+export { Loading } from './loading';

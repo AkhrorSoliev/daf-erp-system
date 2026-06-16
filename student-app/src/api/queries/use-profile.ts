@@ -4,7 +4,7 @@ import type { Profile } from '../types';
 
 export const profileKey = ['profile'] as const;
 
-/** GET /api/student-portal/profile — example query hook (pattern for all screens). */
+/** GET /api/student-portal/profile */
 export function useProfile() {
   return useQuery({
     queryKey: profileKey,
