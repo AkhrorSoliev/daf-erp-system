@@ -8,6 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
+import { consumeLoginOtp } from '../telegram/flows/app-login-otp-flow';
 
 @Injectable()
 export class AuthService {
@@ -15,6 +17,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private redis: RedisService,
   ) {}
 
   async validateUser(login: string, password: string) {
@@ -121,6 +124,62 @@ export class AuthService {
       });
       studentId = student?.id;
     }
+
+    const tokens = this.generateTokens(
+      user.id,
+      roles,
+      user.companyId,
+      studentId,
+    );
+
+    return {
+      ...tokens,
+      user: this.formatUser(user, studentId),
+    };
+  }
+
+  /** Exchange a Telegram-issued one-time code for a student session. */
+  async exchangeOtp(code: string) {
+    const userId = await consumeLoginOtp(this.redis, code);
+    if (!userId) {
+      throw new UnauthorizedException('Kod yaroqsiz yoki muddati tugagan');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      include: {
+        roles: { include: { role: true } },
+        branches: { include: { branch: { select: { id: true, name: true } } } },
+        company: {
+          select: {
+            id: true,
+            name: true,
+            subdomain: true,
+            logo: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Foydalanuvchi topilmadi');
+    }
+    if (user.status !== 'ACTIVE' && user.status !== 'INACTIVE') {
+      throw new UnauthorizedException('Hisobingiz bloklangan');
+    }
+
+    const roleIds: number[] = user.roles.map((ur: any) => ur.role.id);
+    if (!roleIds.includes(6)) {
+      throw new ForbiddenException("Bu kod faqat o'quvchilar uchun");
+    }
+
+    const roles = user.roles.map((ur: any) => ur.role.name);
+    const student = await this.prisma.student.findFirst({
+      where: { userId: user.id, deletedAt: null },
+      select: { id: true },
+    });
+    const studentId = student?.id;
 
     const tokens = this.generateTokens(
       user.id,
