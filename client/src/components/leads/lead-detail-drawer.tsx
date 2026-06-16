@@ -40,6 +40,8 @@ import {
   type LeadStatus,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useLeadActivity } from "@/hooks/use-lead-activity";
+import { useAuth } from "@/hooks/use-auth";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 
 interface LeadFormSubmission {
@@ -73,6 +75,7 @@ interface LeadDetail {
   convertedStudentId: number | null;
   createdAt: string;
   calledAt: string | null;
+  calledBy: { id: number; firstName: string; lastName: string } | null;
   source: { id: string; name: string } | null;
   section: {
     id: string;
@@ -252,6 +255,10 @@ export function LeadDetailDrawer() {
   const openConvertLead = useLeadsUi((s) => s.openConvertLead);
   const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
   const bumpLeadCommentCount = useLeadsBoard((s) => s.bumpLeadCommentCount);
+  const detailLeadTab = useLeadsUi((s) => s.detailLeadTab);
+  const clearDetailLeadTab = useLeadsUi((s) => s.clearDetailLeadTab);
+  const invalidateActivity = useLeadActivity((s) => s.invalidate);
+  const authUser = useAuth((s) => s.user);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -279,6 +286,16 @@ export function LeadDetailDrawer() {
     },
     [pathname, router, searchParams],
   );
+
+  // One-shot: when the drawer is opened straight onto a tab (e.g. the card's
+  // comment icon requests "izohlar"), apply it once and clear the intent so a
+  // later manual tab switch isn't forced back.
+  useEffect(() => {
+    if (leadId && detailLeadTab) {
+      setTab(detailLeadTab);
+      clearDetailLeadTab();
+    }
+  }, [leadId, detailLeadTab, setTab, clearDetailLeadTab]);
 
   const handleCloseDetail = useCallback(() => {
     closeLeadDetail();
@@ -321,10 +338,13 @@ export function LeadDetailDrawer() {
   const handleCommentConfirmed = useCallback(
     (tempId: string) => {
       setOptimisticComments((prev) => prev.filter((c) => c.id !== tempId));
+      if (!lead) return;
       // Keep the board card's comment icon/count in sync without a refetch.
-      if (lead?.section) bumpLeadCommentCount(lead.section.id, lead.id, 1);
+      if (lead.section) bumpLeadCommentCount(lead.section.id, lead.id, 1);
+      // Drop the cached hover preview so the next hover shows this new comment.
+      invalidateActivity(lead.id);
     },
-    [lead, bumpLeadCommentCount],
+    [lead, bumpLeadCommentCount, invalidateActivity],
   );
 
   const handleToggleCalled = useCallback(async () => {
@@ -335,9 +355,24 @@ export function LeadDetailDrawer() {
       const { data } = await api.patch<LeadCard>(`/leads/${lead.id}/called`, {
         called: next,
       });
-      setLead((prev) => (prev ? { ...prev, calledAt: data.calledAt } : prev));
+      // Marking on credits the current user as the caller; clearing removes it.
+      const nextCalledBy =
+        next && authUser
+          ? {
+              id: authUser.id,
+              firstName: authUser.firstName,
+              lastName: authUser.lastName,
+            }
+          : null;
+      setLead((prev) =>
+        prev
+          ? { ...prev, calledAt: data.calledAt, calledBy: nextCalledBy }
+          : prev,
+      );
       // Reflect the new state on the board card immediately.
       if (lead.section) applyLeadUpdate(lead.section.id, data);
+      // Drop the cached hover preview so the next hover reflects the change.
+      invalidateActivity(lead.id);
       toast.success(
         next
           ? "Telefon qilindi deb belgilandi"
@@ -348,7 +383,7 @@ export function LeadDetailDrawer() {
     } finally {
       setMarking(false);
     }
-  }, [lead, applyLeadUpdate]);
+  }, [lead, applyLeadUpdate, invalidateActivity, authUser]);
 
   const handleCommentFailed = useCallback((tempId: string) => {
     setOptimisticComments((prev) =>
@@ -357,6 +392,14 @@ export function LeadDetailDrawer() {
       ),
     );
   }, []);
+
+  // Fired by CommentList after a successful delete — mirror the add path so the
+  // board card count and the hover-summary cache don't go stale.
+  const handleCommentDeleted = useCallback(() => {
+    if (!lead) return;
+    if (lead.section) bumpLeadCommentCount(lead.section.id, lead.id, -1);
+    invalidateActivity(lead.id);
+  }, [lead, bumpLeadCommentCount, invalidateActivity]);
 
   return (
     <Sheet open={!!leadId} onOpenChange={(o) => !o && handleCloseDetail()}>
@@ -422,8 +465,16 @@ export function LeadDetailDrawer() {
                     {lead.calledAt ? (
                       <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                         <PhoneCall className="size-3.5 shrink-0" />
-                        Telefon qilingan ·{" "}
-                        {format(parseISO(lead.calledAt), "dd.MM.yyyy")}
+                        <span>
+                          Telefon qilingan ·{" "}
+                          {format(
+                            parseISO(lead.calledAt),
+                            "dd.MM.yyyy, HH:mm",
+                          )}
+                          {lead.calledBy
+                            ? ` · ${lead.calledBy.firstName} ${lead.calledBy.lastName}`
+                            : ""}
+                        </span>
                       </p>
                     ) : (
                       <p className="mt-0.5 text-xs text-muted-foreground">
@@ -505,6 +556,7 @@ export function LeadDetailDrawer() {
                   entityType="Lead"
                   entityId={lead.id}
                   optimisticComments={optimisticComments}
+                  onCommentChange={handleCommentDeleted}
                 />
               </TabsContent>
 

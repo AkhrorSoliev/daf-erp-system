@@ -158,7 +158,7 @@ function CallForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Aloqa natijasini qayd qilish</DialogTitle>
+        <DialogTitle>Natijani kiritish</DialogTitle>
       </DialogHeader>
 
       <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">

@@ -48,6 +48,13 @@ export class LeadsController {
     return this.leadsService.getSectionLeads(sectionId);
   }
 
+  // Lazy hover preview (caller + latest comment). Declared before ':id' so the
+  // extra path segment isn't swallowed by the generic detail route.
+  @Get(':id/hover-summary')
+  getHoverSummary(@Param('id') id: string) {
+    return this.leadsService.getHoverSummary(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.leadsService.findOne(id);

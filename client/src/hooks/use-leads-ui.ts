@@ -47,6 +47,8 @@ interface LeadsUiState {
   renameTarget: RenameTarget | null;
   deleteTarget: DeleteTarget | null;
   detailLeadId: string | null;
+  /** Tab the detail drawer should open on (e.g. "izohlar"); applied once. */
+  detailLeadTab: string | null;
   editLead: EditLeadTarget | null;
   moveLead: MoveLeadTarget | null;
   convertLead: { id: string; sectionId: string } | null;
@@ -61,8 +63,10 @@ interface LeadsUiState {
   closeRename: () => void;
   openDelete: (target: DeleteTarget) => void;
   closeDelete: () => void;
-  openLeadDetail: (leadId: string) => void;
+  openLeadDetail: (leadId: string, tab?: string) => void;
   closeLeadDetail: () => void;
+  /** Clears the one-shot tab once the drawer has applied it. */
+  clearDetailLeadTab: () => void;
   openEditLead: (target: EditLeadTarget) => void;
   closeEditLead: () => void;
   openMoveLead: (target: MoveLeadTarget) => void;
@@ -78,6 +82,7 @@ export const useLeadsUi = create<LeadsUiState>((set) => ({
   renameTarget: null,
   deleteTarget: null,
   detailLeadId: null,
+  detailLeadTab: null,
   editLead: null,
   moveLead: null,
   convertLead: null,
@@ -93,14 +98,18 @@ export const useLeadsUi = create<LeadsUiState>((set) => ({
   closeRename: () => set({ renameTarget: null }),
   openDelete: (target) => set({ deleteTarget: target }),
   closeDelete: () => set({ deleteTarget: null }),
-  openLeadDetail: (leadId) => set({ detailLeadId: leadId }),
-  closeLeadDetail: () => set({ detailLeadId: null }),
+  openLeadDetail: (leadId, tab) =>
+    set({ detailLeadId: leadId, detailLeadTab: tab ?? null }),
+  closeLeadDetail: () => set({ detailLeadId: null, detailLeadTab: null }),
+  clearDetailLeadTab: () => set({ detailLeadTab: null }),
   // Opening edit / move closes the detail drawer to avoid stacked sheets.
-  openEditLead: (target) => set({ editLead: target, detailLeadId: null }),
+  openEditLead: (target) =>
+    set({ editLead: target, detailLeadId: null, detailLeadTab: null }),
   closeEditLead: () => set({ editLead: null }),
-  openMoveLead: (target) => set({ moveLead: target, detailLeadId: null }),
+  openMoveLead: (target) =>
+    set({ moveLead: target, detailLeadId: null, detailLeadTab: null }),
   closeMoveLead: () => set({ moveLead: null }),
   openConvertLead: (target) =>
-    set({ convertLead: target, detailLeadId: null }),
+    set({ convertLead: target, detailLeadId: null, detailLeadTab: null }),
   closeConvertLead: () => set({ convertLead: null }),
 }));

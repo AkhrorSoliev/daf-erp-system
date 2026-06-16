@@ -31,7 +31,10 @@ describe('LeadsService', () => {
       leadSection: { findFirst: jest.fn() },
       leadSource: { findFirst: jest.fn() },
       // Comment counts are grouped, not relation-counted (polymorphic table).
-      comment: { groupBy: jest.fn().mockResolvedValue([]) },
+      comment: {
+        groupBy: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
     };
     history = {
       recordCreate: jest.fn(),
@@ -460,6 +463,63 @@ describe('LeadsService', () => {
     });
   });
 
+  describe('getHoverSummary', () => {
+    it('throws NotFound when the lead is missing', async () => {
+      prisma.lead.findFirst.mockResolvedValue(null);
+      await expect(service.getHoverSummary('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('returns caller name + latest comment with composed names', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        calledAt: new Date('2026-06-16T10:00:00Z'),
+        calledBy: { id: 7, firstName: 'Olim', lastName: 'Aliyev' },
+      });
+      prisma.comment.findFirst.mockResolvedValue({
+        content: 'Ertaga qayta qo‘ng‘iroq',
+        createdAt: new Date('2026-06-16T11:00:00Z'),
+        isTask: false,
+        author: { firstName: 'Dilnoza', lastName: 'Karimova' },
+      });
+
+      const result = await service.getHoverSummary('lead-1');
+
+      expect(prisma.comment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { entityType: 'Lead', entityId: 'lead-1' },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+      expect(result.calledBy).toEqual({ id: 7, name: 'Olim Aliyev' });
+      expect(result.latestComment).toEqual(
+        expect.objectContaining({
+          authorName: 'Dilnoza Karimova',
+          content: 'Ertaga qayta qo‘ng‘iroq',
+          isTask: false,
+        }),
+      );
+    });
+
+    it('returns nulls when the lead was never called and has no comments', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-2',
+        calledAt: null,
+        calledBy: null,
+      });
+      prisma.comment.findFirst.mockResolvedValue(null);
+
+      const result = await service.getHoverSummary('lead-2');
+
+      expect(result).toEqual({
+        calledAt: null,
+        calledBy: null,
+        latestComment: null,
+      });
+    });
+  });
+
   describe('markCalled', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
@@ -488,7 +548,7 @@ describe('LeadsService', () => {
       expect(history.recordUpdate).toHaveBeenCalled();
     });
 
-    it('keeps the original timestamp when re-marking an already-called lead', async () => {
+    it('keeps the original caller and timestamp when re-marking an already-called lead', async () => {
       const original = new Date('2026-06-01T08:00:00Z');
       prisma.lead.findFirst.mockResolvedValue({
         id: 'lead-1',
@@ -496,9 +556,13 @@ describe('LeadsService', () => {
       });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1', calledAt: original });
 
-      await service.markCalled('lead-1', { called: true }, 1001, 7);
+      // A different user (9) re-marks; neither the timestamp nor the caller
+      // identity may change — the (when, who) pair must stay coherent.
+      await service.markCalled('lead-1', { called: true }, 1001, 9);
 
-      expect(prisma.lead.update.mock.calls[0][0].data.calledAt).toBe(original);
+      const data = prisma.lead.update.mock.calls[0][0].data;
+      expect(data.calledAt).toBeUndefined();
+      expect(data.calledById).toBeUndefined();
     });
 
     it('clears the marker when called is false', async () => {
