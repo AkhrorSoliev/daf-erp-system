@@ -145,13 +145,23 @@ export class UsersService {
   }
 
   async findAll(query: UserQueryDto, companyId: number) {
-    const { user_type, search, branch_id, page = 1, pageSize = 10 } = query;
+    const { user_type, search, branch_id, active_only, page = 1, pageSize = 10 } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = {
       deletedAt: null,
       companyId,
     };
+
+    // Assignee dropdowns (e.g. task assignment) pass active_only so that
+    // deactivated/suspended/terminated employees are not offered. Mirror the
+    // canonical "active recipient" predicate (status + isActive) — don't rely
+    // on the sync invariant alone. The general employees list omits this and
+    // intentionally still shows non-active staff for management.
+    if (active_only) {
+      where.isActive = true;
+      where.status = UserStatus.ACTIVE;
+    }
 
     if (user_type) {
       const types = user_type
