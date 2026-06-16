@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { router } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { useMutation } from '@tanstack/react-query';
 
 import { Button, Input, Screen, Text } from '@/design/components';
 import { login } from '@/api/auth';
 import { useAuth } from '@/auth/auth-store';
 import { getErrorMessage } from '@/lib/get-error-message';
-import { env } from '@/config/env';
 import { t } from '@/i18n/uz';
 
 export default function Login() {
@@ -61,10 +59,7 @@ export default function Login() {
           <Button
             label="Telegram orqali kirish"
             variant="secondary"
-            onPress={() => {
-              Linking.openURL(`https://t.me/${env.botUsername}`);
-              router.push('/otp');
-            }}
+            onPress={() => router.push('/otp')}
           />
         </View>
       </View>

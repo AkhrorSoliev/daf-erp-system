@@ -18,6 +18,7 @@ import {
   STUDENT_GROUP_DEEP_LINK_RE,
   EMPLOYEE_DEEP_LINK_RE,
   MOCK_EXAM_DEEP_LINK_PREFIX,
+  APP_LOGIN_DEEP_LINK,
   VALID_ROLE_IDS,
 } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
@@ -164,6 +165,32 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.start(async (ctx) => {
       const payload = ctx.payload;
       this.logger.log(`Bot /start payload: "${payload}"`);
+
+      // Native app login — auto-issue a one-time code (no menu tap needed)
+      if (payload === APP_LOGIN_DEEP_LINK) {
+        const chatId = String(ctx.chat!.id);
+        const res = await issueLoginOtp(this.prisma, this.redis, chatId);
+        if (!res.ok) {
+          await ctx.reply(
+            res.reason === 'not_found'
+              ? "Siz hali ro'yxatdan o'tmagansiz. Administrator bilan bog'laning."
+              : res.reason === 'no_account'
+                ? "Sizda ilova hisobi yo'q. Administrator bilan bog'laning."
+                : `Juda ko'p urinish. ${formatRetryAfter(
+                    res.retryAfterSec ?? 60,
+                  )} dan keyin qayta urining.`,
+          );
+          return;
+        }
+        await ctx.reply(
+          `📱 <b>Ilovaga kirish kodi:</b>\n\n<code>${res.code}</code>\n\n` +
+            `Bu kodni DAF Student ilovasiga kiriting. Kod ${Math.round(
+              res.ttlSec / 60,
+            )} daqiqa amal qiladi.`,
+          { parse_mode: 'HTML' },
+        );
+        return;
+      }
 
       if (payload.startsWith(TEACHER_DEEP_LINK_PREFIX)) {
         ctx.session.processing = true;
