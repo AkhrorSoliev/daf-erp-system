@@ -19,6 +19,7 @@ import {
   EMPLOYEE_DEEP_LINK_RE,
   MOCK_EXAM_DEEP_LINK_PREFIX,
   APP_LOGIN_DEEP_LINK,
+  APP_LOGIN_REQUEST_PREFIX,
   VALID_ROLE_IDS,
 } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
@@ -26,7 +27,7 @@ import { createStudentRegistrationScene } from './scenes/student-registration.sc
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
 import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
 import { createPasswordResetScene } from './scenes/password-reset.scene';
-import { issueLoginOtp } from './flows/app-login-otp-flow';
+import { issueLoginOtp, approveLoginRequest } from './flows/app-login-otp-flow';
 import { formatRetryAfter } from './flows/password-reset-flow';
 import {
   signEmployeePayload,
@@ -165,6 +166,34 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.start(async (ctx) => {
       const payload = ctx.payload;
       this.logger.log(`Bot /start payload: "${payload}"`);
+
+      // Native app login (link/poll) — approve the pending request, app auto-logs-in
+      if (payload.startsWith(APP_LOGIN_REQUEST_PREFIX)) {
+        const requestId = payload.slice(APP_LOGIN_REQUEST_PREFIX.length);
+        const chatId = String(ctx.chat!.id);
+        if (!/^[a-zA-Z0-9-]{8,64}$/.test(requestId)) {
+          await ctx.reply("Noto'g'ri havola. Ilovadan qayta urinib ko'ring.");
+          return;
+        }
+        const res = await approveLoginRequest(
+          this.prisma,
+          this.redis,
+          chatId,
+          requestId,
+        );
+        if (!res.ok) {
+          await ctx.reply(
+            res.reason === 'not_found'
+              ? "Siz hali ro'yxatdan o'tmagansiz. Administrator bilan bog'laning."
+              : "Sizda ilova hisobi yo'q. Administrator bilan bog'laning.",
+          );
+          return;
+        }
+        await ctx.reply(
+          `✅ ${res.firstName}, ilovaga kirish tasdiqlandi!\n\nEndi ilovaga qayting — avtomatik kirasiz.`,
+        );
+        return;
+      }
 
       // Native app login — auto-issue a one-time code (no menu tap needed)
       if (payload === APP_LOGIN_DEEP_LINK) {

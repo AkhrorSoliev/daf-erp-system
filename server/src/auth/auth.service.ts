@@ -9,7 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { consumeLoginOtp } from '../telegram/flows/app-login-otp-flow';
+import {
+  consumeLoginOtp,
+  consumeLoginRequest,
+} from '../telegram/flows/app-login-otp-flow';
 
 @Injectable()
 export class AuthService {
@@ -144,7 +147,20 @@ export class AuthService {
     if (!userId) {
       throw new UnauthorizedException('Kod yaroqsiz yoki muddati tugagan');
     }
+    return this.buildStudentSession(userId);
+  }
 
+  /** Poll a link-based app login request; pending until the bot approves it. */
+  async pollLoginRequest(requestId: string) {
+    if (!requestId) return { status: 'pending' as const };
+    const userId = await consumeLoginRequest(this.redis, requestId);
+    if (!userId) return { status: 'pending' as const };
+    const session = await this.buildStudentSession(userId);
+    return { status: 'approved' as const, ...session };
+  }
+
+  /** Load a student user, enforce the role-6 gate, and issue a session. */
+  private async buildStudentSession(userId: number) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
       include: {
@@ -171,7 +187,7 @@ export class AuthService {
 
     const roleIds: number[] = user.roles.map((ur: any) => ur.role.id);
     if (!roleIds.includes(6)) {
-      throw new ForbiddenException("Bu kod faqat o'quvchilar uchun");
+      throw new ForbiddenException("Bu faqat o'quvchilar uchun");
     }
 
     const roles = user.roles.map((ur: any) => ur.role.name);

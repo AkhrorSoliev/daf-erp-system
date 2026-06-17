@@ -1,4 +1,12 @@
-import { Controller, Post, UseGuards, Request, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Query,
+  UseGuards,
+  Request,
+  Body,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { Public } from '../common/decorators';
@@ -31,5 +39,12 @@ export class AuthController {
   @Post('otp/exchange')
   async exchangeOtp(@Body() dto: OtpExchangeDto) {
     return this.authService.exchangeOtp(dto.code);
+  }
+
+  // Native app (link/poll): poll a login request until the bot approves it.
+  @Public()
+  @Get('otp/poll')
+  async pollLogin(@Query('requestId') requestId: string) {
+    return this.authService.pollLoginRequest(requestId ?? '');
   }
 }

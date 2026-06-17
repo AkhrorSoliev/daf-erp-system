@@ -1,4 +1,9 @@
-import { issueLoginOtp, consumeLoginOtp } from './app-login-otp-flow';
+import {
+  issueLoginOtp,
+  consumeLoginOtp,
+  approveLoginRequest,
+  consumeLoginRequest,
+} from './app-login-otp-flow';
 
 function makeRedis() {
   const store = new Map<string, string>();
@@ -73,6 +78,41 @@ describe('app-login-otp-flow', () => {
 
     it('returns null for an unknown code', async () => {
       const res = await consumeLoginOtp(makeRedis(), '000000');
+      expect(res).toBeNull();
+    });
+  });
+
+  describe('approveLoginRequest / consumeLoginRequest', () => {
+    it('not_found when no student is linked to the chat', async () => {
+      const prisma: any = { student: { findFirst: jest.fn().mockResolvedValue(null) } };
+      const res = await approveLoginRequest(prisma, makeRedis(), 'chat1', 'req-abc12345');
+      expect(res).toEqual({ ok: false, reason: 'not_found' });
+    });
+
+    it('no_account when the student has no portal user', async () => {
+      const prisma: any = {
+        student: { findFirst: jest.fn().mockResolvedValue({ firstName: 'A', userId: null }) },
+      };
+      const res = await approveLoginRequest(prisma, makeRedis(), 'chat1', 'req-abc12345');
+      expect(res).toEqual({ ok: false, reason: 'no_account' });
+    });
+
+    it('approves and the request can then be consumed once', async () => {
+      const prisma: any = {
+        student: { findFirst: jest.fn().mockResolvedValue({ firstName: 'Ali', userId: 777 }) },
+      };
+      const redis = makeRedis();
+      const res = await approveLoginRequest(prisma, redis, 'chat1', 'req-abc12345');
+      expect(res).toEqual({ ok: true, firstName: 'Ali' });
+
+      const first = await consumeLoginRequest(redis, 'req-abc12345');
+      expect(first).toBe(777);
+      const second = await consumeLoginRequest(redis, 'req-abc12345');
+      expect(second).toBeNull();
+    });
+
+    it('consume returns null for an unapproved request', async () => {
+      const res = await consumeLoginRequest(makeRedis(), 'req-nope12345');
       expect(res).toBeNull();
     });
   });

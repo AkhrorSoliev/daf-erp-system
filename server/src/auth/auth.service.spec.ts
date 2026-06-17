@@ -98,4 +98,33 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('pollLoginRequest', () => {
+    it('returns pending for an empty requestId', async () => {
+      const res = await service.pollLoginRequest('');
+      expect(res).toEqual({ status: 'pending' });
+    });
+
+    it('returns pending until the bot approves the request', async () => {
+      redis.get.mockResolvedValue(null);
+      const res = await service.pollLoginRequest('req-abc12345');
+      expect(res.status).toBe('pending');
+    });
+
+    it('returns an approved session once the bot approves', async () => {
+      redis.get.mockResolvedValue('555');
+      prisma.user.findFirst.mockResolvedValue({
+        id: 555,
+        companyId: 1,
+        status: 'ACTIVE',
+        roles: [{ role: { id: 6, name: 'Student' } }],
+        branches: [],
+        company: {},
+      });
+      const res = await service.pollLoginRequest('req-abc12345');
+      expect(res.status).toBe('approved');
+      expect((res as { accessToken?: string }).accessToken).toBe('tok');
+      expect(redis.del).toHaveBeenCalled();
+    });
+  });
 });
