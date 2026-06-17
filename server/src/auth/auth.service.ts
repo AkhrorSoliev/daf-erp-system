@@ -9,10 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import {
-  consumeLoginOtp,
-  consumeLoginRequest,
-} from '../telegram/flows/app-login-otp-flow';
+import { consumeLoginRequest } from '../telegram/flows/app-login-otp-flow';
 
 @Injectable()
 export class AuthService {
@@ -139,15 +136,6 @@ export class AuthService {
       ...tokens,
       user: this.formatUser(user, studentId),
     };
-  }
-
-  /** Exchange a Telegram-issued one-time code for a student session. */
-  async exchangeOtp(code: string) {
-    const userId = await consumeLoginOtp(this.redis, code);
-    if (!userId) {
-      throw new UnauthorizedException('Kod yaroqsiz yoki muddati tugagan');
-    }
-    return this.buildStudentSession(userId);
   }
 
   /** Poll a link-based app login request; pending until the bot approves it. */

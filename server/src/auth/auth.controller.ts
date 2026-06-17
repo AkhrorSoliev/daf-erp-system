@@ -12,7 +12,6 @@ import { AuthService } from './auth.service';
 import { Public } from '../common/decorators';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { OtpExchangeDto } from './dto/otp-exchange.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -32,13 +31,6 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto.refreshToken);
-  }
-
-  // Native app: exchange a Telegram-issued one-time code for a session.
-  @Public()
-  @Post('otp/exchange')
-  async exchangeOtp(@Body() dto: OtpExchangeDto) {
-    return this.authService.exchangeOtp(dto.code);
   }
 
   // Native app (link/poll): poll a login request until the bot approves it.

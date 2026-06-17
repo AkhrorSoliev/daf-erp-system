@@ -18,7 +18,6 @@ import {
   STUDENT_GROUP_DEEP_LINK_RE,
   EMPLOYEE_DEEP_LINK_RE,
   MOCK_EXAM_DEEP_LINK_PREFIX,
-  APP_LOGIN_DEEP_LINK,
   APP_LOGIN_REQUEST_PREFIX,
   VALID_ROLE_IDS,
 } from './constants';
@@ -27,8 +26,7 @@ import { createStudentRegistrationScene } from './scenes/student-registration.sc
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
 import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
 import { createPasswordResetScene } from './scenes/password-reset.scene';
-import { issueLoginOtp, approveLoginRequest } from './flows/app-login-otp-flow';
-import { formatRetryAfter } from './flows/password-reset-flow';
+import { approveLoginRequest } from './flows/app-login-otp-flow';
 import {
   signEmployeePayload,
   verifyEmployeePayload,
@@ -191,32 +189,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         }
         await ctx.reply(
           `✅ ${res.firstName}, ilovaga kirish tasdiqlandi!\n\nEndi ilovaga qayting — avtomatik kirasiz.`,
-        );
-        return;
-      }
-
-      // Native app login — auto-issue a one-time code (no menu tap needed)
-      if (payload === APP_LOGIN_DEEP_LINK) {
-        const chatId = String(ctx.chat!.id);
-        const res = await issueLoginOtp(this.prisma, this.redis, chatId);
-        if (!res.ok) {
-          await ctx.reply(
-            res.reason === 'not_found'
-              ? "Siz hali ro'yxatdan o'tmagansiz. Administrator bilan bog'laning."
-              : res.reason === 'no_account'
-                ? "Sizda ilova hisobi yo'q. Administrator bilan bog'laning."
-                : `Juda ko'p urinish. ${formatRetryAfter(
-                    res.retryAfterSec ?? 60,
-                  )} dan keyin qayta urining.`,
-          );
-          return;
-        }
-        await ctx.reply(
-          `📱 <b>Ilovaga kirish kodi:</b>\n\n<code>${res.code}</code>\n\n` +
-            `Bu kodni DAF Student ilovasiga kiriting. Kod ${Math.round(
-              res.ttlSec / 60,
-            )} daqiqa amal qiladi.`,
-          { parse_mode: 'HTML' },
         );
         return;
       }
@@ -429,7 +401,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
               '📄 Mock imtihon natijalari',
               'menu_mock_results',
             ),
-            Markup.button.callback('📱 Ilovaga kirish', 'menu_app_login'),
           ],
         ]),
       );
@@ -445,32 +416,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.action('menu_password', async (ctx) => {
       await ctx.answerCbQuery();
       await ctx.scene.enter(SCENES.PASSWORD_RESET);
-    });
-
-    // Ilovaga kirish — bir martalik kod yuborish
-    this.bot.action('menu_app_login', async (ctx) => {
-      await ctx.answerCbQuery();
-      const chatId = String(ctx.chat!.id);
-      const res = await issueLoginOtp(this.prisma, this.redis, chatId);
-      if (!res.ok) {
-        const msg =
-          res.reason === 'not_found'
-            ? "Siz hali ro'yxatdan o'tmagansiz. Administrator bilan bog'laning."
-            : res.reason === 'no_account'
-              ? "Sizda ilova hisobi yo'q. Administrator bilan bog'laning."
-              : `Juda ko'p urinish. ${formatRetryAfter(
-                  res.retryAfterSec ?? 60,
-                )} dan keyin qayta urining.`;
-        await ctx.reply(msg);
-        return;
-      }
-      await ctx.reply(
-        `📱 <b>Ilovaga kirish kodi:</b>\n\n<code>${res.code}</code>\n\n` +
-          `Bu kodni DAF Student ilovasiga kiriting. Kod ${Math.round(
-            res.ttlSec / 60,
-          )} daqiqa amal qiladi.`,
-        { parse_mode: 'HTML' },
-      );
     });
 
     // Mock imtihon natijalari — foydalanuvchi qatnashgan ANNOUNCED imtihonlar
