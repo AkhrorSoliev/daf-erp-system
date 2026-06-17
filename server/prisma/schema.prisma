@@ -334,6 +334,7 @@ model User {
   commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
   notifications                    Notification[]             @relation("UserNotifications")
   pushSubscriptions                PushSubscription[]         @relation("UserPushSubscriptions")
+  deviceTokens                     DeviceToken[]              @relation("UserDeviceTokens")
   sentSmsMessages                  SmsMessage[]               @relation("SmsSender")
   markedAttendances                Attendance[]               @relation("AttendanceMarkedBy")
   student                          Student?                   @relation("StudentUser")
@@ -1510,6 +1511,21 @@ model PushSubscription {
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Native mobile push token (Expo push token) for the student app.
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     Int
+  user       User     @relation("UserDeviceTokens", fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   String?
+  appVersion String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
 
   @@index([userId])
 }

@@ -33,6 +33,10 @@ describe('NotificationsService', () => {
         upsert: jest.fn().mockResolvedValue({ id: 'push-uuid-1' }),
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      deviceToken: {
+        upsert: jest.fn().mockResolvedValue({ id: 'device-uuid-1' }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -172,6 +176,31 @@ describe('NotificationsService', () => {
 
       expect(prisma.pushSubscription.deleteMany).toHaveBeenCalledWith({
         where: { userId: 10001, endpoint: 'https://push.example.com/123' },
+      });
+      expect(result.message).toBeDefined();
+    });
+  });
+
+  describe('registerDevice', () => {
+    it('upserts the device token keyed by token', async () => {
+      await service.registerDevice(10001, 'ExponentPushToken[abc]', 'android', '1.0.0');
+      expect(prisma.deviceToken.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { token: 'ExponentPushToken[abc]' },
+          create: expect.objectContaining({
+            userId: 10001,
+            token: 'ExponentPushToken[abc]',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('unregisterDevice', () => {
+    it('deletes the device token for the user', async () => {
+      const result = await service.unregisterDevice(10001, 'ExponentPushToken[abc]');
+      expect(prisma.deviceToken.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 10001, token: 'ExponentPushToken[abc]' },
       });
       expect(result.message).toBeDefined();
     });

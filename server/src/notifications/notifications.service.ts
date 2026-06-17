@@ -93,4 +93,23 @@ export class NotificationsService {
     });
     return { message: 'Push subscription olib tashlandi' };
   }
+
+  /** Register / refresh a native (Expo) push token for the student app. */
+  async registerDevice(
+    userId: number,
+    token: string,
+    platform?: string,
+    appVersion?: string,
+  ) {
+    return this.prisma.deviceToken.upsert({
+      where: { token },
+      update: { userId, platform, appVersion, lastSeenAt: new Date() },
+      create: { userId, token, platform, appVersion },
+    });
+  }
+
+  async unregisterDevice(userId: number, token: string) {
+    await this.prisma.deviceToken.deleteMany({ where: { userId, token } });
+    return { message: "Qurilma o'chirildi" };
+  }
 }

@@ -16,6 +16,7 @@ import { NotificationsGateway } from './notifications.gateway';
 import { PushService } from './push.service';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { PushSubscriptionDto } from './dto/push-subscription.dto';
+import { RegisterDeviceDto } from './dto/register-device.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators';
 
@@ -96,5 +97,27 @@ export class NotificationsController {
     @Body() dto: { endpoint: string },
   ) {
     return this.notificationsService.unregisterPush(userId, dto.endpoint);
+  }
+
+  // Native app: register / unregister an Expo push token for the current user.
+  @Post('devices')
+  registerDevice(
+    @CurrentUser('id') userId: number,
+    @Body() dto: RegisterDeviceDto,
+  ) {
+    return this.notificationsService.registerDevice(
+      userId,
+      dto.token,
+      dto.platform,
+      dto.appVersion,
+    );
+  }
+
+  @Delete('devices')
+  unregisterDevice(
+    @CurrentUser('id') userId: number,
+    @Body() dto: { token: string },
+  ) {
+    return this.notificationsService.unregisterDevice(userId, dto.token);
   }
 }
