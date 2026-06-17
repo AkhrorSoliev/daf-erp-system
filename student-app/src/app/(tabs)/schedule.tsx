@@ -1,14 +1,25 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 
-import { Card, EmptyState, Loading, Screen, Text } from '@/design/components';
+import { Card, EmptyState, LoadingCards, Screen, Text } from '@/design/components';
 import { useSchedule } from '@/api/queries/use-schedule';
-import { dayLabel } from '@/lib/labels';
 import { t } from '@/i18n/uz';
+
+const WEEKDAYS = [
+  { key: 'monday', label: 'Dushanba' },
+  { key: 'tuesday', label: 'Seshanba' },
+  { key: 'wednesday', label: 'Chorshanba' },
+  { key: 'thursday', label: 'Payshanba' },
+  { key: 'friday', label: 'Juma' },
+  { key: 'saturday', label: 'Shanba' },
+  { key: 'sunday', label: 'Yakshanba' },
+] as const;
+
+const DAY_BY_INDEX = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export default function Schedule() {
   const q = useSchedule();
 
-  if (q.isLoading) return <Screen edges={['top']}><Loading /></Screen>;
+  if (q.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
   if (q.isError) {
     return (
       <Screen edges={['top']} className="justify-center">
@@ -18,6 +29,7 @@ export default function Schedule() {
   }
 
   const items = q.data ?? [];
+  const todayKey = DAY_BY_INDEX[new Date().getDay()];
 
   return (
     <Screen edges={['top']}>
@@ -25,27 +37,53 @@ export default function Schedule() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} />}
       >
-        <View className="gap-3 p-4">
+        <View className="gap-4 p-4">
           <Text variant="heading">{t.tabs.schedule}</Text>
+
           {items.length === 0 ? (
             <EmptyState title="Jadval bo'sh" description={t.placeholders.comingSoon} />
           ) : (
-            items.map((s) => (
-              <Card key={s.groupId} className="gap-1">
-                <Text variant="label">{s.groupName}</Text>
-                {s.courseName ? <Text variant="muted">{s.courseName}</Text> : null}
-                <Text variant="body">{s.exactDays.map(dayLabel).join(', ')}</Text>
-                {s.lessonStartTime ? (
-                  <Text variant="muted">
-                    {s.lessonStartTime} – {s.lessonEndTime ?? ''}
-                    {s.room ? ` · ${s.room.name}` : ''}
-                  </Text>
-                ) : null}
-                {s.teachers.length ? (
-                  <Text variant="muted">{s.teachers.map((tt) => `${tt.firstName} ${tt.lastName}`).join(', ')}</Text>
-                ) : null}
-              </Card>
-            ))
+            WEEKDAYS.map((day) => {
+              const lessons = items
+                .filter((s) => s.exactDays.map((d) => d.toLowerCase()).includes(day.key))
+                .sort((a, b) => (a.lessonStartTime ?? '').localeCompare(b.lessonStartTime ?? ''));
+              const isToday = day.key === todayKey;
+
+              return (
+                <View key={day.key} className="gap-2">
+                  <View className="flex-row items-center gap-2">
+                    <Text variant="title" className={isToday ? 'text-primary' : undefined}>
+                      {day.label}
+                    </Text>
+                    {isToday ? <Text variant="muted">bugun</Text> : null}
+                  </View>
+
+                  {lessons.length === 0 ? (
+                    <Text variant="muted">Dars yo&apos;q</Text>
+                  ) : (
+                    lessons.map((s) => (
+                      <Card key={`${day.key}-${s.groupId}`} className="flex-row gap-3">
+                        <View className="w-16">
+                          <Text variant="label">{s.lessonStartTime ?? '—'}</Text>
+                          {s.lessonEndTime ? <Text variant="muted">{s.lessonEndTime}</Text> : null}
+                        </View>
+                        <View className="flex-1 gap-0.5">
+                          <Text variant="label">{s.groupName}</Text>
+                          {s.courseName ? <Text variant="muted">{s.courseName}</Text> : null}
+                          {s.room || s.teachers.length ? (
+                            <Text variant="muted">
+                              {[s.room?.name, s.teachers.map((tt) => `${tt.firstName} ${tt.lastName}`).join(', ')]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </Card>
+                    ))
+                  )}
+                </View>
+              );
+            })
           )}
         </View>
       </ScrollView>

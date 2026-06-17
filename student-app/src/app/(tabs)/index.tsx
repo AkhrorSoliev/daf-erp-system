@@ -1,7 +1,7 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Button, Card, EmptyState, Loading, Screen, Text } from '@/design/components';
+import { Button, Card, EmptyState, LoadingCards, Screen, Text } from '@/design/components';
 import { useProfile } from '@/api/queries/use-profile';
 import { formatSom } from '@/lib/format';
 import { dayLabel } from '@/lib/labels';
@@ -10,7 +10,7 @@ import { t } from '@/i18n/uz';
 export default function Home() {
   const q = useProfile();
 
-  if (q.isLoading) return <Screen edges={['top']}><Loading /></Screen>;
+  if (q.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
   if (q.isError || !q.data) {
     return (
       <Screen edges={['top']} className="justify-center">

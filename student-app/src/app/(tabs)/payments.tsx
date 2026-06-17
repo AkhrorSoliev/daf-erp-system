@@ -3,7 +3,7 @@ import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native
 import { useMutation } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
-import { Button, Card, EmptyState, Input, Loading, Screen, Text } from '@/design/components';
+import { Button, Card, EmptyState, Input, LoadingCards, Screen, Text } from '@/design/components';
 import { useProfile } from '@/api/queries/use-profile';
 import { usePayments } from '@/api/queries/use-payments';
 import { initPayment, MIN_PAYMENT, QUICK_AMOUNTS, type PaymentMethod } from '@/api/payments';
@@ -29,7 +29,7 @@ export default function Payments() {
     onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
   });
 
-  if (profile.isLoading || pay.isLoading) return <Screen edges={['top']}><Loading /></Screen>;
+  if (profile.isLoading || pay.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
 
   const balance = profile.data?.balance ?? 0;
   const payments = pay.data?.payments ?? [];
