@@ -94,6 +94,8 @@ export class PushService {
         title: payload.title,
         body: payload.body,
         sound: 'default',
+        priority: 'high', // wake the device even in Doze / locked
+        channelId: 'alerts', // MAX-importance channel → heads-up + lock screen
         ...(payload.url ? { data: { url: payload.url } } : {}),
       }));
 

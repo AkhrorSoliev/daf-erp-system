@@ -36,9 +36,15 @@ export async function registerForPush(): Promise<void> {
     if (!granted) return;
 
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'Asosiy',
-        importance: Notifications.AndroidImportance.DEFAULT,
+      // MAX importance + public lock-screen visibility → heads-up banner, sound,
+      // wakes the screen, and shows on the lock screen. (New channel id because
+      // Android freezes a channel's importance once created.)
+      await Notifications.setNotificationChannelAsync('alerts', {
+        name: 'Bildirishnomalar',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
 
