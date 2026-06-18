@@ -1,10 +1,17 @@
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { tokens } from '@/design/tokens';
+import { registerForPush } from '@/lib/push';
 import { t } from '@/i18n/uz';
 
 export default function TabsLayout() {
+  // Register for push once the student is authenticated (tabs mounted).
+  useEffect(() => {
+    registerForPush();
+  }, []);
+
   return (
     <Tabs
       screenOptions={{
