@@ -1,0 +1,103 @@
+<!-- @dsCard group="Student App" viewport="460x900" name="Lumio Student App" subtitle="Interactive: Home, Lessons, Resources, More, Quiz, Settings" -->
+<!DOCTYPE html>
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumio · Student App</title>
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  html,body{margin:0;height:100%}
+  body{background:radial-gradient(120% 100% at 50% 0%, #F3F6FA 0%, #E3E9F1 100%);
+    display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--font-ui)}
+  *{box-sizing:border-box}
+</style></head>
+<body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../assets/sound.js"></script>
+<script type="text/babel" src="kit.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="more-screens.jsx"></script>
+<script type="text/babel" src="learning-screens.jsx"></script>
+<script type="text/babel" data-presets="react">
+(function () {
+const { Phone, StatusBar, BottomNav, HomeScreen, LessonsScreen, ResourcesScreen, MoreScreen, SettingsScreen, QuizScreen,
+  ChatListScreen, ChatThreadScreen, LeaderboardScreen, ProfileScreen, BattleResultScreen, NotificationsScreen,
+  PublicProfileScreen, VocabScreen, NewWordsScreen, UnitScreen, VideoListScreen, WordScreen, HomeworkScreen, FillBlankScreen } = window;
+
+function App() {
+  const [tab, setTab] = React.useState('lessons');
+  const [overlay, setOverlay] = React.useState(null);
+  const [peer, setPeer] = React.useState(null);
+  const [profilePeer, setProfilePeer] = React.useState(null);
+  const [profileFrom, setProfileFrom] = React.useState(null);
+  const go = (o) => setOverlay(o);
+  const openPeer = (pr, from) => { setProfilePeer(pr); setProfileFrom(from); setOverlay('peerprofile'); };
+
+  const lightStatus = (!overlay && tab === 'home') || overlay === 'profile' || overlay === 'leaderboard';
+  const headerTint = lightStatus ? '#fff' : 'var(--ink-900)';
+  const fullscreen = ['quiz', 'settings', 'vocab', 'chatlist', 'chatthread', 'leaderboard', 'profile', 'battle', 'notifications', 'peerprofile',
+    'newwords', 'unit', 'video', 'word', 'homework', 'fillblank'].includes(overlay);
+
+  let screen;
+  if (overlay === 'quiz') screen = <QuizScreen exit={() => setOverlay(null)} />;
+  else if (overlay === 'settings') screen = <SettingsScreen back={() => setOverlay(null)} />;
+  else if (overlay === 'vocab') screen = <VocabScreen back={() => setOverlay(null)} go={go} />;
+  else if (overlay === 'newwords') screen = <NewWordsScreen back={() => setOverlay('vocab')} go={go} />;
+  else if (overlay === 'unit') screen = <UnitScreen back={() => setOverlay(null)} go={go} />;
+  else if (overlay === 'video') screen = <VideoListScreen back={() => setOverlay('unit')} go={go} />;
+  else if (overlay === 'word') screen = <WordScreen back={() => setOverlay('unit')} go={go} />;
+  else if (overlay === 'homework') screen = <HomeworkScreen back={() => setOverlay('unit')} go={go} />;
+  else if (overlay === 'fillblank') screen = <FillBlankScreen back={() => setOverlay('homework')} />;
+  else if (overlay === 'chatlist') screen = <ChatListScreen back={() => setOverlay(null)} open={(c) => { setPeer(c); setOverlay('chatthread'); }} />;
+  else if (overlay === 'chatthread') screen = <ChatThreadScreen back={() => setOverlay('chatlist')} peer={peer} openPeer={(pr) => openPeer(pr, 'chatthread')} />;
+  else if (overlay === 'leaderboard') screen = <LeaderboardScreen back={() => setOverlay(null)} openPeer={(pr) => openPeer(pr, 'leaderboard')} />;
+  else if (overlay === 'peerprofile') screen = <PublicProfileScreen back={() => setOverlay(profileFrom)} peer={profilePeer}
+    onMessage={() => { setPeer({ id: 'peer', name: (profilePeer && profilePeer.name) || 'O‘quvchi', bg: (profilePeer && profilePeer.bg) || 'var(--coral-100)', fg: (profilePeer && profilePeer.fg) || 'var(--coral-600)', online: profilePeer && profilePeer.online }); setOverlay('chatthread'); }}
+    onChallenge={() => setOverlay('battle')} />;
+  else if (overlay === 'profile') screen = <ProfileScreen back={() => setOverlay(null)} go={go} />;
+  else if (overlay === 'battle') screen = <BattleResultScreen back={() => setOverlay(null)} />;
+  else if (overlay === 'notifications') screen = <NotificationsScreen back={() => setOverlay(null)} />;
+  else if (tab === 'home') screen = <HomeScreen go={go} />;
+  else if (tab === 'lessons') screen = <LessonsScreen go={go} />;
+  else if (tab === 'res') screen = <ResourcesScreen />;
+  else screen = <MoreScreen go={go} />;
+
+  return (
+    <Phone>
+      <StatusBar tint={headerTint} />
+      <div style={{ position: 'absolute', top: 50, left: 0, right: 0, bottom: 0 }}>
+        {screen}
+      </div>
+      {!fullscreen ? <BottomNav value={tab} onChange={(v) => { try { LumioSound.unlock(); LumioSound.play('select'); } catch (e) {} setTab(v); setOverlay(null); }} /> : null}
+    </Phone>
+  );
+}
+
+function VocabEmpty({ back }) {
+  const { I } = window;
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '6px 20px 14px' }}>
+        <button onClick={back} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-900)', fontSize: 24 }}>
+          <i className="ph-bold ph-arrow-left" /></button>
+        <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--ink-900)' }}>Mening lug‘atim</h1>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 30, textAlign: 'center', gap: 8 }}>
+        <div style={{ width: 96, height: 96, borderRadius: 30, background: 'var(--sky-100)', color: 'var(--sky-500)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', fontSize: 46, marginBottom: 8, boxShadow: 'var(--clay-sky)' }}><i className="ph-fill ph-cards-three" /></div>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: 'var(--ink-900)' }}>Hali so‘zlar yo‘q</div>
+        <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink-500)', maxWidth: 240 }}>
+          Darslarni boshlang — yangi so‘zlar shu yerda to‘planadi.</div>
+      </div>
+    </div>
+  );
+}
+window.VocabEmpty = VocabEmpty;
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+})();
+</script>
+</body></html>

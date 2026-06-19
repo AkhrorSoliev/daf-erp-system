@@ -1,0 +1,13 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lumio mark">
+  <defs>
+    <linearGradient id="lumioCoral" x1="14" y1="10" x2="106" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8A5B"></stop>
+      <stop offset="0.55" stop-color="#FF6B4A"></stop>
+      <stop offset="1" stop-color="#F0502C"></stop>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="104" height="104" rx="32" fill="url(#lumioCoral)"></rect>
+  <rect x="8" y="8" width="104" height="104" rx="32" fill="#000" opacity="0.0"></rect>
+  <path d="M62 28 L40 64 H58 L52 92 L82 52 H62 L70 28 Z" fill="#fff"></path>
+  <circle cx="92" cy="30" r="6" fill="#FFC24D"></circle>
+</svg>

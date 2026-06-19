@@ -1,0 +1,46 @@
+<!-- @dsCard group="Components" viewport="700x720" name="Learning · Words, Video, Exercises, Chart" subtitle="WordCard, AudioPlayer, VideoLessonCard, ExerciseCard, NumberedSteps, ProgressChart" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>body{margin:0;padding:24px;background:var(--surface-app);font-family:var(--font-ui)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;max-width:660px}
+  .col{display:flex;flex-direction:column;gap:14px}
+  .lbl{font-weight:800;font-size:11px;color:var(--ink-400);letter-spacing:.06em;text-transform:uppercase}</style>
+</head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { WordCard, AudioPlayer, VideoLessonCard, ExerciseCard, NumberedSteps, ProgressChart } = window.LumioDesignSystem_f2f824;
+function Demo(){
+  const [play,setPlay]=React.useState(false);
+  return (<div className="grid">
+    <div className="col">
+      <span className="lbl">WordCard (flashcard)</span>
+      <WordCard flag="🇬🇧" lang="Olmosh" term="you" ipa="/juː/" example="Hello. Are you Angela?" onAudio={()=>{}} onTranslate={()=>{}}/>
+      <WordCard flag="🇺🇿" lang="" term="siz, sen"/>
+      <span className="lbl">AudioPlayer</span>
+      <AudioPlayer elapsed="00:15" total="00:30" progress={50} playing={play} onToggle={()=>setPlay(!play)}/>
+      <span className="lbl">VideoLessonCard</span>
+      <VideoLessonCard title="1-video" video={{stars:[0,1],coins:[0,1],pct:0}} practice={{stars:[0,10],coins:[0,10],pct:0}} onWatch={()=>{}}/>
+    </div>
+    <div className="col">
+      <span className="lbl">ExerciseCard</span>
+      <ExerciseCard type="Choose Answer" skill="LISTENING" instruction="Complete the conversations with the correct word" stars={[0,10]} coins={[0,10]} percent={0}/>
+      <ExerciseCard type="Construct" skill="GRAMMAR" instruction="Rearrange the words to make sentences or question" stars={[2,6]} coins={[2,6]} percent={33}/>
+      <span className="lbl">ProgressChart</span>
+      <ProgressChart labels={['Shan','Yak','Du','Se','Chor','Pay','Ju']}
+        series={[{data:[0,1,1,2,2,3,4],color:'var(--sky-500)'},{data:[0,0,1,1,2,2,3],color:'var(--amber-500)'}]}
+        legend={[{value:4,label:'Yangi so‘zlar',color:'var(--sky-500)'},{value:3,label:'O‘rganilayotgan',color:'var(--amber-500)'}]}/>
+      <span className="lbl">NumberedSteps (empty state)</span>
+      <NumberedSteps tone="grape" steps={['Darslikdan yangi so‘zlar qo‘shing.','“O‘rganilayotgan so‘zlar”da saqlanadi.','“Hamma so‘zlar”ga o‘tadi.']}/>
+    </div>
+  </div>);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body></html>

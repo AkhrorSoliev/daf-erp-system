@@ -1,0 +1,105 @@
+<!-- @dsCard group="Brand" viewport="700x1480" name="Sound System (reference)" subtitle="Per-cue preview, duration, volume, trigger & usage" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumio · Sound System</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--surface-app);font-family:var(--font-ui);color:var(--ink-900)}
+  .head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .head h1{margin:0;font-family:var(--font-display);font-weight:800;font-size:26px}
+  .sub{font-weight:600;font-size:14px;color:var(--ink-500);margin:0 0 18px;max-width:560px;line-height:1.5}
+  .toggle{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--ink-700);background:#fff;border:1px solid var(--line);border-radius:var(--r-pill);padding:8px 14px}
+  .group{font-family:var(--font-display);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-400);margin:22px 4px 10px}
+  .row{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);
+    box-shadow:var(--shadow-xs);padding:14px 16px;margin-bottom:10px}
+  .play{flex:0 0 auto;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:var(--coral-500);color:#fff;
+    font-size:24px;display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--clay-coral);
+    transition:transform .1s var(--ease-out),box-shadow .1s var(--ease-out)}
+  .play:active{transform:translateY(4px);box-shadow:var(--clay-coral-press)}
+  .play.alt{background:var(--teal-500);box-shadow:var(--clay-teal)}
+  .play.warn{background:var(--amber-500);color:var(--ink-900);box-shadow:var(--clay-amber)}
+  .play.muted{background:var(--ink-400);box-shadow:0 5px 0 var(--ink-600)}
+  .info{flex:1;min-width:0}
+  .name{font-family:var(--font-display);font-weight:800;font-size:18px;display:flex;align-items:center;gap:8px}
+  .code{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;color:var(--coral-600);background:var(--coral-50);
+    border-radius:6px;padding:2px 7px}
+  .trig{font-weight:700;font-size:13.5px;color:var(--ink-700);margin:4px 0 2px}
+  .use{font-weight:600;font-size:13px;color:var(--ink-500);line-height:1.45}
+  .specs{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:104px}
+  .spec{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-display);font-weight:800;font-size:12px;color:var(--ink-700);
+    background:var(--bg-tint);border:1px solid var(--line);border-radius:var(--r-pill);padding:4px 10px;white-space:nowrap}
+  .vol{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+  .vol i{width:3px;border-radius:2px;background:var(--ink-300)}
+  .vol i.on{background:var(--coral-500)}
+  @media(max-width:600px){.row{flex-wrap:wrap}.specs{align-items:flex-start;flex-direction:row;flex-wrap:wrap;min-width:0;width:100%}}
+</style></head>
+<body>
+  <div class="head">
+    <h1>Sound System</h1>
+    <label class="toggle"><input type="checkbox" id="en" checked> Ovoz effektlari</label>
+  </div>
+  <p class="sub">14 procedurally-synthesized cues (no audio files). Tap any <b>play</b> button to preview. Each cue is gated by the “Ovoz effektlari” setting and should follow the trigger + usage rules below. Volume is the cue’s peak gain (0–1).</p>
+  <div id="list"></div>
+
+  <script src="../assets/sound.js"></script>
+  <script>
+    // Catalog: [key, icon, playStyle, durationMs, volume(0-1), trigger, usage]
+    var GROUPS = [
+      ['Interaction · constant', [
+        ['tap','hand-tap','',50,0.10,'Light press on a non-navigating control.','Use sparingly — only where tactile feedback helps (steppers, chips). Skip on every button to avoid clutter.'],
+        ['select','cursor-click','',80,0.12,'Bottom-nav tab change, opening a screen, picking a list item.','The default “you moved somewhere” cue. One per navigation.'],
+        ['toggle','toggle-left','',60,0.07,'Flipping a Switch / segmented control (incl. the sound toggle itself).','Very quiet. Only on the ON flip; silence on OFF.'],
+        ['sheet','tray','',180,0.06,'A BottomSheet or Dialog opens.','Soft woosh. Pair with the slide/pop animation; don’t play on close.'],
+      ]],
+      ['Learning feedback · frequent', [
+        ['correct','check-circle','alt',280,0.16,'Right answer in a quiz / exercise.','Rising 3-note arpeggio. Always pair with the green correct state.'],
+        ['wrong','x-circle','warn',220,0.12,'Wrong answer.','Short descending buzz — corrective, never harsh. Pair with the shake + red state.'],
+      ]],
+      ['Rewards · daily', [
+        ['coin','coin','warn',160,0.09,'Earning coins (lesson/practice reward).','Quick double “ping”. Can repeat per coin batch, not per coin.'],
+        ['xp','lightning','warn',180,0.12,'XP / energy gain.','One shimmer per award event.'],
+        ['streak','fire','warn',250,0.13,'Daily streak increments / streak milestone.','Rising 4-note run. Pair with the streak count-up.'],
+      ]],
+      ['Milestones · rare', [
+        ['levelup','trophy','warn',340,0.16,'Level-up / unit completed.','Triumphant ascending run. Reserve for genuine progression moments.'],
+        ['win','confetti','alt',460,0.14,'Battle win, big achievement (Jang natijasi winner card).','The biggest cue. Always with confetti — never alone.'],
+      ]],
+      ['Social & system', [
+        ['notify','bell','',260,0.12,'Incoming notification / battle invite.','Gentle two-tone. Respect OS Do-Not-Disturb in production.'],
+        ['message','chat-circle','alt',100,0.10,'Sending or receiving a chat message.','Light blip. Keep below other cues — chat is high-frequency.'],
+        ['locked','lock-simple','muted',120,0.12,'Tapping a locked lesson / blocked action.','Dull low thud = “not yet”. Pair with a tooltip or shake.'],
+      ]],
+    ];
+
+    function volBars(v){ // 0..1 -> 5 bars
+      var n = Math.max(1, Math.round(v/0.18*5)); var h='';
+      for(var i=0;i<5;i++) h+='<i class="'+(i<n?'on':'')+'" style="height:'+(5+i*2)+'px"></i>';
+      return '<span class="vol" title="peak gain '+v.toFixed(2)+'">'+h+'</span>';
+    }
+    var list=document.getElementById('list');
+    GROUPS.forEach(function(grp){
+      var g=document.createElement('div'); g.className='group'; g.textContent=grp[0]; list.appendChild(g);
+      grp[1].forEach(function(c){
+        var key=c[0],icon=c[1],style=c[2],dur=c[3],vol=c[4],trig=c[5],use=c[6];
+        var row=document.createElement('div'); row.className='row';
+        row.innerHTML =
+          '<button class="play '+style+'" aria-label="Play '+key+'"><i class="ph-fill ph-play"></i></button>'+
+          '<div class="info"><div class="name">'+key+' <span class="code">play(\''+key+'\')</span></div>'+
+          '<div class="trig"><i class="ph-bold ph-flag" style="font-size:13px;color:var(--ink-400)"></i> '+trig+'</div>'+
+          '<div class="use">'+use+'</div></div>'+
+          '<div class="specs">'+
+            '<span class="spec"><i class="ph-fill ph-timer" style="font-size:13px"></i> ~'+dur+' ms</span>'+
+            '<span class="spec">'+volBars(vol)+' '+vol.toFixed(2)+'</span>'+
+            '<span class="spec"><i class="ph-fill ph-'+icon+'" style="font-size:13px;color:var(--coral-500)"></i></span>'+
+          '</div>';
+        row.querySelector('.play').onclick=function(){ LumioSound.unlock(); LumioSound.play(key); };
+        list.appendChild(row);
+      });
+    });
+    var en=document.getElementById('en'); en.checked=LumioSound.enabled();
+    en.onchange=function(){ LumioSound.setEnabled(en.checked); if(en.checked) LumioSound.play('toggle'); };
+  </script>
+</body></html>

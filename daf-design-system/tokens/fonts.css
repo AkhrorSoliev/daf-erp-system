@@ -1,0 +1,4 @@
+/* Lumio webfonts — Baloo 2 (chunky rounded display) + Nunito (friendly UI/body).
+   SUBSTITUTION NOTE: the reference app used a proprietary rounded sans. These are the
+   closest free Google Fonts matches. Swap in licensed binaries here if/when available. */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,600&display=swap');
