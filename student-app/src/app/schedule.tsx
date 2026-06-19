@@ -1,7 +1,7 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 
-import { Badge, Card, EmptyState, LoadingCards, Screen, ScreenHeader, Text } from '@/design/components';
-import { tokens } from '@/design/tokens';
+import { Badge, Card, EmptyState, LoadingCards, Screen, StackHeader, Text } from '@/design/components';
+import { useColors } from '@/design/colors';
 import { useSchedule } from '@/api/queries/use-schedule';
 import { t } from '@/i18n/uz';
 
@@ -19,11 +19,13 @@ const DAY_BY_INDEX = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'f
 
 export default function Schedule() {
   const q = useSchedule();
+  const colors = useColors();
 
   if (q.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
   if (q.isError) {
     return (
-      <Screen edges={['top']} className="justify-center">
+      <Screen edges={['top']}>
+        <StackHeader title={t.tabs.schedule} />
         <EmptyState icon="cloud-offline-outline" title={t.common.error} />
       </Screen>
     );
@@ -34,16 +36,13 @@ export default function Schedule() {
 
   return (
     <Screen edges={['top']}>
+      <StackHeader title={t.tabs.schedule} />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor={tokens.color.primary} />
-        }
+        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor={colors.fgMuted} />}
       >
-        <View className="gap-5 p-5 pb-32">
-          <ScreenHeader title={t.tabs.schedule} />
-
+        <View className="gap-5 p-5 pt-2">
           {items.length === 0 ? (
             <EmptyState icon="calendar-outline" title="Jadval bo'sh" description={t.placeholders.comingSoon} />
           ) : (
@@ -67,9 +66,9 @@ export default function Schedule() {
                   ) : (
                     lessons.map((s) => (
                       <Card key={`${day.key}-${s.groupId}`} className="flex-row gap-3.5">
-                        <View className="w-[58px] items-center rounded-md bg-coral-50 py-2">
-                          <Text variant="num" className="text-[17px] text-coral-600">{s.lessonStartTime ?? '—'}</Text>
-                          {s.lessonEndTime ? <Text variant="muted" className="text-[12px] text-coral-600/70">{s.lessonEndTime}</Text> : null}
+                        <View className="w-[58px] items-center rounded-md bg-coral-50 py-2 dark:bg-coral-500/15">
+                          <Text variant="num" className="text-[17px] text-coral-600 dark:text-coral-400">{s.lessonStartTime ?? '—'}</Text>
+                          {s.lessonEndTime ? <Text variant="muted" className="text-[12px] text-coral-600/70 dark:text-coral-400/70">{s.lessonEndTime}</Text> : null}
                         </View>
                         <View className="flex-1 justify-center gap-0.5">
                           <Text variant="h3">{s.groupName}</Text>

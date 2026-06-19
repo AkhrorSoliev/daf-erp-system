@@ -1,6 +1,6 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 
-import { Badge, Card, EmptyState, LoadingCards, ProgressBar, Screen, ScreenHeader, Text, type BadgeTone } from '@/design/components';
+import { Badge, Card, EmptyState, LoadingCards, ProgressBar, Screen, StackHeader, Text, type BadgeTone } from '@/design/components';
 import { tokens } from '@/design/tokens';
 import { useAttendanceHistory, useAttendanceStats } from '@/api/queries/use-attendance';
 import { formatDate } from '@/lib/format';
@@ -14,7 +14,7 @@ const STATUS: Record<AttendanceStatus, { label: string; tone: BadgeTone }> = {
   EXCUSED: { label: 'Sababli', tone: 'neutral' },
 };
 
-const SEG = { present: tokens.color.success, late: tokens.color.warning, absent: tokens.color.danger, excused: '#BCCAD3' };
+const SEG = { present: tokens.color.success, late: tokens.color.warning, absent: tokens.color.danger, excused: '#9DB0BC' };
 
 function percentClass(p: number): string {
   if (p >= 75) return 'text-success';
@@ -43,7 +43,8 @@ export default function Attendance() {
   if (stats.isLoading || history.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
   if (stats.isError) {
     return (
-      <Screen edges={['top']} className="justify-center">
+      <Screen edges={['top']}>
+        <StackHeader title={t.tabs.attendance} />
         <EmptyState icon="cloud-offline-outline" title={t.common.error} />
       </Screen>
     );
@@ -55,6 +56,7 @@ export default function Attendance() {
 
   return (
     <Screen edges={['top']}>
+      <StackHeader title={t.tabs.attendance} />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -69,9 +71,7 @@ export default function Attendance() {
           />
         }
       >
-        <View className="gap-5 p-5 pb-32">
-          <ScreenHeader title={t.tabs.attendance} />
-
+        <View className="gap-5 p-5 pt-2">
           {s ? (
             <Card className="gap-3.5">
               <View className="flex-row items-center justify-between">
@@ -111,7 +111,7 @@ export default function Attendance() {
                 g.records.slice(0, 20).map((r, i) => (
                   <View
                     key={`${g.groupId}-${i}`}
-                    className="flex-row items-center justify-between rounded-card border border-line bg-white px-4 py-3"
+                    className="flex-row items-center justify-between rounded-card border border-border bg-surface px-4 py-3"
                   >
                     <Text variant="bodyStrong">{formatDate(r.date)}</Text>
                     <Badge label={STATUS[r.status]?.label ?? r.status} tone={STATUS[r.status]?.tone ?? 'neutral'} />

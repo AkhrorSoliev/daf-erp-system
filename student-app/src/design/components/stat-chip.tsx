@@ -19,7 +19,7 @@ export function StatChip({
 }) {
   return (
     <View
-      className={cn('h-10 flex-row items-center gap-1.5 rounded-pill border border-line bg-white px-3.5', className)}
+      className={cn('h-10 flex-row items-center gap-1.5 rounded-pill border border-border bg-surface px-3.5', className)}
       style={{ boxShadow: shadow.sm }}
     >
       <Ionicons name={icon} size={18} color={color} />

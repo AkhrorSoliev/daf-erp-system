@@ -1,6 +1,6 @@
 import { Modal, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { tokens } from '@/design/tokens';
+import { useColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
 import { Text } from './text';
 
@@ -23,15 +23,16 @@ export function ActionSheet({
   options: ActionSheetOption[];
   title?: string;
 }) {
+  const colors = useColors();
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
-      <Pressable className="flex-1 justify-end bg-ink-900/50" onPress={onClose}>
+      <Pressable className="flex-1 justify-end bg-black/50" onPress={onClose}>
         <Pressable
-          className="gap-1 rounded-t-[34px] bg-white px-4 pb-9 pt-3"
+          className="gap-1 rounded-t-[34px] bg-surface px-4 pb-9 pt-3"
           style={{ boxShadow: shadow.pop }}
           onPress={() => {}}
         >
-          <View className="mb-2 h-1.5 w-10 self-center rounded-full bg-ink-200" />
+          <View className="mb-2 h-1.5 w-10 self-center rounded-full bg-border" />
           {title ? (
             <Text variant="muted" className="pb-1 text-center">
               {title}
@@ -44,18 +45,18 @@ export function ActionSheet({
                 onClose();
                 o.onPress();
               }}
-              className="flex-row items-center gap-3 rounded-md px-3 py-3.5 active:bg-ink-100"
+              className="flex-row items-center gap-3 rounded-md px-3 py-3.5 active:bg-tint"
             >
               {o.icon ? (
-                <Ionicons name={o.icon} size={22} color={o.destructive ? tokens.color.danger : tokens.color.fg} />
+                <Ionicons name={o.icon} size={22} color={o.destructive ? colors.danger : colors.fg} />
               ) : null}
               <Text variant="label" className={o.destructive ? 'text-danger' : undefined}>
                 {o.label}
               </Text>
             </Pressable>
           ))}
-          <Pressable onPress={onClose} className="mt-1 items-center rounded-md bg-ink-100 py-3.5 active:opacity-80">
-            <Text variant="label" className="text-ink-600">
+          <Pressable onPress={onClose} className="mt-1 items-center rounded-md bg-sunk py-3.5 active:opacity-80">
+            <Text variant="label" className="text-fg-muted">
               Bekor qilish
             </Text>
           </Pressable>

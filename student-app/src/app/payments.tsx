@@ -3,7 +3,7 @@ import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native
 import { useMutation } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
-import { Button, Card, EmptyState, IconTile, Input, LoadingCards, Screen, ScreenHeader, Text } from '@/design/components';
+import { Button, Card, EmptyState, IconTile, Input, LoadingCards, Screen, StackHeader, Text } from '@/design/components';
 import { tokens } from '@/design/tokens';
 import { useProfile } from '@/api/queries/use-profile';
 import { usePayments } from '@/api/queries/use-payments';
@@ -40,6 +40,7 @@ export default function Payments() {
 
   return (
     <Screen edges={['top']}>
+      <StackHeader title={t.tabs.payments} />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -54,12 +55,10 @@ export default function Payments() {
           />
         }
       >
-        <View className="gap-4 p-5 pb-32">
-          <ScreenHeader title={t.tabs.payments} />
-
+        <View className="gap-4 p-5 pt-2">
           <Card className="flex-row items-center justify-between">
             <View>
-              <Text className="font-bodyx text-[11px] uppercase tracking-[1px] text-ink-400">{t.home.balance}</Text>
+              <Text variant="caps">{t.home.balance}</Text>
               <Text variant="num" className={cn('mt-1 text-[28px]', inDebt ? 'text-danger' : 'text-success')}>
                 {formatSom(balance)}
               </Text>
@@ -84,10 +83,10 @@ export default function Payments() {
                     onPress={() => setAmount(a)}
                     className={cn(
                       'rounded-pill border px-3.5 py-2',
-                      active ? 'border-coral-500 bg-coral-50' : 'border-line bg-white',
+                      active ? 'border-coral-500 bg-coral-50 dark:bg-coral-500/15' : 'border-border bg-surface',
                     )}
                   >
-                    <Text className={cn('font-bodymd text-[13px]', active ? 'text-coral-600' : 'text-ink-500')}>
+                    <Text className={cn('font-bodymd text-[13px]', active ? 'text-coral-600 dark:text-coral-400' : 'text-fg-muted')}>
                       {formatSom(a)}
                     </Text>
                   </Pressable>
@@ -113,7 +112,7 @@ export default function Payments() {
               payments.map((p) => (
                 <View
                   key={p.id}
-                  className="flex-row items-center gap-3.5 rounded-card border border-line bg-white px-4 py-3"
+                  className="flex-row items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3"
                 >
                   <IconTile icon="cash" tone="teal" />
                   <View className="flex-1">

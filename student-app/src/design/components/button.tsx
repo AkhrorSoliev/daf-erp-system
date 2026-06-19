@@ -1,7 +1,7 @@
-import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, type PressableProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { cn } from '@/lib/cn';
-import { tokens } from '@/design/tokens';
+import { useColors } from '@/design/colors';
 import { clay } from '@/design/shadows';
 import { Text } from './text';
 
@@ -16,17 +16,6 @@ const dangerClayPress = [
   { offsetX: 0, offsetY: 2, blurRadius: 0, color: '#B5311F' },
   { offsetX: 0, offsetY: 6, blurRadius: 12, color: 'rgba(214,58,36,0.28)' },
 ];
-
-const palette: Record<
-  ButtonVariant,
-  { bg: string; label: string; icon: string; clay?: any; press?: any }
-> = {
-  primary: { bg: 'bg-coral-500', label: 'text-white', icon: '#FFFFFF', clay: clay.coral, press: clay.coralPress },
-  teal: { bg: 'bg-teal-500', label: 'text-white', icon: '#FFFFFF', clay: clay.teal, press: clay.tealPress },
-  secondary: { bg: 'bg-white', label: 'text-ink-900', icon: tokens.color.fg, clay: clay.white, press: clay.whitePress },
-  danger: { bg: 'bg-danger', label: 'text-white', icon: '#FFFFFF', clay: dangerClay, press: dangerClayPress },
-  ghost: { bg: 'bg-transparent', label: 'text-ink-700', icon: tokens.color.fg },
-};
 
 const sizes: Record<ButtonSize, { box: string; text: string; icon: number }> = {
   sm: { box: 'h-[42px] px-[18px] rounded-md', text: 'text-[15px]', icon: 17 },
@@ -50,6 +39,16 @@ export function Button({
   loading?: boolean;
   iconBefore?: keyof typeof Ionicons.glyphMap;
 }) {
+  const colors = useColors();
+
+  const palette: Record<ButtonVariant, { bg: string; label: string; icon: string; clay?: any; press?: any }> = {
+    primary: { bg: 'bg-coral-500', label: 'text-white', icon: '#FFFFFF', clay: clay.coral, press: clay.coralPress },
+    teal: { bg: 'bg-teal-500', label: 'text-white', icon: '#FFFFFF', clay: clay.teal, press: clay.tealPress },
+    secondary: { bg: 'bg-surface', label: 'text-fg', icon: colors.fg, clay: clay.white, press: clay.whitePress },
+    danger: { bg: 'bg-danger', label: 'text-white', icon: '#FFFFFF', clay: dangerClay, press: dangerClayPress },
+    ghost: { bg: 'bg-transparent', label: 'text-fg-body', icon: colors.fg },
+  };
+
   const pal = palette[variant];
   const sz = sizes[size];
   const isDisabled = disabled || loading;
