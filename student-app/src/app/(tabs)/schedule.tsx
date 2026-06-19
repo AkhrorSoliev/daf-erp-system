@@ -1,6 +1,7 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 
-import { Card, EmptyState, LoadingCards, Screen, Text } from '@/design/components';
+import { Badge, Card, EmptyState, LoadingCards, Screen, ScreenHeader, Text } from '@/design/components';
+import { tokens } from '@/design/tokens';
 import { useSchedule } from '@/api/queries/use-schedule';
 import { t } from '@/i18n/uz';
 
@@ -23,7 +24,7 @@ export default function Schedule() {
   if (q.isError) {
     return (
       <Screen edges={['top']} className="justify-center">
-        <EmptyState title={t.common.error} />
+        <EmptyState icon="cloud-offline-outline" title={t.common.error} />
       </Screen>
     );
   }
@@ -35,13 +36,16 @@ export default function Schedule() {
     <Screen edges={['top']}>
       <ScrollView
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor={tokens.color.primary} />
+        }
       >
-        <View className="gap-4 p-4">
-          <Text variant="heading">{t.tabs.schedule}</Text>
+        <View className="gap-5 p-5 pb-32">
+          <ScreenHeader title={t.tabs.schedule} />
 
           {items.length === 0 ? (
-            <EmptyState title="Jadval bo'sh" description={t.placeholders.comingSoon} />
+            <EmptyState icon="calendar-outline" title="Jadval bo'sh" description={t.placeholders.comingSoon} />
           ) : (
             WEEKDAYS.map((day) => {
               const lessons = items
@@ -50,25 +54,25 @@ export default function Schedule() {
               const isToday = day.key === todayKey;
 
               return (
-                <View key={day.key} className="gap-2">
-                  <View className="flex-row items-center gap-2">
-                    <Text variant="title" className={isToday ? 'text-primary' : undefined}>
+                <View key={day.key} className="gap-2.5">
+                  <View className="flex-row items-center gap-2 px-1">
+                    <Text variant="title" className={isToday ? 'text-coral-500' : undefined}>
                       {day.label}
                     </Text>
-                    {isToday ? <Text variant="muted">bugun</Text> : null}
+                    {isToday ? <Badge label="Bugun" tone="coral" /> : null}
                   </View>
 
                   {lessons.length === 0 ? (
-                    <Text variant="muted">Dars yo&apos;q</Text>
+                    <Text variant="muted" className="px-1">Dars yo&apos;q</Text>
                   ) : (
                     lessons.map((s) => (
-                      <Card key={`${day.key}-${s.groupId}`} className="flex-row gap-3">
-                        <View className="w-16">
-                          <Text variant="label">{s.lessonStartTime ?? '—'}</Text>
-                          {s.lessonEndTime ? <Text variant="muted">{s.lessonEndTime}</Text> : null}
+                      <Card key={`${day.key}-${s.groupId}`} className="flex-row gap-3.5">
+                        <View className="w-[58px] items-center rounded-md bg-coral-50 py-2">
+                          <Text variant="num" className="text-[17px] text-coral-600">{s.lessonStartTime ?? '—'}</Text>
+                          {s.lessonEndTime ? <Text variant="muted" className="text-[12px] text-coral-600/70">{s.lessonEndTime}</Text> : null}
                         </View>
-                        <View className="flex-1 gap-0.5">
-                          <Text variant="label">{s.groupName}</Text>
+                        <View className="flex-1 justify-center gap-0.5">
+                          <Text variant="h3">{s.groupName}</Text>
                           {s.courseName ? <Text variant="muted">{s.courseName}</Text> : null}
                           {s.room || s.teachers.length ? (
                             <Text variant="muted">

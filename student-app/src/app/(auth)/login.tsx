@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import * as Crypto from 'expo-crypto';
 import { useMutation } from '@tanstack/react-query';
 
 import { Button, Input, Screen, Text } from '@/design/components';
+import { clay } from '@/design/shadows';
+import { tokens } from '@/design/tokens';
 import { login, pollLoginRequest } from '@/api/auth';
 import { useAuth } from '@/auth/auth-store';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -13,6 +16,17 @@ import { t } from '@/i18n/uz';
 
 const POLL_INTERVAL = 2500;
 const POLL_TIMEOUT = 3 * 60 * 1000;
+
+function BrandMark() {
+  return (
+    <View className="items-center gap-3">
+      <View className="h-16 w-16 items-center justify-center rounded-2xl bg-coral-500" style={{ boxShadow: clay.coral }}>
+        <Ionicons name="flash" size={32} color="#FFFFFF" />
+      </View>
+      <Text variant="title">DAF Student</Text>
+    </View>
+  );
+}
 
 export default function Login() {
   const [phone, setPhone] = useState('');
@@ -75,7 +89,7 @@ export default function Login() {
     return (
       <Screen className="justify-center px-6">
         <View className="items-center gap-6">
-          <ActivityIndicator />
+          <ActivityIndicator color={tokens.color.primary} />
           <View className="gap-2">
             <Text variant="heading" className="text-center">
               Telegram&apos;da tasdiqlang
@@ -84,8 +98,8 @@ export default function Login() {
               Botda <Text variant="label">START</Text> tugmasini bosing — tasdiqlangach avtomatik kirasiz.
             </Text>
           </View>
-          <View className="w-full gap-2">
-            <Button label="Telegramni qayta ochish" onPress={() => Linking.openURL(botUrl())} />
+          <View className="w-full gap-2.5">
+            <Button label="Telegramni qayta ochish" iconBefore="paper-plane" onPress={() => Linking.openURL(botUrl())} />
             <Button label="Bekor qilish" variant="ghost" onPress={() => setTgWaiting(false)} />
           </View>
         </View>
@@ -97,10 +111,12 @@ export default function Login() {
 
   return (
     <Screen className="justify-center px-6">
-      <View className="gap-6">
-        <View className="gap-2">
-          <Text variant="heading">{t.auth.login}</Text>
-          <Text variant="muted">DAF Sprachzentrum — o&apos;quvchi kabineti</Text>
+      <View className="gap-7">
+        <BrandMark />
+
+        <View className="gap-1">
+          <Text variant="heading" className="text-center">{t.auth.login}</Text>
+          <Text variant="muted" className="text-center">DAF Sprachzentrum — o&apos;quvchi kabineti</Text>
         </View>
 
         <View className="gap-3">
@@ -120,16 +136,15 @@ export default function Login() {
           </View>
         </View>
 
-        <Button
-          label={t.auth.login}
-          loading={loginMut.isPending}
-          disabled={!canSubmit}
-          onPress={() => loginMut.mutate()}
-        />
+        <Button label={t.auth.login} loading={loginMut.isPending} disabled={!canSubmit} onPress={() => loginMut.mutate()} />
 
-        <View className="gap-2">
-          <Text variant="muted" className="text-center">yoki</Text>
-          <Button label="Telegram orqali kirish" variant="secondary" onPress={startTelegram} />
+        <View className="gap-3">
+          <View className="flex-row items-center gap-3">
+            <View className="h-px flex-1 bg-line" />
+            <Text variant="muted">yoki</Text>
+            <View className="h-px flex-1 bg-line" />
+          </View>
+          <Button label="Telegram orqali kirish" variant="secondary" iconBefore="paper-plane-outline" onPress={startTelegram} />
         </View>
       </View>
     </Screen>
