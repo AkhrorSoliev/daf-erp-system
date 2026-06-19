@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "905836677096",
+    "project_id": "daf-app-d37fc",
+    "storage_bucket": "daf-app-d37fc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:905836677096:android:e5bc69fdd8ef2b9966c65d",
+        "android_client_info": {
+          "package_name": "uz.dafzentrum.student"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCC5EaEy4m3Uo8IdMD4CzypVlbFnYmEjdg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

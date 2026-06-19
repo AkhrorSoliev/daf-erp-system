@@ -1,0 +1,33 @@
+<!-- @dsCard group="Components" viewport="700x520" name="Notifications · States & Grouping" subtitle="NotificationItem: unread, read, new, priority + date groups" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>body{margin:0;padding:24px;background:var(--surface-app);font-family:var(--font-ui)}
+  .col{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .grouphdr{display:flex;align-items:center;justify-content:space-between;margin:10px 4px 2px}
+  .grouphdr .t{font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--ink-500);letter-spacing:.04em;text-transform:uppercase}
+  .grouphdr .c{font-family:var(--font-display);font-weight:800;font-size:12px;color:#fff;background:var(--coral-500);border-radius:999px;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;padding:0 7px}</style>
+</head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { NotificationItem } = window.LumioDesignSystem_f2f824;
+const F=(n)=><i className={`ph-fill ph-${n}`}/>;
+function Demo(){
+  return (<div className="col">
+    <div className="grouphdr"><span className="t">Bugun</span><span className="c">3</span></div>
+    <NotificationItem type="battle" icon={F('sword')} title="Asror sizni Jangga chaqirdi" body="Beginner 1 · 10 savol · qabul qilasizmi?" time="Hozir" isNew/>
+    <NotificationItem type="achievement" icon={F('trophy')} title="5 kunlik seriya!" body="Ajoyib — +50 XP qo‘shildi" time="2 soat oldin"/>
+    <NotificationItem type="system" icon={F('warning')} title="Obuna tugaydi" body="Premium obunangiz 2 kundan keyin tugaydi" time="3 soat oldin" priority/>
+    <div className="grouphdr"><span className="t">Kecha</span></div>
+    <NotificationItem type="social" icon={F('chat-circle-dots')} title="Guli yangi xabar yubordi" body="Rahmat! Ko‘rishguncha 👋" time="Kecha 18:20" read/>
+    <NotificationItem type="lesson" icon={F('book-open')} title="Bugungi dars tayyor" body="Unit 1.2 — 10 daqiqa" time="Kecha 09:00" read/>
+  </div>);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body></html>

@@ -1,0 +1,20 @@
+<!-- @dsCard group="Spacing" viewport="700x190" name="Corner radii" subtitle="Large, soft rounding everywhere" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:24px;background:var(--surface-app);font-family:var(--font-ui)}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  .col{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .box{width:74px;height:74px;background:#fff;box-shadow:var(--shadow-sm);border:2px solid var(--coral-300)}
+  .n{font-weight:800;font-size:11px;color:var(--ink-700)}
+</style></head>
+<body>
+  <div class="row">
+    <div class="col"><div class="box" style="border-radius:var(--r-sm)"></div><div class="n">sm · 12</div></div>
+    <div class="col"><div class="box" style="border-radius:var(--r-md)"></div><div class="n">md · 16</div></div>
+    <div class="col"><div class="box" style="border-radius:var(--r-lg)"></div><div class="n">lg · 22</div></div>
+    <div class="col"><div class="box" style="border-radius:var(--r-xl)"></div><div class="n">xl · 28</div></div>
+    <div class="col"><div class="box" style="border-radius:var(--r-2xl)"></div><div class="n">2xl · 34</div></div>
+    <div class="col"><div class="box" style="border-radius:var(--r-pill);width:120px"></div><div class="n">pill</div></div>
+  </div>
+</body></html>

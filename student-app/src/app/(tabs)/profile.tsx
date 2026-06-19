@@ -1,0 +1,114 @@
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { ActionSheet, Avatar, Button, Card, Loading, Screen, ScreenHeader, Text } from '@/design/components';
+import { useProfile } from '@/api/queries/use-profile';
+import { deletePhoto, uploadPhoto } from '@/api/profile';
+import { useAuth } from '@/auth/auth-store';
+import { formatPhone } from '@/lib/format';
+import { getErrorMessage } from '@/lib/get-error-message';
+import { t } from '@/i18n/uz';
+
+function Row({ label, value, last }: { label: string; value?: string | null; last?: boolean }) {
+  if (!value) return null;
+  return (
+    <View className={`flex-row items-center justify-between py-3 ${last ? '' : 'border-b border-line'}`}>
+      <Text variant="muted">{label}</Text>
+      <Text variant="label" className="flex-1 text-right">{value}</Text>
+    </View>
+  );
+}
+
+export default function Profile() {
+  const q = useProfile();
+  const signOut = useAuth((s) => s.signOut);
+  const queryClient = useQueryClient();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const photoMut = useMutation({
+    mutationFn: (uri: string) => uploadPhoto(uri),
+    onSuccess: () => q.refetch(),
+    onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: () => deletePhoto(),
+    onSuccess: () => q.refetch(),
+    onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
+  });
+
+  const photoBusy = photoMut.isPending || deleteMut.isPending;
+
+  async function pickFromLibrary() {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+    if (!res.canceled && res.assets[0]?.uri) photoMut.mutate(res.assets[0].uri);
+  }
+
+  async function pickFromCamera() {
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+    if (!res.canceled && res.assets[0]?.uri) photoMut.mutate(res.assets[0].uri);
+  }
+
+  if (q.isLoading) return <Screen edges={['top']}><Loading /></Screen>;
+  const p = q.data;
+  const initials = p ? `${p.firstName?.[0] ?? ''}${p.lastName?.[0] ?? ''}`.toUpperCase() : '';
+
+  return (
+    <Screen edges={['top']}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="gap-4 p-5 pb-32">
+          <ScreenHeader title={t.tabs.profile} />
+          {p ? (
+            <Card className="items-center gap-3">
+              <Pressable onPress={() => setSheetOpen(true)} disabled={photoBusy} className="items-center gap-2 active:opacity-80">
+                <View>
+                  <Avatar uri={p.photo} initials={initials} size={96} />
+                  {/* camera badge — signals the avatar is tappable */}
+                  <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-coral-500">
+                    <Ionicons name="camera" size={15} color="#FFFFFF" />
+                  </View>
+                </View>
+                <Text variant="muted">{photoBusy ? 'Yuklanmoqda...' : "Rasmni o'zgartirish"}</Text>
+              </Pressable>
+
+              <Text variant="title">{`${p.firstName} ${p.lastName}`.trim()}</Text>
+
+              <View className="w-full">
+                <Row label="Telefon" value={formatPhone(p.phone)} />
+                <Row label="Login" value={p.login} />
+                <Row label="Telegram" value={p.telegram} />
+                <Row label="Filial" value={p.branches.map((b) => b.name).join(', ') || null} last />
+              </View>
+            </Card>
+          ) : null}
+
+          <Button
+            label="Chiqish"
+            variant="danger"
+            iconBefore="log-out-outline"
+            onPress={async () => {
+              await signOut();
+              queryClient.clear();
+            }}
+          />
+        </View>
+      </ScrollView>
+
+      <ActionSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title="Profil rasmi"
+        options={[
+          { label: 'Galereyadan tanlash', icon: 'images-outline', onPress: pickFromLibrary },
+          { label: 'Kameradan olish', icon: 'camera-outline', onPress: pickFromCamera },
+          ...(p?.photo
+            ? [{ label: "Rasmni o'chirish", icon: 'trash-outline' as const, onPress: () => deleteMut.mutate(), destructive: true }]
+            : []),
+        ]}
+      />
+    </Screen>
+  );
+}

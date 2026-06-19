@@ -1,0 +1,54 @@
+/* ===========================================================================
+   Lumio · Motion — shared @keyframes + utility classes.
+   Tiered by frequency (frequency-inverse intensity):
+     • subtle  → constant micro-moments (card/row enter, count-ups)
+     • medium  → daily wins (lesson complete, streak tick)
+     • big     → rare milestones (battle win, level-up)
+   All entrance/celebration anims are ONE-SHOT (run once, forwards). Decorative
+   loops are opt-in and limited to small accents (sparkle, glow ring).
+   Easing + duration come from effects.css (--ease-*, --dur-*).
+   =========================================================================== */
+
+/* ---------------- SUBTLE (constant) ---------------- */
+@keyframes lumio-fade-up   { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes lumio-fade-in   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lumio-pop-in    { 0% { opacity: 0; transform: scale(.92); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes lumio-slide-in  { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+
+/* ---------------- MEDIUM (daily wins) ---------------- */
+@keyframes lumio-bounce-in { 0% { opacity: 0; transform: scale(.6); } 60% { opacity: 1; transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes lumio-shake     { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+@keyframes lumio-tick-up   { 0% { transform: translateY(40%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+/* ---------------- BIG (rare milestones) ---------------- */
+@keyframes lumio-confetti  { 0% { transform: translateY(-12px) rotate(0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(220px) rotate(540deg); opacity: 0; } }
+@keyframes lumio-burst     { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+
+/* ---------------- LOOPING ACCENTS (small, opt-in) ---------------- */
+@keyframes lumio-sparkle   { 0%,100% { transform: scale(.7) rotate(0); opacity: .5; } 50% { transform: scale(1.1) rotate(20deg); opacity: 1; } }
+@keyframes lumio-pulse-ring{ 0% { box-shadow: 0 0 0 0 rgba(255,107,74,.45); } 70% { box-shadow: 0 0 0 14px rgba(255,107,74,0); } 100% { box-shadow: 0 0 0 0 rgba(255,107,74,0); } }
+@keyframes lumio-float     { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* ---------------- Utility classes ---------------- */
+.lumio-fade-up   { animation: lumio-fade-up   var(--dur-slow) var(--ease-out) both; }
+.lumio-fade-in   { animation: lumio-fade-in   var(--dur-base) var(--ease-out) both; }
+.lumio-pop-in    { animation: lumio-pop-in    var(--dur-base) var(--ease-bounce) both; }
+.lumio-slide-in  { animation: lumio-slide-in  var(--dur-base) var(--ease-out) both; }
+.lumio-bounce-in { animation: lumio-bounce-in 480ms var(--ease-bounce) both; }
+.lumio-shake     { animation: lumio-shake     420ms var(--ease-in-out) both; }
+.lumio-pulse-ring{ animation: lumio-pulse-ring 1800ms var(--ease-out) infinite; }
+.lumio-sparkle   { animation: lumio-sparkle   1600ms var(--ease-in-out) infinite; }
+.lumio-float     { animation: lumio-float     3000ms var(--ease-in-out) infinite; }
+
+/* Stagger helper: add lumio-stagger to a parent, set --i on children. */
+.lumio-stagger > * { animation: lumio-fade-up var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 60ms); }
+
+/* ---------------- Reduced motion: resolve to end-state, kill loops ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

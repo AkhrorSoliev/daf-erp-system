@@ -1,0 +1,76 @@
+<!-- @dsCard group="Motion" viewport="700x340" name="Motion · Easings & Keyframes" subtitle="Tiered: subtle / medium / big — tap Replay" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  body{margin:0;padding:22px;background:var(--surface-card);font-family:var(--font-ui)}
+  .lbl{font-weight:800;font-size:11px;color:var(--ink-400);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+  .tiers{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:18px}
+  .tier{flex:1;min-width:180px}
+  .demos{display:flex;gap:10px}
+  .box{width:60px;height:60px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px}
+  .cap{font-weight:700;font-size:10px;color:var(--ink-400);text-align:center;margin-top:5px}
+  .ease{display:flex;gap:18px;margin-bottom:18px}
+  .track{flex:1}
+  .dot{width:20px;height:20px;border-radius:50%;background:var(--coral-500)}
+  .replay{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;border:none;border-radius:var(--r-pill);
+    background:var(--ink-900);color:#fff;font-family:var(--font-display);font-weight:700;font-size:14px;cursor:pointer}
+  @keyframes demo-run{0%{left:0}100%{left:calc(100% - 20px)}}
+</style></head>
+<body>
+  <button class="replay" onclick="document.getElementById('stage').className='';void document.getElementById('stage').offsetWidth;document.getElementById('stage').className='go'" style="margin-bottom:16px">
+    <i class="ph-fill ph-arrow-clockwise"></i> Replay
+  </button>
+  <div id="stage" class="go">
+    <div class="tiers">
+      <div class="tier">
+        <p class="lbl">Subtle · constant</p>
+        <div class="demos">
+          <div><div class="box anim" data-a="lumio-fade-up" style="background:var(--coral-500)"><i class="ph-fill ph-arrow-up"></i></div><div class="cap">fade-up</div></div>
+          <div><div class="box anim" data-a="lumio-pop-in" style="background:var(--teal-500)"><i class="ph-fill ph-circle"></i></div><div class="cap">pop-in</div></div>
+          <div><div class="box anim" data-a="lumio-slide-in" style="background:var(--sky-500)"><i class="ph-fill ph-arrow-right"></i></div><div class="cap">slide-in</div></div>
+        </div>
+      </div>
+      <div class="tier">
+        <p class="lbl">Medium · daily wins</p>
+        <div class="demos">
+          <div><div class="box anim" data-a="lumio-bounce-in" style="background:var(--amber-500)"><i class="ph-fill ph-star"></i></div><div class="cap">bounce-in</div></div>
+          <div><div class="box anim" data-a="lumio-shake" style="background:var(--danger-500)"><i class="ph-fill ph-x"></i></div><div class="cap">shake</div></div>
+          <div><div class="box" style="background:var(--coral-500)"><span class="anim" data-a="lumio-pulse-ring" style="width:60px;height:60px;border-radius:50%;display:block"></span><i class="ph-fill ph-fire" style="position:relative;margin-left:-42px"></i></div><div class="cap">pulse-ring</div></div>
+        </div>
+      </div>
+      <div class="tier">
+        <p class="lbl">Big · rare milestones</p>
+        <div class="demos">
+          <div style="position:relative;width:120px;height:78px;background:var(--grad-sun);border-radius:var(--r-md);overflow:hidden" id="confettiBox">
+            <i class="ph-fill ph-trophy anim" data-a="lumio-bounce-in" style="position:absolute;inset:0;margin:auto;width:30px;height:30px;color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center"></i>
+          </div>
+          <div style="align-self:center"><div class="cap" style="font-size:11px">confetti +<br>burst</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:18px;align-items:center">
+    <span class="lbl" style="margin:0">Easings</span>
+    <span style="font-weight:700;font-size:12px;color:var(--ink-600)">ease-out · ease-in-out · <b style="color:var(--coral-600)">ease-bounce</b> (overshoot) · dur 120/200/320ms</span>
+  </div>
+
+  <script>
+    const cs=['var(--coral-500)','var(--amber-500)','var(--teal-500)','var(--grape-500)','var(--sky-500)'];
+    function fireConfetti(){
+      const box=document.getElementById('confettiBox');
+      box.querySelectorAll('.cf').forEach(e=>e.remove());
+      for(let i=0;i<16;i++){const s=document.createElement('span');s.className='cf';
+        s.style.cssText=`position:absolute;top:-10px;left:${(i*61%100)}%;width:7px;height:11px;border-radius:2px;background:${cs[i%5]};animation:lumio-confetti ${900+i*30}ms var(--ease-out) ${i*20}ms both`;
+        box.appendChild(s);}
+    }
+    function run(){
+      document.querySelectorAll('.anim').forEach(el=>{const a=el.dataset.a;el.style.animation='none';void el.offsetWidth;
+        const loop=(a==='lumio-pulse-ring');
+        el.style.animation=`${a} ${a==='lumio-bounce-in'?'480ms':a==='lumio-shake'?'420ms':a==='lumio-pulse-ring'?'1800ms':'var(--dur-slow)'} var(--ease-${a==='lumio-pop-in'||a==='lumio-bounce-in'?'bounce':'out'}) ${loop?'infinite':'both'}`;});
+      fireConfetti();
+    }
+    document.querySelector('.replay').addEventListener('click',run);
+    run();
+  </script>
+</body></html>

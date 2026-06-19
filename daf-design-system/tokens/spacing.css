@@ -1,0 +1,50 @@
+/* ===========================================================================
+   Lumio · Spacing & sizing tokens
+   8pt-ish base with a few half-steps. Generous, roomy, touch-first.
+   =========================================================================== */
+:root {
+  --s-0:  0px;
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  28px;
+  --s-8:  32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+
+  /* Layout */
+  --gutter:        20px;   /* screen side padding (mobile) */
+  --gutter-tablet: 40px;   /* screen side padding (tablet) */
+  --gap-card:      16px;   /* between stacked cards */
+  --content-max:   1120px; /* web shell max width */
+  --touch-min:     48px;   /* min hit target (>=44) */
+  --nav-h:         72px;   /* bottom nav height (mobile) */
+  --rail-w:        96px;   /* collapsed side nav rail width (tablet) */
+  --rail-w-open:   240px;  /* expanded side nav width (large tablet / desktop) */
+
+  /* ---- Breakpoints (min-width). Mobile-first: base styles target phones,
+     these widen the layout up. Tablet portrait ~768, landscape/large ~1024. ---- */
+  --bp-sm:      480px;   /* large phone */
+  --bp-tablet:  768px;   /* tablet portrait — nav rail, 2-col grids appear */
+  --bp-lg:     1024px;   /* tablet landscape / small desktop — expanded nav, 3-col */
+  --bp-xl:     1280px;   /* desktop — content caps at --content-max, centered */
+
+  /* Responsive content widths */
+  --reading-max:   620px;  /* single-column reading width (forms, threads) */
+  --kit-max:       960px;  /* app content column cap inside the tablet shell */
+
+  /* Tablet grid */
+  --grid-gap:      24px;
+  --col-min:       300px;  /* min card width before wrapping to fewer columns */
+
+  /* Component padding presets */
+  --pad-card:      20px;
+  --pad-card-lg:   24px;
+  --pad-row:       16px;
+  --pad-input:     16px;
+}

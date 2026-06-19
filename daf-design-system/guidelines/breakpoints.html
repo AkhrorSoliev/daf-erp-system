@@ -1,0 +1,26 @@
+<!-- @dsCard group="Spacing" viewport="700x300" name="Breakpoints & Responsive" subtitle="Mobile-first breakpoints + how layout adapts" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:22px;background:var(--surface-card);font-family:var(--font-ui);color:var(--ink-900)}
+  .bars{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .bar{display:flex;align-items:center;gap:12px}
+  .chip{flex:'0 0 auto';font-family:var(--font-display);font-weight:800;font-size:12px;color:#fff;border-radius:var(--r-pill);padding:5px 12px;min-width:96px;text-align:center}
+  .track{flex:1;height:14px;border-radius:var(--r-pill);background:var(--bg-sunk)}
+  .fill{height:100%;border-radius:var(--r-pill)}
+  .meta{font-weight:700;font-size:12px;color:var(--ink-500);min-width:188px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px}
+  .l{font-weight:700;font-size:11px;color:var(--ink-700);background:var(--bg-tint);border:1px solid var(--line);border-radius:var(--r-pill);padding:5px 11px}
+</style></head>
+<body>
+  <div class="bars">
+    <div class="bar"><span class="chip" style="background:var(--ink-500)">Mobile</span><div class="track"><div class="fill" style="width:30%;background:var(--ink-500)"></div></div><span class="meta">&lt; 768 · 1 col · bottom nav · 20px gutter</span></div>
+    <div class="bar"><span class="chip" style="background:var(--teal-500)">Tablet ↑768</span><div class="track"><div class="fill" style="width:58%;background:var(--teal-500)"></div></div><span class="meta">2 col · side rail · 40px gutter</span></div>
+    <div class="bar"><span class="chip" style="background:var(--coral-500)">Large ↑1024</span><div class="track"><div class="fill" style="width:80%;background:var(--coral-500)"></div></div><span class="meta">3 col · expanded rail · two-pane</span></div>
+    <div class="bar"><span class="chip" style="background:var(--grape-500)">Desktop ↑1280</span><div class="track"><div class="fill" style="width:100%;background:var(--grape-500)"></div></div><span class="meta">centered · max 1120px</span></div>
+  </div>
+  <div class="legend">
+    <span class="l">--bp-tablet 768</span><span class="l">--bp-lg 1024</span><span class="l">--bp-xl 1280</span>
+    <span class="l">.lumio-container</span><span class="l">.lumio-grid / --auto / --3</span><span class="l">.lumio-two-pane</span><span class="l">.lumio-side-rail</span><span class="l">.lumio-tablet-up / .lumio-mobile-only</span>
+  </div>
+</body></html>

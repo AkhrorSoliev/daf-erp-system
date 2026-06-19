@@ -1,0 +1,28 @@
+<!-- @dsCard group="Colors" viewport="700x200" name="Gradients & Status" subtitle="Feature-tile gradients + semantic" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:22px;background:var(--surface-app);font-family:var(--font-ui)}
+  .wrap{display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .g{flex:1;min-width:110px;height:58px;border-radius:var(--r-lg);display:flex;align-items:flex-end;padding:8px 12px;color:#fff;font-weight:800;font-size:12px;text-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .s{width:120px;border-radius:var(--r-md);overflow:hidden;background:#fff;box-shadow:var(--shadow-xs)}
+  .sc{height:40px}.sm{padding:6px 10px;font-weight:800;font-size:11px;color:var(--ink-900)}
+</style></head>
+<body>
+  <div class="wrap">
+    <div class="row">
+      <div class="g" style="background:var(--grad-warm)">warm</div>
+      <div class="g" style="background:var(--grad-sun)">sun</div>
+      <div class="g" style="background:var(--grad-teal)">teal</div>
+      <div class="g" style="background:var(--grad-cool)">cool</div>
+      <div class="g" style="background:var(--grad-grape)">grape</div>
+    </div>
+    <div class="row">
+      <div class="s"><div class="sc" style="background:var(--success-500)"></div><div class="sm">success</div></div>
+      <div class="s"><div class="sc" style="background:var(--warning-500)"></div><div class="sm">warning</div></div>
+      <div class="s"><div class="sc" style="background:var(--danger-500)"></div><div class="sm">danger</div></div>
+      <div class="s"><div class="sc" style="background:var(--info-500)"></div><div class="sm">info</div></div>
+    </div>
+  </div>
+</body></html>

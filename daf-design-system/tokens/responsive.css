@@ -1,0 +1,80 @@
+/* ===========================================================================
+   Lumio · Responsive utilities
+   Mobile-first. Base rules target phones; min-width queries widen up to tablet
+   and desktop. These are the few things inline styles can't express (media
+   queries), so they ship as classes. Breakpoints mirror tokens in spacing.css.
+   =========================================================================== */
+
+/* --- Container: responsive side gutters + capped, centered content --- */
+.lumio-container {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  box-sizing: border-box;
+}
+@media (min-width: 768px) {
+  .lumio-container { padding-inline: var(--gutter-tablet); max-width: var(--kit-max); }
+}
+@media (min-width: 1280px) {
+  .lumio-container { max-width: var(--content-max); }
+}
+
+/* Narrow reading column (forms, chat threads, prose) */
+.lumio-reading { width: 100%; max-width: var(--reading-max); margin-inline: auto; }
+
+/* --- Auto-responsive card grid: 1 col on phones, fills to N as width allows --- */
+.lumio-grid {
+  display: grid;
+  gap: var(--gap-card);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) {
+  .lumio-grid { gap: var(--grid-gap); grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .lumio-grid--3 { grid-template-columns: repeat(3, 1fr); }
+}
+/* Content-driven variant: as many --col-min columns as fit, no breakpoints needed */
+.lumio-grid--auto {
+  display: grid;
+  gap: var(--grid-gap);
+  grid-template-columns: repeat(auto-fill, minmax(var(--col-min), 1fr));
+}
+
+/* --- Tablet two-pane: a fixed list/detail or rail + content split --- */
+.lumio-two-pane { display: block; }
+@media (min-width: 768px) {
+  .lumio-two-pane {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: var(--grid-gap);
+    align-items: start;
+  }
+}
+
+/* --- Responsive visibility helpers --- */
+.lumio-tablet-up { display: none; }
+@media (min-width: 768px) { .lumio-tablet-up { display: revert; } }
+@media (min-width: 768px) { .lumio-mobile-only { display: none !important; } }
+
+/* --- Navigation adaptation ---
+   Mobile: floating bottom nav (.lumio-bottom-nav visible).
+   Tablet+: a vertical side rail (.lumio-side-rail) takes over; bottom nav hides. */
+.lumio-side-rail { display: none; }
+@media (min-width: 768px) {
+  .lumio-bottom-nav { display: none !important; }
+  .lumio-side-rail {
+    display: flex; flex-direction: column;
+    width: var(--rail-w); flex: 0 0 var(--rail-w);
+  }
+}
+@media (min-width: 1024px) {
+  .lumio-side-rail--expand { width: var(--rail-w-open); flex-basis: var(--rail-w-open); }
+}
+
+/* App shell that places the rail beside scrollable content on tablet+ */
+.lumio-app-shell { display: block; }
+@media (min-width: 768px) {
+  .lumio-app-shell { display: flex; align-items: stretch; gap: 0; }
+  .lumio-app-shell > .lumio-app-main { flex: 1; min-width: 0; }
+}

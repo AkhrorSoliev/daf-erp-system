@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" viewport="700x430" name="Chat · Messages & Conversations" subtitle="MessageBubble, ChatComposer, ConversationRow" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>body{margin:0;padding:24px;background:var(--surface-app);font-family:var(--font-ui)}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  .lbl{font-weight:800;font-size:11px;color:var(--ink-400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+  .thread{display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--bg-tint);border-radius:22px;border:1px solid var(--line)}
+  .list{display:flex;flex-direction:column;gap:10px}</style>
+</head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { MessageBubble, ChatComposer, ConversationRow } = window.LumioDesignSystem_f2f824;
+function Demo(){
+  const [msgs,setMsgs]=React.useState([
+    {s:'them',n:'Asrorbek',t:'10:12',x:'Salom! Bugun mashq qilamizmi?'},
+    {s:'me',t:'10:13',x:'Albatta, 5 daqiqada tayyorman 💪'},
+    {s:'them',n:'Asrorbek',t:'10:14',x:'Zo‘r, Jang qilamiz!'},
+  ]);
+  return (<div className="wrap">
+    <div>
+      <div className="lbl">Thread · MessageBubble + Composer</div>
+      <div className="thread">
+        {msgs.map((m,i)=><MessageBubble key={i} side={m.s} name={m.n} time={m.t}>{m.x}</MessageBubble>)}
+        <div style={{margin:'4px -16px -16px',borderRadius:'0 0 22px 22px',overflow:'hidden'}}>
+          <ChatComposer onSend={(t)=>setMsgs([...msgs,{s:'me',t:'10:15',x:t}])}/>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div className="lbl">Conversations · ConversationRow</div>
+      <div className="list">
+        <ConversationRow name="Asrorbek Abrayev" preview="Zo‘r, Jang qilamiz!" time="10:14" unread={2} online/>
+        <ConversationRow name="Guli Mag‘rufovna" preview="Rahmat 👍" time="Kecha"/>
+        <ConversationRow name="Beginner 1 guruhi" preview="Ismoil: Uy vazifasi-chi?" time="Du" unread={5}/>
+      </div>
+    </div>
+  </div>);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body></html>

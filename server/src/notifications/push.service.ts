@@ -33,6 +33,16 @@ export class PushService {
     userId: number,
     payload: { title: string; body: string; url?: string },
   ) {
+    await Promise.allSettled([
+      this.sendWebPush(userId, payload),
+      this.sendNativePush(userId, payload),
+    ]);
+  }
+
+  private async sendWebPush(
+    userId: number,
+    payload: { title: string; body: string; url?: string },
+  ) {
     if (!this.initialized) return;
 
     const subscriptions = await this.prisma.pushSubscription.findMany({
@@ -61,6 +71,60 @@ export class PushService {
           );
         }
       }
+    }
+  }
+
+  /**
+   * Native push via the Expo Push API (https://exp.host/--/api/v2/push/send).
+   * Fully guarded — a missing table / network error never breaks the fan-out.
+   * FCM (Android) / APNs (iOS) credentials live in the Expo project, not here.
+   */
+  private async sendNativePush(
+    userId: number,
+    payload: { title: string; body: string; url?: string },
+  ) {
+    try {
+      const devices = await this.prisma.deviceToken.findMany({
+        where: { userId },
+      });
+      if (devices.length === 0) return;
+
+      const messages = devices.map((d) => ({
+        to: d.token,
+        title: payload.title,
+        body: payload.body,
+        sound: 'default',
+        priority: 'high', // wake the device even in Doze / locked
+        channelId: 'alerts', // MAX-importance channel → heads-up + lock screen
+        ...(payload.url ? { data: { url: payload.url } } : {}),
+      }));
+
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(messages),
+      });
+
+      const json: any = await res.json().catch(() => null);
+      const tickets = json?.data;
+      if (Array.isArray(tickets)) {
+        for (let i = 0; i < tickets.length; i++) {
+          const ticket = tickets[i];
+          if (
+            ticket?.status === 'error' &&
+            ticket?.details?.error === 'DeviceNotRegistered'
+          ) {
+            await this.prisma.deviceToken
+              .delete({ where: { token: devices[i].token } })
+              .catch(() => {});
+          }
+        }
+      }
+    } catch (error: any) {
+      this.logger.error(`Native push failed: ${error?.message}`);
     }
   }
 

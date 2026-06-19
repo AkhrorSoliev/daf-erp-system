@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "asc-submission-health": {
+      "source": "rudrankriyam/app-store-connect-cli-skills",
+      "sourceType": "github",
+      "skillPath": "skills/asc-submission-health/SKILL.md",
+      "computedHash": "9638d2e4b942d4dec5849b0a1e1c93c29d5a3f531cfd44ba984a1a81ea2862d8"
+    },
+    "expo-observe": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-observe/SKILL.md",
+      "computedHash": "4fdd09a1b7067e9c8a2d3db1e6782ae01205858f007c282cba80efd6e7181ad0"
+    },
+    "expo-react-native-performance": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "skillPath": "skills/.experimental/expo-react-native-performance/SKILL.md",
+      "computedHash": "da6e70dd6c48bd87388d966d8789063041a70928fa824841a3e097e59e924a54"
+    },
+    "expo-react-native-typescript": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "expo-react-native-typescript/SKILL.md",
+      "computedHash": "ef1a36e2a4e803d4e754eabea9b851221ee37b5c416256dbc9d2d1b333447f4b"
+    },
+    "expo-router": {
+      "source": "jchaselubitz/drill-app",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/expo-router/SKILL.md",
+      "computedHash": "f30acc3748b66dd22a7abb8655e25f4dd70267615394e09fba694e07cf07f741"
+    },
+    "jwt-security": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "jwt-security/SKILL.md",
+      "computedHash": "07d22bb08ad8ac8ffcb90885bb04c04ec7e6f5498eb63580ca6072a4c1694c80"
+    },
+    "styling-nativewind-v4-expo": {
+      "source": "tristanmanchester/agent-skills",
+      "sourceType": "github",
+      "skillPath": "styling-nativewind-v4-expo/SKILL.md",
+      "computedHash": "3ae7dd2816992d82a31fd9cf56097010ef62df56a757f8172af41b712ae9a90e"
+    },
+    "tanstack-query": {
+      "source": "tanstack-skills/tanstack-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/tanstack-query/skills/tanstack-query/SKILL.md",
+      "computedHash": "b8a0477cd4d7bf8fa54d27f8e64d82388402f0d502591db50a357df5b9995c75"
+    }
+  }
+}

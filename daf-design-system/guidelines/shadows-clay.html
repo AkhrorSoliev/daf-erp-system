@@ -1,0 +1,18 @@
+<!-- @dsCard group="Spacing" viewport="700x230" name="Clay & shadows" subtitle="Extruded lip + ambient + inset" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:26px;background:var(--surface-app);font-family:var(--font-ui)}
+  .row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .box{width:120px;height:64px;border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+  .n{font-weight:800;font-size:11px;color:var(--ink-700)}
+</style></head>
+<body>
+  <div class="row">
+    <div class="col"><div class="box" style="background:#fff;color:var(--ink-700);box-shadow:var(--shadow-card)"></div><div class="n">ambient · card</div></div>
+    <div class="col"><div class="box" style="background:#fff;color:var(--ink-700);box-shadow:var(--clay-white)"></div><div class="n">clay · white</div></div>
+    <div class="col"><div class="box" style="background:var(--coral-500);color:#fff;box-shadow:var(--clay-coral)">Press me</div><div class="n">clay · coral</div></div>
+    <div class="col"><div class="box" style="background:var(--bg-sunk);color:var(--ink-500);box-shadow:var(--inset-deep)">sunken</div><div class="n">inset · well</div></div>
+  </div>
+</body></html>

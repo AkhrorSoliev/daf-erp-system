@@ -43,6 +43,9 @@ export class StudentPortalService {
   updatePhoto(studentId: number, file: Express.Multer.File, userId: number) {
     return this.write.updatePhoto(studentId, file, userId);
   }
+  removePhoto(studentId: number, userId: number) {
+    return this.write.removePhoto(studentId, userId);
+  }
   createPaymentIntent(params: {
     studentId: number;
     companyId: number;

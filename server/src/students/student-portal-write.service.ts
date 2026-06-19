@@ -161,6 +161,46 @@ export class StudentPortalWriteService {
     return { photo: photoUrl };
   }
 
+  async removePhoto(studentId: number, userId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, deletedAt: null },
+      select: { id: true, photo: true, companyId: true, userId: true },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Talaba topilmadi');
+    }
+
+    if (!student.photo) {
+      return { photo: null };
+    }
+
+    await this.uploadService.deleteFile(student.photo);
+
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data: { photo: null },
+    });
+
+    if (student.userId) {
+      await this.prisma.user.update({
+        where: { id: student.userId },
+        data: { photo: null },
+      });
+    }
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'Student',
+      entityId: studentId,
+      oldValues: { rasm: 'rasm mavjud edi' },
+      newValues: { rasm: "rasm o'chirildi" },
+      changedById: userId,
+      companyId: student.companyId ?? undefined,
+    });
+
+    return { photo: null };
+  }
+
   /**
    * Create a PaymentIntent so the webhook can verify the expected amount.
    * Expires unused intents for the same student+provider before creating a new one.

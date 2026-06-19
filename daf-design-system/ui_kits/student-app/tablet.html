@@ -1,0 +1,130 @@
+<!-- @dsCard group="Student App" viewport="1024x768" name="Tablet Layout (responsive)" subtitle="Side nav rail + two-pane content; resize to see it adapt" -->
+<!DOCTYPE html>
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumio · Tablet</title>
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg-app);font-family:var(--font-ui);color:var(--ink-900)}
+  .shell{display:flex;min-height:100vh}
+
+  /* SIDE RAIL — hidden on mobile (bottom nav takes over), shown tablet+ */
+  .rail{display:none;flex-direction:column;align-items:stretch;gap:6px;width:var(--rail-w);flex:0 0 var(--rail-w);
+    background:rgba(255,255,255,.82);backdrop-filter:var(--blur-glass);border-right:1px solid var(--line);
+    padding:20px 12px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+  .brand img{width:48px;height:48px}
+  .navitem{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 6px;border:none;background:transparent;
+    border-radius:var(--r-lg);cursor:pointer;color:var(--ink-400);font-family:var(--font-ui);font-weight:700;font-size:12px}
+  .navitem.active{background:var(--coral-500);color:#fff;box-shadow:0 8px 18px rgba(255,107,74,.35)}
+  .navitem i{font-size:25px}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:14px;padding:18px 24px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .topbar h1{margin:0;font-family:var(--font-display);font-weight:800;font-size:24px;flex:1}
+  .pill{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;background:#fff;border:1px solid var(--line);
+    border-radius:var(--r-pill);box-shadow:var(--shadow-sm);font-family:var(--font-display);font-weight:800;font-size:16px}
+  .content{padding:24px;flex:1}
+
+  .two-pane{display:grid;gap:var(--grid-gap);grid-template-columns:1fr}
+  .grid2{display:grid;gap:var(--grid-gap);grid-template-columns:1fr}
+  .card{background:#fff;border-radius:var(--r-xl);box-shadow:var(--shadow-card);border:1px solid var(--line)}
+  .feature{position:relative;overflow:hidden;min-height:150px;padding:22px;border-radius:var(--r-xl);color:#fff;display:flex;flex-direction:column;justify-content:center}
+  .feature h3{margin:0;font-family:var(--font-display);font-weight:800;font-size:28px;text-shadow:0 2px 8px rgba(14,42,61,.18)}
+  .feature .open{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;background:#fff;color:var(--ink-900);display:flex;align-items:center;justify-content:center;font-size:21px;box-shadow:var(--shadow-card)}
+  .sectionlabel{font-family:var(--font-display);font-weight:800;font-size:20px;margin:4px 0 14px}
+
+  /* MOBILE bottom nav — shown only < tablet */
+  .bottomnav{position:fixed;left:16px;right:16px;bottom:14px;height:70px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;background:rgba(255,255,255,.86);backdrop-filter:var(--blur-glass);border-radius:var(--r-2xl);
+    box-shadow:0 8px 24px rgba(14,42,61,.14);border:1px solid rgba(255,255,255,.6);z-index:20}
+  .bn{display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:transparent;color:var(--ink-400);font-weight:700;font-size:12px;cursor:pointer}
+  .bn i{font-size:22px}
+  .bn.active{color:var(--coral-500)}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (min-width:768px){
+    .rail{display:flex}
+    .bottomnav{display:none}
+    .content{padding:28px 32px;max-width:var(--kit-max);width:100%;margin-inline:auto}
+    .grid2{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (min-width:1024px){
+    .rail.expand{width:var(--rail-w-open);flex-basis:var(--rail-w-open);padding:20px}
+    .two-pane{grid-template-columns:1.4fr 1fr}
+  }
+</style></head>
+<body>
+<div class="shell">
+  <!-- SIDE RAIL (tablet+) -->
+  <nav class="rail">
+    <div class="brand"><img src="../../assets/lumio-mark.svg" alt="Lumio"></div>
+    <button class="navitem active"><i class="ph-fill ph-house"></i>Asosiy</button>
+    <button class="navitem"><i class="ph ph-path"></i>Darslar</button>
+    <button class="navitem"><i class="ph ph-books"></i>Resurslar</button>
+    <button class="navitem"><i class="ph ph-chat-circle"></i>Suhbat</button>
+    <button class="navitem"><i class="ph ph-squares-four"></i>Ko‘proq</button>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <h1>Salom, Jasur!</h1>
+      <span class="pill"><i class="ph-fill ph-lightning" style="color:var(--amber-500)"></i>201</span>
+      <span class="pill"><i class="ph-fill ph-fire" style="color:var(--coral-500)"></i>5</span>
+      <span class="pill" style="width:44px;justify-content:center;padding:0"><i class="ph ph-bell"></i></span>
+    </header>
+
+    <div class="content">
+      <div class="two-pane">
+        <!-- LEFT pane -->
+        <div>
+          <div class="sectionlabel">Bugungi maqsad</div>
+          <div class="grid2" style="margin-bottom:24px">
+            <div class="feature" style="background:var(--grad-cool);box-shadow:var(--clay-sky)">
+              <span class="open"><i class="ph-bold ph-arrow-up-right"></i></span>
+              <h3>Mening<br>lug‘atim</h3>
+            </div>
+            <div class="feature" style="background:var(--grad-grape);box-shadow:var(--clay-grape)">
+              <span class="open"><i class="ph-bold ph-arrow-up-right"></i></span>
+              <h3>Zoom<br>tadbirlar</h3>
+            </div>
+          </div>
+          <div class="sectionlabel">Darslar</div>
+          <div class="grid2">
+            <div class="card" style="padding:18px"><div style="font-family:var(--font-display);font-weight:800;font-size:20px">Unit 1.1</div><div style="height:10px;background:var(--bg-sunk);border-radius:99px;margin-top:12px;box-shadow:var(--inset-soft)"><div style="width:35%;height:100%;background:var(--coral-500);border-radius:99px"></div></div></div>
+            <div class="card" style="padding:18px"><div style="font-family:var(--font-display);font-weight:800;font-size:20px">Unit 1.2</div><div style="height:10px;background:var(--bg-sunk);border-radius:99px;margin-top:12px;box-shadow:var(--inset-soft)"></div></div>
+          </div>
+        </div>
+
+        <!-- RIGHT pane: leaderboard rail -->
+        <div>
+          <div class="sectionlabel">Peshqadamlar</div>
+          <div class="card" style="padding:8px">
+            <div style="background:var(--grad-sun);border-radius:18px;padding:16px;color:#fff;margin-bottom:8px">
+              <div style="font-family:var(--font-display);font-weight:800;font-size:18px">Sizning o‘rningiz</div>
+              <div style="font-family:var(--font-display);font-weight:800;font-size:32px">#312</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding:6px">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px"><b style="color:var(--coral-500);width:20px">1</b><span style="flex:1;font-family:var(--font-display);font-weight:700">Aliyor S.</span><span class="pill" style="height:30px;font-size:13px"><i class="ph-fill ph-star" style="color:var(--amber-500)"></i>10722</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px"><b style="color:var(--coral-500);width:20px">2</b><span style="flex:1;font-family:var(--font-display);font-weight:700">Faridun S.</span><span class="pill" style="height:30px;font-size:13px"><i class="ph-fill ph-star" style="color:var(--amber-500)"></i>10004</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px"><b style="color:var(--coral-500);width:20px">3</b><span style="flex:1;font-family:var(--font-display);font-weight:700">Guli M.</span><span class="pill" style="height:30px;font-size:13px"><i class="ph-fill ph-star" style="color:var(--amber-500)"></i>9069</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE bottom nav (only < 768) -->
+<nav class="bottomnav">
+  <button class="bn active"><i class="ph-fill ph-house"></i>Asosiy</button>
+  <button class="bn"><i class="ph ph-path"></i>Darslar</button>
+  <button class="bn"><i class="ph ph-books"></i>Resurslar</button>
+  <button class="bn"><i class="ph ph-squares-four"></i>Ko‘proq</button>
+</nav>
+</body></html>

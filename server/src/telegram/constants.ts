@@ -10,6 +10,8 @@ export const TEACHER_DEEP_LINK_PREFIX = 'teacher_';
 export const STUDENT_DEEP_LINK_PREFIX = 'student_';
 export const EMPLOYEE_DEEP_LINK_PREFIX = 'employee_';
 export const MOCK_EXAM_DEEP_LINK_PREFIX = 'mock_';
+/** Native app login (link/poll): t.me/<bot>?start=req_<id> → bot approves, app polls. */
+export const APP_LOGIN_REQUEST_PREFIX = 'req_';
 export const STUDENT_GROUP_DEEP_LINK_RE = /^student_(\d+)_group_(.+)$/;
 export const EMPLOYEE_DEEP_LINK_RE =
   /^employee_(\d+)_roles_([\d,]+)_sig_([0-9a-f]+)$/i;

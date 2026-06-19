@@ -1,0 +1,24 @@
+<!-- @dsCard group="Colors" viewport="700x210" name="Ink & Neutrals" subtitle="Text + surface ramp" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:22px;background:var(--surface-app);font-family:var(--font-ui)}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .sw{width:84px;border-radius:var(--r-sm);overflow:hidden;box-shadow:var(--shadow-xs);background:#fff;border:1px solid var(--line)}
+  .chip{height:54px}
+  .meta{padding:6px 8px}
+  .name{font-weight:800;font-size:11px;color:var(--ink-900)}
+  .hex{font-size:10px;color:var(--ink-500);font-weight:700}
+</style></head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--ink-900)"></div><div class="meta"><div class="name">ink-900</div><div class="hex">heading</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink-700)"></div><div class="meta"><div class="name">ink-700</div><div class="hex">body</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink-500)"></div><div class="meta"><div class="name">ink-500</div><div class="hex">muted</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink-300)"></div><div class="meta"><div class="name">ink-300</div><div class="hex">disabled</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--line)"></div><div class="meta"><div class="name">line</div><div class="hex">border</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--bg-sunk)"></div><div class="meta"><div class="name">bg-sunk</div><div class="hex">wells</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--bg-app)"></div><div class="meta"><div class="name">bg-app</div><div class="hex">canvas</div></div></div>
+    <div class="sw"><div class="chip" style="background:#fff"></div><div class="meta"><div class="name">white</div><div class="hex">card</div></div></div>
+  </div>
+</body></html>
