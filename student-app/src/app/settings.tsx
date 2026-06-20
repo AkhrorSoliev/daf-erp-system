@@ -5,6 +5,7 @@ import { Badge, ListRow, Screen, StackHeader, Text } from '@/design/components';
 import { useColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
 import { useThemeStore, type ThemeMode } from '@/design/theme';
+import { useThemeTransition } from '@/design/theme-transition';
 import { cn } from '@/lib/cn';
 
 const THEME_OPTS: { mode: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -17,6 +18,7 @@ export default function Settings() {
   const colors = useColors();
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const { animateThemeChange } = useThemeTransition();
 
   return (
     <Screen>
@@ -32,7 +34,11 @@ export default function Settings() {
                 return (
                   <Pressable
                     key={o.mode}
-                    onPress={() => setMode(o.mode)}
+                    onPress={(e) => {
+                      if (o.mode === mode) return;
+                      const { pageX, pageY } = e.nativeEvent;
+                      animateThemeChange(pageX, pageY, () => setMode(o.mode));
+                    }}
                     className={cn('flex-1 items-center gap-1 rounded-[14px] py-3', active && 'bg-surface')}
                     style={active ? { boxShadow: shadow.sm } : undefined}
                   >

@@ -22,6 +22,7 @@ import {
 import { queryClient } from '@/api/query-client';
 import { useAuth } from '@/auth/auth-store';
 import { useThemeStore } from '@/design/theme';
+import { ThemeTransitionProvider } from '@/design/theme-transition';
 import { useColors, themeColors } from '@/design/colors';
 import { tokens } from '@/design/tokens';
 
@@ -86,6 +87,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider value={navTheme}>
+            <ThemeTransitionProvider>
             {!ready ? (
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
                 <ActivityIndicator color={tokens.color.primary} />
@@ -109,6 +111,7 @@ export default function RootLayout() {
               </Stack>
             )}
             <StatusBar style={isDark ? 'light' : 'dark'} />
+            </ThemeTransitionProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
