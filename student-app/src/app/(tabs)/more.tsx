@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { Avatar, Card, ListRow, Screen, ScreenHeader, Text } from '@/design/components';
+import { Avatar, Card, FadeIn, ListRow, Screen, ScreenHeader, Text } from '@/design/components';
 import { useColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
 import { useProfile } from '@/api/queries/use-profile';
@@ -33,6 +33,14 @@ export default function More() {
     ]);
   }
 
+  const menu = [
+    { icon: 'wallet' as const, tone: 'teal' as const, label: "To'lovlar", onPress: () => router.push('/payments') },
+    { icon: 'help-circle' as const, tone: 'sky' as const, label: 'FAQ', onPress: () => router.push('/faq') },
+    { icon: 'information-circle' as const, tone: 'grape' as const, label: 'Biz haqimizda', onPress: () => router.push('/about') },
+    { icon: 'settings' as const, tone: 'ink' as const, label: 'Sozlamalar', onPress: () => router.push('/settings') },
+    { icon: 'log-out' as const, tone: 'coral' as const, label: 'Chiqish', onPress: confirmLogout, chevron: false },
+  ];
+
   return (
     <Screen>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -40,23 +48,25 @@ export default function More() {
           <ScreenHeader title="Ko'proq" />
 
           {/* Profile header → profile screen */}
-          <Pressable onPress={() => router.push('/profile')}>
-            <Card className="flex-row items-center gap-3.5" style={{ boxShadow: shadow.card }}>
-              <Avatar uri={p?.photo} initials={initials} size={56} />
-              <View className="flex-1">
-                <Text variant="title">{name || 'Profil'}</Text>
-                <Text variant="muted">Profilni ko&apos;rish</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.fgFaint} />
-            </Card>
-          </Pressable>
+          <FadeIn index={0}>
+            <Pressable onPress={() => router.push('/profile')}>
+              <Card className="flex-row items-center gap-3.5" style={{ boxShadow: shadow.card }}>
+                <Avatar uri={p?.photo} initials={initials} size={56} />
+                <View className="flex-1">
+                  <Text variant="title">{name || 'Profil'}</Text>
+                  <Text variant="muted">Profilni ko&apos;rish</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.fgFaint} />
+              </Card>
+            </Pressable>
+          </FadeIn>
 
           <View className="gap-2.5 pt-1">
-            <ListRow icon="wallet" tone="teal" label="To'lovlar" onPress={() => router.push('/payments')} />
-            <ListRow icon="help-circle" tone="sky" label="FAQ" onPress={() => router.push('/faq')} />
-            <ListRow icon="information-circle" tone="grape" label="Biz haqimizda" onPress={() => router.push('/about')} />
-            <ListRow icon="settings" tone="ink" label="Sozlamalar" onPress={() => router.push('/settings')} />
-            <ListRow icon="log-out" tone="coral" label="Chiqish" onPress={confirmLogout} chevron={false} />
+            {menu.map((m, i) => (
+              <FadeIn key={m.label} index={i + 1}>
+                <ListRow icon={m.icon} tone={m.tone} label={m.label} onPress={m.onPress} chevron={m.chevron} />
+              </FadeIn>
+            ))}
           </View>
         </View>
       </ScrollView>

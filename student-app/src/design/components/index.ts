@@ -16,3 +16,4 @@ export { ProgressBar, type ProgressSegment } from './progress-bar';
 export { ScreenHeader } from './screen-header';
 export { StackHeader } from './stack-header';
 export { LumioTabBar } from './tab-bar';
+export { FadeIn, EASE, EASE_BOUNCE, DUR } from './motion';

@@ -1,8 +1,11 @@
-import { ActivityIndicator, Pressable, type PressableProps } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
+import { MotiView } from 'moti';
 import { Ionicons } from '@expo/vector-icons';
 import { cn } from '@/lib/cn';
 import { useColors } from '@/design/colors';
 import { clay } from '@/design/shadows';
+import { EASE, DUR } from './motion';
 import { Text } from './text';
 
 type ButtonVariant = 'primary' | 'secondary' | 'teal' | 'ghost' | 'danger';
@@ -11,10 +14,6 @@ type ButtonSize = 'sm' | 'md' | 'lg';
 const dangerClay = [
   { offsetX: 0, offsetY: 6, blurRadius: 0, color: '#B5311F' },
   { offsetX: 0, offsetY: 16, blurRadius: 26, color: 'rgba(214,58,36,0.30)' },
-];
-const dangerClayPress = [
-  { offsetX: 0, offsetY: 2, blurRadius: 0, color: '#B5311F' },
-  { offsetX: 0, offsetY: 6, blurRadius: 12, color: 'rgba(214,58,36,0.28)' },
 ];
 
 const sizes: Record<ButtonSize, { box: string; text: string; icon: number }> = {
@@ -40,40 +39,47 @@ export function Button({
   iconBefore?: keyof typeof Ionicons.glyphMap;
 }) {
   const colors = useColors();
+  const [pressed, setPressed] = useState(false);
 
-  const palette: Record<ButtonVariant, { bg: string; label: string; icon: string; clay?: any; press?: any }> = {
-    primary: { bg: 'bg-coral-500', label: 'text-white', icon: '#FFFFFF', clay: clay.coral, press: clay.coralPress },
-    teal: { bg: 'bg-teal-500', label: 'text-white', icon: '#FFFFFF', clay: clay.teal, press: clay.tealPress },
-    secondary: { bg: 'bg-surface', label: 'text-fg', icon: colors.fg, clay: clay.white, press: clay.whitePress },
-    danger: { bg: 'bg-danger', label: 'text-white', icon: '#FFFFFF', clay: dangerClay, press: dangerClayPress },
+  const palette: Record<ButtonVariant, { bg: string; label: string; icon: string; clay?: any }> = {
+    primary: { bg: 'bg-coral-500', label: 'text-white', icon: '#FFFFFF', clay: clay.coral },
+    teal: { bg: 'bg-teal-500', label: 'text-white', icon: '#FFFFFF', clay: clay.teal },
+    secondary: { bg: 'bg-surface', label: 'text-fg', icon: colors.fg, clay: clay.white },
+    danger: { bg: 'bg-danger', label: 'text-white', icon: '#FFFFFF', clay: dangerClay },
     ghost: { bg: 'bg-transparent', label: 'text-fg-body', icon: colors.fg },
   };
 
   const pal = palette[variant];
   const sz = sizes[size];
   const isDisabled = disabled || loading;
-  const isGhost = variant === 'ghost';
 
   return (
     <Pressable
       accessibilityRole="button"
       disabled={isDisabled}
-      className={cn('flex-row items-center justify-center gap-2', sz.box, pal.bg, isDisabled && 'opacity-50', className)}
-      style={({ pressed }) =>
-        isGhost
-          ? [pressed && { transform: [{ scale: 0.97 }] }]
-          : [{ boxShadow: pressed && !isDisabled ? pal.press : pal.clay, transform: [{ translateY: pressed && !isDisabled ? 4 : 0 }] }]
-      }
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      className={className}
       {...props}
     >
-      {loading ? (
-        <ActivityIndicator color={pal.icon} />
-      ) : (
-        <>
-          {iconBefore ? <Ionicons name={iconBefore} size={sz.icon} color={pal.icon} /> : null}
-          <Text className={cn('font-display', sz.text, pal.label)}>{text}</Text>
-        </>
-      )}
+      <MotiView
+        animate={{ scale: pressed && !isDisabled ? 0.96 : 1 }}
+        transition={{ type: 'timing', duration: DUR.fast, easing: EASE }}
+      >
+        <View
+          className={cn('flex-row items-center justify-center gap-2', sz.box, pal.bg, isDisabled && 'opacity-50')}
+          style={variant === 'ghost' ? undefined : { boxShadow: pal.clay }}
+        >
+          {loading ? (
+            <ActivityIndicator color={pal.icon} />
+          ) : (
+            <>
+              {iconBefore ? <Ionicons name={iconBefore} size={sz.icon} color={pal.icon} /> : null}
+              <Text className={cn('font-display', sz.text, pal.label)}>{text}</Text>
+            </>
+          )}
+        </View>
+      </MotiView>
     </Pressable>
   );
 }
