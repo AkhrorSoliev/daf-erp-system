@@ -20,7 +20,7 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
   const colors = useColors();
   return (
     <View
-      style={{ position: 'absolute', left: 16, right: 16, bottom: Math.max(insets.bottom, 24) }}
+      style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + 16 }}
       pointerEvents="box-none"
     >
       <View
