@@ -1,12 +1,18 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Appearance, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Badge, ListRow, Screen, StackHeader, Text } from '@/design/components';
-import { useColors } from '@/design/colors';
+import { useColors, themeColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
 import { useThemeStore, type ThemeMode } from '@/design/theme';
 import { useThemeTransition } from '@/design/theme-transition';
 import { cn } from '@/lib/cn';
+
+/** Background color the target mode resolves to — drives the reveal circle. */
+function revealBg(m: ThemeMode): string {
+  const scheme = m === 'system' ? Appearance.getColorScheme() ?? 'light' : m;
+  return scheme === 'dark' ? themeColors.dark.bg : themeColors.light.bg;
+}
 
 const THEME_OPTS: { mode: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { mode: 'system', label: 'Tizim', icon: 'phone-portrait-outline' },
@@ -37,7 +43,7 @@ export default function Settings() {
                     onPress={(e) => {
                       if (o.mode === mode) return;
                       const { pageX, pageY } = e.nativeEvent;
-                      animateThemeChange(pageX, pageY, () => setMode(o.mode));
+                      animateThemeChange(pageX, pageY, () => setMode(o.mode), revealBg(o.mode));
                     }}
                     className={cn('flex-1 items-center gap-1 rounded-[14px] py-3', active && 'bg-surface')}
                     style={active ? { boxShadow: shadow.sm } : undefined}
