@@ -3,7 +3,6 @@ import '@/global.css';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { Stack } from 'expo-router';
-import * as NavigationBar from 'expo-navigation-bar';
 import { DefaultTheme, DarkTheme, ThemeProvider, type Theme } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
@@ -25,6 +24,15 @@ import { useAuth } from '@/auth/auth-store';
 import { useThemeStore } from '@/design/theme';
 import { useColors, themeColors } from '@/design/colors';
 import { tokens } from '@/design/tokens';
+
+// Lazily required so a dev build WITHOUT the native module doesn't hard-crash
+// (e.g. running new JS on an older APK). Falls back to no nav-bar theming.
+let NavigationBar: typeof import('expo-navigation-bar') | null = null;
+try {
+  NavigationBar = require('expo-navigation-bar');
+} catch {
+  NavigationBar = null;
+}
 
 export default function RootLayout() {
   const status = useAuth((s) => s.status);
@@ -66,7 +74,7 @@ export default function RootLayout() {
 
   // Theme the Android system navigation bar to match (no-op on iOS / older builds).
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android' || !NavigationBar) return;
     NavigationBar.setBackgroundColorAsync(colors.bg).catch(() => {});
     NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark').catch(() => {});
   }, [colors.bg, isDark]);
