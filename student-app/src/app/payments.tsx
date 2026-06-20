@@ -30,7 +30,7 @@ export default function Payments() {
     onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
   });
 
-  if (profile.isLoading || pay.isLoading) return <Screen edges={['top', 'bottom']}><LoadingCards /></Screen>;
+  if (profile.isLoading || pay.isLoading) return <Screen><LoadingCards /></Screen>;
 
   const balance = profile.data?.balance ?? 0;
   const inDebt = balance < 0;
@@ -39,7 +39,7 @@ export default function Payments() {
   const canPay = amount >= MIN_PAYMENT && !initMut.isPending;
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen>
       <StackHeader title={t.tabs.payments} />
       <ScrollView
         className="flex-1"

@@ -34,7 +34,7 @@ export default function More() {
   }
 
   return (
-    <Screen edges={['top']}>
+    <Screen>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-3 p-5 pb-32">
           <ScreenHeader title="Ko'proq" />

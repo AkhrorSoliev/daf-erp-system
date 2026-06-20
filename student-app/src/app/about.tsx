@@ -8,7 +8,7 @@ import { clay } from '@/design/shadows';
 export default function About() {
   const version = Constants.expoConfig?.version ?? '1.0.0';
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen>
       <StackHeader title="Biz haqimizda" />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-4 p-5 pt-2">

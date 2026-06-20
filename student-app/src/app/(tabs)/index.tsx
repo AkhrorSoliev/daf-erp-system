@@ -28,10 +28,10 @@ export default function Home() {
   const sched = useSchedule();
   const colors = useColors();
 
-  if (q.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
+  if (q.isLoading) return <Screen><LoadingCards /></Screen>;
   if (q.isError || !q.data) {
     return (
-      <Screen edges={['top']} className="justify-center">
+      <Screen className="justify-center">
         <EmptyState icon="cloud-offline-outline" title={t.common.error} description="Ma'lumotni yuklab bo'lmadi" />
       </Screen>
     );
@@ -48,7 +48,7 @@ export default function Home() {
   const refreshing = q.isRefetching || att.isRefetching || sched.isRefetching;
 
   return (
-    <Screen edges={['top']}>
+    <Screen>
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}

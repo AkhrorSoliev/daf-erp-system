@@ -3,7 +3,7 @@ import { EmptyState, Screen, ScreenHeader } from '@/design/components';
 
 export default function Resurslar() {
   return (
-    <Screen edges={['top']}>
+    <Screen>
       <View className="flex-1 p-5">
         <ScreenHeader title="Resurslar" />
         <View className="flex-1 items-center justify-center pb-24">

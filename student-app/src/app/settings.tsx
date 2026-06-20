@@ -19,7 +19,7 @@ export default function Settings() {
   const setMode = useThemeStore((s) => s.setMode);
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen>
       <StackHeader title="Sozlamalar" />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-6 p-5 pt-2">

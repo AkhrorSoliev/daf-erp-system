@@ -26,7 +26,7 @@ const FAQ = [
 
 export default function Faq() {
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen>
       <StackHeader title="FAQ" />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-3 p-5 pt-2">
