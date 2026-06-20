@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { cn } from '@/lib/cn';
-import { tokens } from '@/design/tokens';
+import { useColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
 import { IconTile, type Tone } from './icon-tile';
 import { Text } from './text';
@@ -27,12 +27,13 @@ export function ListRow({
   chevron?: boolean;
   className?: string;
 }) {
+  const colors = useColors();
   const showChevron = chevron ?? !!onPress;
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      className={cn('flex-row items-center gap-3.5 rounded-card border border-line bg-white px-4 py-3.5', className)}
+      className={cn('flex-row items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5', className)}
       style={({ pressed }) => [{ boxShadow: shadow.xs }, pressed && onPress && { transform: [{ scale: 0.985 }] }]}
     >
       {icon ? <IconTile icon={icon} tone={tone} /> : null}
@@ -41,7 +42,7 @@ export function ListRow({
         {subtitle ? <Text variant="muted">{subtitle}</Text> : null}
       </View>
       {trailing}
-      {showChevron ? <Ionicons name="chevron-forward" size={20} color={tokens.color.fg} /> : null}
+      {showChevron ? <Ionicons name="chevron-forward" size={20} color={colors.fgFaint} /> : null}
     </Pressable>
   );
 }

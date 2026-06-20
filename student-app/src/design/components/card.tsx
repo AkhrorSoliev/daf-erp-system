@@ -6,7 +6,7 @@ import { shadow } from '@/design/shadows';
 export function Card({ className, style, ...props }: ViewProps) {
   return (
     <View
-      className={cn('rounded-card border border-line bg-white p-5', className)}
+      className={cn('rounded-card border border-border bg-surface p-5', className)}
       style={[{ boxShadow: shadow.card }, style]}
       {...props}
     />

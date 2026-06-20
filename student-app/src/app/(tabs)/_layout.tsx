@@ -11,15 +11,11 @@ export default function TabsLayout() {
   }, []);
 
   return (
-    <Tabs
-      screenOptions={{ headerShown: false }}
-      tabBar={(props) => <LumioTabBar {...props} />}
-    >
+    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <LumioTabBar {...props} />}>
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="schedule" />
-      <Tabs.Screen name="attendance" />
-      <Tabs.Screen name="payments" />
-      <Tabs.Screen name="profile" />
+      <Tabs.Screen name="darslar" />
+      <Tabs.Screen name="resurslar" />
+      <Tabs.Screen name="more" />
     </Tabs>
   );
 }

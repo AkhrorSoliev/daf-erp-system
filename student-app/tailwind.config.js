@@ -1,17 +1,34 @@
 /**
- * DAF Student App — Lumio design tokens.
- * Mirrors daf-design-system/tokens/*.css (colors, type, radii). Programmatic
- * (non-className) values live in src/design/tokens.ts; clay/ambient shadows in
- * src/design/shadows.ts. Keep all three in sync.
+ * DAF Student App — Lumio design tokens (light + dark).
+ * Semantic colors are CSS variables (src/global.css :root / .dark:root) so the
+ * whole app re-themes by flipping ~10 vars. Accent ramps stay fixed (they pop on
+ * both themes). Programmatic icon colors live in src/design/colors.ts.
  * @type {import('tailwindcss').Config}
  */
 module.exports = {
   content: ['./src/**/*.{js,jsx,ts,tsx}'],
   presets: [require('nativewind/preset')],
+  darkMode: 'class', // manual light/dark/system via nativewind colorScheme
   theme: {
     extend: {
       colors: {
-        // --- Lumio palettes (full ramps) ---
+        // --- Semantic (theme-aware, flip via CSS vars) ---
+        bg: 'rgb(var(--bg) / <alpha-value>)', // app canvas
+        surface: 'rgb(var(--surface) / <alpha-value>)', // cards
+        sunk: 'rgb(var(--sunk) / <alpha-value>)', // wells / tracks
+        tint: 'rgb(var(--tint) / <alpha-value>)', // faint row tint
+        fg: {
+          DEFAULT: 'rgb(var(--fg) / <alpha-value>)', // strong text
+          body: 'rgb(var(--fg-body) / <alpha-value>)',
+          muted: 'rgb(var(--fg-muted) / <alpha-value>)',
+          faint: 'rgb(var(--fg-faint) / <alpha-value>)',
+        },
+        border: 'rgb(var(--border) / <alpha-value>)',
+        line: 'rgb(var(--border) / <alpha-value>)',
+        'line-strong': 'rgb(var(--border-strong) / <alpha-value>)',
+        primary: { DEFAULT: '#FF6B4A', fg: '#FFFFFF' },
+
+        // --- Accent ramps (fixed — pop on both themes) ---
         coral: {
           50: '#FFF2EE', 100: '#FFE1D8', 200: '#FFC6B5', 300: '#FFA48A',
           400: '#FF855F', 500: '#FF6B4A', 600: '#F04E2C', 700: '#C83D20',
@@ -30,35 +47,19 @@ module.exports = {
           100: '#EAF0F4', 200: '#DCE4EA', 300: '#BCCAD3', 400: '#93A6B2',
           500: '#6B8392', 600: '#45616F', 700: '#2B4A5C', 800: '#1B3A4E', 900: '#0E2A3D',
         },
-
-        // --- Semantic aliases (also keep the names existing screens use) ---
-        bg: '#EDF1F6', // app canvas
-        sunk: '#E3E9F1', // sunken wells / tracks
-        tint: '#F5F8FB', // faint card tint
-        surface: '#FFFFFF', // cards are white now
-        fg: { DEFAULT: '#0E2A3D', muted: '#6B8392' },
-        primary: { DEFAULT: '#FF6B4A', fg: '#FFFFFF' },
-        border: '#E0E7EE',
-        line: '#E0E7EE',
-        'line-strong': '#CFD9E2',
-
-        success: { DEFAULT: '#2BB673', 50: '#E4F7EE', 600: '#1F9E61' },
+        success: { DEFAULT: '#2BB673', 50: '#E4F7EE', 400: '#4ECB8E', 600: '#1F9E61' },
         warning: { DEFAULT: '#FFB02E' },
-        danger: { DEFAULT: '#F0513A', 50: '#FDE9E5', 600: '#D63A24' },
+        danger: { DEFAULT: '#F0513A', 50: '#FDE9E5', 400: '#FF7A66', 600: '#D63A24' },
       },
       borderRadius: {
         xs: '8px', sm: '12px', md: '16px', lg: '22px', xl: '28px',
         '2xl': '34px', '3xl': '40px',
-        button: '22px', // Lumio md button
-        card: '22px', // Lumio default card
-        pill: '999px',
+        button: '22px', card: '22px', pill: '999px',
       },
       fontFamily: {
-        // Display = Baloo 2 (chunky rounded headings + numbers)
         displayx: ['Baloo2_800ExtraBold'],
         display: ['Baloo2_700Bold'],
         displaymd: ['Baloo2_600SemiBold'],
-        // UI/Body = Nunito
         bodyreg: ['Nunito_400Regular'],
         body: ['Nunito_600SemiBold'],
         bodymd: ['Nunito_700Bold'],
