@@ -49,12 +49,12 @@ export default function Profile() {
     if (!res.canceled && res.assets[0]?.uri) photoMut.mutate(res.assets[0].uri);
   }
 
-  if (q.isLoading) return <Screen edges={['top']}><Loading /></Screen>;
+  if (q.isLoading) return <Screen edges={['top', 'bottom']}><Loading /></Screen>;
   const p = q.data;
   const initials = p ? `${p.firstName?.[0] ?? ''}${p.lastName?.[0] ?? ''}`.toUpperCase() : '';
 
   return (
-    <Screen edges={['top']}>
+    <Screen edges={['top', 'bottom']}>
       <StackHeader title={t.tabs.profile} />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-4 p-5 pt-2">

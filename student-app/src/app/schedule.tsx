@@ -21,10 +21,10 @@ export default function Schedule() {
   const q = useSchedule();
   const colors = useColors();
 
-  if (q.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
+  if (q.isLoading) return <Screen edges={['top', 'bottom']}><LoadingCards /></Screen>;
   if (q.isError) {
     return (
-      <Screen edges={['top']}>
+      <Screen edges={['top', 'bottom']}>
         <StackHeader title={t.tabs.schedule} />
         <EmptyState icon="cloud-offline-outline" title={t.common.error} />
       </Screen>
@@ -35,7 +35,7 @@ export default function Schedule() {
   const todayKey = DAY_BY_INDEX[new Date().getDay()];
 
   return (
-    <Screen edges={['top']}>
+    <Screen edges={['top', 'bottom']}>
       <StackHeader title={t.tabs.schedule} />
       <ScrollView
         className="flex-1"

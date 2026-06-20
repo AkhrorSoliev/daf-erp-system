@@ -40,10 +40,10 @@ export default function Attendance() {
   const stats = useAttendanceStats();
   const history = useAttendanceHistory();
 
-  if (stats.isLoading || history.isLoading) return <Screen edges={['top']}><LoadingCards /></Screen>;
+  if (stats.isLoading || history.isLoading) return <Screen edges={['top', 'bottom']}><LoadingCards /></Screen>;
   if (stats.isError) {
     return (
-      <Screen edges={['top']}>
+      <Screen edges={['top', 'bottom']}>
         <StackHeader title={t.tabs.attendance} />
         <EmptyState icon="cloud-offline-outline" title={t.common.error} />
       </Screen>
@@ -55,7 +55,7 @@ export default function Attendance() {
   const refreshing = stats.isRefetching || history.isRefetching;
 
   return (
-    <Screen edges={['top']}>
+    <Screen edges={['top', 'bottom']}>
       <StackHeader title={t.tabs.attendance} />
       <ScrollView
         className="flex-1"
