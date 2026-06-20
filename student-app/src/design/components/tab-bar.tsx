@@ -1,9 +1,16 @@
-import { Pressable, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, View, type LayoutChangeEvent } from 'react-native';
+import { MotiView } from 'moti';
+import { Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useColors } from '@/design/colors';
 import { Text } from './text';
+
+const CIRCLE = 56;
+const PILL_H = 68;
+const EASE = Easing.bezier(0.22, 1, 0.36, 1); // Lumio --ease-out
 
 type Meta = { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap; label: string };
 
@@ -14,56 +21,84 @@ const META: Record<string, Meta> = {
   more: { active: 'grid', inactive: 'grid-outline', label: "Ko'proq" },
 };
 
-/** Floating glass nav pill: active tab is a solid coral circle, others icon + label. */
+/** Floating glass nav pill: a coral circle slides between tabs; labels fade in/out. */
 export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const [rowW, setRowW] = useState(0);
+
+  const n = state.routes.length;
+  const cellW = rowW > 0 ? rowW / n : 0;
+  const indicatorX = cellW > 0 ? state.index * cellW + (cellW - CIRCLE) / 2 : 0;
+
   return (
     <View
       style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + 16 }}
       pointerEvents="box-none"
     >
       <View
-        className="h-[68px] flex-row items-center justify-between gap-1 rounded-[34px] border border-border bg-surface/95 px-3"
+        className="h-[68px] flex-row items-center rounded-[34px] border border-border bg-surface/95 px-2"
         style={{ boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 24, color: 'rgba(14,42,61,0.16)' }] }}
       >
-        {state.routes.map((route, i) => {
-          const meta = META[route.name];
-          if (!meta) return null;
-          const focused = state.index === i;
+        <View
+          className="flex-1 flex-row"
+          style={{ height: '100%' }}
+          onLayout={(e: LayoutChangeEvent) => setRowW(e.nativeEvent.layout.width)}
+        >
+          {/* Sliding coral circle (behind the icons) */}
+          {cellW > 0 ? (
+            <MotiView
+              animate={{ translateX: indicatorX }}
+              transition={{ type: 'timing', duration: 240, easing: EASE }}
+              style={{
+                position: 'absolute',
+                top: (PILL_H - CIRCLE) / 2,
+                left: 0,
+                width: CIRCLE,
+                height: CIRCLE,
+                borderRadius: CIRCLE / 2,
+                backgroundColor: '#FF6B4A',
+                boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 18, color: 'rgba(255,107,74,0.4)' }],
+              }}
+            />
+          ) : null}
 
-          const onPress = () => {
-            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
-          };
+          {state.routes.map((route, i) => {
+            const meta = META[route.name];
+            if (!meta) return null;
+            const focused = state.index === i;
 
-          if (focused) {
+            const onPress = () => {
+              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+              if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            };
+
             return (
               <Pressable
                 key={route.key}
                 accessibilityRole="button"
-                accessibilityState={{ selected: true }}
+                accessibilityState={{ selected: focused }}
                 onPress={onPress}
-                className="h-14 w-14 items-center justify-center rounded-full bg-coral-500"
-                style={{ boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 18, color: 'rgba(255,107,74,0.4)' }] }}
+                className="flex-1 items-center justify-center active:opacity-80"
               >
-                <Ionicons name={meta.active} size={24} color="#FFFFFF" />
+                <Ionicons
+                  name={focused ? meta.active : meta.inactive}
+                  size={focused ? 24 : 22}
+                  color={focused ? '#FFFFFF' : colors.fgFaint}
+                />
+                <MotiView
+                  animate={{ opacity: focused ? 0 : 1, height: focused ? 0 : 14 }}
+                  transition={{ type: 'timing', duration: 200, easing: EASE }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <Text className="font-bodymd text-[11px] text-fg-faint" style={{ marginTop: 2 }}>
+                    {meta.label}
+                  </Text>
+                </MotiView>
               </Pressable>
             );
-          }
-
-          return (
-            <Pressable
-              key={route.key}
-              accessibilityRole="button"
-              onPress={onPress}
-              className="flex-1 items-center justify-center gap-0.5 py-2 active:opacity-70"
-            >
-              <Ionicons name={meta.inactive} size={22} color={colors.fgFaint} />
-              <Text className="font-bodymd text-[11px] text-fg-faint">{meta.label}</Text>
-            </Pressable>
-          );
-        })}
+          })}
+        </View>
       </View>
     </View>
   );
