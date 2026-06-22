@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
 import { MotiView } from 'moti';
+import { useColorScheme } from 'nativewind';
 import { Ionicons } from '@expo/vector-icons';
 import { cn } from '@/lib/cn';
 import { useColors } from '@/design/colors';
@@ -39,12 +40,13 @@ export function Button({
   iconBefore?: keyof typeof Ionicons.glyphMap;
 }) {
   const colors = useColors();
+  const { colorScheme } = useColorScheme();
   const [pressed, setPressed] = useState(false);
 
   const palette: Record<ButtonVariant, { bg: string; label: string; icon: string; clay?: any }> = {
     primary: { bg: 'bg-coral-500', label: 'text-white', icon: '#FFFFFF', clay: clay.coral },
     teal: { bg: 'bg-teal-500', label: 'text-white', icon: '#FFFFFF', clay: clay.teal },
-    secondary: { bg: 'bg-surface', label: 'text-fg', icon: colors.fg, clay: clay.white },
+    secondary: { bg: 'bg-surface', label: 'text-fg', icon: colors.fg, clay: colorScheme === 'dark' ? clay.whiteDark : clay.white },
     danger: { bg: 'bg-danger', label: 'text-white', icon: '#FFFFFF', clay: dangerClay },
     ghost: { bg: 'bg-transparent', label: 'text-fg-body', icon: colors.fg },
   };
