@@ -47,6 +47,12 @@ export const clay = {
     { offsetX: 0, offsetY: 5, blurRadius: 0, color: '#E2E8EF' },
     { offsetX: 0, offsetY: 12, blurRadius: 22, color: 'rgba(14,42,61,0.08)' },
   ] as Shadow,
+  // Dark-mode twin of `white`: the lip must read darker than the surface,
+  // else the light-grey lip glows like a white shadow on a dark screen.
+  whiteDark: [
+    { offsetX: 0, offsetY: 5, blurRadius: 0, color: '#0A1C26' },
+    { offsetX: 0, offsetY: 12, blurRadius: 22, color: 'rgba(0,0,0,0.35)' },
+  ] as Shadow,
   whitePress: [
     { offsetX: 0, offsetY: 2, blurRadius: 0, color: '#D6DEE7' },
     { offsetX: 0, offsetY: 5, blurRadius: 10, color: 'rgba(14,42,61,0.10)' },
