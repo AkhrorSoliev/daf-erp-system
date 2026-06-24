@@ -6,6 +6,9 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { ForgotPasswordService } from './forgot-password/forgot-password.service';
+import { EskizModule } from '../eskiz/eskiz.module';
+import { PasswordResetModule } from '../common/password-reset';
 
 @Module({
   imports: [
@@ -17,9 +20,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         secret: configService.get<string>('JWT_SECRET')!,
       }),
     }),
+    EskizModule,
+    PasswordResetModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy, ForgotPasswordService],
   exports: [AuthService],
 })
 export class AuthModule {}

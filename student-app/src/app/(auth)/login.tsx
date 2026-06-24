@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import * as Crypto from 'expo-crypto';
+import { router } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 
 import { Button, Input, Screen, Text } from '@/design/components';
@@ -13,6 +14,12 @@ import { useAuth } from '@/auth/auth-store';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { env } from '@/config/env';
 import { t } from '@/i18n/uz';
+
+// SMS password reset is hidden until an Eskiz brand nik is registered — until
+// then the OTP can't be delivered (test sender 4546 only sends a fixed string),
+// so the flow is a dead-end. Flip to `true` once the nik is approved and
+// ESKIZ_FROM is set. See memory: project_eskiz_sms_setup.
+const SMS_PASSWORD_RESET_ENABLED = false;
 
 const POLL_INTERVAL = 2500;
 const POLL_TIMEOUT = 3 * 60 * 1000;
@@ -137,6 +144,15 @@ export default function Login() {
         </View>
 
         <Button label={t.auth.login} loading={loginMut.isPending} disabled={!canSubmit} onPress={() => loginMut.mutate()} />
+
+        {SMS_PASSWORD_RESET_ENABLED && (
+          <Button
+            label={t.auth.forgot}
+            variant="ghost"
+            size="sm"
+            onPress={() => router.push('/forgot-password')}
+          />
+        )}
 
         <View className="gap-3">
           <View className="flex-row items-center gap-3">

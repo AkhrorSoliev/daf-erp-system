@@ -21,6 +21,13 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
+import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
+
+// SMS-based password reset is hidden until an Eskiz brand nik is registered.
+// Until then the OTP can't be delivered (test sender 4546 only sends a fixed
+// test string), so the flow is a dead-end for users. Flip to `true` once the
+// nik is approved and ESKIZ_FROM is set. See memory: project_eskiz_sms_setup.
+const SMS_PASSWORD_RESET_ENABLED = false;
 
 const portalIcons = {
   shield: Shield,
@@ -44,6 +51,7 @@ export function LoginForm({ portal }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -186,7 +194,21 @@ export function LoginForm({ portal }: LoginFormProps) {
           )}
           Kirish
         </button>
+
+        {SMS_PASSWORD_RESET_ENABLED && portal === "student" && (
+          <button
+            type="button"
+            onClick={() => setForgotOpen(true)}
+            className="w-full text-center text-sm text-primary hover:underline"
+          >
+            Parolni unutdingizmi?
+          </button>
+        )}
       </form>
+
+      {SMS_PASSWORD_RESET_ENABLED && portal === "student" && (
+        <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
+      )}
     </div>
   );
 }

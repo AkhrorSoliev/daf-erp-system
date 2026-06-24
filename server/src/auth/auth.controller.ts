@@ -5,17 +5,26 @@ import {
   Query,
   UseGuards,
   Request,
+  Req,
   Body,
+  HttpCode,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
+import { ForgotPasswordService } from './forgot-password/forgot-password.service';
 import { Public } from '../common/decorators';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
+import { ForgotPasswordVerifyDto } from './dto/forgot-password-verify.dto';
+import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private forgotPasswordService: ForgotPasswordService,
+  ) {}
 
   @Public()
   @UseGuards(AuthGuard('local'))
@@ -39,4 +48,43 @@ export class AuthController {
   async pollLogin(@Query('requestId') requestId: string) {
     return this.authService.pollLoginRequest(requestId ?? '');
   }
+
+  // ── SMS "forgot password" (Eskiz OTP) ──────────────────────────────────────
+  // Step 1: request a 4-digit code by SMS. Always returns a generic message
+  // (anti-enumeration) — never reveals whether the phone is registered.
+  @Public()
+  @HttpCode(200)
+  @Post('forgot-password/request')
+  async forgotPasswordRequest(
+    @Body() dto: ForgotPasswordRequestDto,
+    @Req() req,
+  ) {
+    return this.forgotPasswordService.requestCode(dto.phone, clientIp(req));
+  }
+
+  // Step 2: verify the code → returns a single-use reset token.
+  @Public()
+  @HttpCode(200)
+  @Post('forgot-password/verify')
+  async forgotPasswordVerify(@Body() dto: ForgotPasswordVerifyDto) {
+    return this.forgotPasswordService.verifyCode(dto.phone, dto.code);
+  }
+
+  // Step 3: set a new password using the reset token.
+  @Public()
+  @HttpCode(200)
+  @Post('forgot-password/reset')
+  async forgotPasswordReset(@Body() dto: ForgotPasswordResetDto) {
+    return this.forgotPasswordService.resetPassword(
+      dto.resetToken,
+      dto.newPassword,
+    );
+  }
+}
+
+/** Best-effort client IP for rate-limiting (honours x-forwarded-for behind a proxy). */
+function clientIp(req: any): string | undefined {
+  const fwd = req?.headers?.['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
+  return req?.ip;
 }
