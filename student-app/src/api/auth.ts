@@ -18,3 +18,26 @@ export async function pollLoginRequest(requestId: string): Promise<PollResult> {
   }
   return { status: 'pending' };
 }
+
+// ── SMS "forgot password" (Eskiz OTP) ──────────────────────────────────────
+/** Step 1: request a 4-digit SMS code. Always resolves (anti-enumeration). */
+export async function requestPasswordReset(phone: string): Promise<void> {
+  await api.post('/auth/forgot-password/request', { phone });
+}
+
+/** Step 2: verify the code → single-use reset token. */
+export async function verifyResetCode(
+  phone: string,
+  code: string,
+): Promise<{ resetToken: string }> {
+  const { data } = await api.post('/auth/forgot-password/verify', { phone, code });
+  return { resetToken: data.resetToken };
+}
+
+/** Step 3: set the new password with the reset token. */
+export async function resetPasswordWithToken(
+  resetToken: string,
+  newPassword: string,
+): Promise<void> {
+  await api.post('/auth/forgot-password/reset', { resetToken, newPassword });
+}

@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eskiz.uz SMS API — Hujjatlar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <a href="#" class="header-logo" onclick="showPage('overview')">
+      <svg viewBox="0 0 150 32" height="32">
+        <rect width="150" height="32" rx="4" fill="#1f9d57"/>
+        <text x="75" y="22" text-anchor="middle" fill="#fff" font-size="16" font-weight="bold" font-family="Arial">Eskiz.uz</text>
+      </svg>
+      <span>SMS API Hujjatlar</span>
+    </a>
+  </div>
+  <div class="header-lang">
+    <a href="#" class="active">UZ</a>
+  </div>
+</header>
+
+<!-- Layout -->
+<div class="layout">
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <a href="#" class="sidebar-link top-level active" data-page="overview" onclick="showPage('overview')">Umumiy ko'rinish</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Boshlash</div>
+    <a href="#" class="sidebar-link" data-page="kirish" onclick="showPage('kirish')">Ro'yxatdan o'tish va kalit</a>
+    <a href="#" class="sidebar-link" data-page="token-guide" onclick="showPage('token-guide')">Token hayot sikli</a>
+    <a href="#" class="sidebar-link" data-page="tpl-moderation" onclick="showPage('tpl-moderation')">Shablon moderatsiyasi</a>
+    <a href="#" class="sidebar-link" data-page="phone-format" onclick="showPage('phone-format')">Telefon va nik formati</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Autentifikatsiya</div>
+    <a href="#" class="sidebar-link" data-page="auth-login" onclick="showPage('auth-login')">Token olish</a>
+    <a href="#" class="sidebar-link" data-page="auth-refresh" onclick="showPage('auth-refresh')">Tokenni yangilash</a>
+    <a href="#" class="sidebar-link" data-page="auth-user" onclick="showPage('auth-user')">Foydalanuvchi ma'lumotlari</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Shablonlar</div>
+    <a href="#" class="sidebar-link" data-page="tpl-create" onclick="showPage('tpl-create')">Shablon yuborish</a>
+    <a href="#" class="sidebar-link" data-page="tpl-list" onclick="showPage('tpl-list')">Shablonlar ro'yxati</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">SMS yuborish</div>
+    <a href="#" class="sidebar-link" data-page="send" onclick="showPage('send')">SMS yuborish</a>
+    <a href="#" class="sidebar-link" data-page="send-batch" onclick="showPage('send-batch')">Ommaviy yuborish</a>
+    <a href="#" class="sidebar-link" data-page="send-global" onclick="showPage('send-global')">Xalqaro SMS</a>
+    <a href="#" class="sidebar-link" data-page="detail" onclick="showPage('detail')">Detalizatsiya</a>
+    <a href="#" class="sidebar-link" data-page="by-dispatch" onclick="showPage('by-dispatch')">Rassilka bo'yicha SMS</a>
+    <a href="#" class="sidebar-link" data-page="dispatch-status" onclick="showPage('dispatch-status')">Rassilka holati</a>
+    <a href="#" class="sidebar-link" data-page="nick" onclick="showPage('nick')">Niklar ro'yxati</a>
+    <a href="#" class="sidebar-link" data-page="normalizer" onclick="showPage('normalizer')">SMS normalizatsiya</a>
+    <a href="#" class="sidebar-link" data-page="check" onclick="showPage('check')">Belgilarni tekshirish</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Hisobotlar</div>
+    <a href="#" class="sidebar-link" data-page="totals" onclick="showPage('totals')">Yuborilgan SMS yakuni</a>
+    <a href="#" class="sidebar-link" data-page="balance" onclick="showPage('balance')">Balansni olish</a>
+    <a href="#" class="sidebar-link" data-page="prices" onclick="showPage('prices')">Narxlarni olish</a>
+    <a href="#" class="sidebar-link" data-page="export" onclick="showPage('export')">CSV eksport</a>
+    <a href="#" class="sidebar-link" data-page="by-month" onclick="showPage('by-month')">Oylar bo'yicha yakun</a>
+    <a href="#" class="sidebar-link" data-page="by-smsc" onclick="showPage('by-smsc')">Kompaniyalar bo'yicha</a>
+    <a href="#" class="sidebar-link" data-page="by-range" onclick="showPage('by-range')">Sanalar bo'yicha xarajat</a>
+    <a href="#" class="sidebar-link" data-page="by-dispatch-cost" onclick="showPage('by-dispatch-cost')">Rassilka xarajati</a>
+    <a href="#" class="sidebar-link" data-page="status-by-id" onclick="showPage('status-by-id')">ID bo'yicha holat</a>
+    <a href="#" class="sidebar-link" data-page="logs" onclick="showPage('logs')">Tizim loglari</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-title">Ma'lumotnoma</div>
+    <a href="#" class="sidebar-link" data-page="statuslar" onclick="showPage('statuslar')">Yetkazish statuslari</a>
+    <a href="#" class="sidebar-link" data-page="xatoliklar" onclick="showPage('xatoliklar')">Xatoliklar</a>
+    <a href="#" class="sidebar-link" data-page="integratsiya" onclick="showPage('integratsiya')">DAF ERP integratsiyasi</a>
+  </div>
+</nav>
+
+<!-- Content -->
+<main class="content" id="content">
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="page-section active" id="page-overview">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Umumiy ko'rinish</div>
+  <h1>Eskiz.uz SMS API</h1>
+  <p><strong>Eskiz.uz</strong> — O'zbekiston hududida (va xalqaro) SMS xabarlar yuborish uchun SMS shlyuz (SMS gateway). Ushbu hujjatlar to'plami <code>notify.eskiz.uz</code> REST API bilan integratsiya tartibini, autentifikatsiya, shablon moderatsiyasi, SMS yuborish va hisobotlarni tavsiflaydi.</p>
+
+  <div class="alert alert-info">
+    <strong>Eslatma:</strong> Ushbu hujjat DaF Sprachzentrum ERP tizimi uchun tayyorlangan ichki ma'lumotnoma bo'lib, <a href="https://documenter.getpostman.com/view/663428/RzfmES4z?version=latest" target="_blank">eskiz.uz rasmiy Postman hujjatlari</a> asosida o'zbek tiliga moslashtirilgan. Payme va Click hujjatlari bilan bir xil uslubda tuzilgan.
+  </div>
+
+  <h2>Asosiy ma'lumotlar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Qiymat</th></tr></thead>
+      <tbody>
+        <tr><td>Asosiy URL (Base URL)</td><td><code>https://notify.eskiz.uz/api</code></td></tr>
+        <tr><td>Protokol</td><td>REST (JSON / <code>multipart/form-data</code>)</td></tr>
+        <tr><td>Autentifikatsiya</td><td>Bearer token (JWT)</td></tr>
+        <tr><td>Token yashash muddati</td><td>~30 kun (<code>PATCH /auth/refresh</code> bilan yangilanadi)</td></tr>
+        <tr><td>Telefon formati</td><td><code>998XXXXXXXXX</code> (12 raqam, <code>+</code> belgisisiz)</td></tr>
+        <tr><td>Standart jo'natuvchi (<code>from</code>)</td><td><code>4546</code> (test nik). Brend nik moderatsiyadan o'tishi kerak</td></tr>
+        <tr><td>Shablon</td><td>Ishlab chiqarishda har bir matn oldindan moderatsiyadan o'tishi shart</td></tr>
+        <tr><td>Test matni</td><td><code>Bu Eskiz dan test</code> (shablonsiz yuborish mumkin)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Integratsiya bosqichlari</h2>
+  <ol>
+    <li><strong>Ro'yxatdan o'tish</strong> — <code>my.eskiz.uz</code> kabinetida hisob ochish, balans to'ldirish.</li>
+    <li><strong>Token olish</strong> — kabinetdagi email + parol bilan <code>POST /auth/login</code> orqali JWT token olish.</li>
+    <li><strong>Brend nik</strong> — o'z nomingiz (masalan <code>DaFZentrum</code>) uchun ariza berib, moderatsiyadan o'tkazish.</li>
+    <li><strong>Shablon</strong> — yuboriladigan har bir matn ko'rinishini <code>POST /user/template</code> orqali tasdiqlatish.</li>
+    <li><strong>Yuborish</strong> — <code>POST /message/sms/send</code> (yoki <code>send-batch</code>) orqali SMS jo'natish.</li>
+    <li><strong>Holatni kuzatish</strong> — <code>callback_url</code> yoki <code>status_by_id</code> orqali yetkazish holatini olish.</li>
+  </ol>
+
+  <h2>API metodlari jadvali</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Bo'lim</th><th>Metod</th><th>Endpoint</th><th>Vazifa</th></tr></thead>
+      <tbody>
+        <tr><td>Auth</td><td><span class="method method-post">POST</span></td><td><code>/auth/login</code></td><td>Token olish</td></tr>
+        <tr><td>Auth</td><td><span class="method method-patch">PATCH</span></td><td><code>/auth/refresh</code></td><td>Tokenni yangilash</td></tr>
+        <tr><td>Auth</td><td><span class="method method-get">GET</span></td><td><code>/auth/user</code></td><td>Foydalanuvchi ma'lumoti</td></tr>
+        <tr><td>Shablon</td><td><span class="method method-post">POST</span></td><td><code>/user/template</code></td><td>Shablon yuborish</td></tr>
+        <tr><td>Shablon</td><td><span class="method method-get">GET</span></td><td><code>/user/templates</code></td><td>Shablonlar ro'yxati</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-post">POST</span></td><td><code>/message/sms/send</code></td><td>Bitta SMS</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-post">POST</span></td><td><code>/message/sms/send-batch</code></td><td>Ommaviy SMS</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-post">POST</span></td><td><code>/message/sms/send-global</code></td><td>Xalqaro SMS</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-post">POST</span></td><td><code>/message/sms/get-user-messages</code></td><td>Detalizatsiya</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-post">POST</span></td><td><code>/message/sms/get-user-messages-by-dispatch</code></td><td>Rassilka SMS lari</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-post">POST</span></td><td><code>/message/sms/get-dispatch-status</code></td><td>Rassilka holati</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-get">GET</span></td><td><code>/nick/me</code></td><td>Niklar ro'yxati</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-post">POST</span></td><td><code>/message/sms/normalizer</code></td><td>SMS normalizatsiya</td></tr>
+        <tr><td>Yuborish</td><td><span class="method method-get">GET</span></td><td><code>/message/sms/check</code></td><td>Belgilarni tekshirish</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-post">POST</span></td><td><code>/user/totals</code></td><td>Yuborilgan yakun</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-get">GET</span></td><td><code>/user/get-limit</code></td><td>Balans</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-get">GET</span></td><td><code>/user/prices</code></td><td>Narxlar</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-post">POST</span></td><td><code>/message/export</code></td><td>CSV eksport</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-get">GET</span></td><td><code>/report/total-by-month</code></td><td>Oylar bo'yicha</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-post">POST</span></td><td><code>/report/total-by-smsc</code></td><td>Kompaniyalar bo'yicha</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-post">POST</span></td><td><code>/report/total-by-range</code></td><td>Sanalar bo'yicha xarajat</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-post">POST</span></td><td><code>/report/total-by-dispatch</code></td><td>Rassilka xarajati</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-get">GET</span></td><td><code>/message/sms/status_by_id/:id</code></td><td>ID bo'yicha holat</td></tr>
+        <tr><td>Hisobot</td><td><span class="method method-get">GET</span></td><td><code>/logs/sms/:id</code></td><td>Tizim loglari</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== KIRISH ==================== -->
+<div class="page-section" id="page-kirish">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Boshlash &rsaquo; Ro'yxatdan o'tish</div>
+  <h1>Ro'yxatdan o'tish va kalit</h1>
+
+  <p>Eskiz API'dan foydalanish uchun avval <code>my.eskiz.uz</code> kabinetida hisob ochiladi. API kaliti emas, balki <strong>email + parol</strong> orqali token olinadi.</p>
+
+  <h2>Kerakli ma'lumotlar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Ma'lumot</th><th>Qayerdan olinadi</th></tr></thead>
+      <tbody>
+        <tr><td><code>email</code></td><td>Kabinetga kirgan email</td></tr>
+        <tr><td><code>password</code></td><td>Kabinet &rarr; Sozlamalar &rarr; API bo'limidagi <strong>maxsus API parol</strong> (kabinet kirish parolidan farq qiladi)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Diqqat:</strong> API uchun ishlatiladigan parol — bu kabinetning <em>API bo'limidagi</em> maxsus paroldir, oddiy login paroli emas. Uni o'zgartirsangiz, eski token bekor bo'lmaydi, lekin yangi token olish uchun yangi parol kerak bo'ladi.
+  </div>
+
+  <h2>Balans</h2>
+  <p>SMS yuborish uchun kabinetda balans bo'lishi kerak. Balansni <code>GET /user/get-limit</code> orqali tekshirish mumkin. Har bir SMS narxi <code>GET /user/prices</code> orqali ko'riladi.</p>
+
+  <h2>Maxfiylik</h2>
+  <div class="alert alert-danger">
+    <strong>Muhim:</strong> <code>email</code>, <code>password</code> va olingan <code>token</code> ni hech qachon frontend (brauzer/mobil ilova) kodiga joylashtirmang. Faqat backend (server) tomonida, environment o'zgaruvchilarida saqlang.
+  </div>
+</div>
+
+<!-- ==================== TOKEN GUIDE ==================== -->
+<div class="page-section" id="page-token-guide">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Boshlash &rsaquo; Token hayot sikli</div>
+  <h1>Token hayot sikli</h1>
+
+  <p>Eskiz API <strong>Bearer JWT token</strong> ishlatadi. Token taxminan <strong>30 kun</strong> amal qiladi, so'ng yangilanishi kerak.</p>
+
+  <h2>Bosqichlar</h2>
+  <ol>
+    <li><strong>Olish:</strong> <code>POST /auth/login</code> &rarr; <code>data.token</code> qaytadi.</li>
+    <li><strong>Ishlatish:</strong> har bir so'rovga <code>Authorization: Bearer &lt;token&gt;</code> sarlavhasini qo'shing.</li>
+    <li><strong>Yangilash:</strong> token eskirishidan oldin <code>PATCH /auth/refresh</code> (eski token bilan) &rarr; yangi token qaytadi.</li>
+  </ol>
+
+  <h2>Tavsiya etilgan strategiya (backend)</h2>
+  <div class="alert alert-info">
+    Tokenni <strong>Redis</strong> da keshlang (masalan 25 kunlik TTL bilan). Har so'rovda qayta login qilmang. <code>401 Unauthorized</code> javobi kelganda — bir marta avtomatik <code>login</code> qilib, tokenni yangilab, so'rovni qayta yuboring (retry-on-401).
+  </div>
+
+  <h2>Token muddati tugaganda</h2>
+  <p>Muddati o'tgan token bilan so'rov yuborilsa, API <code>401</code> bilan javob qaytaradi. Bunda <code>/auth/refresh</code> ishlamasligi mumkin (token allaqachon yaroqsiz) — bu holda qaytadan <code>/auth/login</code> qiling.</p>
+
+  <pre><code># 1. Token olish
+curl -X POST https://notify.eskiz.uz/api/auth/login \
+  -F "email=vash@email.uz" \
+  -F "password=API_PAROL"
+
+# Javob: { "data": { "token": "eyJ0eXAiOiJ..." } }
+
+# 2. Tokenni ishlatish
+curl https://notify.eskiz.uz/api/auth/user \
+  -H "Authorization: Bearer eyJ0eXAiOiJ..."
+
+# 3. Yangilash
+curl -X PATCH https://notify.eskiz.uz/api/auth/refresh \
+  -H "Authorization: Bearer eyJ0eXAiOiJ..."</code></pre>
+</div>
+
+<!-- ==================== TEMPLATE MODERATION ==================== -->
+<div class="page-section" id="page-tpl-moderation">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Boshlash &rsaquo; Shablon moderatsiyasi</div>
+  <h1>Shablon moderatsiyasi</h1>
+
+  <div class="alert alert-danger">
+    <strong>Eng muhim qoida:</strong> Ishlab chiqarishda (test nikdan tashqari) yuboriladigan <strong>har bir SMS matni oldindan moderatsiyadan o'tgan shablonga mos kelishi shart</strong>. Tasdiqlanmagan matn yuborilsa, SMS jo'natilmaydi (rad etiladi).
+  </div>
+
+  <h2>Qanday ishlaydi</h2>
+  <ol>
+    <li>Yuboriladigan matn ko'rinishini <code>POST /user/template</code> orqali (yoki kabinet orqali) yuborasiz.</li>
+    <li>Shablon <code>moderation</code> holatiga tushadi va Eskiz operatorlari uni tekshiradi.</li>
+    <li>Tasdiqlangach, faqat shu matn ko'rinishidagi SMS lar yuboriladi.</li>
+  </ol>
+
+  <h2>O'zgaruvchilar</h2>
+  <p>Shablonlarda o'zgaruvchan qismlar bo'lishi mumkin (ism, parol, kod va h.k.). Eskiz odatda o'zgaruvchilarni qavslar bilan belgilashga ruxsat beradi. Misol:</p>
+  <pre><code>Hurmatli mijoz, DaF Sprachzentrum tizimiga kirish: login {login}, parol {parol}. Sayt: student.dafzentrum.uz</code></pre>
+  <p>Bunda <code>{login}</code> va <code>{parol}</code> har bir yuborishda haqiqiy qiymatlar bilan almashtiriladi, lekin shablonning umumiy ko'rinishi o'zgarmaydi.</p>
+
+  <div class="alert alert-warning">
+    <strong>Maslahat:</strong> Loyihada ishlatiladigan barcha matnlarni (login ma'lumotlari, parol tiklash kodi, davomat, qarz eslatmasi va h.k.) oldindan ro'yxatlab, hammasini bir vaqtning o'zida moderatsiyaga yuboring. Aks holda kerakli paytda SMS jo'natilmay qoladi.
+  </div>
+
+  <h2>Test rejimi</h2>
+  <p>Moderatsiyasiz sinab ko'rish uchun standart test nik (<code>4546</code>) bilan aniq <code>Bu Eskiz dan test</code> matnini yuborish mumkin. Boshqa har qanday matn shablon talab qiladi.</p>
+</div>
+
+<!-- ==================== PHONE / NICK FORMAT ==================== -->
+<div class="page-section" id="page-phone-format">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Boshlash &rsaquo; Telefon va nik</div>
+  <h1>Telefon va nik formati</h1>
+
+  <h2>Telefon raqami</h2>
+  <ul>
+    <li>Format: <code>998XXXXXXXXX</code> — <strong>12 ta raqam</strong>, <code>+</code> belgisisiz, <code>998</code> mamlakat kodi bilan.</li>
+    <li>To'g'ri: <code>998991234567</code></li>
+    <li>Noto'g'ri: <code>+998991234567</code>, <code>991234567</code>, <code>8991234567</code></li>
+  </ul>
+
+  <div class="alert alert-info">
+    DaF ERP'da telefon <strong>9 raqamli</strong> (<code>+998</code> prefiksisiz) saqlanadi. Eskizga yuborishdan oldin oldiga <code>998</code> qo'shilishi kerak: <code>"998" + student.phone</code>.
+  </div>
+
+  <h2>Jo'natuvchi nik (<code>from</code>)</h2>
+  <ul>
+    <li>Standart test qiymati: <code>4546</code> — faqat test matni uchun.</li>
+    <li>Brend nik (masalan <code>DaFZentrum</code>) ishlatish uchun uni Eskiz kabinetida ro'yxatdan o'tkazib, moderatsiyadan o'tkazish kerak.</li>
+    <li>Tasdiqlangan niklaringizni <code>GET /nick/me</code> orqali ko'rishingiz mumkin.</li>
+    <li>Nik tasdiqlangach, <code>send</code> so'rovida <code>from</code> maydoniga o'sha nikni yozasiz.</li>
+  </ul>
+</div>
+
+<!-- ==================== AUTH: LOGIN ==================== -->
+<div class="page-section" id="page-auth-login">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Autentifikatsiya &rsaquo; Token olish</div>
+  <h1>Token olish</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/auth/login</code></div>
+
+  <p>Email va API parol orqali Bearer token oladi. Token taxminan 30 kun amal qiladi.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>email</code></td><td>String</td><td>Ha</td><td>Kabinet email</td></tr>
+        <tr><td><code>password</code></td><td>String</td><td>Ha</td><td>Kabinet API bo'limidagi parol</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>curl -X POST https://notify.eskiz.uz/api/auth/login \
+  -F "email=sizning@email.uz" \
+  -F "password=KABINET_API_PAROLI"</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "message": "token_generated",
+    "data": {
+        "token": "<sizning_token>"
+    },
+    "token_type": "bearer"
+}</code></pre>
+</div>
+
+<!-- ==================== AUTH: REFRESH ==================== -->
+<div class="page-section" id="page-auth-refresh">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Autentifikatsiya &rsaquo; Tokenni yangilash</div>
+  <h1>Tokenni yangilash</h1>
+  <div class="endpoint"><span class="method method-patch">PATCH</span> <code>https://notify.eskiz.uz/api/auth/refresh</code></div>
+
+  <p>Mavjud (hali amal qiluvchi) token bilan yangi token oladi. Token eskirishidan oldin chaqirish tavsiya etiladi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;mavjud_token&gt;</code></pre>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>curl -X PATCH https://notify.eskiz.uz/api/auth/refresh \
+  -H "Authorization: Bearer eyJ0eXAiOiJ..."</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "message": "token_generated",
+    "data": {
+        "token": "<yangi_token>"
+    },
+    "token_type": "bearer"
+}</code></pre>
+</div>
+
+<!-- ==================== AUTH: USER ==================== -->
+<div class="page-section" id="page-auth-user">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Autentifikatsiya &rsaquo; Foydalanuvchi</div>
+  <h1>Foydalanuvchi ma'lumotlari</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/auth/user</code></div>
+
+  <p>Joriy token egasining profil ma'lumotlarini qaytaradi (id, nom, email, rol, holat, balans).</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "status": "success",
+    "data": {
+        "id": 378,
+        "created_at": "2020-10-14T18:27:03Z",
+        "updated_at": "2023-11-03T20:09:31.527361Z",
+        "name": "Name",
+        "email": "vash@email.uz",
+        "password": "",
+        "role": "user",
+        "status": "active",
+        "is_vip": false,
+        "balance": 0
+    },
+    "id": null
+}</code></pre>
+</div>
+
+<!-- ==================== TEMPLATE: CREATE ==================== -->
+<div class="page-section" id="page-tpl-create">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Shablonlar &rsaquo; Shablon yuborish</div>
+  <h1>Shablon yuborish</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/user/template</code></div>
+
+  <p>Yangi SMS shablonini moderatsiyaga yuboradi. Tasdiqlangach shu ko'rinishdagi matnlarni yuborish mumkin bo'ladi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>template</code></td><td>String</td><td>Ha</td><td>Shablon (matn) ko'rinishi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>curl -X POST https://notify.eskiz.uz/api/user/template \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -F "template=DaF Sprachzentrum: login {login}, parol {parol}. student.dafzentrum.uz"</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "template": "shablon yoki matn"
+}</code></pre>
+</div>
+
+<!-- ==================== TEMPLATE: LIST ==================== -->
+<div class="page-section" id="page-tpl-list">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Shablonlar &rsaquo; Ro'yxat</div>
+  <h1>Shablonlar ro'yxati</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/user/templates</code></div>
+
+  <p>Foydalanuvchining barcha shablonlarini va ularning moderatsiya holatini qaytaradi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "success": true,
+    "result": [
+        {
+            "id": 1,
+            "template": "",
+            "original_text": "Eskiz API test 2",
+            "status": "moderation"
+        }
+    ]
+}</code></pre>
+
+  <h2>Shablon holatlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Holat</th><th>Ma'no</th></tr></thead>
+      <tbody>
+        <tr><td><code>moderation</code></td><td>Tekshiruvda — hali yuborib bo'lmaydi</td></tr>
+        <tr><td><code>service</code> / tasdiqlangan</td><td>Tasdiqlangan — yuborish mumkin</td></tr>
+        <tr><td><code>rejected</code></td><td>Rad etilgan — qayta yuborish kerak</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SEND ==================== -->
+<div class="page-section" id="page-send">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; SMS yuborish</div>
+  <h1>SMS yuborish</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/sms/send</code></div>
+
+  <p>Bitta telefon raqamiga SMS yuboradi. Javobda qaytgan <code>id</code> — bu <code>request_id</code> bo'lib, holatni kuzatishda ishlatiladi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>mobile_phone</code></td><td>String</td><td>Ha</td><td>Telefon raqami: <code>998991234567</code></td></tr>
+        <tr><td><code>message</code></td><td>String</td><td>Ha</td><td>Xabar matni (tasdiqlangan shablonga mos)</td></tr>
+        <tr><td><code>from</code></td><td>String</td><td>Yo'q</td><td>Jo'natuvchi nik. Standart <code>4546</code>; brend nik uchun o'zingiznikini yozing</td></tr>
+        <tr><td><code>callback_url</code></td><td>String (URL)</td><td>Yo'q</td><td>Yetkazish holatini avtomatik qabul qilish uchun URL</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>curl -X POST https://notify.eskiz.uz/api/message/sms/send \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -F "mobile_phone=998991234567" \
+  -F "message=Bu Eskiz dan test" \
+  -F "from=4546"</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "id": "59bf10a2-aba8-4694-8fd5-0be20102a580",
+    "message": "Waiting for SMS provider",
+    "status": "waiting"
+}</code></pre>
+
+  <h2>callback_url</h2>
+  <p>Agar <code>callback_url</code> berilsa, Eskiz yetkazish holati o'zgarganda quyidagi formatda <code>POST</code> so'rov yuboradi:</p>
+  <pre><code>{
+  "request_id": "UUID",
+  "message_id": "4385062",
+  "user_sms_id": "vash_ID_zdes",
+  "country": "UZ",
+  "phone_number": "998991234567",
+  "sms_count": "1",
+  "status": "DELIVRD",
+  "status_date": "2021-04-02 00:39:36"
+}</code></pre>
+  <div class="alert alert-info">
+    <code>request_id</code> — bu <code>send</code>, <code>send-batch</code> va <code>send-global</code> javobidagi <code>id</code> maydonining qiymati. U bilan SMS ni o'z tizimingizdagi yozuv bilan bog'laysiz.
+  </div>
+</div>
+
+<!-- ==================== SEND-BATCH ==================== -->
+<div class="page-section" id="page-send-batch">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Ommaviy</div>
+  <h1>Ommaviy yuborish (rassilka)</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/sms/send-batch</code></div>
+
+  <p>Bir nechta raqamga turli matnlarni bitta so'rovda yuboradi. Bu endpoint <code>application/json</code> (raw body) qabul qiladi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;
+Content-Type: application/json</code></pre>
+
+  <h2>So'rov parametrlari (JSON)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>messages</code></td><td>Array</td><td>Ha</td><td>Obyektlar ro'yxati: <code>user_sms_id</code>, <code>to</code>, <code>text</code></td></tr>
+        <tr><td><code>messages[].user_sms_id</code></td><td>String</td><td>Ha</td><td>Sizning ichki SMS ID'ngiz (callback'da qaytadi)</td></tr>
+        <tr><td><code>messages[].to</code></td><td>Number</td><td>Ha</td><td>Telefon raqami: <code>998990000000</code></td></tr>
+        <tr><td><code>messages[].text</code></td><td>String</td><td>Ha</td><td>Xabar matni</td></tr>
+        <tr><td><code>from</code></td><td>String</td><td>Yo'q</td><td>Jo'natuvchi nik (standart <code>4546</code>)</td></tr>
+        <tr><td><code>dispatch_id</code></td><td>Number</td><td>Yo'q</td><td>Rassilka ID (keyin hisobotda ishlatiladi)</td></tr>
+        <tr><td><code>callback_url</code></td><td>String</td><td>Yo'q</td><td>Holat callback URL'i</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>curl -X POST https://notify.eskiz.uz/api/message/sms/send-batch \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+        {"user_sms_id":"sms1","to": 998990000000, "text": "eto test"},
+        {"user_sms_id":"sms2","to": 998980000000, "text": "eto test 2"}
+    ],
+    "from": "4546",
+    "dispatch_id": 123,
+    "callback_url": ""
+}'</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "id": "03759b6d-c4db-449f-81c1-f625ab1bc1b4",
+    "message": "Waiting for SMS provider",
+    "status": [
+        "waiting",
+        "waiting"
+    ]
+}</code></pre>
+</div>
+
+<!-- ==================== SEND-GLOBAL ==================== -->
+<div class="page-section" id="page-send-global">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Xalqaro</div>
+  <h1>Xalqaro SMS</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/sms/send-global</code></div>
+
+  <p>O'zbekistondan tashqaridagi raqamlarga SMS yuboradi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Majburiy</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>mobile_phone</code></td><td>String</td><td>Ha</td><td>Telefon raqami (mamlakat kodi bilan)</td></tr>
+        <tr><td><code>message</code></td><td>String</td><td>Ha</td><td>Xabar matni</td></tr>
+        <tr><td><code>country_code</code></td><td>String</td><td>Ha</td><td>Mamlakat kodi (masalan <code>US</code>)</td></tr>
+        <tr><td><code>unicode</code></td><td>String</td><td>Yo'q</td><td><code>1</code> — kirill/unicode matn yuborish uchun</td></tr>
+        <tr><td><code>callback_url</code></td><td>String</td><td>Yo'q</td><td>Holat callback URL'i</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>So'rov misoli</h2>
+  <pre><code>curl -X POST https://notify.eskiz.uz/api/message/sms/send-global \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -F "mobile_phone=1234567891011" \
+  -F "message=Test boshlanadi" \
+  -F "country_code=US" \
+  -F "unicode=0"</code></pre>
+
+  <div class="alert alert-info">Javob formati <code>send</code> bilan bir xil: <code>{ "id": "...", "message": "...", "status": "waiting" }</code>.</div>
+</div>
+
+<!-- ==================== DETAIL ==================== -->
+<div class="page-section" id="page-detail">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Detalizatsiya</div>
+  <h1>Detalizatsiya (foydalanuvchi xabarlari)</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/sms/get-user-messages</code></div>
+
+  <p>Berilgan sana oralig'ida yuborilgan barcha SMS larning batafsil ro'yxatini (sahifalangan) qaytaradi.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>start_date</code></td><td>String</td><td>Boshlanish: <code>%Y-%m-%d %H:%M</code> (masalan <code>2023-11-01 00:00</code>)</td></tr>
+        <tr><td><code>to_date</code></td><td>String</td><td>Tugash: <code>%Y-%m-%d %H:%M</code></td></tr>
+        <tr><td><code>page_size</code></td><td>Number</td><td>Sahifadagi SMS soni (20 dan 200 gacha)</td></tr>
+        <tr><td><code>count</code></td><td>Number</td><td><code>1</code> — status bo'yicha yakuniy son kerak bo'lsa</td></tr>
+        <tr><td><code>is_ad</code></td><td>Number</td><td>[bo'sh] — barchasi, <code>1</code> — reklama, <code>0</code> — servis</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob misoli (ro'yxat)</h2>
+  <pre><code>{
+    "data": {
+        "current_page": 1,
+        "per_page": 20,
+        "last_page": 1,
+        "total": 4,
+        "result": [
+            {
+                "id": 16,
+                "user_id": 378,
+                "user_sms_id": "hiha124",
+                "request_id": "7fc5c514-aa30-4adc-9b80-2956d612fb4c",
+                "price": 50,
+                "is_ad": true,
+                "nick": "4546",
+                "to": "998xxxxxxxxx",
+                "message": "Eskiz test",
+                "parts_count": 1,
+                "status": "DELIVERED"
+            }
+        ]
+    }
+}</code></pre>
+
+  <h2>Javob misoli (<code>count=1</code> — yakun)</h2>
+  <pre><code>{
+    "status": "success",
+    "data": [
+        { "status": "DELIVERED", "total": 4 }
+    ],
+    "id": null
+}</code></pre>
+</div>
+
+<!-- ==================== BY DISPATCH ==================== -->
+<div class="page-section" id="page-by-dispatch">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Rassilka SMS</div>
+  <h1>Rassilka bo'yicha SMS</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/sms/get-user-messages-by-dispatch</code></div>
+
+  <p>Berilgan <code>dispatch_id</code> bo'yicha yuborilgan SMS larning detalizatsiyasini qaytaradi.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>dispatch_id</code></td><td>Number</td><td>Rassilka ID</td></tr>
+        <tr><td><code>count</code></td><td>Number</td><td><code>1</code> — status bo'yicha yakun kerak bo'lsa</td></tr>
+        <tr><td><code>is_ad</code></td><td>Number</td><td>[bo'sh] — barchasi, <code>1</code> — reklama, <code>0</code> — servis</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "result": "Detalizatsiya bilan ro'yxat"
+}</code></pre>
+</div>
+
+<!-- ==================== DISPATCH STATUS ==================== -->
+<div class="page-section" id="page-dispatch-status">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Rassilka holati</div>
+  <h1>Rassilka holati</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/sms/get-dispatch-status</code></div>
+
+  <p>Rassilkaning umumiy holati bo'yicha yakuniy statistikani qaytaradi (qancha yetkazildi va h.k.).</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>user_id</code></td><td>Number</td><td>Foydalanuvchi ID</td></tr>
+        <tr><td><code>dispatch_id</code></td><td>Number</td><td>Rassilka ID</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "status": "success",
+    "data": [
+        { "status": "DELIVERED", "total": 18 }
+    ],
+    "id": null
+}</code></pre>
+</div>
+
+<!-- ==================== NICK ==================== -->
+<div class="page-section" id="page-nick">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Niklar</div>
+  <h1>Niklar ro'yxati</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/nick/me</code></div>
+
+  <p>Foydalanuvchiga biriktirilgan (tasdiqlangan) jo'natuvchi niklarini qaytaradi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>[
+    "Eskiz.uz"
+]</code></pre>
+</div>
+
+<!-- ==================== NORMALIZER ==================== -->
+<div class="page-section" id="page-normalizer">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Normalizatsiya</div>
+  <h1>SMS normalizatsiya</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/sms/normalizer</code></div>
+
+  <p>Matndagi maxsus (lotin bo'lmagan, ko'rinishi o'xshash) belgilarni aniqlaydi. Bunday belgilar SMS narxini oshirib yuborishi (unicode segmentlar) yoki yetkazilmaslikka olib kelishi mumkin.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>message</code></td><td>String</td><td>Tekshiriladigan matn</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "special_characters": [
+        { "position": 16, "code": "0x20AC", "char": "€" },
+        { "position": 23, "code": "0x7C", "char": "|" },
+        { "position": 45, "code": "0x405", "char": "Ѕ" }
+    ]
+}</code></pre>
+
+  <div class="alert alert-warning">
+    Masalan lotin <code>S</code> o'rniga kirill <code>Ѕ</code> (ko'rinishi bir xil) tushib qolsa, butun SMS unicode'ga o'tib, narxi va segment soni oshadi. Normalizer shularni topadi.
+  </div>
+</div>
+
+<!-- ==================== CHECK ==================== -->
+<div class="page-section" id="page-check">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; SMS yuborish &rsaquo; Belgilarni tekshirish</div>
+  <h1>Belgilarni tekshirish</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/message/sms/check</code></div>
+
+  <p>Matnni tekshirib, segmentlar soni va kodlash (encoding) haqida ma'lumot beradi.</p>
+
+  <h2>So'rov tanasi (JSON)</h2>
+  <pre><code>{
+    "message": "Tekshiriladigan matn"
+}</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "status": "success"
+}</code></pre>
+</div>
+
+<!-- ==================== TOTALS ==================== -->
+<div class="page-section" id="page-totals">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Yuborilgan yakun</div>
+  <h1>Yuborilgan SMS yakuni</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/user/totals</code></div>
+
+  <p>Status va oy bo'yicha yuborilgan SMS paketlari yakunini qaytaradi.</p>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "status": "success",
+    "data": [
+        { "status": "DELIVERED", "month": "Nov", "packets": 3 }
+    ],
+    "id": null
+}</code></pre>
+</div>
+
+<!-- ==================== BALANCE ==================== -->
+<div class="page-section" id="page-balance">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Balans</div>
+  <h1>Balansni olish</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/user/get-limit</code></div>
+
+  <p>Hisobdagi joriy balansni qaytaradi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "data": {
+        "balance": 0
+    },
+    "status": "success"
+}</code></pre>
+
+  <div class="alert alert-info">Avtomatik SMS yuborishdan oldin balansni kuzatib boring — balans tugaganda SMS lar jim rad etiladi. Past balans ogohlantirishini sozlash tavsiya etiladi.</div>
+</div>
+
+<!-- ==================== PRICES ==================== -->
+<div class="page-section" id="page-prices">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Narxlar</div>
+  <h1>Narxlarni olish</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/user/prices</code></div>
+
+  <p>Joriy SMS tariflarini (yo'nalish/operator bo'yicha narxlar) qaytaradi.</p>
+
+  <h2>Sarlavhalar</h2>
+  <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <div class="alert alert-info">Narxlar bitta SMS segmenti uchun beriladi. Uzun matn bir nechta segmentga bo'linadi — har bir segment alohida hisoblanadi (lotin: 160 belgi, unicode: 70 belgi).</div>
+</div>
+
+<!-- ==================== EXPORT ==================== -->
+<div class="page-section" id="page-export">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; CSV eksport</div>
+  <h1>CSV eksport</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/message/export?status=all</code></div>
+
+  <p>Tanlangan davr uchun SMS hisobotini CSV formatida eksport qiladi.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>year</code></td><td>Number</td><td>Yil (masalan <code>2024</code>)</td></tr>
+        <tr><td><code>month</code></td><td>Number</td><td>Oy (1–12)</td></tr>
+        <tr><td><code>start</code></td><td>String</td><td><code>YYYY-MM-DD HH:mm:ss</code> (ixtiyoriy)</td></tr>
+        <tr><td><code>end</code></td><td>String</td><td><code>YYYY-MM-DD HH:mm:ss</code> (ixtiyoriy)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Query parametri <code>?status=all</code> — barcha statuslar bo'yicha eksport.</p>
+</div>
+
+<!-- ==================== BY MONTH ==================== -->
+<div class="page-section" id="page-by-month">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Oylar bo'yicha</div>
+  <h1>Oylar bo'yicha yakun</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/report/total-by-month?year=2024</code></div>
+
+  <p>Yil davomidagi har oy bo'yicha yuborilgan segmentlar va sarflangan summani qaytaradi.</p>
+
+  <h2>Query parametrlari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>year</code></td><td>Yil (masalan <code>2024</code>)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "data": [
+        {
+            "year": 2024, "month": 2,
+            "ad_parts": 14, "ad_spent": 1610,
+            "parts": 409, "spent": 22594,
+            "total_parts": 423, "total_spent": 24204
+        },
+        {
+            "year": 2024, "month": 1,
+            "ad_parts": 8, "ad_spent": 920,
+            "parts": 30, "spent": 1500,
+            "total_parts": 38, "total_spent": 2420
+        }
+    ]
+}</code></pre>
+
+  <div class="alert alert-info">
+    <code>parts</code>/<code>spent</code> — servis SMS lar; <code>ad_parts</code>/<code>ad_spent</code> — reklama SMS lar; <code>total_*</code> — umumiy.
+  </div>
+</div>
+
+<!-- ==================== BY SMSC ==================== -->
+<div class="page-section" id="page-by-smsc">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Kompaniyalar bo'yicha</div>
+  <h1>Kompaniyalar (operatorlar) bo'yicha</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/report/total-by-smsc</code></div>
+
+  <p>Berilgan oyda har bir SMS markazi (<code>smsc_id</code> — operator) bo'yicha statistikani qaytaradi.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>year</code></td><td>Number</td><td>Yil</td></tr>
+        <tr><td><code>month</code></td><td>Number</td><td>Oy (1–12)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "data": [
+        {
+            "year": 2024, "month": 1,
+            "parts": 9, "spent": 450,
+            "total_parts": 9, "total_spent": 450,
+            "smsc_id": 1
+        },
+        {
+            "year": 2024, "month": 1,
+            "parts": 10, "spent": 500,
+            "total_parts": 10, "total_spent": 500,
+            "smsc_id": 2
+        }
+    ]
+}</code></pre>
+</div>
+
+<!-- ==================== BY RANGE ==================== -->
+<div class="page-section" id="page-by-range">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Sanalar bo'yicha</div>
+  <h1>Sanalar bo'yicha xarajat</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/report/total-by-range</code></div>
+
+  <p>Berilgan sana oralig'idagi umumiy xarajatni qaytaradi.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>start_date</code></td><td>String</td><td>Boshlanish: <code>%Y-%m-%d %H:%M</code></td></tr>
+        <tr><td><code>to_date</code></td><td>String</td><td>Tugash: <code>%Y-%m-%d %H:%M</code></td></tr>
+        <tr><td><code>is_ad</code></td><td>Number</td><td>[bo'sh] — barchasi, <code>1</code> — reklama, <code>0</code> — servis</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== BY DISPATCH COST ==================== -->
+<div class="page-section" id="page-by-dispatch-cost">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Rassilka xarajati</div>
+  <h1>Rassilka bo'yicha xarajat</h1>
+  <div class="endpoint"><span class="method method-post">POST</span> <code>https://notify.eskiz.uz/api/report/total-by-dispatch</code></div>
+
+  <p>Berilgan <code>dispatch_id</code> bo'yicha umumiy xarajatni qaytaradi.</p>
+
+  <h2>So'rov parametrlari (form-data)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Turi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>dispatch_id</code></td><td>Number</td><td>Rassilka ID</td></tr>
+        <tr><td><code>is_ad</code></td><td>Number</td><td>[bo'sh] — barchasi, <code>1</code> — reklama, <code>0</code> — servis</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== STATUS BY ID ==================== -->
+<div class="page-section" id="page-status-by-id">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; ID bo'yicha holat</div>
+  <h1>ID bo'yicha holat</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/message/sms/status_by_id/:id</code></div>
+
+  <p>Eskiz xabar <code>id</code>'si bo'yicha bitta SMS ning to'liq holatini qaytaradi.</p>
+
+  <h2>URL parametri</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Parametr</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>:id</code></td><td>Eskiz xabar ID (detalizatsiyadagi <code>id</code> yoki <code>message_id</code>)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "status": "success",
+    "data": {
+        "id": 61359094,
+        "country_id": 83,
+        "smsc_id": 8,
+        "request_id": "b169553b-de29-4649-b5dd-cfafd85984f9",
+        "is_ad": false,
+        "nick": "from",
+        "to": "to",
+        "message": "Test",
+        "encoding": 1,
+        "parts_count": 1
+    }
+}</code></pre>
+</div>
+
+<!-- ==================== LOGS ==================== -->
+<div class="page-section" id="page-logs">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Hisobotlar &rsaquo; Tizim loglari</div>
+  <h1>Tizim loglari</h1>
+  <div class="endpoint"><span class="method method-get">GET</span> <code>https://notify.eskiz.uz/api/logs/sms/:id</code></div>
+
+  <p>Bitta SMS ning ichki tizim loglarini (yuborish jarayonidagi qadamlar) qaytaradi. Diagnostika uchun foydali.</p>
+
+  <h2>Javob misoli</h2>
+  <pre><code>{
+    "messages": [
+        {
+            "ip": "127.0.0.1",
+            "from": "4546",
+            "to": "99899*******",
+            "user_sms_id": "test-sms-1",
+            "timestamp": "2024-02-27T11:30:28.066Z",
+            "message": "CallbackURL bo'sh",
+            "level_name": "WARN"
+        },
+        {
+            "from": "4546",
+            "to": "99899*******",
+            "user_sms_id": "test-sms-1",
+            "timestamp": "2024-02-27T11:30:28.061Z",
+            "message": "SMS muvaffaqiyatli update qilindi",
+            "level_name": "INFO"
+        }
+    ]
+}</code></pre>
+</div>
+
+<!-- ==================== STATUSES ==================== -->
+<div class="page-section" id="page-statuslar">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Ma'lumotnoma &rsaquo; Statuslar</div>
+  <h1>Yetkazish statuslari</h1>
+
+  <p>SMS yuborilgach, uning holati bir necha bosqichdan o'tadi. <code>callback_url</code> orqali yoki detalizatsiya/<code>status_by_id</code> orqali holatni kuzatish mumkin.</p>
+
+  <h2>Umumiy holatlar</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Status</th><th>Ma'no</th></tr></thead>
+      <tbody>
+        <tr><td><span class="state-badge state-wait">waiting</span></td><td>SMS provayder navbatida (yuborish boshlandi)</td></tr>
+        <tr><td><span class="state-badge state-ok">DELIVERED</span></td><td>Abonentga yetkazildi</td></tr>
+        <tr><td><span class="state-badge state-fail">REJECTED</span></td><td>Rad etildi (shablon mos emas, balans yo'q, qora ro'yxat va h.k.)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Yetkazib berish hisoboti statuslari (SMPP, <code>status</code> maydoni)</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Kod</th><th>Ma'no</th></tr></thead>
+      <tbody>
+        <tr><td><code>DELIVRD</code></td><td>Abonent telefoniga yetkazildi</td></tr>
+        <tr><td><code>EXPIRED</code></td><td>Amal muddati tugadi (telefon o'chiq/tarmoqdan tashqarida)</td></tr>
+        <tr><td><code>UNDELIV</code></td><td>Yetkazib bo'lmadi</td></tr>
+        <tr><td><code>DELETED</code></td><td>O'chirildi</td></tr>
+        <tr><td><code>ACCEPTD</code></td><td>Operator tomonidan qabul qilindi</td></tr>
+        <tr><td><code>REJECTD</code></td><td>Operator rad etdi</td></tr>
+        <tr><td><code>UNKNOWN</code></td><td>Noma'lum holat</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    Yakuniy holat odatda <code>callback_url</code> ga POST qilinadi. Agar callback sozlanmagan bo'lsa, holatni vaqti-vaqti bilan <code>status_by_id/:id</code> yoki detalizatsiya orqali so'rab turish kerak.
+  </div>
+</div>
+
+<!-- ==================== ERRORS ==================== -->
+<div class="page-section" id="page-xatoliklar">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Ma'lumotnoma &rsaquo; Xatoliklar</div>
+  <h1>Xatoliklar</h1>
+
+  <p>API standart HTTP status kodlari bilan javob beradi. Asosiy holatlar:</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>HTTP</th><th>Ma'no</th><th>Yechim</th></tr></thead>
+      <tbody>
+        <tr><td><code>200</code></td><td>Muvaffaqiyatli</td><td>—</td></tr>
+        <tr><td><code>400</code></td><td>Noto'g'ri so'rov (parametr xato)</td><td>Telefon formati, majburiy maydonlarni tekshiring</td></tr>
+        <tr><td><code>401</code></td><td>Token yaroqsiz yoki muddati o'tgan</td><td>Qaytadan <code>login</code> qiling yoki <code>refresh</code></td></tr>
+        <tr><td><code>422</code></td><td>Validatsiya xatosi (matn/shablon mos emas)</td><td>Shablon moderatsiyadan o'tganini tekshiring</td></tr>
+        <tr><td><code>429</code></td><td>So'rovlar limiti (rate limit)</td><td>So'rov tezligini kamaytiring, qayta urinish (backoff)</td></tr>
+        <tr><td><code>500</code></td><td>Server xatosi</td><td>Keyinroq qayta urinib ko'ring</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Eng ko'p uchraydigan sabablar</h2>
+  <ul>
+    <li><strong>SMS yuborilmadi (rad):</strong> matn tasdiqlangan shablonga mos emas.</li>
+    <li><strong>401:</strong> token muddati o'tgan (~30 kun) — yangilang.</li>
+    <li><strong>Balans yetarli emas:</strong> <code>get-limit</code> bilan tekshiring.</li>
+    <li><strong>Telefon formati:</strong> <code>998XXXXXXXXX</code> bo'lishi shart.</li>
+  </ul>
+</div>
+
+<!-- ==================== INTEGRATION (DAF ERP) ==================== -->
+<div class="page-section" id="page-integratsiya">
+  <div class="breadcrumb"><a href="#" onclick="showPage('overview')">Bosh sahifa</a> &rsaquo; Ma'lumotnoma &rsaquo; DAF ERP integratsiyasi</div>
+  <h1>DAF ERP integratsiyasi bo'yicha eslatmalar</h1>
+
+  <div class="alert alert-info">
+    Bu bo'lim — Payme/Click integratsiyasi kabi, DaF Sprachzentrum backend (NestJS + Prisma) tomonida eskiz'ni qanday ulash bo'yicha amaliy tavsiyalar. Kod hali yozilmagan; bu — yo'l xaritasi.
+  </div>
+
+  <h2>Tavsiya etilgan arxitektura</h2>
+  <ul>
+    <li><strong><code>EskizService</code></strong> — token olish/keshlash (Redis, ~25 kun TTL), avtomatik yangilash, <code>send</code> / <code>send-batch</code> chaqiruvlari, 401'da retry.</li>
+    <li><strong>Mavjud <code>SmsService</code></strong> ni kengaytirish: hozir faqat Telegram orqali yuboradi. Unga eskiz kanalini qo'shish.</li>
+    <li><strong><code>SmsMessage</code> jadvali</strong> ga <code>channel</code> (<code>TELEGRAM</code> | <code>SMS</code>) va <code>providerMessageId</code> / <code>requestId</code> ustunlarini qo'shish (callback'ni bog'lash uchun).</li>
+    <li><strong>Webhook</strong> — Payme/Click kabi, <code>callback_url</code> uchun ochiq endpoint (masalan <code>POST /api/gateways/eskiz/callback</code>) qo'shib, yetkazish holatini <code>SmsMessage.status</code> ga yozish.</li>
+  </ul>
+
+  <h2>Environment o'zgaruvchilari</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>O'zgaruvchi</th><th>Tavsif</th></tr></thead>
+      <tbody>
+        <tr><td><code>ESKIZ_EMAIL</code></td><td>Kabinet email</td></tr>
+        <tr><td><code>ESKIZ_PASSWORD</code></td><td>Kabinet API paroli</td></tr>
+        <tr><td><code>ESKIZ_FROM</code></td><td>Tasdiqlangan jo'natuvchi nik (masalan <code>DaFZentrum</code>)</td></tr>
+        <tr><td><code>ESKIZ_CALLBACK_URL</code></td><td>Yetkazish holati uchun webhook URL'i</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Telefon formatini moslash</h2>
+  <p>DAF ERP'da telefon 9 raqamli saqlanadi. Eskizga yuborishdan oldin:</p>
+  <pre><code>const mobilePhone = `998${student.phone}`; // 998 + 9 raqam = 12 raqam</code></pre>
+
+  <h2>Kanal strategiyasi (keyin hal qilinadi)</h2>
+  <p>SMS qachon va qanday yuborilishi (Telegramga zaxira sifatida yoki parallel) keyinchalik hal qilinadi. Bu hujjat faqat eskiz API ma'lumotnomasidir.</p>
+
+  <h2>Moderatsiya ro'yxati (oldindan tayyorlash)</h2>
+  <p>Quyidagi matn turlarini oldindan shablon sifatida tasdiqlatish kerak bo'ladi:</p>
+  <ul>
+    <li>Kirish ma'lumotlari (login + parol)</li>
+    <li>Parolni tiklash (yangi parol yoki kod)</li>
+    <li>Davomat / qarz / to'lov eslatmalari (agar SMS orqali yuborilsa)</li>
+  </ul>
+</div>
+
+</main>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  Eskiz.uz SMS API — DaF Sprachzentrum ERP ichki hujjati. Manba: <a href="https://documenter.getpostman.com/view/663428/RzfmES4z?version=latest" target="_blank">eskiz.uz Postman</a>. Base URL: <code>https://notify.eskiz.uz/api</code>
+</div>
+
+<script>
+function showPage(pageId) {
+  document.querySelectorAll('.page-section').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var target = document.getElementById('page-' + pageId);
+  if (target) {
+    target.classList.add('active');
+  }
+  document.querySelectorAll('.sidebar-link').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var link = document.querySelector('.sidebar-link[data-page="' + pageId + '"]');
+  if (link) {
+    link.classList.add('active');
+  }
+  window.scrollTo(0, 0);
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+document.addEventListener('click', function(e) {
+  var sidebar = document.getElementById('sidebar');
+  var hamburger = document.querySelector('.hamburger');
+  if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
+    sidebar.classList.remove('open');
+  }
+});
+</script>
+
+</body>
+</html>
