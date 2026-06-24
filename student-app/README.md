@@ -1,8 +1,40 @@
-# Welcome to your Expo app 👋
+# DaF Student 📱
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+DaFZentrum til markazi o'quvchilari uchun mobil ilova (Expo SDK 54, managed workflow).
+Funksiyalar: Telegram OTP / telefon-parol login, dars jadvali, davomat, to'lovlar, profil, QR davomat skaneri.
 
-## Get started
+- **Paket nomi:** `uz.dafzentrum.student`
+- **Backend API:** `https://api.dafzentrum.uz/api` (Railway)
+- **EAS project:** owner `dafzentrum` · `7820bfa5-a72c-4f44-913a-58b04a1cf2e8`
+
+## Muhit (environment)
+
+API manzili `EXPO_PUBLIC_API_URL` orqali beriladi:
+
+- **Lokal dev:** `.env` faylida (gitignore'da) — `EXPO_PUBLIC_API_URL=https://api.dafzentrum.uz/api`.
+- **EAS build:** `.env` build serveriga yuklanmaydi, shuning uchun URL `eas.json` ning
+  `preview` va `production` profillaridagi `env` blokida belgilangan.
+
+## Play Store'ga chiqarish (release)
+
+```bash
+# 1. EAS'ga kirish (bir marta)
+npm install -g eas-cli
+eas login                       # 'dafzentrum' akkaunti
+
+# 2. Production build (.aab) — versionCode EAS'da avtomatik oshadi
+eas build --platform android --profile production
+
+# 3. (keyinroq) avtomatik yuborish — service account sozlangach
+eas submit --platform android --latest
+```
+
+Birinchi marta `.aab` ni Google Play Console'ga **qo'lda** yuklash tavsiya etiladi.
+Maxfiylik siyosati: [`privacy-policy.html`](./privacy-policy.html) — hostlab, URL'ini Play Console'ga kiriting.
+
+---
+
+## Get started (Expo)
 
 1. Install dependencies
 
