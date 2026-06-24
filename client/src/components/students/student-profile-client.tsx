@@ -115,6 +115,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             onPaymentHistoryClick={() => handleTabChange("tolovlar")}
             onRefundClick={() => setRefundOpen(true)}
             onWithdrawalClick={() => setWithdrawalOpen(true)}
+            onStatusChanged={refreshStudent}
           />
         </div>
         <div className="min-w-0 flex-1">

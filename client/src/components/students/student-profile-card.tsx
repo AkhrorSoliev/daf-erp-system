@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { Archive, ChevronDown, Clock, CreditCard, Flag, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Archive, ChevronDown, Clock, CreditCard, Flag, Pencil, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { StudentStatusBadge } from "./student-status-badge";
+import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -63,15 +64,17 @@ interface StudentProfileCardProps {
   onRefundClick?: () => void;
   onWithdrawalClick?: () => void;
   onInitialBalanceClick?: () => void;
+  onStatusChanged?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onWithdrawalClick, onInitialBalanceClick }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onWithdrawalClick, onInitialBalanceClick, onStatusChanged }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const router = useRouter();
   const authUser = useAuth((s) => s.user);
   const canManage = authUser?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const isCeo = authUser?.roles.some((r) => r.id === 1) ?? false;
   const [showDelete, setShowDelete] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
 
@@ -89,6 +92,17 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
     } finally {
       setDeleting(false);
       setDeleteReason("");
+    }
+  };
+
+  // ARCHIVED status (xato/duplikat yozuv) → o'quvchi ro'yxatdan yo'qoladi, shuning
+  // uchun ro'yxatga qaytaramiz. Boshqa statuslarda profilni qayta yuklaymiz
+  // (badge + balans yangilanishi uchun — masalan FROZEN prepaid'ni qaytaradi).
+  const handleStatusChanged = (newStatus: string) => {
+    if (newStatus === "ARCHIVED") {
+      router.push("/students");
+    } else {
+      onStatusChanged?.();
     }
   };
 
@@ -236,6 +250,20 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                   variant="ghost"
                   size="sm"
                   className="size-8 p-0"
+                  onClick={() => setShowStatus(true)}
+                >
+                  <RefreshCw className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Status o&apos;zgartirish</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-8 p-0"
                   onClick={onHistoryClick}
                 >
                   <Clock className="size-4" />
@@ -330,6 +358,16 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ChangeStatusDialog
+        open={showStatus}
+        onOpenChange={setShowStatus}
+        entityType="students"
+        entityId={student.id}
+        entityName={`${student.firstName} ${student.lastName}`}
+        currentStatus={student.status || "ACTIVE"}
+        onStatusChanged={handleStatusChanged}
+      />
 
 
       {canManage && (
