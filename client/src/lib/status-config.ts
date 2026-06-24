@@ -105,7 +105,7 @@ const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   students: {
     ACTIVE: ["FROZEN", "EXPELLED", "ARCHIVED"],  // GRADUATED avtomatik — guruh tugaganda
     INACTIVE: ["ACTIVE", "FROZEN", "ARCHIVED"],   // legacy
-    FROZEN: ["ACTIVE", "ARCHIVED"],
+    FROZEN: ["ACTIVE", "EXPELLED", "ARCHIVED"],  // muzlatilgan o'quvchi butunlay tashlasa — to'g'ridan-to'g'ri chetlatish
     GRADUATED: ["ACTIVE", "ARCHIVED"],
     EXPELLED: ["ACTIVE", "ARCHIVED"],
   },
