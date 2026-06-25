@@ -1,7 +1,7 @@
 # Google Play — Store Listing matnlari (DaF Student)
 
 > Bu matnlarni Play Console → **Main store listing** va **App content** bo'limlariga ko'chiring.
-> Aloqa ma'lumotlarini (e-pochta) DaFZentrum'ning haqiqiy ma'lumoti bilan tekshiring.
+> Tashkilot nomi: **DaFZentrum til markazi — DaF Sprachzentrum**. Rasmiy e-pochta: **info@daf-sprachzentrum.uz**.
 
 ---
 
@@ -49,9 +49,9 @@ DaF Student ilovasi faqat DaFZentrum o'quvchilari uchun mo'ljallangan. Tizimga k
 - **Tags:** education, study, language learning
 
 ## Contact details (Play Console talab qiladi)
-- **Email:** info@dafzentrum.uz  *(tekshiring/almashtiring)*
+- **Email:** info@daf-sprachzentrum.uz  *(tekshiring/almashtiring)*
 - **Website:** https://dafzentrum.uz  *(agar bo'lsa)*
-- **Privacy policy URL:** *(privacy-policy.html ni hostlagandan keyingi URL)*
+- **Privacy policy URL:** https://akhrorsoliev.github.io/dafzentrum-privacy/  *(4 tilli: UZ/DE/RU/EN)*
 
 ---
 
@@ -90,7 +90,7 @@ Ilova quyidagilarni **to'playdi** (hammasi shifrlangan, uchinchi tomonga sotilma
 > (Toza yechim — backend'da bu maydonlarni student-portal javobidan olib tashlash; shunda bu qatorni o'chirish mumkin.)
 
 - **Data encrypted in transit:** Ha (HTTPS)
-- **Users can request data deletion:** Ha (info@dafzentrum.uz orqali)
+- **Users can request data deletion:** Ha (info@daf-sprachzentrum.uz orqali)
 - **Push-bildirishnoma protsessori:** Expo (Expo Application Services / exp.host) push tokenni qabul qiladi; Android'da Google Firebase Cloud Messaging quyi transport. (Bu protsessorlar — "shared" emas, balki xizmat ko'rsatuvchi sifatida.)
 
 ## Content rating

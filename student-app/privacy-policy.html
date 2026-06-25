@@ -3,168 +3,545 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maxfiylik siyosati — DaF Student</title>
+  <title>Maxfiylik siyosati / Privacy Policy — DaF Student</title>
   <style>
     :root { --ink:#1a2233; --muted:#5b6678; --brand:#208AEF; --line:#e6ebf2; --bg:#ffffff; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: #f5f7fb; color: var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.65; font-size: 16px;
-    }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
-    header { background: var(--brand); color: #fff; padding: 40px 20px; }
-    header .inner { max-width: 760px; margin: 0 auto; }
-    header h1 { margin: 0 0 6px; font-size: 26px; }
-    header p { margin: 0; opacity: .9; font-size: 14px; }
-    .card { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 24px 26px; }
-    h2 { font-size: 19px; margin: 28px 0 10px; }
-    h2:first-child { margin-top: 0; }
-    h3 { font-size: 16px; margin: 18px 0 6px; }
-    p, li { color: var(--ink); }
-    ul { padding-left: 22px; margin: 8px 0; }
-    li { margin: 4px 0; }
-    a { color: var(--brand); }
-    .muted { color: var(--muted); font-size: 14px; }
-    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14.5px; }
-    th, td { text-align: left; padding: 9px 10px; border: 1px solid var(--line); vertical-align: top; }
-    th { background: #f0f4fa; }
-    .note { background: #fff8e6; border: 1px solid #ffe39a; border-radius: 10px; padding: 12px 14px; font-size: 14px; }
-    footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 30px; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f5f7fb; color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.65; font-size:16px; }
+    header { background:var(--brand); color:#fff; padding:20px 20px 0; position:sticky; top:0; z-index:10; }
+    header .inner { max-width:760px; margin:0 auto; }
+    header .brand { font-size:18px; font-weight:700; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+    .langbar { display:flex; gap:6px; flex-wrap:wrap; }
+    .langbtn { appearance:none; border:0; background:rgba(255,255,255,.18); color:#fff; padding:8px 15px; border-radius:10px 10px 0 0; font-size:14px; font-weight:600; cursor:pointer; transition:background .15s; }
+    .langbtn:hover { background:rgba(255,255,255,.3); }
+    .langbtn.active { background:#f5f7fb; color:var(--brand); }
+    .wrap { max-width:760px; margin:0 auto; padding:28px 20px 80px; }
+    .card { background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:24px 26px; }
+    .lang-block { display:none; }
+    .lang-block.active { display:block; }
+    .doc-title { font-size:26px; margin:0 0 4px; }
+    .doc-sub { color:var(--muted); font-size:14px; margin:0 0 18px; }
+    h2 { font-size:19px; margin:26px 0 10px; }
+    h2:first-of-type { margin-top:8px; }
+    h3 { font-size:16px; margin:18px 0 6px; }
+    p, li { color:var(--ink); }
+    ul { padding-left:22px; margin:8px 0; }
+    li { margin:4px 0; }
+    a { color:var(--brand); }
+    .muted { color:var(--muted); font-size:14px; }
+    table { width:100%; border-collapse:collapse; margin:12px 0; font-size:14.5px; }
+    th, td { text-align:left; padding:9px 10px; border:1px solid var(--line); vertical-align:top; }
+    th { background:#f0f4fa; }
+    .doc-footer { display:block; text-align:center; color:var(--muted); font-size:13px; margin-top:30px; }
   </style>
 </head>
 <body>
   <header>
     <div class="inner">
-      <h1>Maxfiylik siyosati</h1>
-      <p>DaF Student mobil ilovasi · Oxirgi yangilanish: 2026-yil 24-iyun</p>
+      <div class="brand">DaF Student</div>
+      <nav class="langbar" aria-label="Language">
+        <button class="langbtn" type="button" data-lang="uz">O'zbek</button>
+        <button class="langbtn" type="button" data-lang="de">Deutsch</button>
+        <button class="langbtn" type="button" data-lang="ru">Русский</button>
+        <button class="langbtn" type="button" data-lang="en">English</button>
+      </nav>
     </div>
   </header>
-
   <div class="wrap">
     <div class="card">
-      <p>
-        Ushbu Maxfiylik siyosati <strong>DaFZentrum til markazi</strong> tomonidan ishlab chiqilgan
-        <strong>DaF Student</strong> mobil ilovasidan (keyingi o'rinlarda — "Ilova") foydalanishda
-        sizning shaxsiy ma'lumotlaringiz qanday yig'ilishi, ishlatilishi va himoyalanishini tushuntiradi.
-        Ilovadan foydalanish orqali siz ushbu siyosatga rozilik bildirasiz.
-      </p>
+      <section class="lang-block" data-lang="uz" lang="uz">
+<h1 class="doc-title">Maxfiylik siyosati</h1>
+<p class="doc-sub">DaF Student mobil ilovasi · Oxirgi yangilanish: 2026-yil 25-iyun</p>
 
-      <h2>1. Biz to'playdigan ma'lumotlar</h2>
-      <p>Ilova faqat o'quv jarayoni uchun zarur bo'lgan ma'lumotlarni to'playdi:</p>
-      <table>
-        <tr><th>Ma'lumot turi</th><th>Misollar</th><th>Maqsadi</th></tr>
-        <tr>
-          <td>Shaxsiy ma'lumotlar</td>
-          <td>Ism, familiya, telefon raqami, profil rasmi, tug'ilgan sana, Telegram identifikatori</td>
-          <td>Hisobni aniqlash, tizimga kirish, profilni ko'rsatish</td>
-        </tr>
-        <tr>
-          <td>Ota-ona/vasiy ma'lumotlari</td>
-          <td>Ota-ona yoki vasiy ismi va telefon raqami, qo'shimcha telefon raqami</td>
-          <td>Markaz bilan bog'lanish va o'quvchi profilini to'ldirish</td>
-        </tr>
-        <tr>
-          <td>O'quv ma'lumotlari</td>
-          <td>Dars jadvali, davomat, guruh va filial ma'lumotlari</td>
-          <td>O'quvchiga jadval va davomatni ko'rsatish</td>
-        </tr>
-        <tr>
-          <td>To'lov ma'lumotlari</td>
-          <td>Balans, to'lovlar tarixi</td>
-          <td>To'lov holatini ko'rsatish va to'lovni amalga oshirish</td>
-        </tr>
-        <tr>
-          <td>Texnik ma'lumotlar</td>
-          <td>Push-bildirishnoma identifikatori (token), qurilma turi</td>
-          <td>Bildirishnomalar yuborish</td>
-        </tr>
-      </table>
-      <p class="muted">
-        Ilova joylashuv (GPS) ma'lumotini, mikrofon yozuvini yoki kontaktlaringizni to'plamaydi.
-      </p>
+<p>
+  Ushbu Maxfiylik siyosati <strong>DaFZentrum til markazi — DaF Sprachzentrum</strong> tomonidan ishlab chiqilgan
+  <strong>DaF Student</strong> mobil ilovasidan (keyingi o'rinlarda — "Ilova") foydalanishda
+  sizning shaxsiy ma'lumotlaringiz qanday yig'ilishi, ishlatilishi va himoyalanishini tushuntiradi.
+  Ilovadan foydalanish orqali siz ushbu siyosatga rozilik bildirasiz.
+</p>
 
-      <h2>2. Qurilma ruxsatlari</h2>
-      <ul>
-        <li><strong>Kamera</strong> — faqat davomatni belgilash uchun QR kodni skanerlashda va profil rasmini olishda ishlatiladi.</li>
-        <li><strong>Galereya / Rasmlar</strong> — faqat siz tanlagan profil rasmini yuklash uchun.</li>
-        <li><strong>Bildirishnomalar</strong> — markazdan kelgan eslatmalarni qabul qilish uchun.</li>
-      </ul>
-      <p class="muted">Ruxsatlar faqat siz tegishli amalni bajarganingizda so'raladi va boshqa maqsadda ishlatilmaydi.</p>
+<h2>1. Biz to'playdigan ma'lumotlar</h2>
+<p>Ilova faqat o'quv jarayoni uchun zarur bo'lgan ma'lumotlarni to'playdi:</p>
+<table>
+  <tr><th>Ma'lumot turi</th><th>Misollar</th><th>Maqsadi</th></tr>
+  <tr>
+    <td>Shaxsiy ma'lumotlar</td>
+    <td>Ism, familiya, telefon raqami, profil rasmi, tug'ilgan sana, Telegram identifikatori</td>
+    <td>Hisobni aniqlash, tizimga kirish, profilni ko'rsatish</td>
+  </tr>
+  <tr>
+    <td>Ota-ona/vasiy ma'lumotlari</td>
+    <td>Ota-ona yoki vasiy ismi va telefon raqami, qo'shimcha telefon raqami</td>
+    <td>Markaz bilan bog'lanish va o'quvchi profilini to'ldirish</td>
+  </tr>
+  <tr>
+    <td>O'quv ma'lumotlari</td>
+    <td>Dars jadvali, davomat, guruh va filial ma'lumotlari</td>
+    <td>O'quvchiga jadval va davomatni ko'rsatish</td>
+  </tr>
+  <tr>
+    <td>To'lov ma'lumotlari</td>
+    <td>Balans, to'lovlar tarixi</td>
+    <td>To'lov holatini ko'rsatish va to'lovni amalga oshirish</td>
+  </tr>
+  <tr>
+    <td>Texnik ma'lumotlar</td>
+    <td>Push-bildirishnoma identifikatori (token), qurilma turi</td>
+    <td>Bildirishnomalar yuborish</td>
+  </tr>
+</table>
+<p class="muted">Ilova joylashuv (GPS) ma'lumotini, mikrofon yozuvini yoki kontaktlaringizni to'plamaydi.</p>
 
-      <h2>3. Ma'lumotlardan qanday foydalanamiz</h2>
-      <ul>
-        <li>Sizni tizimda autentifikatsiya qilish (Telegram orqali yoki telefon + parol);</li>
-        <li>Dars jadvali, davomat va to'lov ma'lumotlarini ko'rsatish;</li>
-        <li>Muhim eslatma va bildirishnomalarni yuborish;</li>
-        <li>Ilova ishlashini ta'minlash va texnik nosozliklarni bartaraf etish.</li>
-      </ul>
-      <p>Biz sizning ma'lumotlaringizni <strong>reklama maqsadida ishlatmaymiz</strong> va uchinchi shaxslarga <strong>sotmaymiz</strong>.</p>
+<h2>2. Qurilma ruxsatlari</h2>
+<ul>
+  <li><strong>Kamera</strong> — faqat davomatni belgilash uchun QR kodni skanerlashda va profil rasmini olishda ishlatiladi.</li>
+  <li><strong>Galereya / Rasmlar</strong> — faqat siz tanlagan profil rasmini yuklash uchun.</li>
+  <li><strong>Bildirishnomalar</strong> — markazdan kelgan eslatmalarni qabul qilish uchun.</li>
+</ul>
+<p class="muted">Ruxsatlar faqat siz tegishli amalni bajarganingizda so'raladi va boshqa maqsadda ishlatilmaydi.</p>
 
-      <h2>4. Ma'lumotlarni uchinchi tomon xizmatlari bilan ulashish</h2>
-      <p>Ilova ishlashi uchun quyidagi ishonchli xizmatlardan foydalanadi:</p>
-      <ul>
-        <li><strong>Expo (Expo Application Services)</strong> — push-bildirishnomalarni yo'naltirish uchun (qurilmaning push tokeni qabul qilinadi);</li>
-        <li><strong>Google Firebase (Cloud Messaging)</strong> — Android qurilmalarga push-bildirishnomalarni yetkazib berish (quyi bosqich transporti);</li>
-        <li><strong>Telegram</strong> — bir martalik kod (OTP) orqali tizimga kirish uchun;</li>
-        <li><strong>Eskiz.uz</strong> — parolni tiklashda SMS kod yuborish uchun (faollashtirilganda);</li>
-        <li><strong>To'lov tizimlari (Payme / Click)</strong> — to'lovlarni amalga oshirish uchun.</li>
-      </ul>
-      <p class="muted">Bu xizmatlarga faqat tegishli funksiya uchun zarur bo'lgan minimal ma'lumot uzatiladi.</p>
+<h2>3. Ma'lumotlardan qanday foydalanamiz</h2>
+<ul>
+  <li>Sizni tizimda autentifikatsiya qilish (Telegram orqali yoki telefon + parol);</li>
+  <li>Dars jadvali, davomat va to'lov ma'lumotlarini ko'rsatish;</li>
+  <li>Muhim eslatma va bildirishnomalarni yuborish;</li>
+  <li>Ilova ishlashini ta'minlash va texnik nosozliklarni bartaraf etish.</li>
+</ul>
+<p>Biz sizning ma'lumotlaringizni <strong>reklama maqsadida ishlatmaymiz</strong> va uchinchi shaxslarga <strong>sotmaymiz</strong>.</p>
 
-      <h2>5. Ma'lumotlar xavfsizligi</h2>
-      <ul>
-        <li>Barcha ma'lumotlar server bilan <strong>HTTPS (shifrlangan)</strong> ulanish orqali uzatiladi;</li>
-        <li>Kirish tokenlari qurilmaning xavfsiz xotirasida (Android Keystore / iOS Keychain) saqlanadi;</li>
-        <li>Ma'lumotlarga faqat ruxsatga ega xodimlar kira oladi.</li>
-      </ul>
+<h2>4. Ma'lumotlarni uchinchi tomon xizmatlari bilan ulashish</h2>
+<p>Ilova ishlashi uchun quyidagi ishonchli xizmatlardan foydalanadi:</p>
+<ul>
+  <li><strong>Expo (Expo Application Services)</strong> — push-bildirishnomalarni yo'naltirish uchun (qurilmaning push tokeni qabul qilinadi);</li>
+  <li><strong>Google Firebase (Cloud Messaging)</strong> — Android qurilmalarga push-bildirishnomalarni yetkazib berish (quyi bosqich transporti);</li>
+  <li><strong>Telegram</strong> — bir martalik kod (OTP) orqali tizimga kirish uchun;</li>
+  <li><strong>Eskiz.uz</strong> — parolni tiklashda SMS kod yuborish uchun (faollashtirilganda);</li>
+  <li><strong>To'lov tizimlari (Payme / Click)</strong> — to'lovlarni amalga oshirish uchun.</li>
+</ul>
+<p class="muted">Bu xizmatlarga faqat tegishli funksiya uchun zarur bo'lgan minimal ma'lumot uzatiladi.</p>
 
-      <h2>6. Ma'lumotlarni saqlash muddati</h2>
-      <p>
-        Shaxsiy ma'lumotlaringiz siz markaz o'quvchisi bo'lgan davrda saqlanadi. Hisobingiz o'chirilishini
-        so'rasangiz, ma'lumotlaringiz qonun talab qilgan muddatlar (masalan, moliyaviy yozuvlar) bundan mustasno,
-        o'chiriladi.
-      </p>
+<h2>5. Ma'lumotlar xavfsizligi</h2>
+<ul>
+  <li>Barcha ma'lumotlar server bilan <strong>HTTPS (shifrlangan)</strong> ulanish orqali uzatiladi;</li>
+  <li>Kirish tokenlari qurilmaning xavfsiz xotirasida (Android Keystore / iOS Keychain) saqlanadi;</li>
+  <li>Ma'lumotlarga faqat ruxsatga ega xodimlar kira oladi.</li>
+</ul>
 
-      <h2>7. Sizning huquqlaringiz</h2>
-      <ul>
-        <li>O'zingiz haqingizdagi ma'lumotlarni ko'rish va to'g'rilash;</li>
-        <li>Hisobingizni va ma'lumotlaringizni o'chirishni so'rash;</li>
-        <li>Bildirishnomalardan voz kechish.</li>
-      </ul>
-      <p>
-        Bu huquqlardan foydalanish, jumladan hisobingiz va shaxsiy ma'lumotlaringizni o'chirishni so'rash uchun
-        <a href="mailto:info@dafzentrum.uz">info@dafzentrum.uz</a> manziliga murojaat qiling.
-        So'rovingiz oqilona muddat ichida ko'rib chiqiladi (qonun talab qiladigan moliyaviy yozuvlar bundan mustasno).
-      </p>
+<h2>6. Ma'lumotlarni saqlash muddati</h2>
+<p>
+  Shaxsiy ma'lumotlaringiz siz markaz o'quvchisi bo'lgan davrda saqlanadi. Hisobingiz o'chirilishini
+  so'rasangiz, ma'lumotlaringiz qonun talab qilgan muddatlar (masalan, moliyaviy yozuvlar) bundan mustasno,
+  o'chiriladi.
+</p>
 
-      <h2>8. Bolalar maxfiyligi</h2>
-      <p>
-        Ilova til markazi o'quvchilari uchun mo'ljallangan. 18 yoshga to'lmagan o'quvchilar ma'lumotlari
-        ota-ona yoki vasiy roziligi asosida markaz tomonidan kiritiladi va yuqorida tavsiflangan tartibda himoyalanadi.
-      </p>
+<h2>7. Sizning huquqlaringiz</h2>
+<ul>
+  <li>O'zingiz haqingizdagi ma'lumotlarni ko'rish va to'g'rilash;</li>
+  <li>Hisobingizni va ma'lumotlaringizni o'chirishni so'rash;</li>
+  <li>Bildirishnomalardan voz kechish.</li>
+</ul>
+<p>
+  Bu huquqlardan foydalanish, jumladan hisobingiz va shaxsiy ma'lumotlaringizni o'chirishni so'rash uchun
+  <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a> manziliga murojaat qiling.
+  So'rovingiz oqilona muddat ichida ko'rib chiqiladi (qonun talab qiladigan moliyaviy yozuvlar bundan mustasno).
+</p>
 
-      <h2>9. Siyosatga o'zgartirishlar</h2>
-      <p>
-        Biz ushbu siyosatni vaqti-vaqti bilan yangilashimiz mumkin. Muhim o'zgarishlar bo'lsa, ilova orqali
-        yoki ushbu sahifada xabar beramiz. "Oxirgi yangilanish" sanasi har doim joriy versiyani ko'rsatadi.
-      </p>
+<h2>8. Bolalar maxfiyligi</h2>
+<p>
+  Ilova til markazi o'quvchilari uchun mo'ljallangan. 18 yoshga to'lmagan o'quvchilar ma'lumotlari
+  ota-ona yoki vasiy roziligi asosida markaz tomonidan kiritiladi va yuqorida tavsiflangan tartibda himoyalanadi.
+</p>
 
-      <h2>10. Biz bilan bog'lanish</h2>
-      <p>Maxfiylik bilan bog'liq savollar yoki so'rovlar uchun:</p>
-      <ul>
-        <li><strong>Tashkilot:</strong> DaFZentrum til markazi</li>
-        <li><strong>E-pochta:</strong> <a href="mailto:info@dafzentrum.uz">info@dafzentrum.uz</a></li>
-        <li><strong>Telegram:</strong> @dafzentrum_bot</li>
-      </ul>
-      <div class="note">
-        <strong>Eslatma (joylashtirishdan oldin to'ldiring):</strong> yuqoridagi e-pochta, telefon va
-        tashkilot rasmiy nomini DaFZentrum'ning haqiqiy aloqa ma'lumotlari bilan tekshirib/almashtiring.
-        Google Play ishlaydigan aloqa manzilini talab qiladi.
-      </div>
+<h2>9. Siyosatga o'zgartirishlar</h2>
+<p>
+  Biz ushbu siyosatni vaqti-vaqti bilan yangilashimiz mumkin. Muhim o'zgarishlar bo'lsa, ilova orqali
+  yoki ushbu sahifada xabar beramiz. "Oxirgi yangilanish" sanasi har doim joriy versiyani ko'rsatadi.
+</p>
 
-      <footer>© 2026 DaFZentrum til markazi. Barcha huquqlar himoyalangan.</footer>
+<h2>10. Biz bilan bog'lanish</h2>
+<p>Maxfiylik bilan bog'liq savollar yoki so'rovlar uchun:</p>
+<ul>
+  <li><strong>Tashkilot:</strong> DaFZentrum til markazi — DaF Sprachzentrum</li>
+  <li><strong>E-pochta:</strong> <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a></li>
+  <li><strong>Telegram:</strong> @dafzentrum_bot</li>
+</ul>
+
+<footer class="doc-footer">© 2026 DaFZentrum til markazi — DaF Sprachzentrum. Barcha huquqlar himoyalangan.</footer>
+
+      </section>
+      <section class="lang-block" data-lang="de" lang="de">
+<h1 class="doc-title">Datenschutzerklärung</h1>
+<p class="doc-sub">DaF Student – mobile App · Letzte Aktualisierung: 25. Juni 2026</p>
+
+<p>
+  Diese Datenschutzerklärung erläutert, wie Ihre personenbezogenen Daten bei der Nutzung der von der
+  <strong>DaFZentrum Sprachschule — DaF Sprachzentrum</strong> entwickelten mobilen App
+  <strong>DaF Student</strong> (nachfolgend „App") erhoben, verwendet und geschützt werden.
+  Durch die Nutzung der App erklären Sie sich mit dieser Erklärung einverstanden.
+</p>
+
+<h2>1. Daten, die wir erheben</h2>
+<p>Die App erhebt ausschließlich die für den Lernprozess erforderlichen Daten:</p>
+<table>
+  <tr><th>Datenart</th><th>Beispiele</th><th>Zweck</th></tr>
+  <tr>
+    <td>Personenbezogene Daten</td>
+    <td>Vorname, Nachname, Telefonnummer, Profilbild, Geburtsdatum, Telegram-Kennung</td>
+    <td>Identifizierung des Kontos, Anmeldung im System, Anzeige des Profils</td>
+  </tr>
+  <tr>
+    <td>Daten der Eltern/Erziehungsberechtigten</td>
+    <td>Name und Telefonnummer eines Elternteils oder Erziehungsberechtigten, zusätzliche Telefonnummer</td>
+    <td>Kontaktaufnahme mit dem Zentrum und Vervollständigung des Schülerprofils</td>
+  </tr>
+  <tr>
+    <td>Lerndaten</td>
+    <td>Stundenplan, Anwesenheit, Gruppen- und Filialinformationen</td>
+    <td>Anzeige von Stundenplan und Anwesenheit für den Schüler</td>
+  </tr>
+  <tr>
+    <td>Zahlungsdaten</td>
+    <td>Kontostand, Zahlungsverlauf</td>
+    <td>Anzeige des Zahlungsstatus und Durchführung von Zahlungen</td>
+  </tr>
+  <tr>
+    <td>Technische Daten</td>
+    <td>Push-Benachrichtigungskennung (Token), Gerätetyp</td>
+    <td>Versand von Benachrichtigungen</td>
+  </tr>
+</table>
+<p class="muted">Die App erhebt keine Standortdaten (GPS), keine Mikrofonaufnahmen und keine Kontakte.</p>
+
+<h2>2. Geräteberechtigungen</h2>
+<ul>
+  <li><strong>Kamera</strong> — wird ausschließlich zum Scannen des QR-Codes für die Anwesenheitserfassung und zur Aufnahme des Profilbilds verwendet.</li>
+  <li><strong>Galerie / Bilder</strong> — ausschließlich zum Hochladen des von Ihnen ausgewählten Profilbilds.</li>
+  <li><strong>Benachrichtigungen</strong> — zum Empfang von Erinnerungen des Zentrums.</li>
+</ul>
+<p class="muted">Berechtigungen werden nur dann angefragt, wenn Sie die entsprechende Aktion ausführen, und werden zu keinem anderen Zweck verwendet.</p>
+
+<h2>3. Wie wir die Daten verwenden</h2>
+<ul>
+  <li>Authentifizierung im System (über Telegram oder Telefonnummer + Passwort);</li>
+  <li>Anzeige von Stundenplan-, Anwesenheits- und Zahlungsdaten;</li>
+  <li>Versand wichtiger Erinnerungen und Benachrichtigungen;</li>
+  <li>Gewährleistung des Betriebs der App und Behebung technischer Störungen.</li>
+</ul>
+<p>Wir verwenden Ihre Daten <strong>nicht zu Werbezwecken</strong> und <strong>verkaufen</strong> sie nicht an Dritte.</p>
+
+<h2>4. Weitergabe von Daten an Drittanbieterdienste</h2>
+<p>Für den Betrieb der App werden die folgenden vertrauenswürdigen Dienste verwendet:</p>
+<ul>
+  <li><strong>Expo (Expo Application Services)</strong> — zur Zustellung von Push-Benachrichtigungen (der Push-Token des Geräts wird übermittelt);</li>
+  <li><strong>Google Firebase (Cloud Messaging)</strong> — zur Zustellung von Push-Benachrichtigungen an Android-Geräte (Transport auf unterer Ebene);</li>
+  <li><strong>Telegram</strong> — zur Anmeldung im System über einen Einmalcode (OTP);</li>
+  <li><strong>Eskiz.uz</strong> — zum Versand von SMS-Codes beim Zurücksetzen des Passworts (sofern aktiviert);</li>
+  <li><strong>Zahlungssysteme (Payme / Click)</strong> — zur Durchführung von Zahlungen.</li>
+</ul>
+<p class="muted">An diese Dienste werden nur die für die jeweilige Funktion erforderlichen Mindestdaten übermittelt.</p>
+
+<h2>5. Datensicherheit</h2>
+<ul>
+  <li>Alle Daten werden über eine <strong>HTTPS-verschlüsselte</strong> Verbindung mit dem Server übertragen;</li>
+  <li>Zugangstokens werden im sicheren Speicher des Geräts (Android Keystore / iOS Keychain) abgelegt;</li>
+  <li>Nur berechtigte Mitarbeiter haben Zugriff auf die Daten.</li>
+</ul>
+
+<h2>6. Speicherdauer der Daten</h2>
+<p>
+  Ihre personenbezogenen Daten werden für die Dauer Ihrer Schülerschaft am Zentrum gespeichert. Wenn Sie die
+  Löschung Ihres Kontos beantragen, werden Ihre Daten gelöscht, mit Ausnahme der gesetzlich vorgeschriebenen
+  Aufbewahrungsfristen (z. B. für Finanzunterlagen).
+</p>
+
+<h2>7. Ihre Rechte</h2>
+<ul>
+  <li>Einsicht in und Berichtigung der über Sie gespeicherten Daten;</li>
+  <li>Antrag auf Löschung Ihres Kontos und Ihrer Daten;</li>
+  <li>Abbestellung von Benachrichtigungen.</li>
+</ul>
+<p>
+  Um diese Rechte wahrzunehmen, einschließlich des Antrags auf Löschung Ihres Kontos und Ihrer personenbezogenen Daten,
+  wenden Sie sich bitte an <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a>.
+  Ihr Antrag wird innerhalb einer angemessenen Frist bearbeitet (mit Ausnahme der gesetzlich vorgeschriebenen Finanzunterlagen).
+</p>
+
+<h2>8. Datenschutz für Kinder</h2>
+<p>
+  Die App ist für die Schüler der Sprachschule bestimmt. Die Daten von Schülern unter 18 Jahren werden auf
+  Grundlage der Einwilligung eines Elternteils oder Erziehungsberechtigten durch das Zentrum eingegeben und wie oben beschrieben geschützt.
+</p>
+
+<h2>9. Änderungen dieser Erklärung</h2>
+<p>
+  Wir können diese Erklärung von Zeit zu Zeit aktualisieren. Bei wesentlichen Änderungen informieren wir Sie über die App
+  oder auf dieser Seite. Das Datum der „Letzten Aktualisierung" gibt stets die aktuelle Version an.
+</p>
+
+<h2>10. Kontakt</h2>
+<p>Bei Fragen oder Anliegen zum Datenschutz:</p>
+<ul>
+  <li><strong>Organisation:</strong> DaFZentrum Sprachschule — DaF Sprachzentrum</li>
+  <li><strong>E-Mail:</strong> <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a></li>
+  <li><strong>Telegram:</strong> @dafzentrum_bot</li>
+</ul>
+
+<footer class="doc-footer">© 2026 DaFZentrum Sprachschule — DaF Sprachzentrum. Alle Rechte vorbehalten.</footer>
+      </section>
+      <section class="lang-block" data-lang="ru" lang="ru">
+<h1 class="doc-title">Политика конфиденциальности</h1>
+<p class="doc-sub">Мобильное приложение DaF Student · Последнее обновление: 25 июня 2026 г.</p>
+
+<p>
+  Настоящая Политика конфиденциальности объясняет, как при использовании мобильного приложения
+  <strong>DaF Student</strong> (далее — «Приложение»), разработанного <strong>языковым центром DaFZentrum — DaF Sprachzentrum</strong>,
+  собираются, используются и защищаются ваши персональные данные.
+  Используя Приложение, вы выражаете согласие с настоящей Политикой.
+</p>
+
+<h2>1. Данные, которые мы собираем</h2>
+<p>Приложение собирает только те данные, которые необходимы для учебного процесса:</p>
+<table>
+  <tr><th>Тип данных</th><th>Примеры</th><th>Цель</th></tr>
+  <tr>
+    <td>Персональные данные</td>
+    <td>Имя, фамилия, номер телефона, фотография профиля, дата рождения, идентификатор Telegram</td>
+    <td>Идентификация учётной записи, вход в систему, отображение профиля</td>
+  </tr>
+  <tr>
+    <td>Данные родителя/опекуна</td>
+    <td>Имя и номер телефона родителя или опекуна, дополнительный номер телефона</td>
+    <td>Связь с центром и заполнение профиля учащегося</td>
+  </tr>
+  <tr>
+    <td>Учебные данные</td>
+    <td>Расписание занятий, посещаемость, данные о группе и филиале</td>
+    <td>Отображение учащемуся расписания и посещаемости</td>
+  </tr>
+  <tr>
+    <td>Платёжные данные</td>
+    <td>Баланс, история платежей</td>
+    <td>Отображение состояния оплаты и проведение платежей</td>
+  </tr>
+  <tr>
+    <td>Технические данные</td>
+    <td>Идентификатор push-уведомлений (токен), тип устройства</td>
+    <td>Отправка уведомлений</td>
+  </tr>
+</table>
+<p class="muted">Приложение не собирает данные о местоположении (GPS), запись с микрофона и ваши контакты.</p>
+
+<h2>2. Разрешения устройства</h2>
+<ul>
+  <li><strong>Камера</strong> — используется только для сканирования QR-кода при отметке посещаемости и для съёмки фотографии профиля.</li>
+  <li><strong>Галерея / Фотографии</strong> — только для загрузки выбранной вами фотографии профиля.</li>
+  <li><strong>Уведомления</strong> — для получения напоминаний от центра.</li>
+</ul>
+<p class="muted">Разрешения запрашиваются только тогда, когда вы выполняете соответствующее действие, и не используются в иных целях.</p>
+
+<h2>3. Как мы используем данные</h2>
+<ul>
+  <li>Аутентификация в системе (через Telegram либо по телефону + паролю);</li>
+  <li>Отображение расписания занятий, посещаемости и платёжных данных;</li>
+  <li>Отправка важных напоминаний и уведомлений;</li>
+  <li>Обеспечение работы Приложения и устранение технических неполадок.</li>
+</ul>
+<p>Мы <strong>не используем</strong> ваши данные в рекламных целях и <strong>не продаём</strong> их третьим лицам.</p>
+
+<h2>4. Передача данных сторонним сервисам</h2>
+<p>Для работы Приложения используются следующие надёжные сервисы:</p>
+<ul>
+  <li><strong>Expo (Expo Application Services)</strong> — для маршрутизации push-уведомлений (принимается push-токен устройства);</li>
+  <li><strong>Google Firebase (Cloud Messaging)</strong> — для доставки push-уведомлений на устройства Android (транспорт нижнего уровня);</li>
+  <li><strong>Telegram</strong> — для входа в систему с помощью одноразового кода (OTP);</li>
+  <li><strong>Eskiz.uz</strong> — для отправки SMS-кода при восстановлении пароля (при активации);</li>
+  <li><strong>Платёжные системы (Payme / Click)</strong> — для проведения платежей.</li>
+</ul>
+<p class="muted">Этим сервисам передаётся только минимальный объём данных, необходимый для соответствующей функции.</p>
+
+<h2>5. Безопасность данных</h2>
+<ul>
+  <li>Все данные передаются на сервер по <strong>зашифрованному соединению HTTPS</strong>;</li>
+  <li>Токены доступа хранятся в защищённом хранилище устройства (Android Keystore / iOS Keychain);</li>
+  <li>Доступ к данным имеют только уполномоченные сотрудники.</li>
+</ul>
+
+<h2>6. Срок хранения данных</h2>
+<p>
+  Ваши персональные данные хранятся в течение периода, пока вы являетесь учащимся центра. Если вы запросите
+  удаление вашей учётной записи, ваши данные будут удалены, за исключением случаев, предусмотренных установленными
+  законом сроками (например, для финансовых записей).
+</p>
+
+<h2>7. Ваши права</h2>
+<ul>
+  <li>Просматривать и исправлять данные о себе;</li>
+  <li>Запросить удаление вашей учётной записи и данных;</li>
+  <li>Отказаться от уведомлений.</li>
+</ul>
+<p>
+  Для реализации этих прав, в том числе для запроса об удалении вашей учётной записи и персональных данных,
+  обращайтесь по адресу <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a>.
+  Ваш запрос будет рассмотрен в разумный срок (за исключением финансовых записей, хранение которых требуется законом).
+</p>
+
+<h2>8. Конфиденциальность детей</h2>
+<p>
+  Приложение предназначено для учащихся языкового центра. Данные учащихся младше 18 лет вносятся
+  центром на основании согласия родителя или опекуна и защищаются в порядке, описанном выше.
+</p>
+
+<h2>9. Изменения в Политике</h2>
+<p>
+  Мы можем периодически обновлять настоящую Политику. При существенных изменениях мы сообщим об этом через
+  приложение или на этой странице. Дата «Последнее обновление» всегда отражает текущую версию.
+</p>
+
+<h2>10. Связь с нами</h2>
+<p>По вопросам или запросам, связанным с конфиденциальностью:</p>
+<ul>
+  <li><strong>Организация:</strong> языковой центр DaFZentrum — DaF Sprachzentrum</li>
+  <li><strong>Эл. почта:</strong> <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a></li>
+  <li><strong>Telegram:</strong> @dafzentrum_bot</li>
+</ul>
+
+<footer class="doc-footer">© 2026 языковой центр DaFZentrum — DaF Sprachzentrum. Все права защищены.</footer>
+      </section>
+      <section class="lang-block" data-lang="en" lang="en">
+<h1 class="doc-title">Privacy Policy</h1>
+<p class="doc-sub">DaF Student mobile app · Last updated: June 25, 2026</p>
+
+<p>
+  This Privacy Policy explains how your personal data is collected, used, and protected when you use the
+  <strong>DaF Student</strong> mobile app (hereinafter — the "App"), developed by
+  <strong>DaFZentrum Language Center — DaF Sprachzentrum</strong>.
+  By using the App, you agree to this policy.
+</p>
+
+<h2>1. Information We Collect</h2>
+<p>The App collects only the information necessary for the educational process:</p>
+<table>
+  <tr><th>Type of data</th><th>Examples</th><th>Purpose</th></tr>
+  <tr>
+    <td>Personal data</td>
+    <td>First name, last name, phone number, profile photo, date of birth, Telegram identifier</td>
+    <td>Account identification, signing in, displaying the profile</td>
+  </tr>
+  <tr>
+    <td>Parent/guardian data</td>
+    <td>Parent or guardian name and phone number, additional phone number</td>
+    <td>Contacting the center and completing the student profile</td>
+  </tr>
+  <tr>
+    <td>Educational data</td>
+    <td>Class schedule, attendance, group and branch information</td>
+    <td>Displaying the schedule and attendance to the student</td>
+  </tr>
+  <tr>
+    <td>Payment data</td>
+    <td>Balance, payment history</td>
+    <td>Displaying payment status and processing payments</td>
+  </tr>
+  <tr>
+    <td>Technical data</td>
+    <td>Push notification identifier (token), device type</td>
+    <td>Sending notifications</td>
+  </tr>
+</table>
+<p class="muted">The App does not collect location (GPS) data, microphone recordings, or your contacts.</p>
+
+<h2>2. Device Permissions</h2>
+<ul>
+  <li><strong>Camera</strong> — used only to scan the QR code for marking attendance and to take a profile photo.</li>
+  <li><strong>Gallery / Photos</strong> — only to upload a profile photo that you select.</li>
+  <li><strong>Notifications</strong> — to receive reminders from the center.</li>
+</ul>
+<p class="muted">Permissions are requested only when you perform the relevant action and are not used for any other purpose.</p>
+
+<h2>3. How We Use the Information</h2>
+<ul>
+  <li>To authenticate you in the system (via Telegram or phone + password);</li>
+  <li>To display class schedule, attendance, and payment information;</li>
+  <li>To send important reminders and notifications;</li>
+  <li>To ensure the App functions and to resolve technical issues.</li>
+</ul>
+<p>We <strong>do not use your data for advertising purposes</strong> and <strong>do not sell</strong> it to third parties.</p>
+
+<h2>4. Sharing Data with Third-Party Services</h2>
+<p>The App relies on the following trusted services to operate:</p>
+<ul>
+  <li><strong>Expo (Expo Application Services)</strong> — for routing push notifications (the device's push token is received);</li>
+  <li><strong>Google Firebase (Cloud Messaging)</strong> — for delivering push notifications to Android devices (lower-level transport);</li>
+  <li><strong>Telegram</strong> — for signing in via a one-time code (OTP);</li>
+  <li><strong>Eskiz.uz</strong> — for sending an SMS code during password reset (when enabled);</li>
+  <li><strong>Payment systems (Payme / Click)</strong> — for processing payments.</li>
+</ul>
+<p class="muted">Only the minimal data required for the relevant function is transmitted to these services.</p>
+
+<h2>5. Data Security</h2>
+<ul>
+  <li>All data is transmitted to the server over an <strong>HTTPS (encrypted)</strong> connection;</li>
+  <li>Access tokens are stored in the device's secure storage (Android Keystore / iOS Keychain);</li>
+  <li>Only authorized staff can access the data.</li>
+</ul>
+
+<h2>6. Data Retention Period</h2>
+<p>
+  Your personal data is retained for the period during which you are a student of the center. If you request
+  deletion of your account, your data will be deleted, except for data that is required to be kept by law
+  (for example, financial records).
+</p>
+
+<h2>7. Your Rights</h2>
+<ul>
+  <li>To view and correct information about yourself;</li>
+  <li>To request deletion of your account and your data;</li>
+  <li>To opt out of notifications.</li>
+</ul>
+<p>
+  To exercise these rights, including requesting the deletion of your account and personal data, please contact us at
+  <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a>.
+  Your request will be reviewed within a reasonable period (except for financial records required to be kept by law).
+</p>
+
+<h2>8. Children's Privacy</h2>
+<p>
+  The App is intended for students of the language center. Data of students under 18 years of age is
+  entered by the center on the basis of parental or guardian consent and is protected in the manner described above.
+</p>
+
+<h2>9. Changes to This Policy</h2>
+<p>
+  We may update this policy from time to time. In the event of significant changes, we will notify you through the App
+  or on this page. The "Last updated" date always indicates the current version.
+</p>
+
+<h2>10. Contact Us</h2>
+<p>For privacy-related questions or requests:</p>
+<ul>
+  <li><strong>Organization:</strong> DaFZentrum Language Center — DaF Sprachzentrum</li>
+  <li><strong>Email:</strong> <a href="mailto:info@daf-sprachzentrum.uz">info@daf-sprachzentrum.uz</a></li>
+  <li><strong>Telegram:</strong> @dafzentrum_bot</li>
+</ul>
+
+<footer class="doc-footer">© 2026 DaFZentrum Language Center — DaF Sprachzentrum. All rights reserved.</footer>
+      </section>
     </div>
   </div>
+  <script>
+(function(){
+  var btns=document.querySelectorAll(".langbtn");
+  var blocks=document.querySelectorAll(".lang-block");
+  function set(lang){
+    blocks.forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-lang")===lang); });
+    btns.forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-lang")===lang); });
+    document.documentElement.setAttribute("lang", lang);
+    try{ localStorage.setItem("daf_privacy_lang", lang); }catch(e){}
+  }
+  btns.forEach(function(x){ x.addEventListener("click", function(){ set(x.getAttribute("data-lang")); window.scrollTo(0,0); }); });
+  var saved=null; try{ saved=localStorage.getItem("daf_privacy_lang"); }catch(e){}
+  set(saved || "uz");
+})();
+  </script>
 </body>
 </html>
