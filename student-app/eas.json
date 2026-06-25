@@ -9,10 +9,18 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.dafzentrum.uz/api",
+        "EXPO_PUBLIC_TELEGRAM_BOT": "dafzentrum_bot"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.dafzentrum.uz/api",
+        "EXPO_PUBLIC_TELEGRAM_BOT": "dafzentrum_bot"
+      }
     }
   },
   "submit": {
