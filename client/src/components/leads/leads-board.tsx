@@ -96,6 +96,20 @@ export function LeadsBoard() {
   // drop when the target is collapsed (the card isn't in any loaded array).
   const overSectionRef = useRef<string | null>(null);
 
+  // Which columns are collapsed to a narrow strip (transient, per-session).
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  function toggleColumnCollapse(columnId: string) {
+    setCollapsedColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(columnId)) next.delete(columnId);
+      else next.add(columnId);
+      return next;
+    });
+  }
+
   const sensors = useSensors(
     // A small drag threshold so a click on a card still opens its detail.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -322,6 +336,8 @@ export function LeadsBoard() {
               canMoveRight={
                 customIdx >= 0 && customIdx < customColumns.length - 1
               }
+              collapsed={collapsedColumns.has(column.id)}
+              onToggleCollapse={() => toggleColumnCollapse(column.id)}
             />
           );
         })}
