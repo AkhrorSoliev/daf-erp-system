@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -13,6 +13,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
@@ -27,12 +29,23 @@ export function DeleteConfirmDialog() {
   const applyLeadRemove = useLeadsBoard((s) => s.applyLeadRemove);
 
   const [deleting, setDeleting] = useState(false);
+  const [reason, setReason] = useState("");
 
   const open = !!deleteTarget;
   const kind = deleteTarget?.kind;
+  const isLead = kind === "lead";
+
+  // Reset the reason whenever a different target is opened.
+  useEffect(() => {
+    if (deleteTarget) setReason("");
+  }, [deleteTarget]);
+
+  // A lead delete = marking it LOST, which requires a reason.
+  const reasonMissing = isLead && !reason.trim();
 
   async function handleConfirm() {
     if (!deleteTarget) return;
+    if (reasonMissing) return;
     setDeleting(true);
     try {
       if (deleteTarget.kind === "column") {
@@ -44,9 +57,11 @@ export function DeleteConfirmDialog() {
         applySectionRemove(deleteTarget.columnId ?? "", deleteTarget.id);
         toast.success("Bo'lim arxivga ko'chirildi");
       } else {
-        await api.delete(`/leads/${deleteTarget.id}`);
+        await api.delete(`/leads/${deleteTarget.id}`, {
+          data: { reason: reason.trim() },
+        });
         applyLeadRemove(deleteTarget.sectionId ?? "", deleteTarget.id);
-        toast.success("Lid arxivga ko'chirildi");
+        toast.success("Lid yo'qotilgan deb belgilandi");
       }
       closeDelete();
     } catch (error) {
@@ -68,7 +83,7 @@ export function DeleteConfirmDialog() {
       ? "ustuni arxivga ko'chiriladi. Ustun faqat ichida bo'lim qolmaganda o'chiriladi."
       : kind === "section"
         ? "bo'limi va undagi barcha lidlar arxivga ko'chiriladi. Ularni keyinchalik arxivdan tiklash mumkin."
-        : "lidi arxivga ko'chiriladi. Uni keyinchalik arxivdan tiklash mumkin.";
+        : "lidi «Yo'qotilgan» deb belgilanadi va arxivga ko'chiriladi. Uni keyinchalik arxivdan tiklash mumkin.";
 
   return (
     <AlertDialog
@@ -82,6 +97,25 @@ export function DeleteConfirmDialog() {
             &laquo;{deleteTarget?.name}&raquo; {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {isLead && (
+          <div className="space-y-1.5">
+            <Label htmlFor="lost-reason">
+              Yo&apos;qotilish sababi <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="lost-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Masalan: narx qimmat keldi, javob bermadi, boshqa markazga ketdi..."
+              maxLength={500}
+              rows={3}
+              disabled={deleting}
+              autoFocus
+            />
+          </div>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>
             Bekor qilish
@@ -89,7 +123,7 @@ export function DeleteConfirmDialog() {
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={deleting}
+            disabled={deleting || reasonMissing}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}

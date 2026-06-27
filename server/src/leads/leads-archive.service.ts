@@ -35,6 +35,7 @@ export class LeadsArchiveService {
           lastName: true,
           phone: true,
           statusEnum: true,
+          lostReason: true,
           deletedAt: true,
           deletedBy: DELETED_BY_SELECT,
           // Origin label — the section/column may themselves be archived, so we
@@ -142,6 +143,9 @@ export class LeadsArchiveService {
     systemKey: string | null,
   ): LeadStatus {
     if (lead.convertedStudentId) return LeadStatus.CONVERTED;
+    // A lost lead (deleted with a reason) is "back in play" once restored — it
+    // returns to NEW and its lostReason is cleared in the restore update below.
+    if (lead.statusEnum === LeadStatus.LOST) return LeadStatus.NEW;
     return systemKey === 'NEW' ? LeadStatus.NEW : lead.statusEnum;
   }
 
@@ -182,6 +186,7 @@ export class LeadsArchiveService {
           deletedAt: null,
           deletedById: null,
           deletionBatchId: null,
+          lostReason: null,
           sectionId: dto.sectionId,
           order: (maxOrder._max.order ?? -1) + 1,
           statusEnum: status,
@@ -284,6 +289,7 @@ export class LeadsArchiveService {
             deletedAt: null,
             deletedById: null,
             deletionBatchId: null,
+            lostReason: null,
             sectionId: id,
             order: order++,
             statusEnum: status,

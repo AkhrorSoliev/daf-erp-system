@@ -57,6 +57,8 @@ interface ArchivedLead {
   firstName: string;
   lastName: string;
   phone: string;
+  /** Why the lead was lost — set when it was deleted directly (delete = LOST). */
+  lostReason: string | null;
   deletedAt: string | null;
   deletedBy: DeletedBy | null;
   section: {
@@ -248,6 +250,7 @@ function ArchivedLeadsCard({
               <TableHead className="w-10 border-r">#</TableHead>
               <TableHead>Ism</TableHead>
               <TableHead>Bo&apos;lim</TableHead>
+              <TableHead>Yo&apos;qotilish sababi</TableHead>
               <TableHead>Kim tomonidan</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -256,13 +259,13 @@ function ArchivedLeadsCard({
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={6}>
                     <div className="h-5 animate-pulse rounded bg-muted/50" />
                   </TableCell>
                 </TableRow>
               ))
             ) : leads.length === 0 ? (
-              <EmptyRow span={5} text="Arxivda lid yo'q" />
+              <EmptyRow span={6} text="Arxivda lid yo'q" />
             ) : (
               leads.map((lead, index) => (
                 <TableRow key={lead.id}>
@@ -286,6 +289,22 @@ function ArchivedLeadsCard({
                       </>
                     ) : (
                       "—"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {lead.lostReason ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="block max-w-[14rem] truncate">
+                            {lead.lostReason}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          {lead.lostReason}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>

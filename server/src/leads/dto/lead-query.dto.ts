@@ -1,4 +1,10 @@
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsBooleanString,
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { LeadStatus } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
@@ -23,6 +29,18 @@ export class LeadQueryDto extends PaginationDto {
   @IsOptional()
   @IsEnum(LeadStatus)
   status?: LeadStatus;
+
+  // "true" → only leads already marked called (calledAt set); "false" → only
+  // not-yet-called leads. Omitted → no contact filter.
+  @IsOptional()
+  @IsBooleanString()
+  called?: string;
+
+  // "true" → only leads with at least one comment; "false" → only leads with
+  // none. Omitted → no comment filter.
+  @IsOptional()
+  @IsBooleanString()
+  hasComments?: string;
 
   // createdAt range (yyyy-MM-dd).
   @IsOptional()

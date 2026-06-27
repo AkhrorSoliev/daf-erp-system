@@ -7,6 +7,10 @@ export const LEAD_FILTER_SCHEMA = {
   status: { type: "string" as const, defaultValue: "all" },
   sourceId: { type: "string" as const, defaultValue: "all" },
   columnId: { type: "string" as const, defaultValue: "all" },
+  // Contact marker: "all" | "true" (called) | "false" (not called).
+  called: { type: "string" as const, defaultValue: "all" },
+  // Comment presence: "all" | "true" (has comments) | "false" (none).
+  hasComments: { type: "string" as const, defaultValue: "all" },
   startDate: { type: "string" as const, defaultValue: "" },
   endDate: { type: "string" as const, defaultValue: "" },
   page: { type: "number" as const, defaultValue: 1 },
@@ -18,6 +22,8 @@ export interface LeadFilterValues {
   status: string;
   sourceId: string;
   columnId: string;
+  called: string;
+  hasComments: string;
   startDate: string;
   endDate: string;
   page: number;
@@ -31,6 +37,8 @@ export function leadFiltersActive(f: LeadFilterValues): boolean {
     f.status !== "all" ||
     f.sourceId !== "all" ||
     f.columnId !== "all" ||
+    f.called !== "all" ||
+    f.hasComments !== "all" ||
     f.startDate !== "" ||
     f.endDate !== ""
   );
