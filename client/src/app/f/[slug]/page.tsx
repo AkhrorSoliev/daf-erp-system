@@ -23,11 +23,19 @@ async function fetchFormSchema(slug: string): Promise<PublicFormSchema | null> {
 
 export default async function PublicFormPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
+  const sp = await searchParams;
+  // Source tag carried by the share link (?source=Instagram) — attributes the
+  // lead to that channel/ad on submit.
+  const raw = Array.isArray(sp.source) ? sp.source[0] : sp.source;
+  const source = raw?.slice(0, 100);
+
   const schema = await fetchFormSchema(slug);
   if (!schema) notFound();
-  return <PublicFormRenderer slug={slug} schema={schema} />;
+  return <PublicFormRenderer slug={slug} schema={schema} source={source} />;
 }
