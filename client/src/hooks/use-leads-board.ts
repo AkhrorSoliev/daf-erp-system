@@ -104,6 +104,12 @@ interface LeadsBoardState {
     fromColumnId: string,
     toColumnId: string,
   ) => Promise<void>;
+  /** Reorders a section within its column to the dropped-on section's slot. */
+  reorderSection: (
+    columnId: string,
+    activeSectionId: string,
+    overSectionId: string,
+  ) => Promise<void>;
   applyLeadUpdate: (sectionId: string, lead: LeadCard) => void;
   /** Adjusts a card's comment count in place (e.g. after a comment is added). */
   bumpLeadCommentCount: (
@@ -336,6 +342,37 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
     } catch (error) {
       set({ board: prevBoard });
       toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
+    }
+  },
+
+  reorderSection: async (columnId, activeSectionId, overSectionId) => {
+    const { board } = get();
+    const column = board.find((c) => c.id === columnId);
+    if (!column) return;
+    const oldIndex = column.sections.findIndex((s) => s.id === activeSectionId);
+    const newIndex = column.sections.findIndex((s) => s.id === overSectionId);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+    const reordered = [...column.sections];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+
+    const prevBoard = board;
+    set({
+      board: board.map((c) =>
+        c.id === columnId ? { ...c, sections: reordered } : c,
+      ),
+    });
+    try {
+      await api.patch("/lead-sections/reorder", {
+        columnId,
+        sectionIds: reordered.map((s) => s.id),
+      });
+    } catch (error) {
+      set({ board: prevBoard });
+      toast.error(
+        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
+      );
     }
   },
 

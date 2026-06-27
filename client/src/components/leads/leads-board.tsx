@@ -51,6 +51,7 @@ export function LeadsBoard() {
   const leadsBySection = useLeadsBoard((s) => s.leadsBySection);
   const moveLead = useLeadsBoard((s) => s.moveLead);
   const moveSectionToColumn = useLeadsBoard((s) => s.moveSectionToColumn);
+  const reorderSection = useLeadsBoard((s) => s.reorderSection);
 
   const [activeLead, setActiveLead] = useState<LeadCard | null>(null);
   const [activeSection, setActiveSection] = useState<LeadBoardSection | null>(
@@ -86,8 +87,9 @@ export function LeadsBoard() {
     if (!over) return;
     const overData = over.data.current;
 
-    // Section drag → move it to whichever column it was dropped on (a column
-    // body directly, or another section whose column we resolve).
+    // Section drag → either reorder within its column (dropped onto another
+    // section in the same column) or move to a different column (dropped on a
+    // column body, or a section whose column we resolve).
     if (active.data.current?.type === "section") {
       const fromColumnId = active.data.current?.columnId as string | undefined;
       const toColumnId =
@@ -96,7 +98,18 @@ export function LeadsBoard() {
           : overData?.type === "section"
             ? (overData.columnId as string | undefined)
             : undefined;
-      if (!fromColumnId || !toColumnId || fromColumnId === toColumnId) return;
+      if (!fromColumnId || !toColumnId) return;
+      if (fromColumnId === toColumnId) {
+        // Same column: reorder to the slot of the section it was dropped on.
+        if (overData?.type === "section" && over.id !== active.id) {
+          reorderSection(
+            fromColumnId,
+            active.id as string,
+            over.id as string,
+          );
+        }
+        return;
+      }
       moveSectionToColumn(active.id as string, fromColumnId, toColumnId);
       return;
     }
