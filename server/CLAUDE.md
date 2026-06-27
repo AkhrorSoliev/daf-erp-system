@@ -444,6 +444,7 @@ The financial system is built on an **append-only ledger** principle — financi
 - **Endpoints**: `POST /expenses`, `GET /expenses`, `PATCH /expenses/:id`, `DELETE /expenses/:id`
 - **Roles**: CEO, BD, Admin (create); CEO, BD (update/delete)
 - **TEACHER_ADVANCE** category: requires `relatedUserId`; settled against future salary in `SalaryService.applyPendingAdvances()`
+- **Advance surfacing in the salary view (display-only)**: a settled advance reduces `SalaryPayment.amount`, so the salary view used to show only the net and the advance was invisible (lived only under Expenses). The salary read endpoints now surface advances as part of pay — `salary-summary.service.ts` returns `advancesTotal` (all non-deleted TEACHER_ADVANCE for the teacher) + `advancesPending` (unsettled), `salary-breakdown.service.ts` `getPaymentBreakdown` returns `settledAdvances[]` / `settledAdvancesTotal` / `grossTotal` (= net `amount` + settled advances; works for FIXED_MONTHLY where accrual total is 0), and `salary-payment.service.ts` `findPayments` adds per-row `advancesTotal` / `grossAmount`. **Invariant:** `paidTotal + advancesTotal` reconstructs gross cash given with no double-count (a settled advance was subtracted from the payment it settled against). The ledger is untouched — this is a reporting change only.
 - Financial field changes (amount, category, relatedUserId) trigger ledger reversal + re-post
 - Soft delete cascades ledger reversal
 

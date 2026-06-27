@@ -47,8 +47,30 @@ export class SalaryBreakdownService {
       { salaryPaymentId },
     );
 
+    // Advances (TEACHER_ADVANCE expenses) that were netted out of THIS
+    // payment. They were paid to the teacher up front via Xarajatlar, so
+    // `payment.amount` is already reduced by their total. Surface them here
+    // so the payslip explains the gap between "earned" and "net paid":
+    //   grossTotal (earned/owed before advances) − settledAdvancesTotal
+    //     = payment.amount (net cash transferred in the salary run).
+    const settledAdvances = await this.prisma.expense.findMany({
+      where: { settledBySalaryPaymentId: salaryPaymentId, companyId },
+      select: { id: true, amount: true, description: true, date: true },
+      orderBy: { date: 'asc' },
+    });
+    const settledAdvancesTotal = settledAdvances.reduce(
+      (s, e) => s + e.amount,
+      0,
+    );
+
     return {
       payment,
+      settledAdvances,
+      settledAdvancesTotal,
+      // Pre-advance amount = what the teacher actually earned/was owed for
+      // this period (works for both accrual-based and FIXED_MONTHLY payments,
+      // where `amountTotal` from accruals would be 0).
+      grossTotal: payment.amount + settledAdvancesTotal,
       ...accruals,
     };
   }

@@ -27,6 +27,8 @@ interface SalarySummary {
   actualEarned: number;
   accrualCount: number;
   paidTotal: number;
+  advancesTotal?: number;
+  advancesPending?: number;
   groups: Array<{
     groupId: string;
     groupName: string;
@@ -135,15 +137,31 @@ export function TeacherSalaryClient() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Bugungacha to&apos;langan</CardDescription>
+            <CardDescription>Bugungacha berilgan</CardDescription>
             <CardTitle className="text-2xl">
               {summaryLoading ? (
                 <Skeleton className="h-7 w-32" />
               ) : (
-                fmtSom(summary?.paidTotal ?? 0)
+                fmtSom(
+                  (summary?.paidTotal ?? 0) + (summary?.advancesTotal ?? 0),
+                )
               )}
             </CardTitle>
           </CardHeader>
+          {!summaryLoading && (summary?.advancesTotal ?? 0) > 0 && (
+            <CardContent className="space-y-0.5 text-xs text-muted-foreground">
+              <p>
+                Oylik: {fmtSom(summary?.paidTotal ?? 0)} · Avans:{" "}
+                {fmtSom(summary?.advancesTotal ?? 0)}
+              </p>
+              {(summary?.advancesPending ?? 0) > 0 && (
+                <p className="text-amber-600">
+                  {fmtSom(summary?.advancesPending ?? 0)} avans hali oylikdan
+                  ushlanmagan
+                </p>
+              )}
+            </CardContent>
+          )}
         </Card>
       </div>
 

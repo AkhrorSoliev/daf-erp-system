@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Download, RotateCcw, History } from "lucide-react";
+import { Download, RotateCcw, History, Wallet } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -56,6 +56,14 @@ interface BreakdownResponse {
     status: string;
   };
   lines: BreakdownLine[];
+  settledAdvances: {
+    id: string;
+    amount: number;
+    description: string;
+    date: string;
+  }[];
+  settledAdvancesTotal: number;
+  grossTotal: number;
   totals: {
     accrualCount: number;
     amountTotal: number;
@@ -231,6 +239,54 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
                     value={`${summary?.uniqueStudents ?? 0} ta`}
                   />
                 </div>
+                {data.settledAdvancesTotal > 0 && (
+                  <div className="mt-4 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs dark:border-indigo-900 dark:bg-indigo-950/30">
+                    <div className="flex items-center gap-2 font-medium text-indigo-900 dark:text-indigo-300">
+                      <Wallet className="size-3.5 shrink-0" />
+                      Avans ushlandi
+                    </div>
+                    <p className="mt-1 text-indigo-800/80 dark:text-indigo-300/80">
+                      Bu summa ustozga avval Xarajatlardan avans sifatida
+                      berilgan va shu oylikdan ushlab qolingan.
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      {data.settledAdvances.map((a) => (
+                        <li
+                          key={a.id}
+                          className="flex items-baseline justify-between gap-3"
+                        >
+                          <span className="text-indigo-800/70 dark:text-indigo-300/70 truncate">
+                            {format(new Date(a.date), "dd.MM.yyyy")} ·{" "}
+                            {a.description}
+                          </span>
+                          <span className="tabular-nums font-medium text-indigo-900 dark:text-indigo-300 shrink-0">
+                            −{fmt(a.amount)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 space-y-0.5 border-t border-indigo-200 pt-2 dark:border-indigo-900">
+                      <div className="flex justify-between text-indigo-800/80 dark:text-indigo-300/80">
+                        <span>Hisoblangan oylik (avansdan oldin):</span>
+                        <span className="tabular-nums">
+                          {fmt(data.grossTotal)} so&apos;m
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-indigo-800/80 dark:text-indigo-300/80">
+                        <span>Avans ushlandi:</span>
+                        <span className="tabular-nums">
+                          −{fmt(data.settledAdvancesTotal)} so&apos;m
+                        </span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-indigo-900 dark:text-indigo-200">
+                        <span>Sof to&apos;lov:</span>
+                        <span className="tabular-nums">
+                          {fmt(data.payment.amount)} so&apos;m
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {data.totals.carriedOverCount > 0 && (
                   <div className="mt-4 flex items-start gap-2 rounded-md bg-purple-50 dark:bg-purple-950/30 px-3 py-2 text-xs text-purple-900 dark:text-purple-300">
                     <History className="size-3.5 mt-0.5 shrink-0" />

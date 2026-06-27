@@ -555,6 +555,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 - Layout follows the project's standard drawer skeleton: `SheetContent p-0 flex flex-col` → `SheetHeader border-b px-6 py-4` → scrollable body with sections (`px-6 py-5`) → `SheetFooter border-t px-6 py-4`.
 - Summary card at the top: Amount (large, tabular-nums), period range, lessons/students stats. Followed by the per-lesson breakdown table and a `<PossibleDeductionsInfo />` note at the bottom listing possible deductions.
 - Reversed accruals stay in the table (sorted in date order) but with `bg-amber-50/40`, opacity 60%, strikethrough amount, and a small `Bekor` badge with `RotateCcw` icon. Backend filters them out of payroll math (`reversedAt: null`) but they remain visible for audit.
+- **Avans ushlandi box**: when the payment has settled TEACHER_ADVANCE expenses (`settledAdvancesTotal > 0`), an indigo box lists each advance (date · description · −amount) and shows the math `Hisoblangan oylik (avansdan oldin) − Avans ushlandi = Sof to'lov`. This makes the gap between earned and net-paid explicit — the advance was paid up front via Xarajatlar and netted out of this run. The salary summary cards (`salary-summary-view.tsx`, `teacher-salary-client.tsx`) likewise show "Jami berilgan = oylik + avans" with an amber "hali oylikdan ushlanmagan" note for the pending slice; the `/payments/salary` table shows "+ X avans ushlandi" under the net amount.
 - CSV export (`Download` icon button) builds a UTF-8-with-BOM CSV (Excel-compatible) of every line.
 
 ### Lehrer Portal Salary Page
