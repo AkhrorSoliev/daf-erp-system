@@ -92,9 +92,16 @@ export function LeadColumn({
           <TooltipContent side="right">Ustunni ochish</TooltipContent>
         </Tooltip>
 
-        <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
-          {totalLeads}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="shrink-0 cursor-default rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
+              {column.sections.length}/{totalLeads}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {column.sections.length} ta bo&apos;lim / {totalLeads} ta lid
+          </TooltipContent>
+        </Tooltip>
 
         <span className="min-h-0 select-none overflow-hidden text-sm font-semibold [writing-mode:vertical-lr]">
           {column.name}
@@ -122,9 +129,16 @@ export function LeadColumn({
             <TooltipContent>Ustunni yopish</TooltipContent>
           </Tooltip>
           <h2 className="truncate text-sm font-semibold">{column.name}</h2>
-          <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
-            {totalLeads}
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="shrink-0 cursor-default rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
+                {column.sections.length}/{totalLeads}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {column.sections.length} ta bo&apos;lim / {totalLeads} ta lid
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="flex shrink-0 items-center">
           <Button
