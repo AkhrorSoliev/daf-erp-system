@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -21,12 +23,13 @@ import {
 import api from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { useLeadsBoard } from "@/hooks/use-leads-board";
 import {
-  LEAD_STATUS_LABELS,
-  useLeadsBoard,
-  type LeadStatus,
-} from "@/hooks/use-leads-board";
-import { LEAD_FILTER_SCHEMA, leadFiltersActive } from "./lead-filter-schema";
+  LEAD_FILTER_SCHEMA,
+  LEAD_HOLATI_GROUPS,
+  LEAD_HOLATI_OPTIONS,
+  leadFiltersActive,
+} from "./lead-filter-schema";
 
 /** A source option for the filter — includes soft-deleted-but-used ones. */
 interface FilterSource {
@@ -34,13 +37,6 @@ interface FilterSource {
   name: string;
   deleted: boolean;
 }
-
-// Only the two funnel stages the board actually sets are offered. A new lead is
-// NEW; "O'quvchiga aylantirish" sets CONVERTED. CONTACTED / TRIAL / ARCHIVED are
-// never written (legacy enum values), and LOST leads live in the archive
-// (deleting a lead = marking it LOST), so none of them belong on the live-board
-// status filter. Their labels stay in LEAD_STATUS_LABELS for the archive view.
-const STATUS_ORDER: LeadStatus[] = ["NEW", "CONVERTED"];
 
 export function LeadsFilterBar() {
   const { filters, setFilters, resetFilters } = useUrlFilters(
@@ -81,47 +77,24 @@ export function LeadsFilterBar() {
       </div>
 
       <Select
-        value={filters.status}
-        onValueChange={(value) => setFilters({ status: value, page: 1 })}
+        value={filters.holati}
+        onValueChange={(value) => setFilters({ holati: value, page: 1 })}
       >
-        <SelectTrigger className="w-full sm:w-48">
+        <SelectTrigger className="w-full sm:w-56">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Barcha holatlar</SelectItem>
-          {STATUS_ORDER.map((status) => (
-            <SelectItem key={status} value={status}>
-              {LEAD_STATUS_LABELS[status]}
-            </SelectItem>
+          {LEAD_HOLATI_GROUPS.map((group) => (
+            <SelectGroup key={group}>
+              <SelectLabel>{group}</SelectLabel>
+              {LEAD_HOLATI_OPTIONS.filter((o) => o.group === group).map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.called}
-        onValueChange={(value) => setFilters({ called: value, page: 1 })}
-      >
-        <SelectTrigger className="w-full sm:w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha aloqa holati</SelectItem>
-          <SelectItem value="true">Aloqaga chiqilgan</SelectItem>
-          <SelectItem value="false">Aloqaga chiqilmagan</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.hasComments}
-        onValueChange={(value) => setFilters({ hasComments: value, page: 1 })}
-      >
-        <SelectTrigger className="w-full sm:w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha izoh holati</SelectItem>
-          <SelectItem value="true">Izoh yozilgan</SelectItem>
-          <SelectItem value="false">Izohsiz</SelectItem>
         </SelectContent>
       </Select>
 

@@ -46,7 +46,7 @@ import {
   type LeadStatus,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
-import { LEAD_FILTER_SCHEMA } from "./lead-filter-schema";
+import { LEAD_FILTER_SCHEMA, LEAD_HOLATI_OPTIONS } from "./lead-filter-schema";
 
 interface LeadListRow {
   id: string;
@@ -85,11 +85,14 @@ export function LeadsList() {
         pageSize: filters.pageSize,
       };
       if (filters.search.trim()) params.search = filters.search.trim();
-      if (filters.status !== "all") params.status = filters.status;
       if (filters.sourceId !== "all") params.sourceId = filters.sourceId;
       if (filters.columnId !== "all") params.columnId = filters.columnId;
-      if (filters.called !== "all") params.called = filters.called;
-      if (filters.hasComments !== "all") params.hasComments = filters.hasComments;
+      // The unified "Holati" filter maps its token to exactly one backend param
+      // (stage / contact / comment).
+      if (filters.holati !== "all") {
+        const opt = LEAD_HOLATI_OPTIONS.find((o) => o.value === filters.holati);
+        if (opt) params[opt.param.key] = opt.param.value;
+      }
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
 
@@ -105,11 +108,9 @@ export function LeadsList() {
     filters.page,
     filters.pageSize,
     filters.search,
-    filters.status,
+    filters.holati,
     filters.sourceId,
     filters.columnId,
-    filters.called,
-    filters.hasComments,
     filters.startDate,
     filters.endDate,
   ]);
