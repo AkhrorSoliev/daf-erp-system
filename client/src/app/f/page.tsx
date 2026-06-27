@@ -15,9 +15,6 @@ export default function FormIndexPage() {
         Bu sahifa faqat sizga yuborilgan maxsus havola orqali ochiladi. Iltimos,
         formaga kirish uchun siz qabul qilgan havolani bosing.
       </p>
-      <p className="mt-7 text-[11px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase">
-        DaF Sprachzentrum
-      </p>
     </div>
   );
 }

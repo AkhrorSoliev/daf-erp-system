@@ -26,10 +26,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#EDF1F6" },
-    { media: "(prefers-color-scheme: dark)", color: "#08161F" },
-  ],
+  themeColor: "#EDF1F6", // light-only surface
 };
 
 // Public form route — no app shell, no auth, no sidebar. The whole tree is

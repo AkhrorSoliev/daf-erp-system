@@ -72,7 +72,10 @@ function buildZodSchema(fields: FormFieldShape[]) {
       } else {
         shape[f.id] = z.preprocess(
           (v) => (v === "" ? undefined : v),
-          base.refine((v) => v !== undefined && v !== null, {
+          // `.optional()` lets an empty/undefined value skip the base type
+          // check (which would otherwise emit "expected string, received
+          // undefined") so the friendly Uzbek message is shown instead.
+          base.optional().refine((v) => v !== undefined && v !== null, {
             message: "To'ldirilishi shart",
           }),
         );
@@ -147,7 +150,6 @@ export function PublicFormRenderer({ slug, schema }: Props) {
             {done}
           </p>
         </div>
-        <BrandFooter />
       </FormCard>
     );
   }
@@ -182,8 +184,6 @@ export function PublicFormRenderer({ slug, schema }: Props) {
           Yuborish
         </Button>
       </form>
-
-      <BrandFooter />
     </FormCard>
   );
 }
@@ -206,14 +206,12 @@ function BrandHeader({
 }) {
   return (
     <div className="mb-6 flex flex-col items-center text-center">
-      <span className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 shadow-[0_2px_8px_rgba(14,42,61,0.08)] ring-1 ring-border">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/daf-logo.png"
-          alt="DaF Sprachzentrum"
-          className="h-7 w-auto object-contain"
-        />
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/daf-logo.png"
+        alt="DaF Sprachzentrum"
+        className="h-10 w-auto object-contain"
+      />
       <h1 className="mt-5 text-[26px] leading-tight font-bold text-foreground">
         {title}
       </h1>
@@ -223,14 +221,6 @@ function BrandHeader({
         </p>
       )}
     </div>
-  );
-}
-
-function BrandFooter() {
-  return (
-    <p className="mt-7 text-center text-[11px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase">
-      DaF Sprachzentrum
-    </p>
   );
 }
 

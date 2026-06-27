@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { RouteThemeProvider } from "@/components/providers/route-theme-lock";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,7 +45,7 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <ThemeProvider
+        <RouteThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
@@ -57,7 +57,7 @@ export default function RootLayout({
             </QueryProvider>
             <Toaster position="top-right" />
           </AuthProvider>
-        </ThemeProvider>
+        </RouteThemeProvider>
       </body>
     </html>
   );
