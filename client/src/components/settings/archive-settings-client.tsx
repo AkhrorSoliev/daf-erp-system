@@ -47,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SettingsPageHeader } from "./settings-page-header";
+import { LeadsArchive } from "@/components/leads/leads-archive";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 
@@ -108,6 +109,19 @@ export function ArchiveSettingsClient() {
   useEffect(() => {
     fetchCounts();
   }, [fetchCounts]);
+
+  // Leads have a dedicated two-column archive (leads | sections) with their own
+  // restore flow, open to CEO/BD/Admin — not the generic single table.
+  if (selected === "leads") {
+    return (
+      <LeadsArchive
+        onBack={() => {
+          resetFilters();
+          fetchCounts();
+        }}
+      />
+    );
+  }
 
   if (selected) {
     const category = categories.find((c) => c.key === selected)!;
@@ -314,7 +328,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                       : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {item.deletedBy?.name || "—"}
+                    {deletedByName(item)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -404,6 +418,19 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       )}
     </div>
   );
+}
+
+/**
+ * The archive API selects the deleter as `{ id, firstName, lastName }` (no
+ * `.name`), so the column used to always render "—". Compose the name here so
+ * "Kim tomonidan" works for every entity type; fall back to `.name` just in
+ * case a shape ever provides it.
+ */
+function deletedByName(item: any): string {
+  const by = item.deletedBy;
+  if (!by) return "—";
+  const composed = [by.firstName, by.lastName].filter(Boolean).join(" ").trim();
+  return composed || by.name || "—";
 }
 
 function getDisplayName(entityType: string, item: any): string {

@@ -40,6 +40,13 @@ export interface MoveLeadTarget {
   sectionId: string;
 }
 
+export interface MoveSectionTarget {
+  id: string;
+  /** Column the section is currently in — excluded from the move options. */
+  columnId: string;
+  name: string;
+}
+
 interface LeadsUiState {
   addLead: { open: boolean; sectionId?: string };
   createSection: { columnId: string; columnName: string } | null;
@@ -51,6 +58,7 @@ interface LeadsUiState {
   detailLeadTab: string | null;
   editLead: EditLeadTarget | null;
   moveLead: MoveLeadTarget | null;
+  moveSection: MoveSectionTarget | null;
   convertLead: { id: string; sectionId: string } | null;
 
   openAddLead: (sectionId?: string) => void;
@@ -71,6 +79,8 @@ interface LeadsUiState {
   closeEditLead: () => void;
   openMoveLead: (target: MoveLeadTarget) => void;
   closeMoveLead: () => void;
+  openMoveSection: (target: MoveSectionTarget) => void;
+  closeMoveSection: () => void;
   openConvertLead: (target: { id: string; sectionId: string }) => void;
   closeConvertLead: () => void;
 }
@@ -85,6 +95,7 @@ export const useLeadsUi = create<LeadsUiState>((set) => ({
   detailLeadTab: null,
   editLead: null,
   moveLead: null,
+  moveSection: null,
   convertLead: null,
 
   openAddLead: (sectionId) => set({ addLead: { open: true, sectionId } }),
@@ -109,6 +120,8 @@ export const useLeadsUi = create<LeadsUiState>((set) => ({
   openMoveLead: (target) =>
     set({ moveLead: target, detailLeadId: null, detailLeadTab: null }),
   closeMoveLead: () => set({ moveLead: null }),
+  openMoveSection: (target) => set({ moveSection: target }),
+  closeMoveSection: () => set({ moveSection: null }),
   openConvertLead: (target) =>
     set({ convertLead: target, detailLeadId: null, detailLeadTab: null }),
   closeConvertLead: () => set({ convertLead: null }),

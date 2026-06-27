@@ -1,5 +1,6 @@
 "use client";
 
+import { useDroppable } from "@dnd-kit/core";
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,6 +9,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,6 +37,13 @@ export function LeadColumn({
   const openCreateSection = useLeadsUi((s) => s.openCreateSection);
   const openRename = useLeadsUi((s) => s.openRename);
   const openDelete = useLeadsUi((s) => s.openDelete);
+
+  // The column body is a drop target for sections dragged from another column.
+  const { setNodeRef, isOver, active } = useDroppable({
+    id: column.id,
+    data: { type: "column" },
+  });
+  const sectionOver = isOver && active?.data.current?.type === "section";
 
   const totalLeads = column.sections.reduce((sum, s) => sum + s.leadCount, 0);
 
@@ -112,7 +121,13 @@ export function LeadColumn({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2 transition-colors",
+          sectionOver && "bg-primary/5 ring-2 ring-inset ring-primary/40",
+        )}
+      >
         {column.sections.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-8 text-center">
             <p className="text-sm text-muted-foreground">

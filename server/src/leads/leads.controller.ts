@@ -11,12 +11,14 @@ import {
 } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { LeadsBoardService } from './leads-board.service';
+import { LeadsArchiveService } from './leads-archive.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
+import { RestoreLeadDto } from './dto/restore-lead.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -27,6 +29,7 @@ export class LeadsController {
   constructor(
     private readonly leadsService: LeadsService,
     private readonly boardService: LeadsBoardService,
+    private readonly archiveService: LeadsArchiveService,
   ) {}
 
   // Filtered, paginated flat list — used by the filter view.
@@ -40,6 +43,13 @@ export class LeadsController {
   @Get('board')
   getBoard() {
     return this.boardService.getBoard();
+  }
+
+  // Archived leads + sections (two-column leads archive). Declared before ':id'
+  // so "/leads/archive" is not captured as an id.
+  @Get('archive')
+  getArchive() {
+    return this.archiveService.getArchive();
   }
 
   // Lazily loaded when a section is expanded on the board.
@@ -99,6 +109,17 @@ export class LeadsController {
     @CurrentUser('id') userId: number,
   ) {
     return this.leadsService.convert(id, dto, companyId, userId);
+  }
+
+  // Restores an archived lead into a chosen column + section.
+  @Post(':id/restore')
+  restore(
+    @Param('id') id: string,
+    @Body() dto: RestoreLeadDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.archiveService.restoreLead(id, dto, companyId, userId);
   }
 
   @Patch(':id')

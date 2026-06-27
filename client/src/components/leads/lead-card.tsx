@@ -176,7 +176,7 @@ interface LeadCardItemProps {
 export function LeadCardItem({ lead, sectionId }: LeadCardItemProps) {
   const openLeadDetail = useLeadsUi((s) => s.openLeadDetail);
   const { setNodeRef, listeners, attributes, transform, isDragging } =
-    useDraggable({ id: lead.id, data: { sectionId } });
+    useDraggable({ id: lead.id, data: { type: "lead", sectionId } });
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
