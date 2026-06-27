@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  ClipboardCopy,
   FileEdit,
   Loader2,
   MoreHorizontal,
@@ -36,27 +35,7 @@ import {
   useCustomForms,
   type CustomFormSummary,
 } from "@/hooks/use-custom-forms";
-
-function buildPublicLink(slug: string): string {
-  if (typeof window === "undefined") return `/f/${slug}`;
-  const host = window.location.hostname;
-  // On production admin/lehrer/student hosts, swap the subdomain to `form.`
-  // and drop the `/f/` prefix — the form subdomain rewrites `/<slug>`
-  // internally. Local dev keeps the current origin + `/f/<slug>`.
-  if (host.endsWith(".dafzentrum.uz")) {
-    return `https://form.dafzentrum.uz/${slug}`;
-  }
-  return `${window.location.origin}/f/${slug}`;
-}
-
-async function copyToClipboard(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success("Havola nusxalandi");
-  } catch {
-    toast.error("Nusxalashda xatolik");
-  }
-}
+import { CopyFormLinkButton } from "./copy-form-link-dialog";
 
 export function FormsListClient() {
   const { forms, loading, setForms } = useCustomForms(true);
@@ -139,19 +118,11 @@ export function FormsListClient() {
                   </div>
                   <div className="mt-0.5 truncate text-xs text-muted-foreground">
                     {form.section.column.name} → {form.section.name}
-                    {form.source ? ` • ${form.source.name}` : ""}
                     {" • "}
                     {form.submissionCount} ta javob
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copyToClipboard(buildPublicLink(form.slug))}
-                >
-                  <ClipboardCopy className="size-3.5" />
-                  Havola
-                </Button>
+                <CopyFormLinkButton slug={form.slug} label="Havola" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="icon" variant="ghost" className="size-8">

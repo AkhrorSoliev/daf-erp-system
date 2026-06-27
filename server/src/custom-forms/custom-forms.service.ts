@@ -287,13 +287,19 @@ export class CustomFormsService {
       throw new BadRequestException("Ism, familya va telefon maydonlari to'liq emas");
     }
 
+    const sourceId = await this.resolveSubmissionSourceId(
+      dto.source,
+      form.sourceId,
+      form.companyId,
+    );
+
     const lead = await this.leadsService.create(
       {
         firstName: mapped.firstName,
         lastName: mapped.lastName,
         phone: mapped.phone,
         sectionId: form.sectionId,
-        sourceId: form.sourceId ?? undefined,
+        sourceId,
       },
       form.companyId,
       null,
@@ -310,6 +316,45 @@ export class CustomFormsService {
     });
 
     return { success: true, message: DEFAULT_SUCCESS_MESSAGE };
+  }
+
+  /**
+   * Resolves the LeadSource id for a public submission. A `source` tag carried
+   * by the share link (e.g. `?source=Instagram`) wins: its LeadSource is found
+   * case-insensitively or created on the fly, so each tagged link attributes
+   * its leads to a trackable source. Falls back to the form's own `sourceId`
+   * (legacy per-form source) when no tag is supplied.
+   */
+  private async resolveSubmissionSourceId(
+    rawSource: string | undefined,
+    fallbackSourceId: string | null,
+    companyId: number,
+  ): Promise<string | undefined> {
+    const name = rawSource?.trim();
+    if (!name) return fallbackSourceId ?? undefined;
+
+    const existing = await this.prisma.leadSource.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' }, deletedAt: null },
+      select: { id: true },
+    });
+    if (existing) return existing.id;
+
+    const maxOrder = await this.prisma.leadSource.aggregate({
+      where: { deletedAt: null },
+      _max: { order: true },
+    });
+    const created = await this.prisma.leadSource.create({
+      data: { name, order: (maxOrder._max.order ?? -1) + 1 },
+      select: { id: true, name: true },
+    });
+    await this.entityHistoryService.recordCreate({
+      entityType: 'LeadSource',
+      entityId: created.id,
+      newValues: { name: created.name },
+      changedById: undefined,
+      companyId,
+    });
+    return created.id;
   }
 
   // ── Internals ──────────────────────────────────────────────────────────────

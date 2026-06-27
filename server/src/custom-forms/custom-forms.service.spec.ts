@@ -39,7 +39,11 @@ describe('CustomFormsService', () => {
       },
       customFormSubmission: { create: jest.fn().mockResolvedValue({ id: 'sub-1' }) },
       leadSection: { findFirst: jest.fn().mockResolvedValue({ id: 'sec-1' }) },
-      leadSource: { findFirst: jest.fn().mockResolvedValue({ id: 'src-1' }) },
+      leadSource: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'src-1' }),
+        aggregate: jest.fn().mockResolvedValue({ _max: { order: 0 } }),
+        create: jest.fn().mockResolvedValue({ id: 'src-new', name: 'reklama' }),
+      },
     };
     history = {
       recordCreate: jest.fn(),
@@ -244,6 +248,62 @@ describe('CustomFormsService', () => {
         }),
       });
     });
+    it('attributes the lead to an existing source named by the link tag', async () => {
+      prisma.leadSource.findFirst.mockResolvedValue({ id: 'src-insta' });
+      await service.submit(
+        'abc1234567',
+        { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' }, source: 'Instagram' },
+        {},
+      );
+      expect(prisma.leadSource.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            name: { equals: 'Instagram', mode: 'insensitive' },
+            deletedAt: null,
+          }),
+        }),
+      );
+      expect(leads.create).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceId: 'src-insta' }),
+        1,
+        null,
+      );
+      expect(prisma.leadSource.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a LeadSource on the fly for an unknown link tag', async () => {
+      prisma.leadSource.findFirst.mockResolvedValue(null);
+      await service.submit(
+        'abc1234567',
+        { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' }, source: 'reklama' },
+        {},
+      );
+      expect(prisma.leadSource.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ name: 'reklama' }),
+        }),
+      );
+      expect(leads.create).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceId: 'src-new' }),
+        1,
+        null,
+      );
+    });
+
+    it('falls back to the form source when no link tag is supplied', async () => {
+      await service.submit(
+        'abc1234567',
+        { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' } },
+        {},
+      );
+      expect(prisma.leadSource.findFirst).not.toHaveBeenCalled();
+      expect(leads.create).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceId: 'src-1' }),
+        1,
+        null,
+      );
+    });
+
     it('rejects select values that are not part of the configured options', async () => {
       prisma.customForm.findFirst.mockResolvedValue({
         id: 'cf-1',

@@ -10,7 +10,7 @@ import {
   useWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ClipboardCopy, HelpCircle, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, HelpCircle, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,32 +58,10 @@ import {
   FormFieldEditor,
 } from "./form-field-editor";
 import { FormPreview } from "./form-preview";
-
-interface LeadSourceLite {
-  id: string;
-  name: string;
-}
+import { CopyFormLinkButton } from "./copy-form-link-dialog";
 
 interface Props {
   formId?: string;
-}
-
-function buildPublicLink(slug: string): string {
-  if (typeof window === "undefined") return `/f/${slug}`;
-  const host = window.location.hostname;
-  if (host.endsWith(".dafzentrum.uz")) {
-    return `https://form.dafzentrum.uz/${slug}`;
-  }
-  return `${window.location.origin}/f/${slug}`;
-}
-
-async function copyLink(slug: string) {
-  try {
-    await navigator.clipboard.writeText(buildPublicLink(slug));
-    toast.success("Havola nusxalandi");
-  } catch {
-    toast.error("Nusxalashda xatolik");
-  }
 }
 
 export function FormBuilderClient({ formId }: Props) {
@@ -91,7 +69,6 @@ export function FormBuilderClient({ formId }: Props) {
   const board = useLeadsBoard((s) => s.board);
   const fetchBoard = useLeadsBoard((s) => s.fetchBoard);
 
-  const [sources, setSources] = useState<LeadSourceLite[]>([]);
   const [loading, setLoading] = useState(!!formId);
   const [saving, setSaving] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
@@ -115,7 +92,6 @@ export function FormBuilderClient({ formId }: Props) {
       title: "",
       description: "",
       sectionId: "",
-      sourceId: "",
       fields: defaultFormFields(),
       isActive: true,
     },
@@ -148,10 +124,6 @@ export function FormBuilderClient({ formId }: Props) {
 
   useEffect(() => {
     if (!board.length) fetchBoard();
-    api
-      .get<LeadSourceLite[]>("/lead-sources")
-      .then(({ data }) => setSources(data))
-      .catch(() => setSources([]));
   }, [board.length, fetchBoard]);
 
   useEffect(() => {
@@ -165,7 +137,6 @@ export function FormBuilderClient({ formId }: Props) {
           title: data.title,
           description: data.description ?? "",
           sectionId: data.sectionId,
-          sourceId: data.sourceId ?? "",
           fields: data.fields,
           isActive: data.isActive,
         });
@@ -224,24 +195,16 @@ export function FormBuilderClient({ formId }: Props) {
     const payload = {
       ...values,
       description: values.description?.trim() || undefined,
-      sourceId: values.sourceId?.trim() || undefined,
     };
     try {
       if (formId) {
-        const { data } = await api.patch<CustomFormSummary>(
-          `/custom-forms/${formId}`,
-          payload,
-        );
-        setSlug(data.slug);
+        await api.patch<CustomFormSummary>(`/custom-forms/${formId}`, payload);
         toast.success("Forma yangilandi");
       } else {
-        const { data } = await api.post<CustomFormSummary>(
-          "/custom-forms",
-          payload,
-        );
+        await api.post<CustomFormSummary>("/custom-forms", payload);
         toast.success("Forma yaratildi");
-        router.replace(`/leads/forms/${data.id}`);
       }
+      router.push("/leads/forms");
     } catch (error) {
       toast.error(getErrorMessage(error, "Saqlashda xatolik"));
     } finally {
@@ -266,17 +229,7 @@ export function FormBuilderClient({ formId }: Props) {
             Orqaga
           </Link>
         </Button>
-        {slug && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => copyLink(slug)}
-          >
-            <ClipboardCopy className="size-3.5" />
-            Public havolani nusxalash
-          </Button>
-        )}
+        {slug && <CopyFormLinkButton slug={slug} />}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
@@ -410,35 +363,6 @@ export function FormBuilderClient({ formId }: Props) {
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <LabelWithHint
-            label="Lid manbasi (ixtiyoriy)"
-            hint="Lid qayerdan kelganini belgilaydi (Instagram, Telegram va hokazo) — hisobotlarda formalar bo'yicha samaradorlikni ko'rish uchun."
-          />
-          <Controller
-            control={control}
-            name="sourceId"
-            render={({ field }) => (
-              <Select
-                value={field.value || "none"}
-                onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Manba tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— (yo&apos;q)</SelectItem>
-                  {sources.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-
         <Controller
           control={control}
           name="isActive"
@@ -526,20 +450,6 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function LabelWithHint({ label, hint }: { label: string; hint: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <Label>{label}</Label>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <HelpCircle className="size-3.5 cursor-help text-muted-foreground" />
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">{hint}</TooltipContent>
-      </Tooltip>
-    </div>
   );
 }
 

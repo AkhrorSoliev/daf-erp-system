@@ -215,6 +215,16 @@
    theme via RouteThemeProvider (next-themes forcedTheme), so no dark token
    set is defined here. */
 
+/* Text selection uses the primary (coral CTA) color. */
+.form-theme ::selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.form-theme ::-moz-selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
 /* Baloo 2 for headings & display text; Nunito (base) for everything else. */
 .form-theme h1,
 .form-theme h2,

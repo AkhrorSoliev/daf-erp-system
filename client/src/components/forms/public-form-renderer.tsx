@@ -28,6 +28,8 @@ interface Props {
     description: string | null;
     fields: FormFieldShape[];
   };
+  /** Source tag from the share link (?source=...) — attributes the lead. */
+  source?: string;
 }
 
 // Build a per-form zod schema from the field definitions.
@@ -85,7 +87,7 @@ function buildZodSchema(fields: FormFieldShape[]) {
   return z.object(shape);
 }
 
-export function PublicFormRenderer({ slug, schema }: Props) {
+export function PublicFormRenderer({ slug, schema, source }: Props) {
   const zodSchema = useMemo(() => buildZodSchema(schema.fields), [schema.fields]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -120,7 +122,7 @@ export function PublicFormRenderer({ slug, schema }: Props) {
       const res = await fetch(`${apiUrl}/public/forms/${slug}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: values }),
+        body: JSON.stringify({ data: values, source }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {

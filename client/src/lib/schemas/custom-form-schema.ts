@@ -59,7 +59,6 @@ export const customFormSchema = z
     title: z.string().min(1, "Forma nomi bo'sh bo'lmasin").max(150),
     description: z.string().max(1000).optional(),
     sectionId: z.string().min(1, "Bo'limni tanlang"),
-    sourceId: z.string().optional(),
     fields: z.array(fieldSchema).min(1, "Kamida bitta maydon qo'shing").max(40),
     isActive: z.boolean().optional(),
   })
