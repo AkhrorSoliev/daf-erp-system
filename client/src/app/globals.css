@@ -172,6 +172,102 @@
   --info: oklch(0.68 0.12 220);
 }
 
+/* ============================================================
+   Public Form — Lumio design system (scoped override)
+   Mirrors the student-app (student-app/src/global.css) token set so
+   the public form at form.dafzentrum.uz/<slug> matches the native app.
+   Applied via the `.form-theme` class on the `/f` route layout only —
+   the admin dashboard and all other portals are unaffected.
+   ============================================================ */
+.form-theme {
+  /* Lumio LIGHT tokens mapped onto the shadcn variable names so every
+     existing primitive (Input, Select, Button, PhoneInput, DatePicker)
+     re-themes automatically. */
+  --background: #edf1f6; /* bg canvas */
+  --foreground: #0e2a3d; /* ink-900 */
+  --card: #ffffff; /* surface */
+  --card-foreground: #0e2a3d;
+  --popover: #ffffff;
+  --popover-foreground: #0e2a3d;
+  --primary: #ff6b4a; /* coral */
+  --primary-foreground: #ffffff;
+  --secondary: #e3e9f1; /* sunk */
+  --secondary-foreground: #0e2a3d;
+  --muted: #e3e9f1; /* sunk */
+  --muted-foreground: #6b8392; /* ink-500 */
+  --accent: #f5f8fb; /* tint */
+  --accent-foreground: #0e2a3d;
+  --destructive: #f0513a; /* danger */
+  --border: #e0e7ee;
+  --input: #e0e7ee;
+  --ring: #ff6b4a; /* coral focus */
+  --radius: 1.25rem; /* soft Lumio rounding → rounded-md≈16px (inputs), rounded-sm≈12px */
+  /* Clay-extrude shadow tokens (signature Lumio button effect) */
+  --clay-lip: #c83d20; /* coral-700 solid bottom lip */
+  --clay-ambient: rgb(240 78 44 / 0.32); /* soft coral ambient */
+
+  font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  color: var(--foreground);
+}
+
+.dark .form-theme,
+.form-theme.dark {
+  /* Lumio DARK — deep-ocean inversion (device dark mode via next-themes). */
+  --background: #08161f;
+  --foreground: #f2f6f9;
+  --card: #12303f;
+  --card-foreground: #f2f6f9;
+  --popover: #12303f;
+  --popover-foreground: #f2f6f9;
+  --primary: #ff6b4a;
+  --primary-foreground: #ffffff;
+  --secondary: #0b1e29;
+  --secondary-foreground: #f2f6f9;
+  --muted: #0b1e29;
+  --muted-foreground: #8ca0ad;
+  --accent: #16384a;
+  --accent-foreground: #f2f6f9;
+  --destructive: #ff7a66; /* danger-400 for dark legibility */
+  --border: #24465a;
+  --input: #24465a;
+  --ring: #ff6b4a;
+  --clay-lip: #0a1c26;
+  --clay-ambient: rgb(240 78 44 / 0.4);
+}
+
+/* Baloo 2 for headings & display text; Nunito (base) for everything else. */
+.form-theme h1,
+.form-theme h2,
+.form-theme h3,
+.form-theme .font-display {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Bigger, finger-friendly select trigger (its h-9 is variant-scoped, so a
+   utility class can't override it — set the height here instead). */
+.form-theme [data-slot="select-trigger"] {
+  height: 3rem;
+}
+
+/* Clay-extrude CTA: solid coral lip + soft ambient, collapses on press. */
+.form-theme .clay-btn {
+  box-shadow:
+    0 4px 0 0 var(--clay-lip),
+    0 14px 24px -8px var(--clay-ambient);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.15s ease;
+}
+.form-theme .clay-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    0 2px 0 0 var(--clay-lip),
+    0 8px 16px -8px var(--clay-ambient);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
