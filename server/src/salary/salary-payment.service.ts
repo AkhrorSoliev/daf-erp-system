@@ -45,6 +45,9 @@ export class SalaryPaymentService {
             },
           },
           paidBy: { select: { id: true, firstName: true, lastName: true } },
+          // Advances netted out of this payment — `amount` is already net of
+          // them, so we expose their total separately for the list view.
+          settledExpenses: { select: { amount: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
@@ -53,7 +56,15 @@ export class SalaryPaymentService {
       this.prisma.salaryPayment.count({ where }),
     ]);
 
-    return { data, total, page, pageSize };
+    // Fold settled advances into a per-row total + the gross (pre-advance)
+    // amount so the salary table can show "net + avans" at a glance without
+    // opening the breakdown drawer.
+    const rows = data.map(({ settledExpenses, ...sp }) => {
+      const advancesTotal = settledExpenses.reduce((s, e) => s + e.amount, 0);
+      return { ...sp, advancesTotal, grossAmount: sp.amount + advancesTotal };
+    });
+
+    return { data: rows, total, page, pageSize };
   }
 
   async approvePayment(id: string, companyId: number) {

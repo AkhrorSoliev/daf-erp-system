@@ -11,6 +11,10 @@ export interface SalarySummary {
   lessonsCount?: number;
   studentsCount?: number;
   paidTotal: number;
+  /** Ustozga berilgan jami avans (TEACHER_ADVANCE xarajatlari). */
+  advancesTotal?: number;
+  /** Shundan hali oylikdan ushlab qolinmagani. */
+  advancesPending?: number;
   groups: {
     groupId: number;
     groupName: string;
@@ -60,10 +64,27 @@ export function SalarySummaryView({ summary }: SalarySummaryViewProps) {
           </p>
         </div>
         <div className="rounded-lg border p-3 space-y-1">
-          <p className="text-xs text-muted-foreground">Jami to&apos;langan</p>
+          <p className="text-xs text-muted-foreground">Jami berilgan</p>
           <p className="text-lg font-bold">
-            {summary.paidTotal.toLocaleString("en-US")} so&apos;m
+            {(summary.paidTotal + (summary.advancesTotal ?? 0)).toLocaleString(
+              "en-US",
+            )}{" "}
+            so&apos;m
           </p>
+          {(summary.advancesTotal ?? 0) > 0 && (
+            <div className="space-y-0.5 pt-0.5 text-xs text-muted-foreground">
+              <p>
+                Oylik: {summary.paidTotal.toLocaleString("en-US")} · Avans:{" "}
+                {(summary.advancesTotal ?? 0).toLocaleString("en-US")}
+              </p>
+              {(summary.advancesPending ?? 0) > 0 && (
+                <p className="text-amber-600">
+                  {(summary.advancesPending ?? 0).toLocaleString("en-US")} so&apos;m
+                  avans hali oylikdan ushlanmagan
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

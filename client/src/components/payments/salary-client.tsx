@@ -51,6 +51,10 @@ import { SalaryPeriodSettingsSheet } from "./salary-period-settings-sheet";
 interface SalaryPayment {
   id: string;
   amount: number;
+  /** Bu to'lovdan ushlab qolingan avans yig'indisi. */
+  advancesTotal?: number;
+  /** amount + advancesTotal — avansdan oldingi summa. */
+  grossAmount?: number;
   status: string;
   periodStart: string;
   periodEnd: string;
@@ -353,6 +357,11 @@ export function SalaryClient() {
                 </TableCell>
                 <TableCell className="font-medium">
                   {formatPrice(sp.amount)} so&apos;m
+                  {(sp.advancesTotal ?? 0) > 0 && (
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      + {formatPrice(sp.advancesTotal ?? 0)} avans ushlandi
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className={statusColors[sp.status]}>

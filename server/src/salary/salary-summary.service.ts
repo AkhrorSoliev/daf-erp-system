@@ -139,6 +139,39 @@ export class SalarySummaryService {
       _sum: { amount: true },
     });
 
+    // Teacher advances (TEACHER_ADVANCE expenses). An advance is real cash
+    // handed to the teacher the moment it's recorded in Xarajatlar; it is
+    // later netted out of a salary run (SalaryPayment.amount is already
+    // reduced by the settled ones — so `paidTotal` is net of them). We
+    // surface advances here so the salary view reflects money actually given
+    // to the teacher as part of their pay, instead of it being visible only
+    // under Expenses. Note: `paidTotal + advancesTotal` reconstructs the
+    // gross cash given without double-counting, because a settled advance was
+    // subtracted from the payment amount it settled against.
+    const [advancesAgg, advancesPendingAgg] = await Promise.all([
+      this.prisma.expense.aggregate({
+        where: {
+          category: 'TEACHER_ADVANCE',
+          relatedUserId: teacherId,
+          companyId,
+          deletedAt: null,
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.expense.aggregate({
+        where: {
+          category: 'TEACHER_ADVANCE',
+          relatedUserId: teacherId,
+          companyId,
+          deletedAt: null,
+          // Not yet netted out of any salary run — still to be deducted from
+          // a future payment.
+          settledBySalaryPaymentId: null,
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
     const fixedMonthlyConfig = configs.find(
       (c) => c.salaryType === SalaryType.FIXED_MONTHLY,
     );
@@ -153,6 +186,10 @@ export class SalarySummaryService {
       lessonsCount: lessonsByDate.length,
       studentsCount: studentsByStudent.length,
       paidTotal: paidTotal._sum.amount ?? 0,
+      // Avans (TEACHER_ADVANCE) — money already handed to the teacher.
+      advancesTotal: advancesAgg._sum.amount ?? 0,
+      // Portion not yet netted out of a salary run.
+      advancesPending: advancesPendingAgg._sum.amount ?? 0,
       groups: groupsBreakdown,
       hasConfig: configs.length > 0,
       isFixedMonthly: !!fixedMonthlyConfig,
