@@ -137,24 +137,26 @@ export function PublicFormRenderer({ slug, schema }: Props) {
 
   if (done) {
     return (
-      <div className="rounded-lg border bg-background p-8 text-center shadow-sm">
-        <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
-        <h1 className="mt-3 text-lg font-semibold">Rahmat!</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{done}</p>
-      </div>
+      <FormCard>
+        <div className="py-2 text-center">
+          <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-[#2BB673]/10">
+            <CheckCircle2 className="size-9 text-[#2BB673]" />
+          </div>
+          <h1 className="mt-5 text-2xl font-bold">Rahmat!</h1>
+          <p className="mx-auto mt-2 max-w-xs text-[15px] leading-relaxed text-muted-foreground">
+            {done}
+          </p>
+        </div>
+        <BrandFooter />
+      </FormCard>
     );
   }
 
   return (
-    <div className="rounded-lg border bg-background p-6 shadow-sm sm:p-8">
-      <h1 className="text-xl font-semibold">{schema.title}</h1>
-      {schema.description && (
-        <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
-          {schema.description}
-        </p>
-      )}
+    <FormCard>
+      <BrandHeader title={schema.title} description={schema.description} />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {schema.fields.map((f) => (
           <FieldRow
             key={f.id}
@@ -166,17 +168,69 @@ export function PublicFormRenderer({ slug, schema }: Props) {
         ))}
 
         {submitError && (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
             {submitError}
           </p>
         )}
 
-        <Button type="submit" disabled={submitting} className="w-full">
-          {submitting && <Loader2 className="size-4 animate-spin" />}
+        <Button
+          type="submit"
+          disabled={submitting}
+          className="clay-btn h-14 w-full rounded-[22px] text-base font-bold"
+        >
+          {submitting && <Loader2 className="size-5 animate-spin" />}
           Yuborish
         </Button>
       </form>
+
+      <BrandFooter />
+    </FormCard>
+  );
+}
+
+// Lumio surface card — soft 26px radius, hairline border, ink-tinted shadow.
+function FormCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[26px] border border-border bg-card p-6 shadow-[0_18px_40px_-12px_rgba(14,42,61,0.18)] sm:p-8">
+      {children}
     </div>
+  );
+}
+
+function BrandHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string | null;
+}) {
+  return (
+    <div className="mb-6 flex flex-col items-center text-center">
+      <span className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 shadow-[0_2px_8px_rgba(14,42,61,0.08)] ring-1 ring-border">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/daf-logo.png"
+          alt="DaF Sprachzentrum"
+          className="h-7 w-auto object-contain"
+        />
+      </span>
+      <h1 className="mt-5 text-[26px] leading-tight font-bold text-foreground">
+        {title}
+      </h1>
+      {description && (
+        <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function BrandFooter() {
+  return (
+    <p className="mt-7 text-center text-[11px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase">
+      DaF Sprachzentrum
+    </p>
   );
 }
 
@@ -192,7 +246,10 @@ function FieldRow({
   error?: string;
 }) {
   const labelEl = (
-    <Label htmlFor={field.id} className="text-sm font-medium">
+    <Label
+      htmlFor={field.id}
+      className="text-[15px] font-semibold text-foreground"
+    >
       {field.label}
       {field.required && <span className="ml-0.5 text-destructive">*</span>}
     </Label>
@@ -200,22 +257,23 @@ function FieldRow({
 
   if (field.type === "textarea") {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {labelEl}
         <Textarea
           id={field.id}
           {...register(field.id)}
           placeholder={field.placeholder}
           rows={3}
+          className="min-h-28 rounded-2xl px-4 py-3 text-base"
         />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
       </div>
     );
   }
 
   if (field.type === "phone") {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {labelEl}
         <Controller
           control={control}
@@ -224,17 +282,18 @@ function FieldRow({
             <PhoneInput
               value={(f.value as string) ?? ""}
               onChange={(e) => f.onChange(e.target.value)}
+              className="h-12 px-4 text-base"
             />
           )}
         />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
       </div>
     );
   }
 
   if (field.type === "select") {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {labelEl}
         <Controller
           control={control}
@@ -244,7 +303,7 @@ function FieldRow({
               value={(f.value as string) ?? ""}
               onValueChange={f.onChange}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full px-4 text-base">
                 <SelectValue placeholder={field.placeholder ?? "Tanlang"} />
               </SelectTrigger>
               <SelectContent>
@@ -257,56 +316,63 @@ function FieldRow({
             </Select>
           )}
         />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
       </div>
     );
   }
 
   if (field.type === "radio") {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {labelEl}
         <Controller
           control={control}
           name={field.id}
           render={({ field: f }) => (
-            <div className="space-y-1.5">
-              {field.options?.map((o) => (
-                <label
-                  key={o.value}
-                  className="flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <input
-                    type="radio"
-                    name={field.id}
-                    value={o.value}
-                    checked={f.value === o.value}
-                    onChange={() => f.onChange(o.value)}
-                    className="size-4 cursor-pointer accent-primary"
-                  />
-                  {o.label}
-                </label>
-              ))}
+            <div className="space-y-2">
+              {field.options?.map((o) => {
+                const selected = f.value === o.value;
+                return (
+                  <label
+                    key={o.value}
+                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 text-[15px] transition-colors ${
+                      selected
+                        ? "border-primary bg-primary/5 font-semibold text-foreground"
+                        : "border-border bg-card text-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={field.id}
+                      value={o.value}
+                      checked={selected}
+                      onChange={() => f.onChange(o.value)}
+                      className="size-5 cursor-pointer accent-primary"
+                    />
+                    {o.label}
+                  </label>
+                );
+              })}
             </div>
           )}
         />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
       </div>
     );
   }
 
   if (field.type === "checkbox") {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <Controller
           control={control}
           name={field.id}
           render={({ field: f }) => (
-            <label className="flex cursor-pointer items-start gap-2 text-sm">
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-[15px] leading-snug transition-colors hover:bg-accent">
               <Checkbox
                 checked={Boolean(f.value)}
                 onCheckedChange={(v) => f.onChange(Boolean(v))}
-                className="mt-0.5"
+                className="mt-0.5 size-5"
               />
               <span>
                 {field.label}
@@ -317,14 +383,14 @@ function FieldRow({
             </label>
           )}
         />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
       </div>
     );
   }
 
   if (field.type === "date") {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {labelEl}
         <Controller
           control={control}
@@ -335,17 +401,18 @@ function FieldRow({
               onChange={(d) =>
                 f.onChange(d ? d.toISOString().slice(0, 10) : "")
               }
+              className="h-12 rounded-2xl px-4 text-base font-normal"
             />
           )}
         />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
       </div>
     );
   }
 
   // text / email / number
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {labelEl}
       <Input
         id={field.id}
@@ -358,8 +425,9 @@ function FieldRow({
         }
         {...register(field.id)}
         placeholder={field.placeholder}
+        className="h-12 px-4 text-base"
       />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
     </div>
   );
 }
