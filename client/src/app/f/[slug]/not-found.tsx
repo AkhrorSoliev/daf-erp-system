@@ -10,9 +10,6 @@ export default function NotFound() {
       <p className="mx-auto mt-2 max-w-xs text-[15px] leading-relaxed text-muted-foreground">
         Bu havola eskirgan yoki forma o&apos;chirilgan bo&apos;lishi mumkin.
       </p>
-      <p className="mt-7 text-[11px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase">
-        DaF Sprachzentrum
-      </p>
     </div>
   );
 }

@@ -211,30 +211,9 @@
   color: var(--foreground);
 }
 
-.dark .form-theme,
-.form-theme.dark {
-  /* Lumio DARK — deep-ocean inversion (device dark mode via next-themes). */
-  --background: #08161f;
-  --foreground: #f2f6f9;
-  --card: #12303f;
-  --card-foreground: #f2f6f9;
-  --popover: #12303f;
-  --popover-foreground: #f2f6f9;
-  --primary: #ff6b4a;
-  --primary-foreground: #ffffff;
-  --secondary: #0b1e29;
-  --secondary-foreground: #f2f6f9;
-  --muted: #0b1e29;
-  --muted-foreground: #8ca0ad;
-  --accent: #16384a;
-  --accent-foreground: #f2f6f9;
-  --destructive: #ff7a66; /* danger-400 for dark legibility */
-  --border: #24465a;
-  --input: #24465a;
-  --ring: #ff6b4a;
-  --clay-lip: #0a1c26;
-  --clay-ambient: rgb(240 78 44 / 0.4);
-}
+/* The public form is light-only — the `/f` routes are pinned to the light
+   theme via RouteThemeProvider (next-themes forcedTheme), so no dark token
+   set is defined here. */
 
 /* Baloo 2 for headings & display text; Nunito (base) for everything else. */
 .form-theme h1,
