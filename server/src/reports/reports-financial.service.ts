@@ -259,6 +259,22 @@ export class ReportsFinancialService {
       _sum: { amount: true },
     });
 
+    // Teacher advances (TEACHER_ADVANCE) are cash paid to teachers — they
+    // belong under "Ustoz oyliklari", not generic Xarajatlar. Reclassify
+    // (display-only): pull them OUT of the expenses bucket and fold them INTO
+    // salary.paid below. The combined outflow (and netProfit) is unchanged —
+    // only the split between the two buckets shifts.
+    const teacherAdvances = await this.prisma.expense.aggregate({
+      where: {
+        companyId,
+        deletedAt: null,
+        category: 'TEACHER_ADVANCE',
+        date: { gte: new Date(start), lte: new Date(end) },
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      _sum: { amount: true },
+    });
+
     const debtors = await this.prisma.student.count({
       where: {
         companyId,
@@ -315,8 +331,12 @@ export class ReportsFinancialService {
     });
 
     const totalIncome = actualIncome._sum.amount ?? 0;
-    const totalExpenseAmount = expenses._sum.amount ?? 0;
-    const totalSalaryPaid = salaryPaid._sum.amount ?? 0;
+    const advancesInPeriod = teacherAdvances._sum.amount ?? 0;
+    // Expenses excluding advances (they move to salary); salary paid includes
+    // advances. Their sum equals the old (allExpenses + netSalaryPaid), so the
+    // Chiqimlar and Foyda totals are unchanged — only the split shifts.
+    const totalExpenseAmount = (expenses._sum.amount ?? 0) - advancesInPeriod;
+    const totalSalaryPaid = (salaryPaid._sum.amount ?? 0) + advancesInPeriod;
     const totalExpenses = totalExpenseAmount + totalSalaryPaid;
     const marketingTotal = marketingExpenses._sum.amount ?? 0;
     const periodPayerTotal = periodPayerIncome._sum.amount ?? 0;
@@ -342,6 +362,9 @@ export class ReportsFinancialService {
       salary: {
         paid: totalSalaryPaid,
         pending,
+        // Portion of `paid` that came from TEACHER_ADVANCE expenses (so the
+        // UI can show a "shundan avans" sub-line).
+        advances: advancesInPeriod,
       },
       expenses: totalExpenseAmount,
       netProfit: totalIncome - totalExpenses,

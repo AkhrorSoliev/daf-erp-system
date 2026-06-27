@@ -453,6 +453,7 @@ The financial system is built on an **append-only ledger** principle — financi
 - **Endpoints**: `GET /reports/financial-overview`, `GET /reports/financial-trend`, `GET /reports/kpis`, and more
 - **Roles**: CEO, BD
 - **Financial overview** calculates: income (actual vs forecast), salary (paid + pending with tax), expenses, net profit, LTV, CAC, marketing ROI, avg payment, debtors
+- **Teacher advances reclassified into salary (display-only)**: `getFinancialOverview` pulls TEACHER_ADVANCE expenses OUT of the `expenses` bucket and folds them INTO `salary.paid` (an avans is cash paid to a teacher, not a generic Xarajat), and returns `salary.advances` so the UI shows a "shundan avans" sub-line under "Ustoz oyliklari → To'langan". The combined outflow (`expenses + salary.paid`) and `netProfit` are unchanged — only the split shifts, so there is no double-count. Same idea as the salary-view advance surfacing (see Expenses Module → "Advance surfacing")
 - Income filters by `status: COMPLETED` — REVERSED payments excluded automatically
 - All queries support `branchId` and `startDate/endDate` filters
 
