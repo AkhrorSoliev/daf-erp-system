@@ -33,6 +33,7 @@ describe('LeadsService', () => {
       // Comment counts are grouped, not relation-counted (polymorphic table).
       comment: {
         groupBy: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockResolvedValue(null),
       },
       $transaction: jest.fn().mockImplementation((arg: any) =>
@@ -144,6 +145,44 @@ describe('LeadsService', () => {
           where: { deletedAt: null },
           skip: 0,
           take: 10,
+        }),
+      );
+    });
+
+    it('filters by contacted (called) leads', async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll({ called: 'true' });
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ calledAt: { not: null } }),
+        }),
+      );
+    });
+
+    it('constrains by commented lead ids when hasComments=true', async () => {
+      prisma.comment.findMany.mockResolvedValue([
+        { entityId: 'lead-1' },
+        { entityId: 'lead-2' },
+      ]);
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll({ hasComments: 'true' });
+
+      expect(prisma.comment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { entityType: 'Lead' },
+          distinct: ['entityId'],
+        }),
+      );
+      expect(prisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: { in: ['lead-1', 'lead-2'] },
+          }),
         }),
       );
     });
@@ -413,31 +452,57 @@ describe('LeadsService', () => {
   });
 
   describe('remove', () => {
-    it('throws NotFound when the lead is missing', async () => {
-      prisma.lead.findFirst.mockResolvedValue(null);
-      await expect(service.remove('missing', 1001, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+    it('rejects an empty reason', async () => {
+      await expect(
+        service.remove('lead-1', { reason: '   ' }, 1001, 1),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.lead.findFirst).not.toHaveBeenCalled();
     });
 
-    it('soft-deletes the lead and records history', async () => {
+    it('throws NotFound when the lead is missing', async () => {
+      prisma.lead.findFirst.mockResolvedValue(null);
+      await expect(
+        service.remove('missing', { reason: 'Javob bermadi' }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('marks the lead LOST with a reason, archives it and records the status change', async () => {
       prisma.lead.findFirst.mockResolvedValue({
         id: 'lead-1',
-        firstName: 'Aziz',
-        lastName: 'Karimov',
         sectionId: 'sec-1',
+        statusEnum: 'NEW',
       });
 
-      const result = await service.remove('lead-1', 1001, 1);
+      const result = await service.remove(
+        'lead-1',
+        { reason: 'Narx qimmat keldi' },
+        1001,
+        1,
+      );
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'lead-1' },
-          data: expect.objectContaining({ deletedById: 1 }),
+          data: expect.objectContaining({
+            statusEnum: 'LOST',
+            status: 'lost',
+            lostReason: 'Narx qimmat keldi',
+            deletedById: 1,
+          }),
         }),
       );
+      // The update payload must carry an archival timestamp.
+      const data = prisma.lead.update.mock.calls[0][0].data;
+      expect(data.deletedAt).toBeInstanceOf(Date);
       expect(result.sectionId).toBe('sec-1');
-      expect(history.recordDelete).toHaveBeenCalled();
+      expect(history.recordStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: expect.objectContaining({
+            status: 'LOST',
+            lostReason: 'Narx qimmat keldi',
+          }),
+        }),
+      );
     });
   });
 

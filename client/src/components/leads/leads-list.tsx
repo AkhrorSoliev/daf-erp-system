@@ -88,6 +88,8 @@ export function LeadsList() {
       if (filters.status !== "all") params.status = filters.status;
       if (filters.sourceId !== "all") params.sourceId = filters.sourceId;
       if (filters.columnId !== "all") params.columnId = filters.columnId;
+      if (filters.called !== "all") params.called = filters.called;
+      if (filters.hasComments !== "all") params.hasComments = filters.hasComments;
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
 
@@ -106,6 +108,8 @@ export function LeadsList() {
     filters.status,
     filters.sourceId,
     filters.columnId,
+    filters.called,
+    filters.hasComments,
     filters.startDate,
     filters.endDate,
   ]);

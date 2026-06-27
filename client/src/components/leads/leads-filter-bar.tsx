@@ -35,16 +35,12 @@ interface FilterSource {
   deleted: boolean;
 }
 
-// "CONTACTED" is intentionally omitted — the fixed CONTACTED column was removed
-// so leads no longer enter that stage. The label is kept in LEAD_STATUS_LABELS
-// for any legacy rows still carrying the value in the flat list view.
-const STATUS_ORDER: LeadStatus[] = [
-  "NEW",
-  "TRIAL",
-  "CONVERTED",
-  "LOST",
-  "ARCHIVED",
-];
+// Only the two funnel stages the board actually sets are offered. A new lead is
+// NEW; "O'quvchiga aylantirish" sets CONVERTED. CONTACTED / TRIAL / ARCHIVED are
+// never written (legacy enum values), and LOST leads live in the archive
+// (deleting a lead = marking it LOST), so none of them belong on the live-board
+// status filter. Their labels stay in LEAD_STATUS_LABELS for the archive view.
+const STATUS_ORDER: LeadStatus[] = ["NEW", "CONVERTED"];
 
 export function LeadsFilterBar() {
   const { filters, setFilters, resetFilters } = useUrlFilters(
@@ -98,6 +94,34 @@ export function LeadsFilterBar() {
               {LEAD_STATUS_LABELS[status]}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.called}
+        onValueChange={(value) => setFilters({ called: value, page: 1 })}
+      >
+        <SelectTrigger className="w-full sm:w-48">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Barcha aloqa holati</SelectItem>
+          <SelectItem value="true">Aloqaga chiqilgan</SelectItem>
+          <SelectItem value="false">Aloqaga chiqilmagan</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.hasComments}
+        onValueChange={(value) => setFilters({ hasComments: value, page: 1 })}
+      >
+        <SelectTrigger className="w-full sm:w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Barcha izoh holati</SelectItem>
+          <SelectItem value="true">Izoh yozilgan</SelectItem>
+          <SelectItem value="false">Izohsiz</SelectItem>
         </SelectContent>
       </Select>
 

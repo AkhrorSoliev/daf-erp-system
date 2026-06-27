@@ -20,6 +20,7 @@ import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RestoreLeadDto } from './dto/restore-lead.dto';
+import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -140,12 +141,15 @@ export class LeadsController {
     return this.leadsService.update(id, dto, companyId, userId);
   }
 
+  // Deleting a lead marks it LOST with a mandatory reason (sent in the body)
+  // and archives it. The reason is surfaced in the leads archive + audit trail.
   @Delete(':id')
   remove(
     @Param('id') id: string,
+    @Body() dto: RemoveLeadDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
   ) {
-    return this.leadsService.remove(id, companyId, userId);
+    return this.leadsService.remove(id, dto, companyId, userId);
   }
 }

@@ -14,6 +14,7 @@ import { ReorderLeadsDto } from './dto/reorder-leads.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
+import { RemoveLeadDto } from './dto/remove-lead.dto';
 
 // Compact shape rendered as a card on the board.
 const LEAD_CARD_SELECT = {
@@ -81,6 +82,24 @@ export class LeadsService {
     if (query.sectionId) where.sectionId = query.sectionId;
     if (query.columnId) where.section = { columnId: query.columnId };
     if (query.status) where.statusEnum = query.status;
+
+    // Contact marker filter — leads already called vs not yet called.
+    if (query.called === 'true') where.calledAt = { not: null };
+    else if (query.called === 'false') where.calledAt = null;
+
+    // Comment-presence filter. Comments are polymorphic (no FK to Lead), so we
+    // resolve the set of commented lead ids once and constrain by id. Prisma
+    // treats `in: []` as "match none" and `notIn: []` as "match all", which is
+    // exactly what we want when no lead has a comment yet.
+    if (query.hasComments !== undefined) {
+      const commented = await this.prisma.comment.findMany({
+        where: { entityType: 'Lead' },
+        distinct: ['entityId'],
+        select: { entityId: true },
+      });
+      const ids = commented.map((c) => c.entityId);
+      where.id = query.hasComments === 'true' ? { in: ids } : { notIn: ids };
+    }
 
     if (query.startDate || query.endDate) {
       const createdAt: Prisma.DateTimeFilter = {};
@@ -548,38 +567,65 @@ export class LeadsService {
     return this.withCommentCount(updated);
   }
 
-  /** Soft-deletes a lead (moves it to the archive — no hard delete). */
-  async remove(id: string, companyId: number, userId: number) {
+  /**
+   * Deleting a lead = marking it LOST. The lead is archived (`deletedAt`) AND
+   * flagged `statusEnum = LOST` with a mandatory reason, so the funnel records
+   * why it didn't convert. (Section cascade-archival is a separate path in
+   * LeadSectionsService and intentionally leaves statusEnum/lostReason
+   * untouched — those leads are merely archived, not deliberately lost.)
+   * Restorable from the archive — restore resets LOST → NEW and clears the
+   * reason (see LeadsArchiveService.restoredStatus).
+   */
+  async remove(
+    id: string,
+    dto: RemoveLeadDto,
+    companyId: number,
+    userId: number,
+  ) {
+    const reason = dto.reason?.trim();
+    if (!reason) {
+      throw new BadRequestException("Yo'qotilish sababini kiriting");
+    }
+
     const existing = await this.prisma.lead.findFirst({
       where: { id, deletedAt: null },
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
         sectionId: true,
+        statusEnum: true,
       },
     });
     if (!existing) {
       throw new NotFoundException('Lid topilmadi');
     }
 
-    await this.entityHistoryService.recordDelete({
+    await this.prisma.lead.update({
+      where: { id },
+      data: {
+        statusEnum: LeadStatus.LOST,
+        status: 'lost',
+        lostReason: reason,
+        statusChangedAt: new Date(),
+        statusChangedById: userId,
+        statusChangeReason: reason,
+        deletedAt: new Date(),
+        deletedById: userId,
+      },
+    });
+
+    await this.entityHistoryService.recordStatusChange({
       entityType: 'Lead',
       entityId: id,
-      oldValues: {
-        firstName: existing.firstName,
-        lastName: existing.lastName,
-      },
+      oldValues: { status: existing.statusEnum },
+      newValues: { status: LeadStatus.LOST, lostReason: reason },
       changedById: userId,
       companyId,
     });
 
-    await this.prisma.lead.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedById: userId },
-    });
-
-    return { message: "Lid arxivga ko'chirildi", sectionId: existing.sectionId };
+    return {
+      message: "Lid yo'qotilgan deb belgilandi va arxivga ko'chirildi",
+      sectionId: existing.sectionId,
+    };
   }
 
   /**

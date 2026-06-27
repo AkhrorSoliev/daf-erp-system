@@ -620,6 +620,12 @@ model Lead {
   statusChangedById  Int?
   statusChangeReason String?
 
+  // Why the lead was lost. Set only when an admin deletes a lead directly
+  // (delete = mark LOST): the lead is archived (deletedAt) with statusEnum=LOST
+  // and this required reason. Section cascade-archival leaves it null (those
+  // leads are merely archived, not deliberately "lost").
+  lostReason String?
+
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("LeadDeletedBy", fields: [deletedById], references: [id])
