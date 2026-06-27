@@ -10,6 +10,7 @@ import { StudentsService } from '../students/students.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
+import { ReorderLeadsDto } from './dto/reorder-leads.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
@@ -463,6 +464,41 @@ export class LeadsService {
     });
 
     return this.withCommentCount(updated);
+  }
+
+  /**
+   * Reorders the leads of a single section top-to-bottom. Pure ordering — no
+   * history is recorded (matches the section reorder; cross-section moves still
+   * go through move(), which does record history).
+   */
+  async reorder(dto: ReorderLeadsDto) {
+    const leads = await this.prisma.lead.findMany({
+      where: { sectionId: dto.sectionId, deletedAt: null },
+      select: { id: true },
+    });
+    const ids = new Set(leads.map((l) => l.id));
+
+    for (const id of dto.leadIds) {
+      if (!ids.has(id)) {
+        throw new BadRequestException('Lid topilmadi');
+      }
+    }
+    if (dto.leadIds.length !== leads.length) {
+      throw new BadRequestException(
+        'Barcha lidlar tartibda ko‘rsatilishi kerak',
+      );
+    }
+
+    await this.prisma.$transaction(
+      dto.leadIds.map((id, index) =>
+        this.prisma.lead.update({
+          where: { id },
+          data: { order: index },
+        }),
+      ),
+    );
+
+    return { message: 'Lidlar tartibi yangilandi' };
   }
 
   /**

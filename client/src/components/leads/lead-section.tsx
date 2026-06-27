@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowDown,
   ArrowUp,
@@ -55,18 +61,29 @@ export function LeadSection({
   const openDelete = useLeadsUi((s) => s.openDelete);
   const openMoveSection = useLeadsUi((s) => s.openMoveSection);
 
-  // A section is BOTH a drop target (leads dragged onto it) and a draggable
-  // item (its header grip lets the whole section move to another column).
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: section.id,
-    data: { type: "section", columnId },
-  });
+  // The section is a sortable item within its column (drag to reorder / move
+  // between columns, with neighbours sliding aside).
   const {
-    setNodeRef: setDragRef,
+    setNodeRef: setSortableRef,
     listeners,
     attributes,
+    transform,
+    transition,
     isDragging,
-  } = useDraggable({ id: section.id, data: { type: "section", columnId } });
+  } = useSortable({ id: section.id, data: { type: "section", columnId } });
+  const sortableStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  // The section is ALSO a drop target for lead cards. Its droppable id is
+  // namespaced so it never collides with the section's own sortable id; the
+  // real section id is read from `data.current.sectionId`. Kept on the always-
+  // rendered wrapper so a collapsed section still accepts a card (append).
+  const { setNodeRef: setLeadDropRef, isOver } = useDroppable({
+    id: `lead-drop:${section.id}`,
+    data: { type: "lead-drop", columnId, sectionId: section.id },
+  });
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -76,28 +93,30 @@ export function LeadSection({
 
   return (
     <div
-      ref={setDropRef}
-      className={cn(
-        "rounded-md transition-shadow",
-        // Don't show the drop-target ring on the section currently being dragged
-        // (it registers its own droppable under the pointer).
-        isOver && !isDragging && "ring-2 ring-primary/50",
-        isDragging && "opacity-40",
-      )}
+      ref={setSortableRef}
+      style={sortableStyle}
+      className={cn("rounded-md", isDragging && "opacity-40")}
     >
-      <Collapsible
-        open={open}
-        onOpenChange={handleOpenChange}
-        className="rounded-md border bg-card"
+      <div
+        ref={setLeadDropRef}
+        className={cn(
+          "rounded-md transition-shadow",
+          // Don't show the lead drop-target ring on a section being dragged.
+          isOver && !isDragging && "ring-2 ring-primary/50",
+        )}
       >
-        <div className="flex items-center gap-0.5 px-1">
-          <button
-            type="button"
-            ref={setDragRef}
-            className="shrink-0 cursor-grab touch-none px-0.5 text-muted-foreground active:cursor-grabbing"
-            {...listeners}
-            {...attributes}
-          >
+        <Collapsible
+          open={open}
+          onOpenChange={handleOpenChange}
+          className="rounded-md border bg-card"
+        >
+          <div className="flex items-center gap-0.5 px-1">
+            <button
+              type="button"
+              className="shrink-0 cursor-grab touch-none px-0.5 text-muted-foreground active:cursor-grabbing"
+              {...listeners}
+              {...attributes}
+            >
             <GripVertical className="size-4" />
             <span className="sr-only">
               Bo&apos;limni ko&apos;chirish uchun ushlang
@@ -214,16 +233,22 @@ export function LeadSection({
               </Button>
             </div>
           ) : (
-            leads.map((lead) => (
-              <LeadCardItem
-                key={lead.id}
-                lead={lead}
-                sectionId={section.id}
-              />
-            ))
+            <SortableContext
+              items={leads.map((l) => l.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {leads.map((lead) => (
+                <LeadCardItem
+                  key={lead.id}
+                  lead={lead}
+                  sectionId={section.id}
+                />
+              ))}
+            </SortableContext>
           )}
         </CollapsibleContent>
-      </Collapsible>
+        </Collapsible>
+      </div>
     </div>
   );
 }

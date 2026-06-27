@@ -2,6 +2,10 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
   ArrowLeft,
   ArrowRight,
   FolderPlus,
@@ -143,15 +147,20 @@ export function LeadColumn({
             </Button>
           </div>
         ) : (
-          column.sections.map((section, index) => (
-            <LeadSection
-              key={section.id}
-              section={section}
-              columnId={column.id}
-              canMoveUp={index > 0}
-              canMoveDown={index < column.sections.length - 1}
-            />
-          ))
+          <SortableContext
+            items={column.sections.map((s) => s.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {column.sections.map((section, index) => (
+              <LeadSection
+                key={section.id}
+                section={section}
+                columnId={column.id}
+                canMoveUp={index > 0}
+                canMoveDown={index < column.sections.length - 1}
+              />
+            ))}
+          </SortableContext>
         )}
       </div>
     </div>
