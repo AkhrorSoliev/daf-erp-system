@@ -123,6 +123,51 @@ interface LeadsBoardState {
     toSectionId: string,
   ) => Promise<void>;
   applyLeadRemove: (sectionId: string, leadId: string) => void;
+
+  // --- Sortable drag session ---------------------------------------------
+  // During a @dnd-kit/sortable drag the local state is reflowed on every
+  // onDragOver (no API) so neighbours slide to make room; the API call fires
+  // once on drop. A single snapshot taken at drag start backs the rollback.
+  dragSnapshot: {
+    board: LeadBoardColumn[];
+    leadsBySection: Record<string, LeadCard[]>;
+  } | null;
+  captureDragSnapshot: () => void;
+  clearDragSnapshot: () => void;
+  rollbackDrag: () => void;
+  /** Replaces a section's loaded lead array (same-container arrayMove on drop). */
+  setLeadsForSection: (sectionId: string, leads: LeadCard[]) => void;
+  /** Replaces a column's section array (same-container arrayMove on drop). */
+  setSectionsForColumn: (columnId: string, sections: LeadBoardSection[]) => void;
+  /** Moves a card between sections in LOCAL state + keeps leadCount badges in sync. */
+  moveLeadLocal: (args: {
+    leadId: string;
+    fromSectionId: string;
+    toSectionId: string;
+    toIndex: number;
+  }) => void;
+  /** Moves a section between columns in LOCAL state. */
+  moveSectionLocal: (args: {
+    sectionId: string;
+    fromColumnId: string;
+    toColumnId: string;
+    toIndex: number;
+  }) => void;
+  persistLeadReorder: (sectionId: string, leadIds: string[]) => Promise<void>;
+  persistLeadMove: (args: {
+    leadId: string;
+    toSectionId: string;
+    toLeadIds: string[];
+  }) => Promise<void>;
+  persistSectionReorder: (
+    columnId: string,
+    sectionIds: string[],
+  ) => Promise<void>;
+  persistSectionMove: (args: {
+    sectionId: string;
+    toColumnId: string;
+    toSectionIds: string[];
+  }) => Promise<void>;
 }
 
 export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
@@ -132,6 +177,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
   loadedSections: new Set(),
   loadingSections: new Set(),
   revision: 0,
+  dragSnapshot: null,
 
   fetchBoard: async () => {
     set({ loadingBoard: true });
@@ -483,5 +529,176 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       }));
       return { board, leadsBySection, revision: s.revision + 1 };
     });
+  },
+
+  // --- Sortable drag session ---------------------------------------------
+
+  captureDragSnapshot: () => {
+    set((s) => ({
+      dragSnapshot: {
+        board: s.board.map((c) => ({
+          ...c,
+          sections: c.sections.map((sec) => ({ ...sec })),
+        })),
+        leadsBySection: Object.fromEntries(
+          Object.entries(s.leadsBySection).map(([k, v]) => [k, [...v]]),
+        ),
+      },
+    }));
+  },
+
+  clearDragSnapshot: () => set({ dragSnapshot: null }),
+
+  rollbackDrag: () =>
+    set((s) =>
+      s.dragSnapshot
+        ? {
+            board: s.dragSnapshot.board,
+            leadsBySection: s.dragSnapshot.leadsBySection,
+            dragSnapshot: null,
+          }
+        : {},
+    ),
+
+  setLeadsForSection: (sectionId, leads) =>
+    set((s) => ({
+      leadsBySection: { ...s.leadsBySection, [sectionId]: leads },
+    })),
+
+  setSectionsForColumn: (columnId, sections) =>
+    set((s) => ({
+      board: s.board.map((c) => (c.id === columnId ? { ...c, sections } : c)),
+    })),
+
+  moveLeadLocal: ({ leadId, fromSectionId, toSectionId, toIndex }) => {
+    if (fromSectionId === toSectionId) return;
+    set((s) => {
+      const leadsBySection = { ...s.leadsBySection };
+      const fromLeads = leadsBySection[fromSectionId];
+      const moved = fromLeads?.find((l) => l.id === leadId);
+      if (fromLeads) {
+        leadsBySection[fromSectionId] = fromLeads.filter(
+          (l) => l.id !== leadId,
+        );
+      }
+      // Insert into the target only when it is loaded (expanded). A collapsed
+      // target just gets its badge bumped; the card lands on drop (append).
+      if (moved && leadsBySection[toSectionId]) {
+        const target = [...leadsBySection[toSectionId]];
+        const i = Math.max(0, Math.min(toIndex, target.length));
+        target.splice(i, 0, moved);
+        leadsBySection[toSectionId] = target;
+      }
+      const board = s.board.map((col) => ({
+        ...col,
+        sections: col.sections.map((sec) => {
+          if (sec.id === fromSectionId)
+            return { ...sec, leadCount: Math.max(0, sec.leadCount - 1) };
+          if (sec.id === toSectionId)
+            return { ...sec, leadCount: sec.leadCount + 1 };
+          return sec;
+        }),
+      }));
+      return { board, leadsBySection };
+    });
+  },
+
+  moveSectionLocal: ({ sectionId, fromColumnId, toColumnId, toIndex }) => {
+    if (fromColumnId === toColumnId) return;
+    set((s) => {
+      let moved: LeadBoardSection | undefined;
+      const stripped = s.board.map((c) => {
+        if (c.id === fromColumnId) {
+          moved = c.sections.find((sec) => sec.id === sectionId);
+          return {
+            ...c,
+            sections: c.sections.filter((sec) => sec.id !== sectionId),
+          };
+        }
+        return c;
+      });
+      if (!moved) return {};
+      const board = stripped.map((c) => {
+        if (c.id === toColumnId) {
+          const target = [...c.sections];
+          const i = Math.max(0, Math.min(toIndex, target.length));
+          target.splice(i, 0, moved as LeadBoardSection);
+          return { ...c, sections: target };
+        }
+        return c;
+      });
+      return { board };
+    });
+  },
+
+  persistLeadReorder: async (sectionId, leadIds) => {
+    try {
+      await api.patch("/leads/reorder", { sectionId, leadIds });
+      get().clearDragSnapshot();
+    } catch (error) {
+      get().rollbackDrag();
+      toast.error(
+        getErrorMessage(error, "Lid tartibini o'zgartirishda xatolik"),
+      );
+    }
+  },
+
+  persistLeadMove: async ({ leadId, toSectionId, toLeadIds }) => {
+    try {
+      const { data } = await api.patch<LeadCard>(`/leads/${leadId}/move`, {
+        sectionId: toSectionId,
+      });
+      // Replace the optimistic card with the server copy (status may sync).
+      set((s) => {
+        if (!s.leadsBySection[toSectionId]) return {};
+        return {
+          leadsBySection: {
+            ...s.leadsBySection,
+            [toSectionId]: s.leadsBySection[toSectionId].map((l) =>
+              l.id === leadId ? data : l,
+            ),
+          },
+        };
+      });
+      // Persist the dropped position when the target list is loaded; a collapsed
+      // target keeps the server append (order is correct on next expand).
+      if (toLeadIds.length > 0) {
+        await api.patch("/leads/reorder", { sectionId: toSectionId, leadIds: toLeadIds });
+      }
+      get().clearDragSnapshot();
+    } catch (error) {
+      get().rollbackDrag();
+      toast.error(getErrorMessage(error, "Lidni ko'chirishda xatolik"));
+    }
+  },
+
+  persistSectionReorder: async (columnId, sectionIds) => {
+    try {
+      await api.patch("/lead-sections/reorder", { columnId, sectionIds });
+      get().clearDragSnapshot();
+    } catch (error) {
+      get().rollbackDrag();
+      toast.error(
+        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
+      );
+    }
+  },
+
+  persistSectionMove: async ({ sectionId, toColumnId, toSectionIds }) => {
+    try {
+      await api.patch(`/lead-sections/${sectionId}/move`, {
+        targetColumnId: toColumnId,
+      });
+      if (toSectionIds.length > 0) {
+        await api.patch("/lead-sections/reorder", {
+          columnId: toColumnId,
+          sectionIds: toSectionIds,
+        });
+      }
+      get().clearDragSnapshot();
+    } catch (error) {
+      get().rollbackDrag();
+      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
+    }
   },
 }));

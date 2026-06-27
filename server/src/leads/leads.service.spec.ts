@@ -35,6 +35,9 @@ describe('LeadsService', () => {
         groupBy: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      $transaction: jest.fn().mockImplementation((arg: any) =>
+        typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+      ),
     };
     history = {
       recordCreate: jest.fn(),
@@ -367,6 +370,43 @@ describe('LeadsService', () => {
             order: 0,
             statusEnum: 'CONTACTED',
           }),
+        }),
+      );
+    });
+  });
+
+  describe('reorder', () => {
+    it('rejects a lead that does not belong to the section', async () => {
+      prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1' }]);
+      await expect(
+        service.reorder({ sectionId: 'sec-1', leadIds: ['other'] }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects a partial id list (full coverage required)', async () => {
+      prisma.lead.findMany.mockResolvedValue([
+        { id: 'lead-1' },
+        { id: 'lead-2' },
+      ]);
+      await expect(
+        service.reorder({ sectionId: 'sec-1', leadIds: ['lead-1'] }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('renumbers the section leads inside a transaction', async () => {
+      prisma.lead.findMany.mockResolvedValue([
+        { id: 'lead-1' },
+        { id: 'lead-2' },
+      ]);
+      await service.reorder({
+        sectionId: 'sec-1',
+        leadIds: ['lead-2', 'lead-1'],
+      });
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'lead-2' },
+          data: { order: 0 },
         }),
       );
     });

@@ -15,6 +15,7 @@ import { LeadsArchiveService } from './leads-archive.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
+import { ReorderLeadsDto } from './dto/reorder-leads.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
@@ -77,6 +78,13 @@ export class LeadsController {
     @CurrentUser('id') userId: number,
   ) {
     return this.leadsService.create(dto, companyId, userId);
+  }
+
+  // Declared before ':id/move' and ':id' so "/leads/reorder" is not captured
+  // as an id. Reorders the leads within one section (pure ordering).
+  @Patch('reorder')
+  reorder(@Body() dto: ReorderLeadsDto) {
+    return this.leadsService.reorder(dto);
   }
 
   // Declared before ':id' so "/leads/:id/move" resolves to the move handler.

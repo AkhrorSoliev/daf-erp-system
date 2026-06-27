@@ -6,7 +6,8 @@ import {
   Phone,
   PhoneCall,
 } from "lucide-react";
-import { useDraggable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -175,12 +176,17 @@ interface LeadCardItemProps {
 
 export function LeadCardItem({ lead, sectionId }: LeadCardItemProps) {
   const openLeadDetail = useLeadsUi((s) => s.openLeadDetail);
-  const { setNodeRef, listeners, attributes, transform, isDragging } =
-    useDraggable({ id: lead.id, data: { type: "lead", sectionId } });
+  const {
+    setNodeRef,
+    listeners,
+    attributes,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: lead.id, data: { type: "lead", sectionId } });
 
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
+  // `transition` is what slides neighbouring cards aside to make room.
+  const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
     <div
