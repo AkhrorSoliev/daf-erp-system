@@ -8,6 +8,8 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  ChevronsLeft,
+  ChevronsRight,
   FolderPlus,
   MoreVertical,
   Pencil,
@@ -22,6 +24,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useLeadsBoard, type LeadBoardColumn } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { LeadSection } from "./lead-section";
@@ -30,12 +37,16 @@ interface LeadColumnProps {
   column: LeadBoardColumn;
   canMoveLeft: boolean;
   canMoveRight: boolean;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 export function LeadColumn({
   column,
   canMoveLeft,
   canMoveRight,
+  collapsed,
+  onToggleCollapse,
 }: LeadColumnProps) {
   const moveColumn = useLeadsBoard((s) => s.moveColumn);
   const openCreateSection = useLeadsUi((s) => s.openCreateSection);
@@ -51,10 +62,65 @@ export function LeadColumn({
 
   const totalLeads = column.sections.reduce((sum, s) => sum + s.leadCount, 0);
 
+  // Collapsed: a narrow vertical strip. Stays a drop target so a dragged section
+  // can still be dropped into the column without expanding it first.
+  if (collapsed) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "flex h-full w-11 min-w-11 shrink-0 cursor-pointer flex-col items-center gap-3 rounded-lg border bg-muted/30 py-3 transition-colors",
+          sectionOver && "bg-primary/5 ring-2 ring-inset ring-primary/40",
+        )}
+        onClick={onToggleCollapse}
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCollapse();
+              }}
+            >
+              <ChevronsRight className="size-4" />
+              <span className="sr-only">Ustunni ochish</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Ustunni ochish</TooltipContent>
+        </Tooltip>
+
+        <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
+          {totalLeads}
+        </span>
+
+        <span className="min-h-0 select-none overflow-hidden text-sm font-semibold [writing-mode:vertical-lr]">
+          {column.name}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full w-80 min-w-80 shrink-0 flex-col rounded-lg border bg-muted/30">
       <div className="flex shrink-0 items-center justify-between gap-1 border-b px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="shrink-0"
+                onClick={onToggleCollapse}
+              >
+                <ChevronsLeft className="size-4" />
+                <span className="sr-only">Ustunni yopish</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Ustunni yopish</TooltipContent>
+          </Tooltip>
           <h2 className="truncate text-sm font-semibold">{column.name}</h2>
           <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
             {totalLeads}
