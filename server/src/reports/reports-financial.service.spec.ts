@@ -120,5 +120,52 @@ describe('ReportsFinancialService', () => {
         }),
       );
     });
+
+    it('reclassifies TEACHER_ADVANCE expenses from expenses into salary.paid without changing the outflow total', async () => {
+      // All expenses = 3,000,000 (of which 2,400,000 is teacher advances);
+      // no salary run was PAID this period (the CEO paid advances instead).
+      prisma.expense.aggregate.mockImplementation((args: any) => {
+        if (args.where.category === 'TEACHER_ADVANCE') {
+          return Promise.resolve({ _sum: { amount: 2_400_000 } });
+        }
+        if (args.where.category === 'MARKETING') {
+          return Promise.resolve({ _sum: { amount: 0 } });
+        }
+        return Promise.resolve({ _sum: { amount: 3_000_000 } });
+      });
+      prisma.salaryPayment.aggregate.mockResolvedValue({
+        _sum: { amount: 0 },
+      });
+      prisma.salaryAccrual.aggregate.mockResolvedValue({
+        _sum: { amount: 350_000 },
+      });
+
+      const result = await service.getFinancialOverview(1, period);
+
+      // Advances folded into salary.paid; exposed separately for the sub-line.
+      expect(result.salary.paid).toBe(2_400_000);
+      expect(result.salary.advances).toBe(2_400_000);
+      expect(result.salary.pending).toBe(350_000);
+      // Expenses bucket no longer contains the advances.
+      expect(result.expenses).toBe(600_000);
+      // Total outflow (and therefore netProfit) is unchanged: income 0 −
+      // (600,000 expenses + 2,400,000 salary) = −3,000,000, same as the old
+      // (3,000,000 expenses + 0 salary).
+      expect(result.netProfit).toBe(-3_000_000);
+    });
+
+    it('scopes the teacher-advance query to TEACHER_ADVANCE and the branch', async () => {
+      await service.getFinancialOverview(1, { ...period, branchId: 42 });
+
+      expect(prisma.expense.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            companyId: 1,
+            category: 'TEACHER_ADVANCE',
+            branchId: 42,
+          }),
+        }),
+      );
+    });
   });
 });

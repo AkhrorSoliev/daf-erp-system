@@ -51,7 +51,7 @@ interface FinancialOverview {
     outstandingReceivable: number;
     debtorExposure: { count: number; avgDebt: number };
   };
-  salary: { paid: number; pending: number };
+  salary: { paid: number; pending: number; advances?: number };
   expenses: number;
   netProfit: number;
   debtorCount: number;
@@ -148,7 +148,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       outstandingReceivable: 0,
       debtorExposure: { count: 0, avgDebt: 0 },
     },
-    salary: { paid: 0, pending: 0 },
+    salary: { paid: 0, pending: 0, advances: 0 },
     expenses: 0,
     netProfit: 0,
     debtorCount: 0,
@@ -334,6 +334,21 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                 {fmt(d.salary.paid)} so&apos;m
               </span>
             </div>
+            {(d.salary.advances ?? 0) > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex justify-between text-xs text-muted-foreground pl-4 cursor-help">
+                    <span>shundan avans</span>
+                    <span>{fmt(d.salary.advances ?? 0)} so&apos;m</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-64">
+                  Xarajatlardan ustozlarga berilgan avans. Bu summa oylik
+                  sifatida hisoblanadi (Xarajatlar emas) va keyingi oylikdan
+                  ushlab qolinadi.
+                </TooltipContent>
+              </Tooltip>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Kutilayotgan</span>
               <span className="font-medium text-amber-600">
