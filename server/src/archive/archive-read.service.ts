@@ -23,6 +23,7 @@ export class ArchiveReadService {
       courses,
       students,
       leads,
+      leadSections,
       groups,
       enrollments,
       holidays,
@@ -34,6 +35,9 @@ export class ArchiveReadService {
       this.prisma.student.count({ where: scoped }),
       // Lead/Holiday/Enrollment are company-global in schema — count unscoped.
       this.prisma.lead.count({ where: deletedFilter }),
+      // Archived board sections live in the leads archive too — fold them into
+      // the leads count so the entry-point card reflects what's restorable.
+      this.prisma.leadSection.count({ where: deletedFilter }),
       this.prisma.group.count({ where: scoped }),
       this.prisma.enrollment.count({ where: deletedFilter }),
       this.prisma.holiday.count({ where: deletedFilter }),
@@ -44,7 +48,7 @@ export class ArchiveReadService {
       rooms,
       courses,
       students,
-      leads,
+      leads: leads + leadSections,
       groups,
       enrollments,
       holidays,

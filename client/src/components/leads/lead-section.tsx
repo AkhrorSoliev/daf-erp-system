@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useDroppable } from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   ArrowDown,
   ArrowUp,
   ChevronRight,
+  FolderInput,
+  GripVertical,
   MoreVertical,
   Pencil,
   Plus,
@@ -51,9 +53,20 @@ export function LeadSection({
   const openAddLead = useLeadsUi((s) => s.openAddLead);
   const openRename = useLeadsUi((s) => s.openRename);
   const openDelete = useLeadsUi((s) => s.openDelete);
+  const openMoveSection = useLeadsUi((s) => s.openMoveSection);
 
-  // The whole section is a drop target for leads dragged from elsewhere.
-  const { setNodeRef, isOver } = useDroppable({ id: section.id });
+  // A section is BOTH a drop target (leads dragged onto it) and a draggable
+  // item (its header grip lets the whole section move to another column).
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: section.id,
+    data: { type: "section", columnId },
+  });
+  const {
+    setNodeRef: setDragRef,
+    listeners,
+    attributes,
+    isDragging,
+  } = useDraggable({ id: section.id, data: { type: "section", columnId } });
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -63,10 +76,13 @@ export function LeadSection({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setDropRef}
       className={cn(
         "rounded-md transition-shadow",
-        isOver && "ring-2 ring-primary/50",
+        // Don't show the drop-target ring on the section currently being dragged
+        // (it registers its own droppable under the pointer).
+        isOver && !isDragging && "ring-2 ring-primary/50",
+        isDragging && "opacity-40",
       )}
     >
       <Collapsible
@@ -75,6 +91,18 @@ export function LeadSection({
         className="rounded-md border bg-card"
       >
         <div className="flex items-center gap-0.5 px-1">
+          <button
+            type="button"
+            ref={setDragRef}
+            className="shrink-0 cursor-grab touch-none px-0.5 text-muted-foreground active:cursor-grabbing"
+            {...listeners}
+            {...attributes}
+          >
+            <GripVertical className="size-4" />
+            <span className="sr-only">
+              Bo&apos;limni ko&apos;chirish uchun ushlang
+            </span>
+          </button>
           <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-2 text-left hover:bg-muted/50">
             <ChevronRight
               className={cn(
@@ -133,6 +161,18 @@ export function LeadSection({
                 <ArrowDown className="mr-2 size-4" />
                 Pastga surish
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  openMoveSection({
+                    id: section.id,
+                    columnId,
+                    name: section.name,
+                  })
+                }
+              >
+                <FolderInput className="mr-2 size-4" />
+                Boshqa ustunga ko&apos;chirish
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
@@ -184,6 +224,21 @@ export function LeadSection({
           )}
         </CollapsibleContent>
       </Collapsible>
+    </div>
+  );
+}
+
+/** Non-interactive copy rendered inside the DnD drag overlay for a section. */
+export function SectionOverlay({ section }: { section: LeadBoardSection }) {
+  return (
+    <div className="flex w-72 items-center gap-1.5 rounded-md border bg-card px-2 py-2 shadow-lg ring-2 ring-primary/20">
+      <GripVertical className="size-4 shrink-0 text-muted-foreground" />
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+        {section.name}
+      </span>
+      <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
+        {section.leadCount}
+      </span>
     </div>
   );
 }

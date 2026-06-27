@@ -98,6 +98,12 @@ interface LeadsBoardState {
     sectionId: string,
     direction: "up" | "down",
   ) => Promise<void>;
+  /** Moves a section into another column (drag-and-drop or the move dialog). */
+  moveSectionToColumn: (
+    sectionId: string,
+    fromColumnId: string,
+    toColumnId: string,
+  ) => Promise<void>;
   applyLeadUpdate: (sectionId: string, lead: LeadCard) => void;
   /** Adjusts a card's comment count in place (e.g. after a comment is added). */
   bumpLeadCommentCount: (
@@ -297,6 +303,39 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       toast.error(
         getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
       );
+    }
+  },
+
+  moveSectionToColumn: async (sectionId, fromColumnId, toColumnId) => {
+    if (fromColumnId === toColumnId) return;
+    const { board } = get();
+    const fromColumn = board.find((c) => c.id === fromColumnId);
+    const toColumn = board.find((c) => c.id === toColumnId);
+    if (!fromColumn || !toColumn) return;
+    const section = fromColumn.sections.find((s) => s.id === sectionId);
+    if (!section) return;
+
+    const prevBoard = board;
+    // Optimistic: drop from the source column, append to the target column.
+    set({
+      board: board.map((c) => {
+        if (c.id === fromColumnId)
+          return {
+            ...c,
+            sections: c.sections.filter((s) => s.id !== sectionId),
+          };
+        if (c.id === toColumnId)
+          return { ...c, sections: [...c.sections, section] };
+        return c;
+      }),
+    });
+    try {
+      await api.patch(`/lead-sections/${sectionId}/move`, {
+        targetColumnId: toColumnId,
+      });
+    } catch (error) {
+      set({ board: prevBoard });
+      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
     }
   },
 

@@ -261,10 +261,10 @@ async function seedRoles() {
 // ============================================================================
 
 async function seedLeadColumns() {
-  const fixed = [
-    { name: 'Yangi Lidlar', systemKey: 'NEW', order: 0 },
-    { name: 'Aloqaga chiqilgan Lidlar', systemKey: 'CONTACTED', order: 1 },
-  ];
+  // The board has a single fixed/system column. Custom columns are created by
+  // users at runtime. (The former "Aloqaga chiqilgan" / CONTACTED column was
+  // removed — leads are now organised purely by user-defined columns.)
+  const fixed = [{ name: 'Yangi Lidlar', systemKey: 'NEW', order: 0 }];
   for (const c of fixed) {
     await prisma.leadColumn.create({
       data: {

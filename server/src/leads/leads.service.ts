@@ -293,11 +293,9 @@ export class LeadsService {
       }
     }
 
-    // A fixed column drives the funnel stage; everything else defaults to NEW.
-    const statusEnum =
-      section.column.systemKey === 'CONTACTED'
-        ? LeadStatus.CONTACTED
-        : LeadStatus.NEW;
+    // The board (column/section) is a workflow layer decoupled from the funnel
+    // stage — a brand-new lead always starts as NEW regardless of its column.
+    const statusEnum = LeadStatus.NEW;
 
     const maxOrder = await this.prisma.lead.aggregate({
       where: { sectionId: dto.sectionId, deletedAt: null },
@@ -434,12 +432,10 @@ export class LeadsService {
       throw new NotFoundException("Bo'lim topilmadi");
     }
 
+    // Landing in the fixed NEW column resets the funnel stage; any custom
+    // column leaves statusEnum untouched (CONTACTED column was removed).
     const statusEnum =
-      section.column.systemKey === 'NEW'
-        ? LeadStatus.NEW
-        : section.column.systemKey === 'CONTACTED'
-          ? LeadStatus.CONTACTED
-          : lead.statusEnum;
+      section.column.systemKey === 'NEW' ? LeadStatus.NEW : lead.statusEnum;
 
     const maxOrder = await this.prisma.lead.aggregate({
       where: { sectionId: dto.sectionId, deletedAt: null },

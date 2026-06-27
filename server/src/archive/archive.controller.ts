@@ -52,6 +52,7 @@ export class ArchiveController {
     @CurrentUser('companyId') companyId: number,
   ) {
     this.validateEntityType(entityType);
+    this.assertNotLeadOwned(entityType);
     return this.archiveService.restore(entityType, id, userId, companyId);
   }
 
@@ -62,6 +63,7 @@ export class ArchiveController {
     @CurrentUser('companyId') companyId: number,
   ) {
     this.validateEntityType(entityType);
+    this.assertNotLeadOwned(entityType);
     return this.archiveService.permanentDelete(entityType, id, companyId);
   }
 
@@ -70,6 +72,21 @@ export class ArchiveController {
     if (!validTypes.includes(entityType as ArchiveEntityType)) {
       throw new BadRequestException(
         `Noto'g'ri entity turi: ${entityType}. Ruxsat etilgan: ${validTypes.join(', ')}`,
+      );
+    }
+  }
+
+  /**
+   * Leads have a dedicated archive (column → section restore, with/without
+   * leads) owned by the leads module. The generic batch restore/permanent-delete
+   * would orphan cascade-archived leads (it un-deletes the leads but not their
+   * LeadSection), so it must never run for leads — the counts/list stay, but
+   * mutations are routed through the leads archive.
+   */
+  private assertNotLeadOwned(entityType: ArchiveEntityType) {
+    if (entityType === ArchiveEntityType.LEADS) {
+      throw new BadRequestException(
+        "Lidlar arxivini /leads bo'limidagi arxiv orqali boshqaring",
       );
     }
   }

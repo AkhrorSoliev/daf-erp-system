@@ -42,7 +42,7 @@ export function DeleteConfirmDialog() {
       } else if (deleteTarget.kind === "section") {
         await api.delete(`/lead-sections/${deleteTarget.id}`);
         applySectionRemove(deleteTarget.columnId ?? "", deleteTarget.id);
-        toast.success("Bo'lim o'chirildi");
+        toast.success("Bo'lim arxivga ko'chirildi");
       } else {
         await api.delete(`/leads/${deleteTarget.id}`);
         applyLeadRemove(deleteTarget.sectionId ?? "", deleteTarget.id);
@@ -67,7 +67,7 @@ export function DeleteConfirmDialog() {
     kind === "column"
       ? "ustuni arxivga ko'chiriladi. Ustun faqat ichida bo'lim qolmaganda o'chiriladi."
       : kind === "section"
-        ? "bo'limi arxivga ko'chiriladi. Bo'lim faqat ichida lid qolmaganda o'chiriladi."
+        ? "bo'limi va undagi barcha lidlar arxivga ko'chiriladi. Ularni keyinchalik arxivdan tiklash mumkin."
         : "lidi arxivga ko'chiriladi. Uni keyinchalik arxivdan tiklash mumkin.";
 
   return (

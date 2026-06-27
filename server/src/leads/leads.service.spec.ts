@@ -212,10 +212,10 @@ describe('LeadsService', () => {
       );
     });
 
-    it('derives CONTACTED status from a fixed CONTACTED column', async () => {
+    it('creates a NEW lead in a custom column (status decoupled from column)', async () => {
       prisma.leadSection.findFirst.mockResolvedValue({
         id: 'sec-2',
-        column: { systemKey: 'CONTACTED' },
+        column: { systemKey: null },
       });
       prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
       prisma.lead.create.mockResolvedValue({
@@ -223,7 +223,7 @@ describe('LeadsService', () => {
         firstName: 'Aziz',
         lastName: 'Karimov',
         phone: '901234567',
-        statusEnum: 'CONTACTED',
+        statusEnum: 'NEW',
       });
 
       await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, 1);
@@ -231,7 +231,7 @@ describe('LeadsService', () => {
       expect(prisma.lead.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            statusEnum: 'CONTACTED',
+            statusEnum: 'NEW',
             order: 0,
           }),
         }),
@@ -318,15 +318,15 @@ describe('LeadsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('syncs status to CONTACTED when moved into a fixed CONTACTED column', async () => {
+    it('resets status to NEW when moved into the fixed NEW column', async () => {
       prisma.lead.findFirst.mockResolvedValue({
         id: 'lead-1',
         sectionId: 'sec-1',
-        statusEnum: 'NEW',
+        statusEnum: 'CONTACTED',
       });
       prisma.leadSection.findFirst.mockResolvedValue({
         id: 'sec-2',
-        column: { systemKey: 'CONTACTED' },
+        column: { systemKey: 'NEW' },
       });
       prisma.lead.aggregate.mockResolvedValue({ _max: { order: 1 } });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
@@ -338,7 +338,7 @@ describe('LeadsService', () => {
           data: expect.objectContaining({
             sectionId: 'sec-2',
             order: 2,
-            statusEnum: 'CONTACTED',
+            statusEnum: 'NEW',
           }),
         }),
       );

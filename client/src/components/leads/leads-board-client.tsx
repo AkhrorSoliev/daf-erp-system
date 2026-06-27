@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Columns3, FileEdit, Megaphone, Plus } from "lucide-react";
+import { Archive, Columns3, FileEdit, Megaphone, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
@@ -14,6 +14,7 @@ import { LeadsList } from "./leads-list";
 import { AddLeadDrawer } from "./add-lead-drawer";
 import { EditLeadDrawer } from "./edit-lead-drawer";
 import { MoveLeadDialog } from "./move-lead-dialog";
+import { MoveSectionDialog } from "./move-section-dialog";
 import { ConvertLeadDialog } from "./convert-lead-dialog";
 import { CreateSectionDialog } from "./create-section-dialog";
 import { CreateColumnDialog } from "./create-column-dialog";
@@ -47,6 +48,12 @@ export function LeadsBoardClient() {
             <Link href="/leads/forms">
               <FileEdit className="size-4" />
               Formalar
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/leads/archive">
+              <Archive className="size-4" />
+              Arxiv
             </Link>
           </Button>
           <Button
@@ -85,6 +92,7 @@ export function LeadsBoardClient() {
       <AddLeadDrawer />
       <EditLeadDrawer />
       <MoveLeadDialog />
+      <MoveSectionDialog />
       <ConvertLeadDialog />
       <CreateSectionDialog />
       <CreateColumnDialog />

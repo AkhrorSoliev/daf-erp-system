@@ -163,7 +163,6 @@ describe('LeadColumnsService', () => {
     it('renumbers custom columns inside a transaction', async () => {
       prisma.leadColumn.findMany.mockResolvedValue([
         { id: 'sys-1', isSystem: true, systemKey: 'NEW' },
-        { id: 'sys-2', isSystem: true, systemKey: 'CONTACTED' },
         { id: 'col-a', isSystem: false, systemKey: null },
         { id: 'col-b', isSystem: false, systemKey: null },
       ]);

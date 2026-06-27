@@ -19,8 +19,16 @@ describe('LeadSectionsService', () => {
         update: jest.fn(),
         findMany: jest.fn(),
       },
-      lead: { count: jest.fn() },
-      $transaction: jest.fn().mockResolvedValue([]),
+      lead: {
+        count: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn(),
+      },
+      // Supports both the array form (reorder) and the interactive callback
+      // form (cascade remove), running the callback against the same mock.
+      $transaction: jest.fn().mockImplementation((arg: any) =>
+        typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+      ),
     };
     history = {
       recordCreate: jest.fn(),
@@ -115,37 +123,136 @@ describe('LeadSectionsService', () => {
     });
   });
 
-  describe('remove', () => {
-    it('refuses to delete a section that still has leads', async () => {
-      prisma.leadSection.findFirst.mockResolvedValue({
-        id: 'sec-1',
-        name: 'Reklama',
-        columnId: 'col-1',
-      });
-      prisma.lead.count.mockResolvedValue(3);
-      await expect(service.remove('sec-1', 1001, 1)).rejects.toThrow(
-        BadRequestException,
+  describe('remove (cascade archive)', () => {
+    it('throws NotFound for a missing section', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue(null);
+      await expect(service.remove('missing', 1001, 1)).rejects.toThrow(
+        NotFoundException,
       );
     });
 
-    it('soft-deletes an empty section and returns its column id', async () => {
+    it('archives the section + every lead inside it with a shared batch and audits each', async () => {
       prisma.leadSection.findFirst.mockResolvedValue({
         id: 'sec-1',
         name: 'Reklama',
         columnId: 'col-1',
       });
-      prisma.lead.count.mockResolvedValue(0);
+      prisma.lead.findMany.mockResolvedValue([
+        { id: 'lead-1', firstName: 'Aziz', lastName: 'Karimov' },
+        { id: 'lead-2', firstName: 'Olim', lastName: 'Aliyev' },
+      ]);
 
       const result = await service.remove('sec-1', 1001, 1);
 
-      expect(result.columnId).toBe('col-1');
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(result).toEqual(
+        expect.objectContaining({ columnId: 'col-1', archivedLeadCount: 2 }),
+      );
+      // One section delete + one delete per cascaded lead = 3 audit rows.
+      expect(history.recordDelete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'LeadSection',
+          entityId: 'sec-1',
+        }),
+      );
+      expect(history.recordDelete).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: 'Lead', entityId: 'lead-1' }),
+      );
+      expect(history.recordDelete).toHaveBeenCalledTimes(3);
+    });
+
+    it('archives an empty section with no cascaded leads', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-1',
+        name: 'Reklama',
+        columnId: 'col-1',
+      });
+      prisma.lead.findMany.mockResolvedValue([]);
+
+      const result = await service.remove('sec-1', 1001, 1);
+
+      expect(result.archivedLeadCount).toBe(0);
+      expect(history.recordDelete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('move', () => {
+    it('throws NotFound for a missing section', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue(null);
+      await expect(
+        service.move('missing', { targetColumnId: 'col-2' }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFound when the target column is missing', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-1',
+        columnId: 'col-1',
+        name: 'Reklama',
+        order: 0,
+      });
+      prisma.leadColumn.findFirst.mockResolvedValue(null);
+      await expect(
+        service.move('sec-1', { targetColumnId: 'missing' }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('moves the section to the end of the target column and records history', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-1',
+        columnId: 'col-1',
+        name: 'Reklama',
+        order: 0,
+      });
+      prisma.leadColumn.findFirst.mockResolvedValue({ id: 'col-2' });
+      prisma.leadSection.aggregate.mockResolvedValue({ _max: { order: 1 } });
+      prisma.leadSection.update.mockResolvedValue({
+        id: 'sec-1',
+        name: 'Reklama',
+        columnId: 'col-2',
+        order: 2,
+      });
+
+      const result = await service.move(
+        'sec-1',
+        { targetColumnId: 'col-2' },
+        1001,
+        1,
+      );
+
       expect(prisma.leadSection.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'sec-1' },
-          data: expect.objectContaining({ deletedById: 1 }),
+          data: { columnId: 'col-2', order: 2 },
         }),
       );
-      expect(history.recordDelete).toHaveBeenCalled();
+      expect(result).toEqual({
+        id: 'sec-1',
+        name: 'Reklama',
+        columnId: 'col-2',
+        order: 2,
+      });
+      expect(history.recordUpdate).toHaveBeenCalled();
+    });
+
+    it('is a no-op when the section is already in the target column', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-1',
+        columnId: 'col-1',
+        name: 'Reklama',
+        order: 0,
+      });
+      prisma.leadColumn.findFirst.mockResolvedValue({ id: 'col-1' });
+
+      const result = await service.move(
+        'sec-1',
+        { targetColumnId: 'col-1' },
+        1001,
+        1,
+      );
+
+      expect(prisma.leadSection.update).not.toHaveBeenCalled();
+      expect(result.columnId).toBe('col-1');
     });
   });
 

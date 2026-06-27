@@ -11,10 +11,9 @@ import { UpdateLeadColumnDto } from './dto/update-lead-column.dto';
 import { ReorderLeadColumnsDto } from './dto/reorder-lead-columns.dto';
 
 /**
- * Board columns. Two rows are seeded as fixed/system columns (systemKey NEW
- * and CONTACTED) and cannot be renamed, reordered or deleted — they always
- * stay at positions 0 and 1. Custom columns are fully manageable and live at
- * positions 2 and beyond.
+ * Board columns. One row is seeded as a fixed/system column (systemKey NEW)
+ * and cannot be renamed, reordered or deleted — it always stays at position 0.
+ * Custom columns are fully manageable and live at positions 1 and beyond.
  */
 @Injectable()
 export class LeadColumnsService {
@@ -152,8 +151,8 @@ export class LeadColumnsService {
   }
 
   /**
-   * Reorders custom columns. System columns are always pinned to positions
-   * 0 (NEW) and 1 (CONTACTED); custom columns follow at 2, 3, 4, ...
+   * Reorders custom columns. The single system column (NEW) is always pinned to
+   * position 0; custom columns follow at 1, 2, 3, ...
    */
   async reorder(dto: ReorderLeadColumnsDto) {
     const columns = await this.prisma.leadColumn.findMany({
@@ -183,13 +182,13 @@ export class LeadColumnsService {
         .map((c) =>
           this.prisma.leadColumn.update({
             where: { id: c.id },
-            data: { order: c.systemKey === 'NEW' ? 0 : 1 },
+            data: { order: 0 },
           }),
         ),
       ...dto.columnIds.map((id, index) =>
         this.prisma.leadColumn.update({
           where: { id },
-          data: { order: index + 2 },
+          data: { order: index + 1 },
         }),
       ),
     ]);

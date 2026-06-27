@@ -35,9 +35,11 @@ interface FilterSource {
   deleted: boolean;
 }
 
+// "CONTACTED" is intentionally omitted — the fixed CONTACTED column was removed
+// so leads no longer enter that stage. The label is kept in LEAD_STATUS_LABELS
+// for any legacy rows still carrying the value in the flat list view.
 const STATUS_ORDER: LeadStatus[] = [
   "NEW",
-  "CONTACTED",
   "TRIAL",
   "CONVERTED",
   "LOST",
