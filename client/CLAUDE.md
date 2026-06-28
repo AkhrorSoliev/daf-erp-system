@@ -523,7 +523,6 @@ The financial section lives under `/payments/*` with these sub-pages:
 | `/payments/overview` | `overview-client.tsx` → `PaymentsOverview` | Dashboard: KPI cards (income, expenses, profit, LTV, CAC, ROI), date range picker, recent payments |
 | `/payments/salary` | `salary-client.tsx` | Salary payments table + "Oylik belgilash" config dialog + batch pay |
 | `/payments/expenses` | `expenses-client.tsx` | Expense list + create dialog |
-| `/payments/contracts` | `contracts-client.tsx` | Contract list + create |
 | `/payments/debtors` | — | Students with negative balance |
 
 #### Key Components

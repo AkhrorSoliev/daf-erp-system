@@ -37,7 +37,6 @@ import { CustomFormsModule } from './custom-forms/custom-forms.module';
 import { MockExamsModule } from './mock-exams/mock-exams.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { PaymentsModule } from './payments/payments.module';
-import { ContractsModule } from './contracts/contracts.module';
 import { SalaryModule } from './salary/salary.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
@@ -94,7 +93,6 @@ import { JwtAuthGuard } from './common/guards';
     MockExamsModule,
     TransactionsModule,
     PaymentsModule,
-    ContractsModule,
     SalaryModule,
     RefundsModule,
     WithdrawalsModule,

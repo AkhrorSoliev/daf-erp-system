@@ -420,13 +420,11 @@ The financial system is built on an **append-only ledger** principle — financi
   - `maxWait: 10000, timeout: 15000` configured for Neon serverless cold-start tolerance
 - **Methods**: `recordPayment()`, `deductLessonFee()`, `recordRefund()`, `recordSalaryPayment()`, `recordExpense()`, `reverseTransaction()`, `createAdjustment()`
 
-#### Contracts Module (`src/contracts/`)
+#### Contracts (model retained, user-facing CRUD module removed)
 
-- **Endpoints**: `POST /contracts`, `GET /contracts`, `GET /contracts/:id`, `GET /contracts/student/:studentId`, `PATCH /contracts/:id`, `PATCH /contracts/:id/status`
-- **Roles**: CEO, BD, Admin — status change CEO/BD only
-- `contractNumber` auto-generated: `DAF-YYYY-#####` (atomic sequence per year)
-- `paidAmount` auto-updated by payment create/reverse and refund process/reverse
-- **Status transitions**: `DRAFT → [ACTIVE, CANCELLED]`, `ACTIVE → [COMPLETED, CANCELLED, REFUNDED]`
+- The dedicated `src/contracts/` module (controller + service + DTOs, the `/contracts` CRUD endpoints) and the `/payments/contracts` admin page were **removed** — contracts were never wired into the real workflow (nothing auto-creates them; the live billing model is prepaid-balance, not contract-based), so the page sat permanently empty.
+- The **`Contract` Prisma model is intentionally kept** — it is load-bearing infrastructure referenced by `billing` (`group.contracts[0]?.id` on every lesson deduction), `payments` (`Payment.contractId`, `Contract.paidAmount`), `refunds`, `transactions` (`Transaction.contractId`), `reports` (group/course joins via `contract`), and `receipts` (`contractNumber`). All these fields are currently `null` in practice but the code paths depend on the relation. Do **not** drop the model or `contractId` FKs without a dedicated migration.
+- If contracts are ever revived as a feature, re-add a CRUD module — `contractNumber` was auto-generated `DAF-YYYY-#####` (atomic per-year sequence), `paidAmount` was auto-updated by payment/refund flows, and status transitions were `DRAFT → [ACTIVE, CANCELLED]`, `ACTIVE → [COMPLETED, CANCELLED, REFUNDED]`.
 
 #### Refunds Module (`src/refunds/`)
 
