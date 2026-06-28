@@ -7,6 +7,7 @@ import { LeadStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
+import { StudentEnrollmentService } from '../students/student-enrollment.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
@@ -35,6 +36,7 @@ export class LeadsService {
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
     private studentsService: StudentsService,
+    private studentEnrollmentService: StudentEnrollmentService,
   ) {}
 
   /**
@@ -631,7 +633,8 @@ export class LeadsService {
   /**
    * Converts a lead into a real Student. Reuses StudentsService.create (which
    * also provisions the portal login), then flags the lead CONVERTED and links
-   * it to the new student.
+   * it to the new student. When a `groupId` is supplied, the fresh student is
+   * also enrolled into that group (and assigned to the group's branch).
    */
   async convert(
     leadId: string,
@@ -663,6 +666,28 @@ export class LeadsService {
       );
     }
 
+    // If a target group is given, validate it up-front — before creating the
+    // student — so a bad group never leaves an orphan student behind. The
+    // student is assigned to the group's own branch (a group always lives in
+    // exactly one branch), so the group's branch overrides any `branchId`.
+    let resolvedBranchId = dto.branchId;
+    if (dto.groupId) {
+      const group = await this.prisma.group.findFirst({
+        where: { id: dto.groupId, deletedAt: null, companyId },
+        select: { branchId: true, statusEnum: true },
+      });
+      if (!group) {
+        throw new NotFoundException('Guruh topilmadi');
+      }
+      const ENROLLABLE_STATUSES = ['ACTIVE', 'FORMING', 'PAUSED'];
+      if (!ENROLLABLE_STATUSES.includes(group.statusEnum)) {
+        throw new BadRequestException(
+          "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
+        );
+      }
+      resolvedBranchId = group.branchId;
+    }
+
     const student = await this.studentsService.create(
       {
         firstName: lead.firstName,
@@ -672,11 +697,24 @@ export class LeadsService {
         telegram: lead.telegram ?? undefined,
         parentPhone: lead.parentPhone ?? undefined,
         parentName: lead.parentName ?? undefined,
-        branchIds: dto.branchId ? [dto.branchId] : undefined,
+        branchIds: resolvedBranchId ? [resolvedBranchId] : undefined,
       },
       companyId,
       userId,
     );
+
+    // Enroll the brand-new student into the chosen group. A fresh student has
+    // no existing enrollment, so this is never a transfer — no transfer reason
+    // is needed. enrollToGroup re-validates the group + records history.
+    if (dto.groupId) {
+      await this.studentEnrollmentService.enrollToGroup(
+        student.id,
+        dto.groupId,
+        userId,
+        companyId,
+        dto.startDate ? { startDate: dto.startDate } : {},
+      );
+    }
 
     const updated = await this.prisma.lead.update({
       where: { id: leadId },
