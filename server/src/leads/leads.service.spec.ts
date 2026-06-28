@@ -4,12 +4,14 @@ import { LeadsService } from './leads.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
+import { StudentEnrollmentService } from '../students/student-enrollment.service';
 
 describe('LeadsService', () => {
   let service: LeadsService;
   let prisma: any;
   let history: any;
   let students: any;
+  let enrollment: any;
 
   const validDto = {
     firstName: 'Aziz',
@@ -30,6 +32,7 @@ describe('LeadsService', () => {
       },
       leadSection: { findFirst: jest.fn() },
       leadSource: { findFirst: jest.fn() },
+      group: { findFirst: jest.fn() },
       // Comment counts are grouped, not relation-counted (polymorphic table).
       comment: {
         groupBy: jest.fn().mockResolvedValue([]),
@@ -49,6 +52,7 @@ describe('LeadsService', () => {
     };
 
     students = { create: jest.fn() };
+    enrollment = { enrollToGroup: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -56,6 +60,7 @@ describe('LeadsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: history },
         { provide: StudentsService, useValue: students },
+        { provide: StudentEnrollmentService, useValue: enrollment },
       ],
     }).compile();
 
@@ -565,6 +570,79 @@ describe('LeadsService', () => {
       );
       expect(result.studentId).toBe(10007);
       expect(history.recordStatusChange).toHaveBeenCalled();
+      // No group requested → no enrollment attempt.
+      expect(prisma.group.findFirst).not.toHaveBeenCalled();
+      expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
+    });
+
+    const convertibleLead = {
+      id: 'lead-1',
+      firstName: 'Aziz',
+      lastName: 'Karimov',
+      phone: '901234567',
+      gender: null,
+      telegram: null,
+      parentPhone: null,
+      parentName: null,
+      statusEnum: 'NEW',
+      convertedStudentId: null,
+    };
+
+    it('enrolls the new student into the chosen group using the group branch', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      // Group lives in branch 7 — that branch must win over dto.branchId (5).
+      prisma.group.findFirst.mockResolvedValue({
+        branchId: 7,
+        statusEnum: 'ACTIVE',
+      });
+      students.create.mockResolvedValue({ id: 10008 });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      const result = await service.convert(
+        'lead-1',
+        { branchId: 5, groupId: 'grp-1', startDate: '2026-06-28' },
+        1001,
+        1,
+      );
+
+      expect(students.create).toHaveBeenCalledWith(
+        expect.objectContaining({ branchIds: [7] }),
+        1001,
+        1,
+      );
+      expect(enrollment.enrollToGroup).toHaveBeenCalledWith(
+        10008,
+        'grp-1',
+        1,
+        1001,
+        { startDate: '2026-06-28' },
+      );
+      expect(result.studentId).toBe(10008);
+    });
+
+    it('throws NotFound when the chosen group is missing (no student created)', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      prisma.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.convert('lead-1', { groupId: 'missing' }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+      expect(students.create).not.toHaveBeenCalled();
+      expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequest when the chosen group is not enrollable', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      prisma.group.findFirst.mockResolvedValue({
+        branchId: 7,
+        statusEnum: 'COMPLETED',
+      });
+
+      await expect(
+        service.convert('lead-1', { groupId: 'grp-done' }, 1001, 1),
+      ).rejects.toThrow(BadRequestException);
+      expect(students.create).not.toHaveBeenCalled();
+      expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
     });
   });
 
