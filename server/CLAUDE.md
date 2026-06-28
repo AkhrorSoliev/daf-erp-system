@@ -24,7 +24,7 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 
 - Every domain entity gets its own NestJS module (module + controller + service + dto/)
 - Services contain business logic; controllers are thin (validation + delegation)
-- Use `PrismaService` for all database access — no raw SQL (exception: one-off backfill scripts in `server/scripts/` may use raw `PrismaClient` + `$executeRaw` where bulk SQL is required for performance)
+- Use `PrismaService` for all database access. Prefer the Prisma query builder; raw SQL is allowed **only** via the tagged-template `$queryRaw`/`$executeRaw` (parameterized — values become `$1,$2…`). **Never** use `$queryRawUnsafe`/`$executeRawUnsafe` (string-built — SQL-injection risk). Tagged-template raw SQL is used in some production services (e.g. `billing/lesson-billing.service.ts` for a `NOT EXISTS` unpaid-lesson scan) as well as one-off backfill scripts in `server/scripts/`.
 - `PrismaModule` is global — no need to import it per module
 
 ### Naming Conventions

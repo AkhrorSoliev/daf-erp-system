@@ -8,6 +8,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createHash, timingSafeEqual } from 'crypto';
 import { Telegraf, Scenes, session, Markup } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
@@ -447,8 +448,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // Launch bot (polling mode for development)
     const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
     if (webhookUrl) {
-      await this.bot.telegram.setWebhook(webhookUrl);
-      this.logger.log(`Bot webhook o'rnatildi: ${webhookUrl}`);
+      // Register a secret_token so Telegram echoes it back in the
+      // X-Telegram-Bot-Api-Secret-Token header on every update — handleWebhook
+      // verifies it, rejecting forged POSTs to the public webhook path.
+      const secret = this.webhookSecret();
+      await this.bot.telegram.setWebhook(
+        webhookUrl,
+        secret ? { secret_token: secret } : undefined,
+      );
+      this.logger.log(
+        `Bot webhook o'rnatildi: ${webhookUrl}${secret ? ' (secret_token bilan)' : ' (secret_token YO\'Q — TELEGRAM_BOT_TOKEN ham yo\'q)'}`,
+      );
     } else {
       this.bot.launch().catch((err) => {
         this.logger.error('Bot ishga tushirishda xatolik:', err.message);
@@ -715,9 +725,47 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   async handleWebhook(req: any, res: any) {
-    if (this.bot) {
-      await this.bot.handleUpdate(req.body, res);
+    if (!this.bot) return;
+
+    // Reject forged updates: when a secret_token is configured, Telegram sends
+    // it back in this header. A mismatch means the POST did not originate from
+    // Telegram → drop it. (If no secret is configured we process as before, to
+    // stay backward-compatible with deployments that have neither secret nor
+    // bot token set.)
+    const expected = this.webhookSecret();
+    if (expected) {
+      const received = req?.headers?.['x-telegram-bot-api-secret-token'];
+      if (!this.secretMatches(expected, received)) {
+        this.logger.warn('Telegram webhook: invalid secret token — rejected');
+        res.status(401).send('unauthorized');
+        return;
+      }
     }
+
+    await this.bot.handleUpdate(req.body, res);
+  }
+
+  /**
+   * Secret used for Telegram webhook authentication. Prefers an explicit
+   * TELEGRAM_WEBHOOK_SECRET; otherwise derives a stable value from the bot
+   * token (sha256 hex — valid secret_token charset, ≤256 chars). An attacker
+   * who does not know the bot token cannot reproduce it. Returns null only
+   * when neither is configured.
+   */
+  private webhookSecret(): string | null {
+    const explicit = this.configService.get<string>('TELEGRAM_WEBHOOK_SECRET');
+    if (explicit) return explicit;
+    const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    if (token) return createHash('sha256').update(token).digest('hex');
+    return null;
+  }
+
+  /** Constant-time comparison of the configured vs received secret token. */
+  private secretMatches(expected: string, received: unknown): boolean {
+    if (typeof received !== 'string' || received.length === 0) return false;
+    const a = Buffer.from(expected);
+    const b = Buffer.from(received);
+    return a.length === b.length && timingSafeEqual(a, b);
   }
 
   async generateEmployeeLinkPayload(

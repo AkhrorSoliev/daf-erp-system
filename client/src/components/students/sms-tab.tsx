@@ -22,8 +22,22 @@ import {
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 
+// Escape EVERYTHING first, then re-allow only a tiny fixed set of
+// attribute-less formatting tags (<b>/<i>/<u>/<br>). Safe by construction:
+// any other tag — and any allowed tag carrying attributes/handlers like
+// <b onmouseover=…> or <img src=x onerror=…> — never matches the exact
+// allow-patterns below, so it stays escaped and renders as literal text.
+// (The previous regex tried to strip disallowed tags and silently let
+// through <img>/<iframe>/<input>/<body> because its lookahead matched the
+// tag name's first letter.)
 function sanitizeHtml(html: string): string {
-  return html.replace(/<\/?(?!b|i|u|br\s*\/?)[\w\s="'-]*>/gi, "");
+  const escaped = html
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escaped
+    .replace(/&lt;(\/?(?:b|i|u))&gt;/gi, "<$1>")
+    .replace(/&lt;br\s*\/?&gt;/gi, "<br>");
 }
 
 interface SmsMessageData {
