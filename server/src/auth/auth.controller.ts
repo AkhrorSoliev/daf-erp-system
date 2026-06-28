@@ -10,9 +10,11 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
 import { Public } from '../common/decorators';
+import { IpThrottlerGuard } from '../common/guards';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
@@ -27,7 +29,10 @@ export class AuthController {
   ) {}
 
   @Public()
-  @UseGuards(AuthGuard('local'))
+  // ThrottlerGuard runs first so failed credential attempts are counted too:
+  // 10 attempts / minute / IP before 429. Then local auth validates the body.
+  @UseGuards(IpThrottlerGuard, AuthGuard('local'))
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   async login(@Request() req, @Body() _loginDto: LoginDto) {
     const origin = req.headers['origin'] as string | undefined;
@@ -37,6 +42,10 @@ export class AuthController {
   }
 
   @Public()
+  // Looser than login (legit clients may refresh from several tabs), but still
+  // caps refresh-token guessing: 30 / minute / IP.
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Post('refresh')
   async refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto.refreshToken);
