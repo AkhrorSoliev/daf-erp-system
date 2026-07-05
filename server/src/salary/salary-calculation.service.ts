@@ -1,31 +1,69 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryPaymentStatus, SalaryType, Prisma } from '@prisma/client';
-import { resolveCompletedPeriod } from './shared/resolve-current-period';
+import {
+  resolveCompletedPeriod,
+  resolveCurrentPeriod,
+} from './shared/resolve-current-period';
 
 @Injectable()
 export class SalaryCalculationService {
   constructor(private prisma: PrismaService) {}
 
-  async calculateMonthlySalaries(companyId: number, now: Date = new Date()) {
-    // Settle the period that has just FINISHED, not the one `now` is inside.
-    // The cron fires on cycleStartDay, when the "current" period is the one
-    // just starting — paying that would settle an almost-empty window and
-    // strand the month that just ended. `resolveCompletedPeriod` returns the
-    // previous (closed) period. Bounds come from SalaryPeriodSetting
-    // (configurable per company); default 8th→7th if no setting exists.
-    const { periodStart, periodEnd } = await resolveCompletedPeriod(
-      this.prisma,
-      companyId,
-      now,
-    );
+  /**
+   * Settle one payroll period.
+   *
+   * Two entry modes:
+   * - **Cron (no `asOfDate`)** — settles the period that has just FINISHED via
+   *   `resolveCompletedPeriod`. The cron fires on cycleStartDay, when the
+   *   "current" period is the one just starting; paying that would settle an
+   *   almost-empty window and strand the month that just ended.
+   * - **Manual (`asOfDate` given)** — the CEO picks the period directly by
+   *   passing any date INSIDE it. We resolve via `resolveCurrentPeriod` (the
+   *   period that date falls in), NOT `resolveCompletedPeriod`, so "enter a
+   *   day in May → settle May". Mixing the two is the biggest off-by-one
+   *   footgun, so each caller states its intent explicitly.
+   *
+   * Bounds come from SalaryPeriodSetting (per-company cycleStartDay; default
+   * 8th→7th if no setting exists), so the same configured boundaries drive
+   * both modes.
+   *
+   * Idempotent per (userId, periodStart, periodEnd): re-running a period folds
+   * any newly-eligible accruals into the existing CALCULATED draft instead of
+   * creating a duplicate payment. Users whose payment for the period is already
+   * APPROVED/PAID (closed) are skipped — late accruals there are handled by the
+   * carry-over mechanism in `createAccrual`, never by recalculation.
+   */
+  async calculateMonthlySalaries(
+    companyId: number,
+    opts: { asOfDate?: Date; now?: Date } = {},
+  ) {
+    // `now` is injectable for deterministic tests; production passes nothing.
+    const now = opts.now ?? new Date();
+    const { periodStart, periodEnd } = opts.asOfDate
+      ? await resolveCurrentPeriod(this.prisma, companyId, opts.asOfDate)
+      : await resolveCompletedPeriod(this.prisma, companyId, now);
+
+    // Never settle a period that has not finished yet — it would pay a
+    // half-open window. The cron path can't hit this (`resolveCompletedPeriod`
+    // is always in the past); the manual path can, so guard it.
+    if (periodEnd.getTime() > now.getTime()) {
+      throw new BadRequestException(
+        "Tugamagan davrni hisoblab bo'lmaydi — davr hali yakunlanmagan",
+      );
+    }
 
     const results: {
       userId: number;
       amount: number;
       advanceDeducted: number;
       kind: 'ACCRUAL' | 'FIXED_MONTHLY';
+      action: 'CREATED' | 'MERGED';
     }[] = [];
+    // Users whose payment for this period is already APPROVED/PAID and so was
+    // skipped (closed window). Surfaced in the result so the caller/UI can show
+    // "N ta o'tkazib yuborildi (allaqachon to'langan)".
+    const skipped: number[] = [];
 
     // === ACCRUAL-BASED (teachers) ===
     // - Effective payroll date = COALESCE(creditPeriodDate, lessonDate),
@@ -63,47 +101,112 @@ export class SalaryCalculationService {
       byUser.set(a.userId, entry);
     }
 
-    for (const [userId, { ids, total }] of byUser) {
-      const amount = total;
-
-      // Atomic: SalaryPayment + accrual link + advance settlement are all-or-nothing.
-      const { finalNet, advanceDeducted } = await this.prisma.$transaction(
+    for (const [userId, { ids }] of byUser) {
+      // Atomic: existence check + SalaryPayment create/merge + accrual link +
+      // advance settlement are all-or-nothing. The existence check runs INSIDE
+      // the Serializable tx so a concurrent run (manual + cron) can't both
+      // create a payment for the same (userId, periodStart, periodEnd).
+      const outcome = await this.prisma.$transaction(
         async (tx) => {
-          const salaryPayment = await tx.salaryPayment.create({
-            data: {
-              userId,
-              periodStart,
-              periodEnd,
-              amount,
-              status: SalaryPaymentStatus.CALCULATED,
-              companyId,
-            },
+          const existing = await tx.salaryPayment.findFirst({
+            where: { userId, companyId, periodStart, periodEnd },
+            select: { id: true, status: true },
           });
+
+          // Closed window — never recalc. Late accruals for a closed period are
+          // carried over by `createAccrual`, so they should not even reach here;
+          // skip defensively (and leave them unlinked for the next open run).
+          if (
+            existing &&
+            (existing.status === SalaryPaymentStatus.APPROVED ||
+              existing.status === SalaryPaymentStatus.PAID)
+          ) {
+            return { skipped: true as const };
+          }
+
+          // Re-run / backfill: fold the new accruals into the existing
+          // CALCULATED draft. Otherwise create a fresh draft. Either way, link
+          // this run's accruals to that payment.
+          const paymentId =
+            existing?.id ??
+            (
+              await tx.salaryPayment.create({
+                data: {
+                  userId,
+                  periodStart,
+                  periodEnd,
+                  amount: 0,
+                  status: SalaryPaymentStatus.CALCULATED,
+                  companyId,
+                },
+              })
+            ).id;
 
           await tx.salaryAccrual.updateMany({
             where: { id: { in: ids } },
-            data: { salaryPaymentId: salaryPayment.id },
+            data: { salaryPaymentId: paymentId },
           });
 
-          const advanceDeducted = await this.applyPendingAdvances(
+          // Recompute gross authoritatively from ALL non-reversed accruals now
+          // linked to this payment (not `+=`), so a reversed accrual correctly
+          // drops out of the total on a re-run.
+          const linked = await tx.salaryAccrual.aggregate({
+            where: { salaryPaymentId: paymentId, reversedAt: null },
+            _sum: { amount: true },
+          });
+          const gross = linked._sum.amount ?? 0;
+
+          // Advances already settled against THIS payment stay settled; only
+          // top up with still-pending advances against the (possibly grown)
+          // gross. `applyPendingAdvances` filters `settledBySalaryPaymentId:
+          // null`, so it never re-settles what this payment already absorbed.
+          const alreadySettled = await tx.expense.aggregate({
+            where: {
+              settledBySalaryPaymentId: paymentId,
+              category: 'TEACHER_ADVANCE',
+              deletedAt: null,
+            },
+            _sum: { amount: true },
+          });
+          const alreadySettledTotal = alreadySettled._sum.amount ?? 0;
+
+          const newlyDeducted = await this.applyPendingAdvances(
             tx,
-            { id: salaryPayment.id, amount },
+            { id: paymentId, amount: gross - alreadySettledTotal },
             userId,
             companyId,
           );
+
+          const finalNet = gross - alreadySettledTotal - newlyDeducted;
+          // applyPendingAdvances only updates `amount` when it settles
+          // something; set the authoritative net explicitly so create (amount=0)
+          // and no-advance re-runs both land on the right figure.
+          await tx.salaryPayment.update({
+            where: { id: paymentId },
+            data: { amount: finalNet },
+          });
+
           return {
-            finalNet: amount - advanceDeducted,
-            advanceDeducted,
+            skipped: false as const,
+            finalNet,
+            advanceDeducted: alreadySettledTotal + newlyDeducted,
+            action: existing ? ('MERGED' as const) : ('CREATED' as const),
           };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
+      if (outcome.skipped) {
+        skipped.push(userId);
+        continue;
+      }
+
       results.push({
         userId,
-        amount: finalNet,
-        advanceDeducted,
+        amount: outcome.finalNet,
+        advanceDeducted: outcome.advanceDeducted,
         kind: 'ACCRUAL',
+        action: outcome.action,
       });
     }
 
@@ -190,10 +293,28 @@ export class SalaryCalculationService {
         amount: finalNet,
         advanceDeducted,
         kind: 'FIXED_MONTHLY',
+        action: 'CREATED',
       });
     }
 
-    return { calculated: results.length, details: results };
+    return {
+      calculated: results.length,
+      skipped: skipped.length,
+      periodStart,
+      periodEnd,
+      details: results,
+      skippedUserIds: skipped,
+    };
+  }
+
+  /**
+   * Resolve the period a manually-picked date falls inside, without mutating
+   * anything. Powers the "Davrni tanlab hisoblash" dialog preview so the UI
+   * shows the exact [start, end] window the calculate run will settle, using
+   * the company's configured cycleStartDay (never reinvented client-side).
+   */
+  async previewPeriod(companyId: number, asOfDate: Date) {
+    return resolveCurrentPeriod(this.prisma, companyId, asOfDate);
   }
 
   /**

@@ -1,10 +1,8 @@
-import { Suspense } from "react";
-import { SalaryConfigPageClient } from "@/components/payments/salary-config-page-client";
+import { redirect } from "next/navigation";
 
+// The dedicated "Oylik belgilash" page was merged into /payments/salary —
+// salary rates are now edited inline (per-teacher pencil + bulk select) on the
+// live overview. Old bookmarks land on the unified page.
 export default function SalaryConfigPage() {
-  return (
-    <Suspense>
-      <SalaryConfigPageClient />
-    </Suspense>
-  );
+  redirect("/payments/salary");
 }

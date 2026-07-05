@@ -1,0 +1,345 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { resolveCurrentPeriod } from './shared/resolve-current-period';
+
+export interface SalaryOverviewQuery {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  /** 'configured' = has at least one active rate; 'unconfigured' = none. */
+  status?: 'all' | 'configured' | 'unconfigured';
+}
+
+/**
+ * "Ustozlar oyligi" jonli ko'rinishi — har bir ustoz uchun ayni vaqtdagi
+ * oylik holati (profildagi summalar bilan bir xil): kutilayotgan oylik, joriy
+ * davrda real ishlangan (to'lanmagan accrual), jami berilgan + avans, hozirgi
+ * stavka(lar) va oxirgi oylik to'lovi (tasdiqlash/to'lash uchun).
+ *
+ * Hisob-kitob profildagi `getTeacherSalarySummary` bilan AYNAN bir xil
+ * formula bo'yicha — shuning uchun sahifadagi raqam profildagi raqam bilan
+ * mos keladi. Ko'p so'rov o'rniga bitta sahifadagi barcha ustozlar uchun
+ * to'plamli (bulk) so'rovlar ishlatiladi.
+ */
+@Injectable()
+export class SalaryOverviewService {
+  constructor(private prisma: PrismaService) {}
+
+  async getOverview(
+    query: SalaryOverviewQuery,
+    companyId: number,
+    performedById: number,
+  ) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
+
+    // Branch scope: CEO / Administrator see all; Branch Director only their
+    // own mainBranch (mirrors the matrix + batch-pay scoping).
+    const caller = await this.prisma.user.findUnique({
+      where: { id: performedById },
+      select: {
+        mainBranch: true,
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
+    const scoped =
+      !roleNames.includes('CEO') && !roleNames.includes('Administrator');
+    const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
+
+    const search = query.search?.trim();
+    const searchId = search && /^\d+$/.test(search) ? Number(search) : null;
+
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      companyId,
+      roles: { some: { role: { name: 'Teacher' } } },
+      ...(branchId !== undefined && {
+        branches: { some: { branchId } },
+      }),
+      ...(search && {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          ...(searchId !== null ? [{ id: searchId }] : []),
+        ],
+      }),
+    };
+
+    const teachers = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        branches: { select: { branch: { select: { id: true, name: true } } } },
+      },
+    });
+
+    const ids = teachers.map((t) => t.id);
+    const period = await resolveCurrentPeriod(this.prisma, companyId, new Date());
+
+    if (ids.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        period,
+        pending: {
+          calculated: 0,
+          approved: 0,
+          approvedTotal: 0,
+          calculatedIds: [],
+          approvedIds: [],
+        },
+      };
+    }
+
+    // ─── Bulk fetches (one query each, keyed by userId) ───────────────────
+    const [
+      configs,
+      groupTeachers,
+      earnedAgg,
+      paidAgg,
+      advancesAgg,
+      payments,
+    ] = await Promise.all([
+      this.prisma.employeeSalaryConfig.findMany({
+        where: { userId: { in: ids }, isActive: true, companyId },
+        select: {
+          id: true,
+          userId: true,
+          salaryType: true,
+          value: true,
+          groupId: true,
+          group: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.groupTeacher.findMany({
+        where: {
+          teacherId: { in: ids },
+          group: { deletedAt: null, statusEnum: 'ACTIVE' },
+        },
+        select: {
+          teacherId: true,
+          group: {
+            select: {
+              id: true,
+              exactDays: true,
+              course: { select: { price: true, lessonPaymentCount: true } },
+              _count: {
+                select: {
+                  enrollments: { where: { status: 'ACTIVE', deletedAt: null } },
+                },
+              },
+            },
+          },
+        },
+      }),
+      // Real ishlangan = to'lanmagan, bekor qilinmagan accruallar yig'indisi
+      // (profildagi `actualEarned` bilan bir xil — davr bo'yicha filtrlanmaydi).
+      this.prisma.salaryAccrual.groupBy({
+        by: ['userId'],
+        where: {
+          userId: { in: ids },
+          companyId,
+          salaryPaymentId: null,
+          reversedAt: null,
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.salaryPayment.groupBy({
+        by: ['userId'],
+        where: { userId: { in: ids }, companyId, status: 'PAID' },
+        _sum: { amount: true },
+      }),
+      this.prisma.expense.groupBy({
+        by: ['relatedUserId'],
+        where: {
+          relatedUserId: { in: ids },
+          category: 'TEACHER_ADVANCE',
+          companyId,
+          deletedAt: null,
+        },
+        _sum: { amount: true },
+      }),
+      // Oxirgi to'lov (har ustoz uchun) + pending (tasdiqlash/to'lash) uchun.
+      this.prisma.salaryPayment.findMany({
+        where: {
+          userId: { in: ids },
+          companyId,
+          status: { not: SalaryPaymentStatus.CANCELLED },
+        },
+        select: {
+          id: true,
+          userId: true,
+          amount: true,
+          status: true,
+          periodStart: true,
+          periodEnd: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    // Index bulk results by userId.
+    const configsByUser = new Map<number, typeof configs>();
+    for (const c of configs) {
+      const list = configsByUser.get(c.userId) ?? [];
+      list.push(c);
+      configsByUser.set(c.userId, list);
+    }
+    const groupsByUser = new Map<number, typeof groupTeachers>();
+    for (const gt of groupTeachers) {
+      const list = groupsByUser.get(gt.teacherId) ?? [];
+      list.push(gt);
+      groupsByUser.set(gt.teacherId, list);
+    }
+    const earnedByUser = new Map(
+      earnedAgg.map((a) => [a.userId, a._sum.amount ?? 0]),
+    );
+    const paidByUser = new Map(
+      paidAgg.map((a) => [a.userId, a._sum.amount ?? 0]),
+    );
+    const advancesByUser = new Map(
+      advancesAgg.map((a) => [a.relatedUserId as number, a._sum.amount ?? 0]),
+    );
+    // payments are createdAt DESC — first seen per user is the latest.
+    const latestByUser = new Map<number, (typeof payments)[number]>();
+    for (const p of payments) {
+      if (!latestByUser.has(p.userId)) latestByUser.set(p.userId, p);
+    }
+
+    const rows = teachers.map((t) => {
+      const userConfigs = configsByUser.get(t.id) ?? [];
+      const expectedMonthly = this.computeExpectedMonthly(
+        userConfigs,
+        groupsByUser.get(t.id) ?? [],
+      );
+      return {
+        user: {
+          id: t.id,
+          firstName: t.firstName,
+          lastName: t.lastName,
+          isActive: t.isActive,
+          branch: t.branches[0]?.branch ?? null,
+        },
+        configs: userConfigs.map((c) => ({
+          id: c.id,
+          salaryType: c.salaryType,
+          value: c.value,
+          groupId: c.groupId,
+          group: c.group,
+        })),
+        expectedMonthly,
+        actualEarned: earnedByUser.get(t.id) ?? 0,
+        paidTotal: paidByUser.get(t.id) ?? 0,
+        advancesTotal: advancesByUser.get(t.id) ?? 0,
+        latestPayment: latestByUser.get(t.id) ?? null,
+      };
+    });
+
+    // status filter (configured / unconfigured) over the computed rows.
+    const filtered =
+      query.status === 'configured'
+        ? rows.filter((r) => r.configs.length > 0)
+        : query.status === 'unconfigured'
+          ? rows.filter((r) => r.configs.length === 0)
+          : rows;
+
+    // Sort: most "real ishlangan" first, then expected, then name. In-memory
+    // pagination — per-company teacher counts are small (tens, not thousands).
+    filtered.sort((a, b) => {
+      if (b.actualEarned !== a.actualEarned)
+        return b.actualEarned - a.actualEarned;
+      if (b.expectedMonthly !== a.expectedMonthly)
+        return b.expectedMonthly - a.expectedMonthly;
+      const fn = a.user.firstName.localeCompare(b.user.firstName);
+      return fn !== 0 ? fn : a.user.lastName.localeCompare(b.user.lastName);
+    });
+
+    const data = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+    // Pending batch — every CALCULATED / APPROVED payment in scope (not just
+    // the current page), so the batch "tasdiqlash / to'lash" bar acts globally.
+    const calculatedIds: string[] = [];
+    const approvedIds: string[] = [];
+    let approvedTotal = 0;
+    for (const p of payments) {
+      if (p.status === SalaryPaymentStatus.CALCULATED) calculatedIds.push(p.id);
+      else if (p.status === SalaryPaymentStatus.APPROVED) {
+        approvedIds.push(p.id);
+        approvedTotal += p.amount;
+      }
+    }
+
+    return {
+      data,
+      total: filtered.length,
+      page,
+      pageSize,
+      period,
+      pending: {
+        calculated: calculatedIds.length,
+        approved: approvedIds.length,
+        approvedTotal,
+        calculatedIds,
+        approvedIds,
+      },
+    };
+  }
+
+  /**
+   * Replicates `SalarySummaryService.getTeacherSalarySummary`'s expected-monthly
+   * math EXACTLY so the overview number matches the teacher profile:
+   *  - FIXED_MONTHLY (global) config → flat value.
+   *  - otherwise Σ over ACTIVE groups of (perStudentPerLesson × activeStudents
+   *    × lessonsPerMonth), where the group's own config wins over the global one.
+   */
+  private computeExpectedMonthly(
+    configs: {
+      salaryType: SalaryType;
+      value: number;
+      groupId: string | null;
+    }[],
+    groups: {
+      group: {
+        id: string;
+        exactDays: string[];
+        course: { price: number; lessonPaymentCount: number };
+        _count: { enrollments: number };
+      };
+    }[],
+  ): number {
+    const fixedMonthly = configs.find(
+      (c) => c.salaryType === SalaryType.FIXED_MONTHLY,
+    );
+    if (fixedMonthly) return fixedMonthly.value;
+
+    const defaultConfig = configs.find((c) => !c.groupId);
+
+    let total = 0;
+    for (const { group } of groups) {
+      const groupConfig =
+        configs.find((c) => c.groupId === group.id) ?? defaultConfig;
+      if (!groupConfig || groupConfig.salaryType === SalaryType.FIXED_MONTHLY) {
+        continue;
+      }
+      const activeStudents = group._count.enrollments;
+      const lessonPaymentCount = group.course.lessonPaymentCount || 12;
+      const perLessonCost = Math.round(group.course.price / lessonPaymentCount);
+      const lessonsPerMonth = group.exactDays.length * 4;
+
+      const perStudentPerLesson =
+        groupConfig.salaryType === SalaryType.PERCENTAGE
+          ? Math.round((perLessonCost * groupConfig.value) / 100)
+          : Math.round(groupConfig.value / lessonPaymentCount);
+
+      total += perStudentPerLesson * activeStudents * lessonsPerMonth;
+    }
+    return total;
+  }
+}

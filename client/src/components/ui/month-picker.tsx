@@ -47,6 +47,10 @@ interface MonthPickerProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  /** Earliest selectable month ("YYYY-MM"); earlier months are disabled. */
+  minMonth?: string;
+  /** Latest selectable month ("YYYY-MM"); later months are disabled. */
+  maxMonth?: string;
 }
 
 function formatMonth(value: string | null | undefined): string | null {
@@ -66,7 +70,13 @@ export function MonthPicker({
   disabled,
   className,
   id,
+  minMonth,
+  maxMonth,
 }: MonthPickerProps) {
+  const minYear = minMonth ? parseInt(minMonth.slice(0, 4), 10) : null;
+  const maxYear = maxMonth ? parseInt(maxMonth.slice(0, 4), 10) : null;
+  const keyOf = (year: number, monthIndex: number) =>
+    `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
   const [open, setOpen] = React.useState(false);
   const [viewYear, setViewYear] = React.useState(() => {
     const match = value && /^(\d{4})-/.exec(value);
@@ -110,6 +120,7 @@ export function MonthPicker({
             variant="ghost"
             size="icon"
             className="size-7"
+            disabled={minYear !== null && viewYear <= minYear}
             onClick={() => setViewYear((y) => y - 1)}
           >
             <ChevronLeft className="size-4" />
@@ -119,6 +130,7 @@ export function MonthPicker({
             variant="ghost"
             size="icon"
             className="size-7"
+            disabled={maxYear !== null && viewYear >= maxYear}
             onClick={() => setViewYear((y) => y + 1)}
           >
             <ChevronRight className="size-4" />
@@ -128,12 +140,17 @@ export function MonthPicker({
           {UZBEK_MONTHS_SHORT.map((label, idx) => {
             const isSelected =
               selectedYear === viewYear && selectedMonth === idx + 1;
+            const key = keyOf(viewYear, idx);
+            const outOfRange =
+              (minMonth != null && key < minMonth) ||
+              (maxMonth != null && key > maxMonth);
             return (
               <Button
                 key={label}
                 variant={isSelected ? "default" : "ghost"}
                 size="sm"
                 className="h-9"
+                disabled={outOfRange}
                 onClick={() => handlePick(idx)}
               >
                 {label}

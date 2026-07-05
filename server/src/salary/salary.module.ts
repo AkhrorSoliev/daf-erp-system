@@ -3,6 +3,8 @@ import { SalaryService } from './salary.service';
 import { SalaryConfigService } from './salary-config.service';
 import { SalaryAccrualService } from './salary-accrual.service';
 import { SalarySummaryService } from './salary-summary.service';
+import { SalaryOverviewService } from './salary-overview.service';
+import { SalaryMonthlyService } from './salary-monthly.service';
 import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryPaymentService } from './salary-payment.service';
 import { SalaryController } from './salary.controller';
@@ -20,6 +22,8 @@ import { TransactionsModule } from '../transactions/transactions.module';
     SalaryConfigService,
     SalaryAccrualService,
     SalarySummaryService,
+    SalaryOverviewService,
+    SalaryMonthlyService,
     SalaryCalculationService,
     SalaryPaymentService,
     SalaryCronService,

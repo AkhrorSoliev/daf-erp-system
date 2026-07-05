@@ -15,6 +15,120 @@ export class SalaryPaymentService {
     private transactionsService: TransactionsService,
   ) {}
 
+  /**
+   * "Oylar kesimida" matrix — teachers as rows, months as columns, each cell a
+   * SalaryPayment summary. Months are keyed by the Tashkent calendar month of
+   * `periodStart` (with cycleStartDay=1 that is the natural calendar month;
+   * other start days still bucket by the month the period opens in). Excludes
+   * CANCELLED payments. Branch Directors are scoped to their own mainBranch.
+   */
+  async getMatrix(
+    query: { from: string; to: string },
+    companyId: number,
+    performedById: number,
+  ) {
+    const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const monthKey = (d: Date) => {
+      const t = new Date(d.getTime() + TASHKENT_OFFSET_MS);
+      return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
+    };
+
+    const [fy, fm] = query.from.split('-').map(Number);
+    const [ty, tm] = query.to.split('-').map(Number);
+    // periodStart range: [first day of `from` @00:00 Tashkent, first day of
+    // (`to`+1) @00:00 Tashkent) — converted to the stored UTC instant.
+    const fromStart = new Date(Date.UTC(fy, fm - 1, 1) - TASHKENT_OFFSET_MS);
+    const toEndExclusive = new Date(Date.UTC(ty, tm, 1) - TASHKENT_OFFSET_MS);
+
+    const months: string[] = [];
+    for (let y = fy, m = fm; y < ty || (y === ty && m <= tm); ) {
+      months.push(`${y}-${String(m).padStart(2, '0')}`);
+      m += 1;
+      if (m > 12) {
+        m = 1;
+        y += 1;
+      }
+    }
+
+    // Branch scope: CEO/Administrator see all; Branch Director only their branch.
+    const caller = await this.prisma.user.findUnique({
+      where: { id: performedById },
+      select: {
+        mainBranch: true,
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
+    const scoped =
+      !roleNames.includes('CEO') && !roleNames.includes('Administrator');
+    const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
+
+    const payments = await this.prisma.salaryPayment.findMany({
+      where: {
+        companyId,
+        status: { not: SalaryPaymentStatus.CANCELLED },
+        periodStart: { gte: fromStart, lt: toEndExclusive },
+        ...(branchId !== undefined && { user: { mainBranch: branchId } }),
+      },
+      select: {
+        id: true,
+        userId: true,
+        amount: true,
+        status: true,
+        periodStart: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            roles: { select: { role: { select: { id: true, name: true } } } },
+          },
+        },
+        settledExpenses: { select: { amount: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    type Cell = {
+      amount: number;
+      grossAmount: number;
+      status: SalaryPaymentStatus;
+      paymentId: string;
+    };
+    type Row = {
+      user: (typeof payments)[number]['user'];
+      cells: Record<string, Cell>;
+      total: number;
+    };
+    const rowMap = new Map<number, Row>();
+    const monthlyTotals: Record<string, number> = {};
+
+    for (const p of payments) {
+      const adv = p.settledExpenses.reduce((s, e) => s + e.amount, 0);
+      const key = monthKey(p.periodStart);
+      let row = rowMap.get(p.userId);
+      if (!row) {
+        row = { user: p.user, cells: {}, total: 0 };
+        rowMap.set(p.userId, row);
+      }
+      const prev = row.cells[key];
+      // Normally one payment per teacher-month; if more (re-calc artifacts) sum
+      // amounts and surface the latest status/paymentId (orderBy createdAt asc).
+      row.cells[key] = {
+        amount: (prev?.amount ?? 0) + p.amount,
+        grossAmount: (prev?.grossAmount ?? 0) + p.amount + adv,
+        status: p.status,
+        paymentId: p.id,
+      };
+      row.total += p.amount;
+      monthlyTotals[key] = (monthlyTotals[key] ?? 0) + p.amount;
+    }
+
+    const rows = [...rowMap.values()].sort((a, b) => b.total - a.total);
+    const grandTotal = rows.reduce((s, r) => s + r.total, 0);
+    return { months, rows, monthlyTotals, grandTotal };
+  }
+
   async findPayments(query: SalaryPaymentQueryDto, companyId: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;

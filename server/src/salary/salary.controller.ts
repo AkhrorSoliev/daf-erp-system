@@ -20,7 +20,12 @@ import {
 } from './dto/salary-config.dto';
 import { CreateSalaryPeriodSettingDto } from './dto/salary-period-setting.dto';
 import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
+import { SalaryMatrixQueryDto } from './dto/salary-matrix-query.dto';
+import { SalaryOverviewQueryDto } from './dto/salary-overview-query.dto';
+import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { BatchPayDto } from './dto/batch-pay.dto';
+import { CalculateSalaryDto } from './dto/calculate-salary.dto';
+import { parseTashkentDateStart } from './shared/resolve-current-period';
 import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
@@ -204,6 +209,46 @@ export class SalaryController {
     return this.salaryService.findPayments(query, companyId);
   }
 
+  @Get('matrix')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getMatrix(
+    @Query() query: SalaryMatrixQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getMatrix(query, companyId, userId);
+  }
+
+  /**
+   * "Ustozlar oyligi" jonli ko'rinishi — har bir ustozning ayni vaqtdagi
+   * oylik holati (profildagi summalar bilan bir xil). BD o'z filiali bilan
+   * cheklangan.
+   */
+  @Get('overview')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getOverview(
+    @Query() query: SalaryOverviewQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getOverview(query, companyId, userId);
+  }
+
+  /**
+   * "Ustozlar oyligi" — tanlangan oy uchun har bir ustozning to'liq ishlangani,
+   * o'quvchilar to'lagani, markaz qo'shimchasi (top-up) va avansi. BD o'z filiali
+   * bilan cheklangan.
+   */
+  @Get('monthly')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getMonthly(
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getMonthly(query, companyId, userId);
+  }
+
   @Get('payments/:id/breakdown')
   @Roles('CEO', 'Branch Director', 'Administrator')
   getPaymentBreakdown(
@@ -213,10 +258,32 @@ export class SalaryController {
     return this.breakdownService.getPaymentBreakdown(id, companyId);
   }
 
+  /**
+   * Preview which period a picked date settles — drives the calculate dialog so
+   * the CEO sees the exact [start, end] window before triggering. CEO-only to
+   * mirror the calculate action it precedes.
+   */
+  @Get('period-preview')
+  @Roles('CEO')
+  previewPeriod(
+    @Query('asOfDate') asOfDate: string | undefined,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    const ref = asOfDate ? parseTashkentDateStart(asOfDate) : new Date();
+    return this.salaryService.previewPeriod(companyId, ref);
+  }
+
   @Post('calculate')
   @Roles('CEO')
-  calculateSalaries(@CurrentUser('companyId') companyId: number) {
-    return this.salaryService.calculateMonthlySalaries(companyId);
+  calculateSalaries(
+    @Body() dto: CalculateSalaryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.calculateMonthlySalaries(companyId, {
+      asOfDate: dto.asOfDate
+        ? parseTashkentDateStart(dto.asOfDate)
+        : undefined,
+    });
   }
 
   @Patch('payments/:id/approve')

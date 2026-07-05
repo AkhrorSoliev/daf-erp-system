@@ -26,7 +26,7 @@ describe('SalaryController @Roles metadata', () => {
       expect(rolesFor('createPeriodSetting')).toEqual(['CEO']);
     });
 
-    it.each(['calculateSalaries', 'approvePayment'] as const)(
+    it.each(['calculateSalaries', 'previewPeriod', 'approvePayment'] as const)(
       '%s requires CEO',
       (method) => {
         expect(rolesFor(method)).toEqual(['CEO']);
@@ -51,6 +51,9 @@ describe('SalaryController @Roles metadata', () => {
       'listPeriodSettings',
       'getAccruals',
       'findPayments',
+      'getMatrix',
+      'getOverview',
+      'getMonthly',
       'getPaymentBreakdown',
     ] as const;
     it.each(readers)('%s allows CEO/BD/Administrator', (method) => {
