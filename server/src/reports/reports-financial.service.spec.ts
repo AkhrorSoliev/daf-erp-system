@@ -121,48 +121,89 @@ describe('ReportsFinancialService', () => {
       );
     });
 
-    it('reclassifies TEACHER_ADVANCE expenses from expenses into salary.paid without changing the outflow total', async () => {
-      // All expenses = 3,000,000 (of which 2,400,000 is teacher advances);
-      // no salary run was PAID this period (the CEO paid advances instead).
+    // Helper: mock the four expense.aggregate calls (all / advance-paid /
+    // advance-settled / marketing) by inspecting the `where`.
+    const mockExpenses = (opts: {
+      all: number;
+      advancePaid: number;
+      advanceSettled: number;
+    }) => {
       prisma.expense.aggregate.mockImplementation((args: any) => {
-        if (args.where.category === 'TEACHER_ADVANCE') {
-          return Promise.resolve({ _sum: { amount: 2_400_000 } });
+        const w = args.where;
+        if (w.category === 'TEACHER_ADVANCE' && w.settledBySalaryPayment) {
+          return Promise.resolve({ _sum: { amount: opts.advanceSettled } });
         }
-        if (args.where.category === 'MARKETING') {
+        if (w.category === 'TEACHER_ADVANCE') {
+          return Promise.resolve({ _sum: { amount: opts.advancePaid } });
+        }
+        if (w.category === 'MARKETING') {
           return Promise.resolve({ _sum: { amount: 0 } });
         }
-        return Promise.resolve({ _sum: { amount: 3_000_000 } });
+        return Promise.resolve({ _sum: { amount: opts.all } });
       });
-      prisma.salaryPayment.aggregate.mockResolvedValue({
-        _sum: { amount: 0 },
-      });
+    };
+
+    it('excludes an UNSETTLED advance from Xarajatlar, salary AND Foyda (it is a prepayment, not a Chiqim yet)', async () => {
+      // All expenses = 3,000,000 (of which 2,400,000 is advance cash paid this
+      // period); none of it is settled yet, and no salary run was PAID.
+      mockExpenses({ all: 3_000_000, advancePaid: 2_400_000, advanceSettled: 0 });
+      prisma.salaryPayment.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
       prisma.salaryAccrual.aggregate.mockResolvedValue({
         _sum: { amount: 350_000 },
       });
 
       const result = await service.getFinancialOverview(1, period);
 
-      // Advances folded into salary.paid; exposed separately for the sub-line.
-      expect(result.salary.paid).toBe(2_400_000);
-      expect(result.salary.advances).toBe(2_400_000);
-      expect(result.salary.pending).toBe(350_000);
-      // Expenses bucket no longer contains the advances.
+      // Advance pulled out of Xarajatlar (avanssiz)…
       expect(result.expenses).toBe(600_000);
-      // Total outflow (and therefore netProfit) is unchanged: income 0 −
-      // (600,000 expenses + 2,400,000 salary) = −3,000,000, same as the old
-      // (3,000,000 expenses + 0 salary).
-      expect(result.netProfit).toBe(-3_000_000);
+      // …but NOT added to salary (it is not settled) — so the "shundan avans"
+      // sub-line and salary.paid are both 0 this period.
+      expect(result.salary.paid).toBe(0);
+      expect(result.salary.advances).toBe(0);
+      expect(result.salary.pending).toBe(350_000);
+      // The 2,400,000 advance is in NEITHER bucket → outflow is only 600,000.
+      // Foyda: income 0 − 600,000 = −600,000 (NOT −3,000,000).
+      expect(result.netProfit).toBe(-600_000);
     });
 
-    it('scopes the teacher-advance query to TEACHER_ADVANCE and the branch', async () => {
+    it('recognizes a SETTLED advance as salary cost in the period its salary run is paid', async () => {
+      // No advance cash paid this period, but a prior advance of 2,400,000
+      // settled against a salary run paid now (net cash paid = 100,000).
+      mockExpenses({ all: 600_000, advancePaid: 0, advanceSettled: 2_400_000 });
+      prisma.salaryPayment.aggregate.mockResolvedValue({
+        _sum: { amount: 100_000 },
+      });
+      prisma.salaryAccrual.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+
+      const result = await service.getFinancialOverview(1, period);
+
+      expect(result.expenses).toBe(600_000);
+      // Gross salary = net paid 100,000 + settled advance 2,400,000.
+      expect(result.salary.paid).toBe(2_500_000);
+      expect(result.salary.advances).toBe(2_400_000);
+      // Outflow = 600,000 + 2,500,000 → Foyda = −3,100,000.
+      expect(result.netProfit).toBe(-3_100_000);
+    });
+
+    it('scopes the advance-paid query to TEACHER_ADVANCE + branch and the settled query to a PAID salary run', async () => {
       await service.getFinancialOverview(1, { ...period, branchId: 42 });
 
+      // Advance-paid (netted out of Xarajatlar) — by expense date + branch.
       expect(prisma.expense.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             companyId: 1,
             category: 'TEACHER_ADVANCE',
             branchId: 42,
+          }),
+        }),
+      );
+      // Advance-settled (recognized as salary) — gated on a PAID SalaryPayment.
+      expect(prisma.expense.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            category: 'TEACHER_ADVANCE',
+            settledBySalaryPayment: expect.objectContaining({ status: 'PAID' }),
           }),
         }),
       );
