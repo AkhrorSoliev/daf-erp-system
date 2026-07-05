@@ -163,7 +163,7 @@ describe('ExpensesService — findAll filters + summary', () => {
     expect(call.by).toEqual(['category', 'paymentMethod']);
   });
 
-  it('excludes TEACHER_ADVANCE from the headline totals and surfaces it as advancesTotal', async () => {
+  it('includes TEACHER_ADVANCE in the headline totals AND exposes it separately as advancesTotal', async () => {
     prisma.expense.count.mockResolvedValue(5);
     prisma.expense.groupBy.mockResolvedValue([
       {
@@ -191,12 +191,13 @@ describe('ExpensesService — findAll filters + summary', () => {
     const res = await service.findAll({} as ExpenseQueryDto, COMPANY_ID);
 
     expect(res.summary).toEqual({
-      // 2.0M gross − 0.7M advance = 1.3M avanssiz.
-      totalAmount: 1_300_000,
+      // Jami includes EVERY category, advance included: 2.0M.
+      totalAmount: 2_000_000,
       count: 5,
-      // Cash: 1.5M − 0.5M advance = 1.0M; Card: 0.5M − 0.2M advance = 0.3M.
-      cashTotal: 1_000_000,
-      cardTotal: 300_000,
+      // Cash: 1.0M rent + 0.5M advance = 1.5M; Card: 0.3M mkt + 0.2M adv = 0.5M.
+      cashTotal: 1_500_000,
+      cardTotal: 500_000,
+      // Advance is still broken out for its own card.
       advancesTotal: 700_000,
     });
   });
