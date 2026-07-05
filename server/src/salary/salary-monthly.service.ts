@@ -1,0 +1,429 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  parseTashkentDateStart,
+  resolveCurrentPeriod,
+} from './shared/resolve-current-period';
+import {
+  perLessonAccrual,
+  pickActiveVersion,
+  RateVersion,
+} from './shared/deserved-math';
+
+export interface SalaryMonthlyQuery {
+  month?: string;
+  search?: string;
+}
+
+const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+/** Fallback floor when a company has no `systemStartDate` (May 2026 cutover). */
+const DEFAULT_FLOOR_MONTH = '2026-05';
+
+/**
+ * Net-to-pay base. **Faza 1 (current):** teachers are paid what students
+ * actually covered (`'COVERED'`). **Faza 2 (July top-up, deferred):** flip to
+ * `'FULL'` so the net becomes the full deserved salary (center tops up the gap).
+ * This single constant is the whole switch — nothing else changes.
+ */
+const NET_BASE: 'COVERED' | 'FULL' = 'COVERED';
+
+/** Tashkent calendar month key ("YYYY-MM") of an instant. */
+function monthKeyOf(d: Date): string {
+  const t = new Date(d.getTime() + TASHKENT_OFFSET_MS);
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/** "YYYY-MM-DD" of a `@db.Date` value (UTC midnight), for override keys. */
+function dateStr(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * "Ustozlar oyligi" — per-teacher salary report for ONE selected month.
+ *
+ * Columns produced per teacher:
+ *  - `fullDeserved`  = all lessons actually held that month × rate (covered + gap)
+ *  - `covered`       = the portion backed by students who actually paid (live accruals)
+ *  - `gap`           = top-up the center would add (fullDeserved − covered)
+ *  - `advances`      = TEACHER_ADVANCE given during the calendar month
+ *  - `netToPay`      = base (see NET_BASE) − advances, or the settled payment's net
+ *
+ * Manual/Excel months (no per-lesson accruals — e.g. May, whose config only
+ * became effective in June) have `hasLessonData = false`, so the deserved /
+ * covered / gap columns come back `null` (rendered as "—"). We never fabricate
+ * those numbers from a proxy rate.
+ *
+ * The deserved/covered/gap math is the SAME as the read-only forecast script
+ * (`scripts/forecast-full-salary-topup.ts`), ported into a bulk in-memory sweep
+ * (one query per input, no per-lesson DB lookups).
+ */
+@Injectable()
+export class SalaryMonthlyService {
+  constructor(private prisma: PrismaService) {}
+
+  async getMonthly(
+    query: SalaryMonthlyQuery,
+    companyId: number,
+    performedById: number,
+  ) {
+    // ─── Step 1: month + floor + period bounds ────────────────────────────
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { systemStartDate: true },
+    });
+    const floorMonth = company?.systemStartDate
+      ? monthKeyOf(company.systemStartDate)
+      : DEFAULT_FLOOR_MONTH;
+
+    const requested =
+      query.month && /^\d{4}-(0[1-9]|1[0-2])$/.test(query.month)
+        ? query.month
+        : monthKeyOf(new Date());
+    const month = requested < floorMonth ? floorMonth : requested;
+
+    // Mid-month reference → the payroll period the month sits in. With
+    // cycleStartDay=1 this is exactly the calendar month.
+    const asOf = parseTashkentDateStart(`${month}-15`);
+    const period = await resolveCurrentPeriod(this.prisma, companyId, asOf);
+    const { periodStart, periodEnd } = period;
+
+    // Calendar-month bounds for advances (accounting date, not the period).
+    const [my, mm] = month.split('-').map(Number);
+    const monthStart = new Date(Date.UTC(my, mm - 1, 1));
+    const nextMonthStart = new Date(Date.UTC(my, mm, 1));
+    // Same bounds as UTC instants, for `SalaryPayment.periodStart` bucketing
+    // (mirrors getMatrix's Tashkent-month bucketing for a single month).
+    const periodStartLow = new Date(monthStart.getTime() - TASHKENT_OFFSET_MS);
+    const periodStartHigh = new Date(
+      nextMonthStart.getTime() - TASHKENT_OFFSET_MS,
+    );
+
+    // ─── Step 2: branch scope + teacher load ──────────────────────────────
+    const caller = await this.prisma.user.findUnique({
+      where: { id: performedById },
+      select: {
+        mainBranch: true,
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
+    const scoped =
+      !roleNames.includes('CEO') && !roleNames.includes('Administrator');
+    const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
+
+    const search = query.search?.trim();
+    const searchId = search && /^\d+$/.test(search) ? Number(search) : null;
+
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      companyId,
+      roles: { some: { role: { name: 'Teacher' } } },
+      ...(branchId !== undefined && { branches: { some: { branchId } } }),
+      ...(search && {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          ...(searchId !== null ? [{ id: searchId }] : []),
+        ],
+      }),
+    };
+
+    const teachers = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        branches: { select: { branch: { select: { id: true, name: true } } } },
+      },
+    });
+    const ids = teachers.map((t) => t.id);
+
+    const zeroTotals = {
+      fullDeserved: 0,
+      covered: 0,
+      gap: 0,
+      advances: 0,
+      netToPay: 0,
+    };
+    if (ids.length === 0) {
+      return { month, floorMonth, period, data: [], totals: zeroTotals };
+    }
+    const idSet = new Set(ids);
+
+    // ─── Step 3: bulk fetches (one query each, no per-lesson DB) ──────────
+    const [
+      accruals,
+      attendances,
+      groups,
+      groupTeachers,
+      overrides,
+      versionRows,
+      advancesAgg,
+      payments,
+    ] = await Promise.all([
+      // Covered ground-truth — accruals bucketed into this period (carry-over OR).
+      this.prisma.salaryAccrual.findMany({
+        where: {
+          companyId,
+          userId: { in: ids },
+          reversedAt: null,
+          OR: [
+            { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
+            {
+              creditPeriodDate: null,
+              lessonDate: { gte: periodStart, lte: periodEnd },
+            },
+          ],
+        },
+        select: { userId: true, attendanceId: true, amount: true },
+      }),
+      // Billable attendances in the period (for the GAP sweep).
+      this.prisma.attendance.findMany({
+        where: {
+          companyId,
+          status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+          date: { gte: periodStart, lte: periodEnd },
+        },
+        select: { id: true, groupId: true, date: true },
+      }),
+      // perLessonCost basis.
+      this.prisma.group.findMany({
+        where: { companyId },
+        select: {
+          id: true,
+          course: { select: { price: true, lessonPaymentCount: true } },
+        },
+      }),
+      // Group rosters.
+      this.prisma.groupTeacher.findMany({
+        select: { groupId: true, teacherId: true },
+      }),
+      // Substitute overrides per (group, date).
+      this.prisma.lessonTeacherOverride.findMany({
+        where: { deletedAt: null },
+        select: { groupId: true, date: true, teacherIds: true },
+      }),
+      // Active salary config versions (resolved in-memory per lesson date).
+      this.prisma.employeeSalaryConfigVersion.findMany({
+        where: { companyId, config: { isActive: true } },
+        select: {
+          salaryType: true,
+          value: true,
+          effectiveFrom: true,
+          effectiveTo: true,
+          config: { select: { userId: true, groupId: true, salaryType: true } },
+        },
+      }),
+      // Advances GIVEN during the calendar month (by accounting date).
+      this.prisma.expense.groupBy({
+        by: ['relatedUserId'],
+        where: {
+          relatedUserId: { in: ids },
+          category: 'TEACHER_ADVANCE',
+          companyId,
+          deletedAt: null,
+          date: { gte: monthStart, lt: nextMonthStart },
+        },
+        _sum: { amount: true },
+      }),
+      // Settled SalaryPayment for the month (net + gross + status).
+      this.prisma.salaryPayment.findMany({
+        where: {
+          companyId,
+          userId: { in: ids },
+          status: { not: SalaryPaymentStatus.CANCELLED },
+          periodStart: { gte: periodStartLow, lt: periodStartHigh },
+        },
+        select: {
+          id: true,
+          userId: true,
+          amount: true,
+          status: true,
+          settledExpenses: { select: { amount: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+    // ─── Build in-memory maps ─────────────────────────────────────────────
+    const groupMap = new Map(groups.map((g) => [g.id, g]));
+
+    const rosterMap = new Map<string, number[]>();
+    for (const gt of groupTeachers) {
+      const arr = rosterMap.get(gt.groupId) ?? [];
+      arr.push(gt.teacherId);
+      rosterMap.set(gt.groupId, arr);
+    }
+    const overrideMap = new Map<string, number[]>();
+    for (const o of overrides) {
+      overrideMap.set(`${o.groupId}::${dateStr(o.date)}`, o.teacherIds);
+    }
+    const resolveTeachers = (groupId: string, dStr: string): number[] =>
+      overrideMap.get(`${groupId}::${dStr}`) ?? rosterMap.get(groupId) ?? [];
+
+    const versByKey = new Map<string, RateVersion[]>();
+    const fixedMonthlyTeachers = new Set<number>();
+    for (const r of versionRows) {
+      const key = `${r.config.userId}::${r.config.groupId ?? 'GLOBAL'}`;
+      const arr = versByKey.get(key) ?? [];
+      arr.push({
+        salaryType: r.salaryType,
+        value: r.value,
+        effectiveFrom: r.effectiveFrom,
+        effectiveTo: r.effectiveTo,
+      });
+      versByKey.set(key, arr);
+      if (
+        r.config.salaryType === SalaryType.FIXED_MONTHLY &&
+        r.config.groupId == null
+      ) {
+        fixedMonthlyTeachers.add(r.config.userId);
+      }
+    }
+    const resolveRate = (
+      tid: number,
+      groupId: string,
+      at: Date,
+    ): RateVersion | null =>
+      pickActiveVersion(versByKey.get(`${tid}::${groupId}`), at) ??
+      pickActiveVersion(versByKey.get(`${tid}::GLOBAL`), at);
+
+    const advancesByUser = new Map(
+      advancesAgg.map((a) => [a.relatedUserId as number, a._sum.amount ?? 0]),
+    );
+
+    // Settled payment per teacher (sum if duplicated; latest status wins — asc order).
+    const paymentByUser = new Map<
+      number,
+      { id: string; amount: number; grossAmount: number; status: SalaryPaymentStatus }
+    >();
+    for (const p of payments) {
+      const adv = p.settledExpenses.reduce((s, e) => s + e.amount, 0);
+      const prev = paymentByUser.get(p.userId);
+      paymentByUser.set(p.userId, {
+        id: p.id,
+        amount: (prev?.amount ?? 0) + p.amount,
+        grossAmount: (prev?.grossAmount ?? 0) + p.amount + adv,
+        status: p.status,
+      });
+    }
+
+    // ─── Step 4: per-teacher aggregation (single pass over attendances) ──
+    interface Agg {
+      covered: number;
+      coveredAtt: Set<string>;
+      gap: number;
+      gapUnits: number;
+      noConfigUnits: number;
+      isFixedMonthly: boolean;
+    }
+    const agg = new Map<number, Agg>();
+    for (const id of ids) {
+      agg.set(id, {
+        covered: 0,
+        coveredAtt: new Set(),
+        gap: 0,
+        gapUnits: 0,
+        noConfigUnits: 0,
+        isFixedMonthly: fixedMonthlyTeachers.has(id),
+      });
+    }
+    for (const ac of accruals) {
+      const a = agg.get(ac.userId);
+      if (!a) continue;
+      a.covered += ac.amount;
+      if (ac.attendanceId) a.coveredAtt.add(ac.attendanceId);
+    }
+    for (const att of attendances) {
+      const g = groupMap.get(att.groupId);
+      if (!g) continue;
+      const lpc = g.course.lessonPaymentCount || 12;
+      const perLessonCost = Math.round(g.course.price / lpc);
+      const dStr = dateStr(att.date);
+      for (const tid of resolveTeachers(att.groupId, dStr)) {
+        const a = agg.get(tid);
+        if (!a) continue; // teacher outside branch scope / search page
+        if (a.coveredAtt.has(att.id)) continue; // already covered → in `covered`
+        if (a.isFixedMonthly) continue; // flat salary — no per-lesson gap
+        const v = resolveRate(tid, att.groupId, att.date);
+        if (v) {
+          a.gap += perLessonAccrual(v, perLessonCost, lpc);
+          a.gapUnits += 1;
+        } else {
+          a.noConfigUnits += 1; // config gap — do NOT fabricate (May signature)
+        }
+      }
+    }
+
+    // ─── Step 5+6: build rows ────────────────────────────────────────────
+    const rows = teachers.map((t) => {
+      const a = agg.get(t.id)!;
+      const hasLessonData = a.covered !== 0 || a.gapUnits !== 0;
+      const fullDeserved = hasLessonData ? a.covered + a.gap : null;
+      const covered = hasLessonData ? a.covered : null;
+      const gap = hasLessonData ? a.gap : null;
+      const advances = advancesByUser.get(t.id) ?? 0;
+      const payment = paymentByUser.get(t.id) ?? null;
+
+      // Net-to-pay: a settled payment's `amount` is ALREADY net of settled
+      // advances (CLAUDE.md invariant) — never subtract avans again. For an
+      // unsettled month, net = base − advances.
+      let netToPay: number;
+      if (payment) {
+        netToPay = payment.amount;
+      } else {
+        const base =
+          NET_BASE === 'FULL' && hasLessonData ? a.covered + a.gap : a.covered;
+        netToPay = Math.max(0, base - advances);
+      }
+
+      return {
+        user: {
+          id: t.id,
+          firstName: t.firstName,
+          lastName: t.lastName,
+          isActive: t.isActive,
+          branch: t.branches[0]?.branch ?? null,
+        },
+        hasLessonData,
+        isFixedMonthly: a.isFixedMonthly,
+        fullDeserved,
+        covered,
+        gap,
+        advances,
+        netToPay,
+        payment: payment
+          ? { id: payment.id, amount: payment.amount, status: payment.status }
+          : null,
+      };
+    });
+
+    // Sort by gross magnitude desc, then name.
+    rows.sort((a, b) => {
+      const ma =
+        a.fullDeserved ?? (a.payment ? a.netToPay : 0);
+      const mb =
+        b.fullDeserved ?? (b.payment ? b.netToPay : 0);
+      if (mb !== ma) return mb - ma;
+      const fn = a.user.firstName.localeCompare(b.user.firstName);
+      return fn !== 0 ? fn : a.user.lastName.localeCompare(b.user.lastName);
+    });
+
+    // ─── Step 7: JAMI totals (deserved/covered/gap only over lesson-data rows) ─
+    const totals = rows.reduce(
+      (s, r) => ({
+        fullDeserved: s.fullDeserved + (r.fullDeserved ?? 0),
+        covered: s.covered + (r.covered ?? 0),
+        gap: s.gap + (r.gap ?? 0),
+        advances: s.advances + r.advances,
+        netToPay: s.netToPay + r.netToPay,
+      }),
+      { ...zeroTotals },
+    );
+
+    return { month, floorMonth, period, data: rows, totals };
+  }
+}

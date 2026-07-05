@@ -1,19 +1,29 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Download, RotateCcw, History, Wallet } from "lucide-react";
+import {
+  CheckCircle,
+  Download,
+  Loader2,
+  RotateCcw,
+  History,
+  Wallet,
+} from "lucide-react";
+import toast from "react-hot-toast";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getErrorMessage } from "@/lib/get-error-message";
 import {
   Table,
   TableBody,
@@ -77,6 +87,11 @@ interface BreakdownResponse {
 interface Props {
   salaryPaymentId: string | null;
   onClose: () => void;
+  /** CEO can approve; CEO/BD can pay. Drives the footer workflow buttons. */
+  isCeo?: boolean;
+  canPay?: boolean;
+  /** Called after approve/pay so the parent (matrix) refetches. */
+  onChanged?: () => void;
 }
 
 const statusLabels: Record<string, string> = {
@@ -106,7 +121,15 @@ const fmt = (n: number) => n.toLocaleString("uz-UZ");
  * export. Replaces the earlier 4-stat grid + 7-column table that felt
  * cramped on the side surface.
  */
-export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
+export function SalaryBreakdownDrawer({
+  salaryPaymentId,
+  onClose,
+  isCeo = false,
+  canPay = false,
+  onChanged,
+}: Props) {
+  const queryClient = useQueryClient();
+  const [processing, setProcessing] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["salary-payment-breakdown", salaryPaymentId],
     queryFn: () =>
@@ -115,6 +138,35 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
         .then((r) => r.data),
     enabled: !!salaryPaymentId,
   });
+
+  const runAction = async (
+    kind: "approve" | "pay",
+  ) => {
+    if (!data) return;
+    setProcessing(true);
+    try {
+      if (kind === "approve") {
+        await api.patch(`/salary/payments/${data.payment.id}/approve`);
+        toast.success("Oylik tasdiqlandi");
+      } else {
+        await api.post(`/salary/payments/${data.payment.id}/pay`);
+        toast.success("Oylik to'landi");
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["salary-payment-breakdown", salaryPaymentId],
+      });
+      onChanged?.();
+    } catch (err) {
+      toast.error(
+        getErrorMessage(
+          err,
+          kind === "approve" ? "Tasdiqlashda xatolik" : "To'lashda xatolik",
+        ),
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   // Pre-compute lesson + student counts for the summary card so the table
   // doesn't have to scan twice and the user gets a "5 ta o'quvchi · 45 ta dars"
@@ -334,7 +386,7 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
 
                 {data.lines.length === 0 ? (
                   <p className="text-muted-foreground text-sm py-8 text-center border rounded-md">
-                    Bu davrda yozilgan accrual yo&apos;q
+                    Qo&apos;lda kiritilgan oylik — dars-by-dars tafsilot yo&apos;q.
                   </p>
                 ) : (
                   <div className="rounded-md border overflow-hidden">
@@ -362,6 +414,50 @@ export function SalaryBreakdownDrawer({ salaryPaymentId, onClose }: Props) {
             </>
           )}
         </div>
+
+        {/* === Workflow footer === */}
+        {data &&
+          ((data.payment.status === "CALCULATED" && isCeo) ||
+            (data.payment.status === "APPROVED" && canPay) ||
+            data.payment.status === "PAID") && (
+            <SheetFooter className="border-t px-6 py-4 shrink-0">
+              {data.payment.status === "CALCULATED" && isCeo && (
+                <div className="flex w-full items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Tasdiqlash — pul harakatisiz tekshiruv.
+                  </p>
+                  <Button onClick={() => runAction("approve")} disabled={processing}>
+                    {processing ? (
+                      <Loader2 className="size-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="size-4 mr-2" />
+                    )}
+                    Tasdiqlash
+                  </Button>
+                </div>
+              )}
+              {data.payment.status === "APPROVED" && canPay && (
+                <div className="flex w-full items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    To&apos;lash — ustoz balansidan ayiriladi.
+                  </p>
+                  <Button onClick={() => runAction("pay")} disabled={processing}>
+                    {processing ? (
+                      <Loader2 className="size-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="size-4 mr-2" />
+                    )}
+                    To&apos;lash
+                  </Button>
+                </div>
+              )}
+              {data.payment.status === "PAID" && (
+                <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+                  ✓ To&apos;langan
+                </p>
+              )}
+            </SheetFooter>
+          )}
       </SheetContent>
     </Sheet>
   );

@@ -114,6 +114,17 @@ export function computePeriodBounds(
 }
 
 /**
+ * Parse a 'YYYY-MM-DD' string as 00:00 Tashkent of that calendar date,
+ * returned as a UTC Date. Mirrors the salary config/period parsers so a
+ * manually-picked calculate date aligns exactly with the period boundaries
+ * `computePeriodBounds` produces.
+ */
+export function parseTashkentDateStart(input: string): Date {
+  const utc = new Date(`${input}T00:00:00.000Z`);
+  return new Date(utc.getTime() - TASHKENT_OFFSET_MS);
+}
+
+/**
  * Returns true iff `now` is the cycle start day for the active setting.
  * Used by the daily cron to decide whether to run the calculation today.
  */
