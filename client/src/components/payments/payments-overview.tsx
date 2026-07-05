@@ -343,9 +343,10 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-64">
-                  Xarajatlardan ustozlarga berilgan avans. Bu summa oylik
-                  sifatida hisoblanadi (Xarajatlar emas) va keyingi oylikdan
-                  ushlab qolinadi.
+                  Bu davr oyligidan ushlab qolingan (hisoblangan) avans — oylik
+                  tarkibida ko&apos;rsatiladi. Berilgan, lekin hali ushlanmagan
+                  avans Chiqimga kirmaydi; u ushlangan oyda oylik sifatida
+                  hisoblanadi.
                 </TooltipContent>
               </Tooltip>
             )}

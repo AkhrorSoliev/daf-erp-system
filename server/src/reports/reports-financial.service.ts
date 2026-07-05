@@ -259,17 +259,36 @@ export class ReportsFinancialService {
       _sum: { amount: true },
     });
 
-    // Teacher advances (TEACHER_ADVANCE) are cash paid to teachers — they
-    // belong under "Ustoz oyliklari", not generic Xarajatlar. Reclassify
-    // (display-only): pull them OUT of the expenses bucket and fold them INTO
-    // salary.paid below. The combined outflow (and netProfit) is unchanged —
-    // only the split between the two buckets shifts.
+    // Teacher advances (TEACHER_ADVANCE) are never a generic Xarajat. Two
+    // separate figures matter, on DIFFERENT dates:
+    //   • advancesPaidInPeriod — cash handed to teachers this period. Used only
+    //     to net the advance rows OUT of Xarajatlar (avanssiz). It is NOT an
+    //     outflow on its own: an advance is a prepayment/receivable, not a cost.
+    //   • advancesSettledInPeriod (below) — advances that became real salary
+    //     cost this period by being netted against a PAID salary run. Only
+    //     these are folded into "Ustoz oyliklari".
+    // So an advance paid-but-not-yet-settled sits in NEITHER bucket → it is not
+    // a Chiqim in the month it is handed out, and lands in salary the month it
+    // settles. Lifetime cost stays correct (gross = net paid + settled advance).
     const teacherAdvances = await this.prisma.expense.aggregate({
       where: {
         companyId,
         deletedAt: null,
         category: 'TEACHER_ADVANCE',
         date: { gte: new Date(start), lte: new Date(end) },
+        ...(query.branchId && { branchId: query.branchId }),
+      },
+      _sum: { amount: true },
+    });
+
+    // Advances recognized as salary cost this period: settled against a
+    // SalaryPayment that was PAID inside the window (settlement-based).
+    const settledAdvances = await this.prisma.expense.aggregate({
+      where: {
+        companyId,
+        deletedAt: null,
+        category: 'TEACHER_ADVANCE',
+        settledBySalaryPayment: { status: 'PAID', paidAt: dateFilter },
         ...(query.branchId && { branchId: query.branchId }),
       },
       _sum: { amount: true },
@@ -331,12 +350,16 @@ export class ReportsFinancialService {
     });
 
     const totalIncome = actualIncome._sum.amount ?? 0;
-    const advancesInPeriod = teacherAdvances._sum.amount ?? 0;
-    // Expenses excluding advances (they move to salary); salary paid includes
-    // advances. Their sum equals the old (allExpenses + netSalaryPaid), so the
-    // Chiqimlar and Foyda totals are unchanged — only the split shifts.
-    const totalExpenseAmount = (expenses._sum.amount ?? 0) - advancesInPeriod;
-    const totalSalaryPaid = (salaryPaid._sum.amount ?? 0) + advancesInPeriod;
+    const advancesPaidInPeriod = teacherAdvances._sum.amount ?? 0;
+    const advancesSettledInPeriod = settledAdvances._sum.amount ?? 0;
+    // Xarajatlar exclude advance cash entirely (avanssiz). Salary paid adds ONLY
+    // the advances SETTLED this period — so an unsettled advance (cash out, not
+    // yet salary) is in neither bucket and is not counted as a Chiqim/Foyda hit
+    // this month; it lands in salary the month it settles. This keeps lifetime
+    // cost correct without ever double-counting or losing the advance.
+    const totalExpenseAmount = (expenses._sum.amount ?? 0) - advancesPaidInPeriod;
+    const totalSalaryPaid =
+      (salaryPaid._sum.amount ?? 0) + advancesSettledInPeriod;
     const totalExpenses = totalExpenseAmount + totalSalaryPaid;
     const marketingTotal = marketingExpenses._sum.amount ?? 0;
     const periodPayerTotal = periodPayerIncome._sum.amount ?? 0;
@@ -362,9 +385,10 @@ export class ReportsFinancialService {
       salary: {
         paid: totalSalaryPaid,
         pending,
-        // Portion of `paid` that came from TEACHER_ADVANCE expenses (so the
-        // UI can show a "shundan avans" sub-line).
-        advances: advancesInPeriod,
+        // Portion of `paid` that came from advances SETTLED this period (so the
+        // UI can show a "shundan avans" sub-line). Unsettled advances are not
+        // here — they are not a Chiqim until they settle.
+        advances: advancesSettledInPeriod,
       },
       expenses: totalExpenseAmount,
       netProfit: totalIncome - totalExpenses,
@@ -423,6 +447,8 @@ export class ReportsFinancialService {
           marketing,
           newStudents,
           payerCount,
+          advancePaidAgg,
+          advanceSettledAgg,
         ] = await Promise.all([
           this.prisma.payment.aggregate({
             where: {
@@ -464,6 +490,28 @@ export class ReportsFinancialService {
             by: ['studentId'],
             where: { companyId, status: 'COMPLETED', createdAt: dateFilter },
           }),
+          // Advance cash paid this month — netted out of Xarajatlar (avanssiz).
+          this.prisma.expense.aggregate({
+            where: {
+              companyId,
+              deletedAt: null,
+              category: 'TEACHER_ADVANCE',
+              date: { gte: m.start, lte: m.end },
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          }),
+          // Advance recognized as salary this month — settled against a PAID run.
+          this.prisma.expense.aggregate({
+            where: {
+              companyId,
+              deletedAt: null,
+              category: 'TEACHER_ADVANCE',
+              settledBySalaryPayment: { status: 'PAID', paidAt: dateFilter },
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          }),
         ]);
 
         const incomeTotal = income._sum.amount ?? 0;
@@ -471,12 +519,19 @@ export class ReportsFinancialService {
         const salaryTotal = salaryAgg._sum.amount ?? 0;
         const marketingTotal = marketing._sum.amount ?? 0;
         const paymentCount = income._count;
+        // Same avanssiz / settlement-based split as getFinancialOverview so the
+        // drill-down chart matches the "Chiqimlar" KPI card: exclude advance
+        // cash from Xarajatlar, add only the advances settled this month.
+        const advancePaid = advancePaidAgg._sum.amount ?? 0;
+        const advanceSettled = advanceSettledAgg._sum.amount ?? 0;
+        const chiqimTotal =
+          expenseTotal - advancePaid + salaryTotal + advanceSettled;
 
         return {
           month: m.label,
           income: incomeTotal,
-          expenses: expenseTotal + salaryTotal,
-          profit: incomeTotal - expenseTotal - salaryTotal,
+          expenses: chiqimTotal,
+          profit: incomeTotal - chiqimTotal,
           activeBalance: 0,
           ltv:
             payerCount.length > 0
