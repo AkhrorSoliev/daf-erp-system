@@ -132,12 +132,19 @@ describe('ExpensesService — findAll filters + summary', () => {
     expect(whereArg().date).toBeUndefined();
   });
 
-  it('returns a summary derived from aggregate + groupBy over the full filtered set', async () => {
+  it('returns a summary derived from the grouped scan over the full filtered set', async () => {
     prisma.expense.count.mockResolvedValue(7);
-    prisma.expense.aggregate.mockResolvedValue({ _sum: { amount: 900_000 } });
     prisma.expense.groupBy.mockResolvedValue([
-      { paymentMethod: ExpensePaymentMethod.CASH, _sum: { amount: 500_000 } },
-      { paymentMethod: ExpensePaymentMethod.CARD, _sum: { amount: 400_000 } },
+      {
+        category: ExpenseCategory.RENT,
+        paymentMethod: ExpensePaymentMethod.CASH,
+        _sum: { amount: 500_000 },
+      },
+      {
+        category: ExpenseCategory.UTILITIES,
+        paymentMethod: ExpensePaymentMethod.CARD,
+        _sum: { amount: 400_000 },
+      },
     ]);
 
     const res = await service.findAll({} as ExpenseQueryDto, COMPANY_ID);
@@ -147,19 +154,60 @@ describe('ExpensesService — findAll filters + summary', () => {
       count: 7,
       cashTotal: 500_000,
       cardTotal: 400_000,
+      advancesTotal: 0,
     });
-    // Summary aggregation must use the SAME where as the list query.
-    expect(prisma.expense.aggregate.mock.calls[0][0].where).toEqual(whereArg());
-    expect(prisma.expense.groupBy.mock.calls[0][0].where).toEqual(whereArg());
+    // Summary aggregation must use the SAME where as the list query, grouped by
+    // both category (to split the advance) and paymentMethod.
+    const call = prisma.expense.groupBy.mock.calls[0][0];
+    expect(call.where).toEqual(whereArg());
+    expect(call.by).toEqual(['category', 'paymentMethod']);
+  });
+
+  it('excludes TEACHER_ADVANCE from the headline totals and surfaces it as advancesTotal', async () => {
+    prisma.expense.count.mockResolvedValue(5);
+    prisma.expense.groupBy.mockResolvedValue([
+      {
+        category: ExpenseCategory.RENT,
+        paymentMethod: ExpensePaymentMethod.CASH,
+        _sum: { amount: 1_000_000 },
+      },
+      {
+        category: ExpenseCategory.MARKETING,
+        paymentMethod: ExpensePaymentMethod.CARD,
+        _sum: { amount: 300_000 },
+      },
+      {
+        category: ExpenseCategory.TEACHER_ADVANCE,
+        paymentMethod: ExpensePaymentMethod.CASH,
+        _sum: { amount: 500_000 },
+      },
+      {
+        category: ExpenseCategory.TEACHER_ADVANCE,
+        paymentMethod: ExpensePaymentMethod.CARD,
+        _sum: { amount: 200_000 },
+      },
+    ]);
+
+    const res = await service.findAll({} as ExpenseQueryDto, COMPANY_ID);
+
+    expect(res.summary).toEqual({
+      // 2.0M gross − 0.7M advance = 1.3M avanssiz.
+      totalAmount: 1_300_000,
+      count: 5,
+      // Cash: 1.5M − 0.5M advance = 1.0M; Card: 0.5M − 0.2M advance = 0.3M.
+      cashTotal: 1_000_000,
+      cardTotal: 300_000,
+      advancesTotal: 700_000,
+    });
   });
 
   it('defaults missing payment-method buckets to 0', async () => {
-    prisma.expense.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
     prisma.expense.groupBy.mockResolvedValue([]); // no rows at all
     const res = await service.findAll({} as ExpenseQueryDto, COMPANY_ID);
     expect(res.summary.cashTotal).toBe(0);
     expect(res.summary.cardTotal).toBe(0);
     expect(res.summary.totalAmount).toBe(0);
+    expect(res.summary.advancesTotal).toBe(0);
   });
 
   describe('exportAll', () => {

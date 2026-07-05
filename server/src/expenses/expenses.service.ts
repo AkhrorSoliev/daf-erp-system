@@ -167,7 +167,7 @@ export class ExpensesService {
 
     const where = this.buildWhere(query, companyId);
 
-    const [data, total, agg, byMethod] = await Promise.all([
+    const [data, total, byCatMethod] = await Promise.all([
       this.prisma.expense.findMany({
         where,
         select: this.listSelect,
@@ -176,18 +176,45 @@ export class ExpensesService {
         take: pageSize,
       }),
       this.prisma.expense.count({ where }),
-      this.prisma.expense.aggregate({ where, _sum: { amount: true } }),
+      // One grouped scan over the WHOLE filtered set (not just this page) so
+      // the cards stay correct while paging AND we can split the advance out.
       this.prisma.expense.groupBy({
-        by: ['paymentMethod'],
+        by: ['category', 'paymentMethod'],
         where,
         _sum: { amount: true },
       }),
     ]);
 
-    // Summary spans the WHOLE filtered set (not just this page) so the cards
-    // stay correct as the user pages through.
-    const sumFor = (method: ExpensePaymentMethod) =>
-      byMethod.find((g) => g.paymentMethod === method)?._sum.amount ?? 0;
+    // A TEACHER_ADVANCE is cash paid to a teacher, not a generic Xarajat — the
+    // financial overview already reclassifies it into "Ustoz oyliklari". Keep
+    // the expenses page consistent with that: the headline totals (Jami / Naqt
+    // / Karta) are computed AVANSSIZ (advance excluded) so they match the
+    // overview's "Chiqimlar" figure, while the advance is surfaced separately
+    // as `advancesTotal`. The advance rows themselves still appear in the list.
+    const sumWhere = (
+      pred: (g: (typeof byCatMethod)[number]) => boolean,
+    ): number =>
+      byCatMethod.reduce(
+        (s, g) => (pred(g) ? s + (g._sum.amount ?? 0) : s),
+        0,
+      );
+    const isAdvance = (g: (typeof byCatMethod)[number]) =>
+      g.category === ExpenseCategory.TEACHER_ADVANCE;
+
+    const grandTotal = sumWhere(() => true);
+    const advancesTotal = sumWhere(isAdvance);
+    const cashAll = sumWhere(
+      (g) => g.paymentMethod === ExpensePaymentMethod.CASH,
+    );
+    const cardAll = sumWhere(
+      (g) => g.paymentMethod === ExpensePaymentMethod.CARD,
+    );
+    const advanceCash = sumWhere(
+      (g) => isAdvance(g) && g.paymentMethod === ExpensePaymentMethod.CASH,
+    );
+    const advanceCard = sumWhere(
+      (g) => isAdvance(g) && g.paymentMethod === ExpensePaymentMethod.CARD,
+    );
 
     return {
       data,
@@ -195,10 +222,12 @@ export class ExpensesService {
       page,
       pageSize,
       summary: {
-        totalAmount: agg._sum.amount ?? 0,
+        totalAmount: grandTotal - advancesTotal,
         count: total,
-        cashTotal: sumFor(ExpensePaymentMethod.CASH),
-        cardTotal: sumFor(ExpensePaymentMethod.CARD),
+        cashTotal: cashAll - advanceCash,
+        cardTotal: cardAll - advanceCard,
+        // Ustoz avansi — headline totalga kirmaydi, oylikda hisoblanadi.
+        advancesTotal,
       },
     };
   }
@@ -244,14 +273,27 @@ export class ExpensesService {
       createdByName: `${r.createdBy.firstName} ${r.createdBy.lastName}`.trim(),
     }));
 
+    // Totals mirror the on-screen summary: AVANSSIZ headline (Jami / Naqt /
+    // Karta exclude TEACHER_ADVANCE) plus the advance surfaced separately, so
+    // the printed report reconciles with the /payments/overview "Chiqimlar".
+    const sumRows = (pred: (r: (typeof rows)[number]) => boolean): number =>
+      rows.reduce((s, r) => (pred(r) ? s + r.amount : s), 0);
+    const isAdvanceRow = (r: (typeof rows)[number]) =>
+      r.category === ExpenseCategory.TEACHER_ADVANCE;
+
     const totals = {
-      totalAmount: rows.reduce((s, r) => s + r.amount, 0),
-      cashTotal: rows
-        .filter((r) => r.paymentMethod === ExpensePaymentMethod.CASH)
-        .reduce((s, r) => s + r.amount, 0),
-      cardTotal: rows
-        .filter((r) => r.paymentMethod === ExpensePaymentMethod.CARD)
-        .reduce((s, r) => s + r.amount, 0),
+      totalAmount: sumRows(() => true) - sumRows(isAdvanceRow),
+      cashTotal:
+        sumRows((r) => r.paymentMethod === ExpensePaymentMethod.CASH) -
+        sumRows(
+          (r) => isAdvanceRow(r) && r.paymentMethod === ExpensePaymentMethod.CASH,
+        ),
+      cardTotal:
+        sumRows((r) => r.paymentMethod === ExpensePaymentMethod.CARD) -
+        sumRows(
+          (r) => isAdvanceRow(r) && r.paymentMethod === ExpensePaymentMethod.CARD,
+        ),
+      advancesTotal: sumRows(isAdvanceRow),
       count: rows.length,
     };
 
