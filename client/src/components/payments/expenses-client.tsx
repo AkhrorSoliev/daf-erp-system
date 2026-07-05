@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 import {
   FileText,
   History,
@@ -109,6 +109,19 @@ export function ExpensesClient() {
     return () => clearTimeout(t);
   }, [searchInput, filters.search, setFilters]);
 
+  // Default view = the current calendar month. When the user hasn't picked an
+  // explicit date range in the URL, scope everything (list, summary, PDF) to
+  // this month so opening the page shows "this month's" expenses.
+  const { monthStart, monthEnd } = useMemo(() => {
+    const now = new Date();
+    return {
+      monthStart: format(startOfMonth(now), "yyyy-MM-dd"),
+      monthEnd: format(endOfMonth(now), "yyyy-MM-dd"),
+    };
+  }, []);
+  const effectiveStartDate = filters.startDate || monthStart;
+  const effectiveEndDate = filters.endDate || monthEnd;
+
   const queryParams = {
     branchId: selectedBranch?.id,
     page: filters.page,
@@ -117,8 +130,8 @@ export function ExpensesClient() {
     paymentMethod:
       filters.paymentMethod === "all" ? undefined : filters.paymentMethod,
     search: filters.search || undefined,
-    startDate: filters.startDate || undefined,
-    endDate: filters.endDate || undefined,
+    startDate: effectiveStartDate,
+    endDate: effectiveEndDate,
   };
 
   const { data, isLoading } = useQuery({
@@ -131,8 +144,8 @@ export function ExpensesClient() {
       filters.category,
       filters.paymentMethod,
       filters.search,
-      filters.startDate,
-      filters.endDate,
+      effectiveStartDate,
+      effectiveEndDate,
     ],
     queryFn: () =>
       api
@@ -211,8 +224,8 @@ export function ExpensesClient() {
     setDialogOpen(true);
   };
 
-  const startDate = filters.startDate ? new Date(filters.startDate) : null;
-  const endDate = filters.endDate ? new Date(filters.endDate) : null;
+  const startDate = new Date(effectiveStartDate);
+  const endDate = new Date(effectiveEndDate);
 
   const hasActiveFilters =
     filters.category !== "all" ||
