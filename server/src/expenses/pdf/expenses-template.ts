@@ -41,6 +41,8 @@ export interface ExpensesPdfInput {
     totalAmount: number;
     cashTotal: number;
     cardTotal: number;
+    // Ustoz avansi — headline `totalAmount` dan tashqarida (avanssiz).
+    advancesTotal: number;
     count: number;
   };
 }
@@ -196,6 +198,16 @@ function totalsBlock(totals: ExpensesPdfInput['totals']): ContentColumns {
     { label: 'Jami', value: `${formatSom(totals.totalAmount)} so'm`, bold: true },
     { label: 'Naqt', value: `${formatSom(totals.cashTotal)} so'm` },
     { label: 'Karta', value: `${formatSom(totals.cardTotal)} so'm` },
+    // Advance is cash paid to a teacher (salary), not a generic Xarajat — shown
+    // apart so "Jami" stays avanssiz and reconciles with the overview.
+    ...(totals.advancesTotal > 0
+      ? [
+          {
+            label: 'Ustoz avansi (oylikda)',
+            value: `${formatSom(totals.advancesTotal)} so'm`,
+          },
+        ]
+      : []),
     { label: 'Xarajatlar soni', value: `${totals.count} ta` },
   ];
   return {
