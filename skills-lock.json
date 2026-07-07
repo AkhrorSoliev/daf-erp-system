@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "3-statement-model": {
+      "source": "anthropics/financial-services",
+      "sourceType": "github",
+      "skillPath": "plugins/vertical-plugins/financial-analysis/skills/3-statement-model/SKILL.md",
+      "computedHash": "1bf9f28bb52c29f8bb976d5bcba88910307983866424d43ff209b9c305eea9c8"
+    },
+    "audit-xls": {
+      "source": "anthropics/financial-services",
+      "sourceType": "github",
+      "skillPath": "plugins/vertical-plugins/financial-analysis/skills/audit-xls/SKILL.md",
+      "computedHash": "890ac2385d133a0fe7f11bf7dc0b6ebe4a844fdbe2eccdecb1d863b298517584"
+    },
     "deploy-to-vercel": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
@@ -16,11 +28,29 @@
       "sourceType": "github",
       "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
     },
+    "gl-recon": {
+      "source": "anthropics/financial-services",
+      "sourceType": "github",
+      "skillPath": "plugins/vertical-plugins/fund-admin/skills/gl-recon/SKILL.md",
+      "computedHash": "b637c23603f6cd17ae5f8c924446d80169a74531d8014935ffea6ec1bdd88c6c"
+    },
     "pdf": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "skillPath": "skills/pdf/SKILL.md",
       "computedHash": "cfbc539377088ca7e44a813b30c306327385bbd973cd7a721e1743f60837dd62"
+    },
+    "roll-forward": {
+      "source": "anthropics/financial-services",
+      "sourceType": "github",
+      "skillPath": "plugins/vertical-plugins/fund-admin/skills/roll-forward/SKILL.md",
+      "computedHash": "d42c9400038edbd0d694fbbeb83912e425d9271f666bff095660f196b3fcb38c"
+    },
+    "variance-commentary": {
+      "source": "anthropics/financial-services",
+      "sourceType": "github",
+      "skillPath": "plugins/vertical-plugins/fund-admin/skills/variance-commentary/SKILL.md",
+      "computedHash": "2b08d7e682ce05bb087796995fbe9ee255098f27d139fa4103bbcc5c633244ce"
     },
     "vercel-cli-with-tokens": {
       "source": "vercel-labs/agent-skills",
@@ -41,6 +71,12 @@
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+    },
+    "xlsx-author": {
+      "source": "anthropics/financial-services",
+      "sourceType": "github",
+      "skillPath": "plugins/vertical-plugins/financial-analysis/skills/xlsx-author/SKILL.md",
+      "computedHash": "98b55e4a1b56dde97c99b1a3fa90b53bf51c4dc091efedd0f8289f73e66571b3"
     }
   }
 }
