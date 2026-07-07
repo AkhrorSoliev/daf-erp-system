@@ -1,0 +1,135 @@
+/**
+ * Standalone generator for the "Moliyaviy hisobot" Excel — produces EXACTLY the
+ * same workbook the /payments/overview "Excel yuklab olish" button gives in
+ * production (same ReportsExcelService, same read-only queries). Bypasses the
+ * HTTP layer + full Nest bootstrap (no crons/listeners) by wiring just the
+ * report services against a PrismaClient.
+ *
+ *   Dev:   npx ts-node --transpile-only scripts/generate-financial-excel.ts [start] [end]
+ *   Prod:  railway run npx ts-node --transpile-only scripts/generate-financial-excel.ts [start] [end]
+ *
+ * start/end are optional YYYY-MM-DD; default = current calendar month (the
+ * frontend default). Company-wide (CEO view — all branches).
+ */
+import 'dotenv/config'; // loads server/.env for dev; `railway run` env wins in prod (dotenv doesn't override)
+import { Workbook } from 'exceljs';
+import * as fs from 'fs';
+import * as path from 'path';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { ReportsFinancialService } from '../src/reports/reports-financial.service';
+import { ReportsProfitLossService } from '../src/reports/reports-profit-loss.service';
+import { ReportsCashFlowService } from '../src/reports/reports-cash-flow.service';
+import { ReportsBalanceSheetService } from '../src/reports/reports-balance-sheet.service';
+import { ReportsPaymentsService } from '../src/reports/reports-payments.service';
+import { ExpensesService } from '../src/expenses/expenses.service';
+import { SalaryMonthlyService } from '../src/salary/salary-monthly.service';
+import { PaymentsDebtorsService } from '../src/payments/payments-debtors.service';
+import { ReportsExcelService } from '../src/reports/reports-excel.service';
+
+async function main() {
+  const prisma = new PrismaService();
+  await prisma.$connect();
+  const startDate = process.argv[2];
+  const endDate = process.argv[3];
+
+  // Real service instances; only PrismaService-backed reads are exercised, so
+  // the unused constructor deps (TransactionsService, EntityHistoryService) are
+  // safely null for the methods this script calls.
+  const financial = new ReportsFinancialService(prisma as any);
+  const profitLoss = new ReportsProfitLossService(prisma as any);
+  const cashFlow = new ReportsCashFlowService(prisma as any);
+  const balance = new ReportsBalanceSheetService(prisma as any);
+  const payments = new ReportsPaymentsService(prisma as any);
+  const expenses = new ExpensesService(prisma as any, null as any, null as any);
+  const salaryMonthly = new SalaryMonthlyService(prisma as any);
+  const debtors = new PaymentsDebtorsService(prisma as any);
+
+  const facade: any = {
+    getFinancialOverview: (c: number, q: any) => financial.getFinancialOverview(c, q),
+    getProfitLoss: (c: number, q: any) => profitLoss.getProfitLoss(c, q),
+    getCashFlow: (c: number, q: any) => cashFlow.getCashFlow(c, q),
+    getBalanceSheet: (c: number, q: any) => balance.getBalanceSheet(c, q),
+    getPaymentLineItems: (c: number, q: any) => payments.getPaymentLineItems(c, q),
+    getExpenseLineItems: (c: number, q: any) => expenses.exportAllForReport(c, q),
+    getSalaryMonthly: (c: number, month: string, performedById: number) =>
+      salaryMonthly.getMonthly({ month }, c, performedById),
+    getDebtorLineItems: (c: number, b?: number[]) => debtors.getDebtorLineItems(c, b),
+    getFinancialTrend: (c: number, b?: number) => financial.getFinancialTrend(c, b),
+    getPerBranchSummary: (c: number, q: any) => payments.getPerBranchSummary(c, q),
+    getReconciliation: (c: number, q: any) => financial.getReconciliation(c, q),
+    getPriorPeriodSummary: (c: number, q: any) => financial.getPriorPeriodSummary(c, q),
+  };
+
+  const excel = new ReportsExcelService(facade);
+
+  const company = await prisma.company.findFirst({ select: { id: true, name: true } });
+  if (!company) throw new Error('Company topilmadi');
+  const branches = await prisma.branch.findMany({
+    where: { companyId: company.id, deletedAt: null },
+    select: { id: true, name: true },
+  });
+  const branchNames: Record<number, string> = Object.fromEntries(
+    branches.map((b) => [b.id, b.name]),
+  );
+
+  // A CEO id → getMonthly returns all teachers (company-wide, unscoped).
+  const ceo = await prisma.user.findFirst({
+    where: {
+      companyId: company.id,
+      deletedAt: null,
+      roles: { some: { role: { name: 'CEO' } } },
+    },
+    select: { id: true },
+  });
+
+  const buffer = await excel.generate(company.id, {
+    startDate,
+    endDate,
+    companyName: company.name,
+    branchLabel: 'Barcha filiallar',
+    branchNames,
+    performedById: ceo?.id ?? 0,
+  });
+
+  const outDir = path.join(__dirname, '..', 'reports');
+  fs.mkdirSync(outDir, { recursive: true });
+  const stamp = startDate && endDate ? `${startDate}_${endDate}` : new Date().toISOString().slice(0, 10);
+  const outPath = path.join(outDir, `moliyaviy-hisobot-${stamp}.xlsx`);
+  fs.writeFileSync(outPath, buffer);
+
+  // Re-read the produced workbook and print a summary so we can confirm the
+  // reconciliation ties without opening the file.
+  const wb = new Workbook();
+  await wb.xlsx.load(buffer as unknown as ArrayBuffer);
+  const cell = (sheet: string, col1: string, col: number) => {
+    const ws = wb.getWorksheet(sheet);
+    let out: any = null;
+    ws?.eachRow((r) => {
+      if (out == null && String(r.getCell(1).value ?? '') === col1) out = r.getCell(col).value;
+    });
+    return out;
+  };
+  const ties: string[] = [];
+  wb.getWorksheet('Tekshiruv')?.eachRow((r) => {
+    const v = String(r.getCell(5).value ?? '');
+    if (v === 'MOS' || v === 'XATO') ties.push(`${v}  ${String(r.getCell(1).value)}`);
+  });
+
+  console.log('==================================================');
+  console.log(`Fayl:      ${outPath}`);
+  console.log(`Hajmi:     ${(buffer.length / 1024).toFixed(1)} KB`);
+  console.log(`Kompaniya: ${company.name} (#${company.id}), filiallar: ${branches.length}`);
+  console.log(`Varaqlar:  ${wb.worksheets.map((w) => w.name).join(', ')}`);
+  console.log(`Davr:      ${cell('Muqova', 'Hisobot davri:', 2)}`);
+  console.log(`Sof foyda: ${cell('Asosiy xulosa', 'Sof foyda', 2)}`);
+  console.log('--- Tekshiruv (ties) ---');
+  ties.forEach((t) => console.log('  ' + t));
+  console.log('==================================================');
+
+  await prisma.$disconnect();
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

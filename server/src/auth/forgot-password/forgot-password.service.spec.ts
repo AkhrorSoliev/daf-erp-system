@@ -78,10 +78,14 @@ describe('ForgotPasswordService', () => {
 
       expect(res.message).toMatch(/tasdiqlash kodi yuborildi/);
       expect(eskiz.sendSms).toHaveBeenCalledTimes(1);
-      // The sent message embeds the resource name + purpose (moderation rules).
+      // The sent message embeds the resource name + type + purpose (Eskiz
+      // Punkt 2 — the brand-only form was rejected, so the "mobil ilova" type
+      // word is now mandatory in the moderated template; this OTP is for the
+      // student app's login/password reset).
       const [, message] = eskiz.sendSms.mock.calls[0];
       expect(message).toContain('DaF Sprachzentrum');
-      expect(message).toContain('parolni tiklash uchun tasdiqlash kodi');
+      expect(message).toContain('mobil ilova');
+      expect(message).toContain('parolini tiklash uchun tasdiqlash kodi');
       // A code is stored in Redis (hashed) with attempts left.
       const stored = JSON.parse(redis.store.get(`otp_reset:code:${PHONE}`)!);
       expect(stored.n).toBe(3);

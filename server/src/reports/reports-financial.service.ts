@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolvePeriod } from '../common/finance/period-helpers';
 
 @Injectable()
 export class ReportsFinancialService {
@@ -551,5 +552,88 @@ export class ReportsFinancialService {
     );
 
     return result;
+  }
+
+  /**
+   * Reconciliation data for the Excel "Tekshiruv" sheet. COMPANY-WIDE by design:
+   * student balances aren't cleanly branch-scoped, so scoping the roll-forward
+   * per branch would break the foot. The sheet labels this "(kompaniya bo'yicha)".
+   *
+   *  • student roll-forward — closing = current Σ Student.balance; opening =
+   *    closing − Σ(all student-ledger transactions in the period). Foots by
+   *    construction, and breaks the period movement out by transaction type.
+   *  • GL recon (H1 invariant) — Σ Student.balance must equal Σ Transaction.amount
+   *    over student rows (all types, incl. reversed, which net themselves out).
+   */
+  async getReconciliation(
+    companyId: number,
+    query: { startDate?: string; endDate?: string },
+  ) {
+    const period = resolvePeriod(query.startDate, query.endDate);
+    const tsFilter = { gte: period.start, lte: period.endTs };
+
+    const [byType, storedAgg, ledgerAgg] = await Promise.all([
+      this.prisma.transaction.groupBy({
+        by: ['type'],
+        where: { companyId, studentId: { not: null }, createdAt: tsFilter },
+        _sum: { amount: true },
+      }),
+      this.prisma.student.aggregate({
+        where: { companyId },
+        _sum: { balance: true },
+      }),
+      this.prisma.transaction.aggregate({
+        where: { companyId, studentId: { not: null } },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const sumType = (t: TransactionType) =>
+      byType.find((g) => g.type === t)?._sum.amount ?? 0;
+    const activity = {
+      payment: sumType(TransactionType.PAYMENT),
+      lessonDeduction: sumType(TransactionType.LESSON_DEDUCTION),
+      adjustment: sumType(TransactionType.ADJUSTMENT),
+      refund: sumType(TransactionType.REFUND),
+      initialBalance: sumType(TransactionType.INITIAL_BALANCE),
+      writeOff: sumType(TransactionType.DEBT_WRITE_OFF),
+      withdrawal: sumType(TransactionType.BALANCE_WITHDRAWAL),
+    };
+    const activityTotal = byType.reduce((s, g) => s + (g._sum.amount ?? 0), 0);
+    const named = Object.values(activity).reduce((s, v) => s + v, 0);
+    const closing = storedAgg._sum.balance ?? 0;
+    const ledgerSum = ledgerAgg._sum.amount ?? 0;
+
+    return {
+      period: { start: period.startStr, end: period.endStr },
+      student: {
+        opening: closing - activityTotal,
+        closing,
+        activity: { ...activity, other: activityTotal - named },
+        activityTotal,
+      },
+      gl: { storedBalanceSum: closing, ledgerSum, diff: closing - ledgerSum },
+    };
+  }
+
+  /**
+   * The financial overview for the equal-length period immediately BEFORE the
+   * requested one — powers the "Joriy vs O'tgan davr" comparison on the Excel
+   * summary. Branch scope follows `getFinancialOverview` (branchId only).
+   */
+  async getPriorPeriodSummary(
+    companyId: number,
+    query: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
+    const period = resolvePeriod(query.startDate, query.endDate);
+    const durationMs = period.endTs.getTime() - period.start.getTime();
+    const prevEnd = new Date(period.start.getTime() - 1);
+    const prevStart = new Date(prevEnd.getTime() - durationMs);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    return this.getFinancialOverview(companyId, {
+      branchId: query.branchId,
+      startDate: iso(prevStart),
+      endDate: iso(prevEnd),
+    });
   }
 }

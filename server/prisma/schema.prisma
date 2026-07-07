@@ -2077,6 +2077,14 @@ model SalaryAccrual {
   // won't retroactively rewrite this row, so audit/breakdown reports stay
   // correct even if the course price moves. 0 for legacy/pre-versioning rows.
   perLessonCost   Int            @default(0)
+  // Center top-up marker (Faza 2, July 2026 full-deserved payroll). TRUE when
+  // this accrual was funded by the CENTER at calculation time for a lesson the
+  // student had NOT yet paid for (the "gap") — i.e. the teacher is paid their
+  // full deserved salary now, and the center fronts the uncovered slice. When
+  // the student later pays, retroactive billing's `createAccrual` upsert hits
+  // the SAME natural-key row and flips this back to FALSE (recovered), so the
+  // teacher is never paid twice. Ordinary student-covered accruals stay FALSE.
+  isCenterTopUp   Boolean        @default(false)
   salaryPaymentId String?
   salaryPayment   SalaryPayment? @relation(fields: [salaryPaymentId], references: [id])
 

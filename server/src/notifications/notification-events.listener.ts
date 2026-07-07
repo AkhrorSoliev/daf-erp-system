@@ -445,7 +445,7 @@ export class NotificationEventsListener {
 
         const title = 'Oldingi oydan ish haqi';
         const message =
-          `Kechikkan to'lov tufayli oldingi (yopilgan) oydagi ${count} ta dars uchun ` +
+          `Kechikkan to'lov tufayli oldingi oydagi ${count} ta dars uchun ` +
           `${formatSom(total)} so'm joriy oyligingizga qo'shildi.`;
 
         try {

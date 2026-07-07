@@ -17,9 +17,12 @@ import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
 import { ReportsExcelService } from './reports-excel.service';
 import { HolidaysModule } from '../holidays/holidays.module';
+import { ExpensesModule } from '../expenses/expenses.module';
+import { SalaryModule } from '../salary/salary.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
-  imports: [HolidaysModule],
+  imports: [HolidaysModule, ExpensesModule, SalaryModule, PaymentsModule],
   controllers: [ReportsController],
   providers: [
     ReportsService,

@@ -139,6 +139,7 @@ export class SalaryBreakdownService {
         perLessonCost: true,
         lessonDate: true,
         creditPeriodDate: true,
+        isCenterTopUp: true,
         attendanceId: true,
         reversedAt: true,
         reversalReason: true,
@@ -176,6 +177,12 @@ export class SalaryBreakdownService {
     // the UI can show "shundan oldingi oydan: X".
     const carriedOver = active.filter((r) => !!r.creditPeriodDate);
     const carriedOverTotal = carriedOver.reduce((s, r) => s + r.amount, 0);
+
+    // Center top-up slice (Faza 2): active accruals the center fronted for a
+    // lesson the student had not paid for. Surfaced separately so the payslip
+    // can show "shundan markaz qo'shimchasi: X".
+    const centerTopUp = active.filter((r) => r.isCenterTopUp);
+    const centerTopUpTotal = centerTopUp.reduce((s, r) => s + r.amount, 0);
 
     // Mark which (groupId, lessonDate) pairs had a substitute teacher override
     // active. Build a Set of "groupId|date" keys so each line gets an O(1)
@@ -221,6 +228,9 @@ export class SalaryBreakdownService {
         // credited to; `lessonDate` remains the real lesson date.
         isCarriedOver: !!r.creditPeriodDate,
         creditPeriodDate: r.creditPeriodDate,
+        // Center-fronted (top-up) accrual — teacher paid their full deserved
+        // salary for a lesson the student hadn't paid for yet.
+        isCenterTopUp: r.isCenterTopUp,
         reversedAt: r.reversedAt,
         reversalReason: r.reversalReason,
         reversedBy: r.reversedBy,
@@ -232,6 +242,8 @@ export class SalaryBreakdownService {
         reversedTotal,
         carriedOverCount: carriedOver.length,
         carriedOverTotal,
+        centerTopUpCount: centerTopUp.length,
+        centerTopUpTotal,
       },
     };
   }

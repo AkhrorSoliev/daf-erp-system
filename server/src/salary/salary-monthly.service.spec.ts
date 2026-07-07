@@ -29,7 +29,10 @@ describe('SalaryMonthlyService', () => {
         findUnique: jest.fn().mockResolvedValue(ceoCaller),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
+      salaryAccrual: {
+        findMany: jest.fn().mockResolvedValue([]),
+        groupBy: jest.fn().mockResolvedValue([]), // carriedOut aggregate
+      },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
@@ -64,6 +67,8 @@ describe('SalaryMonthlyService', () => {
     expect(res.totals).toEqual({
       fullDeserved: 0,
       covered: 0,
+      carriedIn: 0,
+      carriedOut: 0,
       gap: 0,
       advances: 0,
       netToPay: 0,
@@ -93,21 +98,120 @@ describe('SalaryMonthlyService', () => {
       { userId: 10010, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', groupId: 'g1', date: new Date('2026-06-10') },
-      { id: 'a2', groupId: 'g1', date: new Date('2026-06-12') },
+      { id: 'a1', groupId: 'g1', date: new Date('2026-07-10') },
+      { id: 'a2', groupId: 'g1', date: new Date('2026-07-12') },
     ]);
 
-    const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+    // July is a top-up month → netToPay uses the FULL (covered + gap) base.
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
 
     const row = res.data[0];
     expect(row.hasLessonData).toBe(true);
     expect(row.covered).toBe(6_000);
     expect(row.gap).toBe(6_000);
     expect(row.fullDeserved).toBe(12_000);
-    expect(row.netToPay).toBe(6_000); // COVERED base − 0 advances
+    expect(row.netToPay).toBe(12_000); // FULL base (covered + gap) − 0 advances
     expect(res.totals).toEqual(
       expect.objectContaining({ fullDeserved: 12_000, covered: 6_000, gap: 6_000 }),
     );
+  });
+
+  it('exposes carriedIn (part of covered) and carriedOut per teacher', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+    ]);
+    // Two covered accruals: one normal (creditPeriodDate null), one carried IN
+    // from a prior month (creditPeriodDate set → counts as "oldingi oydan").
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      { userId: 10010, attendanceId: 'a1', amount: 6_000, creditPeriodDate: null },
+      { userId: 10010, attendanceId: 'a2', amount: 4_000, creditPeriodDate: new Date('2026-06-01') },
+    ]);
+    // This month's lessons whose earning carried OUT to a later period.
+    prisma.salaryAccrual.groupBy.mockResolvedValue([
+      { userId: 10010, _sum: { amount: 2_500 } },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+    const row = res.data[0];
+    expect(row.covered).toBe(10_000); // both covered accruals
+    expect(row.carriedIn).toBe(4_000); // the one with creditPeriodDate
+    expect(row.carriedOut).toBe(2_500); // from the groupBy
+    expect(res.totals).toEqual(
+      expect.objectContaining({ carriedIn: 4_000, carriedOut: 2_500 }),
+    );
+  });
+
+  it('shows the COVERED base (not full) for a pre-top-up month (June)', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        salaryType: 'PERCENTAGE',
+        value: 30,
+        effectiveFrom: new Date('2026-05-01'),
+        effectiveTo: null,
+        config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+      },
+    ]);
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      { userId: 10010, attendanceId: 'a1', amount: 6_000 },
+    ]);
+    prisma.attendance.findMany.mockResolvedValue([
+      { id: 'a1', groupId: 'g1', date: new Date('2026-06-10') },
+      { id: 'a2', groupId: 'g1', date: new Date('2026-06-12') },
+    ]);
+
+    // June is BEFORE the top-up switch → netToPay stays on the covered base,
+    // matching what the cron actually paid for June (covered only).
+    const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+    const row = res.data[0];
+    expect(row.fullDeserved).toBe(12_000); // display columns unchanged
+    expect(row.gap).toBe(6_000);
+    expect(row.netToPay).toBe(6_000); // COVERED base − 0 advances (no top-up)
+  });
+
+  it('nets FULL deserved minus advances for an unsettled top-up month', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } }, // perLesson = 20_000
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        salaryType: 'PERCENTAGE',
+        value: 30, // 6_000 per lesson
+        effectiveFrom: new Date('2026-05-01'),
+        effectiveTo: null,
+        config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+      },
+    ]);
+    // covered 6_000 + gap 6_000 = fullDeserved 12_000; 2_000 avans given, no payment yet.
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      { userId: 10010, attendanceId: 'a1', amount: 6_000 },
+    ]);
+    prisma.attendance.findMany.mockResolvedValue([
+      { id: 'a1', groupId: 'g1', date: new Date('2026-07-10') },
+      { id: 'a2', groupId: 'g1', date: new Date('2026-07-12') },
+    ]);
+    prisma.expense.groupBy.mockResolvedValue([
+      { relatedUserId: 10010, _sum: { amount: 2_000 } },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    const row = res.data[0];
+    expect(row.fullDeserved).toBe(12_000);
+    expect(row.advances).toBe(2_000);
+    expect(row.netToPay).toBe(10_000); // 12_000 fullDeserved − 2_000 avans
   });
 
   it('blanks the per-lesson columns for a manual/config-gap month (May)', async () => {

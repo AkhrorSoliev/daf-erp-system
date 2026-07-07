@@ -202,7 +202,22 @@ export function SalaryMonthlyView({
                 </TooltipProvider>
               </TableHead>
               <TableHead className="text-right">Avans</TableHead>
-              <TableHead className="text-right">To&apos;lanishi kerak</TableHead>
+              <TableHead className="text-right">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center gap-1">
+                      To&apos;lanishi kerak
+                      <Info className="size-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-56">
+                      O&apos;qituvchiga to&apos;lanishi kerak bo&apos;lgan sof summa:
+                      to&apos;liq ishlangan (markaz qo&apos;shimchasi bilan) − avans.
+                      Hisoblab bo&apos;lingan oylar uchun haqiqiy to&apos;langan summa
+                      ko&apos;rsatiladi.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead>Holat</TableHead>
             </TableRow>
           </TableHeader>

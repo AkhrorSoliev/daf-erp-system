@@ -74,8 +74,17 @@ export class SalaryAccrualService {
     // When provided, a carry-over (closed-period redirect) pushes an event
     // here so the caller can notify the teacher post-commit.
     carriedOverSink?: CarriedOverAccrual[];
+    // Faza 2 — center-funded top-up accrual for an uncovered ("gap") lesson.
+    // Bypasses the B.1 coverage gate (no student deduction backs it — the
+    // center fronts the teacher's full deserved pay) and marks the row
+    // `isCenterTopUp=true`. Never carried over: the calc writes it into the
+    // (still-open) period it is settling. When the student later pays, the
+    // normal covered path upserts the SAME natural-key row and flips the flag
+    // back to FALSE (recovered) — the teacher is never paid twice.
+    centerFunded?: boolean;
   }) {
-    if (!params.deductionTransactionId) {
+    const centerFunded = params.centerFunded ?? false;
+    if (!centerFunded && !params.deductionTransactionId) {
       // Student has no active payment cycle — teacher does not earn for this lesson.
       return null;
     }
@@ -83,61 +92,80 @@ export class SalaryAccrualService {
     const db = params.tx ?? this.prisma;
 
     // Period-closed policy: if the lesson date falls inside a SalaryPayment
-    // period that is already APPROVED or PAID for this teacher, that payroll
-    // is closed and an accrual dated there would never be swept by any run.
+    // period that has ALREADY BEEN SETTLED for this teacher — i.e. the payroll
+    // cron has run for it and created a payment (CALCULATED, or later APPROVED/
+    // PAID) — that month is done and a late accrual dated there must NOT leak
+    // back into it (it would either strand unpaid or wrongly re-fold into the
+    // old draft). Note: CALCULATED counts as settled here even before the CEO
+    // approves it, because the cron settles a period the instant the next one
+    // begins, and the business rule is "a lesson paid for AFTER its month closed
+    // is paid in the CURRENT open month".
     // Instead of refusing (which silently lost late-payment earnings), we
     // CARRY THE ACCRUAL OVER to the current open period: keep `lessonDate`
     // (so the rate version + breakdown still reflect the real lesson) but set
     // `creditPeriodDate` to the current period start so the calc buckets it
     // there. The teacher is paid in the next cycle, labelled "oldingi oydan".
-    const closedPeriod = await db.salaryPayment.findFirst({
-      where: {
-        userId: params.teacherId,
-        companyId: params.companyId,
-        status: {
-          in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID],
-        },
-        periodStart: { lte: params.lessonDate },
-        periodEnd: { gte: params.lessonDate },
-      },
-      select: { id: true, status: true },
-    });
-
+    //
+    // Center-funded accruals skip this entirely — the calc writes them into the
+    // open period it is currently settling, so there is never anything to carry.
     let creditPeriodDate: Date | undefined;
-    if (closedPeriod) {
-      const current = await resolveCurrentPeriod(
-        db,
-        params.companyId,
-        new Date(),
-      );
-
-      // Safety net: if the CURRENT period is itself already APPROVED/PAID
-      // (should never happen — payroll closes at period end, not mid-cycle),
-      // there is no open period to credit. Preserve the old refuse-and-log
-      // behaviour so the accrual isn't dumped into another closed window.
-      const currentClosed = await db.salaryPayment.findFirst({
+    if (!centerFunded) {
+      const closedPeriod = await db.salaryPayment.findFirst({
         where: {
           userId: params.teacherId,
           companyId: params.companyId,
+          // CALCULATED included: a settled month is "closed" for new late
+          // accruals even before the CEO approves it. (The safety-net check
+          // below stays APPROVED/PAID-only — the CURRENT open period can still
+          // receive the carry-over into its draft.)
           status: {
-            in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID],
+            in: [
+              SalaryPaymentStatus.CALCULATED,
+              SalaryPaymentStatus.APPROVED,
+              SalaryPaymentStatus.PAID,
+            ],
           },
-          periodStart: { lte: current.periodEnd },
-          periodEnd: { gte: current.periodStart },
+          periodStart: { lte: params.lessonDate },
+          periodEnd: { gte: params.lessonDate },
         },
         select: { id: true, status: true },
       });
-      if (currentClosed) {
-        this.logger.error(
-          `Cannot carry over accrual: both the lesson period and the current period are closed. teacher ${params.teacherId}, lessonDate ${params.lessonDate.toISOString()}, current [${current.periodStart.toISOString()}..${current.periodEnd.toISOString()}] (SalaryPayment ${currentClosed.id} is ${currentClosed.status}). Admin must credit manually (Balance Withdrawal).`,
-        );
-        return null;
-      }
 
-      creditPeriodDate = current.periodStart;
-      this.logger.log(
-        `Carrying over accrual for teacher ${params.teacherId}: lessonDate ${params.lessonDate.toISOString()} is in closed SalaryPayment ${closedPeriod.id} (${closedPeriod.status}); crediting current period starting ${creditPeriodDate.toISOString()}.`,
-      );
+      if (closedPeriod) {
+        const current = await resolveCurrentPeriod(
+          db,
+          params.companyId,
+          new Date(),
+        );
+
+        // Safety net: if the CURRENT period is itself already APPROVED/PAID
+        // (should never happen — payroll closes at period end, not mid-cycle),
+        // there is no open period to credit. Preserve the old refuse-and-log
+        // behaviour so the accrual isn't dumped into another closed window.
+        const currentClosed = await db.salaryPayment.findFirst({
+          where: {
+            userId: params.teacherId,
+            companyId: params.companyId,
+            status: {
+              in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID],
+            },
+            periodStart: { lte: current.periodEnd },
+            periodEnd: { gte: current.periodStart },
+          },
+          select: { id: true, status: true },
+        });
+        if (currentClosed) {
+          this.logger.error(
+            `Cannot carry over accrual: both the lesson period and the current period are closed. teacher ${params.teacherId}, lessonDate ${params.lessonDate.toISOString()}, current [${current.periodStart.toISOString()}..${current.periodEnd.toISOString()}] (SalaryPayment ${currentClosed.id} is ${currentClosed.status}). Admin must credit manually (Balance Withdrawal).`,
+          );
+          return null;
+        }
+
+        creditPeriodDate = current.periodStart;
+        this.logger.log(
+          `Carrying over accrual for teacher ${params.teacherId}: lessonDate ${params.lessonDate.toISOString()} is in closed SalaryPayment ${closedPeriod.id} (${closedPeriod.status}); crediting current period starting ${creditPeriodDate.toISOString()}.`,
+        );
+      }
     }
 
     // Two-query lookup. Per-group beats global at the same effective range.
@@ -166,6 +194,28 @@ export class SalaryAccrualService {
         : version.value;
     }
 
+    // Carry-over notification must fire only for a genuinely NEW accrual. When
+    // a lesson was already paid via a center top-up, this covered-path write
+    // just UPDATES that existing row (recovery) — carrying over / notifying the
+    // teacher then would be wrong. Detect existence up front, but only on the
+    // (rare) carry-over path so the hot billing path pays no extra query.
+    let carryOverIsFresh = false;
+    if (creditPeriodDate) {
+      const already = await db.salaryAccrual.findUnique({
+        where: {
+          userId_studentId_groupId_lessonDate_attendanceId: {
+            userId: params.teacherId,
+            studentId: params.studentId,
+            groupId: params.groupId,
+            lessonDate: params.lessonDate,
+            attendanceId: params.attendanceId,
+          },
+        },
+        select: { id: true },
+      });
+      carryOverIsFresh = !already;
+    }
+
     const accrual = await db.salaryAccrual.upsert({
       where: {
         userId_studentId_groupId_lessonDate_attendanceId: {
@@ -187,6 +237,8 @@ export class SalaryAccrualService {
         companyId: params.companyId,
         deductionTransactionId: params.deductionTransactionId,
         salaryConfigVersionId: version.id,
+        // Center-funded gap accrual vs. ordinary student-covered accrual.
+        isCenterTopUp: centerFunded,
         // Write-once: only set on the initial create. `undefined` here means
         // "no carry-over" (column stays NULL → bucket by lessonDate as usual).
         creditPeriodDate,
@@ -201,6 +253,11 @@ export class SalaryAccrualService {
         reversedAt: null,
         reversedById: null,
         reversalReason: null,
+        // Recovery flip: when a real student-covered deduction later settles a
+        // lesson the center had fronted, the accrual becomes genuinely covered
+        // → clear the flag. A re-run of the gap sweep (centerFunded) leaves it
+        // untouched so a still-uncovered lesson stays marked as a top-up.
+        ...(centerFunded ? {} : { isCenterTopUp: false }),
         // `creditPeriodDate` intentionally NOT updated here — the carry-over
         // target is decided exactly once, on first write, so re-running
         // retroactive billing can never drift the accrual to a later period.
@@ -211,8 +268,10 @@ export class SalaryAccrualService {
     // the financial transaction commits. The upstream idempotency guards
     // (LESSON_CONSUMPTION check in bill(), salaryDeferred flag in
     // settleDeferredAccruals) ensure this branch runs once per accrual, so we
-    // don't double-notify on re-runs.
-    if (creditPeriodDate && params.carriedOverSink) {
+    // don't double-notify on re-runs. `carryOverIsFresh` additionally suppresses
+    // the notification when this write merely RECOVERED a row the center had
+    // already paid via top-up (the row existed → nothing was carried over).
+    if (creditPeriodDate && carryOverIsFresh && params.carriedOverSink) {
       params.carriedOverSink.push({
         teacherId: params.teacherId,
         studentId: params.studentId,

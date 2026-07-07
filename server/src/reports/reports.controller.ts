@@ -160,11 +160,34 @@ export class ReportsController {
     @Res() res: Response,
   ) {
     const branchIds = await this.resolveBranchScopeForUser(user);
+    const [company, branches] = await Promise.all([
+      this.prisma.company.findUnique({
+        where: { id: user.companyId },
+        select: { name: true },
+      }),
+      this.prisma.branch.findMany({
+        where: { companyId: user.companyId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+    ]);
+    const branchNames: Record<number, string> = Object.fromEntries(
+      branches.map((b) => [b.id, b.name]),
+    );
+    const branchLabel = query.branchId
+      ? (branchNames[query.branchId] ?? `Filial #${query.branchId}`)
+      : branchIds && branchIds.length > 0
+        ? branchIds.map((id) => branchNames[id] ?? `#${id}`).join(', ')
+        : 'Barcha filiallar';
+
     const buffer = await this.reportsExcelService.generate(user.companyId, {
       branchId: query.branchId,
       branchIds: branchIds ?? undefined,
       startDate: query.startDate,
       endDate: query.endDate,
+      companyName: company?.name ?? 'DaF Sprachzentrum',
+      branchLabel,
+      branchNames,
+      performedById: user.id,
     });
     const filename = `moliyaviy-hisobot-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
