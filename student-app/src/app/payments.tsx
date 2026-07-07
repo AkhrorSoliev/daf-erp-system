@@ -12,9 +12,10 @@ import { formatDate, formatSom } from '@/lib/format';
 import { paymentMethodLabel } from '@/lib/labels';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { cn } from '@/lib/cn';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 export default function Payments() {
+  const t = useT();
   const profile = useProfile();
   const pay = usePayments();
   const [amount, setAmount] = useState(0);
@@ -27,7 +28,7 @@ export default function Payments() {
       profile.refetch();
       pay.refetch();
     },
-    onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
+    onError: (error) => Alert.alert(t.common.errorTitle, getErrorMessage(error)),
   });
 
   if (profile.isLoading || pay.isLoading) return <Screen><LoadingCards /></Screen>;
@@ -67,12 +68,12 @@ export default function Payments() {
           </Card>
 
           <Card className="gap-3.5">
-            <Text variant="title">Balansni to&apos;ldirish</Text>
+            <Text variant="title">{t.payments.addBalance}</Text>
             <Input
               value={amount ? String(amount) : ''}
               onChangeText={(v) => setAmount(Number(v.replace(/\D/g, '')) || 0)}
               keyboardType="number-pad"
-              placeholder="Summa (so'm)"
+              placeholder={t.payments.amountPlaceholder}
             />
             <View className="flex-row flex-wrap gap-2">
               {QUICK_AMOUNTS.map((a) => {
@@ -101,13 +102,13 @@ export default function Payments() {
                 <Button label="Click" variant="secondary" disabled={!canPay} onPress={() => initMut.mutate('CLICK')} />
               </View>
             </View>
-            <Text variant="muted">To&apos;lovdan keyin balans bir necha soniyada yangilanadi.</Text>
+            <Text variant="muted">{t.payments.afterPaymentNote}</Text>
           </Card>
 
           <View className="gap-2.5">
-            <Text variant="title">To&apos;lovlar tarixi</Text>
+            <Text variant="title">{t.payments.history}</Text>
             {payments.length === 0 ? (
-              <EmptyState icon="receipt-outline" title="To'lovlar yo'q" />
+              <EmptyState icon="receipt-outline" title={t.payments.noPayments} />
             ) : (
               payments.map((p) => (
                 <View

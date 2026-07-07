@@ -4,14 +4,14 @@ import { Badge, Card, EmptyState, LoadingCards, ProgressBar, Screen, StackHeader
 import { tokens } from '@/design/tokens';
 import { useAttendanceHistory, useAttendanceStats } from '@/api/queries/use-attendance';
 import { formatDate } from '@/lib/format';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 import type { AttendanceStatus } from '@/api/types';
 
-const STATUS: Record<AttendanceStatus, { label: string; tone: BadgeTone }> = {
-  PRESENT: { label: 'Keldi', tone: 'success' },
-  LATE: { label: 'Kechikdi', tone: 'warning' },
-  ABSENT: { label: 'Kelmadi', tone: 'danger' },
-  EXCUSED: { label: 'Sababli', tone: 'neutral' },
+const STATUS_TONE: Record<AttendanceStatus, BadgeTone> = {
+  PRESENT: 'success',
+  LATE: 'warning',
+  ABSENT: 'danger',
+  EXCUSED: 'neutral',
 };
 
 const SEG = { present: tokens.color.success, late: tokens.color.warning, absent: tokens.color.danger, excused: '#9DB0BC' };
@@ -37,8 +37,16 @@ function Legend({ color, label }: { color: string; label: string }) {
 }
 
 export default function Attendance() {
+  const t = useT();
   const stats = useAttendanceStats();
   const history = useAttendanceHistory();
+
+  const STATUS_LABEL: Record<AttendanceStatus, string> = {
+    PRESENT: t.attendance.present,
+    LATE: t.attendance.late,
+    ABSENT: t.attendance.absent,
+    EXCUSED: t.attendance.excused,
+  };
 
   if (stats.isLoading || history.isLoading) return <Screen><LoadingCards /></Screen>;
   if (stats.isError) {
@@ -75,7 +83,7 @@ export default function Attendance() {
           {s ? (
             <Card className="gap-3.5">
               <View className="flex-row items-center justify-between">
-                <Text variant="muted">Umumiy davomat</Text>
+                <Text variant="muted">{t.attendance.total}</Text>
                 <Text variant="num" className={`text-[30px] ${percentClass(s.percentage)}`}>{s.percentage}%</Text>
               </View>
 
@@ -91,10 +99,10 @@ export default function Attendance() {
               ) : null}
 
               <View className="flex-row flex-wrap gap-x-4 gap-y-1.5">
-                <Legend color={SEG.present} label={`Keldi: ${s.present}`} />
-                <Legend color={SEG.late} label={`Kechikdi: ${s.late}`} />
-                <Legend color={SEG.absent} label={`Kelmadi: ${s.absent}`} />
-                <Legend color={SEG.excused} label={`Sababli: ${s.excused}`} />
+                <Legend color={SEG.present} label={`${t.attendance.present}: ${s.present}`} />
+                <Legend color={SEG.late} label={`${t.attendance.late}: ${s.late}`} />
+                <Legend color={SEG.absent} label={`${t.attendance.absent}: ${s.absent}`} />
+                <Legend color={SEG.excused} label={`${t.attendance.excused}: ${s.excused}`} />
               </View>
             </Card>
           ) : null}
@@ -106,7 +114,7 @@ export default function Attendance() {
                 <Badge label={`${g.stats.percentage}%`} tone={percentTone(g.stats.percentage)} />
               </View>
               {g.records.length === 0 ? (
-                <Text variant="muted" className="px-1">Yozuv yo&apos;q</Text>
+                <Text variant="muted" className="px-1">{t.attendance.noRecords}</Text>
               ) : (
                 g.records.slice(0, 20).map((r, i) => (
                   <View
@@ -114,7 +122,7 @@ export default function Attendance() {
                     className="flex-row items-center justify-between rounded-card border border-border bg-surface px-4 py-3"
                   >
                     <Text variant="bodyStrong">{formatDate(r.date)}</Text>
-                    <Badge label={STATUS[r.status]?.label ?? r.status} tone={STATUS[r.status]?.tone ?? 'neutral'} />
+                    <Badge label={STATUS_LABEL[r.status] ?? r.status} tone={STATUS_TONE[r.status] ?? 'neutral'} />
                   </View>
                 ))
               )}

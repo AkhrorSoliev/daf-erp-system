@@ -13,7 +13,7 @@ import { login, pollLoginRequest } from '@/api/auth';
 import { useAuth } from '@/auth/auth-store';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { env } from '@/config/env';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 // SMS password reset is hidden until an Eskiz brand nik is registered — until
 // then the OTP can't be delivered (test sender 4546 only sends a fixed string),
@@ -25,17 +25,19 @@ const POLL_INTERVAL = 2500;
 const POLL_TIMEOUT = 3 * 60 * 1000;
 
 function BrandMark() {
+  const t = useT();
   return (
     <View className="items-center gap-3">
       <View className="h-16 w-16 items-center justify-center rounded-2xl bg-coral-500" style={{ boxShadow: clay.coral }}>
         <Ionicons name="flash" size={32} color="#FFFFFF" />
       </View>
-      <Text variant="title">DAF Student</Text>
+      <Text variant="title">{t.auth.brand}</Text>
     </View>
   );
 }
 
 export default function Login() {
+  const t = useT();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [tgWaiting, setTgWaiting] = useState(false);
@@ -45,7 +47,7 @@ export default function Login() {
   const loginMut = useMutation({
     mutationFn: () => login(phone, password),
     onSuccess: (data) => signIn(data.accessToken, data.refreshToken),
-    onError: (error) => Alert.alert('Kirish xatosi', getErrorMessage(error)),
+    onError: (error) => Alert.alert(t.auth.loginErrorTitle, getErrorMessage(error)),
   });
 
   function botUrl() {
@@ -69,7 +71,7 @@ export default function Login() {
       if (!active) return;
       if (Date.now() - started > POLL_TIMEOUT) {
         setTgWaiting(false);
-        Alert.alert('Vaqt tugadi', "Qayta urinib ko'ring");
+        Alert.alert(t.auth.timeoutTitle, t.auth.timeoutMessage);
         return;
       }
       try {
@@ -99,15 +101,17 @@ export default function Login() {
           <ActivityIndicator color={tokens.color.primary} />
           <View className="gap-2">
             <Text variant="heading" className="text-center">
-              Telegram&apos;da tasdiqlang
+              {t.auth.telegramConfirmTitle}
             </Text>
             <Text variant="muted" className="text-center">
-              Botda <Text variant="label">START</Text> tugmasini bosing — tasdiqlangach avtomatik kirasiz.
+              {t.auth.telegramHintBefore}
+              <Text variant="label">{t.auth.telegramHintWord}</Text>
+              {t.auth.telegramHintAfter}
             </Text>
           </View>
           <View className="w-full gap-2.5">
-            <Button label="Telegramni qayta ochish" iconBefore="paper-plane" onPress={() => Linking.openURL(botUrl())} />
-            <Button label="Bekor qilish" variant="ghost" onPress={() => setTgWaiting(false)} />
+            <Button label={t.auth.telegramReopen} iconBefore="paper-plane" onPress={() => Linking.openURL(botUrl())} />
+            <Button label={t.common.cancel} variant="ghost" onPress={() => setTgWaiting(false)} />
           </View>
         </View>
       </Screen>
@@ -123,7 +127,7 @@ export default function Login() {
 
         <View className="gap-1">
           <Text variant="heading" className="text-center">{t.auth.login}</Text>
-          <Text variant="muted" className="text-center">DAF Sprachzentrum — o&apos;quvchi kabineti</Text>
+          <Text variant="muted" className="text-center">{t.auth.tagline}</Text>
         </View>
 
         <View className="gap-3">
@@ -138,8 +142,8 @@ export default function Login() {
             />
           </View>
           <View className="gap-1.5">
-            <Text variant="label">Parol</Text>
-            <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="••••••" />
+            <Text variant="label">{t.auth.passwordLabel}</Text>
+            <Input value={password} onChangeText={setPassword} secureTextEntry placeholder={t.auth.passwordPlaceholder} />
           </View>
         </View>
 
@@ -157,10 +161,10 @@ export default function Login() {
         <View className="gap-3">
           <View className="flex-row items-center gap-3">
             <View className="h-px flex-1 bg-line" />
-            <Text variant="muted">yoki</Text>
+            <Text variant="muted">{t.auth.orDivider}</Text>
             <View className="h-px flex-1 bg-line" />
           </View>
-          <Button label="Telegram orqali kirish" variant="secondary" iconBefore="paper-plane-outline" onPress={startTelegram} />
+          <Button label={t.auth.telegramLogin} variant="secondary" iconBefore="paper-plane-outline" onPress={startTelegram} />
         </View>
       </View>
     </Screen>

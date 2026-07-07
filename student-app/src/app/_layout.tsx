@@ -20,7 +20,9 @@ import {
 } from '@expo-google-fonts/nunito';
 
 import { queryClient } from '@/api/query-client';
+import { observability } from '@/lib/observability';
 import { useAuth } from '@/auth/auth-store';
+import { useLanguageStore } from '@/i18n';
 import { useThemeStore } from '@/design/theme';
 import { ThemeTransitionProvider } from '@/design/theme-transition';
 import { useColors, themeColors } from '@/design/colors';
@@ -39,7 +41,9 @@ export default function RootLayout() {
   const status = useAuth((s) => s.status);
   const hydrate = useAuth((s) => s.hydrate);
   const hydrateTheme = useThemeStore((s) => s.hydrate);
+  const hydrateLang = useLanguageStore((s) => s.hydrate);
   const [themeReady, setThemeReady] = useState(false);
+  const [langReady, setLangReady] = useState(false);
 
   const { colorScheme } = useColorScheme();
   const colors = useColors();
@@ -57,7 +61,7 @@ export default function RootLayout() {
     },
   };
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Baloo2_600SemiBold,
     Baloo2_700Bold,
     Baloo2_800ExtraBold,
@@ -68,10 +72,20 @@ export default function RootLayout() {
     Nunito_900Black,
   });
 
+  // Watchdog: if any boot gate wedges (font fetch error, SecureStore reject),
+  // never strand the user on the loader forever — bail out after a few seconds
+  // and log which gate was still pending so it shows up in diagnostics.
+  const [bailout, setBailout] = useState(false);
+
   useEffect(() => {
     hydrate();
     hydrateTheme().finally(() => setThemeReady(true));
-  }, [hydrate, hydrateTheme]);
+    hydrateLang().finally(() => setLangReady(true));
+  }, [hydrate, hydrateTheme, hydrateLang]);
+
+  useEffect(() => {
+    if (fontError) observability.captureError(fontError, { where: 'root.useFonts' });
+  }, [fontError]);
 
   // Theme the Android system navigation bar to match (no-op on iOS / older builds).
   useEffect(() => {
@@ -80,7 +94,24 @@ export default function RootLayout() {
     NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark').catch(() => {});
   }, [colors.bg, isDark]);
 
-  const ready = fontsLoaded && status !== 'loading' && themeReady;
+  // Fonts failing to load shouldn't block forever — render with the system
+  // fallback font instead of an endless spinner.
+  const ready = (fontsLoaded || fontError != null) && status !== 'loading' && themeReady && langReady;
+
+  useEffect(() => {
+    if (ready) return;
+    const t = setTimeout(() => {
+      observability.captureError(new Error('Boot watchdog tripped — loader stuck'), {
+        where: 'root.watchdog',
+        fontsLoaded,
+        fontError: fontError != null,
+        status,
+        themeReady,
+      });
+      setBailout(true);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [ready, fontsLoaded, fontError, status, themeReady]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -88,7 +119,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider value={navTheme}>
             <ThemeTransitionProvider>
-            {!ready ? (
+            {!(ready || bailout) ? (
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
                 <ActivityIndicator color={tokens.color.primary} />
               </View>
@@ -99,6 +130,11 @@ export default function RootLayout() {
                   <Stack.Screen name="schedule" />
                   <Stack.Screen name="attendance" />
                   <Stack.Screen name="payments" />
+                  <Stack.Screen name="battle" />
+                  <Stack.Screen name="battle-play" />
+                  <Stack.Screen name="vocabulary" />
+                  <Stack.Screen name="hoeren" />
+                  <Stack.Screen name="leaderboard" />
                   <Stack.Screen name="profile" />
                   <Stack.Screen name="settings" />
                   <Stack.Screen name="faq" />

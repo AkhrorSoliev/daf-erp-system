@@ -6,6 +6,7 @@ import { useColors, themeColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
 import { useThemeStore, type ThemeMode } from '@/design/theme';
 import { useThemeTransition } from '@/design/theme-transition';
+import { useT, useLang, useSetLang, LANGUAGES } from '@/i18n';
 import { cn } from '@/lib/cn';
 
 /** Background color the target mode resolves to — drives the reveal circle. */
@@ -14,26 +15,56 @@ function revealBg(m: ThemeMode): string {
   return scheme === 'dark' ? themeColors.dark.bg : themeColors.light.bg;
 }
 
-const THEME_OPTS: { mode: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { mode: 'system', label: 'Tizim', icon: 'phone-portrait-outline' },
-  { mode: 'light', label: "Yorug'", icon: 'sunny-outline' },
-  { mode: 'dark', label: "Qorong'i", icon: 'moon-outline' },
+const THEME_OPTS: { mode: ThemeMode; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { mode: 'system', icon: 'phone-portrait-outline' },
+  { mode: 'light', icon: 'sunny-outline' },
+  { mode: 'dark', icon: 'moon-outline' },
 ];
 
 export default function Settings() {
+  const t = useT();
   const colors = useColors();
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const { animateThemeChange } = useThemeTransition();
+  const lang = useLang();
+  const setLang = useSetLang();
+
+  const themeLabel: Record<ThemeMode, string> = {
+    system: t.settings.themeSystem,
+    light: t.settings.themeLight,
+    dark: t.settings.themeDark,
+  };
 
   return (
     <Screen>
-      <StackHeader title="Sozlamalar" />
+      <StackHeader title={t.tabs.settings} />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-6 p-5 pt-2">
+          {/* Language */}
+          <View className="gap-2.5">
+            <Text variant="caps" className="px-1">{t.settings.language}</Text>
+            <View className="flex-row gap-2 rounded-[20px] bg-sunk p-1.5">
+              {LANGUAGES.map((l) => {
+                const active = lang === l.code;
+                return (
+                  <Pressable
+                    key={l.code}
+                    onPress={() => setLang(l.code)}
+                    className={cn('flex-1 flex-row items-center justify-center gap-1.5 rounded-[14px] py-3', active && 'bg-surface')}
+                    style={active ? { boxShadow: shadow.sm } : undefined}
+                  >
+                    <Text className="text-[16px]">{l.flag}</Text>
+                    <Text className={cn('font-bodymd text-[14px]', active ? 'text-fg' : 'text-fg-muted')}>{l.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
           {/* Theme */}
           <View className="gap-2.5">
-            <Text variant="caps" className="px-1">Mavzu</Text>
+            <Text variant="caps" className="px-1">{t.settings.theme}</Text>
             <View className="flex-row gap-2 rounded-[20px] bg-sunk p-1.5">
               {THEME_OPTS.map((o) => {
                 const active = mode === o.mode;
@@ -49,7 +80,7 @@ export default function Settings() {
                     style={active ? { boxShadow: shadow.sm } : undefined}
                   >
                     <Ionicons name={o.icon} size={20} color={active ? colors.fg : colors.fgMuted} />
-                    <Text className={cn('font-bodymd text-[12px]', active ? 'text-fg' : 'text-fg-muted')}>{o.label}</Text>
+                    <Text className={cn('font-bodymd text-[12px]', active ? 'text-fg' : 'text-fg-muted')}>{themeLabel[o.mode]}</Text>
                   </Pressable>
                 );
               })}
@@ -58,22 +89,14 @@ export default function Settings() {
 
           {/* Coming soon */}
           <View className="gap-2.5">
-            <Text variant="caps" className="px-1">Boshqa</Text>
-            <ListRow
-              icon="language"
-              tone="sky"
-              label="Til"
-              className="opacity-60"
-              chevron={false}
-              trailing={<Badge label="Tez orada" tone="neutral" />}
-            />
+            <Text variant="caps" className="px-1">{t.settings.other}</Text>
             <ListRow
               icon="chatbubbles"
               tone="grape"
-              label="Tarjimon"
+              label={t.settings.translator}
               className="opacity-60"
               chevron={false}
-              trailing={<Badge label="Tez orada" tone="neutral" />}
+              trailing={<Badge label={t.common.comingSoon} tone="neutral" />}
             />
           </View>
         </View>

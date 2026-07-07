@@ -43,6 +43,14 @@ export const clay = {
     { offsetX: 0, offsetY: 6, blurRadius: 0, color: '#D2790A' },
     { offsetX: 0, offsetY: 16, blurRadius: 26, color: 'rgba(245,149,18,0.30)' },
   ] as Shadow,
+  grape: [
+    { offsetX: 0, offsetY: 6, blurRadius: 0, color: '#6D28D9' },
+    { offsetX: 0, offsetY: 16, blurRadius: 26, color: 'rgba(139,92,246,0.30)' },
+  ] as Shadow,
+  sky: [
+    { offsetX: 0, offsetY: 6, blurRadius: 0, color: '#1466C4' },
+    { offsetX: 0, offsetY: 16, blurRadius: 26, color: 'rgba(46,151,255,0.30)' },
+  ] as Shadow,
   white: [
     { offsetX: 0, offsetY: 5, blurRadius: 0, color: '#E2E8EF' },
     { offsetX: 0, offsetY: 12, blurRadius: 22, color: 'rgba(14,42,61,0.08)' },

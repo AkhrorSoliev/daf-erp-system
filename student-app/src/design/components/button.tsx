@@ -9,7 +9,7 @@ import { clay } from '@/design/shadows';
 import { EASE, DUR } from './motion';
 import { Text } from './text';
 
-type ButtonVariant = 'primary' | 'secondary' | 'teal' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'teal' | 'grape' | 'sky' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 const dangerClay = [
@@ -46,6 +46,8 @@ export function Button({
   const palette: Record<ButtonVariant, { bg: string; label: string; icon: string; clay?: any }> = {
     primary: { bg: 'bg-coral-500', label: 'text-white', icon: '#FFFFFF', clay: clay.coral },
     teal: { bg: 'bg-teal-500', label: 'text-white', icon: '#FFFFFF', clay: clay.teal },
+    grape: { bg: 'bg-grape-500', label: 'text-white', icon: '#FFFFFF', clay: clay.grape },
+    sky: { bg: 'bg-sky-500', label: 'text-white', icon: '#FFFFFF', clay: clay.sky },
     secondary: { bg: 'bg-surface', label: 'text-fg', icon: colors.fg, clay: colorScheme === 'dark' ? clay.whiteDark : clay.white },
     danger: { bg: 'bg-danger', label: 'text-white', icon: '#FFFFFF', clay: dangerClay },
     ghost: { bg: 'bg-transparent', label: 'text-fg-body', icon: colors.fg },
