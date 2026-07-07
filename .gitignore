@@ -16,6 +16,10 @@ service-account*.json
 server/dist
 server/generated
 server/audit-output/
+server/reports/
+
+# Generated Excel reports / scratch audio binaries (not source — regenerated)
+/audios/
 
 # Editor / agent runtime state
 .claude/scheduled_tasks.lock
