@@ -36,6 +36,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
     SalaryAccrualService,
     TeacherTimelineService,
     SalaryBreakdownService,
+    SalaryPaymentService,
   ],
 })
 export class SalaryModule {}

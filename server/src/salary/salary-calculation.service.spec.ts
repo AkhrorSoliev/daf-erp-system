@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { SalaryCalculationService } from './salary-calculation.service';
+import { SalaryAccrualService } from './salary-accrual.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -11,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 describe('SalaryCalculationService', () => {
   let service: SalaryCalculationService;
+  let accrualService: SalaryAccrualService;
   let prisma: any;
   let tx: any;
 
@@ -39,8 +41,19 @@ describe('SalaryCalculationService', () => {
       salaryPeriodSetting: { findFirst: jest.fn().mockResolvedValue(null) },
       salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
-      employeeSalaryConfigVersion: { findFirst: jest.fn() },
-      salaryPayment: { findFirst: jest.fn().mockResolvedValue(null) },
+      employeeSalaryConfigVersion: {
+        findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      salaryPayment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      // Only touched by the center top-up gap sweep (July 2026+).
+      attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      group: { findMany: jest.fn().mockResolvedValue([]) },
+      groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(async (cb: any) => cb(tx)),
     };
 
@@ -48,10 +61,12 @@ describe('SalaryCalculationService', () => {
       providers: [
         SalaryCalculationService,
         { provide: PrismaService, useValue: prisma },
+        { provide: SalaryAccrualService, useValue: { createAccrual: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<SalaryCalculationService>(SalaryCalculationService);
+    accrualService = module.get<SalaryAccrualService>(SalaryAccrualService);
   });
 
   const now = new Date('2026-06-20T08:00:00.000Z');
@@ -112,6 +127,98 @@ describe('SalaryCalculationService', () => {
       service.calculateMonthlySalaries(1, { asOfDate, now }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(tx.salaryPayment.create).not.toHaveBeenCalled();
+  });
+
+  describe('center top-up (Phase 0, July 2026+)', () => {
+    // A completed JULY period (cycleStartDay=8 → [Jul 8 → Aug 7]); top-up month.
+    const julyNow = new Date('2026-08-20T08:00:00.000Z');
+    const julyAsOf = new Date('2026-07-15T00:00:00.000Z');
+
+    it('fronts each uncovered billable lesson with a center-funded accrual', async () => {
+      // One billable lesson, no covered accrual → a gap for teacher 10010.
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-1',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+      ]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
+
+      expect(accrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teacherId: 10010,
+          studentId: 100,
+          groupId: 'g1',
+          attendanceId: 'att-1',
+          perLessonCost: 20_000,
+          centerFunded: true,
+        }),
+      );
+    });
+
+    it('skips a teacher whose payment for the period is already closed (APPROVED/PAID)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-1',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+      ]);
+      // 10010's July payment is already PAID → do not front dangling accruals.
+      prisma.salaryPayment.findMany.mockResolvedValue([{ userId: 10010 }]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
+
+      expect(accrualService.createAccrual).not.toHaveBeenCalled();
+    });
+
+    it('does NOT run the gap sweep for a pre-July (covered-only) period', async () => {
+      // Default `now` (2026-06-20) settles the completed May period.
+      await service.calculateMonthlySalaries(1, { now });
+
+      expect(accrualService.createAccrual).not.toHaveBeenCalled();
+      expect(prisma.attendance.findMany).not.toHaveBeenCalled();
+    });
   });
 
   it('CREATES a fresh draft and links accruals when no payment exists for the period', async () => {

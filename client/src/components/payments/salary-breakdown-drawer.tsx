@@ -10,6 +10,7 @@ import {
   RotateCcw,
   History,
   Wallet,
+  Building2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -51,6 +52,7 @@ interface BreakdownLine {
   isSubstitute?: boolean;
   isCarriedOver?: boolean;
   creditPeriodDate?: string | null;
+  isCenterTopUp?: boolean;
   reversedAt: string | null;
   reversalReason: string | null;
   reversedBy: { firstName: string; lastName: string } | null;
@@ -81,6 +83,8 @@ interface BreakdownResponse {
     reversedTotal: number;
     carriedOverCount: number;
     carriedOverTotal: number;
+    centerTopUpCount: number;
+    centerTopUpTotal: number;
   };
 }
 
@@ -350,6 +354,17 @@ export function SalaryBreakdownDrawer({
                     </div>
                   </div>
                 )}
+                {data.totals.centerTopUpCount > 0 && (
+                  <div className="mt-4 flex items-start gap-2 rounded-md bg-sky-50 dark:bg-sky-950/30 px-3 py-2 text-xs text-sky-900 dark:text-sky-300">
+                    <Building2 className="size-3.5 mt-0.5 shrink-0" />
+                    <div>
+                      Shundan <b>{fmt(data.totals.centerTopUpTotal)} so&apos;m</b>{" "}
+                      ({data.totals.centerTopUpCount} ta dars) — markaz
+                      qo&apos;shimchasi: o&apos;quvchi hali to&apos;lamagan darslar
+                      uchun to&apos;liq oylik markaz hisobidan
+                    </div>
+                  </div>
+                )}
                 {data.totals.reversedCount > 0 && (
                   <div className="mt-4 flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-300">
                     <RotateCcw className="size-3.5 mt-0.5 shrink-0" />
@@ -529,6 +544,14 @@ function BreakdownRow({ line, index }: { line: BreakdownLine; index: number }) {
               className="text-[10px] py-0 h-4 border-purple-300 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
             >
               Oldingi oydan
+            </Badge>
+          )}
+          {line.isCenterTopUp && (
+            <Badge
+              variant="outline"
+              className="text-[10px] py-0 h-4 border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
+            >
+              Markaz qo&apos;shimchasi
             </Badge>
           )}
         </div>

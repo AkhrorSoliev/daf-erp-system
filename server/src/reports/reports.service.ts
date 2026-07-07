@@ -31,6 +31,18 @@ import {
   AttendanceByGroupQueryDto,
   AttendanceTeacherPerfQueryDto,
 } from './dto/attendance-reports-query.dto';
+import { ExpensesService } from '../expenses/expenses.service';
+import { SalaryPaymentService } from '../salary/salary-payment.service';
+import { SalaryService } from '../salary/salary.service';
+import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
+
+// Shared shape for the Excel report's period + branch scope.
+export interface ReportScopeQuery {
+  branchId?: number;
+  branchIds?: number[];
+  startDate?: string;
+  endDate?: string;
+}
 
 @Injectable()
 export class ReportsService {
@@ -49,7 +61,51 @@ export class ReportsService {
     private profitLoss: ReportsProfitLossService,
     private cashFlow: ReportsCashFlowService,
     private balanceSheet: ReportsBalanceSheetService,
+    private expenses: ExpensesService,
+    private salaryPayments: SalaryPaymentService,
+    private salary: SalaryService,
+    private debtors: PaymentsDebtorsService,
   ) {}
+
+  // Excel financial report — line-item + reconciliation data sources. Kept on
+  // the facade so ReportsExcelService stays Prisma-free and depends only on
+  // ReportsService.
+  getPaymentLineItems(companyId: number, query: ReportScopeQuery) {
+    return this.payments.getPaymentLineItems(companyId, query);
+  }
+  getExpenseLineItems(companyId: number, query: ReportScopeQuery) {
+    return this.expenses.exportAllForReport(companyId, query);
+  }
+  getSalaryLineItems(
+    companyId: number,
+    query: { startDate?: string; endDate?: string },
+  ) {
+    return this.salaryPayments.getSalaryLineItemsForPeriod(companyId, query);
+  }
+  // Computed monthly teacher salary (the /payments/salary "Oyliklar" view) —
+  // meaningful for the month even before payroll is disbursed. `performedById`
+  // drives branch scope (CEO/Admin → all teachers; BD → own branch).
+  getSalaryMonthly(companyId: number, month: string, performedById: number) {
+    return this.salary.getMonthly({ month }, companyId, performedById);
+  }
+  getDebtorLineItems(companyId: number, branchIds?: number[]) {
+    return this.debtors.getDebtorLineItems(companyId, branchIds);
+  }
+  getPerBranchSummary(
+    companyId: number,
+    query: { startDate?: string; endDate?: string },
+  ) {
+    return this.payments.getPerBranchSummary(companyId, query);
+  }
+  getReconciliation(
+    companyId: number,
+    query: { startDate?: string; endDate?: string },
+  ) {
+    return this.financial.getReconciliation(companyId, query);
+  }
+  getPriorPeriodSummary(companyId: number, query: ReportScopeQuery) {
+    return this.financial.getPriorPeriodSummary(companyId, query);
+  }
 
   // Financial statements (Phase 1)
   getProfitLoss(companyId: number, query: ProfitLossQuery) {

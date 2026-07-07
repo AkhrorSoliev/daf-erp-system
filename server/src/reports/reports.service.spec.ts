@@ -16,6 +16,10 @@ import { ReportsCenterActivityService } from './reports-center-activity.service'
 import { ReportsProfitLossService } from './reports-profit-loss.service';
 import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
+import { ExpensesService } from '../expenses/expenses.service';
+import { SalaryPaymentService } from '../salary/salary-payment.service';
+import { SalaryService } from '../salary/salary.service';
+import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
 
 describe('ReportsService', () => {
   let service: ReportsService;
@@ -107,6 +111,10 @@ describe('ReportsService', () => {
         ReportsProfitLossService,
         ReportsCashFlowService,
         ReportsBalanceSheetService,
+        { provide: ExpensesService, useValue: {} },
+        { provide: SalaryPaymentService, useValue: {} },
+        { provide: SalaryService, useValue: {} },
+        { provide: PaymentsDebtorsService, useValue: {} },
         { provide: PrismaService, useValue: prisma },
         { provide: RedisService, useValue: redis },
         {

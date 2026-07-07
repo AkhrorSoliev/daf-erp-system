@@ -50,10 +50,12 @@ Rasmlardagi qoidalar (Eskiz kabinet → "Mening matnlarim" → "+ Matn qo'shish"
 Variant B tanlangani uchun **faqat bitta shablon** kerak — OTP kodi (parol hech qachon SMS bilan ketmaydi):
 
 ```
-DaF Sprachzentrum: parolni tiklash uchun tasdiqlash kodi: 1234. Kodni hech kimga bermang. Amal qilish muddati: 5 daqiqa.
+DaF Sprachzentrum mobil ilovasining parolini tiklash uchun tasdiqlash kodi: 0000. Kodni hech kimga bermang. Amal qilish muddati: 5 daqiqa.
 ```
 
-> Matn sof lotin/ASCII — bitta SMS segmenti (unicode emas, arzon). Ish vaqtida yuboriladigan matn tasdiqlangan shablonga **belgi-ma-belgi** mos kelishi shart (faqat o'zgaruvchan kod farq qiladi), aks holda Eskiz `REJECTED` qaytaradi. `RULE A`: `1234` aniq qiymat sifatida topshiriladi (placeholder emas), moderatorning o'zi maska qiladi. `RULE B`: resurs nomi `DaF Sprachzentrum` + maqsad `parolni tiklash uchun` matn ichida bor.
+> **Tarix (2026-06-24 rad etildi → tuzatildi):** birinchi topshirilgan variant `DaF Sprachzentrum: parolni tiklash uchun tasdiqlash kodi: 1234. ...` Eskiz tomonidan **Punkt 2** bo'yicha rad etildi. Sabab: tasdiqlangan namunalarda (`Eskiz.uz sayti`, `Eskiz Media platformasi`, `Eskiz mobil ilovasi`) resurs nomi **doim tur so'zi bilan** keladi; bizda esa resurs turi yo'q edi va `:` matnni gap ichiga singdirmasdan yorliq qilib qo'ygan edi. OTP **mobil ilova** (talaba app) loginini/parolini tiklash uchun ekanligi sababli, yangi variant resurs nomini `DaF Sprachzentrum mobil ilovasi` ko'rinishida beradi va tasdiqlangan `... platformasi ning parolini tiklash uchun kod` strukturasini aynan takrorlaydi.
+>
+> Matn sof lotin/ASCII — bitta SMS segmenti (unicode emas, arzon, ~138 belgi). Ish vaqtida yuboriladigan matn tasdiqlangan shablonga **belgi-ma-belgi** mos kelishi shart (faqat o'zgaruvchan kod farq qiladi), aks holda Eskiz `REJECTED` qaytaradi. `RULE A`: `0000` aniq qiymat sifatida topshiriladi (placeholder emas, Eskiz namunalaridagidek), moderatorning o'zi o'sha joyni maska qiladi; runtime'da kod haqiqiy 4 xonali son (1000–9999) bo'ladi. `RULE B`: resurs nomi `DaF Sprachzentrum mobil ilovasi` + maqsad `parolini tiklash uchun` matn ichida bor.
 >
 > **Jo'natuvchi nik (`from`) eslatmasi:** SMS standarti bo'yicha alfa-name (harfli jo'natuvchi nomi) **≤11 belgi** bo'lishi mumkin. "DaF Sprachzentrum" (17 belgi) nik sifatida sig'maydi — u faqat matn *ichidagi* resurs nomi. Nik uchun qisqaroq tasdiqlangan nom kerak (tavsiya: `DaFZentrum` = 10 belgi). Bu Eskiz kabinetida nik ro'yxatdan o'tkazilganda yakunlanadi; `ESKIZ_FROM` env shu qiymatga teng bo'ladi.
 >

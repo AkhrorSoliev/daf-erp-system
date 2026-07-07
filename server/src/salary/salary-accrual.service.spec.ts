@@ -66,6 +66,85 @@ describe('SalaryAccrualService', () => {
     });
   });
 
+  describe('center top-up (Faza 2)', () => {
+    const version = {
+      id: 'v-1',
+      salaryType: 'PERCENTAGE',
+      value: 30,
+      effectiveFrom: new Date('2026-01-01'),
+      effectiveTo: null,
+    };
+
+    it('centerFunded bypasses the B.1 gate and marks isCenterTopUp=true', async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'acc-1' });
+
+      const result = await service.createAccrual({
+        ...baseParams,
+        deductionTransactionId: null, // no student coverage — the center fronts it
+        centerFunded: true,
+      });
+
+      expect(result).toEqual({ id: 'acc-1' });
+      // A center top-up is written straight into the open period being settled —
+      // it must NOT probe for a closed period / carry over.
+      expect(prisma.salaryPayment.findFirst).not.toHaveBeenCalled();
+      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ isCenterTopUp: true }),
+        }),
+      );
+    });
+
+    it('covered path clears isCenterTopUp on update (recovery flip)', async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'acc-1' });
+
+      await service.createAccrual(baseParams); // ordinary student-covered accrual
+
+      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ isCenterTopUp: false }),
+          // A later covered deduction settling a fronted lesson clears the flag.
+          update: expect.objectContaining({ isCenterTopUp: false }),
+        }),
+      );
+    });
+
+    it('does NOT notify carry-over when recovering a row the center already paid', async () => {
+      // Lesson period is closed → the carry-over branch computes creditPeriodDate…
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'closed-1', status: 'PAID' }) // lesson period closed
+        .mockResolvedValueOnce(null); // current period still open
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      // …but the accrual already exists (a center top-up already paid it).
+      prisma.salaryAccrual.findUnique.mockResolvedValueOnce({ id: 'existing' });
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'existing' });
+
+      const sink: any[] = [];
+      await service.createAccrual({ ...baseParams, carriedOverSink: sink });
+
+      expect(sink).toHaveLength(0); // no spurious "oldingi oydan" notification
+    });
+
+    it('still notifies a genuinely fresh carried-over accrual', async () => {
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'closed-1', status: 'PAID' })
+        .mockResolvedValueOnce(null);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null); // fresh accrual
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
+
+      const sink: any[] = [];
+      await service.createAccrual({ ...baseParams, carriedOverSink: sink });
+
+      expect(sink).toHaveLength(1);
+      expect(sink[0]).toEqual(
+        expect.objectContaining({ teacherId: 1, studentId: 100 }),
+      );
+    });
+  });
+
   describe('two-query config lookup (P1.4 — groupId DESC was unsafe)', () => {
     it('uses per-group version when one matches', async () => {
       const groupVersion = {
@@ -295,6 +374,54 @@ describe('SalaryAccrualService', () => {
       expect(result).toBeNull();
       expect(prisma.employeeSalaryConfigVersion.findFirst).not.toHaveBeenCalled();
       expect(prisma.salaryAccrual.upsert).not.toHaveBeenCalled();
+    });
+
+    it('treats a CALCULATED period as settled → carries a late accrual over', async () => {
+      // 1st findFirst: the lesson's own period is merely CALCULATED (the cron
+      // ran but the CEO hasn't approved it). It must now count as "settled".
+      // 2nd findFirst: the current period is open (null) → safe to credit.
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'sp-1', status: 'CALCULATED' })
+        .mockResolvedValueOnce(null);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'PERCENTAGE',
+        value: 30,
+      });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      await service.createAccrual(baseParams);
+
+      // The closed-period query (1st call) must include CALCULATED so a late
+      // payment for an already-settled month carries forward instead of leaking.
+      const closedQuery = prisma.salaryPayment.findFirst.mock.calls[0][0];
+      expect(closedQuery.where.status.in).toEqual(
+        expect.arrayContaining(['CALCULATED', 'APPROVED', 'PAID']),
+      );
+      // ...and it actually carried over.
+      const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
+      expect(call.create.creditPeriodDate).toBeInstanceOf(Date);
+      expect(call.update).not.toHaveProperty('creditPeriodDate');
+    });
+
+    it('keeps the safety-net (current-period) query on APPROVED/PAID only', async () => {
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'sp-1', status: 'CALCULATED' })
+        .mockResolvedValueOnce(null);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'PERCENTAGE',
+        value: 30,
+      });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      await service.createAccrual(baseParams);
+
+      // A CALCULATED current-period draft must still be able to RECEIVE the
+      // carry-over, so the safety-net check must not treat CALCULATED as closed.
+      const safetyNetQuery = prisma.salaryPayment.findFirst.mock.calls[1][0];
+      expect(safetyNetQuery.where.status.in).toEqual(['APPROVED', 'PAID']);
+      expect(safetyNetQuery.where.status.in).not.toContain('CALCULATED');
     });
   });
 

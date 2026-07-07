@@ -22,6 +22,6 @@ import { MockExamsModule } from '../mock-exams/mock-exams.module';
     PaymentsPreviewService,
     PaymentEventsListener,
   ],
-  exports: [PaymentsService],
+  exports: [PaymentsService, PaymentsDebtorsService],
 })
 export class PaymentsModule {}

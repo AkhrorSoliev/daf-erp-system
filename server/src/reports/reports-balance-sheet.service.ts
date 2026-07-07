@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { branchWhere } from '../common/finance/period-helpers';
 
@@ -50,10 +50,15 @@ export class ReportsBalanceSheetService {
           where: { companyId, deletedAt: null, ...branch },
           _sum: { balance: true },
         }),
+        // Receivables + deferred are scoped to ACTIVE students so the balance
+        // sheet's "Debitorlik" ties exactly with the debtor list and the
+        // on-screen "Qarzdorlik" card (both active-only). Departed-student debt
+        // is handled separately via the debt write-off flow.
         this.prisma.student.aggregate({
           where: {
             companyId,
             deletedAt: null,
+            status: StudentStatus.ACTIVE,
             balance: { lt: 0 },
             ...studentBranch,
           },
@@ -64,6 +69,7 @@ export class ReportsBalanceSheetService {
           where: {
             companyId,
             deletedAt: null,
+            status: StudentStatus.ACTIVE,
             balance: { gt: 0 },
             ...studentBranch,
           },

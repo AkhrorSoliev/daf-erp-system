@@ -7,6 +7,7 @@ import {
   assertValidTransition,
   SALARY_PAYMENT_TRANSITIONS,
 } from '../common/finance/status-transitions';
+import { resolvePeriod } from '../common/finance/period-helpers';
 
 @Injectable()
 export class SalaryPaymentService {
@@ -179,6 +180,44 @@ export class SalaryPaymentService {
     });
 
     return { data: rows, total, page, pageSize };
+  }
+
+  /**
+   * PAID salary runs settled inside the period, for the Excel "Oyliklar"
+   * line-item sheet. `status: PAID` + `paidAt` in period mirrors the P&L
+   * teacher/admin salary basis, so the sheet's Jami reconciles with
+   * Foyda-va-zarar (teacherSalaries + adminSalaries). SalaryPayment has no
+   * branchId (company-level payroll), so this is intentionally not
+   * branch-scoped — the sheet states that. `grossAmount` re-adds settled
+   * advances (which `amount` is already net of) so gross = net + avans.
+   */
+  async getSalaryLineItemsForPeriod(
+    companyId: number,
+    query: { startDate?: string; endDate?: string },
+  ) {
+    const period = resolvePeriod(query.startDate, query.endDate);
+    const rows = await this.prisma.salaryPayment.findMany({
+      where: {
+        companyId,
+        status: SalaryPaymentStatus.PAID,
+        paidAt: { gte: period.start, lte: period.endTs },
+      },
+      select: {
+        amount: true,
+        status: true,
+        periodStart: true,
+        periodEnd: true,
+        paidAt: true,
+        user: { select: { id: true, firstName: true, lastName: true } },
+        settledExpenses: { select: { amount: true } },
+      },
+      orderBy: { paidAt: 'asc' },
+    });
+
+    return rows.map(({ settledExpenses, ...sp }) => {
+      const advancesTotal = settledExpenses.reduce((s, e) => s + e.amount, 0);
+      return { ...sp, advancesTotal, grossAmount: sp.amount + advancesTotal };
+    });
   }
 
   async approvePayment(id: string, companyId: number) {

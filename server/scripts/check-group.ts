@@ -22,9 +22,11 @@ async function main(prisma: PrismaClient) {
   }
 
   const isNum = /^\d+$/.test(arg);
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(arg);
   const where: Record<string, unknown> = { deletedAt: null };
   if (branch) where.branchId = branch;
-  if (isNum) where.groupNumber = Number(arg);
+  if (isUuid) where.id = arg;
+  else if (isNum) where.groupNumber = Number(arg);
   else where.name = { contains: arg, mode: 'insensitive' };
 
   const matches = await prisma.group.findMany({

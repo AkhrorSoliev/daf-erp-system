@@ -10,6 +10,7 @@ import {
   pickActiveVersion,
   RateVersion,
 } from './shared/deserved-math';
+import { isTopUpMonth } from './shared/topup';
 
 export interface SalaryMonthlyQuery {
   month?: string;
@@ -21,12 +22,15 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
 const DEFAULT_FLOOR_MONTH = '2026-05';
 
 /**
- * Net-to-pay base. **Faza 1 (current):** teachers are paid what students
- * actually covered (`'COVERED'`). **Faza 2 (July top-up, deferred):** flip to
- * `'FULL'` so the net becomes the full deserved salary (center tops up the gap).
- * This single constant is the whole switch — nothing else changes.
+ * Net-to-pay base per month. **Faza 2 (July center top-up):** from
+ * `TOPUP_EFFECTIVE_MONTH` on, the net-to-pay shown is the FULL deserved salary —
+ * `covered` (students-paid) PLUS `gap` (the center's top-up), minus advances —
+ * because the cron now actually PAYS that (`SalaryCalculationService` Phase 0).
+ * Earlier months stay on the covered base, so a given month's shown and paid
+ * figures always agree. Already-settled months show their real
+ * `SalaryPayment.amount` regardless (which, for a top-up month, already includes
+ * the gap). Gated by `isTopUpMonth` — the single switch lives in `shared/topup`.
  */
-const NET_BASE: 'COVERED' | 'FULL' = 'COVERED';
 
 /** Tashkent calendar month key ("YYYY-MM") of an instant. */
 function monthKeyOf(d: Date): string {
@@ -144,6 +148,8 @@ export class SalaryMonthlyService {
     const zeroTotals = {
       fullDeserved: 0,
       covered: 0,
+      carriedIn: 0,
+      carriedOut: 0,
       gap: 0,
       advances: 0,
       netToPay: 0,
@@ -163,8 +169,11 @@ export class SalaryMonthlyService {
       versionRows,
       advancesAgg,
       payments,
+      carriedOutAgg,
     ] = await Promise.all([
       // Covered ground-truth — accruals bucketed into this period (carry-over OR).
+      // `creditPeriodDate` is selected so a carried-IN accrual (its lessonDate is
+      // in a prior month, but it lands here) can be split out as "oldingi oydan".
       this.prisma.salaryAccrual.findMany({
         where: {
           companyId,
@@ -178,7 +187,12 @@ export class SalaryMonthlyService {
             },
           ],
         },
-        select: { userId: true, attendanceId: true, amount: true },
+        select: {
+          userId: true,
+          attendanceId: true,
+          amount: true,
+          creditPeriodDate: true,
+        },
       }),
       // Billable attendances in the period (for the GAP sweep).
       this.prisma.attendance.findMany({
@@ -246,7 +260,25 @@ export class SalaryMonthlyService {
         },
         orderBy: { createdAt: 'asc' },
       }),
+      // Carried OUT: this month's LESSONS whose earning was carried forward to a
+      // LATER period (a late payment arrived after this month was settled). These
+      // are NOT in `covered` (the OR above excludes them), so surface them so the
+      // teacher/CEO can see "keyingi oyga o'tgan".
+      this.prisma.salaryAccrual.groupBy({
+        by: ['userId'],
+        where: {
+          companyId,
+          userId: { in: ids },
+          reversedAt: null,
+          lessonDate: { gte: periodStart, lte: periodEnd },
+          creditPeriodDate: { gt: periodEnd },
+        },
+        _sum: { amount: true },
+      }),
     ]);
+    const carriedOutMap = new Map(
+      carriedOutAgg.map((a) => [a.userId as number, a._sum.amount ?? 0]),
+    );
 
     // ─── Build in-memory maps ─────────────────────────────────────────────
     const groupMap = new Map(groups.map((g) => [g.id, g]));
@@ -314,6 +346,7 @@ export class SalaryMonthlyService {
     // ─── Step 4: per-teacher aggregation (single pass over attendances) ──
     interface Agg {
       covered: number;
+      carriedIn: number;
       coveredAtt: Set<string>;
       gap: number;
       gapUnits: number;
@@ -324,6 +357,7 @@ export class SalaryMonthlyService {
     for (const id of ids) {
       agg.set(id, {
         covered: 0,
+        carriedIn: 0,
         coveredAtt: new Set(),
         gap: 0,
         gapUnits: 0,
@@ -335,6 +369,8 @@ export class SalaryMonthlyService {
       const a = agg.get(ac.userId);
       if (!a) continue;
       a.covered += ac.amount;
+      // A carried-IN accrual (creditPeriodDate set → lessonDate was a prior month).
+      if (ac.creditPeriodDate) a.carriedIn += ac.amount;
       if (ac.attendanceId) a.coveredAtt.add(ac.attendanceId);
     }
     for (const att of attendances) {
@@ -375,8 +411,11 @@ export class SalaryMonthlyService {
       if (payment) {
         netToPay = payment.amount;
       } else {
+        // Top-up months front the gap (full deserved); earlier months pay only
+        // what students covered. Keeps the shown netToPay equal to what the cron
+        // will actually pay for this month.
         const base =
-          NET_BASE === 'FULL' && hasLessonData ? a.covered + a.gap : a.covered;
+          isTopUpMonth(month) && hasLessonData ? a.covered + a.gap : a.covered;
         netToPay = Math.max(0, base - advances);
       }
 
@@ -392,6 +431,12 @@ export class SalaryMonthlyService {
         isFixedMonthly: a.isFixedMonthly,
         fullDeserved,
         covered,
+        // "Oldingi oydan" — portion of `covered` that came from prior-month
+        // lessons carried into this period. "Keyingi oyga o'tgan" — this month's
+        // lessons whose earning was carried forward to a later period (NOT in
+        // `covered`). Both are informational transparency columns.
+        carriedIn: a.carriedIn,
+        carriedOut: carriedOutMap.get(t.id) ?? 0,
         gap,
         advances,
         netToPay,
@@ -417,6 +462,8 @@ export class SalaryMonthlyService {
       (s, r) => ({
         fullDeserved: s.fullDeserved + (r.fullDeserved ?? 0),
         covered: s.covered + (r.covered ?? 0),
+        carriedIn: s.carriedIn + r.carriedIn,
+        carriedOut: s.carriedOut + r.carriedOut,
         gap: s.gap + (r.gap ?? 0),
         advances: s.advances + r.advances,
         netToPay: s.netToPay + r.netToPay,

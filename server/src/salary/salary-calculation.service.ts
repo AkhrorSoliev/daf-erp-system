@@ -1,14 +1,35 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryPaymentStatus, SalaryType, Prisma } from '@prisma/client';
 import {
   resolveCompletedPeriod,
   resolveCurrentPeriod,
 } from './shared/resolve-current-period';
+import { isTopUpPeriod } from './shared/topup';
+import {
+  perLessonAccrual,
+  pickActiveVersion,
+  RateVersion,
+} from './shared/deserved-math';
+import { SalaryAccrualService } from './salary-accrual.service';
+
+/** One uncovered billable lesson to be fronted by a center top-up accrual. */
+interface GapSpec {
+  studentId: number;
+  groupId: string;
+  attendanceId: string;
+  lessonDate: Date;
+  perLessonCost: number;
+}
 
 @Injectable()
 export class SalaryCalculationService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(SalaryCalculationService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private salaryAccrualService: SalaryAccrualService,
+  ) {}
 
   /**
    * Settle one payroll period.
@@ -51,6 +72,16 @@ export class SalaryCalculationService {
       throw new BadRequestException(
         "Tugamagan davrni hisoblab bo'lmaydi — davr hali yakunlanmagan",
       );
+    }
+
+    // Phase 0 — center top-up (full-deserved payroll, July 2026+). Front the
+    // teacher's pay for every uncovered ("gap") billable lesson in the period by
+    // writing center-funded SalaryAccrual rows. They are ordinary unlinked
+    // accruals, so the accrual sweep + payment loop below pick them up exactly
+    // like student-covered ones — the payment's gross becomes the FULL deserved
+    // salary. Periods before the switch keep the covered-only behaviour intact.
+    if (isTopUpPeriod(periodStart)) {
+      await this.writeCenterTopUpAccruals(companyId, periodStart, periodEnd);
     }
 
     const results: {
@@ -365,5 +396,225 @@ export class SalaryCalculationService {
     });
 
     return deducted;
+  }
+
+  /**
+   * Center top-up (Faza 2). For every billable lesson in the period with NO live
+   * accrual for the resolved teacher (a debtor's uncovered lesson), write a
+   * center-funded `SalaryAccrual` so the teacher is paid their FULL deserved
+   * salary. These are ordinary unlinked accruals, so the accrual sweep + payment
+   * loop pick them up like student-covered ones.
+   *
+   * Idempotent: lessons that already carry a live accrual (covered OR a prior
+   * top-up) are skipped by the sweep, and `createAccrual`'s upsert dedups on a
+   * re-run. Teachers whose payment for THIS period is already APPROVED/PAID are
+   * skipped so we never leave dangling unlinked accruals in a closed window.
+   *
+   * Runs in per-teacher, chunked Serializable transactions so the cron never
+   * opens one giant long-running tx. Cost: one `createAccrual` per gap lesson
+   * (rate lookup + balance mirror) — acceptable for a monthly 02:00 batch.
+   */
+  private async writeCenterTopUpAccruals(
+    companyId: number,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<void> {
+    const gapByUser = await this.computeGapAccruals(
+      companyId,
+      periodStart,
+      periodEnd,
+    );
+    if (gapByUser.size === 0) return;
+
+    const closedPayments = await this.prisma.salaryPayment.findMany({
+      where: {
+        companyId,
+        periodStart,
+        periodEnd,
+        status: {
+          in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID],
+        },
+      },
+      select: { userId: true },
+    });
+    const closedSet = new Set(closedPayments.map((p) => p.userId));
+
+    const CHUNK = 200;
+    let written = 0;
+    for (const [teacherId, specs] of gapByUser) {
+      if (closedSet.has(teacherId)) continue;
+      for (let i = 0; i < specs.length; i += CHUNK) {
+        const batch = specs.slice(i, i + CHUNK);
+        await this.prisma.$transaction(
+          async (tx) => {
+            for (const g of batch) {
+              await this.salaryAccrualService.createAccrual({
+                teacherId,
+                studentId: g.studentId,
+                groupId: g.groupId,
+                attendanceId: g.attendanceId,
+                lessonDate: g.lessonDate,
+                perLessonCost: g.perLessonCost,
+                companyId,
+                centerFunded: true,
+                tx,
+              });
+            }
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 20000,
+            timeout: 120000,
+          },
+        );
+        written += batch.length;
+      }
+    }
+    this.logger.log(
+      `Center top-up: wrote/upserted ${written} gap accrual(s) across ${gapByUser.size} teacher(s) for period [${periodStart.toISOString()}..${periodEnd.toISOString()}].`,
+    );
+  }
+
+  /**
+   * Bulk in-memory gap sweep — one query per input, no per-lesson DB lookups.
+   * Mirrors `SalaryMonthlyService.getMonthly`'s deserved/gap pass and the
+   * forecast script; all three share `deserved-math` so they stay in lock-step.
+   * Returns per-teacher gap specs (uncovered billable lessons with a resolvable,
+   * non-FIXED_MONTHLY rate). Config-gap lessons (no active rate at `lessonDate`)
+   * are skipped — a rate is never fabricated.
+   */
+  private async computeGapAccruals(
+    companyId: number,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<Map<number, GapSpec[]>> {
+    const [accruals, attendances, groups, groupTeachers, overrides, versionRows] =
+      await Promise.all([
+        // ALL non-reversed accruals bucketed into this period (covered + any
+        // prior top-up) → covered-key set so a lesson is never double-listed.
+        this.prisma.salaryAccrual.findMany({
+          where: {
+            companyId,
+            reversedAt: null,
+            OR: [
+              { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
+              {
+                creditPeriodDate: null,
+                lessonDate: { gte: periodStart, lte: periodEnd },
+              },
+            ],
+          },
+          select: { userId: true, attendanceId: true },
+        }),
+        this.prisma.attendance.findMany({
+          where: {
+            companyId,
+            status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+            date: { gte: periodStart, lte: periodEnd },
+          },
+          select: { id: true, studentId: true, groupId: true, date: true },
+        }),
+        this.prisma.group.findMany({
+          where: { companyId },
+          select: {
+            id: true,
+            course: { select: { price: true, lessonPaymentCount: true } },
+          },
+        }),
+        this.prisma.groupTeacher.findMany({
+          select: { groupId: true, teacherId: true },
+        }),
+        this.prisma.lessonTeacherOverride.findMany({
+          where: { deletedAt: null },
+          select: { groupId: true, date: true, teacherIds: true },
+        }),
+        this.prisma.employeeSalaryConfigVersion.findMany({
+          where: { companyId, config: { isActive: true } },
+          select: {
+            salaryType: true,
+            value: true,
+            effectiveFrom: true,
+            effectiveTo: true,
+            config: {
+              select: { userId: true, groupId: true, salaryType: true },
+            },
+          },
+        }),
+      ]);
+
+    const dateStr = (d: Date) => d.toISOString().slice(0, 10);
+
+    const coveredKey = new Set<string>(); // `${attendanceId}::${userId}`
+    for (const a of accruals) {
+      if (a.attendanceId) coveredKey.add(`${a.attendanceId}::${a.userId}`);
+    }
+
+    const groupMap = new Map(groups.map((g) => [g.id, g]));
+
+    const rosterMap = new Map<string, number[]>();
+    for (const gt of groupTeachers) {
+      const arr = rosterMap.get(gt.groupId) ?? [];
+      arr.push(gt.teacherId);
+      rosterMap.set(gt.groupId, arr);
+    }
+    const overrideMap = new Map<string, number[]>();
+    for (const o of overrides) {
+      overrideMap.set(`${o.groupId}::${dateStr(o.date)}`, o.teacherIds);
+    }
+    const resolveTeachers = (groupId: string, dStr: string): number[] =>
+      overrideMap.get(`${groupId}::${dStr}`) ?? rosterMap.get(groupId) ?? [];
+
+    const versByKey = new Map<string, RateVersion[]>();
+    const fixedMonthlyTeachers = new Set<number>();
+    for (const r of versionRows) {
+      const key = `${r.config.userId}::${r.config.groupId ?? 'GLOBAL'}`;
+      const arr = versByKey.get(key) ?? [];
+      arr.push({
+        salaryType: r.salaryType,
+        value: r.value,
+        effectiveFrom: r.effectiveFrom,
+        effectiveTo: r.effectiveTo,
+      });
+      versByKey.set(key, arr);
+      if (
+        r.config.salaryType === SalaryType.FIXED_MONTHLY &&
+        r.config.groupId == null
+      ) {
+        fixedMonthlyTeachers.add(r.config.userId);
+      }
+    }
+    const resolveRate = (
+      tid: number,
+      groupId: string,
+      at: Date,
+    ): RateVersion | null =>
+      pickActiveVersion(versByKey.get(`${tid}::${groupId}`), at) ??
+      pickActiveVersion(versByKey.get(`${tid}::GLOBAL`), at);
+
+    const gapByUser = new Map<number, GapSpec[]>();
+    for (const att of attendances) {
+      const g = groupMap.get(att.groupId);
+      if (!g) continue;
+      const lpc = g.course.lessonPaymentCount || 12;
+      const perLessonCost = Math.round(g.course.price / lpc);
+      const dStr = dateStr(att.date);
+      for (const tid of resolveTeachers(att.groupId, dStr)) {
+        if (coveredKey.has(`${att.id}::${tid}`)) continue; // already has a live accrual
+        if (fixedMonthlyTeachers.has(tid)) continue; // flat salary — no per-lesson gap
+        const v = resolveRate(tid, att.groupId, att.date);
+        if (!v) continue; // config gap — do NOT fabricate a rate
+        if (perLessonAccrual(v, perLessonCost, lpc) <= 0) continue; // FIXED_MONTHLY / zero
+        const arr = gapByUser.get(tid) ?? [];
+        arr.push({
+          studentId: att.studentId,
+          groupId: att.groupId,
+          attendanceId: att.id,
+          lessonDate: att.date,
+          perLessonCost,
+        });
+        gapByUser.set(tid, arr);
+      }
+    }
+    return gapByUser;
   }
 }

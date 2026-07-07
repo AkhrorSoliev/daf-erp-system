@@ -223,6 +223,57 @@ export class PaymentsDebtorsService {
   }
 
   /**
+   * Every active debtor, unpaginated, for the Excel "Qarzdorlar" line-item
+   * sheet. Reuses the canonical `debtorWhere` (same predicate as the balance
+   * sheet's accountsReceivable), so `total` ties exactly with the Balans sheet.
+   * The caller resolves `branchIds` to match the balance-sheet scope. Row list
+   * is capped; `total` comes from an aggregate so it stays exact.
+   */
+  async getDebtorLineItems(companyId: number, branchIds?: number[]) {
+    const where = this.debtorWhere(companyId, branchIds);
+    const [rows, agg] = await Promise.all([
+      this.prisma.student.findMany({
+        where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          balance: true,
+          branches: { select: { branchId: true } },
+          enrollments: {
+            where: { status: 'ACTIVE', deletedAt: null },
+            select: { group: { select: { name: true } } },
+          },
+        },
+        orderBy: { balance: 'asc' }, // most-negative first = largest debt first
+        take: 10_001,
+      }),
+      this.prisma.student.aggregate({
+        where,
+        _sum: { balance: true },
+        _count: true,
+      }),
+    ]);
+
+    const truncated = rows.length > 10_000;
+    return {
+      rows: (truncated ? rows.slice(0, 10_000) : rows).map((s) => ({
+        id: s.id,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        phone: s.phone,
+        debtAmount: -s.balance,
+        branchIds: s.branches.map((b) => b.branchId),
+        groups: s.enrollments.map((e) => e.group.name),
+      })),
+      truncated,
+      total: Math.abs(agg._sum.balance ?? 0),
+      count: agg._count,
+    };
+  }
+
+  /**
    * Card-ready aggregate for the debtors page: total owed, debtor count and
    * average debt (lifted from reports-financial), plus the payment-promise
    * counts that power the "Va'da / muddati o'tgan" card. Same `where` and
