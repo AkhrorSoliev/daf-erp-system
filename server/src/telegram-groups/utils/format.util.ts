@@ -22,6 +22,28 @@ export function formatSum(amount: number): string {
   return `${formatNumber(amount)} so'm`;
 }
 
+/**
+ * Signed money — prefixes a leading "+" for strictly-positive amounts so a
+ * net/profit line reads "+6 550 000 so'm". Negatives already carry the "-"
+ * from `formatNumber`; zero stays bare.
+ */
+export function formatSignedSum(amount: number): string {
+  const rounded = Math.round(amount);
+  return `${rounded > 0 ? '+' : ''}${formatSum(rounded)}`;
+}
+
+/**
+ * Escapes the three characters that break Telegram `parse_mode: 'HTML'`.
+ * Interpolated free text (company/branch names) MUST pass through this — a
+ * name containing `&`, `<` or `>` otherwise makes Telegram reject the message.
+ */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 export function formatDate(d: Date | string): string {
   const date = d instanceof Date ? d : new Date(d);
   const dd = String(date.getDate()).padStart(2, '0');

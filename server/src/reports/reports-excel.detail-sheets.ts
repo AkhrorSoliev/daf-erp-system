@@ -66,7 +66,7 @@ export function paymentsSheet(
     'Bu davrda kassaga real tushgan har bir to‘lov (bittalab).',
     'Summa — to‘langan pul; Usul — naqd/Payme/Click/o‘tkazma; Daromad turi — nima uchun to‘langani.',
     '"Summa" ustunidagi rangli chiziq — to‘lov kattaligini ko‘rsatadi.',
-    'Jami summa — "Foyda va zarar" varag‘idagi daromadga aynan teng (Tekshiruv varag‘ida tasdiqlangan).',
+    'Jami summa — "Foyda va zarar" bo‘limidagi daromadga aynan teng (Tekshiruv bo‘limida tasdiqlangan).',
   ], 8);
 }
 
@@ -108,8 +108,8 @@ export function expensesSheet(
   sheetNotes(ws, [
     'Bu davrda qilingan har bir xarajat (ijara, kommunal, marketing va h.k.).',
     'Ustozga berilgan avans ham shu yerda — "Ustoz" ustunida ismi bilan.',
-    'Jami — "Foyda va zarar" varag‘idagi operatsion xarajat + avansga teng (Tekshiruvda tasdiqlangan).',
-    'Diqqat: ustozlar oyligi bu yerda EMAS — u alohida "Oyliklar" varag‘ida.',
+    'Jami — "Foyda va zarar" bo‘limidagi operatsion xarajat + avansga teng (Tekshiruvda tasdiqlangan).',
+    'Diqqat: ustozlar oyligi bu yerda EMAS — u alohida "Oyliklar" bo‘limida.',
   ], 8);
 }
 
@@ -168,7 +168,7 @@ export function salariesSheet(wb: Workbook, salaries: any, period: string) {
     'Jami hisoblangan = O‘quvchilar to‘lagan + Markaz qo‘shimchasi. Sof to‘lanadigan = avans ayirilgach ustozga beriladigan summa.',
     '"shundan oldingi oydan" — "O‘quvchilar to‘lagan" ichida OLDINGI oy darslaridan kechikib kelib qo‘shilgan qism (uning bir bo‘lagi).',
     '"Keyingi oyga o‘tgan" — bu oy darslarining kech to‘langani KEYINGI oyga o‘tdi (bu oy summasida YO‘Q; keyingi oy oyligiga qo‘shiladi).',
-    '"Sof to‘lanadigan" ustunidagi rangli chiziq — oylik kattaligini ko‘rsatadi. Diqqat: oylik odatda keyingi oy boshida to‘lanadi. Bu varaq faqat USTOZLAR.',
+    '"Sof to‘lanadigan" ustunidagi rangli chiziq — oylik kattaligini ko‘rsatadi. Diqqat: oylik odatda keyingi oy boshida to‘lanadi. Bu bo‘lim faqat USTOZLAR.',
     '"—" belgisi — o‘sha oyda dars ma‘lumoti yo‘q (masalan o‘tish oyi).',
   ], 9);
 }
@@ -211,7 +211,7 @@ export function debtorsSheet(
   sheetNotes(ws, [
     'Hozir markazga qarzdor bo‘lgan FAOL o‘quvchilar (eng katta qarz yuqorida).',
     '"Qarz" ustunidagi rangli chiziq — qarz kattaligini ko‘rsatadi.',
-    'Jami qarz — "Balans" varag‘idagi "Debitorlik" bilan bir xil (Tekshiruvda tasdiqlangan).',
+    'Jami qarz — "Balans" bo‘limidagi "Debitorlik" bilan bir xil (Tekshiruvda tasdiqlangan).',
     'Bu joriy kundagi holat (davr oxiri emas). Ketib qolgan o‘quvchilar qarzi bu yerda yo‘q — u alohida "hisobdan chiqarish" oqimida.',
   ], 6);
 }
@@ -219,10 +219,10 @@ export function debtorsSheet(
 // ---- Sheet 10: Oylik dinamika ----
 export function trendSheet(wb: Workbook, trend: any) {
   const ws = wb.addWorksheet('Oylik dinamika');
-  ws.columns = [{ width: 12 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 16 }];
+  ws.columns = [{ width: 12 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 20 }];
   sheetTitle(ws, 'Oylik dinamika (so‘nggi 6 oy)', 'Tanlangan davrdan qat‘i nazar', 5);
   const rows = Array.isArray(trend) ? trend : [];
-  const header = tableHeader(ws, ['Oy', 'Tushum', 'Chiqim', 'Foyda', 'Foyda Δ%']);
+  const header = tableHeader(ws, ['Oy', 'Tushum', 'Chiqim', 'Foyda', 'Foyda o‘zgarishi %']);
   const firstDataRow = header.number + 1;
   rows.forEach((m: any, i: number) => {
     const prev = i > 0 ? rows[i - 1].profit : null;
@@ -282,7 +282,6 @@ export function perBranchSheet(wb: Workbook, perBranch: any, period: string) {
 export function reconciliationSheet(
   wb: Workbook,
   recon: any,
-  cf: any,
   pl: any,
   payments: any,
   expenses: any,
@@ -290,6 +289,10 @@ export function reconciliationSheet(
   debtors: any,
   bs: any,
   period: string,
+  // When false (a past-month bot export that dropped the Balans/Qarzdorlar
+  // sheets), skip the two rows that tie against live balance-sheet/debtor state
+  // — they'd compare a current-state receivable to a past-period P&L.
+  includePointInTime = true,
 ) {
   const ws = wb.addWorksheet('Tekshiruv');
   ws.columns = [
@@ -305,23 +308,25 @@ export function reconciliationSheet(
   sectionHeader(ws, 'Ties (mos kelishi)', 6);
   tableHeader(ws, ['Tekshiruv', 'Kutilgan', 'Haqiqiy', 'Farq', 'Holat', 'Izoh']);
   checkRow(ws, 'To‘lovlar = Foyda-zarar daromad', pl?.revenue?.total ?? 0, payments?.total ?? 0, 'Cash tie-out.');
-  checkRow(ws, 'Qarzdorlar = Balans debitorlik', bs?.assets?.accountsReceivable ?? 0, debtors?.total ?? 0);
+  if (includePointInTime)
+    checkRow(ws, 'Qarzdorlar = Balans debitorlik', bs?.assets?.accountsReceivable ?? 0, debtors?.total ?? 0);
   checkRow(ws, 'Xarajatlar = P&L (operatsion + avans)', opByCat + (pl?.costOfServices?.teacherAdvances ?? 0), expenses?.total ?? 0);
-  checkRow(ws, 'Kassa footing', (cf?.openingBalance ?? 0) + (cf?.netCashFlow ?? 0), cf?.closingBalance ?? 0);
   checkRow(ws, 'O‘quvchi balansi footing', (recon?.student?.opening ?? 0) + (recon?.student?.activityTotal ?? 0), recon?.student?.closing ?? 0);
   checkRow(ws, 'GL recon: Σ balans = Σ ledger (kompaniya)', recon?.gl?.storedBalanceSum ?? 0, recon?.gl?.ledgerSum ?? 0);
 
   // Balanslashuv farqi (bir yozuvli tizim) — moved here from Balans, informational.
-  const balGap = (bs?.assets?.total ?? 0) - ((bs?.liabilities?.total ?? 0) + (bs?.equity?.total ?? 0));
-  sectionHeader(ws, 'Balanslashuv (bir yozuvli tizim — ma‘lumot)', 6);
-  kvRow(ws, 'Aktiv − (Passiv + Kapital) farqi', balGap, 'Tizim ikki yozuvli GL emas — 0 ga yaqin bo‘lsa hammasi joyida.');
+  if (includePointInTime) {
+    const balGap = (bs?.assets?.total ?? 0) - ((bs?.liabilities?.total ?? 0) + (bs?.equity?.total ?? 0));
+    sectionHeader(ws, 'Balanslashuv (bir yozuvli tizim — ma‘lumot)', 6);
+    kvRow(ws, 'Aktiv − (Passiv + Kapital) farqi', balGap, 'Tizim ikki yozuvli GL emas — 0 ga yaqin bo‘lsa hammasi joyida.');
+  }
 
   // Oylik — computed vs cash-paid (informational, NOT a MOS/XATO tie: they are
   // offset by the payroll cycle — this month's salary is paid next month).
   const computedNet = salaries?.totals?.netToPay ?? 0;
   const cashPaid = (pl?.costOfServices?.teacherSalaries ?? 0) + (pl?.operatingExpenses?.adminSalaries ?? 0);
   sectionHeader(ws, 'Oylik: hisoblangan vs naqd to‘langan (ma‘lumot)', 6);
-  kvRow(ws, 'Hisoblangan oylik (sof, shu oy)', computedNet, '"Oyliklar" varag‘i — shu oy uchun ustozlarga hisoblangan.');
+  kvRow(ws, 'Hisoblangan oylik (sof, shu oy)', computedNet, '"Oyliklar" bo‘limi — shu oy uchun ustozlarga hisoblangan.');
   kvRow(ws, 'Naqd to‘langan oylik (P&L)', cashPaid, 'Shu davrda haqiqatan pul chiqarilgan oylik.');
 
   // O'quvchi balansi roll-forward
@@ -338,21 +343,11 @@ export function reconciliationSheet(
   kvRow(ws, '± Boshqa', a.other ?? 0);
   totalsRow(ws, ['= Davr oxiri Σ balans', recon?.student?.closing ?? 0, ''], [2]);
 
-  // Kassa roll-forward
-  sectionHeader(ws, 'Kassa aylanmasi', 6);
-  kvRow(ws, 'Ochilish qoldig‘i', cf?.openingBalance ?? 0);
-  kvRow(ws, '+ Kirim', cf?.inflows?.operating ?? 0);
-  kvRow(ws, '− Chiqim', cf?.outflows?.operating ?? 0);
-  kvRow(ws, '± O‘tkazma (sof)', cf?.transfersNet ?? 0);
-  kvRow(ws, '± Tuzatish', cf?.adjustments ?? 0);
-  totalsRow(ws, ['= Yakuniy qoldiq', cf?.closingBalance ?? 0, ''], [2]);
-
   sheetNotes(ws, [
-    'Bu varaq hisobotning har bir raqami bir-biriga MOS kelishini isbotlaydi (audit).',
+    'Bu bo‘lim hisobotning har bir raqami bir-biriga MOS kelishini isbotlaydi (audit).',
     'MOS = to‘g‘ri; XATO = nomuvofiqlik (farq ko‘rsatiladi va tuzatilishi kerak).',
     'Aylanma (roll-forward): oy boshidagi qoldiq + davr harakatlari = oy oxiridagi qoldiq — to‘g‘ri qo‘shilib chiqishi ("footing") kerak.',
     'O‘quvchi balansi aylanmasidagi satrlar: Hisoblangan darslar = darslar uchun yechilgan pul; Hisobdan chiqarish = kechirilgan qarz; Boshlang‘ich balans = tizimga o‘tishda kiritilgan; Balans yechish = ortiqcha balansni daromadga o‘tkazish; Boshqa = mayda tuzatishlar.',
-    'Kassa aylanmasi = kassa/bank pulining oy davomidagi harakati (Pul oqimi varag‘i bilan bir xil).',
     'Oylik "hisoblangan" va "naqd to‘langan" farq qiladi — chunki oylik keyingi oy boshida to‘lanadi (bu XATO emas).',
   ], 6);
 }

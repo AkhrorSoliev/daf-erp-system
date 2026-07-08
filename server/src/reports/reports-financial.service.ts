@@ -555,6 +555,120 @@ export class ReportsFinancialService {
   }
 
   /**
+   * Yearly trend — one bucket per calendar year, from the company's
+   * `systemStartDate` year (capped to the last 5 years) up to the current year.
+   * Powers the Excel "Yillar kesimida" sheet; columns grow automatically as
+   * years accumulate. Uses the SAME avanssiz income/expense split as
+   * `getFinancialTrend` so a year total equals the sum of its months.
+   */
+  async getYearlyTrend(companyId: number, branchId?: number) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { systemStartDate: true },
+    });
+    const startYear = company?.systemStartDate
+      ? company.systemStartDate.getFullYear()
+      : currentYear;
+    // Keep the block readable — at most the 5 most recent years.
+    const firstYear = Math.max(startYear, currentYear - 4);
+    const years: number[] = [];
+    for (let y = firstYear; y <= currentYear; y++) years.push(y);
+
+    const branchFilter = branchId ? { branchId } : {};
+
+    return Promise.all(
+      years.map(async (year) => {
+        const start = new Date(year, 0, 1);
+        const end = new Date(year, 11, 31, 23, 59, 59, 999);
+        const dateFilter = { gte: start, lte: end };
+
+        const [
+          income,
+          expenseAgg,
+          salaryAgg,
+          newStudents,
+          payerCount,
+          advancePaidAgg,
+          advanceSettledAgg,
+        ] = await Promise.all([
+          this.prisma.payment.aggregate({
+            where: {
+              companyId,
+              status: 'COMPLETED',
+              createdAt: dateFilter,
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+            _count: true,
+          }),
+          this.prisma.expense.aggregate({
+            where: {
+              companyId,
+              deletedAt: null,
+              date: { gte: start, lte: end },
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          }),
+          this.prisma.salaryPayment.aggregate({
+            where: { companyId, status: 'PAID', paidAt: dateFilter },
+            _sum: { amount: true },
+          }),
+          this.prisma.student.count({
+            where: { companyId, deletedAt: null, createdAt: dateFilter },
+          }),
+          this.prisma.payment.groupBy({
+            by: ['studentId'],
+            where: { companyId, status: 'COMPLETED', createdAt: dateFilter },
+          }),
+          this.prisma.expense.aggregate({
+            where: {
+              companyId,
+              deletedAt: null,
+              category: 'TEACHER_ADVANCE',
+              date: { gte: start, lte: end },
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          }),
+          this.prisma.expense.aggregate({
+            where: {
+              companyId,
+              deletedAt: null,
+              category: 'TEACHER_ADVANCE',
+              settledBySalaryPayment: { status: 'PAID', paidAt: dateFilter },
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          }),
+        ]);
+
+        const incomeTotal = income._sum.amount ?? 0;
+        const expenseTotal = expenseAgg._sum.amount ?? 0;
+        const salaryTotal = salaryAgg._sum.amount ?? 0;
+        const paymentCount = income._count;
+        const advancePaid = advancePaidAgg._sum.amount ?? 0;
+        const advanceSettled = advanceSettledAgg._sum.amount ?? 0;
+        const chiqimTotal =
+          expenseTotal - advancePaid + salaryTotal + advanceSettled;
+
+        return {
+          year,
+          income: incomeTotal,
+          expenses: chiqimTotal,
+          profit: incomeTotal - chiqimTotal,
+          newStudents,
+          payerCount: payerCount.length,
+          avgPayment:
+            paymentCount > 0 ? Math.round(incomeTotal / paymentCount) : 0,
+        };
+      }),
+    );
+  }
+
+  /**
    * Reconciliation data for the Excel "Tekshiruv" sheet. COMPANY-WIDE by design:
    * student balances aren't cleanly branch-scoped, so scoping the roll-forward
    * per branch would break the foot. The sheet labels this "(kompaniya bo'yicha)".

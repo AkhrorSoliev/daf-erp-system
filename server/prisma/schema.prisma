@@ -2589,3 +2589,24 @@ enum AlertSeverity {
   WARNING
   CRITICAL
 }
+
+/// Nightly snapshot of a company's key financial figures, written by the
+/// 21:00 Telegram daily-report cron AFTER a successful send. Powers the
+/// day-over-day debt ▲/▼ delta shown in the daily report ("bugun ▲ 1 200 000").
+/// One row per company per Tashkent calendar day (upsert on same-day re-run);
+/// the delta compares today's live figures against the most recent PRIOR day's
+/// row, so a missing row (first run, or an off day) just means no delta shown.
+model DailyFinancialSnapshot {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  date           DateTime @db.Date
+  totalDebt      Int      @default(0)
+  debtorCount    Int      @default(0)
+  activeStudents Int      @default(0)
+  mtdIncome      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([companyId, date])
+  @@index([companyId, date])
+}

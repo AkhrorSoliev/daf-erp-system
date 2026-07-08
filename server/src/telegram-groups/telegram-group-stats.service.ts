@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
 import {
   firstOfThisMonthUtc,
-  formatDate,
   formatNumber,
   formatSum,
   tashkentDayRange,
@@ -23,7 +23,10 @@ const TEACHER_ROLE_NAME = 'O\'qituvchi';
  */
 @Injectable()
 export class TelegramGroupStatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dailyReport: TelegramGroupDailyReportService,
+  ) {}
 
   // -------------------- /oquvchilar --------------------
   async buildStudentsBlock(companyId: number): Promise<string> {
@@ -325,124 +328,15 @@ export class TelegramGroupStatsService {
   }
 
   // -------------------- /hisobot (full daily) --------------------
+  /**
+   * The full end-of-day report. The heavy composition lives in
+   * {@link TelegramGroupDailyReportService}; this delegator keeps the bot
+   * command (`/hisobot`) and the 21:00 cron on one code path. On-demand
+   * `/hisobot` intentionally does NOT persist a snapshot — only the cron
+   * writes tonight's baseline after a confirmed send.
+   */
   async buildDailyReport(companyId: number): Promise<string> {
-    const today = tashkentDayRange();
-    const firstOfMonth = firstOfThisMonthUtc();
-    const todayDate = tashkentTodayDate();
-
-    const teacherRole = await this.prisma.role.findFirst({
-      where: { name: { in: ['Teacher', TEACHER_ROLE_NAME] } },
-      select: { id: true },
-    });
-    const teacherRoleId = teacherRole?.id;
-
-    const [
-      activeStudents,
-      todayNewStudents,
-      activeGroups,
-      activeTeachers,
-      todayPayments,
-      attendanceBreakdown,
-      lessonGroupsToday,
-      debtorAgg,
-      monthlyIncome,
-      company,
-    ] = await Promise.all([
-      this.prisma.student.count({
-        where: { companyId, deletedAt: null, status: 'ACTIVE' },
-      }),
-      this.prisma.student.count({
-        where: {
-          companyId,
-          deletedAt: null,
-          createdAt: { gte: today.start, lt: today.end },
-        },
-      }),
-      this.prisma.group.count({
-        where: { companyId, deletedAt: null, statusEnum: 'ACTIVE' },
-      }),
-      teacherRoleId
-        ? this.prisma.user.count({
-            where: {
-              companyId,
-              deletedAt: null,
-              status: 'ACTIVE',
-              roles: { some: { roleId: teacherRoleId } },
-            },
-          })
-        : Promise.resolve(0),
-      this.prisma.payment.aggregate({
-        where: {
-          companyId,
-          status: 'COMPLETED',
-          createdAt: { gte: today.start, lt: today.end },
-        },
-        _sum: { amount: true },
-        _count: true,
-      }),
-      // Attendance.date is a PostgreSQL DATE column — compare against the
-      // Tashkent calendar date directly, not the shifted tashkentDayRange
-      // window. See tashkentTodayDate() for why.
-      this.prisma.attendance.groupBy({
-        by: ['status'],
-        where: { companyId, date: todayDate },
-        _count: true,
-      }),
-      this.prisma.attendance.groupBy({
-        by: ['groupId'],
-        where: { companyId, date: todayDate },
-      }),
-      this.prisma.student.aggregate({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
-        },
-        _sum: { balance: true },
-        _count: true,
-      }),
-      this.prisma.payment.aggregate({
-        where: {
-          companyId,
-          status: 'COMPLETED',
-          createdAt: { gte: firstOfMonth },
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.company.findUnique({
-        where: { id: companyId },
-        select: { name: true },
-      }),
-    ]);
-
-    const countFor = (s: 'PRESENT' | 'LATE' | 'ABSENT' | 'EXCUSED'): number =>
-      attendanceBreakdown.find((r) => r.status === s)?._count ?? 0;
-    const attended = countFor('PRESENT') + countFor('LATE');
-    const absent = countFor('ABSENT');
-    // EXCUSED (officially excused) is intentionally excluded from both the
-    // numerator and the denominator — it's neither "came" nor "missed".
-    const attendanceDenom = attended + absent;
-    const attendancePct =
-      attendanceDenom > 0 ? Math.round((attended / attendanceDenom) * 100) : 0;
-    const lessonsToday = lessonGroupsToday.length;
-
-    return [
-      `📊 <b>${formatDate(new Date())} — ${company?.name ?? 'Hisobot'}</b>`,
-      ``,
-      `<b>Bugun:</b>`,
-      `• Yangi o'quvchilar: <b>${formatNumber(todayNewStudents)}</b>`,
-      `• To'lovlar: <b>${formatNumber(todayPayments._count ?? 0)}</b> ta · <b>${formatSum(todayPayments._sum.amount ?? 0)}</b>`,
-      `• Darslar: <b>${formatNumber(lessonsToday)}</b> ta`,
-      `• Keldi: <b>${formatNumber(attended)}</b> ta · Kelmadi: <b>${formatNumber(absent)}</b> ta (${attendancePct}% qatnashish)`,
-      ``,
-      `<b>Hozirgi holat:</b>`,
-      `• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b>`,
-      `• Faol guruhlar: <b>${formatNumber(activeGroups)}</b> ta`,
-      `• Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b>`,
-      `• Qarzdorlar: <b>${formatNumber(debtorAgg._count)}</b> ta — <b>${formatSum(Math.abs(debtorAgg._sum.balance ?? 0))}</b>`,
-      ``,
-      `<b>Oy boshidan bugungacha tushum:</b> ${formatSum(monthlyIncome._sum.amount ?? 0)}`,
-    ].join('\n');
+    const { message } = await this.dailyReport.build(companyId);
+    return message;
   }
 }

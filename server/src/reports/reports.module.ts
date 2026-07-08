@@ -42,5 +42,8 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsBalanceSheetService,
     ReportsExcelService,
   ],
+  // Exposed so the Telegram admin bot's report menu can generate the same
+  // financial Excel workbook + in-chat summary the /payments panel uses.
+  exports: [ReportsExcelService, ReportsFinancialService],
 })
 export class ReportsModule {}

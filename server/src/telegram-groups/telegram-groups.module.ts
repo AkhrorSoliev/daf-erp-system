@@ -11,14 +11,20 @@ import { TelegramGroupAnnouncementService } from './telegram-group-announcement.
 import { TelegramGroupDigestBufferService } from './telegram-group-digest-buffer.service';
 import { TelegramGroupDigestService } from './telegram-group-digest.service';
 import { TelegramGroupDigestCronService } from './telegram-group-digest-cron.service';
+import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
+import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import { HolidaysModule } from '../holidays/holidays.module';
+import { SalaryModule } from '../salary/salary.module';
+import { ReportsModule } from '../reports/reports.module';
 
 @Module({
-  imports: [HolidaysModule],
+  imports: [HolidaysModule, SalaryModule, ReportsModule],
   controllers: [TelegramGroupsController],
   providers: [
     TelegramGroupsService,
     TelegramGroupStatsService,
+    TelegramGroupDailyReportService,
+    TelegramGroupReportMenuService,
     TelegramGroupBroadcastService,
     TelegramGroupBroadcastListener,
     TelegramGroupDailyCronService,

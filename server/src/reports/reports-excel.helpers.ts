@@ -229,14 +229,14 @@ export function freezeAndFilter(
 }
 
 /**
- * "ⓘ Bu varaq haqida" — a plain-language explanation block appended at the
+ * "ⓘ Bu bo‘lim haqida" — a plain-language explanation block appended at the
  * bottom of a sheet. A leading blank row separates it from any auto-filtered
  * data; each note sits in column 1 and overflows into the empty cells to its
  * right (readable without merging, which Excel can't auto-height).
  */
 export function sheetNotes(ws: Worksheet, lines: string[], span = 6): void {
   ws.addRow([]);
-  const h = ws.addRow(['ⓘ Bu varaq haqida']);
+  const h = ws.addRow(['ⓘ Bu bo‘lim haqida']);
   h.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
   ws.mergeCells(h.number, 1, h.number, span);
   for (let c = 1; c <= span; c++) paint(h.getCell(c), NAVY);

@@ -167,6 +167,9 @@ export class ReportsService {
   getFinancialTrend(companyId: number, branchId?: number) {
     return this.financial.getFinancialTrend(companyId, branchId);
   }
+  getYearlyTrend(companyId: number, branchId?: number) {
+    return this.financial.getYearlyTrend(companyId, branchId);
+  }
   getDebtWriteOffsSummary(
     companyId: number,
     options?: Parameters<
