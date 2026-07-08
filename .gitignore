@@ -16,7 +16,11 @@ service-account*.json
 server/dist
 server/generated
 server/audit-output/
-server/reports/
+# NOTE: the generated-report dir is ignored via server/.gitignore as the
+# anchored pattern `/reports/`. A `server/reports/` pattern here made
+# `railway up` (run from server/) strip the `server/` prefix to a bare,
+# UNANCHORED `reports/`, which also excluded the source dir server/src/reports/
+# from the upload and broke the build (TS2307 on every `../reports/*` import).
 
 # Generated Excel reports / scratch audio binaries (not source — regenerated)
 /audios/
