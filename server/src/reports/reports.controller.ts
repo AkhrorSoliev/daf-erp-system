@@ -179,6 +179,18 @@ export class ReportsController {
         ? branchIds.map((id) => branchNames[id] ?? `#${id}`).join(', ')
         : 'Barcha filiallar';
 
+    // Parse the comparison request: CSV of "prev" | "yoy" | "custom" | "yearly".
+    // When the param is entirely absent (old clients / direct API), fall back to
+    // sensible defaults; an explicit empty string means "no comparisons".
+    const validModes = ['prev', 'yoy', 'custom', 'yearly'];
+    const compareModes =
+      query.compare === undefined
+        ? ['prev', 'yoy', 'yearly']
+        : query.compare
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => validModes.includes(s));
+
     const buffer = await this.reportsExcelService.generate(user.companyId, {
       branchId: query.branchId,
       branchIds: branchIds ?? undefined,
@@ -188,6 +200,9 @@ export class ReportsController {
       branchLabel,
       branchNames,
       performedById: user.id,
+      compareModes,
+      compareStartDate: query.compareStartDate,
+      compareEndDate: query.compareEndDate,
     });
     const filename = `moliyaviy-hisobot-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(

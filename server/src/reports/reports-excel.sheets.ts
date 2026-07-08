@@ -1,21 +1,18 @@
 /**
  * Formal-statement + framing sheet builders for the "Moliyaviy hisobot"
- * workbook: Muqova / Asosiy xulosa / Foyda va zarar / Pul oqimi / Balans /
+ * workbook: Muqova / Asosiy xulosa / Foyda va zarar / Balans /
  * To'lov usullari / Izoh. The line-item + reconciliation builders live in
  * reports-excel.detail-sheets.ts. Data params are loosely typed (`any`) — the
  * shapes come straight from the ReportsService facade and are only read here.
  */
-import { Workbook, Worksheet } from 'exceljs';
+import { Workbook } from 'exceljs';
 import {
   NAVY,
   SUBTLE,
-  SOM,
   NUM,
   REVENUE_LABELS,
   EXPENSE_LABELS,
   METHOD_LABELS,
-  CASH_TYPE_LABELS,
-  ACCOUNT_TYPE_LABELS,
   sheetTitle,
   sectionHeader,
   tableHeader,
@@ -24,17 +21,6 @@ import {
   deltaRow,
   sheetNotes,
 } from './reports-excel.helpers';
-
-// A summary/kv line whose izoh lands in the far column so it stays readable
-// beside the comparison table (which also uses col 6 for izoh).
-function lineWithIzoh(ws: Worksheet, label: string, value: number, izoh: string) {
-  const r = ws.addRow([label, value, '', '', '', izoh]);
-  r.getCell(2).numFmt = SOM;
-  const ic = r.getCell(6);
-  ic.font = { italic: true, size: 9, color: { argb: SUBTLE } };
-  ic.alignment = { wrapText: true, vertical: 'top' };
-  return r;
-}
 
 // ---- Sheet 1: Muqova ----
 export function coverSheet(
@@ -96,28 +82,22 @@ export function summarySheet(
   wb: Workbook,
   overview: any,
   prior: any,
-  cf: any,
   period: string,
+  currentTag: string,
+  priorTag: string,
   computedSalaryNet = 0,
 ) {
   const ws = wb.addWorksheet('Asosiy xulosa');
   ws.columns = [
-    { width: 34 }, { width: 18 }, { width: 18 }, { width: 16 }, { width: 12 }, { width: 48 },
+    { width: 34 }, { width: 18 }, { width: 18 }, { width: 16 }, { width: 15 }, { width: 48 },
   ];
   sheetTitle(ws, 'Asosiy xulosa', period, 6);
 
   const o = overview ?? {};
   const p = prior ?? {};
-  const c = cf ?? {};
 
-  sectionHeader(ws, 'PUL HARAKATI (kassa asosida — joriy davr)', 6);
-  lineWithIzoh(ws, 'Tushgan pul', c.inflows?.operating ?? 0, 'Kassaga real tushgan to‘lovlar.');
-  lineWithIzoh(ws, 'Chiqqan pul', Math.abs(c.outflows?.operating ?? 0), 'Xarajat, oylik va qaytarishlar uchun chiqib ketgan pul.');
-  lineWithIzoh(ws, 'Sof pul oqimi', c.netCashFlow ?? 0, 'Tushgan − chiqqan pul.');
-  lineWithIzoh(ws, 'Davr oxiri kassa qoldig‘i', c.closingBalance ?? 0, 'Barcha kassa/bank hisoblarining davr oxiridagi qoldig‘i.');
-
-  sectionHeader(ws, 'NATIJA, QARZDORLIK, O‘QUVCHILAR (joriy vs o‘tgan davr)', 6);
-  tableHeader(ws, ['Ko‘rsatkich', 'Joriy', 'O‘tgan davr', 'Δ', 'Δ%', 'Izoh']);
+  sectionHeader(ws, 'NATIJA, QARZDORLIK, O‘QUVCHILAR (davrlar taqqoslashi)', 6);
+  tableHeader(ws, ['Ko‘rsatkich', currentTag, priorTag, 'Farq', 'O‘zgarish %', 'Izoh']);
   deltaRow(ws, 'Tushgan tushum', o.income?.actual ?? 0, p.income?.actual ?? 0, 'Davrda qabul qilingan to‘lovlar (kassa asosida).');
   deltaRow(ws, 'Umumiy chiqim (xarajat + oylik)', (o.expenses ?? 0) + (o.salary?.paid ?? 0), (p.expenses ?? 0) + (p.salary?.paid ?? 0), 'Operatsion xarajat + to‘langan oyliklar.');
   deltaRow(ws, 'Sof foyda', o.netProfit ?? 0, p.netProfit ?? 0, 'Ekrandagi dashboard bilan bir xil (kassa asosida).');
@@ -134,13 +114,12 @@ export function summarySheet(
     ws,
     'Sof foyda (hisoblangan oylik bilan)',
     (o.netProfit ?? 0) + (o.salary?.paid ?? 0) - computedSalaryNet,
-    'Yuqoridagi "Sof foyda"dan shu oy uchun HISOBLANGAN ustoz oyligi ayirilgan — real oy natijasi (oylik keyingi oy to‘lansa ham). "Oyliklar" varag‘iga qarang.',
+    'Yuqoridagi "Sof foyda"dan shu oy uchun HISOBLANGAN ustoz oyligi ayirilgan — real oy natijasi (oylik keyingi oy to‘lansa ham). "Oyliklar" bo‘limiga qarang.',
   );
 
   sheetNotes(ws, [
-    'Bu — hisobotning eng muhim, sodda tilda XULOSAsi.',
-    'PUL HARAKATI = kassaga real kirgan/chiqgan pul. NATIJA = tushum − chiqim = sof foyda.',
-    '"Joriy / O‘tgan davr / Δ / Δ%" ustunlari — bu davrni oldingi teng davr bilan taqqoslaydi (yashil = o‘sish, qizil = kamayish).',
+    'Bu — hisobotning eng muhim, sodda tilda XULOSAsi. NATIJA = tushum − chiqim = sof foyda.',
+    `"${currentTag} / ${priorTag} / Farq / O‘zgarish %" ustunlari — joriy davrni oldingi teng davr bilan taqqoslaydi (yashil = o‘sish, qizil = kamayish). "Farq" = ikki davr orasidagi ayirma, "O‘zgarish %" = shu ayirmaning foizi.`,
     'Sof foyda kassa asosida (ekrandagi ko‘rsatkich bilan bir xil). "Sof foyda (hisoblangan oylik bilan)" — ustoz oyligi hisobga olingan real natija.',
   ], 6);
 }
@@ -189,47 +168,11 @@ export function profitLossSheet(wb: Workbook, pl: any, period: string) {
   sheetNotes(ws, [
     'Foyda va zarar = Daromad − Xizmat tannarxi (ustozlar ulushi) − Operatsion xarajatlar = Sof foyda.',
     'Marja — foydalilik foizi. Yalpi marja = Yalpi foyda ÷ Daromad; Sof marja = Sof foyda ÷ Daromad. Masalan 38% = har 100 so‘m tushumdan 38 so‘m foyda.',
-    'Diqqat: bu yerdagi "Ustoz oyligi" — NAQD asosida (shu davrda TO‘LANGAN oylik). Shu oy uchun HISOBLANGAN ustoz oyligi alohida "Oyliklar" varag‘ida (u odatda keyingi oy to‘lanadi).',
+    'Diqqat: bu yerdagi "Ustoz oyligi" — NAQD asosida (shu davrda TO‘LANGAN oylik). Shu oy uchun HISOBLANGAN ustoz oyligi alohida "Oyliklar" bo‘limida (u odatda keyingi oy to‘lanadi).',
   ], 3);
 }
 
-// ---- Sheet 4: Pul oqimi ----
-export function cashFlowSheet(wb: Workbook, cf: any, period: string) {
-  const ws = wb.addWorksheet('Pul oqimi');
-  ws.columns = [{ width: 38 }, { width: 20 }, { width: 44 }];
-  sheetTitle(ws, 'Pul oqimi (kassa harakati)', period, 3);
-  if (!cf) return;
-
-  kvRow(ws, 'Boshlang‘ich qoldiq', cf.openingBalance ?? 0);
-  kvRow(ws, 'Kirim', cf.inflows?.operating ?? 0, 'Kassaga tushgan to‘lovlar.');
-  kvRow(ws, 'Chiqim', cf.outflows?.operating ?? 0, 'Xarajat / oylik / qaytarish.');
-  kvRow(ws, 'Tuzatishlar', cf.adjustments ?? 0);
-  kvRow(ws, 'O‘tkazmalar (sof)', cf.transfersNet ?? 0);
-  kvRow(ws, 'Sof pul oqimi', cf.netCashFlow ?? 0, undefined, { bold: true });
-  kvRow(ws, 'Yakuniy qoldiq', cf.closingBalance ?? 0, 'Barcha hisoblarning davr oxiridagi qoldig‘i.', { bold: true });
-
-  sectionHeader(ws, 'Oqim turlari bo‘yicha');
-  tableHeader(ws, ['Tur', 'Soni', 'Summa']);
-  (cf.byType ?? []).forEach((t: any) => {
-    const r = ws.addRow([CASH_TYPE_LABELS[t.type] ?? t.type, t.count, t.amount]);
-    r.getCell(3).numFmt = NUM;
-  });
-
-  sectionHeader(ws, 'Kassa hisoblari — har biridagi hozirgi qoldiq');
-  tableHeader(ws, ['Hisob', 'Turi', 'Hozirgi qoldiq']);
-  (cf.accounts ?? []).forEach((a: any) => {
-    const r = ws.addRow([a.name, ACCOUNT_TYPE_LABELS[a.type] ?? a.type, a.balance]);
-    r.getCell(3).numFmt = NUM;
-  });
-
-  sheetNotes(ws, [
-    'Pul oqimi = kassa/bank pulining oy davomidagi harakati. Boshlang‘ich qoldiq + Kirim − Chiqim = Yakuniy qoldiq.',
-    'Kirim = kassaga tushgan to‘lovlar; Chiqim = xarajat/oylik/qaytarish uchun chiqib ketgan pul.',
-    '"Kassa hisoblari" ro‘yxati — markazning har bir kassa va bank hisobidagi HOZIRGI (ayni damdagi) pul qoldig‘i. Masalan "Asosiy kassa" — asosiy kassada hozir turgan naqd pul.',
-  ], 3);
-}
-
-// ---- Sheet 5: Balans ----
+// ---- Sheet 4: Balans ----
 export function balanceSheet(wb: Workbook, bs: any) {
   const ws = wb.addWorksheet('Balans');
   ws.columns = [{ width: 40 }, { width: 20 }, { width: 50 }];
@@ -254,7 +197,7 @@ export function balanceSheet(wb: Workbook, bs: any) {
     'AKTIV = bizda bor: kassa/bankdagi pul + o‘quvchilar qarzi (Debitorlik).',
     'PASSIV = biz qarzdormiz: ustozlarga oylik qarzi + o‘quvchilar oldindan to‘lagan pul (kelajakda dars berishimiz kerak).',
     'KAPITAL = Aktiv − Passiv (markazning sof qiymati).',
-    'Texnik "balanslashuv farqi" ko‘rsatkichi "Tekshiruv" varag‘iga ko‘chirildi (buxgalter uchun).',
+    'Texnik "balanslashuv farqi" ko‘rsatkichi "Tekshiruv" bo‘limiga ko‘chirildi (buxgalter uchun).',
   ], 3);
 }
 

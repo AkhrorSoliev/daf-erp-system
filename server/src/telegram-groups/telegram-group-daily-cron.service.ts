@@ -3,7 +3,11 @@ import { Cron } from '@nestjs/schedule';
 import { TelegramGroupStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramAdminBotService } from './telegram-admin-bot.service';
-import { TelegramGroupStatsService } from './telegram-group-stats.service';
+import {
+  DailySnapshotData,
+  TelegramGroupDailyReportService,
+} from './telegram-group-daily-report.service';
+import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import { isTashkentSunday, tashkentDayRange } from './utils/format.util';
 import { HolidaysService } from '../holidays/holidays.service';
 
@@ -21,7 +25,7 @@ export class TelegramGroupDailyCronService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly statsService: TelegramGroupStatsService,
+    private readonly dailyReport: TelegramGroupDailyReportService,
     private readonly adminBot: TelegramAdminBotService,
     private readonly holidaysService: HolidaysService,
   ) {}
@@ -74,17 +78,32 @@ export class TelegramGroupDailyCronService {
     }
 
     let sent = 0;
+    // A company can own several approved groups — build the (identical) report
+    // once per company and reuse it for every group, so the prognoz walk and
+    // salary sweep run once, not per chat.
+    const builtByCompany = new Map<
+      number,
+      { message: string; snapshot: DailySnapshotData }
+    >();
     for (const g of groups) {
       if (!g.companyId) continue;
       try {
-        const report = await this.statsService.buildDailyReport(g.companyId);
-        await bot.telegram.sendMessage(g.chatId.toString(), report, {
+        let built = builtByCompany.get(g.companyId);
+        if (!built) {
+          built = await this.dailyReport.build(g.companyId);
+          builtByCompany.set(g.companyId, built);
+        }
+        await bot.telegram.sendMessage(g.chatId.toString(), built.message, {
           parse_mode: 'HTML',
+          reply_markup: TelegramGroupReportMenuService.moreButton().reply_markup,
         });
         await this.prisma.telegramGroup.update({
           where: { id: g.id },
           data: { lastDailyReportAt: new Date() },
         });
+        // Persist tonight's baseline for tomorrow's ▲/▼ delta only after a
+        // confirmed send (idempotent upsert — safe to repeat per group).
+        await this.dailyReport.persistSnapshot(g.companyId, built.snapshot);
         sent += 1;
       } catch (err: any) {
         const code = err?.response?.error_code ?? err?.code;

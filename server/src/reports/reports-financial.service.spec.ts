@@ -8,6 +8,11 @@ describe('ReportsFinancialService', () => {
 
   beforeEach(async () => {
     prisma = {
+      company: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ systemStartDate: new Date('2026-01-01') }),
+      },
       payment: {
         aggregate: jest
           .fn()
@@ -207,6 +212,55 @@ describe('ReportsFinancialService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('getYearlyTrend', () => {
+    it('buckets by calendar year with the same avanssiz split as the monthly trend', async () => {
+      prisma.company.findUnique.mockResolvedValue({
+        systemStartDate: new Date('2026-01-01'),
+      });
+      prisma.payment.aggregate.mockResolvedValue({
+        _sum: { amount: 1_000_000 },
+        _count: 4,
+      });
+      // General expense = 200k; both TEACHER_ADVANCE queries = 0 (no advances).
+      prisma.expense.aggregate.mockImplementation((args: any) =>
+        Promise.resolve({
+          _sum: {
+            amount: args?.where?.category === 'TEACHER_ADVANCE' ? 0 : 200_000,
+          },
+        }),
+      );
+      prisma.salaryPayment.aggregate.mockResolvedValue({
+        _sum: { amount: 300_000 },
+      });
+      prisma.student.count.mockResolvedValue(10);
+      prisma.payment.groupBy.mockResolvedValue([
+        { studentId: 1 },
+        { studentId: 2 },
+      ]);
+
+      const res = await service.getYearlyTrend(1);
+
+      expect(Array.isArray(res)).toBe(true);
+      expect(res.length).toBeGreaterThanOrEqual(1);
+      const y = res[res.length - 1];
+      expect(y.year).toBe(new Date().getFullYear());
+      expect(y.income).toBe(1_000_000);
+      // expenses = 200k − advancePaid(0) + salary(300k) + advanceSettled(0)
+      expect(y.expenses).toBe(500_000);
+      expect(y.profit).toBe(500_000);
+      expect(y.newStudents).toBe(10);
+      expect(y.payerCount).toBe(2);
+    });
+
+    it('caps the block to at most the 5 most recent years', async () => {
+      prisma.company.findUnique.mockResolvedValue({
+        systemStartDate: new Date('2000-01-01'),
+      });
+      const res = await service.getYearlyTrend(1);
+      expect(res.length).toBeLessThanOrEqual(5);
     });
   });
 });

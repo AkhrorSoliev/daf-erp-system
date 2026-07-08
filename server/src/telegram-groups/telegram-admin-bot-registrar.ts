@@ -4,6 +4,7 @@ import { TelegramGroupStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramGroupsService } from './telegram-groups.service';
 import { TelegramGroupStatsService } from './telegram-group-stats.service';
+import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import {
   MSG_APPROVED_ANNOUNCE,
   MSG_HELP,
@@ -35,6 +36,7 @@ export class TelegramAdminBotRegistrar {
     private readonly prisma: PrismaService,
     private readonly groupsService: TelegramGroupsService,
     private readonly statsService: TelegramGroupStatsService,
+    private readonly reportMenu: TelegramGroupReportMenuService,
   ) {}
 
   register(bot: Telegraf): void {
@@ -60,13 +62,59 @@ export class TelegramAdminBotRegistrar {
       this.handleStats(ctx, (cid) => this.statsService.buildDebtorsBlock(cid)),
     );
     bot.command('hisobot', (ctx) =>
-      this.handleStats(ctx, (cid) => this.statsService.buildDailyReport(cid)),
+      this.handleStats(
+        ctx,
+        (cid) => this.statsService.buildDailyReport(cid),
+        TelegramGroupReportMenuService.moreButton().reply_markup,
+      ),
     );
     bot.command('guruhlar', (ctx) =>
       this.handleStats(ctx, (cid) => this.statsService.buildGroupsBlock(cid)),
     );
 
+    this.registerReportMenu(bot);
+
     bot.on('my_chat_member', (ctx) => this.handleMyChatMember(ctx));
+  }
+
+  /**
+   * Inline-button report menu that hangs off the daily report ("Ko'proq
+   * imkoniyatlar"). All flow state lives in callback_data (no session); the
+   * menu service resolves the approved group and delivers Excel/text to the
+   * group. Read-only — no mutations reachable from a group button.
+   */
+  private registerReportMenu(bot: Telegraf): void {
+    bot.action('rm:open', (ctx) => this.reportMenu.openMenu(ctx));
+    bot.action('rm:root', (ctx) => this.reportMenu.showRoot(ctx));
+    bot.action('rm:close', (ctx) => this.reportMenu.close(ctx));
+
+    // Full monthly report: pick year → pick month → Excel.
+    bot.action('rm:full', (ctx) => this.reportMenu.showFullYears(ctx));
+    bot.action(/^rm:fy:(\d{4})$/, (ctx) =>
+      this.reportMenu.showFullMonths(ctx, Number(ctx.match[1])),
+    );
+    bot.action(/^rm:fm:(\d{4}-\d{2})$/, (ctx) =>
+      this.reportMenu.sendMonthExcel(ctx, ctx.match[1]),
+    );
+
+    // Period comparison: pick month A → pick month B → one Excel.
+    bot.action('rm:cmp', (ctx) => this.reportMenu.showCmpMonthA(ctx));
+    bot.action(/^rm:ca:(\d{4}-\d{2})$/, (ctx) =>
+      this.reportMenu.showCmpMonthB(ctx, ctx.match[1]),
+    );
+    bot.action(/^rm:cb:(\d{4}-\d{2}):(\d{4}-\d{2})$/, (ctx) =>
+      this.reportMenu.sendComparisonExcel(ctx, ctx.match[1], ctx.match[2]),
+    );
+
+    // Presets + in-chat card.
+    bot.action('rm:pre', (ctx) => this.reportMenu.showPresets(ctx));
+    bot.action('rm:p3', (ctx) => this.reportMenu.sendPresetExcel(ctx, 3));
+    bot.action('rm:p6', (ctx) => this.reportMenu.sendPresetExcel(ctx, 6));
+    bot.action('rm:p12', (ctx) => this.reportMenu.sendPresetExcel(ctx, 12));
+    bot.action(/^rm:py:(\d{4})$/, (ctx) =>
+      this.reportMenu.sendYearlyExcel(ctx, Number(ctx.match[1])),
+    );
+    bot.action('rm:cfin', (ctx) => this.reportMenu.sendFinancialCard(ctx));
   }
 
   /**
@@ -80,6 +128,7 @@ export class TelegramAdminBotRegistrar {
   private async handleStats(
     ctx: Context,
     builder: (companyId: number) => Promise<string>,
+    replyMarkup?: any,
   ): Promise<void> {
     const group = await this.resolveApprovedGroup(ctx);
     if (!group || !group.companyId) return;
@@ -95,7 +144,10 @@ export class TelegramAdminBotRegistrar {
 
     try {
       const message = await builder(group.companyId);
-      await ctx.reply(message, { parse_mode: 'HTML' });
+      await ctx.reply(message, {
+        parse_mode: 'HTML',
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+      });
     } catch (err: any) {
       this.logger.error(
         `Stats command failed for chat ${ctx.chat?.id}: ${err?.message}`,

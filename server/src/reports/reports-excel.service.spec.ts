@@ -175,6 +175,70 @@ describe('ReportsExcelService', () => {
     gl: { storedBalanceSum: 500_000, ledgerSum: 500_000, diff: 0 },
   };
 
+  // ---- Operational (non-financial) mock datasets. ----
+  const kpis = {
+    activeStudents: { current: 120, trend: 9 },
+    activeGroups: 15,
+    averageAttendance: 82,
+    leadConversionRate: 25,
+    newStudentsThisMonth: 10,
+    churnedThisMonth: 4,
+  };
+  const leads = {
+    funnel: [{ status: 'NEW', count: 30 }, { status: 'CONVERTED', count: 10 }],
+    conversionRateOverTime: [{ month: '2026-05', rate: 20, total: 50, converted: 10 }],
+    averageDaysToConversion: 7,
+  };
+  const departedSummary = {
+    churnRate: 8.5,
+    departedCount: 12,
+    totalStudents: 132,
+    lostRevenue: 300_000,
+    totalDebt: -50_000,
+    debtorCount: 3,
+    avgDurationMonths: 4.2,
+    totalTeacherChanges: 2,
+    departedAfterTeacherChange: 1,
+  };
+  const departedDynamics = { data: [{ date: '2026-06-01', count: 12 }], granularity: 'month' };
+  const departedReasons = { data: [{ reasonId: null, reasonName: 'Moliyaviy', count: 5 }] };
+  const roomUtil = {
+    rooms: [
+      { id: 'r1', name: '1-xona', capacity: 15, hoursPerWeek: 20, fillRate: 80, totalGroups: 3, totalEnrolled: 36 },
+    ],
+    summary: { totalRooms: 1, averageFillRate: 80, mostUtilized: '1-xona', leastUtilized: '1-xona' },
+  };
+  const groupAnalytics = {
+    statusDistribution: [{ status: 'ACTIVE', count: 15 }],
+    fillRates: [{ groupId: 'g1', groupName: 'A1-01', enrolled: 12, capacity: 15, fillRate: 80 }],
+    formingGroups: [],
+  };
+  const attendance = {
+    overallRate: 82,
+    overallRetention: 95,
+    statusBreakdown: { present: 400, absent: 80, late: 10, excused: 20, total: 510 },
+    bucket: 'week',
+    trend: [{ bucketStart: '2026-W23', label: '1 Iyn', rate: 80, total: 100, retentionPct: 95 }],
+    byDayOfWeek: [{ day: 'Dushanba', rate: 85 }],
+    worstGroups: [{ groupId: 'g2', groupName: 'B1-02', rate: 60, retentionPct: 80 }],
+    bestGroups: [{ groupId: 'g1', groupName: 'A1-01', rate: 95, retentionPct: 100 }],
+  };
+  const teacherPerf = {
+    teachers: [
+      { id: 10010, firstName: 'Ustoz', lastName: 'B', photo: null, groupsCount: 3, totalStudents: 40, startStudentCount: 35, endStudentCount: 40, retentionPct: 114, averageAttendance: 88, averageFillRate: 80 },
+    ],
+    total: 1,
+    page: 1,
+    pageSize: 100,
+  };
+  const teacherChanges = [
+    { id: 'tc1', groupId: 'g1', groupName: 'A1-01', branchName: 'Markaz', courseName: 'A1', previousTeachers: ['Ustoz A'], newTeachers: ['Ustoz B'], changeType: 'REPLACED', triggeredByDismissal: false, reasonId: null, reasonName: 'Ish yuki', changedAt: new Date('2026-06-15T00:00:00Z'), changedBy: 'Admin A' },
+  ];
+  const yearlyTrend = [
+    { year: 2025, income: 800_000, expenses: 500_000, profit: 300_000, newStudents: 8, payerCount: 3, avgPayment: 100_000 },
+    { year: 2026, income: 1_000_000, expenses: 600_000, profit: 400_000, newStudents: 10, payerCount: 4, avgPayment: 120_000 },
+  ];
+
   const baseMocks = () => ({
     getFinancialOverview: jest.fn().mockResolvedValue(overview),
     getProfitLoss: jest.fn().mockResolvedValue(pl),
@@ -188,6 +252,18 @@ describe('ReportsExcelService', () => {
     getPerBranchSummary: jest.fn().mockResolvedValue(perBranch),
     getReconciliation: jest.fn().mockResolvedValue(recon),
     getPriorPeriodSummary: jest.fn().mockResolvedValue(prior),
+    // Operational feeds.
+    getKpis: jest.fn().mockResolvedValue(kpis),
+    getLeadAnalytics: jest.fn().mockResolvedValue(leads),
+    getDepartedStudentsSummary: jest.fn().mockResolvedValue(departedSummary),
+    getDepartedStudentsDynamics: jest.fn().mockResolvedValue(departedDynamics),
+    getDepartedStudentsReasons: jest.fn().mockResolvedValue(departedReasons),
+    getRoomUtilization: jest.fn().mockResolvedValue(roomUtil),
+    getGroupAnalytics: jest.fn().mockResolvedValue(groupAnalytics),
+    getAttendanceAnalytics: jest.fn().mockResolvedValue(attendance),
+    getTeacherPerformance: jest.fn().mockResolvedValue(teacherPerf),
+    getTeacherChangesList: jest.fn().mockResolvedValue(teacherChanges),
+    getYearlyTrend: jest.fn().mockResolvedValue(yearlyTrend),
   });
 
   beforeEach(async () => {
@@ -226,13 +302,12 @@ describe('ReportsExcelService', () => {
     expect(reports.getPriorPeriodSummary).toHaveBeenCalled();
   });
 
-  it('builds the 14 expected sheets in order (company-wide)', async () => {
+  it('builds the 21 expected sheets in order (company-wide, financial + operational)', async () => {
     const wb = await load(await service.generate(1, {}));
     expect(wb.worksheets.map((w) => w.name)).toEqual([
       'Muqova',
       'Asosiy xulosa',
       'Foyda va zarar',
-      'Pul oqimi',
       'Balans',
       "To'lovlar",
       'Xarajatlar',
@@ -241,16 +316,64 @@ describe('ReportsExcelService', () => {
       'Oylik dinamika',
       'Filial kesimida',
       "To'lov usullari",
+      'KPI paneli',
+      'Lidlar',
+      "O'quvchilar oqimi",
+      'Xonalar bandligi',
+      "Guruhlar to'ldirilishi",
+      'Davomat',
+      "O'qituvchilar samaradorligi",
+      "O'qituvchi o'zgarishlari",
       'Tekshiruv',
       'Izoh',
     ]);
+  });
+
+  it('drops the live-state sheets for a PAST month when hidePointInTimeForPastPeriod is set', async () => {
+    const wb = await load(
+      await service.generate(1, {
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+        hidePointInTimeForPastPeriod: true,
+      }),
+    );
+    const names = wb.worksheets.map((w) => w.name);
+    for (const dropped of [
+      'Balans',
+      'Qarzdorlar',
+      'KPI paneli',
+      'Xonalar bandligi',
+      "Guruhlar to'ldirilishi",
+    ]) {
+      expect(names).not.toContain(dropped);
+    }
+    // Period-scoped sheets stay.
+    expect(names).toContain('Foyda va zarar');
+    expect(names).toContain('Davomat');
+    expect(names).toContain('Tekshiruv');
+  });
+
+  it('keeps all sheets for the CURRENT month even with the flag set', async () => {
+    const now = new Date();
+    const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const wb = await load(
+      await service.generate(1, {
+        startDate: `${m}-01`,
+        endDate: `${m}-28`,
+        hidePointInTimeForPastPeriod: true,
+      }),
+    );
+    const names = wb.worksheets.map((w) => w.name);
+    expect(names).toContain('Balans');
+    expect(names).toContain('Qarzdorlar');
+    expect(names).toContain('KPI paneli');
   });
 
   it('omits "Filial kesimida" when a branch is selected', async () => {
     const wb = await load(await service.generate(1, { branchId: 1 }));
     const names = wb.worksheets.map((w) => w.name);
     expect(names).not.toContain('Filial kesimida');
-    expect(names).toHaveLength(13);
+    expect(names).toHaveLength(20);
     expect(reports.getPerBranchSummary).not.toHaveBeenCalled();
   });
 
@@ -275,7 +398,7 @@ describe('ReportsExcelService', () => {
       const v = String(row.getCell(5).value ?? '');
       if (v === 'MOS' || v === 'XATO') verdicts.push(v);
     });
-    expect(verdicts.length).toBeGreaterThanOrEqual(6);
+    expect(verdicts.length).toBeGreaterThanOrEqual(5);
     expect(verdicts).not.toContain('XATO');
   });
 
@@ -298,6 +421,74 @@ describe('ReportsExcelService', () => {
       if (String(r.getCell(1).value ?? '').includes('Balanslashuv')) hasGap = true;
     });
     expect(hasGap).toBe(false);
+  });
+
+  it('renders the operational sheets with data from the facade', async () => {
+    const wb = await load(await service.generate(1, {}));
+    const kpiRow = findRow(wb.getWorksheet('KPI paneli')!, "Faol o'quvchilar");
+    expect(kpiRow.getCell(2).value).toBe(120);
+    const attRow = findRow(wb.getWorksheet('Davomat')!, 'Umumiy davomat');
+    expect(attRow.getCell(2).value).toBe(82);
+    const roomRow = findRow(wb.getWorksheet('Xonalar bandligi')!, '1-xona');
+    expect(roomRow.getCell(6).value).toBe(80); // fillRate %
+    const churnRow = findRow(wb.getWorksheet("O'quvchilar oqimi")!, 'Churn (ketish) foizi');
+    expect(churnRow.getCell(2).value).toBe(8.5);
+    expect(reports.getKpis).toHaveBeenCalled();
+    expect(reports.getAttendanceAnalytics).toHaveBeenCalled();
+    expect(reports.getLeadAnalytics).toHaveBeenCalled();
+    expect(reports.getTeacherChangesList).toHaveBeenCalled();
+  });
+
+  it('adds "Taqqoslash" + "Yillar kesimida" sheets when compareModes are requested', async () => {
+    const wb = await load(
+      await service.generate(1, {
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+        compareModes: ['prev', 'yoy', 'yearly'],
+        performedById: 999,
+      }),
+    );
+    const names = wb.worksheets.map((w) => w.name);
+    expect(names).toContain('Taqqoslash');
+    expect(names).toContain('Yillar kesimida');
+
+    // Taqqoslash: current Tushum = overview.income.actual; Δ% vs the (mocked
+    // identical) prior overview is 0.
+    const cmp = wb.getWorksheet('Taqqoslash')!;
+    const tushum = findRow(cmp, 'Tushum (kassa)');
+    expect(tushum.getCell(2).value).toBe(overview.income.actual);
+    expect(tushum.getCell(4).value).toBe(0); // Δ% (Oldingi davr) — same period → 0
+
+    // Yillar kesimida: Tushum row → 2025, 2026, YoY Δ% = growthPct(1M,800k)=25.
+    const yws = wb.getWorksheet('Yillar kesimida')!;
+    const inc = findRow(yws, 'Tushum');
+    expect(inc.getCell(2).value).toBe(800_000);
+    expect(inc.getCell(3).value).toBe(1_000_000);
+    expect(inc.getCell(4).value).toBe(25);
+
+    expect(reports.getFinancialOverview).toHaveBeenCalled();
+    expect(reports.getYearlyTrend).toHaveBeenCalled();
+  });
+
+  it('omits the comparison sheets when no compareModes are requested', async () => {
+    const wb = await load(await service.generate(1, {}));
+    const names = wb.worksheets.map((w) => w.name);
+    expect(names).not.toContain('Taqqoslash');
+    expect(names).not.toContain('Yillar kesimida');
+  });
+
+  it('renders an empty-note operational sheet when its source throws (workbook survives)', async () => {
+    reports.getRoomUtilization.mockRejectedValue(new Error('boom'));
+    const wb = await load(await service.generate(1, {}));
+    // The whole workbook still builds (all 21 sheets present)...
+    expect(wb.worksheets).toHaveLength(21);
+    // ...and the failed sheet carries the "no data" note instead of crashing.
+    const ws = wb.getWorksheet('Xonalar bandligi')!;
+    let hasNote = false;
+    ws.eachRow((r) => {
+      if (String(r.getCell(1).value ?? '').includes("Ma'lumot hozircha mavjud emas")) hasNote = true;
+    });
+    expect(hasNote).toBe(true);
   });
 
   it('labels a still-open period as month-to-date on the cover', async () => {
