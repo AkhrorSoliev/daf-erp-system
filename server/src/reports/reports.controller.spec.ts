@@ -46,6 +46,15 @@ describe('ReportsController — role guards', () => {
     getMonthlyDebtRecovery: jest
       .fn()
       .mockResolvedValue({ months: [], totals: {} }),
+    getMonthDebtDetail: jest.fn().mockResolvedValue({
+      monthKey: '2026-06',
+      label: 'Iyun 2026',
+      totals: {},
+      debtors: [],
+      recoveredPayments: [],
+      writeOffs: [],
+      truncated: false,
+    }),
   };
 
   const mockPrisma = {
@@ -60,7 +69,12 @@ describe('ReportsController — role guards', () => {
         { provide: PrismaService, useValue: mockPrisma },
         {
           provide: ReportsExcelService,
-          useValue: { generate: jest.fn().mockResolvedValue(Buffer.from('')) },
+          useValue: {
+            generate: jest.fn().mockResolvedValue(Buffer.from('')),
+            generateDebtHistory: jest
+              .fn()
+              .mockResolvedValue(Buffer.from('')),
+          },
         },
       ],
     }).compile();
@@ -143,6 +157,8 @@ describe('ReportsController — role guards', () => {
     'getTeacherPaymentReports',
     'getTeacherGroupsReport',
     'getMonthlyDebtRecovery',
+    'getMonthDebtDetail',
+    'exportMonthlyDebtExcel',
   ] as const;
 
   for (const method of narrowedEndpoints) {

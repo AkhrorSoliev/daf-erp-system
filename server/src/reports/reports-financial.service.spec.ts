@@ -344,4 +344,98 @@ describe('ReportsFinancialService', () => {
       expect(m.recoveryRate).toBe(100);
     });
   });
+
+  describe('getMonthDebtDetail', () => {
+    beforeEach(() => {
+      prisma.student.findMany = jest.fn();
+      prisma.transaction.groupBy = jest.fn();
+      prisma.transaction.findMany = jest.fn();
+    });
+
+    it('returns the per-student cohort + payment/write-off lists and foots to the aggregate', async () => {
+      // Cohort: student 1 owed 200k at month-end, paid 80k since → remaining 120k.
+      prisma.student.findMany
+        // (1) balances for reconstruction
+        .mockResolvedValueOnce([
+          { id: 1, balance: -200000 },
+          { id: 2, balance: 50000 },
+        ])
+        // (2) name/phone/group enrichment for the cohort
+        .mockResolvedValueOnce([
+          {
+            id: 1,
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            phone: '901234567',
+            enrollments: [{ group: { name: 'A1-01' } }],
+          },
+        ]);
+      prisma.transaction.groupBy
+        .mockResolvedValueOnce([]) // movesAfter
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 80000 } }]) // PAYMENT
+        .mockResolvedValueOnce([]); // DEBT_WRITE_OFF
+      prisma.transaction.findMany
+        // payRows (recovered payments)
+        .mockResolvedValueOnce([
+          {
+            id: 'p1',
+            studentId: 1,
+            amount: 80000,
+            createdAt: new Date('2026-07-05'),
+            student: { firstName: 'Ali', lastName: 'Valiyev' },
+            performedBy: { firstName: 'Admin', lastName: 'X' },
+            payment: { method: 'CASH' },
+          },
+        ])
+        // woRows (write-offs)
+        .mockResolvedValueOnce([]);
+
+      const res = await service.getMonthDebtDetail(1, '2026-06');
+
+      expect(res.totals).toEqual({
+        closingDebt: 200000,
+        recovered: 80000,
+        writtenOff: 0,
+        remaining: 120000,
+        debtorCount: 1,
+      });
+      // Detail foots to the aggregate.
+      expect(res.debtors.reduce((s, d) => s + d.monthEndDebt, 0)).toBe(
+        res.totals.closingDebt,
+      );
+      expect(res.debtors).toHaveLength(1);
+      expect(res.debtors[0]).toEqual(
+        expect.objectContaining({
+          id: 1,
+          firstName: 'Ali',
+          phone: '901234567',
+          groups: ['A1-01'],
+          monthEndDebt: 200000,
+          recovered: 80000,
+          remaining: 120000,
+        }),
+      );
+      expect(res.recoveredPayments).toHaveLength(1);
+      expect(res.recoveredPayments[0]).toEqual(
+        expect.objectContaining({
+          amount: 80000,
+          method: 'CASH',
+          performedBy: 'Admin X',
+        }),
+      );
+      expect(res.writeOffs).toHaveLength(0);
+      expect(res.truncated).toBe(false);
+    });
+
+    it('short-circuits (no enrichment / list queries) when the month has no debtors', async () => {
+      prisma.student.findMany.mockResolvedValueOnce([{ id: 1, balance: 5000 }]);
+      prisma.transaction.groupBy.mockResolvedValueOnce([]); // movesAfter → no negatives
+
+      const res = await service.getMonthDebtDetail(1, '2026-06');
+
+      expect(res.debtors).toEqual([]);
+      expect(res.totals.debtorCount).toBe(0);
+      expect(prisma.transaction.findMany).not.toHaveBeenCalled();
+    });
+  });
 });

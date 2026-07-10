@@ -173,6 +173,9 @@ export class ReportsService {
   getMonthlyDebtRecovery(companyId: number) {
     return this.financial.getMonthlyDebtRecovery(companyId);
   }
+  getMonthDebtDetail(companyId: number, monthKey: string) {
+    return this.financial.getMonthDebtDetail(companyId, monthKey);
+  }
   getDebtWriteOffsSummary(
     companyId: number,
     options?: Parameters<
