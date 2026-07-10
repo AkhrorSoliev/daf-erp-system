@@ -239,6 +239,9 @@ export class SalaryAccrualService {
         salaryConfigVersionId: version.id,
         // Center-funded gap accrual vs. ordinary student-covered accrual.
         isCenterTopUp: centerFunded,
+        // Sticky mirror — set TRUE on a center-funded create, never cleared, so
+        // a later recovery (flag flip below) can't erase "this was a top-up".
+        wasCenterTopUp: centerFunded,
         // Write-once: only set on the initial create. `undefined` here means
         // "no carry-over" (column stays NULL → bucket by lessonDate as usual).
         creditPeriodDate,
@@ -258,6 +261,10 @@ export class SalaryAccrualService {
         // → clear the flag. A re-run of the gap sweep (centerFunded) leaves it
         // untouched so a still-uncovered lesson stays marked as a top-up.
         ...(centerFunded ? {} : { isCenterTopUp: false }),
+        // Sticky top-up history: a gap-sweep re-run (centerFunded) asserts it
+        // TRUE; the recovery path leaves it untouched (already TRUE from the
+        // original top-up create). Never set back to FALSE.
+        ...(centerFunded ? { wasCenterTopUp: true } : {}),
         // `creditPeriodDate` intentionally NOT updated here — the carry-over
         // target is decided exactly once, on first write, so re-running
         // retroactive billing can never drift the accrual to a later period.

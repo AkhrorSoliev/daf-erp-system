@@ -247,6 +247,88 @@ export function trendSheet(wb: Workbook, trend: any) {
   ], 5);
 }
 
+// ---- Sheet: Oylik qarzdorlik (undirish) ----
+// Ledger-reconstructed month-end debt with recovery. NOT a live-state sheet, so
+// it is never dropped for past-period exports (unlike Qarzdorlar/Balans).
+export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
+  const ws = wb.addWorksheet('Oylik qarzdorlik');
+  ws.columns = [
+    { width: 16 },
+    { width: 20 },
+    { width: 14 },
+    { width: 18 },
+    { width: 16 },
+    { width: 18 },
+    { width: 13 },
+    { width: 42 },
+  ];
+  sheetTitle(
+    ws,
+    'Oylik qarzdorlik va undirish',
+    'Har oy qancha qarz bilan yopilgani + keyingi undirish',
+    8,
+  );
+  const months = Array.isArray(debtHistory?.months) ? debtHistory.months : [];
+  const header = tableHeader(ws, [
+    'Oy',
+    'Oy oxiridagi qarz',
+    'Qarzdorlar',
+    'Undirildi',
+    'Kechirilgan',
+    'Qolgan qarz',
+    'Undirish %',
+    'Izoh',
+  ]);
+  const firstDataRow = header.number + 1;
+  months.forEach((m: any) => {
+    const izoh =
+      m.monthKey === '2026-05' ? "Pul oqimi to‘liq emas (o‘tish davri)" : '';
+    const r = ws.addRow([
+      m.label,
+      m.closingDebt,
+      m.debtorCount,
+      m.recovered,
+      m.writtenOff,
+      m.remaining,
+      m.recoveryRate,
+      izoh,
+    ]);
+    [2, 3, 4, 5, 6].forEach((c) => (r.getCell(c).numFmt = NUM));
+    r.getCell(7).numFmt = '#,##0.0"%"';
+    const ic = r.getCell(8);
+    ic.font = { italic: true, size: 9, color: { argb: SUBTLE } };
+    ic.alignment = { wrapText: true, vertical: 'top' };
+  });
+  const lastDataRow = ws.rowCount;
+  const t = debtHistory?.totals ?? {
+    closingDebt: 0,
+    recovered: 0,
+    writtenOff: 0,
+    remaining: 0,
+  };
+  // Debtor count isn't summable across months (cohorts overlap) → left blank.
+  totalsRow(
+    ws,
+    ['Jami', t.closingDebt, '', t.recovered, t.writtenOff, t.remaining, '', ''],
+    [2, 4, 5, 6],
+  );
+  if (lastDataRow >= firstDataRow) {
+    dataBar(ws, `B${firstDataRow}:B${lastDataRow}`);
+    colorScale(ws, `G${firstDataRow}:G${lastDataRow}`);
+  }
+  freezeAndFilter(ws, header.number, 8);
+  sheetNotes(
+    ws,
+    [
+      '"Oy oxiridagi qarz" — o‘sha oy oxirida (Toshkent) balansi manfiy bo‘lgan BARCHA o‘quvchilar qarzi (statusdan qat‘i nazar). Bu raqam muzlagan — keyin o‘zgarmaydi.',
+      '"Undirildi" — o‘sha oy qarzdorlarining keyingi naqd to‘lovlari, har o‘quvchida o‘sha oy qarzi bilan cheklangan (tizim eng eski qarzdan yopadi). "Kechirilgan" — DEBT_WRITE_OFF (naqdsiz, alohida).',
+      '"Qolgan qarz" = Oy oxiridagi qarz − Undirildi − Kechirilgan. "Undirish %" = Undirildi ÷ Oy oxiridagi qarz.',
+      'Ledgerdan (Transaction) qayta hisoblangan — kompaniya bo‘yicha (filial kesimi yo‘q).',
+    ],
+    8,
+  );
+}
+
 // ---- Sheet 11: Filial kesimida ----
 export function perBranchSheet(wb: Workbook, perBranch: any, period: string) {
   const ws = wb.addWorksheet('Filial kesimida');

@@ -3,6 +3,64 @@ import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
 
+const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+/** Fallback floor when a company has no `systemStartDate` (May 2026 cutover). */
+const DEBT_FLOOR_MONTH = '2026-05';
+const UZ_MONTHS = [
+  'Yanvar',
+  'Fevral',
+  'Mart',
+  'Aprel',
+  'May',
+  'Iyun',
+  'Iyul',
+  'Avgust',
+  'Sentabr',
+  'Oktabr',
+  'Noyabr',
+  'Dekabr',
+];
+
+/** Tashkent calendar month key ("YYYY-MM") of an instant. */
+function tashkentMonthKey(d: Date): string {
+  const t = new Date(d.getTime() + TASHKENT_OFFSET_MS);
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/** "May 2026" label for a "YYYY-MM" key. */
+function monthLabel(monthKey: string): string {
+  const [y, m] = monthKey.split('-').map(Number);
+  return `${UZ_MONTHS[m - 1]} ${y}`;
+}
+
+/** Inclusive list of "YYYY-MM" keys from `fromKey` to `toKey`. */
+function enumerateMonths(fromKey: string, toKey: string): string[] {
+  const out: string[] = [];
+  let [y, m] = fromKey.split('-').map(Number);
+  const [ty, tm] = toKey.split('-').map(Number);
+  while (y < ty || (y === ty && m <= tm)) {
+    out.push(`${y}-${String(m).padStart(2, '0')}`);
+    m++;
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return out;
+}
+
+/**
+ * The exclusive UTC boundary marking the END of Tashkent month `monthKey` —
+ * i.e. the first instant of the FOLLOWING Tashkent month. A transaction with
+ * `createdAt >= this` happened strictly AFTER the month closed. (monthKey's
+ * 1-based month equals the 0-based index of the next month, so `Date.UTC(y, m, 1)`
+ * is already the next month's first day; subtract the offset for Tashkent midnight.)
+ */
+function tashkentMonthEndBoundary(monthKey: string): Date {
+  const [y, m] = monthKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 1) - TASHKENT_OFFSET_MS);
+}
+
 @Injectable()
 export class ReportsFinancialService {
   constructor(private prisma: PrismaService) {}
@@ -666,6 +724,176 @@ export class ReportsFinancialService {
         };
       }),
     );
+  }
+
+  /**
+   * "Oylik qarzdorlik + undirish" — per Tashkent calendar month (from the
+   * company's `systemStartDate` floor to the current month), how much total
+   * student debt the center CLOSED THAT MONTH WITH, and how much of that
+   * cohort's debt has since been recovered (cash) or written off.
+   *
+   * COMPANY-WIDE and reconstructed from the append-only `Transaction` ledger
+   * only — no snapshot table. `Student.balance` is a pure accumulator and past
+   * ledger rows never change (corrections land at `createdAt = now()`), so each
+   * past month-end figure is derivable AND stable:
+   *   balanceAsOf(monthEnd)_i = Student.balance_i
+   *                             − Σ(Transaction.amount WHERE studentId=i
+   *                                 AND createdAt >= nextMonthStart)
+   * The signed sum spans ALL types incl. reversed (they net themselves out), so
+   * it reconciles exactly to the live balance — same trick as `getReconciliation`.
+   *
+   * Cohort = students with balanceAsOf(monthEnd) < 0, ANY status (a
+   * frozen/expelled/archived debtor still owes money). Recovery is capped per
+   * student at that month's debt (the system settles oldest-first, so a later
+   * month's new debt never distorts an earlier month):
+   *   recovered_i = min(debt_i, max(0, Σ PAYMENT.amount after monthEnd))
+   * `DEBT_WRITE_OFF` is a separate column (forgiven, not cash) so the recovery
+   * rate isn't inflated. remaining = closingDebt − recovered − writtenOff.
+   */
+  async getMonthlyDebtRecovery(companyId: number): Promise<{
+    months: Array<{
+      monthKey: string;
+      label: string;
+      closingDebt: number;
+      debtorCount: number;
+      recovered: number;
+      writtenOff: number;
+      remaining: number;
+      recoveryRate: number;
+    }>;
+    totals: {
+      closingDebt: number;
+      recovered: number;
+      writtenOff: number;
+      remaining: number;
+    };
+  }> {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { systemStartDate: true },
+    });
+    const floorKey = company?.systemStartDate
+      ? tashkentMonthKey(company.systemStartDate)
+      : DEBT_FLOOR_MONTH;
+    const monthKeys = enumerateMonths(floorKey, tashkentMonthKey(new Date()));
+
+    // Live balances for every student (any status, incl. archived debtors).
+    const students = await this.prisma.student.findMany({
+      where: { companyId },
+      select: { id: true, balance: true },
+    });
+
+    const months: Array<{
+      monthKey: string;
+      label: string;
+      closingDebt: number;
+      debtorCount: number;
+      recovered: number;
+      writtenOff: number;
+      remaining: number;
+      recoveryRate: number;
+    }> = [];
+    const totals = {
+      closingDebt: 0,
+      recovered: 0,
+      writtenOff: 0,
+      remaining: 0,
+    };
+
+    for (const monthKey of monthKeys) {
+      const boundary = tashkentMonthEndBoundary(monthKey);
+
+      // Σ signed amount AFTER month-end, per student → reconstruct that month's
+      // closing balance for everyone.
+      const movesAfter = await this.prisma.transaction.groupBy({
+        by: ['studentId'],
+        where: {
+          companyId,
+          studentId: { not: null },
+          createdAt: { gte: boundary },
+        },
+        _sum: { amount: true },
+      });
+      const moveMap = new Map<number, number>();
+      for (const m of movesAfter) {
+        if (m.studentId != null) moveMap.set(m.studentId, m._sum.amount ?? 0);
+      }
+
+      const cohort: Array<{ id: number; debt: number }> = [];
+      for (const s of students) {
+        const balAsOf = s.balance - (moveMap.get(s.id) ?? 0);
+        if (balAsOf < 0) cohort.push({ id: s.id, debt: -balAsOf });
+      }
+      const closingDebt = cohort.reduce((sum, c) => sum + c.debt, 0);
+
+      let recovered = 0;
+      let writtenOff = 0;
+      if (cohort.length > 0) {
+        const cohortIds = cohort.map((c) => c.id);
+        const [payAgg, woAgg] = await Promise.all([
+          this.prisma.transaction.groupBy({
+            by: ['studentId'],
+            where: {
+              companyId,
+              studentId: { in: cohortIds },
+              type: TransactionType.PAYMENT,
+              createdAt: { gte: boundary },
+            },
+            _sum: { amount: true },
+          }),
+          this.prisma.transaction.groupBy({
+            by: ['studentId'],
+            where: {
+              companyId,
+              studentId: { in: cohortIds },
+              type: TransactionType.DEBT_WRITE_OFF,
+              createdAt: { gte: boundary },
+            },
+            _sum: { amount: true },
+          }),
+        ]);
+        const payMap = new Map<number, number>();
+        for (const p of payAgg) {
+          if (p.studentId != null) payMap.set(p.studentId, p._sum.amount ?? 0);
+        }
+        const woMap = new Map<number, number>();
+        for (const w of woAgg) {
+          if (w.studentId != null) woMap.set(w.studentId, w._sum.amount ?? 0);
+        }
+        for (const c of cohort) {
+          const rec = Math.min(c.debt, Math.max(0, payMap.get(c.id) ?? 0));
+          const wo = Math.min(
+            c.debt - rec,
+            Math.max(0, woMap.get(c.id) ?? 0),
+          );
+          recovered += rec;
+          writtenOff += wo;
+        }
+      }
+
+      const remaining = closingDebt - recovered - writtenOff;
+      const recoveryRate =
+        closingDebt > 0
+          ? Math.round((recovered / closingDebt) * 1000) / 10
+          : 0;
+
+      months.push({
+        monthKey,
+        label: monthLabel(monthKey),
+        closingDebt,
+        debtorCount: cohort.length,
+        recovered,
+        writtenOff,
+        remaining,
+        recoveryRate,
+      });
+      totals.closingDebt += closingDebt;
+      totals.recovered += recovered;
+      totals.writtenOff += writtenOff;
+      totals.remaining += remaining;
+    }
+
+    return { months, totals };
   }
 
   /**

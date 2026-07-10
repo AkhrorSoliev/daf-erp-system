@@ -2085,6 +2085,12 @@ model SalaryAccrual {
   // the SAME natural-key row and flips this back to FALSE (recovered), so the
   // teacher is never paid twice. Ordinary student-covered accruals stay FALSE.
   isCenterTopUp   Boolean        @default(false)
+  // STICKY companion to `isCenterTopUp`: TRUE whenever this row was EVER center-
+  // funded, and NEVER cleared. `isCenterTopUp` flips to FALSE on recovery, losing
+  // the history of "the center once fronted this"; this flag preserves it so the
+  // center-advance report can compute advanced (Σ wasCenterTopUp), still-fronted
+  // (Σ isCenterTopUp), and recovered (Σ wasCenterTopUp AND NOT isCenterTopUp).
+  wasCenterTopUp  Boolean        @default(false)
   salaryPaymentId String?
   salaryPayment   SalaryPayment? @relation(fields: [salaryPaymentId], references: [id])
 

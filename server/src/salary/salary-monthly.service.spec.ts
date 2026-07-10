@@ -72,6 +72,9 @@ describe('SalaryMonthlyService', () => {
       gap: 0,
       advances: 0,
       netToPay: 0,
+      centerAdvanced: 0,
+      centerStillFronted: 0,
+      centerRecovered: 0,
     });
     expect(prisma.attendance.findMany).not.toHaveBeenCalled();
   });
@@ -306,6 +309,57 @@ describe('SalaryMonthlyService', () => {
     expect(row.isFixedMonthly).toBe(true);
     expect(row.gap).toBeNull(); // no fabricated per-lesson gap
     expect(row.hasLessonData).toBe(false);
+  });
+
+  it('reports center top-up advanced/recovered/still-fronted per teacher and totals', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    // Three accruals in the period:
+    //  - a1: ordinary student-covered (never a top-up)         → neither flag
+    //  - a2: center fronted, STILL fronted (isCenterTopUp)     → advanced + fronted
+    //  - a3: center fronted then recovered (was, not is)       → advanced only
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      {
+        userId: 10010,
+        attendanceId: 'a1',
+        amount: 6_000,
+        creditPeriodDate: null,
+        isCenterTopUp: false,
+        wasCenterTopUp: false,
+      },
+      {
+        userId: 10010,
+        attendanceId: 'a2',
+        amount: 6_000,
+        creditPeriodDate: null,
+        isCenterTopUp: true,
+        wasCenterTopUp: true,
+      },
+      {
+        userId: 10010,
+        attendanceId: 'a3',
+        amount: 6_000,
+        creditPeriodDate: null,
+        isCenterTopUp: false,
+        wasCenterTopUp: true,
+      },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    const row = res.data[0];
+    // advanced (X) = a2 + a3 = 12_000
+    expect(row.centerAdvanced).toBe(12_000);
+    expect(res.totals.centerAdvanced).toBe(12_000);
+    // still-fronted (Z) = a2 = 6_000
+    expect(res.totals.centerStillFronted).toBe(6_000);
+    // recovered (Y) = X − Z = 6_000 (a3, which was fronted then paid back)
+    expect(res.totals.centerRecovered).toBe(6_000);
   });
 
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {

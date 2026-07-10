@@ -153,6 +153,12 @@ export class SalaryMonthlyService {
       gap: 0,
       advances: 0,
       netToPay: 0,
+      // Center top-up lifecycle (company-level summary card):
+      //   advanced (X) = Σ wasCenterTopUp, stillFronted (Z) = Σ isCenterTopUp,
+      //   recovered (Y) = X − Z.
+      centerAdvanced: 0,
+      centerStillFronted: 0,
+      centerRecovered: 0,
     };
     if (ids.length === 0) {
       return { month, floorMonth, period, data: [], totals: zeroTotals };
@@ -192,6 +198,8 @@ export class SalaryMonthlyService {
           attendanceId: true,
           amount: true,
           creditPeriodDate: true,
+          isCenterTopUp: true,
+          wasCenterTopUp: true,
         },
       }),
       // Billable attendances in the period (for the GAP sweep).
@@ -352,6 +360,8 @@ export class SalaryMonthlyService {
       gapUnits: number;
       noConfigUnits: number;
       isFixedMonthly: boolean;
+      centerAdvanced: number;
+      centerStillFronted: number;
     }
     const agg = new Map<number, Agg>();
     for (const id of ids) {
@@ -363,6 +373,8 @@ export class SalaryMonthlyService {
         gapUnits: 0,
         noConfigUnits: 0,
         isFixedMonthly: fixedMonthlyTeachers.has(id),
+        centerAdvanced: 0,
+        centerStillFronted: 0,
       });
     }
     for (const ac of accruals) {
@@ -372,6 +384,10 @@ export class SalaryMonthlyService {
       // A carried-IN accrual (creditPeriodDate set → lessonDate was a prior month).
       if (ac.creditPeriodDate) a.carriedIn += ac.amount;
       if (ac.attendanceId) a.coveredAtt.add(ac.attendanceId);
+      // Center top-up lifecycle: advanced = ever-fronted; stillFronted = not yet
+      // recovered. recovered (Y) = advanced − stillFronted (computed in totals).
+      if (ac.wasCenterTopUp) a.centerAdvanced += ac.amount;
+      if (ac.isCenterTopUp) a.centerStillFronted += ac.amount;
     }
     for (const att of attendances) {
       const g = groupMap.get(att.groupId);
@@ -440,6 +456,11 @@ export class SalaryMonthlyService {
         gap,
         advances,
         netToPay,
+        // Per-teacher "Markaz qo'shdi" = how much the center fronted for this
+        // teacher this period (X). stillFronted is carried for the totals card
+        // (company-level Y/Z), not shown per row.
+        centerAdvanced: a.centerAdvanced,
+        centerStillFronted: a.centerStillFronted,
         payment: payment
           ? { id: payment.id, amount: payment.amount, status: payment.status }
           : null,
@@ -467,9 +488,14 @@ export class SalaryMonthlyService {
         gap: s.gap + (r.gap ?? 0),
         advances: s.advances + r.advances,
         netToPay: s.netToPay + r.netToPay,
+        centerAdvanced: s.centerAdvanced + r.centerAdvanced,
+        centerStillFronted: s.centerStillFronted + r.centerStillFronted,
+        centerRecovered: 0, // filled below (X − Z)
       }),
       { ...zeroTotals },
     );
+    // recovered (Y) = advanced (X) − still-fronted (Z).
+    totals.centerRecovered = totals.centerAdvanced - totals.centerStillFronted;
 
     return { month, floorMonth, period, data: rows, totals };
   }

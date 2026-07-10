@@ -43,6 +43,9 @@ describe('ReportsController — role guards', () => {
     getProfitLoss: jest.fn().mockResolvedValue({}),
     getCashFlow: jest.fn().mockResolvedValue({}),
     getBalanceSheet: jest.fn().mockResolvedValue({}),
+    getMonthlyDebtRecovery: jest
+      .fn()
+      .mockResolvedValue({ months: [], totals: {} }),
   };
 
   const mockPrisma = {
@@ -139,6 +142,7 @@ describe('ReportsController — role guards', () => {
     'getPaymentReports',
     'getTeacherPaymentReports',
     'getTeacherGroupsReport',
+    'getMonthlyDebtRecovery',
   ] as const;
 
   for (const method of narrowedEndpoints) {

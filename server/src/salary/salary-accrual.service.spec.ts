@@ -91,24 +91,34 @@ describe('SalaryAccrualService', () => {
       expect(prisma.salaryPayment.findFirst).not.toHaveBeenCalled();
       expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          create: expect.objectContaining({ isCenterTopUp: true }),
+          // Both flags TRUE on a center-funded create; wasCenterTopUp is sticky.
+          create: expect.objectContaining({
+            isCenterTopUp: true,
+            wasCenterTopUp: true,
+          }),
+          // A gap-sweep re-run re-asserts the sticky flag TRUE, never clears it.
+          update: expect.objectContaining({ wasCenterTopUp: true }),
         }),
       );
     });
 
-    it('covered path clears isCenterTopUp on update (recovery flip)', async () => {
+    it('covered path clears isCenterTopUp but keeps wasCenterTopUp sticky (recovery flip)', async () => {
       prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'acc-1' });
 
       await service.createAccrual(baseParams); // ordinary student-covered accrual
 
-      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          create: expect.objectContaining({ isCenterTopUp: false }),
-          // A later covered deduction settling a fronted lesson clears the flag.
-          update: expect.objectContaining({ isCenterTopUp: false }),
-        }),
+      const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
+      // Fresh covered accrual: both flags FALSE on create.
+      expect(call.create).toEqual(
+        expect.objectContaining({ isCenterTopUp: false, wasCenterTopUp: false }),
       );
+      // Recovery flip: isCenterTopUp cleared; wasCenterTopUp is NOT touched on
+      // the covered path (stays whatever the row had — TRUE if it was a top-up).
+      expect(call.update).toEqual(
+        expect.objectContaining({ isCenterTopUp: false }),
+      );
+      expect(call.update).not.toHaveProperty('wasCenterTopUp');
     });
 
     it('does NOT notify carry-over when recovering a row the center already paid', async () => {
