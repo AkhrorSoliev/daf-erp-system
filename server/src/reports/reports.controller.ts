@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Param,
@@ -136,6 +137,39 @@ export class ReportsController {
   @Roles('CEO', 'Branch Director')
   getMonthlyDebtRecovery(@CurrentUser('companyId') companyId: number) {
     return this.reportsService.getMonthlyDebtRecovery(companyId);
+  }
+
+  // Dedicated Excel workbook for the debt-history page (Umumiy + Qarzdorlar +
+  // Undirildi + Kechirilgan sheets). CEO/BD only. Note: this static route must
+  // be declared BEFORE the ":monthKey" param route so "excel" isn't captured.
+  @Get('monthly-debt-recovery/excel')
+  @Roles('CEO', 'Branch Director')
+  async exportMonthlyDebtExcel(
+    @CurrentUser('companyId') companyId: number,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.reportsExcelService.generateDebtHistory(companyId);
+    const filename = `oylik-qarzdorlik-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
+  }
+
+  // Per-month drill-down: who owed at month-end, who paid, who was written off.
+  @Get('monthly-debt-recovery/:monthKey/detail')
+  @Roles('CEO', 'Branch Director')
+  getMonthDebtDetail(
+    @Param('monthKey') monthKey: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) {
+      throw new BadRequestException('monthKey formati YYYY-MM bo‘lishi kerak');
+    }
+    return this.reportsService.getMonthDebtDetail(companyId, monthKey);
   }
 
   // KPI summary for the "yo'qolgan o'quvchi" write-off flow — total

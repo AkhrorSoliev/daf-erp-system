@@ -266,6 +266,15 @@ describe('ReportsExcelService', () => {
     getMonthlyDebtRecovery: jest
       .fn()
       .mockResolvedValue({ months: [], totals: {} }),
+    getMonthDebtDetail: jest.fn().mockResolvedValue({
+      monthKey: '2026-06',
+      label: 'Iyun 2026',
+      totals: {},
+      debtors: [],
+      recoveredPayments: [],
+      writeOffs: [],
+      truncated: false,
+    }),
     // Operational feeds.
     getKpis: jest.fn().mockResolvedValue(kpis),
     getLeadAnalytics: jest.fn().mockResolvedValue(leads),
@@ -530,5 +539,84 @@ describe('ReportsExcelService', () => {
     const wb = await load(await service.generate(1, { startDate: '2026-07-01', endDate: '2999-12-31' }));
     const row = findRow(wb.getWorksheet('Muqova')!, 'Hisobot davri:');
     expect(String(row.getCell(2).value)).toContain('bugungi kungacha');
+  });
+
+  describe('generateDebtHistory', () => {
+    it('builds the 4 debt sheets (Umumiy + Qarzdorlar + Undirildi + Kechirilgan) with detail', async () => {
+      reports.getMonthlyDebtRecovery.mockResolvedValueOnce({
+        months: [
+          {
+            monthKey: '2026-06',
+            label: 'Iyun 2026',
+            closingDebt: 200000,
+            debtorCount: 1,
+            recovered: 80000,
+            writtenOff: 0,
+            remaining: 120000,
+            recoveryRate: 40,
+          },
+        ],
+        totals: {
+          closingDebt: 200000,
+          recovered: 80000,
+          writtenOff: 0,
+          remaining: 120000,
+        },
+      });
+      reports.getMonthDebtDetail.mockResolvedValueOnce({
+        monthKey: '2026-06',
+        label: 'Iyun 2026',
+        totals: {
+          closingDebt: 200000,
+          recovered: 80000,
+          writtenOff: 0,
+          remaining: 120000,
+          debtorCount: 1,
+        },
+        debtors: [
+          {
+            id: 10001,
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            phone: '901234567',
+            groups: ['A1-01'],
+            monthEndDebt: 200000,
+            recovered: 80000,
+            writtenOff: 0,
+            remaining: 120000,
+          },
+        ],
+        recoveredPayments: [
+          {
+            id: 'p1',
+            studentId: 10001,
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            amount: 80000,
+            method: 'CASH',
+            createdAt: new Date('2026-07-05'),
+            performedBy: 'Admin X',
+          },
+        ],
+        writeOffs: [],
+        truncated: false,
+      });
+
+      const wb = await load(await service.generateDebtHistory(1));
+      const names = wb.worksheets.map((w) => w.name);
+      expect(names).toEqual([
+        'Oylik qarzdorlik',
+        'Qarzdorlar',
+        'Undirildi',
+        'Kechirilgan',
+      ]);
+      // Debtor row lands on the Qarzdorlar sheet with its month + amount.
+      const dRow = findRow(wb.getWorksheet('Qarzdorlar')!, 'Iyun 2026');
+      expect(dRow.getCell(4).value).toBe(200000);
+      // Payment row lands on Undirildi.
+      const pRow = findRow(wb.getWorksheet('Undirildi')!, 'Iyun 2026');
+      expect(pRow.getCell(4).value).toBe(80000);
+      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06');
+    });
   });
 });

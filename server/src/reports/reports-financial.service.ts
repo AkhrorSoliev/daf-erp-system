@@ -801,76 +801,14 @@ export class ReportsFinancialService {
     };
 
     for (const monthKey of monthKeys) {
-      const boundary = tashkentMonthEndBoundary(monthKey);
-
-      // Σ signed amount AFTER month-end, per student → reconstruct that month's
-      // closing balance for everyone.
-      const movesAfter = await this.prisma.transaction.groupBy({
-        by: ['studentId'],
-        where: {
-          companyId,
-          studentId: { not: null },
-          createdAt: { gte: boundary },
-        },
-        _sum: { amount: true },
-      });
-      const moveMap = new Map<number, number>();
-      for (const m of movesAfter) {
-        if (m.studentId != null) moveMap.set(m.studentId, m._sum.amount ?? 0);
-      }
-
-      const cohort: Array<{ id: number; debt: number }> = [];
-      for (const s of students) {
-        const balAsOf = s.balance - (moveMap.get(s.id) ?? 0);
-        if (balAsOf < 0) cohort.push({ id: s.id, debt: -balAsOf });
-      }
-      const closingDebt = cohort.reduce((sum, c) => sum + c.debt, 0);
-
-      let recovered = 0;
-      let writtenOff = 0;
-      if (cohort.length > 0) {
-        const cohortIds = cohort.map((c) => c.id);
-        const [payAgg, woAgg] = await Promise.all([
-          this.prisma.transaction.groupBy({
-            by: ['studentId'],
-            where: {
-              companyId,
-              studentId: { in: cohortIds },
-              type: TransactionType.PAYMENT,
-              createdAt: { gte: boundary },
-            },
-            _sum: { amount: true },
-          }),
-          this.prisma.transaction.groupBy({
-            by: ['studentId'],
-            where: {
-              companyId,
-              studentId: { in: cohortIds },
-              type: TransactionType.DEBT_WRITE_OFF,
-              createdAt: { gte: boundary },
-            },
-            _sum: { amount: true },
-          }),
-        ]);
-        const payMap = new Map<number, number>();
-        for (const p of payAgg) {
-          if (p.studentId != null) payMap.set(p.studentId, p._sum.amount ?? 0);
-        }
-        const woMap = new Map<number, number>();
-        for (const w of woAgg) {
-          if (w.studentId != null) woMap.set(w.studentId, w._sum.amount ?? 0);
-        }
-        for (const c of cohort) {
-          const rec = Math.min(c.debt, Math.max(0, payMap.get(c.id) ?? 0));
-          const wo = Math.min(
-            c.debt - rec,
-            Math.max(0, woMap.get(c.id) ?? 0),
-          );
-          recovered += rec;
-          writtenOff += wo;
-        }
-      }
-
+      const { cohort } = await this.reconstructMonthCohort(
+        companyId,
+        monthKey,
+        students,
+      );
+      const closingDebt = cohort.reduce((s, c) => s + c.monthEndDebt, 0);
+      const recovered = cohort.reduce((s, c) => s + c.recovered, 0);
+      const writtenOff = cohort.reduce((s, c) => s + c.writtenOff, 0);
       const remaining = closingDebt - recovered - writtenOff;
       const recoveryRate =
         closingDebt > 0
@@ -894,6 +832,304 @@ export class ReportsFinancialService {
     }
 
     return { months, totals };
+  }
+
+  /**
+   * Shared month-end cohort reconstruction (see `getMonthlyDebtRecovery` for the
+   * ledger math). Returns the `boundary` (first instant of the NEXT Tashkent
+   * month) and the per-student cohort — everyone whose reconstructed month-end
+   * balance was negative — with each student's monthEndDebt and the capped
+   * recovered / writtenOff / remaining. Powers both the aggregate report and the
+   * per-month drill-down detail. `students` (id+balance for the whole company)
+   * is passed in so the caller can load it once and reuse across months.
+   */
+  private async reconstructMonthCohort(
+    companyId: number,
+    monthKey: string,
+    students: Array<{ id: number; balance: number }>,
+  ): Promise<{
+    boundary: Date;
+    cohort: Array<{
+      id: number;
+      monthEndDebt: number;
+      recovered: number;
+      writtenOff: number;
+      remaining: number;
+    }>;
+  }> {
+    const boundary = tashkentMonthEndBoundary(monthKey);
+
+    // Σ signed amount AFTER month-end, per student → reconstruct closing balance.
+    const movesAfter = await this.prisma.transaction.groupBy({
+      by: ['studentId'],
+      where: {
+        companyId,
+        studentId: { not: null },
+        createdAt: { gte: boundary },
+      },
+      _sum: { amount: true },
+    });
+    const moveMap = new Map<number, number>();
+    for (const m of movesAfter) {
+      if (m.studentId != null) moveMap.set(m.studentId, m._sum.amount ?? 0);
+    }
+
+    const base: Array<{ id: number; debt: number }> = [];
+    for (const s of students) {
+      const balAsOf = s.balance - (moveMap.get(s.id) ?? 0);
+      if (balAsOf < 0) base.push({ id: s.id, debt: -balAsOf });
+    }
+    if (base.length === 0) return { boundary, cohort: [] };
+
+    const cohortIds = base.map((c) => c.id);
+    const [payAgg, woAgg] = await Promise.all([
+      this.prisma.transaction.groupBy({
+        by: ['studentId'],
+        where: {
+          companyId,
+          studentId: { in: cohortIds },
+          type: TransactionType.PAYMENT,
+          createdAt: { gte: boundary },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.transaction.groupBy({
+        by: ['studentId'],
+        where: {
+          companyId,
+          studentId: { in: cohortIds },
+          type: TransactionType.DEBT_WRITE_OFF,
+          createdAt: { gte: boundary },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+    const payMap = new Map<number, number>();
+    for (const p of payAgg) {
+      if (p.studentId != null) payMap.set(p.studentId, p._sum.amount ?? 0);
+    }
+    const woMap = new Map<number, number>();
+    for (const w of woAgg) {
+      if (w.studentId != null) woMap.set(w.studentId, w._sum.amount ?? 0);
+    }
+
+    const cohort = base.map((c) => {
+      const recovered = Math.min(c.debt, Math.max(0, payMap.get(c.id) ?? 0));
+      const writtenOff = Math.min(
+        c.debt - recovered,
+        Math.max(0, woMap.get(c.id) ?? 0),
+      );
+      return {
+        id: c.id,
+        monthEndDebt: c.debt,
+        recovered,
+        writtenOff,
+        remaining: c.debt - recovered - writtenOff,
+      };
+    });
+    return { boundary, cohort };
+  }
+
+  /**
+   * Per-month drill-down for `/payments/debt-history`: WHO owed at that month's
+   * end and how much, WHO paid since (recovered), and WHO/WHY/WHEN each debt was
+   * written off. Cohort is the same ledger-reconstructed set as the aggregate
+   * report (any status). Transaction lists are scoped to the cohort + month-end
+   * boundary and capped (a school-scale month has ~hundreds of rows).
+   */
+  async getMonthDebtDetail(
+    companyId: number,
+    monthKey: string,
+  ): Promise<{
+    monthKey: string;
+    label: string;
+    totals: {
+      closingDebt: number;
+      recovered: number;
+      writtenOff: number;
+      remaining: number;
+      debtorCount: number;
+    };
+    debtors: Array<{
+      id: number;
+      firstName: string;
+      lastName: string;
+      phone: string | null;
+      groups: string[];
+      monthEndDebt: number;
+      recovered: number;
+      writtenOff: number;
+      remaining: number;
+    }>;
+    recoveredPayments: Array<{
+      id: string;
+      studentId: number | null;
+      firstName: string;
+      lastName: string;
+      amount: number;
+      method: string | null;
+      createdAt: Date;
+      performedBy: string | null;
+    }>;
+    writeOffs: Array<{
+      id: string;
+      studentId: number | null;
+      firstName: string;
+      lastName: string;
+      amount: number;
+      reason: string | null;
+      performedBy: string | null;
+      createdAt: Date;
+    }>;
+    truncated: boolean;
+  }> {
+    const LIST_CAP = 2000;
+    const students = await this.prisma.student.findMany({
+      where: { companyId },
+      select: { id: true, balance: true },
+    });
+    const { boundary, cohort } = await this.reconstructMonthCohort(
+      companyId,
+      monthKey,
+      students,
+    );
+    const cohortIds = cohort.map((c) => c.id);
+
+    const totals = {
+      closingDebt: cohort.reduce((s, c) => s + c.monthEndDebt, 0),
+      recovered: cohort.reduce((s, c) => s + c.recovered, 0),
+      writtenOff: cohort.reduce((s, c) => s + c.writtenOff, 0),
+      remaining: cohort.reduce((s, c) => s + c.remaining, 0),
+      debtorCount: cohort.length,
+    };
+
+    if (cohortIds.length === 0) {
+      return {
+        monthKey,
+        label: monthLabel(monthKey),
+        totals,
+        debtors: [],
+        recoveredPayments: [],
+        writeOffs: [],
+        truncated: false,
+      };
+    }
+
+    const [enriched, payRows, woRows] = await Promise.all([
+      this.prisma.student.findMany({
+        where: { id: { in: cohortIds } },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          enrollments: {
+            where: { status: 'ACTIVE' },
+            select: { group: { select: { name: true } } },
+          },
+        },
+      }),
+      this.prisma.transaction.findMany({
+        where: {
+          companyId,
+          studentId: { in: cohortIds },
+          type: TransactionType.PAYMENT,
+          createdAt: { gte: boundary },
+          reversedAt: null,
+        },
+        select: {
+          id: true,
+          studentId: true,
+          amount: true,
+          createdAt: true,
+          student: { select: { firstName: true, lastName: true } },
+          performedBy: { select: { firstName: true, lastName: true } },
+          payment: { select: { method: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: LIST_CAP + 1,
+      }),
+      this.prisma.transaction.findMany({
+        where: {
+          companyId,
+          studentId: { in: cohortIds },
+          type: TransactionType.DEBT_WRITE_OFF,
+          createdAt: { gte: boundary },
+          reversedAt: null,
+        },
+        select: {
+          id: true,
+          studentId: true,
+          amount: true,
+          createdAt: true,
+          description: true,
+          metadata: true,
+          student: { select: { firstName: true, lastName: true } },
+          performedBy: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: LIST_CAP + 1,
+      }),
+    ]);
+
+    const enrichMap = new Map(enriched.map((e) => [e.id, e]));
+    const fullName = (u: { firstName: string; lastName: string } | null) =>
+      u ? `${u.firstName} ${u.lastName}`.trim() : null;
+
+    const debtors = cohort
+      .map((c) => {
+        const e = enrichMap.get(c.id);
+        return {
+          id: c.id,
+          firstName: e?.firstName ?? '',
+          lastName: e?.lastName ?? '',
+          phone: e?.phone ?? null,
+          groups: e?.enrollments.map((en) => en.group.name) ?? [],
+          monthEndDebt: c.monthEndDebt,
+          recovered: c.recovered,
+          writtenOff: c.writtenOff,
+          remaining: c.remaining,
+        };
+      })
+      .sort((a, b) => b.monthEndDebt - a.monthEndDebt);
+
+    const truncated =
+      payRows.length > LIST_CAP || woRows.length > LIST_CAP;
+
+    const recoveredPayments = payRows.slice(0, LIST_CAP).map((t) => ({
+      id: t.id,
+      studentId: t.studentId,
+      firstName: t.student?.firstName ?? '',
+      lastName: t.student?.lastName ?? '',
+      amount: t.amount,
+      method: t.payment?.method ?? null,
+      createdAt: t.createdAt,
+      performedBy: fullName(t.performedBy),
+    }));
+
+    const writeOffs = woRows.slice(0, LIST_CAP).map((t) => {
+      const meta = (t.metadata as { reason?: string } | null) ?? null;
+      return {
+        id: t.id,
+        studentId: t.studentId,
+        firstName: t.student?.firstName ?? '',
+        lastName: t.student?.lastName ?? '',
+        amount: t.amount,
+        reason: meta?.reason ?? t.description ?? null,
+        performedBy: fullName(t.performedBy),
+        createdAt: t.createdAt,
+      };
+    });
+
+    return {
+      monthKey,
+      label: monthLabel(monthKey),
+      totals,
+      debtors,
+      recoveredPayments,
+      writeOffs,
+      truncated,
+    };
   }
 
   /**

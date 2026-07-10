@@ -17,6 +17,9 @@ import {
   debtorsSheet,
   trendSheet,
   monthlyDebtSheet,
+  debtorsCohortSheet,
+  recoveredPaymentsSheet,
+  writeOffsSheet,
   perBranchSheet,
   reconciliationSheet,
 } from './reports-excel.detail-sheets';
@@ -327,6 +330,42 @@ export class ReportsExcelService {
     if (yearly) yearlyTrendSheet(wb, yearly);
     reconciliationSheet(wb, recon, pl, payments, expenses, salaries, debtors, bs, period, !dropPointInTime);
     glossarySheet(wb);
+
+    const buf = await wb.xlsx.writeBuffer();
+    return Buffer.from(buf);
+  }
+
+  /**
+   * Dedicated "Oylik qarzdorlik" workbook for the /payments/debt-history page —
+   * separate from the giant financial report. Four sheets: Umumiy (the month
+   * summary, reusing `monthlyDebtSheet`) + per-student detail for Qarzdorlar /
+   * Undirildi / Kechirilgan, each row tagged with its month label. All figures
+   * flow through ReportsService (no Prisma here).
+   */
+  async generateDebtHistory(companyId: number): Promise<Buffer> {
+    const debtHistory = await this.reports.getMonthlyDebtRecovery(companyId);
+    const details = await Promise.all(
+      debtHistory.months.map((m) =>
+        this.reports.getMonthDebtDetail(companyId, m.monthKey),
+      ),
+    );
+    const debtorRows = details.flatMap((d) =>
+      d.debtors.map((x) => ({ month: d.label, ...x })),
+    );
+    const payRows = details.flatMap((d) =>
+      d.recoveredPayments.map((x) => ({ month: d.label, ...x })),
+    );
+    const woRows = details.flatMap((d) =>
+      d.writeOffs.map((x) => ({ month: d.label, ...x })),
+    );
+
+    const wb = new Workbook();
+    wb.creator = 'DaF Sprachzentrum ERP';
+    wb.created = new Date(0);
+    monthlyDebtSheet(wb, debtHistory);
+    debtorsCohortSheet(wb, debtorRows);
+    recoveredPaymentsSheet(wb, payRows);
+    writeOffsSheet(wb, woRows);
 
     const buf = await wb.xlsx.writeBuffer();
     return Buffer.from(buf);

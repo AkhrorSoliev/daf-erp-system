@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Info } from "lucide-react";
+import { Download, Info, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,7 +24,9 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { formatPrice, formatPercent } from "@/lib/format-utils";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
+import { MonthDebtDetailDialog } from "./month-debt-detail-dialog";
 
 interface DebtMonth {
   monthKey: string;
@@ -81,15 +86,56 @@ export function DebtHistoryView() {
   const months = data?.months ?? [];
   const totals = data?.totals;
 
+  const [target, setTarget] = useState<{
+    monthKey: string;
+    label: string;
+  } | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const downloadExcel = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get("/reports/monthly-debt-recovery/excel", {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `oylik-qarzdorlik-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold">Oylik qarzdorlik va undirish</h1>
-        <p className="text-sm text-muted-foreground">
-          Har oy qancha qarz bilan yopilgani (muzlagan tarix) va o&apos;sha
-          qarzdan keyin qanchasi undirilgani.
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Oylik qarzdorlik va undirish</h1>
+          <p className="text-sm text-muted-foreground">
+            Har oy qancha qarz bilan yopilgani (muzlagan tarix) va o&apos;sha
+            qarzdan keyin qanchasi undirilgani. Batafsil ko&apos;rish uchun oyni
+            bosing.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="shrink-0"
+          onClick={downloadExcel}
+          disabled={exporting || months.length === 0}
+        >
+          {exporting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Download className="size-4" />
+          )}
+          Excel yuklab olish
+        </Button>
       </div>
 
       {/* Explainer note */}
@@ -156,7 +202,13 @@ export function DebtHistoryView() {
               </TableRow>
             ) : (
               months.map((m, idx) => (
-                <TableRow key={m.monthKey}>
+                <TableRow
+                  key={m.monthKey}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    setTarget({ monthKey: m.monthKey, label: m.label })
+                  }
+                >
                   <TableCell className="border-r text-muted-foreground tabular-nums">
                     {idx + 1}
                   </TableCell>
@@ -239,6 +291,8 @@ export function DebtHistoryView() {
           )}
         </Table>
       </div>
+
+      <MonthDebtDetailDialog target={target} onClose={() => setTarget(null)} />
     </div>
   );
 }

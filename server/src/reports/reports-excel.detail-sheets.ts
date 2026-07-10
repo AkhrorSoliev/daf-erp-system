@@ -341,6 +341,161 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
   );
 }
 
+// ---- Dedicated "Oylik qarzdorlik" workbook: detail sheets ----
+// Each row is one student in one month's cohort / one transaction; the "Oy"
+// column carries the month label so all months live in one flat, filterable sheet.
+
+export function debtorsCohortSheet(wb: Workbook, rows: any[]) {
+  const ws = wb.addWorksheet('Qarzdorlar');
+  ws.columns = [
+    { width: 16 },
+    { width: 30 },
+    { width: 16 },
+    { width: 18 },
+    { width: 16 },
+    { width: 16 },
+  ];
+  sheetTitle(
+    ws,
+    'Qarzdorlar (oy oxiri kesimida)',
+    'Har oy oxirida qarzdor bo‘lgan o‘quvchilar',
+    6,
+  );
+  const header = tableHeader(ws, [
+    'Oy',
+    'O‘quvchi',
+    'Telefon',
+    'Oy oxiridagi qarz',
+    'Undirildi',
+    'Qolgan',
+  ]);
+  let td = 0;
+  let tr = 0;
+  let tq = 0;
+  rows.forEach((r) => {
+    td += r.monthEndDebt;
+    tr += r.recovered;
+    tq += r.remaining;
+    const row = ws.addRow([
+      r.month,
+      `#${r.id} ${r.firstName} ${r.lastName}`.trim(),
+      r.phone ?? '',
+      r.monthEndDebt,
+      r.recovered,
+      r.remaining,
+    ]);
+    [4, 5, 6].forEach((c) => (row.getCell(c).numFmt = NUM));
+  });
+  totalsRow(ws, ['Jami', '', '', td, tr, tq], [4, 5, 6]);
+  freezeAndFilter(ws, header.number, 6);
+  sheetNotes(
+    ws,
+    [
+      'Har qator — bitta o‘quvchi bitta oy oxirida (statusdan qat‘i nazar). Bir o‘quvchi bir necha oyda ko‘rinishi mumkin — har oy alohida surat.',
+      '"Undirildi" o‘sha oy qarzi bilan cheklangan (tizim eng eski qarzdan yopadi). "Qolgan" = Oy oxiridagi qarz − Undirildi − Kechirilgan.',
+    ],
+    6,
+  );
+}
+
+export function recoveredPaymentsSheet(wb: Workbook, rows: any[]) {
+  const ws = wb.addWorksheet('Undirildi');
+  ws.columns = [
+    { width: 16 },
+    { width: 14 },
+    { width: 30 },
+    { width: 16 },
+    { width: 12 },
+    { width: 24 },
+  ];
+  sheetTitle(
+    ws,
+    'Undirildi — qarzdorlarning to‘lovlari',
+    'Oy tugagach o‘sha oy qarzdorlaridan tushgan to‘lovlar',
+    6,
+  );
+  const header = tableHeader(ws, [
+    'Oy',
+    'Sana',
+    'O‘quvchi',
+    'Summa',
+    'Usul',
+    'Qabul qildi',
+  ]);
+  let t = 0;
+  rows.forEach((r) => {
+    t += r.amount;
+    const row = ws.addRow([
+      r.month,
+      fmtDate(r.createdAt),
+      `#${r.studentId ?? ''} ${r.firstName} ${r.lastName}`.trim(),
+      r.amount,
+      r.method ? (METHOD_LABELS[r.method] ?? r.method) : '',
+      r.performedBy ?? '',
+    ]);
+    row.getCell(4).numFmt = NUM;
+  });
+  totalsRow(ws, ['Jami', '', '', t, '', ''], [4]);
+  freezeAndFilter(ws, header.number, 6);
+  sheetNotes(
+    ws,
+    [
+      'Bu — o‘sha oy qarzdorlarining oy tugagandan KEYINGI naqd to‘lovlari (undirish manbai).',
+      'Diqqat: "Umumiy" varag‘idagi "Undirildi" jamlanmasi har o‘quvchida o‘sha oy qarzi bilan cheklangan, shuning uchun bu ro‘yxat yig‘indisidan kichikroq bo‘lishi mumkin.',
+    ],
+    6,
+  );
+}
+
+export function writeOffsSheet(wb: Workbook, rows: any[]) {
+  const ws = wb.addWorksheet('Kechirilgan');
+  ws.columns = [
+    { width: 16 },
+    { width: 14 },
+    { width: 30 },
+    { width: 16 },
+    { width: 40 },
+    { width: 24 },
+  ];
+  sheetTitle(
+    ws,
+    'Kechirilgan — hisobdan chiqarilgan qarzlar',
+    'Naqdsiz kechirilgan qarzlar (kim / nega / qachon)',
+    6,
+  );
+  const header = tableHeader(ws, [
+    'Oy',
+    'Sana',
+    'O‘quvchi',
+    'Summa',
+    'Sabab',
+    'Bajardi',
+  ]);
+  let t = 0;
+  rows.forEach((r) => {
+    t += r.amount;
+    const row = ws.addRow([
+      r.month,
+      fmtDate(r.createdAt),
+      `#${r.studentId ?? ''} ${r.firstName} ${r.lastName}`.trim(),
+      r.amount,
+      r.reason ?? '',
+      r.performedBy ?? '',
+    ]);
+    row.getCell(4).numFmt = NUM;
+  });
+  totalsRow(ws, ['Jami', '', '', t, '', ''], [4]);
+  freezeAndFilter(ws, header.number, 6);
+  sheetNotes(
+    ws,
+    [
+      'Qarzi hisobdan chiqarilgan o‘quvchilar — bu NAQD emas, kechirilgan (markaz zararga yozgan).',
+      '"Sabab" — hisobdan chiqarish sababi; "Bajardi" — amalni bajargan xodim.',
+    ],
+    6,
+  );
+}
+
 // ---- Sheet 11: Filial kesimida ----
 export function perBranchSheet(wb: Workbook, perBranch: any, period: string) {
   const ws = wb.addWorksheet('Filial kesimida');
