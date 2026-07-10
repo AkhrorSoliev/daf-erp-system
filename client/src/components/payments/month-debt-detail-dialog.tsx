@@ -84,14 +84,10 @@ const METHOD_LABELS: Record<string, string> = {
 type TabKey = "debtors" | "recovered" | "writeoffs" | "remaining";
 
 const TAB_HINT: Record<TabKey, string> = {
-  debtors:
-    "Oy oxirida qarzdor bo'lgan barcha o'quvchilar (statusdan qat'i nazar).",
-  recovered:
-    "Oy tugagach shu qarzdorlardan tushgan to'lovlar. (Jamlanma undirish har o'quvchida o'sha oy qarzi bilan cheklangan.)",
-  writeoffs:
-    "Qarzi hisobdan chiqarilganlar — naqdsiz kechirilgan (kim / nega / qachon).",
-  remaining:
-    "Cohortdan hali to'liq qoplanmagan o'quvchilar (Qolgan qarz > 0).",
+  debtors: "Oy oxirida qarzi bo'lgan barcha o'quvchilar.",
+  recovered: "Shu qarzdorlar oy tugagach to'lagan to'lovlar.",
+  writeoffs: "Qarzi naqdsiz hisobdan chiqarilganlar (kim, nega, qachon).",
+  remaining: "Qarzi hali to'liq qoplanmagan o'quvchilar.",
 };
 
 function fmtDate(iso: string) {
