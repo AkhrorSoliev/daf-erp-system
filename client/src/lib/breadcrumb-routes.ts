@@ -41,6 +41,7 @@ export const routeLabels: Record<string, string> = {
   // /profile/salary — Teacher portalida ustozning o'z oyligi sahifasi.
   config: "Oylik belgilash",
   debtors: "Qarzdorlar",
+  "debt-history": "Oylik qarzdorlik",
   "debt-write-offs": "Qarz hisobdan chiqarishlar",
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",

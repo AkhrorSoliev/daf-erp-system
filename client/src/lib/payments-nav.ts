@@ -6,6 +6,7 @@ import {
   UserMinus,
   Activity,
   Eraser,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Xarajatlar", url: "/payments/expenses", icon: Receipt },
   { title: "Ish haqi", url: "/payments/salary", icon: Banknote, visibleForRoles: [1, 2] },
   { title: "Qarzdorlar", url: "/payments/debtors", icon: UserMinus },
+  { title: "Oylik qarzdorlik", url: "/payments/debt-history", icon: CalendarClock, visibleForRoles: [1, 2] },
   { title: "To'lov tizimlari jurnali", url: "/payments/gateway-events", icon: Activity, visibleForRoles: [1] },
   { title: "Qarz hisobdan chiqarishlar", url: "/payments/debt-write-offs", icon: Eraser, visibleForRoles: [1, 2] },
 ];

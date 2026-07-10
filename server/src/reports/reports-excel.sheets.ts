@@ -64,6 +64,7 @@ export function coverSheet(
     ['Oyliklar', 'Ustozlar oyligi (davrda to‘langan)'],
     ['Qarzdorlar', "Qarzdor o‘quvchilar ro‘yxati"],
     ['Oylik dinamika', "So‘nggi 6 oy: tushum/chiqim/foyda"],
+    ['Oylik qarzdorlik', 'Har oy qancha qarz bilan yopilgani + undirish'],
     ...(companyWide
       ? [['Filial kesimida', 'Filiallar bo‘yicha tushum/chiqim/foyda/qarz']]
       : []),

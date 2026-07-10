@@ -52,6 +52,8 @@ interface MonthlyRow {
   gap: number | null;
   advances: number;
   netToPay: number;
+  centerAdvanced: number;
+  centerStillFronted: number;
   payment: { id: string; amount: number; status: string } | null;
 }
 interface MonthlyResponse {
@@ -65,6 +67,11 @@ interface MonthlyResponse {
     gap: number;
     advances: number;
     netToPay: number;
+    // Center top-up lifecycle (company-level card): advanced (X) / recovered
+    // (Y) / still-fronted (Z), where Y = X − Z.
+    centerAdvanced: number;
+    centerRecovered: number;
+    centerStillFronted: number;
   };
 }
 
@@ -340,6 +347,52 @@ export function SalaryMonthlyView({
           )}
         </Table>
       </div>
+
+      {/* Markaz qo'shimchasi lifecycle (company-level) — shown only for months
+          where the center actually fronted money (past settled top-up months). */}
+      {!isLoading && totals && totals.centerAdvanced > 0 && (
+        <div className="rounded-md border bg-muted/20 p-4">
+          <div className="mb-3 flex items-center gap-1.5 text-sm font-medium">
+            Markaz qo&apos;shimchasi (bu oy, umumiy)
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="size-3.5 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-64">
+                  Markaz o&apos;quvchilar to&apos;lamagan qismni ustozlarga
+                  qo&apos;shib bergan. O&apos;quvchilar keyin to&apos;lasa, u pul
+                  markazga qaytadi (undirildi) va ustozga qayta yozilmaydi.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <div className="text-xs text-muted-foreground">
+                Jami qo&apos;shdi
+              </div>
+              <div className="text-lg font-semibold tabular-nums">
+                {formatPrice(totals.centerAdvanced)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Undirildi</div>
+              <div className="text-lg font-semibold tabular-nums text-green-700 dark:text-green-400">
+                {formatPrice(totals.centerRecovered)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">
+                Qolgan (markaz)
+              </div>
+              <div className="text-lg font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                {formatPrice(totals.centerStillFronted)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Row count + manual-month totals caveat */}
       {!isLoading && rows.length > 0 && (

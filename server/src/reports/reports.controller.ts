@@ -128,6 +128,16 @@ export class ReportsController {
     });
   }
 
+  // "Oylik qarzdorlik + undirish" — per-month closing debt (frozen, ledger-
+  // reconstructed) + how much of each month's cohort has since been recovered.
+  // Company-wide (student balances aren't cleanly branch-scoped). CEO + BD only
+  // — Administrators shouldn't see company-wide debt aggregates.
+  @Get('monthly-debt-recovery')
+  @Roles('CEO', 'Branch Director')
+  getMonthlyDebtRecovery(@CurrentUser('companyId') companyId: number) {
+    return this.reportsService.getMonthlyDebtRecovery(companyId);
+  }
+
   // KPI summary for the "yo'qolgan o'quvchi" write-off flow — total
   // amount + operation count for the period. CEO sees the whole company;
   // Branch Director is auto-scoped to their UserBranch rows. Restricted

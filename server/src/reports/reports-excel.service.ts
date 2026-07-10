@@ -16,6 +16,7 @@ import {
   salariesSheet,
   debtorsSheet,
   trendSheet,
+  monthlyDebtSheet,
   perBranchSheet,
   reconciliationSheet,
 } from './reports-excel.detail-sheets';
@@ -129,6 +130,7 @@ export class ReportsExcelService {
       perBranch,
       recon,
       prior,
+      debtHistory,
     ] = await Promise.all([
       this.reports.getFinancialOverview(companyId, {
         branchId: query.branchId,
@@ -150,6 +152,8 @@ export class ReportsExcelService {
         : Promise.resolve([]),
       this.reports.getReconciliation(companyId, periodScope),
       this.reports.getPriorPeriodSummary(companyId, scope),
+      // Month-end debt + recovery — ledger-reconstructed, period-independent.
+      this.reports.getMonthlyDebtRecovery(companyId),
     ]);
 
     // ─── Operational (non-financial) datasets ────────────────────────────────
@@ -297,6 +301,8 @@ export class ReportsExcelService {
     salariesSheet(wb, salaries, period);
     if (!dropPointInTime) debtorsSheet(wb, debtors, branchNames);
     trendSheet(wb, trend);
+    // Past-safe: reconstructed from the ledger, so never gated by dropPointInTime.
+    monthlyDebtSheet(wb, debtHistory);
     if (companyWide) perBranchSheet(wb, perBranch, period);
     methodsSheet(wb, overview, pl, period);
     // ─── Operational block (marketing → students → capacity → quality) ──────

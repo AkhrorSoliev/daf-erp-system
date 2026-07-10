@@ -252,6 +252,9 @@ describe('ReportsExcelService', () => {
     getPerBranchSummary: jest.fn().mockResolvedValue(perBranch),
     getReconciliation: jest.fn().mockResolvedValue(recon),
     getPriorPeriodSummary: jest.fn().mockResolvedValue(prior),
+    getMonthlyDebtRecovery: jest
+      .fn()
+      .mockResolvedValue({ months: [], totals: {} }),
     // Operational feeds.
     getKpis: jest.fn().mockResolvedValue(kpis),
     getLeadAnalytics: jest.fn().mockResolvedValue(leads),
@@ -302,7 +305,7 @@ describe('ReportsExcelService', () => {
     expect(reports.getPriorPeriodSummary).toHaveBeenCalled();
   });
 
-  it('builds the 21 expected sheets in order (company-wide, financial + operational)', async () => {
+  it('builds the 22 expected sheets in order (company-wide, financial + operational)', async () => {
     const wb = await load(await service.generate(1, {}));
     expect(wb.worksheets.map((w) => w.name)).toEqual([
       'Muqova',
@@ -314,6 +317,7 @@ describe('ReportsExcelService', () => {
       'Oyliklar',
       'Qarzdorlar',
       'Oylik dinamika',
+      'Oylik qarzdorlik',
       'Filial kesimida',
       "To'lov usullari",
       'KPI paneli',
@@ -351,6 +355,8 @@ describe('ReportsExcelService', () => {
     expect(names).toContain('Foyda va zarar');
     expect(names).toContain('Davomat');
     expect(names).toContain('Tekshiruv');
+    // Ledger-reconstructed month-end debt is past-safe → never dropped.
+    expect(names).toContain('Oylik qarzdorlik');
   });
 
   it('keeps all sheets for the CURRENT month even with the flag set', async () => {
@@ -373,7 +379,7 @@ describe('ReportsExcelService', () => {
     const wb = await load(await service.generate(1, { branchId: 1 }));
     const names = wb.worksheets.map((w) => w.name);
     expect(names).not.toContain('Filial kesimida');
-    expect(names).toHaveLength(20);
+    expect(names).toHaveLength(21);
     expect(reports.getPerBranchSummary).not.toHaveBeenCalled();
   });
 
@@ -480,8 +486,8 @@ describe('ReportsExcelService', () => {
   it('renders an empty-note operational sheet when its source throws (workbook survives)', async () => {
     reports.getRoomUtilization.mockRejectedValue(new Error('boom'));
     const wb = await load(await service.generate(1, {}));
-    // The whole workbook still builds (all 21 sheets present)...
-    expect(wb.worksheets).toHaveLength(21);
+    // The whole workbook still builds (all 22 sheets present)...
+    expect(wb.worksheets).toHaveLength(22);
     // ...and the failed sheet carries the "no data" note instead of crashing.
     const ws = wb.getWorksheet('Xonalar bandligi')!;
     let hasNote = false;

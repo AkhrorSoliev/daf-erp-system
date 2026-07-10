@@ -263,4 +263,85 @@ describe('ReportsFinancialService', () => {
       expect(res.length).toBeLessThanOrEqual(5);
     });
   });
+
+  describe('getMonthlyDebtRecovery', () => {
+    beforeEach(() => {
+      // Single month (systemStartDate = today → floor = current month), so the
+      // number of enumerated months is deterministic (1).
+      prisma.company.findUnique.mockResolvedValue({
+        systemStartDate: new Date(),
+      });
+      prisma.student.findMany = jest.fn();
+      prisma.transaction.groupBy = jest.fn();
+    });
+
+    it('reconstructs month-end debt from any-status negative balances and caps recovery at each cohort debt', async () => {
+      // Student 1 owes 200k, student 2 has credit (+50k, not a debtor),
+      // student 3 owes 100k → closingDebt 300k across 2 debtors.
+      prisma.student.findMany.mockResolvedValue([
+        { id: 1, balance: -200000 },
+        { id: 2, balance: 50000 },
+        { id: 3, balance: -100000 },
+      ]);
+      prisma.transaction.groupBy
+        // movesAfter (no ledger movement after month-end in this scenario)
+        .mockResolvedValueOnce([])
+        // PAYMENT recovery after month-end: student 1 paid 80k, student 3 paid 0
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 80000 } }])
+        // DEBT_WRITE_OFF: none
+        .mockResolvedValueOnce([]);
+
+      const res = await service.getMonthlyDebtRecovery(1);
+
+      expect(res.months).toHaveLength(1);
+      const m = res.months[0];
+      expect(m.closingDebt).toBe(300000);
+      expect(m.debtorCount).toBe(2);
+      expect(m.recovered).toBe(80000);
+      expect(m.writtenOff).toBe(0);
+      expect(m.remaining).toBe(220000);
+      // 80000 / 300000 = 26.666… → 26.7%
+      expect(m.recoveryRate).toBe(26.7);
+      expect(res.totals).toEqual({
+        closingDebt: 300000,
+        recovered: 80000,
+        writtenOff: 0,
+        remaining: 220000,
+      });
+    });
+
+    it('caps recovery at the cohort debt even if later payments exceed it (oldest-first)', async () => {
+      // Student owed 200k at month-end but paid 300k afterwards (250k of it went
+      // to NEW debt). May-cohort recovery is capped at 200k, remaining 0.
+      prisma.student.findMany.mockResolvedValue([{ id: 1, balance: -250000 }]);
+      prisma.transaction.groupBy
+        .mockResolvedValueOnce([]) // movesAfter
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 300000 } }]) // PAYMENT
+        .mockResolvedValueOnce([]); // DEBT_WRITE_OFF
+
+      const res = await service.getMonthlyDebtRecovery(1);
+      const m = res.months[0];
+      expect(m.closingDebt).toBe(250000);
+      expect(m.recovered).toBe(250000); // min(250k debt, 300k paid)
+      expect(m.remaining).toBe(0);
+    });
+
+    it('reconstructs a PAST month-end balance by subtracting later ledger movement', async () => {
+      // Live balance is 0, but 150k of PAYMENT landed AFTER month-end, so the
+      // month-end balance was −150k (a debtor that has since been fully paid).
+      prisma.student.findMany.mockResolvedValue([{ id: 1, balance: 0 }]);
+      prisma.transaction.groupBy
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 150000 } }]) // movesAfter (a payment)
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 150000 } }]) // PAYMENT recovery
+        .mockResolvedValueOnce([]); // DEBT_WRITE_OFF
+
+      const res = await service.getMonthlyDebtRecovery(1);
+      const m = res.months[0];
+      expect(m.closingDebt).toBe(150000); // reconstructed, not the live 0
+      expect(m.debtorCount).toBe(1);
+      expect(m.recovered).toBe(150000);
+      expect(m.remaining).toBe(0);
+      expect(m.recoveryRate).toBe(100);
+    });
+  });
 });
