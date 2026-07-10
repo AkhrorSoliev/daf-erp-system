@@ -162,6 +162,17 @@ export function salariesSheet(wb: Workbook, salaries: any, period: string) {
   );
   if (lastDataRow >= firstDataRow) dataBar(ws, `G${firstDataRow}:G${lastDataRow}`);
   freezeAndFilter(ws, header.number, 9);
+
+  // Markaz qo'shimchasi lifecycle (company-level, this month) — mirrors the
+  // /payments/salary summary card. Shown only when the center actually fronted
+  // money (past settled top-up months; 0 for the in-progress month).
+  if ((t.centerAdvanced ?? 0) > 0) {
+    sectionHeader(ws, 'Markaz qo‘shimchasi — undirish holati (shu oy)', 9);
+    kvRow(ws, 'Jami qo‘shdi', t.centerAdvanced ?? 0, 'Markaz o‘z hisobidan ustozlarga qo‘shib bergan jami summa (X).');
+    kvRow(ws, 'Undirildi', t.centerRecovered ?? 0, 'O‘quvchilar keyin to‘lab, markazga qaytgan qism — ustozga qayta yozilmaydi (Y).');
+    kvRow(ws, 'Qolgan (markaz)', t.centerStillFronted ?? 0, 'Hali qoplanmagan — markazning joriy xarajati (Z = X − Y).');
+  }
+
   sheetNotes(ws, [
     'Shu oy uchun HISOBLANGAN ustoz oyligi — oylik sahifasidagi kabi (to‘lov qilinmagan bo‘lsa ham to‘la ko‘rinadi).',
     'O‘quvchilar to‘lagan = o‘quvchilar pulidan tushgan qism; Markaz qo‘shimchasi = markaz o‘z hisobidan qoplagan qism.',
@@ -169,6 +180,7 @@ export function salariesSheet(wb: Workbook, salaries: any, period: string) {
     '"shundan oldingi oydan" — "O‘quvchilar to‘lagan" ichida OLDINGI oy darslaridan kechikib kelib qo‘shilgan qism (uning bir bo‘lagi).',
     '"Keyingi oyga o‘tgan" — bu oy darslarining kech to‘langani KEYINGI oyga o‘tdi (bu oy summasida YO‘Q; keyingi oy oyligiga qo‘shiladi).',
     '"Sof to‘lanadigan" ustunidagi rangli chiziq — oylik kattaligini ko‘rsatadi. Diqqat: oylik odatda keyingi oy boshida to‘lanadi. Bu bo‘lim faqat USTOZLAR.',
+    '"Markaz qo‘shimchasi — undirish holati" bloki (agar bo‘lsa): markaz shu oy qo‘shgan pulning qanchasi o‘quvchilar tomonidan keyin qoplangani (undirildi) va qanchasi hali markaz zimmasida qolgani.',
     '"—" belgisi — o‘sha oyda dars ma‘lumoti yo‘q (masalan o‘tish oyi).',
   ], 9);
 }
