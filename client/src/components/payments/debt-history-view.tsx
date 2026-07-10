@@ -118,9 +118,8 @@ export function DebtHistoryView() {
         <div>
           <h1 className="text-xl font-semibold">Oylik qarzdorlik va undirish</h1>
           <p className="text-sm text-muted-foreground">
-            Har oy qancha qarz bilan yopilgani (muzlagan tarix) va o&apos;sha
-            qarzdan keyin qanchasi undirilgani. Batafsil ko&apos;rish uchun oyni
-            bosing.
+            Har oy qancha qarz bilan yopilgan va keyin qanchasi undirilgan.
+            Batafsil uchun oyni bosing.
           </p>
         </div>
         <Button
@@ -142,12 +141,9 @@ export function DebtHistoryView() {
       <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0" />
         <span>
-          &quot;Oy oxiridagi qarz&quot; — o&apos;sha oy oxirida balansi manfiy
-          bo&apos;lgan barcha o&apos;quvchilar qarzi (statusdan qat&apos;i
-          nazar). Bu raqam muzlagan — keyin o&apos;zgarmaydi.
-          &quot;Undirildi&quot; va &quot;Qolgan qarz&quot; esa o&apos;quvchilar
-          to&apos;lagani sari yangilanadi. Ledgerdan hisoblangan, kompaniya
-          bo&apos;yicha.
+          Oy oxiridagi qarz — muzlagan raqam, keyin o&apos;zgarmaydi.
+          Undirildi va Qolgan qarz esa o&apos;quvchilar to&apos;lagani sari
+          yangilanadi.
         </span>
       </div>
 
@@ -161,23 +157,23 @@ export function DebtHistoryView() {
               <HeadWithHint
                 className="text-right"
                 label="Oy oxiridagi qarz"
-                hint="O'sha oy oxirida (Toshkent) balansi manfiy bo'lgan barcha o'quvchilar qarzi. Muzlagan tarixiy raqam — keyin o'zgarmaydi."
+                hint="O'sha oy oxirida balansi manfiy bo'lgan o'quvchilar qarzi. Muzlagan — keyin o'zgarmaydi."
               />
               <TableHead className="text-right">Qarzdorlar</TableHead>
               <HeadWithHint
                 className="text-right"
                 label="Undirildi"
-                hint="O'sha oy qarzdorlarining keyingi naqd to'lovlari, har o'quvchida o'sha oy qarzi bilan cheklangan (tizim eng eski qarzdan yopadi)."
+                hint="Shu qarzdorlar keyin to'lagan pul (har birida o'sha oy qarzi bilan cheklangan)."
               />
               <HeadWithHint
                 className="text-right"
                 label="Kechirilgan"
-                hint="Qarzni hisobdan chiqarish (DEBT_WRITE_OFF) — naqdsiz kechirilgan qarz. Undirishga qo'shilmaydi."
+                hint="Naqdsiz hisobdan chiqarilgan qarz. Undirishga kirmaydi."
               />
               <HeadWithHint
                 className="text-right"
                 label="Qolgan qarz"
-                hint="Oy oxiridagi qarz − Undirildi − Kechirilgan. Shu oy qarzidan hali qoplanmagan qismi."
+                hint="Oy oxiridagi qarzdan hali qoplanmagan qismi."
               />
               <TableHead className="text-right">Undirish %</TableHead>
             </TableRow>
@@ -227,8 +223,7 @@ export function DebtHistoryView() {
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-56">
-                              Mayda pul oqimi to&apos;liq to&apos;g&apos;ri
-                              bo&apos;lmagan (eski tizimdan o&apos;tish) — raqam
+                              Eski tizimdan o&apos;tish davri — bu oydagi raqam
                               taxminiy.
                             </TooltipContent>
                           </Tooltip>
