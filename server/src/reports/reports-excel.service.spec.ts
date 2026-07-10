@@ -138,7 +138,18 @@ describe('ReportsExcelService', () => {
         payment: null,
       },
     ],
-    totals: { fullDeserved: 500_000, covered: 400_000, carriedIn: 50_000, carriedOut: 30_000, gap: 100_000, advances: 20_000, netToPay: 480_000 },
+    totals: {
+      fullDeserved: 500_000,
+      covered: 400_000,
+      carriedIn: 50_000,
+      carriedOut: 30_000,
+      gap: 100_000,
+      advances: 20_000,
+      netToPay: 480_000,
+      centerAdvanced: 100_000,
+      centerRecovered: 40_000,
+      centerStillFronted: 60_000,
+    },
   };
   const debtors = {
     rows: [
@@ -417,6 +428,20 @@ describe('ReportsExcelService', () => {
     // "Keyingi oyga o'tgan" total (col 8).
     expect(jami.getCell(8).value).toBe(salaryMonthly.totals.carriedOut);
     expect(reports.getSalaryMonthly).toHaveBeenCalled();
+  });
+
+  it('adds the center top-up undirish block to Oyliklar when the center fronted money', async () => {
+    const wb = await load(await service.generate(1, {}));
+    const ws = wb.getWorksheet('Oyliklar')!;
+    expect(findRow(ws, 'Jami qo‘shdi').getCell(2).value).toBe(
+      salaryMonthly.totals.centerAdvanced,
+    );
+    expect(findRow(ws, 'Undirildi').getCell(2).value).toBe(
+      salaryMonthly.totals.centerRecovered,
+    );
+    expect(findRow(ws, 'Qolgan (markaz)').getCell(2).value).toBe(
+      salaryMonthly.totals.centerStillFronted,
+    );
   });
 
   it('moves "Balanslashuv farqi" off the Balans sheet', async () => {
