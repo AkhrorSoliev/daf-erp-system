@@ -2,14 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GroupStatus } from '@prisma/client';
 import { GroupStatusCronService } from './group-status-cron.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 
 describe('GroupStatusCronService', () => {
   let service: GroupStatusCronService;
   let prisma: any;
   let statusHistoryService: any;
-  let statusCascadeService: any;
   let entityHistoryService: any;
 
   beforeEach(async () => {
@@ -28,10 +27,6 @@ describe('GroupStatusCronService', () => {
       }),
     };
 
-    statusCascadeService = {
-      cascade: jest.fn().mockResolvedValue([]),
-    };
-
     entityHistoryService = {
       recordStatusChange: jest.fn().mockResolvedValue(undefined),
       recordCreate: jest.fn(),
@@ -45,7 +40,6 @@ describe('GroupStatusCronService', () => {
         GroupStatusCronService,
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
-        { provide: StatusCascadeService, useValue: statusCascadeService },
         { provide: EntityHistoryService, useValue: entityHistoryService },
       ],
     }).compile();
@@ -65,9 +59,7 @@ describe('GroupStatusCronService', () => {
         companyId: 1,
       };
 
-      prisma.group.findMany
-        .mockResolvedValueOnce([mockGroup]) // activateGroups query
-        .mockResolvedValueOnce([]); // completeGroups query
+      prisma.group.findMany.mockResolvedValueOnce([mockGroup]); // activateGroups query
 
       await service.autoUpdateGroupStatuses();
 
@@ -101,42 +93,30 @@ describe('GroupStatusCronService', () => {
       );
     });
 
-    it('should complete ACTIVE groups whose endDate has passed', async () => {
-      const mockGroup = {
+    it('should NOT auto-complete ACTIVE groups whose endDate has passed', async () => {
+      // Auto-completion was intentionally removed (2026-07-14, CEO decision):
+      // groups are only ever completed manually now. The cron must leave an
+      // ACTIVE, past-endDate group untouched.
+      const activeGroup = {
         id: 'group-2',
         statusEnum: GroupStatus.ACTIVE,
         companyId: 1,
       };
 
-      prisma.group.findMany
-        .mockResolvedValueOnce([]) // activateGroups query
-        .mockResolvedValueOnce([mockGroup]); // completeGroups query
+      // Only ONE findMany runs now (activateGroups); it returns no FORMING
+      // groups. The old completeGroups query is gone entirely.
+      prisma.group.findMany.mockResolvedValueOnce([]);
 
       await service.autoUpdateGroupStatuses();
 
-      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: 'Group',
-          entityId: 'group-2',
-          fromStatus: GroupStatus.ACTIVE,
-          toStatus: GroupStatus.COMPLETED,
-        }),
+      // Group #group-2 (ACTIVE, endDate passed) is never touched.
+      expect(statusHistoryService.changeStatus).not.toHaveBeenCalledWith(
+        expect.objectContaining({ toStatus: GroupStatus.COMPLETED }),
       );
-
-      // F-02 regression: the completion cascade must run as a "system" action
-      // with userId = undefined. Passing the old magic `0` wrote changedById:0
-      // into nullable FK columns (no User id 0 exists) → P2003, which the cron
-      // swallowed — silently leaving enrollments un-completed and students
-      // un-graduated.
-      expect(statusCascadeService.cascade).toHaveBeenCalledWith(
-        'Group',
-        'group-2',
-        GroupStatus.COMPLETED,
-        undefined,
-      );
-      const lastArgs = statusCascadeService.cascade.mock.calls.at(-1);
-      expect(lastArgs?.[3]).toBeUndefined();
-      expect(lastArgs?.[3]).not.toBe(0);
+      expect(prisma.group.update).not.toHaveBeenCalled();
+      // Exactly one status query ran (activateGroups), not two.
+      expect(prisma.group.findMany).toHaveBeenCalledTimes(1);
+      expect(activeGroup.statusEnum).toBe(GroupStatus.ACTIVE);
     });
 
     it('should do nothing when no groups need status change', async () => {
@@ -154,9 +134,7 @@ describe('GroupStatusCronService', () => {
         { id: 'group-ok', statusEnum: GroupStatus.FORMING, companyId: 1 },
       ];
 
-      prisma.group.findMany
-        .mockResolvedValueOnce(groups)
-        .mockResolvedValueOnce([]);
+      prisma.group.findMany.mockResolvedValueOnce(groups);
 
       statusHistoryService.changeStatus
         .mockRejectedValueOnce(new Error('DB error'))
