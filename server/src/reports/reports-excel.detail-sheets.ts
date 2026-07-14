@@ -13,6 +13,7 @@ import {
   METHOD_LABELS,
   EXPENSE_METHOD_LABELS,
   SALARY_STATUS_LABELS,
+  NetProfit,
   sheetTitle,
   sectionHeader,
   tableHeader,
@@ -173,6 +174,48 @@ export function salariesSheet(wb: Workbook, salaries: any, period: string) {
     kvRow(ws, 'Qolgan (markaz)', t.centerStillFronted ?? 0, 'Hali qoplanmagan — markazning joriy xarajati (Z = X − Y).');
   }
 
+  // Xodimlar oyligi — non-teaching FIXED_MONTHLY staff (admin/cashier/director).
+  // Additive block; the teacher rows/totals above are untouched, and this data
+  // NEVER feeds the "Sof foyda" sheet (that already counts staff via
+  // adminSalaries on a cash basis — double-count trap).
+  const staff = salaries?.staff ?? [];
+  if (staff.length > 0) {
+    sectionHeader(ws, 'Xodimlar oyligi (oylik xodimlar)', 9);
+    const sHeader = tableHeader(ws, [
+      'Xodim',
+      'Lavozim',
+      'Oylik summa',
+      'Avans',
+      'Sof to‘lanadigan',
+      'Holati',
+    ]);
+    const sFirst = sHeader.number + 1;
+    staff.forEach((s: any) => {
+      const statusLabel = s.payment
+        ? (SALARY_STATUS_LABELS[s.payment.status] ?? s.payment.status)
+        : 'Hisoblangan';
+      const row = ws.addRow([
+        `${s.user?.firstName ?? ''} ${s.user?.lastName ?? ''}`.trim(),
+        s.user?.position ?? '',
+        s.monthly ?? 0,
+        s.advances ?? 0,
+        s.netToPay ?? 0,
+        statusLabel,
+      ]);
+      [3, 4, 5].forEach((c) => {
+        if (typeof row.getCell(c).value === 'number') row.getCell(c).numFmt = NUM;
+      });
+    });
+    const sLast = ws.rowCount;
+    const st = salaries?.staffTotals ?? {};
+    totalsRow(
+      ws,
+      ['Jami', '', st.monthly ?? 0, st.advances ?? 0, st.netToPay ?? 0, ''],
+      [3, 4, 5],
+    );
+    if (sLast >= sFirst) dataBar(ws, `E${sFirst}:E${sLast}`);
+  }
+
   sheetNotes(ws, [
     'Shu oy uchun HISOBLANGAN ustoz oyligi — oylik sahifasidagi kabi (to‘lov qilinmagan bo‘lsa ham to‘la ko‘rinadi).',
     'O‘quvchilar to‘lagan = o‘quvchilar pulidan tushgan qism; Markaz qo‘shimchasi = markaz o‘z hisobidan qoplagan qism.',
@@ -181,6 +224,7 @@ export function salariesSheet(wb: Workbook, salaries: any, period: string) {
     '"Keyingi oyga o‘tgan" — bu oy darslarining kech to‘langani KEYINGI oyga o‘tdi (bu oy summasida YO‘Q; keyingi oy oyligiga qo‘shiladi).',
     '"Sof to‘lanadigan" ustunidagi rangli chiziq — oylik kattaligini ko‘rsatadi. Diqqat: oylik odatda keyingi oy boshida to‘lanadi. Bu bo‘lim faqat USTOZLAR.',
     '"Markaz qo‘shimchasi — undirish holati" bloki (agar bo‘lsa): markaz shu oy qo‘shgan pulning qanchasi o‘quvchilar tomonidan keyin qoplangani (undirildi) va qanchasi hali markaz zimmasida qolgani.',
+    '"Xodimlar oyligi" bloki (agar bo‘lsa) — dars o‘tmaydigan qat‘iy oylik xodimlar (administrator, kassir, direktor). Oy o‘rtasida ishga kirgan yoki ketgan bo‘lsa, ishlagan kunlariga mutanosib (proratsiya) hisoblanadi.',
     '"—" belgisi — o‘sha oyda dars ma‘lumoti yo‘q (masalan o‘tish oyi).',
   ], 9);
 }
@@ -271,6 +315,7 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
     { width: 18 },
     { width: 16 },
     { width: 18 },
+    { width: 16 },
     { width: 13 },
     { width: 42 },
   ];
@@ -278,7 +323,7 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
     ws,
     'Oylik qarzdorlik va undirish',
     'Har oy qancha qarz bilan yopilgani + keyingi undirish',
-    8,
+    9,
   );
   const months = Array.isArray(debtHistory?.months) ? debtHistory.months : [];
   const header = tableHeader(ws, [
@@ -288,6 +333,7 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
     'Undirildi',
     'Kechirilgan',
     'Qolgan qarz',
+    'Qolgan qarzdorlar',
     'Undirish %',
     'Izoh',
   ]);
@@ -302,12 +348,13 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
       m.recovered,
       m.writtenOff,
       m.remaining,
+      m.remainingDebtorCount,
       m.recoveryRate,
       izoh,
     ]);
-    [2, 3, 4, 5, 6].forEach((c) => (r.getCell(c).numFmt = NUM));
-    r.getCell(7).numFmt = '#,##0.0"%"';
-    const ic = r.getCell(8);
+    [2, 3, 4, 5, 6, 7].forEach((c) => (r.getCell(c).numFmt = NUM));
+    r.getCell(8).numFmt = '#,##0.0"%"';
+    const ic = r.getCell(9);
     ic.font = { italic: true, size: 9, color: { argb: SUBTLE } };
     ic.alignment = { wrapText: true, vertical: 'top' };
   });
@@ -318,26 +365,37 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
     writtenOff: 0,
     remaining: 0,
   };
-  // Debtor count isn't summable across months (cohorts overlap) → left blank.
+  // Debtor counts aren't summable across months (cohorts overlap) → left blank.
   totalsRow(
     ws,
-    ['Jami', t.closingDebt, '', t.recovered, t.writtenOff, t.remaining, '', ''],
+    [
+      'Jami',
+      t.closingDebt,
+      '',
+      t.recovered,
+      t.writtenOff,
+      t.remaining,
+      '',
+      '',
+      '',
+    ],
     [2, 4, 5, 6],
   );
   if (lastDataRow >= firstDataRow) {
     dataBar(ws, `B${firstDataRow}:B${lastDataRow}`);
-    colorScale(ws, `G${firstDataRow}:G${lastDataRow}`);
+    colorScale(ws, `H${firstDataRow}:H${lastDataRow}`);
   }
-  freezeAndFilter(ws, header.number, 8);
+  freezeAndFilter(ws, header.number, 9);
   sheetNotes(
     ws,
     [
       '"Oy oxiridagi qarz" — o‘sha oy oxirida (Toshkent) balansi manfiy bo‘lgan BARCHA o‘quvchilar qarzi (statusdan qat‘i nazar). Bu raqam muzlagan — keyin o‘zgarmaydi.',
+      '"Qarzdorlar" — o‘sha oyni qarz bilan yopgan o‘quvchilar soni (muzlagan). "Qolgan qarzdorlar" — shulardan hozir HALI qarzi qolganlar soni (to‘liq to‘lagan yoki kechirilganlar chiqib ketadi).',
       '"Undirildi" — o‘sha oy qarzdorlarining keyingi naqd to‘lovlari, har o‘quvchida o‘sha oy qarzi bilan cheklangan (tizim eng eski qarzdan yopadi). "Kechirilgan" — DEBT_WRITE_OFF (naqdsiz, alohida).',
       '"Qolgan qarz" = Oy oxiridagi qarz − Undirildi − Kechirilgan. "Undirish %" = Undirildi ÷ Oy oxiridagi qarz.',
       'Ledgerdan (Transaction) qayta hisoblangan — kompaniya bo‘yicha (filial kesimi yo‘q).',
     ],
-    8,
+    9,
   );
 }
 
@@ -542,6 +600,8 @@ export function reconciliationSheet(
   // sheets), skip the two rows that tie against live balance-sheet/debtor state
   // — they'd compare a current-state receivable to a past-period P&L.
   includePointInTime = true,
+  // The single "Sof foyda" figure — footed here so its arithmetic is auditable.
+  np?: NetProfit,
 ) {
   const ws = wb.addWorksheet('Tekshiruv');
   ws.columns = [
@@ -577,6 +637,23 @@ export function reconciliationSheet(
   sectionHeader(ws, 'Oylik: hisoblangan vs naqd to‘langan (ma‘lumot)', 6);
   kvRow(ws, 'Hisoblangan oylik (sof, shu oy)', computedNet, '"Oyliklar" bo‘limi — shu oy uchun ustozlarga hisoblangan.');
   kvRow(ws, 'Naqd to‘langan oylik (P&L)', cashPaid, 'Shu davrda haqiqatan pul chiqarilgan oylik.');
+
+  // Sof foyda (aniq) — footing so the «Sof foyda» sheet's arithmetic is auditable.
+  if (np) {
+    const footed =
+      np.revenue -
+      np.teacherSalary -
+      np.adminSalary -
+      np.operatingExpenses -
+      np.refunds;
+    sectionHeader(ws, 'Sof foyda (aniq) — footing', 6);
+    kvRow(ws, 'Tushum', np.revenue);
+    kvRow(ws, `− Ustoz oyligi (${np.teacherSalaryBasis})`, np.teacherSalary);
+    kvRow(ws, '− Admin oyligi', np.adminSalary);
+    kvRow(ws, '− Operatsion xarajat (avanssiz)', np.operatingExpenses);
+    kvRow(ws, '− Qaytarishlar (refund)', np.refunds);
+    checkRow(ws, '= Sof foyda (footing)', footed, np.netProfit, 'Komponentlar yig‘indisi «Sof foyda» bo‘limidagi raqamga teng bo‘lishi kerak.');
+  }
 
   // O'quvchi balansi roll-forward
   const a = recon?.student?.activity ?? {};

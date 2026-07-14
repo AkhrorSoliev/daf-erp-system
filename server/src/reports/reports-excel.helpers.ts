@@ -75,6 +75,80 @@ export const SALARY_STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Bekor qilingan',
 };
 
+// ---- Net-profit assembly (single source of truth for "Sof foyda"). ----
+
+/** Fully-itemised net-profit breakdown rendered by the "Sof foyda" sheet and
+ *  reused (as one number) by the summary + reconciliation sheets. */
+export interface NetProfit {
+  revenue: number;
+  teacherSalary: number;
+  /** 'hisoblangan' = deserved (earned this month) | 'naqd' = cash paid (fallback). */
+  teacherSalaryBasis: 'hisoblangan' | 'naqd';
+  adminSalary: number;
+  operatingExpenses: number;
+  refunds: number;
+  netProfit: number;
+  netMarginPercent: number;
+  /** Shown but NOT subtracted from netProfit (per product decision). */
+  memo: { writeOffs: number; providerFees: number; advances: number };
+}
+
+/**
+ * The one authoritative "Sof foyda" figure, assembled from data already fetched
+ * for the workbook — NO new query. Answers the CEO's "aniq nechchi pul sof foyda"
+ * by subtracting EVERY real outflow the two legacy netProfit figures miss:
+ *
+ *   Tushum (COMPLETED to'lovlar)
+ *   − Ustoz oyligi (HISOBLANGAN — bu oy earned; the cash is usually paid next
+ *     cycle, so the legacy cash-basis figure showed ~0 here)
+ *   − Admin oyligi
+ *   − Operatsion xarajatlar (avanssiz — advance is prepaid salary, already
+ *     inside the deserved figure, so it is NOT double-counted here)
+ *   − Qaytarishlar (refund — real cash returned, subtracted nowhere else)
+ *   = SOF FOYDA
+ *
+ * Teacher salary uses the deserved monthly total (`salaries.totals.fullDeserved`
+ * = covered + center top-up gap). When the salary month has no lesson data
+ * (config-gap month), it falls back to the cash-paid teacher salary from the P&L
+ * so the figure is never fabricated. Write-offs (non-cash loss) and gateway
+ * fees are carried as a memo, not subtracted (product decision).
+ */
+export function buildNetProfit(
+  pl: any,
+  salaries: any,
+  outflows: { refunds?: number; writeOffs?: number; providerFees?: number } | null,
+): NetProfit {
+  const revenue = pl?.revenue?.total ?? 0;
+  const deserved = salaries?.totals?.fullDeserved ?? 0;
+  const paidTeacher = pl?.costOfServices?.teacherSalaries ?? 0;
+  const hasDeserved = deserved > 0;
+  const teacherSalary = hasDeserved ? deserved : paidTeacher;
+  const adminSalary = pl?.operatingExpenses?.adminSalaries ?? 0;
+  const operatingExpenses = (pl?.operatingExpenses?.byCategory ?? []).reduce(
+    (s: number, e: any) => s + (e.amount ?? 0),
+    0,
+  );
+  const refunds = outflows?.refunds ?? 0;
+  const netProfit =
+    revenue - teacherSalary - adminSalary - operatingExpenses - refunds;
+  return {
+    revenue,
+    teacherSalary,
+    teacherSalaryBasis: hasDeserved ? 'hisoblangan' : 'naqd',
+    adminSalary,
+    operatingExpenses,
+    refunds,
+    netProfit,
+    netMarginPercent:
+      revenue > 0 ? Math.round((netProfit / revenue) * 1000) / 10 : 0,
+    memo: {
+      writeOffs: outflows?.writeOffs ?? 0,
+      providerFees: outflows?.providerFees ?? 0,
+      advances: pl?.costOfServices?.teacherAdvances ?? 0,
+    },
+  };
+}
+
 // ---- Cell / row styling helpers. ----
 
 function paint(cell: { fill?: unknown }, argb: string) {

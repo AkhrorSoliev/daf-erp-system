@@ -759,6 +759,7 @@ export class ReportsFinancialService {
       recovered: number;
       writtenOff: number;
       remaining: number;
+      remainingDebtorCount: number;
       recoveryRate: number;
     }>;
     totals: {
@@ -791,6 +792,7 @@ export class ReportsFinancialService {
       recovered: number;
       writtenOff: number;
       remaining: number;
+      remainingDebtorCount: number;
       recoveryRate: number;
     }> = [];
     const totals = {
@@ -810,6 +812,10 @@ export class ReportsFinancialService {
       const recovered = cohort.reduce((s, c) => s + c.recovered, 0);
       const writtenOff = cohort.reduce((s, c) => s + c.writtenOff, 0);
       const remaining = closingDebt - recovered - writtenOff;
+      // How many of that month's debtors STILL owe (recovered + written-off has
+      // not cleared them). Distinct from `debtorCount` (everyone who CLOSED the
+      // month with debt) — a debtor who has since fully paid drops out here.
+      const remainingDebtorCount = cohort.filter((c) => c.remaining > 0).length;
       const recoveryRate =
         closingDebt > 0
           ? Math.round((recovered / closingDebt) * 1000) / 10
@@ -823,6 +829,7 @@ export class ReportsFinancialService {
         recovered,
         writtenOff,
         remaining,
+        remainingDebtorCount,
         recoveryRate,
       });
       totals.closingDebt += closingDebt;
@@ -1191,6 +1198,78 @@ export class ReportsFinancialService {
         activityTotal,
       },
       gl: { storedBalanceSum: closing, ledgerSum, diff: closing - ledgerSum },
+    };
+  }
+
+  /**
+   * Period outflows/losses that neither `getFinancialOverview.netProfit` nor
+   * `getProfitLoss.netProfit` subtract today — the missing pieces the CEO's
+   * "aniq sof foyda" needs. All read-only aggregates:
+   *
+   *  • refunds       — cash physically returned to students (REFUND ledger rows,
+   *                    active only). A real cash outflow. `Payment` stays
+   *                    COMPLETED on a refund, so revenue is not reduced either →
+   *                    a pure un-subtracted outflow.
+   *  • writeOffs     — forgiven student debt (DEBT_WRITE_OFF). Non-cash, but a
+   *                    real loss of company value (uncollectable receivable).
+   *  • providerFees  — gateway (Payme/Click) commission retained from the inflow
+   *                    (`Payment.providerFee`). Income counts the GROSS amount,
+   *                    so the fee is money the center never receives.
+   *
+   * Refund/write-off are student-ledger rows that don't carry a reliable
+   * branchId, so they are company-wide (like `getReconciliation`); a branchId
+   * filter is applied only to the gateway-fee (Payment) leg, which is branch-
+   * scoped. The Excel net-profit block is company-wide in the common case.
+   */
+  async getPeriodOutflows(
+    companyId: number,
+    query: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
+    const period = resolvePeriod(query.startDate, query.endDate);
+    const tsFilter = { gte: period.start, lte: period.endTs };
+
+    const [refundRows, writeOffAgg, providerFeeAgg] = await Promise.all([
+      // Active (non-reversed) REFUND rows — signed negative on the student
+      // ledger; take the magnitude of cash returned.
+      this.prisma.transaction.findMany({
+        where: {
+          companyId,
+          type: TransactionType.REFUND,
+          reversedAt: null,
+          createdAt: tsFilter,
+        },
+        select: { amount: true },
+      }),
+      this.prisma.transaction.aggregate({
+        where: {
+          companyId,
+          type: TransactionType.DEBT_WRITE_OFF,
+          reversedAt: null,
+          createdAt: tsFilter,
+        },
+        _sum: { amount: true },
+      }),
+      // Gateway commission actually kept by Payme/Click on COMPLETED payments.
+      this.prisma.payment.aggregate({
+        where: {
+          companyId,
+          status: 'COMPLETED',
+          createdAt: tsFilter,
+          ...(query.branchId && { branchId: query.branchId }),
+        },
+        _sum: { providerFee: true },
+      }),
+    ]);
+
+    const refunds = Math.abs(refundRows.reduce((s, t) => s + t.amount, 0));
+    const writeOffs = Math.abs(writeOffAgg._sum.amount ?? 0);
+    const providerFees = providerFeeAgg._sum.providerFee ?? 0;
+
+    return {
+      period: { start: period.startStr, end: period.endStr },
+      refunds,
+      writeOffs,
+      providerFees,
     };
   }
 

@@ -106,6 +106,14 @@ export class ReportsService {
   getPriorPeriodSummary(companyId: number, query: ReportScopeQuery) {
     return this.financial.getPriorPeriodSummary(companyId, query);
   }
+  // Period outflows the two netProfit figures miss (refunds / write-offs /
+  // gateway fees) — feed the Excel "Sof foyda" block.
+  getPeriodOutflows(
+    companyId: number,
+    query: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
+    return this.financial.getPeriodOutflows(companyId, query);
+  }
 
   // Financial statements (Phase 1)
   getProfitLoss(companyId: number, query: ProfitLossQuery) {
