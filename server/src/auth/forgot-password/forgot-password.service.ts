@@ -265,17 +265,18 @@ export class ForgotPasswordService {
   }
 
   /**
-   * EXACT moderated Eskiz template (RULE A/B): concrete form. Eskiz Punkt 2
-   * requires the resource to be named WITH a type word, like the approved
-   * samples ("Eskiz Media platformasi ning parolini tiklash uchun kod"). The
-   * first submission ("DaF Sprachzentrum: ...") was REJECTED for lacking that.
-   * This OTP is for the student MOBILE APP login/password reset (not the
-   * website), so the resource is "DaF Sprachzentrum mobil ilovasi" + purpose —
-   * mirroring the approved "platformasi ning parolini tiklash uchun" structure.
-   * Pure ASCII = 1 SMS. Must byte-match the approved template.
+   * EXACT moderated Eskiz template (id 78093, status=service). Eskiz matches
+   * every sent message against an approved template, so the runtime text MUST
+   * byte-match the approved form — approved sample is
+   * "DaF Sprachzentrum mobil ilovasining parolini tiklash uchun tasdiqlash kodi: 0000"
+   * (the `%d` wildcard is the code; NO trailing punctuation, NO extra sentence).
+   * An earlier draft appended "Kodni hech kimga bermang. Amal qilish muddati:
+   * 5 daqiqa." — that suffix is NOT in the approved template and would get the
+   * SMS rejected, so it was removed. Pure ASCII = 1 SMS. If the security-advice
+   * suffix is ever wanted, resubmit the fuller text for moderation first.
    */
   private buildOtpMessage(code: string): string {
-    return `DaF Sprachzentrum mobil ilovasining parolini tiklash uchun tasdiqlash kodi: ${code}. Kodni hech kimga bermang. Amal qilish muddati: 5 daqiqa.`;
+    return `DaF Sprachzentrum mobil ilovasining parolini tiklash uchun tasdiqlash kodi: ${code}`;
   }
 
   /** Normalize to the DB's 9-digit form; returns null if not a valid UZ number. */

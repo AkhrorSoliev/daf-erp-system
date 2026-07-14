@@ -83,9 +83,12 @@ describe('ForgotPasswordService', () => {
       // word is now mandatory in the moderated template; this OTP is for the
       // student app's login/password reset).
       const [, message] = eskiz.sendSms.mock.calls[0];
-      expect(message).toContain('DaF Sprachzentrum');
-      expect(message).toContain('mobil ilova');
-      expect(message).toContain('parolini tiklash uchun tasdiqlash kodi');
+      // Must byte-match the approved Eskiz template (id 78093): the fixed
+      // prefix + the code, and NOTHING after it (no security-advice suffix —
+      // that is not in the moderated template and Eskiz would reject it).
+      expect(message).toMatch(
+        /^DaF Sprachzentrum mobil ilovasining parolini tiklash uchun tasdiqlash kodi: \d{4}$/,
+      );
       // A code is stored in Redis (hashed) with attempts left.
       const stored = JSON.parse(redis.store.get(`otp_reset:code:${PHONE}`)!);
       expect(stored.n).toBe(3);
