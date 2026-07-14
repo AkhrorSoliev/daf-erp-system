@@ -9,10 +9,15 @@ import { Workbook } from 'exceljs';
 import {
   NAVY,
   SUBTLE,
+  GREEN,
+  RED,
+  SOM,
+  PCT,
   NUM,
   REVENUE_LABELS,
   EXPENSE_LABELS,
   METHOD_LABELS,
+  NetProfit,
   sheetTitle,
   sectionHeader,
   tableHeader,
@@ -56,6 +61,7 @@ export function coverSheet(
   sectionHeader(ws, 'Mundarija', 2);
   const toc = [
     ['Asosiy xulosa', 'Sodda tilda umumiy natija va joriy-vs-o‘tgan taqqoslash'],
+    ['Sof foyda', 'Aniq natija: tushum − hisoblangan oylik − xarajat − refund'],
     ['Foyda va zarar', 'Daromad − tannarx − xarajat = foyda + marja'],
     ['Pul oqimi', 'Kassa kirim/chiqim va davr oxiri qoldig‘i'],
     ['Balans', 'Aktiv, passiv, kapital (joriy holat)'],
@@ -86,7 +92,7 @@ export function summarySheet(
   period: string,
   currentTag: string,
   priorTag: string,
-  computedSalaryNet = 0,
+  np?: NetProfit,
 ) {
   const ws = wb.addWorksheet('Asosiy xulosa');
   ws.columns = [
@@ -101,7 +107,7 @@ export function summarySheet(
   tableHeader(ws, ['Ko‘rsatkich', currentTag, priorTag, 'Farq', 'O‘zgarish %', 'Izoh']);
   deltaRow(ws, 'Tushgan tushum', o.income?.actual ?? 0, p.income?.actual ?? 0, 'Davrda qabul qilingan to‘lovlar (kassa asosida).');
   deltaRow(ws, 'Umumiy chiqim (xarajat + oylik)', (o.expenses ?? 0) + (o.salary?.paid ?? 0), (p.expenses ?? 0) + (p.salary?.paid ?? 0), 'Operatsion xarajat + to‘langan oyliklar.');
-  deltaRow(ws, 'Sof foyda', o.netProfit ?? 0, p.netProfit ?? 0, 'Ekrandagi dashboard bilan bir xil (kassa asosida).');
+  deltaRow(ws, 'Sof foyda (naqd asosida)', o.netProfit ?? 0, p.netProfit ?? 0, 'Ekrandagi dashboard bilan bir xil (kassa asosida). DIQQAT: ustoz oyligi odatda keyingi oy to‘lanadi, shuning uchun bu raqam yuqori ko‘rinadi — aniq natija uchun «Sof foyda» bo‘limiga qarang.');
   deltaRow(ws, 'Jami qarz', o.forecast?.outstandingReceivable ?? 0, p.forecast?.outstandingReceivable ?? 0, 'Faol o‘quvchilarning umumiy qarzi (joriy holat).');
   deltaRow(ws, 'Qarzdorlar soni', o.debtorCount ?? 0, p.debtorCount ?? 0, undefined, { count: true });
   deltaRow(ws, 'Faol o‘quvchilar', o.activeStudentCount ?? 0, p.activeStudentCount ?? 0, undefined, { count: true });
@@ -113,19 +119,73 @@ export function summarySheet(
   kvRow(ws, 'Prognoz (bashorat)', o.income?.expected ?? 0, 'Barcha faol o‘quvchi to‘liq oy o‘qisa kutiladigan summa — haqiqiy hisob emas.');
   kvRow(
     ws,
-    'Sof foyda (hisoblangan oylik bilan)',
-    (o.netProfit ?? 0) + (o.salary?.paid ?? 0) - computedSalaryNet,
-    'Yuqoridagi "Sof foyda"dan shu oy uchun HISOBLANGAN ustoz oyligi ayirilgan — real oy natijasi (oylik keyingi oy to‘lansa ham). "Oyliklar" bo‘limiga qarang.',
+    'Sof foyda (aniq — hisoblangan oylik + refund bilan)',
+    np?.netProfit ?? 0,
+    '★ ENG ANIQ raqam: tushumdan HISOBLANGAN ustoz oyligi + operatsion xarajat + qaytarishlar ayirilgan. To‘liq yoyilgani «Sof foyda» bo‘limida.',
+    { bold: true },
   );
 
   sheetNotes(ws, [
     'Bu — hisobotning eng muhim, sodda tilda XULOSAsi. NATIJA = tushum − chiqim = sof foyda.',
     `"${currentTag} / ${priorTag} / Farq / O‘zgarish %" ustunlari — joriy davrni oldingi teng davr bilan taqqoslaydi (yashil = o‘sish, qizil = kamayish). "Farq" = ikki davr orasidagi ayirma, "O‘zgarish %" = shu ayirmaning foizi.`,
-    'Sof foyda kassa asosida (ekrandagi ko‘rsatkich bilan bir xil). "Sof foyda (hisoblangan oylik bilan)" — ustoz oyligi hisobga olingan real natija.',
+    '"Sof foyda (naqd asosida)" — kassa asosida (ekran bilan bir xil), lekin ustoz oyligi keyingi oy to‘langani uchun yuqori ko‘rinadi. "Sof foyda (aniq)" — HISOBLANGAN ustoz oyligi + xarajat + qaytarishlar ayirilgan ENG to‘g‘ri raqam. To‘liq yoyilishi alohida «Sof foyda» bo‘limida.',
   ], 6);
 }
 
-// ---- Sheet 3: Foyda va zarar ----
+// ---- Sheet 3: Sof foyda (the single, clear "aniq sof foyda") ----
+/**
+ * The headline the CEO asked for: ONE authoritative net-profit figure that
+ * subtracts EVERY real outflow — teacher salary on the HISOBLANGAN (deserved)
+ * basis (not the ~0 cash-paid figure that made the legacy "Sof foyda" look 4×
+ * too high), operating expenses, and student refunds. Write-offs + gateway fees
+ * are shown as a memo, not subtracted. `np` is pre-assembled by `buildNetProfit`
+ * from data already in the workbook, so this sheet is pure presentation.
+ */
+export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
+  const ws = wb.addWorksheet('Sof foyda');
+  ws.columns = [{ width: 44 }, { width: 22 }, { width: 56 }];
+  sheetTitle(ws, 'Sof foyda — aniq natija', period, 3);
+
+  const teacherLabel =
+    np.teacherSalaryBasis === 'hisoblangan'
+      ? 'Ustoz oyligi (hisoblangan — bu oy uchun)'
+      : "Ustoz oyligi (naqd to'langan)";
+
+  sectionHeader(ws, 'SOF FOYDA HISOBI');
+  kvRow(ws, 'Tushum (qabul qilingan to‘lovlar)', np.revenue, 'Bu davrda kassaga real tushgan to‘lovlar (COMPLETED).');
+  kvRow(ws, `−  ${teacherLabel}`, np.teacherSalary, np.teacherSalaryBasis === 'hisoblangan' ? 'Shu oy darslari uchun ustozlar HAQ QILGAN to‘liq oylik (o‘quvchilar to‘lagani + markaz qo‘shimchasi). Naqd odatda keyingi oy chiqadi.' : 'Bu davrda ustozlarga real to‘langan oylik (dars ma‘lumoti yo‘q oyda shu ishlatiladi).');
+  kvRow(ws, '−  Admin oyligi', np.adminSalary, 'Ustoz bo‘lmagan xodimlar (admin/kassir) oyligi — hozircha 0.');
+  kvRow(ws, '−  Operatsion xarajatlar (avanssiz)', np.operatingExpenses, 'Ijara, kommunal, marketing va h.k. Ustoz avansi bu yerda EMAS — u oylik ichida.');
+  kvRow(ws, '−  Qaytarishlar (refund)', np.refunds, 'O‘quvchilarga qaytarilgan real naqd pul — avval hech qayerda ayirilmasdi.');
+
+  // Bottom-line — big, bold, green/red.
+  const t = ws.addRow(['=  SOF FOYDA', np.netProfit, 'Barcha real chiqimlardan keyin markazda qolgan sof pul.']);
+  t.font = { bold: true, size: 13, color: { argb: np.netProfit >= 0 ? GREEN : RED } };
+  t.getCell(2).numFmt = SOM;
+  t.getCell(2).font = { bold: true, size: 13, color: { argb: np.netProfit >= 0 ? GREEN : RED } };
+  t.getCell(3).font = { italic: true, size: 9, color: { argb: SUBTLE } };
+  t.getCell(3).alignment = { wrapText: true, vertical: 'top' };
+  const m = ws.addRow(['Sof marja', np.netMarginPercent, 'Sof foyda ÷ Tushum — har 100 so‘m tushumdan qancha foyda qolgani.']);
+  m.getCell(2).numFmt = PCT;
+  m.getCell(2).font = { bold: true };
+  m.getCell(3).font = { italic: true, size: 9, color: { argb: SUBTLE } };
+
+  sectionHeader(ws, 'Ma‘lumot uchun (foydadan AYIRILMAGAN)');
+  kvRow(ws, 'Kechirilgan qarz (write-off)', np.memo.writeOffs, 'Hisobdan chiqarilgan qarzlar — naqd emas, lekin real iqtisodiy zarar. Foydadan ayirilmadi (qaror bo‘yicha).');
+  kvRow(ws, 'Gateway komissiyasi (Payme/Click)', np.memo.providerFees, 'To‘lov tizimi ushlab qolgan komissiya. Hozir 0 (yozilmayapti). Foydadan ayirilmadi.');
+  kvRow(ws, 'Ustoz avanslari (oylik ichida)', np.memo.advances, 'Ustozlarga oldindan berilgan pul — «Ustoz oyligi (hisoblangan)» ichida allaqachon bor, shuning uchun alohida ayirilmaydi (ikki marta hisoblanmasin).');
+
+  sheetNotes(ws, [
+    'Bu — savolga aniq javob: BARCHA real chiqimlardan keyin markazda qancha sof foyda qolgani.',
+    'SOF FOYDA = Tushum − Ustoz oyligi (hisoblangan) − Admin oyligi − Operatsion xarajatlar (avanssiz) − Qaytarishlar.',
+    'Ustoz oyligi HISOBLANGAN asosda: shu oy darslari uchun ustozlar haq qilgan to‘liq summa (o‘quvchilar to‘lamagan qismini markaz qoplaydi). Naqd oylik odatda keyingi oy chiqqani uchun, «naqd» asosda bu raqam 0 ko‘rinib, foydani sun‘iy oshirardi — shuning uchun hisoblangan asos olindi.',
+    'Ustoz avansi ikki marta hisoblanmaydi: u «hisoblangan oylik» ichida bor, shuning uchun «Operatsion xarajatlar»dan chiqarilgan (avanssiz).',
+    'Diqqat: Tushum — bu davrda tushgan pul (kelajak darslar uchun oldindan to‘lov ham bo‘lishi mumkin), ustoz oyligi esa shu oy o‘tgan darslar bo‘yicha. Shuning uchun bitta oyda bu ehtiyotkor (past) baho — «Foyda va zarar» va «Oylik dinamika» bo‘limlari bilan birga o‘qing.',
+    'Kechirilgan qarz va gateway komissiyasi — pastda «ma‘lumot uchun», foydadan ayirilmagan.',
+  ], 3);
+}
+
+// ---- Sheet 4: Foyda va zarar ----
 export function profitLossSheet(wb: Workbook, pl: any, period: string) {
   const ws = wb.addWorksheet('Foyda va zarar');
   ws.columns = [{ width: 40 }, { width: 20 }, { width: 50 }];
@@ -246,7 +306,9 @@ export function glossarySheet(wb: Workbook) {
     ['Avans', 'Ustozga davr ichida oldindan berilgan pul. Oylik hisoblanganda hisobga olinadi.'],
     ['Oldindan to‘lov', 'O‘quvchi kelajakdagi darslar uchun oldindan to‘lagan, hali sarflanmagan pul (deferred revenue).'],
     ['Debitorlik', 'O‘quvchilarning bizga qarzi — manfiy balans yig‘indisi.'],
-    ['Sof foyda (ikki asos)', 'Asosiy xulosadagi sof foyda kassa asosida (ekran bilan bir xil). Foyda-zarardagi sof foyda buxgalteriya uslubida — farq qilishi mumkin.'],
+    ['Sof foyda (aniq)', '«Sof foyda» bo‘limidagi asosiy raqam: Tushum − Ustoz oyligi (HISOBLANGAN) − Admin oyligi − Operatsion xarajat (avanssiz) − Qaytarishlar. Barcha real chiqimlardan keyin qolgan sof pul.'],
+    ['Ustoz oyligi (hisoblangan vs naqd)', 'Hisoblangan = shu oy darslari uchun ustozlar HAQ QILGAN oylik (naqd keyingi oy chiqsa ham). Naqd = shu davrda real to‘langan. Naqd asosda oylik ko‘pincha 0 ko‘rinib, foydani sun‘iy oshiradi — shuning uchun aniq foydada hisoblangan olinadi.'],
+    ['Sof foyda (ikki asos)', 'Asosiy xulosadagi "naqd asosida" sof foyda kassa bilan bir xil (ustoz oyligi keyingi oy to‘langani uchun yuqori). "Aniq" sof foyda hisoblangan oylik + refund bilan — «Sof foyda» bo‘limiga qarang.'],
     ['Roll-forward (aylanma)', 'Boshi + harakat − reversal = oxiri. Har bir qoldiq shu tarzda footlab isbotlanadi.'],
     ['Cash tie-out', 'Tushgan pul, to‘lovlar va Foyda-zarar daromadi bir-biriga mos kelishi tekshiruvi.'],
     ['LTV', 'Bir to‘lovchi o‘quvchidan davr ichida olingan o‘rtacha daromad.'],

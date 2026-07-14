@@ -300,6 +300,8 @@ describe('ReportsFinancialService', () => {
       expect(m.recovered).toBe(80000);
       expect(m.writtenOff).toBe(0);
       expect(m.remaining).toBe(220000);
+      // Both debtors still owe after partial/no recovery → 2 remain.
+      expect(m.remainingDebtorCount).toBe(2);
       // 80000 / 300000 = 26.666… → 26.7%
       expect(m.recoveryRate).toBe(26.7);
       expect(res.totals).toEqual({
@@ -341,6 +343,8 @@ describe('ReportsFinancialService', () => {
       expect(m.debtorCount).toBe(1);
       expect(m.recovered).toBe(150000);
       expect(m.remaining).toBe(0);
+      // Fully recovered → nobody from that cohort still owes.
+      expect(m.remainingDebtorCount).toBe(0);
       expect(m.recoveryRate).toBe(100);
     });
   });
@@ -436,6 +440,62 @@ describe('ReportsFinancialService', () => {
       expect(res.debtors).toEqual([]);
       expect(res.totals.debtorCount).toBe(0);
       expect(prisma.transaction.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPeriodOutflows', () => {
+    const period = { startDate: '2026-06-01', endDate: '2026-06-30' };
+
+    it('returns |Σ refunds|, |Σ write-offs| and Σ gateway fees', async () => {
+      // REFUND rows are negative on the student ledger.
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        { amount: -500_000 },
+        { amount: -407_000 },
+      ]);
+      // DEBT_WRITE_OFF credits the student balance (positive).
+      prisma.transaction.aggregate.mockResolvedValueOnce({
+        _sum: { amount: 1_465_986 },
+      });
+      prisma.payment.aggregate.mockResolvedValueOnce({
+        _sum: { providerFee: 12_000 },
+      });
+
+      const r = await service.getPeriodOutflows(1, period);
+
+      expect(r.refunds).toBe(907_000);
+      expect(r.writeOffs).toBe(1_465_986);
+      expect(r.providerFees).toBe(12_000);
+    });
+
+    it('defaults to zero when nothing happened in the period', async () => {
+      const r = await service.getPeriodOutflows(1, period);
+      expect(r).toMatchObject({ refunds: 0, writeOffs: 0, providerFees: 0 });
+    });
+
+    it('filters refunds/write-offs to non-reversed rows and scopes gateway fees by branch', async () => {
+      await service.getPeriodOutflows(1, { ...period, branchId: 7 });
+
+      expect(prisma.transaction.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            type: 'REFUND',
+            reversedAt: null,
+          }),
+        }),
+      );
+      expect(prisma.transaction.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            type: 'DEBT_WRITE_OFF',
+            reversedAt: null,
+          }),
+        }),
+      );
+      expect(prisma.payment.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ branchId: 7 }),
+        }),
+      );
     });
   });
 });

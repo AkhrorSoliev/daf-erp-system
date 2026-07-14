@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { ReportsService } from './reports.service';
-import { tashkentTodayStr, dmy, nowLabel } from './reports-excel.helpers';
+import {
+  tashkentTodayStr,
+  dmy,
+  nowLabel,
+  buildNetProfit,
+} from './reports-excel.helpers';
 import {
   coverSheet,
   summarySheet,
+  netProfitSheet,
   profitLossSheet,
   balanceSheet,
   methodsSheet,
@@ -134,6 +140,7 @@ export class ReportsExcelService {
       recon,
       prior,
       debtHistory,
+      outflows,
     ] = await Promise.all([
       this.reports.getFinancialOverview(companyId, {
         branchId: query.branchId,
@@ -157,6 +164,13 @@ export class ReportsExcelService {
       this.reports.getPriorPeriodSummary(companyId, scope),
       // Month-end debt + recovery — ledger-reconstructed, period-independent.
       this.reports.getMonthlyDebtRecovery(companyId),
+      // Outflows the legacy netProfit misses (refunds / write-offs / gateway
+      // fees) — feed the "Sof foyda" block.
+      this.reports.getPeriodOutflows(companyId, {
+        branchId: query.branchId,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      }),
     ]);
 
     // ─── Operational (non-financial) datasets ────────────────────────────────
@@ -296,7 +310,11 @@ export class ReportsExcelService {
       companyWide,
       nowLabel(),
     );
-    summarySheet(wb, overview, prior, period, currentTag, priorTag, salaries?.totals?.netToPay ?? 0);
+    // Single authoritative "Sof foyda" — assembled once, reused by the summary
+    // headline + the dedicated sheet + the reconciliation tie.
+    const np = buildNetProfit(pl, salaries, outflows);
+    summarySheet(wb, overview, prior, period, currentTag, priorTag, np);
+    netProfitSheet(wb, np, period);
     profitLossSheet(wb, pl, period);
     if (!dropPointInTime) balanceSheet(wb, bs);
     paymentsSheet(wb, payments, branchNames, period);
@@ -328,7 +346,7 @@ export class ReportsExcelService {
         period,
       );
     if (yearly) yearlyTrendSheet(wb, yearly);
-    reconciliationSheet(wb, recon, pl, payments, expenses, salaries, debtors, bs, period, !dropPointInTime);
+    reconciliationSheet(wb, recon, pl, payments, expenses, salaries, debtors, bs, period, !dropPointInTime, np);
     glossarySheet(wb);
 
     const buf = await wb.xlsx.writeBuffer();

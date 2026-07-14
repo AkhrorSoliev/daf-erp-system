@@ -262,6 +262,9 @@ describe('ReportsExcelService', () => {
     getFinancialTrend: jest.fn().mockResolvedValue(trend),
     getPerBranchSummary: jest.fn().mockResolvedValue(perBranch),
     getReconciliation: jest.fn().mockResolvedValue(recon),
+    getPeriodOutflows: jest
+      .fn()
+      .mockResolvedValue({ refunds: 10_000, writeOffs: 5_000, providerFees: 0 }),
     getPriorPeriodSummary: jest.fn().mockResolvedValue(prior),
     getMonthlyDebtRecovery: jest
       .fn()
@@ -325,11 +328,12 @@ describe('ReportsExcelService', () => {
     expect(reports.getPriorPeriodSummary).toHaveBeenCalled();
   });
 
-  it('builds the 22 expected sheets in order (company-wide, financial + operational)', async () => {
+  it('builds the 23 expected sheets in order (company-wide, financial + operational)', async () => {
     const wb = await load(await service.generate(1, {}));
     expect(wb.worksheets.map((w) => w.name)).toEqual([
       'Muqova',
       'Asosiy xulosa',
+      'Sof foyda',
       'Foyda va zarar',
       'Balans',
       "To'lovlar",
@@ -399,15 +403,40 @@ describe('ReportsExcelService', () => {
     const wb = await load(await service.generate(1, { branchId: 1 }));
     const names = wb.worksheets.map((w) => w.name);
     expect(names).not.toContain('Filial kesimida');
-    expect(names).toHaveLength(21);
+    expect(names).toHaveLength(22);
     expect(reports.getPerBranchSummary).not.toHaveBeenCalled();
   });
 
-  it('shows the canonical net profit (= overview.netProfit) on Asosiy xulosa', async () => {
+  it('shows the cash-basis net profit (= overview.netProfit) on Asosiy xulosa', async () => {
     const wb = await load(await service.generate(1, {}));
-    const row = findRow(wb.getWorksheet('Asosiy xulosa')!, 'Sof foyda');
+    const row = findRow(wb.getWorksheet('Asosiy xulosa')!, 'Sof foyda (naqd asosida)');
     expect(row).toBeTruthy();
     expect(row.getCell(2).value).toBe(overview.netProfit);
+  });
+
+  it('builds the "Sof foyda" sheet subtracting deserved salary + expenses + refunds', async () => {
+    const wb = await load(await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30' }));
+    const ws = wb.getWorksheet('Sof foyda')!;
+    expect(ws).toBeTruthy();
+    // revenue 1_000_000 − teacher(fullDeserved) 500_000 − admin 100_000
+    //         − opEx(RENT) 200_000 − refunds 10_000 = 190_000
+    const bottom = findRow(ws, '=  SOF FOYDA');
+    expect(bottom).toBeTruthy();
+    expect(bottom.getCell(2).value).toBe(190_000);
+    // Uses the HISOBLANGAN (deserved) teacher salary, not the ~0 cash-paid one.
+    const teacher = findRow(ws, '−  Ustoz oyligi (hisoblangan — bu oy uchun)');
+    expect(teacher).toBeTruthy();
+    expect(teacher.getCell(2).value).toBe(salaryMonthly.totals.fullDeserved);
+  });
+
+  it('shows the accurate net profit on Asosiy xulosa (deserved salary + refunds)', async () => {
+    const wb = await load(await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30' }));
+    const row = findRow(
+      wb.getWorksheet('Asosiy xulosa')!,
+      'Sof foyda (aniq — hisoblangan oylik + refund bilan)',
+    );
+    expect(row).toBeTruthy();
+    expect(row.getCell(2).value).toBe(190_000);
   });
 
   it('Qarzdorlar total ties to the balance-sheet debitorlik', async () => {
@@ -520,8 +549,8 @@ describe('ReportsExcelService', () => {
   it('renders an empty-note operational sheet when its source throws (workbook survives)', async () => {
     reports.getRoomUtilization.mockRejectedValue(new Error('boom'));
     const wb = await load(await service.generate(1, {}));
-    // The whole workbook still builds (all 22 sheets present)...
-    expect(wb.worksheets).toHaveLength(22);
+    // The whole workbook still builds (all 23 sheets present)...
+    expect(wb.worksheets).toHaveLength(23);
     // ...and the failed sheet carries the "no data" note instead of crashing.
     const ws = wb.getWorksheet('Xonalar bandligi')!;
     let hasNote = false;

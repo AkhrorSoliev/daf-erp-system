@@ -36,6 +36,7 @@ interface DebtMonth {
   recovered: number;
   writtenOff: number;
   remaining: number;
+  remainingDebtorCount: number;
   recoveryRate: number;
 }
 interface DebtRecoveryResponse {
@@ -175,6 +176,11 @@ export function DebtHistoryView() {
                 label="Qolgan qarz"
                 hint="Oy oxiridagi qarzdan hali qoplanmagan qismi."
               />
+              <HeadWithHint
+                className="text-right"
+                label="Qolgan qarzdorlar"
+                hint="O'sha oy qarzdorlaridan hozir hali qarzi qolganlar soni. To'liq to'lagan yoki kechirilganlar chiqib ketadi."
+              />
               <TableHead className="text-right">Undirish %</TableHead>
             </TableRow>
           </TableHeader>
@@ -182,7 +188,7 @@ export function DebtHistoryView() {
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={9}>
                     <Skeleton className="h-9 w-full" />
                   </TableCell>
                 </TableRow>
@@ -190,7 +196,7 @@ export function DebtHistoryView() {
             ) : months.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Hali ma&apos;lumot yo&apos;q.
@@ -255,6 +261,16 @@ export function DebtHistoryView() {
                   >
                     {formatPrice(m.remaining)}
                   </TableCell>
+                  <TableCell
+                    className={cn(
+                      "text-right tabular-nums",
+                      m.remainingDebtorCount > 0
+                        ? "font-medium text-red-700 dark:text-red-400"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {m.remainingDebtorCount}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
                     {formatPercent(m.recoveryRate)}
                   </TableCell>
@@ -280,6 +296,7 @@ export function DebtHistoryView() {
                 <TableCell className="text-right font-semibold tabular-nums text-red-700 dark:text-red-400">
                   {formatPrice(totals.remaining)}
                 </TableCell>
+                <TableCell />
                 <TableCell />
               </TableRow>
             </TableFooter>
