@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { GroupStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 
 const GROUP_STATUS_TO_INT: Record<string, number> = {
@@ -20,7 +20,6 @@ export class GroupStatusCronService {
   constructor(
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
-    private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
   ) {}
 
@@ -42,8 +41,13 @@ export class GroupStatusCronService {
       ),
     );
 
+    // Guruhlarni endDate bo'yicha avtomatik COMPLETED qilish ATAY o'chirilgan
+    // (2026-07-14, CEO qarori). Avtomatik yopish guruhni COMPLETED qilib,
+    // o'quvchilarni kutilmaganda GRADUATED qilardi va keyin guruhni qo'lda
+    // tiklashni talab qilardi. Guruh endi FAQAT qo'lda yopiladi
+    // (PATCH /groups/:id/status). FORMING→ACTIVE avtomatik faollashtirish
+    // saqlanib qoladi.
     await this.activateGroups(today);
-    await this.completeGroups(today);
   }
 
   /**
@@ -74,51 +78,6 @@ export class GroupStatusCronService {
       } catch (error) {
         this.logger.error(
           `FORMING→ACTIVE xatolik, guruh ${group.id}: ${error.message}`,
-        );
-      }
-    }
-  }
-
-  /**
-   * endDate o'tgan ACTIVE guruhlarni COMPLETED ga o'tkazadi
-   */
-  private async completeGroups(today: Date) {
-    const groups = await this.prisma.group.findMany({
-      where: {
-        statusEnum: GroupStatus.ACTIVE,
-        endDate: { lt: today },
-        deletedAt: null,
-      },
-    });
-
-    if (groups.length === 0) return;
-
-    this.logger.log(
-      `${groups.length} ta guruh ACTIVE → COMPLETED ga o'tkazilmoqda`,
-    );
-
-    for (const group of groups) {
-      try {
-        await this.changeGroupStatus(
-          group,
-          GroupStatus.COMPLETED,
-          "Avtomatik: guruh tugash sanasi o'tdi",
-        );
-
-        // COMPLETED → enrollment va studentlarni cascade qilish.
-        // userId = undefined (system action): audit FK ustunlari (changedById /
-        // statusChangedById) nullable, shuning uchun `0` (mavjud bo'lmagan User)
-        // o'rniga undefined uzatamiz — aks holda P2003 FK violation cascade'ni
-        // jimgina sindiradi (enrollmentlar yopilmay, studentlar bitirilmay qoladi).
-        await this.statusCascadeService.cascade(
-          'Group',
-          group.id,
-          GroupStatus.COMPLETED,
-          undefined,
-        );
-      } catch (error) {
-        this.logger.error(
-          `ACTIVE→COMPLETED xatolik, guruh ${group.id}: ${error.message}`,
         );
       }
     }
