@@ -109,7 +109,11 @@ export class ReportsController {
     return this.reportsService.getLeadAnalytics(query);
   }
 
+  // 6-month KPI trend chart (income/expenses/profit/LTV/CAC/ROI series).
+  // CEO/BD only — the drill-down is hidden from Administrators on the frontend,
+  // so the endpoint must reject them too (money-series data).
   @Get('financial-trend')
+  @Roles('CEO', 'Branch Director')
   getFinancialTrend(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -117,16 +121,39 @@ export class ReportsController {
     return this.reportsService.getFinancialTrend(companyId, query.branchId);
   }
 
+  // Financial overview KPI cards. CEO/BD get the full payload (income, expenses,
+  // profit, salary, LTV, CAC, ROI, forecast, debt). Administrator + Cashier are
+  // intentionally allowed to reach it — but only for the two OPERATIONAL figures
+  // the frontend still shows them ("To'lov qilganlar" = payer count, "O'rtacha
+  // to'lov" = avg payment). Every sensitive money metric is stripped here at the
+  // HTTP boundary so a direct API call can't leak it (frontend hiding alone is
+  // not a security boundary).
   @Get('financial-overview')
-  getFinancialOverview(
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  async getFinancialOverview(
     @Query() query: ReportsQueryDto,
-    @CurrentUser('companyId') companyId: number,
+    @CurrentUser() user: { companyId: number; roles: string[] },
   ) {
-    return this.reportsService.getFinancialOverview(companyId, {
-      branchId: query.branchId,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
+    const overview = await this.reportsService.getFinancialOverview(
+      user.companyId,
+      {
+        branchId: query.branchId,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      },
+    );
+
+    const canSeeFinancials = user.roles.some(
+      (r) => r === 'CEO' || r === 'Branch Director',
+    );
+    if (canSeeFinancials) return overview;
+
+    // Operational-only subset for Administrator / Cashier. Nothing that reveals
+    // company revenue, cost, profit, salary, marketing or debt is returned.
+    return {
+      ltvPayerCount: overview.ltvPayerCount,
+      avgPayment: overview.avgPayment,
+    };
   }
 
   // "Oylik qarzdorlik + undirish" — per-month closing debt (frozen, ledger-

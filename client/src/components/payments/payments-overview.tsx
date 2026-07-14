@@ -87,8 +87,12 @@ interface PaymentsOverviewProps {
 export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOverviewProps) {
   const { selectedBranch } = useBranchSwitcher();
   const user = useAuth((s) => s.user);
-  const canSeeWriteOffSummary =
+  // Sensitive financial figures (income, expenses, profit, LTV, CAC, ROI, and
+  // the forecast/salary/debt/method breakdown blocks) are CEO/BD only. Ordinary
+  // admins (Administrator, Cashier) see only the two operational cards below.
+  const canSeeFinancials =
     user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canSeeWriteOffSummary = canSeeFinancials;
 
   const { data, isLoading } = useQuery({
     queryKey: ["financial-overview", selectedBranch?.id, startDate, endDate, refreshKey],
@@ -128,15 +132,17 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     return (
       <div className="space-y-6">
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: canSeeFinancials ? 8 : 2 }).map((_, i) => (
             <Skeleton key={i} className="h-22 rounded-xl" />
           ))}
         </div>
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-36 rounded-xl" />
-          ))}
-        </div>
+        {canSeeFinancials && (
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-36 rounded-xl" />
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -175,33 +181,37 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     <div className="space-y-6">
       {/* ===== Asosiy ko'rsatkichlar — 2 qator, 4 tadan ===== */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-        {/* 1. Tushumlar */}
-        <KpiCard
-          icon={Wallet}
-          label="Tushumlar"
-          value={`${fmt(d.income.actual)} so'm`}
-          color="text-green-600 dark:text-green-400"
-          tooltip={`${d.income.paymentCount} ta to'lov orqali`}
-          onClick={() => setChartKey("income")}
-        />
-        {/* 2. Chiqimlar */}
-        <KpiCard
-          icon={Receipt}
-          label="Chiqimlar"
-          value={`${fmt(d.expenses + d.salary.paid)} so'm`}
-          color="text-red-600 dark:text-red-400"
-          tooltip={`Xarajatlar: ${fmt(d.expenses)}, Oyliklar: ${fmt(d.salary.paid)}`}
-          onClick={() => setChartKey("expenses")}
-        />
-        {/* 3. Foyda */}
-        <KpiCard
-          icon={TrendingUp}
-          label="Foyda"
-          value={`${fmt(d.netProfit)} so'm`}
-          color={d.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
-          tooltip="Tushumlar - Chiqimlar (xarajatlar + oyliklar)"
-          onClick={() => setChartKey("profit")}
-        />
+        {canSeeFinancials && (
+          <>
+            {/* 1. Tushumlar */}
+            <KpiCard
+              icon={Wallet}
+              label="Tushumlar"
+              value={`${fmt(d.income.actual)} so'm`}
+              color="text-green-600 dark:text-green-400"
+              tooltip={`${d.income.paymentCount} ta to'lov orqali`}
+              onClick={() => setChartKey("income")}
+            />
+            {/* 2. Chiqimlar */}
+            <KpiCard
+              icon={Receipt}
+              label="Chiqimlar"
+              value={`${fmt(d.expenses + d.salary.paid)} so'm`}
+              color="text-red-600 dark:text-red-400"
+              tooltip={`Xarajatlar: ${fmt(d.expenses)}, Oyliklar: ${fmt(d.salary.paid)}`}
+              onClick={() => setChartKey("expenses")}
+            />
+            {/* 3. Foyda */}
+            <KpiCard
+              icon={TrendingUp}
+              label="Foyda"
+              value={`${fmt(d.netProfit)} so'm`}
+              color={d.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
+              tooltip="Tushumlar - Chiqimlar (xarajatlar + oyliklar)"
+              onClick={() => setChartKey("profit")}
+            />
+          </>
+        )}
         {/* 4. To'lov qilganlar */}
         <KpiCard
           icon={Users}
@@ -211,36 +221,40 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           tooltip="Tanlangan davrda kamida 1 marta to'lov qilgan o'quvchilar soni"
           subtitle="Davrda aktiv"
         />
-        {/* 5. LTV */}
-        <KpiCard
-          icon={Users}
-          label="LTV"
-          value={`${fmt(d.ltv)} so'm`}
-          color="text-violet-600 dark:text-violet-400"
-          tooltip="Tanlangan davrdagi o'rtacha o'quvchi qiymati — shu davrda to'lov qilgan o'quvchilardan o'rtacha daromad"
-          subtitle="Davriy o'quvchi qiymati"
-          onClick={() => setChartKey("ltv")}
-        />
-        {/* 6. CAC */}
-        <KpiCard
-          icon={UserPlus}
-          label="CAC"
-          value={`${fmt(d.cac)} so'm`}
-          color="text-amber-600 dark:text-amber-400"
-          tooltip={`Yangi o'quvchi jalb qilish narxi. Marketing: ${fmt(d.marketingExpenses)}, Yangi: ${d.newStudentCount} ta`}
-          subtitle="Jalb qilish narxi"
-          onClick={() => setChartKey("cac")}
-        />
-        {/* 7. Marketing ROI */}
-        <KpiCard
-          icon={Megaphone}
-          label="Marketing ROI"
-          value={`${d.marketingRoi}%`}
-          color={d.marketingRoi > 100 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}
-          tooltip="Marketing samaradorligi — sarflangan mablag'ning qaytimi foizda"
-          subtitle="Samaradorlik"
-          onClick={() => setChartKey("marketingRoi")}
-        />
+        {canSeeFinancials && (
+          <>
+            {/* 5. LTV */}
+            <KpiCard
+              icon={Users}
+              label="LTV"
+              value={`${fmt(d.ltv)} so'm`}
+              color="text-violet-600 dark:text-violet-400"
+              tooltip="Tanlangan davrdagi o'rtacha o'quvchi qiymati — shu davrda to'lov qilgan o'quvchilardan o'rtacha daromad"
+              subtitle="Davriy o'quvchi qiymati"
+              onClick={() => setChartKey("ltv")}
+            />
+            {/* 6. CAC */}
+            <KpiCard
+              icon={UserPlus}
+              label="CAC"
+              value={`${fmt(d.cac)} so'm`}
+              color="text-amber-600 dark:text-amber-400"
+              tooltip={`Yangi o'quvchi jalb qilish narxi. Marketing: ${fmt(d.marketingExpenses)}, Yangi: ${d.newStudentCount} ta`}
+              subtitle="Jalb qilish narxi"
+              onClick={() => setChartKey("cac")}
+            />
+            {/* 7. Marketing ROI */}
+            <KpiCard
+              icon={Megaphone}
+              label="Marketing ROI"
+              value={`${d.marketingRoi}%`}
+              color={d.marketingRoi > 100 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}
+              tooltip="Marketing samaradorligi — sarflangan mablag'ning qaytimi foizda"
+              subtitle="Samaradorlik"
+              onClick={() => setChartKey("marketingRoi")}
+            />
+          </>
+        )}
         {/* 8. O'rtacha to'lov */}
         <KpiCard
           icon={CreditCard}
@@ -249,11 +263,12 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           color="text-sky-600 dark:text-sky-400"
           tooltip="Har bir to'lovning o'rtacha summasi"
           subtitle="To'lov boshiga"
-          onClick={() => setChartKey("avgPayment")}
+          onClick={canSeeFinancials ? () => setChartKey("avgPayment") : undefined}
         />
       </div>
 
-      {/* ===== Pastki qator: Prognoz, Oyliklar, Qarzdorlik, To'lov usullari ===== */}
+      {/* ===== Pastki qator: Prognoz, Oyliklar, Qarzdorlik, To'lov usullari — CEO/BD only ===== */}
+      {canSeeFinancials && (
       <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
         {/* Tushum ko'rsatkichlari — Prognoz (bashorat) + Hisoblangan darslar (real) + Tushgan */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
@@ -451,6 +466,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           </div>
         </div>
       </div>
+      )}
 
       <KpiChartDialog
         open={!!chartKey}

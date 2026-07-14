@@ -159,6 +159,7 @@ describe('ReportsController — role guards', () => {
     'getMonthlyDebtRecovery',
     'getMonthDebtDetail',
     'exportMonthlyDebtExcel',
+    'getFinancialTrend',
   ] as const;
 
   for (const method of narrowedEndpoints) {
@@ -192,6 +193,7 @@ describe('ReportsController — role guards', () => {
   const studentPaymentsEndpoints = [
     'getStudentPaymentsReport',
     'getStudentPaymentsFilterOptions',
+    'getFinancialOverview',
   ] as const;
 
   for (const method of studentPaymentsEndpoints) {
@@ -331,6 +333,93 @@ describe('ReportsController — role guards', () => {
           ),
         ).toThrow(ForbiddenException);
       }
+    });
+  });
+
+  describe('getFinancialOverview() — sensitive-field stripping', () => {
+    const fullOverview = {
+      income: { expected: 9, actual: 69126991, billed: 8, paymentCount: 212, byMethod: [{ method: 'CASH', amount: 5, count: 1 }] },
+      forecast: { recognizedRevenueForecast: 7, outstandingReceivable: 6, debtorExposure: { count: 4, avgDebt: 3 } },
+      salary: { paid: 8251000, pending: 5, advances: 2 },
+      expenses: 8251000,
+      netProfit: 60875991,
+      debtorCount: 4,
+      activeBalance: 1,
+      activeStudentCount: 188,
+      ltv: 367697,
+      ltvPayerCount: 188,
+      cac: 0,
+      marketingRoi: 0,
+      avgPayment: 326071,
+      newStudentCount: 0,
+      marketingExpenses: 0,
+    };
+
+    beforeEach(() => {
+      mockService.getFinancialOverview.mockResolvedValue(fullOverview);
+    });
+
+    afterEach(() => {
+      mockService.getFinancialOverview.mockResolvedValue({});
+    });
+
+    const query = {} as any;
+
+    it('returns the FULL payload for CEO', async () => {
+      const res = await controller.getFinancialOverview(query, {
+        companyId: 1,
+        roles: ['CEO'],
+      });
+      expect(res).toBe(fullOverview);
+    });
+
+    it('returns the FULL payload for Branch Director', async () => {
+      const res = await controller.getFinancialOverview(query, {
+        companyId: 1,
+        roles: ['Branch Director'],
+      });
+      expect(res).toBe(fullOverview);
+    });
+
+    it('returns ONLY payer count + avg payment for Administrator', async () => {
+      const res = await controller.getFinancialOverview(query, {
+        companyId: 1,
+        roles: ['Administrator'],
+      });
+      expect(res).toEqual({ ltvPayerCount: 188, avgPayment: 326071 });
+    });
+
+    it('returns ONLY payer count + avg payment for Cashier', async () => {
+      const res = await controller.getFinancialOverview(query, {
+        companyId: 1,
+        roles: ['Cashier'],
+      });
+      expect(res).toEqual({ ltvPayerCount: 188, avgPayment: 326071 });
+    });
+
+    it('never leaks income / expenses / profit / salary / LTV / CAC / ROI / debt to Administrator', async () => {
+      const res: any = await controller.getFinancialOverview(query, {
+        companyId: 1,
+        roles: ['Administrator'],
+      });
+      expect(res.income).toBeUndefined();
+      expect(res.expenses).toBeUndefined();
+      expect(res.netProfit).toBeUndefined();
+      expect(res.salary).toBeUndefined();
+      expect(res.forecast).toBeUndefined();
+      expect(res.ltv).toBeUndefined();
+      expect(res.cac).toBeUndefined();
+      expect(res.marketingRoi).toBeUndefined();
+      expect(res.debtorCount).toBeUndefined();
+      expect(res.activeBalance).toBeUndefined();
+    });
+
+    it('grants the full payload when the user holds Administrator AND Branch Director', async () => {
+      const res = await controller.getFinancialOverview(query, {
+        companyId: 1,
+        roles: ['Administrator', 'Branch Director'],
+      });
+      expect(res).toBe(fullOverview);
     });
   });
 
