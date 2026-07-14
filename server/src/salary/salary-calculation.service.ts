@@ -11,6 +11,7 @@ import {
   pickActiveVersion,
   RateVersion,
 } from './shared/deserved-math';
+import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
 import { SalaryAccrualService } from './salary-accrual.service';
 
 /** One uncovered billable lesson to be fronted by a center top-up accrual. */
@@ -242,40 +243,41 @@ export class SalaryCalculationService {
     }
 
     // === FIXED MONTHLY (admins, cashiers, branch directors, or teachers on fixed salary) ===
-    // P1.7 — read from the version active at periodEnd (last day of the
-    // cycle being settled), NOT the parent mirror. Otherwise a future-dated
-    // FIXED_MONTHLY change would apply to payroll before its effectiveFrom.
+    // isActive is NOT filtered: a staff member deactivated mid-cycle must still
+    // receive their final (prorated) month — the version's `effectiveTo` bounds
+    // the money and future months prorate to 0. The 4b deactivation cascade
+    // guarantees a deactivated config's version is always closed. `deletedAt:
+    // null` on the user is the hard guard so an archived/removed employee is
+    // never paid.
     const fixedMonthlyConfigs = await this.prisma.employeeSalaryConfig.findMany(
       {
         where: {
           companyId,
-          isActive: true,
           groupId: null,
-          // We still anchor on the parent mirror for "is this a fixed-monthly
-          // employee?" because that flag is the join key. The actual
-          // payment value comes from the version below.
           salaryType: SalaryType.FIXED_MONTHLY,
+          user: { deletedAt: null },
         },
-        select: { id: true, userId: true, value: true },
+        select: { id: true, userId: true },
       },
     );
 
     for (const config of fixedMonthlyConfigs) {
-      // Look up the version active at periodEnd. If none (e.g. the only
-      // version's effectiveFrom is after periodEnd), skip — the employee
-      // wasn't on fixed-monthly during this cycle.
-      const activeVersion =
-        await this.prisma.employeeSalaryConfigVersion.findFirst({
-          where: {
-            configId: config.id,
-            salaryType: SalaryType.FIXED_MONTHLY,
-            effectiveFrom: { lte: periodEnd },
-            OR: [{ effectiveTo: null }, { effectiveTo: { gt: periodEnd } }],
-          },
-          orderBy: { effectiveFrom: 'desc' },
-          select: { value: true },
-        });
-      if (!activeVersion) continue;
+      // Prorate over every FIXED_MONTHLY version overlapping the settled period
+      // (mid-cycle hire via effectiveFrom, leave via effectiveTo, rate change =
+      // two versions). Same helper the report uses, so shown == paid. No
+      // overlapping version → amount 0 → skip (employee wasn't on fixed-monthly
+      // this cycle).
+      const versions = await this.prisma.employeeSalaryConfigVersion.findMany({
+        where: {
+          configId: config.id,
+          salaryType: SalaryType.FIXED_MONTHLY,
+          effectiveFrom: { lte: periodEnd },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gt: periodStart } }],
+        },
+        select: { value: true, effectiveFrom: true, effectiveTo: true },
+      });
+      const amount = prorateFixedMonthly(versions, periodStart, periodEnd);
+      if (amount <= 0) continue;
 
       // Skip if a payment already exists for this exact period (idempotent cron).
       const existing = await this.prisma.salaryPayment.findFirst({
@@ -288,8 +290,6 @@ export class SalaryCalculationService {
         select: { id: true },
       });
       if (existing) continue;
-
-      const amount = activeVersion.value;
 
       // Atomic for the same reasons as the accrual branch above.
       const { finalNet, advanceDeducted } = await this.prisma.$transaction(

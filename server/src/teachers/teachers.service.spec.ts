@@ -6,6 +6,7 @@ import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('TeachersService — status methods', () => {
   let service: TeachersService;
@@ -67,6 +68,7 @@ describe('TeachersService — status methods', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: RedisService, useValue: redis },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         {
           provide: EntityHistoryService,

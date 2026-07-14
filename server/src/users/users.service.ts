@@ -13,6 +13,11 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { Prisma, UserStatus } from '@prisma/client';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  USER_DEACTIVATED_EVENT,
+  UserDeactivatedEvent,
+} from '../common/events/user-lifecycle.events';
 
 const userSelect = {
   id: true,
@@ -63,6 +68,7 @@ export class UsersService {
     private prisma: PrismaService,
     private uploadService: UploadService,
     private entityHistoryService: EntityHistoryService,
+    private events: EventEmitter2,
   ) {}
 
   private async assertRoleAndBranchRules(
@@ -491,6 +497,15 @@ export class UsersService {
       companyId: user.companyId,
     });
 
+    // Deactivated / terminated → stop their fixed-monthly payroll (closes the
+    // FIXED_MONTHLY config + version; the final partial month still prorates).
+    if (dto.status !== undefined && dto.status !== UserStatus.ACTIVE) {
+      this.events.emit(USER_DEACTIVATED_EVENT, {
+        userId: id,
+        companyId: user.companyId,
+      } satisfies UserDeactivatedEvent);
+    }
+
     return formatUser(updated);
   }
 
@@ -524,6 +539,12 @@ export class UsersService {
       changedById: deletedById,
       companyId: user.companyId,
     });
+
+    // Archived → stop their fixed-monthly payroll.
+    this.events.emit(USER_DEACTIVATED_EVENT, {
+      userId: id,
+      companyId: user.companyId,
+    } satisfies UserDeactivatedEvent);
 
     return { message: "Xodim muvaffaqiyatli o'chirildi" };
   }

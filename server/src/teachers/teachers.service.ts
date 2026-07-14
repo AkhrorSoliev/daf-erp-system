@@ -10,6 +10,11 @@ import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  USER_DEACTIVATED_EVENT,
+  UserDeactivatedEvent,
+} from '../common/events/user-lifecycle.events';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
@@ -71,6 +76,7 @@ export class TeachersService {
     private statusHistoryService: StatusHistoryService,
     private entityHistoryService: EntityHistoryService,
     private redis: RedisService,
+    private events: EventEmitter2,
   ) {}
 
   async findAll(query: TeacherQueryDto, companyId: number) {
@@ -344,6 +350,14 @@ export class TeachersService {
       // Redis ulanmagan bo'lsa ham status o'zgaradi
     }
 
+    // Deactivated / terminated → stop any fixed-monthly payroll for this user.
+    if (dto.status !== UserStatus.ACTIVE) {
+      this.events.emit(USER_DEACTIVATED_EVENT, {
+        userId: id,
+        companyId: user.companyId,
+      } satisfies UserDeactivatedEvent);
+    }
+
     return formatTeacher(updated);
   }
 
@@ -422,6 +436,12 @@ export class TeachersService {
     } catch {
       // Redis ulanmagan bo'lsa ham delete ishlaydi
     }
+
+    // Archived → stop any fixed-monthly payroll for this user.
+    this.events.emit(USER_DEACTIVATED_EVENT, {
+      userId: id,
+      companyId: user.companyId,
+    } satisfies UserDeactivatedEvent);
 
     return { message: "O'qituvchi muvaffaqiyatli o'chirildi" };
   }

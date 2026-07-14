@@ -5,6 +5,7 @@ import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('UsersService — updateUser status/isActive sync', () => {
   let service: UsersService;
@@ -52,6 +53,7 @@ describe('UsersService — updateUser status/isActive sync', () => {
         UsersService,
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -169,6 +171,7 @@ describe('UsersService — role escalation and branch validation', () => {
         UsersService,
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -368,6 +371,7 @@ describe('UsersService — cross-company guards', () => {
         UsersService,
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -434,6 +438,7 @@ describe('UsersService — findAll companyId scoping', () => {
         UsersService,
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {

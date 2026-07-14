@@ -302,4 +302,54 @@ describe('SalaryCalculationService', () => {
     expect(tx.salaryPayment.create).not.toHaveBeenCalled();
     expect(result.calculated).toBe(0);
   });
+
+  describe('FIXED_MONTHLY (non-teaching staff)', () => {
+    it('creates a prorated payment and excludes archived users (deletedAt guard)', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+        { id: 'cfg1', userId: 10030 },
+      ]);
+      // Full-period version → full flat salary.
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          value: 5_000_000,
+          effectiveFrom: new Date('2026-01-01'),
+          effectiveTo: null,
+        },
+      ]);
+
+      const result = await service.calculateMonthlySalaries(1, { now });
+
+      // 4a guard: the sweep filters out archived/removed employees.
+      expect(prisma.employeeSalaryConfig.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            groupId: null,
+            salaryType: 'FIXED_MONTHLY',
+            user: { deletedAt: null },
+          }),
+        }),
+      );
+      expect(tx.salaryPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 10030,
+            amount: 5_000_000,
+            status: 'CALCULATED',
+          }),
+        }),
+      );
+      expect(result.calculated).toBe(1);
+    });
+
+    it('skips a config with no version overlapping the settled period', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+        { id: 'cfg1', userId: 10030 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([]); // none overlap
+
+      const result = await service.calculateMonthlySalaries(1, { now });
+      expect(tx.salaryPayment.create).not.toHaveBeenCalled();
+      expect(result.calculated).toBe(0);
+    });
+  });
 });

@@ -2,24 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  parseTashkentDateStart,
-  resolveCurrentPeriod,
-} from './shared/resolve-current-period';
-import {
   perLessonAccrual,
   pickActiveVersion,
   RateVersion,
 } from './shared/deserved-math';
 import { isTopUpMonth } from './shared/topup';
+import {
+  resolveMonthlyScope,
+  type SalaryMonthlyQuery,
+} from './shared/resolve-monthly-scope';
+import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 
-export interface SalaryMonthlyQuery {
-  month?: string;
-  search?: string;
-}
-
-const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
-/** Fallback floor when a company has no `systemStartDate` (May 2026 cutover). */
-const DEFAULT_FLOOR_MONTH = '2026-05';
+export type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 
 /**
  * Net-to-pay base per month. **Faza 2 (July center top-up):** from
@@ -31,12 +25,6 @@ const DEFAULT_FLOOR_MONTH = '2026-05';
  * `SalaryPayment.amount` regardless (which, for a top-up month, already includes
  * the gap). Gated by `isTopUpMonth` — the single switch lives in `shared/topup`.
  */
-
-/** Tashkent calendar month key ("YYYY-MM") of an instant. */
-function monthKeyOf(d: Date): string {
-  const t = new Date(d.getTime() + TASHKENT_OFFSET_MS);
-  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
-}
 
 /** "YYYY-MM-DD" of a `@db.Date` value (UTC midnight), for override keys. */
 function dateStr(d: Date): string {
@@ -64,61 +52,45 @@ function dateStr(d: Date): string {
  */
 @Injectable()
 export class SalaryMonthlyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private staff: SalaryStaffMonthlyService,
+  ) {}
 
   async getMonthly(
     query: SalaryMonthlyQuery,
     companyId: number,
     performedById: number,
   ) {
-    // ─── Step 1: month + floor + period bounds ────────────────────────────
-    const company = await this.prisma.company.findUnique({
-      where: { id: companyId },
-      select: { systemStartDate: true },
-    });
-    const floorMonth = company?.systemStartDate
-      ? monthKeyOf(company.systemStartDate)
-      : DEFAULT_FLOOR_MONTH;
-
-    const requested =
-      query.month && /^\d{4}-(0[1-9]|1[0-2])$/.test(query.month)
-        ? query.month
-        : monthKeyOf(new Date());
-    const month = requested < floorMonth ? floorMonth : requested;
-
-    // Mid-month reference → the payroll period the month sits in. With
-    // cycleStartDay=1 this is exactly the calendar month.
-    const asOf = parseTashkentDateStart(`${month}-15`);
-    const period = await resolveCurrentPeriod(this.prisma, companyId, asOf);
-    const { periodStart, periodEnd } = period;
-
-    // Calendar-month bounds for advances (accounting date, not the period).
-    const [my, mm] = month.split('-').map(Number);
-    const monthStart = new Date(Date.UTC(my, mm - 1, 1));
-    const nextMonthStart = new Date(Date.UTC(my, mm, 1));
-    // Same bounds as UTC instants, for `SalaryPayment.periodStart` bucketing
-    // (mirrors getMatrix's Tashkent-month bucketing for a single month).
-    const periodStartLow = new Date(monthStart.getTime() - TASHKENT_OFFSET_MS);
-    const periodStartHigh = new Date(
-      nextMonthStart.getTime() - TASHKENT_OFFSET_MS,
+    // ─── Step 1+2: shared month/period/branch scope ──────────────────────
+    // Resolved via the same helper the non-teaching staff pass uses, so the
+    // two views can never disagree on month/period/branch scope.
+    const scope = await resolveMonthlyScope(
+      this.prisma,
+      query,
+      companyId,
+      performedById,
     );
+    const {
+      month,
+      floorMonth,
+      period,
+      periodStart,
+      periodEnd,
+      monthStart,
+      nextMonthStart,
+      periodStartLow,
+      periodStartHigh,
+      branchId,
+      search,
+      searchId,
+    } = scope;
 
-    // ─── Step 2: branch scope + teacher load ──────────────────────────────
-    const caller = await this.prisma.user.findUnique({
-      where: { id: performedById },
-      select: {
-        mainBranch: true,
-        roles: { select: { role: { select: { name: true } } } },
-      },
-    });
-    const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
-    const scoped =
-      !roleNames.includes('CEO') && !roleNames.includes('Administrator');
-    const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
+    // Non-teaching FIXED_MONTHLY staff (admins/cashiers/directors). Computed up
+    // front so it is returned even on the zero-teacher early-return below.
+    const { staff, staffTotals } = await this.staff.computeStaff(scope);
 
-    const search = query.search?.trim();
-    const searchId = search && /^\d+$/.test(search) ? Number(search) : null;
-
+    // Teacher roster for this month, in branch scope.
     const where: Prisma.UserWhereInput = {
       deletedAt: null,
       companyId,
@@ -161,7 +133,15 @@ export class SalaryMonthlyService {
       centerRecovered: 0,
     };
     if (ids.length === 0) {
-      return { month, floorMonth, period, data: [], totals: zeroTotals };
+      return {
+        month,
+        floorMonth,
+        period,
+        data: [],
+        totals: zeroTotals,
+        staff,
+        staffTotals,
+      };
     }
     const idSet = new Set(ids);
 
@@ -497,6 +477,6 @@ export class SalaryMonthlyService {
     // recovered (Y) = advanced (X) − still-fronted (Z).
     totals.centerRecovered = totals.centerAdvanced - totals.centerStillFronted;
 
-    return { month, floorMonth, period, data: rows, totals };
+    return { month, floorMonth, period, data: rows, totals, staff, staffTotals };
   }
 }
