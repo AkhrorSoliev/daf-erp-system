@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SalaryMonthlyService } from './salary-monthly.service';
+import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -12,8 +13,13 @@ import { PrismaService } from '../prisma/prisma.service';
 describe('SalaryMonthlyService', () => {
   let service: SalaryMonthlyService;
   let prisma: any;
+  let staff: { computeStaff: jest.Mock };
 
   const ceoCaller = { mainBranch: 1, roles: [{ role: { name: 'CEO' } }] };
+  const emptyStaff = {
+    staff: [],
+    staffTotals: { monthly: 0, advances: 0, netToPay: 0 },
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -42,10 +48,13 @@ describe('SalaryMonthlyService', () => {
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
+    staff = { computeStaff: jest.fn().mockResolvedValue(emptyStaff) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SalaryMonthlyService,
         { provide: PrismaService, useValue: prisma },
+        { provide: SalaryStaffMonthlyService, useValue: staff },
       ],
     }).compile();
 
@@ -77,6 +86,31 @@ describe('SalaryMonthlyService', () => {
       centerRecovered: 0,
     });
     expect(prisma.attendance.findMany).not.toHaveBeenCalled();
+    // Staff is computed even on the zero-teacher early return.
+    expect(staff.computeStaff).toHaveBeenCalled();
+    expect(res.staff).toEqual([]);
+    expect(res.staffTotals).toEqual({ monthly: 0, advances: 0, netToPay: 0 });
+  });
+
+  it('surfaces the non-teaching staff pass in the response', async () => {
+    const staffRows = [
+      {
+        user: { id: 10030, firstName: 'A', lastName: 'B', position: 'Administrator', branch: null },
+        monthly: 5_000_000,
+        advances: 0,
+        netToPay: 5_000_000,
+        payment: null,
+      },
+    ];
+    staff.computeStaff.mockResolvedValue({
+      staff: staffRows,
+      staffTotals: { monthly: 5_000_000, advances: 0, netToPay: 5_000_000 },
+    });
+
+    const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+    expect(res.staff).toEqual(staffRows);
+    expect(res.staffTotals.netToPay).toBe(5_000_000);
   });
 
   it('computes covered + gap + fullDeserved for a PERCENTAGE teacher', async () => {

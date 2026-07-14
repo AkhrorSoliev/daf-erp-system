@@ -259,6 +259,18 @@ export class SalaryConfigService {
           });
         }
 
+        // Deactivating a config MUST close its open version so proration /
+        // version-resolution sees a clean end. Otherwise a deactivated
+        // FIXED_MONTHLY config with an open version would keep paying forever
+        // (the report/cron queries include configs by version overlap, not by
+        // isActive). Invariant: a deactivated config never has an open version.
+        if (dto.isActive === false) {
+          await tx.employeeSalaryConfigVersion.updateMany({
+            where: { configId: id, effectiveTo: null },
+            data: { effectiveTo: effectiveFrom },
+          });
+        }
+
         return tx.employeeSalaryConfig.update({
           where: { id },
           data: {
@@ -305,6 +317,56 @@ export class SalaryConfigService {
       },
       orderBy: [{ effectiveFrom: 'desc' }, { createdAt: 'desc' }],
     });
+  }
+
+  /**
+   * Close a deactivated / terminated / archived employee's FIXED_MONTHLY salary
+   * so the payroll cron stops paying them. Sets each active FIXED_MONTHLY config
+   * inactive AND closes its open version (`effectiveTo = asOf`), so the final
+   * (partial) month prorates correctly and every later month prorates to 0.
+   *
+   * Only FIXED_MONTHLY is touched — PERCENTAGE / FIXED_PER_STUDENT (teacher)
+   * configs are attendance-gated (no work → no accrual), so leaving them active
+   * carries no overpayment risk and avoids disturbing accrual rate resolution.
+   *
+   * Idempotent: a second call once everything is closed is a no-op (returns 0).
+   * Invoked by `SalaryUserLifecycleListener` on the `user.deactivated` event.
+   */
+  async deactivateConfigsForUser(
+    userId: number,
+    companyId: number,
+    asOf: Date = new Date(),
+  ): Promise<number> {
+    const configs = await this.prisma.employeeSalaryConfig.findMany({
+      where: {
+        userId,
+        companyId,
+        isActive: true,
+        salaryType: SalaryType.FIXED_MONTHLY,
+      },
+      select: { id: true },
+    });
+    if (configs.length === 0) return 0;
+
+    const ids = configs.map((c) => c.id);
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.employeeSalaryConfigVersion.updateMany({
+          where: { configId: { in: ids }, effectiveTo: null },
+          data: { effectiveTo: asOf },
+        });
+        await tx.employeeSalaryConfig.updateMany({
+          where: { id: { in: ids } },
+          data: { isActive: false },
+        });
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 15_000,
+      },
+    );
+    return configs.length;
   }
 
   // ---------- internals ----------

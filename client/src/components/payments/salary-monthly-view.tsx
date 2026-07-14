@@ -36,6 +36,11 @@ import {
   monthLabel,
 } from "./salary-utils";
 import { SalarySettingsSheet } from "./salary-settings-sheet";
+import {
+  SalaryMonthlyStaffTable,
+  type StaffRow,
+  type StaffTotals,
+} from "./salary-monthly-staff-table";
 
 interface MonthlyRow {
   user: {
@@ -73,6 +78,9 @@ interface MonthlyResponse {
     centerRecovered: number;
     centerStillFronted: number;
   };
+  // Non-teaching FIXED_MONTHLY staff (admin/cashier/director) — flat salary.
+  staff: StaffRow[];
+  staffTotals: StaffTotals;
 }
 
 const FALLBACK_FLOOR = "2026-05";
@@ -392,6 +400,15 @@ export function SalaryMonthlyView({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Xodimlar oyligi — non-teaching fixed-salary staff (separate section) */}
+      {!isLoading && data && data.staff.length > 0 && (
+        <SalaryMonthlyStaffTable
+          staff={data.staff}
+          totals={data.staffTotals}
+          onOpenBreakdown={onOpenBreakdown}
+        />
       )}
 
       {/* Row count + manual-month totals caveat */}

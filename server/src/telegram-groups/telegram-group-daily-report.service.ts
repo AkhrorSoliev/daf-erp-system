@@ -383,6 +383,14 @@ export class TelegramGroupDailyReportService {
       lines.push(`• 🏛 Markaz qo'shimchasi: <b>${formatSum(salary.gap)}</b>`);
     }
 
+    // 💼 Xodimlar oyligi — non-teaching fixed-salary staff (independent of the
+    // teacher lesson-data gate above).
+    if (salary && salary.staffNet > 0) {
+      lines.push('');
+      lines.push(`💼 <b>Xodimlar oyligi</b>`);
+      lines.push(`• To'lanadi: <b>${formatSum(salary.staffNet)}</b>`);
+    }
+
     // 🚩 Diqqat (self-suppressing)
     lines.push('');
     if (flags.length > 0) {
@@ -625,25 +633,29 @@ export class TelegramGroupDailyReportService {
         }));
       if (!caller) return null;
 
-      const { totals } = await this.salaryMonthly.getMonthly(
+      const { totals, staffTotals } = await this.salaryMonthly.getMonthly(
         {},
         companyId,
         caller.id,
       );
+      // Non-teaching fixed-salary staff net — independent of teacher lesson data.
+      const staffNet = staffTotals?.netToPay ?? 0;
       // getMonthly totals sum only over rows that have lesson data; a
-      // config-gap month yields 0s across the board. Treat an all-zero result
-      // as "no data" so the block hides instead of showing an empty top-up.
+      // config-gap month yields 0s across the board. Treat an all-zero teacher
+      // result as "no data" so the teacher block hides — but still carry
+      // staffNet so the staff line can show on a config-gap month.
       if (
         totals.fullDeserved === 0 &&
         totals.covered === 0 &&
         totals.gap === 0
       ) {
-        return { fullDeserved: null, covered: 0, gap: 0 };
+        return { fullDeserved: null, covered: 0, gap: 0, staffNet };
       }
       return {
         fullDeserved: totals.fullDeserved,
         covered: totals.covered,
         gap: totals.gap,
+        staffNet,
       };
     } catch (err: any) {
       this.logger.warn(
@@ -665,4 +677,6 @@ interface SalaryTopUp {
   fullDeserved: number | null;
   covered: number;
   gap: number;
+  /** Net payable to non-teaching FIXED_MONTHLY staff this month (Σ staff netToPay). */
+  staffNet: number;
 }
