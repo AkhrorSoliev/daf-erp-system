@@ -15,11 +15,10 @@ import { getErrorMessage } from '@/lib/get-error-message';
 import { env } from '@/config/env';
 import { t } from '@/i18n/uz';
 
-// SMS password reset is hidden until an Eskiz brand nik is registered — until
-// then the OTP can't be delivered (test sender 4546 only sends a fixed string),
-// so the flow is a dead-end. Flip to `true` once the nik is approved and
-// ESKIZ_FROM is set. See memory: project_eskiz_sms_setup.
-const SMS_PASSWORD_RESET_ENABLED = false;
+// SMS password reset for students. Eskiz account is active with approved
+// template 78093; per Eskiz support a brand nik is not required to deliver it,
+// so ESKIZ_FROM stays 4546. See memory: project_eskiz_sms_setup.
+const SMS_PASSWORD_RESET_ENABLED = true;
 
 const POLL_INTERVAL = 2500;
 const POLL_TIMEOUT = 3 * 60 * 1000;
