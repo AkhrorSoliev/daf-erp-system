@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, XCircle, RotateCcw, Camera } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  ArrowClockwise,
+  Camera,
+} from "@phosphor-icons/react";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +14,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { Button } from "./lumio";
 
 type ScanState = "scanning" | "loading" | "success" | "error";
 
@@ -163,7 +168,7 @@ export function QrScanDialog({ open, onOpenChange }: QrScanDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="lumio sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>QR Davomat</DialogTitle>
           <DialogDescription>
@@ -174,7 +179,7 @@ export function QrScanDialog({ open, onOpenChange }: QrScanDialogProps) {
         <div className="flex flex-col items-center justify-center py-2">
           {scanState === "scanning" || scanState === "loading" ? (
             <div className="w-full space-y-3">
-              <div className="relative overflow-hidden rounded-xl border-2 border-primary/20">
+              <div className="relative overflow-hidden rounded-feature border-4 border-coral-500/25 bg-black">
                 <div
                   id="qr-dialog-reader"
                   ref={containerRef}
@@ -191,30 +196,32 @@ export function QrScanDialog({ open, onOpenChange }: QrScanDialogProps) {
               </div>
 
               {cameraError && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-                  <Camera className="mx-auto mb-2 size-8" />
-                  Kameraga ruxsat bering va qayta urinib ko&apos;ring
+                <div className="flex flex-col items-center gap-2 rounded-card border border-line bg-amber-500/10 p-3 text-center">
+                  <Camera size={32} weight="bold" className="text-amber-600" />
+                  <span className="text-sm font-semibold text-ink-700">
+                    Kameraga ruxsat bering va qayta urinib ko&apos;ring
+                  </span>
                 </div>
               )}
             </div>
           ) : scanState === "success" ? (
             <div className="w-full space-y-4 text-center">
-              <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <CheckCircle2 className="size-8 text-green-600 dark:text-green-400" />
-              </div>
+              <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-success/12 text-success">
+                <CheckCircle size={36} weight="fill" />
+              </span>
               <div className="space-y-1.5">
-                <h2 className="text-base font-semibold text-green-700 dark:text-green-400">
+                <h2 className="font-display text-lg font-extrabold text-success">
                   {result?.alreadyMarked
                     ? "Davomat allaqachon belgilangan"
                     : "Davomat belgilandi!"}
                 </h2>
                 {result?.groupName && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm font-semibold text-ink-500">
                     {result.groupName}
                   </p>
                 )}
                 {result?.lessonNumber && (
-                  <p className="text-lg font-bold text-primary">
+                  <p className="font-display text-lg font-bold text-coral-600">
                     {result.lessonNumber}-dars
                   </p>
                 )}
@@ -222,17 +229,20 @@ export function QrScanDialog({ open, onOpenChange }: QrScanDialogProps) {
             </div>
           ) : scanState === "error" ? (
             <div className="w-full space-y-4 text-center">
-              <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                <XCircle className="size-8 text-red-600 dark:text-red-400" />
-              </div>
+              <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-danger/12 text-danger">
+                <XCircle size={36} weight="fill" />
+              </span>
               <div className="space-y-1.5">
-                <h2 className="text-base font-semibold text-red-700 dark:text-red-400">
+                <h2 className="font-display text-lg font-extrabold text-danger">
                   Xatolik
                 </h2>
-                <p className="text-sm text-muted-foreground">{errorMessage}</p>
+                <p className="text-sm font-semibold text-ink-500">{errorMessage}</p>
               </div>
-              <Button variant="outline" onClick={handleRetry} className="gap-2">
-                <RotateCcw className="size-4" />
+              <Button
+                variant="secondary"
+                onClick={handleRetry}
+                iconBefore={<ArrowClockwise size={18} weight="bold" />}
+              >
                 Qayta urinish
               </Button>
             </div>

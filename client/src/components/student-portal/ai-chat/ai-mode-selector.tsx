@@ -2,17 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, BookOpen, Theater, Loader2 } from "lucide-react";
+import {
+  ChatCircleDots,
+  BookOpen,
+  MaskHappy,
+  CircleNotch,
+  type Icon,
+} from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
-import type { LucideIcon } from "lucide-react";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { cn } from "@/lib/utils";
 
 interface ChatMode {
   mode: string;
   title: string;
   subtitle: string;
-  icon: LucideIcon;
-  gradient: string;
+  icon: Icon;
+  grad: string;
 }
 
 const chatModes: ChatMode[] = [
@@ -20,22 +27,22 @@ const chatModes: ChatMode[] = [
     mode: "FREE_CONVERSATION",
     title: "Erkin suhbat",
     subtitle: "Freie Konversation",
-    icon: MessageSquare,
-    gradient: "from-blue-500/10 to-cyan-500/10",
+    icon: ChatCircleDots,
+    grad: "grad-cool clay-sky",
   },
   {
     mode: "GRAMMAR_PRACTICE",
-    title: "Grammatika mashq",
+    title: "Grammatika",
     subtitle: "Grammatikübung",
     icon: BookOpen,
-    gradient: "from-emerald-500/10 to-green-500/10",
+    grad: "grad-teal clay-teal",
   },
   {
     mode: "ROLEPLAY",
     title: "Rol o'yini",
     subtitle: "Rollenspiel",
-    icon: Theater,
-    gradient: "from-purple-500/10 to-pink-500/10",
+    icon: MaskHappy,
+    grad: "grad-grape clay-grape",
   },
 ];
 
@@ -49,38 +56,39 @@ export function AiModeSelector() {
       const res = await api.post("/student-portal/ai-chat", { mode });
       router.push(`/portal/ai/chat/${res.data.id}`);
     } catch (err) {
-      toast.error(
-        (err as any)?.response?.data?.message || "Suhbat yaratishda xatolik"
-      );
+      toast.error(getErrorMessage(err, "Suhbat yaratishda xatolik"));
       setLoading(null);
     }
   }
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-muted-foreground px-1">
+      <h3 className="px-1 font-display text-base font-bold text-ink-900">
         Yangi suhbat boshlash
       </h3>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2.5">
         {chatModes.map((item) => {
-          const Icon = item.icon;
+          const Ico = item.icon;
           const isLoading = loading === item.mode;
           return (
             <button
               key={item.mode}
               onClick={() => handleSelectMode(item.mode)}
               disabled={loading !== null}
-              className={`relative flex flex-col items-center gap-1.5 rounded-xl border bg-linear-to-br ${item.gradient} p-3 transition-all hover:shadow-md active:scale-[0.97] disabled:opacity-60`}
+              className={cn(
+                "clay-btn flex flex-col items-center gap-1.5 rounded-card p-3.5 text-center text-white disabled:opacity-70",
+                item.grad,
+              )}
             >
               {isLoading ? (
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                <CircleNotch size={22} weight="bold" className="animate-spin" />
               ) : (
-                <Icon className="size-5 text-foreground/80" />
+                <Ico size={24} weight="fill" />
               )}
-              <span className="text-xs font-medium leading-tight text-center">
+              <span className="font-display text-xs font-extrabold leading-tight">
                 {item.title}
               </span>
-              <span className="text-[10px] text-muted-foreground leading-tight">
+              <span className="text-[10px] font-semibold leading-tight text-white/80">
                 {item.subtitle}
               </span>
             </button>

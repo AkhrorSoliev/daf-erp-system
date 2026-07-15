@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, XCircle, RotateCcw, Camera } from "lucide-react";
-import toast from "react-hot-toast";
-import { Button } from "@/components/ui/button";
+import {
+  CheckCircle,
+  XCircle,
+  ArrowClockwise,
+  Camera,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { Screen, StackHeader, Card, Button } from "./lumio";
 
 type ScanState = "scanning" | "loading" | "success" | "error";
 
@@ -20,21 +23,18 @@ interface ScanResult {
 }
 
 export function QrScanner() {
-  const router = useRouter();
   const [scanState, setScanState] = useState<ScanState>("scanning");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [cameraError, setCameraError] = useState(false);
 
   const scannerRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const processingRef = useRef(false);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState();
-        // Html5QrcodeScannerState: SCANNING = 2
         if (state === 2) {
           await scannerRef.current.stop();
         }
@@ -49,10 +49,8 @@ export function QrScanner() {
     async (decodedText: string) => {
       if (processingRef.current) return;
       processingRef.current = true;
-
       setScanState("loading");
 
-      // Vibratsiya
       try {
         navigator.vibrate?.(100);
       } catch {
@@ -67,10 +65,7 @@ export function QrScanner() {
           token: parsed.t,
         });
 
-        // Balance gate: backend returns 200 with `balanceInsufficient: true`
-        // when the student's balance can't cover even one lesson at this
-        // group's per-lesson cost. The student isn't marked PRESENT — admin
-        // intervention is required (collect payment first).
+        // Balance gate: student not marked PRESENT — admin must collect payment.
         if (data?.balanceInsufficient) {
           const debt = data.debtAmount
             ? ` (${data.debtAmount.toLocaleString("uz-UZ").replace(/,/g, " ")} so'm yetishmaydi)`
@@ -91,19 +86,17 @@ export function QrScanner() {
         setResult(data);
         setScanState("success");
         await stopScanner();
-
-        // Muvaffaqiyat vibratsiya
         try {
           navigator.vibrate?.(200);
         } catch {
           // not supported
         }
       } catch (err) {
-        setErrorMessage(getErrorMessage(err, "QR kodni o'qishda xatolik yuz berdi"));
+        setErrorMessage(
+          getErrorMessage(err, "QR kodni o'qishda xatolik yuz berdi"),
+        );
         setScanState("error");
         await stopScanner();
-
-        // Xato vibratsiya
         try {
           navigator.vibrate?.([100, 50, 100]);
         } catch {
@@ -111,7 +104,7 @@ export function QrScanner() {
         }
       }
     },
-    [stopScanner]
+    [stopScanner],
   );
 
   const startScanner = useCallback(async () => {
@@ -121,29 +114,20 @@ export function QrScanner() {
     setErrorMessage("");
     setCameraError(false);
 
-    // Dinamik import qilamiz (SSR da ishlamasligi uchun)
     const { Html5Qrcode } = await import("html5-qrcode");
-
     await stopScanner();
 
-    const scannerId = "qr-reader";
-    const scanner = new Html5Qrcode(scannerId);
+    const scanner = new Html5Qrcode("qr-reader");
     scannerRef.current = scanner;
 
     try {
       await scanner.start(
         { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1,
-        },
-        (decodedText) => {
-          handleScan(decodedText);
-        },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1 },
+        (decodedText) => handleScan(decodedText),
         () => {
-          // QR topilmadi — ignore
-        }
+          // QR not found — ignore
+        },
       );
     } catch {
       setCameraError(true);
@@ -154,102 +138,88 @@ export function QrScanner() {
 
   useEffect(() => {
     startScanner();
-
     return () => {
       stopScanner();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleRetry = () => {
-    startScanner();
-  };
-
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b px-4 py-3">
-        <Button variant="ghost" size="icon-sm" onClick={() => router.push("/portal")}>
-          <ArrowLeft className="size-5" />
-        </Button>
-        <h1 className="text-base font-semibold">QR Davomat</h1>
-      </div>
+    <Screen>
+      <StackHeader title="QR Davomat" backHref="/portal" />
 
-      <div className="flex flex-1 flex-col items-center justify-center p-4">
-        {/* Scanner / Natija */}
+      <div className="mx-auto w-full max-w-sm">
         {scanState === "scanning" || scanState === "loading" ? (
-          <div className="w-full max-w-sm space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
+          <div className="space-y-4">
+            <p className="text-center text-sm font-semibold text-ink-500">
               {scanState === "loading"
                 ? "Tekshirilmoqda..."
                 : "O'qituvchi ko'rsatgan QR kodni skanerlang"}
             </p>
-
-            {/* Kamera oynasi */}
-            <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20">
+            <div className="relative overflow-hidden rounded-feature border-4 border-coral-500/25 bg-black">
               <div
                 id="qr-reader"
-                ref={containerRef}
-                className={cn(
-                  "w-full",
-                  scanState === "loading" && "opacity-50"
-                )}
+                className={cn("w-full", scanState === "loading" && "opacity-50")}
               />
-              {scanState === "loading" && (
+              {scanState === "loading" ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                   <div className="size-10 animate-spin rounded-full border-4 border-white/30 border-t-white" />
                 </div>
-              )}
+              ) : null}
             </div>
-
-            {cameraError && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-                <Camera className="mx-auto mb-2 size-8" />
-                Kameraga ruxsat bering va qayta urinib ko&apos;ring
-              </div>
-            )}
+            {cameraError ? (
+              <Card className="flex flex-col items-center gap-2 text-center">
+                <Camera size={32} weight="bold" className="text-amber-600" />
+                <p className="text-sm font-semibold text-ink-700">
+                  Kameraga ruxsat bering va qayta urinib ko&apos;ring
+                </p>
+              </Card>
+            ) : null}
           </div>
         ) : scanState === "success" ? (
-          <div className="w-full max-w-sm space-y-6 text-center">
-            <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold text-green-700 dark:text-green-400">
+          <Card clay tone="neutral" className="space-y-5 py-8 text-center">
+            <span className="mx-auto flex size-20 items-center justify-center rounded-full bg-success/12 text-success">
+              <CheckCircle size={44} weight="fill" />
+            </span>
+            <div className="space-y-1.5">
+              <h2 className="font-display text-xl font-extrabold text-success">
                 {result?.alreadyMarked
                   ? "Davomat allaqachon belgilangan"
                   : "Davomat belgilandi!"}
               </h2>
-              {result?.groupName && (
-                <p className="text-sm text-muted-foreground">
+              {result?.groupName ? (
+                <p className="text-sm font-semibold text-ink-500">
                   {result.groupName}
                 </p>
-              )}
-              {result?.lessonNumber && (
-                <p className="text-lg font-bold text-primary">
+              ) : null}
+              {result?.lessonNumber ? (
+                <p className="font-display text-lg font-bold text-coral-600">
                   {result.lessonNumber}-dars
                 </p>
-              )}
+              ) : null}
             </div>
-          </div>
-        ) : scanState === "error" ? (
-          <div className="w-full max-w-sm space-y-6 text-center">
-            <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-              <XCircle className="size-10 text-red-600 dark:text-red-400" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">
+          </Card>
+        ) : (
+          <Card clay tone="neutral" className="space-y-5 py-8 text-center">
+            <span className="mx-auto flex size-20 items-center justify-center rounded-full bg-danger/12 text-danger">
+              <XCircle size={44} weight="fill" />
+            </span>
+            <div className="space-y-1.5">
+              <h2 className="font-display text-xl font-extrabold text-danger">
                 Xatolik
               </h2>
-              <p className="text-sm text-muted-foreground">{errorMessage}</p>
+              <p className="text-sm font-semibold text-ink-500">{errorMessage}</p>
             </div>
-            <Button variant="outline" onClick={handleRetry} className="gap-2">
-              <RotateCcw className="size-4" />
+            <Button
+              variant="secondary"
+              onClick={startScanner}
+              iconBefore={<ArrowClockwise size={18} weight="bold" />}
+            >
               Qayta urinish
             </Button>
-          </div>
-        ) : null}
+          </Card>
+        )}
       </div>
-    </div>
+    </Screen>
   );
 }

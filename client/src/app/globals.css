@@ -47,6 +47,55 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* --- Lumio (student portal) utility aliases ---
+     Raw values live only under `.lumio` (see the scoped block below), so
+     these utilities resolve to a color/radius ONLY inside the portal scope
+     and to nothing elsewhere — automatic containment, zero leakage. */
+  --color-coral-50: var(--coral-50);
+  --color-coral-100: var(--coral-100);
+  --color-coral-200: var(--coral-200);
+  --color-coral-400: var(--coral-400);
+  --color-coral-500: var(--coral-500);
+  --color-coral-600: var(--coral-600);
+  --color-coral-700: var(--coral-700);
+  --color-amber-50: var(--amber-50);
+  --color-amber-100: var(--amber-100);
+  --color-amber-500: var(--amber-500);
+  --color-amber-600: var(--amber-600);
+  --color-amber-700: var(--amber-700);
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-grape-100: var(--grape-100);
+  --color-grape-500: var(--grape-500);
+  --color-grape-600: var(--grape-600);
+  --color-sky-100: var(--sky-100);
+  --color-sky-500: var(--sky-500);
+  --color-sky-600: var(--sky-600);
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-ink-200: var(--ink-200);
+  --color-ink-100: var(--ink-100);
+  --color-surface: var(--surface-card);
+  --color-sunk: var(--bg-sunk);
+  --color-tint: var(--bg-tint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
+  --radius-card: var(--r-lg);
+  --radius-feature: var(--r-xl);
+  --radius-pill: var(--r-pill);
 }
 
 :root {
@@ -116,60 +165,6 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
-}
-
-/* ============================================================
-   Student Portal — Claude.ai inspired theme (scoped override)
-   Applied via `.portal-theme` class on the portal root layout.
-   Admin dashboard is unaffected.
-   ============================================================ */
-.portal-theme {
-  --background: oklch(0.97 0.012 80);
-  --foreground: oklch(0.22 0.015 50);
-  --card: oklch(0.995 0.005 80);
-  --card-foreground: oklch(0.22 0.015 50);
-  --popover: oklch(0.995 0.005 80);
-  --popover-foreground: oklch(0.22 0.015 50);
-  --primary: oklch(0.63 0.13 40);
-  --primary-foreground: oklch(0.98 0.005 80);
-  --secondary: oklch(0.93 0.015 80);
-  --secondary-foreground: oklch(0.22 0.015 50);
-  --muted: oklch(0.93 0.015 80);
-  --muted-foreground: oklch(0.48 0.012 50);
-  --accent: oklch(0.90 0.02 80);
-  --accent-foreground: oklch(0.22 0.015 50);
-  --destructive: oklch(0.58 0.20 25);
-  --border: oklch(0.88 0.01 80);
-  --input: oklch(0.90 0.012 80);
-  --ring: oklch(0.63 0.13 40);
-  --success: oklch(0.62 0.12 145);
-  --warning: oklch(0.72 0.14 75);
-  --info: oklch(0.60 0.10 220);
-}
-
-.dark .portal-theme,
-.portal-theme.dark {
-  --background: oklch(0.18 0.008 50);
-  --foreground: oklch(0.94 0.012 80);
-  --card: oklch(0.22 0.008 50);
-  --card-foreground: oklch(0.94 0.012 80);
-  --popover: oklch(0.22 0.008 50);
-  --popover-foreground: oklch(0.94 0.012 80);
-  --primary: oklch(0.70 0.14 40);
-  --primary-foreground: oklch(0.18 0.008 50);
-  --secondary: oklch(0.26 0.008 50);
-  --secondary-foreground: oklch(0.94 0.012 80);
-  --muted: oklch(0.26 0.008 50);
-  --muted-foreground: oklch(0.70 0.012 80);
-  --accent: oklch(0.30 0.008 50);
-  --accent-foreground: oklch(0.94 0.012 80);
-  --destructive: oklch(0.65 0.20 25);
-  --border: oklch(0.30 0.008 50);
-  --input: oklch(0.30 0.008 50);
-  --ring: oklch(0.70 0.14 40);
-  --success: oklch(0.68 0.14 145);
-  --warning: oklch(0.78 0.15 75);
-  --info: oklch(0.68 0.12 220);
 }
 
 /* ============================================================
@@ -257,6 +252,289 @@
     0 8px 16px -8px var(--clay-ambient);
 }
 
+/* ============================================================
+   Student Portal — Lumio design system (scoped override)
+   Mirrors the student-app (student-app/src/design + daf-design-system)
+   Lumio tokens so the portal at student.dafzentrum.uz matches the native
+   app. Applied via the `.lumio` class on the portal route layout (and the
+   student-scoped login). The raw palette vars live ONLY under `.lumio`, so
+   any Lumio utility used outside this scope resolves to nothing — the admin
+   and teacher portals are completely unaffected.
+   ============================================================ */
+.lumio {
+  /* --- Raw Lumio palette (LIGHT) --- */
+  --coral-50: #fff2ee;
+  --coral-100: #ffe1d8;
+  --coral-200: #ffc6b5;
+  --coral-300: #ffa48a;
+  --coral-400: #ff855f;
+  --coral-500: #ff6b4a; /* PRIMARY */
+  --coral-600: #f04e2c; /* press */
+  --coral-700: #c83d20;
+  --amber-50: #fff6e6;
+  --amber-100: #ffe9bf;
+  --amber-400: #ffc24d;
+  --amber-500: #ffb02e;
+  --amber-600: #f59512;
+  --amber-700: #d2790a;
+  --teal-50: #e6fbf8;
+  --teal-100: #c2f4ed;
+  --teal-400: #2dd4c4;
+  --teal-500: #14b8ac;
+  --teal-600: #0e9a90;
+  --teal-700: #0a7a72;
+  --grape-100: #ece6fe;
+  --grape-400: #a78bfa;
+  --grape-500: #8b5cf6;
+  --grape-600: #7c3aed;
+  --sky-100: #dceeff;
+  --sky-400: #5bb1ff;
+  --sky-500: #2e97ff;
+  --sky-600: #1b7be0;
+
+  --ink-900: #0e2a3d; /* headings */
+  --ink-800: #1b3a4e;
+  --ink-700: #2b4a5c; /* strong body */
+  --ink-600: #45616f;
+  --ink-500: #6b8392; /* secondary text */
+  --ink-400: #93a6b2; /* muted / placeholder */
+  --ink-300: #bccad3;
+  --ink-200: #dce4ea;
+  --ink-100: #eaf0f4;
+
+  --bg-app: #edf1f6; /* app canvas */
+  --surface-card: #ffffff;
+  --bg-sunk: #e3e9f1; /* sunken wells / tracks */
+  --bg-tint: #f5f8fb;
+  --line: #e0e7ee;
+  --line-strong: #cfd9e2;
+
+  --success: #2bb673;
+  --warning: #ffb02e;
+  --info: #2e97ff;
+  --danger: #f0513a;
+
+  /* --- Radii --- */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px; /* default card */
+  --r-xl: 28px; /* large feature card */
+  --r-2xl: 34px;
+  --r-3xl: 40px;
+  --r-pill: 999px;
+
+  /* --- Ambient shadows --- */
+  --shadow-sm-lumio: 0 2px 8px rgba(14, 42, 61, 0.07);
+  --shadow-card-lumio: 0 10px 24px rgba(14, 42, 61, 0.09);
+  --shadow-pop-lumio: 0 22px 48px rgba(14, 42, 61, 0.18);
+  --inset-soft: inset 0 2px 5px rgba(14, 42, 61, 0.1);
+
+  /* --- Clay extrude (solid darker bottom lip + soft ambient) --- */
+  --clay-neutral: 0 5px 0 #d6dee7, 0 12px 22px rgba(14, 42, 61, 0.1);
+  --clay-white: 0 5px 0 #e2e8ef, 0 12px 22px rgba(14, 42, 61, 0.08);
+  --clay-coral: 0 6px 0 var(--coral-700), 0 16px 26px rgba(240, 78, 44, 0.3);
+  --clay-amber: 0 6px 0 var(--amber-700), 0 16px 26px rgba(245, 149, 18, 0.3);
+  --clay-teal: 0 6px 0 var(--teal-700), 0 16px 26px rgba(14, 154, 144, 0.3);
+  --clay-grape: 0 6px 0 var(--grape-600), 0 16px 26px rgba(124, 58, 237, 0.3);
+  --clay-sky: 0 6px 0 var(--sky-600), 0 16px 26px rgba(27, 123, 224, 0.3);
+  --clay-coral-press: 0 2px 0 var(--coral-700), 0 6px 12px rgba(240, 78, 44, 0.28);
+  --clay-neutral-press: 0 2px 0 #d6dee7, 0 5px 10px rgba(14, 42, 61, 0.1);
+
+  /* --- Feature-card gradients --- */
+  --grad-warm: linear-gradient(135deg, #ff8a5b 0%, #ff6b4a 55%, #f0502c 100%);
+  --grad-sun: linear-gradient(135deg, #ffcb5c 0%, #ffb02e 60%, #f59512 100%);
+  --grad-teal: linear-gradient(135deg, #34dfce 0%, #14b8ac 60%, #0e9a90 100%);
+  --grad-cool: linear-gradient(135deg, #6fb9ff 0%, #2e97ff 55%, #1b7be0 100%);
+  --grad-grape: linear-gradient(135deg, #b79cfb 0%, #8b5cf6 55%, #6f33e0 100%);
+
+  /* --- Glass + motion --- */
+  --blur-glass: saturate(140%) blur(18px);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  /* --- Map Lumio → shadcn semantic vars (mirrors .form-theme) so every
+     wrapped shadcn primitive (Dialog, Input, Sheet, AlertDialog, Toaster)
+     auto-themes to Lumio. --- */
+  --background: var(--bg-app);
+  --foreground: var(--ink-900);
+  --card: var(--surface-card);
+  --card-foreground: var(--ink-900);
+  --popover: var(--surface-card);
+  --popover-foreground: var(--ink-900);
+  --primary: var(--coral-500);
+  --primary-foreground: #ffffff;
+  --secondary: var(--bg-sunk);
+  --secondary-foreground: var(--ink-900);
+  --muted: var(--bg-sunk);
+  --muted-foreground: var(--ink-500);
+  --accent: var(--bg-tint);
+  --accent-foreground: var(--ink-900);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--coral-500);
+  --radius: 1.25rem;
+
+  font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  color: var(--foreground);
+}
+
+/* Dark = deep-ocean inversion (mirrors student-app/src/global.css .dark:root).
+   Selector must be `.dark .lumio` — next-themes sets `.dark` on <html>, the
+   ancestor of the portal's `.lumio` wrapper. */
+.dark .lumio {
+  --ink-900: #f2f6f9;
+  --ink-800: #d9e2e8;
+  --ink-700: #c7d3dc;
+  --ink-600: #a9bac5;
+  --ink-500: #8ca0ad;
+  --ink-400: #6e8492;
+  --ink-300: #55707f;
+  --ink-200: #3c5666;
+  --ink-100: #16384a;
+
+  --bg-app: #08161f;
+  --surface-card: #12303f;
+  --bg-sunk: #0b1e29;
+  --bg-tint: #16384a;
+  --line: #24465a;
+  --line-strong: #30566e;
+
+  /* Neutral clay lips must read DARKER than the surface in dark mode. */
+  --clay-neutral: 0 5px 0 #071820, 0 12px 22px rgba(0, 0, 0, 0.35);
+  --clay-white: 0 5px 0 #0a1c26, 0 12px 22px rgba(0, 0, 0, 0.35);
+  --clay-neutral-press: 0 2px 0 #071820, 0 5px 10px rgba(0, 0, 0, 0.35);
+  --shadow-sm-lumio: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card-lumio: 0 10px 24px rgba(0, 0, 0, 0.4);
+  --shadow-pop-lumio: 0 22px 48px rgba(0, 0, 0, 0.5);
+  --inset-soft: inset 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* Lumio entrance animation — staggered card/row fade-up. FadeIn sets --i. */
+@keyframes lumio-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer components {
+  /* Resting clay shadows (cards, tiles, nav pill). */
+  .lumio .clay-coral {
+    box-shadow: var(--clay-coral);
+  }
+  .lumio .clay-teal {
+    box-shadow: var(--clay-teal);
+  }
+  .lumio .clay-amber {
+    box-shadow: var(--clay-amber);
+  }
+  .lumio .clay-grape {
+    box-shadow: var(--clay-grape);
+  }
+  .lumio .clay-sky {
+    box-shadow: var(--clay-sky);
+  }
+  .lumio .clay-white {
+    box-shadow: var(--clay-white);
+  }
+  .lumio .clay-neutral {
+    box-shadow: var(--clay-neutral);
+  }
+  .lumio .shadow-lumio-card {
+    box-shadow: var(--shadow-card-lumio);
+  }
+  .lumio .shadow-lumio-sm {
+    box-shadow: var(--shadow-sm-lumio);
+  }
+  .lumio .shadow-lumio-pop {
+    box-shadow: var(--shadow-pop-lumio);
+  }
+  .lumio .inset-well {
+    box-shadow: var(--inset-soft);
+  }
+
+  /* Clay button — sinks + collapses the lip on :active (proven .clay-btn). */
+  .lumio .clay-btn {
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out),
+      background-color var(--dur-base) var(--ease-out),
+      filter var(--dur-base) var(--ease-out);
+  }
+  .lumio .clay-btn:active:not(:disabled) {
+    transform: translateY(4px);
+  }
+  .lumio .clay-btn.clay-coral:active:not(:disabled) {
+    box-shadow: var(--clay-coral-press);
+  }
+  .lumio .clay-btn.clay-teal:active:not(:disabled) {
+    box-shadow:
+      0 2px 0 var(--teal-700),
+      0 6px 12px rgba(14, 154, 144, 0.28);
+  }
+  .lumio .clay-btn.clay-amber:active:not(:disabled) {
+    box-shadow:
+      0 2px 0 var(--amber-700),
+      0 6px 12px rgba(245, 149, 18, 0.28);
+  }
+  .lumio .clay-btn.clay-white:active:not(:disabled),
+  .lumio .clay-btn.clay-neutral:active:not(:disabled) {
+    box-shadow: var(--clay-neutral-press);
+  }
+
+  /* Gradient tiles (feature cards). */
+  .lumio .grad-warm {
+    background-image: var(--grad-warm);
+  }
+  .lumio .grad-sun {
+    background-image: var(--grad-sun);
+  }
+  .lumio .grad-teal {
+    background-image: var(--grad-teal);
+  }
+  .lumio .grad-cool {
+    background-image: var(--grad-cool);
+  }
+  .lumio .grad-grape {
+    background-image: var(--grad-grape);
+  }
+
+  /* Frosted glass (sticky header, floating nav pill). */
+  .lumio .glass {
+    backdrop-filter: var(--blur-glass);
+    -webkit-backdrop-filter: var(--blur-glass);
+  }
+
+  /* Staggered entrance. Parent adds `lumio-stagger`, or child sets --i. */
+  .lumio .lumio-fade-up {
+    animation: lumio-fade-up var(--dur-slow) var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 55ms);
+  }
+  .lumio .lumio-stagger > * {
+    animation: lumio-fade-up var(--dur-slow) var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 55ms);
+  }
+}
+
+/* Reduced motion → resolve to end-state, drop the stagger delay. */
+@media (prefers-reduced-motion: reduce) {
+  .lumio .lumio-fade-up,
+  .lumio .lumio-stagger > * {
+    animation-duration: 0.001ms;
+    animation-delay: 0ms;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -267,10 +545,13 @@
   html {
     @apply font-sans;
   }
-  .portal-theme h1,
-  .portal-theme h2,
-  .portal-theme .portal-heading {
-    font-family: var(--font-serif), ui-serif, Georgia, serif;
+  /* Lumio headings + numbers use Baloo 2 (display). Body stays Nunito. */
+  .lumio h1,
+  .lumio h2,
+  .lumio h3,
+  .lumio .font-display {
+    font-family: var(--font-display), "Baloo 2", ui-sans-serif, system-ui,
+      sans-serif;
     letter-spacing: -0.01em;
   }
 }

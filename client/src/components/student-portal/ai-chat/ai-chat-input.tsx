@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { SendHorizontal } from "lucide-react";
+import { PaperPlaneRight } from "@phosphor-icons/react";
 
 interface AiChatInputProps {
   onSend: (content: string) => void;
@@ -42,7 +42,7 @@ export function AiChatInput({
   }
 
   return (
-    <div className="flex items-end gap-2 rounded-2xl border bg-background p-2 shadow-sm">
+    <div className="flex items-end gap-2 rounded-feature border border-line bg-surface p-2 shadow-lumio-sm">
       <textarea
         ref={textareaRef}
         value={value}
@@ -54,15 +54,16 @@ export function AiChatInput({
         disabled={disabled}
         placeholder={placeholder}
         rows={1}
-        className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50"
+        className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm font-semibold text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-50"
         style={{ maxHeight: 120 }}
       />
       <button
         onClick={handleSubmit}
         disabled={disabled || !value.trim()}
-        className="shrink-0 size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+        aria-label="Yuborish"
+        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-coral-500 text-white transition-all clay-coral clay-btn disabled:opacity-40"
       >
-        <SendHorizontal className="size-4" />
+        <PaperPlaneRight size={18} weight="fill" />
       </button>
     </div>
   );

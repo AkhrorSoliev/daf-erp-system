@@ -4,18 +4,20 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
-  Trash2,
-  Loader2,
-  MessageSquare,
+  CaretLeft,
+  Trash,
+  CircleNotch,
+  ChatCircleDots,
   BookOpen,
-  Theater,
-  Sparkles,
-} from "lucide-react";
+  MaskHappy,
+  Sparkle,
+  type Icon,
+} from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useAiStream } from "@/hooks/use-ai-stream";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "../lumio";
 import { AiMessageBubble } from "./ai-message-bubble";
 import { AiQuickActions } from "./ai-quick-actions";
 import { AiChatInput } from "./ai-chat-input";
@@ -27,10 +29,10 @@ interface Message {
   createdAt: string;
 }
 
-const modeIcons: Record<string, typeof MessageSquare> = {
-  FREE_CONVERSATION: MessageSquare,
+const modeIcons: Record<string, Icon> = {
+  FREE_CONVERSATION: ChatCircleDots,
   GRAMMAR_PRACTICE: BookOpen,
-  ROLEPLAY: Theater,
+  ROLEPLAY: MaskHappy,
 };
 
 const modeLabels: Record<string, string> = {
@@ -141,9 +143,7 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
       toast.success("Suhbat o'chirildi");
       router.push("/portal/ai");
     } catch (err) {
-      toast.error(
-        (err as any)?.response?.data?.message || "O'chirishda xatolik"
-      );
+      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
       setDeleting(false);
     }
   }
@@ -154,18 +154,18 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
   }, [abort]);
 
   const chatMode = data?.chatMode ?? "";
-  const Icon = modeIcons[chatMode] ?? Sparkles;
+  const Ico = modeIcons[chatMode] ?? Sparkle;
   const modeLabel = modeLabels[chatMode] ?? "Deutsch Chat";
   const title = data?.title || modeLabel;
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-[calc(100dvh-(--spacing(12))-(--spacing(20)))] md:h-[calc(100dvh-(--spacing(14)))] max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 p-4 border-b">
-          <Skeleton className="size-8 rounded-full" />
+      <div className="flex h-[calc(100dvh-13rem)] flex-col lg:h-[calc(100dvh-6rem)]">
+        <div className="flex items-center gap-3 border-b border-line pb-3">
+          <Skeleton className="size-9 rounded-full" />
           <Skeleton className="h-5 w-40" />
         </div>
-        <div className="flex-1 p-4 space-y-4">
+        <div className="flex-1 space-y-4 pt-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
@@ -182,26 +182,32 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-(--spacing(12))-(--spacing(20)))] md:h-[calc(100dvh-(--spacing(14)))] max-w-2xl mx-auto">
+    <div className="flex h-[calc(100dvh-13rem)] flex-col lg:h-[calc(100dvh-6rem)]">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b shrink-0">
+      <div className="flex shrink-0 items-center gap-2 border-b border-line pb-3">
         <button
           onClick={() => router.push("/portal/ai")}
-          className="shrink-0 p-1.5 rounded-md hover:bg-accent transition-colors"
+          aria-label="Orqaga"
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-tint"
         >
-          <ArrowLeft className="size-4" />
+          <CaretLeft size={18} weight="bold" />
         </button>
-        <Icon className="size-4 text-muted-foreground shrink-0" />
-        <h2 className="text-sm font-medium truncate flex-1">{title}</h2>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-coral-500/12 text-coral-600">
+          <Ico size={18} weight="fill" />
+        </span>
+        <h2 className="min-w-0 flex-1 truncate font-display text-base font-bold text-ink-900">
+          {title}
+        </h2>
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          aria-label="Suhbatni o'chirish"
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-danger/10 hover:text-danger"
         >
           {deleting ? (
-            <Loader2 className="size-4 animate-spin" />
+            <CircleNotch size={18} weight="bold" className="animate-spin" />
           ) : (
-            <Trash2 className="size-4" />
+            <Trash size={18} weight="bold" />
           )}
         </button>
       </div>
@@ -209,19 +215,19 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
       {/* Messages */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3"
+        className="flex-1 space-y-3 overflow-y-auto py-4"
       >
         {messages.length === 0 && !isStreaming && (
-          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2">
-            <Icon className="size-10 opacity-30" />
-            <p className="text-sm">
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-ink-400">
+            <Ico size={40} weight="fill" className="opacity-40" />
+            <p className="text-sm font-bold text-ink-700">
               {chatMode === "GRAMMAR_PRACTICE"
                 ? "Grammatika bo'yicha savol yozing!"
                 : chatMode === "ROLEPLAY"
                   ? "Rol o'yinini boshlang!"
                   : "Nemischa suhbatni boshlang!"}
             </p>
-            <p className="text-xs opacity-60">
+            <p className="text-xs font-semibold opacity-70">
               Deutsch schreiben, um zu beginnen
             </p>
           </div>
@@ -235,7 +241,6 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
           />
         ))}
 
-        {/* Streaming message */}
         {isStreaming && streamingContent && (
           <AiMessageBubble
             role="assistant"
@@ -244,21 +249,20 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
           />
         )}
 
-        {/* Streaming loader (before first chunk) */}
         {isStreaming && !streamingContent && (
-          <div className="flex gap-2 justify-start">
-            <div className="shrink-0 size-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles className="size-3.5 text-primary" />
-            </div>
-            <div className="rounded-2xl rounded-bl-md bg-muted/60 border px-4 py-3">
+          <div className="flex justify-start gap-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-coral-500/12 text-coral-600">
+              <Sparkle size={15} weight="fill" />
+            </span>
+            <div className="rounded-2xl rounded-bl-md border border-line bg-tint px-4 py-3">
               <div className="flex gap-1">
-                <span className="size-1.5 rounded-full bg-foreground/40 animate-bounce" />
+                <span className="size-1.5 animate-bounce rounded-full bg-coral-500/60" />
                 <span
-                  className="size-1.5 rounded-full bg-foreground/40 animate-bounce"
+                  className="size-1.5 animate-bounce rounded-full bg-coral-500/60"
                   style={{ animationDelay: "0.15s" }}
                 />
                 <span
-                  className="size-1.5 rounded-full bg-foreground/40 animate-bounce"
+                  className="size-1.5 animate-bounce rounded-full bg-coral-500/60"
                   style={{ animationDelay: "0.3s" }}
                 />
               </div>
@@ -270,7 +274,7 @@ export function AiChatView({ conversationId }: AiChatViewProps) {
       </div>
 
       {/* Quick actions + Input */}
-      <div className="shrink-0 px-4 pb-4 pt-2 space-y-2 border-t bg-background">
+      <div className="shrink-0 space-y-2 border-t border-line bg-background pt-2">
         {messages.length > 0 && (
           <AiQuickActions
             suggestions={suggestions}

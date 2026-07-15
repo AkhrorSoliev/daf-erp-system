@@ -3,13 +3,15 @@
 import { AiGreeting } from "../ai-greeting";
 import { AiModeSelector } from "./ai-mode-selector";
 import { AiConversationList } from "./ai-conversation-list";
+import { Screen, ScreenHeader } from "../lumio";
 
 export function AiChatPage() {
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
+    <Screen>
+      <ScreenHeader subtitle="Dein KI-Assistent" title="Deutsch Tutor" />
       <AiGreeting />
       <AiModeSelector />
       <AiConversationList />
-    </div>
+    </Screen>
   );
 }

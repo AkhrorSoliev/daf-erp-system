@@ -4,18 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  MessageSquare,
+  ChatCircleDots,
   BookOpen,
-  Theater,
-  Trash2,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
+  MaskHappy,
+  Trash,
+  CircleNotch,
+  Sparkle,
+  type Icon,
+} from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { uz } from "date-fns/locale";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { IconTile, LoadingCards } from "../lumio";
+import type { LumioTone } from "../lumio";
 
 interface Conversation {
   id: string;
@@ -27,16 +30,10 @@ interface Conversation {
   updatedAt: string;
 }
 
-const modeIcons: Record<string, typeof MessageSquare> = {
-  FREE_CONVERSATION: MessageSquare,
-  GRAMMAR_PRACTICE: BookOpen,
-  ROLEPLAY: Theater,
-};
-
-const modeLabels: Record<string, string> = {
-  FREE_CONVERSATION: "Suhbat",
-  GRAMMAR_PRACTICE: "Grammatika",
-  ROLEPLAY: "Rol o'yini",
+const MODE: Record<string, { icon: Icon; label: string; tone: LumioTone }> = {
+  FREE_CONVERSATION: { icon: ChatCircleDots, label: "Suhbat", tone: "sky" },
+  GRAMMAR_PRACTICE: { icon: BookOpen, label: "Grammatika", tone: "teal" },
+  ROLEPLAY: { icon: MaskHappy, label: "Rol o'yini", tone: "grape" },
 };
 
 export function AiConversationList() {
@@ -69,76 +66,73 @@ export function AiConversationList() {
       });
       toast.success("Suhbat o'chirildi");
     } catch (err) {
-      toast.error(
-        (err as any)?.response?.data?.message || "O'chirishda xatolik"
-      );
+      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
     } finally {
       setDeletingId(null);
     }
   }
 
   if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <div className="h-4 w-32 mb-1" />
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-lg" />
-        ))}
-      </div>
-    );
+    return <LoadingCards count={3} />;
   }
 
   if (conversations.length === 0) return null;
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-muted-foreground px-1">
+      <h3 className="px-1 font-display text-base font-bold text-ink-900">
         O&apos;tgan suhbatlar
       </h3>
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {conversations.map((conv) => {
-          const Icon = modeIcons[conv.chatMode ?? ""] ?? Sparkles;
-          const label = modeLabels[conv.chatMode ?? ""] ?? "Chat";
+          const cfg = MODE[conv.chatMode ?? ""];
+          const Ico = cfg?.icon ?? Sparkle;
+          const label = cfg?.label ?? "Chat";
           const isDeleting = deletingId === conv.id;
 
           return (
-            <button
+            <div
               key={conv.id}
-              onClick={() => router.push(`/portal/ai/chat/${conv.id}`)}
-              className="w-full flex items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent/50 active:scale-[0.99]"
+              className="flex items-center gap-3 rounded-card border border-line bg-surface p-3 shadow-lumio-sm transition-colors hover:bg-tint"
             >
-              <Icon className="size-4 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium truncate">
-                    {conv.title || label}
-                  </p>
-                  <span className="text-[10px] text-muted-foreground shrink-0">
-                    {formatDistanceToNow(new Date(conv.updatedAt), {
-                      addSuffix: true,
-                      locale: uz,
-                    })}
+              <button
+                onClick={() => router.push(`/portal/ai/chat/${conv.id}`)}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <IconTile icon={<Ico weight="bold" />} tone={cfg?.tone ?? "grape"} />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="truncate font-display text-sm font-bold text-ink-900">
+                      {conv.title || label}
+                    </span>
+                    <span className="shrink-0 text-[10px] font-semibold text-ink-400">
+                      {formatDistanceToNow(new Date(conv.updatedAt), {
+                        addSuffix: true,
+                        locale: uz,
+                      })}
+                    </span>
                   </span>
-                </div>
-                {conv.lastMessage && (
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
-                    {conv.lastMessageRole === "user" ? "Siz: " : ""}
-                    {conv.lastMessage.slice(0, 60)}
-                  </p>
-                )}
-              </div>
+                  {conv.lastMessage ? (
+                    <span className="mt-0.5 block truncate text-xs font-semibold text-ink-500">
+                      {conv.lastMessageRole === "user" ? "Siz: " : ""}
+                      {conv.lastMessage.slice(0, 60)}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
               <button
                 onClick={(e) => handleDelete(e, conv.id)}
                 disabled={isDeleting}
-                className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                aria-label="Suhbatni o'chirish"
+                className="shrink-0 rounded-md p-1.5 text-ink-400 transition-colors hover:bg-danger/10 hover:text-danger"
               >
                 {isDeleting ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <CircleNotch size={16} weight="bold" className="animate-spin" />
                 ) : (
-                  <Trash2 className="size-3.5" />
+                  <Trash size={16} weight="bold" />
                 )}
               </button>
-            </button>
+            </div>
           );
         })}
       </div>

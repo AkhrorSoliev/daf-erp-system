@@ -3,11 +3,16 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { StudentBottomNav } from "./student-bottom-nav";
-import { StudentSidebar } from "./student-sidebar";
-import { StudentMobileHeader } from "./student-mobile-header";
-import { Loader2 } from "lucide-react";
+import { LumioBottomNav } from "./lumio/bottom-nav";
+import { LumioSideRail } from "./lumio/side-rail";
+import { LumioTopHeader } from "./lumio/top-header";
+import { CircleNotch } from "@phosphor-icons/react";
 
+// Responsive Lumio app shell. Mobile + tablet (< lg) get the native-app feel: a
+// centered single column, a slim glass top bar, and a floating bottom-nav pill.
+// Desktop (>= lg) swaps the bottom nav for a persistent left side rail and a
+// wider content column. The `.lumio` scope + fonts are applied by the portal
+// route layout that renders this.
 export function StudentPortalLayout({
   children,
 }: {
@@ -26,8 +31,8 @@ export function StudentPortalLayout({
 
   if (!user) {
     return (
-      <div className="portal-theme flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <CircleNotch className="size-8 animate-spin text-coral-500" weight="bold" />
       </div>
     );
   }
@@ -37,13 +42,20 @@ export function StudentPortalLayout({
   }
 
   return (
-    <div className="portal-theme flex min-h-screen bg-background text-foreground antialiased">
-      <StudentSidebar />
-      <div className="flex flex-1 min-w-0 flex-col">
-        <StudentMobileHeader />
-        <main className="flex-1 pb-24 md:pb-0">{children}</main>
-        <StudentBottomNav />
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Desktop-only navigation rail */}
+      <LumioSideRail className="hidden lg:flex" />
+
+      {/* Content column — padded left for the rail on desktop */}
+      <div className="lg:pl-[240px]">
+        <LumioTopHeader className="lg:hidden" />
+        <main className="mx-auto w-full max-w-[560px] px-4 pb-32 pt-4 sm:px-5 lg:max-w-[980px] lg:px-8 lg:py-8 lg:pb-12">
+          {children}
+        </main>
       </div>
+
+      {/* Floating bottom nav — mobile + tablet */}
+      <LumioBottomNav className="lg:hidden" />
     </div>
   );
 }

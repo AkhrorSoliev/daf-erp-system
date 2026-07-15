@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Sun, Sunrise, Sunset, Moon } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Sun, SunHorizon, CloudSun, MoonStars, type Icon } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
 interface TimeSlot {
-  icon: LucideIcon;
+  icon: Icon;
   greetings: string[];
 }
 
 const TIME_SLOTS: Record<string, TimeSlot> = {
   morning: {
-    icon: Sunrise,
+    icon: SunHorizon,
     greetings: [
       "Guten Morgen, {name}! Bereit für einen neuen Lerntag?",
       "Guten Morgen! Lass uns heute etwas Großartiges lernen!",
@@ -38,7 +38,7 @@ const TIME_SLOTS: Record<string, TimeSlot> = {
     ],
   },
   evening: {
-    icon: Sunset,
+    icon: CloudSun,
     greetings: [
       "Guten Abend, {name}! Noch ein bisschen lernen?",
       "Schön, dass du noch da bist, {name}! Lernen kennt keine Uhrzeit.",
@@ -51,7 +51,7 @@ const TIME_SLOTS: Record<string, TimeSlot> = {
     ],
   },
   night: {
-    icon: Moon,
+    icon: MoonStars,
     greetings: [
       "Nachtschicht, {name}? Respekt!",
       "Noch wach, {name}? Die Nacht ist jung — und du bist fleißig!",
@@ -78,9 +78,8 @@ export function AiGreeting() {
   const [mounted, setMounted] = useState(false);
   const [randomIndex, setRandomIndex] = useState(0);
 
-  const slotKey = getTimeSlotKey();
-  const slot = TIME_SLOTS[slotKey];
-  const Icon = slot.icon;
+  const slot = TIME_SLOTS[getTimeSlotKey()];
+  const Ico = slot.icon;
 
   useEffect(() => {
     setRandomIndex(Math.floor(Math.random() * slot.greetings.length));
@@ -92,27 +91,20 @@ export function AiGreeting() {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-border bg-linear-to-br from-primary/5 via-background to-primary/10 px-4 py-3.5 md:px-5 md:py-4 transition-opacity duration-500 ${
-        mounted ? "opacity-100" : "opacity-0"
-      }`}
+      className={cn(
+        "grad-grape clay-grape relative overflow-hidden rounded-card px-4 py-4 text-white transition-opacity duration-500",
+        mounted ? "opacity-100" : "opacity-0",
+      )}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-primary/10 blur-2xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-10 -left-10 size-24 rounded-full bg-primary/5 blur-2xl"
-      />
       <div className="relative flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-          <Icon className="size-5" />
-        </div>
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-white/20">
+          <Ico size={22} weight="fill" />
+        </span>
         <div className="min-w-0 flex-1 pt-0.5">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/80">
             Dein KI-Assistent
           </p>
-          <p className="portal-heading mt-0.5 text-[15px] md:text-[17px] leading-snug text-foreground">
+          <p className="mt-0.5 font-display text-[16px] font-extrabold leading-snug">
             {greeting}
           </p>
         </div>

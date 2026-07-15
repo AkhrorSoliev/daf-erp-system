@@ -1,6 +1,7 @@
 "use client";
 
-import { Sparkles, User } from "lucide-react";
+import { Sparkle, User } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
 interface AiMessageBubbleProps {
   role: "user" | "assistant";
@@ -16,28 +17,29 @@ export function AiMessageBubble({
   const isUser = role === "user";
 
   return (
-    <div className={`flex gap-2 ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={cn("flex gap-2", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
-        <div className="shrink-0 size-7 rounded-full bg-primary/10 flex items-center justify-center mt-1">
-          <Sparkles className="size-3.5 text-primary" />
-        </div>
+        <span className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-coral-500/12 text-coral-600">
+          <Sparkle size={15} weight="fill" />
+        </span>
       )}
       <div
-        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+        className={cn(
+          "max-w-[85%] px-3.5 py-2.5 text-sm font-semibold leading-relaxed",
           isUser
-            ? "bg-primary text-primary-foreground rounded-br-md"
-            : "bg-muted/60 border rounded-bl-md"
-        }`}
+            ? "rounded-2xl rounded-br-md bg-coral-500 text-white"
+            : "rounded-2xl rounded-bl-md border border-line bg-tint text-ink-800",
+        )}
       >
         <MessageContent content={content} isUser={isUser} />
         {isStreaming && (
-          <span className="inline-block w-1.5 h-4 bg-foreground/60 animate-pulse ml-0.5 align-text-bottom rounded-sm" />
+          <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-current align-text-bottom opacity-60" />
         )}
       </div>
       {isUser && (
-        <div className="shrink-0 size-7 rounded-full bg-primary/10 flex items-center justify-center mt-1">
-          <User className="size-3.5 text-primary" />
-        </div>
+        <span className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-coral-500/12 text-coral-600">
+          <User size={15} weight="fill" />
+        </span>
       )}
     </div>
   );
@@ -54,7 +56,6 @@ function MessageContent({
     return <span className="whitespace-pre-wrap">{content}</span>;
   }
 
-  // Parse assistant content for correction markers and formatting
   const lines = content.split("\n");
 
   return (
@@ -65,18 +66,15 @@ function MessageContent({
           return (
             <div
               key={i}
-              className="bg-yellow-500/10 border border-yellow-500/20 rounded-md px-2.5 py-1.5 text-xs"
+              className="rounded-md border border-amber-500/25 bg-amber-500/12 px-2.5 py-1.5 text-xs text-amber-600"
             >
               {line}
             </div>
           );
         }
-
-        // Empty line
         if (line.trim() === "") {
           return <div key={i} className="h-1" />;
         }
-
         return (
           <p key={i} className="whitespace-pre-wrap">
             {line}

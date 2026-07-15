@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Inter, Fraunces } from "next/font/google";
+import { Geist, Inter, Fraunces, Baloo_2, Nunito } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { RouteThemeProvider } from "@/components/providers/route-theme-lock";
@@ -17,6 +17,23 @@ const geistSans = Geist({
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// Lumio fonts (student portal + student-scoped login + public form). Defined
+// globally so portalled Radix content (dialogs/sheets/alerts) — which renders
+// at <body>, outside the scoped `.lumio` wrapper — can still resolve them.
+// They are only *used* under `.lumio` / `.form-theme`, so the admin and
+// teacher portals are visually unchanged.
+const fontDisplay = Baloo_2({
+  variable: "--font-display",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const fontBody = Nunito({
+  variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
 });
@@ -42,6 +59,8 @@ export default function RootLayout({
         geistSans.variable,
         interHeading.variable,
         fraunces.variable,
+        fontDisplay.variable,
+        fontBody.variable,
       )}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
