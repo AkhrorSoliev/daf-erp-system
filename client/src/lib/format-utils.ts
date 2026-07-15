@@ -15,6 +15,21 @@ export function formatPhone(phone: string | null | undefined): string {
   return phone;
 }
 
+/**
+ * Telefon input uchun jonli formatlash: raqamlarni "XX XXX XX XX" ko'rinishida
+ * bo'sh joylar bilan ajratadi (prefixsiz — `+998` alohida addon sifatida chiqadi).
+ * Login/parol tiklash inputlarida foydalaniladi; state'da faqat raw raqamlar saqlanadi.
+ */
+export function formatPhoneInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 9);
+  const parts: string[] = [];
+  if (digits.length > 0) parts.push(digits.slice(0, 2));
+  if (digits.length > 2) parts.push(digits.slice(2, 5));
+  if (digits.length > 5) parts.push(digits.slice(5, 7));
+  if (digits.length > 7) parts.push(digits.slice(7, 9));
+  return parts.join(" ");
+}
+
 // Locale uchun yagona Intl.NumberFormat namunasi. O'zbek tilidagi
 // foydalanuvchi guruh ajratuvchi sifatida bo'sh joyni va kasr ajratuvchi
 // sifatida vergulni kutadi: 1 500 000,5 — bu uz-UZ konvensiyasi.
