@@ -19,7 +19,7 @@ import { RolesGuard } from '../common/guards';
 
 @Controller('expenses')
 @UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Roles('CEO', 'Branch Director')
 export class ExpensesController {
   constructor(private expensesService: ExpensesService) {}
 
@@ -62,7 +62,7 @@ export class ExpensesController {
   }
 
   @Patch(':id')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   update(
     @Param('id') id: string,
     @Body() dto: Partial<CreateExpenseDto>,
@@ -73,7 +73,7 @@ export class ExpensesController {
   }
 
   @Delete(':id')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

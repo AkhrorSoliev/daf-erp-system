@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
+import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -45,6 +46,10 @@ const coursesSchema = {
 
 export function CoursesSettingsClient() {
   const openAddDrawer = useEditCourse((s) => s.openAddDrawer);
+  const user = useAuth((s) => s.user);
+  // Yangi kurs qo'shish faqat CEO (1) va Filial direktori (2) uchun — backend'da
+  // ham POST /courses @Roles('CEO', 'Branch Director'). Admin ko'ra oladi, qo'sha olmaydi.
+  const canAddCourse = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
 
@@ -121,23 +126,25 @@ export function CoursesSettingsClient() {
         title="Kurslar"
         description="Mavjud kurslarni boshqarish va yangi kurslar qo'shish"
         action={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                onClick={openAddDrawer}
-                disabled={!selectedBranch}
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                Yangi kurs
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {selectedBranch
-                ? "Yangi kurs qo\u2018shish"
-                : "Avval filial tanlang"}
-            </TooltipContent>
-          </Tooltip>
+          canAddCourse ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  onClick={openAddDrawer}
+                  disabled={!selectedBranch}
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Yangi kurs
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {selectedBranch
+                  ? "Yangi kurs qo\u2018shish"
+                  : "Avval filial tanlang"}
+              </TooltipContent>
+            </Tooltip>
+          ) : undefined
         }
       />
 

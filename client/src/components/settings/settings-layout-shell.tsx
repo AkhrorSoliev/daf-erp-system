@@ -22,16 +22,21 @@ export function SettingsLayoutShell({ children }: { children: React.ReactNode })
   const isAdminRestricted =
     pathname.startsWith("/settings/employees") ||
     pathname.startsWith("/settings/branches");
+  // Arxiv sahifasi backend'da faqat CEO uchun (@Roles('CEO')) — CEO bo'lmaganlar
+  // linkni ko'rmaydi va sahifaga kirsa 403 oladi, shuning uchun bu yerda ham to'sib qo'yamiz.
+  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  const isCeoRestricted = pathname.startsWith("/settings/archive");
+  const blockCeoRoute = !!user && isCeoRestricted && !isCeo;
 
   useEffect(() => {
     if (isTeacherOnly) {
       router.replace("/");
-    } else if (isAdminOnly && isAdminRestricted) {
+    } else if ((isAdminOnly && isAdminRestricted) || blockCeoRoute) {
       router.replace("/settings");
     }
-  }, [isTeacherOnly, isAdminOnly, isAdminRestricted, router]);
+  }, [isTeacherOnly, isAdminOnly, isAdminRestricted, blockCeoRoute, router]);
 
-  if (isTeacherOnly || (isAdminOnly && isAdminRestricted)) {
+  if (isTeacherOnly || (isAdminOnly && isAdminRestricted) || blockCeoRoute) {
     return null;
   }
 

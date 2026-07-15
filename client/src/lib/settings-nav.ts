@@ -32,7 +32,7 @@ export const settingsNavSections: SettingsNavSection[] = [
       { title: "Kurslar", url: "/settings/courses", icon: BookOpen },
       { title: "Xonalar", url: "/settings/rooms", icon: DoorOpen },
       { title: "Dam olish kunlari", url: "/settings/holidays", icon: CalendarOff },
-      { title: "Arxiv", url: "/settings/archive", icon: Archive },
+      { title: "Arxiv", url: "/settings/archive", icon: Archive, visibleForRoles: [1] },
     ],
   },
   {
