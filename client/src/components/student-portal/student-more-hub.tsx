@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   Wallet,
   ChartLineUp,
-  QrCode,
   Gear,
   Question,
   Info,
@@ -17,7 +16,6 @@ import { useStudentProfile } from "./lib/queries";
 const MENU = [
   { icon: Wallet, tone: "teal" as const, label: "To'lovlar", href: "/portal/payments" },
   { icon: ChartLineUp, tone: "amber" as const, label: "Davomat", href: "/portal/attendance" },
-  { icon: QrCode, tone: "sky" as const, label: "QR skaner", href: "/portal/scan" },
   { icon: Gear, tone: "ink" as const, label: "Sozlamalar", href: "/portal/settings" },
   { icon: Question, tone: "sky" as const, label: "FAQ", href: "/portal/faq" },
   { icon: Info, tone: "grape" as const, label: "Biz haqimizda", href: "/portal/about" },

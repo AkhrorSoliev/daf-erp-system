@@ -7,7 +7,7 @@ const FAQ = [
   },
   {
     q: "Davomat qanday belgilanadi?",
-    a: "Darsga kelganingizda Asosiy sahifadagi «QR bilan belgilash» tugmasini bosib, dars QR kodini skanerlang.",
+    a: "Davomat darsda o'qituvchingiz tomonidan belgilanadi. Uni Asosiy sahifada va «Davomat» bo'limida kuzatib borishingiz mumkin.",
   },
   {
     q: "Balansim manfiy bo'lsa nima bo'ladi?",

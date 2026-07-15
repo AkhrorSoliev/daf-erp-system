@@ -109,5 +109,4 @@ export const moreRoutes = [
   "/portal/settings",
   "/portal/faq",
   "/portal/about",
-  "/portal/scan",
 ];

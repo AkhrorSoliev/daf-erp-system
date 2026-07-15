@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { formatBalance } from "@/lib/format-utils";
 import { formatWeekdays } from "@/lib/weekdays";
 import {
-  QrCode,
   CaretRight,
   Clock,
   GraduationCap,
@@ -29,7 +27,6 @@ import {
 } from "./lumio";
 import { useStudentProfile } from "./lib/queries";
 import type { AttendanceStats, ProfileGroup } from "./lib/types";
-import { QrScanDialog } from "./qr-scan-dialog";
 
 const DAY_BY_INDEX = [
   "sunday",
@@ -87,7 +84,6 @@ function GroupCard({ group }: { group: ProfileGroup }) {
 }
 
 export function StudentHomePage() {
-  const [qrOpen, setQrOpen] = useState(false);
   const { data: profile, isLoading, isError, refetch } = useStudentProfile();
   const { data: stats } = useQuery<AttendanceStats>({
     queryKey: ["student-portal", "attendance-stats"],
@@ -131,44 +127,28 @@ export function StudentHomePage() {
     <Screen>
       <ScreenHeader subtitle="Assalomu alaykum" title={name} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Balance hero */}
-        <FadeIn index={0}>
-          <div className="clay-coral overflow-hidden rounded-card bg-coral-500 p-5 text-white">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/80">
-              Balans
-            </p>
-            <p className="mt-1 font-display text-[34px] font-extrabold leading-none">
-              {formatBalance(profile.balance)}
-            </p>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="inline-flex items-center rounded-pill bg-white/20 px-3 py-1 text-xs font-bold">
-                {inDebt ? "Qarzdorlik mavjud" : "Joriy balans"}
-              </span>
-              <Link
-                href="/portal/payments"
-                className="inline-flex h-9 items-center rounded-pill bg-white px-4 font-display text-sm font-bold text-coral-600"
-              >
-                To&apos;ldirish
-              </Link>
-            </div>
+      {/* Balance hero */}
+      <FadeIn index={0}>
+        <div className="clay-coral overflow-hidden rounded-card bg-coral-500 p-5 text-white">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/80">
+            Balans
+          </p>
+          <p className="mt-1 font-display text-[34px] font-extrabold leading-none">
+            {formatBalance(profile.balance)}
+          </p>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="inline-flex items-center rounded-pill bg-white/20 px-3 py-1 text-xs font-bold">
+              {inDebt ? "Qarzdorlik mavjud" : "Joriy balans"}
+            </span>
+            <Link
+              href="/portal/payments"
+              className="inline-flex h-9 items-center rounded-pill bg-white px-4 font-display text-sm font-bold text-coral-600"
+            >
+              To&apos;ldirish
+            </Link>
           </div>
-        </FadeIn>
-
-        {/* QR attendance CTA */}
-        <FadeIn index={1} className="lg:flex lg:items-stretch">
-          <Button
-            variant="teal"
-            block
-            size="lg"
-            iconBefore={<QrCode size={22} weight="bold" />}
-            onClick={() => setQrOpen(true)}
-            className="lg:h-full"
-          >
-            QR bilan davomatga belgilash
-          </Button>
-        </FadeIn>
-      </div>
+        </div>
+      </FadeIn>
 
       {/* Attendance summary → full screen */}
       {stats ? (
@@ -285,8 +265,6 @@ export function StudentHomePage() {
           )}
         </div>
       </FadeIn>
-
-      <QrScanDialog open={qrOpen} onOpenChange={setQrOpen} />
     </Screen>
   );
 }

@@ -20,7 +20,7 @@ export const Input = React.forwardRef<HTMLInputElement, LumioInputProps>(
     return (
       <div
         className={cn(
-          "flex h-[54px] items-center gap-2 rounded-md border border-line bg-surface px-4 transition-[border-color,box-shadow] focus-within:border-coral-500 focus-within:ring-4 focus-within:ring-coral-500/20",
+          "flex h-[54px] items-center gap-2 rounded-md border border-line-strong bg-sunk px-4 shadow-[inset_0_1px_3px_rgba(14,42,61,0.1)] transition-[background-color,border-color,box-shadow] focus-within:border-coral-500 focus-within:bg-surface focus-within:shadow-none focus-within:ring-4 focus-within:ring-coral-500/20",
           className,
         )}
       >
