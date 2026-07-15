@@ -23,11 +23,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 
-// SMS-based password reset is hidden until an Eskiz brand nik is registered.
-// Until then the OTP can't be delivered (test sender 4546 only sends a fixed
-// test string), so the flow is a dead-end for users. Flip to `true` once the
-// nik is approved and ESKIZ_FROM is set. See memory: project_eskiz_sms_setup.
-const SMS_PASSWORD_RESET_ENABLED = false;
+// SMS-based password reset. Enabled for the student portal only (the trigger
+// below is additionally gated on `portal === "student"`). Eskiz account is
+// active with approved template 78093; per Eskiz support a brand nik is not
+// required to deliver it, so ESKIZ_FROM stays 4546. See memory:
+// project_eskiz_sms_setup.
+const SMS_PASSWORD_RESET_ENABLED = true;
 
 const portalIcons = {
   shield: Shield,
