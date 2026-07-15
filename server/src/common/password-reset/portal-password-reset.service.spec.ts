@@ -18,28 +18,39 @@ function build() {
 
 describe('PortalPasswordResetService', () => {
   describe('resolveByPhone', () => {
-    it('only matches a student-role, ACTIVE/INACTIVE user, newest first', async () => {
+    it('matches by login OR phone, ACTIVE/INACTIVE, newest first; scopes to the portal roles', async () => {
       const { service, prisma } = build();
       prisma.user.findFirst.mockResolvedValue({ id: 10001, companyId: 2 });
       prisma.student.findFirst.mockResolvedValue({ id: 10050, companyId: 2 });
 
-      const target = await service.resolveByPhone('901234567');
+      const target = await service.resolveByPhone('901234567', [1, 2, 3, 5]);
 
       expect(target).toEqual({ userId: 10001, studentId: 10050, companyId: 2 });
       const where = prisma.user.findFirst.mock.calls[0][0].where;
-      expect(where.login).toBe('901234567');
+      expect(where.OR).toEqual([{ login: '901234567' }, { phone: '901234567' }]);
       expect(where.deletedAt).toBeNull();
       expect(where.status).toEqual({ in: ['ACTIVE', 'INACTIVE'] });
-      expect(where.roles).toEqual({ some: { role: { id: 6 } } });
+      expect(where.roles).toEqual({ some: { role: { id: { in: [1, 2, 3, 5] } } } });
       expect(prisma.user.findFirst.mock.calls[0][0].orderBy).toEqual({
         updatedAt: 'desc',
       });
     });
 
+    it('applies no role filter when allowedRoleIds is null (dev/localhost)', async () => {
+      const { service, prisma } = build();
+      prisma.user.findFirst.mockResolvedValue({ id: 10001, companyId: 2 });
+      prisma.student.findFirst.mockResolvedValue(null);
+
+      await service.resolveByPhone('901234567', null);
+
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      expect(where.roles).toBeUndefined();
+    });
+
     it('returns null when no resettable account exists', async () => {
       const { service, prisma } = build();
       prisma.user.findFirst.mockResolvedValue(null);
-      expect(await service.resolveByPhone('901234567')).toBeNull();
+      expect(await service.resolveByPhone('901234567', [6])).toBeNull();
       expect(prisma.student.findFirst).not.toHaveBeenCalled();
     });
   });

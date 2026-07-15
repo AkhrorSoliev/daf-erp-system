@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
@@ -56,6 +57,77 @@ describe('AuthService', () => {
     it('applies no restriction when neither Origin nor X-Portal is present (dev)', async () => {
       const res = await service.login(teacher, undefined, undefined);
       expect(res.accessToken).toBe('tok');
+    });
+  });
+
+  describe('validateUser — phone-based login', () => {
+    it('matches by phone field, scopes to the portal roles, strips the password', async () => {
+      const hash = await bcrypt.hash('pass123', 10);
+      prisma.user.findFirst.mockResolvedValue({
+        id: 5,
+        password: hash,
+        roles: [{ role: { id: 3, name: 'Administrator' } }],
+        branches: [],
+        company: {},
+      });
+
+      const res = await service.validateUser('972062922', 'pass123', [1, 2, 3, 5]);
+
+      expect(res).toBeTruthy();
+      expect((res as any).password).toBeUndefined();
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      expect(where.OR).toEqual(
+        expect.arrayContaining([{ phone: '972062922' }, { login: '972062922' }]),
+      );
+      expect(where.roles).toEqual({ some: { role: { id: { in: [1, 2, 3, 5] } } } });
+      expect(where.status).toEqual({ in: ['ACTIVE', 'INACTIVE'] });
+      expect(prisma.user.findFirst.mock.calls[0][0].orderBy).toEqual({
+        updatedAt: 'desc',
+      });
+    });
+
+    it('normalizes a +998-prefixed phone to 9 digits', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      await service.validateUser('+998 97 206 29 22', 'x', null);
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      expect(where.OR).toEqual(
+        expect.arrayContaining([{ phone: '972062922' }]),
+      );
+    });
+
+    it('falls back to the legacy username when the identifier is not a phone', async () => {
+      const hash = await bcrypt.hash('pass123', 10);
+      prisma.user.findFirst.mockResolvedValue({
+        id: 1,
+        password: hash,
+        roles: [],
+        branches: [],
+        company: {},
+      });
+
+      await service.validateUser('ceo', 'pass123', [1, 2, 3, 5]);
+
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      expect(where.OR).toEqual([{ login: 'ceo' }]);
+    });
+
+    it('returns null on a wrong password', async () => {
+      const hash = await bcrypt.hash('pass123', 10);
+      prisma.user.findFirst.mockResolvedValue({
+        id: 5,
+        password: hash,
+        roles: [],
+        branches: [],
+        company: {},
+      });
+      expect(await service.validateUser('972062922', 'WRONG', null)).toBeNull();
+    });
+
+    it('applies no role filter when allowedRoleIds is null (dev)', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      await service.validateUser('972062922', 'x', null);
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      expect(where.roles).toBeUndefined();
     });
   });
 

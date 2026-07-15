@@ -27,16 +27,27 @@ describe('AuthController — forgot-password endpoints', () => {
     }
   });
 
-  it('request → passes phone + client IP (x-forwarded-for) to the service', async () => {
+  it('request → passes phone + client IP (x-forwarded-for) + null roles (no origin)', async () => {
     const req = { headers: { 'x-forwarded-for': '5.5.5.5, 1.1.1.1' }, ip: '9.9.9.9' };
     await controller.forgotPasswordRequest({ phone: '901234567' } as any, req);
-    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '5.5.5.5');
+    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '5.5.5.5', null);
   });
 
   it('request → falls back to req.ip when no forwarded header', async () => {
     const req = { headers: {}, ip: '9.9.9.9' };
     await controller.forgotPasswordRequest({ phone: '901234567' } as any, req);
-    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '9.9.9.9');
+    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '9.9.9.9', null);
+  });
+
+  it('request → scopes to the portal roles from the Origin header', async () => {
+    const req = {
+      headers: { origin: 'https://admin.dafzentrum.uz' },
+      ip: '9.9.9.9',
+    };
+    await controller.forgotPasswordRequest({ phone: '901234567' } as any, req);
+    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '9.9.9.9', [
+      1, 2, 3, 5,
+    ]);
   });
 
   it('verify → delegates phone + code', async () => {
