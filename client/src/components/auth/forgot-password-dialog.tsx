@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { formatPhone } from "@/lib/format-utils";
+import { formatPhone, formatPhoneInput } from "@/lib/format-utils";
 
 const RESEND_SECONDS = 60;
 const inputClass =
@@ -182,12 +182,12 @@ export function ForgotPasswordDialog({
                   inputMode="numeric"
                   autoFocus
                   required
-                  value={phone}
+                  value={formatPhoneInput(phone)}
                   onChange={(e) =>
                     setPhone(e.target.value.replace(/\D/g, "").slice(0, 9))
                   }
                   placeholder="XX XXX XX XX"
-                  maxLength={9}
+                  maxLength={12}
                   className={`${inputClass} rounded-l-none`}
                 />
               </div>

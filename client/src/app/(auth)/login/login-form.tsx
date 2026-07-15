@@ -22,6 +22,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
+import { formatPhoneInput } from "@/lib/format-utils";
 
 // SMS-based password reset — now available on every portal (login is phone-based
 // across all roles). Eskiz account is active with approved template 78093; per
@@ -117,14 +118,14 @@ export function LoginForm({ portal }: LoginFormProps) {
               type="text"
               autoComplete="username"
               required
-              value={login}
+              value={formatPhoneInput(login)}
               onChange={(e) => {
                 const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
                 setLogin(digits);
               }}
               placeholder="XX XXX XX XX"
               inputMode="numeric"
-              maxLength={9}
+              maxLength={12}
               className="flex h-10 w-full rounded-r-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
