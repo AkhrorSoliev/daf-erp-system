@@ -53,6 +53,13 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - `POST /api/auth/refresh` refreshes the token pair
 - Use `@CurrentUser()` decorator to get the authenticated user in controllers
 
+#### Phone-based login (all roles)
+
+- **Every role logs in with their phone number** (the `login` field on the DTO now carries a 9-digit phone; the legacy username is still accepted as a fallback so no account is locked out). `AuthService.validateUser(login, password, allowedRoleIds?)` normalizes the input to a 9-digit phone and matches `OR: [{ login }, { phone }, { login: phone9 }]` + `deletedAt: null` + status ACTIVE/INACTIVE.
+- **Neither `User.login` nor `User.phone` is `@unique`** — a phone can map to several accounts. The lookup is therefore **portal-scoped**: `LocalStrategy` (`passReqToCallback: true`) reads the `Origin` / `X-Portal` header, resolves the portal's allowed role IDs via `resolveAllowedRoleIds`, and passes them to `validateUser`, which filters `roles.some.role.id ∈ allowedRoleIds`. If several accounts still match within one portal, the **most recently updated** wins (`orderBy updatedAt desc`). Consequence: a wrong-portal login now returns 401 (`validateUser` finds nothing) rather than the old 403 from `login()`'s role gate — that gate stays as defense-in-depth.
+- **SMS password reset works for every role** (not just students): `PortalPasswordResetService.resolveByPhone(phone, allowedRoleIds?)` matches `OR: [{ login }, { phone }]` scoped to the portal roles (from `Origin`/`X-Portal`), same tiebreak. See the Eskiz OTP flow under "SMS forgot password".
+- **Operational caveat:** because phone isn't unique, assigning the same phone to multiple staff within one portal makes only the most-recent one reachable by phone. Audit before relying on phone-login: `scripts/audit-login-phone.ts` (read-only — flags missing phones + duplicate groups); `scripts/sim-phone-login.ts` simulates which account a phone resolves to per portal.
+
 ### Portal-Based Role Restriction (Subdomain Routing)
 
 The system uses **subdomain-based portals** — each subdomain restricts login to specific roles:

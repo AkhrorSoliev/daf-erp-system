@@ -13,6 +13,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
+import { resolveAllowedRoleIds } from './portal-roles.config';
 import { Public } from '../common/decorators';
 import { IpThrottlerGuard } from '../common/guards';
 import { LoginDto } from './dto/login.dto';
@@ -68,7 +69,16 @@ export class AuthController {
     @Body() dto: ForgotPasswordRequestDto,
     @Req() req,
   ) {
-    return this.forgotPasswordService.requestCode(dto.phone, clientIp(req));
+    // Scope the reset to the calling portal's roles so a phone shared across
+    // accounts resets the right one (admin phone on admin.*, teacher on lehrer.*).
+    const origin = req.headers['origin'] as string | undefined;
+    const portal = req.headers['x-portal'] as string | undefined;
+    const allowedRoleIds = resolveAllowedRoleIds(origin, portal);
+    return this.forgotPasswordService.requestCode(
+      dto.phone,
+      clientIp(req),
+      allowedRoleIds,
+    );
   }
 
   // Step 2: verify the code → returns a single-use reset token.

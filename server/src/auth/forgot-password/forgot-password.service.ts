@@ -74,6 +74,7 @@ export class ForgotPasswordService {
   async requestCode(
     rawPhone: string,
     ip?: string,
+    allowedRoleIds?: number[] | null,
   ): Promise<{ message: string }> {
     const phone = this.normalize(rawPhone);
     if (!phone) return { message: GENERIC_REQUEST_MESSAGE };
@@ -98,8 +99,9 @@ export class ForgotPasswordService {
       // prevents an attacker from spamming failing sends to bypass the cap.
       await this.hit(dailyKey(phone), DAILY_TTL_SEC);
 
-      // Resolve the account behind the phone. Nothing more happens for unknowns.
-      const target = await this.reset.resolveByPhone(phone);
+      // Resolve the account behind the phone, scoped to the portal's roles.
+      // Nothing more happens for unknowns.
+      const target = await this.reset.resolveByPhone(phone, allowedRoleIds);
       if (!target) return { message: GENERIC_REQUEST_MESSAGE };
 
       // Global hourly circuit-breaker (protects the Eskiz balance / real money).

@@ -23,11 +23,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 
-// SMS-based password reset. Enabled for the student portal only (the trigger
-// below is additionally gated on `portal === "student"`). Eskiz account is
-// active with approved template 78093; per Eskiz support a brand nik is not
-// required to deliver it, so ESKIZ_FROM stays 4546. See memory:
-// project_eskiz_sms_setup.
+// SMS-based password reset — now available on every portal (login is phone-based
+// across all roles). Eskiz account is active with approved template 78093; per
+// Eskiz support a brand nik is not required to deliver it, so ESKIZ_FROM stays
+// 4546. See memory: project_eskiz_sms_setup.
 const SMS_PASSWORD_RESET_ENABLED = true;
 
 const portalIcons = {
@@ -59,8 +58,8 @@ export function LoginForm({ portal }: LoginFormProps) {
     setError("");
     setLoading(true);
 
-    // Student portalda faqat 9 raqamli telefon yuboriladi
-    const loginValue = portal === "student" ? login.replace(/\D/g, "").slice(-9) : login;
+    // Barcha portallarda login = 9 raqamli telefon raqam
+    const loginValue = login.replace(/\D/g, "").slice(-9);
 
     try {
       const res = await api.post("/auth/login", { login: loginValue, password });
@@ -107,41 +106,28 @@ export function LoginForm({ portal }: LoginFormProps) {
 
         <div className="space-y-2">
           <label htmlFor="login" className="text-sm font-medium">
-            {portal === "student" ? "Telefon raqam" : "Login"}
+            Telefon raqam
           </label>
-          {portal === "student" ? (
-            <div className="flex">
-              <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-                +998
-              </span>
-              <input
-                id="login"
-                type="text"
-                autoComplete="username"
-                required
-                value={login}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
-                  setLogin(digits);
-                }}
-                placeholder="XX XXX XX XX"
-                inputMode="numeric"
-                maxLength={9}
-                className="flex h-10 w-full rounded-r-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-            </div>
-          ) : (
+          <div className="flex">
+            <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+              +998
+            </span>
             <input
               id="login"
               type="text"
               autoComplete="username"
               required
               value={login}
-              onChange={(e) => setLogin(e.target.value)}
-              placeholder="Loginingizni kiriting"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                setLogin(digits);
+              }}
+              placeholder="XX XXX XX XX"
+              inputMode="numeric"
+              maxLength={9}
+              className="flex h-10 w-full rounded-r-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
-          )}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -196,7 +182,7 @@ export function LoginForm({ portal }: LoginFormProps) {
           Kirish
         </button>
 
-        {SMS_PASSWORD_RESET_ENABLED && portal === "student" && (
+        {SMS_PASSWORD_RESET_ENABLED && (
           <button
             type="button"
             onClick={() => setForgotOpen(true)}
@@ -207,7 +193,7 @@ export function LoginForm({ portal }: LoginFormProps) {
         )}
       </form>
 
-      {SMS_PASSWORD_RESET_ENABLED && portal === "student" && (
+      {SMS_PASSWORD_RESET_ENABLED && (
         <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
       )}
     </div>

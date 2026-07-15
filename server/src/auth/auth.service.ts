@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
 import { resolveAllowedRoleIds } from './portal-roles.config';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -20,9 +21,51 @@ export class AuthService {
     private redis: RedisService,
   ) {}
 
-  async validateUser(login: string, password: string) {
+  /**
+   * Validate a login attempt. The identifier is now the user's **phone number**
+   * for every role (the login screen types a phone), but the legacy `login`
+   * (username) is still accepted as a fallback so no account is locked out.
+   *
+   * `allowedRoleIds` scopes the lookup to the calling portal's roles (from the
+   * `Origin` / `X-Portal` header). This is what disambiguates a phone that is
+   * shared across accounts: on admin.dafzentrum.uz only staff-role accounts are
+   * considered, on lehrer only teachers, on student only students. If several
+   * still match (a genuinely duplicated phone within one portal), the most
+   * recently updated account wins. `null` = no restriction (localhost/dev).
+   */
+  async validateUser(
+    login: string,
+    password: string,
+    allowedRoleIds?: number[] | null,
+  ) {
+    const identifier = (login ?? '').trim();
+    const digits = identifier.replace(/\D/g, '');
+    const phone9 =
+      digits.length === 12 && digits.startsWith('998')
+        ? digits.slice(3)
+        : digits.length === 9
+          ? digits
+          : null;
+
+    // Match the phone (staff `phone` field or student `login`=phone) OR the raw
+    // legacy username. Deduped OR clauses.
+    const or: Array<{ login?: string; phone?: string }> = [{ login: identifier }];
+    if (phone9) {
+      or.push({ phone: phone9 });
+      if (phone9 !== identifier) or.push({ login: phone9 });
+    }
+
     const user = await this.prisma.user.findFirst({
-      where: { login, deletedAt: null },
+      where: {
+        OR: or,
+        deletedAt: null,
+        // SUSPENDED / TERMINATED / ARCHIVED users cannot log in.
+        status: { in: [UserStatus.ACTIVE, UserStatus.INACTIVE] },
+        ...(allowedRoleIds && allowedRoleIds.length
+          ? { roles: { some: { role: { id: { in: allowedRoleIds } } } } }
+          : {}),
+      },
+      orderBy: { updatedAt: 'desc' },
       include: {
         roles: { include: { role: true } },
         branches: { include: { branch: { select: { id: true, name: true } } } },
@@ -39,11 +82,6 @@ export class AuthService {
     });
 
     if (!user || !user.password) {
-      return null;
-    }
-
-    // SUSPENDED yoki TERMINATED userlar login qila olmaydi
-    if (user.status !== 'ACTIVE' && user.status !== 'INACTIVE') {
       return null;
     }
 
