@@ -46,14 +46,19 @@ describe('CoursesController — role guards', () => {
   }
 
   describe('create()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
     });
 
     it('should allow CEO to create', () => {
       const ctx = mockExecutionContext(controller.create, ['CEO']);
       expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Administrator from creating', () => {
+      const ctx = mockExecutionContext(controller.create, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 
     it('should deny Teacher from creating', () => {

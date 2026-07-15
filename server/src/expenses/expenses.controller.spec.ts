@@ -45,21 +45,21 @@ describe('ExpensesController — role guards + export delegation', () => {
     } as any;
   }
 
-  it('restricts the controller to CEO, Branch Director, Administrator at class level', () => {
+  it('restricts the controller to CEO, Branch Director at class level', () => {
     const roles = reflector.get<string[]>(ROLES_KEY, ExpensesController);
-    expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    expect(roles).toEqual(['CEO', 'Branch Director']);
   });
 
   describe('pdf endpoint', () => {
-    it('allows CEO / Branch Director / Administrator', () => {
-      for (const role of ['CEO', 'Branch Director', 'Administrator']) {
+    it('allows CEO / Branch Director', () => {
+      for (const role of ['CEO', 'Branch Director']) {
         const ctx = mockExecutionContext(controller.exportPdf, [role]);
         expect(guard.canActivate(ctx)).toBe(true);
       }
     });
 
-    it('denies Cashier and Teacher', () => {
-      for (const role of ['Cashier', 'Teacher']) {
+    it('denies Administrator, Cashier and Teacher', () => {
+      for (const role of ['Administrator', 'Cashier', 'Teacher']) {
         const ctx = mockExecutionContext(controller.exportPdf, [role]);
         expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
       }

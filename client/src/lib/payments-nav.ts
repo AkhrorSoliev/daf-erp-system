@@ -21,7 +21,7 @@ export interface PaymentsNavItem {
 export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Umumiy ma'lumotlar", url: "/payments/overview", icon: BarChart3 },
   { title: "Kutilyotgan to'lovlar", url: "/payments/pending", icon: Clock },
-  { title: "Xarajatlar", url: "/payments/expenses", icon: Receipt },
+  { title: "Xarajatlar", url: "/payments/expenses", icon: Receipt, visibleForRoles: [1, 2] },
   { title: "Ish haqi", url: "/payments/salary", icon: Banknote, visibleForRoles: [1, 2] },
   { title: "Qarzdorlar", url: "/payments/debtors", icon: UserMinus },
   { title: "Oylik qarzdorlik", url: "/payments/debt-history", icon: CalendarClock, visibleForRoles: [1, 2] },

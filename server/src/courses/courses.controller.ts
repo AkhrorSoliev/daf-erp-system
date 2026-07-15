@@ -39,7 +39,7 @@ export class CoursesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   create(
     @Body() dto: CreateCourseDto,
     @CurrentUser('id') userId: number,
