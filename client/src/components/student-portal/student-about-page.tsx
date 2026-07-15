@@ -38,18 +38,31 @@ export function StudentAboutPage() {
       <FadeIn index={2}>
         <Card className="space-y-3">
           <h3 className="font-display text-lg font-bold text-ink-900">Aloqa</h3>
-          <div className="flex items-center gap-3 text-[15px] font-semibold text-ink-700">
+          <a
+            href="tel:+998905351099"
+            className="flex items-center gap-3 text-[15px] font-semibold text-ink-700 transition-colors hover:text-coral-600"
+          >
             <Phone size={20} weight="bold" className="text-teal-600" />
-            +998 90 000 00 00
-          </div>
-          <div className="flex items-center gap-3 text-[15px] font-semibold text-ink-700">
+            +998 90 535 10 99
+          </a>
+          <a
+            href="https://dafzentrum.uz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 text-[15px] font-semibold text-ink-700 transition-colors hover:text-coral-600"
+          >
             <Globe size={20} weight="bold" className="text-sky-600" />
             dafzentrum.uz
-          </div>
-          <div className="flex items-center gap-3 text-[15px] font-semibold text-ink-700">
+          </a>
+          <a
+            href="https://t.me/dafferganaadmin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 text-[15px] font-semibold text-ink-700 transition-colors hover:text-coral-600"
+          >
             <PaperPlaneTilt size={20} weight="bold" className="text-sky-500" />
-            @dafzentrum
-          </div>
+            @dafferganaadmin
+          </a>
         </Card>
       </FadeIn>
 

@@ -188,11 +188,11 @@ export function StudentPaymentSummary() {
                     type="button"
                     disabled={redirecting}
                     onClick={() => pay(p.id as "PAYME" | "CLICK")}
-                    className="clay-white clay-btn flex h-14 items-center justify-center rounded-card border border-line bg-white px-3 disabled:opacity-60"
+                    className="clay-white clay-btn flex h-16 items-center justify-center rounded-card border border-line bg-white px-4 disabled:opacity-60"
                   >
                     {redirecting ? (
                       <CircleNotch
-                        size={22}
+                        size={24}
                         weight="bold"
                         className="animate-spin text-ink-500"
                       />
@@ -201,7 +201,7 @@ export function StudentPaymentSummary() {
                       <img
                         src={p.logo}
                         alt={p.name}
-                        className="h-7 max-w-full object-contain"
+                        className="h-10 max-w-full object-contain"
                       />
                     )}
                   </button>

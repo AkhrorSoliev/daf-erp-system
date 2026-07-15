@@ -25,7 +25,7 @@ The frontend is deployed to multiple subdomains — each portal restricts which 
 |--------|--------|---------------|
 | Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
 | Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
-| Student portal | `student.dafzentrum.uz` | Student (6) — implemented in `src/components/student-portal/` (home, profile, schedule, attendance history, payments via Payme + Click, QR scanner) |
+| Student portal | `student.dafzentrum.uz` | Student (6) — implemented in `src/components/student-portal/` (home, profile, schedule, attendance history, payments via Payme + Click) |
 
 - **Restriction is enforced server-side** — the backend checks the `Origin` header on login and rejects users whose roles don't match the portal (see `portal-roles.config.ts`)
 - **Error handling:** If login is rejected due to role mismatch, the API returns `403 Forbidden` with message "Sizning rolingiz bu portalga kirish huquqiga ega emas"
@@ -632,7 +632,7 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 **Lumio design system (`src/components/student-portal/lumio/`):**
 - Self-contained primitive library (barrel: `lumio/index.ts`) mirroring the student-app's design components: `Button`, `Card`, `FeatureCard`, `IconTile`, `ListRow`, `Badge`, `StatChip`, `Avatar`, `ProgressBar`, `ProgressRing`, `SegmentedControl`, `EmptyState`, `Screen`/`ScreenHeader`/`StackHeader`, `FadeIn`, `Skeleton`, `Input`/`Field`, `BottomSheet`.
 - **Always build portal screens from these primitives**, not raw shadcn — keeps the native-app look consistent. Accent tones live in `lumio/tones.ts` (`TILE_TONE`: coral / sky / teal / grape / amber / ink).
-- Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile/tablet), `lumio/side-rail.tsx` (desktop left rail), `lumio/top-header.tsx` (slim glass bar). The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
+- Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile/tablet) and `lumio/side-rail.tsx` (desktop left rail). Mobile has no top header — each screen renders its own `ScreenHeader`/`StackHeader` title. The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
 
 **Responsive shell (`student-portal-layout.tsx`):** mobile + tablet (`< lg`) get the native-app feel (centered column, floating bottom nav); desktop (`>= lg`) swaps to a persistent left side rail + wider column. Role-gates to Student (role id 6).
 
@@ -647,7 +647,6 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - `student-more-hub.tsx` — "Ko'proq" landing (secondary nav)
 - `student-faq-page.tsx` / `student-about-page.tsx` — FAQ + about screens
 - `student-logout-button.tsx` — logout action
-- `qr-scanner.tsx` / `qr-scan-dialog.tsx` — QR attendance scanning
 - Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
 - Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
 

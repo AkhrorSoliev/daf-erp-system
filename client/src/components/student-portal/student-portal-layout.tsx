@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { LumioBottomNav } from "./lumio/bottom-nav";
 import { LumioSideRail } from "./lumio/side-rail";
-import { LumioTopHeader } from "./lumio/top-header";
 import { CircleNotch } from "@phosphor-icons/react";
 
 // Responsive Lumio app shell. Mobile + tablet (< lg) get the native-app feel: a
@@ -48,8 +47,7 @@ export function StudentPortalLayout({
 
       {/* Content column — padded left for the rail on desktop */}
       <div className="lg:pl-[240px]">
-        <LumioTopHeader className="lg:hidden" />
-        <main className="mx-auto w-full max-w-[560px] px-4 pb-32 pt-4 sm:px-5 lg:max-w-[980px] lg:px-8 lg:py-8 lg:pb-12">
+        <main className="mx-auto w-full max-w-[560px] px-4 pb-32 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 lg:max-w-[980px] lg:px-8 lg:py-8 lg:pb-12">
           {children}
         </main>
       </div>
