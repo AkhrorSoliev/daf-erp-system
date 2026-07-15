@@ -1,41 +1,33 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Check, X, AlarmClock, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { Check, X, Clock, ShieldCheck, CloudSlash } from "@phosphor-icons/react";
+import {
+  Screen,
+  StackHeader,
+  Card,
+  Badge,
+  ProgressRing,
+  ProgressBar,
+  EmptyState,
+  LoadingCards,
+  FadeIn,
+} from "./lumio";
+import type { AttendanceGroup, AttendanceStats } from "./lib/types";
 
-interface AttendanceRecord {
-  date: string;
-  status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
-  note: string | null;
-}
-
-interface GroupAttendance {
-  groupId: string;
-  groupName: string;
-  courseName: string | null;
-  lessonTime: string | null;
-  stats: {
-    total: number;
-    present: number;
-    absent: number;
-    late: number;
-    excused: number;
-    percentage: number;
-  };
-  records: AttendanceRecord[];
-}
-
-const STATUS_MAP = {
-  PRESENT: { label: "Keldi", icon: Check, color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30" },
-  ABSENT: { label: "Kelmadi", icon: X, color: "text-red-600 dark:text-red-400", bg: "bg-red-100 dark:bg-red-900/30" },
-  LATE: { label: "Kechikdi", icon: AlarmClock, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30" },
-  EXCUSED: { label: "Sababli", icon: ShieldCheck, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/30" },
+const STATUS = {
+  PRESENT: { label: "Keldi", icon: Check, tone: "success" as const, color: "var(--success)" },
+  ABSENT: { label: "Kelmadi", icon: X, tone: "danger" as const, color: "var(--danger)" },
+  LATE: { label: "Kechikdi", icon: Clock, tone: "warning" as const, color: "var(--warning)" },
+  EXCUSED: { label: "Sababli", icon: ShieldCheck, tone: "sky" as const, color: "var(--ink-400)" },
 } as const;
+
+function percentColor(p: number): string {
+  if (p >= 75) return "text-success";
+  if (p >= 50) return "text-amber-600";
+  return "text-danger";
+}
 
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split("-");
@@ -43,116 +35,155 @@ function formatDate(dateStr: string) {
 }
 
 const DAY_NAMES: Record<number, string> = {
-  0: "Yak", 1: "Du", 2: "Se", 3: "Cho", 4: "Pay", 5: "Ju", 6: "Sha",
+  0: "Yak",
+  1: "Du",
+  2: "Se",
+  3: "Cho",
+  4: "Pay",
+  5: "Ju",
+  6: "Sha",
 };
 
-export function StudentAttendanceHistory() {
-  const router = useRouter();
+function StatCell({
+  value,
+  label,
+  color,
+}: {
+  value: number;
+  label: string;
+  color: string;
+}) {
+  return (
+    <div className="flex flex-col items-center">
+      <span
+        className="font-display text-xl font-extrabold"
+        style={{ color }}
+      >
+        {value}
+      </span>
+      <span className="text-xs font-semibold text-ink-500">{label}</span>
+    </div>
+  );
+}
 
-  const { data, isLoading } = useQuery<GroupAttendance[]>({
+export function StudentAttendanceHistory() {
+  const { data, isLoading } = useQuery<AttendanceGroup[]>({
     queryKey: ["student-portal", "attendance-history"],
-    queryFn: () => api.get("/student-portal/attendance/history").then((r) => r.data),
+    queryFn: () =>
+      api.get("/student-portal/attendance/history").then((r) => r.data),
+  });
+  const { data: stats } = useQuery<AttendanceStats>({
+    queryKey: ["student-portal", "attendance-stats"],
+    queryFn: () =>
+      api.get("/student-portal/attendance/stats").then((r) => r.data),
   });
 
   return (
-    <div className="space-y-4 p-4 pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon-sm" onClick={() => router.push("/portal")}>
-          <ArrowLeft className="size-5" />
-        </Button>
-        <h1 className="text-base font-semibold">Davomat tarixi</h1>
-      </div>
+    <Screen>
+      <StackHeader title="Davomat" backHref="/portal" />
 
       {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="space-y-2 rounded-lg border p-4">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-4 w-24" />
-              <div className="space-y-1.5 pt-2">
-                {[1, 2, 3].map((j) => (
-                  <Skeleton key={j} className="h-10 w-full" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <LoadingCards count={2} />
       ) : !data || data.length === 0 ? (
-        <div className="flex h-40 items-center justify-center rounded-lg border">
-          <p className="text-sm text-muted-foreground">Davomat ma&apos;lumotlari topilmadi</p>
-        </div>
+        <EmptyState
+          icon={<CloudSlash weight="bold" />}
+          title="Davomat ma'lumotlari yo'q"
+          description="Darslar boshlanganda davomatingiz shu yerda ko'rinadi."
+        />
       ) : (
-        <div className="space-y-4">
-          {data.map((group) => (
-            <div key={group.groupId} className="rounded-lg border bg-card">
-              {/* Guruh sarlavhasi */}
-              <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">{group.groupName}</h2>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  {group.courseName && <span>{group.courseName}</span>}
-                  {group.lessonTime && <span>{group.lessonTime}</span>}
+        <>
+          {/* Overall summary */}
+          {stats && stats.total > 0 ? (
+            <FadeIn index={0}>
+              <Card clay tone="neutral" className="flex items-center gap-5">
+                <ProgressRing
+                  value={stats.percentage}
+                  className={percentColor(stats.percentage)}
+                  sublabel="davomat"
+                />
+                <div className="grid flex-1 grid-cols-2 gap-3">
+                  <StatCell value={stats.present} label="Keldi" color="var(--success)" />
+                  <StatCell value={stats.late} label="Kechikdi" color="var(--warning)" />
+                  <StatCell value={stats.absent} label="Kelmadi" color="var(--danger)" />
+                  <StatCell value={stats.excused} label="Sababli" color="var(--ink-500)" />
                 </div>
-              </div>
+              </Card>
+            </FadeIn>
+          ) : null}
 
-              {/* Statistika */}
-              <div className="grid grid-cols-4 gap-1 border-b px-4 py-2.5">
-                <div className="text-center">
-                  <p className="text-lg font-bold text-green-600 dark:text-green-400">{group.stats.present}</p>
-                  <p className="text-[10px] text-muted-foreground">Keldi</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-red-600 dark:text-red-400">{group.stats.absent}</p>
-                  <p className="text-[10px] text-muted-foreground">Kelmadi</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{group.stats.late}</p>
-                  <p className="text-[10px] text-muted-foreground">Kechikdi</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-primary">{group.stats.percentage}%</p>
-                  <p className="text-[10px] text-muted-foreground">Davomat</p>
-                </div>
-              </div>
+          {/* Per-group */}
+          <div className="space-y-3">
+            {data.map((group, gi) => (
+              <FadeIn key={group.groupId} index={gi + 1}>
+                <Card pad="none" className="overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+                    <div className="min-w-0">
+                      <h2 className="truncate font-display text-base font-bold text-ink-900">
+                        {group.groupName}
+                      </h2>
+                      <p className="truncate text-xs font-semibold text-ink-500">
+                        {[group.courseName, group.lessonTime]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <Badge tone={group.stats.percentage >= 75 ? "success" : group.stats.percentage >= 50 ? "warning" : "danger"}>
+                      {group.stats.percentage}%
+                    </Badge>
+                  </div>
 
-              {/* Davomat jadvali */}
-              {group.records.length === 0 ? (
-                <div className="flex h-16 items-center justify-center">
-                  <p className="text-xs text-muted-foreground">Hali davomat yozilmagan</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {group.records.map((record, i) => {
-                    const cfg = STATUS_MAP[record.status];
-                    const Icon = cfg.icon;
-                    const dateObj = new Date(record.date);
-                    const dayName = DAY_NAMES[dateObj.getDay()];
+                  {group.stats.total > 0 ? (
+                    <div className="px-4 pt-3">
+                      <ProgressBar
+                        segments={[
+                          { value: group.stats.present, color: "var(--success)" },
+                          { value: group.stats.late, color: "var(--warning)" },
+                          { value: group.stats.absent, color: "var(--danger)" },
+                          { value: group.stats.excused, color: "var(--ink-400)" },
+                        ]}
+                        height={10}
+                      />
+                    </div>
+                  ) : null}
 
-                    return (
-                      <div
-                        key={record.date}
-                        className="flex items-center gap-3 px-4 py-2.5"
-                      >
-                        <span className="w-5 text-center text-xs text-muted-foreground">
-                          {group.records.length - i}
-                        </span>
-                        <div className="flex-1">
-                          <span className="text-sm">{formatDate(record.date)}</span>
-                          <span className="ml-1.5 text-xs text-muted-foreground">{dayName}</span>
-                        </div>
-                        <div className={cn("flex items-center gap-1.5 rounded-full px-2.5 py-1", cfg.bg)}>
-                          <Icon className={cn("size-3.5", cfg.color)} />
-                          <span className={cn("text-xs font-medium", cfg.color)}>{cfg.label}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                  {group.records.length === 0 ? (
+                    <p className="px-4 py-5 text-center text-xs font-semibold text-ink-500">
+                      Hali davomat yozilmagan
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-line">
+                      {group.records.map((record) => {
+                        const cfg = STATUS[record.status];
+                        const Icon = cfg.icon;
+                        const dayName = DAY_NAMES[new Date(record.date).getDay()];
+                        return (
+                          <div
+                            key={record.date}
+                            className="flex items-center gap-3 px-4 py-2.5"
+                          >
+                            <div className="flex-1">
+                              <span className="font-display text-sm font-bold text-ink-900">
+                                {formatDate(record.date)}
+                              </span>
+                              <span className="ml-1.5 text-xs font-semibold text-ink-500">
+                                {dayName}
+                              </span>
+                            </div>
+                            <Badge tone={cfg.tone} size="sm">
+                              <Icon size={13} weight="bold" />
+                              {cfg.label}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+              </FadeIn>
+            ))}
+          </div>
+        </>
       )}
-    </div>
+    </Screen>
   );
 }

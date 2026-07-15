@@ -627,17 +627,29 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 
 ### Student Portal (`src/components/student-portal/`)
 
-Student-facing portal at `student.dafzentrum.uz` — students can view their profile, schedule, attendance, and make payments.
+Student-facing portal at `student.dafzentrum.uz` — students can view their profile, schedule, attendance, and make payments. The portal is skinned with the **Lumio** design system (ported from the student-app), a playful "clay" look with Baloo 2 / Nunito fonts, applied via a scoped `.lumio` class + tokens.
 
-**Key components:**
-- `student-portal-layout.tsx` — layout wrapper with bottom nav
-- `student-home-page.tsx` — dashboard with greeting, quick stats, schedule
-- `student-payment-summary.tsx` — balance display, payment methods, payment history
-- `student-groups-list.tsx` — enrolled groups
+**Lumio design system (`src/components/student-portal/lumio/`):**
+- Self-contained primitive library (barrel: `lumio/index.ts`) mirroring the student-app's design components: `Button`, `Card`, `FeatureCard`, `IconTile`, `ListRow`, `Badge`, `StatChip`, `Avatar`, `ProgressBar`, `ProgressRing`, `SegmentedControl`, `EmptyState`, `Screen`/`ScreenHeader`/`StackHeader`, `FadeIn`, `Skeleton`, `Input`/`Field`, `BottomSheet`.
+- **Always build portal screens from these primitives**, not raw shadcn — keeps the native-app look consistent. Accent tones live in `lumio/tones.ts` (`TILE_TONE`: coral / sky / teal / grape / amber / ink).
+- Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile/tablet), `lumio/side-rail.tsx` (desktop left rail), `lumio/top-header.tsx` (slim glass bar). The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
+
+**Responsive shell (`student-portal-layout.tsx`):** mobile + tablet (`< lg`) get the native-app feel (centered column, floating bottom nav); desktop (`>= lg`) swaps to a persistent left side rail + wider column. Role-gates to Student (role id 6).
+
+**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) lists `more`. AI is the raised center coral FAB.
+
+**Key screen components:**
+- `student-home-page.tsx` — dashboard (greeting, stats, schedule)
+- `student-payment-summary.tsx` — balance, payment methods, history
 - `student-schedule-view.tsx` — weekly schedule
 - `student-attendance-history.tsx` — attendance records
-- `student-settings-page.tsx` — profile and password settings
+- `student-profile-page.tsx` / `student-settings-page.tsx` — profile + password settings
+- `student-more-hub.tsx` — "Ko'proq" landing (secondary nav)
+- `student-faq-page.tsx` / `student-about-page.tsx` — FAQ + about screens
+- `student-logout-button.tsx` — logout action
 - `qr-scanner.tsx` / `qr-scan-dialog.tsx` — QR attendance scanning
+- Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
+- Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
 
 #### Online Payment (Payme + Click Integration)
 

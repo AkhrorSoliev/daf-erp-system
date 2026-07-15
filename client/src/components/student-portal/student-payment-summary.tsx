@@ -4,78 +4,56 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
-import axios from "axios";
 import api from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { formatBalance, formatNumber } from "@/lib/format-utils";
+import { Wallet, Clock, CircleNotch } from "@phosphor-icons/react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Wallet,
-  Clock,
-  BookOpen,
-  CreditCard,
-  ArrowRight,
-  Loader2,
-} from "lucide-react";
-
-function formatBalance(balance: number) {
-  return balance.toLocaleString("uz-UZ");
-}
-
-const PAYMENT_METHODS = [
-  {
-    id: "payme",
-    name: "Payme",
-    logo: "/payme-logo.png",
-    imgClass: "h-7 w-30 object-cover",
-    available: true,
-  },
-  {
-    id: "click",
-    name: "Click",
-    logo: "/click-logo.png",
-    imgClass: "h-25 w-30 object-contain",
-    available: true,
-  },
-  {
-    id: "uzum",
-    name: "Uzum Bank",
-    logo: "/uzum-bank.svg",
-    imgClass: "h-10 w-auto object-contain",
-    available: false,
-  },
-] as const;
+  Screen,
+  ScreenHeader,
+  Card,
+  Badge,
+  EmptyState,
+  LoadingCards,
+  FadeIn,
+} from "./lumio";
+import { useStudentProfile } from "./lib/queries";
+import type { PaymentHistory as PaymentHistoryData } from "./lib/types";
 
 const QUICK_AMOUNTS = [
   100_000, 200_000, 300_000, 400_000, 500_000, 600_000, 700_000,
 ];
+const MIN_PAYMENT = 1000;
+
+const PROVIDERS = [
+  { id: "PAYME", name: "Payme", logo: "/payme-logo.png", available: true },
+  { id: "CLICK", name: "Click", logo: "/click-logo.png", available: true },
+  { id: "UZUM", name: "Uzum Bank", logo: "/uzum-bank.svg", available: false },
+] as const;
+
+const TYPE_LABELS: Record<string, string> = {
+  PAYMENT: "To'lov",
+  LESSON_DEDUCTION: "Dars uchun",
+  REFUND: "Qaytarildi",
+  ADJUSTMENT: "Tuzatish",
+  INITIAL_BALANCE: "Boshlang'ich balans",
+  BALANCE_WITHDRAWAL: "Yechildi",
+};
 
 export function StudentPaymentSummary() {
   const queryClient = useQueryClient();
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["student-portal", "profile"],
-    queryFn: () => api.get("/student-portal/profile").then((r) => r.data),
-  });
+  const { data: profile, isLoading } = useStudentProfile();
 
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
+  // On return from the gateway (tab regains focus) reset + refetch the balance.
   useEffect(() => {
-    if (!isRedirecting) return;
-
-    const handleVisibility = () => {
+    if (!redirecting) return;
+    const onVisible = () => {
       if (document.visibilityState === "visible") {
-        setSelectedMethod(null);
         setAmount("");
-        setIsRedirecting(false);
+        setRedirecting(false);
         queryClient.invalidateQueries({
           queryKey: ["student-portal", "profile"],
         });
@@ -85,352 +63,231 @@ export function StudentPaymentSummary() {
         toast.success("Balansingiz tekshirilmoqda...");
       }
     };
+    document.addEventListener("visibilitychange", onVisible);
+    const timeout = setTimeout(() => setRedirecting(false), 20000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearTimeout(timeout);
+    };
+  }, [redirecting, queryClient]);
 
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibility);
-  }, [isRedirecting, queryClient]);
-
-  useEffect(() => {
-    if (!isRedirecting) return;
-    const timeoutId = setTimeout(() => {
-      setIsRedirecting(false);
-    }, 20000);
-    return () => clearTimeout(timeoutId);
-  }, [isRedirecting]);
-
-  const selectedInfo = PAYMENT_METHODS.find((m) => m.id === selectedMethod);
-
-  const handleAmountChange = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    setAmount(digits);
-  };
-
-  const displayAmount =
-    amount && Number(amount) > 0 ? Number(amount).toLocaleString("uz-UZ") : "";
-
-  const handleQuickAmount = (val: number) => {
-    setAmount(String(val));
-  };
-
-  const handleProceed = async () => {
-    if (!selectedMethod || !amount || Number(amount) < 1000) return;
-
-    setIsRedirecting(true);
+  async function pay(method: "PAYME" | "CLICK") {
+    const val = Number(amount);
+    if (!val || val < MIN_PAYMENT) {
+      toast.error(`Minimal summa: ${formatNumber(MIN_PAYMENT)} so'm`);
+      return;
+    }
+    setRedirecting(true);
     try {
       const { data } = await api.post("/student-portal/payments/init", {
-        amount: Number(amount),
-        method: selectedMethod.toUpperCase(),
+        amount: val,
+        method,
         returnUrl: `${window.location.origin}/portal/payments/result`,
       });
       window.location.href = data.checkoutUrl;
     } catch (err) {
-      const msg =
-        axios.isAxiosError(err) && err.response?.data?.message
-          ? err.response.data.message
-          : "To'lov tizimida xatolik yuz berdi";
-      toast.error(msg);
-      setIsRedirecting(false);
+      toast.error(getErrorMessage(err, "To'lov tizimida xatolik yuz berdi"));
+      setRedirecting(false);
     }
-  };
-
-  const handleClose = () => {
-    setSelectedMethod(null);
-    setAmount("");
-    setIsRedirecting(false);
-  };
+  }
 
   if (isLoading) {
     return (
-      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-28 rounded-lg" />
-        <Skeleton className="h-5 w-28" />
-        <Skeleton className="h-16 rounded-lg" />
-      </div>
+      <Screen>
+        <ScreenHeader title="To'lovlar" />
+        <LoadingCards count={2} />
+      </Screen>
     );
   }
 
   if (!profile) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
-        <Wallet className="size-8 text-muted-foreground mb-3" />
-        <p className="text-sm text-muted-foreground">
-          Ma&apos;lumotlarni yuklashda xatolik
-        </p>
-      </div>
+      <EmptyState
+        icon={<Wallet weight="bold" />}
+        title="Ma'lumotni yuklab bo'lmadi"
+        description="Sahifani qayta yuklab ko'ring."
+      />
     );
   }
 
   const balance = profile.balance ?? 0;
-  const isPositive = balance >= 0;
-  const groups = profile.groups ?? [];
+  const inDebt = balance < 0;
+  const belowMin = Number(amount) > 0 && Number(amount) < MIN_PAYMENT;
 
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-4">
-      <div className="rounded-lg border bg-card p-6">
-        <div className="flex items-center gap-3 mb-3">
-          <Wallet className="size-5 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground font-medium">
-            Joriy balans
-          </p>
-        </div>
-        <p
-          className={`text-2xl font-bold ${isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-        >
-          {isPositive ? "" : "-"}
-          {formatBalance(Math.abs(balance))} so&apos;m
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {isPositive ? "Balans ijobiy" : "Qarzdorlik mavjud"}
-        </p>
-      </div>
+    <Screen>
+      <ScreenHeader title="To'lovlar" />
 
-      {groups.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground">
-            Faol kurslar
-          </h3>
-          {groups.map((group: any) => (
-            <div
-              key={group.id}
-              className="rounded-lg border bg-card p-4 flex items-center gap-3"
-            >
-              <BookOpen className="size-4 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{group.name}</p>
-                {group.course_name && (
-                  <p className="text-xs text-muted-foreground">
-                    {group.course_name}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-4">
+          {/* Balance */}
+          <FadeIn index={0}>
+            <Card clay tone="neutral" className="space-y-1">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-500">
+                Joriy balans
+              </p>
+              <p
+                className={`font-display text-[30px] font-extrabold leading-none ${inDebt ? "text-danger" : "text-success"}`}
+              >
+                {formatBalance(balance)}
+              </p>
+              <Badge tone={inDebt ? "danger" : "success"} size="sm">
+                {inDebt ? "Qarzdorlik mavjud" : "Balans ijobiy"}
+              </Badge>
+            </Card>
+          </FadeIn>
 
-      <Separator />
+          {/* Top-up */}
+          <FadeIn index={1}>
+            <Card className="space-y-4">
+              <h2 className="font-display text-lg font-bold text-ink-900">
+                Balansni to&apos;ldirish
+              </h2>
 
-      {/* To'lov usullari */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <CreditCard className="size-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-muted-foreground">
-            Balansni to&apos;ldirish
-          </h3>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {PAYMENT_METHODS.map((method) => (
-            <button
-              key={method.id}
-              onClick={() => {
-                if (!method.available) {
-                  toast("Tez kunda ishga tushiriladi", { icon: "🔜" });
-                  return;
-                }
-                setSelectedMethod(method.id);
-                setAmount("");
-                setIsRedirecting(false);
-              }}
-              className={`relative h-15 flex items-center justify-center rounded-lg border bg-white p-1 transition-colors active:scale-95 ${
-                method.available
-                  ? "hover:bg-gray-50"
-                  : "opacity-50 grayscale"
-              }`}
-            >
-              <img
-                src={method.logo}
-                alt={method.name}
-                className={method.imgClass}
-              />
-              {!method.available && (
-                <span className="absolute -top-2 -right-2 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground border">
-                  Tez kunda
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <Separator />
-
-      <PaymentHistory />
-
-      {/* Summa kiritish dialog */}
-      <Dialog
-        open={!!selectedMethod}
-        onOpenChange={(open) => {
-          if (!open && !isRedirecting) handleClose();
-        }}
-      >
-        <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>To&apos;lov summasi</DialogTitle>
-            <DialogDescription>
-              {selectedInfo?.name} orqali to&apos;lanadigan summani kiriting
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 overflow-hidden">
-            {/* Logo */}
-            <div className="flex justify-center">
-              {selectedInfo && (
-                <div className="rounded-lg bg-white p-2">
-                  <img
-                    src={selectedInfo.logo}
-                    alt={selectedInfo.name}
-                    className="h-10 w-28 object-cover max-w-full"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Summa input */}
-            <div className="relative">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={displayAmount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                placeholder="Summani kiriting"
-                className="box-border w-full rounded-lg border bg-background px-4 py-3 text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                disabled={isRedirecting}
-                autoFocus
-              />
-              {amount && (
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground py-20">
+              <div className="inset-well flex items-center justify-center gap-2 rounded-md bg-sunk px-4 py-3">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={amount ? formatNumber(Number(amount)) : ""}
+                  onChange={(e) =>
+                    setAmount(e.target.value.replace(/\D/g, "").slice(0, 9))
+                  }
+                  placeholder="0"
+                  disabled={redirecting}
+                  className="w-full bg-transparent text-center font-display text-2xl font-extrabold text-ink-900 outline-none placeholder:text-ink-400"
+                />
+                <span className="shrink-0 font-display font-bold text-ink-500">
                   so&apos;m
                 </span>
-              )}
-            </div>
+              </div>
 
-            {/* Tezkor summalar */}
-            <div className="flex gap-2 overflow-x-auto pb-4 -mx-1 px-1">
-              {QUICK_AMOUNTS.map((val) => (
-                <button
-                  key={val}
-                  onClick={() => handleQuickAmount(val)}
-                  disabled={isRedirecting}
-                  className="shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-muted/50 active:scale-95"
-                >
-                  {formatBalance(val)}
-                </button>
-              ))}
-            </div>
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                {QUICK_AMOUNTS.map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    disabled={redirecting}
+                    onClick={() => setAmount(String(val))}
+                    className="shrink-0 rounded-pill border border-line bg-surface px-3 py-1.5 font-display text-xs font-bold text-ink-700 transition-colors hover:bg-tint active:scale-95"
+                  >
+                    {formatNumber(val)}
+                  </button>
+                ))}
+              </div>
 
-            {/* To'lash */}
-            <Button
-              onClick={handleProceed}
-              disabled={!amount || Number(amount) < 1000 || isRedirecting}
-              className="w-full"
-            >
-              {isRedirecting ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+              {belowMin ? (
+                <p className="text-center text-xs font-bold text-danger">
+                  Minimal summa: {formatNumber(MIN_PAYMENT)} so&apos;m
+                </p>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-3">
+                {PROVIDERS.filter((p) => p.available).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={redirecting}
+                    onClick={() => pay(p.id as "PAYME" | "CLICK")}
+                    className="clay-white clay-btn flex h-14 items-center justify-center rounded-card border border-line bg-white px-3 disabled:opacity-60"
+                  >
+                    {redirecting ? (
+                      <CircleNotch
+                        size={22}
+                        weight="bold"
+                        className="animate-spin text-ink-500"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.logo}
+                        alt={p.name}
+                        className="h-7 max-w-full object-contain"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between rounded-card border border-dashed border-line px-4 py-2.5 opacity-70">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/uzum-bank.svg"
+                  alt="Uzum Bank"
+                  className="h-6 object-contain grayscale"
+                />
+                <Badge tone="neutral" size="sm">
+                  Tez kunda
+                </Badge>
+              </div>
+
+              {redirecting ? (
+                <p className="flex items-center justify-center gap-2 text-center text-sm font-bold text-ink-500">
+                  <CircleNotch size={16} weight="bold" className="animate-spin" />
                   To&apos;lov sahifasiga o&apos;tkazilmoqda...
-                </>
-              ) : (
-                <>
-                  To&apos;lash
-                  <ArrowRight className="ml-2 size-4" />
-                </>
-              )}
-            </Button>
+                </p>
+              ) : null}
+            </Card>
+          </FadeIn>
+        </div>
 
-            {Number(amount) > 0 && Number(amount) < 1000 && (
-              <p className="text-xs text-center text-red-500">
-                Minimal summa: 1,000 so&apos;m
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        <FadeIn index={2}>
+          <PaymentHistory />
+        </FadeIn>
+      </div>
+    </Screen>
   );
 }
 
-const methodLabels: Record<string, string> = {
-  CASH: "Naqd",
-  PAYME: "Payme",
-  CLICK: "Click",
-  UZUM: "Uzum",
-  TRANSFER: "O'tkazma",
-};
-
-const typeLabels: Record<string, string> = {
-  PAYMENT: "To'lov",
-  LESSON_DEDUCTION: "Dars uchun",
-  REFUND: "Qaytarildi",
-  ADJUSTMENT: "Tuzatish",
-};
-
 function PaymentHistory() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<PaymentHistoryData>({
     queryKey: ["student-portal", "payments"],
     queryFn: () => api.get("/student-portal/payments").then((r) => r.data),
   });
 
   if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Skeleton className="h-5 w-28" />
-        <Skeleton className="h-16 rounded-lg" />
-        <Skeleton className="h-16 rounded-lg" />
-      </div>
-    );
+    return <LoadingCards count={3} />;
   }
 
   const transactions = data?.transactions ?? [];
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-muted-foreground">
+    <div className="space-y-2.5">
+      <h2 className="px-1 font-display text-lg font-bold text-ink-900">
         Balans tarixi
-      </h3>
+      </h2>
       {transactions.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-muted/40 p-8 text-center">
-          <Clock className="size-6 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm font-medium">Hali tranzaksiya yo&apos;q</p>
-        </div>
+        <EmptyState
+          icon={<Clock weight="bold" />}
+          title="Hali tranzaksiya yo'q"
+          description="To'lov qilganingizdan so'ng bu yerda ko'rinadi."
+        />
       ) : (
-        <div className="space-y-2">
-          {transactions.map(
-            (t: {
-              id: string;
-              type: string;
-              amount: number;
-              balanceAfter: number;
-              description: string | null;
-              createdAt: string;
-            }) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between rounded-lg border bg-card p-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">
-                    {t.description || typeLabels[t.type] || t.type}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p
-                    className={`text-sm font-bold ${t.amount >= 0 ? "text-green-600" : "text-red-600"}`}
-                  >
-                    {t.amount >= 0 ? "+" : ""}
-                    {t.amount.toLocaleString("uz-UZ")} so&apos;m
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t.balanceAfter.toLocaleString("uz-UZ")} so&apos;m
-                  </p>
-                </div>
+        transactions.map((t) => {
+          const positive = t.amount >= 0;
+          return (
+            <Card key={t.id} className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-sm font-bold text-ink-900">
+                  {t.description || TYPE_LABELS[t.type] || t.type}
+                </p>
+                <p className="text-xs font-semibold text-ink-500">
+                  {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
+                </p>
               </div>
-            ),
-          )}
-        </div>
+              <div className="text-right">
+                <p
+                  className={`font-display text-sm font-extrabold ${positive ? "text-success" : "text-danger"}`}
+                >
+                  {positive ? "+" : ""}
+                  {formatNumber(t.amount)} so&apos;m
+                </p>
+                <p className="text-xs font-semibold text-ink-500">
+                  {formatNumber(t.balanceAfter)} so&apos;m
+                </p>
+              </div>
+            </Card>
+          );
+        })
       )}
     </div>
   );
