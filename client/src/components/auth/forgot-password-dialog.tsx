@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { formatPhone } from "@/lib/format-utils";
 
 const RESEND_SECONDS = 60;
 const inputClass =
@@ -154,8 +155,7 @@ export function ForgotPasswordDialog({
           <DialogDescription>
             {step === 1 &&
               "Telefon raqamingizni kiriting — SMS orqali tasdiqlash kodi yuboramiz."}
-            {step === 2 &&
-              `+998 ${phone} raqamiga yuborilgan 4 xonali kodni kiriting.`}
+            {step === 2 && "Tasdiqlash kodi telefon raqamingizga yuborildi."}
             {step === 3 && "Yangi parolingizni o'rnating."}
           </DialogDescription>
         </DialogHeader>
@@ -201,6 +201,14 @@ export function ForgotPasswordDialog({
 
         {step === 2 && (
           <form onSubmit={handleVerify} className="space-y-4">
+            <div className="space-y-1 text-center">
+              <p className="text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
+                {formatPhone(phone)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Ushbu raqamga yuborilgan 4 xonali kodni kiriting.
+              </p>
+            </div>
             <div className="space-y-2">
               <label htmlFor="fp-code" className="text-sm font-medium">
                 Tasdiqlash kodi
