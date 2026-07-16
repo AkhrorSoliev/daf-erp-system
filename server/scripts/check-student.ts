@@ -255,6 +255,11 @@ async function main(prisma: PrismaClient) {
     .filter(
       (t) =>
         t.reversedAt == null &&
+        // A reversed original (reversedAt set) is excluded above; its REVERSAL row
+        // has reversedAt=null but reversedTransactionId set. Counting the reversal
+        // row alone double-subtracts the undone pair (e.g. a corrected 3.5M payment
+        // showing a phantom -3.5M) — skip reversal rows so the pair nets to zero.
+        t.reversedTransactionId == null &&
         !['LESSON_DEDUCTION', 'ADJUSTMENT', 'LESSON_CONSUMPTION'].includes(t.type),
     )
     .reduce((acc, t) => acc + t.amount, 0);
