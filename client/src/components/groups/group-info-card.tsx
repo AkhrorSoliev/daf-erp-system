@@ -10,6 +10,7 @@ import {
   PenLine,
   Copy,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
@@ -56,15 +58,18 @@ interface GroupInfoCardProps {
   group: GroupData;
   commentKey?: number;
   onWriteComment?: () => void;
+  onStatusChanged?: () => void;
 }
 
 export function GroupInfoCard({
   group,
   commentKey,
   onWriteComment,
+  onStatusChanged,
 }: GroupInfoCardProps) {
   const { openDrawer } = useEditGroup();
   const user = useAuth((s) => s.user);
+  const [showStatus, setShowStatus] = useState(false);
 
   const [latestComment, setLatestComment] = useState<{
     content: string;
@@ -312,6 +317,29 @@ export function GroupInfoCard({
 
         <CopyLinkButton group={group} />
       </div>
+
+      {canManage && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 w-full"
+            onClick={() => setShowStatus(true)}
+          >
+            <RefreshCw className="mr-1.5 size-3.5" />
+            Status o&apos;zgartirish
+          </Button>
+          <ChangeStatusDialog
+            open={showStatus}
+            onOpenChange={setShowStatus}
+            entityType="groups"
+            entityId={group.id}
+            entityName={group.name}
+            currentStatus={statusKey}
+            onStatusChanged={() => onStatusChanged?.()}
+          />
+        </>
+      )}
     </div>
   );
 }

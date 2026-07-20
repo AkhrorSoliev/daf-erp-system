@@ -210,7 +210,6 @@ export function EditGroupForm({
       if (values.lessonStartTime) payload.lessonStartTime = values.lessonStartTime;
       if (values.lessonEndTime) payload.lessonEndTime = values.lessonEndTime;
       payload.lessonMinutes = values.lessonMinutes ?? null;
-      if (values.status) payload.status = values.status;
       if (values.startDate) payload.startDate = values.startDate.toISOString();
       if (values.comment) payload.comment = values.comment;
 
@@ -428,9 +427,9 @@ export function EditGroupForm({
         </div>
       </div>
 
-      {/* Sana va holat */}
+      {/* Sana */}
       <div className="space-y-4">
-        <h3 className="text-sm font-medium">Sana va holat</h3>
+        <h3 className="text-sm font-medium">Sana</h3>
 
         <div className="space-y-2">
           <Label>Boshlanish sanasi</Label>
@@ -447,31 +446,6 @@ export function EditGroupForm({
           />
         </div>
 
-        {!isAdd && (
-          <div className="space-y-2">
-            <Label htmlFor="status">Holat</Label>
-            <Controller
-              name="status"
-              control={form.control}
-              render={({ field }) => (
-                <Select
-                  value={String(field.value ?? 2)}
-                  onValueChange={(v) => field.onChange(Number(v))}
-                >
-                  <SelectTrigger id="status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Faol</SelectItem>
-                    <SelectItem value="2">Boshlanmagan</SelectItem>
-                    <SelectItem value="3">Pauza</SelectItem>
-                    <SelectItem value="4">To&apos;xtatilgan</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-        )}
 
         <div className="space-y-2">
           <Label htmlFor="comment">Izoh</Label>

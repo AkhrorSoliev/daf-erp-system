@@ -223,12 +223,10 @@ export class GroupsWriteService {
       }
     }
 
-    let endDate: Date | undefined;
-    const startDate = dto.startDate
-      ? new Date(dto.startDate)
-      : existing.startDate;
-    let courseDuration = existing.course.courseDuration;
-
+    // Validate a changed course exists. endDate is intentionally NOT
+    // recomputed on edit: groups now run open-ended (endDate is stamped only
+    // when the group is manually set COMPLETED), so an edit must leave the
+    // existing endDate untouched instead of re-deriving startDate + duration.
     if (dto.courseId && dto.courseId !== existing.courseId) {
       const course = await this.prisma.course.findFirst({
         where: { id: dto.courseId, deletedAt: null },
@@ -236,12 +234,6 @@ export class GroupsWriteService {
       if (!course) {
         throw new NotFoundException(`Kurs #${dto.courseId} topilmadi`);
       }
-      courseDuration = course.courseDuration;
-    }
-
-    if (startDate && courseDuration) {
-      endDate = new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + courseDuration);
     }
 
     const { teacherIds, changeReasonId, ...updateData } = dto;
@@ -311,7 +303,6 @@ export class GroupsWriteService {
         data: {
           ...updateData,
           startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-          endDate,
           exactDays: dto.exactDays ?? undefined,
         },
         include: groupInclude,

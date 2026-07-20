@@ -1,0 +1,254 @@
+[
+  {
+    "id": "5d1f920e-605a-49fe-a0de-76325de2c71e",
+    "groupNumber": 1,
+    "name": "#001",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "b48b70b1-14c3-422b-b6aa-eaf11383a52a",
+    "groupNumber": 3,
+    "name": "#003",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "f8b3157b-b3e1-4775-9fb4-736cba0b060b",
+    "groupNumber": 4,
+    "name": "#004",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "4c8952bb-15d0-4454-85e3-2c4cf8014c87",
+    "groupNumber": 5,
+    "name": "#005",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-10-13T19:00:00.000Z"
+  },
+  {
+    "id": "661c00a9-21cf-4784-9ed4-8e8e7f2867df",
+    "groupNumber": 11,
+    "name": "#011",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "676e3800-0d5c-4a23-9887-3929589cd509",
+    "groupNumber": 14,
+    "name": "#014",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "80fd6a85-617f-4a21-a0ec-8166abbc0d3c",
+    "groupNumber": 16,
+    "name": "#016",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-10-15T00:00:00.000Z"
+  },
+  {
+    "id": "6d39bb28-6185-4b0e-875c-eef4d7303a33",
+    "groupNumber": 17,
+    "name": "#017",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "5f78806b-28c7-4eb6-a4aa-c1900a90bee4",
+    "groupNumber": 20,
+    "name": "#020",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "f218a499-a3e1-4923-8361-7408f4d7cfcd",
+    "groupNumber": 21,
+    "name": "#021",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "f2b43952-10a7-4975-ad5d-825d55a011c3",
+    "groupNumber": 23,
+    "name": "#023",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "67139f64-b75a-4802-b1a4-29f1ed3db502",
+    "groupNumber": 24,
+    "name": "#024",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "e3ab4e6b-0563-475b-aa03-f7645a5abc22",
+    "groupNumber": 29,
+    "name": "#029",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-08-01T00:00:00.000Z"
+  },
+  {
+    "id": "20fe0f9e-6228-42b9-bf91-03de767eacf0",
+    "groupNumber": 30,
+    "name": "#030",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-07-15T00:00:00.000Z"
+  },
+  {
+    "id": "248725d5-d9c9-485e-906c-279130e5fd89",
+    "groupNumber": 31,
+    "name": "#031",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-10-14T00:00:00.000Z"
+  },
+  {
+    "id": "04695d77-d3c9-4a3a-9992-83575a65e951",
+    "groupNumber": 32,
+    "name": "#032",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-10-15T00:00:00.000Z"
+  },
+  {
+    "id": "0b582f3b-f145-4b12-9292-0546f0dfe8c2",
+    "groupNumber": 35,
+    "name": "#035",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-10-06T00:00:00.000Z"
+  },
+  {
+    "id": "ee1c3dd3-e968-435b-b36c-5f0b4116ea8b",
+    "groupNumber": 36,
+    "name": "#036",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "ae40e381-6af9-4e29-9217-f9c5a9262a4a",
+    "groupNumber": 38,
+    "name": "#038",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "c944f368-c7b0-45a5-a9d4-4b20638a9d68",
+    "groupNumber": 39,
+    "name": "#039",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "410063b5-8c98-4c97-8e4e-5fdaf31271c0",
+    "groupNumber": 41,
+    "name": "#041",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "28af8a99-bcfa-4b1e-aa5d-561a8cb6e1c7",
+    "groupNumber": 42,
+    "name": "#042",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-10-30T19:00:00.000Z"
+  },
+  {
+    "id": "847f230f-98f7-4df2-a4a8-1591b30e385a",
+    "groupNumber": 43,
+    "name": "#043",
+    "statusEnum": "ACTIVE",
+    "endDate": null
+  },
+  {
+    "id": "90eb4e4c-4630-4baa-a729-1d7ff1d33cf5",
+    "groupNumber": 44,
+    "name": "#044",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-17T21:00:00.000Z"
+  },
+  {
+    "id": "c78cccee-3e2e-4567-bd81-e92ae6f83cb7",
+    "groupNumber": 45,
+    "name": "#045",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-11-20T00:00:00.000Z"
+  },
+  {
+    "id": "970a81d7-c316-42d7-b830-87816bdf49bf",
+    "groupNumber": 48,
+    "name": "#048",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-12-02T22:00:00.000Z"
+  },
+  {
+    "id": "dca09e1a-66c8-4ed1-a342-01a131e4304b",
+    "groupNumber": 49,
+    "name": "#049",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-12-07T19:00:00.000Z"
+  },
+  {
+    "id": "0f0bc9af-62b4-45be-b47e-2530fcdaaa4e",
+    "groupNumber": 50,
+    "name": "#050",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-12-11T21:00:00.000Z"
+  },
+  {
+    "id": "9e3c81c0-c2bc-4172-99a5-b5d30ba0465e",
+    "groupNumber": 51,
+    "name": "#051",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-09-22T19:00:00.000Z"
+  },
+  {
+    "id": "d2736a78-d59d-43ba-957d-5ce6dd9fb96f",
+    "groupNumber": 52,
+    "name": "#052",
+    "statusEnum": "ACTIVE",
+    "endDate": "2026-12-25T19:00:00.000Z"
+  },
+  {
+    "id": "8f90bd32-8939-4c91-bb38-d593ce5f35a5",
+    "groupNumber": 53,
+    "name": "#053",
+    "statusEnum": "ACTIVE",
+    "endDate": null
+  },
+  {
+    "id": "4f005d73-518a-454e-8f13-945b8a7eda46",
+    "groupNumber": 54,
+    "name": "#054",
+    "statusEnum": "ACTIVE",
+    "endDate": "2027-01-05T19:00:00.000Z"
+  },
+  {
+    "id": "3b8ba04c-6319-418d-9377-726f6f2e7ab4",
+    "groupNumber": 55,
+    "name": "#055",
+    "statusEnum": "ACTIVE",
+    "endDate": "2027-01-08T19:00:00.000Z"
+  },
+  {
+    "id": "46318437-116e-4aba-8ae2-a0b63697f612",
+    "groupNumber": 56,
+    "name": "#056",
+    "statusEnum": "ACTIVE",
+    "endDate": "2027-01-15T19:00:00.000Z"
+  },
+  {
+    "id": "44882adc-c09d-46e4-b761-6a7f6a2d87de",
+    "groupNumber": 7,
+    "name": "#007",
+    "statusEnum": "PAUSED",
+    "endDate": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "0289574c-b3db-40e2-a297-b66b1f74492d",
+    "groupNumber": 22,
+    "name": "#022",
+    "statusEnum": "CANCELLED",
+    "endDate": "2026-10-12T19:00:00.000Z"
+  }
+]

@@ -91,7 +91,12 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
     <>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="w-full lg:w-85 lg:shrink-0">
-          <GroupInfoCard group={group} commentKey={commentKey} onWriteComment={handleWriteComment} />
+          <GroupInfoCard
+            group={group}
+            commentKey={commentKey}
+            onWriteComment={handleWriteComment}
+            onStatusChanged={fetchGroup}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <GroupDetailTabs
