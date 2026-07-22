@@ -2,6 +2,8 @@ import {
   ArrowRightLeft,
   Bot,
   ClipboardCheck,
+  GraduationCap,
+  Link2,
   MessageSquare,
   Pencil,
   Plus,
@@ -33,7 +35,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   firstName: "Ism",
   lastName: "Familiya",
   phone: "Telefon",
-  status: "Status",
+  status: "Holat",
   name: "Ism",
   login: "Login",
   gender: "Jinsi",
@@ -81,7 +83,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   courseId: null,
   branchId: null,
   groupNumber: "Guruh raqami",
-  statusEnum: "Status",
+  statusEnum: "Holat",
   previousGroupId: null,
   maxStudents: "Maks. o'quvchilar",
   monthlyPayment: "Oylik to'lov",
@@ -158,7 +160,11 @@ export function getActionInfo(record: HistoryRecord): ActionInfo {
       return { label: "Arxivlandi", icon: Trash2, variant: "destructive" };
 
     case "STATUS_CHANGE":
-      return { label: "Status o'zgardi", icon: RefreshCw, variant: "outline" };
+      if (customAction === "LID_AYLANTIRILDI")
+        return { label: "O'quvchiga aylantirildi", icon: GraduationCap, variant: "default" };
+      if (customAction === "LID_BIRIKTIRILDI")
+        return { label: "Mavjud o'quvchiga biriktirildi", icon: Link2, variant: "default" };
+      return { label: "Holat o'zgardi", icon: RefreshCw, variant: "outline" };
 
     case "RESTORE":
       return { label: "Tiklandi", icon: RotateCcw, variant: "default" };
@@ -174,6 +180,12 @@ export const VALUE_MAX_LENGTH = 80;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
 export const VALUE_TRANSLATIONS: Record<string, string> = {
+  // Lead statuses
+  NEW: "Yangi",
+  CONTACTED: "Aloqaga chiqilgan",
+  TRIAL: "Sinov darsida",
+  CONVERTED: "O'quvchiga aylantirildi",
+  LOST: "Yo'qotilgan",
   // Group statuses
   FORMING: "Boshlanmagan",
   ACTIVE: "Faol",

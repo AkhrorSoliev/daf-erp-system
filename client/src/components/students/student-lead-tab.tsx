@@ -9,7 +9,7 @@ import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
-import { LEAD_STATUS_LABELS, type LeadStatus } from "@/hooks/use-leads-board";
+import { leadConvertedLabel, type LeadStatus } from "@/hooks/use-leads-board";
 
 interface LinkedLead {
   id: string;
@@ -19,6 +19,7 @@ interface LinkedLead {
   statusEnum: LeadStatus;
   createdAt: string;
   statusChangedAt: string | null;
+  statusChangeReason: string | null;
   deletedAt: string | null;
   source: { id: string; name: string } | null;
   section: {
@@ -94,7 +95,7 @@ export function StudentLeadTab({ studentId }: { studentId: number }) {
                 {lead.firstName} {lead.lastName}
               </p>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                {LEAD_STATUS_LABELS[lead.statusEnum] ?? lead.statusEnum}
+                {leadConvertedLabel(lead.statusEnum, lead.statusChangeReason)}
                 {lead.deletedAt ? " · arxiv" : ""}
               </span>
             </div>

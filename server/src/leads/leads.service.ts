@@ -17,6 +17,11 @@ import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
 
+// Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
+// linked to an already-existing student (no new account minted) rather than by
+// creating a fresh one. Lets the UI show "biriktirildi" vs "aylantirildi".
+export const LEAD_LINKED_REASON = 'LINKED_TO_EXISTING';
+
 // Compact shape rendered as a card on the board.
 const LEAD_CARD_SELECT = {
   id: true,
@@ -180,6 +185,7 @@ export class LeadsService {
         phone: true,
         statusEnum: true,
         convertedStudentId: true,
+        statusChangeReason: true,
         order: true,
         createdAt: true,
         updatedAt: true,
@@ -273,6 +279,7 @@ export class LeadsService {
         statusEnum: true,
         createdAt: true,
         statusChangedAt: true,
+        statusChangeReason: true,
         deletedAt: true,
         source: { select: { id: true, name: true } },
         section: {
@@ -799,6 +806,12 @@ export class LeadsService {
       }
     }
 
+    // Distinguish "linked to an existing student" from "converted into a new
+    // one": both end as statusEnum=CONVERTED, so we mark the link case on the
+    // lead (statusChangeReason sentinel) for the UI, and tag the history event
+    // (newValues.action) so its badge reads "biriktirildi" vs "aylantirildi".
+    const isLink = !!dto.existingStudentId;
+
     const updated = await this.prisma.lead.update({
       where: { id: leadId },
       data: {
@@ -807,6 +820,7 @@ export class LeadsService {
         convertedStudentId: studentId,
         statusChangedAt: new Date(),
         statusChangedById: userId,
+        statusChangeReason: isLink ? LEAD_LINKED_REASON : null,
       },
       select: LEAD_CARD_SELECT,
     });
@@ -815,7 +829,10 @@ export class LeadsService {
       entityType: 'Lead',
       entityId: leadId,
       oldValues: { status: lead.statusEnum },
-      newValues: { status: LeadStatus.CONVERTED },
+      newValues: {
+        status: LeadStatus.CONVERTED,
+        action: isLink ? 'LID_BIRIKTIRILDI' : 'LID_AYLANTIRILDI',
+      },
       changedById: userId,
       companyId,
     });
