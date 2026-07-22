@@ -33,6 +33,10 @@ describe('LeadsService', () => {
       leadSection: { findFirst: jest.fn() },
       leadSource: { findFirst: jest.fn() },
       group: { findFirst: jest.fn() },
+      // Phone-based duplicate lookup (findOne matched-student + convert guard).
+      // Defaults to "no existing student" so create/convert paths proceed.
+      student: { findFirst: jest.fn().mockResolvedValue(null) },
+      mockExamParticipant: { findMany: jest.fn().mockResolvedValue([]) },
       // Comment counts are grouped, not relation-counted (polymorphic table).
       comment: {
         groupBy: jest.fn().mockResolvedValue([]),
@@ -75,13 +79,17 @@ describe('LeadsService', () => {
       );
     });
 
-    it('lists non-deleted leads of the section', async () => {
+    it('lists non-deleted, non-converted leads of the section', async () => {
       prisma.leadSection.findFirst.mockResolvedValue({ id: 'sec-1' });
       prisma.lead.findMany.mockResolvedValue([]);
       await service.getSectionLeads('sec-1');
       expect(prisma.lead.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { sectionId: 'sec-1', deletedAt: null },
+          where: {
+            sectionId: 'sec-1',
+            deletedAt: null,
+            statusEnum: { not: 'CONVERTED' },
+          },
         }),
       );
     });
@@ -643,6 +651,55 @@ describe('LeadsService', () => {
       ).rejects.toThrow(BadRequestException);
       expect(students.create).not.toHaveBeenCalled();
       expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
+    });
+
+    it('blocks creating a duplicate when a live student already holds the phone', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      // A live student already exists on this phone → refuse to mint a second.
+      prisma.student.findFirst.mockResolvedValue({ id: 10099 });
+
+      await expect(service.convert('lead-1', {}, 1001, 1)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(students.create).not.toHaveBeenCalled();
+      expect(prisma.lead.update).not.toHaveBeenCalled();
+    });
+
+    it('links the lead to an existing student without creating a new account', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      // existingStudentId lookup resolves to a live student.
+      prisma.student.findFirst.mockResolvedValue({ id: 10050 });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      const result = await service.convert(
+        'lead-1',
+        { existingStudentId: 10050 },
+        1001,
+        1,
+      );
+
+      expect(students.create).not.toHaveBeenCalled();
+      expect(prisma.group.findFirst).not.toHaveBeenCalled();
+      expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusEnum: 'CONVERTED',
+            convertedStudentId: 10050,
+          }),
+        }),
+      );
+      expect(result.studentId).toBe(10050);
+    });
+
+    it('throws NotFound when existingStudentId does not resolve to a live student', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      prisma.student.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.convert('lead-1', { existingStudentId: 99999 }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+      expect(students.create).not.toHaveBeenCalled();
     });
   });
 
