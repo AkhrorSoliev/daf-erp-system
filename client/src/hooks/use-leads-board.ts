@@ -65,6 +65,26 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   ARCHIVED: "Arxivlangan",
 };
 
+// Mirror of the backend LEAD_LINKED_REASON sentinel (Lead.statusChangeReason):
+// a CONVERTED lead carrying it was LINKED to an existing student, not converted
+// into a fresh account.
+export const LEAD_LINKED_REASON = "LINKED_TO_EXISTING";
+
+/**
+ * Display label for a CONVERTED lead, distinguishing "linked to an existing
+ * student" from a fresh conversion. Falls back to the plain converted label for
+ * any other status.
+ */
+export function leadConvertedLabel(
+  statusEnum: LeadStatus,
+  statusChangeReason: string | null | undefined,
+): string {
+  if (statusEnum !== "CONVERTED") return LEAD_STATUS_LABELS[statusEnum];
+  return statusChangeReason === LEAD_LINKED_REASON
+    ? "Mavjud o'quvchiga biriktirilgan"
+    : "O'quvchiga aylangan";
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------

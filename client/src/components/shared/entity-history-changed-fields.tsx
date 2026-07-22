@@ -58,6 +58,14 @@ export function ChangedFields({ record }: { record: HistoryRecord }) {
   let mode: "create" | "delete" | "restore" | "diff" = "create";
   let hasLongValue = false;
 
+  // Lead convert/link events already say everything in their action badge
+  // ("O'quvchiga aylantirildi" / "Mavjud o'quvchiga biriktirildi"), so the
+  // raw "Holat: Yangi → ..." row would be redundant (and misleading for the
+  // link case). Hide the status field for these records.
+  const conversionMarker =
+    newValues?.action === "LID_AYLANTIRILDI" ||
+    newValues?.action === "LID_BIRIKTIRILDI";
+
   if (action === "CREATE" && newValues) {
     entries = Object.entries(newValues).filter(
       ([key, val]) =>
@@ -79,6 +87,9 @@ export function ChangedFields({ record }: { record: HistoryRecord }) {
   ) {
     entries = Object.keys(newValues)
       .filter((key) => getFieldLabel(key) !== null)
+      .filter(
+        (key) => !(conversionMarker && (key === "status" || key === "statusEnum")),
+      )
       .map((key) => [key, newValues[key]]);
     mode = "diff";
   } else if (action === "RESTORE" && newValues) {

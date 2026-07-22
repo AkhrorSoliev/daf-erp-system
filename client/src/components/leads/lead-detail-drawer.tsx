@@ -35,6 +35,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
 import {
   LEAD_STATUS_LABELS,
+  leadConvertedLabel,
   useLeadsBoard,
   type LeadCard,
   type LeadStatus,
@@ -73,6 +74,7 @@ interface LeadDetail {
   phone: string;
   statusEnum: LeadStatus;
   convertedStudentId: number | null;
+  statusChangeReason: string | null;
   createdAt: string;
   calledAt: string | null;
   calledBy: { id: number; firstName: string; lastName: string } | null;
@@ -550,7 +552,10 @@ export function LeadDetailDrawer() {
                 lead.convertedStudentId ? (
                   <div className="rounded-md border bg-muted/40 p-3">
                     <p className="text-sm font-medium">
-                      O&apos;quvchiga aylantirilgan
+                      {leadConvertedLabel(
+                        lead.statusEnum,
+                        lead.statusChangeReason,
+                      )}
                     </p>
                     <Button
                       variant="link"

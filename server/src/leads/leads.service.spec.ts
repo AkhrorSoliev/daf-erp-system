@@ -573,11 +573,17 @@ describe('LeadsService', () => {
           data: expect.objectContaining({
             statusEnum: 'CONVERTED',
             convertedStudentId: 10007,
+            statusChangeReason: null,
           }),
         }),
       );
       expect(result.studentId).toBe(10007);
-      expect(history.recordStatusChange).toHaveBeenCalled();
+      // Fresh convert → history badge marker "aylantirildi".
+      expect(history.recordStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: expect.objectContaining({ action: 'LID_AYLANTIRILDI' }),
+        }),
+      );
       // No group requested → no enrollment attempt.
       expect(prisma.group.findFirst).not.toHaveBeenCalled();
       expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
@@ -686,7 +692,14 @@ describe('LeadsService', () => {
           data: expect.objectContaining({
             statusEnum: 'CONVERTED',
             convertedStudentId: 10050,
+            statusChangeReason: 'LINKED_TO_EXISTING',
           }),
+        }),
+      );
+      // Link-to-existing → history badge marker "biriktirildi".
+      expect(history.recordStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: expect.objectContaining({ action: 'LID_BIRIKTIRILDI' }),
         }),
       );
       expect(result.studentId).toBe(10050);
