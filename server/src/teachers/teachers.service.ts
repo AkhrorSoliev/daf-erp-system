@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { Prisma, UserStatus } from '@prisma/client';
+import { Prisma, UserStatus, EnrollmentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
@@ -502,7 +502,17 @@ export class TeachersService {
         },
         _count: {
           select: {
-            enrollments: { where: { deletedAt: null } },
+            // Guruhdagi "O'quvchilar soni" — faqat AYNAN HOZIR o'qiyotgan
+            // (ACTIVE) o'quvchilar. FROZEN/COMPLETED/DROPPED/TRANSFERRED
+            // (muzlatilgan/bitirgan/chiqib ketgan/o'tgan) sanalmaydi, aks holda
+            // guruhda haqiqiy faol o'quvchilardan ko'p ko'rsatilardi.
+            enrollments: {
+              where: {
+                deletedAt: null,
+                status: EnrollmentStatus.ACTIVE,
+                student: { deletedAt: null },
+              },
+            },
           },
         },
       },
