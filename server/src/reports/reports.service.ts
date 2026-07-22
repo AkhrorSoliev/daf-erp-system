@@ -175,6 +175,12 @@ export class ReportsService {
   getFinancialTrend(companyId: number, branchId?: number) {
     return this.financial.getFinancialTrend(companyId, branchId);
   }
+  getIncomeMonthAttribution(
+    companyId: number,
+    query: { branchId?: number; startDate?: string; endDate?: string },
+  ) {
+    return this.financial.getIncomeMonthAttribution(companyId, query);
+  }
   getYearlyTrend(companyId: number, branchId?: number) {
     return this.financial.getYearlyTrend(companyId, branchId);
   }

@@ -121,6 +121,23 @@ export class ReportsController {
     return this.reportsService.getFinancialTrend(companyId, query.branchId);
   }
 
+  // Income composition for the selected period (the "Tushumlar" card drill-down):
+  // how much of the cash received is REAL income for the period's own month vs
+  // LATE payments settling debt carried in from prior months (broken out by
+  // month). Money breakdown → CEO/BD only, like `financial-trend`.
+  @Get('income-month-attribution')
+  @Roles('CEO', 'Branch Director')
+  getIncomeMonthAttribution(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.reportsService.getIncomeMonthAttribution(companyId, {
+      branchId: query.branchId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
   // Financial overview KPI cards. CEO/BD get the full payload (income, expenses,
   // profit, salary, LTV, CAC, ROI, forecast, debt). Administrator + Cashier are
   // intentionally allowed to reach it — but only for the two OPERATIONAL figures
@@ -132,7 +149,7 @@ export class ReportsController {
   @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   async getFinancialOverview(
     @Query() query: ReportsQueryDto,
-    @CurrentUser() user: { companyId: number; roles: string[] },
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
   ) {
     const overview = await this.reportsService.getFinancialOverview(
       user.companyId,
@@ -146,14 +163,64 @@ export class ReportsController {
     const canSeeFinancials = user.roles.some(
       (r) => r === 'CEO' || r === 'Branch Director',
     );
-    if (canSeeFinancials) return overview;
+    if (!canSeeFinancials) {
+      // Operational-only subset for Administrator / Cashier. Nothing that reveals
+      // company revenue, cost, profit, salary, marketing or debt is returned.
+      return {
+        ltvPayerCount: overview.ltvPayerCount,
+        avgPayment: overview.avgPayment,
+      };
+    }
 
-    // Operational-only subset for Administrator / Cashier. Nothing that reveals
-    // company revenue, cost, profit, salary, marketing or debt is returned.
-    return {
-      ltvPayerCount: overview.ltvPayerCount,
-      avgPayment: overview.avgPayment,
-    };
+    // Computed monthly teacher salary — the SAME figure the downloaded Excel
+    // "Oyliklar" sheet and the /payments/salary page show (`getMonthly`). Folded
+    // in so the overview's "Ustoz oyliklari" card matches the Excel exactly:
+    //   • netToPay  = sof to'lanadigan (avans ayirilgan) — what teachers receive
+    //   • advances  = shu oydagi avanslar jami
+    //   • gross     = netToPay + advances (avans + oylik jami)
+    // Month = the period's START month, mirroring the Excel's `monthStr`
+    // derivation (`ReportsExcelService.generate`). This is the HISOBLANGAN
+    // (accrual) salary for the month — deliberately a different basis from the
+    // cash-paid `salary.paid` that feeds `netProfit`. Caller id drives branch
+    // scope (CEO/BD → same scope as their salary page). Defensive: a salary-calc
+    // failure must degrade to `computed: null`, never break the whole overview.
+    const now = new Date();
+    const month = query.startDate
+      ? query.startDate.slice(0, 7)
+      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    let computed: {
+      month: string;
+      hasLessonData: boolean;
+      netToPay: number;
+      advances: number;
+      gross: number;
+    } | null = null;
+    try {
+      const sm = await this.reportsService.getSalaryMonthly(
+        user.companyId,
+        month,
+        user.id,
+      );
+      const t = sm.totals;
+      // Config-gap / manual months (e.g. May cutover) have no per-lesson data —
+      // the deserved/covered/gap columns come back as 0 there; the card renders a
+      // "o'tish oyi" note instead of a fake 0, mirroring the Excel "—".
+      const hasLessonData =
+        (t.fullDeserved ?? 0) !== 0 ||
+        (t.covered ?? 0) !== 0 ||
+        (t.gap ?? 0) !== 0;
+      computed = {
+        month: sm.month,
+        hasLessonData,
+        netToPay: t.netToPay,
+        advances: t.advances,
+        gross: t.netToPay + t.advances,
+      };
+    } catch {
+      computed = null;
+    }
+
+    return { ...overview, salary: { ...overview.salary, computed } };
   }
 
   // "Oylik qarzdorlik + undirish" — per-month closing debt (frozen, ledger-

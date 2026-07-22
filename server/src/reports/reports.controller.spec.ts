@@ -21,7 +21,18 @@ describe('ReportsController — role guards', () => {
     getGroupAnalytics: jest.fn().mockResolvedValue({}),
     getLeadAnalytics: jest.fn().mockResolvedValue({}),
     getFinancialTrend: jest.fn().mockResolvedValue({}),
+    getIncomeMonthAttribution: jest.fn().mockResolvedValue({}),
     getFinancialOverview: jest.fn().mockResolvedValue({}),
+    getSalaryMonthly: jest.fn().mockResolvedValue({
+      month: '2026-07',
+      totals: {
+        netToPay: 100,
+        advances: 20,
+        fullDeserved: 120,
+        covered: 120,
+        gap: 0,
+      },
+    }),
     getPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherGroupsReport: jest.fn().mockResolvedValue({}),
@@ -160,6 +171,7 @@ describe('ReportsController — role guards', () => {
     'getMonthDebtDetail',
     'exportMonthlyDebtExcel',
     'getFinancialTrend',
+    'getIncomeMonthAttribution',
   ] as const;
 
   for (const method of narrowedEndpoints) {
@@ -366,19 +378,73 @@ describe('ReportsController — role guards', () => {
     const query = {} as any;
 
     it('returns the FULL payload for CEO', async () => {
-      const res = await controller.getFinancialOverview(query, {
+      const res: any = await controller.getFinancialOverview(query, {
+        id: 10001,
         companyId: 1,
         roles: ['CEO'],
       });
-      expect(res).toBe(fullOverview);
+      // Every sensitive field is preserved (the computed-salary fold is additive).
+      expect(res).toMatchObject({
+        income: fullOverview.income,
+        expenses: fullOverview.expenses,
+        netProfit: fullOverview.netProfit,
+        forecast: fullOverview.forecast,
+      });
+      expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
 
     it('returns the FULL payload for Branch Director', async () => {
-      const res = await controller.getFinancialOverview(query, {
+      const res: any = await controller.getFinancialOverview(query, {
+        id: 10002,
         companyId: 1,
         roles: ['Branch Director'],
       });
-      expect(res).toBe(fullOverview);
+      expect(res).toMatchObject({
+        income: fullOverview.income,
+        expenses: fullOverview.expenses,
+        netProfit: fullOverview.netProfit,
+      });
+      expect(res.salary.paid).toBe(fullOverview.salary.paid);
+    });
+
+    it('folds the computed monthly teacher salary into salary.computed for CEO (matches the Excel Oyliklar sheet)', async () => {
+      const res: any = await controller.getFinancialOverview(query, {
+        id: 10001,
+        companyId: 1,
+        roles: ['CEO'],
+      });
+      // netToPay + advances = gross (avans + oylik jami); hasLessonData true when
+      // the month has per-lesson data.
+      expect(res.salary.computed).toEqual({
+        month: '2026-07',
+        hasLessonData: true,
+        netToPay: 100,
+        advances: 20,
+        gross: 120,
+      });
+    });
+
+    it('degrades salary.computed to null (never throws) when the salary calc fails', async () => {
+      mockService.getSalaryMonthly.mockRejectedValueOnce(new Error('boom'));
+      const res: any = await controller.getFinancialOverview(query, {
+        id: 10001,
+        companyId: 1,
+        roles: ['CEO'],
+      });
+      expect(res.salary.computed).toBeNull();
+      // The rest of the payload is untouched.
+      expect(res.netProfit).toBe(fullOverview.netProfit);
+    });
+
+    it('does NOT compute salary for Administrator (no leak, no wasted query)', async () => {
+      mockService.getSalaryMonthly.mockClear();
+      const res: any = await controller.getFinancialOverview(query, {
+        id: 10003,
+        companyId: 1,
+        roles: ['Administrator'],
+      });
+      expect(res.salary).toBeUndefined();
+      expect(mockService.getSalaryMonthly).not.toHaveBeenCalled();
     });
 
     it('returns ONLY payer count + avg payment for Administrator', async () => {
@@ -415,11 +481,16 @@ describe('ReportsController — role guards', () => {
     });
 
     it('grants the full payload when the user holds Administrator AND Branch Director', async () => {
-      const res = await controller.getFinancialOverview(query, {
+      const res: any = await controller.getFinancialOverview(query, {
+        id: 10004,
         companyId: 1,
         roles: ['Administrator', 'Branch Director'],
       });
-      expect(res).toBe(fullOverview);
+      expect(res).toMatchObject({
+        income: fullOverview.income,
+        netProfit: fullOverview.netProfit,
+      });
+      expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
   });
 
