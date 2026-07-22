@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Wallet,
-  Receipt,
-  Banknote,
-  CreditCard,
-  HandCoins,
-  Coins,
-} from "lucide-react";
+import { Wallet, Receipt, Banknote, CreditCard } from "lucide-react";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { SummaryCard } from "./summary-card";
 
@@ -17,19 +10,19 @@ export interface ExpensesSummary {
   cashTotal: number;
   cardTotal: number;
   /**
-   * Ustozlarga berilgan avans (TEACHER_ADVANCE) jami. Jami summaga KIRADI —
-   * alohida card sifatida ham ko'rsatiladi.
+   * Ustozlarga berilgan avans (TEACHER_ADVANCE) jami. "Jami summa" kartasidan
+   * CHIQARIB tashlanadi — avans sof xarajat emas, oylikdan keyin ushlanadi.
    */
   advancesTotal: number;
 }
 
 /**
- * Six KPI cards bound to the backend `summary`, which spans the WHOLE filtered
+ * Four KPI cards bound to the backend `summary`, which spans the WHOLE filtered
  * set (not just the visible page) — so the totals stay correct while paging.
  *
- * "Jami summa" covers every category (advance included) — the full cash-out
- * record. "Avanssiz jami" is the same total minus teacher advances (pure
- * operational spend). "Ustozlar avansi" breaks the advance out on its own card.
+ * "Jami summa" = umumiy xarajatlar MINUS ustozlar avansi (sof xarajat). Avans
+ * bu yerda hisobga olinmaydi (u oylikdan keyin ushlanadi), shuning uchun alohida
+ * "Ustozlar avansi" kartasi ham ko'rsatilmaydi.
  */
 export function ExpensesSummaryCards({
   summary,
@@ -41,24 +34,12 @@ export function ExpensesSummaryCards({
     : 0;
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <SummaryCard
         icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
         tone="red"
         label="Jami summa"
-        value={summary ? `${formatBalance(summary.totalAmount)}` : "—"}
-      />
-      <SummaryCard
-        icon={<Coins className="size-5 text-violet-700 dark:text-violet-300" />}
-        tone="violet"
-        label="Avanssiz jami"
         value={summary ? `${formatBalance(nonAdvanceTotal)}` : "—"}
-      />
-      <SummaryCard
-        icon={<HandCoins className="size-5 text-amber-700 dark:text-amber-300" />}
-        tone="amber"
-        label="Ustozlar avansi"
-        value={summary ? `${formatBalance(summary.advancesTotal)}` : "—"}
       />
       <SummaryCard
         icon={<Banknote className="size-5 text-green-700 dark:text-green-300" />}
