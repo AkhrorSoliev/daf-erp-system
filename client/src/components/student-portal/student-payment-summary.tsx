@@ -26,8 +26,8 @@ const QUICK_AMOUNTS = [
 const MIN_PAYMENT = 1000;
 
 const PROVIDERS = [
-  { id: "PAYME", name: "Payme", logo: "/payme-logo.png", available: true },
-  { id: "CLICK", name: "Click", logo: "/click-logo.png", available: true },
+  { id: "PAYME", name: "Payme", logo: "/payme-logo-v2.png", available: true },
+  { id: "CLICK", name: "Click", logo: "/click-logo-v2.png", available: true },
   { id: "UZUM", name: "Uzum Bank", logo: "/uzum-bank.svg", available: false },
 ] as const;
 
@@ -127,7 +127,7 @@ export function StudentPaymentSummary() {
                 Joriy balans
               </p>
               <p
-                className={`font-display text-[30px] font-extrabold leading-none ${inDebt ? "text-danger" : "text-success"}`}
+                className={`font-display text-[26px] font-extrabold leading-none tabular-nums sm:text-[30px] ${inDebt ? "text-danger" : "text-success"}`}
               >
                 {formatBalance(balance)}
               </p>
@@ -188,7 +188,7 @@ export function StudentPaymentSummary() {
                     type="button"
                     disabled={redirecting}
                     onClick={() => pay(p.id as "PAYME" | "CLICK")}
-                    className="clay-white clay-btn flex h-16 items-center justify-center rounded-card border border-line bg-white px-4 disabled:opacity-60"
+                    className="clay-white clay-btn flex h-20 items-center justify-center overflow-hidden rounded-card border border-line bg-white px-4 disabled:opacity-60"
                   >
                     {redirecting ? (
                       <CircleNotch
@@ -201,7 +201,7 @@ export function StudentPaymentSummary() {
                       <img
                         src={p.logo}
                         alt={p.name}
-                        className="h-10 max-w-full object-contain"
+                        className="max-h-11 w-auto max-w-full object-contain"
                       />
                     )}
                   </button>
@@ -274,14 +274,14 @@ function PaymentHistory() {
                   {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <p
-                  className={`font-display text-sm font-extrabold ${positive ? "text-success" : "text-danger"}`}
+                  className={`font-display text-sm font-extrabold tabular-nums ${positive ? "text-success" : "text-danger"}`}
                 >
                   {positive ? "+" : ""}
                   {formatNumber(t.amount)} so&apos;m
                 </p>
-                <p className="text-xs font-semibold text-ink-500">
+                <p className="text-xs font-semibold tabular-nums text-ink-500">
                   {formatNumber(t.balanceAfter)} so&apos;m
                 </p>
               </div>

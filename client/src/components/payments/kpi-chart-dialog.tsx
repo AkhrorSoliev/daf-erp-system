@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { IncomeAttributionPanel } from "./income-attribution-panel";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
@@ -53,10 +54,11 @@ const kpiConfig: Record<
     description: "Oxirgi 6 oydagi umumiy tushumlar dinamikasi",
   },
   expenses: {
-    title: "Chiqimlar",
+    title: "Chiqimlar dinamikasi",
     color: "#dc2626",
     suffix: " so'm",
-    description: "Oxirgi 6 oydagi umumiy chiqimlar (xarajatlar + oyliklar)",
+    description:
+      "Oxirgi 6 oydagi umumiy chiqimlar (operatsion xarajatlar + oyliklar) dinamikasi. Yuqoridagi karta esa faqat joriy davr operatsion xarajatlarini ko'rsatadi.",
   },
   profit: {
     title: "Foyda",
@@ -107,9 +109,18 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   kpiKey: KpiKey | null;
+  /** Selected period (yyyy-MM-dd) — drives the income composition drill-down. */
+  startDate?: string;
+  endDate?: string;
 }
 
-export function KpiChartDialog({ open, onOpenChange, kpiKey }: Props) {
+export function KpiChartDialog({
+  open,
+  onOpenChange,
+  kpiKey,
+  startDate,
+  endDate,
+}: Props) {
   const { selectedBranch } = useBranchSwitcher();
 
   const { data: trend, isLoading } = useQuery({
@@ -257,6 +268,11 @@ export function KpiChartDialog({ open, onOpenChange, kpiKey }: Props) {
               })}
             </div>
           </div>
+        )}
+
+        {/* Income-only drill-down: real (this month) vs late (prior months). */}
+        {kpiKey === "income" && startDate && endDate && (
+          <IncomeAttributionPanel startDate={startDate} endDate={endDate} />
         )}
       </DialogContent>
     </Dialog>

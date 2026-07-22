@@ -51,7 +51,25 @@ interface FinancialOverview {
     outstandingReceivable: number;
     debtorExposure: { count: number; avgDebt: number };
   };
-  salary: { paid: number; pending: number; advances?: number };
+  salary: {
+    paid: number;
+    pending: number;
+    advances?: number;
+    /**
+     * Computed monthly teacher salary for the period's month — the SAME figure
+     * the downloaded Excel "Oyliklar" sheet and the /payments/salary page show
+     * (accrual/HISOBLANGAN basis, not the cash-paid `paid`). `null` when the
+     * calc is unavailable. `hasLessonData=false` for config-gap months (e.g. the
+     * May cutover) where deserved/covered can't be computed.
+     */
+    computed?: {
+      month: string;
+      hasLessonData: boolean;
+      netToPay: number;
+      advances: number;
+      gross: number;
+    } | null;
+  };
   expenses: number;
   netProfit: number;
   debtorCount: number;
@@ -78,6 +96,19 @@ function fmt(n: number) {
   return n.toLocaleString("uz-UZ");
 }
 
+const UZ_MONTHS = [
+  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+  "Iyul", "Avgust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
+];
+
+/** "2026-07" → "Iyul 2026". Fallback "Shu oy" when the month is unknown. */
+function monthLabel(m?: string) {
+  if (!m) return "Shu oy";
+  const [y, mo] = m.split("-").map(Number);
+  const name = UZ_MONTHS[(mo ?? 0) - 1];
+  return name ? `${name} ${y}` : "Shu oy";
+}
+
 interface PaymentsOverviewProps {
   startDate: string;
   endDate: string;
@@ -93,6 +124,11 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
   const canSeeFinancials =
     user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const canSeeWriteOffSummary = canSeeFinancials;
+  // Only a CEO can view arbitrary branches while the salary card stays
+  // company-wide (getMonthly scopes by caller role → CEO sees all branches, to
+  // match the Excel). A Branch Director's salary card is already their own
+  // branch, so no "barcha filiallar" caveat is needed for them.
+  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
 
   const { data, isLoading } = useQuery({
     queryKey: ["financial-overview", selectedBranch?.id, startDate, endDate, refreshKey],
@@ -154,7 +190,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       outstandingReceivable: 0,
       debtorExposure: { count: 0, avgDebt: 0 },
     },
-    salary: { paid: 0, pending: 0, advances: 0 },
+    salary: { paid: 0, pending: 0, advances: 0, computed: null },
     expenses: 0,
     netProfit: 0,
     debtorCount: 0,
@@ -192,13 +228,13 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               tooltip={`${d.income.paymentCount} ta to'lov orqali`}
               onClick={() => setChartKey("income")}
             />
-            {/* 2. Chiqimlar */}
+            {/* 2. Chiqimlar — faqat operatsion xarajatlar (oylik va avansdan tashqari) */}
             <KpiCard
               icon={Receipt}
               label="Chiqimlar"
-              value={`${fmt(d.expenses + d.salary.paid)} so'm`}
+              value={`${fmt(d.expenses)} so'm`}
               color="text-red-600 dark:text-red-400"
-              tooltip={`Xarajatlar: ${fmt(d.expenses)}, Oyliklar: ${fmt(d.salary.paid)}`}
+              tooltip="Operatsion xarajatlar (ijara, marketing, jihoz va boshqalar). Ustoz oyliklari va avanslar bu yerga kirmaydi — ular alohida 'Ustoz oyliklari' kartasida ko'rsatiladi."
               onClick={() => setChartKey("expenses")}
             />
             {/* 3. Foyda */}
@@ -207,7 +243,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="Foyda"
               value={`${fmt(d.netProfit)} so'm`}
               color={d.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
-              tooltip="Tushumlar - Chiqimlar (xarajatlar + oyliklar)"
+              tooltip="Sof foyda: tushumlardan barcha chiqimlar (operatsion xarajatlar + shu davrda to'langan oyliklar) ayirilgan."
               onClick={() => setChartKey("profit")}
             />
           </>
@@ -334,44 +370,92 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           </div>
         </div>
 
-        {/* Oyliklar */}
+        {/* Ustoz oyliklari — tanlangan oy uchun HISOBLANGAN (Excel "Oyliklar"
+            varag'i + /payments/salary bilan bir xil hisoblash). Avans + sof
+            oylik. Ko'rsatiladigan 3 qiymat (sof oylik / avans / jami) Excelda
+            hech qachon "—" bilan ketmaydi — shuning uchun ularni doim
+            ko'rsatamiz; "o'tish oyi" faqat izoh sifatida qo'shiladi. */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            Ustoz oyliklari
-          </p>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Banknote className="size-3" />
-                To&apos;langan
-              </span>
-              <span className="font-medium">
-                {fmt(d.salary.paid)} so&apos;m
-              </span>
-            </div>
-            {(d.salary.advances ?? 0) > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="cursor-help">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Ustoz oyliklari
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  {monthLabel(d.salary.computed?.month)} uchun hisoblangan
+                  {isCeo && selectedBranch ? " · barcha filiallar" : ""}
+                </p>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-64">
+              Bu ustozlarning shu oy uchun HISOBLANGAN oyligi — Excel
+              &quot;Oyliklar&quot; varag&apos;i va Oyliklar sahifasidagi bilan
+              aynan bir xil hisoblanadi. Oylik odatda keyingi oy boshida
+              to&apos;lanadi, shuning uchun bu &quot;Foyda&quot;dagi to&apos;langan
+              oylikdan farq qilishi mumkin.
+              {isCeo && selectedBranch
+                ? " Oylik barcha filiallar bo'yicha (Excel kabi), boshqa kartalar esa tanlangan filial bo'yicha."
+                : ""}
+            </TooltipContent>
+          </Tooltip>
+          {d.salary.computed ? (
+            <div className="space-y-2">
+              {/* a) Ustozlar olishi kerak bo'lgan summa (avans ayirilgan) */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex justify-between text-xs text-muted-foreground pl-4 cursor-help">
-                    <span>shundan avans</span>
-                    <span>{fmt(d.salary.advances ?? 0)} so&apos;m</span>
+                  <div className="flex justify-between text-sm cursor-help">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Banknote className="size-3" />
+                      Sof oylik (avanssiz)
+                    </span>
+                    <span className="font-medium">
+                      {fmt(d.salary.computed.netToPay)} so&apos;m
+                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-64">
-                  Bu davr oyligidan ushlab qolingan (hisoblangan) avans — oylik
-                  tarkibida ko&apos;rsatiladi. Berilgan, lekin hali ushlanmagan
-                  avans Chiqimga kirmaydi; u ushlangan oyda oylik sifatida
-                  hisoblanadi.
+                  Avans ayirilgach ustozlarga beriladigan summalar yig&apos;indisi.
+                  Excel &quot;Oyliklar&quot; varag&apos;idagi &quot;Sof
+                  to&apos;lanadigan&quot; ustuni bilan bir xil.
                 </TooltipContent>
               </Tooltip>
-            )}
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Kutilayotgan</span>
-              <span className="font-medium text-amber-600">
-                {fmt(d.salary.pending)} so&apos;m
-              </span>
+              {/* b) Avanslarning jami yig'indisi */}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Avans</span>
+                <span className="font-medium">
+                  {fmt(d.salary.computed.advances)} so&apos;m
+                </span>
+              </div>
+              {/* c) Avans + oylik jami */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex justify-between text-sm border-t pt-2 cursor-help">
+                    <span className="text-muted-foreground">
+                      Jami (avans + oylik)
+                    </span>
+                    <span className="font-semibold">
+                      {fmt(d.salary.computed.gross)} so&apos;m
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-64">
+                  Avans va sof to&apos;lanadigan oylik yig&apos;indisi — ustozlarga
+                  shu oy uchun beriladigan jami summa.
+                </TooltipContent>
+              </Tooltip>
+              {!d.salary.computed.hasLessonData && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 border-t pt-2">
+                  O&apos;tish oyi — bu oy uchun dars ma&apos;lumoti cheklangan
+                  (hisoblangan oylik to&apos;liq bo&apos;lmasligi mumkin).
+                </p>
+              )}
             </div>
-          </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Hisoblangan oylik ma&apos;lumoti mavjud emas
+            </p>
+          )}
         </div>
 
         {/* Qarzdorlik majmui — backend forecast.outstandingReceivable + debtorExposure */}
@@ -472,6 +556,8 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
         open={!!chartKey}
         onOpenChange={(open) => { if (!open) setChartKey(null); }}
         kpiKey={chartKey}
+        startDate={startDate}
+        endDate={endDate}
       />
     </div>
   );
