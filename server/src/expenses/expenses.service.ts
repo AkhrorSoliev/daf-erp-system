@@ -133,7 +133,12 @@ export class ExpensesService {
     return {
       companyId,
       deletedAt: null,
-      ...(query.category && { category: query.category }),
+      // TEACHER_ADVANCE is managed on the Ish haqi (salary) page now — advances
+      // never surface in the expenses list / summary / PDF. Any other category
+      // filter still applies; without one we simply exclude advances.
+      ...(query.category && query.category !== ExpenseCategory.TEACHER_ADVANCE
+        ? { category: query.category }
+        : { category: { not: ExpenseCategory.TEACHER_ADVANCE } }),
       ...(query.paymentMethod && { paymentMethod: query.paymentMethod }),
       ...(query.search && {
         description: { contains: query.search, mode: 'insensitive' },
@@ -186,11 +191,9 @@ export class ExpensesService {
       }),
     ]);
 
-    // The headline totals (Jami / Naqt / Karta) cover EVERY category, advance
-    // included — this page is the complete record of cash paid out. The advance
-    // subtotal is computed too and surfaced as `advancesTotal` so the UI can
-    // show it as its own card. (The /payments/overview "Chiqimlar" card is the
-    // avanssiz cost view — advances are excluded there, on purpose.)
+    // Advances are excluded from `where` (managed on the salary page), so the
+    // headline totals (Jami / Naqt / Karta) are the pure operational spend and
+    // `advancesTotal` here is always 0 (kept for response-shape stability).
     const sumWhere = (
       pred: (g: (typeof byCatMethod)[number]) => boolean,
     ): number =>

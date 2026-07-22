@@ -479,4 +479,48 @@ export class SalaryMonthlyService {
 
     return { month, floorMonth, period, data: rows, totals, staff, staffTotals };
   }
+
+  /**
+   * Per-teacher advance breakdown for the "Avans" cell drawer on the salary
+   * page. Lists each TEACHER_ADVANCE expense given to `userId` during the
+   * selected calendar month (same window as the monthly report's `advances`
+   * total) — date, amount, method, note and who recorded it. When an advance
+   * was taken "3 ga bo'lib" (in several parts), each part is its own row.
+   */
+  async getAdvancesForUser(
+    userId: number,
+    query: SalaryMonthlyQuery,
+    companyId: number,
+    performedById: number,
+  ) {
+    const { month, monthStart, nextMonthStart } = await resolveMonthlyScope(
+      this.prisma,
+      query,
+      companyId,
+      performedById,
+    );
+
+    const advances = await this.prisma.expense.findMany({
+      where: {
+        relatedUserId: userId,
+        category: 'TEACHER_ADVANCE',
+        companyId,
+        deletedAt: null,
+        date: { gte: monthStart, lt: nextMonthStart },
+      },
+      select: {
+        id: true,
+        amount: true,
+        date: true,
+        paymentMethod: true,
+        description: true,
+        createdAt: true,
+        createdBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    const total = advances.reduce((s, a) => s + a.amount, 0);
+    return { month, userId, count: advances.length, total, advances };
+  }
 }

@@ -10,8 +10,8 @@ export interface ExpensesSummary {
   cashTotal: number;
   cardTotal: number;
   /**
-   * Ustozlarga berilgan avans (TEACHER_ADVANCE) jami. "Jami summa" kartasidan
-   * CHIQARIB tashlanadi — avans sof xarajat emas, oylikdan keyin ushlanadi.
+   * Always 0 now — TEACHER_ADVANCE is excluded from the expenses endpoint
+   * (advances live on the Ish haqi page). Kept for response-shape stability.
    */
   advancesTotal: number;
 }
@@ -20,26 +20,21 @@ export interface ExpensesSummary {
  * Four KPI cards bound to the backend `summary`, which spans the WHOLE filtered
  * set (not just the visible page) — so the totals stay correct while paging.
  *
- * "Jami summa" = umumiy xarajatlar MINUS ustozlar avansi (sof xarajat). Avans
- * bu yerda hisobga olinmaydi (u oylikdan keyin ushlanadi), shuning uchun alohida
- * "Ustozlar avansi" kartasi ham ko'rsatilmaydi.
+ * "Jami summa" = umumiy operatsion xarajat. Ustozlar avansi bu ro'yxatga
+ * umuman kirmaydi (u /payments/salary sahifasida boshqariladi).
  */
 export function ExpensesSummaryCards({
   summary,
 }: {
   summary?: ExpensesSummary;
 }) {
-  const nonAdvanceTotal = summary
-    ? summary.totalAmount - summary.advancesTotal
-    : 0;
-
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <SummaryCard
         icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
         tone="red"
         label="Jami summa"
-        value={summary ? `${formatBalance(nonAdvanceTotal)}` : "—"}
+        value={summary ? `${formatBalance(summary.totalAmount)}` : "—"}
       />
       <SummaryCard
         icon={<Banknote className="size-5 text-green-700 dark:text-green-300" />}

@@ -44,7 +44,10 @@ describe('SalaryMonthlyService', () => {
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: { findMany: jest.fn().mockResolvedValue([]) },
-      expense: { groupBy: jest.fn().mockResolvedValue([]) },
+      expense: {
+        groupBy: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
@@ -423,5 +426,50 @@ describe('SalaryMonthlyService', () => {
 
     expect(res.floorMonth).toBe('2026-05');
     expect(res.month).toBe('2026-05');
+  });
+
+  describe('getAdvancesForUser', () => {
+    it('lists the teacher TEACHER_ADVANCE expenses for the month with a total', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        {
+          id: 'a1',
+          amount: 300_000,
+          date: new Date('2026-06-05'),
+          paymentMethod: 'CASH',
+          description: '1-qism',
+          createdAt: new Date('2026-06-05'),
+          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
+        },
+        {
+          id: 'a2',
+          amount: 200_000,
+          date: new Date('2026-06-20'),
+          paymentMethod: 'CARD',
+          description: '2-qism',
+          createdAt: new Date('2026-06-20'),
+          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
+        },
+      ]);
+
+      const res = await service.getAdvancesForUser(
+        10010,
+        { month: '2026-06' },
+        1,
+        999,
+      );
+
+      expect(res.month).toBe('2026-06');
+      expect(res.count).toBe(2);
+      expect(res.total).toBe(500_000);
+      const where = prisma.expense.findMany.mock.calls[0][0].where;
+      expect(where).toMatchObject({
+        relatedUserId: 10010,
+        category: 'TEACHER_ADVANCE',
+        companyId: 1,
+        deletedAt: null,
+      });
+      expect(where.date.gte).toBeInstanceOf(Date);
+      expect(where.date.lt).toBeInstanceOf(Date);
+    });
   });
 });

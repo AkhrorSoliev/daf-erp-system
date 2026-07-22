@@ -249,6 +249,26 @@ export class SalaryController {
     return this.salaryService.getMonthly(query, companyId, userId);
   }
 
+  /**
+   * Per-teacher advance breakdown for the "Avans" cell drawer on the salary
+   * page — each TEACHER_ADVANCE given to the teacher in the selected month.
+   */
+  @Get('advances/:userId')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getAdvances(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query('month') month: string | undefined,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getAdvancesForUser(
+      userId,
+      { month },
+      companyId,
+      performedById,
+    );
+  }
+
   @Get('payments/:id/breakdown')
   @Roles('CEO', 'Branch Director', 'Administrator')
   getPaymentBreakdown(
