@@ -254,6 +254,39 @@ export class LeadsService {
   }
 
   /**
+   * Leads that were converted into this student — powers the student profile
+   * "Lid tarixi" tab. A student can have more than one linked lead (e.g. two
+   * leads sharing a phone that were both linked to the same account), so this
+   * returns an array. No statusEnum filter: a converted lead is exactly what we
+   * want here (the board's `not CONVERTED` filter must NOT be copied). Archived
+   * leads are included too — the origin is still part of the student's history.
+   */
+  async findByStudentId(studentId: number) {
+    return this.prisma.lead.findMany({
+      where: { convertedStudentId: studentId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        statusEnum: true,
+        createdAt: true,
+        statusChangedAt: true,
+        deletedAt: true,
+        source: { select: { id: true, name: true } },
+        section: {
+          select: {
+            id: true,
+            name: true,
+            column: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Lightweight hover preview for a board card — who called and when, plus the
    * most recent comment (author + text + time). Fetched lazily on hover and
    * cached client-side, so it never runs on the initial board/section load and

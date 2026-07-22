@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -65,6 +66,14 @@ export class LeadsController {
   @Get(':id/hover-summary')
   getHoverSummary(@Param('id') id: string) {
     return this.leadsService.getHoverSummary(id);
+  }
+
+  // Leads converted into a given student — powers the student profile "Lid
+  // tarixi" tab. Declared before ':id' so the segment isn't captured as a lead
+  // id. studentId is a numeric student id, not a lead uuid.
+  @Get('by-student/:studentId')
+  findByStudentId(@Param('studentId', ParseIntPipe) studentId: number) {
+    return this.leadsService.findByStudentId(studentId);
   }
 
   @Get(':id')

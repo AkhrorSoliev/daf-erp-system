@@ -703,6 +703,24 @@ describe('LeadsService', () => {
     });
   });
 
+  describe('findByStudentId', () => {
+    it('returns leads linked to the student with no board status filter', async () => {
+      prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1' }]);
+
+      const result = await service.findByStudentId(10733);
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { convertedStudentId: 10733 } }),
+      );
+      // Must NOT copy the board's `statusEnum: { not: CONVERTED }` filter — a
+      // converted lead is exactly what the student profile tab wants to show.
+      const arg = prisma.lead.findMany.mock.calls.at(-1)?.[0];
+      expect(arg.where.statusEnum).toBeUndefined();
+      expect(arg.where.deletedAt).toBeUndefined();
+      expect(result).toEqual([{ id: 'lead-1' }]);
+    });
+  });
+
   describe('getHoverSummary', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
