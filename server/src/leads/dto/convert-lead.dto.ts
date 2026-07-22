@@ -21,4 +21,13 @@ export class ConvertLeadDto {
   @IsOptional()
   @IsDateString()
   startDate?: string;
+
+  // Optional: link this lead to an ALREADY-EXISTING student instead of creating
+  // a new one. Set when the detail drawer surfaced a phone-matched student and
+  // the admin chose "bog'lash". When present, no new Student/User is created —
+  // the lead is simply attached to this account (branchId/groupId are ignored).
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  existingStudentId?: number;
 }

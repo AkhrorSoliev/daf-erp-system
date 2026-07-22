@@ -154,7 +154,13 @@ export class LeadsService {
     }
 
     const leads = await this.prisma.lead.findMany({
-      where: { sectionId, deletedAt: null },
+      // Converted leads have moved to the students list — hide them from the
+      // board section so a converted lead never lingers in the funnel.
+      where: {
+        sectionId,
+        deletedAt: null,
+        statusEnum: { not: LeadStatus.CONVERTED },
+      },
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       select: LEAD_CARD_SELECT,
     });
@@ -230,7 +236,21 @@ export class LeadsService {
       },
     );
 
-    return { ...lead, mockParticipations };
+    // Phone-based duplicate guard for the detail drawer: if a live student
+    // already has this exact phone, surface them so the admin opens/links the
+    // existing account instead of converting the lead into a second account.
+    const matchedStudent = await this.prisma.student.findFirst({
+      where: { phone: lead.phone, deletedAt: null },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        status: true,
+      },
+    });
+
+    return { ...lead, mockParticipations, matchedStudent };
   }
 
   /**
@@ -666,54 +686,84 @@ export class LeadsService {
       );
     }
 
-    // If a target group is given, validate it up-front — before creating the
-    // student — so a bad group never leaves an orphan student behind. The
-    // student is assigned to the group's own branch (a group always lives in
-    // exactly one branch), so the group's branch overrides any `branchId`.
-    let resolvedBranchId = dto.branchId;
-    if (dto.groupId) {
-      const group = await this.prisma.group.findFirst({
-        where: { id: dto.groupId, deletedAt: null, companyId },
-        select: { branchId: true, statusEnum: true },
+    let studentId: number;
+
+    if (dto.existingStudentId) {
+      // Link path: this person is already a student (the detail drawer surfaces
+      // them via the phone match). Attach the lead to that existing account
+      // instead of minting a duplicate — no new Student/portal User is created.
+      const existing = await this.prisma.student.findFirst({
+        where: { id: dto.existingStudentId, deletedAt: null, companyId },
+        select: { id: true },
       });
-      if (!group) {
-        throw new NotFoundException('Guruh topilmadi');
+      if (!existing) {
+        throw new NotFoundException("Bog'lanadigan o'quvchi topilmadi");
       }
-      const ENROLLABLE_STATUSES = ['ACTIVE', 'FORMING', 'PAUSED'];
-      if (!ENROLLABLE_STATUSES.includes(group.statusEnum)) {
+      studentId = existing.id;
+    } else {
+      // Create path. Guard against a duplicate first: if a live student already
+      // holds this phone, refuse to mint a second account and point at the
+      // existing one so the admin links instead (the hard one-phone rule).
+      const samePhone = await this.prisma.student.findFirst({
+        where: { phone: lead.phone, deletedAt: null },
+        select: { id: true },
+      });
+      if (samePhone) {
         throw new BadRequestException(
-          "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
+          `Bu telefon raqam bilan o'quvchi allaqachon mavjud (#${samePhone.id}). Yangi akkaunt yaratilmadi — lidni mavjud o'quvchiga bog'lang.`,
         );
       }
-      resolvedBranchId = group.branchId;
-    }
 
-    const student = await this.studentsService.create(
-      {
-        firstName: lead.firstName,
-        lastName: lead.lastName,
-        phone: lead.phone,
-        gender: lead.gender ?? undefined,
-        telegram: lead.telegram ?? undefined,
-        parentPhone: lead.parentPhone ?? undefined,
-        parentName: lead.parentName ?? undefined,
-        branchIds: resolvedBranchId ? [resolvedBranchId] : undefined,
-      },
-      companyId,
-      userId,
-    );
+      // If a target group is given, validate it up-front — before creating the
+      // student — so a bad group never leaves an orphan student behind. The
+      // student is assigned to the group's own branch (a group always lives in
+      // exactly one branch), so the group's branch overrides any `branchId`.
+      let resolvedBranchId = dto.branchId;
+      if (dto.groupId) {
+        const group = await this.prisma.group.findFirst({
+          where: { id: dto.groupId, deletedAt: null, companyId },
+          select: { branchId: true, statusEnum: true },
+        });
+        if (!group) {
+          throw new NotFoundException('Guruh topilmadi');
+        }
+        const ENROLLABLE_STATUSES = ['ACTIVE', 'FORMING', 'PAUSED'];
+        if (!ENROLLABLE_STATUSES.includes(group.statusEnum)) {
+          throw new BadRequestException(
+            "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
+          );
+        }
+        resolvedBranchId = group.branchId;
+      }
 
-    // Enroll the brand-new student into the chosen group. A fresh student has
-    // no existing enrollment, so this is never a transfer — no transfer reason
-    // is needed. enrollToGroup re-validates the group + records history.
-    if (dto.groupId) {
-      await this.studentEnrollmentService.enrollToGroup(
-        student.id,
-        dto.groupId,
-        userId,
+      const student = await this.studentsService.create(
+        {
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          phone: lead.phone,
+          gender: lead.gender ?? undefined,
+          telegram: lead.telegram ?? undefined,
+          parentPhone: lead.parentPhone ?? undefined,
+          parentName: lead.parentName ?? undefined,
+          branchIds: resolvedBranchId ? [resolvedBranchId] : undefined,
+        },
         companyId,
-        dto.startDate ? { startDate: dto.startDate } : {},
+        userId,
       );
+      studentId = student.id;
+
+      // Enroll the brand-new student into the chosen group. A fresh student has
+      // no existing enrollment, so this is never a transfer — no transfer reason
+      // is needed. enrollToGroup re-validates the group + records history.
+      if (dto.groupId) {
+        await this.studentEnrollmentService.enrollToGroup(
+          student.id,
+          dto.groupId,
+          userId,
+          companyId,
+          dto.startDate ? { startDate: dto.startDate } : {},
+        );
+      }
     }
 
     const updated = await this.prisma.lead.update({
@@ -721,7 +771,7 @@ export class LeadsService {
       data: {
         statusEnum: LeadStatus.CONVERTED,
         status: 'converted',
-        convertedStudentId: student.id,
+        convertedStudentId: studentId,
         statusChangedAt: new Date(),
         statusChangedById: userId,
       },
@@ -737,6 +787,6 @@ export class LeadsService {
       companyId,
     });
 
-    return { studentId: student.id, lead: await this.withCommentCount(updated) };
+    return { studentId, lead: await this.withCommentCount(updated) };
   }
 }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { LeadStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -31,7 +32,14 @@ export class LeadsBoardService {
 
     const counts = await this.prisma.lead.groupBy({
       by: ['sectionId'],
-      where: { deletedAt: null, sectionId: { not: null } },
+      // Converted leads have left the funnel — they now live in the students
+      // list, so they must not be counted on the active board. (LOST leads are
+      // already excluded because deleting a lead sets deletedAt.)
+      where: {
+        deletedAt: null,
+        sectionId: { not: null },
+        statusEnum: { not: LeadStatus.CONVERTED },
+      },
       _count: true,
     });
     const countBySection = new Map<string, number>();

@@ -84,7 +84,24 @@ interface LeadDetail {
   } | null;
   formSubmissions: LeadFormSubmission[];
   mockParticipations: LeadMockParticipation[];
+  // A live student that already holds this lead's phone, if any. Surfaced so the
+  // admin links to the existing account instead of creating a duplicate.
+  matchedStudent: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    status: string;
+  } | null;
 }
+
+const STUDENT_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Faol",
+  FROZEN: "Muzlatilgan",
+  GRADUATED: "Bitirgan",
+  EXPELLED: "Chetlatilgan",
+  ARCHIVED: "Arxivlangan",
+};
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -254,6 +271,7 @@ export function LeadDetailDrawer() {
   const openDelete = useLeadsUi((s) => s.openDelete);
   const openConvertLead = useLeadsUi((s) => s.openConvertLead);
   const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
+  const applyLeadRemove = useLeadsBoard((s) => s.applyLeadRemove);
   const bumpLeadCommentCount = useLeadsBoard((s) => s.bumpLeadCommentCount);
   const detailLeadTab = useLeadsUi((s) => s.detailLeadTab);
   const clearDetailLeadTab = useLeadsUi((s) => s.clearDetailLeadTab);
@@ -269,6 +287,7 @@ export function LeadDetailDrawer() {
   const [lead, setLead] = useState<LeadDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -306,6 +325,25 @@ export function LeadDetailDrawer() {
       router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     }
   }, [closeLeadDetail, pathname, router, searchParams]);
+
+  // Attach the lead to the already-existing phone-matched student instead of
+  // creating a duplicate. The lead becomes CONVERTED and leaves the board.
+  const handleLinkToStudent = useCallback(async () => {
+    if (!lead?.matchedStudent) return;
+    setLinking(true);
+    try {
+      await api.post(`/leads/${lead.id}/convert`, {
+        existingStudentId: lead.matchedStudent.id,
+      });
+      if (lead.section) applyLeadRemove(lead.section.id, lead.id);
+      toast.success("Lid mavjud o'quvchiga bog'landi");
+      handleCloseDetail();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Bog'lashda xatolik yuz berdi"));
+    } finally {
+      setLinking(false);
+    }
+  }, [lead, applyLeadRemove, handleCloseDetail]);
 
   useEffect(() => {
     if (!leadId) return;
@@ -525,6 +563,51 @@ export function LeadDetailDrawer() {
                     >
                       O&apos;quvchi sahifasini ochish →
                     </Button>
+                  </div>
+                ) : lead.matchedStudent ? (
+                  <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50/60 p-3 dark:border-amber-800/60 dark:bg-amber-950/30">
+                    <div>
+                      <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                        Bu telefon bilan o&apos;quvchi allaqachon mavjud
+                      </p>
+                      <p className="mt-1 text-sm">
+                        {lead.matchedStudent.firstName}{" "}
+                        {lead.matchedStudent.lastName}{" "}
+                        <span className="text-muted-foreground">
+                          #{lead.matchedStudent.id} ·{" "}
+                          {STUDENT_STATUS_LABELS[lead.matchedStudent.status] ??
+                            lead.matchedStudent.status}
+                        </span>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Dublikat oldini olish uchun yangi akkaunt yaratilmaydi —
+                        mavjud o&apos;quvchiga bog&apos;lang.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          router.push(
+                            `/students/profile/${lead.matchedStudent!.id}`,
+                          )
+                        }
+                      >
+                        <GraduationCap className="size-4" />
+                        Profilni ochish
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleLinkToStudent}
+                        disabled={linking}
+                      >
+                        {linking ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : null}
+                        Shu o&apos;quvchiga bog&apos;lash
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <Button

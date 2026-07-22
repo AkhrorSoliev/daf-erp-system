@@ -63,7 +63,7 @@ function getDaysList(days: string | null, exactDays: string[]): string[] {
 export function ConvertLeadDialog() {
   const convertLead = useLeadsUi((s) => s.convertLead);
   const closeConvertLead = useLeadsUi((s) => s.closeConvertLead);
-  const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
+  const applyLeadRemove = useLeadsBoard((s) => s.applyLeadRemove);
   const branches = useBranchSwitcher((s) => s.branches);
 
   const [branchId, setBranchId] = useState("");
@@ -144,11 +144,12 @@ export function ConvertLeadDialog() {
       const payload: { branchId?: number; groupId?: string } = {};
       if (branchId) payload.branchId = Number(branchId);
       if (groupId) payload.groupId = groupId;
-      const { data } = await api.post<{ studentId: number; lead: LeadCard }>(
+      await api.post<{ studentId: number; lead: LeadCard }>(
         `/leads/${convertLead.id}/convert`,
         payload,
       );
-      applyLeadUpdate(convertLead.sectionId, data.lead);
+      // A converted lead leaves the funnel — drop its card from the board.
+      applyLeadRemove(convertLead.sectionId, convertLead.id);
       toast.success(
         groupId
           ? "Lid o'quvchiga aylantirildi va guruhga qo'shildi"
