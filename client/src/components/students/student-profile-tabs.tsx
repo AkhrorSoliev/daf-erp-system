@@ -10,6 +10,7 @@ import { CommentForm } from "@/components/shared/comment-form";
 import { SmsTab } from "@/components/students/sms-tab";
 import { StudentCallHistoryTab } from "@/components/students/student-call-history-tab";
 import { StudentMockExamsTab } from "@/components/students/student-mock-exams-tab";
+import { StudentLeadTab } from "@/components/students/student-lead-tab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
@@ -452,7 +453,7 @@ export function StudentProfileTabs({
 
         {/* Lid tarixi */}
         <TabsContent value="lid">
-          <EmptyState message="Lid tarixi mavjud emas" />
+          <StudentLeadTab studentId={student.id} />
         </TabsContent>
 
         {/* Mock imtihonlar */}
