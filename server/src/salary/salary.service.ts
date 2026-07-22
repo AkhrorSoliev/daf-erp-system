@@ -95,6 +95,21 @@ export class SalaryService {
     return this.monthly.getMonthly(query, companyId, performedById);
   }
 
+  // Per-teacher advance breakdown for the salary "Avans" cell drawer.
+  getAdvancesForUser(
+    userId: number,
+    query: SalaryMonthlyQuery,
+    companyId: number,
+    performedById: number,
+  ) {
+    return this.monthly.getAdvancesForUser(
+      userId,
+      query,
+      companyId,
+      performedById,
+    );
+  }
+
   // Calculation
   calculateMonthlySalaries(companyId: number, opts?: { asOfDate?: Date }) {
     return this.calculation.calculateMonthlySalaries(companyId, opts);

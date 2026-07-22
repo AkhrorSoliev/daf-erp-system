@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Info, Search, Settings2 } from "lucide-react";
+import { HandCoins, Info, Search, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,11 @@ import {
   monthLabel,
 } from "./salary-utils";
 import { SalarySettingsSheet } from "./salary-settings-sheet";
+import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
+import {
+  SalaryAdvanceBreakdownDrawer,
+  type AdvanceTarget,
+} from "./salary-advance-breakdown-drawer";
 import {
   SalaryMonthlyStaffTable,
   type StaffRow,
@@ -92,6 +97,8 @@ const filtersSchema = {
 
 interface Props {
   isCeo: boolean;
+  /** CEO/BD — may add advances (backed by the CEO/BD expense-create endpoint). */
+  canPay: boolean;
   onOpenBreakdown: (paymentId: string) => void;
   refreshKey: number;
   bumpRefresh: () => void;
@@ -112,6 +119,7 @@ function MoneyOrDash({
 
 export function SalaryMonthlyView({
   isCeo,
+  canPay,
   onOpenBreakdown,
   refreshKey,
   bumpRefresh,
@@ -119,6 +127,10 @@ export function SalaryMonthlyView({
   const { filters, setFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [addAdvanceOpen, setAddAdvanceOpen] = useState(false);
+  const [advanceTarget, setAdvanceTarget] = useState<AdvanceTarget | null>(
+    null,
+  );
 
   const maxMonth = currentMonthKey();
   const month = filters.month || maxMonth;
@@ -169,6 +181,15 @@ export function SalaryMonthlyView({
             }}
           />
         </div>
+        {canPay && (
+          <Button
+            className="shrink-0"
+            onClick={() => setAddAdvanceOpen(true)}
+          >
+            <HandCoins className="size-4" />
+            Avans qo&apos;shish
+          </Button>
+        )}
         {isCeo && (
           <Button
             variant="outline"
@@ -301,9 +322,24 @@ export function SalaryMonthlyView({
                         )}
                       />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell
+                      className="text-right tabular-nums"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {row.advances > 0 ? (
-                        formatPrice(row.advances)
+                        <button
+                          type="button"
+                          className="font-medium text-amber-700 hover:underline dark:text-amber-400"
+                          onClick={() =>
+                            setAdvanceTarget({
+                              userId: row.user.id,
+                              name: `${row.user.firstName} ${row.user.lastName}`,
+                              month: shownMonth,
+                            })
+                          }
+                        >
+                          {formatPrice(row.advances)}
+                        </button>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -433,6 +469,21 @@ export function SalaryMonthlyView({
           onChanged={bumpRefresh}
         />
       )}
+
+      {/* Avans qo'shish — CEO/BD */}
+      {canPay && (
+        <SalaryAddAdvanceDialog
+          open={addAdvanceOpen}
+          onOpenChange={setAddAdvanceOpen}
+          onSaved={bumpRefresh}
+        />
+      )}
+
+      {/* Avans breakdown drawer (opened from the Avans cell) */}
+      <SalaryAdvanceBreakdownDrawer
+        target={advanceTarget}
+        onClose={() => setAdvanceTarget(null)}
+      />
     </div>
   );
 }

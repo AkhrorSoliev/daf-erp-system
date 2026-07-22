@@ -12,12 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// TEACHER_ADVANCE is intentionally absent — advances are created and viewed on
+// the Ish haqi (/payments/salary) page, never here.
 export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   RENT: "Ijara",
   UTILITIES: "Kommunal",
   SUPPLIES: "Ta'minot",
   MARKETING: "Marketing",
-  TEACHER_ADVANCE: "Ustozga avans",
   OTHER: "Boshqa",
 };
 

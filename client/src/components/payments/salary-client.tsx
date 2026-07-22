@@ -30,6 +30,7 @@ export function SalaryClient() {
 
       <SalaryMonthlyView
         isCeo={isCeo}
+        canPay={canPay}
         onOpenBreakdown={setBreakdownPaymentId}
         refreshKey={refreshKey}
         bumpRefresh={bumpRefresh}

@@ -54,6 +54,7 @@ describe('SalaryController @Roles metadata', () => {
       'getMatrix',
       'getOverview',
       'getMonthly',
+      'getAdvances',
       'getPaymentBreakdown',
     ] as const;
     it.each(readers)('%s allows CEO/BD/Administrator', (method) => {

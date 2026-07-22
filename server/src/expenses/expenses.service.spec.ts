@@ -163,43 +163,19 @@ describe('ExpensesService — findAll filters + summary', () => {
     expect(call.by).toEqual(['category', 'paymentMethod']);
   });
 
-  it('includes TEACHER_ADVANCE in the headline totals AND exposes it separately as advancesTotal', async () => {
-    prisma.expense.count.mockResolvedValue(5);
-    prisma.expense.groupBy.mockResolvedValue([
-      {
-        category: ExpenseCategory.RENT,
-        paymentMethod: ExpensePaymentMethod.CASH,
-        _sum: { amount: 1_000_000 },
-      },
-      {
-        category: ExpenseCategory.MARKETING,
-        paymentMethod: ExpensePaymentMethod.CARD,
-        _sum: { amount: 300_000 },
-      },
-      {
-        category: ExpenseCategory.TEACHER_ADVANCE,
-        paymentMethod: ExpensePaymentMethod.CASH,
-        _sum: { amount: 500_000 },
-      },
-      {
-        category: ExpenseCategory.TEACHER_ADVANCE,
-        paymentMethod: ExpensePaymentMethod.CARD,
-        _sum: { amount: 200_000 },
-      },
-    ]);
-
-    const res = await service.findAll({} as ExpenseQueryDto, COMPANY_ID);
-
-    expect(res.summary).toEqual({
-      // Jami includes EVERY category, advance included: 2.0M.
-      totalAmount: 2_000_000,
-      count: 5,
-      // Cash: 1.0M rent + 0.5M advance = 1.5M; Card: 0.3M mkt + 0.2M adv = 0.5M.
-      cashTotal: 1_500_000,
-      cardTotal: 500_000,
-      // Advance is still broken out for its own card.
-      advancesTotal: 700_000,
+  it('excludes TEACHER_ADVANCE from the list/summary (managed on the salary page)', async () => {
+    await service.findAll({} as ExpenseQueryDto, COMPANY_ID);
+    expect(whereArg().category).toEqual({
+      not: ExpenseCategory.TEACHER_ADVANCE,
     });
+  });
+
+  it('honours a non-advance category filter (still excluding advances implicitly)', async () => {
+    await service.findAll(
+      { category: ExpenseCategory.MARKETING } as ExpenseQueryDto,
+      COMPANY_ID,
+    );
+    expect(whereArg().category).toEqual(ExpenseCategory.MARKETING);
   });
 
   it('defaults missing payment-method buckets to 0', async () => {
