@@ -311,8 +311,16 @@ export class ReportsExcelService {
       nowLabel(),
     );
     // Single authoritative "Sof foyda" — assembled once, reused by the summary
-    // headline + the dedicated sheet + the reconciliation tie.
-    const np = buildNetProfit(pl, salaries, outflows);
+    // headline + the dedicated sheet + the reconciliation tie. Revenue is the
+    // "dars tushumi" (recognized — lessons HELD this month), so it pairs with the
+    // covered teacher salary and isolates the month from late/pre-payments.
+    const [rvY, rvM] = monthStr.split('-').map(Number);
+    const recognizedRevenue = await this.reports.getRecognizedRevenue(companyId, {
+      start: new Date(Date.UTC(rvY, rvM - 1, 1)),
+      end: new Date(Date.UTC(rvY, rvM, 1)),
+      branchId: query.branchId,
+    });
+    const np = buildNetProfit(pl, salaries, outflows, monthStr, recognizedRevenue);
     summarySheet(wb, overview, prior, period, currentTag, priorTag, np);
     netProfitSheet(wb, np, period);
     profitLossSheet(wb, pl, period);

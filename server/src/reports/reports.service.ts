@@ -31,6 +31,7 @@ import {
   AttendanceByGroupQueryDto,
   AttendanceTeacherPerfQueryDto,
 } from './dto/attendance-reports-query.dto';
+import { buildNetProfit, NetProfit } from './reports-excel.helpers';
 import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
@@ -87,6 +88,52 @@ export class ReportsService {
   // drives branch scope (CEO/Admin → all teachers; BD → own branch).
   getSalaryMonthly(companyId: number, month: string, performedById: number) {
     return this.salary.getMonthly({ month }, companyId, performedById);
+  }
+  // "Dars tushumi" — recognized revenue for lessons HELD in the window (by
+  // attendance date), the isolated basis the Foyda card + Excel "Sof foyda" use.
+  getRecognizedRevenue(
+    companyId: number,
+    opts: { start: Date; end: Date; branchId?: number },
+  ) {
+    return this.financial.getRecognizedRevenue(companyId, opts);
+  }
+
+  /**
+   * Canonical monthly "Sof foyda" — the ONE net-profit figure the Foyda card and
+   * the Excel "Sof foyda" sheet share, so they can never disagree:
+   *
+   *   dars tushumi (recognized — lessons held this month)
+   *   − ustoz oyligi (covered + center top-up gap, gated from TOPUP_EFFECTIVE_MONTH)
+   *   − admin oyligi − operatsion xarajatlar (avanssiz) − qaytarishlar
+   *   = SOF FOYDA
+   *
+   * Each month is isolated to its own lessons; late payments recognize in the
+   * lesson's month, so the current month is never painted by old-debt cash.
+   * `performedById` drives branch scope (CEO/BD). Month = "YYYY-MM".
+   */
+  async getMonthlyNetProfit(
+    companyId: number,
+    {
+      month,
+      branchId,
+      performedById,
+    }: { month: string; branchId?: number; performedById: number },
+  ): Promise<NetProfit> {
+    const [y, m] = month.split('-').map(Number);
+    const startDate = `${month}-01`;
+    const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+    const scope = { branchId, startDate, endDate };
+    const [recognizedRevenue, sm, pl, outflows] = await Promise.all([
+      this.getRecognizedRevenue(companyId, {
+        start: new Date(Date.UTC(y, m - 1, 1)),
+        end: new Date(Date.UTC(y, m, 1)),
+        branchId,
+      }),
+      this.getSalaryMonthly(companyId, month, performedById),
+      this.getProfitLoss(companyId, scope),
+      this.getPeriodOutflows(companyId, scope),
+    ]);
+    return buildNetProfit(pl, sm, outflows, month, recognizedRevenue);
   }
   getDebtorLineItems(companyId: number, branchIds?: number[]) {
     return this.debtors.getDebtorLineItems(companyId, branchIds);

@@ -147,13 +147,30 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
   sheetTitle(ws, 'Sof foyda — aniq natija', period, 3);
 
   const teacherLabel =
-    np.teacherSalaryBasis === 'hisoblangan'
-      ? 'Ustoz oyligi (hisoblangan — bu oy uchun)'
-      : "Ustoz oyligi (naqd to'langan)";
+    np.teacherSalaryBasis === 'naqd'
+      ? "Ustoz oyligi (naqd to'langan)"
+      : np.teacherSalaryHasTopup
+        ? 'Ustoz oyligi (hisoblangan + markaz qo‘shimchasi)'
+        : 'Ustoz oyligi (hisoblangan — o‘quvchilar to‘lagani)';
+  const teacherNote =
+    np.teacherSalaryBasis === 'naqd'
+      ? 'Bu davrda ustozlarga real to‘langan oylik (dars ma‘lumoti yo‘q oyda shu ishlatiladi).'
+      : np.teacherSalaryHasTopup
+        ? 'Shu oy darslari uchun ustozlar HAQ QILGAN to‘liq oylik: o‘quvchilar to‘lagani + markaz qo‘shimchasi (qarzdor o‘quvchilar darsi ham). Naqd odatda keyingi oy chiqadi.'
+        : 'Shu oy o‘quvchilar TO‘LAGAN darslar uchun ustoz haqi. Markaz qo‘shimchasi (top-up) bu oyda YO‘Q — u faqat 2026-07 dan boshlanadi.';
+
+  const revenueLabel =
+    np.revenueBasis === 'recognized'
+      ? 'Dars tushumi (o‘tilgan darslar)'
+      : 'Tushum (qabul qilingan to‘lovlar)';
+  const revenueNote =
+    np.revenueBasis === 'recognized'
+      ? 'Shu oy O‘TILGAN va to‘langan darslarning to‘liq qiymati. Kech to‘lovlar o‘z darsi oyiga, oldindan to‘lovlar dars o‘tilgan oyiga yoziladi — shu oy faqat o‘z darslarini ko‘rsatadi.'
+      : 'Bu davrda kassaga real tushgan to‘lovlar (COMPLETED).';
 
   sectionHeader(ws, 'SOF FOYDA HISOBI');
-  kvRow(ws, 'Tushum (qabul qilingan to‘lovlar)', np.revenue, 'Bu davrda kassaga real tushgan to‘lovlar (COMPLETED).');
-  kvRow(ws, `−  ${teacherLabel}`, np.teacherSalary, np.teacherSalaryBasis === 'hisoblangan' ? 'Shu oy darslari uchun ustozlar HAQ QILGAN to‘liq oylik (o‘quvchilar to‘lagani + markaz qo‘shimchasi). Naqd odatda keyingi oy chiqadi.' : 'Bu davrda ustozlarga real to‘langan oylik (dars ma‘lumoti yo‘q oyda shu ishlatiladi).');
+  kvRow(ws, revenueLabel, np.revenue, revenueNote);
+  kvRow(ws, `−  ${teacherLabel}`, np.teacherSalary, teacherNote);
   kvRow(ws, '−  Admin oyligi', np.adminSalary, 'Ustoz bo‘lmagan xodimlar (admin/kassir) oyligi — hozircha 0.');
   kvRow(ws, '−  Operatsion xarajatlar (avanssiz)', np.operatingExpenses, 'Ijara, kommunal, marketing va h.k. Ustoz avansi bu yerda EMAS — u oylik ichida.');
   kvRow(ws, '−  Qaytarishlar (refund)', np.refunds, 'O‘quvchilarga qaytarilgan real naqd pul — avval hech qayerda ayirilmasdi.');
@@ -178,9 +195,9 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
   sheetNotes(ws, [
     'Bu — savolga aniq javob: BARCHA real chiqimlardan keyin markazda qancha sof foyda qolgani.',
     'SOF FOYDA = Tushum − Ustoz oyligi (hisoblangan) − Admin oyligi − Operatsion xarajatlar (avanssiz) − Qaytarishlar.',
-    'Ustoz oyligi HISOBLANGAN asosda: shu oy darslari uchun ustozlar haq qilgan to‘liq summa (o‘quvchilar to‘lamagan qismini markaz qoplaydi). Naqd oylik odatda keyingi oy chiqqani uchun, «naqd» asosda bu raqam 0 ko‘rinib, foydani sun‘iy oshirardi — shuning uchun hisoblangan asos olindi.',
+    'Ustoz oyligi HISOBLANGAN asosda (naqd emas): naqd oylik odatda keyingi oy chiqqani uchun «naqd» asosda bu raqam 0 ko‘rinib, foydani sun‘iy oshirardi. Markaz qo‘shimchasi (qarzdor o‘quvchilar darsi uchun) faqat 2026-07 dan qo‘shiladi — undan oldingi oylarda ustoz haqi = o‘quvchilar to‘lagani (covered), chunki o‘shanda markaz qo‘shimcha bermagan.',
     'Ustoz avansi ikki marta hisoblanmaydi: u «hisoblangan oylik» ichida bor, shuning uchun «Operatsion xarajatlar»dan chiqarilgan (avanssiz).',
-    'Diqqat: Tushum — bu davrda tushgan pul (kelajak darslar uchun oldindan to‘lov ham bo‘lishi mumkin), ustoz oyligi esa shu oy o‘tgan darslar bo‘yicha. Shuning uchun bitta oyda bu ehtiyotkor (past) baho — «Foyda va zarar» va «Oylik dinamika» bo‘limlari bilan birga o‘qing.',
+    'Tushum va ustoz oyligi BIR XIL asosda — shu oy o‘tilgan darslar bo‘yicha (dars tushumi = recognized). Shuning uchun kech kelgan to‘lovlar bu oyni bo‘yamaydi (o‘z darsi oyiga ketadi) va oldindan to‘lovlar kelajak oyga qoladi. Har oy o‘zining toza foydasini ko‘rsatadi.',
     'Kechirilgan qarz va gateway komissiyasi — pastda «ma‘lumot uchun», foydadan ayirilmagan.',
   ], 3);
 }

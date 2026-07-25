@@ -243,7 +243,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="Foyda"
               value={`${fmt(d.netProfit)} so'm`}
               color={d.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
-              tooltip="Sof foyda: tushumlardan barcha chiqimlar (operatsion xarajatlar + shu davrda to'langan oyliklar) ayirilgan."
+              tooltip="Sof foyda: shu oy o'tilgan darslar tushumidan ustoz oyligi (o'quvchilar to'lagani + iyuldan markaz qo'shimchasi), xarajatlar va qaytarishlar ayirilgan. Har oy o'z darslari bo'yicha — kech to'lovlar aralashmaydi."
               onClick={() => setChartKey("profit")}
             />
           </>
@@ -390,10 +390,10 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-64">
               Bu ustozlarning shu oy uchun HISOBLANGAN oyligi — Excel
-              &quot;Oyliklar&quot; varag&apos;i va Oyliklar sahifasidagi bilan
-              aynan bir xil hisoblanadi. Oylik odatda keyingi oy boshida
-              to&apos;lanadi, shuning uchun bu &quot;Foyda&quot;dagi to&apos;langan
-              oylikdan farq qilishi mumkin.
+              &quot;Oyliklar&quot; varag&apos;i, Oyliklar sahifasi va
+              &quot;Foyda&quot; kartasi bilan aynan bir xil asosda (o&apos;quvchilar
+              to&apos;lagani + iyuldan markaz qo&apos;shimchasi). Naqd oylik odatda
+              keyingi oy boshida chiqadi.
               {isCeo && selectedBranch
                 ? " Oylik barcha filiallar bo'yicha (Excel kabi), boshqa kartalar esa tanlangan filial bo'yicha."
                 : ""}
