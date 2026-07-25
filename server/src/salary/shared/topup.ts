@@ -44,3 +44,42 @@ export function isTopUpMonth(monthKey: string): boolean {
 export function isTopUpPeriod(periodStart: Date): boolean {
   return isTopUpMonth(monthKeyOf(periodStart));
 }
+
+/**
+ * BR-06 / BR-08 / BR-11 (amal 2026-07): an ABSENT ("kelmadi") lesson earns the
+ * teacher NOTHING and the center adds NO top-up for it — the student is still
+ * billed (their reserved slot / held lesson), so the center keeps that money.
+ *
+ * Scoped to the top-up era: only lessons whose SERVICE month is at/after
+ * `TOPUP_EFFECTIVE_MONTH` are affected. Pre-July (May/June) ABSENT lessons keep
+ * the old "lesson held = teacher paid" behaviour so BR-12 (May/June late
+ * payments still reach the teacher) is not disturbed. EXCUSED is unaffected —
+ * it already never bills or accrues.
+ *
+ * `status` is an `AttendanceStatus` value (string enum); typed loosely so this
+ * pure date/string module stays free of a Prisma import.
+ */
+export function absentExcludedFromSalary(
+  status: string,
+  lessonDate: Date,
+): boolean {
+  return status === 'ABSENT' && monthKeyOf(lessonDate) >= TOPUP_EFFECTIVE_MONTH;
+}
+
+/**
+ * BR-09 (yangi o'quvchi istisnosi): the center does NOT front (top up) a new
+ * student's lessons until that student has *attended* at least this many
+ * lessons (PRESENT/LATE) in the group. A trial student who attends the first 3
+ * and then disappears (or leaves) before a 4th confirmed lesson never generates
+ * a center top-up. Once the count reaches the threshold, the earlier lessons
+ * become eligible too (recomputed idempotently; cross-period backfill in a
+ * later phase). Only the center-funded top-up is gated — a student who actually
+ * PAYS earns the teacher normally regardless of count.
+ */
+export const NEW_STUDENT_TOPUP_MIN_LESSONS = 4;
+
+/** UTC-midnight Date of the first day of the top-up era (2026-07-01). Used to
+ * scope the BR-09b retroactive backlog sweep to top-up-era lessons only. */
+export function topUpEraStartDate(): Date {
+  return new Date(`${TOPUP_EFFECTIVE_MONTH}-01T00:00:00.000Z`);
+}

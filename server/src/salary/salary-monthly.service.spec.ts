@@ -39,7 +39,12 @@ describe('SalaryMonthlyService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         groupBy: jest.fn().mockResolvedValue([]), // carriedOut aggregate
       },
-      attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      attendance: {
+        findMany: jest.fn().mockResolvedValue([]),
+        // BR-09 held-lesson count (studentId::groupId -> attended count). Default
+        // empty; gap tests override it so their student clears the new-student gate.
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
@@ -138,8 +143,12 @@ describe('SalaryMonthlyService', () => {
       { userId: 10010, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', groupId: 'g1', date: new Date('2026-07-10') },
-      { id: 'a2', groupId: 'g1', date: new Date('2026-07-12') },
+      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
+      { id: 'a2', studentId: 20001, groupId: 'g1', date: new Date('2026-07-12') },
+    ]);
+    // Student 20001 has cleared the BR-09 new-student gate (>= 4 attended).
+    prisma.attendance.groupBy.mockResolvedValue([
+      { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
     ]);
 
     // July is a top-up month → netToPay uses the FULL (covered + gap) base.
@@ -207,13 +216,14 @@ describe('SalaryMonthlyService', () => {
       { id: 'a2', groupId: 'g1', date: new Date('2026-06-12') },
     ]);
 
-    // June is BEFORE the top-up switch → netToPay stays on the covered base,
-    // matching what the cron actually paid for June (covered only).
+    // June is BEFORE the top-up switch → there is NO center top-up. The gap is
+    // hidden (0) and deserved = covered, so the pre-July view isn't confused by a
+    // hypothetical "Qo'shilishi kerak" figure. netToPay also stays on covered.
     const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
 
     const row = res.data[0];
-    expect(row.fullDeserved).toBe(12_000); // display columns unchanged
-    expect(row.gap).toBe(6_000);
+    expect(row.fullDeserved).toBe(6_000); // covered only — no top-up before July
+    expect(row.gap).toBe(0); // hidden for pre-July months
     expect(row.netToPay).toBe(6_000); // COVERED base − 0 advances (no top-up)
   });
 
@@ -239,8 +249,11 @@ describe('SalaryMonthlyService', () => {
       { userId: 10010, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', groupId: 'g1', date: new Date('2026-07-10') },
-      { id: 'a2', groupId: 'g1', date: new Date('2026-07-12') },
+      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
+      { id: 'a2', studentId: 20001, groupId: 'g1', date: new Date('2026-07-12') },
+    ]);
+    prisma.attendance.groupBy.mockResolvedValue([
+      { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
     ]);
     prisma.expense.groupBy.mockResolvedValue([
       { relatedUserId: 10010, _sum: { amount: 2_000 } },
@@ -397,6 +410,48 @@ describe('SalaryMonthlyService', () => {
     expect(res.totals.centerStillFronted).toBe(6_000);
     // recovered (Y) = X − Z = 6_000 (a3, which was fronted then paid back)
     expect(res.totals.centerRecovered).toBe(6_000);
+  });
+
+  it('BR-09: tops up a committed student but withholds a new student below the threshold', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } }, // perLesson 20_000, 30% = 6_000
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        salaryType: 'PERCENTAGE',
+        value: 30,
+        effectiveFrom: new Date('2026-05-01'),
+        effectiveTo: null,
+        config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+      },
+    ]);
+    prisma.salaryAccrual.findMany.mockResolvedValue([]); // both lessons uncovered
+    prisma.attendance.findMany.mockResolvedValue([
+      { id: 'a1', studentId: 20003, groupId: 'g1', date: new Date('2026-07-10') }, // committed
+      { id: 'a2', studentId: 20004, groupId: 'g1', date: new Date('2026-07-12') }, // new
+    ]);
+    prisma.attendance.groupBy.mockResolvedValue([
+      { studentId: 20003, groupId: 'g1', _count: { _all: 5 } }, // >= 4 → topped up
+      { studentId: 20004, groupId: 'g1', _count: { _all: 2 } }, // < 4 → withheld
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    // Only the committed student's uncovered lesson becomes a gap.
+    expect(res.data[0].gap).toBe(6_000);
+  });
+
+  it('BR-06/08/11: the gap sweep queries PRESENT/LATE only (ABSENT excluded)', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+
+    await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    const call = prisma.attendance.findMany.mock.calls[0][0];
+    expect(call.where.status).toEqual({ in: ['PRESENT', 'LATE'] });
   });
 
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {

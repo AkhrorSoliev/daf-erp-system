@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import { absentExcludedFromSalary } from '../salary/shared/topup';
 import { EntityHistoryService } from '../common/entity-history';
 import { UpsertLessonTeacherOverrideDto } from './dto/upsert-lesson-teacher-override.dto';
 
@@ -267,12 +268,25 @@ export class LessonTeacherOverridesService {
     // its id (links to the consumption tx) and the student id (key for
     // accrual upsert). Cancelled lessons have status EXCUSED with a
     // `cancellationId` link — already reversed; skip.
+    // BR-06/08/11: a July+ ABSENT lesson earns no teacher, so a substitute-
+    // teacher change must not create (or leave) an accrual for it. Drop ABSENT
+    // from the recompute set for such lessons; pre-July keeps the old behaviour.
+    const recomputeStatuses = absentExcludedFromSalary(
+      AttendanceStatus.ABSENT,
+      p.date,
+    )
+      ? [AttendanceStatus.PRESENT, AttendanceStatus.LATE]
+      : [
+          AttendanceStatus.PRESENT,
+          AttendanceStatus.LATE,
+          AttendanceStatus.ABSENT,
+        ];
     const attendances = await tx.attendance.findMany({
       where: {
         groupId: p.groupId,
         date: p.date,
         cancellationId: null,
-        status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE, AttendanceStatus.ABSENT] },
+        status: { in: recomputeStatuses },
       },
       select: { id: true, studentId: true },
     });

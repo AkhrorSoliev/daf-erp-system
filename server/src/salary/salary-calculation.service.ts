@@ -5,7 +5,11 @@ import {
   resolveCompletedPeriod,
   resolveCurrentPeriod,
 } from './shared/resolve-current-period';
-import { isTopUpPeriod } from './shared/topup';
+import {
+  isTopUpPeriod,
+  NEW_STUDENT_TOPUP_MIN_LESSONS,
+  topUpEraStartDate,
+} from './shared/topup';
 import {
   perLessonAccrual,
   pickActiveVersion,
@@ -21,6 +25,10 @@ interface GapSpec {
   attendanceId: string;
   lessonDate: Date;
   perLessonCost: number;
+  // BR-09b: for a backfilled (retroactively-unlocked) lesson whose own period
+  // has closed, the current open period start to credit it to. Undefined for an
+  // ordinary in-period gap (bucketed by lessonDate).
+  creditPeriodDate?: Date;
 }
 
 @Injectable()
@@ -457,6 +465,9 @@ export class SalaryCalculationService {
                 perLessonCost: g.perLessonCost,
                 companyId,
                 centerFunded: true,
+                // BR-09b: a backfilled lesson is credited to the current open
+                // period; an ordinary in-period gap leaves this undefined.
+                creditPeriodDateOverride: g.creditPeriodDate,
                 tx,
               });
             }
@@ -488,8 +499,15 @@ export class SalaryCalculationService {
     periodStart: Date,
     periodEnd: Date,
   ): Promise<Map<number, GapSpec[]>> {
-    const [accruals, attendances, groups, groupTeachers, overrides, versionRows] =
-      await Promise.all([
+    const [
+      accruals,
+      attendances,
+      groups,
+      groupTeachers,
+      overrides,
+      versionRows,
+      heldCounts,
+    ] = await Promise.all([
         // ALL non-reversed accruals bucketed into this period (covered + any
         // prior top-up) → covered-key set so a lesson is never double-listed.
         this.prisma.salaryAccrual.findMany({
@@ -506,10 +524,12 @@ export class SalaryCalculationService {
           },
           select: { userId: true, attendanceId: true },
         }),
+        // BR-06/08/11: ABSENT excluded from the top-up set — the center never
+        // fronts a no-show lesson (student is still billed elsewhere).
         this.prisma.attendance.findMany({
           where: {
             companyId,
-            status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+            status: { in: ['PRESENT', 'LATE'] },
             date: { gte: periodStart, lte: periodEnd },
           },
           select: { id: true, studentId: true, groupId: true, date: true },
@@ -540,7 +560,25 @@ export class SalaryCalculationService {
             },
           },
         }),
+        // BR-09: per-(student, group) count of ATTENDED (PRESENT/LATE) lessons
+        // up to this period's end. A new student whose count is below the
+        // threshold is not yet center-fronted (see the gate in the loop below).
+        this.prisma.attendance.groupBy({
+          by: ['studentId', 'groupId'],
+          where: {
+            companyId,
+            status: { in: ['PRESENT', 'LATE'] },
+            date: { lte: periodEnd },
+          },
+          _count: { _all: true },
+        }),
       ]);
+
+    // (studentId::groupId) -> attended-lesson count (BR-09 new-student gate).
+    const heldByStudentGroup = new Map<string, number>();
+    for (const h of heldCounts) {
+      heldByStudentGroup.set(`${h.studentId}::${h.groupId}`, h._count._all);
+    }
 
     const dateStr = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -595,6 +633,11 @@ export class SalaryCalculationService {
     for (const att of attendances) {
       const g = groupMap.get(att.groupId);
       if (!g) continue;
+      // BR-09: withhold the center top-up for a new student until they have
+      // attended >= threshold lessons in this group. A covered (paid) lesson is
+      // never gated — it isn't in this uncovered gap set to begin with.
+      const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
+      if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
       const lpc = g.course.lessonPaymentCount || 12;
       const perLessonCost = Math.round(g.course.price / lpc);
       const dStr = dateStr(att.date);
@@ -615,6 +658,60 @@ export class SalaryCalculationService {
         gapByUser.set(tid, arr);
       }
     }
+
+    // ─── BR-09b: retroactive unlock across period boundaries ─────────────────
+    // A new student who has now crossed the threshold may have EARLIER lessons
+    // that were withheld while below it and now sit in an already-closed period.
+    // Those lessons have NO accrual at all (never covered, never topped up), so
+    // a bounded "un-accrued top-up-era backlog" scan is cheap. Front each such
+    // lesson credited to the CURRENT open period (creditPeriodDate = periodStart)
+    // so THIS settlement pays it. Skipped for the very first top-up period (no
+    // prior era period to backfill from). Idempotent: once fronted, the lesson
+    // has an accrual and the NOT EXISTS filter excludes it next time.
+    const eraStart = topUpEraStartDate();
+    if (periodStart > eraStart) {
+      const backlog = await this.prisma.$queryRaw<
+        { id: string; studentId: number; groupId: string; date: Date }[]
+      >`
+        SELECT a.id, a."studentId", a."groupId", a.date
+        FROM "Attendance" a
+        WHERE a."companyId" = ${companyId}
+          AND a.status::text IN ('PRESENT', 'LATE')
+          AND a.date >= ${eraStart}
+          AND a.date < ${periodStart}
+          AND NOT EXISTS (
+            SELECT 1 FROM "SalaryAccrual" sa
+            WHERE sa."attendanceId" = a.id AND sa."reversedAt" IS NULL
+          )
+      `;
+      for (const att of backlog) {
+        // Only genuine new-student pairs that have NOW crossed the threshold.
+        const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
+        if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
+        const g = groupMap.get(att.groupId);
+        if (!g) continue;
+        const lpc = g.course.lessonPaymentCount || 12;
+        const perLessonCost = Math.round(g.course.price / lpc);
+        const dStr = dateStr(att.date);
+        for (const tid of resolveTeachers(att.groupId, dStr)) {
+          if (fixedMonthlyTeachers.has(tid)) continue;
+          const v = resolveRate(tid, att.groupId, att.date);
+          if (!v) continue;
+          if (perLessonAccrual(v, perLessonCost, lpc) <= 0) continue;
+          const arr = gapByUser.get(tid) ?? [];
+          arr.push({
+            studentId: att.studentId,
+            groupId: att.groupId,
+            attendanceId: att.id,
+            lessonDate: att.date,
+            perLessonCost,
+            creditPeriodDate: periodStart,
+          });
+          gapByUser.set(tid, arr);
+        }
+      }
+    }
+
     return gapByUser;
   }
 }

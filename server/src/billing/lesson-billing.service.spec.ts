@@ -136,6 +136,65 @@ describe('LessonBillingService', () => {
   });
 
   // ============================================================
+  // BR-06/08/11 — ABSENT (July+) bills the student but earns no teacher accrual
+  // ============================================================
+
+  describe('BR-06/08/11 — ABSENT excluded from teacher accrual (July+)', () => {
+    it('July ABSENT: bills the student but writes NO salary accrual', async () => {
+      tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 0 }]);
+      tx.student.findUnique.mockResolvedValue({ balance: 400_000 });
+
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        lessonDate: new Date('2026-07-10T00:00:00Z'),
+        oldStatus: null,
+        newStatus: AttendanceStatus.ABSENT,
+      });
+
+      // Student is still billed + consumption recorded (their slot is consumed)…
+      expect(transactionsService.deductLessonFee).toHaveBeenCalled();
+      expect(transactionsService.recordLessonConsumption).toHaveBeenCalled();
+      // …but the teacher earns nothing for a no-show.
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+    });
+
+    it('pre-July (June) ABSENT still accrues to the teacher (BR-12 preserved)', async () => {
+      tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 0 }]);
+      tx.student.findUnique.mockResolvedValue({ balance: 400_000 });
+
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        lessonDate: new Date('2026-06-10T00:00:00Z'),
+        oldStatus: null,
+        newStatus: AttendanceStatus.ABSENT,
+      });
+
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+    });
+
+    it('July ABSENT debtor: the SINGLE_UNCOVERED deduction is NOT salary-deferred', async () => {
+      tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 0 }]);
+      tx.student.findUnique.mockResolvedValue({ balance: 10_000 }); // < perLessonCost 33_333
+
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        lessonDate: new Date('2026-07-10T00:00:00Z'),
+        oldStatus: null,
+        newStatus: AttendanceStatus.ABSENT,
+      });
+
+      expect(transactionsService.deductLessonFee).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: LessonDeductionMode.SINGLE_UNCOVERED,
+          salaryDeferred: false,
+        }),
+        tx,
+      );
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================
   // Misol 1 — full cycle (Aziz pays 400k)
   // ============================================================
 

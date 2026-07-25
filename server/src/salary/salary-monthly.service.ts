@@ -6,7 +6,7 @@ import {
   pickActiveVersion,
   RateVersion,
 } from './shared/deserved-math';
-import { isTopUpMonth } from './shared/topup';
+import { isTopUpMonth, NEW_STUDENT_TOPUP_MIN_LESSONS } from './shared/topup';
 import {
   resolveMonthlyScope,
   type SalaryMonthlyQuery,
@@ -156,6 +156,7 @@ export class SalaryMonthlyService {
       advancesAgg,
       payments,
       carriedOutAgg,
+      heldCounts,
     ] = await Promise.all([
       // Covered ground-truth — accruals bucketed into this period (carry-over OR).
       // `creditPeriodDate` is selected so a carried-IN accrual (its lessonDate is
@@ -182,14 +183,15 @@ export class SalaryMonthlyService {
           wasCenterTopUp: true,
         },
       }),
-      // Billable attendances in the period (for the GAP sweep).
+      // Billable attendances in the period (for the GAP sweep). BR-06/08/11:
+      // ABSENT is excluded — the center never tops up a no-show lesson.
       this.prisma.attendance.findMany({
         where: {
           companyId,
-          status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+          status: { in: ['PRESENT', 'LATE'] },
           date: { gte: periodStart, lte: periodEnd },
         },
-        select: { id: true, groupId: true, date: true },
+        select: { id: true, studentId: true, groupId: true, date: true },
       }),
       // perLessonCost basis.
       this.prisma.group.findMany({
@@ -263,10 +265,26 @@ export class SalaryMonthlyService {
         },
         _sum: { amount: true },
       }),
+      // BR-09: per-(student, group) count of ATTENDED (PRESENT/LATE) lessons up
+      // to this period's end — the new-student top-up gate (mirrors the cron).
+      this.prisma.attendance.groupBy({
+        by: ['studentId', 'groupId'],
+        where: {
+          companyId,
+          status: { in: ['PRESENT', 'LATE'] },
+          date: { lte: periodEnd },
+        },
+        _count: { _all: true },
+      }),
     ]);
     const carriedOutMap = new Map(
       carriedOutAgg.map((a) => [a.userId as number, a._sum.amount ?? 0]),
     );
+    // (studentId::groupId) -> attended-lesson count (BR-09 new-student gate).
+    const heldByStudentGroup = new Map<string, number>();
+    for (const h of heldCounts) {
+      heldByStudentGroup.set(`${h.studentId}::${h.groupId}`, h._count._all);
+    }
 
     // ─── Build in-memory maps ─────────────────────────────────────────────
     const groupMap = new Map(groups.map((g) => [g.id, g]));
@@ -372,6 +390,11 @@ export class SalaryMonthlyService {
     for (const att of attendances) {
       const g = groupMap.get(att.groupId);
       if (!g) continue;
+      // BR-09: withhold the new-student top-up gap until the student has
+      // attended >= threshold lessons in this group (mirrors the cron sweep so
+      // the shown gap equals what will be paid).
+      const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
+      if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
       const lpc = g.course.lessonPaymentCount || 12;
       const perLessonCost = Math.round(g.course.price / lpc);
       const dStr = dateStr(att.date);
@@ -394,9 +417,14 @@ export class SalaryMonthlyService {
     const rows = teachers.map((t) => {
       const a = agg.get(t.id)!;
       const hasLessonData = a.covered !== 0 || a.gapUnits !== 0;
-      const fullDeserved = hasLessonData ? a.covered + a.gap : null;
+      // Center top-up (gap) is a real figure ONLY from TOPUP_EFFECTIVE_MONTH on.
+      // Before that there is NO top-up, so a "Qo'shilishi kerak" number only
+      // confuses — hide it (gap = 0) and treat deserved = covered for pre-July.
+      const showGap = isTopUpMonth(month);
+      const rawGap = showGap ? a.gap : 0;
+      const fullDeserved = hasLessonData ? a.covered + rawGap : null;
       const covered = hasLessonData ? a.covered : null;
-      const gap = hasLessonData ? a.gap : null;
+      const gap = hasLessonData ? rawGap : null;
       const advances = advancesByUser.get(t.id) ?? 0;
       const payment = paymentByUser.get(t.id) ?? null;
 

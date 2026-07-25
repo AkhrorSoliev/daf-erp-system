@@ -82,6 +82,13 @@ export class SalaryAccrualService {
     // normal covered path upserts the SAME natural-key row and flips the flag
     // back to FALSE (recovered) — the teacher is never paid twice.
     centerFunded?: boolean;
+    // BR-09b — a center-funded BACKFILL for a new-student lesson whose own
+    // period has already closed (the student was below the threshold when that
+    // period settled, and has since crossed it). Only valid with
+    // `centerFunded=true`: credits the accrual to this explicit period start
+    // instead of bucketing by lessonDate, so the current open settlement pays
+    // it. Left undefined for an ordinary in-period top-up.
+    creditPeriodDateOverride?: Date;
   }) {
     const centerFunded = params.centerFunded ?? false;
     if (!centerFunded && !params.deductionTransactionId) {
@@ -166,6 +173,11 @@ export class SalaryAccrualService {
           `Carrying over accrual for teacher ${params.teacherId}: lessonDate ${params.lessonDate.toISOString()} is in closed SalaryPayment ${closedPeriod.id} (${closedPeriod.status}); crediting current period starting ${creditPeriodDate.toISOString()}.`,
         );
       }
+    } else if (params.creditPeriodDateOverride) {
+      // BR-09b backfill: a center-funded top-up for a withheld new-student
+      // lesson whose own period has closed → credit it to the current open
+      // period explicitly so this settlement pays it.
+      creditPeriodDate = params.creditPeriodDateOverride;
     }
 
     // Two-query lookup. Per-group beats global at the same effective range.
