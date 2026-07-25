@@ -13,7 +13,12 @@ describe('MockExamParticipantsService', () => {
 
   beforeEach(async () => {
     prisma = {
-      mockExam: { findFirst: jest.fn() },
+      mockExam: {
+        findFirst: jest.fn(),
+        // Pricing lookup used by addManual to compute the DaF-discounted
+        // fee. Defaults to a free exam so existing tests are unaffected.
+        findUnique: jest.fn().mockResolvedValue({ price: 0, studentPrice: null }),
+      },
       mockExamParticipant: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
@@ -202,6 +207,123 @@ describe('MockExamParticipantsService', () => {
       const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
       expect(callArg.data.publicId).toBe(10117);
       expect(callArg.data.studentId).toBe(10117);
+    });
+
+    it('applies the DaF discount + level when phone matches a student', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExam.findUnique.mockResolvedValue({
+        price: 100000,
+        studentPrice: 50000,
+      });
+      prisma.student.findFirst.mockResolvedValue({ id: 10117 });
+      prisma.mockExamParticipant.create.mockResolvedValue({ id: 'p3' });
+
+      await service.addManual(
+        'e1',
+        {
+          firstName: 'Aziz',
+          lastName: 'Karimov',
+          phone: '901234567',
+          level: 'B1',
+        },
+        1001,
+        1,
+      );
+
+      const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
+      expect(callArg.data.studentId).toBe(10117);
+      expect(callArg.data.feeAmount).toBe(50000); // DaF discounted price
+      expect(callArg.data.level).toBe('B1');
+    });
+
+    it('charges full price + no student link for an outsider', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExam.findUnique.mockResolvedValue({
+        price: 100000,
+        studentPrice: 50000,
+      });
+      prisma.student.findFirst.mockResolvedValue(null);
+      prisma.$queryRaw.mockResolvedValue([{ next: BigInt(10777) }]);
+      prisma.mockExamParticipant.create.mockResolvedValue({ id: 'p4' });
+
+      await service.addManual(
+        'e1',
+        { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
+        1001,
+        1,
+      );
+
+      const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
+      expect(callArg.data.studentId).toBeNull();
+      expect(callArg.data.feeAmount).toBe(100000); // full price for outsiders
+    });
+
+    it('uses an explicit studentId (admin pick) + applies the DaF discount', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExam.findUnique.mockResolvedValue({
+        price: 100000,
+        studentPrice: 40000,
+      });
+      // The explicit student lookup succeeds; the phone lookup must NOT run.
+      prisma.student.findFirst.mockResolvedValue({ id: 10222 });
+      prisma.mockExamParticipant.create.mockResolvedValue({ id: 'p5' });
+
+      await service.addManual(
+        'e1',
+        {
+          firstName: 'Aziz',
+          lastName: 'Karimov',
+          phone: '901234567',
+          studentId: 10222,
+        },
+        1001,
+        1,
+      );
+
+      // Student was resolved by id + company scope, not by phone.
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 10222, companyId: 1001 }),
+        }),
+      );
+      const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
+      expect(callArg.data.studentId).toBe(10222);
+      expect(callArg.data.feeAmount).toBe(40000);
+    });
+
+    it('rejects an explicit studentId that does not resolve', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExam.findUnique.mockResolvedValue({
+        price: 100000,
+        studentPrice: 40000,
+      });
+      prisma.student.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.addManual(
+          'e1',
+          {
+            firstName: 'Aziz',
+            lastName: 'Karimov',
+            phone: '901234567',
+            studentId: 99999,
+          },
+          1001,
+          1,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('translates P2002 unique violation into BadRequest', async () => {

@@ -43,6 +43,10 @@ import { PaymentLinkService } from '../payment-gateways/payment-link.service';
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private bot: Telegraf<BotContext>;
   private readonly logger = new Logger(TelegramService.name);
+  // Channel-membership gate config (read in onModuleInit). When
+  // `requiredChannel` is unset the gate is disabled entirely.
+  private requiredChannel?: string;
+  private botUsername?: string;
 
   constructor(
     private configService: ConfigService,
@@ -63,6 +67,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.bot = new Telegraf<BotContext>(token);
+
+    // Channel-membership gate (whole bot). Set TELEGRAM_REQUIRED_CHANNEL to
+    // e.g. "@daffergana" to require membership before any flow runs; leave
+    // it unset to disable the gate (local/dev, or emergency off-switch).
+    // The bot must be an ADMIN of that channel for getChatMember to work.
+    this.requiredChannel = this.configService
+      .get<string>('TELEGRAM_REQUIRED_CHANNEL')
+      ?.trim();
+    this.botUsername = this.configService
+      .get<string>('TELEGRAM_BOT_USERNAME')
+      ?.trim()
+      ?.replace(/^@/, '');
 
     // Redis session store
     this.bot.use(
@@ -114,6 +130,31 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         ctx.session.data = {};
       }
       return next();
+    });
+
+    // Channel-membership gate (whole bot, no exceptions). Runs before the
+    // scene stage so every flow — registration, mock exam, app login,
+    // password reset — is gated. The "✅ Tekshirish" recheck button is let
+    // through so a not-yet-member can confirm they've joined.
+    this.bot.use(async (ctx, next) => {
+      const cbData =
+        ctx.callbackQuery && 'data' in ctx.callbackQuery
+          ? (ctx.callbackQuery as { data?: string }).data
+          : undefined;
+      if (cbData === 'chk_join') return next();
+
+      // Stash the /start payload so we can offer a one-tap resume after
+      // the user joins.
+      const startText = (ctx.message as any)?.text as string | undefined;
+      if (startText && startText.startsWith('/start') && ctx.session) {
+        const parts = startText.split(' ');
+        ctx.session.pendingStartPayload = parts.length > 1 ? parts[1] : '';
+      }
+
+      if (await this.ensureChannelMembership(ctx)) {
+        return next();
+      }
+      // Not a member — join prompt already sent, stop here.
     });
 
     // Scenes
@@ -407,6 +448,61 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       );
     });
 
+    // Channel-membership recheck button ("✅ Tekshirish"). Re-checks
+    // membership; on success caches it and offers a one-tap resume of the
+    // original flow via a fresh /start deep-link.
+    this.bot.action('chk_join', async (ctx) => {
+      const channel = this.requiredChannel;
+      const userId = ctx.from?.id;
+      if (!channel || !userId) {
+        await ctx.answerCbQuery();
+        return;
+      }
+
+      let isMember = false;
+      try {
+        const member = await this.bot.telegram.getChatMember(channel, userId);
+        isMember = member.status !== 'left' && member.status !== 'kicked';
+      } catch (err) {
+        this.logger.warn(
+          `chk_join membership check failed (${channel}): ${(err as Error).message}`,
+        );
+        isMember = true; // fail-open — don't trap a user on a misconfig
+      }
+
+      if (!isMember) {
+        await ctx.answerCbQuery(
+          "Hali a'zo bo'lmadingiz. Iltimos, kanalga a'zo bo'ling va qayta bosing.",
+          { show_alert: true },
+        );
+        return;
+      }
+
+      await ctx.answerCbQuery('Tasdiqlandi ✅');
+      if (ctx.session) ctx.session.channelVerified = true;
+
+      const payload = ctx.session?.pendingStartPayload;
+      const resumeUrl = this.botUsername
+        ? `https://t.me/${this.botUsername}?start=${payload ?? ''}`
+        : null;
+      try {
+        if (resumeUrl) {
+          await ctx.editMessageText(
+            "✅ A'zolik tasdiqlandi! Davom etish uchun tugmani bosing.",
+            Markup.inlineKeyboard([
+              [Markup.button.url('▶️ Davom etish', resumeUrl)],
+            ]),
+          );
+        } else {
+          await ctx.editMessageText(
+            "✅ A'zolik tasdiqlandi! Davom etish uchun /start bosing.",
+          );
+        }
+      } catch {
+        // Message may be too old to edit — ignore.
+      }
+    });
+
     // /cancel handler
     this.bot.command('cancel', async (ctx) => {
       await ctx.scene.leave();
@@ -478,6 +574,54 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ─── Mock exam results delivery ───────────────────────────────
+
+  /**
+   * Channel-membership gate. Returns true when the user may proceed:
+   * the gate is disabled (no `requiredChannel`), the user is already
+   * verified this session, there is no user context, the membership check
+   * errors (fail-open so a misconfig never bricks the bot), or the user is
+   * a confirmed member. Returns false (after sending the join prompt) only
+   * when the user is definitively not a member.
+   */
+  private async ensureChannelMembership(ctx: BotContext): Promise<boolean> {
+    const channel = this.requiredChannel;
+    if (!channel) return true;
+    if (ctx.session?.channelVerified) return true;
+    const userId = ctx.from?.id;
+    if (!userId) return true;
+
+    try {
+      const member = await this.bot.telegram.getChatMember(channel, userId);
+      if (member.status === 'left' || member.status === 'kicked') {
+        await this.sendJoinPrompt(ctx);
+        return false;
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Kanal a'zoligini tekshirib bo'lmadi (${channel}): ${(err as Error).message}`,
+      );
+      return true; // fail-open
+    }
+
+    if (ctx.session) ctx.session.channelVerified = true;
+    return true;
+  }
+
+  /** Asks the user to join the required channel, with a recheck button. */
+  private async sendJoinPrompt(ctx: BotContext): Promise<void> {
+    const channel = this.requiredChannel!;
+    const url = channel.startsWith('@')
+      ? `https://t.me/${channel.slice(1)}`
+      : channel;
+    await ctx.reply(
+      "Botdan foydalanish uchun avval rasmiy kanalimizga a'zo bo'ling, " +
+        'so\'ng "✅ Tekshirish" tugmasini bosing.',
+      Markup.inlineKeyboard([
+        [Markup.button.url("➕ Kanalga a'zo bo'lish", url)],
+        [Markup.button.callback('✅ Tekshirish', 'chk_join')],
+      ]),
+    );
+  }
 
   /**
    * Pushes the announced results PDF to every participant of `examId`

@@ -7,6 +7,7 @@ import { SCENES } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MockExamBillingService } from '../../mock-exams/mock-exam-billing.service';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
+import { resolveParticipantFee } from '../../mock-exams/mock-exam-pricing.util';
 
 /**
  * Mock exam registration scene.
@@ -86,6 +87,7 @@ export function createMockExamRegistrationScene(
         examDate: true,
         registrationDeadline: true,
         formFields: true,
+        offeredLevels: true,
       },
     });
 
@@ -145,17 +147,30 @@ export function createMockExamRegistrationScene(
       return;
     }
 
+    const offeredLevels = Array.isArray(exam.offeredLevels)
+      ? (exam.offeredLevels as string[])
+      : [];
+
     ctx.session.data = {
       examId: exam.id,
       examTitle: exam.title,
       fields,
       currentFieldIndex: 0,
       answers: {},
+      offeredLevels,
+      level: null,
+      // When the exam offers levels, the participant must pick one before
+      // the form questions start.
+      awaitingLevel: offeredLevels.length > 0,
     };
 
     const intro = buildIntroMessage(exam);
     await ctx.reply(intro, Markup.removeKeyboard());
-    await askField(ctx, fields[0]);
+    if (offeredLevels.length > 0) {
+      await askLevel(ctx, offeredLevels);
+    } else {
+      await askField(ctx, fields[0]);
+    }
   });
 
   // /cancel — leave the scene gracefully
@@ -167,6 +182,24 @@ export function createMockExamRegistrationScene(
     );
   };
   scene.command('cancel', cancelHandler);
+
+  // Level selection (inline buttons shown before the form questions)
+  scene.action(/^me_lvl:(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!ctx.session.data?.awaitingLevel) return;
+    const value = ctx.match[1];
+    const offered = (ctx.session.data.offeredLevels as string[]) ?? [];
+    if (!offered.includes(value)) {
+      await ctx.reply(
+        "Iltimos, ko'rsatilgan darajalardan birini tanlang.",
+      );
+      return;
+    }
+    ctx.session.data.level = value;
+    ctx.session.data.awaitingLevel = false;
+    const fields = ctx.session.data.fields as FormField[];
+    await askField(ctx, fields[0]);
+  });
 
   // Inline button selection (select / radio / checkbox)
   scene.action(/^me_opt:(.+)$/, async (ctx) => {
@@ -200,6 +233,12 @@ export function createMockExamRegistrationScene(
     }
     if (text.startsWith('/start')) {
       await ctx.scene.reenter();
+      return;
+    }
+
+    // Still waiting for the level pick — force the inline button.
+    if (ctx.session.data?.awaitingLevel) {
+      await ctx.reply('Iltimos, yuqoridagi darajalardan birini tanlang.');
       return;
     }
 
@@ -276,6 +315,22 @@ function currentField(ctx: BotContext): FormField | null {
     return null;
   }
   return fields[idx];
+}
+
+async function askLevel(ctx: BotContext, levels: string[]) {
+  // Lay the level buttons out 3 per row so A1..C2 fits two tidy rows.
+  const rows: ReturnType<typeof Markup.button.callback>[][] = [];
+  for (let i = 0; i < levels.length; i += 3) {
+    rows.push(
+      levels
+        .slice(i, i + 3)
+        .map((lvl) => Markup.button.callback(lvl, `me_lvl:${lvl}`)),
+    );
+  }
+  await ctx.reply(
+    'Qaysi darajada imtihon topshirasiz?',
+    Markup.inlineKeyboard(rows),
+  );
 }
 
 async function askField(ctx: BotContext, field: FormField) {
@@ -408,22 +463,60 @@ async function finalizeRegistration(
     return;
   }
 
+  // Pricing (for the DaF discount) + the level the user chose.
+  const exam = await prisma.mockExam.findFirst({
+    where: { id: examId },
+    select: { price: true, studentPrice: true },
+  });
+  const examPrice = exam?.price ?? 0;
+  const studentPrice = exam?.studentPrice ?? null;
+  const level = (ctx.session.data.level as string | null) ?? null;
+
   let publicId: number;
   let studentId: number | null = null;
+  let feeAmount = examPrice;
 
   try {
-    // 1. Is this person already a real DaF student? Match by Telegram chat.
-    //    If yes, we reuse their Student.id as the publicId — they pay via
-    //    the normal Student.balance flow and mock results show up on their
-    //    student profile.
-    const existingStudent = await prisma.student.findFirst({
+    // 1. Is this person already a real DaF student? Match first by their
+    //    Telegram chat, then by the phone they just entered. A phone match
+    //    is a walk-in DaF student registering from a Telegram not yet tied
+    //    to their profile — so we link it below. When matched, we reuse
+    //    their Student.id as the publicId (balance-flow payments, results
+    //    show up on the student profile) and apply the DaF mock discount.
+    let existingStudent = await prisma.student.findFirst({
       where: { telegramChatId: chatId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, telegramChatId: true },
     });
+    let matchedByPhone = false;
+    if (!existingStudent) {
+      existingStudent = await prisma.student.findFirst({
+        // phone is NOT unique (see phone-login) — prefer the most recently
+        // touched student when several share a number.
+        where: { phone, deletedAt: null },
+        orderBy: { updatedAt: 'desc' },
+        select: { id: true, telegramChatId: true },
+      });
+      matchedByPhone = existingStudent !== null;
+    }
 
     if (existingStudent) {
       publicId = existingStudent.id;
       studentId = existingStudent.id;
+      // Link this Telegram account to a phone-matched student that has no
+      // chat id yet. Never overwrite a different existing chat id — the
+      // student may use a separate Telegram account.
+      if (matchedByPhone && !existingStudent.telegramChatId) {
+        try {
+          await prisma.student.update({
+            where: { id: existingStudent.id },
+            data: { telegramChatId: chatId },
+          });
+        } catch (err) {
+          logger.warn(
+            `Failed to link Telegram chat ${chatId} to student ${existingStudent.id}: ${(err as Error).message}`,
+          );
+        }
+      }
     } else {
       // 2. Outsider — allocate a fresh public id from the shared Student
       //    sequence. NO Student row is created (mock participants aren't
@@ -435,17 +528,21 @@ async function finalizeRegistration(
       publicId = Number(result[0].next);
     }
 
-    // 3. Optionally surface the registration to the marketing/sales team
-    //    by stamping any matching Lead. The Lead itself stays in the
-    //    Kanban — we only flag that this person also signed up for a mock.
-    //    Implemented as a phone-based lookup so the Lead UI can derive the
-    //    link without an extra FK (see Lead detail view in frontend).
+    // The fee locked in for THIS registration — DaF discount applied when
+    // the registrant matched a student. Billing / gateway / links all read
+    // this from the row so the amount never drifts.
+    feeAmount = resolveParticipantFee(
+      { price: examPrice, studentPrice },
+      studentId !== null,
+    );
 
     await prisma.mockExamParticipant.create({
       data: {
         examId,
         publicId,
         studentId,
+        level,
+        feeAmount,
         telegramChatId: chatId,
         telegramUsername: fromUser.username ?? null,
         telegramFirstName: fromUser.first_name ?? null,
@@ -497,12 +594,9 @@ async function finalizeRegistration(
     }
   }
 
-  // Look up the exam price so the message tells the user what to pay.
-  const exam = await prisma.mockExam.findFirst({
-    where: { id: examId },
-    select: { price: true },
-  });
-  const price = exam?.price ?? 0;
+  // `feeAmount` (computed above) is what this participant owes — the DaF
+  // discount is already baked in.
+  const price = feeAmount;
 
   const lines: string[] = [
     `✅ Siz "${examTitle}" imtihoniga muvaffaqiyatli ro'yxatga olindingiz.`,

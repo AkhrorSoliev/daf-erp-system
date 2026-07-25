@@ -22,6 +22,10 @@ import type { MockExamParticipant } from "./exam-detail-types";
 
 interface ManualParticipantDialogProps {
   examId: string;
+  /** CEFR levels the exam offers (empty = hide the level picker). */
+  offeredLevels: string[];
+  /** Whether the exam has a discounted DaF-student price (shows a hint). */
+  hasStudentDiscount: boolean;
   open: boolean;
   onClose: () => void;
   onAdded: (participant: MockExamParticipant) => void;
@@ -31,10 +35,16 @@ interface FormValues {
   firstName: string;
   lastName: string;
   phone: string;
+  /** Optional explicit DaF student link (5-digit id). */
+  studentId: string;
+  /** Chosen level ("" = none). */
+  level: string;
 }
 
 export function ManualParticipantDialog({
   examId,
+  offeredLevels,
+  hasStudentDiscount,
   open,
   onClose,
   onAdded,
@@ -46,18 +56,40 @@ export function ManualParticipantDialog({
     reset,
     formState: { errors },
   } = useForm<FormValues>({
-    defaultValues: { firstName: "", lastName: "", phone: "" },
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      studentId: "",
+      level: "",
+    },
   });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
-      reset({ firstName: "", lastName: "", phone: "" });
+      reset({
+        firstName: "",
+        lastName: "",
+        phone: "",
+        studentId: "",
+        level: "",
+      });
       setSubmitting(false);
     }
   }, [open, reset]);
 
   async function onSubmit(values: FormValues) {
+    let studentId: number | undefined;
+    if (values.studentId.trim()) {
+      const n = Number(values.studentId);
+      if (!Number.isInteger(n) || n < 10000) {
+        toast.error("O'quvchi ID noto'g'ri (5 xonali son)");
+        return;
+      }
+      studentId = n;
+    }
+
     setSubmitting(true);
     try {
       const { data } = await api.post<MockExamParticipant>(
@@ -66,6 +98,8 @@ export function ManualParticipantDialog({
           firstName: values.firstName.trim(),
           lastName: values.lastName.trim(),
           phone: values.phone,
+          studentId,
+          level: values.level || undefined,
         },
       );
       onAdded(data);
@@ -154,6 +188,56 @@ export function ManualParticipantDialog({
                 {errors.phone.message}
               </p>
             )}
+            <p className="text-xs text-muted-foreground">
+              Raqam markaz o&apos;quvchisiniki bo&apos;lsa, chegirma avtomatik
+              qo&apos;llanadi.
+            </p>
+          </div>
+
+          {offeredLevels.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Daraja (ixtiyoriy)</Label>
+              <Controller
+                name="level"
+                control={control}
+                render={({ field }) => (
+                  <div className="flex flex-wrap gap-2">
+                    {offeredLevels.map((lvl) => {
+                      const active = field.value === lvl;
+                      return (
+                        <Button
+                          key={lvl}
+                          type="button"
+                          size="sm"
+                          variant={active ? "default" : "outline"}
+                          onClick={() => field.onChange(active ? "" : lvl)}
+                          className="w-14 tabular-nums"
+                        >
+                          {lvl}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              />
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="manual-studentId">
+              O&apos;quvchi ID (ixtiyoriy)
+            </Label>
+            <Input
+              id="manual-studentId"
+              inputMode="numeric"
+              placeholder="Masalan: 10234"
+              {...register("studentId")}
+            />
+            <p className="text-xs text-muted-foreground">
+              {hasStudentDiscount
+                ? "Telefon topilmasa, chegirma uchun o'quvchini shu yerda bog'lang."
+                : "Ishtirokchini mavjud o'quvchiga bog'lash uchun ID kiriting."}
+            </p>
           </div>
         </form>
 

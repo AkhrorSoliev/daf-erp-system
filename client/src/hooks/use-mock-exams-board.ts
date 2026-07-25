@@ -36,6 +36,10 @@ export interface MockExamSummary {
   maxScore: number;
   passingScore: number | null;
   price: number;
+  // Discounted mock fee for DaF students (null = they pay the full price).
+  studentPrice: number | null;
+  // CEFR levels the exam offers (empty = no level step in the bot).
+  offeredLevels: string[];
   botStartPayload: string;
   participantCount: number;
   createdAt: string;

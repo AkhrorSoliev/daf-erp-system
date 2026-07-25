@@ -50,13 +50,18 @@ export class MockExamGatewayBillingService {
       select: {
         id: true,
         paid: true,
+        feeAmount: true,
         exam: { select: { price: true } },
       },
     });
     if (!participant) return null;
     return {
       participantId: participant.id,
-      examPrice: participant.exam.price,
+      // The amount the gateway must charge for THIS participant — the fee
+      // locked in at registration (after any DaF discount), falling back to
+      // the exam's current price for legacy rows. Must equal the amount
+      // embedded in the payment deep-link or the webhook rejects the pay.
+      examPrice: participant.feeAmount ?? participant.exam.price,
       alreadyPaid: participant.paid,
     };
   }

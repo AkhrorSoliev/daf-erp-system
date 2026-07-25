@@ -56,6 +56,7 @@ export class MockExamBillingService {
         select: {
           id: true,
           examId: true,
+          feeAmount: true,
           exam: { select: { price: true } },
         },
       });
@@ -68,7 +69,9 @@ export class MockExamBillingService {
       let deductedAmount = 0;
 
       for (const participant of unpaid) {
-        const price = participant.exam.price;
+        // The fee locked in at registration (after any DaF discount);
+        // legacy rows fall back to the exam's current price.
+        const price = participant.feeAmount ?? participant.exam.price;
         // Free mocks shouldn't ever land here (the bot doesn't show a
         // payment prompt for price=0 and the gateway path skips them),
         // but if they do, just flip the flag without any ledger noise.

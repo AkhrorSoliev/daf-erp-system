@@ -25,6 +25,7 @@ import {
   useMockExamsBoard,
   type MockExamRow,
 } from "@/hooks/use-mock-exams-board";
+import { LevelMultiSelect } from "./level-multiselect";
 
 // O'quv markaz ish soatlari (attendance-reminder cron'iga mos: 07:00–22:00).
 // TimePicker filterFix shu oraliqdagi 30-daqiqalik slotlarni qoldiradi.
@@ -58,6 +59,10 @@ interface FormValues {
   registrationTime: string;
   /** Raw digits — PriceInput strips separators internally. */
   price: string;
+  /** Discounted price for DaF students; empty = they pay the full price. */
+  studentPrice: string;
+  /** CEFR levels offered (empty = no level step in the bot). */
+  offeredLevels: string[];
   subjects: SubjectRow[];
 }
 
@@ -110,6 +115,8 @@ export function CreateExamDrawer({
       registrationDate: null,
       registrationTime: "09:00",
       price: "",
+      studentPrice: "",
+      offeredLevels: [],
       subjects: DEFAULT_GERMAN_SUBJECTS.map((s) => ({ ...s })),
     },
   });
@@ -154,6 +161,16 @@ export function CreateExamDrawer({
     if (!Number.isFinite(price) || price < 0) {
       toast.error("Narx noto'g'ri kiritildi");
       return;
+    }
+
+    let studentPrice: number | undefined;
+    if (values.studentPrice.trim()) {
+      const sp = Number(values.studentPrice);
+      if (!Number.isFinite(sp) || sp < 0) {
+        toast.error("DaF o'quvchi narxi noto'g'ri kiritildi");
+        return;
+      }
+      studentPrice = sp;
     }
 
     const subjects: {
@@ -212,6 +229,8 @@ export function CreateExamDrawer({
         examDate: examDt,
         registrationDeadline: regDt,
         price,
+        studentPrice,
+        offeredLevels: values.offeredLevels,
         subjects,
       });
       addExam(data);
@@ -355,6 +374,46 @@ export function CreateExamDrawer({
               />
               <p className="text-xs text-muted-foreground">
                 Click/Payme orqali ID&apos;ga to&apos;lanadi
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="studentPrice">
+                DaF o&apos;quvchi narxi (ixtiyoriy)
+              </Label>
+              <Controller
+                name="studentPrice"
+                control={control}
+                render={({ field }) => (
+                  <PriceInput
+                    id="studentPrice"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    placeholder="Bo'sh = to'liq narx"
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Markazimiz o&apos;quvchilariga chegirmali narx. Bo&apos;sh
+                qoldirilsa, ular ham to&apos;liq narx to&apos;laydi.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Taklif etiladigan darajalar (ixtiyoriy)</Label>
+              <Controller
+                name="offeredLevels"
+                control={control}
+                render={({ field }) => (
+                  <LevelMultiSelect
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Tanlangan darajalar botda tugma sifatida chiqadi;
+                ro&apos;yxatdan o&apos;tuvchi bittasini tanlaydi.
               </p>
             </div>
 

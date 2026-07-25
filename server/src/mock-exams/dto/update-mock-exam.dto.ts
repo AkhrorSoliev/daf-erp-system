@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -13,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { FormFieldDto } from '../../custom-forms/dto/form-field.dto';
+import { CEFR_LEVELS } from '../mock-exam-pricing.util';
 
 export class UpdateMockExamDto {
   @IsOptional()
@@ -61,6 +63,22 @@ export class UpdateMockExamDto {
   @IsInt()
   @Min(0)
   price?: number;
+
+  /**
+   * Discounted mock fee (so'm) for real DaF students. `null` clears the
+   * discount (DaF students revert to the full `price`).
+   */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  @Min(0)
+  studentPrice?: number | null;
+
+  /** CEFR levels offered (subset of A1..C2). Empty array = no level step. */
+  @IsOptional()
+  @IsArray()
+  @IsIn(CEFR_LEVELS, { each: true })
+  offeredLevels?: string[];
 
   @IsOptional()
   @IsArray()

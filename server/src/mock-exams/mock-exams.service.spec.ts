@@ -20,6 +20,11 @@ describe('MockExamsService', () => {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn(),
         update: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      mockExamParticipant: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
     };
     history = {
@@ -200,6 +205,67 @@ describe('MockExamsService', () => {
           entityId: 'e1',
         }),
       );
+    });
+
+    it('persists the DaF student price + sanitized offered levels', async () => {
+      prisma.mockExamSection.findFirst.mockResolvedValue({ id: 'sec-1' });
+      prisma.mockExam.create.mockResolvedValue({
+        id: 'e2',
+        title: 'Goethe B1',
+        description: null,
+        status: MockExamStatus.REGISTRATION_OPEN,
+        sectionId: 'sec-1',
+        examDate: null,
+        registrationDeadline: null,
+        durationMinutes: null,
+        maxScore: 60,
+        passingScore: null,
+        price: 100000,
+        studentPrice: 50000,
+        offeredLevels: ['A1', 'B1'],
+        botStartPayload: 'xyz',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        section: { id: 'sec-1', name: 'IELTS', color: null },
+        subjects: [],
+        _count: { participants: 0 },
+      });
+
+      await service.create(
+        {
+          sectionId: 'sec-1',
+          title: 'Goethe B1',
+          price: 100000,
+          studentPrice: 50000,
+          // Includes junk + a dup + wrong order — must be sanitized.
+          offeredLevels: ['B1', 'A1', 'X', 'A1'],
+          subjects: sampleSubjects,
+        },
+        1001,
+        1,
+      );
+
+      const createCall = prisma.mockExam.create.mock.calls[0][0];
+      expect(createCall.data.price).toBe(100000);
+      expect(createCall.data.studentPrice).toBe(50000);
+      expect(createCall.data.offeredLevels).toEqual(['A1', 'B1']);
+    });
+  });
+
+  describe('revenueSummary', () => {
+    it('sums the locked-in feeAmount (falling back to exam price)', async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([
+        { feeAmount: 50000, exam: { price: 100000 } }, // DaF discounted
+        { feeAmount: 100000, exam: { price: 100000 } }, // full price
+        { feeAmount: null, exam: { price: 80000 } }, // legacy → falls back
+      ]);
+      prisma.mockExamParticipant.count.mockResolvedValue(3);
+      prisma.mockExam.count.mockResolvedValue(1);
+
+      const result = await service.revenueSummary();
+
+      expect(result.totalRevenue).toBe(230000);
+      expect(result.totalPaid).toBe(3);
     });
   });
 
