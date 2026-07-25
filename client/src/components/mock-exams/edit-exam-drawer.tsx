@@ -22,6 +22,7 @@ import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { MockExamSummary } from "@/hooks/use-mock-exams-board";
+import { LevelMultiSelect } from "./level-multiselect";
 
 const WORK_START = "07:00";
 const WORK_END = "22:00";
@@ -44,6 +45,8 @@ interface FormValues {
   registrationDate: Date | null;
   registrationTime: string;
   price: string;
+  studentPrice: string;
+  offeredLevels: string[];
 }
 
 function buildDateTime(date: Date | null, time: string): string | null {
@@ -90,6 +93,8 @@ export function EditExamDrawer({
       registrationDate: null,
       registrationTime: "18:00",
       price: "",
+      studentPrice: "",
+      offeredLevels: [],
     },
   });
   const [submitting, setSubmitting] = useState(false);
@@ -108,6 +113,9 @@ export function EditExamDrawer({
         registrationDate: regParts.date,
         registrationTime: regParts.time,
         price: exam.price > 0 ? String(exam.price) : "",
+        studentPrice:
+          exam.studentPrice != null ? String(exam.studentPrice) : "",
+        offeredLevels: exam.offeredLevels ?? [],
       });
       setSubmitting(false);
     }
@@ -122,6 +130,17 @@ export function EditExamDrawer({
       return;
     }
 
+    // Empty DaF price clears the discount (send null); otherwise validate.
+    let studentPrice: number | null = null;
+    if (values.studentPrice.trim()) {
+      const sp = Number(values.studentPrice);
+      if (!Number.isFinite(sp) || sp < 0) {
+        toast.error("DaF o'quvchi narxi noto'g'ri kiritildi");
+        return;
+      }
+      studentPrice = sp;
+    }
+
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
@@ -133,6 +152,8 @@ export function EditExamDrawer({
           values.registrationTime,
         ),
         price,
+        studentPrice,
+        offeredLevels: values.offeredLevels,
       };
 
       const { data } = await api.patch<ExamDetail>(
@@ -265,6 +286,44 @@ export function EditExamDrawer({
                   />
                 )}
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-student-price">
+                DaF o&apos;quvchi narxi (ixtiyoriy)
+              </Label>
+              <Controller
+                name="studentPrice"
+                control={control}
+                render={({ field }) => (
+                  <PriceInput
+                    id="edit-student-price"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    placeholder="Bo'sh = to'liq narx"
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Markaz o&apos;quvchilariga chegirmali narx.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Taklif etiladigan darajalar</Label>
+              <Controller
+                name="offeredLevels"
+                control={control}
+                render={({ field }) => (
+                  <LevelMultiSelect
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Botda tugma sifatida chiqadi; foydalanuvchi bittasini tanlaydi.
+              </p>
             </div>
           </form>
         </div>

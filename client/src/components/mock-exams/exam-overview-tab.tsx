@@ -44,6 +44,35 @@ export function ExamOverviewTab({ exam }: ExamOverviewTabProps) {
             }
           />
           <Row
+            label="DaF o'quvchi narxi"
+            value={
+              exam.studentPrice != null
+                ? exam.studentPrice > 0
+                  ? `${formatPrice(exam.studentPrice)} so'm`
+                  : "Bepul"
+                : "— (to'liq narx)"
+            }
+          />
+          <Row
+            label="Taklif etilgan darajalar"
+            value={
+              exam.offeredLevels && exam.offeredLevels.length > 0 ? (
+                <span className="flex flex-wrap justify-end gap-1">
+                  {exam.offeredLevels.map((lvl) => (
+                    <span
+                      key={lvl}
+                      className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium"
+                    >
+                      {lvl}
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                "—"
+              )
+            }
+          />
+          <Row
             label="Ishtirokchilar"
             value={`${exam.participantCount} kishi`}
           />

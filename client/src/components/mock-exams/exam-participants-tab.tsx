@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/table";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { formatPrice } from "@/lib/format-utils";
 import type {
   ExamDetail,
   MockExamParticipant,
@@ -193,8 +194,9 @@ export function ExamParticipantsTab({
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead className="w-20">ID</TableHead>
               <TableHead>Ism familya</TableHead>
+              <TableHead className="w-16">Daraja</TableHead>
               <TableHead>Telefon</TableHead>
-              <TableHead className="w-24">To&apos;lov</TableHead>
+              <TableHead className="w-28">To&apos;lov</TableHead>
               <TableHead>Telegram</TableHead>
               <TableHead>Yozildi</TableHead>
               <TableHead className="text-right">Natija</TableHead>
@@ -205,7 +207,7 @@ export function ExamParticipantsTab({
             {loading && data.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className="h-32 text-center text-muted-foreground"
                 >
                   <Loader2 className="mx-auto size-5 animate-spin" />
@@ -214,7 +216,7 @@ export function ExamParticipantsTab({
             ) : data.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className="h-32 text-center text-sm text-muted-foreground"
                 >
                   <Users className="mx-auto mb-2 size-6 opacity-40" />
@@ -245,21 +247,49 @@ export function ExamParticipantsTab({
                   <TableCell className="font-medium">
                     {p.firstName} {p.lastName}
                   </TableCell>
+                  <TableCell className="text-xs">
+                    {p.level ? (
+                      <span className="rounded-full bg-muted px-2 py-0.5 font-medium tabular-nums">
+                        {p.level}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="font-mono text-xs">
                     {formatPhone(p.phone)}
                   </TableCell>
                   <TableCell className="text-xs">
-                    {p.paid ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                        ✓ To&apos;langan
-                      </span>
-                    ) : exam.price > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                        Kutilmoqda
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Bepul</span>
-                    )}
+                    {(() => {
+                      const fee = p.feeAmount ?? exam.price;
+                      if (p.paid) {
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                              ✓ To&apos;langan
+                            </span>
+                            {fee > 0 && (
+                              <span className="tabular-nums text-muted-foreground">
+                                {formatPrice(fee)} so&apos;m
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }
+                      if (fee > 0) {
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                              Kutilmoqda
+                            </span>
+                            <span className="tabular-nums text-muted-foreground">
+                              {formatPrice(fee)} so&apos;m
+                            </span>
+                          </div>
+                        );
+                      }
+                      return <span className="text-muted-foreground">Bepul</span>;
+                    })()}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {p.telegramUsername ? (
@@ -293,7 +323,7 @@ export function ExamParticipantsTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {!p.paid && exam.price > 0 && (
+                        {!p.paid && (p.feeAmount ?? exam.price) > 0 && (
                           <DropdownMenuItem onSelect={() => setPayTarget(p)}>
                             <CircleDollarSign className="mr-2 size-4" />
                             To&apos;lov qabul qilish
@@ -353,6 +383,8 @@ export function ExamParticipantsTab({
 
       <ManualParticipantDialog
         examId={exam.id}
+        offeredLevels={exam.offeredLevels}
+        hasStudentDiscount={exam.studentPrice != null}
         open={manualOpen}
         onClose={() => setManualOpen(false)}
         onAdded={handleAdded}

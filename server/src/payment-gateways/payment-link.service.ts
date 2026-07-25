@@ -46,6 +46,7 @@ export class PaymentLinkService {
       select: {
         publicId: true,
         paid: true,
+        feeAmount: true,
         exam: { select: { price: true, status: true } },
       },
     });
@@ -53,7 +54,10 @@ export class PaymentLinkService {
       throw new NotFoundException('Ishtirokchi topilmadi');
     }
 
-    return this.buildLinks(participant.publicId, participant.exam.price);
+    // Charge the fee locked in at registration (after any DaF discount);
+    // legacy rows fall back to the exam's current price.
+    const amount = participant.feeAmount ?? participant.exam.price;
+    return this.buildLinks(participant.publicId, amount);
   }
 
   /**

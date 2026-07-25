@@ -821,6 +821,15 @@ model MockExam {
   // Mock fee (so'm). 0 = bepul. Auto-deducted from Student.balance when
   // payment lands or balance becomes sufficient (MockExamBillingService).
   price                 Int       @default(0)
+  // Discounted mock fee for real DaF students (so'm). NULL = DaF students
+  // pay the full `price`. Applied when a registrant is matched to a Student
+  // (by Telegram chat or phone) at registration time. Full-price display
+  // (list, summary) still uses `price`; only the per-participant charged
+  // amount switches to this via `resolveParticipantFee`.
+  studentPrice          Int?
+  // CEFR levels this exam offers (e.g. ["A1","A2","B1"]). Empty = no level
+  // step. The bot shows these as inline buttons; the participant picks one.
+  offeredLevels         String[]  @default([])
   // Cached results PDF — regenerated on announce or any score edit.
   resultsPdfFileKey     String?
   resultsPdfGeneratedAt DateTime?
@@ -898,6 +907,19 @@ model MockExamParticipant {
   lastName  String
   phone     String
   formData  Json   @default("{}")
+
+  // CEFR level the participant chose (when the exam offers levels). Null
+  // when the exam has no offered levels or for legacy rows.
+  level String?
+
+  // The mock fee locked in for THIS registration (so'm), after any DaF
+  // discount. Set at registration from the exam price + the resolved
+  // studentId. Billing (balance auto-deduct), the gateway amount-match,
+  // the payment deep-link, and the revenue summary all read this so a
+  // later price edit or a discounted DaF payer never drifts the amount
+  // owed. Null on legacy rows (pre-feature) → callers fall back to
+  // exam.price.
+  feeAmount Int?
 
   // 5-digit public identifier. Drawn from the same Postgres sequence as
   // `Student.id` (`Student_id_seq`) so values never collide. If the

@@ -18,6 +18,7 @@ import {
 } from '../custom-forms/dto/form-field.dto';
 import { shortId } from '../custom-forms/short-id.util';
 import { isValidMockExamStatusTransition } from './mock-exam-status.util';
+import { sanitizeOfferedLevels } from './mock-exam-pricing.util';
 
 const BOT_PAYLOAD_LENGTH = 10;
 const MAX_PAYLOAD_RETRIES = 5;
@@ -41,20 +42,23 @@ export class MockExamsService {
   /**
    * KPI roll-up shown on top of the /mock-exams page.
    *
-   * Revenue is computed as SUM(exam.price) over participants where
-   * `paid = true` — i.e. only mocks that the participant actually paid
-   * for. Free exams (`exam.price = 0`) contribute zero. We don't write
-   * a Transaction row for mock-only payments (per the simple-billing
-   * decision), so this sum is the canonical place to read mock revenue.
+   * Revenue is computed as SUM(participant.feeAmount) over participants
+   * where `paid = true` — the fee locked in at registration (after any DaF
+   * discount), NOT the exam's current `price`. This keeps the total stable
+   * against later price edits and correct for discounted DaF payers. Legacy
+   * rows without a `feeAmount` fall back to the current `exam.price`. Free
+   * exams contribute zero. We don't write a Transaction row for mock-only
+   * payments (per the simple-billing decision), so this sum is the
+   * canonical place to read mock revenue.
    */
   async revenueSummary() {
     const paid = await this.prisma.mockExamParticipant.findMany({
       where: { paid: true, deletedAt: null },
-      select: { exam: { select: { price: true } } },
+      select: { feeAmount: true, exam: { select: { price: true } } },
     });
 
     const totalRevenue = paid.reduce(
-      (sum, p) => sum + (p.exam.price ?? 0),
+      (sum, p) => sum + (p.feeAmount ?? p.exam.price ?? 0),
       0,
     );
 
@@ -252,6 +256,8 @@ export class MockExamsService {
         maxScore: effectiveMaxScore,
         passingScore: dto.passingScore ?? null,
         price: dto.price ?? 0,
+        studentPrice: dto.studentPrice ?? null,
+        offeredLevels: sanitizeOfferedLevels(dto.offeredLevels),
         formFields: this.defaultFormFields(),
         botStartPayload,
         createdById: userId,
@@ -350,6 +356,12 @@ export class MockExamsService {
     }
     if (dto.price !== undefined) {
       data.price = dto.price;
+    }
+    if (dto.studentPrice !== undefined) {
+      data.studentPrice = dto.studentPrice;
+    }
+    if (dto.offeredLevels !== undefined) {
+      data.offeredLevels = sanitizeOfferedLevels(dto.offeredLevels);
     }
     if (dto.formFields !== undefined) {
       this.validateFormFields(dto.formFields);
@@ -713,6 +725,8 @@ export class MockExamsService {
     maxScore: number;
     passingScore: number | null;
     price: number;
+    studentPrice: number | null;
+    offeredLevels: string[];
     formFields: Prisma.JsonValue;
     botStartPayload: string;
     createdAt: Date;
@@ -731,6 +745,8 @@ export class MockExamsService {
       maxScore: exam.maxScore,
       passingScore: exam.passingScore,
       price: exam.price,
+      studentPrice: exam.studentPrice,
+      offeredLevels: exam.offeredLevels,
       formFields: exam.formFields,
       botStartPayload: exam.botStartPayload,
       participantCount: exam._count.participants,
@@ -751,6 +767,8 @@ export class MockExamsService {
     maxScore: number;
     passingScore: number | null;
     price: number;
+    studentPrice: number | null;
+    offeredLevels: string[];
     formFields: Prisma.JsonValue;
     botStartPayload: string;
     createdAt: Date;

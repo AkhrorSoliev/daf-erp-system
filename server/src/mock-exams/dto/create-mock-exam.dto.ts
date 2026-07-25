@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -11,6 +12,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { CEFR_LEVELS } from '../mock-exam-pricing.util';
 
 export class CreateMockExamSubjectDto {
   @IsString()
@@ -87,6 +89,24 @@ export class CreateMockExamDto {
   @IsInt()
   @Min(0)
   price?: number;
+
+  /**
+   * Discounted mock fee (so'm) for real DaF students. Omitted / null = DaF
+   * students pay the full `price`. 0 = free for DaF students.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  studentPrice?: number;
+
+  /**
+   * CEFR levels offered by this exam (subset of A1..C2). Empty / omitted =
+   * no level step in the bot. The participant picks exactly one of these.
+   */
+  @IsOptional()
+  @IsArray()
+  @IsIn(CEFR_LEVELS, { each: true })
+  offeredLevels?: string[];
 
   /**
    * Subjects (Lesen / Hören / ... or whatever the admin picks). At least

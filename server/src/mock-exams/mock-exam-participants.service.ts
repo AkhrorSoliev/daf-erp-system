@@ -12,6 +12,7 @@ import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
 import { ConvertMockParticipantDto } from './dto/convert-mock-participant.dto';
 import { ParticipantsQueryDto } from './dto/participants-query.dto';
 import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
+import { resolveParticipantFee } from './mock-exam-pricing.util';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -70,6 +71,8 @@ export class MockExamParticipantsService {
           telegramUsername: true,
           registeredAt: true,
           studentId: true,
+          level: true,
+          feeAmount: true,
           paid: true,
           paidAt: true,
           totalScore: true,
@@ -109,37 +112,67 @@ export class MockExamParticipantsService {
       );
     }
 
+    // Pricing for the DaF discount.
+    const pricing = await this.prisma.mockExam.findUnique({
+      where: { id: examId },
+      select: { price: true, studentPrice: true },
+    });
+    const examPrice = pricing?.price ?? 0;
+    const studentPrice = pricing?.studentPrice ?? null;
+
     try {
-      // 1. Is this person already a real DaF student? Match by phone — the
-      //    most reliable signal for admin manual entries. If yes, we reuse
-      //    their Student.id as the publicId so mock results show up on the
-      //    student profile and payments route via the normal balance flow.
+      // Resolve the DaF student link. An explicit `studentId` picked by the
+      // admin wins; otherwise auto-detect by phone (the most reliable
+      // signal for manual entries). A matched student reuses their
+      // Student.id as the publicId so mock results show up on the student
+      // profile and payments route via the normal balance flow, and the
+      // DaF mock discount applies.
       let publicId: number;
       let studentId: number | null = null;
-      const existingStudent = await this.prisma.student.findFirst({
-        where: { phone: dto.phone, deletedAt: null },
-        select: { id: true },
-      });
 
-      if (existingStudent) {
-        publicId = existingStudent.id;
-        studentId = existingStudent.id;
+      if (dto.studentId != null) {
+        const student = await this.prisma.student.findFirst({
+          where: { id: dto.studentId, deletedAt: null, companyId },
+          select: { id: true },
+        });
+        if (!student) {
+          throw new BadRequestException("Tanlangan o'quvchi topilmadi");
+        }
+        publicId = student.id;
+        studentId = student.id;
       } else {
-        // 2. Outsider — allocate a fresh public id from the shared Student
-        //    sequence. NO Student row is created (mock participants aren't
-        //    students). The id is later promoted to a real Student.id only
-        //    if an admin explicitly converts the participant to a student.
-        const result = await this.prisma.$queryRaw<{ next: bigint }[]>`
-          SELECT nextval('"Student_id_seq"') AS next
-        `;
-        publicId = Number(result[0].next);
+        const existingStudent = await this.prisma.student.findFirst({
+          where: { phone: dto.phone, deletedAt: null },
+          orderBy: { updatedAt: 'desc' },
+          select: { id: true },
+        });
+        if (existingStudent) {
+          publicId = existingStudent.id;
+          studentId = existingStudent.id;
+        } else {
+          // Outsider — allocate a fresh public id from the shared Student
+          // sequence. NO Student row is created (mock participants aren't
+          // students). The id is later promoted to a real Student.id only
+          // if an admin explicitly converts the participant to a student.
+          const result = await this.prisma.$queryRaw<{ next: bigint }[]>`
+            SELECT nextval('"Student_id_seq"') AS next
+          `;
+          publicId = Number(result[0].next);
+        }
       }
+
+      const feeAmount = resolveParticipantFee(
+        { price: examPrice, studentPrice },
+        studentId !== null,
+      );
 
       const created = await this.prisma.mockExamParticipant.create({
         data: {
           examId,
           publicId,
           studentId,
+          level: dto.level ?? null,
+          feeAmount,
           telegramChatId: dto.telegramChatId?.trim() || null,
           firstName,
           lastName,
@@ -156,6 +189,10 @@ export class MockExamParticipantsService {
           telegramUsername: true,
           registeredAt: true,
           studentId: true,
+          level: true,
+          feeAmount: true,
+          paid: true,
+          paidAt: true,
           totalScore: true,
           percentage: true,
           passed: true,
@@ -339,6 +376,8 @@ export class MockExamParticipantsService {
         id: true,
         publicId: true,
         registeredAt: true,
+        level: true,
+        feeAmount: true,
         paid: true,
         paidAt: true,
         totalScore: true,
@@ -384,7 +423,10 @@ export class MockExamParticipantsService {
     if (participant.paid) {
       throw new BadRequestException('Bu ishtirokchi allaqachon to\'lagan');
     }
-    if (participant.exam.price <= 0) {
+    // Guard on the participant's locked-in fee (after any DaF discount),
+    // falling back to the exam price for legacy rows.
+    const fee = participant.feeAmount ?? participant.exam.price;
+    if (fee <= 0) {
       throw new BadRequestException(
         "Bepul imtihon uchun to'lov qabul qilinmaydi",
       );
@@ -403,6 +445,8 @@ export class MockExamParticipantsService {
         telegramUsername: true,
         registeredAt: true,
         studentId: true,
+        level: true,
+        feeAmount: true,
         paid: true,
         paidAt: true,
         totalScore: true,
