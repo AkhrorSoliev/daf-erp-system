@@ -220,7 +220,27 @@ export class ReportsController {
       computed = null;
     }
 
-    return { ...overview, salary: { ...overview.salary, computed } };
+    // Corrected "Foyda" — the SAME canonical figure as the Excel "Sof foyda":
+    //   dars tushumi (recognized — shu oy o'tilgan darslar)
+    //   − ustoz oyligi (covered + markaz qo'shimchasi, faqat 2026-07 dan)
+    //   − admin oyligi − operatsion xarajat − refund.
+    // The legacy overview.netProfit (kassa tushumi − NAQD to'langan oylik)
+    // grossly overstated profit: teacher salary is paid next cycle, so its
+    // paidAt-based figure was ~0 and barely reduced profit (the +78M June bug).
+    // Defensive: a failure keeps the legacy figure, never breaks the overview.
+    let netProfit = overview.netProfit;
+    try {
+      const np = await this.reportsService.getMonthlyNetProfit(user.companyId, {
+        month,
+        branchId: query.branchId,
+        performedById: user.id,
+      });
+      netProfit = np.netProfit;
+    } catch {
+      netProfit = overview.netProfit;
+    }
+
+    return { ...overview, netProfit, salary: { ...overview.salary, computed } };
   }
 
   // "Oylik qarzdorlik + undirish" — per-month closing debt (frozen, ledger-

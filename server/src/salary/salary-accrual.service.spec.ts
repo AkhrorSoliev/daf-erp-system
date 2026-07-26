@@ -155,6 +155,91 @@ describe('SalaryAccrualService', () => {
     });
   });
 
+  describe('BR-13 — July+ late payment never double-pays the teacher', () => {
+    const version = {
+      id: 'v-1',
+      salaryType: 'PERCENTAGE',
+      value: 30,
+      effectiveFrom: new Date('2026-01-01'),
+      effectiveTo: null,
+    };
+    const julyLesson = new Date('2026-07-10T00:00:00.000Z');
+
+    it('recovering a center-fronted July lesson (late payment) writes NO new teacher balance credit', async () => {
+      // The July period is closed; a center top-up already paid the teacher for
+      // this lesson. The student now pays late → covered path recovers it.
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'closed-jul', status: 'PAID' }) // July closed
+        .mockResolvedValueOnce(null); // current period open
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.findUnique.mockResolvedValueOnce({ id: 'existing' }); // top-up row exists
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'existing' });
+      // The top-up already wrote the SALARY_ACCRUAL balance mirror → idempotency hit.
+      prisma.transaction.findFirst.mockResolvedValue({ id: 'accr-tx' });
+
+      await service.createAccrual({ ...baseParams, lessonDate: julyLesson });
+
+      // Recovery flip only — the teacher's balance is NOT credited a second time.
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
+      expect(call.update).toEqual(expect.objectContaining({ isCenterTopUp: false }));
+    });
+
+    it('a July+ late payment for a NEVER-topped-up lesson DOES pay the teacher (fresh carry)', async () => {
+      // No prior accrual (e.g. a BR-09-withheld new student, or a teacher whose
+      // top-up sweep skipped them) → the teacher was never paid, so pay now.
+      prisma.salaryPayment.findFirst
+        .mockResolvedValueOnce({ id: 'closed-jul', status: 'PAID' })
+        .mockResolvedValueOnce(null);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null); // fresh
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
+      // No prior balance mirror → applyAccrualToBalance actually credits.
+      prisma.transaction.findFirst.mockResolvedValue(null);
+
+      const sink: any[] = [];
+      await service.createAccrual({ ...baseParams, lessonDate: julyLesson, carriedOverSink: sink });
+
+      const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
+      expect(call.create.creditPeriodDate).toBeInstanceOf(Date); // carried to current period
+      expect(prisma.transaction.create).toHaveBeenCalled(); // teacher balance credited
+      expect(sink).toHaveLength(1); // teacher notified "oldingi oydan"
+    });
+  });
+
+  describe('BR-09b — center-funded backfill (creditPeriodDateOverride)', () => {
+    const version = {
+      id: 'v-1',
+      salaryType: 'PERCENTAGE',
+      value: 30,
+      effectiveFrom: new Date('2026-01-01'),
+      effectiveTo: null,
+    };
+
+    it('credits a center-funded backfill to the explicit override period (no closed-period probe)', async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null);
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'backfill' });
+      const override = new Date('2026-08-01T00:00:00.000Z');
+
+      await service.createAccrual({
+        ...baseParams,
+        deductionTransactionId: null, // center fronts it
+        centerFunded: true,
+        creditPeriodDateOverride: override,
+        lessonDate: new Date('2026-07-10T00:00:00.000Z'),
+      });
+
+      // Center-funded → no closed-period lookup; the override is used directly.
+      expect(prisma.salaryPayment.findFirst).not.toHaveBeenCalled();
+      const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
+      expect(call.create.creditPeriodDate).toEqual(override);
+      expect(call.create.isCenterTopUp).toBe(true);
+      expect(call.create.wasCenterTopUp).toBe(true);
+    });
+  });
+
   describe('two-query config lookup (P1.4 — groupId DESC was unsafe)', () => {
     it('uses per-group version when one matches', async () => {
       const groupVersion = {

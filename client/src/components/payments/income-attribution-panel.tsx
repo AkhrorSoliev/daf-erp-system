@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, CalendarClock, Info } from "lucide-react";
+import { CalendarClock, Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -89,27 +89,31 @@ export function IncomeAttributionPanel({ startDate, endDate }: Props) {
 
   return (
     <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
-      <div className="flex items-center gap-1.5">
-        <CalendarClock className="size-4 text-muted-foreground" />
-        <p className="text-sm font-medium">Tushum tarkibi</p>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Tushum tarkibi qanday hisoblanadi"
-              className="inline-flex cursor-help text-muted-foreground"
-            >
-              <Info className="size-3.5" aria-hidden="true" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="max-w-72">
-            Tanlangan davrda kassaga tushgan pul qaysi oy uchun ekani. O&apos;quvchi
-            to&apos;lov qilganda balansi minusda (qarzdor) bo&apos;lsa —
-            to&apos;lovning qarzni yopgan qismi eng eski oydan boshlab
-            &quot;kechikkan to&apos;lov&quot; deb hisoblanadi; qolgani shu davr
-            uchun real tushum.
-          </TooltipContent>
-        </Tooltip>
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5">
+          <CalendarClock className="size-4 text-muted-foreground" />
+          <p className="text-sm font-medium">Tushum tarkibi</p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Tushum tarkibi qanday hisoblanadi"
+                className="inline-flex cursor-help text-muted-foreground"
+              >
+                <Info className="size-3.5" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-72">
+              Bu davrda tushgan pulni ikkiga ajratamiz: shu oy uchun to&apos;langan
+              pul va oldingi oylardagi qarzni yopgan &quot;kechikkan&quot;
+              to&apos;lovlar. Qarzdor o&apos;quvchining to&apos;lovi avval eng eski
+              qarzdan yopiladi.
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Tushgan pul shu oy uchunmi yoki eski qarzni yopish uchunmi
+        </p>
       </div>
 
       {isLoading ? (
@@ -138,42 +142,62 @@ export function IncomeAttributionPanel({ startDate, endDate }: Props) {
         </p>
       ) : (
         <div className="space-y-3">
-          {/* Real income for the period's own month(s) */}
+          {/* Instant visual: green = this month, amber = old debt */}
+          <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
+            {currentShare > 0 && (
+              <div
+                className="bg-green-500"
+                style={{ width: `${currentShare}%` }}
+              />
+            )}
+            {100 - currentShare > 0 && (
+              <div
+                className="bg-amber-500"
+                style={{ width: `${100 - currentShare}%` }}
+              />
+            )}
+          </div>
+
+          {/* This period's own income */}
           <div className="rounded-lg border bg-card p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <ArrowUpRight className="size-4 text-green-500" />
-                {isSingleMonth ? "Shu oy uchun" : "Shu davr uchun"} (
-                {data.currentLabel})
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                <span className="size-2.5 shrink-0 rounded-full bg-green-500" />
+                {isSingleMonth ? "Shu oy uchun" : "Shu davr uchun"} ·{" "}
+                {data.currentLabel}
               </span>
-              <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+              <span className="text-xs font-medium text-muted-foreground tabular-nums">
                 {currentShare}%
               </span>
             </div>
-            <p className="mt-1 text-lg font-bold leading-tight text-green-600 dark:text-green-400">
+            <p className="mt-1 text-xl font-bold leading-tight text-green-600 dark:text-green-400">
               {formatPrice(data.currentMonth)} so&apos;m
             </p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {isSingleMonth
-                ? "Shu oy uchun real tushum — qarz yopilmagan, to'g'ridan-to'g'ri shu oy to'lovi"
-                : "Shu davr uchun real tushum — davrdan oldingi qarzni yopmagan to'lovlar"}
+                ? "Shu oyning o'zi uchun to'langan (eski qarz uchun emas)"
+                : "Shu davrning o'zi uchun to'langan (oldingi qarz uchun emas)"}
             </p>
           </div>
 
-          {/* Late payments, broken out by prior month */}
+          {/* Old-debt (late) payments, per prior month */}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                Kechikkan to&apos;lovlar (oldingi oylardan)
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                <span className="size-2.5 shrink-0 rounded-full bg-amber-500" />
+                Eski qarzlar uchun
               </span>
               <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-                {formatPrice(data.lateTotal)} so&apos;m
+                {100 - currentShare}% · {formatPrice(data.lateTotal)} so&apos;m
               </span>
             </div>
+            <p className="-mt-1 text-xs text-muted-foreground">
+              Oldingi oylardagi qarzni yopish uchun tushgan pul
+            </p>
 
             {data.late.length === 0 ? (
               <p className="rounded-lg border border-dashed bg-card/50 px-3 py-3 text-center text-xs text-muted-foreground">
-                Kechikkan to&apos;lov yo&apos;q — barcha tushum shu davr uchun
+                Eski qarz uchun to&apos;lov yo&apos;q — hamma tushum shu oy uchun
               </p>
             ) : (
               <div className="space-y-1.5">
@@ -185,7 +209,7 @@ export function IncomeAttributionPanel({ startDate, endDate }: Props) {
                       className="rounded-lg border bg-card px-3 py-2 space-y-1"
                     >
                       <div className="flex items-center justify-between gap-2 text-sm">
-                        <span className="text-muted-foreground">{m.label}</span>
+                        <span className="font-medium">{m.label}</span>
                         <span className="flex items-baseline gap-1.5">
                           <span className="font-semibold tabular-nums">
                             {formatPrice(m.amount)} so&apos;m
@@ -210,7 +234,7 @@ export function IncomeAttributionPanel({ startDate, endDate }: Props) {
 
           {/* Reconciliation footer — parts sum to the Tushumlar card figure */}
           <div className="flex items-center justify-between border-t pt-2 text-sm">
-            <span className="text-muted-foreground">Jami tushum</span>
+            <span className="text-muted-foreground">Jami tushgan pul</span>
             <span className="font-bold tabular-nums">
               {formatPrice(data.total)} so&apos;m
             </span>

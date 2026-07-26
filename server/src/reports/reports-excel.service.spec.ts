@@ -258,6 +258,9 @@ describe('ReportsExcelService', () => {
     getPaymentLineItems: jest.fn().mockResolvedValue(payments),
     getExpenseLineItems: jest.fn().mockResolvedValue(expenses),
     getSalaryMonthly: jest.fn().mockResolvedValue(salaryMonthly),
+    // Recognized "dars tushumi" — set equal to cash revenue (1_000_000) so the
+    // net-profit expectations isolate the salary top-up gating under test.
+    getRecognizedRevenue: jest.fn().mockResolvedValue(1_000_000),
     getDebtorLineItems: jest.fn().mockResolvedValue(debtors),
     getFinancialTrend: jest.fn().mockResolvedValue(trend),
     getPerBranchSummary: jest.fn().mockResolvedValue(perBranch),
@@ -418,15 +421,17 @@ describe('ReportsExcelService', () => {
     const wb = await load(await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30' }));
     const ws = wb.getWorksheet('Sof foyda')!;
     expect(ws).toBeTruthy();
-    // revenue 1_000_000 − teacher(fullDeserved) 500_000 − admin 100_000
-    //         − opEx(RENT) 200_000 − refunds 10_000 = 190_000
+    // 2026-06 is PRE top-up (TOPUP_EFFECTIVE_MONTH=2026-07): teacher salary =
+    // COVERED (students-paid) only, NOT covered+gap. So:
+    // revenue 1_000_000 − teacher(covered) 400_000 − admin 100_000
+    //         − opEx(RENT) 200_000 − refunds 10_000 = 290_000
     const bottom = findRow(ws, '=  SOF FOYDA');
     expect(bottom).toBeTruthy();
-    expect(bottom.getCell(2).value).toBe(190_000);
-    // Uses the HISOBLANGAN (deserved) teacher salary, not the ~0 cash-paid one.
-    const teacher = findRow(ws, '−  Ustoz oyligi (hisoblangan — bu oy uchun)');
+    expect(bottom.getCell(2).value).toBe(290_000);
+    // Pre-top-up month → covered-only label, value = covered (not fullDeserved).
+    const teacher = findRow(ws, '−  Ustoz oyligi (hisoblangan — o‘quvchilar to‘lagani)');
     expect(teacher).toBeTruthy();
-    expect(teacher.getCell(2).value).toBe(salaryMonthly.totals.fullDeserved);
+    expect(teacher.getCell(2).value).toBe(salaryMonthly.totals.covered);
   });
 
   it('shows the accurate net profit on Asosiy xulosa (deserved salary + refunds)', async () => {
@@ -436,7 +441,17 @@ describe('ReportsExcelService', () => {
       'Sof foyda (aniq — hisoblangan oylik + refund bilan)',
     );
     expect(row).toBeTruthy();
-    expect(row.getCell(2).value).toBe(190_000);
+    expect(row.getCell(2).value).toBe(290_000); // 2026-06 covered-only (pre top-up)
+  });
+
+  it('includes the center top-up (fullDeserved) from 2026-07 on', async () => {
+    const wb = await load(await service.generate(1, { startDate: '2026-07-01', endDate: '2026-07-31' }));
+    const ws = wb.getWorksheet('Sof foyda')!;
+    const teacher = findRow(ws, '−  Ustoz oyligi (hisoblangan + markaz qo‘shimchasi)');
+    expect(teacher).toBeTruthy();
+    expect(teacher.getCell(2).value).toBe(salaryMonthly.totals.fullDeserved);
+    // revenue 1_000_000 − teacher(fullDeserved) 500_000 − admin 100_000 − opEx 200_000 − refunds 10_000
+    expect(findRow(ws, '=  SOF FOYDA').getCell(2).value).toBe(190_000);
   });
 
   it('Qarzdorlar total ties to the balance-sheet debitorlik', async () => {

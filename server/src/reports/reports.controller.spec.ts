@@ -33,6 +33,8 @@ describe('ReportsController — role guards', () => {
         gap: 0,
       },
     }),
+    // Canonical monthly net profit — overrides overview.netProfit on the card.
+    getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 12_345_678 }),
     getPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherGroupsReport: jest.fn().mockResolvedValue({}),
@@ -384,10 +386,12 @@ describe('ReportsController — role guards', () => {
         roles: ['CEO'],
       });
       // Every sensitive field is preserved (the computed-salary fold is additive).
+      // netProfit is the canonical getMonthlyNetProfit figure (overrides the
+      // legacy overview.netProfit), not the raw cash-basis one.
       expect(res).toMatchObject({
         income: fullOverview.income,
         expenses: fullOverview.expenses,
-        netProfit: fullOverview.netProfit,
+        netProfit: 12_345_678,
         forecast: fullOverview.forecast,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
@@ -402,9 +406,29 @@ describe('ReportsController — role guards', () => {
       expect(res).toMatchObject({
         income: fullOverview.income,
         expenses: fullOverview.expenses,
-        netProfit: fullOverview.netProfit,
+        netProfit: 12_345_678,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
+    });
+
+    it('overrides netProfit with the canonical getMonthlyNetProfit; falls back to legacy on failure', async () => {
+      // Success path → canonical figure.
+      const ok: any = await controller.getFinancialOverview(query, {
+        id: 10001,
+        companyId: 1,
+        roles: ['CEO'],
+      });
+      expect(ok.netProfit).toBe(12_345_678);
+      expect(mockService.getMonthlyNetProfit).toHaveBeenCalled();
+
+      // Failure path → keep the legacy overview.netProfit, never break the card.
+      mockService.getMonthlyNetProfit.mockRejectedValueOnce(new Error('boom'));
+      const degraded: any = await controller.getFinancialOverview(query, {
+        id: 10001,
+        companyId: 1,
+        roles: ['CEO'],
+      });
+      expect(degraded.netProfit).toBe(fullOverview.netProfit);
     });
 
     it('folds the computed monthly teacher salary into salary.computed for CEO (matches the Excel Oyliklar sheet)', async () => {
@@ -432,8 +456,9 @@ describe('ReportsController — role guards', () => {
         roles: ['CEO'],
       });
       expect(res.salary.computed).toBeNull();
-      // The rest of the payload is untouched.
-      expect(res.netProfit).toBe(fullOverview.netProfit);
+      // The rest of the payload is untouched — netProfit is the canonical figure
+      // (getMonthlyNetProfit still succeeds; only the computed-salary fold failed).
+      expect(res.netProfit).toBe(12_345_678);
     });
 
     it('does NOT compute salary for Administrator (no leak, no wasted query)', async () => {
@@ -488,7 +513,7 @@ describe('ReportsController — role guards', () => {
       });
       expect(res).toMatchObject({
         income: fullOverview.income,
-        netProfit: fullOverview.netProfit,
+        netProfit: 12_345_678,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });

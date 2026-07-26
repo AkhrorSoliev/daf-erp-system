@@ -5,6 +5,7 @@
  * reports-excel.service.ts so the service stays a thin sheet-composer.
  */
 import { Worksheet, Row } from 'exceljs';
+import { isTopUpMonth } from '../salary/shared/topup';
 
 // ---- Palette (ARGB) — minimal blue + grey, per the 3-statement-model rule. ----
 export const NAVY = 'FF1F4E79'; // section headers (white bold on navy)
@@ -81,9 +82,15 @@ export const SALARY_STATUS_LABELS: Record<string, string> = {
  *  reused (as one number) by the summary + reconciliation sheets. */
 export interface NetProfit {
   revenue: number;
+  /** 'recognized' = dars tushumi (lessons held this month) | 'cash' = COMPLETED
+   *  payments received (legacy, when no recognized figure supplied). */
+  revenueBasis: 'recognized' | 'cash';
   teacherSalary: number;
   /** 'hisoblangan' = deserved (earned this month) | 'naqd' = cash paid (fallback). */
   teacherSalaryBasis: 'hisoblangan' | 'naqd';
+  /** True when `teacherSalary` includes the center top-up (gap) — only from
+   *  TOPUP_EFFECTIVE_MONTH on. Before that it is students-covered only. */
+  teacherSalaryHasTopup: boolean;
   adminSalary: number;
   operatingExpenses: number;
   refunds: number;
@@ -107,22 +114,37 @@ export interface NetProfit {
  *   − Qaytarishlar (refund — real cash returned, subtracted nowhere else)
  *   = SOF FOYDA
  *
- * Teacher salary uses the deserved monthly total (`salaries.totals.fullDeserved`
- * = covered + center top-up gap). When the salary month has no lesson data
- * (config-gap month), it falls back to the cash-paid teacher salary from the P&L
- * so the figure is never fabricated. Write-offs (non-cash loss) and gateway
- * fees are carried as a memo, not subtracted (product decision).
+ * Teacher salary is the month-appropriate deserved figure, gated by
+ * `isTopUpMonth(month)` exactly like the payout and the /payments/salary view:
+ *   • from TOPUP_EFFECTIVE_MONTH on → `fullDeserved` (covered + center top-up gap)
+ *     — the center now pays the gap, so it IS a real cost.
+ *   • before that                   → `covered` (students-paid only). Using
+ *     fullDeserved for a pre-top-up month wrongly subtracted a gap the center
+ *     never paid, understating profit (this was the June −8M bug).
+ * When the salary month has no lesson data (config-gap month, covered/deserved
+ * null), it falls back to the cash-paid teacher salary from the P&L so the figure
+ * is never fabricated. `month` omitted → legacy full-deserved (back-compat).
+ * Write-offs (non-cash loss) and gateway fees are carried as a memo, not
+ * subtracted (product decision).
  */
 export function buildNetProfit(
   pl: any,
   salaries: any,
   outflows: { refunds?: number; writeOffs?: number; providerFees?: number } | null,
+  month?: string,
+  recognizedRevenue?: number,
 ): NetProfit {
-  const revenue = pl?.revenue?.total ?? 0;
-  const deserved = salaries?.totals?.fullDeserved ?? 0;
+  // Revenue basis: prefer the "dars tushumi" (recognized — lessons held this
+  // month) figure when supplied; fall back to cash COMPLETED payments (pl).
+  const useRecognized = typeof recognizedRevenue === 'number';
+  const revenue = useRecognized ? recognizedRevenue! : pl?.revenue?.total ?? 0;
+  const totals = salaries?.totals ?? {};
+  // Include the center top-up (gap) only from the top-up month on.
+  const hasTopup = month ? isTopUpMonth(month) : true;
+  const deservedRaw = hasTopup ? totals.fullDeserved : totals.covered;
   const paidTeacher = pl?.costOfServices?.teacherSalaries ?? 0;
-  const hasDeserved = deserved > 0;
-  const teacherSalary = hasDeserved ? deserved : paidTeacher;
+  const hasDeserved = typeof deservedRaw === 'number' && deservedRaw > 0;
+  const teacherSalary = hasDeserved ? deservedRaw : paidTeacher;
   const adminSalary = pl?.operatingExpenses?.adminSalaries ?? 0;
   const operatingExpenses = (pl?.operatingExpenses?.byCategory ?? []).reduce(
     (s: number, e: any) => s + (e.amount ?? 0),
@@ -133,8 +155,10 @@ export function buildNetProfit(
     revenue - teacherSalary - adminSalary - operatingExpenses - refunds;
   return {
     revenue,
+    revenueBasis: useRecognized ? 'recognized' : 'cash',
     teacherSalary,
     teacherSalaryBasis: hasDeserved ? 'hisoblangan' : 'naqd',
+    teacherSalaryHasTopup: hasDeserved && hasTopup,
     adminSalary,
     operatingExpenses,
     refunds,

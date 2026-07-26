@@ -471,6 +471,68 @@ export class ReportsFinancialService {
   }
 
   /**
+   * Recognized (accrual) revenue for lessons HELD in [start, end): the full
+   * per-lesson value of every BILLED lesson whose attendance date falls in the
+   * window. Sums `metadata.perLessonCost` over live LESSON_CONSUMPTION rows
+   * joined to their attendance (a consumption exists only for a paid lesson).
+   *
+   * Unlike cash income (Payment by `createdAt`), this isolates a month to its
+   * OWN lessons: a late-paid lesson recognizes in the month it was HELD, and a
+   * prepayment recognizes only as the future lessons are held. It pairs exactly
+   * with the `covered` teacher salary (same lesson set), so the monthly profit
+   * `recognizedRevenue − teacherSalary` is internally consistent — this is the
+   * "dars tushumi" basis the Foyda card + Excel "Sof foyda" use.
+   */
+  async getRecognizedRevenue(
+    companyId: number,
+    { start, end, branchId }: { start: Date; end: Date; branchId?: number },
+  ): Promise<number> {
+    const atts = await this.prisma.attendance.findMany({
+      where: {
+        companyId,
+        status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+        date: { gte: start, lt: end },
+        ...(branchId && { group: { branchId } }),
+      },
+      select: {
+        id: true,
+        group: {
+          select: { course: { select: { price: true, lessonPaymentCount: true } } },
+        },
+      },
+    });
+    if (!atts.length) return 0;
+
+    const attById = new Map(atts.map((a) => [a.id, a]));
+    const attIds = atts.map((a) => a.id);
+    let revenue = 0;
+    // Chunk the `in` list — a month can hold several thousand attendances.
+    for (let i = 0; i < attIds.length; i += 1000) {
+      const cons = await this.prisma.transaction.findMany({
+        where: {
+          companyId,
+          type: 'LESSON_CONSUMPTION',
+          reversedAt: null,
+          attendanceId: { in: attIds.slice(i, i + 1000) },
+        },
+        select: { attendanceId: true, metadata: true },
+      });
+      for (const c of cons) {
+        const meta = c.metadata as { perLessonCost?: number } | null;
+        let per = meta?.perLessonCost;
+        if (per == null) {
+          // Legacy rows without metadata: fall back to the group's course price.
+          const a = c.attendanceId ? attById.get(c.attendanceId) : undefined;
+          const lpc = a?.group?.course?.lessonPaymentCount || 12;
+          per = a?.group?.course ? Math.round(a.group.course.price / lpc) : 0;
+        }
+        revenue += per;
+      }
+    }
+    return revenue;
+  }
+
+  /**
    * Income composition for a period: how much of the cash received in
    * [start, end] is REAL income for the period's own month(s) versus LATE
    * payments that settled debt carried in from earlier months — broken down by
