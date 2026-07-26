@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
 import {
   escapeHtml,
+  firstOfThisMonthDate,
   firstOfThisMonthUtc,
   formatNumber,
   formatSignedSum,
@@ -106,7 +107,14 @@ export class TelegramGroupDailyReportService {
   }> {
     const today = tashkentDayRange();
     const todayDate = tashkentTodayDate();
+    // `firstOfMonth` (a -5h-shifted timestamp) is correct only for the income
+    // query below, which filters `Payment.createdAt` (a real timestamp).
+    // `Expense.date` is a DATE column, so its month window must use date-only
+    // bounds (`firstOfMonthDate` … `todayDate`) — otherwise Postgres floors the
+    // shifted lower bound to the previous 30th/31st and leaks that day's
+    // expenses into this month. See firstOfThisMonthDate() docstring.
     const firstOfMonth = firstOfThisMonthUtc();
+    const firstOfMonthDate = firstOfThisMonthDate();
 
     const [
       company,
@@ -123,6 +131,7 @@ export class TelegramGroupDailyReportService {
       debtorAgg,
       monthlyIncome,
       monthlyExpenses,
+      monthlyAdvances,
       todayFlags,
       yesterdaySnapshot,
     ] = await Promise.all([
@@ -220,12 +229,27 @@ export class TelegramGroupDailyReportService {
         },
         _sum: { amount: true },
       }),
+      // Operational MTD spend — advance-free. `Expense.date` is a DATE column,
+      // so bound it with date-only [1st-of-Tashkent-month … today]; the missing
+      // upper bound + shifted lower bound previously leaked the prev-month 30th
+      // (June rent/salaries) AND any future-dated row into this total.
       this.prisma.expense.aggregate({
         where: {
           companyId,
           deletedAt: null,
-          date: { gte: firstOfMonth },
+          date: { gte: firstOfMonthDate, lte: todayDate },
           category: { not: 'TEACHER_ADVANCE' },
+        },
+        _sum: { amount: true },
+      }),
+      // MTD teacher advances — surfaced on their own "Avans" line (advances are
+      // teacher pay, not operational Xarajat). Same date-only window.
+      this.prisma.expense.aggregate({
+        where: {
+          companyId,
+          deletedAt: null,
+          date: { gte: firstOfMonthDate, lte: todayDate },
+          category: 'TEACHER_ADVANCE',
         },
         _sum: { amount: true },
       }),
@@ -279,7 +303,10 @@ export class TelegramGroupDailyReportService {
 
     const mtdIncome = monthlyIncome._sum.amount ?? 0;
     const mtdExpense = monthlyExpenses._sum.amount ?? 0;
-    const mtdNet = mtdIncome - mtdExpense;
+    // Advances are real cash paid to teachers (teacher pay), so Sof foyda nets
+    // them out too — shown on their own line, kept out of the Xarajat figure.
+    const mtdAdvance = monthlyAdvances._sum.amount ?? 0;
+    const mtdNet = mtdIncome - mtdExpense - mtdAdvance;
     const collectionPct =
       forecastIncome && forecastIncome > 0
         ? Math.round((mtdIncome / forecastIncome) * 100)
@@ -366,6 +393,9 @@ export class TelegramGroupDailyReportService {
     lines.push(`📅 <b>Oy boshidan (1–${dayNum} ${monthName})</b>`);
     lines.push(`• Tushum (haqiqiy): <b>${formatSum(mtdIncome)}</b>`);
     lines.push(`• Xarajat: <b>${formatSum(mtdExpense)}</b>`);
+    if (mtdAdvance > 0) {
+      lines.push(`• Avans (ustozlarga): <b>${formatSum(mtdAdvance)}</b>`);
+    }
     lines.push(`• Sof foyda: <b>${formatSignedSum(mtdNet)}</b>`);
     if (forecastIncome && forecastIncome > 0 && collectionPct !== null) {
       lines.push(

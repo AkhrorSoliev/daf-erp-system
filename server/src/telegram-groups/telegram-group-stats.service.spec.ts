@@ -37,4 +37,46 @@ describe('TelegramGroupStatsService', () => {
       expect(out).toBe('kunlik hisobot');
     });
   });
+
+  describe('buildOverallStats — MTD expense boundary', () => {
+    beforeEach(() =>
+      jest.useFakeTimers().setSystemTime(new Date('2026-07-08T16:00:00Z')),
+    );
+    afterEach(() => jest.useRealTimers());
+
+    it('bounds the /stats Expense query by a date-only Tashkent month window, not a -5h shifted timestamp (regression)', async () => {
+      const prisma: any = {
+        role: { findFirst: jest.fn(async () => ({ id: 4 })) },
+        student: {
+          count: jest.fn(async () => 0),
+          aggregate: jest.fn(async () => ({ _sum: { balance: 0 }, _count: 0 })),
+        },
+        group: { count: jest.fn(async () => 0) },
+        user: { count: jest.fn(async () => 0) },
+        payment: { aggregate: jest.fn(async () => ({ _sum: { amount: 0 } })) },
+        expense: { aggregate: jest.fn(async () => ({ _sum: { amount: 0 } })) },
+      };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          TelegramGroupStatsService,
+          { provide: PrismaService, useValue: prisma },
+          { provide: TelegramGroupDailyReportService, useValue: { build } },
+        ],
+      }).compile();
+      const svc = module.get(TelegramGroupStatsService);
+
+      await svc.buildOverallStats(1001);
+
+      const where = prisma.expense.aggregate.mock.calls[0][0].where;
+      // Lower bound = 1st of the Tashkent month at 00:00 UTC (not the buggy
+      // 19:00-of-the-previous-30th that leaked June into July).
+      expect(where.date.gte).toBeInstanceOf(Date);
+      expect(where.date.gte.getUTCHours()).toBe(0);
+      expect(where.date.gte.getUTCDate()).toBe(1);
+      expect(where.date.gte.getUTCMonth()).toBe(6); // July
+      // Upper bound now exists (was missing → future-dated leak).
+      expect(where.date.lte).toBeInstanceOf(Date);
+      expect(where.date.lte.getUTCHours()).toBe(0);
+    });
+  });
 });
