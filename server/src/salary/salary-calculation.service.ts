@@ -507,6 +507,7 @@ export class SalaryCalculationService {
       overrides,
       versionRows,
       heldCounts,
+      inactiveStudents,
     ] = await Promise.all([
         // ALL non-reversed accruals bucketed into this period (covered + any
         // prior top-up) → covered-key set so a lesson is never double-listed.
@@ -524,12 +525,12 @@ export class SalaryCalculationService {
           },
           select: { userId: true, attendanceId: true },
         }),
-        // BR-06/08/11: ABSENT excluded from the top-up set — the center never
-        // fronts a no-show lesson (student is still billed elsewhere).
+        // Every held lesson (PRESENT/LATE/ABSENT) can earn the teacher; an
+        // uncovered one is fronted by the center. EXCUSED never bills/accrues.
         this.prisma.attendance.findMany({
           where: {
             companyId,
-            status: { in: ['PRESENT', 'LATE'] },
+            status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
             date: { gte: periodStart, lte: periodEnd },
           },
           select: { id: true, studentId: true, groupId: true, date: true },
@@ -572,6 +573,18 @@ export class SalaryCalculationService {
           },
           _count: { _all: true },
         }),
+        // Cap: an inactive student (frozen/expelled/archived/…) is only center-
+        // fronted for lessons up to the date they went inactive (statusChangedAt);
+        // nothing after. A student who paid is covered regardless — this only
+        // bounds the center's own top-up.
+        this.prisma.student.findMany({
+          where: {
+            companyId,
+            status: { not: 'ACTIVE' },
+            statusChangedAt: { not: null },
+          },
+          select: { id: true, statusChangedAt: true },
+        }),
       ]);
 
     // (studentId::groupId) -> attended-lesson count (BR-09 new-student gate).
@@ -579,6 +592,25 @@ export class SalaryCalculationService {
     for (const h of heldCounts) {
       heldByStudentGroup.set(`${h.studentId}::${h.groupId}`, h._count._all);
     }
+    // (studentId) -> Tashkent date the student went inactive (top-up cap).
+    const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const inactiveSince = new Map<number, string>();
+    for (const s of inactiveStudents) {
+      if (s.statusChangedAt) {
+        inactiveSince.set(
+          s.id,
+          new Date(s.statusChangedAt.getTime() + TASHKENT_OFFSET_MS)
+            .toISOString()
+            .slice(0, 10),
+        );
+      }
+    }
+    // Center top-up is withheld for a lesson held after the student went
+    // inactive; a lesson on/before that day is still fronted ("…gacha").
+    const cappedByInactivity = (studentId: number, lessonDate: Date): boolean => {
+      const day = inactiveSince.get(studentId);
+      return day !== undefined && dateStr(lessonDate) > day;
+    };
 
     const dateStr = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -638,6 +670,8 @@ export class SalaryCalculationService {
       // never gated — it isn't in this uncovered gap set to begin with.
       const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
       if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
+      // No center top-up for a lesson held after the student went inactive.
+      if (cappedByInactivity(att.studentId, att.date)) continue;
       const lpc = g.course.lessonPaymentCount || 12;
       const perLessonCost = Math.round(g.course.price / lpc);
       const dStr = dateStr(att.date);
@@ -676,7 +710,7 @@ export class SalaryCalculationService {
         SELECT a.id, a."studentId", a."groupId", a.date
         FROM "Attendance" a
         WHERE a."companyId" = ${companyId}
-          AND a.status::text IN ('PRESENT', 'LATE')
+          AND a.status::text IN ('PRESENT', 'LATE', 'ABSENT')
           AND a.date >= ${eraStart}
           AND a.date < ${periodStart}
           AND NOT EXISTS (
@@ -688,6 +722,7 @@ export class SalaryCalculationService {
         // Only genuine new-student pairs that have NOW crossed the threshold.
         const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
         if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
+        if (cappedByInactivity(att.studentId, att.date)) continue;
         const g = groupMap.get(att.groupId);
         if (!g) continue;
         const lpc = g.course.lessonPaymentCount || 12;

@@ -46,27 +46,6 @@ export function isTopUpPeriod(periodStart: Date): boolean {
 }
 
 /**
- * BR-06 / BR-08 / BR-11 (amal 2026-07): an ABSENT ("kelmadi") lesson earns the
- * teacher NOTHING and the center adds NO top-up for it — the student is still
- * billed (their reserved slot / held lesson), so the center keeps that money.
- *
- * Scoped to the top-up era: only lessons whose SERVICE month is at/after
- * `TOPUP_EFFECTIVE_MONTH` are affected. Pre-July (May/June) ABSENT lessons keep
- * the old "lesson held = teacher paid" behaviour so BR-12 (May/June late
- * payments still reach the teacher) is not disturbed. EXCUSED is unaffected —
- * it already never bills or accrues.
- *
- * `status` is an `AttendanceStatus` value (string enum); typed loosely so this
- * pure date/string module stays free of a Prisma import.
- */
-export function absentExcludedFromSalary(
-  status: string,
-  lessonDate: Date,
-): boolean {
-  return status === 'ABSENT' && monthKeyOf(lessonDate) >= TOPUP_EFFECTIVE_MONTH;
-}
-
-/**
  * BR-09 (yangi o'quvchi istisnosi): the center does NOT front (top up) a new
  * student's lessons until that student has *attended* at least this many
  * lessons (PRESENT/LATE) in the group. A trial student who attends the first 3

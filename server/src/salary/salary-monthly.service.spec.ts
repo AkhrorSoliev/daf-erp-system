@@ -45,6 +45,8 @@ describe('SalaryMonthlyService', () => {
         // empty; gap tests override it so their student clears the new-student gate.
         groupBy: jest.fn().mockResolvedValue([]),
       },
+      // Inactive-student list for the top-up cap; default none.
+      student: { findMany: jest.fn().mockResolvedValue([]) },
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
@@ -445,13 +447,48 @@ describe('SalaryMonthlyService', () => {
     expect(res.data[0].gap).toBe(6_000);
   });
 
-  it('BR-06/08/11: the gap sweep queries PRESENT/LATE only (ABSENT excluded)', async () => {
+  it('the gap sweep includes ABSENT (a held lesson earns the teacher)', async () => {
     prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
 
     await service.getMonthly({ month: '2026-07' }, 1, 999);
 
     const call = prisma.attendance.findMany.mock.calls[0][0];
-    expect(call.where.status).toEqual({ in: ['PRESENT', 'LATE'] });
+    expect(call.where.status).toEqual({ in: ['PRESENT', 'LATE', 'ABSENT'] });
+  });
+
+  it('caps the shown top-up at a student who went inactive (no top-up after status change)', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        salaryType: 'PERCENTAGE',
+        value: 30,
+        effectiveFrom: new Date('2026-05-01'),
+        effectiveTo: null,
+        config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+      },
+    ]);
+    prisma.salaryAccrual.findMany.mockResolvedValue([]); // both uncovered → would be gap
+    prisma.attendance.findMany.mockResolvedValue([
+      { id: 'before', studentId: 20005, groupId: 'g1', date: new Date('2026-07-05') },
+      { id: 'after', studentId: 20005, groupId: 'g1', date: new Date('2026-07-20') },
+    ]);
+    prisma.attendance.groupBy.mockResolvedValue([
+      { studentId: 20005, groupId: 'g1', _count: { _all: 6 } },
+    ]);
+    // Frozen on 2026-07-10 → only the pre-freeze lesson is fronted (one gap unit).
+    prisma.student.findMany.mockResolvedValue([
+      { id: 20005, statusChangedAt: new Date('2026-07-10T09:00:00Z') },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    expect(res.data[0].gap).toBe(6_000); // only 07-05, not 07-20
   });
 
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {

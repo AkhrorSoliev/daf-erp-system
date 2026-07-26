@@ -13,7 +13,7 @@
  * Dev : `npx ts-node scripts/preflight-rules-faza0.ts`
  */
 import { PrismaClient } from '@prisma/client';
-import { run, printHeader, section, som, printTable, day, dbEnvLabel } from './lib/check-cli';
+import { run, printHeader, section, printTable, day, dbEnvLabel } from './lib/check-cli';
 
 const COMPANY_ID = 1001;
 const JULY_START = '2026-07-01';
@@ -85,54 +85,8 @@ async function main(prisma: PrismaClient) {
   }
 
   // ─── 3. Iyul ABSENT accrual soni (reversal skript nishoni) ───────────────
-  section('3. Iyul ABSENT teacher accruallari (reversal nishoni)');
-  const [agg] = await prisma.$queryRaw<{ cnt: number; total: number; topups: number; teachers: number; students: number }[]>`
-    SELECT
-      COUNT(*)::int AS cnt,
-      COALESCE(SUM(sa.amount), 0)::int AS total,
-      COALESCE(SUM(CASE WHEN sa."isCenterTopUp" THEN 1 ELSE 0 END), 0)::int AS topups,
-      COUNT(DISTINCT sa."userId")::int AS teachers,
-      COUNT(DISTINCT sa."studentId")::int AS students
-    FROM "SalaryAccrual" sa
-    JOIN "Attendance" a ON a.id = sa."attendanceId"
-    WHERE a.status::text = 'ABSENT'
-      AND sa."lessonDate" >= ${new Date(JULY_START)}
-      AND sa."reversedAt" IS NULL
-      AND sa."salaryPaymentId" IS NULL
-      AND sa."attendanceId" IS NOT NULL
-      AND sa."companyId" = ${COMPANY_ID}
-  `;
-  console.log(`  Reversal tegadigan accruallar : ${agg.cnt} ta`);
-  console.log(`  Jami summa (ustoz balansidan qaytadi) : ${som(agg.total)} so'm`);
-  console.log(`  Turli ustoz / o'quvchi : ${agg.teachers} / ${agg.students}`);
-  console.log(`  shundan isCenterTopUp=true : ${agg.topups}  (0 kutiladi — top-up hali settlementda yozilmagan)`);
-
-  if (agg.cnt > 0) {
-    const sample = await prisma.$queryRaw<
-      { userId: number; studentId: number; lessonDate: Date; amount: number }[]
-    >`
-      SELECT sa."userId", sa."studentId", sa."lessonDate", sa.amount
-      FROM "SalaryAccrual" sa
-      JOIN "Attendance" a ON a.id = sa."attendanceId"
-      WHERE a.status::text = 'ABSENT'
-        AND sa."lessonDate" >= ${new Date(JULY_START)}
-        AND sa."reversedAt" IS NULL
-        AND sa."salaryPaymentId" IS NULL
-        AND sa."attendanceId" IS NOT NULL
-        AND sa."companyId" = ${COMPANY_ID}
-      ORDER BY sa."lessonDate" ASC
-      LIMIT 8
-    `;
-    section('   namuna (birinchi 8)');
-    printTable(
-      ['ustoz', 'o‘quvchi', 'dars sanasi', 'summa'],
-      sample.map((r) => [r.userId, r.studentId, day(r.lessonDate), som(r.amount)]),
-      ['l', 'l', 'l', 'r'],
-    );
-  }
-
   console.log('\n' + '═'.repeat(74));
-  console.log('  Faza 0 tugadi. Yuqoridagi 3 punkt ✅ bo‘lsa — Faza 1 ga o‘tish mumkin.');
+  console.log('  Pre-flight tugadi. cycleStartDay=1 va deaktiv config yo‘q bo‘lsa — deploy OK.');
   console.log('═'.repeat(74));
 }
 

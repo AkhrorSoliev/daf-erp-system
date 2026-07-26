@@ -56,6 +56,8 @@ describe('SalaryCalculationService', () => {
         // their student clears the new-student gate.
         groupBy: jest.fn().mockResolvedValue([]),
       },
+      // Inactive-student list for the top-up cap; default none.
+      student: { findMany: jest.fn().mockResolvedValue([]) },
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
@@ -217,17 +219,54 @@ describe('SalaryCalculationService', () => {
       expect(accrualService.createAccrual).not.toHaveBeenCalled();
     });
 
-    it('BR-06/08/11: the gap-sweep attendance query is PRESENT/LATE only (ABSENT excluded)', async () => {
+    it('the gap-sweep includes ABSENT (a held lesson earns the teacher)', async () => {
       await service.calculateMonthlySalaries(1, { asOfDate: julyAsOf, now: julyNow });
 
       const statusFilters = prisma.attendance.findMany.mock.calls.map(
         (c: any) => c[0]?.where?.status,
       );
-      // Every gap-sweep attendance read excludes ABSENT.
       for (const s of statusFilters) {
-        expect(s).toEqual({ in: ['PRESENT', 'LATE'] });
+        expect(s).toEqual({ in: ['PRESENT', 'LATE', 'ABSENT'] });
       }
       expect(statusFilters.length).toBeGreaterThan(0);
+    });
+
+    it('caps the top-up at a student who went inactive: no top-up after statusChangedAt', async () => {
+      // Two July lessons: one before the freeze date, one after.
+      prisma.attendance.findMany.mockResolvedValue([
+        { id: 'before', studentId: 100, groupId: 'g1', date: new Date('2026-07-05') },
+        { id: 'after', studentId: 100, groupId: 'g1', date: new Date('2026-07-20') },
+      ]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 6 } },
+      ]);
+      // Student 100 was frozen on 2026-07-10.
+      prisma.student.findMany.mockResolvedValue([
+        { id: 100, statusChangedAt: new Date('2026-07-10T09:00:00Z') },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+      ]);
+
+      await service.calculateMonthlySalaries(1, { asOfDate: julyAsOf, now: julyNow });
+
+      const attIds = accrualService.createAccrual.mock.calls.map(
+        (c: any) => c[0].attendanceId,
+      );
+      expect(attIds).toContain('before'); // up to the freeze date → fronted
+      expect(attIds).not.toContain('after'); // after the freeze date → no top-up
     });
 
     it('skips a teacher whose payment for the period is already closed (APPROVED/PAID)', async () => {

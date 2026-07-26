@@ -11,7 +11,6 @@ import {
   SalaryAccrualService,
   CarriedOverAccrual,
 } from '../salary/salary-accrual.service';
-import { absentExcludedFromSalary } from '../salary/shared/topup';
 
 // Business rule: a lesson held = a lesson paid. The student's prepaid
 // quota is consumed (and the teacher earns) for any status that confirms
@@ -164,10 +163,8 @@ export class LessonBillingService {
       const fromFilter = params.fromDate
         ? Prisma.sql`AND a.date >= ${params.fromDate}`
         : Prisma.empty;
-      const unpaidRows = await tx.$queryRaw<
-        { id: string; date: Date; status: string }[]
-      >`
-        SELECT a.id, a.date, a.status
+      const unpaidRows = await tx.$queryRaw<{ id: string; date: Date }[]>`
+        SELECT a.id, a.date
         FROM "Attendance" a
         WHERE a."studentId" = ${params.studentId}
           AND a."groupId" = ${enr.groupId}
@@ -201,10 +198,7 @@ export class LessonBillingService {
             branchId: enr.group.branchId,
             lessonDate: att.date,
             oldStatus: null,
-            // Real status is threaded through (not hardcoded PRESENT) so the
-            // ABSENT accrual gate in bill() fires — the student is still billed,
-            // but a July+ ABSENT lesson writes no teacher accrual (BR-06/08/11).
-            newStatus: att.status as AttendanceStatus,
+            newStatus: AttendanceStatus.PRESENT,
             companyId: params.companyId,
             performedById: params.performedById,
           },
@@ -314,25 +308,12 @@ export class LessonBillingService {
       // Fully covered: write the missing SalaryAccrual rows + clear flags.
       const attendance = await tx.attendance.findUnique({
         where: { id: row.attendanceId },
-        select: { date: true, groupId: true, status: true },
+        select: { date: true, groupId: true },
       });
       if (!attendance) {
         // Defensive — attendance shouldn't disappear, but if it did, just
         // clear the flag and move on. Without the lesson context we can't
         // resolve teachers anyway.
-        await tx.transaction.update({
-          where: { id: row.id },
-          data: {
-            metadata: { ...md, uncoveredAmount: 0, salaryDeferred: false },
-          },
-        });
-        continue;
-      }
-
-      // BR-06/08/11: a July+ ABSENT lesson earns the teacher nothing. Clear the
-      // deferred flag (debt already covered) but write no accrual. Handles any
-      // legacy ABSENT rows deferred before this rule shipped.
-      if (absentExcludedFromSalary(attendance.status, attendance.date)) {
         await tx.transaction.update({
           where: { id: row.id },
           data: {
@@ -597,10 +578,7 @@ export class LessonBillingService {
             lessonsCovered: 1,
             discountPercent,
             fullAmount: perLessonCost,
-            // A July+ ABSENT lesson never earns the teacher (BR-06/08/11), so it
-            // is NOT deferred — the student still accrues the debt, but there is
-            // no pending teacher accrual to settle when they later pay.
-            salaryDeferred: !absentExcludedFromSalary(p.newStatus, p.lessonDate),
+            salaryDeferred: true,
             uncoveredAmount: discountedPerLessonCost,
           },
           tx,
@@ -635,15 +613,7 @@ export class LessonBillingService {
     // LessonTeacherOverride exists for (groupId, lessonDate), `teacherIds`
     // holds the substitute roster (e.g. Aziz instead of Botir); otherwise
     // it's the standard GroupTeacher list.
-    //
-    // BR-06/08/11: a July+ ABSENT lesson is billed to the student above (their
-    // slot is consumed) but earns the teacher NOTHING and gets no center top-up
-    // — so skip accrual entirely. PRESENT/LATE (and any pre-July status) accrue
-    // as before.
-    if (
-      coverageTransactionId &&
-      !absentExcludedFromSalary(p.newStatus, p.lessonDate)
-    ) {
+    if (coverageTransactionId) {
       for (const teacherId of teacherIds) {
         try {
           await this.salaryAccrualService.createAccrual({

@@ -157,6 +157,7 @@ export class SalaryMonthlyService {
       payments,
       carriedOutAgg,
       heldCounts,
+      inactiveStudents,
     ] = await Promise.all([
       // Covered ground-truth — accruals bucketed into this period (carry-over OR).
       // `creditPeriodDate` is selected so a carried-IN accrual (its lessonDate is
@@ -183,12 +184,13 @@ export class SalaryMonthlyService {
           wasCenterTopUp: true,
         },
       }),
-      // Billable attendances in the period (for the GAP sweep). BR-06/08/11:
-      // ABSENT is excluded — the center never tops up a no-show lesson.
+      // Billable attendances in the period (for the GAP sweep). Every held
+      // lesson (PRESENT/LATE/ABSENT) can earn the teacher; the center fronts an
+      // uncovered one. EXCUSED never bills/accrues.
       this.prisma.attendance.findMany({
         where: {
           companyId,
-          status: { in: ['PRESENT', 'LATE'] },
+          status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
           date: { gte: periodStart, lte: periodEnd },
         },
         select: { id: true, studentId: true, groupId: true, date: true },
@@ -276,6 +278,16 @@ export class SalaryMonthlyService {
         },
         _count: { _all: true },
       }),
+      // Top-up cap: an inactive student is only fronted for lessons up to the
+      // date they went inactive (statusChangedAt). Mirrors the cron sweep.
+      this.prisma.student.findMany({
+        where: {
+          companyId,
+          status: { not: 'ACTIVE' },
+          statusChangedAt: { not: null },
+        },
+        select: { id: true, statusChangedAt: true },
+      }),
     ]);
     const carriedOutMap = new Map(
       carriedOutAgg.map((a) => [a.userId as number, a._sum.amount ?? 0]),
@@ -285,6 +297,23 @@ export class SalaryMonthlyService {
     for (const h of heldCounts) {
       heldByStudentGroup.set(`${h.studentId}::${h.groupId}`, h._count._all);
     }
+    // (studentId) -> Tashkent date the student went inactive (top-up cap).
+    const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const inactiveSince = new Map<number, string>();
+    for (const s of inactiveStudents) {
+      if (s.statusChangedAt) {
+        inactiveSince.set(
+          s.id,
+          new Date(s.statusChangedAt.getTime() + TASHKENT_OFFSET_MS)
+            .toISOString()
+            .slice(0, 10),
+        );
+      }
+    }
+    const cappedByInactivity = (studentId: number, lessonDate: Date): boolean => {
+      const day = inactiveSince.get(studentId);
+      return day !== undefined && dateStr(lessonDate) > day;
+    };
 
     // ─── Build in-memory maps ─────────────────────────────────────────────
     const groupMap = new Map(groups.map((g) => [g.id, g]));
@@ -395,6 +424,8 @@ export class SalaryMonthlyService {
       // the shown gap equals what will be paid).
       const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
       if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
+      // No center top-up for a lesson held after the student went inactive.
+      if (cappedByInactivity(att.studentId, att.date)) continue;
       const lpc = g.course.lessonPaymentCount || 12;
       const perLessonCost = Math.round(g.course.price / lpc);
       const dStr = dateStr(att.date);
