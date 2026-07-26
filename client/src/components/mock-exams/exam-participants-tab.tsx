@@ -277,11 +277,18 @@ export function ExamParticipantsTab({
                         );
                       }
                       if (fee > 0) {
+                        const cashChosen = p.formData?.__payIntent === "CASH";
                         return (
                           <div className="flex flex-col gap-0.5">
-                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                              Kutilmoqda
-                            </span>
+                            {cashChosen ? (
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+                                💵 Naqd kutilmoqda
+                              </span>
+                            ) : (
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                                Kutilmoqda
+                              </span>
+                            )}
                             <span className="tabular-nums text-muted-foreground">
                               {formatPrice(fee)} so&apos;m
                             </span>
