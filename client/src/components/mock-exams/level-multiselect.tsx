@@ -20,8 +20,11 @@ export function LevelMultiSelect({
   onChange,
   disabled,
 }: LevelMultiSelectProps) {
+  // Guard against an undefined value (e.g. a form reset that omits the
+  // field) so a bad prop can never crash the whole page.
+  const selected = value ?? [];
   const toggle = (lvl: string) => {
-    const set = new Set(value);
+    const set = new Set(selected);
     if (set.has(lvl)) set.delete(lvl);
     else set.add(lvl);
     onChange(CEFR_LEVELS.filter((l) => set.has(l)));
@@ -30,7 +33,7 @@ export function LevelMultiSelect({
   return (
     <div className="flex flex-wrap gap-2">
       {CEFR_LEVELS.map((lvl) => {
-        const active = value.includes(lvl);
+        const active = selected.includes(lvl);
         return (
           <Button
             key={lvl}

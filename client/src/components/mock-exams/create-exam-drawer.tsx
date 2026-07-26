@@ -136,6 +136,8 @@ export function CreateExamDrawer({
         registrationDate: null,
         registrationTime: "09:00",
         price: "",
+        studentPrice: "",
+        offeredLevels: [],
         subjects: DEFAULT_GERMAN_SUBJECTS.map((s) => ({ ...s })),
       });
       setSubmitting(false);
