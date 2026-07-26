@@ -24,6 +24,8 @@ interface ManualParticipantDialogProps {
   examId: string;
   /** CEFR levels the exam offers (empty = hide the level picker). */
   offeredLevels: string[];
+  /** Exam time slots offered (empty = hide the time picker). */
+  examTimes: string[];
   /** Whether the exam has a discounted DaF-student price (shows a hint). */
   hasStudentDiscount: boolean;
   open: boolean;
@@ -39,11 +41,14 @@ interface FormValues {
   studentId: string;
   /** Chosen level ("" = none). */
   level: string;
+  /** Chosen exam time ("" = none). */
+  examTime: string;
 }
 
 export function ManualParticipantDialog({
   examId,
   offeredLevels,
+  examTimes,
   hasStudentDiscount,
   open,
   onClose,
@@ -62,6 +67,7 @@ export function ManualParticipantDialog({
       phone: "",
       studentId: "",
       level: "",
+      examTime: "",
     },
   });
   const [submitting, setSubmitting] = useState(false);
@@ -74,6 +80,7 @@ export function ManualParticipantDialog({
         phone: "",
         studentId: "",
         level: "",
+        examTime: "",
       });
       setSubmitting(false);
     }
@@ -100,6 +107,7 @@ export function ManualParticipantDialog({
           phone: values.phone,
           studentId,
           level: values.level || undefined,
+          examTime: values.examTime || undefined,
         },
       );
       onAdded(data);
@@ -214,6 +222,35 @@ export function ManualParticipantDialog({
                           className="w-14 tabular-nums"
                         >
                           {lvl}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              />
+            </div>
+          )}
+
+          {examTimes.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Vaqt (ixtiyoriy)</Label>
+              <Controller
+                name="examTime"
+                control={control}
+                render={({ field }) => (
+                  <div className="flex flex-wrap gap-2">
+                    {examTimes.map((t) => {
+                      const active = field.value === t;
+                      return (
+                        <Button
+                          key={t}
+                          type="button"
+                          size="sm"
+                          variant={active ? "default" : "outline"}
+                          onClick={() => field.onChange(active ? "" : t)}
+                          className="tabular-nums"
+                        >
+                          🕐 {t}
                         </Button>
                       );
                     })}

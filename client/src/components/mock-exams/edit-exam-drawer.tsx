@@ -23,6 +23,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { MockExamSummary } from "@/hooks/use-mock-exams-board";
 import { LevelMultiSelect } from "./level-multiselect";
+import { ExamTimesEditor } from "./exam-times-editor";
 
 const WORK_START = "07:00";
 const WORK_END = "22:00";
@@ -41,7 +42,7 @@ interface FormValues {
   title: string;
   description: string;
   examDate: Date | null;
-  examTime: string;
+  examTimes: string[];
   registrationDate: Date | null;
   registrationTime: string;
   price: string;
@@ -89,7 +90,7 @@ export function EditExamDrawer({
       title: "",
       description: "",
       examDate: null,
-      examTime: "10:00",
+      examTimes: ["10:00"],
       registrationDate: null,
       registrationTime: "18:00",
       price: "",
@@ -109,7 +110,12 @@ export function EditExamDrawer({
         title: exam.title,
         description: exam.description ?? "",
         examDate: examParts.date,
-        examTime: examParts.time,
+        // Fall back to the primary examDate time for legacy exams that have
+        // no explicit examTimes list yet.
+        examTimes:
+          exam.examTimes && exam.examTimes.length > 0
+            ? exam.examTimes
+            : [examParts.time],
         registrationDate: regParts.date,
         registrationTime: regParts.time,
         price: exam.price > 0 ? String(exam.price) : "",
@@ -141,12 +147,18 @@ export function EditExamDrawer({
       studentPrice = sp;
     }
 
+    const examTimes = [...new Set(values.examTimes.filter(Boolean))].sort();
+    if (examTimes.length === 0) {
+      toast.error("Kamida 1 ta imtihon vaqtini qo'shing");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
         title: values.title.trim(),
         description: values.description.trim() || null,
-        examDate: buildDateTime(values.examDate, values.examTime),
+        examDate: buildDateTime(values.examDate, examTimes[0]),
         registrationDeadline: buildDateTime(
           values.registrationDate,
           values.registrationTime,
@@ -154,6 +166,7 @@ export function EditExamDrawer({
         price,
         studentPrice,
         offeredLevels: values.offeredLevels,
+        examTimes,
       };
 
       const { data } = await api.patch<ExamDetail>(
@@ -217,31 +230,36 @@ export function EditExamDrawer({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Imtihon sanasi va soati</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <Controller
-                  name="examDate"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      value={field.value}
-                      onChange={(d) => field.onChange(d ?? null)}
-                    />
-                  )}
-                />
-                <Controller
-                  name="examTime"
-                  control={control}
-                  render={({ field }) => (
-                    <TimePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      minTime={WORK_START}
-                      maxTime={WORK_END}
-                    />
-                  )}
-                />
-              </div>
+              <Label>Imtihon sanasi</Label>
+              <Controller
+                name="examDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value}
+                    onChange={(d) => field.onChange(d ?? null)}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Imtihon vaqtlari</Label>
+              <Controller
+                name="examTimes"
+                control={control}
+                render={({ field }) => (
+                  <ExamTimesEditor
+                    value={field.value}
+                    onChange={field.onChange}
+                    minTime={WORK_START}
+                    maxTime={WORK_END}
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Bir nechta vaqt = botda tanlov. Birinchisi asosiy sana-vaqt.
+              </p>
             </div>
 
             <div className="space-y-1.5">

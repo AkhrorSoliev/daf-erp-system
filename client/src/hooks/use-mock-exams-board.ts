@@ -40,6 +40,8 @@ export interface MockExamSummary {
   studentPrice: number | null;
   // CEFR levels the exam offers (empty = no level step in the bot).
   offeredLevels: string[];
+  // Time slots ("HH:mm") offered on examDate (empty/single = no time step).
+  examTimes: string[];
   botStartPayload: string;
   participantCount: number;
   createdAt: string;

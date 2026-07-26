@@ -8,6 +8,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   ValidateNested,
@@ -107,6 +108,16 @@ export class CreateMockExamDto {
   @IsArray()
   @IsIn(CEFR_LEVELS, { each: true })
   offeredLevels?: string[];
+
+  /**
+   * Time slots offered on `examDate` as "HH:mm" strings. When more than
+   * one, the bot asks the participant to pick one. Empty / single = no
+   * time-choice step.
+   */
+  @IsOptional()
+  @IsArray()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true })
+  examTimes?: string[];
 
   /**
    * Subjects (Lesen / Hören / ... or whatever the admin picks). At least

@@ -35,6 +35,8 @@ export interface MockExamParticipant {
   studentId: number | null;
   /** CEFR level the participant chose (null when the exam offers none). */
   level: string | null;
+  /** The exam time slot ("HH:mm") the participant chose (null if none). */
+  examTime: string | null;
   /** The fee locked in for this registration (after any DaF discount). */
   feeAmount: number | null;
   /**

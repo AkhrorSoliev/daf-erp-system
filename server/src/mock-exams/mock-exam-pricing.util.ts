@@ -29,6 +29,23 @@ export function sanitizeOfferedLevels(input: unknown): CefrLevel[] {
   return CEFR_LEVELS.filter((l) => set.has(l));
 }
 
+/** "HH:mm" 24-hour time, 00:00–23:59. */
+const EXAM_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export function isExamTime(value: unknown): value is string {
+  return typeof value === 'string' && EXAM_TIME_RE.test(value);
+}
+
+/**
+ * Keep only valid "HH:mm" times, de-duplicated and sorted chronologically
+ * (lexicographic sort works for zero-padded 24h times). Used when
+ * persisting an admin-provided list of exam time slots.
+ */
+export function sanitizeExamTimes(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return [...new Set(input.filter(isExamTime))].sort();
+}
+
 /**
  * The fee a single participant owes for one registration.
  *

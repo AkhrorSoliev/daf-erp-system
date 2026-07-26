@@ -830,6 +830,11 @@ model MockExam {
   // CEFR levels this exam offers (e.g. ["A1","A2","B1"]). Empty = no level
   // step. The bot shows these as inline buttons; the participant picks one.
   offeredLevels         String[]  @default([])
+  // Time slots offered on `examDate` as "HH:mm" strings (e.g.
+  // ["10:00","14:00"]). Empty / single = no time-choice step in the bot.
+  // When more than one, the bot shows them as inline buttons and the
+  // participant picks one (stored on MockExamParticipant.examTime).
+  examTimes             String[]  @default([])
   // Cached results PDF — regenerated on announce or any score edit.
   resultsPdfFileKey     String?
   resultsPdfGeneratedAt DateTime?
@@ -911,6 +916,10 @@ model MockExamParticipant {
   // CEFR level the participant chose (when the exam offers levels). Null
   // when the exam has no offered levels or for legacy rows.
   level String?
+
+  // The exam time slot ("HH:mm") the participant chose, when the exam
+  // offers multiple times. Null when the exam has a single time / none.
+  examTime String?
 
   // The mock fee locked in for THIS registration (so'm), after any DaF
   // discount. Set at registration from the exam price + the resolved

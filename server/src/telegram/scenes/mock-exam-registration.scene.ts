@@ -88,6 +88,7 @@ export function createMockExamRegistrationScene(
         registrationDeadline: true,
         formFields: true,
         offeredLevels: true,
+        examTimes: true,
       },
     });
 
@@ -150,6 +151,9 @@ export function createMockExamRegistrationScene(
     const offeredLevels = Array.isArray(exam.offeredLevels)
       ? (exam.offeredLevels as string[])
       : [];
+    const examTimes = Array.isArray(exam.examTimes)
+      ? (exam.examTimes as string[])
+      : [];
 
     ctx.session.data = {
       examId: exam.id,
@@ -159,9 +163,12 @@ export function createMockExamRegistrationScene(
       answers: {},
       offeredLevels,
       level: null,
-      // When the exam offers levels, the participant must pick one before
-      // the form questions start.
+      examTimes,
+      // A single offered time is auto-assigned; only 2+ trigger a choice.
+      examTime: examTimes.length === 1 ? examTimes[0] : null,
+      // Choice steps that run before the form questions start.
       awaitingLevel: offeredLevels.length > 0,
+      awaitingTime: false,
     };
 
     const intro = buildIntroMessage(exam);
@@ -169,7 +176,7 @@ export function createMockExamRegistrationScene(
     if (offeredLevels.length > 0) {
       await askLevel(ctx, offeredLevels);
     } else {
-      await askField(ctx, fields[0]);
+      await startTimeOrFields(ctx);
     }
   });
 
@@ -197,6 +204,21 @@ export function createMockExamRegistrationScene(
     }
     ctx.session.data.level = value;
     ctx.session.data.awaitingLevel = false;
+    await startTimeOrFields(ctx);
+  });
+
+  // Time-slot selection (inline buttons shown after level, before the form)
+  scene.action(/^me_time:(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!ctx.session.data?.awaitingTime) return;
+    const value = ctx.match[1];
+    const times = (ctx.session.data.examTimes as string[]) ?? [];
+    if (!times.includes(value)) {
+      await ctx.reply("Iltimos, ko'rsatilgan vaqtlardan birini tanlang.");
+      return;
+    }
+    ctx.session.data.examTime = value;
+    ctx.session.data.awaitingTime = false;
     const fields = ctx.session.data.fields as FormField[];
     await askField(ctx, fields[0]);
   });
@@ -239,6 +261,11 @@ export function createMockExamRegistrationScene(
     // Still waiting for the level pick — force the inline button.
     if (ctx.session.data?.awaitingLevel) {
       await ctx.reply('Iltimos, yuqoridagi darajalardan birini tanlang.');
+      return;
+    }
+    // Still waiting for the time pick — force the inline button.
+    if (ctx.session.data?.awaitingTime) {
+      await ctx.reply('Iltimos, yuqoridagi vaqtlardan birini tanlang.');
       return;
     }
 
@@ -331,6 +358,37 @@ async function askLevel(ctx: BotContext, levels: string[]) {
     'Qaysi darajada imtihon topshirasiz?',
     Markup.inlineKeyboard(rows),
   );
+}
+
+async function askTime(ctx: BotContext, times: string[]) {
+  const rows: ReturnType<typeof Markup.button.callback>[][] = [];
+  for (let i = 0; i < times.length; i += 3) {
+    rows.push(
+      times
+        .slice(i, i + 3)
+        .map((t) => Markup.button.callback(`🕐 ${t}`, `me_time:${t}`)),
+    );
+  }
+  await ctx.reply(
+    'Qaysi vaqtda imtihon topshirasiz?',
+    Markup.inlineKeyboard(rows),
+  );
+}
+
+/**
+ * After the level step (or when there's none), ask the participant to pick
+ * a time slot when the exam offers 2+; otherwise proceed straight to the
+ * form questions. A single offered time was already auto-assigned on enter.
+ */
+async function startTimeOrFields(ctx: BotContext) {
+  const times = (ctx.session.data.examTimes as string[]) ?? [];
+  const fields = ctx.session.data.fields as FormField[];
+  if (times.length > 1) {
+    ctx.session.data.awaitingTime = true;
+    await askTime(ctx, times);
+  } else {
+    await askField(ctx, fields[0]);
+  }
 }
 
 async function askField(ctx: BotContext, field: FormField) {
@@ -471,6 +529,7 @@ async function finalizeRegistration(
   const examPrice = exam?.price ?? 0;
   const studentPrice = exam?.studentPrice ?? null;
   const level = (ctx.session.data.level as string | null) ?? null;
+  const examTime = (ctx.session.data.examTime as string | null) ?? null;
 
   let publicId: number;
   let studentId: number | null = null;
@@ -543,6 +602,7 @@ async function finalizeRegistration(
         publicId,
         studentId,
         level,
+        examTime,
         feeAmount,
         telegramChatId: chatId,
         telegramUsername: fromUser.username ?? null,
@@ -606,6 +666,9 @@ async function finalizeRegistration(
     '',
     `🆔 Sizning identifikatoringiz: <b>${publicId}</b>`,
   ];
+  if (examTime) {
+    lines.push(`🕐 Tanlangan vaqt: <b>${examTime}</b>`);
+  }
 
   // Build the payment keyboard when there's a fee and the participant
   // isn't already paid (auto-deducted DaF students skip this). Payme/Click

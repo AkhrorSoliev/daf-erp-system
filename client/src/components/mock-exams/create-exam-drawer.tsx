@@ -26,6 +26,7 @@ import {
   type MockExamRow,
 } from "@/hooks/use-mock-exams-board";
 import { LevelMultiSelect } from "./level-multiselect";
+import { ExamTimesEditor } from "./exam-times-editor";
 
 // O'quv markaz ish soatlari (attendance-reminder cron'iga mos: 07:00–22:00).
 // TimePicker filterFix shu oraliqdagi 30-daqiqalik slotlarni qoldiradi.
@@ -54,7 +55,8 @@ interface FormValues {
   title: string;
   description: string;
   examDate: Date | null;
-  examTime: string;
+  /** Offered exam times ("HH:mm"); the first is the primary session. */
+  examTimes: string[];
   registrationDate: Date | null;
   registrationTime: string;
   /** Raw digits — PriceInput strips separators internally. */
@@ -111,7 +113,7 @@ export function CreateExamDrawer({
       title: "",
       description: "",
       examDate: null,
-      examTime: "10:00",
+      examTimes: ["10:00"],
       registrationDate: null,
       registrationTime: "09:00",
       price: "",
@@ -132,7 +134,7 @@ export function CreateExamDrawer({
         title: "",
         description: "",
         examDate: null,
-        examTime: "10:00",
+        examTimes: ["10:00"],
         registrationDate: null,
         registrationTime: "09:00",
         price: "",
@@ -150,7 +152,15 @@ export function CreateExamDrawer({
       return;
     }
 
-    const examDt = buildDateTime(values.examDate, values.examTime);
+    // De-duplicated, sorted times; the first is the primary session that
+    // feeds examDate. At least one time is required.
+    const examTimes = [...new Set(values.examTimes.filter(Boolean))].sort();
+    if (examTimes.length === 0) {
+      toast.error("Kamida 1 ta imtihon vaqtini qo'shing");
+      return;
+    }
+
+    const examDt = buildDateTime(values.examDate, examTimes[0]);
     const regDt = buildDateTime(values.registrationDate, values.registrationTime);
     if (examDt && regDt && new Date(regDt) > new Date(examDt)) {
       toast.error(
@@ -233,6 +243,7 @@ export function CreateExamDrawer({
         price,
         studentPrice,
         offeredLevels: values.offeredLevels,
+        examTimes,
         subjects,
       });
       addExam(data);
@@ -297,35 +308,37 @@ export function CreateExamDrawer({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Imtihon sanasi va soati</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <Controller
-                  name="examDate"
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <DatePicker
-                      value={field.value}
-                      onChange={(d) => field.onChange(d ?? null)}
-                    />
-                  )}
-                />
-                <Controller
-                  name="examTime"
-                  control={control}
-                  render={({ field }) => (
-                    <TimePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      minTime={WORK_START}
-                      maxTime={WORK_END}
-                    />
-                  )}
-                />
-              </div>
+              <Label>Imtihon sanasi</Label>
+              <Controller
+                name="examDate"
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value}
+                    onChange={(d) => field.onChange(d ?? null)}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Imtihon vaqtlari</Label>
+              <Controller
+                name="examTimes"
+                control={control}
+                render={({ field }) => (
+                  <ExamTimesEditor
+                    value={field.value}
+                    onChange={field.onChange}
+                    minTime={WORK_START}
+                    maxTime={WORK_END}
+                  />
+                )}
+              />
               <p className="text-xs text-muted-foreground">
-                Soatlar markaz ish vaqti oralig&apos;ida ({WORK_START}–
-                {WORK_END})
+                Bir nechta vaqt qo&apos;shsangiz, botda ro&apos;yxatdan
+                o&apos;tuvchi vaqtni tanlaydi. Birinchisi asosiy sana-vaqt.
               </p>
             </div>
 
