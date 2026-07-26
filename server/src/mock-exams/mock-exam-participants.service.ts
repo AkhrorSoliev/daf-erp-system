@@ -56,6 +56,26 @@ export class MockExamParticipantsService {
         { telegramUsername: { contains: search, mode: 'insensitive' } },
       ];
     }
+    if (query.examTime) {
+      where.examTime = query.examTime;
+    }
+    if (query.level) {
+      where.level = query.level;
+    }
+    // Payment-status filter. `cash` = unpaid with a cash intent marker in
+    // formData; `pending` = unpaid without it; `paid` = settled.
+    const CASH_INTENT: Prisma.MockExamParticipantWhereInput = {
+      formData: { path: ['__payIntent'], equals: 'CASH' },
+    };
+    if (query.paidStatus === 'paid') {
+      where.paid = true;
+    } else if (query.paidStatus === 'cash') {
+      where.paid = false;
+      where.formData = CASH_INTENT.formData;
+    } else if (query.paidStatus === 'pending') {
+      where.paid = false;
+      where.NOT = CASH_INTENT;
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.mockExamParticipant.findMany({
@@ -74,6 +94,7 @@ export class MockExamParticipantsService {
           registeredAt: true,
           studentId: true,
           level: true,
+          examTime: true,
           feeAmount: true,
           formData: true,
           paid: true,
@@ -175,6 +196,7 @@ export class MockExamParticipantsService {
           publicId,
           studentId,
           level: dto.level ?? null,
+          examTime: dto.examTime ?? null,
           feeAmount,
           telegramChatId: dto.telegramChatId?.trim() || null,
           firstName,
@@ -193,6 +215,7 @@ export class MockExamParticipantsService {
           registeredAt: true,
           studentId: true,
           level: true,
+          examTime: true,
           feeAmount: true,
           paid: true,
           paidAt: true,
@@ -449,6 +472,7 @@ export class MockExamParticipantsService {
         registeredAt: true,
         studentId: true,
         level: true,
+        examTime: true,
         feeAmount: true,
         paid: true,
         paidAt: true,

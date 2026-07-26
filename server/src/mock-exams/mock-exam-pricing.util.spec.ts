@@ -2,6 +2,7 @@ import {
   CEFR_LEVELS,
   isCefrLevel,
   resolveParticipantFee,
+  sanitizeExamTimes,
   sanitizeOfferedLevels,
 } from './mock-exam-pricing.util';
 
@@ -58,6 +59,19 @@ describe('mock-exam-pricing.util', () => {
       expect(sanitizeOfferedLevels(undefined)).toEqual([]);
       expect(sanitizeOfferedLevels('A1')).toEqual([]);
       expect(sanitizeOfferedLevels(null)).toEqual([]);
+    });
+  });
+
+  describe('sanitizeExamTimes', () => {
+    it('keeps valid HH:mm, de-duplicates and sorts chronologically', () => {
+      expect(
+        sanitizeExamTimes(['14:00', '09:30', '14:00', 'bad', '25:00', '10:5']),
+      ).toEqual(['09:30', '14:00']);
+    });
+
+    it('returns [] for non-arrays', () => {
+      expect(sanitizeExamTimes(undefined)).toEqual([]);
+      expect(sanitizeExamTimes('10:00')).toEqual([]);
     });
   });
 });

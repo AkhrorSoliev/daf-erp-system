@@ -18,7 +18,10 @@ import {
 } from '../custom-forms/dto/form-field.dto';
 import { shortId } from '../custom-forms/short-id.util';
 import { isValidMockExamStatusTransition } from './mock-exam-status.util';
-import { sanitizeOfferedLevels } from './mock-exam-pricing.util';
+import {
+  sanitizeExamTimes,
+  sanitizeOfferedLevels,
+} from './mock-exam-pricing.util';
 
 const BOT_PAYLOAD_LENGTH = 10;
 const MAX_PAYLOAD_RETRIES = 5;
@@ -258,6 +261,7 @@ export class MockExamsService {
         price: dto.price ?? 0,
         studentPrice: dto.studentPrice ?? null,
         offeredLevels: sanitizeOfferedLevels(dto.offeredLevels),
+        examTimes: sanitizeExamTimes(dto.examTimes),
         formFields: this.defaultFormFields(),
         botStartPayload,
         createdById: userId,
@@ -362,6 +366,9 @@ export class MockExamsService {
     }
     if (dto.offeredLevels !== undefined) {
       data.offeredLevels = sanitizeOfferedLevels(dto.offeredLevels);
+    }
+    if (dto.examTimes !== undefined) {
+      data.examTimes = sanitizeExamTimes(dto.examTimes);
     }
     if (dto.formFields !== undefined) {
       this.validateFormFields(dto.formFields);
@@ -727,6 +734,7 @@ export class MockExamsService {
     price: number;
     studentPrice: number | null;
     offeredLevels: string[];
+    examTimes: string[];
     formFields: Prisma.JsonValue;
     botStartPayload: string;
     createdAt: Date;
@@ -747,6 +755,7 @@ export class MockExamsService {
       price: exam.price,
       studentPrice: exam.studentPrice,
       offeredLevels: exam.offeredLevels,
+      examTimes: exam.examTimes,
       formFields: exam.formFields,
       botStartPayload: exam.botStartPayload,
       participantCount: exam._count.participants,
@@ -769,6 +778,7 @@ export class MockExamsService {
     price: number;
     studentPrice: number | null;
     offeredLevels: string[];
+    examTimes: string[];
     formFields: Prisma.JsonValue;
     botStartPayload: string;
     createdAt: Date;

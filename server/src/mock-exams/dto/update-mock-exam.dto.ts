@@ -8,6 +8,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   ValidateIf,
@@ -79,6 +80,12 @@ export class UpdateMockExamDto {
   @IsArray()
   @IsIn(CEFR_LEVELS, { each: true })
   offeredLevels?: string[];
+
+  /** Exam time slots as "HH:mm". Empty array = no time-choice step. */
+  @IsOptional()
+  @IsArray()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true })
+  examTimes?: string[];
 
   @IsOptional()
   @IsArray()

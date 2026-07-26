@@ -39,6 +39,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
@@ -80,6 +87,10 @@ export function ExamParticipantsTab({
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  // Filters (all = no filter). Sent as server-side query params.
+  const [timeFilter, setTimeFilter] = useState("all");
+  const [paidFilter, setPaidFilter] = useState("all");
+  const [levelFilter, setLevelFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [manualOpen, setManualOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] =
@@ -95,10 +106,10 @@ export function ExamParticipantsTab({
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Reset to first page on search change
+  // Reset to first page on any search / filter change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, timeFilter, paidFilter, levelFilter]);
 
   const fetchRef = useRef(0);
   const fetchData = useCallback(
@@ -108,7 +119,16 @@ export function ExamParticipantsTab({
       try {
         const { data: resp } = await api.get<ParticipantsResponse>(
           `/mock-exams/${exam.id}/participants`,
-          { params: { page: targetPage, pageSize: PAGE_SIZE, search: q || undefined } },
+          {
+            params: {
+              page: targetPage,
+              pageSize: PAGE_SIZE,
+              search: q || undefined,
+              examTime: timeFilter !== "all" ? timeFilter : undefined,
+              paidStatus: paidFilter !== "all" ? paidFilter : undefined,
+              level: levelFilter !== "all" ? levelFilter : undefined,
+            },
+          },
         );
         if (requestId !== fetchRef.current) return;
         setData(resp.data);
@@ -123,7 +143,7 @@ export function ExamParticipantsTab({
         if (requestId === fetchRef.current) setLoading(false);
       }
     },
-    [exam.id],
+    [exam.id, timeFilter, paidFilter, levelFilter],
   );
 
   useEffect(() => {
@@ -187,6 +207,51 @@ export function ExamParticipantsTab({
         </div>
       </div>
 
+      {/* Filters: time, payment status, level (server-side) */}
+      <div className="flex flex-wrap items-center gap-2">
+        {exam.examTimes && exam.examTimes.length > 0 && (
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha vaqtlar</SelectItem>
+              {exam.examTimes.map((t) => (
+                <SelectItem key={t} value={t}>
+                  🕐 {t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={paidFilter} onValueChange={setPaidFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha to&apos;lovlar</SelectItem>
+            <SelectItem value="paid">To&apos;langan</SelectItem>
+            <SelectItem value="pending">Kutilmoqda</SelectItem>
+            <SelectItem value="cash">Naqd kutilmoqda</SelectItem>
+          </SelectContent>
+        </Select>
+        {exam.offeredLevels && exam.offeredLevels.length > 0 && (
+          <Select value={levelFilter} onValueChange={setLevelFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha darajalar</SelectItem>
+              {exam.offeredLevels.map((l) => (
+                <SelectItem key={l} value={l}>
+                  {l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -195,6 +260,7 @@ export function ExamParticipantsTab({
               <TableHead className="w-20">ID</TableHead>
               <TableHead>Ism familya</TableHead>
               <TableHead className="w-16">Daraja</TableHead>
+              <TableHead className="w-20">Vaqt</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead className="w-28">To&apos;lov</TableHead>
               <TableHead>Telegram</TableHead>
@@ -207,7 +273,7 @@ export function ExamParticipantsTab({
             {loading && data.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={11}
                   className="h-32 text-center text-muted-foreground"
                 >
                   <Loader2 className="mx-auto size-5 animate-spin" />
@@ -216,7 +282,7 @@ export function ExamParticipantsTab({
             ) : data.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={11}
                   className="h-32 text-center text-sm text-muted-foreground"
                 >
                   <Users className="mx-auto mb-2 size-6 opacity-40" />
@@ -251,6 +317,15 @@ export function ExamParticipantsTab({
                     {p.level ? (
                       <span className="rounded-full bg-muted px-2 py-0.5 font-medium tabular-nums">
                         {p.level}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs tabular-nums">
+                    {p.examTime ? (
+                      <span className="whitespace-nowrap">
+                        🕐 {p.examTime}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -391,6 +466,7 @@ export function ExamParticipantsTab({
       <ManualParticipantDialog
         examId={exam.id}
         offeredLevels={exam.offeredLevels}
+        examTimes={exam.examTimes}
         hasStudentDiscount={exam.studentPrice != null}
         open={manualOpen}
         onClose={() => setManualOpen(false)}

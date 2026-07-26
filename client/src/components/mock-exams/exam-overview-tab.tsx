@@ -22,8 +22,29 @@ export function ExamOverviewTab({ exam }: ExamOverviewTabProps) {
             label="Imtihon sanasi"
             value={
               exam.examDate
-                ? format(new Date(exam.examDate), "dd.MM.yyyy, HH:mm")
+                ? format(new Date(exam.examDate), "dd.MM.yyyy")
                 : "—"
+            }
+          />
+          <Row
+            label="Imtihon vaqtlari"
+            value={
+              exam.examTimes && exam.examTimes.length > 0 ? (
+                <span className="flex flex-wrap justify-end gap-1">
+                  {exam.examTimes.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums"
+                    >
+                      🕐 {t}
+                    </span>
+                  ))}
+                </span>
+              ) : exam.examDate ? (
+                format(new Date(exam.examDate), "HH:mm")
+              ) : (
+                "—"
+              )
             }
           />
           <Row

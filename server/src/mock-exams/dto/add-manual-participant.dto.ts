@@ -50,4 +50,9 @@ export class AddManualParticipantDto {
   @IsOptional()
   @IsIn(CEFR_LEVELS)
   level?: string;
+
+  /** Exam time slot ("HH:mm") — optional, when the exam offers times. */
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  examTime?: string;
 }

@@ -99,6 +99,50 @@ describe('MockExamParticipantsService', () => {
         }),
       );
     });
+
+    it('applies time / level / cash filters to the query', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExamParticipant.findMany.mockResolvedValue([]);
+      prisma.mockExamParticipant.count.mockResolvedValue(0);
+
+      await service.list('e1', {
+        examTime: '14:00',
+        level: 'B1',
+        paidStatus: 'cash',
+      } as any);
+
+      const arg = prisma.mockExamParticipant.findMany.mock.calls[0][0];
+      expect(arg.where).toEqual(
+        expect.objectContaining({
+          examTime: '14:00',
+          level: 'B1',
+          paid: false,
+          formData: { path: ['__payIntent'], equals: 'CASH' },
+        }),
+      );
+    });
+
+    it('filters "pending" as unpaid without a cash intent', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExamParticipant.findMany.mockResolvedValue([]);
+      prisma.mockExamParticipant.count.mockResolvedValue(0);
+
+      await service.list('e1', { paidStatus: 'pending' } as any);
+
+      const arg = prisma.mockExamParticipant.findMany.mock.calls[0][0];
+      expect(arg.where).toEqual(
+        expect.objectContaining({
+          paid: false,
+          NOT: { formData: { path: ['__payIntent'], equals: 'CASH' } },
+        }),
+      );
+    });
   });
 
   describe('addManual', () => {
