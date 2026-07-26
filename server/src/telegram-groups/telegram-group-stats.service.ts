@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
 import {
+  firstOfThisMonthDate,
   firstOfThisMonthUtc,
   formatNumber,
   formatSum,
@@ -244,7 +245,14 @@ export class TelegramGroupStatsService {
   // -------------------- /stats --------------------
   async buildOverallStats(companyId: number): Promise<string> {
     const today = tashkentDayRange();
+    // `firstOfMonth` (a -5h-shifted timestamp) is correct for the income query
+    // below (filters `Payment.createdAt`, a timestamp). `Expense.date` is a DATE
+    // column, so its month window must use date-only bounds — otherwise Postgres
+    // floors the shifted lower bound to the previous 30th/31st and leaks that
+    // day's rows into this month. See firstOfThisMonthDate() docstring.
     const firstOfMonth = firstOfThisMonthUtc();
+    const firstOfMonthDate = firstOfThisMonthDate();
+    const todayDate = tashkentTodayDate();
 
     const teacherRole = await this.prisma.role.findFirst({
       where: { name: { in: ['Teacher', TEACHER_ROLE_NAME] } },
@@ -306,7 +314,7 @@ export class TelegramGroupStatsService {
         where: {
           companyId,
           deletedAt: null,
-          date: { gte: firstOfMonth },
+          date: { gte: firstOfMonthDate, lte: todayDate },
         },
         _sum: { amount: true },
       }),

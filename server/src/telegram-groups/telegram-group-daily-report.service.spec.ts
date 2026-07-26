@@ -25,6 +25,7 @@ interface State {
   debt: { total: number; count: number };
   mtdIncome: number;
   mtdExpenses: number;
+  mtdAdvances: number;
   flags: Array<{ type: string; amount: number; count: number }>;
   yesterdaySnapshot: {
     totalDebt: number;
@@ -65,6 +66,7 @@ function defaultState(): State {
     debt: { total: 22_300_000, count: 48 },
     mtdIncome: 280_000_000,
     mtdExpenses: 95_000_000,
+    mtdAdvances: 0,
     flags: [
       { type: 'REFUND', amount: -350_000, count: 1 },
       { type: 'DEBT_WRITE_OFF', amount: 900_000, count: 1 },
@@ -111,11 +113,19 @@ function makePrisma(state: State) {
       ),
     },
     expense: {
-      aggregate: jest.fn(async ({ where }: any) =>
-        where.date instanceof Date
-          ? { _sum: { amount: state.todayExpenses } }
-          : { _sum: { amount: state.mtdExpenses } },
-      ),
+      aggregate: jest.fn(async ({ where }: any) => {
+        // Today's spend uses an exact DATE (`date` is a Date instance); the two
+        // MTD queries use a {gte,lte} window and are told apart by category:
+        // the advance query pins `category: 'TEACHER_ADVANCE'`, the operational
+        // query excludes it via `{ not: 'TEACHER_ADVANCE' }`.
+        if (where.date instanceof Date) {
+          return { _sum: { amount: state.todayExpenses } };
+        }
+        if (where.category === 'TEACHER_ADVANCE') {
+          return { _sum: { amount: state.mtdAdvances } };
+        }
+        return { _sum: { amount: state.mtdExpenses } };
+      }),
     },
     attendance: {
       groupBy: jest.fn(async ({ by }: any) =>
@@ -222,6 +232,64 @@ describe('TelegramGroupDailyReportService', () => {
         expect.objectContaining({ gte: expect.anything(), lt: expect.anything() }),
       );
       expect(where.date.getUTCHours()).toBe(0);
+    }
+  });
+
+  it('splits teacher advances into their own MTD line and subtracts them from Sof foyda', async () => {
+    const state = defaultState();
+    state.mtdIncome = 144_431_991;
+    state.mtdExpenses = 20_017_000;
+    state.mtdAdvances = 12_150_000;
+    const service = await buildService(makePrisma(state), makeSalary(state));
+
+    const { message: raw } = await service.build(1001);
+    const message = raw.replace(/ /g, ' ');
+
+    // Xarajat = pure operational spend (advance-free); Avans is a standalone
+    // line, not a "shundan" sub-line of Xarajat.
+    expect(message).toContain("• Xarajat: <b>20 017 000 so'm</b>");
+    expect(message).toContain("• Avans (ustozlarga): <b>12 150 000 so'm</b>");
+    // Sof foyda = Tushum − Xarajat − Avans = 144 431 991 − 20 017 000 − 12 150 000.
+    expect(message).toContain("• Sof foyda: <b>+112 264 991 so'm</b>");
+  });
+
+  it('omits the Avans line when there are no MTD advances (self-suppressing)', async () => {
+    const state = defaultState();
+    state.mtdAdvances = 0;
+    const service = await buildService(makePrisma(state), makeSalary(state));
+
+    const { message: raw } = await service.build(1001);
+    const message = raw.replace(/ /g, ' ');
+    expect(message).not.toContain('Avans (ustozlarga)');
+    // Sof foyda unchanged: 280M − 95M − 0 = +185M.
+    expect(message).toContain("• Sof foyda: <b>+185 000 000 so'm</b>");
+  });
+
+  it('bounds the MTD Expense query by a date-only Tashkent month window, never a -5h shifted timestamp (regression)', async () => {
+    const state = defaultState();
+    const prisma = makePrisma(state);
+    const service = await buildService(prisma, makeSalary(state));
+
+    await service.build(1001);
+
+    // The two MTD aggregates (operational + advance) filter `date` as a
+    // {gte,lte} window; today's spend uses an exact Date. Inspect the windows.
+    const monthlyWheres = prisma.expense.aggregate.mock.calls
+      .map((c: any) => c[0].where)
+      .filter((w: any) => w.date && !(w.date instanceof Date));
+    expect(monthlyWheres.length).toBe(2);
+
+    for (const where of monthlyWheres) {
+      // Lower bound is the 1st of the Tashkent month at 00:00 UTC — NOT the
+      // buggy 19:00-of-the-previous-30th that firstOfThisMonthUtc() produced
+      // (which Postgres floored to the prior day and leaked June into July).
+      expect(where.date.gte).toBeInstanceOf(Date);
+      expect(where.date.gte.getUTCHours()).toBe(0);
+      expect(where.date.gte.getUTCDate()).toBe(1);
+      expect(where.date.gte.getUTCMonth()).toBe(6); // July (0-indexed)
+      // An upper bound now exists (was missing → future-dated rows leaked in).
+      expect(where.date.lte).toBeInstanceOf(Date);
+      expect(where.date.lte.getUTCHours()).toBe(0);
     }
   });
 

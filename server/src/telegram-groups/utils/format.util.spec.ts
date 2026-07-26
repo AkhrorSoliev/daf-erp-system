@@ -1,4 +1,5 @@
 import {
+  firstOfThisMonthDate,
   firstOfThisMonthUtc,
   formatDate,
   formatNumber,
@@ -87,6 +88,26 @@ describe('format.util', () => {
       const now = new Date('2026-05-15T10:00:00.000Z');
       // 2026-05-01 00:00 Tashkent = 2026-04-30 19:00 UTC.
       expect(firstOfThisMonthUtc(now).toISOString()).toBe('2026-04-30T19:00:00.000Z');
+    });
+  });
+
+  describe('firstOfThisMonthDate', () => {
+    it('returns the 1st of the Tashkent month at 00:00 UTC for DATE-column queries', () => {
+      const now = new Date('2026-07-15T10:00:00.000Z');
+      expect(firstOfThisMonthDate(now).toISOString()).toBe('2026-07-01T00:00:00.000Z');
+    });
+
+    it('rolls into the new month at Tashkent midnight, not 5h early (regression)', () => {
+      // 2026-06-30 19:01 UTC = 2026-07-01 00:01 Tashkent → must be July, not June.
+      const now = new Date('2026-06-30T19:01:00.000Z');
+      expect(firstOfThisMonthDate(now).toISOString()).toBe('2026-07-01T00:00:00.000Z');
+    });
+
+    it('is +5h ahead of firstOfThisMonthUtc — the exact off-by-one the DATE variant fixes', () => {
+      const now = new Date('2026-07-15T10:00:00.000Z');
+      expect(
+        firstOfThisMonthDate(now).getTime() - firstOfThisMonthUtc(now).getTime(),
+      ).toBe(5 * 60 * 60 * 1000);
     });
   });
 

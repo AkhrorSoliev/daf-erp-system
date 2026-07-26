@@ -104,6 +104,28 @@ export function firstOfThisMonthUtc(now: Date = new Date()): Date {
 }
 
 /**
+ * First day of the current Tashkent month as a Date at 00:00 UTC — the
+ * DATE-column companion to {@link firstOfThisMonthUtc}. Use this when filtering
+ * a PostgreSQL `DATE` column (e.g. `Expense.date`), NOT the -5h-shifted
+ * `firstOfThisMonthUtc`.
+ *
+ * Why: `firstOfThisMonthUtc` returns the timestamp of Tashkent midnight on the
+ * 1st (= the 30th/31st at 19:00 UTC of the previous month). Postgres floors a
+ * timestamp bound to its calendar date when comparing against a DATE column, so
+ * that bound resolves to the LAST day of the PREVIOUS month and silently pulls
+ * that whole day's rows into "this month" (e.g. a June-30 rent batch leaking
+ * into the July expense total). This variant carries no offset — same shape as
+ * {@link tashkentTodayDate} — so the DATE comparison lands exactly on the 1st.
+ */
+export function firstOfThisMonthDate(now: Date = new Date()): Date {
+  const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+  const tashkentNow = new Date(now.getTime() + TASHKENT_OFFSET_MS);
+  const y = tashkentNow.getUTCFullYear();
+  const m = tashkentNow.getUTCMonth();
+  return new Date(Date.UTC(y, m, 1));
+}
+
+/**
  * Today's Tashkent calendar date as a Date at 00:00 UTC. Use this when
  * filtering against PostgreSQL `DATE` columns (e.g. `Attendance.date`).
  *
