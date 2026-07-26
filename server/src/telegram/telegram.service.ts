@@ -503,6 +503,59 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
+    // Mock exam "pay cash on arrival" button (shown after registration when
+    // there's a fee). Records the cash intent on the participant so the
+    // admin sees "Naqd kutilmoqda", then confirms to the user. The actual
+    // payment is later confirmed by an admin via "To'lov qabul qilish".
+    this.bot.action(/^me_cash:(.+)$/, async (ctx) => {
+      const participantId = ctx.match[1];
+      const chatId = String(ctx.chat!.id);
+      try {
+        const participant = await this.prisma.mockExamParticipant.findFirst({
+          where: { id: participantId, telegramChatId: chatId, deletedAt: null },
+          select: { id: true, publicId: true, paid: true, formData: true },
+        });
+        if (!participant) {
+          await ctx.answerCbQuery();
+          return;
+        }
+        if (participant.paid) {
+          await ctx.answerCbQuery("To'lov allaqachon amalga oshirilgan.", {
+            show_alert: true,
+          });
+          return;
+        }
+        const formData =
+          participant.formData &&
+          typeof participant.formData === 'object' &&
+          !Array.isArray(participant.formData)
+            ? (participant.formData as Record<string, unknown>)
+            : {};
+        await this.prisma.mockExamParticipant.update({
+          where: { id: participant.id },
+          data: {
+            formData: { ...formData, __payIntent: 'CASH' } as any,
+          },
+        });
+        await ctx.answerCbQuery('Qabul qilindi ✅');
+        try {
+          await ctx.editMessageText(
+            `💵 Yaxshi! Imtihon kuni markazga kelib, <b>${participant.publicId}</b> ` +
+              "ID bilan naqd pul to'lang.\n\n" +
+              "Administrator to'lovingizni tasdiqlaganidan so'ng sizga xabar keladi.",
+            { parse_mode: 'HTML' },
+          );
+        } catch {
+          // Message too old to edit — ignore.
+        }
+      } catch (err) {
+        this.logger.warn(
+          `me_cash failed for ${participantId}: ${(err as Error).message}`,
+        );
+        await ctx.answerCbQuery();
+      }
+    });
+
     // /cancel handler
     this.bot.command('cancel', async (ctx) => {
       await ctx.scene.leave();

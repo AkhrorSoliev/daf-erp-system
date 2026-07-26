@@ -37,6 +37,11 @@ export interface MockExamParticipant {
   level: string | null;
   /** The fee locked in for this registration (after any DaF discount). */
   feeAmount: number | null;
+  /**
+   * Raw registration answers + system markers. `__payIntent === "CASH"`
+   * means the participant chose to pay cash on arrival (still unpaid).
+   */
+  formData: { __payIntent?: string } & Record<string, unknown>;
   paid: boolean;
   paidAt: string | null;
   totalScore: number | null;

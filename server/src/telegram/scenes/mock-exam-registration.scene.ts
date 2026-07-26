@@ -475,6 +475,7 @@ async function finalizeRegistration(
   let publicId: number;
   let studentId: number | null = null;
   let feeAmount = examPrice;
+  let participantId: string | null = null;
 
   try {
     // 1. Is this person already a real DaF student? Match first by their
@@ -536,7 +537,7 @@ async function finalizeRegistration(
       studentId !== null,
     );
 
-    await prisma.mockExamParticipant.create({
+    const created = await prisma.mockExamParticipant.create({
       data: {
         examId,
         publicId,
@@ -552,7 +553,9 @@ async function finalizeRegistration(
         phone,
         formData: answers as Prisma.InputJsonValue,
       },
+      select: { id: true },
     });
+    participantId = created.id;
   } catch (error) {
     // Unique constraint (examId, publicId) — already registered race
     if (
@@ -604,27 +607,40 @@ async function finalizeRegistration(
     `🆔 Sizning identifikatoringiz: <b>${publicId}</b>`,
   ];
 
-  // Build payment deep-link buttons when there's a fee and the
-  // participant isn't already paid (auto-deducted DaF students skip
-  // this). Each button is a Telegram URL button: tapping it opens the
-  // provider's app (when installed) or web checkout. Merchant id +
-  // amount are pre-filled — the user just confirms the payment.
-  let paymentButtons: Array<Array<{ text: string; url: string }>> = [];
+  // Build the payment keyboard when there's a fee and the participant
+  // isn't already paid (auto-deducted DaF students skip this). Payme/Click
+  // are URL buttons (open the provider app/web checkout with merchant id +
+  // amount pre-filled). A "Naqd (markazda)" callback button is always
+  // offered alongside so the user can choose to pay cash on arrival.
+  type KbButton =
+    | ReturnType<typeof Markup.button.url>
+    | ReturnType<typeof Markup.button.callback>;
+  const keyboardRows: KbButton[][] = [];
+  let hasPayLinks = false;
   if (!autoPaid && price > 0) {
     try {
       const links = await paymentLinkService.buildLinks(publicId, price);
-      const row: Array<{ text: string; url: string }> = [];
+      const payRow: KbButton[] = [];
       if (links.payme) {
-        row.push({ text: '💳 Payme orqali to\'lash', url: links.payme });
+        payRow.push(Markup.button.url('💳 Payme', links.payme));
       }
       if (links.click) {
-        row.push({ text: '💳 Click orqali to\'lash', url: links.click });
+        payRow.push(Markup.button.url('💳 Click', links.click));
       }
-      if (row.length > 0) paymentButtons = [row];
+      if (payRow.length > 0) {
+        keyboardRows.push(payRow);
+        hasPayLinks = true;
+      }
     } catch (err) {
       logger.warn(
         `Failed to build payment links for participant publicId=${publicId}: ${(err as Error).message}`,
       );
+    }
+    // Cash option — only when we know which participant to mark.
+    if (participantId) {
+      keyboardRows.push([
+        Markup.button.callback('💵 Naqd (markazda)', `me_cash:${participantId}`),
+      ]);
     }
   }
 
@@ -632,11 +648,15 @@ async function finalizeRegistration(
     lines.push('', `💳 To'lov balansingizdan yechib olindi (${price} so'm).`);
   } else if (price > 0) {
     lines.push('', `💳 To'lov: <b>${price.toLocaleString('uz-UZ')} so'm</b>`);
-    if (paymentButtons.length > 0) {
-      lines.push("Quyidagi tugma orqali to'lang — telefoningizda app ochiladi:");
+    if (hasPayLinks) {
+      lines.push(
+        "Payme yoki Click tugmasi orqali to'lang (telefoningizda app ochiladi), " +
+          'yoki naqd pul bilan to\'lamoqchi bo\'lsangiz «💵 Naqd (markazda)» tugmasini bosing.',
+      );
     } else {
       lines.push(
-        `Payme yoki Click orqali <b>${publicId}</b> raqamiga to'lang.`,
+        `Payme yoki Click orqali <b>${publicId}</b> raqamiga to'lang, ` +
+          'yoki naqd uchun «💵 Naqd (markazda)» tugmasini bosing.',
       );
     }
   }
@@ -647,12 +667,8 @@ async function finalizeRegistration(
 
   const replyOptions: Parameters<typeof ctx.reply>[1] = {
     parse_mode: 'HTML',
-    ...(paymentButtons.length > 0
-      ? Markup.inlineKeyboard(
-          paymentButtons.map((row) =>
-            row.map((btn) => Markup.button.url(btn.text, btn.url)),
-          ),
-        )
+    ...(keyboardRows.length > 0
+      ? Markup.inlineKeyboard(keyboardRows)
       : Markup.removeKeyboard()),
   };
 

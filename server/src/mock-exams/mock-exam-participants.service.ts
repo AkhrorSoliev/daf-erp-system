@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MockExamStatus, Prisma } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamBillingService } from './mock-exam-billing.service';
@@ -33,6 +34,7 @@ export class MockExamParticipantsService {
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
     private mockExamBilling: MockExamBillingService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async list(examId: string, query: ParticipantsQueryDto) {
@@ -73,6 +75,7 @@ export class MockExamParticipantsService {
           studentId: true,
           level: true,
           feeAmount: true,
+          formData: true,
           paid: true,
           paidAt: true,
           totalScore: true,
@@ -473,6 +476,16 @@ export class MockExamParticipantsService {
       `Mock participant ${id} marked paid manually by user ${userId} ` +
         `(method=${dto.method}, exam="${participant.exam.title}")`,
     );
+
+    // Notify the participant on Telegram that their payment was accepted.
+    // Handled by a listener in TelegramModule (avoids a circular import).
+    // Skipped downstream when there's no telegramChatId (manual entries).
+    this.eventEmitter.emit('mock.participant.paid', {
+      telegramChatId: updated.telegramChatId,
+      publicId: updated.publicId,
+      examTitle: participant.exam.title,
+      feeAmount: updated.feeAmount ?? participant.exam.price,
+    });
 
     return updated;
   }

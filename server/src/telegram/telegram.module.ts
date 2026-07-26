@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
 import { TelegramController } from './telegram.controller';
 import { MockExamAnnounceListener } from './mock-exam-announce.listener';
+import { MockExamPaidListener } from './mock-exam-paid.listener';
 import { UploadModule } from '../upload/upload.module';
 import { UsersModule } from '../users/users.module';
 import { MockExamsModule } from '../mock-exams/mock-exams.module';
@@ -14,7 +15,7 @@ import { PaymentLinksModule } from '../payment-gateways/payment-links.module';
   // BillingModule → TelegramModule).
   imports: [UploadModule, UsersModule, MockExamsModule, PaymentLinksModule],
   controllers: [TelegramController],
-  providers: [TelegramService, MockExamAnnounceListener],
+  providers: [TelegramService, MockExamAnnounceListener, MockExamPaidListener],
   exports: [TelegramService],
 })
 export class TelegramModule {}

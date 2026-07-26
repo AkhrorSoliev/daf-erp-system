@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { MockExamStatus, Prisma } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MockExamParticipantsService } from './mock-exam-participants.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -43,12 +44,14 @@ describe('MockExamParticipantsService', () => {
       recordRestore: jest.fn(),
     };
     const billing = { tryDeductForStudent: jest.fn().mockResolvedValue({ paidCount: 0, deductedAmount: 0 }) };
+    const eventEmitter = { emit: jest.fn() };
     const mod: TestingModule = await Test.createTestingModule({
       providers: [
         MockExamParticipantsService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: history },
         { provide: MockExamBillingService, useValue: billing },
+        { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();
     service = mod.get(MockExamParticipantsService);
@@ -349,6 +352,53 @@ describe('MockExamParticipantsService', () => {
           1001,
           1,
         ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('markPaid', () => {
+    it('flips paid + emits mock.participant.paid for the Telegram notice', async () => {
+      const emit = jest.fn();
+      (service as any).eventEmitter = { emit };
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        paid: false,
+        feeAmount: 50000,
+        exam: { price: 100000, title: 'Goethe B1' },
+      });
+      prisma.mockExamParticipant.update.mockResolvedValue({
+        id: 'p1',
+        publicId: 10117,
+        telegramChatId: '555',
+        feeAmount: 50000,
+        paid: true,
+      });
+
+      await service.markPaid('p1', { method: 'CASH' } as any, 1001, 1);
+
+      expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ paid: true }) }),
+      );
+      expect(emit).toHaveBeenCalledWith(
+        'mock.participant.paid',
+        expect.objectContaining({
+          telegramChatId: '555',
+          publicId: 10117,
+          examTitle: 'Goethe B1',
+          feeAmount: 50000,
+        }),
+      );
+    });
+
+    it('rejects a free exam (fee resolves to 0)', async () => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        paid: false,
+        feeAmount: null,
+        exam: { price: 0, title: 'Bepul' },
+      });
+      await expect(
+        service.markPaid('p1', { method: 'CASH' } as any, 1001, 1),
       ).rejects.toThrow(BadRequestException);
     });
   });
