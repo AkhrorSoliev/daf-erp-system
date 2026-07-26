@@ -93,7 +93,11 @@ export class AttendanceReminderService {
     }).formatToParts(new Date());
     const p = (t: string) => parts.find((x) => x.type === t)!.value;
     const today = `${p('year')}-${p('month')}-${p('day')}`;
-    const currentMinutes = Number(p('hour')) * 60 + Number(p('minute'));
+    // `hour12: false` resolves to the h24 cycle on older ICU (Node 20), where
+    // midnight formats as "24" instead of "00" — that would push
+    // `currentMinutes` past the schedule window and silently skip the tick.
+    // `% 24` normalizes both cycles.
+    const currentMinutes = (Number(p('hour')) % 24) * 60 + Number(p('minute'));
     const weekdayIdx = DAY_NAME_TO_JS[p('weekday').toLowerCase()];
     if (weekdayIdx === undefined) return;
 
@@ -103,11 +107,10 @@ export class AttendanceReminderService {
       return;
 
     const parsedDate = new Date(today + 'T00:00:00.000Z');
-    const currentTime = `${p('hour')}:${p('minute')}`;
-    const endCandidates = [
-      currentTime,
-      this.addMinutes(currentTime, 30),
-    ];
+    // Rebuilt from the normalized minute for the same h24 reason as above —
+    // `p('hour')` alone would read "24:15" at midnight and match no lesson.
+    const currentTime = `${String(Math.floor(currentMinutes / 60)).padStart(2, '0')}:${String(currentMinutes % 60).padStart(2, '0')}`;
+    const endCandidates = [currentTime, this.addMinutes(currentTime, 30)];
 
     const groups = await this.prisma.group.findMany({
       where: {
@@ -155,9 +158,8 @@ export class AttendanceReminderService {
 
     if (groups.length === 0) return;
 
-    const isHoliday = !!(await this.holidaysService.findActiveHolidayCovering(
-      parsedDate,
-    ));
+    const isHoliday =
+      !!(await this.holidaysService.findActiveHolidayCovering(parsedDate));
     if (isHoliday) return;
 
     for (const group of groups) {
