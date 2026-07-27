@@ -74,6 +74,10 @@ describe('ClickMethodsService', () => {
     // returning null suffice. Specific tests can override per-test.
     const mockGateway = {
       resolveTarget: jest.fn().mockResolvedValue(null),
+      // Standart: bu to'lov mock uchun EMAS — mavjud testlar o'quvchi
+      // yo'lini tekshiradi. Mock yo'nalishi alohida
+      // `mock-exam-gateway-routing.spec.ts` da qamrab olingan.
+      shouldRouteToMock: jest.fn().mockResolvedValue(false),
       findByExternalId: jest.fn().mockResolvedValue(null),
       findById: jest.fn().mockResolvedValue(null),
       findOrCreatePending: jest.fn(),
