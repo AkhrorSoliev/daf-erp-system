@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -33,7 +34,10 @@ interface SettlementResult {
 export class MockExamBillingService {
   private readonly logger = new Logger(MockExamBillingService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Settle all unpaid mock fees for `studentId` against the student's
@@ -57,16 +61,26 @@ export class MockExamBillingService {
           id: true,
           examId: true,
           feeAmount: true,
-          exam: { select: { price: true } },
+          telegramChatId: true,
+          publicId: true,
+          exam: { select: { price: true, title: true } },
         },
       });
 
       if (unpaid.length === 0) {
-        return { paidCount: 0, deductedAmount: 0 };
+        return { paidCount: 0, deductedAmount: 0, settled: [] };
       }
 
       let paidCount = 0;
       let deductedAmount = 0;
+      // Xabar yuborish uchun ro'yxat — hodisalar tranzaksiyadan KEYIN
+      // chiqariladi, aks holda rollback bo'lganda yolg'on xabar ketardi.
+      const settled: {
+        telegramChatId: string | null;
+        publicId: number;
+        examTitle: string;
+        feeAmount: number;
+      }[] = [];
 
       for (const participant of unpaid) {
         // The fee locked in at registration (after any DaF discount);
@@ -130,12 +144,25 @@ export class MockExamBillingService {
             `amount=${price} tx=${transaction.id}`,
         );
 
+        settled.push({
+          telegramChatId: participant.telegramChatId,
+          publicId: participant.publicId,
+          examTitle: participant.exam.title,
+          feeAmount: price,
+        });
         paidCount++;
         deductedAmount += price;
       }
 
-      return { paidCount, deductedAmount };
-    }, tx);
+      return { paidCount, deductedAmount, settled };
+    }, tx).then((res) => {
+      // Balansdan yechilganda ham foydalanuvchi xabardor bo'lsin — ilgari
+      // faqat admin naqd qabul qilganda xabar ketardi.
+      for (const s of res.settled) {
+        this.eventEmitter.emit('mock.participant.paid', s);
+      }
+      return { paidCount: res.paidCount, deductedAmount: res.deductedAmount };
+    });
   }
 
   // ─── Helpers ──────────────────────────────────────────────────
