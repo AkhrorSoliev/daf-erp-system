@@ -9,6 +9,10 @@ import {
   MULTI_WORD_NAME_HINT,
   looksLikeFullName,
 } from '../name-prompts';
+import {
+  normalizeSharedPhone,
+  SHARED_PHONE_INVALID,
+} from '../phone-utils';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MockExamBillingService } from '../../mock-exams/mock-exam-billing.service';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
@@ -240,12 +244,11 @@ export function createMockExamRegistrationScene(
     const field = currentField(ctx);
     if (!field || field.type !== 'phone') return;
 
-    let phone = ctx.message.contact.phone_number.replace(/[^\d]/g, '');
-    if (phone.startsWith('998')) phone = phone.slice(3);
-    if (!UZ_PHONE_RE.test(phone)) {
-      await ctx.reply(
-        "Telefon raqami noto'g'ri formatda. Yana urinib ko'ring:",
-      );
+    // Kontakt tugmasidan kelgan raqamni Telegram o'zi beradi — chet el
+    // raqami ham qabul qilinadi (o'zbek raqami 9 xonaga keltiriladi).
+    const phone = normalizeSharedPhone(ctx.message.contact.phone_number);
+    if (!phone) {
+      await ctx.reply(SHARED_PHONE_INVALID);
       return;
     }
     await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, phone);

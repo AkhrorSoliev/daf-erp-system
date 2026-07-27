@@ -10,6 +10,10 @@ import {
   looksLikeFullName,
 } from '../name-prompts';
 import {
+  normalizeSharedPhone,
+  SHARED_PHONE_INVALID,
+} from '../phone-utils';
+import {
   generateUniqueLogin,
   generatePassword,
 } from '../utils/login-generator';
@@ -178,17 +182,12 @@ export function createTeacherRegistrationScene(
     if (ctx.session.processing) return;
 
     const contact = ctx.message.contact;
-    let phone = contact.phone_number;
-
-    // +998 ni olib tashlash, faqat 9 raqam qoldirish
-    phone = phone.replace(/\D/g, '');
-    if (phone.startsWith('998')) {
-      phone = phone.slice(3);
-    }
-
-    if (phone.length !== 9) {
+    // Kontakt tugmasidan kelgan raqamni Telegram o'zi beradi — chet el
+    // raqami ham qabul qilinadi (o'zbek raqami 9 xonaga keltiriladi).
+    const phone = normalizeSharedPhone(contact.phone_number);
+    if (!phone) {
       await ctx.reply(
-        "Telefon raqam noto'g'ri formatda. Qayta yuboring:",
+        SHARED_PHONE_INVALID,
         Markup.keyboard([
           [
             Markup.button.contactRequest(
