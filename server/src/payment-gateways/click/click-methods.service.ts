@@ -78,12 +78,26 @@ export class ClickMethodsService {
       select: { id: true },
     });
 
-    // Fallback to mock participant when no Student matches. This handles
-    // non-DaF participants paying for a mock — they have a publicId from
-    // the shared Student_id_seq but no Student row. Routed through a
-    // separate gateway state table (MockExamGatewayTransaction) so the
-    // student and mock domains stay clean.
-    if (!student) {
+    // Mock imtihon yo'li ikki holatda tanlanadi:
+    //   a) mos Student umuman yo'q (tashqi ishtirokchi — publicId umumiy
+    //      ketma-ketlikdan, lekin Student qatori yo'q);
+    //   b) Student bor, LEKIN to'lov aynan mock havolasi orqali kelgan
+    //      (`shouldRouteToMock` — summa to'lanmagan ishtirokchi narxiga
+    //      teng va portal PaymentIntent'i yo'q).
+    //
+    // (b) shart shuning uchun kerakki, DaF o'quvchisida publicId = Student.id
+    // bo'lgani sababli mock to'lovi balansga tushib ketardi va qarzi bor
+    // o'quvchida qarzga so'rilib, imtihon to'lanmagan qolardi.
+    const routeToMock =
+      !student ||
+      (await this.mockGateway.shouldRouteToMock({
+        publicId: studentId,
+        amountSom: amount,
+        provider: 'CLICK',
+        companyId,
+      }));
+
+    if (routeToMock) {
       return this.preparePathMock({
         publicId: studentId,
         clickTransId,

@@ -66,6 +66,58 @@ export class MockExamGatewayBillingService {
     };
   }
 
+  /**
+   * Shu to'lov mock imtihon uchunmi yoki o'quvchi balansini to'ldirishmi?
+   *
+   * MUAMMO: bot bergan mock havolasi hisob raqami sifatida `publicId` ni
+   * ishlatadi, DaF o'quvchisida esa `publicId === Student.id`. Shuning uchun
+   * webhook uni O'QUVCHI deb tanib, pulni balansga yozardi. Agar o'quvchining
+   * qarzi bo'lsa, pul o'sha qarzga so'rilardi va imtihon "kutilmoqda" bo'lib
+   * qolaverardi — qarzdor o'quvchi mock uchun umuman to'lay olmasdi.
+   *
+   * QAROR: mock havolasi orqali kelgan pul FAQAT mock uchun ishlatiladi —
+   * o'quvchining balansiga ham, qarziga ham tegmaydi.
+   *
+   * Ajratish belgilari (uchalasi ham bajarilishi shart):
+   *   1. shu `publicId` da to'lanmagan, o'chirilmagan ishtirokchi bor;
+   *   2. to'lanayotgan summa AYNAN o'sha ishtirokchining narxiga teng;
+   *   3. o'quvchi portalidan boshlangan tirik `PaymentIntent` YO'Q — u bor
+   *      bo'lsa, demak odam ataylab balans to'ldirmoqda, aralashmaymiz.
+   *
+   * Uchinchi shart muhim: bo'lmasa, o'quvchi mock narxiga teng summani
+   * balansiga to'ldirmoqchi bo'lganda puli imtihonga ketib qolardi.
+   */
+  async shouldRouteToMock(args: {
+    publicId: number;
+    amountSom: number;
+    provider: GatewayProvider;
+    companyId: number;
+  }): Promise<boolean> {
+    const target = await this.resolveTarget(args.publicId);
+    if (!target || target.alreadyPaid) return false;
+    if (target.examPrice <= 0) return false;
+    if (Math.floor(args.amountSom) !== target.examPrice) return false;
+
+    const liveIntent = await this.prisma.paymentIntent.findFirst({
+      where: {
+        studentId: args.publicId,
+        companyId: args.companyId,
+        provider: args.provider,
+        used: false,
+        expiresAt: { gt: new Date() },
+        amount: Math.floor(args.amountSom),
+      },
+      select: { id: true },
+    });
+    if (liveIntent) return false;
+
+    this.logger.log(
+      `Mock sifatida yo'naltirildi: publicId=${args.publicId} summa=${args.amountSom} ` +
+        `participant=${target.participantId} (${args.provider})`,
+    );
+    return true;
+  }
+
   async findByExternalId(
     provider: GatewayProvider,
     externalId: string,

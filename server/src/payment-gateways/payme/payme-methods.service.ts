@@ -80,10 +80,21 @@ export class PaymeMethodsService {
       select: { id: true },
     });
 
-    // Fallback to mock participant when no Student matches — non-DaF
-    // mock-only registrants pay via their publicId, which lives in the
-    // shared sequence but doesn't have a Student row.
-    if (!student) {
+    // Mock imtihon yo'li ikki holatda: (a) mos Student yo'q (tashqi
+    // ishtirokchi), yoki (b) Student bor, lekin to'lov aynan mock havolasi
+    // orqali kelgan. (b) bo'lmasa, DaF o'quvchisida publicId = Student.id
+    // bo'lgani uchun mock to'lovi balansga tushib, qarzi borida qarzga
+    // so'rilib ketardi va imtihon to'lanmagan qolardi.
+    const routeToMock =
+      !student ||
+      (await this.mockGateway.shouldRouteToMock({
+        publicId: studentId,
+        amountSom: Math.floor(p.amount / 100),
+        provider: 'PAYME',
+        companyId,
+      }));
+
+    if (routeToMock) {
       const mockTarget = await this.mockGateway.resolveTarget(studentId);
       if (!mockTarget) {
         return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');
