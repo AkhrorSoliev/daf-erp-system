@@ -95,7 +95,10 @@ export class PaymeMethodsService {
       }));
 
     if (routeToMock) {
-      const mockTarget = await this.mockGateway.resolveTarget(studentId);
+      const mockTarget = await this.mockGateway.resolveTarget(
+        studentId,
+        Math.floor(p.amount / 100),
+      );
       if (!mockTarget) {
         return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');
       }
@@ -202,12 +205,23 @@ export class PaymeMethodsService {
     const now = BigInt(Date.now());
 
     // 3. Dispatch: is this account a real Student or a mock participant?
+    //    MUHIM: bu qaror `checkPerformTransaction` dagi bilan BIR XIL bo'lishi
+    //    shart. Aks holda tekshiruv mock deb ruxsat berib, tranzaksiya esa
+    //    o'quvchi yo'lidan yaratilib, pul balansga tushib ketardi.
     const student = await this.prisma.student.findFirst({
       where: { id: accountId, deletedAt: null, companyId },
       select: { id: true },
     });
+    const routeToMock =
+      !student ||
+      (await this.mockGateway.shouldRouteToMock({
+        publicId: accountId,
+        amountSom: Math.floor(p.amount / 100),
+        provider: 'PAYME',
+        companyId,
+      }));
 
-    if (student) {
+    if (!routeToMock) {
       // ── Student path (existing) ──
       const pendingTxn = await this.prisma.paymeTransaction.findFirst({
         where: { studentId: accountId, companyId, state: 1 },
@@ -242,7 +256,10 @@ export class PaymeMethodsService {
     }
 
     // ── Mock participant path ──
-    const target = await this.mockGateway.resolveTarget(accountId);
+    const target = await this.mockGateway.resolveTarget(
+      accountId,
+      Math.floor(p.amount / 100),
+    );
     if (!target) {
       // Shouldn't happen — checkPerform already validated existence.
       return paymeError(rpcId, STUDENT_NOT_FOUND, undefined, 'student_id');

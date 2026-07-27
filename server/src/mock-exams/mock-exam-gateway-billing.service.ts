@@ -44,9 +44,17 @@ export class MockExamGatewayBillingService {
    */
   async resolveTarget(
     publicId: number,
+    expectedAmountSom?: number,
   ): Promise<ResolvedMockTarget | null> {
-    const participant = await this.prisma.mockExamParticipant.findFirst({
+    // BIR ODAMDA BIR NECHTA IShTIROKCHI BO'LADI. DaF o'quvchisi har bir mock
+    // imtihonga o'sha publicId bilan yoziladi, shuning uchun bu yerda
+    // `findFirst` ishlatib bo'lmaydi — u tartibsiz (ixtiyoriy) qatorni
+    // qaytaradi va odatda ENG ESKISINI oladi. Natijada odam yangi imtihon
+    // uchun to'laganda summa eski imtihon narxi bilan solishtirilib,
+    // "mos emas" deb rad etilardi.
+    const rows = await this.prisma.mockExamParticipant.findMany({
       where: { publicId, deletedAt: null },
+      orderBy: { registeredAt: 'desc' },
       select: {
         id: true,
         paid: true,
@@ -54,15 +62,42 @@ export class MockExamGatewayBillingService {
         exam: { select: { price: true } },
       },
     });
-    if (!participant) return null;
+    if (rows.length === 0) return null;
+
+    // To'lanishi kerak bo'lgan summa: ro'yxatdan o'tishda qotirilgan fee
+    // (DaF chegirmasi bilan), eski qatorlarda imtihonning joriy narxi.
+    const feeOf = (p: (typeof rows)[number]) => p.feeAmount ?? p.exam.price;
+    const unpaid = rows.filter((p) => !p.paid);
+
+    // 1) To'lov summasi bilan AYNAN mos keladigan to'lanmagan ishtirokchi —
+    //    to'lov havolasi o'sha summani o'zida saqlaydi, shuning uchun bu eng
+    //    ishonchli moslik. Bir nechta mos kelsa, eng yangisi olinadi.
+    if (expectedAmountSom != null) {
+      const wanted = Math.floor(expectedAmountSom);
+      const exact = unpaid.find((p) => feeOf(p) === wanted);
+      if (exact) {
+        return {
+          participantId: exact.id,
+          examPrice: feeOf(exact),
+          alreadyPaid: false,
+        };
+      }
+    }
+
+    // 2) Summa berilmagan yoki mos kelmadi — eng yangi to'lanmagani.
+    if (unpaid.length > 0) {
+      return {
+        participantId: unpaid[0].id,
+        examPrice: feeOf(unpaid[0]),
+        alreadyPaid: false,
+      };
+    }
+
+    // 3) Hammasi to'langan — chaqiruvchi "allaqachon to'langan" deb javob bersin.
     return {
-      participantId: participant.id,
-      // The amount the gateway must charge for THIS participant — the fee
-      // locked in at registration (after any DaF discount), falling back to
-      // the exam's current price for legacy rows. Must equal the amount
-      // embedded in the payment deep-link or the webhook rejects the pay.
-      examPrice: participant.feeAmount ?? participant.exam.price,
-      alreadyPaid: participant.paid,
+      participantId: rows[0].id,
+      examPrice: feeOf(rows[0]),
+      alreadyPaid: true,
     };
   }
 
@@ -93,7 +128,7 @@ export class MockExamGatewayBillingService {
     provider: GatewayProvider;
     companyId: number;
   }): Promise<boolean> {
-    const target = await this.resolveTarget(args.publicId);
+    const target = await this.resolveTarget(args.publicId, args.amountSom);
     if (!target || target.alreadyPaid) return false;
     if (target.examPrice <= 0) return false;
     if (Math.floor(args.amountSom) !== target.examPrice) return false;
