@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -13,6 +13,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -127,6 +137,13 @@ export function CreateExamDrawer({
     name: "subjects",
   });
   const [submitting, setSubmitting] = useState(false);
+  /**
+   * Narx bo'sh qoldirilsa imtihon BEPUL bo'lib yaratiladi va bot hech kimdan
+   * to'lov so'ramaydi. Bu jimgina sodir bo'lsa, admin imtihon pullik deb
+   * o'ylab yuraveradi — shuning uchun tasdiq so'raymiz.
+   */
+  const [freeConfirmOpen, setFreeConfirmOpen] = useState(false);
+  const freeConfirmedRef = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -143,6 +160,9 @@ export function CreateExamDrawer({
         subjects: DEFAULT_GERMAN_SUBJECTS.map((s) => ({ ...s })),
       });
       setSubmitting(false);
+      // Har safar yangi imtihon uchun tasdiq qaytadan so'ralsin.
+      freeConfirmedRef.current = false;
+      setFreeConfirmOpen(false);
     }
   }, [open, reset]);
 
@@ -172,6 +192,12 @@ export function CreateExamDrawer({
     const price = values.price.trim() ? Number(values.price) : 0;
     if (!Number.isFinite(price) || price < 0) {
       toast.error("Narx noto'g'ri kiritildi");
+      return;
+    }
+
+    // Narx 0 → imtihon bepul, bot to'lov so'ramaydi. Bir marta tasdiqlatamiz.
+    if (price === 0 && !freeConfirmedRef.current) {
+      setFreeConfirmOpen(true);
       return;
     }
 
@@ -525,6 +551,38 @@ export function CreateExamDrawer({
           </Button>
         </SheetFooter>
       </SheetContent>
+
+      <AlertDialog open={freeConfirmOpen} onOpenChange={setFreeConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Bu imtihon bepul bo&apos;ladimi?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Narx kiritilmadi. Agar shunday davom etsangiz, imtihon{" "}
+              <b>bepul</b> bo&apos;lib yaratiladi va bot ro&apos;yxatdan
+              o&apos;tganlardan <b>to&apos;lov so&apos;ramaydi</b>.
+              <br />
+              <br />
+              Imtihon pullik bo&apos;lishi kerak bo&apos;lsa — bekor qiling va
+              &quot;Narx&quot; maydonini to&apos;ldiring.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                freeConfirmedRef.current = true;
+                setFreeConfirmOpen(false);
+                // Formani qayta yuboramiz — endi tekshiruv o'tkazib yuboradi.
+                void handleSubmit(onSubmit)();
+              }}
+            >
+              Ha, bepul bo&apos;lsin
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

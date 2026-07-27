@@ -987,9 +987,16 @@ model MockExamParticipant {
   subjectScores       MockExamSubjectScore[]
   gatewayTransactions MockExamGatewayTransaction[]
 
-  // One person can register for each MockExam only once. publicId is the
+  // One person can register for each MockExam only once — publicId is the
   // canonical identity (works whether they're a DaF student or not).
-  @@unique([examId, publicId])
+  //
+  // The uniqueness is enforced by a PARTIAL unique index scoped to
+  // `deletedAt IS NULL` (added as raw SQL in the migration), NOT by a plain
+  // `@@unique`. A plain one counts soft-deleted rows too, so once an admin
+  // removed a participant that person could never register for the same
+  // exam again — the bot answered "Siz allaqachon ro'yxatga olingansiz"
+  // forever. Removing someone must actually free their slot.
+  @@index([examId, publicId])
   @@index([examId, deletedAt])
   @@index([studentId])
   @@index([telegramChatId])
