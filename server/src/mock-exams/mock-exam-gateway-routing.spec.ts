@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { MockExamGatewayBillingService } from './mock-exam-gateway-billing.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -42,6 +43,7 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       providers: [
         MockExamGatewayBillingService,
         { provide: PrismaService, useValue: prisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
     service = moduleRef.get(MockExamGatewayBillingService);
@@ -162,6 +164,86 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       ]);
       const t = await service.resolveTarget(10003, 2000);
       expect(t?.alreadyPaid).toBe(true);
+    });
+  });
+
+  /**
+   * REGRESSIYA: shlyuz orqali to'langanda ishtirokchi "to'langan" bo'lardi,
+   * lekin bot JIM qolardi — `mock.participant.paid` hodisasi faqat admin naqd
+   * to'lovni qabul qilganda chiqarilardi. Foydalanuvchi to'lovi o'tgan-o'tmaganini
+   * bilmasdi va to'lov tugmalari ekranda turaverardi.
+   */
+  describe("markCompleted — to'lov haqida xabar", () => {
+    it("mock.participant.paid hodisasini chiqaradi", async () => {
+      const emit = jest.fn();
+      const tx = {
+        mockExamGatewayTransaction: {
+          update: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+        },
+        mockExamParticipant: {
+          update: jest.fn().mockResolvedValue({
+            telegramChatId: '1647226871',
+            publicId: 10003,
+            feeAmount: 3000,
+            exam: { title: 'Test 3', price: 3000 },
+          }),
+        },
+      };
+      const p: any = {
+        $transaction: jest.fn(async (fn: any) => fn(tx)),
+      };
+      const mod = await Test.createTestingModule({
+        providers: [
+          MockExamGatewayBillingService,
+          { provide: PrismaService, useValue: p },
+          { provide: EventEmitter2, useValue: { emit } },
+        ],
+      }).compile();
+
+      await mod.get(MockExamGatewayBillingService).markCompleted('txn-1');
+
+      expect(tx.mockExamParticipant.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ paid: true }),
+        }),
+      );
+      expect(emit).toHaveBeenCalledWith('mock.participant.paid', {
+        telegramChatId: '1647226871',
+        publicId: 10003,
+        examTitle: 'Test 3',
+        feeAmount: 3000,
+      });
+    });
+
+    it("eski feeAmount=null qatorda imtihon narxini yuboradi", async () => {
+      const emit = jest.fn();
+      const tx = {
+        mockExamGatewayTransaction: {
+          update: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+        },
+        mockExamParticipant: {
+          update: jest.fn().mockResolvedValue({
+            telegramChatId: '1',
+            publicId: 10,
+            feeAmount: null,
+            exam: { title: 'Eski', price: 40000 },
+          }),
+        },
+      };
+      const mod = await Test.createTestingModule({
+        providers: [
+          MockExamGatewayBillingService,
+          { provide: PrismaService, useValue: { $transaction: async (fn: any) => fn(tx) } },
+          { provide: EventEmitter2, useValue: { emit } },
+        ],
+      }).compile();
+
+      await mod.get(MockExamGatewayBillingService).markCompleted('txn-1');
+
+      expect(emit).toHaveBeenCalledWith(
+        'mock.participant.paid',
+        expect.objectContaining({ feeAmount: 40000 }),
+      );
     });
   });
 

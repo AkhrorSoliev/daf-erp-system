@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -34,7 +35,10 @@ interface ResolvedMockTarget {
 export class MockExamGatewayBillingService {
   private readonly logger = new Logger(MockExamGatewayBillingService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Resolves a Click/Payme `account_id` to a mock participant target.
@@ -215,7 +219,7 @@ export class MockExamGatewayBillingService {
    * transaction so they're atomic.
    */
   async markCompleted(gatewayTxnId: string): Promise<void> {
-    await this.prisma.$transaction(
+    const notify = await this.prisma.$transaction(
       async (tx) => {
         const txn = await tx.mockExamGatewayTransaction.update({
           where: { id: gatewayTxnId },
@@ -224,10 +228,17 @@ export class MockExamGatewayBillingService {
             completedAt: new Date(),
           },
         });
-        await tx.mockExamParticipant.update({
+        const participant = await tx.mockExamParticipant.update({
           where: { id: txn.mockParticipantId },
           data: { paid: true, paidAt: new Date() },
+          select: {
+            telegramChatId: true,
+            publicId: true,
+            feeAmount: true,
+            exam: { select: { title: true, price: true } },
+          },
         });
+        return participant;
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -235,6 +246,20 @@ export class MockExamGatewayBillingService {
         timeout: 15000,
       },
     );
+
+    // Foydalanuvchiga Telegramda xabar berish. Ilgari bu hodisa FAQAT admin
+    // naqd to'lovni qabul qilganda chiqarilardi, shuning uchun Click/Payme
+    // orqali to'laganda ishtirokchi "to'langan" bo'lardi-yu, bot jim qolardi —
+    // odam to'lovi o'tgan-o'tmaganini bilmasdi.
+    //
+    // Tranzaksiyadan KEYIN chiqariladi: xabar yuborishdagi nosozlik moliyaviy
+    // yozuvni orqaga qaytarmasligi kerak.
+    this.eventEmitter.emit('mock.participant.paid', {
+      telegramChatId: notify.telegramChatId,
+      publicId: notify.publicId,
+      examTitle: notify.exam.title,
+      feeAmount: notify.feeAmount ?? notify.exam.price,
+    });
   }
 
   /**
