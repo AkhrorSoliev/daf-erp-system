@@ -1,6 +1,7 @@
 import {
   ASK_FIRST_NAME,
   ASK_LAST_NAME,
+  FIRST_NAME_HINT,
   MULTI_WORD_NAME_HINT,
   looksLikeFullName,
 } from './name-prompts';
@@ -46,6 +47,12 @@ describe('name-prompts', () => {
     it("ogohlantirish nima qilish kerakligini aytadi", () => {
       expect(MULTI_WORD_NAME_HINT.toLowerCase()).toContain('faqat');
       expect(MULTI_WORD_NAME_HINT).toContain('Masalan');
+    });
+
+    it("izoh to'liq so'rov ichida ham bor (ikkalasi ajralib ketmasin)", () => {
+      // Mock imtihonda savol matni bazadan keladi, shuning uchun u yerda faqat
+      // FIRST_NAME_HINT qo'shiladi. Ikkisi bitta manbadan bo'lishi shart.
+      expect(ASK_FIRST_NAME).toContain(FIRST_NAME_HINT);
     });
 
     it("matnlarda formatlash belgilari yo'q (parse_mode ishlatilmaydi)", () => {
