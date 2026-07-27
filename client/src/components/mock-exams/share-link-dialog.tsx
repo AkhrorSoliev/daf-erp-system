@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  buildBotLink,
+  isTelegramBotConfigured,
+  TELEGRAM_BOT_NOT_CONFIGURED,
+} from "@/lib/telegram-link";
 
 interface ShareLinkDialogProps {
   open: boolean;
@@ -30,10 +35,8 @@ export function ShareLinkDialog({
   registrationOpen,
 }: ShareLinkDialogProps) {
   const [copied, setCopied] = useState(false);
-  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT;
-  const url = botUsername
-    ? `https://t.me/${botUsername}?start=mock_${botStartPayload}`
-    : `t.me/<BOT>?start=mock_${botStartPayload}`;
+  const botLink = buildBotLink(`mock_${botStartPayload}`);
+  const url = botLink ?? `t.me/<BOT>?start=mock_${botStartPayload}`;
 
   async function handleCopy() {
     try {
@@ -98,10 +101,9 @@ export function ShareLinkDialog({
             </p>
           </div>
 
-          {!botUsername && (
+          {!isTelegramBotConfigured && (
             <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              <code>NEXT_PUBLIC_TELEGRAM_BOT</code> .env da
-              ko&apos;rsatilmagan — havola to&apos;liq emas.
+              {TELEGRAM_BOT_NOT_CONFIGURED}
             </p>
           )}
         </div>

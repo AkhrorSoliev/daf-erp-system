@@ -15,6 +15,7 @@ import { EditBranchDrawer } from "./edit-branch-drawer";
 import type { Branch } from "@/hooks/use-edit-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import api from "@/lib/api";
+import { buildBotLink, TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -38,9 +39,10 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const registrationLink = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=teacher_${branchId}`;
+  const registrationLink = buildBotLink(`teacher_${branchId}`);
 
   const handleCopy = async () => {
+    if (!registrationLink) return;
     await navigator.clipboard.writeText(registrationLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -249,21 +251,38 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
           <div className="flex-1 rounded-md border bg-muted/50 px-3 py-2">
             <div className="flex items-center gap-2">
               <Link2 className="size-4 shrink-0 text-muted-foreground" />
-              <code className="text-sm break-all">{registrationLink}</code>
+              {registrationLink ? (
+                <code className="text-sm break-all">{registrationLink}</code>
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  {TELEGRAM_BOT_NOT_CONFIGURED}
+                </span>
+              )}
             </div>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="sm" variant="outline" onClick={handleCopy}>
-                {copied ? (
-                  <Check className="mr-1.5 h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="mr-1.5 h-4 w-4" />
-                )}
-                {copied ? "Nusxalandi" : "Nusxalash"}
-              </Button>
+              <span tabIndex={0}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopy}
+                  disabled={!registrationLink}
+                >
+                  {copied ? (
+                    <Check className="mr-1.5 h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="mr-1.5 h-4 w-4" />
+                  )}
+                  {copied ? "Nusxalandi" : "Nusxalash"}
+                </Button>
+              </span>
             </TooltipTrigger>
-            <TooltipContent>Havolani nusxalash</TooltipContent>
+            <TooltipContent>
+              {registrationLink
+                ? "Havolani nusxalash"
+                : TELEGRAM_BOT_NOT_CONFIGURED}
+            </TooltipContent>
           </Tooltip>
         </div>
       </div>

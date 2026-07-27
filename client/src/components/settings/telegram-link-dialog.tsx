@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
+import { buildBotLink, TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
 
 function extractError(err: unknown, fallback: string): string {
   const msg = (err as { response?: { data?: { message?: string | string[] } } })
@@ -85,7 +86,11 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
         "/telegram/employee-link",
         { branchId: selectedBranch.id, roleIds },
       );
-      const url = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=${data.payload}`;
+      const url = buildBotLink(data.payload);
+      if (!url) {
+        toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+        return;
+      }
       setLink(url);
       await navigator.clipboard.writeText(url);
       setCopied(true);

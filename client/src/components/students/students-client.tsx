@@ -31,6 +31,11 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import {
+  buildBotLink,
+  isTelegramBotConfigured,
+  TELEGRAM_BOT_NOT_CONFIGURED,
+} from "@/lib/telegram-link";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
@@ -66,7 +71,11 @@ export function StudentsClient() {
 
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
-    const link = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=student_${selectedBranch.id}`;
+    const link = buildBotLink(`student_${selectedBranch.id}`);
+    if (!link) {
+      toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+      return;
+    }
     await navigator.clipboard.writeText(link);
     setCopied(true);
     toast.success("Havola nusxalandi");
@@ -182,7 +191,7 @@ export function StudentsClient() {
                 <TooltipContent>Avval filial tanlang</TooltipContent>
               </Tooltip>
             )}
-            {selectedBranch ? (
+            {selectedBranch && isTelegramBotConfigured ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" onClick={handleCopyLink} className="shrink-0">
@@ -208,7 +217,9 @@ export function StudentsClient() {
                     </Button>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>Avval filial tanlang</TooltipContent>
+                <TooltipContent>
+                  {selectedBranch ? TELEGRAM_BOT_NOT_CONFIGURED : "Avval filial tanlang"}
+                </TooltipContent>
               </Tooltip>
             )}
           </div>
