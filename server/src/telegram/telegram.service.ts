@@ -76,6 +76,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   // `requiredChannel` is unset the gate is disabled entirely.
   private requiredChannel?: string;
   private botUsername?: string;
+  /**
+   * `/start` oqimi, `onModuleInit` ichida yaratiladi va shu yerda saqlanadi.
+   *
+   * NEGA KERAK: kanal a'zoligi tasdiqlangandan keyin foydalanuvchini AYNAN
+   * o'sha oqimga qaytarish kerak. Ilgari bunga `t.me/<bot>?start=...` URL
+   * tugmasi qo'yilgan edi, lekin foydalanuvchi allaqachon shu bot chatida
+   * turganda Telegram bunday havolani bosganda `/start` ni QAYTA YUBORMAYDI —
+   * shunchaki chatni ochadi, ya'ni tugma hech nima qilmaydi. Shuning uchun
+   * oqimni server tomonda o'zimiz chaqiramiz.
+   */
+  private startFlow?: (ctx: BotContext, payload: string) => Promise<void>;
 
   constructor(
     private configService: ConfigService,
@@ -243,8 +254,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.use(stage.middleware());
 
     // /start handler
-    this.bot.start(async (ctx) => {
-      const payload = ctx.payload;
+    // `/start` oqimi alohida funksiyaga olindi, chunki uni IKKI joydan
+    // chaqiramiz: haqiqiy /start buyrug'idan va kanal a'zoligi tasdiqlangandan
+    // keyin ("✅ Tekshirish" tugmasi).
+    const startFlow = async (ctx: BotContext, payload: string) => {
       this.logger.log(`Bot /start payload: "${payload}"`);
 
       // Native app login (link/poll) — approve the pending request, app auto-logs-in
@@ -486,7 +499,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           ],
         ]),
       );
-    });
+    };
+
+    this.startFlow = startFlow;
+    this.bot.start(async (ctx) => startFlow(ctx, ctx.payload));
 
     // Channel-membership recheck button ("✅ Tekshirish"). Re-checks
     // membership; on success caches it and offers a one-tap resume of the
@@ -526,26 +542,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       // deb yozish statistikani soxtalashtiradi, shuning uchun yozmaymiz.
       if (!checkFailed && ctx.from) await this.gateStats.recordJoined(ctx.from);
 
-      const payload = ctx.session?.pendingStartPayload;
-      const resumeUrl = this.botUsername
-        ? `https://t.me/${this.botUsername}?start=${payload ?? ''}`
-        : null;
+      // Tugmalarni olib tashlaymiz, shunda "Tekshirish" qayta bosilmaydi.
       try {
-        if (resumeUrl) {
-          await ctx.editMessageText(
-            "✅ A'zolik tasdiqlandi! Davom etish uchun tugmani bosing.",
-            Markup.inlineKeyboard([
-              [Markup.button.url('▶️ Davom etish', resumeUrl)],
-            ]),
-          );
-        } else {
-          await ctx.editMessageText(
-            "✅ A'zolik tasdiqlandi! Davom etish uchun /start bosing.",
-          );
-        }
+        await ctx.editMessageText("✅ A'zolik tasdiqlandi!");
       } catch {
-        // Message may be too old to edit — ignore.
+        // Xabar tahrirlash uchun juda eski bo'lishi mumkin — e'tiborsiz qoldiramiz.
       }
+
+      await this.resumeAfterJoin(ctx);
     });
 
     // Mock exam "pay cash on arrival" button (shown after registration when
@@ -784,6 +788,33 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       );
     }
     return String(chat.id) === channel;
+  }
+
+  /**
+   * A'zolik tasdiqlangandan keyin foydalanuvchi uzilgan joydan davom etadi.
+   *
+   * Ilgari bu yerda `t.me/<bot>?start=<payload>` URL tugmasi ko'rsatilardi,
+   * lekin foydalanuvchi ALLAQACHON shu bot chatida turgani uchun Telegram
+   * bunday havolani bosganda `/start` ni qayta yubormaydi — u shunchaki
+   * chatni fokuslaydi. Natijada tugma jimgina hech nima qilmasdi.
+   *
+   * Shuning uchun oqimni server tomonda o'zimiz chaqiramiz. Xatolik yuz bersa
+   * ham foydalanuvchi boshi berk ko'chada qolmasligi kerak — unga nima qilishni
+   * aytadigan zaxira xabar yuboriladi.
+   */
+  private async resumeAfterJoin(ctx: BotContext): Promise<void> {
+    const payload = ctx.session?.pendingStartPayload ?? '';
+    if (this.startFlow) {
+      try {
+        await this.startFlow(ctx, payload);
+        return;
+      } catch (err) {
+        this.logger.error(
+          `A'zolik tasdiqlangandan keyin oqimni davom ettirib bo'lmadi: ${(err as Error).message}`,
+        );
+      }
+    }
+    await ctx.reply("Davom etish uchun /start yuboring.");
   }
 
   /** Asks the user to join the required channel, with a recheck button. */
