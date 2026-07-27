@@ -7,6 +7,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
 import {
+  ASK_FIRST_NAME,
+  ASK_LAST_NAME,
+  FIRST_NAME_TOO_SHORT,
+  LAST_NAME_TOO_SHORT,
+  MULTI_WORD_NAME_HINT,
+  looksLikeFullName,
+} from '../name-prompts';
+import {
   buildTeachersKeyboard,
   daysMap,
   formatQrGroupInfo,
@@ -66,7 +74,7 @@ export function createStudentRegistrationScene(
       ctx.session.step = 3;
       const info = formatQrGroupInfo(ctx.session.data);
       await ctx.reply(
-        `Assalomu alaykum!\nQuyidagi guruhga ro'yxatdan o'tish:\n\n${info}\nIsmingizni kiriting:`,
+        `Assalomu alaykum!\nQuyidagi guruhga ro'yxatdan o'tish:\n\n${info}\n${ASK_FIRST_NAME}`,
       );
       return;
     }
@@ -209,7 +217,7 @@ export function createStudentRegistrationScene(
     ctx.session.step = 3;
 
     await ctx.editMessageText(`✅ Guruh tanlandi: ${group.name}`);
-    await ctx.reply('Ismingizni kiriting:');
+    await ctx.reply(ASK_FIRST_NAME);
   });
 
   // Text xabarlari
@@ -241,22 +249,24 @@ export function createStudentRegistrationScene(
     switch (step) {
       case 3: {
         if (text.length < 2) {
-          await ctx.reply(
-            "Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
-          );
+          await ctx.reply(FIRST_NAME_TOO_SHORT);
+          return;
+        }
+        // Ism o'rniga to'liq ism-familiya yozilgan — bir marta tushuntirib
+        // qayta so'raymiz, aks holda familiya ikki marta yozilib qolardi.
+        if (looksLikeFullName(text)) {
+          await ctx.reply(MULTI_WORD_NAME_HINT);
           return;
         }
         ctx.session.data.firstName = text;
         ctx.session.step = 4;
-        await ctx.reply('Familiyangizni kiriting:');
+        await ctx.reply(ASK_LAST_NAME);
         break;
       }
 
       case 4: {
         if (text.length < 2) {
-          await ctx.reply(
-            "Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
-          );
+          await ctx.reply(LAST_NAME_TOO_SHORT);
           return;
         }
         ctx.session.data.lastName = text;

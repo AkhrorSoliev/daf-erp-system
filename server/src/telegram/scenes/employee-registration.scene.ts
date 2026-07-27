@@ -2,6 +2,14 @@ import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
 import { SCENES, DEFAULT_COMPANY_ID } from '../constants';
 import {
+  ASK_FIRST_NAME,
+  ASK_LAST_NAME,
+  FIRST_NAME_TOO_SHORT,
+  LAST_NAME_TOO_SHORT,
+  MULTI_WORD_NAME_HINT,
+  looksLikeFullName,
+} from '../name-prompts';
+import {
   generateUniqueLogin,
   generatePassword,
 } from '../utils/login-generator';
@@ -60,7 +68,7 @@ export function createEmployeeRegistrationScene(
     await ctx.reply(
       `Assalomu alaykum! Xodim sifatida ro'yxatdan o'tish.\n\n` +
         `Tanlangan lavozim(lar): ${roleNamesText(roleIds)}\n\n` +
-        'Ismingizni kiriting:',
+        ASK_FIRST_NAME,
     );
   });
 
@@ -92,22 +100,24 @@ export function createEmployeeRegistrationScene(
     switch (step) {
       case 1: {
         if (text.length < 2) {
-          await ctx.reply(
-            "Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
-          );
+          await ctx.reply(FIRST_NAME_TOO_SHORT);
+          return;
+        }
+        // Ism o'rniga to'liq ism-familiya yozilgan — bir marta tushuntirib
+        // qayta so'raymiz, aks holda familiya ikki marta yozilib qolardi.
+        if (looksLikeFullName(text)) {
+          await ctx.reply(MULTI_WORD_NAME_HINT);
           return;
         }
         ctx.session.data.firstName = text;
         ctx.session.step = 2;
-        await ctx.reply('Familiyangizni kiriting:');
+        await ctx.reply(ASK_LAST_NAME);
         break;
       }
 
       case 2: {
         if (text.length < 2) {
-          await ctx.reply(
-            "Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
-          );
+          await ctx.reply(LAST_NAME_TOO_SHORT);
           return;
         }
         ctx.session.data.lastName = text;
@@ -423,7 +433,7 @@ export function createEmployeeRegistrationScene(
     ctx.session.data = { branchId, roleIds };
     ctx.session.processing = false;
     await ctx.editMessageCaption('\uD83D\uDD04 Qayta kiritish tanlandi');
-    await ctx.reply('Ismingizni kiriting:');
+    await ctx.reply(ASK_FIRST_NAME);
   });
 
   return scene;

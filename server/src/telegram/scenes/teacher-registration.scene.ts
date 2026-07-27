@@ -2,6 +2,14 @@ import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
 import { SCENES, TEACHER_ROLE_ID, DEFAULT_COMPANY_ID } from '../constants';
 import {
+  ASK_FIRST_NAME,
+  ASK_LAST_NAME,
+  FIRST_NAME_TOO_SHORT,
+  LAST_NAME_TOO_SHORT,
+  MULTI_WORD_NAME_HINT,
+  looksLikeFullName,
+} from '../name-prompts';
+import {
   generateUniqueLogin,
   generatePassword,
 } from '../utils/login-generator';
@@ -48,7 +56,7 @@ export function createTeacherRegistrationScene(
     ctx.session.data = { branchId };
     await ctx.reply(
       "Assalomu alaykum! O'qituvchi sifatida ro'yxatdan o'tish.\n\n" +
-        'Ismingizni kiriting:',
+        ASK_FIRST_NAME,
     );
   });
 
@@ -84,23 +92,25 @@ export function createTeacherRegistrationScene(
       // Ism kiritish
       case 1: {
         if (text.length < 2) {
-          await ctx.reply(
-            "Ism kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
-          );
+          await ctx.reply(FIRST_NAME_TOO_SHORT);
+          return;
+        }
+        // Ism o'rniga to'liq ism-familiya yozilgan — bir marta tushuntirib
+        // qayta so'raymiz, aks holda familiya ikki marta yozilib qolardi.
+        if (looksLikeFullName(text)) {
+          await ctx.reply(MULTI_WORD_NAME_HINT);
           return;
         }
         ctx.session.data.firstName = text;
         ctx.session.step = 2;
-        await ctx.reply('Familiyangizni kiriting:');
+        await ctx.reply(ASK_LAST_NAME);
         break;
       }
 
       // Familiya kiritish
       case 2: {
         if (text.length < 2) {
-          await ctx.reply(
-            "Familiya kamida 2 belgidan iborat bo'lishi kerak. Qayta kiriting:",
-          );
+          await ctx.reply(LAST_NAME_TOO_SHORT);
           return;
         }
         ctx.session.data.lastName = text;
@@ -416,7 +426,7 @@ export function createTeacherRegistrationScene(
     ctx.session.data = { branchId };
     ctx.session.processing = false;
     await ctx.editMessageCaption('\uD83D\uDD04 Qayta kiritish tanlandi');
-    await ctx.reply('Ismingizni kiriting:');
+    await ctx.reply(ASK_FIRST_NAME);
   });
 
   return scene;
