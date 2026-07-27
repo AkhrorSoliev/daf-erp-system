@@ -362,7 +362,12 @@ export class ClickMethodsService {
     clickPaydocId: number | string;
     companyId: number;
   }): Promise<ClickWebhookResponse> {
-    const target = await this.mockGateway.resolveTarget(args.publicId);
+    // Summani ham uzatamiz — bir odamda bir nechta ishtirokchi bo'lishi
+    // mumkin, to'g'risini summa bo'yicha tanlaymiz.
+    const target = await this.mockGateway.resolveTarget(
+      args.publicId,
+      args.amount,
+    );
     if (!target) {
       return clickError(
         args.clickTransId,
