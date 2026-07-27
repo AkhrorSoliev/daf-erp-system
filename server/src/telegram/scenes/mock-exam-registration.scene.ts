@@ -4,6 +4,11 @@ import { message } from 'telegraf/filters';
 import { MockExamStatus, Prisma } from '@prisma/client';
 import { BotContext } from '../types/context';
 import { SCENES } from '../constants';
+import {
+  FIRST_NAME_HINT,
+  MULTI_WORD_NAME_HINT,
+  looksLikeFullName,
+} from '../name-prompts';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MockExamBillingService } from '../../mock-exams/mock-exam-billing.service';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
@@ -325,6 +330,12 @@ export function createMockExamRegistrationScene(
       await ctx.reply("Javob 1 dan 1000 belgi orasida bo'lishi kerak.");
       return;
     }
+    // Ism savoliga to'liq ism-familiya yozilgan — bir marta tushuntirib qayta
+    // so'raymiz, aks holda familiya ikki marta yozilib qolardi.
+    if (field.mapsTo === 'firstName' && looksLikeFullName(text)) {
+      await ctx.reply(MULTI_WORD_NAME_HINT);
+      return;
+    }
     await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, text);
   });
 
@@ -393,7 +404,12 @@ async function startTimeOrFields(ctx: BotContext) {
 
 async function askField(ctx: BotContext, field: FormField) {
   const requiredMark = field.required ? '' : ' (ixtiyoriy)';
-  const prompt = `${field.label}${requiredMark}:`;
+  // Ism savoliga familiya keyin so'ralishini KODDA qo'shamiz. Savol matni
+  // (`field.label`) bazadan keladi va har imtihonda admin tomonidan alohida
+  // yoziladi — izohni faqat matnga qo'shib qo'ysak, yangi yaratilgan
+  // imtihonda yana yo'qolardi.
+  const hint = field.mapsTo === 'firstName' ? `\n\n${FIRST_NAME_HINT}` : '';
+  const prompt = `${field.label}${requiredMark}:${hint}`;
 
   if (field.type === 'phone') {
     await ctx.reply(

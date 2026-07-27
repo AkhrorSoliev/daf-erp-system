@@ -22,8 +22,10 @@
  * javob beradi, formatlash qo'shilsa ismlardagi maxsus belgilar (`_`, `*`)
  * xabarni buzishi mumkin edi.
  */
-export const ASK_FIRST_NAME =
-  "👤 Ismingizni kiriting:\n\nℹ️ Faqat ismingizni yozing — familiyangizni keyingi qadamda alohida so'raymiz.";
+export const FIRST_NAME_HINT =
+  "ℹ️ Faqat ismingizni yozing — familiyangizni keyingi qadamda alohida so'raymiz.";
+
+export const ASK_FIRST_NAME = `👤 Ismingizni kiriting:\n\n${FIRST_NAME_HINT}`;
 
 /** Familiya so'rovi. */
 export const ASK_LAST_NAME = '👤 Endi familiyangizni kiriting:';
