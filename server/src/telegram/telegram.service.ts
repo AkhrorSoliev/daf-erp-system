@@ -33,11 +33,40 @@ import {
   verifyEmployeePayload,
 } from './utils/signed-link.util';
 import { PrismaService } from '../prisma/prisma.service';
+import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
+
+/**
+ * Telegram'dan qabul qilinadigan yangilanish turlari.
+ *
+ * DIQQAT: `allowed_updates` berilganda u standart ro'yxatni ALMASHTIRADI —
+ * qo'shmaydi. Shuning uchun bu ro'yxat Telegram'ning standart to'plami +
+ * `chat_member` dan iborat. Biror turni bu yerdan tushirib qoldirish botning
+ * o'sha turdagi xabarlarni umuman ko'rmasligiga olib keladi.
+ *
+ * `chat_member` standart to'plamda YO'Q — kanalga kim kirib-chiqqanini bilish
+ * uchun uni ataylab qo'shyapmiz (bot kanalda admin bo'lishi shart).
+ */
+const ALLOWED_UPDATES = [
+  'message',
+  'edited_message',
+  'channel_post',
+  'edited_channel_post',
+  'callback_query',
+  'inline_query',
+  'chosen_inline_result',
+  'shipping_query',
+  'pre_checkout_query',
+  'poll',
+  'poll_answer',
+  'my_chat_member',
+  'chat_member',
+  'chat_join_request',
+] as const;
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -57,6 +86,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private entityHistoryService: EntityHistoryService,
     private mockExamBilling: MockExamBillingService,
     private paymentLinkService: PaymentLinkService,
+    private gateStats: TelegramChannelGateStatsService,
   ) {}
 
   async onModuleInit() {
@@ -137,6 +167,16 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // password reset — is gated. The "✅ Tekshirish" recheck button is let
     // through so a not-yet-member can confirm they've joined.
     this.bot.use(async (ctx, next) => {
+      // Kanal a'zoligi o'zgarishi haqidagi xizmat yangilanishlari foydalanuvchi
+      // harakati EMAS — ular gate'dan o'tmasligi kerak. Aks holda bot
+      // "kanalga a'zo bo'ling" xabarini kanalning o'ziga yozib yuborardi.
+      if (
+        ctx.updateType === 'chat_member' ||
+        ctx.updateType === 'my_chat_member'
+      ) {
+        return next();
+      }
+
       const cbData =
         ctx.callbackQuery && 'data' in ctx.callbackQuery
           ? (ctx.callbackQuery as { data?: string }).data
@@ -460,6 +500,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
 
       let isMember = false;
+      let checkFailed = false;
       try {
         const member = await this.bot.telegram.getChatMember(channel, userId);
         isMember = member.status !== 'left' && member.status !== 'kicked';
@@ -468,6 +509,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           `chk_join membership check failed (${channel}): ${(err as Error).message}`,
         );
         isMember = true; // fail-open — don't trap a user on a misconfig
+        checkFailed = true;
       }
 
       if (!isMember) {
@@ -480,6 +522,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
       await ctx.answerCbQuery('Tasdiqlandi ✅');
       if (ctx.session) ctx.session.channelVerified = true;
+      // Fail-open holatida a'zolik ASLIDA tasdiqlanmagan — uni "a'zo bo'ldi"
+      // deb yozish statistikani soxtalashtiradi, shuning uchun yozmaymiz.
+      if (!checkFailed && ctx.from) await this.gateStats.recordJoined(ctx.from);
 
       const payload = ctx.session?.pendingStartPayload;
       const resumeUrl = this.botUsername
@@ -594,6 +639,34 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       },
     );
 
+    // Kanal a'zoligi o'zgarishi — real vaqtda "kirdi / chiqdi" hodisasi.
+    // Bu bizga odam botga QAYTMASA ham chiqib ketganini bilish imkonini beradi
+    // (aks holda faqat u keyingi safar botni ochganda bilardik).
+    this.bot.on('chat_member', async (ctx) => {
+      try {
+        const upd = ctx.chatMember;
+        if (!upd || !this.isRequiredChannelChat(upd.chat)) return;
+
+        const status = upd.new_chat_member.status;
+        const user = upd.new_chat_member.user;
+        if (user.is_bot) return;
+
+        if (status === 'left' || status === 'kicked') {
+          await this.gateStats.recordLeft(user.id);
+        } else {
+          // Kanalga qo'shildi. Agar bu odam ilgari bot tomonidan to'silgan
+          // bo'lsa, uning `blockedAt`i saqlanib qoladi va u "bot tufayli"
+          // metrikasiga tushadi. To'silmagan bo'lsa — o'z-o'zidan kelgan
+          // obunachi (`blockedAt` NULL), u asosiy metrikaga kirmaydi.
+          await this.gateStats.recordJoined(user);
+        }
+      } catch (err) {
+        this.logger.warn(
+          `chat_member yangilanishini qayta ishlab bo'lmadi: ${(err as Error).message}`,
+        );
+      }
+    });
+
     // Launch bot (polling mode for development)
     const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
     if (webhookUrl) {
@@ -601,17 +674,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       // X-Telegram-Bot-Api-Secret-Token header on every update — handleWebhook
       // verifies it, rejecting forged POSTs to the public webhook path.
       const secret = this.webhookSecret();
-      await this.bot.telegram.setWebhook(
-        webhookUrl,
-        secret ? { secret_token: secret } : undefined,
-      );
+      await this.bot.telegram.setWebhook(webhookUrl, {
+        ...(secret ? { secret_token: secret } : {}),
+        allowed_updates: [...ALLOWED_UPDATES],
+      });
       this.logger.log(
         `Bot webhook o'rnatildi: ${webhookUrl}${secret ? ' (secret_token bilan)' : ' (secret_token YO\'Q — TELEGRAM_BOT_TOKEN ham yo\'q)'}`,
       );
     } else {
-      this.bot.launch().catch((err) => {
-        this.logger.error('Bot ishga tushirishda xatolik:', err.message);
-      });
+      this.bot
+        .launch({ allowedUpdates: [...ALLOWED_UPDATES] })
+        .catch((err) => {
+          this.logger.error('Bot ishga tushirishda xatolik:', err.message);
+        });
       this.logger.log('Bot polling rejimida ishga tushdi');
     }
   }
@@ -624,6 +699,34 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   getBot(): Telegraf<BotContext> {
     return this.bot;
+  }
+
+  /** Gate yoqilganmi (kanal talab qilinadimi). */
+  isChannelGateEnabled(): boolean {
+    return Boolean(this.requiredChannel);
+  }
+
+  /** Talab qilinayotgan kanal nomi (masalan "@daffergana"), yoki null. */
+  getRequiredChannel(): string | null {
+    return this.requiredChannel ?? null;
+  }
+
+  /**
+   * Kanaldagi umumiy a'zolar soni (Telegram'dan jonli olinadi).
+   * Gate o'chiq bo'lsa yoki so'rov muvaffaqiyatsiz bo'lsa `null` — hisobot
+   * sahifasi bu holda shunchaki raqamni ko'rsatmaydi, xato bermaydi.
+   */
+  async getChannelMemberCount(): Promise<number | null> {
+    const channel = this.requiredChannel;
+    if (!channel || !this.bot) return null;
+    try {
+      return await this.bot.telegram.getChatMembersCount(channel);
+    } catch (err) {
+      this.logger.warn(
+        `Kanal a'zolari sonini olib bo'lmadi (${channel}): ${(err as Error).message}`,
+      );
+      return null;
+    }
   }
 
   // ─── Mock exam results delivery ───────────────────────────────
@@ -646,6 +749,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     try {
       const member = await this.bot.telegram.getChatMember(channel, userId);
       if (member.status === 'left' || member.status === 'kicked') {
+        if (ctx.from) await this.gateStats.recordBlocked(ctx.from);
         await this.sendJoinPrompt(ctx);
         return false;
       }
@@ -653,11 +757,33 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(
         `Kanal a'zoligini tekshirib bo'lmadi (${channel}): ${(err as Error).message}`,
       );
-      return true; // fail-open
+      return true; // fail-open — statistika yozilmaydi (a'zolik tasdiqlanmagan)
     }
 
     if (ctx.session) ctx.session.channelVerified = true;
+    // Bu yerga faqat tekshiruv HAQIQATAN muvaffaqiyatli bo'lganda kelinadi
+    // (fail-open yo'li yuqorida `return` qiladi), shuning uchun a'zolikni
+    // ishonch bilan yozamiz.
+    if (ctx.from) await this.gateStats.recordJoined(ctx.from);
     return true;
+  }
+
+  /**
+   * `chat_member` yangilanishi AYNAN biz kuzatayotgan kanaldanmi?
+   *
+   * Bot bir nechta chatda admin bo'lishi mumkin (masalan guruh statistikasi
+   * uchun), shuning uchun begona chatdagi a'zolik o'zgarishini gate
+   * statistikasiga yozib yubormaslik kerak.
+   */
+  private isRequiredChannelChat(chat: { id: number; username?: string }): boolean {
+    const channel = this.requiredChannel;
+    if (!channel) return false;
+    if (channel.startsWith('@')) {
+      return (
+        (chat.username ?? '').toLowerCase() === channel.slice(1).toLowerCase()
+      );
+    }
+    return String(chat.id) === channel;
   }
 
   /** Asks the user to join the required channel, with a recheck button. */

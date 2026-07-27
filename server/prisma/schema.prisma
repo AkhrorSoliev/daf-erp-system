@@ -2647,3 +2647,44 @@ model DailyFinancialSnapshot {
   @@unique([companyId, date])
   @@index([companyId, date])
 }
+
+/// Telegram kanal a'zolik gate'ining voronkasi — bitta qator = bitta Telegram
+/// foydalanuvchisi. Gate yoqilganda (`TELEGRAM_REQUIRED_CHANNEL`) bot a'zo
+/// bo'lmagan odamni to'sadi → `blockedAt`. Odam kanalga a'zo bo'lgach
+/// "✅ Tekshirish" bosganda (yoki Telegram `chat_member` xabari kelganda) →
+/// `joinedAt`. Keyin chiqib ketsa → `leftAt`; qayta kirsa `leftAt` NULL ga
+/// qaytadi va `rejoinCount` oshadi.
+///
+/// ASOSIY METRIKA — "bot tufayli a'zo bo'lganlar":
+///   blockedAt IS NOT NULL AND joinedAt IS NOT NULL
+/// Ulardan hozir ham a'zo bo'lib turganlari (`leftAt IS NULL`) gate'ning CHIN
+/// natijasi — bu ikki raqamning farqi soxta/vaqtinchalik a'zolikni ochib beradi.
+///
+/// `blockedAt IS NULL AND joinedAt IS NOT NULL` — botga kelganida allaqachon
+/// a'zo bo'lgan odam: gate uni to'smagan, shuning uchun u ASOSIY metrikaga
+/// kirmaydi (uni biz jalb qilmaganmiz).
+///
+/// Yozuv hajmi ataylab kichik: har xabarda EMAS, odam boshiga umr bo'yi ~2–3
+/// marta yoziladi, shuning uchun bot trafigi bazaga sezilarli yuk bermaydi.
+///
+/// `telegramUserId` — `Student.telegramChatId` bilan bir xil turda (String), shu
+/// sababli "bu odam bizning o'quvchimizmi?" degan solishtiruv to'g'ridan-to'g'ri
+/// ishlaydi.
+model TelegramChannelGateEvent {
+  id             Int       @id @default(autoincrement())
+  companyId      Int
+  telegramUserId String
+  username       String?
+  firstName      String?
+  blockedAt      DateTime?
+  joinedAt       DateTime?
+  leftAt         DateTime?
+  rejoinCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([companyId, telegramUserId])
+  @@index([companyId, blockedAt])
+  @@index([companyId, joinedAt])
+  @@index([companyId, leftAt])
+}

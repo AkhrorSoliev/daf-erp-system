@@ -25,6 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  buildBotLink,
+  isTelegramBotConfigured,
+  TELEGRAM_BOT_NOT_CONFIGURED,
+} from "@/lib/telegram-link";
 import { TeachersTable } from "./teachers-table";
 import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
@@ -61,7 +66,11 @@ export function TeachersClient() {
 
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
-    const link = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=teacher_${selectedBranch.id}`;
+    const link = buildBotLink(`teacher_${selectedBranch.id}`);
+    if (!link) {
+      toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+      return;
+    }
     await navigator.clipboard.writeText(link);
     setCopied(true);
     toast.success("Havola nusxalandi");
@@ -118,7 +127,7 @@ export function TeachersClient() {
         </div>
         <div className="flex items-center gap-2 ml-auto">
           {canManageTeachers && (
-            selectedBranch ? (
+            selectedBranch && isTelegramBotConfigured ? (
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -153,7 +162,7 @@ export function TeachersClient() {
                     <div className="flex flex-col items-center gap-4 py-4">
                       <div className="w-full max-w-70 rounded-lg border bg-white p-4">
                         <QRCodeSVG
-                          value={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=teacher_${selectedBranch.id}`}
+                          value={buildBotLink(`teacher_${selectedBranch.id}`) ?? ""}
                           className="h-auto w-full"
                           level="M"
                         />
@@ -176,7 +185,7 @@ export function TeachersClient() {
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Avval filial tanlang
+                  {selectedBranch ? TELEGRAM_BOT_NOT_CONFIGURED : "Avval filial tanlang"}
                 </TooltipContent>
               </Tooltip>
             )

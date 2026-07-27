@@ -6,6 +6,7 @@ import {
   GraduationCap,
   Activity,
   CalendarCheck,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ export const reportsNavSections: ReportsNavSection[] = [
       { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus },
       { title: "Markaz faoliyat statistikasi", url: "/reports/activity", icon: Activity },
       { title: "Davomat statistikasi", url: "/reports/attendance", icon: CalendarCheck },
+      { title: "Bot hisoboti", url: "/reports/bot", icon: Send },
     ],
   },
 ];

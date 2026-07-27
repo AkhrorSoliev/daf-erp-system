@@ -53,6 +53,11 @@ const STATUS_MAP: Record<
 
 import { formatWeekdays } from "@/lib/weekdays";
 import { formatPrice } from "@/lib/format-utils";
+import {
+  buildBotLink,
+  isTelegramBotConfigured,
+  TELEGRAM_BOT_NOT_CONFIGURED,
+} from "@/lib/telegram-link";
 
 interface GroupInfoCardProps {
   group: GroupData;
@@ -300,17 +305,29 @@ export function GroupInfoCard({
               <DialogTitle>QR kod — {group.name}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-4">
-              <div className="rounded-lg border bg-white p-4">
-                <QRCodeSVG
-                  value={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=student_${group.branchId}_group_${group.id}`}
-                  size={280}
-                  level="M"
-                />
-              </div>
-              <p className="text-muted-foreground text-center text-sm">
-                Ushbu QR kodni skanerlang va &quot;{group.name}&quot; guruhiga
-                ro&apos;yxatdan o&apos;ting
-              </p>
+              {isTelegramBotConfigured ? (
+                <>
+                  <div className="rounded-lg border bg-white p-4">
+                    <QRCodeSVG
+                      value={
+                        buildBotLink(
+                          `student_${group.branchId}_group_${group.id}`,
+                        ) ?? ""
+                      }
+                      size={280}
+                      level="M"
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-center text-sm">
+                    Ushbu QR kodni skanerlang va &quot;{group.name}&quot;
+                    guruhiga ro&apos;yxatdan o&apos;ting
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-center text-sm">
+                  {TELEGRAM_BOT_NOT_CONFIGURED}
+                </p>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -346,13 +363,30 @@ export function GroupInfoCard({
 
 function CopyLinkButton({ group }: { group: GroupData }) {
   const [copied, setCopied] = useState(false);
-  const link = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT}?start=student_${group.branchId}_group_${group.id}`;
+  const link = buildBotLink(`student_${group.branchId}_group_${group.id}`);
 
   const copyLink = async () => {
+    if (!link) return;
     await navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Bot sozlanmagan — nusxalashga yaroqli havola yo'q, tugma o'chiriladi.
+  if (!link) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span tabIndex={0}>
+            <Button variant="outline" size="sm" className="size-8 p-0" disabled>
+              <Copy className="size-4" />
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{TELEGRAM_BOT_NOT_CONFIGURED}</TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return (
     <Tooltip>

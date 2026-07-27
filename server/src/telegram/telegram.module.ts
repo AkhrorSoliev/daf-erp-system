@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
+import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { TelegramController } from './telegram.controller';
+import { TelegramChannelReportController } from './telegram-channel-report.controller';
 import { MockExamAnnounceListener } from './mock-exam-announce.listener';
 import { MockExamPaidListener } from './mock-exam-paid.listener';
 import { UploadModule } from '../upload/upload.module';
@@ -14,8 +16,13 @@ import { PaymentLinksModule } from '../payment-gateways/payment-links.module';
   // would create a cycle (PaymentGatewaysModule → PaymentsModule →
   // BillingModule → TelegramModule).
   imports: [UploadModule, UsersModule, MockExamsModule, PaymentLinksModule],
-  controllers: [TelegramController],
-  providers: [TelegramService, MockExamAnnounceListener, MockExamPaidListener],
-  exports: [TelegramService],
+  controllers: [TelegramController, TelegramChannelReportController],
+  providers: [
+    TelegramService,
+    TelegramChannelGateStatsService,
+    MockExamAnnounceListener,
+    MockExamPaidListener,
+  ],
+  exports: [TelegramService, TelegramChannelGateStatsService],
 })
 export class TelegramModule {}
