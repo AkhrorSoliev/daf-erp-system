@@ -475,9 +475,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
+      // Salomlashish xabari reply-klaviaturani TOZALAYDI. Bu ataylab alohida
+      // xabar: bitta xabarda ham inline tugmalar, ham `remove_keyboard`
+      // bo'lolmaydi. Tozalashsiz, yarim yo'lda tashlab ketilgan ro'yxatdan
+      // o'tishdan qolgan «📱 Telefon raqamni yuborish» klaviaturasi ekranda
+      // yopishib qolar va /start ham uni ketkaza olmasdi.
       await ctx.reply(
-        'Assalomu alaykum! DaF Sprachzentrum botiga xush kelibsiz.\n\n' +
-          'Quyidagi imkoniyatlardan birini tanlang:',
+        'Assalomu alaykum! DaF Sprachzentrum botiga xush kelibsiz.',
+        Markup.removeKeyboard(),
+      );
+      await ctx.reply(
+        'Quyidagi imkoniyatlardan birini tanlang:',
         Markup.inlineKeyboard([
           [
             Markup.button.callback("📝 Ro'yxatdan o'tish", 'menu_registration'),

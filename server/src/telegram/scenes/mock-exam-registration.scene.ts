@@ -744,14 +744,30 @@ async function finalizeRegistration(
     "Natijalar e'lon qilingach, PDFda identifikatoringizni topishingiz mumkin. Eslab qoling!",
   );
 
-  const replyOptions: Parameters<typeof ctx.reply>[1] = {
-    parse_mode: 'HTML',
-    ...(keyboardRows.length > 0
-      ? Markup.inlineKeyboard(keyboardRows)
-      : Markup.removeKeyboard()),
-  };
-
-  await ctx.reply(lines.join('\n'), replyOptions);
+  // Telefon so'ralganda qo'yilgan «📱 Telefon raqamni yuborish» klaviaturasi
+  // shu yerda albatta tozalanishi kerak. Bitta xabarda ham inline tugmalar,
+  // ham `remove_keyboard` bo'lolmaydi (Telegram'da `reply_markup` bitta) —
+  // shuning uchun pullik imtihonda xabar IKKIGA bo'linadi.
+  //
+  // Ilgari bu shart faqat `keyboardRows.length === 0` bo'lganda bajarilardi,
+  // ya'ni PULLIK imtihonga yozilgan har bir odamda telefon klaviaturasi
+  // ekranda yopishib qolardi (telefon oxirgi savol bo'lgani uchun undan keyin
+  // klaviaturani tozalaydigan boshqa so'rov bo'lmasdi).
+  if (keyboardRows.length > 0) {
+    await ctx.reply(lines.join('\n'), {
+      parse_mode: 'HTML',
+      ...Markup.removeKeyboard(),
+    });
+    await ctx.reply(
+      "To'lov usulini tanlang:",
+      Markup.inlineKeyboard(keyboardRows),
+    );
+  } else {
+    await ctx.reply(lines.join('\n'), {
+      parse_mode: 'HTML',
+      ...Markup.removeKeyboard(),
+    });
+  }
   await ctx.scene.leave();
 }
 
