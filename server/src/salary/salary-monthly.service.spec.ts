@@ -564,4 +564,75 @@ describe('SalaryMonthlyService', () => {
       expect(where.date.lt).toBeInstanceOf(Date);
     });
   });
+
+  /**
+   * The per-user view backing the teacher profile tab, the profile card and
+   * the lehrer portal. It MUST come out of the same pass as the full table —
+   * a separate calculation is exactly how the four-different-numbers bug
+   * happened.
+   */
+  describe('getMonthlyForUser', () => {
+    it('narrows the teacher roster to the requested user', async () => {
+      await service.getMonthlyForUser(10005, { month: '2026-06' }, 1, 999);
+
+      const where = prisma.user.findMany.mock.calls[0][0].where;
+      expect(where.id).toBe(10005);
+    });
+
+    it('returns the single teacher row alongside the month metadata', async () => {
+      prisma.user.findMany.mockResolvedValue([teacher(10005, 'Gulnoza', 'S')]);
+
+      const res = await service.getMonthlyForUser(
+        10005,
+        { month: '2026-06' },
+        1,
+        999,
+      );
+
+      expect(res.month).toBe('2026-06');
+      expect(res.floorMonth).toBe('2026-05');
+      expect(res.period.cycleStartDay).toBe(1);
+      expect(res.row?.user.id).toBe(10005);
+    });
+
+    it('falls back to the non-teaching staff row for a fixed-salary employee', async () => {
+      const staffRow = {
+        user: {
+          id: 10030,
+          firstName: 'A',
+          lastName: 'B',
+          position: 'Administrator',
+          branch: null,
+        },
+        monthly: 5_000_000,
+        advances: 0,
+        netToPay: 5_000_000,
+        payment: null,
+      };
+      staff.computeStaff.mockResolvedValue({
+        staff: [staffRow],
+        staffTotals: { monthly: 5_000_000, advances: 0, netToPay: 5_000_000 },
+      });
+
+      const res = await service.getMonthlyForUser(
+        10030,
+        { month: '2026-06' },
+        1,
+        999,
+      );
+
+      expect(res.row).toEqual(staffRow);
+    });
+
+    it('returns a null row when the user has no salary presence that month', async () => {
+      const res = await service.getMonthlyForUser(
+        10099,
+        { month: '2026-06' },
+        1,
+        999,
+      );
+
+      expect(res.row).toBeNull();
+    });
+  });
 });

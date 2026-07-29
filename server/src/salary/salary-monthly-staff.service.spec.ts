@@ -31,6 +31,7 @@ function juneScope(overrides: Partial<MonthlyScope> = {}): MonthlyScope {
     branchId: undefined,
     search: undefined,
     searchId: null,
+    userId: undefined,
     ...overrides,
   };
 }
@@ -157,6 +158,13 @@ describe('SalaryStaffMonthlyService', () => {
 
     expect(res.staff[0].netToPay).toBe(4_500_000); // payment.amount, not 4M
     expect(res.staff[0].payment?.status).toBe('PAID');
+  });
+
+  it('narrows the staff roster to one user when the scope carries a userId', async () => {
+    await service.computeStaff(juneScope({ userId: 10030 }));
+
+    const where = prisma.employeeSalaryConfig.findMany.mock.calls[0][0].where;
+    expect(where.user.id).toBe(10030);
   });
 
   it('drops a config with no active version and no settled payment', async () => {

@@ -84,6 +84,7 @@ export class SalaryMonthlyService {
       branchId,
       search,
       searchId,
+      userId,
     } = scope;
 
     // Non-teaching FIXED_MONTHLY staff (admins/cashiers/directors). Computed up
@@ -95,6 +96,7 @@ export class SalaryMonthlyService {
       deletedAt: null,
       companyId,
       roles: { some: { role: { name: 'Teacher' } } },
+      ...(userId !== undefined && { id: userId }),
       ...(branchId !== undefined && { branches: { some: { branchId } } }),
       ...(search && {
         OR: [
@@ -546,6 +548,41 @@ export class SalaryMonthlyService {
    * total) — date, amount, method, note and who recorded it. When an advance
    * was taken "3 ga bo'lib" (in several parts), each part is its own row.
    */
+  /**
+   * The monthly report narrowed to ONE user — the single source behind the
+   * teacher profile "Ish haqi" tab, the profile card's "To'lanishi kerak" and
+   * the lehrer portal.
+   *
+   * It deliberately runs the SAME `getMonthly` pass the `/payments/salary`
+   * table renders and just picks the caller's row, so the two screens cannot
+   * drift apart. (They used to: the profile computed its own forecast and its
+   * own period-less accrual sum, producing four different numbers for one
+   * teacher.)
+   *
+   * `row` is the teacher row when the user teaches, the non-teaching
+   * FIXED_MONTHLY staff row otherwise, and `null` when the user has no salary
+   * presence in that month.
+   */
+  async getMonthlyForUser(
+    userId: number,
+    query: SalaryMonthlyQuery,
+    companyId: number,
+    performedById: number,
+  ) {
+    const res = await this.getMonthly(
+      { ...query, userId },
+      companyId,
+      performedById,
+    );
+
+    return {
+      month: res.month,
+      floorMonth: res.floorMonth,
+      period: res.period,
+      row: res.data[0] ?? res.staff[0] ?? null,
+    };
+  }
+
   async getAdvancesForUser(
     userId: number,
     query: SalaryMonthlyQuery,

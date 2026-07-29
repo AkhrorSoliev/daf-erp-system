@@ -70,6 +70,25 @@ export class SalaryController {
     return this.breakdownService.getCurrentCycleBreakdown(userId, companyId);
   }
 
+  /**
+   * "Mening oyligim" — the caller's own row from the monthly salary report.
+   * Identical figures to what an admin sees on `/payments/salary`, because it
+   * is literally the same pass narrowed to one user.
+   */
+  @Get('me/monthly')
+  getMyMonthly(
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getMonthlyForUser(
+      userId,
+      query,
+      companyId,
+      userId,
+    );
+  }
+
   @Get('me/payments/:id/breakdown')
   getMyPaymentBreakdown(
     @Param('id') id: string,
@@ -247,6 +266,29 @@ export class SalaryController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.salaryService.getMonthly(query, companyId, userId);
+  }
+
+  /**
+   * One named teacher's row from the monthly report — backs the profile
+   * "Ish haqi" tab and the profile card's "To'lanishi kerak".
+   *
+   * Same gate as `/teachers/:id/salary-summary`, the endpoint it replaces:
+   * Administrator is deliberately excluded, since this is one person's pay.
+   */
+  @Get('monthly/user/:userId')
+  @Roles('CEO', 'Branch Director')
+  getMonthlyForUser(
+    @Param('userId', ParseIntPipe) targetUserId: number,
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.getMonthlyForUser(
+      targetUserId,
+      query,
+      companyId,
+      performedById,
+    );
   }
 
   /**

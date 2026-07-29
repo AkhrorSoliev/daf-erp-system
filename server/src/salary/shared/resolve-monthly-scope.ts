@@ -7,6 +7,12 @@ import {
 export interface SalaryMonthlyQuery {
   month?: string;
   search?: string;
+  /**
+   * Narrow the report to a single user. Powers the per-teacher views (profile
+   * "Ish haqi" tab, profile card, lehrer portal) so they read the SAME row the
+   * `/payments/salary` table renders instead of computing their own figure.
+   */
+  userId?: number;
 }
 
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -44,6 +50,8 @@ export interface MonthlyScope {
   branchId: number | undefined;
   search: string | undefined;
   searchId: number | null;
+  /** Single-user scope; undefined = the full roster. */
+  userId: number | undefined;
 }
 
 export async function resolveMonthlyScope(
@@ -91,8 +99,14 @@ export async function resolveMonthlyScope(
     },
   });
   const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
+  // Looking at your own row is always allowed: an id-exact lookup of yourself
+  // must not come back empty because your UserBranch rows disagree with your
+  // `mainBranch`. Everyone else keeps the normal BD branch confinement.
+  const selfView = query.userId !== undefined && query.userId === performedById;
   const scoped =
-    !roleNames.includes('CEO') && !roleNames.includes('Administrator');
+    !selfView &&
+    !roleNames.includes('CEO') &&
+    !roleNames.includes('Administrator');
   const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
 
   const search = query.search?.trim();
@@ -112,5 +126,6 @@ export async function resolveMonthlyScope(
     branchId,
     search: search || undefined,
     searchId,
+    userId: query.userId,
   };
 }

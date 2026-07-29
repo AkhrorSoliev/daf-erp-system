@@ -57,51 +57,25 @@ export class SalarySummaryService {
 
     const defaultConfig = configs.find((c) => !c.groupId);
 
+    // Group CONTEXT only — which groups, how many students, on what rate.
+    // No money is projected here on purpose: the old `expectedMonthly`
+    // (students × `exactDays.length * 4` lessons × rate) was a forecast that
+    // sat beside the real monthly report and contradicted it for every
+    // teacher. All salary figures now come from `SalaryMonthlyService`.
     const groupsBreakdown = teacherGroups
       .filter((tg) => tg.group.statusEnum === 'ACTIVE')
       .map((tg) => {
         const groupConfig =
           configs.find((c) => c.groupId === tg.group.id) ?? defaultConfig;
-        const activeStudents = tg.group._count.enrollments;
-        const lessonPaymentCount = tg.group.course.lessonPaymentCount || 12;
-        const perLessonCost = Math.round(
-          tg.group.course.price / lessonPaymentCount,
-        );
-        const lessonsPerMonth = tg.group.exactDays.length * 4;
-
-        let expectedPerStudentPerLesson = 0;
-        if (
-          groupConfig &&
-          groupConfig.salaryType !== SalaryType.FIXED_MONTHLY
-        ) {
-          if (groupConfig.salaryType === SalaryType.PERCENTAGE) {
-            expectedPerStudentPerLesson = Math.round(
-              (perLessonCost * groupConfig.value) / 100,
-            );
-          } else {
-            // FIXED_PER_STUDENT: `value` is per-student-per-cycle. Divide
-            // by lessonPaymentCount to get per-lesson. This previously
-            // returned the full value per lesson, inflating expectations.
-            expectedPerStudentPerLesson = Math.round(
-              groupConfig.value / lessonPaymentCount,
-            );
-          }
-        }
-
-        const expectedMonthly =
-          expectedPerStudentPerLesson * activeStudents * lessonsPerMonth;
 
         return {
           groupId: tg.group.id,
           groupName: tg.group.name,
-          activeStudents,
-          lessonsPerMonth,
+          activeStudents: tg.group._count.enrollments,
           salaryType: groupConfig?.salaryType ?? null,
           salaryValue: groupConfig?.value ?? 0,
           // Kurs narxi — guruh o'quvchisi kurs uchun qancha to'lashi
           coursePrice: tg.group.course.price,
-          expectedPerLesson: expectedPerStudentPerLesson * activeStudents,
-          expectedMonthly,
         };
       });
 
@@ -175,12 +149,8 @@ export class SalarySummaryService {
     const fixedMonthlyConfig = configs.find(
       (c) => c.salaryType === SalaryType.FIXED_MONTHLY,
     );
-    const expectedMonthlyTotal = fixedMonthlyConfig
-      ? fixedMonthlyConfig.value
-      : groupsBreakdown.reduce((sum, g) => sum + g.expectedMonthly, 0);
 
     return {
-      expectedMonthly: expectedMonthlyTotal,
       actualEarned: unpaidAccruals._sum.amount ?? 0,
       accrualCount: unpaidAccruals._count,
       lessonsCount: lessonsByDate.length,

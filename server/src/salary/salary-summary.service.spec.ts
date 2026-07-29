@@ -42,6 +42,65 @@ describe('SalarySummaryService', () => {
     service = module.get<SalarySummaryService>(SalarySummaryService);
   });
 
+  /**
+   * The old `expectedMonthly` was a forecast — active students × a hardcoded
+   * `exactDays.length * 4` lessons × rate — and it sat next to the real
+   * monthly report showing a completely different figure for the same teacher.
+   * The summary now only carries group CONTEXT; every money number comes from
+   * `SalaryMonthlyService`.
+   */
+  describe('lesson-count forecast removal', () => {
+    const withOneGroup = () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+        { salaryType: 'PERCENTAGE', value: 30, groupId: null, group: null },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        {
+          group: {
+            id: 5,
+            name: '#005',
+            exactDays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+            statusEnum: 'ACTIVE',
+            course: { price: 600_000, lessonPaymentCount: 12 },
+            _count: { enrollments: 23 },
+          },
+        },
+      ]);
+    };
+
+    it('does not return a top-level expectedMonthly forecast', async () => {
+      withOneGroup();
+
+      const result = await service.getTeacherSalarySummary(10010, 1);
+
+      expect(result).not.toHaveProperty('expectedMonthly');
+    });
+
+    it('does not return per-group forecast money', async () => {
+      withOneGroup();
+
+      const result = await service.getTeacherSalarySummary(10010, 1);
+
+      expect(result.groups[0]).not.toHaveProperty('expectedMonthly');
+      expect(result.groups[0]).not.toHaveProperty('expectedPerLesson');
+    });
+
+    it('keeps the group context the profile still renders', async () => {
+      withOneGroup();
+
+      const result = await service.getTeacherSalarySummary(10010, 1);
+
+      expect(result.groups[0]).toMatchObject({
+        groupId: 5,
+        groupName: '#005',
+        activeStudents: 23,
+        salaryType: 'PERCENTAGE',
+        salaryValue: 30,
+        coursePrice: 600_000,
+      });
+    });
+  });
+
   it('surfaces total and pending teacher advances', async () => {
     const result = await service.getTeacherSalarySummary(10010, 1);
 
