@@ -19,12 +19,14 @@ export function SalaryClient() {
   return (
     <div className="space-y-6">
       <div>
+        {/* "Oyliklar", not "Ustozlar oyligi": the page covers teachers AND
+            fixed-salary staff (admin / cashier / director). It is also the name
+            this same report already carries in the Excel export. */}
         <h2 className="font-heading text-lg font-semibold tracking-tight">
-          Ustozlar oyligi
+          Oyliklar
         </h2>
         <p className="text-sm text-muted-foreground">
-          Tanlangan oy bo&apos;yicha har bir o&apos;qituvchining to&apos;liq ishlangani,
-          o&apos;quvchilar to&apos;lagani va markaz qo&apos;shimchasi
+          Tanlangan oyda kimga qancha to&apos;lanishi
         </p>
       </div>
 

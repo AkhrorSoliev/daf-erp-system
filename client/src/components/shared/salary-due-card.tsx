@@ -67,7 +67,7 @@ export function SalaryDueCard({
           <TooltipContent className="max-w-56">
             Shu oy uchun to&apos;lanishi kerak bo&apos;lgan sof summa — avans
             allaqachon ayirilgan. «Ish haqi» bo&apos;limidagi va Moliya →
-            Ustozlar oyligi sahifasidagi raqam bilan bir xil.
+            Oyliklar sahifasidagi raqam bilan bir xil.
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

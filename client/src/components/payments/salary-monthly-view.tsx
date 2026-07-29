@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MonthPicker } from "@/components/ui/month-picker";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -93,6 +100,10 @@ const FALLBACK_FLOOR = "2026-05";
 const filtersSchema = {
   month: { type: "string" as const, defaultValue: "" },
   search: { type: "string" as const, defaultValue: "" },
+  // The page holds two payrolls that are computed differently: teachers earn
+  // per lesson, staff earn a flat monthly rate. Filtering by which one you are
+  // looking at is the split the data itself already has.
+  kim: { type: "string" as const, defaultValue: "all" },
 };
 
 interface Props {
@@ -181,6 +192,19 @@ export function SalaryMonthlyView({
             }}
           />
         </div>
+        <Select
+          value={filters.kim}
+          onValueChange={(v) => setFilters({ kim: v })}
+        >
+          <SelectTrigger className="shrink-0 sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Hamma xodimlar</SelectItem>
+            <SelectItem value="teachers">Faqat ustozlar</SelectItem>
+            <SelectItem value="staff">Faqat xodimlar</SelectItem>
+          </SelectContent>
+        </Select>
         {canPay && (
           <Button
             className="shrink-0"
@@ -202,8 +226,8 @@ export function SalaryMonthlyView({
         )}
       </div>
 
-      {/* Manual-month note */}
-      {monthHasNoData && (
+      {/* Manual-month note — about per-lesson data, i.e. the teacher table */}
+      {filters.kim !== "staff" && monthHasNoData && (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -213,7 +237,8 @@ export function SalaryMonthlyView({
         </div>
       )}
 
-      {/* Table */}
+      {/* Teachers */}
+      {filters.kim !== "staff" && (
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
@@ -391,6 +416,7 @@ export function SalaryMonthlyView({
           )}
         </Table>
       </div>
+      )}
 
       {/* Markaz qo'shimchasi lifecycle (company-level) — shown only for months
           where the center actually fronted money (past settled top-up months). */}
@@ -438,17 +464,35 @@ export function SalaryMonthlyView({
         </div>
       )}
 
-      {/* Xodimlar oyligi — non-teaching fixed-salary staff (separate section) */}
-      {!isLoading && data && data.staff.length > 0 && (
-        <SalaryMonthlyStaffTable
-          staff={data.staff}
-          totals={data.staffTotals}
-          onOpenBreakdown={onOpenBreakdown}
-        />
-      )}
+      {/* Fixed-salary staff (admin / cashier / director) — a separate payroll:
+          flat monthly rate, no per-lesson accruals. */}
+      {filters.kim !== "teachers" &&
+        !isLoading &&
+        data &&
+        (data.staff.length > 0 ? (
+          <SalaryMonthlyStaffTable
+            staff={data.staff}
+            totals={data.staffTotals}
+            onOpenBreakdown={onOpenBreakdown}
+          />
+        ) : (
+          // Actionable empty state: staff pay is invisible here until a rate
+          // exists, and without one their lessons-free salary never reaches the
+          // profit figure either.
+          <div className="flex items-start gap-2 rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+            <Info className="mt-0.5 size-4 shrink-0" />
+            <span>
+              Xodimlarga (administrator, kassir, direktor) hali oylik
+              belgilanmagan.
+              {isCeo
+                ? " Belgilash uchun ⚙ Sozlamalar → Stavkalar."
+                : " CEO ⚙ Sozlamalar bo'limida belgilaydi."}
+            </span>
+          </div>
+        ))}
 
-      {/* Row count + manual-month totals caveat */}
-      {!isLoading && rows.length > 0 && (
+      {/* Row count + manual-month totals caveat — teacher table only */}
+      {filters.kim !== "staff" && !isLoading && rows.length > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Jami: {rows.length} ta o&apos;qituvchi</span>
           {rows.some((r) => !r.hasLessonData && r.payment) && (
