@@ -84,6 +84,13 @@ interface EnrollToGroupDialogProps {
   studentId: number;
   studentName: string;
   enrolledGroupIds: string[];
+  /**
+   * The student's own branch. A student belongs to exactly one branch and can
+   * only be enrolled into that branch's groups, so the list must be scoped to
+   * it — not to whichever branch the header switcher happens to show. Falls
+   * back to the switcher when the caller does not know it.
+   */
+  studentBranchId?: number | null;
   onEnrolled?: () => void;
 }
 
@@ -93,6 +100,7 @@ export function EnrollToGroupDialog({
   studentId,
   studentName,
   enrolledGroupIds,
+  studentBranchId,
   onEnrolled,
 }: EnrollToGroupDialogProps) {
   const [groups, setGroups] = useState<GroupOption[]>([]);
@@ -106,12 +114,14 @@ export function EnrollToGroupDialog({
 
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
+  const branchId = studentBranchId ?? selectedBranch?.id ?? null;
+
   const fetchGroups = useCallback(async () => {
-    if (!selectedBranch) return;
+    if (!branchId) return;
     setLoading(true);
     try {
       const params: Record<string, any> = {
-        branch_id: selectedBranch.id,
+        branch_id: branchId,
         pageSize: 50,
       };
       if (search.trim()) params.search = search.trim();
@@ -125,7 +135,7 @@ export function EnrollToGroupDialog({
     } finally {
       setLoading(false);
     }
-  }, [selectedBranch?.id, search]);
+  }, [branchId, search]);
 
   useEffect(() => {
     if (open) fetchGroups();

@@ -61,6 +61,27 @@ export class StudentEnrollmentService {
       );
     }
 
+    // A student belongs to exactly one branch. Enrolling into another branch's
+    // group used to succeed silently, leaving the student listed under one
+    // branch while their lesson fees and their teacher's pay were booked to
+    // another — the same person then appeared in one report as Fargona and in
+    // another as Namangan. A student with no branch yet adopts the group's:
+    // the enrollment IS the branch assignment in that case.
+    const studentBranches = await this.prisma.studentBranch.findMany({
+      where: { studentId },
+      select: { branchId: true },
+    });
+    if (studentBranches.length === 0) {
+      await this.prisma.studentBranch.create({
+        data: { studentId, branchId: group.branchId },
+      });
+    } else if (!studentBranches.some((b) => b.branchId === group.branchId)) {
+      throw new BadRequestException(
+        `Bu o'quvchi boshqa filialga tegishli — uni bu guruhga qo'shib bo'lmaydi. ` +
+          `O'quvchi filiali: ${studentBranches.map((b) => b.branchId).join(', ')}, guruh filiali: ${group.branchId}.`,
+      );
+    }
+
     // Resolve startDate. The dropdown sends "YYYY-MM-DD" (Tashkent calendar);
     // omitted means "from today". We don't validate that the date matches
     // the group's exactDays here — admins may legitimately want to enroll

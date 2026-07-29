@@ -84,17 +84,19 @@ PROD hozir invariantlarni **allaqachon qanoatlantiradi**: ikki filialli o'quvchi
 
 ## Batch 2 — Eski ma'lumotni to'ldirish (backfill)
 
-**Namangan real ma'lumot olishidan OLDIN.** Hozir noaniq qator 0 ta; Namanganda dars paydo bo'lgach aniqlik yo'qoladi.
+**Namangan real ma'lumot olishidan OLDIN.** Namanganda dars paydo bo'lgach eski qatorning filialini aniqlash imkoni yo'qoladi.
 
-- `scripts/backfill-transaction-branch.ts` (yozilishi kerak) — 8 738 ta filialsiz tranzaksiya, 99.9% deterministik tiklanadi:
-  1. `attendanceId` → `Attendance.groupId` → `Group.branchId` (8 497 ta)
-  2. `studentId` → o'quvchining filiali (230 ta)
-  3. Qolgan 11 ta — qo'lda, filial 1 ga
-- `SalaryAccrual.branchId` ni `Group.branchId` dan to'ldirish (100% aniq).
-- **Umumiy kassadagi tarixni filial 1 ga o'tkazish**: 4 ta refund (−1 107 000 so'm) va 2 ta oylik to'lovi hozir `branchId=null` kassadan chiqqan.
-- Har bir qadamdan oldin `(id, branchId)` juftligi zaxiraga olinadi; avval `--dry-run`.
+| # | Ish | Holat |
+|---|---|---|
+| 2.1 | `Transaction.branchId` backfill | ✅ **bajarildi 2026-07-29** — 8 966 qator → filial 1 |
+| 2.2 | Umumiy kassadagi 6 ta harakatni filial 1 ga o'tkazish (4 refund −1 107 000 + 1 oylik + 1 tuzatish) | ⏳ Batch 3 bilan birga |
+| 2.3 | `SalaryAccrual.branchId` ustuni + backfill | ⏳ Batch 5 (migratsiya bilan) |
 
-**Tekshirish:** `audit-branch-isolation.ts` + `audit-finance-reconciliation.ts` (A–H invariantlari buzilmasin).
+**2.1 natijasi:** `scripts/backfill-transaction-branch.ts` — qoida uch manbadan (davomat→guruh, o'quvchi, ustoz) filialni tiklaydi. PRODda **8 966 tadan 8 966 tasi filial 1**, noaniq **0**, aniqlanmagan **0**. Rejadagi "11 ta tiklanmaydi" bahosi eskirgan edi — o'sha qatorlar ustoz orqali tiklandi. Zaxira: `scripts/backfill-transaction-branch-backup-2026-07-29.json` (qaytarish = o'sha id larga `branchId = null`).
+
+**Tekshirish natijasi (`audit-finance-reconciliation.ts`, backfilldan keyin):** balansga tegadigan barcha CRITICAL invariantlar **PASS** — A1 (ledger↔balans), A3, A5, H1, E1 (kassa zanjiri). Backfill faqat yorliq ustunini o'zgartirgani uchun boshqacha bo'lishi ham mumkin emas edi.
+
+> ⚠️ **Backfilldan OLDIN ham mavjud bo'lgan, aloqasi yo'q muammo:** `B1` CRITICAL FAIL — 694 ta `SALARY_ACCRUAL` tranzaksiyasi "bekor qilingan" deb belgilangan, lekin qarshi qator yozilmagan (jami 13 038 226 so'm). Hammasi **2026-06-29 07:51** da, `reversedById: null` bilan, `"May Excel rebuild — drop stale cancelled payment"` izohli bir martalik skript tomonidan qilingan. B1 tekshiruvi `branchId` ni umuman o'qimaydi. Oylik hisob-kitobi `SalaryAccrual` dan o'qiydi (u to'g'ri belgilangan), shuning uchun **to'lanadigan oylikka ta'sir qilmaydi** — qoldiq faqat `User.balance` va ledger izchilligida. Alohida ish sifatida hal qilinadi.
 
 ---
 

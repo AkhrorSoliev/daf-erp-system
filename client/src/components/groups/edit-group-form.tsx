@@ -195,9 +195,13 @@ export function EditGroupForm({
   const onSubmit = async (values: EditGroupFormValues) => {
     setSubmitting(true);
     try {
+      // NOTE: branchId is deliberately NOT sent. This form used to include the
+      // header switcher's branch on every save, which silently moved the group
+      // — along with its students, lesson deductions and salary accruals — into
+      // whichever branch the admin happened to be viewing. A group's branch is
+      // fixed at creation; the backend ignores the field too.
       const payload: any = {
         courseId: values.courseId,
-        branchId: selectedBranch?.id,
       };
       if (values.name) payload.name = values.name;
       if (values.level) payload.level = values.level;

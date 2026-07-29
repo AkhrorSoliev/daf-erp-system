@@ -776,6 +776,15 @@ export class LeadsService {
         resolvedBranchId = group.branchId;
       }
 
+      // A branch-less student is invisible in every branch-filtered list and
+      // blocks the first payment (money cannot be booked to "no branch"), so
+      // conversion must decide the branch here rather than "later".
+      if (!resolvedBranchId) {
+        throw new BadRequestException(
+          "O'quvchi qaysi filialga tegishli ekanini tanlang — filialsiz o'quvchi yaratib bo'lmaydi.",
+        );
+      }
+
       const student = await this.studentsService.create(
         {
           firstName: lead.firstName,

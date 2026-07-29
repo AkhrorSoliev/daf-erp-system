@@ -24,6 +24,15 @@ export class UpdateGroupDto {
   @IsString()
   courseId?: string;
 
+  /**
+   * @deprecated A group's branch is fixed at creation and is IGNORED here.
+   *
+   * The field is kept only so an older client that still sends it does not get
+   * rejected by `forbidNonWhitelisted` mid-deploy. `GroupsWriteService.update`
+   * discards it. Moving a group between branches would silently re-attribute
+   * its students, lesson deductions and salary accruals, so it needs a
+   * dedicated, explicit operation — not a side effect of editing the name.
+   */
   @IsOptional()
   @IsInt()
   @Type(() => Number)

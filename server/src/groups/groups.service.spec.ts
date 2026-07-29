@@ -64,7 +64,9 @@ describe('GroupsService — status methods', () => {
       course: { findFirst: jest.fn() },
       room: { findFirst: jest.fn() },
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
-      user: { count: jest.fn() },
+      // `findMany` backs the "teacher belongs to this group's branch" guard —
+      // empty means no teacher from a foreign branch was requested.
+      user: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
@@ -422,6 +424,30 @@ describe('GroupsService — status methods', () => {
         ],
         _count: { enrollments: 0 },
       });
+    });
+
+    it("rejects a teacher who belongs to another branch", async () => {
+      prisma.user.findMany.mockResolvedValueOnce([
+        { id: 2002, firstName: 'Jane', lastName: 'Smith' },
+      ]);
+
+      await expect(
+        service.update('group-1', { teacherIds: [2002] } as any, 1, 1001),
+      ).rejects.toThrow(/boshqa filialga tegishli/);
+      expect(prisma.group.update).not.toHaveBeenCalled();
+    });
+
+    it('ignores a branchId sent by the client — a group cannot drift branches', async () => {
+      await service.update(
+        'group-1',
+        { name: 'Yangi nom', branchId: 2 } as any,
+        1,
+        1001,
+      );
+
+      const data = prisma.group.update.mock.calls[0][0].data;
+      expect(data).not.toHaveProperty('branchId');
+      expect(data).toEqual(expect.objectContaining({ name: 'Yangi nom' }));
     });
 
     it('writes GroupTeacherHistory when teachers change', async () => {

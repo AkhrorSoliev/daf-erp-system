@@ -182,7 +182,9 @@ export function ConvertLeadDialog() {
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           {/* Branch */}
           <div className="space-y-1.5">
-            <Label>Filial</Label>
+            <Label>
+              Filial <span className="text-destructive">*</span>
+            </Label>
             <Select value={branchId} onValueChange={handleBranchChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Filialni tanlang" />
@@ -196,7 +198,9 @@ export function ConvertLeadDialog() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Filialni keyinroq o&apos;quvchi sahifasida ham belgilash mumkin.
+              Filial majburiy — filialsiz o&apos;quvchi hech bir filial
+              ro&apos;yxatida ko&apos;rinmaydi va undan to&apos;lov qabul qilib
+              bo&apos;lmaydi.
             </p>
           </div>
 
@@ -322,7 +326,11 @@ export function ConvertLeadDialog() {
           >
             Bekor qilish
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={submitting}>
+          <Button
+            type="button"
+            onClick={handleConfirm}
+            disabled={submitting || !branchId}
+          >
             {submitting && <Loader2 className="size-4 animate-spin" />}
             Aylantirish
           </Button>

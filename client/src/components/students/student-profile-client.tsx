@@ -138,6 +138,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
         studentId={student.id}
         studentName={`${student.firstName} ${student.lastName}`}
         enrolledGroupIds={student.groups.map((g) => g.id)}
+        studentBranchId={student.branches?.[0]?.id ?? null}
         onEnrolled={handleEnrolled}
       />
       <RecordPaymentDialog

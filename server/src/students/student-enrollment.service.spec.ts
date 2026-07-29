@@ -59,6 +59,11 @@ describe('StudentEnrollmentService', () => {
           .fn()
           .mockResolvedValue({ price: 800000, lessonPaymentCount: 12 }),
       },
+      // The student already belongs to the group's branch (the normal case).
+      studentBranch: {
+        findMany: jest.fn().mockResolvedValue([{ branchId: 1 }]),
+        create: jest.fn(),
+      },
       studentExitReason: {
         findFirst: jest.fn(),
         count: jest.fn().mockResolvedValue(0),
@@ -162,12 +167,39 @@ describe('StudentEnrollmentService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    describe('branch match (one student = one branch)', () => {
+      it("rejects enrolling into another branch's group", async () => {
+        prisma.studentBranch.findMany.mockResolvedValue([{ branchId: 2 }]);
+
+        await expect(
+          service.enrollToGroup(1, 'group-1', 2, 1001),
+        ).rejects.toThrow(/boshqa filialga tegishli/);
+        expect(prisma.enrollment.create).not.toHaveBeenCalled();
+      });
+
+      it("adopts the group's branch for a student who has none yet", async () => {
+        prisma.studentBranch.findMany.mockResolvedValue([]);
+
+        await service.enrollToGroup(1, 'group-1', 2, 1001);
+
+        expect(prisma.studentBranch.create).toHaveBeenCalledWith({
+          data: { studentId: 1, branchId: 1 },
+        });
+      });
+
+      it('leaves an already-matching branch untouched', async () => {
+        await service.enrollToGroup(1, 'group-1', 2, 1001);
+        expect(prisma.studentBranch.create).not.toHaveBeenCalled();
+      });
+    });
+
     it('allows enrollment to FORMING group', async () => {
       prisma.group.findFirst.mockResolvedValue({
         id: 'group-1',
         name: 'A1',
         deletedAt: null,
         statusEnum: 'FORMING',
+        branchId: 1,
         course: { name: 'Deutsch A1' },
         days: 'ODD',
         exactDays: [],
@@ -186,6 +218,7 @@ describe('StudentEnrollmentService', () => {
         name: 'A1',
         deletedAt: null,
         statusEnum: 'PAUSED',
+        branchId: 1,
         course: { name: 'Deutsch A1' },
         days: 'ODD',
         exactDays: [],
