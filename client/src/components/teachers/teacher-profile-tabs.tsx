@@ -13,9 +13,11 @@ import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
 import {
-  SalarySummaryView,
-  type SalarySummary,
-} from "@/components/shared/salary-summary-view";
+  TeacherGroupsRateList,
+  type SalaryGroupsSummary,
+} from "@/components/shared/teacher-groups-rate-list";
+import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
+import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -49,7 +51,8 @@ export function TeacherProfileTabs({
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [salaryVisible, setSalaryVisible] = useState(false);
   const [salaryLoading, setSalaryLoading] = useState(false);
-  const [salarySummary, setSalarySummary] = useState<SalarySummary | null>(null);
+  const [salarySummary, setSalarySummary] =
+    useState<SalaryGroupsSummary | null>(null);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
   const historyShown = useRef(false);
   const commentsShown = useRef(false);
@@ -196,14 +199,22 @@ export function TeacherProfileTabs({
       {/* Ish haqi — faqat CEO va Branch Director */}
       {canSeeSalary && (
         <TabsContent value="ish-haqi">
-          {salaryLoading ? (
-            <div className="flex h-24 items-center justify-center rounded-md border">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          {salaryVisible && (
+            <div className="space-y-6">
+              {/* The money — same row /payments/salary renders. */}
+              <SalaryMonthlyPanel userId={teacher.id} scope="admin" />
+
+              {/* Context behind it: groups, students, rates. */}
+              {salaryLoading ? (
+                <div className="flex h-24 items-center justify-center rounded-md border">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : salarySummary ? (
+                <TeacherGroupsRateList summary={salarySummary} />
+              ) : null}
+
+              <PossibleDeductionsInfo variant="teacher" />
             </div>
-          ) : salarySummary && salaryVisible ? (
-            <SalarySummaryView summary={salarySummary} />
-          ) : (
-            <EmptyState message="Ish haqi ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
       )}

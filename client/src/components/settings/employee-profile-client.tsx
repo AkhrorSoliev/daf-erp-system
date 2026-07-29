@@ -183,7 +183,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
               name: ROLE_LABELS[r.name] || r.name,
             }))}
             isActive={employee.status === "ACTIVE"}
-            balance={canSeeBalance ? employee.balance : undefined}
+            salaryDueUserId={canSeeBalance ? employee.id : undefined}
             phone={employee.phone}
             branches={employee.branches}
             infoItems={mobileInfoItems}

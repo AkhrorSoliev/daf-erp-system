@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatPhone, formatBalance } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { SalaryDueCard } from "@/components/shared/salary-due-card";
 
 interface ProfileAction {
   icon: React.ReactNode;
@@ -38,7 +39,15 @@ interface MobileProfileHeaderProps {
   roles: Array<{ id: number; name: string }>;
   roleVariant?: "green" | "secondary";
   isActive?: boolean;
+  /** Student prepaid balance banner. Staff use `salaryDueUserId` instead. */
   balance?: number;
+  /**
+   * Show this employee's "To'lanishi kerak" for the current month instead of a
+   * raw balance. With `salaryDueScope="admin"` (default) pass only for callers
+   * allowed to see money (CEO / BD); `"me"` is the user's own profile.
+   */
+  salaryDueUserId?: number;
+  salaryDueScope?: "admin" | "me";
   phone?: string | null;
   branches?: Array<{ id: number; name: string }>;
   infoItems?: InfoItem[];
@@ -70,6 +79,8 @@ export function MobileProfileHeader({
   roleVariant = "secondary",
   isActive = true,
   balance,
+  salaryDueUserId,
+  salaryDueScope = "admin",
   phone,
   branches,
   infoItems,
@@ -161,7 +172,14 @@ export function MobileProfileHeader({
         </div>
       )}
 
-      {/* Balance banner */}
+      {/* Salary due banner (staff) */}
+      {salaryDueUserId !== undefined && (
+        <div className="mt-3 rounded-md bg-muted/40 px-3 py-2">
+          <SalaryDueCard userId={salaryDueUserId} scope={salaryDueScope} />
+        </div>
+      )}
+
+      {/* Balance banner (student prepaid) */}
       {balance !== undefined && (
         <div
           className={cn(

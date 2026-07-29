@@ -12,7 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { AuthUser } from "@/hooks/use-auth";
-import { formatBalance } from "@/lib/format-utils";
+import { SalaryDueCard } from "@/components/shared/salary-due-card";
 
 function getInitials(name: string) {
   return name
@@ -61,17 +61,8 @@ export function ProfileCard({ user, onEdit }: ProfileCardProps) {
 
       <Separator />
 
-      {/* Balans */}
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">Balans</p>
-        <p
-          className={`text-lg font-semibold ${
-            user.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-          }`}
-        >
-          {formatBalance(user.balance)}
-        </p>
-      </div>
+      {/* To'lanishi kerak — joriy oy uchun */}
+      <SalaryDueCard userId={user.id} scope="me" />
 
       <Separator />
 

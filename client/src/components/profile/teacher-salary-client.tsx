@@ -20,24 +20,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
+import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
 
+/**
+ * Group context only — no money. Every salary figure on this page comes from
+ * `SalaryMonthlyPanel`, i.e. the same report the administration reads.
+ */
 interface SalarySummary {
-  expectedMonthly: number;
-  actualEarned: number;
-  accrualCount: number;
-  paidTotal: number;
-  advancesTotal?: number;
-  advancesPending?: number;
   groups: Array<{
     groupId: string;
     groupName: string;
     activeStudents: number;
-    lessonsPerMonth: number;
     salaryType: string | null;
     salaryValue: number;
-    expectedPerLesson: number;
-    expectedMonthly: number;
+    coursePrice: number;
   }>;
   hasConfig: boolean;
   isFixedMonthly: boolean;
@@ -77,6 +75,8 @@ interface BreakdownResponse {
 const fmtSom = (v: number) => `${v.toLocaleString("uz-UZ")} so'm`;
 
 export function TeacherSalaryClient() {
+  const userId = useAuth((s) => s.user?.id) ?? 0;
+
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ["teacher-salary-summary"],
     queryFn: () =>
@@ -100,78 +100,16 @@ export function TeacherSalaryClient() {
         </p>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Kutilayotgan oylik</CardDescription>
-            <CardTitle className="text-2xl">
-              {summaryLoading ? (
-                <Skeleton className="h-7 w-32" />
-              ) : (
-                fmtSom(summary?.expectedMonthly ?? 0)
-              )}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      {/* The money — the same row the administration sees on /payments/salary. */}
+      <SalaryMonthlyPanel userId={userId} scope="me" />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Real ishlangan</CardDescription>
-            <CardTitle className="text-2xl">
-              {summaryLoading ? (
-                <Skeleton className="h-7 w-32" />
-              ) : (
-                fmtSom(summary?.actualEarned ?? 0)
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!summaryLoading && summary?.accrualCount !== undefined && (
-              <p className="text-xs text-muted-foreground">
-                {summary.accrualCount} ta dars uchun yozilgan
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Bugungacha berilgan</CardDescription>
-            <CardTitle className="text-2xl">
-              {summaryLoading ? (
-                <Skeleton className="h-7 w-32" />
-              ) : (
-                fmtSom(
-                  (summary?.paidTotal ?? 0) + (summary?.advancesTotal ?? 0),
-                )
-              )}
-            </CardTitle>
-          </CardHeader>
-          {!summaryLoading && (summary?.advancesTotal ?? 0) > 0 && (
-            <CardContent className="space-y-0.5 text-xs text-muted-foreground">
-              <p>
-                Oylik: {fmtSom(summary?.paidTotal ?? 0)} · Avans:{" "}
-                {fmtSom(summary?.advancesTotal ?? 0)}
-              </p>
-              {(summary?.advancesPending ?? 0) > 0 && (
-                <p className="text-amber-600">
-                  {fmtSom(summary?.advancesPending ?? 0)} avans hali oylikdan
-                  ushlanmagan
-                </p>
-              )}
-            </CardContent>
-          )}
-        </Card>
-      </div>
-
-      {/* Per-group breakdown */}
+      {/* Per-group context */}
       {!summary?.isFixedMonthly && (
         <Card>
           <CardHeader>
-            <CardTitle>Guruhlar bo&apos;yicha kutilayotgan oylik</CardTitle>
+            <CardTitle>Guruhlaringiz</CardTitle>
             <CardDescription>
-              Aktiv o&apos;quvchilar soni × foiz/qoida × bir oydagi darslar
+              Har bir guruhdagi aktiv o&apos;quvchilar soni va stavkangiz
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -188,9 +126,8 @@ export function TeacherSalaryClient() {
                     <TableHead className="w-12 border-r">#</TableHead>
                     <TableHead>Guruh</TableHead>
                     <TableHead>Aktiv o&apos;quvchilar</TableHead>
-                    <TableHead>Oylik darslar</TableHead>
                     <TableHead>Foiz / qoida</TableHead>
-                    <TableHead className="text-right">Oylik</TableHead>
+                    <TableHead className="text-right">Kurs narxi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -201,7 +138,6 @@ export function TeacherSalaryClient() {
                       </TableCell>
                       <TableCell className="font-medium">{g.groupName}</TableCell>
                       <TableCell>{g.activeStudents}</TableCell>
-                      <TableCell>{g.lessonsPerMonth}</TableCell>
                       <TableCell>
                         {g.salaryType === "PERCENTAGE"
                           ? `${g.salaryValue}%`
@@ -209,8 +145,8 @@ export function TeacherSalaryClient() {
                             ? fmtSom(g.salaryValue)
                             : "—"}
                       </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {fmtSom(g.expectedMonthly)}
+                      <TableCell className="text-right">
+                        {fmtSom(g.coursePrice)}
                       </TableCell>
                     </TableRow>
                   ))}
