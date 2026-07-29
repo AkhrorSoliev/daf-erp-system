@@ -26,6 +26,7 @@ describe('SalaryAccrualService', () => {
       group: {
         findUnique: jest.fn().mockResolvedValue({
           course: { lessonPaymentCount: 12 },
+          branchId: 2,
         }),
       },
       salaryAccrual: {
@@ -205,6 +206,83 @@ describe('SalaryAccrualService', () => {
       expect(call.create.creditPeriodDate).toBeInstanceOf(Date); // carried to current period
       expect(prisma.transaction.create).toHaveBeenCalled(); // teacher balance credited
       expect(sink).toHaveLength(1); // teacher notified "oldingi oydan"
+    });
+  });
+
+  describe('branch stamping (D3 — pay follows the lesson)', () => {
+    const version = {
+      id: 'v-1',
+      salaryType: 'PERCENTAGE',
+      value: 30,
+      effectiveFrom: new Date('2026-01-01'),
+      effectiveTo: null,
+    };
+
+    it("stamps the mirror SALARY_ACCRUAL with the GROUP's branch, not the teacher's", async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null);
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
+      prisma.transaction.findFirst.mockResolvedValue(null);
+
+      await service.createAccrual({ ...baseParams });
+
+      expect(prisma.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: 2 }),
+        }),
+      );
+    });
+
+    it('writes null rather than guessing when the group has no branch', async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null);
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
+      prisma.transaction.findFirst.mockResolvedValue(null);
+      prisma.group.findUnique
+        .mockResolvedValueOnce({ course: { lessonPaymentCount: 12 } }) // rate lookup
+        .mockResolvedValueOnce(null); // branch lookup: group vanished
+
+      await service.createAccrual({ ...baseParams });
+
+      expect(prisma.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: null }),
+        }),
+      );
+    });
+
+    it('reversal inherits the original row branch so it cannot land in another P&L', async () => {
+      prisma.salaryAccrual.findFirst.mockResolvedValueOnce({
+        id: 'acc-1',
+        amount: 5000,
+        attendanceId: 'att-1',
+        reversedAt: null,
+      });
+      prisma.salaryAccrual.update.mockResolvedValue({ id: 'acc-1' });
+      prisma.transaction.findFirst.mockResolvedValueOnce({
+        id: 'tx-orig',
+        amount: 5000,
+        companyId: 1,
+        branchId: 2,
+      });
+
+      await service.reverseAccrualForAttendance({
+        teacherId: baseParams.teacherId,
+        studentId: baseParams.studentId,
+        groupId: baseParams.groupId,
+        lessonDate: baseParams.lessonDate,
+        attendanceId: 'att-1',
+        reversalReason: 'test',
+      });
+
+      expect(prisma.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            branchId: 2,
+            reversedTransactionId: 'tx-orig',
+          }),
+        }),
+      );
     });
   });
 

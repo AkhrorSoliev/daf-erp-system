@@ -50,6 +50,8 @@ describe('WithdrawalsService', () => {
         ]),
         findFirst: jest.fn().mockResolvedValue({ groupId: 'grp-1' }),
       },
+      // The withdrawal is recognised as the student's branch's revenue.
+      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
       transaction: {
         create: jest
           .fn()
@@ -151,6 +153,8 @@ describe('WithdrawalsService', () => {
           data: expect.objectContaining({
             type: 'BALANCE_WITHDRAWAL',
             amount: -200_000,
+            // Recognised revenue must land in the student's branch P&L (D4).
+            branchId: 1,
           }),
         }),
       );

@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { resolveStudentBranchId } from '../common/finance/resolve-branch';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 
 @Injectable()
@@ -152,6 +153,15 @@ export class WithdrawalsService {
         }
         const balanceAfter = balanceBefore - dto.amount;
 
+        // A withdrawal recognises the student's prepaid money as revenue, so it
+        // belongs to that student's branch — otherwise the amount lands in no
+        // branch's P&L at all (D4).
+        const branchId = await resolveStudentBranchId(
+          tx,
+          dto.studentId,
+          companyId,
+        );
+
         const transaction = await tx.transaction.create({
           data: {
             type: TransactionType.BALANCE_WITHDRAWAL,
@@ -159,6 +169,7 @@ export class WithdrawalsService {
             balanceBefore,
             balanceAfter,
             studentId: dto.studentId,
+            branchId,
             companyId,
             performedById: userId,
             description:

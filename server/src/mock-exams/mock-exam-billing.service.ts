@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveStudentBranchId } from '../common/finance/resolve-branch';
 
 interface SettlementOptions {
   studentId: number;
@@ -110,6 +111,15 @@ export class MockExamBillingService {
         const balanceBefore = student.balance;
         const balanceAfter = balanceBefore - price;
 
+        // Mock fees leave the student's balance, so they are that student's
+        // branch's revenue. Without this the row is invisible to every
+        // per-branch total (D4: Σ(branches) must equal the company figure).
+        const branchId = await resolveStudentBranchId(
+          client,
+          options.studentId,
+          options.companyId,
+        );
+
         const transaction = await client.transaction.create({
           data: {
             type: TransactionType.MOCK_EXAM_FEE,
@@ -117,6 +127,7 @@ export class MockExamBillingService {
             balanceBefore,
             balanceAfter,
             studentId: options.studentId,
+            branchId,
             companyId: options.companyId,
             description: 'Mock imtihon to\'lovi',
             metadata: {

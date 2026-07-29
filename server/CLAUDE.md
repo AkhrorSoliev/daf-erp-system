@@ -434,6 +434,20 @@ The financial system is built on an **append-only ledger** principle — financi
   - `maxWait: 10000, timeout: 15000` configured for Neon serverless cold-start tolerance
 - **Methods**: `recordPayment()`, `deductLessonFee()`, `recordRefund()`, `recordSalaryPayment()`, `recordExpense()`, `reverseTransaction()`, `createAdjustment()`
 
+#### Branch attribution on the ledger (mandatory)
+
+**Every financial row must carry a `branchId`.** A `branchId = null` row is silently dropped from every per-branch report and cannot be re-attributed afterwards, so `Σ(branches)` stops equalling the company total. This is not cosmetic — the business rule (`docs/branch-decisions.md`) is that each branch computes its own P&L from its own income, expenses and payroll.
+
+- **Resolvers live in `src/common/finance/resolve-branch.ts`** — do not re-implement branch lookup at a call site:
+  - `resolveStudentBranchId(db, studentId, companyId)` — **fail-closed**, throws when the branch is unknown. Use on every money-writing path: refusing to write beats writing a row nobody can attribute later.
+  - `tryResolveStudentBranchId(...)` — null-tolerant variant for read/report paths.
+  - `tryResolveUserBranchId(db, userId)` — employee branch (`mainBranch`, else the single `UserBranch` row). Returns `null` for a deliberately branch-less CEO.
+- **Student priority is `StudentBranch` first, active enrollment second.** `StudentBranch` is what every read path filters on (`/students?branch_id=`, debtors, balance sheet), so money must be attributed the same way the lists slice it.
+- **`TransactionsWriteService` resolves the branch itself** for every student-scoped method, so callers cannot forget. Passing an explicit `branchId` still wins (contract-derived payments rely on this).
+- **Cash movements follow the same branch**: a refund or salary payment leaves that branch's kassa, never the company-wide one. Under the "no shared expenses" rule there is no company-level bucket to fall back to.
+- **`SALARY_ACCRUAL` takes the GROUP's branch, not the teacher's**, and it is **stamped (frozen) at write time** rather than joined live — a group that later moves branch must not rewrite settled payroll history.
+- **Three services write `Transaction` rows outside `TransactionsWriteService`** and each resolves the branch itself: `salary-accrual.service.ts`, `mock-exam-billing.service.ts`, `withdrawals.service.ts`. If you add a fourth, stamp the branch there too.
+
 #### Contracts (model retained, user-facing CRUD module removed)
 
 - The dedicated `src/contracts/` module (controller + service + DTOs, the `/contracts` CRUD endpoints) and the `/payments/contracts` admin page were **removed** — contracts were never wired into the real workflow (nothing auto-creates them; the live billing model is prepaid-balance, not contract-based), so the page sat permanently empty.

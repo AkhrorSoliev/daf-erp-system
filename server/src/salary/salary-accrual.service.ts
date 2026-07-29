@@ -311,6 +311,7 @@ export class SalaryAccrualService {
       attendanceId: params.attendanceId,
       amount,
       companyId: params.companyId,
+      groupId: params.groupId,
     });
 
     return accrual;
@@ -328,6 +329,7 @@ export class SalaryAccrualService {
       attendanceId: string;
       amount: number;
       companyId: number;
+      groupId: string;
     },
   ) {
     const existing = await db.transaction.findFirst({
@@ -348,6 +350,16 @@ export class SalaryAccrualService {
     const balanceBefore = users[0].balance;
     const balanceAfter = balanceBefore + params.amount;
 
+    // D3: a lesson's pay belongs to the branch of the GROUP it was held in,
+    // never the teacher's home branch. Stamped (frozen) here rather than joined
+    // live at read time, so a group that later moves branch cannot rewrite
+    // settled payroll history. This single line is what stops ~4 300
+    // branch-less SALARY_ACCRUAL rows a month.
+    const group = await db.group.findUnique({
+      where: { id: params.groupId },
+      select: { branchId: true },
+    });
+
     await db.transaction.create({
       data: {
         type: TransactionType.SALARY_ACCRUAL,
@@ -356,6 +368,7 @@ export class SalaryAccrualService {
         balanceAfter,
         teacherId: params.teacherId,
         attendanceId: params.attendanceId,
+        branchId: group?.branchId ?? null,
         companyId: params.companyId,
         description: "Dars uchun yig'ildi",
       },
@@ -445,7 +458,7 @@ export class SalaryAccrualService {
         type: TransactionType.SALARY_ACCRUAL,
         reversedAt: null,
       },
-      select: { id: true, amount: true, companyId: true },
+      select: { id: true, amount: true, companyId: true, branchId: true },
     });
     if (!original) return;
 
@@ -464,6 +477,9 @@ export class SalaryAccrualService {
         balanceAfter,
         teacherId: params.teacherId,
         attendanceId: params.attendanceId,
+        // Inherit the original's branch so a reversal never lands in a
+        // different P&L than the row it cancels.
+        branchId: original.branchId,
         companyId: original.companyId,
         reversedTransactionId: original.id,
         performedById: params.reversedById,
