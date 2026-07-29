@@ -130,7 +130,21 @@ PROD hozir invariantlarni **allaqachon qanoatlantiradi**: ikki filialli o'quvchi
 
 ---
 
-## Batch 4 — Ustoz onboarding (D1)
+## Batch 4 — Ustoz onboarding (D1) ✅ QISMAN BAJARILDI 2026-07-29
+
+| Ish | Holat |
+|---|---|
+| Imzosiz `teacher_<branchId>` havolasini olib tashlash | ✅ eskirgan havolaga tushuntirish javobi beriladi |
+| Ustoz havolasi imzolangan yo'l orqali (`roleIds: [4]`) | ✅ klientda `useTeacherRegistrationLink`, brauzerda payload qurilmaydi |
+| Rol ko'tarish teshigini yopish | ✅ `GRANTABLE_ROLE_IDS` — Administrator endi CEO havolasi yasay olmaydi |
+| Havolada filial tekshiruvi (`deletedAt`, `status`) | ✅ |
+| **Stavka darvozasi** — stavkasiz ustozni guruhga biriktirib bo'lmaydi | ✅ `assertTeachersHaveRate` (create + update) |
+| `POST /teachers` da filial majburiy | ⏳ keyingi bosqich |
+| `mainBranch` avtomatik to'ldirilishi | ⏳ keyingi bosqich |
+
+**Eslatma:** PRODda stavkasiz yagona ustoz — test akkaunt #10001 (guruh #035). Stavka darvozasi shu guruhni tahrirlashda ishga tushadi; bu kutilgan holat.
+
+### Asl reja (ma'lumot uchun)
 
 - Imzosiz `teacher_<branchId>` deep-link **olib tashlanadi**, o'rniga imzolangan xodim-havolasi ishlatiladi. Hozir havoladagi raqamni qo'lda o'zgartirib istalgan filialga ro'yxatdan o'tish mumkin. → P76
 - Havoladagi filial `/start` da tekshiriladi: kompaniya, `deletedAt`, `status`.

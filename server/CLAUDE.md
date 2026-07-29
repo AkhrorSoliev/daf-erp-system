@@ -458,6 +458,13 @@ Business rules from `docs/branch-decisions.md`. They exist because a second bran
 - **D6 — a teacher belongs to exactly one branch.** `GroupsWriteService.update` rejects assigning a teacher whose `UserBranch` points at a different branch than the group. A teacher with no branch attached is allowed through (onboarding handles that case) so an unrelated edit is never blocked.
 - **A group's branch is fixed at creation.** `UpdateGroupDto.branchId` is deprecated and **discarded** by the service. The client used to send the header switcher's branch on every save, silently moving the group — plus its students, future lesson deductions and salary accruals — into whichever branch the admin was viewing. Moving a group needs a dedicated operation, not a side effect of renaming it.
 - **Lead conversion requires a branch.** `LeadsService.convert` throws when neither `branchId` nor a group resolves one.
+- **A teacher may not be put in front of a class without a salary rate.** `GroupsWriteService.assertTeachersHaveRate` blocks create/update when an assigned teacher has no active `EmployeeSalaryConfig`. `createAccrual` silently returns null when no rate version covers the lesson date, and a rate cannot be back-dated into a closed payroll period — so those lessons earn the teacher nothing, permanently (this is how ~20 mln so'm went missing in May 2026). The assignment is the last point where it is still fixable.
+
+#### Registration deep links
+
+- **Teacher onboarding goes through the SIGNED `employee_<branch>_roles_<ids>_sig_<hmac>` link only.** The legacy unsigned `teacher_<branchId>` payload is **retired** — it carried no signature, so anyone holding one could edit the number and register as a teacher of any branch. `/start` answers old links with "ask for a new link" rather than failing silently. The client mints links via `POST /telegram/employee-link` (see `useTeacherRegistrationLink`); never build a payload in the browser.
+- **A link IS an account, so the issuer's own role caps what it may grant.** `GRANTABLE_ROLE_IDS` (`telegram/constants.ts`): CEO → all, Branch Director → Administrator/Teacher/Cashier, Administrator → Teacher/Cashier. Without this ceiling an Administrator could mint a CEO link for their own branch and grant themselves full access — the existing branch check would not stop them. The dialog hides non-grantable roles; the service re-checks.
+- **Branch lookups in `/start` handlers filter `deletedAt: null` + `status: 'ACTIVE'`** so an archived or closed branch cannot accept new registrations.
 
 #### Contracts (model retained, user-facing CRUD module removed)
 

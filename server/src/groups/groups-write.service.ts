@@ -65,6 +65,7 @@ export class GroupsWriteService {
           "Ba'zi o'qituvchilar topilmadi yoki o'qituvchi emas",
         );
       }
+      await this.assertTeachersHaveRate(dto.teacherIds);
     }
 
     let endDate: Date | undefined;
@@ -195,6 +196,40 @@ export class GroupsWriteService {
     );
   }
 
+  /**
+   * A teacher must have a salary rate BEFORE they are put in front of a class.
+   *
+   * `createAccrual` silently returns null when no rate version covers the
+   * lesson date, and a rate cannot be back-dated into a closed payroll period —
+   * so lessons taught without a rate earn the teacher nothing, permanently.
+   * That is exactly how ~20 mln so'm went missing in May 2026. Blocking the
+   * assignment is the last point where this is still fixable.
+   */
+  private async assertTeachersHaveRate(teacherIds: number[]): Promise<void> {
+    if (!teacherIds.length) return;
+    const withRate = await this.prisma.employeeSalaryConfig.findMany({
+      where: { userId: { in: teacherIds }, isActive: true },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    const haveRate = new Set(withRate.map((c) => c.userId));
+    const missing = teacherIds.filter((id) => !haveRate.has(id));
+    if (!missing.length) return;
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: missing } },
+      select: { firstName: true, lastName: true },
+    });
+    const names = users
+      .map((u) => `${u.firstName} ${u.lastName}`.trim())
+      .join(', ');
+    throw new BadRequestException(
+      `Bu ustoz(lar)ga ish haqi stavkasi belgilanmagan: ${names}. ` +
+        `Avval stavkani belgilang — aks holda ularning darslari uchun oylik ` +
+        `yozilmaydi va buni keyin orqaga tuzatib bo'lmaydi.`,
+    );
+  }
+
   async update(
     id: string,
     dto: UpdateGroupDto,
@@ -244,6 +279,8 @@ export class GroupsWriteService {
             `Guruh filiali bilan mos ustoz tanlang.`,
         );
       }
+
+      await this.assertTeachersHaveRate(dto.teacherIds);
     }
 
     // Validate a changed course exists. endDate is intentionally NOT

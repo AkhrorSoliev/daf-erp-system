@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  buildBotLink,
   isTelegramBotConfigured,
   TELEGRAM_BOT_NOT_CONFIGURED,
 } from "@/lib/telegram-link";
@@ -35,6 +34,7 @@ import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useTeacherRegistrationLink } from "@/hooks/use-teacher-registration-link";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
@@ -59,6 +59,9 @@ export function TeachersClient() {
   const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
+  // Signed, server-minted link — the old client-built `teacher_<id>` payload
+  // was unsigned and let anyone register into any branch.
+  const { link: teacherLink } = useTeacherRegistrationLink(selectedBranch?.id);
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setUrlFilters({ search: value, page: 1 });
@@ -66,12 +69,11 @@ export function TeachersClient() {
 
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
-    const link = buildBotLink(`teacher_${selectedBranch.id}`);
-    if (!link) {
+    if (!teacherLink) {
       toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
       return;
     }
-    await navigator.clipboard.writeText(link);
+    await navigator.clipboard.writeText(teacherLink);
     setCopied(true);
     toast.success("Havola nusxalandi");
     setTimeout(() => setCopied(false), 2000);
@@ -162,7 +164,7 @@ export function TeachersClient() {
                     <div className="flex flex-col items-center gap-4 py-4">
                       <div className="w-full max-w-70 rounded-lg border bg-white p-4">
                         <QRCodeSVG
-                          value={buildBotLink(`teacher_${selectedBranch.id}`) ?? ""}
+                          value={teacherLink ?? ""}
                           className="h-auto w-full"
                           level="M"
                         />

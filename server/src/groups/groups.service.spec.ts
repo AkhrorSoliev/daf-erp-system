@@ -67,6 +67,14 @@ describe('GroupsService — status methods', () => {
       // `findMany` backs the "teacher belongs to this group's branch" guard —
       // empty means no teacher from a foreign branch was requested.
       user: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      // Every assigned teacher already has a salary rate (the normal case).
+      employeeSalaryConfig: {
+        findMany: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            (where.userId.in as number[]).map((userId) => ({ userId })),
+          ),
+      },
       groupTeacher: {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
@@ -424,6 +432,17 @@ describe('GroupsService — status methods', () => {
         ],
         _count: { enrollments: 0 },
       });
+    });
+
+    it('rejects a teacher who has no salary rate yet', async () => {
+      // No rate → createAccrual silently writes nothing and a rate cannot be
+      // back-dated, so those lessons would earn the teacher nothing forever.
+      prisma.employeeSalaryConfig.findMany.mockResolvedValueOnce([]);
+
+      await expect(
+        service.update('group-1', { teacherIds: [2002] } as any, 1, 1001),
+      ).rejects.toThrow(/stavkasi belgilanmagan/);
+      expect(prisma.group.update).not.toHaveBeenCalled();
     });
 
     it("rejects a teacher who belongs to another branch", async () => {

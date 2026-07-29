@@ -21,6 +21,7 @@ import {
   MOCK_EXAM_DEEP_LINK_PREFIX,
   APP_LOGIN_REQUEST_PREFIX,
   VALID_ROLE_IDS,
+  GRANTABLE_ROLE_IDS,
 } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
@@ -288,29 +289,16 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
+      // RETIRED: the legacy `teacher_<branchId>` link carried no signature, so
+      // anyone holding one could edit the number and register themselves as a
+      // teacher of ANY branch. Teacher onboarding now goes through the signed
+      // `employee_..._sig_...` link (role 4), which the admin panel already
+      // generates. Old links are answered with an explanation rather than a
+      // silent failure.
       if (payload.startsWith(TEACHER_DEEP_LINK_PREFIX)) {
-        ctx.session.processing = true;
-        const branchIdStr = payload.slice(TEACHER_DEEP_LINK_PREFIX.length);
-        const branchId = Number(branchIdStr);
-
-        if (!branchIdStr || isNaN(branchId)) {
-          ctx.session.processing = false;
-          await ctx.reply("Noto'g'ri havola. Administrator bilan bog'laning.");
-          return;
-        }
-
-        const branch = await this.prisma.branch.findUnique({
-          where: { id: branchId },
-        });
-        if (!branch) {
-          ctx.session.processing = false;
-          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        ctx.session.data = { branchId };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.TEACHER_REGISTRATION);
+        await ctx.reply(
+          "Bu havola eskirgan. Administratordan yangi ro'yxatdan o'tish havolasini so'rang.",
+        );
         return;
       }
 
@@ -341,8 +329,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           return;
         }
 
-        const branch = await this.prisma.branch.findUnique({
-          where: { id: branchId },
+        // Archived or closed branches must not accept new registrations.
+        const branch = await this.prisma.branch.findFirst({
+          where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+          select: { id: true },
         });
         if (!branch) {
           ctx.session.processing = false;
@@ -363,8 +353,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         const branchId = Number(groupMatch[1]);
         const groupId = groupMatch[2];
 
-        const branch = await this.prisma.branch.findUnique({
-          where: { id: branchId },
+        const branch = await this.prisma.branch.findFirst({
+          where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+          select: { id: true },
         });
         if (!branch) {
           ctx.session.processing = false;
@@ -1145,6 +1136,22 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (invalid.length > 0) {
       throw new BadRequestException(
         `Noto'g'ri lavozim ID: ${invalid.join(', ')}`,
+      );
+    }
+
+    // Privilege escalation guard: the link IS the account. Without this an
+    // Administrator could mint a CEO registration link for their own branch
+    // and hand themselves full access — the branch check below would happily
+    // pass. A caller may only grant roles at or below their own level.
+    const grantable: readonly number[] = requestedBy.roles.includes('CEO')
+      ? GRANTABLE_ROLE_IDS.CEO
+      : requestedBy.roles.includes('Branch Director')
+        ? GRANTABLE_ROLE_IDS.BRANCH_DIRECTOR
+        : GRANTABLE_ROLE_IDS.ADMINISTRATOR;
+    const forbidden = unique.filter((id) => !grantable.includes(id));
+    if (forbidden.length > 0) {
+      throw new ForbiddenException(
+        "Siz bu lavozim uchun havola yarata olmaysiz — o'zingizdan yuqori lavozim tanlangan",
       );
     }
 

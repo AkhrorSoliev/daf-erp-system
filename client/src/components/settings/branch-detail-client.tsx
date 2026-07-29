@@ -15,7 +15,8 @@ import { EditBranchDrawer } from "./edit-branch-drawer";
 import type { Branch } from "@/hooks/use-edit-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import api from "@/lib/api";
-import { buildBotLink, TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
+import { TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
+import { useTeacherRegistrationLink } from "@/hooks/use-teacher-registration-link";
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -39,7 +40,11 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const registrationLink = buildBotLink(`teacher_${branchId}`);
+  // Signed, server-minted link (roleIds [4]). The old unsigned
+  // `teacher_<branchId>` payload let anyone register into any branch.
+  const { link: registrationLink } = useTeacherRegistrationLink(
+    Number(branchId),
+  );
 
   const handleCopy = async () => {
     if (!registrationLink) return;
