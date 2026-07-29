@@ -58,13 +58,19 @@ export class CashAccountsService {
   }
 
   async create(dto: CreateCashAccountDto, userId: number, companyId: number) {
-    if (dto.branchId) {
-      const branch = await this.prisma.branch.findFirst({
-        where: { id: dto.branchId, companyId, deletedAt: null },
-        select: { id: true },
-      });
-      if (!branch) throw new BadRequestException('Filial topilmadi');
+    // Every account belongs to exactly one branch — a branch-less "company"
+    // account is what silently absorbed branch outflows until it drifted
+    // negative (docs/branch-decisions.md D4).
+    if (!dto.branchId) {
+      throw new BadRequestException(
+        "Kassa hisobi uchun filial tanlanishi shart",
+      );
     }
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: dto.branchId, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!branch) throw new BadRequestException('Filial topilmadi');
 
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.cashAccount.create({
@@ -123,9 +129,9 @@ export class CashAccountsService {
       companyId,
       deletedAt: null,
       ...(query.type && { type: query.type }),
-      // A Branch Director still sees company-wide (branchId = null) accounts
-      // alongside their own branch's accounts.
-      ...(branchIds && { OR: [{ branchId: { in: branchIds } }, { branchId: null }] }),
+      // Branch-less accounts no longer exist, so a scoped caller sees exactly
+      // their own branches' accounts — nothing "shared" to fall back on.
+      ...(branchIds && { branchId: { in: branchIds } }),
     };
 
     const data = await this.prisma.cashAccount.findMany({

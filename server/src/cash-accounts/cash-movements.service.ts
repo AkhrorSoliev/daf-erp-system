@@ -40,10 +40,12 @@ export function cashTypeForExpenseMethod(
  * are designed to be called from INSIDE an existing Serializable `$transaction`
  * (the payment / expense / salary / refund tx) by passing the `tx` client.
  *
- * Resilience contract: if no matching cash account is configured yet, the
- * inflow/outflow helpers NO-OP (return null) rather than throw — a missing
- * account must never break a payment. Movements begin once accounts exist
- * (seeded by the backfill script with an opening balance).
+ * Missing-account contract: a movement for a NAMED branch whose account does
+ * not exist THROWS. It used to no-op with a warning, which meant money moved
+ * in the Transaction ledger while the cash journal recorded nothing and nobody
+ * noticed. Only a branch-less caller (a CEO salary, which spans branches) still
+ * degrades to a warning. Open each branch's accounts before it takes money —
+ * `scripts/backfill-cash-accounts.ts` seeds them.
  */
 @Injectable()
 export class CashMovementsService {
@@ -79,8 +81,8 @@ export class CashMovementsService {
 
   /**
    * Resolve which cash account a movement belongs to. Explicit id wins; else
-   * pick the branch-specific account of the preferred type, falling back to a
-   * company-wide (branchId = null) account. Returns null when nothing matches.
+   * the branch account of the preferred type. Returns null when nothing
+   * matches (or when no branch was given at all).
    */
   private async resolveAccountId(
     client: Prisma.TransactionClient,
@@ -92,28 +94,19 @@ export class CashMovementsService {
     },
   ): Promise<string | null> {
     if (params.explicitId) return params.explicitId;
+    if (params.branchId == null) return null;
 
-    // Branch-specific first.
-    if (params.branchId != null) {
-      const branchAcc = await client.cashAccount.findFirst({
-        where: {
-          companyId: params.companyId,
-          branchId: params.branchId,
-          type: params.preferType,
-          isActive: true,
-          deletedAt: null,
-        },
-        select: { id: true },
-        orderBy: { createdAt: 'asc' },
-      });
-      if (branchAcc) return branchAcc.id;
-    }
-
-    // Company-wide fallback.
-    const companyAcc = await client.cashAccount.findFirst({
+    // Branch account only. The company-wide (branchId = null) fallback that
+    // used to sit here is gone: money physically leaves a branch's drawer, so
+    // booking it against a company-level account made that account drift
+    // negative while the branch's balance stayed too high by the same amount
+    // (PROD: −1 107 000 so'm across 4 refunds and a salary payment). Under
+    // "each branch carries its own costs" there is no company-level bucket to
+    // fall back to — a missing branch account is a setup error, not a default.
+    const branchAcc = await client.cashAccount.findFirst({
       where: {
         companyId: params.companyId,
-        branchId: null,
+        branchId: params.branchId,
         type: params.preferType,
         isActive: true,
         deletedAt: null,
@@ -121,7 +114,7 @@ export class CashMovementsService {
       select: { id: true },
       orderBy: { createdAt: 'asc' },
     });
-    return companyAcc?.id ?? null;
+    return branchAcc?.id ?? null;
   }
 
   /**
@@ -194,8 +187,19 @@ export class CashMovementsService {
         explicitId: params.cashAccountId,
       });
       if (!accountId) {
+        // A named branch with no account is a setup error, not a default:
+        // silently skipping used to leave money moved in the ledger with
+        // nothing in the cash journal, and nobody found out. Fail loudly so
+        // the branch's accounts get opened. A branch-less caller (e.g. a CEO
+        // salary, which spans branches) still degrades to a warning.
+        if (params.branchId != null) {
+          throw new Error(
+            `Filial #${params.branchId} uchun ${params.preferType ?? 'CASH'} kassa hisobi topilmadi — ` +
+              `pul harakati yozilmadi. Filial uchun kassa oching.`,
+          );
+        }
         this.logger.warn(
-          `Cash inflow skipped: no ${params.preferType ?? 'CASH'} account for company ${params.companyId} (branch ${params.branchId ?? 'any'})`,
+          `Cash inflow skipped: no ${params.preferType ?? 'CASH'} account for company ${params.companyId} (no branch given)`,
         );
         return null;
       }
@@ -238,8 +242,19 @@ export class CashMovementsService {
         explicitId: params.cashAccountId,
       });
       if (!accountId) {
+        // A named branch with no account is a setup error, not a default:
+        // silently skipping used to leave money moved in the ledger with
+        // nothing in the cash journal, and nobody found out. Fail loudly so
+        // the branch's accounts get opened. A branch-less caller (e.g. a CEO
+        // salary, which spans branches) still degrades to a warning.
+        if (params.branchId != null) {
+          throw new Error(
+            `Filial #${params.branchId} uchun ${params.preferType ?? 'CASH'} kassa hisobi topilmadi — ` +
+              `pul harakati yozilmadi. Filial uchun kassa oching.`,
+          );
+        }
         this.logger.warn(
-          `Cash outflow skipped: no ${params.preferType ?? 'CASH'} account for company ${params.companyId} (branch ${params.branchId ?? 'any'})`,
+          `Cash outflow skipped: no ${params.preferType ?? 'CASH'} account for company ${params.companyId} (no branch given)`,
         );
         return null;
       }

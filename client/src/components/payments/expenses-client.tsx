@@ -151,6 +151,10 @@ export function ExpensesClient() {
       api
         .get<ExpensesResponse>("/expenses", { params: queryParams })
         .then((r) => r.data),
+    // Wait for the branch to hydrate. Without this the first request goes out
+    // without a branch and the backend answers company-wide — a flash of the
+    // other branch's expenses before the real list replaces it.
+    enabled: !!selectedBranch?.id,
   });
 
   const refresh = () => {

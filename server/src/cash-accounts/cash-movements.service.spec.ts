@@ -26,9 +26,8 @@ function makeTxClient(opts: {
     _updates: updates,
     $queryRaw: jest.fn().mockResolvedValue(opts.account ? [opts.account] : []),
     cashAccount: {
-      // resolveAccountId may call findFirst once (no branch) or twice
-      // (branch-specific then company-wide fallback); a blanket resolved value
-      // covers both shapes for these tests.
+      // resolveAccountId looks up the branch account only — the company-wide
+      // fallback was removed, so one findFirst is all it takes.
       findFirst: jest.fn().mockResolvedValue(opts.resolve ?? null),
       update: jest.fn().mockImplementation(({ data }) => {
         updates.push(data);
@@ -87,15 +86,16 @@ describe('CashMovementsService', () => {
   });
 
   describe('recordInflow', () => {
-    it('credits the resolved company-wide account', async () => {
+    it("credits the branch's own account", async () => {
       const tx = makeTxClient({
-        account: { id: 'acc1', balance: 1000, branchId: null },
+        account: { id: 'acc1', balance: 1000, branchId: 1 },
         resolve: { id: 'acc1' },
       });
 
       const mv = await service.recordInflow(
         {
           companyId: 1,
+          branchId: 1,
           amount: 500,
           preferType: CashAccountType.CASH,
           transactionId: 'tx1',
@@ -133,12 +133,12 @@ describe('CashMovementsService', () => {
   describe('recordOutflow', () => {
     it('debits the account (negative signed amount)', async () => {
       const tx = makeTxClient({
-        account: { id: 'acc1', balance: 1000, branchId: null },
+        account: { id: 'acc1', balance: 1000, branchId: 1 },
         resolve: { id: 'acc1' },
       });
 
       await service.recordOutflow(
-        { companyId: 1, amount: 300, transactionId: 'tx2' },
+        { companyId: 1, branchId: 1, amount: 300, transactionId: 'tx2' },
         tx,
       );
 
@@ -148,6 +148,44 @@ describe('CashMovementsService', () => {
       expect(row.balanceBefore).toBe(1000);
       expect(row.balanceAfter).toBe(700);
       expect(tx._updates[0].balance).toBe(700);
+    });
+  });
+
+  // Each branch carries its own cash (docs/branch-decisions.md D4). The old
+  // company-wide fallback quietly absorbed branch outflows, leaving that
+  // account negative and the branch's balance too high by the same amount.
+  describe('missing branch account', () => {
+    it('throws instead of silently skipping when a named branch has no account', async () => {
+      const tx = makeTxClient({ account: null, resolve: null });
+
+      await expect(
+        service.recordOutflow(
+          { companyId: 1, branchId: 2, amount: 300 },
+          tx,
+        ),
+      ).rejects.toThrow(/Filial #2 uchun .* kassa hisobi topilmadi/);
+      expect(tx.cashMovement.create).not.toHaveBeenCalled();
+    });
+
+    it('does NOT fall back to a company-wide account', async () => {
+      // A branch-less account exists, but the branch has none: the old code
+      // would have booked the money here anyway.
+      const tx = makeTxClient({ account: null, resolve: null });
+
+      await expect(
+        service.recordInflow({ companyId: 1, branchId: 2, amount: 500 }, tx),
+      ).rejects.toThrow(/kassa hisobi topilmadi/);
+    });
+
+    it('still degrades to a warning when no branch was given at all', async () => {
+      // A CEO salary spans branches and has no branch of its own — blocking
+      // that payout would be worse than an unmirrored cash row.
+      const tx = makeTxClient({ account: null, resolve: null });
+
+      await expect(
+        service.recordOutflow({ companyId: 1, amount: 300 }, tx),
+      ).resolves.toBeNull();
+      expect(tx.cashMovement.create).not.toHaveBeenCalled();
     });
   });
 

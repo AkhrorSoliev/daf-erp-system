@@ -23,7 +23,8 @@ describe('CashAccountsService', () => {
 
   beforeEach(async () => {
     prisma = {
-      branch: { findFirst: jest.fn() },
+      // The branch a new account is opened for must exist.
+      branch: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
       user: { findUnique: jest.fn() },
       cashAccount: {
         create: jest.fn(),
@@ -64,7 +65,7 @@ describe('CashAccountsService', () => {
       });
 
       await service.create(
-        { name: 'Kassa', type: CashAccountType.CASH, openingBalance: 1000 },
+        { name: 'Kassa', type: CashAccountType.CASH, branchId: 1, openingBalance: 1000 },
         7,
         1,
       );
@@ -83,7 +84,7 @@ describe('CashAccountsService', () => {
         balance: 0,
       });
       await service.create(
-        { name: 'Bank', type: CashAccountType.BANK },
+        { name: 'Bank', type: CashAccountType.BANK, branchId: 1 },
         7,
         1,
       );

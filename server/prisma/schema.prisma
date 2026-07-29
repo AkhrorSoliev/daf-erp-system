@@ -2247,7 +2247,7 @@ model Expense {
   amount        Int
   description   String
   date          DateTime             @db.Date
-  branchId      Int?
+  branchId      Int
   receiptUrl    String?
   createdById   Int
   createdBy     User                 @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
@@ -2278,6 +2278,7 @@ model Expense {
   @@index([category])
   @@index([deletedAt])
   @@index([relatedUserId])
+  @@index([branchId])
 }
 
 // ===== PAYMENT GATEWAY EVENT LOG =====
@@ -2418,7 +2419,7 @@ model CashAccount {
   id        String          @id @default(uuid())
   name      String // "Asosiy kassa", "Bank hisobi", ...
   type      CashAccountType @default(CASH)
-  branchId  Int? // null = company-wide account
+  branchId  Int // every account belongs to exactly one branch (D4)
   balance   Int             @default(0) // so'm
   isActive  Boolean         @default(true)
   companyId Int

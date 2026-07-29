@@ -27,9 +27,14 @@ export class CreateExpenseDto {
   @IsNotEmpty()
   date: string;
 
-  @IsOptional()
+  /**
+   * Required. Each branch's profit is its own income minus its OWN expenses —
+   * there is no company-level "shared cost" bucket (docs/branch-decisions.md
+   * D4). A cost that genuinely spans branches is entered as two rows, split by
+   * the CEO. A branch-less expense would belong to no branch's P&L at all.
+   */
   @IsInt()
-  branchId?: number;
+  branchId: number;
 
   @IsOptional()
   @IsString()

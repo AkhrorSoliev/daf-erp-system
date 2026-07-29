@@ -16,9 +16,13 @@ export class CreateCashAccountDto {
   @IsEnum(CashAccountType)
   type: CashAccountType;
 
-  @IsOptional()
+  /**
+   * Required. There is no company-level cash account: money physically sits in
+   * a branch's drawer or bank, and each branch carries its own costs
+   * (docs/branch-decisions.md D4).
+   */
   @IsInt()
-  branchId?: number;
+  branchId: number;
 
   // Optional opening balance (so'm). When > 0, an ADJUSTMENT cash movement is
   // written so the ledger reconciles with the denormalized balance from day one.

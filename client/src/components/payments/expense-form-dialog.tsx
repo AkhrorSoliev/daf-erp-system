@@ -110,6 +110,12 @@ export function ExpenseFormDialog({
         await api.patch(`/expenses/${expense!.id}`, payload);
         toast.success("Xarajat yangilandi");
       } else {
+        // Every expense belongs to exactly one branch — a branch-less one
+        // would sit in no branch's profit calculation at all.
+        if (!branchId) {
+          toast.error("Avval filialni tanlang — xarajat filialsiz saqlanmaydi");
+          return;
+        }
         await api.post("/expenses", { ...payload, branchId });
         toast.success("Xarajat qayd qilindi");
       }

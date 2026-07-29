@@ -100,7 +100,23 @@ PROD hozir invariantlarni **allaqachon qanoatlantiradi**: ikki filialli o'quvchi
 
 ---
 
-## Batch 3 — Xarajat va kassada filial majburiy (D4)
+## Batch 3 — Xarajat va kassada filial majburiy (D4) ✅ BAJARILDI 2026-07-29
+
+**Bajarilgan ishlar:**
+
+| # | Ish | Natija |
+|---|---|---|
+| 3.1 | Filialsiz kassani bo'shatish | `close-branchless-cash-accounts.ts` — Farg'ona kassasidan 1 107 000 so'm qoplama o'tkazma; «Asosiy kassa» −1 107 000 → 0, ikkala filialsiz hisob arxivlandi. Farg'ona kassa: 104 074 000 → **102 967 000** |
+| 3.2 | Kod | Xarajat ro'yxati endi filialni **haqiqatan** filtrlaydi; xarajat va kassa hisobida filial majburiy; `resolveAccountId` dagi kompaniya zaxirasi **o'chirildi**; nomlangan filialda kassa yo'q bo'lsa — **xato**, jimgina o'tkazib yuborish yo'q |
+| 3.3 | Migratsiya | `20260729120000_branch_required_on_expense_and_cash` — `Expense.branchId` va `CashAccount.branchId` **NOT NULL**, `(companyId, branchId, type)` bo'yicha qisman unique indeks |
+
+**Migratsiya oldidan o'lchangan:** Expense 195 ta, hammasi filialli (0 buzuq); CashAccount 2 ta filialsiz — ikkalasi ham arxivlangan, migratsiya ularni filial 1 ga "park" qildi.
+
+**Tekshiruv (`audit-finance-reconciliation.ts`):** kassa va ledger invariantlari **hammasi PASS** — E1 (kassa zanjiri), E2, E3, E4, A1, A5, G1, H1.
+
+> Eski harakatlarning `branchId` i **ataylab** null qoldirildi: filial-1 tomoni qoplama o'tkazma orqali allaqachon ko'rsatilgan, originallarni ham belgilash filial hisobotida ikki karra sanalishiga olib kelardi.
+
+### Asl reja (ma'lumot uchun)
 
 **Migratsiya.**
 
