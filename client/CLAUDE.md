@@ -487,6 +487,17 @@ These rules codify lessons learned while building `/reports/departed-students`. 
   {historyVisible && <EntityHistoryTable entityType="Branch" entityId={branch.id} />}
   ```
 
+### Branch Context in Forms (MANDATORY)
+
+The system runs several branches, and a record written to the wrong one is wrong money. Two rules follow from `docs/branch-decisions.md`:
+
+- **Take the branch from the ENTITY, not from the header switcher**, whenever the entity already has one. The switcher is a *viewing* filter; it is not a statement about the record being edited.
+  - `enroll-to-group-dialog.tsx` takes a `studentBranchId` prop and lists only that branch's groups (falling back to the switcher only when the caller doesn't know it). Listing every branch's groups let an admin pick a foreign group — the backend now rejects it, but the option should never be offered.
+  - `edit-group-form.tsx` **must not send `branchId`**. It used to include the switcher's branch on every save, silently moving the group into whichever branch was being viewed. A group's branch is fixed at creation; the backend ignores the field.
+- **Branch is a required field wherever a record is born.** `convert-lead-dialog.tsx` marks Filial with `*` and disables the confirm button until one is chosen — "set it later" is not an option, because a branch-less student appears in no branch list and cannot take a payment. `add-student-dialog.tsx` already derives it from the active branch.
+
+When a backend guard rejects a cross-branch action, surface the server's Uzbek message via `getErrorMessage` — it explains which branch each side belongs to.
+
 ### Student Filters
 
 - **Single search field** for name, phone, and ID — placeholder: "Ism, telefon yoki ID bo'yicha..."

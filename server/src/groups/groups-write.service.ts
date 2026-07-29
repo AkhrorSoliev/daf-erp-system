@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -221,6 +222,28 @@ export class GroupsWriteService {
           "Ba'zi o'qituvchilar topilmadi yoki o'qituvchi emas",
         );
       }
+
+      // A teacher belongs to exactly one branch, and every lesson's pay is
+      // booked to the branch of the group it was held in. Assigning a teacher
+      // to another branch's group would therefore charge one branch's payroll
+      // to the other. Only an explicit mismatch is blocked — a teacher with no
+      // branch attached yet is left to the onboarding rules.
+      const foreign = await this.prisma.user.findMany({
+        where: {
+          id: { in: dto.teacherIds },
+          branches: { some: {}, none: { branchId: existing.branchId } },
+        },
+        select: { id: true, firstName: true, lastName: true },
+      });
+      if (foreign.length) {
+        const names = foreign
+          .map((t) => `${t.firstName} ${t.lastName}`.trim())
+          .join(', ');
+        throw new BadRequestException(
+          `Bu ustoz(lar) boshqa filialga tegishli: ${names}. ` +
+            `Guruh filiali bilan mos ustoz tanlang.`,
+        );
+      }
     }
 
     // Validate a changed course exists. endDate is intentionally NOT
@@ -236,7 +259,11 @@ export class GroupsWriteService {
       }
     }
 
-    const { teacherIds, changeReasonId, ...updateData } = dto;
+    // `branchId` is deliberately discarded: the group's branch is fixed at
+    // creation. The client used to send the header switcher's branch on EVERY
+    // save, which silently moved a group (and its future lesson deductions and
+    // salary accruals) into whichever branch the admin happened to be viewing.
+    const { teacherIds, changeReasonId, branchId: _ignored, ...updateData } = dto;
 
     // Validate changeReasonId if provided — must belong to the same company.
     if (changeReasonId) {

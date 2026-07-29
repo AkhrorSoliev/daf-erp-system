@@ -260,6 +260,7 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
         studentId={student.id}
         studentName={studentName}
         enrolledGroupIds={student.groups?.map((g) => g.id) ?? []}
+        studentBranchId={student.branches?.[0]?.id ?? null}
       />
     </div>
   );

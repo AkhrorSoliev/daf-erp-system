@@ -76,6 +76,39 @@ export class StudentsWriteService {
     private transactionsService: TransactionsService,
   ) {}
 
+  /**
+   * A student belongs to exactly one branch, and that branch must be real and
+   * belong to the caller's company.
+   *
+   * Why it is enforced here rather than in the DTO: `branchIds` used to be a
+   * free-form array that nothing validated, so `[]`, a foreign company's
+   * branch, or a non-existent id all sailed through. A branch-less student is
+   * then absent from every branch-filtered list and their first payment cannot
+   * be booked to any branch at all.
+   */
+  private async assertSingleValidBranch(
+    branchIds: number[] | undefined,
+    companyId: number,
+  ): Promise<void> {
+    if (!branchIds?.length) {
+      throw new BadRequestException(
+        "O'quvchi uchun filial tanlanishi shart",
+      );
+    }
+    if (branchIds.length > 1) {
+      throw new BadRequestException(
+        "O'quvchi bir vaqtda faqat bitta filialga tegishli bo'lishi mumkin",
+      );
+    }
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchIds[0], companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!branch) {
+      throw new BadRequestException(`Filial #${branchIds[0]} topilmadi`);
+    }
+  }
+
   async create(dto: CreateStudentDto, companyId: number, userId?: number) {
     // Phone is the student-portal login identifier → must be globally unique,
     // not scoped to companyId (otherwise two students in different companies
@@ -88,6 +121,8 @@ export class StudentsWriteService {
         'Bu telefon raqam allaqachon tizimda mavjud',
       );
     }
+
+    await this.assertSingleValidBranch(dto.branchIds, companyId);
 
     const student = await this.prisma.$transaction(
       async (tx) => {
@@ -182,6 +217,12 @@ export class StudentsWriteService {
 
     if (!student) {
       throw new NotFoundException(`O'quvchi topilmadi`);
+    }
+
+    // Editing branches is allowed, but only to another single valid branch —
+    // clearing them would strand the student outside every branch view.
+    if (dto.branchIds !== undefined) {
+      await this.assertSingleValidBranch(dto.branchIds, companyId);
     }
 
     if (

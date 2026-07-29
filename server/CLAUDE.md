@@ -448,6 +448,16 @@ The financial system is built on an **append-only ledger** principle — financi
 - **`SALARY_ACCRUAL` takes the GROUP's branch, not the teacher's**, and it is **stamped (frozen) at write time** rather than joined live — a group that later moves branch must not rewrite settled payroll history.
 - **Three services write `Transaction` rows outside `TransactionsWriteService`** and each resolves the branch itself: `salary-accrual.service.ts`, `mock-exam-billing.service.ts`, `withdrawals.service.ts`. If you add a fourth, stamp the branch there too.
 
+#### Branch invariants (one student / one teacher / fixed group branch)
+
+Business rules from `docs/branch-decisions.md`. They exist because a second branch turns every "it only works because there is one branch" shortcut into wrong money.
+
+- **D5 — a student belongs to exactly one branch.** `StudentsWriteService.assertSingleValidBranch` rejects an empty `branchIds`, more than one branch, and a branch that does not exist or belongs to another company. It runs on both `create` and `update`. A branch-less student is absent from every branch-filtered list and their first payment cannot be booked at all (the ledger is fail-closed).
+- **Enrolment enforces the same rule.** `StudentEnrollmentService.enrollToGroup` compares the group's branch with the student's: a mismatch is a `400`, and a student with no branch yet **adopts the group's** (the enrolment IS the branch assignment). Without this the student was listed under one branch while their lesson fees and their teacher's pay were booked to another.
+- **D6 — a teacher belongs to exactly one branch.** `GroupsWriteService.update` rejects assigning a teacher whose `UserBranch` points at a different branch than the group. A teacher with no branch attached is allowed through (onboarding handles that case) so an unrelated edit is never blocked.
+- **A group's branch is fixed at creation.** `UpdateGroupDto.branchId` is deprecated and **discarded** by the service. The client used to send the header switcher's branch on every save, silently moving the group — plus its students, future lesson deductions and salary accruals — into whichever branch the admin was viewing. Moving a group needs a dedicated operation, not a side effect of renaming it.
+- **Lead conversion requires a branch.** `LeadsService.convert` throws when neither `branchId` nor a group resolves one.
+
 #### Contracts (model retained, user-facing CRUD module removed)
 
 - The dedicated `src/contracts/` module (controller + service + DTOs, the `/contracts` CRUD endpoints) and the `/payments/contracts` admin page were **removed** — contracts were never wired into the real workflow (nothing auto-creates them; the live billing model is prepaid-balance, not contract-based), so the page sat permanently empty.
