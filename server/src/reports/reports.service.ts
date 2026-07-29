@@ -86,8 +86,13 @@ export class ReportsService {
   // Computed monthly teacher salary (the /payments/salary "Oyliklar" view) —
   // meaningful for the month even before payroll is disbursed. `performedById`
   // drives branch scope (CEO/Admin → all teachers; BD → own branch).
-  getSalaryMonthly(companyId: number, month: string, performedById: number) {
-    return this.salary.getMonthly({ month }, companyId, performedById);
+  getSalaryMonthly(
+    companyId: number,
+    month: string,
+    performedById: number,
+    branchId?: number,
+  ) {
+    return this.salary.getMonthly({ month, branchId }, companyId, performedById);
   }
   // "Dars tushumi" — recognized revenue for lessons HELD in the window (by
   // attendance date), the isolated basis the Foyda card + Excel "Sof foyda" use.
@@ -129,7 +134,10 @@ export class ReportsService {
         end: new Date(Date.UTC(y, m, 1)),
         branchId,
       }),
-      this.getSalaryMonthly(companyId, month, performedById),
+      // Branch-scoped: subtracting company-wide payroll from ONE branch's
+      // revenue is what made a freshly-opened branch look catastrophically
+      // unprofitable in its first month.
+      this.getSalaryMonthly(companyId, month, performedById, branchId),
       this.getProfitLoss(companyId, scope),
       this.getPeriodOutflows(companyId, scope),
     ]);
