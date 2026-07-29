@@ -88,6 +88,8 @@ export interface NetProfit {
   teacherSalary: number;
   /** 'hisoblangan' = deserved (earned this month) | 'naqd' = cash paid (fallback). */
   teacherSalaryBasis: 'hisoblangan' | 'naqd';
+  /** Staff leg basis: 'hisoblangan' = earned this month, 'naqd' = cash paid. */
+  adminSalaryBasis: 'hisoblangan' | 'naqd';
   /** True when `teacherSalary` includes the center top-up (gap) — only from
    *  TOPUP_EFFECTIVE_MONTH on. Before that it is students-covered only. */
   teacherSalaryHasTopup: boolean;
@@ -145,7 +147,18 @@ export function buildNetProfit(
   const paidTeacher = pl?.costOfServices?.teacherSalaries ?? 0;
   const hasDeserved = typeof deservedRaw === 'number' && deservedRaw > 0;
   const teacherSalary = hasDeserved ? deservedRaw : paidTeacher;
-  const adminSalary = pl?.operatingExpenses?.adminSalaries ?? 0;
+  // Staff (admin / cashier / director) salary on the same basis as the teacher
+  // leg: what was EARNED this month, not what cash happened to leave. Salaries
+  // are disbursed the following cycle, so the paid figure is ~0 inside the
+  // month — exactly the mistake that overstated June profit by ~78M for
+  // teachers. Falls back to the paid figure when no staff rate is configured,
+  // so a center that keeps staff pay outside the salary module is unaffected.
+  const paidAdmin = pl?.operatingExpenses?.adminSalaries ?? 0;
+  const deservedStaff = salaries?.staffTotals?.monthly;
+  const adminSalary =
+    typeof deservedStaff === 'number' && deservedStaff > 0
+      ? deservedStaff
+      : paidAdmin;
   const operatingExpenses = (pl?.operatingExpenses?.byCategory ?? []).reduce(
     (s: number, e: any) => s + (e.amount ?? 0),
     0,
@@ -160,6 +173,10 @@ export function buildNetProfit(
     teacherSalaryBasis: hasDeserved ? 'hisoblangan' : 'naqd',
     teacherSalaryHasTopup: hasDeserved && hasTopup,
     adminSalary,
+    adminSalaryBasis:
+      typeof deservedStaff === 'number' && deservedStaff > 0
+        ? ('hisoblangan' as const)
+        : ('naqd' as const),
     operatingExpenses,
     refunds,
     netProfit,

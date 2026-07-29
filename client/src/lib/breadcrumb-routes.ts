@@ -35,7 +35,10 @@ export const routeLabels: Record<string, string> = {
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
   expenses: "Xarajatlar",
-  salary: "Ish haqi",
+  // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).
+  // "Ish haqi" stays the term for ONE person's salary (profile tabs), so the
+  // two words mark a real distinction rather than drifting vocabulary.
+  salary: "Oyliklar",
   // /payments/salary/config — CEO Oylik belgilash sahifasi (xodimlar ro'yxati + bulk + individual).
   // /payments/salary/settings — CEO oylik davri sozlamalari sahifasi.
   // /profile/salary — Teacher portalida ustozning o'z oyligi sahifasi.
