@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryPaymentStatus, Prisma } from '@prisma/client';
@@ -8,6 +12,7 @@ import {
   SALARY_PAYMENT_TRANSITIONS,
 } from '../common/finance/status-transitions';
 import { resolvePeriod } from '../common/finance/period-helpers';
+import { resolvePayrollBranchScope } from './shared/payroll-branch-scope';
 
 @Injectable()
 export class SalaryPaymentService {
@@ -243,6 +248,22 @@ export class SalaryPaymentService {
       where: { id, companyId },
     });
     if (!payment) throw new NotFoundException('Oylik topilmadi');
+
+    // `batchPay` confines a non-CEO caller to their own branch; paying a single
+    // payment had NO branch check at all, so the same director could settle
+    // another branch's teacher just by passing its id.
+    const scope = await resolvePayrollBranchScope(this.prisma, performedById);
+    if (scope.kind !== 'all') {
+      const payee = await this.prisma.user.findUnique({
+        where: { id: payment.userId },
+        select: { mainBranch: true },
+      });
+      if (scope.kind === 'none' || payee?.mainBranch !== scope.branchId) {
+        throw new ForbiddenException(
+          "Bu xodim sizning filialingizga tegishli emas — oyligini to'lay olmaysiz",
+        );
+      }
+    }
     assertValidTransition(
       'SalaryPayment',
       SALARY_PAYMENT_TRANSITIONS,
@@ -303,7 +324,14 @@ export class SalaryPaymentService {
     const isCeo = caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
     const effectiveBranchId = isCeo
       ? params.branchId
-      : (caller?.mainBranch ?? undefined);
+      : caller?.mainBranch;
+    // Fail CLOSED: a non-CEO caller whose mainBranch is unknown used to fall
+    // through to "no filter" and could batch-pay EVERY branch's salaries.
+    if (!isCeo && effectiveBranchId == null) {
+      throw new ForbiddenException(
+        "Sizning asosiy filialingiz belgilanmagan — oylik to'lay olmaysiz. Administrator bilan bog'laning.",
+      );
+    }
 
     const eligible = await this.prisma.salaryPayment.findMany({
       where: {
@@ -312,8 +340,8 @@ export class SalaryPaymentService {
         ...(params.userIds &&
           params.userIds.length > 0 && { userId: { in: params.userIds } }),
         // Branch scope: SalaryPayment has no branchId directly, so scope via
-        // the employee's mainBranch.
-        ...(effectiveBranchId !== undefined && {
+        // the employee's own branch (D6: one employee, one branch).
+        ...(effectiveBranchId != null && {
           user: { mainBranch: effectiveBranchId },
         }),
       },

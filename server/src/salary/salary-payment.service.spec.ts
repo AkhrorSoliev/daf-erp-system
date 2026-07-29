@@ -15,7 +15,11 @@ describe('SalaryPaymentService.getMatrix', () => {
           roles: [{ role: { name: 'CEO' } }],
         }),
       },
-      salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
+      salaryPayment: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+      },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -101,4 +105,60 @@ describe('SalaryPaymentService.getMatrix', () => {
     const arg = prisma.salaryPayment.findMany.mock.calls[0][0];
     expect(arg.where.user).toBeUndefined();
   });
+
+  /**
+   * Paying a single salary had NO branch check, while batchPay confined the
+   * caller — so the same director could settle another branch's teacher just
+   * by passing its id. Both paths must also fail CLOSED when the caller's own
+   * branch is unknown.
+   */
+  describe('branch confinement on payout', () => {
+    const CALCULATED = {
+      id: 'sp-1',
+      userId: 555,
+      amount: 1_000_000,
+      status: 'APPROVED',
+      companyId: 1,
+    };
+
+    it("refuses to pay another branch's employee", async () => {
+      prisma.user.findUnique
+        .mockResolvedValueOnce({
+          mainBranch: 1,
+          roles: [{ role: { name: 'Branch Director' } }],
+        }) // caller
+        .mockResolvedValueOnce({ mainBranch: 2 }); // payee
+      prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
+
+      await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+        /filialingizga tegishli emas/,
+      );
+      expect(prisma.salaryPayment.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses to pay at all when the caller has no branch (fail closed)', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        mainBranch: null,
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
+
+      await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+        /filialingizga tegishli emas/,
+      );
+    });
+
+    it('blocks batchPay for a branch-less non-CEO caller', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        mainBranch: null,
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(
+        service.batchPay({ companyId: 1 } as any, 10768),
+      ).rejects.toThrow(/asosiy filialingiz belgilanmagan/);
+      expect(prisma.salaryPayment.findMany).not.toHaveBeenCalled();
+    });
+  });
+
 });
