@@ -157,7 +157,26 @@ PROD hozir invariantlarni **allaqachon qanoatlantiradi**: ikki filialli o'quvchi
 
 ---
 
-## Batch 5 — Oylikni filialga bog'lash
+## Batch 5 — Oylikni filialga bog'lash ✅ BAJARILDI 2026-07-29 (kutilganidan kichik)
+
+**D6 qarori bu batch'ni sezilarli qisqartirdi.** Asl rejada `SalaryAccrual.branchId` ustuni + migratsiya + backfill bor edi. Lekin:
+
+- **D6** — ustoz aynan bitta filialda, va Batch 1 dan beri boshqa filial guruhiga biriktirib bo'lmaydi. Demak ustozning barcha accruallari o'z filialidan keladi: ustoz bo'yicha kesish = dars filiali bo'yicha kesish.
+- **Batch 1c** — guruh filiali endi ko'chmaydi. Demak `Group.branchId` ga jonli join xavfsiz; "yozish paytida qotirish" argumenti kuchini yo'qotdi.
+- **Batch 1d** — `SALARY_ACCRUAL` mirror tranzaksiyasi allaqachon filialni tashiydi, ya'ni ledger o'qiydigan hisobotlar filialni bepul oladi.
+
+Shu sababli ustun qo'shilmadi — o'rniga haqiqiy muammo tuzatildi: **pul to'laydigan yo'llardagi fail-open scope.**
+
+| Ish | Natija |
+|---|---|
+| Yagona `resolvePayrollBranchScope` helperi | ✅ `all` / `branch` / **`none`** — noma'lum scope endi "hammasi" emas, "hech narsa" |
+| Oylik hisoboti (`getMonthly`, fixed-salary xodimlar) | ✅ fail-CLOSED |
+| `batchPay` | ✅ filialsiz non-CEO chaqiruvchi endi **bloklanadi** (ilgari **hamma filial** oyligini to'lay olardi) |
+| `payPayment` | ✅ filial tekshiruvi qo'shildi (ilgari **umuman yo'q** edi) |
+
+**Qolgani Batch 6 ga ko'chdi:** «Foyda» kartasi va Excel'da filial tushumidan kompaniya oyligi ayirilishi (P37), markaz qo'shimchasining filialga taqsimlanishi (P26).
+
+### Asl reja (ma'lumot uchun)
 
 - `SalaryAccrual.branchId` — yangi ustun, **yozish paytida qotadi** (nullable → backfill → NOT NULL). Jonli `group.branchId` join **ishlatilmaydi**: guruh keyin ko'chsa o'tgan oylik tarixini qayta yozib yuborardi.
 - `WithdrawalsService` ham accrual yozadi — u ham filial bosadi.

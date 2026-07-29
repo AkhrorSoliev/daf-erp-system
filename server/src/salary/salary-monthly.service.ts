@@ -82,6 +82,7 @@ export class SalaryMonthlyService {
       periodStartLow,
       periodStartHigh,
       branchId,
+      blocked,
       search,
       searchId,
       userId,
@@ -91,11 +92,14 @@ export class SalaryMonthlyService {
     // front so it is returned even on the zero-teacher early-return below.
     const { staff, staffTotals } = await this.staff.computeStaff(scope);
 
-    // Teacher roster for this month, in branch scope.
+    // Teacher roster for this month, in branch scope. `blocked` means the
+    // caller is branch-confined but has no branch — an impossible filter is
+    // used so they see nothing, rather than falling through to every branch.
     const where: Prisma.UserWhereInput = {
       deletedAt: null,
       companyId,
       roles: { some: { role: { name: 'Teacher' } } },
+      ...(blocked && { id: -1 }),
       ...(userId !== undefined && { id: userId }),
       ...(branchId !== undefined && { branches: { some: { branchId } } }),
       ...(search && {

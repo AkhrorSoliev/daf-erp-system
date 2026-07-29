@@ -61,6 +61,7 @@ export class SalaryStaffMonthlyService {
       periodStartLow,
       periodStartHigh,
       branchId,
+      blocked,
       search,
       searchId,
       userId,
@@ -81,6 +82,8 @@ export class SalaryStaffMonthlyService {
         user: {
           deletedAt: null,
           roles: { none: { role: { name: 'Teacher' } } },
+          // Branch-confined caller with no branch → match nothing (fail closed).
+          ...(blocked && { id: -1 }),
           ...(userId !== undefined && { id: userId }),
           ...(branchId !== undefined && { branches: { some: { branchId } } }),
           ...(search && {

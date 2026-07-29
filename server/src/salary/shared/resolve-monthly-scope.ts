@@ -1,5 +1,9 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  resolvePayrollBranchScope,
+  scopeToBranchFilter,
+} from './payroll-branch-scope';
+import {
   parseTashkentDateStart,
   resolveCurrentPeriod,
 } from './resolve-current-period';
@@ -48,6 +52,8 @@ export interface MonthlyScope {
   periodStartHigh: Date;
   /** Branch scope (BD → own branch); undefined = all branches (CEO/Admin). */
   branchId: number | undefined;
+  /** True when the caller is branch-confined but has no branch — show nothing. */
+  blocked: boolean;
   search: string | undefined;
   searchId: number | null;
   /** Single-user scope; undefined = the full roster. */
@@ -91,23 +97,17 @@ export async function resolveMonthlyScope(
   const periodStartHigh = new Date(nextMonthStart.getTime() - TASHKENT_OFFSET_MS);
 
   // ─── branch scope ───────────────────────────────────────────────────────
-  const caller = await prisma.user.findUnique({
-    where: { id: performedById },
-    select: {
-      mainBranch: true,
-      roles: { select: { role: { select: { name: true } } } },
-    },
-  });
-  const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
   // Looking at your own row is always allowed: an id-exact lookup of yourself
   // must not come back empty because your UserBranch rows disagree with your
-  // `mainBranch`. Everyone else keeps the normal BD branch confinement.
+  // `mainBranch`. Everyone else keeps the normal branch confinement.
   const selfView = query.userId !== undefined && query.userId === performedById;
-  const scoped =
-    !selfView &&
-    !roleNames.includes('CEO') &&
-    !roleNames.includes('Administrator');
-  const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
+  const scope = await resolvePayrollBranchScope(prisma, performedById, {
+    selfView,
+  });
+  const branchId = scopeToBranchFilter(scope);
+  // Fail CLOSED. A confined caller whose branch is unknown previously fell
+  // through to "no filter" and saw every branch's payroll.
+  const blocked = scope.kind === 'none';
 
   const search = query.search?.trim();
   const searchId = search && /^\d+$/.test(search) ? Number(search) : null;
@@ -124,6 +124,7 @@ export async function resolveMonthlyScope(
     periodStartLow,
     periodStartHigh,
     branchId,
+    blocked,
     search: search || undefined,
     searchId,
     userId: query.userId,
