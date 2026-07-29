@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Building2,
   Check,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { buildBotLink, TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
@@ -35,6 +36,15 @@ function extractError(err: unknown, fallback: string): string {
   if (typeof msg === "string") return msg;
   return fallback;
 }
+
+// Which roles the current user may hand out. A signed link IS an account, so
+// nobody may generate one for a role above their own — the backend enforces
+// the same ceiling; this only keeps the UI honest.
+const GRANTABLE_BY_ROLE: Record<string, number[]> = {
+  CEO: [1, 2, 3, 4, 5],
+  "Branch Director": [3, 4, 5],
+  Administrator: [4, 5],
+};
 
 const ROLES = [
   { id: 1, label: "CEO", icon: Crown },
@@ -51,6 +61,18 @@ interface TelegramLinkDialogProps {
 
 export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogProps) {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const currentUser = useAuth((s) => s.user);
+  const grantableRoleIds = useMemo(() => {
+    const names = currentUser?.roles?.map((r) => r.name) ?? [];
+    for (const key of ["CEO", "Branch Director", "Administrator"]) {
+      if (names.includes(key)) return GRANTABLE_BY_ROLE[key];
+    }
+    return [];
+  }, [currentUser]);
+  const visibleRoles = useMemo(
+    () => ROLES.filter((r) => grantableRoleIds.includes(r.id)),
+    [grantableRoleIds],
+  );
   const [roleIds, setRoleIds] = useState<number[]>([]);
   const [link, setLink] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -136,7 +158,7 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
               Lavozim(lar)
             </Label>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {ROLES.map((role) => {
+              {visibleRoles.map((role) => {
                 const isChecked = roleIds.includes(role.id);
                 const Icon = role.icon;
                 return (

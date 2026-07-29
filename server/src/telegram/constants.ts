@@ -18,4 +18,18 @@ export const EMPLOYEE_DEEP_LINK_RE =
 
 export const TEACHER_ROLE_ID = 4;
 export const VALID_ROLE_IDS = [1, 2, 3, 4, 5] as const;
+
+/**
+ * Which roles each caller may hand out in a registration deep link.
+ *
+ * A signed link IS an account: whoever opens it registers with exactly those
+ * roles. Without this ceiling an Administrator could generate a CEO link for
+ * their own branch and grant themselves full access — the branch check alone
+ * would not stop them. Nobody can grant above their own level.
+ */
+export const GRANTABLE_ROLE_IDS = {
+  CEO: [1, 2, 3, 4, 5],
+  BRANCH_DIRECTOR: [3, 4, 5],
+  ADMINISTRATOR: [4, 5],
+} as const satisfies Record<string, readonly number[]>;
 export const DEFAULT_COMPANY_ID = 1001;
