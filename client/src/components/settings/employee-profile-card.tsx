@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useAuth } from "@/hooks/use-auth";
-import { formatBalance, formatPhone } from "@/lib/format-utils";
+import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
+import { SalaryDueCard } from "@/components/shared/salary-due-card";
 
 const ROLE_LABELS: Record<string, string> = {
   CEO: "CEO",
@@ -159,17 +160,10 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
 
       <Separator />
 
-      {/* Balans — faqat CEO va Branch Director */}
+      {/* To'lanishi kerak — faqat CEO va Branch Director */}
       {canSeeBalance && (
         <>
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Balans</p>
-            <p
-              className={`text-lg font-bold ${employee.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-            >
-              {formatBalance(employee.balance)}
-            </p>
-          </div>
+          <SalaryDueCard userId={employee.id} />
 
           <Separator />
         </>

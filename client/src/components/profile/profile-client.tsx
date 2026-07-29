@@ -46,7 +46,8 @@ export function ProfileClient() {
             fullName={fullName}
             id={user.id}
             roles={user.roles}
-            balance={user.balance}
+            salaryDueUserId={user.id}
+            salaryDueScope="me"
             phone={user.phone}
             branches={displayBranches}
             infoItems={[

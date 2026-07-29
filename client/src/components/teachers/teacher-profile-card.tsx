@@ -29,6 +29,7 @@ import {
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useAuth } from "@/hooks/use-auth";
 import { formatPhone } from "@/lib/format-utils";
+import { SalaryDueCard } from "@/components/shared/salary-due-card";
 
 interface TeacherProfileCardProps {
   teacher: TeacherData;
@@ -131,17 +132,10 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
 
       <Separator />
 
-      {/* Balance — CEO and Branch Director only */}
+      {/* Salary due — CEO and Branch Director only */}
       {canManageTeachers && (
         <>
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Balans</p>
-            <p
-              className={`text-lg font-bold ${teacher.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-            >
-              {teacher.balance.toLocaleString("uz-UZ")} so&apos;m
-            </p>
-          </div>
+          <SalaryDueCard userId={teacher.id} />
 
           <Separator />
 

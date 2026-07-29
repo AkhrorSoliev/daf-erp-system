@@ -63,6 +63,7 @@ export class SalaryStaffMonthlyService {
       branchId,
       search,
       searchId,
+      userId,
     } = scope;
 
     // 1. Non-teacher global FIXED_MONTHLY configs in branch scope.
@@ -80,6 +81,7 @@ export class SalaryStaffMonthlyService {
         user: {
           deletedAt: null,
           roles: { none: { role: { name: 'Teacher' } } },
+          ...(userId !== undefined && { id: userId }),
           ...(branchId !== undefined && { branches: { some: { branchId } } }),
           ...(search && {
             OR: [

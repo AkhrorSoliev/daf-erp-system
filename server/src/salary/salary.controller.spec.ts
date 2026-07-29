@@ -74,9 +74,19 @@ describe('SalaryController @Roles metadata', () => {
       'getMyAccruals',
       'getMyCurrentCycleBreakdown',
       'getMyPaymentBreakdown',
+      // "Mening oyligim" — the same monthly row /payments/salary shows.
+      'getMyMonthly',
     ] as const;
     it.each(selfEndpoints)('%s has no method-level role override', (method) => {
       expect(rolesFor(method)).toEqual([]);
+    });
+  });
+
+  describe('Per-user monthly row (profile tab + profile card)', () => {
+    // Money for ONE named teacher — same gate as the profile salary tab it
+    // backs (`/teachers/:id/salary-summary`), i.e. Administrator is excluded.
+    it('getMonthlyForUser allows CEO and Branch Director only', () => {
+      expect(rolesFor('getMonthlyForUser')).toEqual(['CEO', 'Branch Director']);
     });
   });
 });

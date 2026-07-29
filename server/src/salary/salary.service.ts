@@ -95,6 +95,23 @@ export class SalaryService {
     return this.monthly.getMonthly(query, companyId, performedById);
   }
 
+  // The same monthly pass narrowed to ONE user — backs the profile "Ish haqi"
+  // tab, the profile card and the lehrer portal, so those screens can never
+  // disagree with the /payments/salary table.
+  getMonthlyForUser(
+    userId: number,
+    query: SalaryMonthlyQuery,
+    companyId: number,
+    performedById: number,
+  ) {
+    return this.monthly.getMonthlyForUser(
+      userId,
+      query,
+      companyId,
+      performedById,
+    );
+  }
+
   // Per-teacher advance breakdown for the salary "Avans" cell drawer.
   getAdvancesForUser(
     userId: number,

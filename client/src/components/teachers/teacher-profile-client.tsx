@@ -133,7 +133,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
             roles={teacher.roles}
             roleVariant="green"
             isActive={teacher.isActive}
-            balance={canManageTeachers ? teacher.balance : undefined}
+            salaryDueUserId={canManageTeachers ? teacher.id : undefined}
             phone={teacher.phone}
             branches={teacher.branches}
             infoItems={mobileInfoItems}
