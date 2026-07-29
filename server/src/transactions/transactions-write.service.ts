@@ -16,6 +16,10 @@ import {
   cashTypeForPaymentMethod,
   cashTypeForExpenseMethod,
 } from '../cash-accounts/cash-movements.service';
+import {
+  resolveStudentBranchId,
+  tryResolveUserBranchId,
+} from '../common/finance/resolve-branch';
 
 // Transaction types that represent REAL money in/out of the center and so
 // must mirror onto a cash account. Everything else (lesson deduction /
@@ -34,6 +38,29 @@ export class TransactionsWriteService {
     private prisma: PrismaService,
     private cashMovements: CashMovementsService,
   ) {}
+
+  /**
+   * Every student-scoped ledger row must carry a branch.
+   *
+   * This service is the ONLY path that writes `Transaction` rows, so resolving
+   * the branch here fixes every caller at once — previously each call site had
+   * to remember to pass `branchId` and most did not, which is how ~8 900
+   * branch-less rows accumulated. A branch-less row is unrecoverable by any
+   * report filter, so `Σ(branches)` silently stops matching the company total.
+   *
+   * Fail-closed on purpose (see `resolveStudentBranchId`): refusing to write is
+   * cheaper than writing a row nobody can attribute later. D5 guarantees every
+   * student has exactly one branch, so this only throws on genuinely broken data.
+   */
+  private async branchForStudent(
+    client: Prisma.TransactionClient,
+    studentId: number,
+    companyId: number,
+    explicit?: number | null,
+  ): Promise<number> {
+    if (explicit != null) return explicit;
+    return resolveStudentBranchId(client, studentId, companyId);
+  }
 
   /**
    * Run a callback inside the given transaction client, or open a new one with Serializable isolation.
@@ -73,6 +100,12 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
 
       const transaction = await client.transaction.create({
         data: {
@@ -83,7 +116,7 @@ export class TransactionsWriteService {
           studentId: params.studentId,
           paymentId: params.paymentId,
           contractId: params.contractId,
-          branchId: params.branchId,
+          branchId,
           companyId: params.companyId,
           performedById: params.performedById,
           description: "To'lov qabul qilindi",
@@ -99,7 +132,7 @@ export class TransactionsWriteService {
       await this.cashMovements.recordInflow(
         {
           companyId: params.companyId,
-          branchId: params.branchId,
+          branchId,
           amount: params.amount,
           preferType: cashTypeForPaymentMethod(
             params.method ?? PaymentMethod.CASH,
@@ -155,6 +188,12 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore - params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
 
       const metadata: Prisma.InputJsonValue | undefined = params.mode
         ? {
@@ -190,7 +229,7 @@ export class TransactionsWriteService {
           attendanceId: params.attendanceId,
           enrollmentId: params.enrollmentId,
           contractId: params.contractId,
-          branchId: params.branchId,
+          branchId,
           companyId: params.companyId,
           description: 'Dars uchun yechildi',
           ...(metadata && { metadata }),
@@ -236,6 +275,13 @@ export class TransactionsWriteService {
       });
       const balance = student?.balance ?? 0;
 
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
+
       return client.transaction.create({
         data: {
           type: TransactionType.LESSON_CONSUMPTION,
@@ -246,7 +292,7 @@ export class TransactionsWriteService {
           attendanceId: params.attendanceId,
           enrollmentId: params.enrollmentId,
           contractId: params.contractId,
-          branchId: params.branchId,
+          branchId,
           companyId: params.companyId,
           description: 'Oldindan to`langan dars iste`mol qilindi',
           metadata: { perLessonCost: params.perLessonCost },
@@ -309,6 +355,12 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
 
       try {
         const transaction = await client.transaction.create({
@@ -318,7 +370,7 @@ export class TransactionsWriteService {
             balanceBefore,
             balanceAfter,
             studentId: params.studentId,
-            branchId: params.branchId,
+            branchId,
             companyId: params.companyId,
             performedById: params.performedById,
             description: params.note ?? "Boshlang'ich balans kiritildi",
@@ -354,6 +406,7 @@ export class TransactionsWriteService {
       amount: number;
       refundId: string;
       contractId?: string;
+      branchId?: number;
       companyId: number;
       performedById?: number;
     },
@@ -363,6 +416,12 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore - params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
 
       const transaction = await client.transaction.create({
         data: {
@@ -373,6 +432,7 @@ export class TransactionsWriteService {
           studentId: params.studentId,
           refundId: params.refundId,
           contractId: params.contractId,
+          branchId,
           companyId: params.companyId,
           performedById: params.performedById,
           description: 'Pul qaytarildi',
@@ -384,10 +444,12 @@ export class TransactionsWriteService {
         data: { balance: balanceAfter },
       });
 
-      // Cash out of the center to the student.
+      // Cash out of the center to the student — from THAT student's branch
+      // kassa, never the company-wide one (D2/D4: no cross-branch money).
       await this.cashMovements.recordOutflow(
         {
           companyId: params.companyId,
+          branchId,
           amount: params.amount,
           transactionId: transaction.id,
           description: 'Pul qaytarildi',
@@ -409,6 +471,7 @@ export class TransactionsWriteService {
       userId: number;
       amount: number;
       salaryPaymentId: string;
+      branchId?: number | null;
       companyId: number;
       performedById?: number;
     },
@@ -424,6 +487,12 @@ export class TransactionsWriteService {
       const user = users[0];
       const balanceBefore = user.balance;
       const balanceAfter = balanceBefore - params.amount;
+      // D6 gives every employee exactly one branch, so the payee's own branch
+      // is the branch that bears the cost. Not fail-closed: a CEO is
+      // deliberately branch-less, and blocking their payout would be worse
+      // than an unattributed row — those are handled explicitly in Batch 5.
+      const branchId =
+        params.branchId ?? (await tryResolveUserBranchId(client, params.userId));
 
       const transaction = await client.transaction.create({
         data: {
@@ -433,6 +502,7 @@ export class TransactionsWriteService {
           balanceAfter,
           teacherId: params.userId,
           salaryPaymentId: params.salaryPaymentId,
+          branchId,
           companyId: params.companyId,
           performedById: params.performedById,
           description: "Oylik to'landi",
@@ -444,10 +514,12 @@ export class TransactionsWriteService {
         data: { balance: balanceAfter },
       });
 
-      // Salary leaves the center cash (default kassa).
+      // Salary leaves the PAYEE'S BRANCH kassa — under D4 each branch carries
+      // its own payroll cost, so one branch's cash must never settle another's.
       await this.cashMovements.recordOutflow(
         {
           companyId: params.companyId,
+          branchId,
           amount: params.amount,
           transactionId: transaction.id,
           description: "Oylik to'landi",
@@ -680,6 +752,12 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
 
       const transaction = await client.transaction.create({
         data: {
@@ -688,7 +766,7 @@ export class TransactionsWriteService {
           balanceBefore,
           balanceAfter,
           studentId: params.studentId,
-          branchId: params.branchId,
+          branchId,
           companyId: params.companyId,
           performedById: params.performedById,
           description: params.description,
@@ -745,6 +823,12 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
 
       const transaction = await client.transaction.create({
         data: {
@@ -754,7 +838,7 @@ export class TransactionsWriteService {
           balanceAfter,
           studentId: params.studentId,
           enrollmentId: params.enrollmentId,
-          branchId: params.branchId,
+          branchId,
           companyId: params.companyId,
           performedById: params.performedById,
           description: params.description,
@@ -799,6 +883,12 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, params.studentId);
       const balanceBefore = student.balance;
       const balanceAfter = balanceBefore + params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
 
       const transaction = await client.transaction.create({
         data: {
@@ -807,7 +897,7 @@ export class TransactionsWriteService {
           balanceBefore,
           balanceAfter,
           studentId: params.studentId,
-          branchId: params.branchId,
+          branchId,
           companyId: params.companyId,
           performedById: params.performedById,
           description:
