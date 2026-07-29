@@ -36,6 +36,14 @@ export class ReportsProfitLossService {
   async getProfitLoss(companyId: number, query: ProfitLossQuery) {
     const period = resolvePeriod(query.startDate, query.endDate);
     const branch = branchWhere(query);
+    // Same scope expressed as a plain id list, for relations that carry the
+    // branch on a joined row rather than on themselves.
+    const branchScopeIds =
+      query.branchIds && query.branchIds.length > 0
+        ? query.branchIds
+        : query.branchId
+          ? [query.branchId]
+          : null;
 
     const tsFilter = { gte: period.start, lte: period.endTs };
     const dateFilter = { gte: period.start, lte: period.endDate };
@@ -65,10 +73,17 @@ export class ReportsProfitLossService {
         _sum: { amount: true },
       }),
       // Paid salaries in the period, with accrual count to classify teacher
-      // vs admin. SalaryPayment has no branchId, so it is not branch-filtered
-      // (salary is a company-level payroll run).
+      // vs admin. `SalaryPayment` carries no branch of its own, so scope via
+      // the payee's branch — one employee belongs to exactly one branch, so
+      // their whole payroll is that branch's cost. Leaving this company-wide
+      // charged every branch's payroll against each branch's revenue.
       this.prisma.salaryPayment.findMany({
-        where: { companyId, status: 'PAID', paidAt: tsFilter },
+        where: {
+          companyId,
+          status: 'PAID',
+          paidAt: tsFilter,
+          ...(branchScopeIds && { user: { mainBranch: { in: branchScopeIds } } }),
+        },
         select: { amount: true, _count: { select: { accruals: true } } },
       }),
     ]);

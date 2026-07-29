@@ -196,10 +196,14 @@ export class ReportsController {
       gross: number;
     } | null = null;
     try {
+      // Branch-scoped like every other figure on this card — an "Oyliklar"
+      // block showing company-wide payroll next to one branch's income is how
+      // the profit number went wrong in the first place.
       const sm = await this.reportsService.getSalaryMonthly(
         user.companyId,
         month,
         user.id,
+        query.branchId,
       );
       const t = sm.totals;
       // Config-gap / manual months (e.g. May cutover) have no per-lesson data —

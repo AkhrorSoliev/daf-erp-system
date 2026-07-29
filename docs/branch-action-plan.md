@@ -190,7 +190,21 @@ Shu sababli ustun qo'shilmadi — o'rniga haqiqiy muammo tuzatildi: **pul to'lay
 
 ---
 
-## Batch 6 — Hisobot va foyda
+## Batch 6 — Hisobot va foyda ✅ ASOSIY QISMI BAJARILDI 2026-07-29
+
+| Ish | Natija |
+|---|---|
+| **P37** «Foyda» kartasi + Excel «Sof foyda» | ✅ `getSalaryMonthly` ga `branchId` uzatiladi — filial tushumidan **shu filial** oyligi ayiriladi |
+| Overview'dagi «Oyliklar» bloki | ✅ filialga kesildi |
+| **P49** `getProfitLoss.paidSalaries` | ✅ to'langan oylik payee filiali bo'yicha (`user.mainBranch`) kesiladi — kod izohida "company-level" deb tan olingan edi |
+| **P50** qaytarishlar + hisobdan chiqarishlar | ✅ filial bo'yicha filtrlanadi (Batch 1d + backfill buni imkonli qildi) |
+| Filial so'rovi faqat **toraytiradi** | ✅ filialga bog'langan direktor boshqa filialni so'rasa — bloklanadi |
+
+**P41 (`branchId=null` kassalar filtrda yo'qoladi) — endi mavjud emas:** Batch 3 filialsiz kassa tushunchasini butunlay o'chirdi.
+
+**Qolgani:** `financial-overview` dagi qarz/qarzdorlar/faol o'quvchilar bloklari (P38), trend hisoboti (P39), Excel varaqlari va `Σ(filiallar) == jami` avtomatik testi.
+
+### Asl reja (ma'lumot uchun)
 
 - «Foyda» kartasi va Excel «Sof foyda»: oylik oyog'i filialga kesiladi. → **P37**
 - `getProfitLoss`: `paidSalaries` filial bo'yicha (kod izohida kompaniya bo'yicha ekani tan olingan). → P49

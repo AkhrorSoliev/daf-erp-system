@@ -1505,12 +1505,16 @@ export class ReportsFinancialService {
     const [refundRows, writeOffAgg, providerFeeAgg] = await Promise.all([
       // Active (non-reversed) REFUND rows — signed negative on the student
       // ledger; take the magnitude of cash returned.
+      // Branch-filtered since every ledger row now carries a branch (and the
+      // historical rows were backfilled) — a branch's own refunds and
+      // write-offs, not the company's, must reduce its profit.
       this.prisma.transaction.findMany({
         where: {
           companyId,
           type: TransactionType.REFUND,
           reversedAt: null,
           createdAt: tsFilter,
+          ...(query.branchId && { branchId: query.branchId }),
         },
         select: { amount: true },
       }),
@@ -1520,6 +1524,7 @@ export class ReportsFinancialService {
           type: TransactionType.DEBT_WRITE_OFF,
           reversedAt: null,
           createdAt: tsFilter,
+          ...(query.branchId && { branchId: query.branchId }),
         },
         _sum: { amount: true },
       }),

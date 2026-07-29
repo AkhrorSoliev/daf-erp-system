@@ -17,6 +17,13 @@ export interface SalaryMonthlyQuery {
    * `/payments/salary` table renders instead of computing their own figure.
    */
   userId?: number;
+  /**
+   * Narrow the report to one branch. It can only ever NARROW: a caller already
+   * confined to a branch cannot use this to look at another one. Needed so the
+   * «Foyda» card subtracts THAT branch's payroll from THAT branch's revenue —
+   * it used to subtract the whole company's.
+   */
+  branchId?: number;
 }
 
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -104,10 +111,18 @@ export async function resolveMonthlyScope(
   const scope = await resolvePayrollBranchScope(prisma, performedById, {
     selfView,
   });
-  const branchId = scopeToBranchFilter(scope);
   // Fail CLOSED. A confined caller whose branch is unknown previously fell
   // through to "no filter" and saw every branch's payroll.
-  const blocked = scope.kind === 'none';
+  let blocked = scope.kind === 'none';
+  let branchId = scopeToBranchFilter(scope);
+  if (scope.kind === 'branch') {
+    // A requested branch may only match the one the caller is confined to.
+    if (query.branchId != null && query.branchId !== scope.branchId) {
+      blocked = true;
+    }
+  } else if (scope.kind === 'all' && query.branchId != null) {
+    branchId = query.branchId;
+  }
 
   const search = query.search?.trim();
   const searchId = search && /^\d+$/.test(search) ? Number(search) : null;
