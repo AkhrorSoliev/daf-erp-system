@@ -133,6 +133,12 @@ export class ExpensesService {
     return {
       companyId,
       deletedAt: null,
+      // Every expense belongs to exactly one branch, and each branch's profit
+      // is its own income minus its OWN costs (docs/branch-decisions.md D4).
+      // This filter was accepted by the DTO but never applied, so the list,
+      // the summary cards and the PDF always showed company-wide figures —
+      // while the PDF header printed the selected branch's name on top.
+      ...(query.branchId && { branchId: query.branchId }),
       // TEACHER_ADVANCE is managed on the Ish haqi (salary) page now — advances
       // never surface in the expenses list / summary / PDF. Any other category
       // filter still applies; without one we simply exclude advances.
