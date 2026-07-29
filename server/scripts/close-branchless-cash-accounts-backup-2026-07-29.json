@@ -1,0 +1,20 @@
+{
+  "takenAt": "2026-07-29T14:11:38.131Z",
+  "TARGET_BRANCH": 1,
+  "accounts": [
+    {
+      "id": "d3339899-5864-4088-a4e8-8ececd03a54d",
+      "name": "Bank hisobi",
+      "type": "BANK",
+      "balanceBefore": 0,
+      "movements": 0
+    },
+    {
+      "id": "14d1334b-9ea4-4067-9357-3b23122b2fa9",
+      "name": "Asosiy kassa",
+      "type": "CASH",
+      "balanceBefore": -1107000,
+      "movements": 6
+    }
+  ]
+}
