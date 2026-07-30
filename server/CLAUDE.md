@@ -434,6 +434,20 @@ The financial system is built on an **append-only ledger** principle — financi
   - `maxWait: 10000, timeout: 15000` configured for Neon serverless cold-start tolerance
 - **Methods**: `recordPayment()`, `deductLessonFee()`, `recordRefund()`, `recordSalaryPayment()`, `recordExpense()`, `reverseTransaction()`, `createAdjustment()`
 
+#### One canonical "Sof foyda" — never re-derive it
+
+`ReportsService.getMonthlyNetProfit` is the ONE net-profit figure. Four surfaces used to compute their own, so the same month showed four numbers:
+
+| Surface | Was | Now |
+|---|---|---|
+| `/overview` Foyda card | canonical ✅ | unchanged |
+| Telegram 21:00 daily report | `tushum − xarajat − avans` — **no salary subtracted at all** | canonical, with the cash reading on its own line |
+| Telegram `rm:cfin` card | legacy cash `overview.netProfit` | canonical |
+| Foyda-card click-through chart | legacy cash | renamed «Kassa oqimi» — see below |
+
+- The daily report's old formula was the worst: payroll is never written to `Expense`, so **no salary was deducted**, yet advance cash *was* — and the same message printed the full deserved salary a few lines lower. Both Telegram surfaces now call the canonical figure with a CEO caller (company-wide) and **fall back to an honestly-labelled cash line** if it fails, so a wrong number never wears the "Sof foyda" label.
+- The **trend chart stays cash-based on purpose.** Calling the canonical figure per month would mean roughly ten times the queries per chart open, so the series is named for what it measures — «Kassa oqimi» — instead of competing with the card under the same name. Two different numbers must not share one label.
+
 #### Multi-month Excel export: every profit leg must share one window
 
 `ReportsExcelService.generate` builds "Sof foyda" from several sources, and they must all cover the **same** months. They did not: revenue (`getRecognizedRevenue`) and teacher salary (`getSalaryMonthly`) came from `startDate`'s month alone, while operating expenses (`getProfitLoss`) and refunds (`getPeriodOutflows`) covered the whole selected period. A 3-month export therefore subtracted 3 months of cost from 1 month of income. The yearly preset was worse: `monthStr` became `2026-01`, which has no attendance, so revenue was 0 and the sheet printed the negative of the entire year's expenses as its headline "most accurate" figure.

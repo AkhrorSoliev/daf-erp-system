@@ -4,6 +4,7 @@ import { TelegramGroupStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsExcelService } from '../reports/reports-excel.service';
 import { ReportsFinancialService } from '../reports/reports-financial.service';
+import { ReportsService } from '../reports/reports.service';
 import { formatSum } from './utils/format.util';
 
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -58,6 +59,7 @@ export class TelegramGroupReportMenuService {
     private readonly prisma: PrismaService,
     private readonly reportsExcel: ReportsExcelService,
     private readonly reportsFinancial: ReportsFinancialService,
+    private readonly reports: ReportsService,
   ) {}
 
   /** Inline keyboard attached under the daily report — opens the menu. */
@@ -275,7 +277,13 @@ export class TelegramGroupReportMenuService {
         group.companyId,
         {},
       );
-      const month = this.monthLabel(this.currentMonth());
+      const monthKey = this.currentMonth();
+      const month = this.monthLabel(monthKey);
+      // `o.netProfit` is the legacy cash figure (kassa tushumi − NAQD to'langan
+      // oylik). Payroll is paid the following cycle, so its paid leg is ~0 and
+      // profit reads far too high — the "+78M June" bug the code names itself.
+      // Read the canonical figure the Foyda card and Excel «Sof foyda» use.
+      const canonical = await this.canonicalNetProfit(group.companyId, monthKey);
       const lines = [
         `💰 <b>Moliyaviy xulosa — ${month}</b>`,
         ``,
@@ -283,7 +291,9 @@ export class TelegramGroupReportMenuService {
         `• Kutilgan (prognoz): <b>${formatSum(o.forecast.recognizedRevenueForecast)}</b>`,
         `• Xarajat: <b>${formatSum(o.expenses)}</b>`,
         `• Ustoz oyligi (to'langan): <b>${formatSum(o.salary.paid)}</b>`,
-        `• Sof foyda: <b>${formatSum(o.netProfit)}</b>`,
+        canonical !== null
+          ? `• Sof foyda: <b>${formatSum(canonical)}</b>`
+          : `• Kassa harakati (oyliksiz): <b>${formatSum(o.netProfit)}</b>`,
         `• Qarzdorlar: <b>${o.forecast.debtorExposure.count}</b> ta — <b>${formatSum(Math.abs(o.forecast.outstandingReceivable))}</b>`,
       ];
       await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
@@ -292,6 +302,37 @@ export class TelegramGroupReportMenuService {
       await ctx.reply("Ma'lumot yuklanmadi. Qayta urinib ko'ring.").catch(() => undefined);
     } finally {
       this.generating.delete(key);
+    }
+  }
+
+  /**
+   * The ONE canonical "Sof foyda" (`ReportsService.getMonthlyNetProfit`) — the
+   * same figure the /overview Foyda card and the Excel sheet show. Needs a CEO
+   * caller so the figure is company-wide. Returns null on failure so the card
+   * degrades to an honestly-labelled cash line instead of a wrong profit.
+   */
+  private async canonicalNetProfit(
+    companyId: number,
+    month: string,
+  ): Promise<number | null> {
+    try {
+      const ceo = await this.prisma.user.findFirst({
+        where: {
+          companyId,
+          deletedAt: null,
+          roles: { some: { role: { name: 'CEO' } } },
+        },
+        select: { id: true },
+      });
+      if (!ceo) return null;
+      const np = await this.reports.getMonthlyNetProfit(companyId, {
+        month,
+        performedById: ceo.id,
+      });
+      return np.netProfit;
+    } catch (e: any) {
+      this.logger.warn(`Canonical net profit failed: ${e?.message ?? e}`);
+      return null;
     }
   }
 

@@ -61,10 +61,17 @@ const kpiConfig: Record<
       "Oxirgi 6 oydagi umumiy chiqimlar (operatsion xarajatlar + oyliklar) dinamikasi. Yuqoridagi karta esa faqat joriy davr operatsion xarajatlarini ko'rsatadi.",
   },
   profit: {
-    title: "Foyda",
+    // NOT the canonical "Sof foyda". This series is cash-based (kassa tushumi −
+    // kassa chiqimi), while the Foyda card shows recognised revenue minus
+    // DESERVED salary. Calling the canonical figure per month would mean ~10x
+    // the queries per chart open, so the series keeps its cheap basis and is
+    // named for what it actually measures — two different numbers must not
+    // share one name.
+    title: "Kassa oqimi (oylar bo'yicha)",
     color: "#2563eb",
     suffix: " so'm",
-    description: "Oxirgi 6 oydagi sof foyda (tushum - chiqim)",
+    description:
+      "Kassaga kirgan va chiqqan pul farqi. Kartadagi «Foyda» boshqa asosda — u tan olingan tushumdan ishlangan oylikni ayiradi, shuning uchun bu grafik bilan mos kelmasligi normal.",
   },
   activeBalance: {
     title: "Aktiv balans",

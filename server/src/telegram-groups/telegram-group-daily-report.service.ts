@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
+import { ReportsService } from '../reports/reports.service';
 import {
   escapeHtml,
   firstOfThisMonthDate,
@@ -93,6 +94,7 @@ export class TelegramGroupDailyReportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly salaryMonthly: SalaryMonthlyService,
+    private readonly reports: ReportsService,
   ) {}
 
   /**
@@ -274,9 +276,12 @@ export class TelegramGroupDailyReportService {
 
     // Prognoz + salary top-up are computed separately (heavier, and each is
     // wrapped so a failure degrades gracefully rather than killing the report).
-    const [forecastIncome, salary] = await Promise.all([
+    // Tashkent calendar month of "today" — the window the MTD block reports on.
+    const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
+    const [forecastIncome, salary, canonicalNet] = await Promise.all([
       this.computeMonthlyForecast(companyId),
       this.computeSalaryTopUp(companyId),
+      this.computeCanonicalNetProfit(companyId, monthKey),
     ]);
 
     // ── Derive figures ────────────────────────────────────────────────────
@@ -306,7 +311,8 @@ export class TelegramGroupDailyReportService {
     // Advances are real cash paid to teachers (teacher pay), so Sof foyda nets
     // them out too — shown on their own line, kept out of the Xarajat figure.
     const mtdAdvance = monthlyAdvances._sum.amount ?? 0;
-    const mtdNet = mtdIncome - mtdExpense - mtdAdvance;
+    // Cash-only figure, kept for the «kassa harakati» reading below.
+    const mtdCashNet = mtdIncome - mtdExpense - mtdAdvance;
     const collectionPct =
       forecastIncome && forecastIncome > 0
         ? Math.round((mtdIncome / forecastIncome) * 100)
@@ -396,7 +402,18 @@ export class TelegramGroupDailyReportService {
     if (mtdAdvance > 0) {
       lines.push(`• Avans (ustozlarga): <b>${formatSum(mtdAdvance)}</b>`);
     }
-    lines.push(`• Sof foyda: <b>${formatSignedSum(mtdNet)}</b>`);
+    if (canonicalNet !== null) {
+      lines.push(`• Sof foyda: <b>${formatSignedSum(canonicalNet)}</b>`);
+      lines.push(
+        `• Kassa harakati (oyliksiz): <b>${formatSignedSum(mtdCashNet)}</b>`,
+      );
+    } else {
+      // Canonical figure unavailable — label the fallback honestly rather than
+      // presenting a cash number as "Sof foyda".
+      lines.push(
+        `• Kassa harakati (oyliksiz): <b>${formatSignedSum(mtdCashNet)}</b>`,
+      );
+    }
     if (forecastIncome && forecastIncome > 0 && collectionPct !== null) {
       lines.push(
         `• Oylik prognoz: <b>${formatSum(forecastIncome)}</b> → <b>${collectionPct}%</b> yig'ildi`,
@@ -640,6 +657,46 @@ export class TelegramGroupDailyReportService {
    * Administrator caller so the figures are company-wide, not branch-scoped.
    * Returns null (block hidden) when no such user exists or the compute fails.
    */
+  /**
+   * The ONE canonical "Sof foyda" — the same figure the /overview Foyda card and
+   * the Excel «Sof foyda» sheet show (`ReportsService.getMonthlyNetProfit`).
+   *
+   * This message used to print `tushum − xarajat − avans`, which subtracts NO
+   * salary at all (payroll is never written to `Expense`) while still deducting
+   * advance cash the canonical formula does not treat as an expense. So the
+   * headline profit was far too high — and the very same message printed the
+   * full deserved salary a few lines below it.
+   *
+   * Returns null on failure so a broken figure never takes the whole 21:00
+   * report down; the caller then falls back to the cash line.
+   */
+  private async computeCanonicalNetProfit(
+    companyId: number,
+    month: string,
+  ): Promise<number | null> {
+    try {
+      const caller = await this.prisma.user.findFirst({
+        where: {
+          companyId,
+          deletedAt: null,
+          roles: { some: { role: { name: 'CEO' } } },
+        },
+        select: { id: true },
+      });
+      if (!caller) return null;
+      const np = await this.reports.getMonthlyNetProfit(companyId, {
+        month,
+        performedById: caller.id,
+      });
+      return np.netProfit;
+    } catch (e) {
+      this.logger.warn(
+        `Canonical net profit failed for company ${companyId} (${month}): ${e}`,
+      );
+      return null;
+    }
+  }
+
   private async computeSalaryTopUp(
     companyId: number,
   ): Promise<SalaryTopUp | null> {
