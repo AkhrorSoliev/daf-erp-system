@@ -18,6 +18,7 @@ describe('AuthController — forgot-password endpoints', () => {
       {} as any,
       forgot as any,
       { enabled: true } as any,
+      {} as any,
     );
   });
 
@@ -107,6 +108,7 @@ describe('AuthController — telegram/status', () => {
       {} as any,
       {} as any,
       { enabled: true } as any,
+      {} as any,
     );
     expect(controller.telegramStatus()).toEqual({ enabled: true });
   });
@@ -116,6 +118,7 @@ describe('AuthController — telegram/status', () => {
       {} as any,
       {} as any,
       { enabled: false } as any,
+      {} as any,
     );
     expect(controller.telegramStatus()).toEqual({ enabled: false });
   });
@@ -126,5 +129,27 @@ describe('AuthController — telegram/status', () => {
       AuthController.prototype.telegramStatus,
     );
     expect(isPublic).toBe(true);
+  });
+});
+
+describe('telegram/start', () => {
+  it('Origin sarlavhasidan authorize URL yasaydi', async () => {
+    const store = { createAuthorizeUrl: jest.fn().mockResolvedValue('https://oauth.telegram.org/auth?x=1') };
+    const local = new AuthController(
+      {} as any,
+      {} as any,
+      { enabled: true } as any,
+      store as any,
+    );
+
+    const res = await local.telegramStart(
+      {},
+      { headers: { origin: 'https://admin.dafzentrum.uz' } } as any,
+    );
+
+    expect(store.createAuthorizeUrl).toHaveBeenCalledWith(
+      'https://admin.dafzentrum.uz',
+    );
+    expect(res).toEqual({ url: 'https://oauth.telegram.org/auth?x=1' });
   });
 });

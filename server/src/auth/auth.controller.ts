@@ -14,6 +14,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
 import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
+import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
 import { resolveAllowedRoleIds } from './portal-roles.config';
 import { Public } from '../common/decorators';
 import { IpThrottlerGuard } from '../common/guards';
@@ -22,6 +23,7 @@ import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
 import { ForgotPasswordVerifyDto } from './dto/forgot-password-verify.dto';
 import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
+import { TelegramOauthStartDto } from './dto/telegram-oauth-start.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -29,6 +31,7 @@ export class AuthController {
     private authService: AuthService,
     private forgotPasswordService: ForgotPasswordService,
     private telegramOauthConfig: TelegramOauthConfig,
+    private telegramOauthStateStore: TelegramOauthStateStore,
   ) {}
 
   @Public()
@@ -67,6 +70,24 @@ export class AuthController {
   @Get('telegram/status')
   telegramStatus() {
     return { enabled: this.telegramOauthConfig.enabled };
+  }
+
+  /**
+   * Oqimni boshlaydi: `state` + PKCE yasab, Telegram'ning authorize URL'ini
+   * qaytaradi. Klient shu URL'ga o'tadi.
+   */
+  @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Get('telegram/start')
+  async telegramStart(
+    @Query() query: TelegramOauthStartDto,
+    @Req() req,
+  ) {
+    const origin =
+      query.origin ?? (req.headers['origin'] as string | undefined) ?? '';
+    const url = await this.telegramOauthStateStore.createAuthorizeUrl(origin);
+    return { url };
   }
 
   // ── SMS "forgot password" (Eskiz OTP) ──────────────────────────────────────

@@ -9,6 +9,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
 import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
+import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
 import { EskizModule } from '../eskiz/eskiz.module';
 import { PasswordResetModule } from '../common/password-reset';
 
@@ -36,6 +37,7 @@ import { PasswordResetModule } from '../common/password-reset';
     JwtStrategy,
     ForgotPasswordService,
     TelegramOauthConfig,
+    TelegramOauthStateStore,
   ],
   exports: [AuthService],
 })
