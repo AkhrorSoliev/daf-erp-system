@@ -13,6 +13,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
+import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
 import { resolveAllowedRoleIds } from './portal-roles.config';
 import { Public } from '../common/decorators';
 import { IpThrottlerGuard } from '../common/guards';
@@ -27,6 +28,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private forgotPasswordService: ForgotPasswordService,
+    private telegramOauthConfig: TelegramOauthConfig,
   ) {}
 
   @Public()
@@ -57,6 +59,14 @@ export class AuthController {
   @Get('otp/poll')
   async pollLogin(@Query('requestId') requestId: string) {
     return this.authService.pollLoginRequest(requestId ?? '');
+  }
+
+  // ── Telegram OAuth (OIDC) — web portallar uchun ────────────────────────────
+  /** Klient tugmani ko'rsatishdan oldin funksiya yoniqligini so'raydi. */
+  @Public()
+  @Get('telegram/status')
+  telegramStatus() {
+    return { enabled: this.telegramOauthConfig.enabled };
   }
 
   // ── SMS "forgot password" (Eskiz OTP) ──────────────────────────────────────

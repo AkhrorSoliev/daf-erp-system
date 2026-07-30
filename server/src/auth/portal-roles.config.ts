@@ -63,3 +63,24 @@ export function resolveAllowedRoleIds(
   if (fromPortal !== null) return fromPortal;
   return getAllowedRoleIds(origin);
 }
+
+/**
+ * Ma'lum portal hostname'lari — `PORTAL_ROLES` kalitlari bilan bir manba.
+ *
+ * NEGA KERAK: Telegram OAuth callback foydalanuvchini portalga qaytaradi va
+ * qaytish manzili `state` ichidan olinadi. Oq ro'yxatsiz bu ochiq redirect
+ * bo'lib qolardi.
+ */
+export const PORTAL_HOSTNAMES: string[] = Object.keys(PORTAL_ROLES);
+
+/** Origin bizning portallardan biri (yoki lokal dev) ekanini bildiradi. */
+export function isKnownPortalOrigin(origin: string | undefined): boolean {
+  if (!origin) return false;
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    return PORTAL_HOSTNAMES.includes(hostname);
+  } catch {
+    return false;
+  }
+}

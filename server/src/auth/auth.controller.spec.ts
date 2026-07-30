@@ -14,7 +14,11 @@ describe('AuthController — forgot-password endpoints', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    controller = new AuthController({} as any, forgot as any);
+    controller = new AuthController(
+      {} as any,
+      forgot as any,
+      { enabled: true } as any,
+    );
   });
 
   it('marks all three forgot-password endpoints @Public()', () => {
@@ -94,5 +98,33 @@ describe('IpThrottlerGuard.getTracker', () => {
 
   it('falls back to req.ip when there is no forwarded header', async () => {
     await expect(track({ headers: {}, ip: '9.9.9.9' })).resolves.toBe('9.9.9.9');
+  });
+});
+
+describe('AuthController — telegram/status', () => {
+  it("funksiya yoniq bo'lsa true qaytaradi", () => {
+    const controller = new AuthController(
+      {} as any,
+      {} as any,
+      { enabled: true } as any,
+    );
+    expect(controller.telegramStatus()).toEqual({ enabled: true });
+  });
+
+  it("funksiya o'chiq bo'lsa false qaytaradi", () => {
+    const controller = new AuthController(
+      {} as any,
+      {} as any,
+      { enabled: false } as any,
+    );
+    expect(controller.telegramStatus()).toEqual({ enabled: false });
+  });
+
+  it('@Public() bilan belgilangan (JWT talab qilmaydi)', () => {
+    const isPublic = Reflect.getMetadata(
+      IS_PUBLIC_KEY,
+      AuthController.prototype.telegramStatus,
+    );
+    expect(isPublic).toBe(true);
   });
 });
