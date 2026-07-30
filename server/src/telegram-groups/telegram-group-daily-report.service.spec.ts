@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
+import { ReportsService } from '../reports/reports.service';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
 
 /**
@@ -163,12 +164,23 @@ function makeSalary(state: State) {
   };
 }
 
-async function buildService(prisma: any, salary: any) {
+async function buildService(prisma: any, salary: any, reports?: any) {
   const module: TestingModule = await Test.createTestingModule({
     providers: [
       TelegramGroupDailyReportService,
       { provide: PrismaService, useValue: prisma },
       { provide: SalaryMonthlyService, useValue: salary },
+      {
+        // The «Sof foyda» line now reads the canonical figure. Default mock
+        // returns a fixed number; pass your own to assert the fallback.
+        provide: ReportsService,
+        useValue:
+          reports ?? {
+            getMonthlyNetProfit: jest
+              .fn()
+              .mockResolvedValue({ netProfit: 12_345_678 }),
+          },
+      },
     ],
   }).compile();
   return module.get(TelegramGroupDailyReportService);
@@ -208,7 +220,12 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).toContain('Qarzdorlar: <b>48</b> ta — <b>22 300 000 so\'m</b>  (bugun ▲ 1 200 000 · +2)');
     // 📅 MTD: 280M − 95M = +185M net.
     expect(message).toContain('Tushum (haqiqiy): <b>280 000 000 so\'m</b>');
-    expect(message).toContain('Sof foyda: <b>+185 000 000 so\'m</b>');
+    // Headline is the canonical figure from the mock; the cash reading moved to
+    // its own honestly-named line.
+    expect(message).toContain("• Sof foyda: <b>+12 345 678 so'm</b>");
+    expect(message).toContain(
+      "• Kassa harakati (oyliksiz): <b>+185 000 000 so'm</b>",
+    );
     // 💵 Salary top-up block.
     expect(message).toContain("To'liq ishlangan: <b>40 000 000 so'm</b>");
     expect(message).toContain("O'quvchilar to'lagan: <b>32 000 000 so'm</b>");
@@ -235,7 +252,7 @@ describe('TelegramGroupDailyReportService', () => {
     }
   });
 
-  it('splits teacher advances into their own MTD line and subtracts them from Sof foyda', async () => {
+  it('splits teacher advances into their own MTD line and nets them out of the cash reading', async () => {
     const state = defaultState();
     state.mtdIncome = 144_431_991;
     state.mtdExpenses = 20_017_000;
@@ -249,8 +266,11 @@ describe('TelegramGroupDailyReportService', () => {
     // line, not a "shundan" sub-line of Xarajat.
     expect(message).toContain("• Xarajat: <b>20 017 000 so'm</b>");
     expect(message).toContain("• Avans (ustozlarga): <b>12 150 000 so'm</b>");
-    // Sof foyda = Tushum − Xarajat − Avans = 144 431 991 − 20 017 000 − 12 150 000.
-    expect(message).toContain("• Sof foyda: <b>+112 264 991 so'm</b>");
+    // Cash reading = Tushum − Xarajat − Avans = 144 431 991 − 20 017 000 − 12 150 000.
+    // (The «Sof foyda» headline is the canonical figure, not this.)
+    expect(message).toContain(
+      "• Kassa harakati (oyliksiz): <b>+112 264 991 so'm</b>",
+    );
   });
 
   it('omits the Avans line when there are no MTD advances (self-suppressing)', async () => {
@@ -261,8 +281,10 @@ describe('TelegramGroupDailyReportService', () => {
     const { message: raw } = await service.build(1001);
     const message = raw.replace(/ /g, ' ');
     expect(message).not.toContain('Avans (ustozlarga)');
-    // Sof foyda unchanged: 280M − 95M − 0 = +185M.
-    expect(message).toContain("• Sof foyda: <b>+185 000 000 so'm</b>");
+    // Cash reading unchanged: 280M − 95M − 0 = +185M.
+    expect(message).toContain(
+      "• Kassa harakati (oyliksiz): <b>+185 000 000 so'm</b>",
+    );
   });
 
   it('bounds the MTD Expense query by a date-only Tashkent month window, never a -5h shifted timestamp (regression)', async () => {
@@ -412,3 +434,48 @@ describe('TelegramGroupDailyReportService', () => {
     );
   });
 });
+
+/**
+ * H5: «Sof foyda» had four different definitions across the app. This message
+ * carried the worst one — `tushum − xarajat − avans`, which subtracts NO salary
+ * (payroll never reaches the `Expense` table) while still deducting advance cash
+ * the canonical formula does not treat as an expense. It then printed the full
+ * deserved salary a few lines below its own inflated profit.
+ */
+describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-08T16:00:00Z'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('falls back to an honestly-named cash line when the canonical figure fails', async () => {
+    const state = defaultState();
+    const svc = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockRejectedValue(new Error('db down')),
+    });
+
+    const { message } = await svc.build(1);
+
+    // No "Sof foyda" claim at all — a cash number must never wear that label.
+    expect(message).not.toContain('• Sof foyda:');
+    expect(message).toContain('• Kassa harakati (oyliksiz):');
+  });
+
+  it('asks for the Tashkent calendar month of today', async () => {
+    const state = defaultState();
+    const getMonthlyNetProfit = jest
+      .fn()
+      .mockResolvedValue({ netProfit: 1_000 });
+    const svc = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit,
+    });
+
+    await svc.build(1);
+
+    expect(getMonthlyNetProfit).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ month: '2026-07' }),
+    );
+  });
+});
+
