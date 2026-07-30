@@ -31,8 +31,10 @@ Ikki alohida, lekin bir-biriga bog'liq muammo:
 | Savol | Qaror |
 |---|---|
 | Bazadagi `login` maydoni | Yangi akkauntlarda `login` = telefon raqam (bot VA admin panel). Mavjud akkauntlar tegilmaydi — eski username fallback sifatida ishlashda davom etadi |
-| Input ko'rinishi | Chapda o'zgarmas `+` addon, input butunlay bo'sh, jonli formatlash (`XX XXX XX XX`) yo'q — chet el raqamiga to'g'ri kelmaydi |
-| Qamrov | Web kirish + «Parolni unutdingizmi?» dialogi + native student-app |
+| Input ko'rinishi (kirish) | Chapda o'zgarmas `+` addon, input butunlay bo'sh, jonli formatlash (`XX XXX XX XX`) yo'q — chet el raqamiga to'g'ri kelmaydi |
+| Qamrov | Faqat **kirish** ekranlari: web (admin/lehrer/student) + native student-app login |
+| «Parolni unutdingizmi?» | **Tegilmaydi** — avvalgidek `+998` static prefiks + 9 xonali jonli formatlangan input. Sabab: Eskiz SMS ni faqat O'zbekiston raqamlariga yetkazadi, ya'ni bu cheklov haqiqatni aks ettiradi |
+| Mavjud username akkauntlar (`namangantest`) | Telefon raqami bilan kirish **allaqachon ishlaydi** — `validateUser` `User.phone` bo'yicha ham topadi. Ular bilmasligining sababi — bot ularga username aytgan. Bazada tegilmaydi, username ham ishlashda davom etadi |
 
 ## 1. Bot xabari: login = telefon raqam
 
@@ -79,9 +81,13 @@ o'chiriladi, `generatePassword` to'g'ridan-to'g'ri
 |---|---|
 | `client/src/app/(auth)/login/login-form.tsx` (113–133) | `+998` span → `+` addon; `formatPhoneInput` va `maxLength` olib tashlanadi; placeholder `998 90 123 45 67` |
 | `client/src/app/(auth)/login/student-login-form.tsx` (84) | `addon="+998"` → `addon="+"`, formatlashsiz |
-| `client/src/components/auth/forgot-password-dialog.tsx` (177) | xuddi shunday |
 | `student-app/src/app/(auth)/login.tsx` (116) | `phone.length === 9` → kamida 8 raqam |
-| `student-app/src/app/(auth)/forgot-password.tsx` (49, 112) | xuddi shunday |
+
+**Tegilmaydigan fayllar** (ataylab):
+- `client/src/components/auth/forgot-password-dialog.tsx` — `+998` static
+  prefiks + `formatPhoneInput` avvalgidek qoladi.
+- `student-app/src/app/(auth)/forgot-password.tsx` — `length === 9` sharti
+  avvalgidek qoladi.
 
 Serverga qiymat **yozilganidek** (trim qilingan xom satr) yuboriladi —
 `slice(-9)` olib tashlanadi. Yon foyda: eski username bilan kirish ham qayta
@@ -107,38 +113,23 @@ ishlaydi, chunki raqamga aylantirish endi klientda emas, serverda bo'ladi.
    Shartlar dublikatsiz yig'iladi. 9 xonali va `998`+12 xonali xatti-harakat
    o'zgarmaydi — mavjud foydalanuvchilar uchun regressiya yo'q.
 
-3. `server/src/auth/dto/forgot-password-request.dto.ts`: `^\d{9}$` →
-   `^\+?\d{8,15}$`.
-
-4. `server/src/auth/forgot-password/forgot-password.service.ts` → `requestCode`
-   boshida, `normalize()` `null` qaytarsa, generic xabar o'rniga **aniq xato**
-   otiladi: «SMS faqat O'zbekiston raqamlariga yuboriladi. Administrator bilan
-   bog'laning.»
-
-   - `normalize()` o'zi o'zgarmaydi (avvalgidek 9 xonaga keltiradi yoki `null`).
-   - Xato `try` blokidan **oldin**, ya'ni akkaunt izlashdan oldin otiladi —
-     bu faqat format haqidagi javob, anti-enumeration kafolati buzilmaydi
-     (mavjud/mavjud emas holatlar uchun generic «kod yuborildi» o'z kuchida
-     qoladi).
-   - `verifyCode` tegilmaydi: u avvalgidek `INVALID_CODE_MESSAGE` beradi
-     (UZ bo'lmagan raqamga kod hech qachon yuborilmagan bo'ladi).
-   - Redis kalitlari avvalgidek 9 xonali telefonga bog'lanadi.
-
-   Sabab: Eskiz faqat O'zbekiston raqamlariga yetkazadi. Input ochilgach, chet
-   el raqamli foydalanuvchi «kod yuborildi» deb aldangan holda kutib qolmasligi
-   kerak.
+3. Parolni tiklash oqimi (`forgot-password-request.dto.ts`,
+   `forgot-password.service.ts`) **tegilmaydi**: DTO avvalgidek `^\d{9}$`,
+   `normalize()` avvalgidek, Redis kalitlari avvalgidek. Front ham `+998`
+   prefiksni saqlab qolgani uchun bu oqim butunlay o'zgarishsiz qoladi.
 
 ## 3. Testlar
 
 - `server/src/auth/auth.service.spec.ts` — chet el 12 xonali raqam bilan
   kirish ishlaydi; 9 xonali avvalgidek; `998`+12 xonali avvalgidek; eski
-  username fallback avvalgidek.
+  username (`namangantest`) bilan kirish avvalgidek; **username akkaunt o'z
+  telefon raqami bilan kiradi** (1-muammoning asosiy tekshiruvi).
 - `server/src/common/utils/phone.util.spec.ts` — `phone-utils.spec.ts` dan
   ko'chirilgan holatlar (UZ 9/12, chet el, juda qisqa/uzun → null).
-- `forgot-password.service.spec.ts` — UZ bo'lmagan raqam → BadRequest, akkaunt
-  izlanmaydi; UZ raqam avvalgidek generic xabar.
 - Sahna darajasida: yaratilgan `User.login === data.phone` (ustoz va xodim),
   `generateUniqueLogin` chaqirilmasligi.
+- `forgot-password.service.spec.ts` tegilmaydi (oqim o'zgarmaydi) — mavjud
+  testlar yashil qolishi regressiya yo'qligining dalili.
 
 ## Joylashtirish
 
