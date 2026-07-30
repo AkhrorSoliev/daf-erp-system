@@ -4,7 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { RoomsController } from './rooms.controller';
 import { RoomsService } from './rooms.service';
 import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
 
 describe('RoomsController — role guards', () => {
   let controller: RoomsController;
@@ -110,9 +110,10 @@ describe('RoomsController — role guards', () => {
   });
 
   describe('findAll() — no guard', () => {
-    it('should NOT have @Roles metadata', () => {
+    it('is staff-only — a student-portal token must not read it', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
+      expect(roles).not.toContain('Student');
     });
   });
 });

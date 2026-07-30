@@ -34,6 +34,14 @@ describe('BranchesService — status methods', () => {
       userBranch: { count: jest.fn().mockResolvedValue(0) },
       room: { count: jest.fn().mockResolvedValue(0) },
       course: { count: jest.fn().mockResolvedValue(0) },
+      // The caller-scope guard reads the acting user; a CEO spans all branches.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
     };
 
     statusHistoryService = {
@@ -112,3 +120,88 @@ describe('BranchesService — status methods', () => {
     });
   });
 });
+
+/**
+ * Closing a branch cascades: every group goes CANCELLED and every active
+ * enrollment DROPPED. Only the company was checked, so a Branch Director could
+ * pass another branch's id and stop it with one request.
+ */
+describe('BranchesService — caller branch confinement', () => {
+  let service: BranchesService;
+  let prisma: any;
+
+  const branch = { id: 2, name: 'Namangan', companyId: 1001, deletedAt: null };
+
+  const makeService = async (caller: any) => {
+    prisma = {
+      branch: {
+        findFirst: jest.fn().mockResolvedValue(branch),
+        findUnique: jest.fn().mockResolvedValue(branch),
+        update: jest.fn().mockResolvedValue(branch),
+      },
+      user: { findFirst: jest.fn().mockResolvedValue(caller) },
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        BranchesService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: StatusHistoryService,
+          useValue: { changeStatus: jest.fn().mockResolvedValue({}) },
+        },
+        { provide: StatusCascadeService, useValue: { cascade: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordUpdate: jest.fn(), recordStatusChange: jest.fn() },
+        },
+      ],
+    }).compile();
+    service = module.get(BranchesService);
+  };
+
+  it("refuses to edit another branch", async () => {
+    await makeService({
+      mainBranch: 1,
+      branches: [{ branchId: 1 }],
+      roles: [{ role: { name: 'Branch Director' } }],
+    });
+
+    await expect(
+      service.update(2, { name: 'Bosib olindi' } as any, 99, 1001),
+    ).rejects.toThrow(/o'z filialingizni/);
+    expect(prisma.branch.update).not.toHaveBeenCalled();
+  });
+
+  it('allows a director to edit their own branch', async () => {
+    await makeService({
+      mainBranch: 2,
+      branches: [{ branchId: 2 }],
+      roles: [{ role: { name: 'Branch Director' } }],
+    });
+
+    await expect(
+      service.update(2, { name: 'Yangi nom' } as any, 99, 1001),
+    ).resolves.toBeDefined();
+  });
+
+  it('lets a CEO edit any branch', async () => {
+    await makeService({
+      mainBranch: null,
+      branches: [],
+      roles: [{ role: { name: 'CEO' } }],
+    });
+
+    await expect(
+      service.update(2, { name: 'Yangi nom' } as any, 99, 1001),
+    ).resolves.toBeDefined();
+  });
+
+  it('refuses when the caller cannot be identified (fail closed)', async () => {
+    await makeService(null);
+
+    await expect(
+      service.update(2, { name: 'X' } as any, 99, 1001),
+    ).rejects.toThrow(/topilmadi/);
+  });
+});
+

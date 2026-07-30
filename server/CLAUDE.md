@@ -460,6 +460,22 @@ Business rules from `docs/branch-decisions.md`. They exist because a second bran
 - **Lead conversion requires a branch.** `LeadsService.convert` throws when neither `branchId` nor a group resolves one.
 - **A teacher may not be put in front of a class without a salary rate.** `GroupsWriteService.assertTeachersHaveRate` blocks create/update when an assigned teacher has no active `EmployeeSalaryConfig`. `createAccrual` silently returns null when no rate version covers the lesson date, and a rate cannot be back-dated into a closed payroll period — so those lessons earn the teacher nothing, permanently (this is how ~20 mln so'm went missing in May 2026). The assignment is the last point where it is still fixable.
 
+#### Staff-only list endpoints
+
+`GET /students`, `/branches` (+`:id`), `/rooms` (+`:id`), `/courses` (+`:id`) and `/dashboard/today-schedule` carried **no `@Roles()` at all**. The global `JwtAuthGuard` only proves the caller is logged in — and a student-portal token is a valid login. `studentSelect` returns phone, parent phone, address, passport series and balance, so any student could pull the centre's entire PII database.
+
+- They now carry `@Roles(...STAFF_ROLES)` (`common/decorators/staff-roles.ts`) — every role **except Student**. A narrow whitelist would be wrong: the dashboard is visible to teachers, the payment dialog to cashiers, group screens to all staff. Students read their own data through `student-portal.controller.ts`.
+- The controller specs assert the guard **exists** and excludes `Student`. Four of them previously asserted the opposite ("should NOT have @Roles metadata"), which encoded the hole — do not reintroduce that shape.
+
+#### Object-level branch confinement
+
+A `@Roles()` guard proves the caller has a role, not that the record is theirs. Two id-addressed writes were company-scoped only:
+
+- **`BranchesService.update` / `changeStatus`** — a Branch Director could pass another branch's id and edit or **CLOSE** it. Closing cascades: every group of that branch goes `CANCELLED` and every active enrollment `DROPPED`. `assertCallerMayTouchBranch` now confines non-CEO callers to their own branch and **fails closed** when the caller cannot be identified.
+- **`UsersService.updateUser`** — accepts `password`, so a director could take over another branch's accounts. `assertCallerMayTouchUser` requires an overlap between the caller's branches and the target's; editing yourself is always allowed, a CEO spans everything, and a branch-less caller or target is refused.
+
+When adding a new id-addressed mutation, check the record's branch against the caller's — `companyId` alone is not a boundary once there is more than one branch.
+
 #### Registration deep links
 
 - **Teacher onboarding goes through the SIGNED `employee_<branch>_roles_<ids>_sig_<hmac>` link only.** The legacy unsigned `teacher_<branchId>` payload is **retired** — it carried no signature, so anyone holding one could edit the number and register as a teacher of any branch. `/start` answers old links with "ask for a new link" rather than failing silently. The client mints links via `POST /telegram/employee-link` (see `useTeacherRegistrationLink`); never build a payload in the browser.

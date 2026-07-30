@@ -15,7 +15,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CountByBranchQueryDto } from './dto/count-by-branch-query.dto';
 import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, STAFF_ROLES } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
 @Controller('rooms')
@@ -30,6 +30,10 @@ export class RoomsController {
     return this.roomsService.countByBranch(query, companyId);
   }
 
+  // Staff only — a student-portal token used to read this too.
+  // (room list feeds group forms and the occupancy view.)
+  @UseGuards(RolesGuard)
+  @Roles(...STAFF_ROLES)
   @Get()
   findAll(
     @Query() query: RoomQueryDto,
@@ -38,6 +42,9 @@ export class RoomsController {
     return this.roomsService.findAll(query, companyId);
   }
 
+  // Staff only, same reason as the list above.
+  @UseGuards(RolesGuard)
+  @Roles(...STAFF_ROLES)
   @Get(':id')
   findOne(
     @Param('id') id: string,

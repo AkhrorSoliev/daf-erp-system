@@ -4,7 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { BranchesController } from './branches.controller';
 import { BranchesService } from './branches.service';
 import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
 
 describe('BranchesController — role guards', () => {
   let controller: BranchesController;
@@ -128,16 +128,18 @@ describe('BranchesController — role guards', () => {
   });
 
   describe('findAll() — no guard', () => {
-    it('should NOT have @Roles metadata (open to all authenticated users)', () => {
+    it('is staff-only — a student-portal token must not read it', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
+      expect(roles).not.toContain('Student');
     });
   });
 
   describe('findOne() — no guard', () => {
-    it('should NOT have @Roles metadata (open to all authenticated users)', () => {
+    it('is staff-only — a student-portal token must not read it', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findOne);
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
+      expect(roles).not.toContain('Student');
     });
   });
 });
