@@ -1,6 +1,8 @@
 import { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } from 'jose';
 import { UnauthorizedException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import { TelegramIdTokenVerifier } from './telegram-id-token.verifier';
+import { TelegramOauthConfig } from './telegram-oauth.config';
 
 const CLIENT_ID = '8576891251';
 const ISSUER = 'https://oauth.telegram.org';
@@ -120,5 +122,116 @@ describe('TelegramIdTokenVerifier', () => {
     await expect(verifier.verify('')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+  });
+
+  it("phone_number_verified string 'true' bo'lsa rad etadi (qat'iy boolean tekshiruvi)", async () => {
+    const { verifier, sign } = await harness();
+    const token = await sign({
+      ...validPayload,
+      phone_number_verified: 'true' as unknown as boolean,
+    });
+    await expect(verifier.verify(token)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('phone_number_verified 1 (raqam) bo\'lsa rad etadi (qat\'iy boolean tekshiruvi)', async () => {
+    const { verifier, sign } = await harness();
+    const token = await sign({
+      ...validPayload,
+      phone_number_verified: 1 as unknown as boolean,
+    });
+    await expect(verifier.verify(token)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it("id claim yo'q bo'lsa rad etadi", async () => {
+    const { verifier, sign } = await harness();
+    const { id: _omit, ...withoutId } = validPayload;
+    await expect(
+      verifier.verify(await sign(withoutId)),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it.each([
+    ['object', { a: 1 }],
+    ['array', [1, 2]],
+    ['boolean', true],
+    ['null', null],
+  ])('id claim skalyar bo\'lmasa (%s) rad etadi', async (_label, badId) => {
+    const { verifier, sign } = await harness();
+    const token = await sign({ ...validPayload, id: badId as unknown });
+    await expect(verifier.verify(token)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it("clientId bo'sh bo'lsa, boshqa jihatdan mukammal tokenni ham rad etadi", async () => {
+    const { publicKey, privateKey } = await generateKeyPair('RS256');
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = 'test-key';
+    jwk.alg = 'RS256';
+    const keyResolver = createLocalJWKSet({ keys: [jwk] });
+
+    // aud claim bo'sh clientId bilan solishtirilmasin deb ataylab '' emas,
+    // haqiqiy CLIENT_ID bilan imzolaymiz — yagona muammo config.clientId
+    // bo'shligi bo'lishi kerak.
+    const token = await new SignJWT(validPayload)
+      .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(privateKey as CryptoKey);
+
+    const verifier = new TelegramIdTokenVerifier(
+      { clientId: '' } as any,
+      keyResolver,
+    );
+    await expect(verifier.verify(token)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it("exp claim yo'q bo'lsa rad etadi (muddatsiz token abadiy amal qilmasligi kerak)", async () => {
+    const { publicKey, privateKey } = await generateKeyPair('RS256');
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = 'test-key';
+    jwk.alg = 'RS256';
+    const keyResolver = createLocalJWKSet({ keys: [jwk] });
+
+    const verifier = new TelegramIdTokenVerifier(
+      { clientId: CLIENT_ID } as any,
+      keyResolver,
+    );
+
+    // Ataylab `.setExpirationTime(...)` chaqirilmaydi — `exp` claim umuman
+    // yo'q token yasaymiz.
+    const noExpToken = await new SignJWT(validPayload)
+      .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
+      .setIssuedAt()
+      .sign(privateKey as CryptoKey);
+
+    await expect(verifier.verify(noExpToken)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it("Nest DI konteynerida TelegramIdTokenVerifier muammosiz resolve bo'ladi (ilova ko'tarilishini isbotlaydi)", async () => {
+    // Bu test Critical topilmani ushlaydi: `keyResolver?: JWTVerifyGetKey`
+    // ixtiyoriy parametri `@Inject` tokenisiz Nest uchun `Function` tokeni
+    // sifatida ko'rinadi va butun ilova ko'tarilmay qoladi. Bu yerda
+    // haqiqiy Nest konteyneri orqali provider ro'yxatidan o'tkazamiz —
+    // `new TelegramIdTokenVerifier(...)` to'g'ridan-to'g'ri chaqiruvi buni
+    // hech qachon ko'rmas edi.
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        { provide: TelegramOauthConfig, useValue: { clientId: CLIENT_ID } },
+        TelegramIdTokenVerifier,
+      ],
+    }).compile();
+
+    expect(
+      moduleRef.get(TelegramIdTokenVerifier),
+    ).toBeInstanceOf(TelegramIdTokenVerifier);
   });
 });
