@@ -1,5 +1,8 @@
 import { createHash } from 'crypto';
-import { TelegramOauthStateStore } from './telegram-oauth-state.store';
+import {
+  STATE_TTL_SEC,
+  TelegramOauthStateStore,
+} from './telegram-oauth-state.store';
 
 function makeStore(enabled = true) {
   const kv = new Map<string, string>();
@@ -53,15 +56,19 @@ describe('TelegramOauthStateStore', () => {
     expect(url.searchParams.get('code_challenge')).toBe(expected);
   });
 
-  it('state 5 daqiqalik TTL bilan saqlanadi', async () => {
+  it('state eksport qilingan STATE_TTL_SEC bilan saqlanadi', async () => {
     const { store, redis } = makeStore();
     await store.createAuthorizeUrl('https://admin.dafzentrum.uz');
+    // Xom `300` emas, eksport qilingan konstanta — shu bilan eksport haqiqatan
+    // yuk ko'taradi va TTL o'zgarsa test o'z-o'zidan ergashadi.
     expect(redis.set).toHaveBeenCalledWith(
       expect.stringContaining('tg_oauth:state:'),
       expect.any(String),
       'EX',
-      300,
+      STATE_TTL_SEC,
     );
+    // 5 daqiqa ATAYLAB: kirish oynasi undan uzun bo'lmasligi kerak.
+    expect(STATE_TTL_SEC).toBeLessThanOrEqual(300);
   });
 
   it('state BIR MARTALIK — ikkinchi consume null qaytaradi', async () => {

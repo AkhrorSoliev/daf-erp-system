@@ -53,13 +53,14 @@ const validPayload = {
 };
 
 describe('TelegramIdTokenVerifier', () => {
-  it("to'g'ri tokendan telefon va telegram id ni oladi", async () => {
+  it("to'g'ri tokendan FAQAT telefonni oladi", async () => {
     const { verifier, sign } = await harness();
     const result = await verifier.verify(await sign(validPayload));
-    expect(result).toEqual({
-      phoneNumber: '998901234567',
-      telegramUserId: '987654321',
-    });
+    // `id` claim'i tekshiriladi, lekin QAYTARILMAYDI — uni hech kim
+    // ishlatmaydi, katta Telegram id'lari esa `number` sifatida 2^53 dan
+    // oshib aniqligini yo'qotishi mumkin. `toEqual` (mos emas
+    // `toMatchObject`) — qo'shimcha maydon paydo bo'lsa test yiqiladi.
+    expect(result).toEqual({ phoneNumber: '998901234567' });
   });
 
   it('boshqa kalit bilan imzolangan tokenni rad etadi', async () => {

@@ -145,6 +145,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Both login forms render `<TelegramLoginButton />` (`src/components/auth/telegram-login-button.tsx`) under the password form. It **self-hides** unless `GET /auth/telegram/status` reports `enabled` — the OAuth credentials are configured by hand, so an unconfigured environment must show no button rather than a broken one.
 - Clicking it asks the backend for the authorize URL (`GET /auth/telegram/start`) and navigates there. The client never builds the Telegram URL itself and never holds the PKCE verifier.
 - Telegram returns to the API, which 302s to `/auth/telegram/callback?handoff=…` on this app. That page exchanges the single-use handoff for tokens (`POST /auth/telegram/complete`), calls `setAuth`, and redirects (student → `/portal`, everyone else → `/`).
+- **The same page also handles `?error=<message>`** — a server-side failure after the OAuth `state` was consumed 302s here with a human-readable Uzbek message instead of stranding the user on raw JSON at the API domain. Both `error` and the missing-`handoff` fallback are computed in the `useState` **lazy initializer**; do not move them into the effect (`react-hooks/set-state-in-effect`).
 - **The callback page must stay wrapped in `<Suspense>`** — it reads `useSearchParams`, which bails out of static prerendering without a boundary and fails `npm run build`.
 
 #### Dates and Times

@@ -12,13 +12,20 @@ function TelegramCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth } = useAuth();
-  // `handoff` yo'qligi darhol aniqlanadi — lazy initializer'da hisoblanadi,
-  // shu bilan effekt ichida sinxron setState chaqirilmaydi (cascading-render lint qoidasi).
-  const [error, setError] = useState(() =>
-    searchParams.get("handoff")
+  // Server tomon xatosi (`?error=`) va `handoff` yo'qligi darhol aniqlanadi —
+  // lazy initializer'da hisoblanadi, shu bilan effekt ichida sinxron setState
+  // chaqirilmaydi (cascading-render lint qoidasi).
+  //
+  // `?error=` — API callback'i `state` iste'mol qilingandan keyin xatoga
+  // uchrasa, foydalanuvchini API domenida xom JSON bilan qoldirmasdan shu
+  // sahifaga o'qiladigan xabar bilan qaytaradi.
+  const [error, setError] = useState(() => {
+    const fromServer = searchParams.get("error");
+    if (fromServer) return fromServer;
+    return searchParams.get("handoff")
       ? ""
-      : "Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.",
-  );
+      : "Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.";
+  });
   // Strict Mode ikki marta chaqiradi, handoff esa bir martalik — qulflaymiz.
   const consumed = useRef(false);
 

@@ -76,8 +76,22 @@ shart. Amalda buni takrorlamaslik uchun akkauntni topish qismi `validateUser`
 dan ajratib olinadi va ikki joydan chaqiriladi (parol tekshiruvi faqat parolli
 yo'lda qoladi).
 
-Bir raqam bir necha akkauntga tegishli bo'lsa — `validateUser` dagi qoida:
-portal bo'yicha cheklash + `orderBy: { updatedAt: 'desc' }`.
+Bir raqam bir necha akkauntga tegishli bo'lsa — **parolsiz yo'l yopiq holatga
+o'tadi** (implementatsiya paytida o'zgardi, 5-bo'lim talabiga ko'ra shu yerga
+yozildi). Parol bilan kirishda qoida o'zgarmaydi: portal bo'yicha cheklash +
+`orderBy: { updatedAt: 'desc' }` — «g'olib» akkauntga kirish uchun baribir
+O'SHA akkauntning paroli kerak, ya'ni tanlov zararsiz. Telegram yo'lida esa
+parol so'ralmaydi: bitta ofis raqami kassirda ham, administratorda ham bo'lsa
+(ikkisi BIR portalda, ya'ni portal darvozasi ajratib bermaydi), g'olibni tanlash
+Telegram akkaunti egasini BEGONA akkauntga kiritib qo'yardi. Shuning uchun
+`AuthService.findAccountsByIdentifier` (`findMany`, `take: 2` — `where` sharti
+`findAccountByIdentifier` bilan bitta manbadan) bittadan ko'p qatorni topsa,
+kirish rad etiladi:
+
+> «Bu raqam bir nechta akkauntga tegishli. Iltimos, telefon raqam va parol
+> bilan kiring.»
+
+`validateUser` ataylab tegilmaydi — parol bilan kirish aynan avvalgidek qoladi.
 
 Raqam tizimda topilmasa: tushunarli xato — «Bu Telegram raqami tizimda yo'q.
 Administrator bilan bog'laning.»
@@ -96,7 +110,7 @@ bilmay qoladi).
 |---|---|
 | `GET /auth/telegram/status` | `{ enabled: boolean }` — config bor-yo'qligi. Klient tugmani ko'rsatish uchun shuni so'raydi (public, arzon) |
 | `GET /auth/telegram/start` | `state` (random) + PKCE `code_verifier` yasaydi, Redis'ga yozadi (TTL 5 daq, bir martalik, ichida portal origin'i), `oauth.telegram.org/auth` URL'ini qaytaradi. `code_verifier` brauzerga **chiqmaydi** |
-| `GET /auth/telegram/callback` | `state` ni Redis'dan **iste'mol qiladi** → yo'q/muddati o'tgan bo'lsa rad → `code` ni `/token` da almashtiradi → `id_token` ni tekshiradi → akkauntni topadi → portal darvozasi → bizning tokenlar → portalga `?handoff=` bilan redirect |
+| `GET /auth/telegram/callback` | `code` bor-yo'qligini tekshiradi (bir martalik `state` bekorga yoqilmasin) → `state` ni Redis'dan **iste'mol qiladi** → yo'q/muddati o'tgan bo'lsa JSON 400 → `code` ni `/token` da almashtiradi → `id_token` ni tekshiradi → akkauntni topadi → portal darvozasi → bizning tokenlar → portalga `?handoff=` bilan redirect. `state` iste'mol qilingandan KEYINGI har qanday rad etish ham portalga redirect (`?error=<xabar>`) — foydalanuvchi API domenida xom JSON bilan qolmasligi uchun |
 | `POST /auth/telegram/complete` | `handoff` ni iste'mol qiladi (bir martalik, TTL 60 sek) → access+refresh token + user obyekti |
 
 ### `redirect_uri` — bitta, API domenida
@@ -141,9 +155,23 @@ da throttle **umuman yo'q**. Bu ish davomida unga ham chek qo'yiladi
 
 ### Konfiguratsiya
 
-`TELEGRAM_OAUTH_CLIENT_ID`, `TELEGRAM_OAUTH_CLIENT_SECRET` — Railway env.
-Ikkisi ham bo'lmasa, funksiya **butunlay o'chiq**: `start` 404/501 qaytaradi va
-klient tugmani ko'rsatmaydi (config yo'qligi jimgina buzilishga olib kelmasin).
+**UCHTA** env kerak (implementatsiya paytida uchinchisi qo'shildi — 5-bo'lim
+talabiga ko'ra shu yerga yozildi):
+
+- `TELEGRAM_OAUTH_CLIENT_ID`
+- `TELEGRAM_OAUTH_CLIENT_SECRET`
+- `TELEGRAM_OAUTH_REDIRECT_URI` — BotFather'dagi Redirect URI bilan **bayt-ba-bayt**
+  mos bo'lishi shart (Telegram «Must match exactly» deydi), shuning uchun kodga
+  yozib qo'yilmaydi
+
+Bironta bo'lmasa, funksiya **butunlay o'chiq**: `start` **503**
+(`ServiceUnavailableException`, «Telegram orqali kirish hozircha yoqilmagan»)
+qaytaradi va `status` `{ enabled: false }` beradi, ya'ni klient tugmani
+ko'rsatmaydi (config yo'qligi jimgina buzilishga olib kelmasin).
+
+`status` bundan tashqari `Origin` ni ham tekshiradi: portal bo'lmagan manzilda
+(CORS ruxsat bergan Vercel preview aliasi kabi) `{ enabled: false }` qaytaradi —
+aks holda tugma chizilib, bosilganda «Noma'lum portal manzili» 400 berardi.
 
 ## 3. Client
 
@@ -232,8 +260,11 @@ Server (Jest):
   `phone_number` yo'q. Testlarda o'z RSA kalit juftligimiz bilan soxta JWKS
 - akkaunt topish: staff raqami, o'quvchi raqami, chet el raqami
   (`normalizeSharedPhone` bilan), tizimda yo'q raqam → tushunarli xato
-- portal darvozasi: admin portalda ustoz → 403; lehrer'da ustoz → OK;
-  bir raqam ikki akkauntda → portal bo'yicha to'g'ri tanlanishi
+- portal darvozasi: admin portalda ustoz → rad; lehrer'da ustoz → OK;
+  **bir raqam ikki akkauntda → kirish umuman rad etilishi** (1-bo'limga qara)
+  va Redis'da almashtiriladigan `handoff` QOLMASLIGI
+- `state` iste'mol qilingandan keyingi har qanday rad etish portalning kirish
+  sahifasiga `?error=` bilan qaytishi (API domenida xom JSON qolmasligi)
 - `handoff`: bir martalik, muddati o'tgani rad
 - config yo'q bo'lsa `status` `{ enabled: false }` va `start` funksiya o'chiq
   deb javob berishi

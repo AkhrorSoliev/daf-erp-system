@@ -36,8 +36,6 @@ export const TELEGRAM_JWKS_RESOLVER = 'TELEGRAM_JWKS_RESOLVER';
 export interface VerifiedTelegramIdentity {
   /** `phone_number` claim — `+` belgisiz, mamlakat kodi bilan. */
   phoneNumber: string;
-  /** `id` claim — Telegram user id. `sub` EMAS (u opaque identifikator). */
-  telegramUserId: string;
 }
 
 /**
@@ -104,12 +102,16 @@ export class TelegramIdTokenVerifier {
       );
     }
 
+    // `id` claim QIYMATI qaytarilmaydi — uni hech kim ishlatmaydi va katta
+    // Telegram id'lari `number` sifatida 2^53 dan oshib aniqligini yo'qotishi
+    // mumkin. Lekin claim MAVJUD va skalyar ekani tokenning qat'iy
+    // tekshiruvining bir qismi: bu shakl Telegram'ning haqiqiy `id_token`iga
+    // xos, shuning uchun tekshiruvni saqlab qolamiz.
     const rawId = payload.id;
     if (typeof rawId !== 'number' && typeof rawId !== 'string') {
       throw new UnauthorizedException('Telegram javobi tekshirilmadi');
     }
-    const telegramUserId = String(rawId);
 
-    return { phoneNumber, telegramUserId };
+    return { phoneNumber };
   }
 }

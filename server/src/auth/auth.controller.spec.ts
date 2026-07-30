@@ -154,26 +154,54 @@ describe('IpThrottlerGuard.getTracker', () => {
 });
 
 describe('AuthController — telegram/status', () => {
-  it("funksiya yoniq bo'lsa true qaytaradi", () => {
-    const controller = new AuthController(
+  const controllerWith = (enabled: boolean) =>
+    new AuthController(
       {} as any,
       {} as any,
-      { enabled: true } as any,
+      { enabled } as any,
       {} as any,
       {} as any,
     );
-    expect(controller.telegramStatus()).toEqual({ enabled: true });
+  const reqFrom = (origin?: string) => ({ headers: origin ? { origin } : {} });
+
+  it("funksiya yoniq va Origin portal bo'lsa true qaytaradi", () => {
+    expect(
+      controllerWith(true).telegramStatus(
+        reqFrom('https://admin.dafzentrum.uz') as any,
+      ),
+    ).toEqual({ enabled: true });
   });
 
   it("funksiya o'chiq bo'lsa false qaytaradi", () => {
-    const controller = new AuthController(
-      {} as any,
-      {} as any,
-      { enabled: false } as any,
-      {} as any,
-      {} as any,
-    );
-    expect(controller.telegramStatus()).toEqual({ enabled: false });
+    expect(
+      controllerWith(false).telegramStatus(
+        reqFrom('https://admin.dafzentrum.uz') as any,
+      ),
+    ).toEqual({ enabled: false });
+  });
+
+  it("portal BO'LMAGAN origin uchun false qaytaradi (buzilgan tugma chizilmasin)", () => {
+    // CORS ruxsat bergan, lekin portal bo'lmagan manzil (Vercel preview
+    // alias). Avval tugma chizilib, bosilganda `start` 400 berardi.
+    expect(
+      controllerWith(true).telegramStatus(
+        reqFrom('https://client-brown-ten-36.vercel.app') as any,
+      ),
+    ).toEqual({ enabled: false });
+  });
+
+  it('Origin sarlavhasi umuman bo\'lmasa false qaytaradi', () => {
+    expect(controllerWith(true).telegramStatus(reqFrom() as any)).toEqual({
+      enabled: false,
+    });
+  });
+
+  it("lokal dev (localhost) uchun true qaytaradi", () => {
+    expect(
+      controllerWith(true).telegramStatus(
+        reqFrom('http://localhost:3000') as any,
+      ),
+    ).toEqual({ enabled: true });
   });
 
   it('@Public() bilan belgilangan (JWT talab qilmaydi)', () => {
@@ -186,9 +214,8 @@ describe('AuthController — telegram/status', () => {
 });
 
 describe('telegram/start', () => {
-  it('Origin sarlavhasidan authorize URL yasaydi', async () => {
-    const store = { createAuthorizeUrl: jest.fn().mockResolvedValue('https://oauth.telegram.org/auth?x=1') };
-    const local = new AuthController(
+  const controllerWithStore = (store: unknown) =>
+    new AuthController(
       {} as any,
       {} as any,
       { enabled: true } as any,
@@ -196,15 +223,35 @@ describe('telegram/start', () => {
       {} as any,
     );
 
-    const res = await local.telegramStart(
-      {},
-      { headers: { origin: 'https://admin.dafzentrum.uz' } } as any,
-    );
+  it('Origin sarlavhasidan authorize URL yasaydi', async () => {
+    const store = { createAuthorizeUrl: jest.fn().mockResolvedValue('https://oauth.telegram.org/auth?x=1') };
+
+    const res = await controllerWithStore(store).telegramStart({
+      headers: { origin: 'https://admin.dafzentrum.uz' },
+    } as any);
 
     expect(store.createAuthorizeUrl).toHaveBeenCalledWith(
       'https://admin.dafzentrum.uz',
     );
     expect(res).toEqual({ url: 'https://oauth.telegram.org/auth?x=1' });
+  });
+
+  it("query dagi origin qabul QILINMAYDI — faqat Origin sarlavhasi", async () => {
+    // `?origin=` parametri olib tashlandi: klient uni hech qachon yubormagan,
+    // lekin u prodda `?origin=http://localhost:3000` bilan portal cheklovini
+    // chetlab o'tishning yagona yo'li edi. Handler endi bitta argument
+    // (`req`) oladi, ya'ni query'da nima kelsa ham e'tiborsiz qoladi.
+    const store = { createAuthorizeUrl: jest.fn().mockResolvedValue('https://oauth.telegram.org/auth?x=1') };
+
+    await controllerWithStore(store).telegramStart({
+      headers: { origin: 'https://lehrer.dafzentrum.uz' },
+      query: { origin: 'http://localhost:3000' },
+    } as any);
+
+    expect(store.createAuthorizeUrl).toHaveBeenCalledWith(
+      'https://lehrer.dafzentrum.uz',
+    );
+    expect(controllerWithStore(store).telegramStart).toHaveLength(1);
   });
 });
 
@@ -230,6 +277,30 @@ describe('telegram/callback', () => {
     expect(res.redirect).toHaveBeenCalledWith(
       302,
       'https://admin.dafzentrum.uz/auth/telegram/callback?handoff=abc',
+    );
+  });
+
+  it("xato holatida ham 302 qiladi (API domenida xom JSON qolmasin)", async () => {
+    const oauth = {
+      handleCallback: jest.fn().mockResolvedValue({
+        redirectUrl:
+          "https://admin.dafzentrum.uz/auth/telegram/callback?error=Bu+Telegram+raqami+tizimda+yo%27q.",
+      }),
+    };
+    const local = new AuthController(
+      {} as any,
+      {} as any,
+      { enabled: true } as any,
+      {} as any,
+      oauth as any,
+    );
+    const res = { redirect: jest.fn() };
+
+    await local.telegramCallback({ code: 'c', state: 's' }, res as any);
+
+    expect(res.redirect).toHaveBeenCalledWith(
+      302,
+      expect.stringContaining('?error='),
     );
   });
 
