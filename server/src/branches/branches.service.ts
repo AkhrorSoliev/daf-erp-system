@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { BranchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -120,6 +124,44 @@ export class BranchesService {
     return branch;
   }
 
+  /**
+   * A non-CEO caller may only touch their OWN branch.
+   *
+   * Both endpoints only checked `companyId`, so a Branch Director could pass
+   * another branch's id and edit — or CLOSE — it. Closing cascades: every group
+   * of that branch goes CANCELLED and every active enrollment DROPPED. One
+   * request could stop the other branch entirely.
+   */
+  private async assertCallerMayTouchBranch(
+    branchId: number,
+    userId: number | undefined,
+  ): Promise<void> {
+    if (userId == null) {
+      // No identifiable caller means no way to verify scope; fail closed.
+      throw new ForbiddenException("Foydalanuvchi aniqlanmadi");
+    }
+    const caller = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: {
+        mainBranch: true,
+        branches: { select: { branchId: true } },
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    if (!caller) throw new ForbiddenException("Foydalanuvchi topilmadi");
+    if (caller.roles.some((r) => r.role.name === 'CEO')) return;
+
+    const allowed = new Set<number>([
+      ...caller.branches.map((b) => b.branchId),
+      ...(caller.mainBranch != null ? [caller.mainBranch] : []),
+    ]);
+    if (!allowed.has(branchId)) {
+      throw new ForbiddenException(
+        "Siz faqat o'z filialingizni tahrirlashingiz mumkin",
+      );
+    }
+  }
+
   async update(
     id: number,
     dto: UpdateBranchDto,
@@ -132,6 +174,7 @@ export class BranchesService {
     if (!branch) {
       throw new NotFoundException(`Branch #${id} topilmadi`);
     }
+    await this.assertCallerMayTouchBranch(id, userId);
 
     const updated = await this.prisma.branch.update({
       where: { id },
@@ -163,6 +206,7 @@ export class BranchesService {
     if (!branch) {
       throw new NotFoundException(`Branch #${id} topilmadi`);
     }
+    await this.assertCallerMayTouchBranch(id, userId);
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'Branch',

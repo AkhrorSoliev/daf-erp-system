@@ -14,13 +14,17 @@ import { CourseQueryDto } from './dto/course-query.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { ChangeCourseStatusDto } from './dto/change-course-status.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, STAFF_ROLES } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
 @Controller('courses')
 export class CoursesController {
   constructor(private coursesService: CoursesService) {}
 
+  // Staff only — a student-portal token used to read this too.
+  // (course list feeds group forms and price lookups.)
+  @UseGuards(RolesGuard)
+  @Roles(...STAFF_ROLES)
   @Get()
   findAll(
     @Query() query: CourseQueryDto,
@@ -29,6 +33,9 @@ export class CoursesController {
     return this.coursesService.findAll(query, companyId);
   }
 
+  // Staff only, same reason as the list above.
+  @UseGuards(RolesGuard)
+  @Roles(...STAFF_ROLES)
   @Get(':id')
   findOne(
     @Param('id') id: string,

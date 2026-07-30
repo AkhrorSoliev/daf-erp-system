@@ -216,7 +216,20 @@ Shu sababli ustun qo'shilmadi — o'rniga haqiqiy muammo tuzatildi: **pul to'lay
 
 ---
 
-## Batch 7 — Huquqlar (RBAC)
+## Batch 7 — Huquqlar (RBAC) ✅ ASOSIY QISMI BAJARILDI 2026-07-30
+
+| Ish | Natija |
+|---|---|
+| **P55** `GET /students` rol qorovulisiz — to'liq PII | ✅ `STAFF_ROLES` (Student roli chiqarildi) |
+| **P56** `/branches`, `/rooms`, `/courses`, `/dashboard/today-schedule` | ✅ list + detail endpointlariga qorovul |
+| **P51** filial direktori boshqa filialni **yopishi** mumkin | ✅ `assertCallerMayTouchBranch`, fail-closed |
+| **P52** begona filial xodimining **parolini** almashtirish | ✅ `assertCallerMayTouchUser` |
+
+**Eslatma:** to'rtta eski test aynan qorovul **yo'qligini** tasdiqlar edi ("should NOT have @Roles metadata") — ular teskarisiga o'zgartirildi, ya'ni endi qorovul yo'qolsa test yiqiladi.
+
+**Qolgani:** davomatda filial tekshiruvi (P54), kassa endpointlari (P22), hisobot endpointlarining scope'i (P57), `Administrator` rolini filialga cheklash (P59 — CEO qaroriga bog'liq).
+
+### Asl reja (ma'lumot uchun)
 
 - JWT ga `branchIds` + `mainBranch`; bitta `BranchScopeGuard` / `resolveBranchScope(user, requestedBranchId)`. `branch_id` faqat **torroq** filtr bo'ladi, kengaytiruvchi emas. → P53
 - **IDOR yopiladi:** filial statusini o'zgartirish (P51 — boshqa filialni yopish mumkin), `PATCH /users/:id` (begona xodim paroli), guruh/xona/kurs/xarajat id bo'yicha yozish. → P52

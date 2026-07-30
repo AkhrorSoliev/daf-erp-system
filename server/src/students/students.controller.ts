@@ -24,7 +24,7 @@ import { DeleteStudentDto } from './dto/delete-student.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
 import { InitialBalanceDto } from './dto/initial-balance.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
-import { Roles, CurrentUser } from '../common/decorators';
+import { Roles, CurrentUser, STAFF_ROLES } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { TransactionsService } from '../transactions/transactions.service';
 
@@ -37,6 +37,13 @@ export class StudentsController {
     private transactionsService: TransactionsService,
   ) {}
 
+  // Staff only. Without this the global JwtAuthGuard let ANY valid token —
+  // including a student-portal one — pull every student's phone, parent phone,
+  // address, passport series and balance. Teachers and cashiers legitimately
+  // reach this (group screens, payment dialog); the teacher narrowing below
+  // still confines a teacher to their own students.
+  @UseGuards(RolesGuard)
+  @Roles(...STAFF_ROLES)
   @Get()
   findAll(@Query() query: StudentQueryDto, @CurrentUser() currentUser: any) {
     const roles: string[] = currentUser.roles ?? [];

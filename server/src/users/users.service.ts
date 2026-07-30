@@ -413,6 +413,49 @@ export class UsersService {
     return formatUser(user);
   }
 
+  /**
+   * A non-CEO caller may only edit staff of their OWN branch.
+   *
+   * `updateUser` only checked the company, so a Branch Director could pass
+   * another branch's employee id and edit them — including `password`, which
+   * this endpoint accepts. One branch's director could take over the other
+   * branch's accounts.
+   */
+  private async assertCallerMayTouchUser(
+    target: { id: number; mainBranch: number | null; branches: any[] },
+    changedById: number,
+  ): Promise<void> {
+    if (target.id === changedById) return; // editing yourself is always fine
+
+    const caller = await this.prisma.user.findFirst({
+      where: { id: changedById, deletedAt: null },
+      select: {
+        mainBranch: true,
+        branches: { select: { branchId: true } },
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    if (!caller) throw new ForbiddenException('Foydalanuvchi topilmadi');
+    if (caller.roles.some((r) => r.role.name === 'CEO')) return;
+
+    const callerBranches = new Set<number>([
+      ...caller.branches.map((b) => b.branchId),
+      ...(caller.mainBranch != null ? [caller.mainBranch] : []),
+    ]);
+    const targetBranches = new Set<number>([
+      ...target.branches.map((b: any) => b.branch?.id ?? b.branchId),
+      ...(target.mainBranch != null ? [target.mainBranch] : []),
+    ]);
+    // Fail closed: an unscoped caller, or a target with no branch at all, is
+    // not something a branch-level user may edit.
+    const overlap = [...targetBranches].some((b) => callerBranches.has(b));
+    if (callerBranches.size === 0 || targetBranches.size === 0 || !overlap) {
+      throw new ForbiddenException(
+        "Siz faqat o'z filialingiz xodimlarini tahrirlashingiz mumkin",
+      );
+    }
+  }
+
   async updateUser(
     id: number,
     dto: UpdateUserDto,
@@ -429,6 +472,7 @@ export class UsersService {
     }
 
     this.assertSameCompany(user.companyId, callerCompanyId);
+    await this.assertCallerMayTouchUser(user as any, changedById);
 
     // If roles or branches are being modified, re-validate combined state
     if (dto.roleIds !== undefined || dto.branchIds !== undefined) {

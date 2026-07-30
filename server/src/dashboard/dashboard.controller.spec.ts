@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
-import { ROLES_KEY } from '../common/decorators';
+import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
 
 describe('DashboardController', () => {
   let controller: DashboardController;
@@ -34,12 +34,10 @@ describe('DashboardController', () => {
   });
 
   describe('getTodaySchedule()', () => {
-    it('should NOT have @Roles metadata (open to all authenticated users)', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.getTodaySchedule,
-      );
-      expect(roles).toBeUndefined();
+    it('is staff-only — a student-portal token must not read it', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.getTodaySchedule);
+      expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
+      expect(roles).not.toContain('Student');
     });
 
     it('should delegate to service with correct params', async () => {
