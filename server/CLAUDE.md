@@ -446,7 +446,10 @@ The financial system is built on an **append-only ledger** principle — financi
 | Foyda-card click-through chart | legacy cash | renamed «Kassa oqimi» — see below |
 
 - The daily report's old formula was the worst: payroll is never written to `Expense`, so **no salary was deducted**, yet advance cash *was* — and the same message printed the full deserved salary a few lines lower. Both Telegram surfaces now call the canonical figure with a CEO caller (company-wide) and **fall back to an honestly-labelled cash line** if it fails, so a wrong number never wears the "Sof foyda" label.
-- The **trend chart stays cash-based on purpose.** Calling the canonical figure per month would mean roughly ten times the queries per chart open, so the series is named for what it measures — «Kassa oqimi» — instead of competing with the card under the same name. Two different numbers must not share one label.
+- The **trend chart now plots the canonical figure too**, made affordable by a per-month **day cache** (`net-profit-cache.ts`). Six months × one `getMonthlyNetProfit` each is roughly ten times the queries of the cash basis, which is why the series was cheap before; a day is the right granularity because these numbers drift slowly (recognised revenue is keyed by attendance date, so a late payment never moves it — only the covered/gap split shifts). The first chart open of the Tashkent day computes, the rest are free.
+  - Key is per `(company, branch, month)` so overlapping ranges reuse entries and a branch-filtered view never reads the company-wide figure. TTL runs to the next **Tashkent** midnight.
+  - A Redis outage degrades to computing, never to failing; a month whose canonical figure cannot be produced keeps its cash value and is flagged `profitBasis: 'kassa'`, so one bad point never takes the chart down.
+  - `getFinancialTrend` (raw, cash) is left untouched for the Excel path; the chart endpoint calls `getFinancialTrendCanonical`.
 
 #### Multi-month Excel export: every profit leg must share one window
 

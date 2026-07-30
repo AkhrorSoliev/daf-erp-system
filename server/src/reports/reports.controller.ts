@@ -117,8 +117,15 @@ export class ReportsController {
   getFinancialTrend(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.reportsService.getFinancialTrend(companyId, query.branchId);
+    // Canonical profit per month, day-cached — so the chart behind the Foyda
+    // card plots the same figure the card shows instead of a cash proxy.
+    return this.reportsService.getFinancialTrendCanonical(
+      companyId,
+      query.branchId,
+      userId,
+    );
   }
 
   // Income composition for the selected period (the "Tushumlar" card drill-down):
