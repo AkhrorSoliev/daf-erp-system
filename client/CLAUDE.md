@@ -138,6 +138,8 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Use the shared `<PhoneInput>` component from `src/components/ui/phone-input.tsx` — it handles formatting, placeholder, prefix, and `inputMode="numeric"` automatically
 - The component stores **raw 9 digits** (no spaces) in form state while displaying the formatted value. When using with `react-hook-form`, wrap with `<Controller>` instead of `register()`
 
+**EXCEPTION — sign-in identifier fields, do NOT "fix" these:** `client/src/app/(auth)/login/login-form.tsx` and `client/src/app/(auth)/login/student-login-form.tsx` deliberately violate all three rules above. Their identifier field uses a bare, non-editable `+` prefix (not `+998`), has no live `XX XXX XX XX` formatting, no length cap, does **not** use `<PhoneInput>`, and sends the typed value raw (only `.trim()`-ed) to `POST /auth/login`. This is intentional: sign-in must also accept foreign numbers whose country code is part of the stored identifier, and the server (`AuthService.validateUser`, via `normalizeSharedPhone`) normalizes and matches whatever was typed — Uzbek or foreign. **Do not restore the `+998` prefix, live formatting, or `<PhoneInput>` on these two forms** — doing so would re-break sign-in for foreign-number accounts. The password-reset dialog, `client/src/components/auth/forgot-password-dialog.tsx`, is NOT part of this exception — it keeps the full `+998` rule above, because Eskiz (the SMS provider) only delivers OTP codes to Uzbek numbers.
+
 #### Dates and Times
 
 - Date-only display format: **dd.MM.yyyy** — e.g. `21.03.2026`
