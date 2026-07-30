@@ -22,7 +22,6 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
-import { formatPhoneInput } from "@/lib/format-utils";
 
 // SMS-based password reset — now available on every portal (login is phone-based
 // across all roles). Eskiz account is active with approved template 78093; per
@@ -59,8 +58,10 @@ export function LoginForm({ portal }: LoginFormProps) {
     setError("");
     setLoading(true);
 
-    // Barcha portallarda login = 9 raqamli telefon raqam
-    const loginValue = login.replace(/\D/g, "").slice(-9);
+    // Raqamni serverga YOZILGANIDEK yuboramiz: normalizatsiya (O'zbekiston →
+    // 9 xona, chet el → kod bilan) serverda, common/utils/phone.util da.
+    // Klientda kesish chet el raqamining mamlakat kodini yo'q qilardi.
+    const loginValue = login.trim();
 
     try {
       const res = await api.post("/auth/login", { login: loginValue, password });
@@ -111,21 +112,17 @@ export function LoginForm({ portal }: LoginFormProps) {
           </label>
           <div className="flex">
             <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-              +998
+              +
             </span>
             <input
               id="login"
               type="text"
               autoComplete="username"
               required
-              value={formatPhoneInput(login)}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
-                setLogin(digits);
-              }}
-              placeholder="XX XXX XX XX"
-              inputMode="numeric"
-              maxLength={12}
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="998 90 123 45 67"
+              inputMode="tel"
               className="flex h-10 w-full rounded-r-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
