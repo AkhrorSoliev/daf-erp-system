@@ -166,16 +166,18 @@ prod'da ochiq turadi**. Bu ongli qaror (CEO, 2026-07-30). Server tomonidan
 yamash imkoni yo'q — kod solishtirish ham ilovaning kodni ko'rsatishini talab
 qiladi, ya'ni har qanday yechim yangi build talab qiladi.
 
-**Native ishi boshlanganda Telegram auth alohida hal qilinadi.** Birinchi qadam
-— uchta yo'ldan qaysi biri ishlashini aniqlash:
+**Native ishi boshlanganda Telegram auth alohida hal qilinadi** — lekin yo'l
+avvalgi taxminlardan aniqroq. BotFather'ning OIDC ekranida (2026-07-30 da
+ko'rilgan) **«Native Login → Add Native App»** bo'limi bor:
 
-1. Telegram'ning rasmiy iOS/Android SDK'si (GitHub repolari, README'larida
-   tafsilot) — Expo'da native modul = config plugin/prebuild + dev-client
-   rebuild
-2. `expo-auth-session` + custom scheme (`dafstudent://`) — Telegram custom
-   scheme redirect'ni qabul qiladimi, hujjatda **yozilmagan**, sinash kerak
-3. https redirect + universal link (iOS associated domains + Android app
-   links), yoki serverda ilovaga sakraydigan oraliq sahifa
+> Register native apps to enable Telegram Login via deep links without a
+> browser redirect.
+
+Ya'ni native yo'l Telegram tomonidan **rasman qo'llab-quvvatlanadi** va brauzer
+redirect'i kerak emas. Bu avvalgi noaniqlikni (custom scheme qabul qilinadimi,
+universal link kerakmi) hal qiladi. Native ish boshlanganda birinchi qadam:
+ilovani shu bo'limda ro'yxatga olib, deep-link oqimi Expo'da qanday
+ulanishini aniqlash.
 
 ## 5. Implementatsiyadan oldin majburiy tekshiruv
 
@@ -197,17 +199,24 @@ Farq chiqsa — spec shu joyda yangilanadi, keyin kod yoziladi.
 
 ## 6. CEO tomonidan qilinadigan sozlash (kod emas)
 
-1. BotFather → **Bot Settings → Web Login**: Client ID va secret olish
-2. Allowed URLs:
-   - **Redirect URI (bitta):**
-     `https://api.dafzentrum.uz/api/auth/telegram/callback`
-   - **Origin'lar (uchta):** `https://admin.dafzentrum.uz`,
-     `https://lehrer.dafzentrum.uz`, `https://student.dafzentrum.uz`
-   - Lokal ishlash uchun kerak bo'lsa: `http://localhost:4000/api/auth/telegram/callback`
-     va `http://localhost:3000` (Telegram `http`/`localhost` ni qabul qilmasa,
-     lokalda funksiya o'chiq holatda sinaladi — 5-bo'limdagi tekshiruvda shu
-     ham aniqlanadi)
-3. Railway env: `TELEGRAM_OAUTH_CLIENT_ID`, `TELEGRAM_OAUTH_CLIENT_SECRET`
+BotFather → Login Widget → **Switch to OpenID Connect Login** (2026-07-30 da
+bajarilgan). Ekranda: Client ID + Client Secret, **Redirect URIs**, **Trusted
+Origins**, **Native Login**.
+
+1. **Client ID:** `8576891251` (maxfiy emas). **Client Secret** — faqat Railway
+   env'iga, hech qayerga nusxalanmaydi
+2. **Redirect URIs** → «Add a Redirect URI» (*«Must match exactly»*):
+   - `https://api.dafzentrum.uz/api/auth/telegram/callback` — bitta, API
+     domenida (kodni client secret bilan server almashtiradi)
+   - Lokal ishlash uchun (Telegram qabul qilsa):
+     `http://localhost:4000/api/auth/telegram/callback`. Rad etilsa — lokalda
+     funksiya o'chiq holatda sinaladi
+3. **Trusted Origins** → uchta portal:
+   `https://admin.dafzentrum.uz`, `https://lehrer.dafzentrum.uz`,
+   `https://student.dafzentrum.uz`
+4. **Railway env:** `TELEGRAM_OAUTH_CLIENT_ID`,
+   `TELEGRAM_OAUTH_CLIENT_SECRET`
+5. **Native Login** — bu ishda ishlatilmaydi (4-bo'limga qara)
 
 Bularsiz funksiya o'chiq turadi (tugma ko'rinmaydi) — ya'ni sozlash
 kechiksa ham kod xavfsiz joylashtiriladi.
