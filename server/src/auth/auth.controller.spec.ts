@@ -97,6 +97,26 @@ describe('AuthController — rate limiting (F-3)', () => {
     const guards = guardsOf(AuthController.prototype.pollLogin);
     expect(guards).toContain(IpThrottlerGuard);
   });
+
+  it('protects /auth/telegram/status with IpThrottlerGuard', () => {
+    const guards = guardsOf(AuthController.prototype.telegramStatus);
+    expect(guards).toContain(IpThrottlerGuard);
+  });
+
+  it('protects /auth/telegram/start with IpThrottlerGuard', () => {
+    const guards = guardsOf(AuthController.prototype.telegramStart);
+    expect(guards).toContain(IpThrottlerGuard);
+  });
+
+  it('protects /auth/telegram/callback with IpThrottlerGuard', () => {
+    const guards = guardsOf(AuthController.prototype.telegramCallback);
+    expect(guards).toContain(IpThrottlerGuard);
+  });
+
+  it('protects /auth/telegram/complete with IpThrottlerGuard', () => {
+    const guards = guardsOf(AuthController.prototype.telegramComplete);
+    expect(guards).toContain(IpThrottlerGuard);
+  });
 });
 
 describe('AuthController — otp/poll delegatsiyasi', () => {

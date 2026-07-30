@@ -75,8 +75,14 @@ export class AuthController {
   }
 
   // ── Telegram OAuth (OIDC) — web portallar uchun ────────────────────────────
+  // Klient tugmani ko'rsatishdan oldin funksiya yoniqligini so'raydi (login
+  // sahifasi mount bo'lganda). Boshqa Telegram endpointlariga o'xshab
+  // himoyalangan — 30/min/IP, chunki bu autentifikatsiyasiz GET, lekin
+  // start (10/min)dan yengilroq: Redis'ga yozmaydi, tashqi so'rov qilmaydi.
   /** Klient tugmani ko'rsatishdan oldin funksiya yoniqligini so'raydi. */
   @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Get('telegram/status')
   telegramStatus() {
     return { enabled: this.telegramOauthConfig.enabled };
