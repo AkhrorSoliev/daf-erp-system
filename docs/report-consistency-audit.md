@@ -386,7 +386,7 @@ Excel tomoni **to'g'ri** — u ustunni aniq oyna bilan («31.05.2026—30.06.202
 | # | Ish | Nima tuzaladi | Og'irligi |
 |---|---|---|---|
 | ~~**P1**~~ | ~~`computePeriodBounds` ni ustun turiga moslash (H3)~~ | ✅ **BAJARILDI 2026-07-30** — iyul oynasi 01.07 dan boshlanadi, tizim raqami 90 824 433 → 89 005 090 (−1 819 343). H7 ham tuzatildi (PR #375). | — |
-| **P2** | Excel ko'p oylik export (H6) — `monthStr` va davr oynasini birlashtirish yoki ko'p oylik exportda «Sof foyda» ni bloklash | Yillik/3-oylik export'dagi bema'ni foyda | O'rta |
+| ~~**P2**~~ | ~~Excel ko'p oylik export (H6)~~ | ✅ **BAJARILDI 2026-07-30** — foyda oyoqlari davrdagi oylar bo'yicha yig'iladi (har oy o'z top-up asosi bilan), floordan oldingi oylar tashlanadi. `reports-excel.month-range.ts` | — |
 | **P3** | Telegramdagi «% yig'ildi» ni ma'noli formulaga o'tkazish + nomini to'liq yozish (H1) | 109% vs 83% chalkashligi | Kichik |
 | **P4** | «Sof foyda» ni bitta manbaga keltirish (H5): Telegram kunlik + `rm:cfin` + Foyda grafigi → `getMonthlyNetProfit` | 4 xil raqam → 1 | O'rta |
 | **P5** | Prognozni kalendar bo'yicha hisoblash + oy boshida muzlatish (H2) | 11% xato; «dinamik» savol | O'rta-katta (yangi jadval) |
