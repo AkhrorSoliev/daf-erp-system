@@ -83,6 +83,12 @@ describe('SalaryCalculationService', () => {
   // Payroll must settle the COMPLETED one before it: [May 8 → Jun 7].
   const completedStart = new Date('2026-05-07T19:00:00.000Z'); // May 8 00:00 Tashkent
   const completedEnd = new Date('2026-06-07T18:59:59.999Z'); // Jun 8 00:00 Tashkent − 1ms
+  // `lessonDate` is a `@db.Date` column: Postgres truncates a timestamp to its
+  // UTC date when comparing, so the Tashkent-shifted bounds above pulled the
+  // previous period's LAST day into this one (it counted in both). Date columns
+  // therefore get unshifted calendar bounds with an EXCLUSIVE upper edge.
+  const completedStartDate = new Date('2026-05-08T00:00:00.000Z');
+  const completedEndDateExcl = new Date('2026-06-08T00:00:00.000Z');
 
   it('settles the COMPLETED period and sweeps by effective date (COALESCE(creditPeriodDate, lessonDate))', async () => {
     await service.calculateMonthlySalaries(1, { now });
@@ -97,7 +103,10 @@ describe('SalaryCalculationService', () => {
             { creditPeriodDate: { gte: completedStart, lte: completedEnd } },
             {
               creditPeriodDate: null,
-              lessonDate: { gte: completedStart, lte: completedEnd },
+              lessonDate: {
+                gte: completedStartDate,
+                lt: completedEndDateExcl,
+              },
             },
           ],
         }),
@@ -111,6 +120,8 @@ describe('SalaryCalculationService', () => {
     const asOfDate = new Date('2026-04-15T00:00:00.000Z');
     const periodStart = new Date('2026-04-07T19:00:00.000Z'); // Apr 8 00:00 Tashkent
     const periodEnd = new Date('2026-05-07T18:59:59.999Z'); // May 8 00:00 Tashkent − 1ms
+    const periodStartDate = new Date('2026-04-08T00:00:00.000Z');
+    const periodEndDateExcl = new Date('2026-05-08T00:00:00.000Z');
 
     await service.calculateMonthlySalaries(1, { asOfDate, now });
 
@@ -121,7 +132,7 @@ describe('SalaryCalculationService', () => {
             { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
             {
               creditPeriodDate: null,
-              lessonDate: { gte: periodStart, lte: periodEnd },
+              lessonDate: { gte: periodStartDate, lt: periodEndDateExcl },
             },
           ],
         }),

@@ -712,6 +712,21 @@ Every salary config write (PERCENTAGE / FIXED_PER_STUDENT / FIXED_MONTHLY) creat
 
 Value is per-student-per-cycle, NOT per-lesson. Per-lesson amount in `createAccrual` and `salary-summary` is `Math.round(value / lessonPaymentCount)`. The previous bug wrote the full `value` per lesson, inflating teacher pay by `lessonPaymentCount × `.
 
+#### Period bounds are column-type aware (`PeriodBounds`)
+
+`computePeriodBounds` returns **two** pairs, and picking the wrong one silently double-counts a day:
+
+| Pair | Use with | Columns |
+|---|---|---|
+| `periodStart` / `periodEnd` (Tashkent-shifted instants, `lte`) | TIMESTAMP columns | `SalaryAccrual.creditPeriodDate`, `SalaryPayment.periodStart/End`, `EmployeeSalaryConfigVersion.effectiveFrom/To` |
+| `periodStartDate` / `periodEndDateExclusive` (unshifted UTC dates, **`lt`**) | `@db.Date` columns | `SalaryAccrual.lessonDate`, `Attendance.date`, `Expense.date` |
+
+**Why:** Postgres compares a `date` column against a timestamp by truncating the timestamp to its UTC calendar date. The Tashkent-shifted start of July is `2026-06-30T19:00:00Z`, which truncates to **2026-06-30** — so `lessonDate >= periodStart` swept the last day of June into July, and that day counted in **both** periods. Measured on production: July's salary figure was inflated by **1 819 343 so'm**, and the error flowed into the Foyda card, the Excel «Sof foyda» sheet and the Telegram daily report. Fixing the bounds dropped the July figure from 90 824 433 to 89 005 090.
+
+The upper date bound is **exclusive** on purpose: `lte …T18:59:59.999Z` truncates to the period's last day and would include it twice over.
+
+Note that 30.06 lessons can still legitimately appear in July via `creditPeriodDate` — that is the carry-over feature (a late payment credited to the open period), not the boundary defect. `scripts/audit-boundary-probe.ts` checks the boundary; `scripts/audit-july-clean.ts` predates the fix and its «ORTIQCHA» line no longer measures double counting.
+
 #### Salary Period (`SalaryPeriodSetting`)
 
 Per-company configurable cycle start day (default 8). Replaces the previously-hardcoded `8 → 7` window.

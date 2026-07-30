@@ -70,7 +70,12 @@ export class SalaryCalculationService {
   ) {
     // `now` is injectable for deterministic tests; production passes nothing.
     const now = opts.now ?? new Date();
-    const { periodStart, periodEnd } = opts.asOfDate
+    const {
+      periodStart,
+      periodEnd,
+      periodStartDate,
+      periodEndDateExclusive,
+    } = opts.asOfDate
       ? await resolveCurrentPeriod(this.prisma, companyId, opts.asOfDate)
       : await resolveCompletedPeriod(this.prisma, companyId, now);
 
@@ -90,7 +95,13 @@ export class SalaryCalculationService {
     // like student-covered ones — the payment's gross becomes the FULL deserved
     // salary. Periods before the switch keep the covered-only behaviour intact.
     if (isTopUpPeriod(periodStart)) {
-      await this.writeCenterTopUpAccruals(companyId, periodStart, periodEnd);
+      await this.writeCenterTopUpAccruals(
+        companyId,
+        periodStart,
+        periodEnd,
+        periodStartDate,
+        periodEndDateExclusive,
+      );
     }
 
     const results: {
@@ -122,7 +133,7 @@ export class SalaryCalculationService {
           { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
           {
             creditPeriodDate: null,
-            lessonDate: { gte: periodStart, lte: periodEnd },
+            lessonDate: { gte: periodStartDate, lt: periodEndDateExclusive },
           },
         ],
       },
@@ -426,11 +437,15 @@ export class SalaryCalculationService {
     companyId: number,
     periodStart: Date,
     periodEnd: Date,
+    periodStartDate: Date,
+    periodEndDateExclusive: Date,
   ): Promise<void> {
     const gapByUser = await this.computeGapAccruals(
       companyId,
       periodStart,
       periodEnd,
+      periodStartDate,
+      periodEndDateExclusive,
     );
     if (gapByUser.size === 0) return;
 
@@ -498,6 +513,10 @@ export class SalaryCalculationService {
     companyId: number,
     periodStart: Date,
     periodEnd: Date,
+    // `@db.Date` bounds, kept separate from the timestamp pair — see
+    // `PeriodBounds`. Upper bound is exclusive.
+    periodStartDate: Date,
+    periodEndDateExclusive: Date,
   ): Promise<Map<number, GapSpec[]>> {
     const [
       accruals,
@@ -519,7 +538,7 @@ export class SalaryCalculationService {
               { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
               {
                 creditPeriodDate: null,
-                lessonDate: { gte: periodStart, lte: periodEnd },
+                lessonDate: { gte: periodStartDate, lt: periodEndDateExclusive },
               },
             ],
           },
@@ -531,7 +550,7 @@ export class SalaryCalculationService {
           where: {
             companyId,
             status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
-            date: { gte: periodStart, lte: periodEnd },
+            date: { gte: periodStartDate, lt: periodEndDateExclusive },
           },
           select: { id: true, studentId: true, groupId: true, date: true },
         }),
@@ -569,7 +588,7 @@ export class SalaryCalculationService {
           where: {
             companyId,
             status: { in: ['PRESENT', 'LATE'] },
-            date: { lte: periodEnd },
+            date: { lt: periodEndDateExclusive },
           },
           _count: { _all: true },
         }),
