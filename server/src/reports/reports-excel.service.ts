@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { ReportsService } from './reports.service';
 import {
+  aggregatableMonths,
+  sumMonthlySalaries,
+} from './reports-excel.month-range';
+import {
   tashkentTodayStr,
   dmy,
   nowLabel,
@@ -324,13 +328,62 @@ export class ReportsExcelService {
     // headline + the dedicated sheet + the reconciliation tie. Revenue is the
     // "dars tushumi" (recognized — lessons HELD this month), so it pairs with the
     // covered teacher salary and isolates the month from late/pre-payments.
-    const [rvY, rvM] = monthStr.split('-').map(Number);
-    const recognizedRevenue = await this.reports.getRecognizedRevenue(companyId, {
-      start: new Date(Date.UTC(rvY, rvM - 1, 1)),
-      end: new Date(Date.UTC(rvY, rvM, 1)),
-      branchId: query.branchId,
-    });
-    const np = buildNetProfit(pl, salaries, outflows, monthStr, recognizedRevenue);
+    //
+    // MULTI-MONTH: every leg must cover the SAME window. Operating expenses and
+    // refunds already span the whole period, so revenue and salary are summed
+    // across the period's months too. Previously both came from `monthStr`
+    // alone, so a 3-month export subtracted 3 months of cost from 1 month of
+    // income, and the yearly preset (monthStr = 2026-01, no attendance) printed
+    // the negative of the whole year's expenses as its headline figure.
+    const rangeStart = query.startDate ?? `${monthStr}-01`;
+    const rangeEnd = query.endDate ?? `${monthStr}-31`;
+    const { months: profitMonths } = aggregatableMonths(
+      rangeStart,
+      rangeEnd,
+      salaries.floorMonth ?? monthStr,
+    );
+
+    const revenuePerMonth = await Promise.all(
+      profitMonths.map((m) => {
+        const [y, mm] = m.split('-').map(Number);
+        return this.reports.getRecognizedRevenue(companyId, {
+          start: new Date(Date.UTC(y, mm - 1, 1)),
+          end: new Date(Date.UTC(y, mm, 1)),
+          branchId: query.branchId,
+        });
+      }),
+    );
+    const recognizedRevenue = revenuePerMonth.reduce((a, b) => a + b, 0);
+
+    let np;
+    if (profitMonths.length <= 1) {
+      // Single-month export keeps the original single-call path exactly.
+      np = buildNetProfit(
+        pl,
+        salaries,
+        outflows,
+        profitMonths[0] ?? monthStr,
+        recognizedRevenue,
+      );
+    } else {
+      // `salaries` itself stays single-month — the "Oyliklar" sheet is a
+      // per-month view by design. Only the profit legs are aggregated.
+      const perMonth = await Promise.all(
+        profitMonths.map(async (m) => ({
+          month: m,
+          salaries: await this.reports.getSalaryMonthly(
+            companyId,
+            m,
+            query.performedById ?? 0,
+            query.branchId,
+          ),
+        })),
+      );
+      const aggregated = sumMonthlySalaries(perMonth);
+      // No `month` argument: top-up gating is already applied per month inside
+      // `sumMonthlySalaries`, so `fullDeserved` is the correct basis.
+      np = buildNetProfit(pl, aggregated, outflows, undefined, recognizedRevenue);
+    }
     summarySheet(wb, overview, prior, period, currentTag, priorTag, np);
     netProfitSheet(wb, np, period);
     profitLossSheet(wb, pl, period);

@@ -434,6 +434,16 @@ The financial system is built on an **append-only ledger** principle — financi
   - `maxWait: 10000, timeout: 15000` configured for Neon serverless cold-start tolerance
 - **Methods**: `recordPayment()`, `deductLessonFee()`, `recordRefund()`, `recordSalaryPayment()`, `recordExpense()`, `reverseTransaction()`, `createAdjustment()`
 
+#### Multi-month Excel export: every profit leg must share one window
+
+`ReportsExcelService.generate` builds "Sof foyda" from several sources, and they must all cover the **same** months. They did not: revenue (`getRecognizedRevenue`) and teacher salary (`getSalaryMonthly`) came from `startDate`'s month alone, while operating expenses (`getProfitLoss`) and refunds (`getPeriodOutflows`) covered the whole selected period. A 3-month export therefore subtracted 3 months of cost from 1 month of income. The yearly preset was worse: `monthStr` became `2026-01`, which has no attendance, so revenue was 0 and the sheet printed the negative of the entire year's expenses as its headline "most accurate" figure.
+
+- `reports-excel.month-range.ts` sums the legs across the period's months. Each month contributes on **its own** top-up basis (`fullDeserved` from `TOPUP_EFFECTIVE_MONTH` on, `covered` before), so gating stays per month; the aggregated object is then passed to `buildNetProfit` **without** a `month` argument.
+- **Months before the reporting floor are dropped, not clamped.** `getSalaryMonthly` clamps a too-early month up to `floorMonth`, so summing an unclamped list would count the floor month once per skipped month — the yearly export's core defect.
+- `MAX_AGGREGATED_MONTHS` caps the fan-out; a single-month export keeps the original single-call path byte-for-byte.
+- The `Oyliklar` sheet still receives the **single-month** `salaries` object — it is a per-month view by design. Only the profit legs are aggregated.
+- **The `Tekshiruv` footing cannot catch this class.** It re-adds `np`'s own fields and compares them to `np.netProfit`, which is tautologically equal — an arithmetic check, not a window check. Do not treat a green footing as proof the windows agree.
+
 #### Branch attribution on the ledger (mandatory)
 
 **Every financial row must carry a `branchId`.** A `branchId = null` row is silently dropped from every per-branch report and cannot be re-attributed afterwards, so `Σ(branches)` stops equalling the company total. This is not cosmetic — the business rule (`docs/branch-decisions.md`) is that each branch computes its own P&L from its own income, expenses and payroll.
