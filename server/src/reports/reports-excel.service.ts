@@ -154,7 +154,17 @@ export class ReportsExcelService {
       }),
       this.reports.getPaymentLineItems(companyId, scope),
       this.reports.getExpenseLineItems(companyId, scope),
-      this.reports.getSalaryMonthly(companyId, monthStr, query.performedById ?? 0),
+      // branchId is REQUIRED here: the revenue leg of this workbook is
+      // branch-scoped, so leaving salary company-wide subtracts every branch's
+      // payroll from one branch's income. The API path was fixed in c490d68;
+      // this call site was missed, which is why the Excel "Sof foyda" sheet and
+      // the Foyda card disagreed for a filtered export.
+      this.reports.getSalaryMonthly(
+        companyId,
+        monthStr,
+        query.performedById ?? 0,
+        query.branchId,
+      ),
       this.reports.getDebtorLineItems(companyId, debtorBranchIds),
       this.reports.getFinancialTrend(companyId, query.branchId),
       companyWide

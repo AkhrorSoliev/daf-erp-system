@@ -483,6 +483,21 @@ describe('ReportsExcelService', () => {
     expect(reports.getSalaryMonthly).toHaveBeenCalled();
   });
 
+  it('scopes the salary leg to the requested branch', async () => {
+    // The revenue leg of this workbook is branch-scoped. Leaving salary
+    // company-wide subtracted EVERY branch's payroll from ONE branch's income:
+    // a Namangan-filtered export showed "Sof foyda" = −90.8M while the Foyda
+    // card showed 0. The API path was fixed in c490d68; this call site was not.
+    await service.generate(1, { branchId: 2 } as any);
+
+    expect(reports.getSalaryMonthly).toHaveBeenCalledWith(
+      1,
+      expect.any(String),
+      expect.any(Number),
+      2,
+    );
+  });
+
   it('adds the center top-up undirish block to Oyliklar when the center fronted money', async () => {
     const wb = await load(await service.generate(1, {}));
     const ws = wb.getWorksheet('Oyliklar')!;
