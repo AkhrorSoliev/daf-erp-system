@@ -141,3 +141,78 @@ describe('resolveCompletedPeriod (payroll settles the period that just ended)', 
     expect(periodEnd.toISOString()).toBe('2026-06-04T18:59:59.999Z'); // Jun 5 00:00 Tashkent − 1ms
   });
 });
+
+/**
+ * The boundary day must belong to exactly ONE period.
+ *
+ * `SalaryAccrual.lessonDate` and `Attendance.date` are `@db.Date`. Postgres
+ * compares a date column against a timestamp by truncating the timestamp to its
+ * UTC calendar date — so the Tashkent-shifted start of July (2026-06-30T19:00Z)
+ * truncated to **2026-06-30** and `lessonDate >= periodStart` quietly swept the
+ * last day of June into July. Measured on production: 30.06 appeared in both
+ * the June and July windows, inflating July's salary figure by 1 819 343 so'm
+ * and carrying that error into the Foyda card, the Excel «Sof foyda» sheet and
+ * the Telegram daily report.
+ */
+describe('computePeriodBounds — @db.Date bounds do not overlap', () => {
+  const CYCLE_START_DAY_1 = 1;
+
+  const june = computePeriodBounds(
+    new Date('2026-06-15T00:00:00.000Z'),
+    CYCLE_START_DAY_1,
+  );
+  const july = computePeriodBounds(
+    new Date('2026-07-15T00:00:00.000Z'),
+    CYCLE_START_DAY_1,
+  );
+
+  it('gives date columns unshifted calendar bounds', () => {
+    expect(july.periodStartDate.toISOString()).toBe('2026-07-01T00:00:00.000Z');
+    expect(july.periodEndDateExclusive.toISOString()).toBe(
+      '2026-08-01T00:00:00.000Z',
+    );
+  });
+
+  it('keeps the timestamp pair Tashkent-shifted (unchanged behaviour)', () => {
+    expect(july.periodStart.toISOString()).toBe('2026-06-30T19:00:00.000Z');
+  });
+
+  it('June ends exactly where July begins — no gap, no overlap', () => {
+    expect(june.periodEndDateExclusive.getTime()).toBe(
+      july.periodStartDate.getTime(),
+    );
+  });
+
+  it('30.06 falls in June only, never in July', () => {
+    const boundaryDay = new Date('2026-06-30T00:00:00.000Z');
+
+    const inJune =
+      boundaryDay >= june.periodStartDate &&
+      boundaryDay < june.periodEndDateExclusive;
+    const inJuly =
+      boundaryDay >= july.periodStartDate &&
+      boundaryDay < july.periodEndDateExclusive;
+
+    expect(inJune).toBe(true);
+    expect(inJuly).toBe(false);
+  });
+
+  it('the old shifted bounds WOULD have double-counted it — regression anchor', () => {
+    // Documents the exact defect: with the timestamp bounds, 30.06 satisfies
+    // both windows once Postgres truncates them to dates.
+    const truncate = (d: Date) =>
+      new Date(d.toISOString().slice(0, 10) + 'T00:00:00.000Z');
+    const boundaryDay = new Date('2026-06-30T00:00:00.000Z');
+
+    expect(truncate(july.periodStart).getTime()).toBe(boundaryDay.getTime());
+    expect(boundaryDay >= truncate(june.periodStart)).toBe(true);
+  });
+
+  it('holds for a mid-month cycle start day too', () => {
+    const a = computePeriodBounds(new Date('2026-06-20T00:00:00.000Z'), 8);
+    const b = computePeriodBounds(new Date('2026-07-20T00:00:00.000Z'), 8);
+    expect(a.periodStartDate.toISOString()).toBe('2026-06-08T00:00:00.000Z');
+    expect(a.periodEndDateExclusive.getTime()).toBe(b.periodStartDate.getTime());
+  });
+});
+

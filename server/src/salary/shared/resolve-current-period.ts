@@ -27,7 +27,7 @@ export async function resolveCurrentPeriod(
   prisma: PrismaLike,
   companyId: number,
   now: Date,
-): Promise<{ periodStart: Date; periodEnd: Date; cycleStartDay: number }> {
+): Promise<PeriodBounds & { cycleStartDay: number }> {
   const setting = await prisma.salaryPeriodSetting.findFirst({
     where: {
       companyId,
@@ -64,7 +64,7 @@ export async function resolveCompletedPeriod(
   prisma: PrismaLike,
   companyId: number,
   now: Date,
-): Promise<{ periodStart: Date; periodEnd: Date; cycleStartDay: number }> {
+): Promise<PeriodBounds & { cycleStartDay: number }> {
   const current = await resolveCurrentPeriod(prisma, companyId, now);
   const lastInstantOfPreviousPeriod = new Date(
     current.periodStart.getTime() - 1,
@@ -76,10 +76,35 @@ export async function resolveCompletedPeriod(
  * Pure function (no DB) — exposed for unit tests and the cron's
  * "is today the cycle start day for this company?" check.
  */
+export interface PeriodBounds {
+  /** Tashkent-shifted instants — for TIMESTAMP columns (`creditPeriodDate`, `SalaryPayment.periodStart`). */
+  periodStart: Date;
+  /** Inclusive, for use with `lte` on TIMESTAMP columns. */
+  periodEnd: Date;
+  /**
+   * Unshifted UTC calendar dates — for `@db.Date` columns (`SalaryAccrual.lessonDate`,
+   * `Attendance.date`, `Expense.date`).
+   *
+   * WHY A SECOND PAIR: Postgres compares a `date` column against a timestamp by
+   * truncating the timestamp to its UTC calendar date. The Tashkent-shifted
+   * start of July is `2026-06-30T19:00:00Z`, which truncates to **2026-06-30** —
+   * so `lessonDate >= periodStart` silently pulled the last day of June into
+   * July. That day therefore landed in BOTH periods, inflating the July salary
+   * figure by 1 819 343 so'm in production and carrying that error into the
+   * Foyda card, the Excel «Sof foyda» sheet and the Telegram daily report.
+   *
+   * The upper bound is EXCLUSIVE on purpose: `lte …T18:59:59.999Z` truncates to
+   * the last day of the period and would include it twice over. Use
+   * `{ gte: periodStartDate, lt: periodEndDateExclusive }`.
+   */
+  periodStartDate: Date;
+  periodEndDateExclusive: Date;
+}
+
 export function computePeriodBounds(
   now: Date,
   cycleStartDay: number,
-): { periodStart: Date; periodEnd: Date } {
+): PeriodBounds {
   // Convert `now` to a Tashkent-local date so day-of-month uses the user's wall clock.
   const tashkentNow = new Date(now.getTime() + TASHKENT_OFFSET_MS);
   const tYear = tashkentNow.getUTCFullYear();
@@ -110,7 +135,14 @@ export function computePeriodBounds(
     periodEndTashkentExclusive.getTime() - TASHKENT_OFFSET_MS - 1,
   );
 
-  return { periodStart, periodEnd };
+  return {
+    periodStart,
+    periodEnd,
+    // The Tashkent calendar dates BEFORE the offset is subtracted are exactly
+    // the plain UTC-midnight values a `@db.Date` comparison needs.
+    periodStartDate: periodStartTashkent,
+    periodEndDateExclusive: periodEndTashkentExclusive,
+  };
 }
 
 /**

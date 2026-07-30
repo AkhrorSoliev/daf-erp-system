@@ -80,7 +80,8 @@ export class SalaryBreakdownService {
    * Shows what they've earned so far this period.
    */
   async getCurrentCycleBreakdown(userId: number, companyId: number) {
-    const { periodStart, periodEnd } = await resolveCurrentPeriod(
+    const { periodStart, periodEnd, periodStartDate, periodEndDateExclusive } =
+      await resolveCurrentPeriod(
       this.prisma,
       companyId,
       new Date(),
@@ -89,6 +90,8 @@ export class SalaryBreakdownService {
     const accruals = await this.fetchAccrualBreakdown(userId, companyId, {
       periodStart,
       periodEnd,
+      periodStartDate,
+      periodEndDateExclusive,
     });
 
     return {
@@ -104,7 +107,13 @@ export class SalaryBreakdownService {
     companyId: number,
     filter:
       | { salaryPaymentId: string }
-      | { periodStart: Date; periodEnd: Date },
+      | {
+          periodStart: Date;
+          periodEnd: Date;
+          // `@db.Date` bounds for `lessonDate`; upper bound exclusive.
+          periodStartDate: Date;
+          periodEndDateExclusive: Date;
+        },
   ) {
     const where: Prisma.SalaryAccrualWhereInput =
       'salaryPaymentId' in filter
@@ -126,7 +135,10 @@ export class SalaryBreakdownService {
               },
               {
                 creditPeriodDate: null,
-                lessonDate: { gte: filter.periodStart, lte: filter.periodEnd },
+                lessonDate: {
+                  gte: filter.periodStartDate,
+                  lt: filter.periodEndDateExclusive,
+                },
               },
             ],
           };

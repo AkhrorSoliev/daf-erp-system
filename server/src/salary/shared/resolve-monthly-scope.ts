@@ -51,6 +51,14 @@ export interface MonthlyScope {
   period: Awaited<ReturnType<typeof resolveCurrentPeriod>>;
   periodStart: Date;
   periodEnd: Date;
+  /**
+   * Bounds for `@db.Date` columns (`lessonDate`, `Attendance.date`). Postgres
+   * truncates a timestamp to its UTC date when comparing, so the Tashkent-
+   * shifted `periodStart` pulled the previous period's last day in — that day
+   * counted in BOTH periods. Upper bound is EXCLUSIVE: use `lt`.
+   */
+  periodStartDate: Date;
+  periodEndDateExclusive: Date;
   /** Calendar-month bounds for advances (accounting date, not the period). */
   monthStart: Date;
   nextMonthStart: Date;
@@ -92,7 +100,8 @@ export async function resolveMonthlyScope(
   // cycleStartDay=1 this is exactly the calendar month.
   const asOf = parseTashkentDateStart(`${month}-15`);
   const period = await resolveCurrentPeriod(prisma, companyId, asOf);
-  const { periodStart, periodEnd } = period;
+  const { periodStart, periodEnd, periodStartDate, periodEndDateExclusive } =
+    period;
 
   // Calendar-month bounds for advances (accounting date, not the period).
   const [my, mm] = month.split('-').map(Number);
@@ -134,6 +143,8 @@ export async function resolveMonthlyScope(
     period,
     periodStart,
     periodEnd,
+    periodStartDate,
+    periodEndDateExclusive,
     monthStart,
     nextMonthStart,
     periodStartLow,
