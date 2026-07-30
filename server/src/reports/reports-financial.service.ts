@@ -749,7 +749,12 @@ export class ReportsFinancialService {
    */
   async getFinancialTrend(companyId: number, branchId?: number) {
     const now = new Date();
-    const months: { label: string; start: Date; end: Date }[] = [];
+    const months: {
+      label: string;
+      monthKey: string;
+      start: Date;
+      end: Date;
+    }[] = [];
 
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -764,7 +769,10 @@ export class ReportsFinancialService {
         999,
       );
       const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-      months.push({ label, start, end });
+      // `YYYY-MM` alongside the display label so callers can ask for the
+      // canonical per-month figure without re-parsing `MM/YYYY`.
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      months.push({ label, monthKey, start, end });
     }
 
     const branchFilter = branchId ? { branchId } : {};
@@ -862,6 +870,7 @@ export class ReportsFinancialService {
 
         return {
           month: m.label,
+          monthKey: m.monthKey,
           income: incomeTotal,
           expenses: chiqimTotal,
           profit: incomeTotal - chiqimTotal,

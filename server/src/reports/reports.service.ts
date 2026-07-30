@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { RedisService } from '../redis/redis.service';
+import { cachedNetProfit } from './net-profit-cache';
 import { StudentStatus } from '@prisma/client';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsOverviewService } from './reports-overview.service';
@@ -66,6 +68,7 @@ export class ReportsService {
     private salaryPayments: SalaryPaymentService,
     private salary: SalaryService,
     private debtors: PaymentsDebtorsService,
+    private redis: RedisService,
   ) {}
 
   // Excel financial report — line-item + reconciliation data sources. Kept on
@@ -229,6 +232,51 @@ export class ReportsService {
   }
   getFinancialTrend(companyId: number, branchId?: number) {
     return this.financial.getFinancialTrend(companyId, branchId);
+  }
+
+  /**
+   * The trend series with `profit` replaced by the CANONICAL monthly net profit
+   * — the same figure the Foyda card and the Excel «Sof foyda» sheet show.
+   *
+   * The raw series computes profit on a cash basis, so opening the chart behind
+   * the Foyda card used to show a different number than the card itself. Doing
+   * it properly means one `getMonthlyNetProfit` per month, which is why it was
+   * left cheap; a per-month DAY cache makes it affordable (see
+   * `net-profit-cache.ts`). The first chart open of the Tashkent day pays,
+   * later ones are free.
+   *
+   * Any month whose canonical figure cannot be produced keeps its cash value
+   * and is flagged, so a failure degrades one point rather than the chart.
+   */
+  async getFinancialTrendCanonical(
+    companyId: number,
+    branchId: number | undefined,
+    performedById: number,
+  ) {
+    const rows = await this.financial.getFinancialTrend(companyId, branchId);
+    return Promise.all(
+      rows.map(async (row: any) => {
+        try {
+          const profit = await cachedNetProfit(
+            this.redis,
+            companyId,
+            branchId,
+            row.monthKey,
+            async () => {
+              const np = await this.getMonthlyNetProfit(companyId, {
+                month: row.monthKey,
+                branchId,
+                performedById,
+              });
+              return np.netProfit;
+            },
+          );
+          return { ...row, profit, profitBasis: 'kanonik' as const };
+        } catch {
+          return { ...row, profitBasis: 'kassa' as const };
+        }
+      }),
+    );
   }
   getIncomeMonthAttribution(
     companyId: number,
