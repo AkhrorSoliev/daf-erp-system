@@ -34,9 +34,15 @@ export class AuthService {
    * still match (a genuinely duplicated phone within one portal), the most
    * recently updated account wins. `null` = no restriction (localhost/dev).
    */
-  async validateUser(
+  /**
+   * Kimlikni (telefon yoki eski username) akkauntga aylantiradi.
+   *
+   * NEGA AJRATILGAN: parol bilan kirish va Telegram OAuth bir xil qoidadan
+   * foydalanishi SHART — aks holda parolsiz yo'l parollidan kengroq bo'lib
+   * qolishi mumkin. Parol tekshiruvi ataylab bu yerda emas.
+   */
+  async findAccountByIdentifier(
     login: string,
-    password: string,
     allowedRoleIds?: number[] | null,
   ) {
     const identifier = (login ?? '').trim();
@@ -64,7 +70,7 @@ export class AuthService {
       return true;
     });
 
-    const user = await this.prisma.user.findFirst({
+    return this.prisma.user.findFirst({
       where: {
         OR: or,
         deletedAt: null,
@@ -89,6 +95,14 @@ export class AuthService {
         },
       },
     });
+  }
+
+  async validateUser(
+    login: string,
+    password: string,
+    allowedRoleIds?: number[] | null,
+  ) {
+    const user = await this.findAccountByIdentifier(login, allowedRoleIds);
 
     if (!user || !user.password) {
       return null;

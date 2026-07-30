@@ -178,6 +178,36 @@ describe('AuthService', () => {
     });
   });
 
+  describe('findAccountByIdentifier', () => {
+    it('validateUser bilan AYNAN bir xil OR shartlarini yasaydi', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      await service.validateUser('+998 97 206 29 22', 'x', [1, 2, 3, 5]);
+      const fromValidate = prisma.user.findFirst.mock.calls[0][0];
+
+      prisma.user.findFirst.mockClear();
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      await service.findAccountByIdentifier('+998 97 206 29 22', [1, 2, 3, 5]);
+      const fromFinder = prisma.user.findFirst.mock.calls[0][0];
+
+      expect(fromFinder).toEqual(fromValidate);
+    });
+
+    it('parolni tekshirmaydi — topilgan qatorni qaytaradi', async () => {
+      prisma.user.findFirst.mockResolvedValue({
+        id: 5,
+        password: 'hash',
+        roles: [],
+        branches: [],
+        company: {},
+      });
+
+      const found = await service.findAccountByIdentifier('901234567', null);
+      expect(found).toMatchObject({ id: 5 });
+    });
+  });
+
   describe('pollLoginRequest', () => {
     it('returns pending for an empty requestId', async () => {
       const res = await service.pollLoginRequest('');
