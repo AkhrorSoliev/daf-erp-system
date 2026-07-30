@@ -474,6 +474,16 @@ A `@Roles()` guard proves the caller has a role, not that the record is theirs. 
 - **`BranchesService.update` / `changeStatus`** — a Branch Director could pass another branch's id and edit or **CLOSE** it. Closing cascades: every group of that branch goes `CANCELLED` and every active enrollment `DROPPED`. `assertCallerMayTouchBranch` now confines non-CEO callers to their own branch and **fails closed** when the caller cannot be identified.
 - **`UsersService.updateUser`** — accepts `password`, so a director could take over another branch's accounts. `assertCallerMayTouchUser` requires an overlap between the caller's branches and the target's; editing yourself is always allowed, a CEO spans everything, and a branch-less caller or target is refused.
 
+**Use the shared helpers** in `common/auth/branch-scope.ts` rather than re-deriving this per service:
+
+- `resolveCallerBranchScope(prisma, userId)` → `{ kind: 'all' }` for a CEO (deliberately branch-less, spans everything) or `{ kind: 'branches', branchIds }` for everyone else, merging `mainBranch` and `UserBranch` because different parts of the system wrote one or the other. A non-CEO with no branch gets an **empty** list — nothing, never everything.
+- `assertCallerInBranch(prisma, userId, branchId, message?)` — throws `ForbiddenException` unless the caller may act on that branch.
+
+Applied to:
+
+- **Attendance** (`attendance.controller.verifyGroupAccess`) — attendance is a money path: saving it deducts from student balances and writes teacher accruals. Only pure teachers were checked, so an Administrator or Branch Director of one branch could take attendance for ANOTHER branch's group, billing its students and paying its teacher. A pure teacher is still checked by group assignment (the stronger test); everyone else by branch.
+- **Cash accounts** (`CashAccountsService.findOne(id, companyId, userId?)`) — `findAll` scoped by branch but every id-addressed operation (movements, patch, delete, transfer, reconcile) checked only `companyId`, so a director could transfer money out of the other branch's kassa or post an adjustment to it. Pass `userId` on any path that reads or moves an account's money; `transfer` checks **both** sides.
+
 When adding a new id-addressed mutation, check the record's branch against the caller's — `companyId` alone is not a boundary once there is more than one branch.
 
 #### Registration deep links

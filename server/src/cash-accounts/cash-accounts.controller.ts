@@ -60,8 +60,9 @@ export class CashAccountsController {
     @Param('id') id: string,
     @Query() query: MovementQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.cashAccountsService.getMovements(id, query, companyId);
+    return this.cashAccountsService.getMovements(id, query, companyId, userId);
   }
 
   @Post(':id/reconcile')
