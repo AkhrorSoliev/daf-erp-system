@@ -10,6 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
 import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
 import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
+import { TelegramIdTokenVerifier } from './telegram-oauth/telegram-id-token.verifier';
 import { EskizModule } from '../eskiz/eskiz.module';
 import { PasswordResetModule } from '../common/password-reset';
 
@@ -38,6 +39,7 @@ import { PasswordResetModule } from '../common/password-reset';
     ForgotPasswordService,
     TelegramOauthConfig,
     TelegramOauthStateStore,
+    TelegramIdTokenVerifier,
   ],
   exports: [AuthService],
 })
