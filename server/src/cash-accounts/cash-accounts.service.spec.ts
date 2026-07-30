@@ -297,6 +297,19 @@ describe('CashAccountsService — branch confinement', () => {
     ).rejects.toThrow(/boshqa filialga tegishli/);
   });
 
+  it('lets a multi-branch admin reach each of their branches', async () => {
+    // An Administrator attached to both branches works in each like a local
+    // admin — the confinement is a set, not a single mainBranch.
+    await makeService({
+      mainBranch: 1,
+      branches: [{ branchId: 1 }, { branchId: 2 }],
+      roles: [{ role: { name: 'Administrator' } }],
+    });
+    await expect(
+      service.getMovements('acc-2', {} as any, 1, 99),
+    ).resolves.toBeDefined();
+  });
+
   it('lets a CEO reach any branch', async () => {
     await makeService({
       mainBranch: null,

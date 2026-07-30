@@ -477,6 +477,7 @@ A `@Roles()` guard proves the caller has a role, not that the record is theirs. 
 **Use the shared helpers** in `common/auth/branch-scope.ts` rather than re-deriving this per service:
 
 - `resolveCallerBranchScope(prisma, userId)` → `{ kind: 'all' }` for a CEO (deliberately branch-less, spans everything) or `{ kind: 'branches', branchIds }` for everyone else, merging `mainBranch` and `UserBranch` because different parts of the system wrote one or the other. A non-CEO with no branch gets an **empty** list — nothing, never everything.
+- **The scope is a SET, deliberately.** An Administrator normally works in one branch, but attaching several is supported: pick multiple branches on the employee form and they act in each exactly like a local admin. Confining to `mainBranch` alone would lock a multi-branch admin out of every branch but one. `mainBranch` remains the tiebreak for the places that need a single answer (payroll, outreach).
 - `assertCallerInBranch(prisma, userId, branchId, message?)` — throws `ForbiddenException` unless the caller may act on that branch.
 
 Applied to:
