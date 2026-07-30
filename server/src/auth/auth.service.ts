@@ -11,6 +11,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { consumeLoginRequest } from '../telegram/flows/app-login-otp-flow';
+import { normalizeSharedPhone } from '../common/utils/phone.util';
 
 @Injectable()
 export class AuthService {
@@ -40,20 +41,28 @@ export class AuthService {
   ) {
     const identifier = (login ?? '').trim();
     const digits = identifier.replace(/\D/g, '');
-    const phone9 =
-      digits.length === 12 && digits.startsWith('998')
-        ? digits.slice(3)
-        : digits.length === 9
-          ? digits
-          : null;
+    // Bot saqlagan ko'rinishga keltiramiz: O'zbekiston → 9 xona, chet el →
+    // mamlakat kodi bilan. Bir manba — common/utils/phone.util.
+    const normalized = digits ? normalizeSharedPhone(digits) : null;
 
-    // Match the phone (staff `phone` field or student `login`=phone) OR the raw
-    // legacy username. Deduped OR clauses.
-    const or: Array<{ login?: string; phone?: string }> = [{ login: identifier }];
-    if (phone9) {
-      or.push({ phone: phone9 });
-      if (phone9 !== identifier) or.push({ login: phone9 });
+    // Kimligi: telefon (staff `phone`, o'quvchi `login`=telefon), yoki eski
+    // username. Xom raqam ham qo'shiladi — ba'zi legacy qatorlarda telefon
+    // 998 prefiksi bilan saqlangan bo'lishi mumkin.
+    const candidates: Array<{ login?: string; phone?: string }> = [
+      { login: identifier },
+    ];
+    for (const value of [normalized, digits]) {
+      if (!value) continue;
+      candidates.push({ phone: value }, { login: value });
     }
+    // Dublikatsiz — bir xil shart ikki marta ketmasin.
+    const seen = new Set<string>();
+    const or = candidates.filter((clause) => {
+      const key = JSON.stringify(clause);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     const user = await this.prisma.user.findFirst({
       where: {
