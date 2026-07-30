@@ -103,3 +103,34 @@ describe('assertCallerInBranch', () => {
     ).rejects.toThrow('Maxsus xabar');
   });
 });
+
+/**
+ * An Administrator normally works in one branch, but the centre can attach
+ * several — and then they must act in each exactly like a local admin. That is
+ * why the scope is a SET rather than a single `mainBranch`: confining to
+ * `mainBranch` alone would silently lock a multi-branch admin out of every
+ * branch but one.
+ */
+describe('multi-branch staff', () => {
+  const multiAdmin = {
+    mainBranch: 1,
+    branchIds: [1, 2],
+    roles: ['Administrator'],
+  };
+
+  it('may act in EVERY attached branch, not just mainBranch', async () => {
+    await expect(
+      assertCallerInBranch(prismaWith(multiAdmin), 10737, 1),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertCallerInBranch(prismaWith(multiAdmin), 10737, 2),
+    ).resolves.toBeUndefined();
+  });
+
+  it('is still refused a branch nobody attached', async () => {
+    await expect(
+      assertCallerInBranch(prismaWith(multiAdmin), 10737, 3),
+    ).rejects.toThrow(/ruxsat yo'q/);
+  });
+});
+
