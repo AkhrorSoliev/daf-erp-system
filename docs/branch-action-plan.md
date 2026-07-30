@@ -227,7 +227,13 @@ Shu sababli ustun qo'shilmadi — o'rniga haqiqiy muammo tuzatildi: **pul to'lay
 
 **Eslatma:** to'rtta eski test aynan qorovul **yo'qligini** tasdiqlar edi ("should NOT have @Roles metadata") — ular teskarisiga o'zgartirildi, ya'ni endi qorovul yo'qolsa test yiqiladi.
 
-**Qolgani:** davomatda filial tekshiruvi (P54), kassa endpointlari (P22), hisobot endpointlarining scope'i (P57), `Administrator` rolini filialga cheklash (P59 — CEO qaroriga bog'liq).
+| **P54** davomatda filial tekshiruvi | ✅ `verifyGroupAccess` — 9 ta endpoint bitta nuqtadan o'tadi |
+| **P22** kassa endpointlari | ✅ `findOne(id, companyId, userId)` — harakatlar, tahrir, o'chirish, transfer (ikki tomoni), solishtiruv |
+| Yagona `common/auth/branch-scope.ts` helperi | ✅ takrorlanuvchi naqsh birlashtirildi |
+
+> **Diqqat — bu P59 ga qisman javob berdi.** Davomat va kassada endi **CEOdan tashqari hamma** o'z filialiga cheklanadi, ya'ni `Administrator` ham. Bu D4/D6 dan kelib chiqadi (har filial o'z P&L i, har xodim bitta filialda), lekin siz P59 ni rasman tasdiqlamagansiz. Agar Administrator kompaniya darajasida qolishi kerak bo'lsa — aytsangiz qaytaraman.
+
+**Qolgani:** hisobot endpointlarining scope'i (P57), `Administrator` rolini boshqa joylarda ham cheklash (P59).
 
 ### Asl reja (ma'lumot uchun)
 

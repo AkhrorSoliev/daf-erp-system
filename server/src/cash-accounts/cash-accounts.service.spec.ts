@@ -25,7 +25,16 @@ describe('CashAccountsService', () => {
     prisma = {
       // The branch a new account is opened for must exist.
       branch: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
-      user: { findUnique: jest.fn() },
+      // The caller-scope guard on every id-addressed cash operation reads the
+      // acting user; a CEO spans all branches.
+      user: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
       cashAccount: {
         create: jest.fn(),
         findFirst: jest.fn(),
@@ -202,3 +211,101 @@ describe('CashAccountsService', () => {
     });
   });
 });
+
+/**
+ * `findAll` applied a branch scope but every id-addressed cash operation only
+ * checked `companyId` — so a director of one branch could transfer money out of
+ * the other branch's kassa, or post an adjustment to it.
+ */
+describe('CashAccountsService — branch confinement', () => {
+  let service: CashAccountsService;
+  let prisma: any;
+
+  const account = (branchId: number) => ({
+    id: `acc-${branchId}`,
+    branchId,
+    companyId: 1,
+    balance: 1_000_000,
+    deletedAt: null,
+  });
+
+  const makeService = async (caller: any) => {
+    const txClient = {
+      cashAccount: { update: jest.fn(), findUniqueOrThrow: jest.fn() },
+      cashMovement: { create: jest.fn() },
+    };
+    prisma = {
+      branch: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
+      user: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(caller),
+      },
+      cashAccount: {
+        create: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(account(2)),
+        findMany: jest.fn(),
+        update: jest.fn(),
+      },
+      cashMovement: { findMany: jest.fn(), count: jest.fn() },
+      $transaction: jest.fn().mockImplementation((cb: any) => cb(txClient)),
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CashAccountsService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: CashMovementsService,
+          useValue: { adjust: jest.fn(), transfer: jest.fn() },
+        },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn() },
+        },
+      ],
+    }).compile();
+    service = module.get(CashAccountsService);
+  };
+
+  const director = {
+    mainBranch: 1,
+    branches: [{ branchId: 1 }],
+    roles: [{ role: { name: 'Branch Director' } }],
+  };
+
+  it("refuses to read another branch's cash movements", async () => {
+    await makeService(director);
+    await expect(
+      service.getMovements('acc-2', {} as any, 1, 99),
+    ).rejects.toThrow(/boshqa filialga tegishli/);
+  });
+
+  it("refuses to reconcile another branch's kassa", async () => {
+    await makeService(director);
+    await expect(
+      service.reconcile('acc-2', { actualBalance: 5, reason: 'x' } as any, 99, 1),
+    ).rejects.toThrow(/boshqa filialga tegishli/);
+  });
+
+  it("refuses to transfer out of another branch's kassa", async () => {
+    await makeService(director);
+    await expect(
+      service.transfer(
+        { fromAccountId: 'acc-2', toAccountId: 'acc-9', amount: 100 } as any,
+        99,
+        1,
+      ),
+    ).rejects.toThrow(/boshqa filialga tegishli/);
+  });
+
+  it('lets a CEO reach any branch', async () => {
+    await makeService({
+      mainBranch: null,
+      branches: [],
+      roles: [{ role: { name: 'CEO' } }],
+    });
+    await expect(
+      service.getMovements('acc-2', {} as any, 1, 99),
+    ).resolves.toBeDefined();
+  });
+});
+

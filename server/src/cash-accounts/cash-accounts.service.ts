@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { Prisma } from '@prisma/client';
 import { CashMovementsService } from './cash-movements.service';
@@ -143,11 +144,28 @@ export class CashAccountsService {
     return { data, totalBalance };
   }
 
-  async findOne(id: string, companyId: number) {
+  /**
+   * Existence + tenant guard, plus the caller's branch when `userId` is given.
+   *
+   * `findAll` applied a branch scope but every id-addressed operation —
+   * movements, patch, delete, transfer, reconcile — checked only `companyId`.
+   * A director of one branch could therefore transfer money out of the other
+   * branch's kassa or post an adjustment to it. Pass `userId` on any path that
+   * reads or moves that account's money.
+   */
+  async findOne(id: string, companyId: number, userId?: number) {
     const account = await this.prisma.cashAccount.findFirst({
       where: { id, companyId, deletedAt: null },
     });
     if (!account) throw new NotFoundException('Kassa hisobi topilmadi');
+    if (userId != null) {
+      await assertCallerInBranch(
+        this.prisma,
+        userId,
+        account.branchId,
+        "Bu kassa boshqa filialga tegishli — sizda ruxsat yo'q",
+      );
+    }
     return account;
   }
 
@@ -155,8 +173,9 @@ export class CashAccountsService {
     id: string,
     query: MovementQueryDto,
     companyId: number,
+    userId?: number,
   ) {
-    await this.findOne(id, companyId); // existence + tenant guard
+    await this.findOne(id, companyId, userId); // existence + tenant + branch
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
@@ -191,7 +210,7 @@ export class CashAccountsService {
     userId: number,
     companyId: number,
   ) {
-    const existing = await this.findOne(id, companyId);
+    const existing = await this.findOne(id, companyId, userId);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const account = await tx.cashAccount.update({
@@ -219,7 +238,7 @@ export class CashAccountsService {
   }
 
   async remove(id: string, userId: number, companyId: number) {
-    const existing = await this.findOne(id, companyId);
+    const existing = await this.findOne(id, companyId, userId);
     // Guard: don't archive an account that still holds money — its balance
     // would silently vanish from the cash-balance KPI. Drain / transfer first.
     if (existing.balance !== 0) {
@@ -252,8 +271,10 @@ export class CashAccountsService {
         "Manba va qabul qiluvchi hisob bir xil bo'lishi mumkin emas",
       );
     }
-    const from = await this.findOne(dto.fromAccountId, companyId);
-    const to = await this.findOne(dto.toAccountId, companyId);
+    // BOTH sides are checked: moving money out of another branch's kassa and
+    // moving money INTO one are equally out of scope.
+    const from = await this.findOne(dto.fromAccountId, companyId, userId);
+    const to = await this.findOne(dto.toAccountId, companyId, userId);
     if (from.balance < dto.amount) {
       throw new BadRequestException("Manba hisobda yetarli mablag' yo'q");
     }
@@ -279,7 +300,7 @@ export class CashAccountsService {
     userId: number,
     companyId: number,
   ) {
-    const account = await this.findOne(id, companyId);
+    const account = await this.findOne(id, companyId, userId);
     const delta = dto.actualBalance - account.balance;
     if (delta === 0) {
       return account; // already reconciled

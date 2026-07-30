@@ -7,7 +7,9 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { AttendanceService } from './attendance.service';
 import { QrAttendanceService } from './qr-attendance.service';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
@@ -32,8 +34,19 @@ export class AttendanceController {
     private prisma: PrismaService,
   ) {}
 
-  /** Verify teacher has access to this group */
-  private async verifyTeacherAccess(
+  /**
+   * Verify the caller may touch this group's attendance.
+   *
+   * Attendance is a money path: saving it deducts from student balances and
+   * writes teacher accruals. Only pure teachers were ever checked here, so an
+   * Administrator or Branch Director of one branch could take attendance for
+   * ANOTHER branch's group — billing its students and paying its teacher.
+   *
+   * A pure teacher is checked by assignment, which is the stronger test (since
+   * the group-teacher guard, a teacher can only be assigned inside their own
+   * branch). Everyone else is checked by branch; a CEO spans all of them.
+   */
+  private async verifyGroupAccess(
     groupId: string,
     roles: string[],
     userId: number,
@@ -48,7 +61,22 @@ export class AttendanceController {
       if (!isAssigned) {
         throw new ForbiddenException('Siz bu guruhga biriktirilmagansiz');
       }
+      return;
     }
+
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null },
+      select: { branchId: true },
+    });
+    if (!group) {
+      throw new NotFoundException('Guruh topilmadi');
+    }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      group.branchId,
+      "Bu guruh boshqa filialga tegishli — davomat bilan ishlash huquqingiz yo'q",
+    );
   }
 
   @Get(':groupId/dates')
@@ -61,7 +89,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.attendanceService.getLessonDates(
       groupId,
       query.month,
@@ -80,7 +108,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.attendanceService.getLessonCalendar(
       groupId,
       query.month,
@@ -99,7 +127,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.attendanceService.getByDate(groupId, date, companyId, roles);
   }
 
@@ -114,7 +142,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.attendanceService.save(
       groupId,
       date,
@@ -135,7 +163,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.attendanceService.getStats(
       groupId,
       query.startDate,
@@ -153,7 +181,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.attendanceService.getLessonSequence(groupId, companyId);
   }
 
@@ -169,7 +197,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.qrAttendanceService.startSession(
       groupId,
       dto.date,
@@ -188,7 +216,7 @@ export class AttendanceController {
     @CurrentUser('id') userId: number,
     @CurrentUser('roles') roles: string[],
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.qrAttendanceService.rotateToken(
       groupId,
       dto.date,
@@ -206,7 +234,7 @@ export class AttendanceController {
     @CurrentUser('id') userId: number,
     @CurrentUser('roles') roles: string[],
   ) {
-    await this.verifyTeacherAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId);
     return this.qrAttendanceService.stopSession(
       groupId,
       dto.date,
