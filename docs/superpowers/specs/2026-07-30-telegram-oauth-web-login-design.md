@@ -1,0 +1,249 @@
+# Telegram OAuth bilan kirish — web (3 portal)
+
+Sana: 2026-07-30
+Holat: dizayn tasdiqlangan (CEO), implementatsiya kutilmoqda
+Bog'liq: `docs/superpowers/specs/2026-07-30-phone-login-open-input-design.md` (PR #381) — bu ish uning kimlik modeliga suyanadi
+
+## Maqsad
+
+Har uch web portalda («admin», «lehrer», «student») telefon+parol yonida
+**«Telegram orqali kirish»** paydo bo'ladi. Ustozlar, adminlar, CEO, kassir,
+o'quvchilar — hammasi.
+
+## Nega uy qurmasi emas, Telegram'ning rasmiy OAuth'i
+
+Bizda allaqachon Telegram orqali kirish bor, lekin **faqat student native
+ilovada** va u Telegram autentifikatsiyasi EMAS: ilova `req_<uuid>` yasab
+`t.me/<bot>?start=req_<uuid>` ni ochadi, bot START bosgan odamni tasdiqlaydi,
+ilova poll qiladi (`app-login-otp-flow.ts`, `telegram.service.ts:264-289`,
+`auth.service.ts` → `pollLoginRequest`). Ya'ni «kim START bosdi — o'sha egasi»
+degan xulosani o'zimiz chiqaramiz.
+
+**Shu yerda relay zaifligi bor:** `requestId` ni KLIENT yasaydi, tasdiqlovchi
+esa boshqa odam bo'lishi mumkin — ikkisi orasida bog'lanish yo'q. Buzg'unchi o'z
+brauzerida `req_X` yasab, qurbonga `t.me/bot?start=req_X` yuboradi; qurbon START
+bosadi; **sessiya buzg'unchining brauzerida ochiladi**. Havola haqiqiy (`t.me`,
+haqiqiy bot), parol kiritilmaydi, va «botga o'tib START bosing» — markazning
+haqiqiy ko'rsatmasi, ya'ni so'rov tabiiy ko'rinadi.
+
+Cheklovlar: 3 daqiqa TTL, bir martalik, portal darvozasi, kanal a'zoligi.
+Zarar o'quvchi holatida maxfiylik bilan cheklangan (parol o'zgartirish joriy
+parolni talab qiladi — `student-portal-write.service.ts:84`; to'lov faqat
+balansga kirim qiladi), LEKIN refresh token **24 soat** va tizimda sessiyani
+bekor qilish mexanizmi **yo'q** (`auth.service.ts:248-256` faqat JWT imzosini
+tekshiradi). Xodimlarga ochilsa — CEO sessiyasi = butun moliya paneli.
+
+Telegram'ning OAuth 2.0 / OIDC oqimi bu muammoni **tuzilishi bo'yicha** yo'q
+qiladi:
+
+1. `state` + PKCE oqimni **boshlagan brauzerga** bog'laydi
+2. `code` bizning domenimizga, **foydalanuvchining o'z brauzerida** redirect
+   bilan keladi — buzg'unchining brauzeriga yetib borish yo'li yo'q
+3. Tasdiqlash ekranini **Telegram** chizadi va qaysi saytga kirilayotganini
+   aytadi (bizning bot faqat «kirish tasdiqlandi» deydi, kimga ekani noma'lum)
+4. Allowed URLs oldindan ro'yxatga olinadi — «For security reasons, Telegram
+   will only process logins or redirect users using your pre-registered URLs»
+5. `code` bir martalik va brauzer ko'rmaydigan client secret bilan server
+   tomonda almashtiriladi
+
+## Qabul qilingan qarorlar
+
+| Savol | Qaror |
+|---|---|
+| Mexanizm | Telegram'ning rasmiy OAuth 2.0 / OIDC (uy qurmasi emas) |
+| Qamrov | Faqat **web** (3 portal). Native ilova bu ishda tegilmaydi |
+| Akkauntni topish | `id_token.phone_number` (Telegram tasdiqlagan) → `normalizeSharedPhone` → mavjud `validateUser` mantiqi kabi |
+| `telegramChatId` | **Yozilmaydi** — `sub` ning bot ko'radigan `chat.id` ga tengligi tasdiqlanmagan. Migration yo'q |
+| Tokenlarni yetkazish | URL'da emas — bir martalik `handoff` kodi orqali |
+| QR kod | Kerak emas — `oauth.telegram.org` sahifasi kompyuterda ham ishlaydi |
+| Parol bilan kirish | Qoladi. Telegram — qo'shimcha yo'l, almashtiruvchi emas |
+
+## 1. Kimlik modeli — PR #381 bilan mos tushadi
+
+`scope=phone` → `id_token.phone_number` = **Telegram tasdiqlagan raqam**,
+foydalanuvchi ruxsati bilan. PR #381 dan keyin telefon raqam allaqachon barcha
+rollarda login, ya'ni yangi kimlik mexanizmi qurilmaydi:
+
+```
+phone_number → normalizeSharedPhone (common/utils/phone.util.ts)
+             → akkauntni topish (staff User.phone / o'quvchi User.login=phone)
+             → portal rollari bo'yicha cheklash (portal-roles.config)
+```
+
+Topish va portal darvozasi mantiqiy jihatdan `validateUser` dagi bilan bir xil
+bo'lishi kerak — parolsiz yo'l parolli yo'ldan **kengroq bo'lib qolmasligi**
+shart. Amalda buni takrorlamaslik uchun akkauntni topish qismi `validateUser`
+dan ajratib olinadi va ikki joydan chaqiriladi (parol tekshiruvi faqat parolli
+yo'lda qoladi).
+
+Bir raqam bir necha akkauntga tegishli bo'lsa — `validateUser` dagi qoida:
+portal bo'yicha cheklash + `orderBy: { updatedAt: 'desc' }`.
+
+Raqam tizimda topilmasa: tushunarli xato — «Bu Telegram raqami tizimda yo'q.
+Administrator bilan bog'laning.»
+
+Bu **enumeration xavfi emas**, chunki bu yo'lga faqat **o'z** raqami bilan
+kirish mumkin: raqamni Telegram beradi va u foydalanuvchining o'zi tasdiqlagan
+raqami bo'ladi. Ya'ni begona raqamni tekshirib ko'rishning imkoni yo'q, shuning
+uchun aniq xabar berish xavfsiz va foydali (aks holda odam nima qilishini
+bilmay qoladi).
+
+## 2. Server
+
+### Endpointlar
+
+| Endpoint | Nima qiladi |
+|---|---|
+| `GET /auth/telegram/status` | `{ enabled: boolean }` — config bor-yo'qligi. Klient tugmani ko'rsatish uchun shuni so'raydi (public, arzon) |
+| `GET /auth/telegram/start` | `state` (random) + PKCE `code_verifier` yasaydi, Redis'ga yozadi (TTL 5 daq, bir martalik, ichida portal origin'i), `oauth.telegram.org/auth` URL'ini qaytaradi. `code_verifier` brauzerga **chiqmaydi** |
+| `GET /auth/telegram/callback` | `state` ni Redis'dan **iste'mol qiladi** → yo'q/muddati o'tgan bo'lsa rad → `code` ni `/token` da almashtiradi → `id_token` ni tekshiradi → akkauntni topadi → portal darvozasi → bizning tokenlar → portalga `?handoff=` bilan redirect |
+| `POST /auth/telegram/complete` | `handoff` ni iste'mol qiladi (bir martalik, TTL 60 sek) → access+refresh token + user obyekti |
+
+### `redirect_uri` — bitta, API domenida
+
+`redirect_uri` = **`https://api.dafzentrum.uz/api/auth/telegram/callback`** —
+uchta portal uchun bitta, chunki kodni almashtirish client secret bilan server
+tomonda bo'lishi kerak va secret hech qachon brauzerga chiqmasligi kerak.
+Telegram'da ham **bitta** redirect URI ro'yxatga olinadi.
+
+Foydalanuvchi qaysi portaldan kelgani `start` da aniqlanadi (`Origin`) va
+`state` bilan birga Redis'ga yoziladi — `callback` ga Telegram keladi, u yerda
+`Origin` ishonchsiz. Kirish muvaffaqiyatli bo'lsa, `callback` shu saqlangan
+portalga qaytaradi:
+`https://<portal>.dafzentrum.uz/auth/telegram/callback?handoff=<kod>`.
+
+Portal origin'i **oq ro'yxatdan** olinadi (uchta ma'lum subdomen) — `state`
+ichidagi qiymat bo'lsa ham, ochiq redirect bo'lib qolmasligi uchun qaytarishdan
+oldin ro'yxatga solishtiriladi.
+
+### `id_token` tekshiruvi (majburiy, hammasi)
+
+- RS256 imzo — `https://oauth.telegram.org/.well-known/jwks.json` kalitlari
+  (kalitlar keshlanadi, `kid` bo'yicha tanlanadi)
+- `iss === 'https://oauth.telegram.org'`
+- `aud === <bot client id>`
+- `exp` o'tmagan
+- `phone_number` mavjud (yo'q bo'lsa — `scope=phone` ga ruxsat berilmagan →
+  tushunarli xato)
+
+Bironta tekshiruv o'tmasa — **kirish rad etiladi**. Tekshiruvni «yumshoq»
+qilish, xatoni yutib yuborish yoki `id_token` ni imzosiz o'qish taqiqlanadi.
+
+### Rate limit
+
+`start`, `callback`, `complete` — uchtasiga ham `IpThrottlerGuard`. Parol
+login'da 10/min, refresh'da 30/min bor; bu uchtasiga ham shu tartibda chek
+qo'yiladi.
+
+**Aloqador tuzatish:** mavjud `GET /auth/otp/poll` (native ilova ishlatadi)
+da throttle **umuman yo'q**. Bu ish davomida unga ham chek qo'yiladi
+(60/min/IP — klient har 2.5 sek so'raydi ≈ 24/min).
+
+### Konfiguratsiya
+
+`TELEGRAM_OAUTH_CLIENT_ID`, `TELEGRAM_OAUTH_CLIENT_SECRET` — Railway env.
+Ikkisi ham bo'lmasa, funksiya **butunlay o'chiq**: `start` 404/501 qaytaradi va
+klient tugmani ko'rsatmaydi (config yo'qligi jimgina buzilishga olib kelmasin).
+
+## 3. Client
+
+- Ikkala forma (`login-form.tsx` — admin/lehrer/student, va Lumio
+  `student-login-form.tsx`) ostida «yoki» ajratuvchi + «Telegram orqali kirish»
+  tugmasi. Tugma faqat backend funksiya yoniq deb aytganda ko'rinadi
+- Bosilganda `GET /auth/telegram/start` → `window.location.href = authorizeUrl`
+- Yangi sahifa `/auth/telegram/callback`: `?handoff=` ni o'qiydi →
+  `POST /auth/telegram/complete` → `setAuth` → parol yo'lidagi aynan shu
+  redirect (o'quvchi → `/portal`, qolganlar → `/`). Xato bo'lsa — kirish
+  sahifasiga tushunarli xabar bilan qaytaradi
+- **Yangi `NEXT_PUBLIC_*` env kerak emas** (URL'ni server yasaydi) — ya'ni
+  Vercel env tuzog'i (`.env` fayllari yuklanmaydi) bu ishga tegmaydi
+- Yangi paket kerak emas (QR yo'q)
+
+## 4. Native ilova — bu ishda tegilmaydi
+
+`student-app/` hozirgi poll oqimida qoladi, ya'ni **yuqoridagi relay zaifligi
+prod'da ochiq turadi**. Bu ongli qaror (CEO, 2026-07-30). Server tomonidan
+yamash imkoni yo'q — kod solishtirish ham ilovaning kodni ko'rsatishini talab
+qiladi, ya'ni har qanday yechim yangi build talab qiladi.
+
+**Native ishi boshlanganda Telegram auth alohida hal qilinadi.** Birinchi qadam
+— uchta yo'ldan qaysi biri ishlashini aniqlash:
+
+1. Telegram'ning rasmiy iOS/Android SDK'si (GitHub repolari, README'larida
+   tafsilot) — Expo'da native modul = config plugin/prebuild + dev-client
+   rebuild
+2. `expo-auth-session` + custom scheme (`dafstudent://`) — Telegram custom
+   scheme redirect'ni qabul qiladimi, hujjatda **yozilmagan**, sinash kerak
+3. https redirect + universal link (iOS associated domains + Android app
+   links), yoki serverda ilovaga sakraydigan oraliq sahifa
+
+## 5. Implementatsiyadan oldin majburiy tekshiruv
+
+Yuqoridagi Telegram tafsilotlari `core.telegram.org/widgets/login` dan
+**WebFetch summarizatsiyasi** orqali olingan, verbatim emas. Kod yozishdan
+oldin sahifa to'liq o'qilib tasdiqlanishi shart:
+
+- endpointlar: `oauth.telegram.org/auth`, `/token`,
+  `/.well-known/jwks.json`
+- parametr nomlari: `client_id`, `redirect_uri`, `response_type=code`,
+  `scope=openid profile phone`, `state`, `code_challenge`,
+  `code_challenge_method=S256`
+- token almashtirish: `POST /token`, Basic auth `base64(client_id:secret)`
+- claim nomlari: `phone_number`, va `id` ning `sub` dan farqi (misolda `sub`
+  19 xonali, `id` esa Telegram user id ko'rinishida)
+- legacy hash-widget holati (arxivlangan)
+
+Farq chiqsa — spec shu joyda yangilanadi, keyin kod yoziladi.
+
+## 6. CEO tomonidan qilinadigan sozlash (kod emas)
+
+1. BotFather → **Bot Settings → Web Login**: Client ID va secret olish
+2. Allowed URLs:
+   - **Redirect URI (bitta):**
+     `https://api.dafzentrum.uz/api/auth/telegram/callback`
+   - **Origin'lar (uchta):** `https://admin.dafzentrum.uz`,
+     `https://lehrer.dafzentrum.uz`, `https://student.dafzentrum.uz`
+   - Lokal ishlash uchun kerak bo'lsa: `http://localhost:4000/api/auth/telegram/callback`
+     va `http://localhost:3000` (Telegram `http`/`localhost` ni qabul qilmasa,
+     lokalda funksiya o'chiq holatda sinaladi — 5-bo'limdagi tekshiruvda shu
+     ham aniqlanadi)
+3. Railway env: `TELEGRAM_OAUTH_CLIENT_ID`, `TELEGRAM_OAUTH_CLIENT_SECRET`
+
+Bularsiz funksiya o'chiq turadi (tugma ko'rinmaydi) — ya'ni sozlash
+kechiksa ham kod xavfsiz joylashtiriladi.
+
+## 7. Testlar
+
+Server (Jest):
+
+- `state`: bir martalik (ikkinchi callback rad), muddati o'tgani rad, boshqa
+  portalga tegishli `state` bilan aralashtirib bo'lmasligi
+- `id_token` tekshiruvining **har bir** buzilishi alohida rad etilishi: yolg'on
+  imzo, noto'g'ri `iss`, noto'g'ri `aud`, muddati o'tgan `exp`,
+  `phone_number` yo'q. Testlarda o'z RSA kalit juftligimiz bilan soxta JWKS
+- akkaunt topish: staff raqami, o'quvchi raqami, chet el raqami
+  (`normalizeSharedPhone` bilan), tizimda yo'q raqam → tushunarli xato
+- portal darvozasi: admin portalda ustoz → 403; lehrer'da ustoz → OK;
+  bir raqam ikki akkauntda → portal bo'yicha to'g'ri tanlanishi
+- `handoff`: bir martalik, muddati o'tgani rad
+- config yo'q bo'lsa `status` `{ enabled: false }` va `start` funksiya o'chiq
+  deb javob berishi
+- **ochiq redirect:** `state` ichiga oq ro'yxatda yo'q portal origin'i
+  qo'yilsa, `callback` u yerga qaytarmasligi
+- **regressiya:** native ilovaning `otp/poll` oqimi avvalgidek ishlashi
+  (throttle qo'shilgandan keyin ham)
+
+Client: test infratuzilmasi yo'q — `tsc` + lint + qo'lda tekshirish.
+
+## 8. Joylashtirish
+
+Migration yo'q, sxema o'zgarmaydi. Server: qo'lda `railway up` + env
+o'zgaruvchilar. Client: Vercel. Native: tegilmaydi.
+
+## 9. Qamrovdan tashqarida (keyingi ish)
+
+- Native ilova auth'i (4-bo'lim) — alohida spec
+- Sessiyani bekor qilish mexanizmi (refresh token qora ro'yxati): hozir
+  o'g'irlangan sessiyani 24 soat to'xtatib bo'lmaydi. Bu OAuth'dan mustaqil,
+  umumiy xavfsizlik qarzi
+- Mavjud `req_` poll oqimini o'chirish — native OAuth'ga o'tgandan keyin
