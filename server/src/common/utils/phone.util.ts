@@ -2,6 +2,10 @@
  * Telegram «📱 Telefon raqamni yuborish» tugmasi orqali kelgan raqamni
  * normallashtirish — barcha ro'yxatdan o'tish sahnalari uchun YAGONA joy.
  *
+ * NEGA `common/utils` DA: aynan shu qoida kirish (auth) tomonida ham kerak —
+ * chet el raqami bilan ro'yxatdan o'tgan odam shu raqam bilan kirishi kerak.
+ * Ikki joyda ikki xil normalizatsiya bo'lib ketmasligi uchun bitta manba.
+ *
  * NEGA ALOHIDA QOIDA: tizimning qolgan qismi telefonni 9 xonali o'zbek raqami
  * deb biladi (`Student.phone`, `User.phone`, telefon bo'yicha login, Eskiz
  * SMS, frontenddagi `+998` prefiksi). Qo'lda yozilgan raqam uchun bu cheklov

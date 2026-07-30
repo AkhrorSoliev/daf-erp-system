@@ -1,4 +1,4 @@
-import { normalizeSharedPhone, isUzbekPhone } from './phone-utils';
+import { normalizeSharedPhone, isUzbekPhone } from './phone.util';
 
 /**
  * Kontakt tugmasidan kelgan raqam. Telegram uni O'ZI beradi — xato terilgan

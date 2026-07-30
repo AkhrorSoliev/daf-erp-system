@@ -12,7 +12,7 @@ import {
 import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
-} from '../phone-utils';
+} from '../../common/utils/phone.util';
 import {
   generateUniqueLogin,
   generatePassword,

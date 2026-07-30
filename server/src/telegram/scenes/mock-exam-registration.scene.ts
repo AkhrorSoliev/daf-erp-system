@@ -12,7 +12,7 @@ import {
 import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
-} from '../phone-utils';
+} from '../../common/utils/phone.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MockExamBillingService } from '../../mock-exams/mock-exam-billing.service';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
