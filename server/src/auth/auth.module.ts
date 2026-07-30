@@ -11,6 +11,7 @@ import { ForgotPasswordService } from './forgot-password/forgot-password.service
 import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
 import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
 import { TelegramIdTokenVerifier } from './telegram-oauth/telegram-id-token.verifier';
+import { TelegramOauthService } from './telegram-oauth/telegram-oauth.service';
 import { EskizModule } from '../eskiz/eskiz.module';
 import { PasswordResetModule } from '../common/password-reset';
 
@@ -40,6 +41,7 @@ import { PasswordResetModule } from '../common/password-reset';
     TelegramOauthConfig,
     TelegramOauthStateStore,
     TelegramIdTokenVerifier,
+    TelegramOauthService,
   ],
   exports: [AuthService],
 })

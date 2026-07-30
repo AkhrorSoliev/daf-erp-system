@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Controller,
   Post,
   Get,
   Query,
+  Res,
   UseGuards,
   Request,
   Req,
@@ -15,6 +17,7 @@ import { AuthService } from './auth.service';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
 import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
 import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
+import { TelegramOauthService } from './telegram-oauth/telegram-oauth.service';
 import { resolveAllowedRoleIds } from './portal-roles.config';
 import { Public } from '../common/decorators';
 import { IpThrottlerGuard } from '../common/guards';
@@ -24,6 +27,8 @@ import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
 import { ForgotPasswordVerifyDto } from './dto/forgot-password-verify.dto';
 import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
 import { TelegramOauthStartDto } from './dto/telegram-oauth-start.dto';
+import { TelegramOauthCallbackDto } from './dto/telegram-oauth-callback.dto';
+import { TelegramOauthCompleteDto } from './dto/telegram-oauth-complete.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -32,6 +37,7 @@ export class AuthController {
     private forgotPasswordService: ForgotPasswordService,
     private telegramOauthConfig: TelegramOauthConfig,
     private telegramOauthStateStore: TelegramOauthStateStore,
+    private telegramOauthService: TelegramOauthService,
   ) {}
 
   @Public()
@@ -88,6 +94,41 @@ export class AuthController {
       query.origin ?? (req.headers['origin'] as string | undefined) ?? '';
     const url = await this.telegramOauthStateStore.createAuthorizeUrl(origin);
     return { url };
+  }
+
+  /**
+   * Telegram shu manzilga redirect qiladi. Javob — portalga 302.
+   *
+   * `@Res({ passthrough: false })` ishlatmasdan, Nest'ning `res.redirect` ini
+   * qo'llaymiz, chunki manzil ish vaqtida hisoblanadi.
+   */
+  @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Get('telegram/callback')
+  async telegramCallback(
+    @Query() query: TelegramOauthCallbackDto,
+    @Res() res,
+  ) {
+    if (query.error) {
+      // Foydalanuvchi Telegram ekranida rad etdi — bu xato emas.
+      throw new BadRequestException("Kirish bekor qilindi");
+    }
+    const { redirectUrl } = await this.telegramOauthService.handleCallback(
+      query.code ?? '',
+      query.state ?? '',
+    );
+    res.redirect(302, redirectUrl);
+  }
+
+  /** SPA bir martalik `handoff` ni tokenlarga almashtiradi. */
+  @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('telegram/complete')
+  async telegramComplete(@Body() dto: TelegramOauthCompleteDto) {
+    return this.telegramOauthService.completeHandoff(dto.handoff);
   }
 
   // ── SMS "forgot password" (Eskiz OTP) ──────────────────────────────────────

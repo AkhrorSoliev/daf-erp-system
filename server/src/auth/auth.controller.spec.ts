@@ -19,6 +19,7 @@ describe('AuthController — forgot-password endpoints', () => {
       forgot as any,
       { enabled: true } as any,
       {} as any,
+      {} as any,
     );
   });
 
@@ -109,6 +110,7 @@ describe('AuthController — telegram/status', () => {
       {} as any,
       { enabled: true } as any,
       {} as any,
+      {} as any,
     );
     expect(controller.telegramStatus()).toEqual({ enabled: true });
   });
@@ -118,6 +120,7 @@ describe('AuthController — telegram/status', () => {
       {} as any,
       {} as any,
       { enabled: false } as any,
+      {} as any,
       {} as any,
     );
     expect(controller.telegramStatus()).toEqual({ enabled: false });
@@ -140,6 +143,7 @@ describe('telegram/start', () => {
       {} as any,
       { enabled: true } as any,
       store as any,
+      {} as any,
     );
 
     const res = await local.telegramStart(
@@ -151,5 +155,47 @@ describe('telegram/start', () => {
       'https://admin.dafzentrum.uz',
     );
     expect(res).toEqual({ url: 'https://oauth.telegram.org/auth?x=1' });
+  });
+});
+
+describe('telegram/callback', () => {
+  it('portal manziliga 302 qiladi', async () => {
+    const oauth = {
+      handleCallback: jest
+        .fn()
+        .mockResolvedValue({ redirectUrl: 'https://admin.dafzentrum.uz/auth/telegram/callback?handoff=abc' }),
+    };
+    const local = new AuthController(
+      {} as any,
+      {} as any,
+      { enabled: true } as any,
+      {} as any,
+      oauth as any,
+    );
+    const res = { redirect: jest.fn() };
+
+    await local.telegramCallback({ code: 'c', state: 's' }, res as any);
+
+    expect(oauth.handleCallback).toHaveBeenCalledWith('c', 's');
+    expect(res.redirect).toHaveBeenCalledWith(
+      302,
+      'https://admin.dafzentrum.uz/auth/telegram/callback?handoff=abc',
+    );
+  });
+
+  it('foydalanuvchi rad etsa 400 beradi va kod almashtirmaydi', async () => {
+    const oauth = { handleCallback: jest.fn() };
+    const local = new AuthController(
+      {} as any,
+      {} as any,
+      { enabled: true } as any,
+      {} as any,
+      oauth as any,
+    );
+
+    await expect(
+      local.telegramCallback({ error: 'access_denied' }, { redirect: jest.fn() } as any),
+    ).rejects.toThrow();
+    expect(oauth.handleCallback).not.toHaveBeenCalled();
   });
 });
