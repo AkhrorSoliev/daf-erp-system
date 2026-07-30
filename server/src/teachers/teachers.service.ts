@@ -19,10 +19,7 @@ import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
-import {
-  generateUniqueLogin,
-  generatePassword,
-} from '../telegram/utils/login-generator';
+import { generatePassword } from '../common/utils/password.util';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -209,12 +206,7 @@ export class TeachersService {
       );
     }
 
-    // Login va parol generatsiya
-    const login = await generateUniqueLogin(
-      dto.firstName,
-      dto.lastName,
-      this.prisma,
-    );
+    // Login = telefon raqam. Yuqorida shu telefon band emasligi tekshirilgan.
     const password = generatePassword();
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -225,7 +217,7 @@ export class TeachersService {
         phone: dto.phone,
         photo: dto.photo,
         gender: dto.gender,
-        login,
+        login: dto.phone,
         password: hashedPassword,
         companyId,
         mainBranch: dto.branchId ?? null,
@@ -239,7 +231,7 @@ export class TeachersService {
 
     return {
       ...formatTeacher(user),
-      generatedLogin: login,
+      generatedLogin: dto.phone,
       generatedPassword: password,
     };
   }
