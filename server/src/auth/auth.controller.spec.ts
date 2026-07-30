@@ -1,7 +1,15 @@
 import { Reflector } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { IS_PUBLIC_KEY } from '../common/decorators';
 import { AuthController } from './auth.controller';
 import { IpThrottlerGuard } from '../common/guards';
+import { AuthService } from './auth.service';
+import { ForgotPasswordService } from './forgot-password/forgot-password.service';
+import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
+import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
+import { TelegramOauthService } from './telegram-oauth/telegram-oauth.service';
+import { AuthModule } from './auth.module';
 
 describe('AuthController — forgot-password endpoints', () => {
   const reflector = new Reflector();
@@ -197,5 +205,66 @@ describe('telegram/callback', () => {
       local.telegramCallback({ error: 'access_denied' }, { redirect: jest.fn() } as any),
     ).rejects.toThrow();
     expect(oauth.handleCallback).not.toHaveBeenCalled();
+  });
+});
+
+describe('AuthController — Nest DI wiring', () => {
+  // Every spec above builds AuthController with `new`, bypassing Nest's
+  // container entirely — a token mismatch or a provider missing from
+  // `auth.module.ts` would still pass all of them and only surface at real
+  // app boot ("Nest can't resolve dependencies of AuthController"). This is
+  // exactly the class of bug that took the app down once already (see the
+  // TELEGRAM_JWKS_RESOLVER comment in telegram-id-token.verifier.ts).
+  //
+  // `imports: [AuthModule]` (the real module) was tried first but hangs —
+  // AuthModule pulls in RedisModule/PrismaModule, whose providers try to
+  // open real connections during DI instantiation. So this resolves
+  // AuthController through Nest's actual injector against stand-ins bound to
+  // the exact same class tokens the constructor declares, which still
+  // catches a mistyped/ambiguous injection token or a param Nest can't
+  // resolve at all.
+  it('resolves AuthController via the real DI tokens without throwing', async () => {
+    // AuthController is registered as a plain PROVIDER, not via `controllers:
+    // [...]` — putting it in `controllers` makes Nest's module scanner also
+    // eagerly instantiate every guard class referenced by @UseGuards on its
+    // methods (IpThrottlerGuard → real ThrottlerModule wiring), which this
+    // minimal module doesn't have. As a provider, Nest still resolves the
+    // constructor through the exact same injector/token-matching logic —
+    // that resolution is what this test locks — it just skips route/guard
+    // wiring, which is irrelevant here.
+    const moduleRef = await Test.createTestingModule({
+      // Several endpoints carry @UseGuards(IpThrottlerGuard); Nest resolves
+      // guard classes referenced via decorator metadata as real instances
+      // too (not just constructor params, and NOT satisfiable by a plain
+      // `useValue` override for the same token — Nest re-instantiates them
+      // through this "enhancer" path regardless). The real IpThrottlerGuard
+      // needs ThrottlerModule's providers, and ThrottlerModule.forRoot's
+      // default in-memory storage needs no live Redis/DB, so it's cheap to
+      // include for real here rather than stub around it.
+      imports: [
+        ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 10 }]),
+      ],
+      providers: [
+        AuthController,
+        IpThrottlerGuard,
+        { provide: AuthService, useValue: {} },
+        { provide: ForgotPasswordService, useValue: {} },
+        { provide: TelegramOauthConfig, useValue: {} },
+        { provide: TelegramOauthStateStore, useValue: {} },
+        { provide: TelegramOauthService, useValue: {} },
+      ],
+    }).compile();
+
+    expect(moduleRef.get(AuthController)).toBeInstanceOf(AuthController);
+  });
+
+  // Complements the above: reads `auth.module.ts`'s own @Module metadata
+  // directly (no DI resolution, no live infra) to lock the literal failure
+  // this round's finding described — TelegramOauthService dropped from the
+  // module's `providers` array.
+  it('registers TelegramOauthService as a provider in AuthModule', () => {
+    const providers: unknown[] =
+      Reflect.getMetadata('providers', AuthModule) ?? [];
+    expect(providers).toContain(TelegramOauthService);
   });
 });

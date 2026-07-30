@@ -21,6 +21,15 @@ const PORTAL_CALLBACK_PATH = '/auth/telegram/callback';
 
 const handoffKey = (handoff: string) => `tg_oauth:handoff:${handoff}`;
 
+/**
+ * Handoff Redis'da saqlaydigan va `completeHandoff` qaytaradigan sessiya
+ * shakli. Qo'lda yozilgan interfeys emas, balki `AuthService.login`ning haqiqiy
+ * qaytish qiymatidan olingan — parol bilan kirish yo'li AYNAN shu shaklni
+ * qaytaradi, shuning uchun ikkalasi mustaqil yozilsa, biri o'zgarganda
+ * ikkinchisi sezmasdan orqada qolib ketishi mumkin edi.
+ */
+export type TelegramOauthSession = Awaited<ReturnType<AuthService['login']>>;
+
 @Injectable()
 export class TelegramOauthService {
   private readonly logger = new Logger(TelegramOauthService.name);
@@ -69,9 +78,22 @@ export class TelegramOauthService {
         "Bu Telegram raqami tizimda yo'q. Administrator bilan bog'laning.",
       );
     }
+    // Parol bilan kirishdagi `validateUser` xuddi shu sababdan `!user.password`
+    // bo'lsa `null` qaytaradi — Telegram yo'li parol yo'li QANDAY BO'LSA ham
+    // undan kengroq bo'lmasligi kerak. `User.password` ixtiyoriy ustun, va
+    // parolsiz akkaunt bugun umuman kira olmaydi; xuddi shu umumiy xabar
+    // (enumeration'ga qarshi — qaysi sababdan rad etilgani ochilmaydi).
+    if (!user.password) {
+      throw new UnauthorizedException(
+        "Bu Telegram raqami tizimda yo'q. Administrator bilan bog'laning.",
+      );
+    }
 
     // Rol darvozasi + tokenlar — mavjud login yo'li.
-    const session = await this.authService.login(user, stored.portalOrigin);
+    const session: TelegramOauthSession = await this.authService.login(
+      user,
+      stored.portalOrigin,
+    );
 
     const handoff = randomBytes(32).toString('hex');
     await this.redis.set(
@@ -87,7 +109,7 @@ export class TelegramOauthService {
   }
 
   /** Bir martalik: `getdel` atomik o'qib-o'chiradi. */
-  async completeHandoff(handoff: string) {
+  async completeHandoff(handoff: string): Promise<TelegramOauthSession> {
     const raw = handoff ? await this.redis.getdel(handoffKey(handoff)) : null;
     if (!raw) {
       throw new BadRequestException(
@@ -95,7 +117,7 @@ export class TelegramOauthService {
       );
     }
     try {
-      return JSON.parse(raw);
+      return JSON.parse(raw) as TelegramOauthSession;
     } catch {
       throw new BadRequestException(
         "Sessiya muddati tugadi. Iltimos, qaytadan kiring.",

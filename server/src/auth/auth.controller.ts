@@ -99,8 +99,12 @@ export class AuthController {
   /**
    * Telegram shu manzilga redirect qiladi. Javob — portalga 302.
    *
-   * `@Res({ passthrough: false })` ishlatmasdan, Nest'ning `res.redirect` ini
-   * qo'llaymiz, chunki manzil ish vaqtida hisoblanadi.
+   * `@Res()` bilan javobni to'g'ridan-to'g'ri Express'ning `res.redirect()`i
+   * orqali yozamiz (Nest'da qaytish qiymati orqali redirect qilishning tayyor
+   * yo'li yo'q — `redirectUrl` ish vaqtida hisoblanadi, deklarativ
+   * `@Redirect()` esa faqat statik/handler-qaytargan qiymatga mos keladi).
+   * Handler har doim yo redirect qiladi, yoki istisno tashlaydi — so'rov hech
+   * qachon osilib qolmaydi.
    */
   @Public()
   @UseGuards(IpThrottlerGuard)
