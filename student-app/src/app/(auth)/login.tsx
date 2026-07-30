@@ -113,7 +113,9 @@ export default function Login() {
     );
   }
 
-  const canSubmit = phone.length === 9 && password.length >= 1;
+  // Chet el raqamlari ham qabul qilinadi (E.164 → 8..15 raqam), shu sababli
+  // aynan 9 xona talab qilinmaydi. Normalizatsiya serverda.
+  const canSubmit = phone.replace(/\D/g, '').length >= 8 && password.length >= 1;
 
   return (
     <Screen className="justify-center px-6">
@@ -130,9 +132,9 @@ export default function Login() {
             <Text variant="label">{t.auth.phoneLabel}</Text>
             <Input
               value={phone}
-              onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 9))}
+              onChangeText={setPhone}
               keyboardType="phone-pad"
-              placeholder={t.auth.phonePlaceholder}
+              placeholder={t.auth.loginPhonePlaceholder}
               autoCapitalize="none"
             />
           </View>
