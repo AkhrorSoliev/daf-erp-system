@@ -60,6 +60,18 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 - **SMS password reset works for every role** (not just students): `PortalPasswordResetService.resolveByPhone(phone, allowedRoleIds?)` matches `OR: [{ login }, { phone }]` scoped to the portal roles (from `Origin`/`X-Portal`), same tiebreak. See the Eskiz OTP flow under "SMS forgot password".
 - **Operational caveat:** because phone isn't unique, assigning the same phone to multiple staff within one portal makes only the most-recent one reachable by phone. Audit before relying on phone-login: `scripts/audit-login-phone.ts` (read-only — flags missing phones + duplicate groups); `scripts/sim-phone-login.ts` simulates which account a phone resolves to per portal.
 
+#### Telegram OAuth sign-in (web portals)
+
+- **Web only.** All three portals (`admin` / `lehrer` / `student`) offer "Telegram orqali kirish" through Telegram's official OAuth 2.0 / OIDC flow. The student **native app** still uses the older bot-deep-link + `GET /auth/otp/poll` flow — that flow's `requestId` is minted by the client and approved by whoever presses START, so a forwarded `t.me` link can hand the victim's session to an attacker. OAuth closes that by construction; do not extend the poll flow to staff.
+- **Endpoints** (all `@Public()`, all `IpThrottlerGuard`): `GET /auth/telegram/status` → `{ enabled }`, `GET /auth/telegram/start` → `{ url }`, `GET /auth/telegram/callback` (Telegram redirects here, 302s to the portal), `POST /auth/telegram/complete` → session.
+- **`state` + PKCE live in Redis** (`tg_oauth:state:*`, 5 min, single-use via `getdel`) together with the portal origin. The `code_verifier` **never reaches the browser** — that pair is what binds the flow to the initiating browser.
+- **One `redirect_uri`, on the API domain** (`https://api.dafzentrum.uz/api/auth/telegram/callback`), because the code is exchanged with the client secret server-side. The portal to return to comes from the stored `state` and is re-checked against `isKnownPortalOrigin` — without that whitelist the callback would be an open redirect.
+- **`id_token` verification is absolute**: RS256 against `https://oauth.telegram.org/.well-known/jwks.json`, `issuer=https://oauth.telegram.org`, `audience` = client id, `exp`, plus `phone_number_verified === true`. Any failure denies sign-in. Never add a soft path and never read the token without verifying it — the whole flow's trust rests on this signature.
+- **Account lookup is shared with password login**: `phone_number` (no `+`, country code included) → `AuthService.findAccountByIdentifier` → `AuthService.login` applies the portal role gate. The Telegram path must never be wider than the password path; that is why the lookup is one function.
+- **Tokens never travel in a URL.** The callback redirects with a single-use `handoff` (`tg_oauth:handoff:*`, 60s) that the SPA exchanges. A URL would leak the session into browser history, referrers and proxy logs.
+- **`User.telegramChatId` is NOT written.** The `sub` claim is an opaque per-bot identifier, not the bot's `chat.id`; the Telegram user id is the separate `id` claim. Writing the wrong value would break bot messaging, and nothing here needs it.
+- **Config gate:** missing any of the three env vars turns the feature fully off — `status` returns `{ enabled: false }` and the client renders no button. Config is applied by hand in BotFather + Railway, so a half-configured deploy must degrade to "off", never to a broken button.
+
 ### Portal-Based Role Restriction (Subdomain Routing)
 
 The system uses **subdomain-based portals** — each subdomain restricts login to specific roles:
@@ -1047,3 +1059,6 @@ Skills are specialized knowledge modules that **must** be activated when working
 | `CLICK_SERVICE_ID` | Click service ID | — |
 | `CLICK_SECRET_KEY` | Click secret key for MD5 signature verification | — |
 | `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED` | Gate for per-student attendance Telegram messages (`'true'` to enable) | _disabled_ |
+| `TELEGRAM_OAUTH_CLIENT_ID` | Telegram OIDC client id (BotFather → Login Widget) | — |
+| `TELEGRAM_OAUTH_CLIENT_SECRET` | Telegram OIDC client secret | — |
+| `TELEGRAM_OAUTH_REDIRECT_URI` | Must byte-match a BotFather Redirect URI | — |

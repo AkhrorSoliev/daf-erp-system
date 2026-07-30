@@ -64,7 +64,11 @@ export class AuthController {
   }
 
   // Native app (link/poll): poll a login request until the bot approves it.
+  // Klient har 2.5 sekundda so'raydi (≈24/min), shuning uchun 60/min/IP —
+  // qonuniy pollingga xalaqit bermaydi, cheksiz so'rovni esa to'xtatadi.
   @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @Get('otp/poll')
   async pollLogin(@Query('requestId') requestId: string) {
     return this.authService.pollLoginRequest(requestId ?? '');

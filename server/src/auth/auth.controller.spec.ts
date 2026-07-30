@@ -92,6 +92,28 @@ describe('AuthController — rate limiting (F-3)', () => {
     const guards = guardsOf(AuthController.prototype.refresh);
     expect(guards).toContain(IpThrottlerGuard);
   });
+
+  it('protects /auth/otp/poll with IpThrottlerGuard', () => {
+    const guards = guardsOf(AuthController.prototype.pollLogin);
+    expect(guards).toContain(IpThrottlerGuard);
+  });
+});
+
+describe('AuthController — otp/poll delegatsiyasi', () => {
+  it('requestId ni AuthService.pollLoginRequest ga uzatadi', async () => {
+    const auth = { pollLoginRequest: jest.fn().mockResolvedValue({ status: 'pending' }) };
+    const controller = new AuthController(
+      auth as any,
+      {} as any,
+      { enabled: true } as any,
+      {} as any,
+      {} as any,
+    );
+
+    await controller.pollLogin('req-123');
+
+    expect(auth.pollLoginRequest).toHaveBeenCalledWith('req-123');
+  });
 });
 
 describe('IpThrottlerGuard.getTracker', () => {

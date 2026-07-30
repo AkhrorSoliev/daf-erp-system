@@ -140,6 +140,13 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 **EXCEPTION — sign-in identifier fields, do NOT "fix" these:** `client/src/app/(auth)/login/login-form.tsx` and `client/src/app/(auth)/login/student-login-form.tsx` deliberately violate all three rules above. Their identifier field uses a bare, non-editable `+` prefix (not `+998`), has no live `XX XXX XX XX` formatting, no length cap, does **not** use `<PhoneInput>`, and sends the typed value raw (only `.trim()`-ed) to `POST /auth/login`. This is intentional: sign-in must also accept foreign numbers whose country code is part of the stored identifier, and the server (`AuthService.validateUser`, via `normalizeSharedPhone`) normalizes and matches whatever was typed — Uzbek or foreign. **Do not restore the `+998` prefix, live formatting, or `<PhoneInput>` on these two forms** — doing so would re-break sign-in for foreign-number accounts. The password-reset dialog, `client/src/components/auth/forgot-password-dialog.tsx`, is NOT part of this exception — it keeps the full `+998` rule above, because Eskiz (the SMS provider) only delivers OTP codes to Uzbek numbers.
 
+#### Telegram sign-in button
+
+- Both login forms render `<TelegramLoginButton />` (`src/components/auth/telegram-login-button.tsx`) under the password form. It **self-hides** unless `GET /auth/telegram/status` reports `enabled` — the OAuth credentials are configured by hand, so an unconfigured environment must show no button rather than a broken one.
+- Clicking it asks the backend for the authorize URL (`GET /auth/telegram/start`) and navigates there. The client never builds the Telegram URL itself and never holds the PKCE verifier.
+- Telegram returns to the API, which 302s to `/auth/telegram/callback?handoff=…` on this app. That page exchanges the single-use handoff for tokens (`POST /auth/telegram/complete`), calls `setAuth`, and redirects (student → `/portal`, everyone else → `/`).
+- **The callback page must stay wrapped in `<Suspense>`** — it reads `useSearchParams`, which bails out of static prerendering without a boundary and fails `npm run build`.
+
 #### Dates and Times
 
 - Date-only display format: **dd.MM.yyyy** — e.g. `21.03.2026`
