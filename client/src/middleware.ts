@@ -56,6 +56,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Telegram OAuth callback — the browser lands here carrying a single-use
+  // `handoff` code and, by definition, NO session cookie yet: this page is
+  // what creates the session. Must stay public on every portal/host and be
+  // excepted before the unauthenticated redirect below. Exact match only —
+  // nothing else under /auth should become publicly reachable.
+  if (pathname === "/auth/telegram/callback") {
+    return NextResponse.next();
+  }
+
   const isAuthenticated = token || refreshToken;
 
   // Login sahifasida token bor — tegishli portalga yo'naltirish
