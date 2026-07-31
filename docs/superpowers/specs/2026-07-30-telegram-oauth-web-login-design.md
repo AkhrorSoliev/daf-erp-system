@@ -246,8 +246,12 @@ Origins**, **Native Login**.
 3. **Trusted Origins** → uchta portal:
    `https://admin.dafzentrum.uz`, `https://lehrer.dafzentrum.uz`,
    `https://student.dafzentrum.uz`
-4. **Railway env:** `TELEGRAM_OAUTH_CLIENT_ID`,
-   `TELEGRAM_OAUTH_CLIENT_SECRET`
+4. **Railway env — UCHTASI ham:** `TELEGRAM_OAUTH_CLIENT_ID`,
+   `TELEGRAM_OAUTH_CLIENT_SECRET`, `TELEGRAM_OAUTH_REDIRECT_URI`. Oxirgisi
+   BotFather'dagi Redirect URI bilan belgima-belgi bir xil bo'lishi shart.
+   Bittasi yetishsa funksiya butunlay o'chiq qoladi (`status` →
+   `{ enabled: false }`, `start` → 503), ya'ni ikki o'zgaruvchi bilan
+   deploy qilish tugmani ko'rinmas qiladi
 5. **Native Login** — bu ishda ishlatilmaydi (4-bo'limga qara)
 
 Bularsiz funksiya o'chiq turadi (tugma ko'rinmaydi) — ya'ni sozlash

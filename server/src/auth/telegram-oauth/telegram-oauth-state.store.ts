@@ -24,10 +24,17 @@ interface StoredState {
 /**
  * `state` + PKCE do'koni.
  *
- * NEGA `code_verifier` SERVERDA: `state` va PKCE ikkisi birgalikda oqimni
- * BOSHLAGAN brauzerga bog'laydi. Agar verifier brauzerda bo'lsa, u boshqa
- * qurilmaga ko'chirilishi mumkin edi. Bizning eski bot-havola oqimidagi
- * zaiflik aynan shu bog'lanishning yo'qligi edi.
+ * NEGA `code_verifier` SERVERDA: `state` va PKCE **kod almashtirishni**
+ * qo'riqlaydi — begona `code` ni bizning oqimimizga tiqib qo'yish yoki bir
+ * kodni ikki marta ishlatish mumkin emas. Verifier brauzerda bo'lsa, uni
+ * boshqa qurilmaga ko'chirish mumkin bo'lardi, shuning uchun u faqat Redis'da.
+ *
+ * DIQQAT — bu «brauzerga bog'lash» EMAS: brauzerda hech narsa saqlanmaydi
+ * (cookie ham, verifier ham yo'q). Eski bot-havola oqimidagi relay teshigini
+ * yopadigan xossa boshqa: Telegram `code` ni **tasdiqlagan brauzer** orqali
+ * bizga yetkazadi va `handoff` shu brauzerning 302'sida qaytadi. Batafsil
+ * izoh va qolgan xavf (60 sekundlik `?handoff=` havolasi) `server/CLAUDE.md`
+ * dagi Telegram OAuth bo'limida.
  *
  * NEGA `portalOrigin` SAQLANADI: callback'ga Telegram keladi — u yerdagi
  * `Origin` foydalanuvchi portalini bildirmaydi. Qaytish manzili shu yerdan
