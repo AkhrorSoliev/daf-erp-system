@@ -129,6 +129,53 @@ describe('AuthService', () => {
       const where = prisma.user.findFirst.mock.calls[0][0].where;
       expect(where.roles).toBeUndefined();
     });
+
+    it('finds a foreign-number account by its stored country-coded digits', async () => {
+      // normalizeSharedPhone bunday raqamni kod bilan saqlaydi (491749493338).
+      // Bugungi kod uni tanimaydi — shu sabab chet el raqamli akkaunt kira olmaydi.
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      await service.validateUser('+49 174 9493338', 'x', null);
+
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      expect(where.OR).toEqual(
+        expect.arrayContaining([
+          { phone: '491749493338' },
+          { login: '491749493338' },
+        ]),
+      );
+    });
+
+    it('lets a legacy username account sign in with its phone number', async () => {
+      // `namangantest` — bot username bergan eski akkaunt. Uning telefoni
+      // 9 xonali saqlangan, ya'ni telefon bo'yicha topilishi SHART.
+      const hash = await bcrypt.hash('pass123', 10);
+      prisma.user.findFirst.mockResolvedValue({
+        id: 7,
+        login: 'namangantest',
+        phone: '901234567',
+        password: hash,
+        roles: [{ role: { id: 4, name: 'Teacher' } }],
+        branches: [],
+        company: {},
+      });
+
+      const res = await service.validateUser('901234567', 'pass123', [4]);
+
+      expect(res).toBeTruthy();
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      expect(where.OR).toEqual(expect.arrayContaining([{ phone: '901234567' }]));
+    });
+
+    it('keeps the OR clauses deduplicated', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      await service.validateUser('901234567', 'x', null);
+
+      const where = prisma.user.findFirst.mock.calls[0][0].where;
+      const seen = where.OR.map((c: any) => JSON.stringify(c));
+      expect(new Set(seen).size).toBe(seen.length);
+    });
   });
 
   describe('pollLoginRequest', () => {

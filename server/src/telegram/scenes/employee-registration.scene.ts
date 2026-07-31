@@ -12,11 +12,9 @@ import {
 import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
-} from '../phone-utils';
-import {
-  generateUniqueLogin,
-  generatePassword,
-} from '../utils/login-generator';
+} from '../../common/utils/phone.util';
+import { generatePassword } from '../../common/utils/password.util';
+import { buildStaffCredentialsMessage } from './staff-credentials-message';
 import { downloadFile } from '../utils/download.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
@@ -355,11 +353,7 @@ export function createEmployeeRegistrationScene(
     }
 
     try {
-      const login = await generateUniqueLogin(
-        data.firstName,
-        data.lastName,
-        prisma,
-      );
+      // Login = telefon raqam (o'quvchilarda ham shunday). Parol tasodifiy.
       const password = generatePassword();
 
       await usersService.create({
@@ -368,7 +362,7 @@ export function createEmployeeRegistrationScene(
         phone: data.phone,
         photo: data.photo,
         gender: data.gender,
-        login,
+        login: data.phone,
         password,
         companyId: DEFAULT_COMPANY_ID,
         mainBranch: data.branchId ?? undefined,
@@ -386,13 +380,11 @@ export function createEmployeeRegistrationScene(
 
       await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
       await ctx.replyWithPhoto(data.photo, {
-        caption:
-          "\u2705 Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
-          `\uD83D\uDC64 Sizning login: \`${login}\`\n` +
-          `\uD83D\uDD11 Sizning parol: \`${password}\`\n\n` +
-          '\uD83C\uDF10 Platformaga kirish:\n' +
-          `[${portalUrl.replace('https://', '')}](${portalUrl})\n\n` +
-          '\u26A0\uFE0F Login va parolni eslab qoling yoki saqlang!',
+        caption: buildStaffCredentialsMessage({
+          phone: data.phone,
+          password,
+          portalUrl,
+        }),
         parse_mode: 'Markdown',
       });
 

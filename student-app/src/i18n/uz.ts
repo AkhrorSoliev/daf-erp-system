@@ -13,6 +13,10 @@ export const t = {
   auth: {
     phoneLabel: 'Telefon raqami',
     phonePlaceholder: '90 123 45 67',
+    // Kirish ekrani istalgan formatdagi raqamni qabul qiladi, parolni
+    // tiklash esa faqat O'zbekiston raqamiga SMS yuboradi — shu sababli
+    // ikkalasi turli placeholder ishlatadi.
+    loginPhonePlaceholder: '998 90 123 45 67',
     continue: 'Davom etish',
     otpTitle: 'Tasdiqlash kodi',
     otpHint: 'Telegram bot yuborgan kodni kiriting',

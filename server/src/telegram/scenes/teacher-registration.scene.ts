@@ -12,11 +12,9 @@ import {
 import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
-} from '../phone-utils';
-import {
-  generateUniqueLogin,
-  generatePassword,
-} from '../utils/login-generator';
+} from '../../common/utils/phone.util';
+import { generatePassword } from '../../common/utils/password.util';
+import { buildStaffCredentialsMessage } from './staff-credentials-message';
 import { downloadFile } from '../utils/download.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
@@ -349,12 +347,7 @@ export function createTeacherRegistrationScene(
     const chatId = String(ctx.chat!.id);
 
     try {
-      // Login va parol generatsiya
-      const login = await generateUniqueLogin(
-        data.firstName,
-        data.lastName,
-        prisma,
-      );
+      // Login = telefon raqam (o'quvchilarda ham shunday). Parol tasodifiy.
       const password = generatePassword();
 
       // User yaratish
@@ -364,7 +357,7 @@ export function createTeacherRegistrationScene(
         phone: data.phone,
         photo: data.photo,
         gender: data.gender,
-        login,
+        login: data.phone,
         password,
         companyId: DEFAULT_COMPANY_ID,
         mainBranch: data.branchId ?? undefined,
@@ -376,13 +369,11 @@ export function createTeacherRegistrationScene(
       ctx.session.processing = false;
       await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
       await ctx.replyWithPhoto(data.photo, {
-        caption:
-          "\u2705 Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
-          `\uD83D\uDC64 Sizning login: \`${login}\`\n` +
-          `\uD83D\uDD11 Sizning parol: \`${password}\`\n\n` +
-          '\uD83C\uDF10 Platformaga kirish:\n' +
-          '[lehrer.dafzentrum.uz](https://lehrer.dafzentrum.uz)\n\n' +
-          '\u26A0\uFE0F Login va parolni eslab qoling yoki saqlang!',
+        caption: buildStaffCredentialsMessage({
+          phone: data.phone,
+          password,
+          portalUrl: 'https://lehrer.dafzentrum.uz',
+        }),
         parse_mode: 'Markdown',
       });
 

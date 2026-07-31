@@ -6,7 +6,6 @@ import { Lightning } from "@phosphor-icons/react";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
-import { formatPhoneInput } from "@/lib/format-utils";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 import { Button, Input, Field } from "@/components/student-portal/lumio";
 
@@ -28,7 +27,8 @@ export function StudentLoginForm() {
     setError("");
     setLoading(true);
 
-    const loginValue = login.replace(/\D/g, "").slice(-9);
+    // Normalizatsiya serverda (common/utils/phone.util) — bu yerda kesmaymiz.
+    const loginValue = login.trim();
 
     try {
       const res = await api.post("/auth/login", {
@@ -81,16 +81,14 @@ export function StudentLoginForm() {
 
         <Field label="Telefon raqam">
           <Input
-            addon="+998"
+            addon="+"
             type="text"
-            inputMode="numeric"
+            inputMode="tel"
             autoComplete="username"
             required
-            value={formatPhoneInput(login)}
-            onChange={(e) =>
-              setLogin(e.target.value.replace(/\D/g, "").slice(0, 9))
-            }
-            placeholder="90 123 45 67"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
+            placeholder="998 90 123 45 67"
           />
         </Field>
 
