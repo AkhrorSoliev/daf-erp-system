@@ -22,6 +22,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
+import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 
 // SMS-based password reset — now available on every portal (login is phone-based
 // across all roles). Eskiz account is active with approved template 78093; per
@@ -190,6 +191,8 @@ export function LoginForm({ portal }: LoginFormProps) {
           </button>
         )}
       </form>
+
+      <TelegramLoginButton />
 
       {SMS_PASSWORD_RESET_ENABLED && (
         <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />

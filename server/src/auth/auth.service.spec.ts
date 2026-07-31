@@ -27,7 +27,7 @@ describe('AuthService', () => {
   beforeEach(() => {
     prisma = {
       student: { findFirst: jest.fn().mockResolvedValue({ id: 10001 }) },
-      user: { findFirst: jest.fn() },
+      user: { findFirst: jest.fn(), findMany: jest.fn() },
     };
     jwt = { sign: jest.fn().mockReturnValue('tok') };
     config = { get: jest.fn().mockReturnValue('secret') };
@@ -175,6 +175,59 @@ describe('AuthService', () => {
       const where = prisma.user.findFirst.mock.calls[0][0].where;
       const seen = where.OR.map((c: any) => JSON.stringify(c));
       expect(new Set(seen).size).toBe(seen.length);
+    });
+  });
+
+  describe('findAccountByIdentifier', () => {
+    it('validateUser bilan AYNAN bir xil OR shartlarini yasaydi', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      await service.validateUser('+998 97 206 29 22', 'x', [1, 2, 3, 5]);
+      const fromValidate = prisma.user.findFirst.mock.calls[0][0];
+
+      prisma.user.findFirst.mockClear();
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      await service.findAccountByIdentifier('+998 97 206 29 22', [1, 2, 3, 5]);
+      const fromFinder = prisma.user.findFirst.mock.calls[0][0];
+
+      expect(fromFinder).toEqual(fromValidate);
+    });
+
+    it('parolni tekshirmaydi — topilgan qatorni qaytaradi', async () => {
+      prisma.user.findFirst.mockResolvedValue({
+        id: 5,
+        password: 'hash',
+        roles: [],
+        branches: [],
+        company: {},
+      });
+
+      const found = await service.findAccountByIdentifier('901234567', null);
+      expect(found).toMatchObject({ id: 5 });
+    });
+  });
+
+  describe('findAccountsByIdentifier', () => {
+    it('findAccountByIdentifier bilan AYNAN bir xil shartni ishlatadi (faqat take qo\'shiladi)', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      prisma.user.findMany.mockResolvedValue([]);
+
+      await service.findAccountByIdentifier('+998 97 206 29 22', [1, 2, 3, 5]);
+      const fromSingle = prisma.user.findFirst.mock.calls[0][0];
+
+      await service.findAccountsByIdentifier('+998 97 206 29 22', [1, 2, 3, 5], 2);
+      const fromMulti = prisma.user.findMany.mock.calls[0][0];
+
+      const { take, ...rest } = fromMulti;
+      expect(take).toBe(2);
+      expect(rest).toEqual(fromSingle);
+    });
+
+    it('bir raqamdagi ikki akkauntni ikkitasi bilan qaytaradi (noaniqlik ko\'rinadi)', async () => {
+      prisma.user.findMany.mockResolvedValue([{ id: 5 }, { id: 6 }]);
+      const rows = await service.findAccountsByIdentifier('972062922', [1, 2, 3, 5]);
+      expect(rows).toHaveLength(2);
     });
   });
 

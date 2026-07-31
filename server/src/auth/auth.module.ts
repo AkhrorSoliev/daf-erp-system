@@ -8,6 +8,10 @@ import { AuthController } from './auth.controller';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
+import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
+import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
+import { TelegramIdTokenVerifier } from './telegram-oauth/telegram-id-token.verifier';
+import { TelegramOauthService } from './telegram-oauth/telegram-oauth.service';
 import { EskizModule } from '../eskiz/eskiz.module';
 import { PasswordResetModule } from '../common/password-reset';
 
@@ -29,7 +33,16 @@ import { PasswordResetModule } from '../common/password-reset';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 10 }]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, ForgotPasswordService],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    ForgotPasswordService,
+    TelegramOauthConfig,
+    TelegramOauthStateStore,
+    TelegramIdTokenVerifier,
+    TelegramOauthService,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

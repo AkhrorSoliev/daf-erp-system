@@ -23,22 +23,15 @@ export class AuthService {
   ) {}
 
   /**
-   * Validate a login attempt. The identifier is now the user's **phone number**
-   * for every role (the login screen types a phone), but the legacy `login`
-   * (username) is still accepted as a fallback so no account is locked out.
+   * Kimlik qidiruvining YAGONA manbasi: `where` + `orderBy` + `include`.
    *
-   * `allowedRoleIds` scopes the lookup to the calling portal's roles (from the
-   * `Origin` / `X-Portal` header). This is what disambiguates a phone that is
-   * shared across accounts: on admin.dafzentrum.uz only staff-role accounts are
-   * considered, on lehrer only teachers, on student only students. If several
-   * still match (a genuinely duplicated phone within one portal), the most
-   * recently updated account wins. `null` = no restriction (localhost/dev).
+   * NEGA AJRATILGAN: `findAccountByIdentifier` (parol yo'li) va
+   * `findAccountsByIdentifier` (Telegram OAuth yo'li) bir xil shartni
+   * ishlatishi SHART. Shartni ikki joyga ko'chirsak, `OR` ro'yxati yoki status
+   * filtri bir joyda o'zgarib, parolsiz yo'l parollidan kengroq bo'lib qolishi
+   * mumkin edi.
    */
-  async validateUser(
-    login: string,
-    password: string,
-    allowedRoleIds?: number[] | null,
-  ) {
+  private buildAccountLookup(login: string, allowedRoleIds?: number[] | null) {
     const identifier = (login ?? '').trim();
     const digits = identifier.replace(/\D/g, '');
     // Bot saqlagan ko'rinishga keltiramiz: O'zbekiston → 9 xona, chet el →
@@ -64,7 +57,7 @@ export class AuthService {
       return true;
     });
 
-    const user = await this.prisma.user.findFirst({
+    return {
       where: {
         OR: or,
         deletedAt: null,
@@ -74,7 +67,7 @@ export class AuthService {
           ? { roles: { some: { role: { id: { in: allowedRoleIds } } } } }
           : {}),
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: 'desc' as const },
       include: {
         roles: { include: { role: true } },
         branches: { include: { branch: { select: { id: true, name: true } } } },
@@ -88,7 +81,68 @@ export class AuthService {
           },
         },
       },
+    };
+  }
+
+  /**
+   * Kimlikni (telefon yoki eski username) akkauntga aylantiradi.
+   *
+   * NEGA AJRATILGAN: parol bilan kirish va Telegram OAuth bir xil qoidadan
+   * foydalanishi SHART — aks holda parolsiz yo'l parollidan kengroq bo'lib
+   * qolishi mumkin. Parol tekshiruvi ataylab bu yerda emas.
+   */
+  async findAccountByIdentifier(
+    login: string,
+    allowedRoleIds?: number[] | null,
+  ) {
+    return this.prisma.user.findFirst(
+      this.buildAccountLookup(login, allowedRoleIds),
+    );
+  }
+
+  /**
+   * Xuddi shu shart bilan BIR NECHTA mos akkauntni qaytaradi (`take` bilan
+   * cheklangan, tartib `findAccountByIdentifier` bilan bir xil).
+   *
+   * NEGA KERAK: na `User.login`, na `User.phone` unique emas, ya'ni bitta
+   * telefon bir necha akkauntga tegishli bo'lishi mumkin (masalan ofis
+   * raqami — kassirda ham, administratorda ham). Parol bilan kirishda
+   * `updatedAt desc` bo'yicha "g'olib"ni tanlash zararsiz: o'sha akkauntga
+   * kirish uchun baribir O'SHA akkauntning paroli kerak. Parolsiz yo'lda
+   * (Telegram OAuth) esa bu ikkinchi omilni olib tashlaydi va odamni BEGONA
+   * akkauntga kiritib qo'yishi mumkin — shuning uchun u yo'l noaniqlikni
+   * ko'rishi va yopiq holatga o'tishi kerak. Bu yerda faqat sanaladi; qarorni
+   * chaqiruvchi qabul qiladi.
+   */
+  async findAccountsByIdentifier(
+    login: string,
+    allowedRoleIds?: number[] | null,
+    take = 2,
+  ) {
+    return this.prisma.user.findMany({
+      ...this.buildAccountLookup(login, allowedRoleIds),
+      take,
     });
+  }
+
+  /**
+   * Validate a login attempt. The identifier is now the user's **phone number**
+   * for every role (the login screen types a phone), but the legacy `login`
+   * (username) is still accepted as a fallback so no account is locked out.
+   *
+   * `allowedRoleIds` scopes the lookup to the calling portal's roles (from the
+   * `Origin` / `X-Portal` header). This is what disambiguates a phone that is
+   * shared across accounts: on admin.dafzentrum.uz only staff-role accounts are
+   * considered, on lehrer only teachers, on student only students. If several
+   * still match (a genuinely duplicated phone within one portal), the most
+   * recently updated account wins. `null` = no restriction (localhost/dev).
+   */
+  async validateUser(
+    login: string,
+    password: string,
+    allowedRoleIds?: number[] | null,
+  ) {
+    const user = await this.findAccountByIdentifier(login, allowedRoleIds);
 
     if (!user || !user.password) {
       return null;

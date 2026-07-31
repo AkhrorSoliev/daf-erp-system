@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
+import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 import { Button, Input, Field } from "@/components/student-portal/lumio";
 
 // Lumio-styled login for the student portal (student.dafzentrum.uz). Shares the
@@ -115,6 +116,8 @@ export function StudentLoginForm() {
           Parolni unutdingizmi?
         </button>
       </form>
+
+      <TelegramLoginButton variant="lumio" />
 
       <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </div>

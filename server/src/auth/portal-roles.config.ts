@@ -63,3 +63,40 @@ export function resolveAllowedRoleIds(
   if (fromPortal !== null) return fromPortal;
   return getAllowedRoleIds(origin);
 }
+
+/**
+ * Ma'lum portal hostname'lari — `PORTAL_ROLES` kalitlari bilan bir manba.
+ *
+ * NEGA KERAK: Telegram OAuth callback foydalanuvchini portalga qaytaradi va
+ * qaytish manzili `state` ichidan olinadi. Oq ro'yxatsiz bu ochiq redirect
+ * bo'lib qolardi.
+ */
+export const PORTAL_HOSTNAMES: string[] = Object.keys(PORTAL_ROLES);
+
+/**
+ * Origin bizning portallardan biri (yoki lokal dev) ekanini bildiradi.
+ *
+ * NEGA SXEMA HAM TEKSHIRILADI: bu funksiya Telegram OAuth qaytish manzilini
+ * tasdiqlaydi va o'sha manzilda bir martalik `handoff` kodi yuboriladi.
+ * `http://admin.dafzentrum.uz` faqat hostname bo'yicha o'tib ketsa, kod
+ * Cloudflare HTTPS'ga ko'tarishidan OLDIN ochiq matnda ketardi. Lokal dev
+ * (`localhost` / `127.0.0.1`) http'da ishlaydi — faqat shu ikkisi istisno.
+ *
+ * NEGA `username`/`password` RAD ETILADI: `https://u:p@admin.dafzentrum.uz`
+ * da hostname haqiqiy portal bo'ladi, lekin manzil odamga boshqacha
+ * ko'rinadi. Bunday origin bizdan hech qachon chiqmaydi, shuning uchun
+ * butunlay rad etamiz.
+ */
+export function isKnownPortalOrigin(origin: string | undefined): boolean {
+  if (!origin) return false;
+  try {
+    const url = new URL(origin);
+    if (url.username || url.password) return false;
+    const { hostname, protocol } = url;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    if (protocol !== 'https:') return false;
+    return PORTAL_HOSTNAMES.includes(hostname);
+  } catch {
+    return false;
+  }
+}

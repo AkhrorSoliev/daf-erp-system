@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Controller,
   Post,
   Get,
   Query,
+  Res,
   UseGuards,
   Request,
   Req,
@@ -13,7 +15,13 @@ import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ForgotPasswordService } from './forgot-password/forgot-password.service';
-import { resolveAllowedRoleIds } from './portal-roles.config';
+import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
+import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
+import { TelegramOauthService } from './telegram-oauth/telegram-oauth.service';
+import {
+  isKnownPortalOrigin,
+  resolveAllowedRoleIds,
+} from './portal-roles.config';
 import { Public } from '../common/decorators';
 import { IpThrottlerGuard } from '../common/guards';
 import { LoginDto } from './dto/login.dto';
@@ -21,12 +29,17 @@ import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
 import { ForgotPasswordVerifyDto } from './dto/forgot-password-verify.dto';
 import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
+import { TelegramOauthCallbackDto } from './dto/telegram-oauth-callback.dto';
+import { TelegramOauthCompleteDto } from './dto/telegram-oauth-complete.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
     private forgotPasswordService: ForgotPasswordService,
+    private telegramOauthConfig: TelegramOauthConfig,
+    private telegramOauthStateStore: TelegramOauthStateStore,
+    private telegramOauthService: TelegramOauthService,
   ) {}
 
   @Public()
@@ -53,10 +66,105 @@ export class AuthController {
   }
 
   // Native app (link/poll): poll a login request until the bot approves it.
+  // Klient har 2.5 sekundda so'raydi (≈24/min), shuning uchun 60/min/IP —
+  // qonuniy pollingga xalaqit bermaydi, cheksiz so'rovni esa to'xtatadi.
   @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @Get('otp/poll')
   async pollLogin(@Query('requestId') requestId: string) {
     return this.authService.pollLoginRequest(requestId ?? '');
+  }
+
+  // ── Telegram OAuth (OIDC) — web portallar uchun ────────────────────────────
+  // Klient tugmani ko'rsatishdan oldin funksiya yoniqligini so'raydi (login
+  // sahifasi mount bo'lganda). Boshqa Telegram endpointlariga o'xshab
+  // himoyalangan — 30/min/IP, chunki bu autentifikatsiyasiz GET, lekin
+  // start (10/min)dan yengilroq: Redis'ga yozmaydi, tashqi so'rov qilmaydi.
+  /**
+   * Klient tugmani ko'rsatishdan oldin funksiya yoniqligini so'raydi.
+   *
+   * `Origin` ham tekshiriladi: CORS ruxsat bergan, lekin portal BO'LMAGAN
+   * manzilda (masalan Vercel preview alias) tugma chizilib, bosilganda
+   * `start` «Noma'lum portal manzili» bilan 400 berardi. Klientning
+   * «buzilgan tugmadan ko'ra tugma bo'lmasin» xossasi shu yerda saqlanadi.
+   */
+  @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Get('telegram/status')
+  telegramStatus(@Req() req) {
+    const origin = req.headers['origin'] as string | undefined;
+    return {
+      enabled: this.telegramOauthConfig.enabled && isKnownPortalOrigin(origin),
+    };
+  }
+
+  /**
+   * Oqimni boshlaydi: `state` + PKCE yasab, Telegram'ning authorize URL'ini
+   * qaytaradi. Klient shu URL'ga o'tadi.
+   *
+   * Portal manzili FAQAT `Origin` sarlavhasidan olinadi. Avval `?origin=`
+   * query parametri ham qabul qilinardi — uni klient hech qachon yubormagan,
+   * lekin u prodda `?origin=http://localhost:3000` bilan portal cheklovini
+   * chetlab o'tishning yagona yo'li edi. Endi query parametri umuman yo'q
+   * (global `ValidationPipe` `forbidNonWhitelisted` bilan ishlaydi, ya'ni
+   * DTO'siz endpointga qo'shimcha parametr yuborib ham bo'lmaydi).
+   */
+  @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Get('telegram/start')
+  async telegramStart(@Req() req) {
+    const origin = (req.headers['origin'] as string | undefined) ?? '';
+    const url = await this.telegramOauthStateStore.createAuthorizeUrl(origin);
+    return { url };
+  }
+
+  /**
+   * Telegram shu manzilga redirect qiladi. Javob — portalga 302.
+   *
+   * `@Res()` bilan javobni to'g'ridan-to'g'ri Express'ning `res.redirect()`i
+   * orqali yozamiz (Nest'da qaytish qiymati orqali redirect qilishning tayyor
+   * yo'li yo'q — `redirectUrl` ish vaqtida hisoblanadi, deklarativ
+   * `@Redirect()` esa faqat statik/handler-qaytargan qiymatga mos keladi).
+   * Handler har doim yo redirect qiladi, yoki istisno tashlaydi — so'rov hech
+   * qachon osilib qolmaydi.
+   *
+   * XATOLAR: `state` iste'mol qilingandan keyin yuz bergan har qanday xato
+   * `handleCallback` ichida portalning kirish sahifasiga `?error=` bilan
+   * aylantiriladi — foydalanuvchi API domenida xom JSON bilan qolib
+   * ketmasligi uchun. Bu yerdagi ikki istisno (foydalanuvchi rad etdi, va
+   * eskirgan/noma'lum `state`) — portal manzili hali ma'lum bo'lmagan
+   * holatlar, ular JSON 400 bo'lib qoladi.
+   */
+  @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Get('telegram/callback')
+  async telegramCallback(
+    @Query() query: TelegramOauthCallbackDto,
+    @Res() res,
+  ) {
+    if (query.error) {
+      // Foydalanuvchi Telegram ekranida rad etdi — bu xato emas.
+      throw new BadRequestException("Kirish bekor qilindi");
+    }
+    const { redirectUrl } = await this.telegramOauthService.handleCallback(
+      query.code ?? '',
+      query.state ?? '',
+    );
+    res.redirect(302, redirectUrl);
+  }
+
+  /** SPA bir martalik `handoff` ni tokenlarga almashtiradi. */
+  @Public()
+  @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('telegram/complete')
+  async telegramComplete(@Body() dto: TelegramOauthCompleteDto) {
+    return this.telegramOauthService.completeHandoff(dto.handoff);
   }
 
   // ── SMS "forgot password" (Eskiz OTP) ──────────────────────────────────────
