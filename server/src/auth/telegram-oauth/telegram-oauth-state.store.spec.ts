@@ -19,7 +19,7 @@ function makeStore(enabled = true) {
   } as any;
   const config = {
     enabled,
-    clientId: '8576891251',
+    clientId: '1234567890',
     clientSecret: 'secret',
     redirectUri: 'https://api.dafzentrum.uz/api/auth/telegram/callback',
   } as any;
@@ -32,7 +32,7 @@ describe('TelegramOauthStateStore', () => {
     const url = new URL(await store.createAuthorizeUrl('https://admin.dafzentrum.uz'));
 
     expect(url.origin + url.pathname).toBe('https://oauth.telegram.org/auth');
-    expect(url.searchParams.get('client_id')).toBe('8576891251');
+    expect(url.searchParams.get('client_id')).toBe('1234567890');
     expect(url.searchParams.get('redirect_uri')).toBe(
       'https://api.dafzentrum.uz/api/auth/telegram/callback',
     );

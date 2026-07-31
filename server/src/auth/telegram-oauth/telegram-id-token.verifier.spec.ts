@@ -4,7 +4,7 @@ import { Test } from '@nestjs/testing';
 import { TelegramIdTokenVerifier } from './telegram-id-token.verifier';
 import { TelegramOauthConfig } from './telegram-oauth.config';
 
-const CLIENT_ID = '8576891251';
+const CLIENT_ID = '1234567890';
 const ISSUER = 'https://oauth.telegram.org';
 
 /**

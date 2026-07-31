@@ -19,7 +19,7 @@
 - Token so'rovi (hujjatdan verbatim): `POST`, `Content-Type: application/x-www-form-urlencoded`, `Authorization: Basic base64(client_id:client_secret)`, body `grant_type=authorization_code&code=…&redirect_uri=…&client_id=…&code_verifier=…`. Javob: `{ access_token, token_type, expires_in, id_token }`.
 - `id_token` claim nomlari (hujjatdan verbatim): `iss`, `aud`, `sub`, `iat`, `exp`, `id`, `name`, `given_name`, `family_name`, `preferred_username`, `picture`, `phone_number`, `phone_number_verified`. **`sub` ISHLATILMAYDI** (u opaque identifikator; Telegram user id — `id` claim).
 - `phone_number` **`+` belgisiz, mamlakat kodi bilan** keladi (hujjat misoli: `"971577777777"`).
-- Client ID: `8576891251`. Redirect URI: `https://api.dafzentrum.uz/api/auth/telegram/callback` (lokalda `http://localhost:4000/api/auth/telegram/callback` — ikkisi ham BotFather'da ro'yxatga olingan).
+- Client ID: BotFather'dan olinadi, repoga yozilmaydi (testlarda `1234567890` — o'ylab topilgan qiymat). Redirect URI: `https://api.dafzentrum.uz/api/auth/telegram/callback` (lokalda `http://localhost:4000/api/auth/telegram/callback` — ikkisi ham BotFather'da ro'yxatga olingan).
 - Barcha foydalanuvchiga ko'rinadigan matn va izohlar **lotin alifbosida o'zbekcha**. Kirill/arab harflari — nuqson. `server/CLAUDE.md` va `client/CLAUDE.md` esa **ingliz tilida** (o'sha fayllarning o'z qoidasi).
 - Server testi: `cd server && npx jest <path>`; to'liq to'plam `cd server && npm test`.
 - **Server'da `npx tsc --noEmit` da 44 ta AVVALDAN BOR xato mavjud** (merge-base'da ham shunday). Mezon — «yangi xato yo'q», toza natija emas. Tekshirish: `npx tsc --noEmit 2>&1 | grep -c 'error TS'` → 44 bo'lib qolishi.
@@ -96,7 +96,7 @@ function makeConfig(env: Record<string, string | undefined>) {
 
 describe('TelegramOauthConfig', () => {
   const full = {
-    TELEGRAM_OAUTH_CLIENT_ID: '8576891251',
+    TELEGRAM_OAUTH_CLIENT_ID: '1234567890',
     TELEGRAM_OAUTH_CLIENT_SECRET: 'secret-value',
     TELEGRAM_OAUTH_REDIRECT_URI: 'https://api.dafzentrum.uz/api/auth/telegram/callback',
   };
@@ -104,7 +104,7 @@ describe('TelegramOauthConfig', () => {
   it("hamma sozlama bo'lsa yoniq", () => {
     const config = makeConfig(full);
     expect(config.enabled).toBe(true);
-    expect(config.clientId).toBe('8576891251');
+    expect(config.clientId).toBe('1234567890');
     expect(config.redirectUri).toBe(
       'https://api.dafzentrum.uz/api/auth/telegram/callback',
     );
@@ -365,7 +365,7 @@ function makeStore(enabled = true) {
   } as any;
   const config = {
     enabled,
-    clientId: '8576891251',
+    clientId: '1234567890',
     clientSecret: 'secret',
     redirectUri: 'https://api.dafzentrum.uz/api/auth/telegram/callback',
   } as any;
@@ -378,7 +378,7 @@ describe('TelegramOauthStateStore', () => {
     const url = new URL(await store.createAuthorizeUrl('https://admin.dafzentrum.uz'));
 
     expect(url.origin + url.pathname).toBe('https://oauth.telegram.org/auth');
-    expect(url.searchParams.get('client_id')).toBe('8576891251');
+    expect(url.searchParams.get('client_id')).toBe('1234567890');
     expect(url.searchParams.get('redirect_uri')).toBe(
       'https://api.dafzentrum.uz/api/auth/telegram/callback',
     );
@@ -707,7 +707,7 @@ import { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } from 'jose';
 import { UnauthorizedException } from '@nestjs/common';
 import { TelegramIdTokenVerifier } from './telegram-id-token.verifier';
 
-const CLIENT_ID = '8576891251';
+const CLIENT_ID = '1234567890';
 const ISSUER = 'https://oauth.telegram.org';
 
 /**
@@ -1153,7 +1153,7 @@ function makeService(overrides: Record<string, any> = {}) {
   };
   const config = {
     enabled: true,
-    clientId: '8576891251',
+    clientId: '1234567890',
     clientSecret: 'secret',
     redirectUri: 'https://api.dafzentrum.uz/api/auth/telegram/callback',
   };
@@ -1219,14 +1219,14 @@ describe('TelegramOauthService', () => {
         'application/x-www-form-urlencoded',
       );
       expect(init.headers.Authorization).toBe(
-        `Basic ${Buffer.from('8576891251:secret').toString('base64')}`,
+        `Basic ${Buffer.from('1234567890:secret').toString('base64')}`,
       );
 
       const body = new URLSearchParams(init.body as string);
       expect(body.get('grant_type')).toBe('authorization_code');
       expect(body.get('code')).toBe('code-1');
       expect(body.get('code_verifier')).toBe('verifier-123');
-      expect(body.get('client_id')).toBe('8576891251');
+      expect(body.get('client_id')).toBe('1234567890');
       expect(body.get('redirect_uri')).toBe(
         'https://api.dafzentrum.uz/api/auth/telegram/callback',
       );
@@ -2102,7 +2102,7 @@ Expected: bo'sh
 ## Joylashtirish (rejadan tashqari)
 
 1. **CEO:** BotFather'da prod Redirect URI qo'shilishi — `https://api.dafzentrum.uz/api/auth/telegram/callback` (hozircha faqat localhost ro'yxatda)
-2. **CEO:** Railway env — `TELEGRAM_OAUTH_CLIENT_ID=8576891251`, `TELEGRAM_OAUTH_CLIENT_SECRET=<revoke qilingandan keyingi yangi secret>`, `TELEGRAM_OAUTH_REDIRECT_URI=https://api.dafzentrum.uz/api/auth/telegram/callback`
+2. **CEO:** Railway env — `TELEGRAM_OAUTH_CLIENT_ID=<BotFather Client ID>`, `TELEGRAM_OAUTH_CLIENT_SECRET=<revoke qilingandan keyingi yangi secret>`, `TELEGRAM_OAUTH_REDIRECT_URI=https://api.dafzentrum.uz/api/auth/telegram/callback`
 3. Server: qo'lda `railway up`. Client: Vercel. Yangi `NEXT_PUBLIC_*` **kerak emas**
 4. Deploy'dan keyin qo'lda tekshirish: uchta portalning har birida Telegram orqali kirib ko'rish; admin portalda ustoz akkaunti bilan urinib, rad etilishini tasdiqlash
 

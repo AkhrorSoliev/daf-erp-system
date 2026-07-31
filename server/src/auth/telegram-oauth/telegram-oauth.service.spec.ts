@@ -55,7 +55,7 @@ function makeService(overrides: Record<string, any> = {}) {
   };
   const config = {
     enabled: true,
-    clientId: '8576891251',
+    clientId: '1234567890',
     clientSecret: 'secret',
     redirectUri: 'https://api.dafzentrum.uz/api/auth/telegram/callback',
   };
@@ -129,14 +129,14 @@ describe('TelegramOauthService', () => {
         'application/x-www-form-urlencoded',
       );
       expect(init.headers.Authorization).toBe(
-        `Basic ${Buffer.from('8576891251:secret').toString('base64')}`,
+        `Basic ${Buffer.from('1234567890:secret').toString('base64')}`,
       );
 
       const body = new URLSearchParams(init.body as string);
       expect(body.get('grant_type')).toBe('authorization_code');
       expect(body.get('code')).toBe('code-1');
       expect(body.get('code_verifier')).toBe('verifier-123');
-      expect(body.get('client_id')).toBe('8576891251');
+      expect(body.get('client_id')).toBe('1234567890');
       expect(body.get('redirect_uri')).toBe(
         'https://api.dafzentrum.uz/api/auth/telegram/callback',
       );

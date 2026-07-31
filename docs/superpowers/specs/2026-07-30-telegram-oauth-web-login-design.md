@@ -231,8 +231,12 @@ BotFather → Login Widget → **Switch to OpenID Connect Login** (2026-07-30 da
 bajarilgan). Ekranda: Client ID + Client Secret, **Redirect URIs**, **Trusted
 Origins**, **Native Login**.
 
-1. **Client ID:** `8576891251` (maxfiy emas). **Client Secret** — faqat Railway
-   env'iga, hech qayerga nusxalanmaydi
+1. **Client ID va Client Secret** — ikkalasi ham faqat Railway env'iga
+   yoziladi, repoga EMAS. Client ID texnik jihatdan maxfiy emas (u authorize
+   URL'ida brauzerga baribir ko'rinadi), lekin bu repo ochiq GitHub'da turadi
+   va markazning botiga tegishli identifikatorlarni u yerga chiqarmaymiz.
+   Testlarda va hujjatlarda faqat o'ylab topilgan qiymat (`1234567890`)
+   ishlatiladi.
 2. **Redirect URIs** → «Add a Redirect URI» (*«Must match exactly»*):
    - `https://api.dafzentrum.uz/api/auth/telegram/callback` — bitta, API
      domenida (kodni client secret bilan server almashtiradi)

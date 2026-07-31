@@ -9,7 +9,7 @@ function makeConfig(env: Record<string, string | undefined>) {
 
 describe('TelegramOauthConfig', () => {
   const full = {
-    TELEGRAM_OAUTH_CLIENT_ID: '8576891251',
+    TELEGRAM_OAUTH_CLIENT_ID: '1234567890',
     TELEGRAM_OAUTH_CLIENT_SECRET: 'secret-value',
     TELEGRAM_OAUTH_REDIRECT_URI: 'https://api.dafzentrum.uz/api/auth/telegram/callback',
   };
@@ -17,7 +17,7 @@ describe('TelegramOauthConfig', () => {
   it("hamma sozlama bo'lsa yoniq", () => {
     const config = makeConfig(full);
     expect(config.enabled).toBe(true);
-    expect(config.clientId).toBe('8576891251');
+    expect(config.clientId).toBe('1234567890');
     expect(config.redirectUri).toBe(
       'https://api.dafzentrum.uz/api/auth/telegram/callback',
     );
