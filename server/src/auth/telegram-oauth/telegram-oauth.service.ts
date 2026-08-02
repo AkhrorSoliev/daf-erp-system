@@ -252,6 +252,16 @@ export class TelegramOauthService {
       | null;
     const idToken = payload?.id_token;
     if (!idToken) {
+      // KUZATUV: bu yo'l ilgari JIMGINA otilardi va foydalanuvchi ko'radigan
+      // xabar `verify()` ning xatosi bilan bir xil, ya'ni logda hech narsa
+      // qolmasdi. 2026-08-01 dagi nosozlikni tekshirishda aynan shu ikki
+      // yo'lni bir-biridan ajratib bo'lmadi. Qiymatlarni emas, faqat
+      // KALIT nomlarini yozamiz — tokenlar logga tushmasligi kerak.
+      this.logger.warn(
+        `Telegram token javobida id_token yo'q. Kelgan kalitlar: ${
+          payload ? Object.keys(payload).join(', ') || '(bo\'sh obyekt)' : '(JSON emas)'
+        }`,
+      );
       throw new UnauthorizedException('Telegram javobi tekshirilmadi');
     }
     return idToken;
