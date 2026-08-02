@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { branchWhere } from '../common/finance/period-helpers';
+import {
+  branchIdWhere,
+  studentBranchWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 
 export interface BalanceSheetQuery {
-  branchId?: number;
-  branchIds?: number[];
+  branchIds: ReportBranchIds;
 }
 
 /**
@@ -27,22 +30,18 @@ export class ReportsBalanceSheetService {
   constructor(private prisma: PrismaService) {}
 
   async getBalanceSheet(companyId: number, query: BalanceSheetQuery) {
-    const branch = branchWhere(query);
-    const hasScope = !!(query.branchIds && query.branchIds.length > 0);
+    const branch = branchIdWhere(query.branchIds);
 
-    // Student branch filter (Student has no branchId column — use membership).
-    const studentBranch: Prisma.StudentWhereInput = hasScope
-      ? { branches: { some: { branchId: { in: query.branchIds! } } } }
-      : query.branchId
-        ? { branches: { some: { branchId: query.branchId } } }
-        : {};
+    // Student has no branchId column — scope through StudentBranch membership,
+    // the same predicate every student list uses.
+    const studentBranch: Prisma.StudentWhereInput = studentBranchWhere(
+      query.branchIds,
+    );
 
-    // Accrual branch filter via the group's branch.
-    const accrualBranch: Prisma.SalaryAccrualWhereInput = hasScope
-      ? { group: { branchId: { in: query.branchIds! } } }
-      : query.branchId
-        ? { group: { branchId: query.branchId } }
-        : {};
+    // Accrual branch filter via the group's branch (payroll follows the group,
+    // not the teacher — see the ledger branch-attribution rules).
+    const accrualBranch: Prisma.SalaryAccrualWhereInput =
+      query.branchIds === null ? {} : { group: branchIdWhere(query.branchIds) };
 
     const [cashAgg, receivableAgg, deferredAgg, payableAgg] = await Promise.all(
       [

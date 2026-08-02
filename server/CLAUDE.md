@@ -509,6 +509,17 @@ Business rules from `docs/branch-decisions.md`. They exist because a second bran
 - They now carry `@Roles(...STAFF_ROLES)` (`common/decorators/staff-roles.ts`) — every role **except Student**. A narrow whitelist would be wrong: the dashboard is visible to teachers, the payment dialog to cashiers, group screens to all staff. Students read their own data through `student-portal.controller.ts`.
 - The controller specs assert the guard **exists** and excludes `Student`. Four of them previously asserted the opposite ("should NOT have @Roles metadata"), which encoded the hole — do not reintroduce that shape.
 
+#### One resolved branch scope per report request
+
+Money reports carried **two** branch parameters — `branchId` (the header switcher's pick) and `branchIds` (the caller's own scope) — and every query decided for itself which to honour. `branchWhere()` made it worse by letting `branchIds` OVERRIDE `branchId`, silently discarding the branch the user actually selected. The result: a Branch Director's workbook printed "Namangan filali" on the cover, Fargona's 162 127 987 so'm on the summary sheet and 0 on the P&L; on the web page the empty Namangan branch reported 27 748 684 so'm of debt across 177 debtors, because `receivables`, `debtors` and `activeStudents` ignored the branch entirely.
+
+- **`common/finance/report-branch-scope.ts` is the only branch logic a report may use.** `resolveCallerReportBranchIds(prisma, userId, requestedBranchId)` is called ONCE at the HTTP boundary; the resolved `ReportBranchIds` is passed down to every leg. `branchWhere()` is deleted, and no report type accepts a bare `branchId` any more — the bug class is unrepresentable.
+- **The caller's scope is a CEILING; the requested branch NARROWS within it.** Not the reverse. A branch outside the ceiling resolves to an EMPTY list, never a fallback to the whole scope.
+- **`null` = every branch (a CEO who picked nothing). `[]` = NOTHING.** Same fail-closed rule as `payroll-branch-scope.ts`. Controllers **refuse** an empty scope with `403` rather than serving zeros: `getSalaryMonthly` / `getMonthlyNetProfit` re-derive their own scope from `performedById`, so a zero-filled report would still contain that caller's payroll and read as a catastrophic loss.
+- **Three predicate shapes, because the branch lives in three places**: `branchIdWhere` (Payment, Expense, Transaction, CashMovement), `studentBranchWhere` (Student — via the `StudentBranch` join, the same predicate every student list uses), `userBranchWhere` (SalaryPayment / SalaryAccrual carry NO branch — it comes from the employee's `mainBranch`/`UserBranch`).
+- **Count legs need scoping too.** `getFinancialTrend` / `getYearlyTrend` scoped money by branch but took new-student and unique-payer COUNTS company-wide, so a branch series plotted 0 so'm beside "715 new students". `getReconciliation` took no branch at all, so every workbook's Tekshiruv sheet footed against the whole company.
+- **`reports-branch-scope-coverage.spec.ts` is the regression guard**: with a scope set, EVERY query a money report issues must carry a branch predicate. A newly-added unscoped query fails it immediately. `scripts/audit-branch-scope-sum.ts` checks the same invariant (`Σ(branches) == total`) against real data.
+
 #### Object-level branch confinement
 
 A `@Roles()` guard proves the caller has a role, not that the record is theirs. Two id-addressed writes were company-scoped only:

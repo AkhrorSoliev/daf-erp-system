@@ -84,11 +84,11 @@ describe('ReportsFinancialService', () => {
     });
 
     it('scopes the billed-lessons query to the requested branch', async () => {
-      await service.getFinancialOverview(1, { ...period, branchId: 42 });
+      await service.getFinancialOverview(1, { ...period, branchIds: [42] });
 
       expect(prisma.transaction.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ branchId: 42 }),
+          where: expect.objectContaining({ branchId: { in: [42] } }),
         }),
       );
     });
@@ -191,7 +191,7 @@ describe('ReportsFinancialService', () => {
     });
 
     it('scopes the advance-paid query to TEACHER_ADVANCE + branch and the settled query to a PAID salary run', async () => {
-      await service.getFinancialOverview(1, { ...period, branchId: 42 });
+      await service.getFinancialOverview(1, { ...period, branchIds: [42] });
 
       // Advance-paid (netted out of Xarajatlar) — by expense date + branch.
       expect(prisma.expense.aggregate).toHaveBeenCalledWith(
@@ -199,7 +199,7 @@ describe('ReportsFinancialService', () => {
           where: expect.objectContaining({
             companyId: 1,
             category: 'TEACHER_ADVANCE',
-            branchId: 42,
+            branchId: { in: [42] },
           }),
         }),
       );
@@ -473,7 +473,7 @@ describe('ReportsFinancialService', () => {
     });
 
     it('filters refunds/write-offs to non-reversed rows and scopes gateway fees by branch', async () => {
-      await service.getPeriodOutflows(1, { ...period, branchId: 7 });
+      await service.getPeriodOutflows(1, { ...period, branchIds: [7] });
 
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -493,7 +493,7 @@ describe('ReportsFinancialService', () => {
       );
       expect(prisma.payment.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ branchId: 7 }),
+          where: expect.objectContaining({ branchId: { in: [7] } }),
         }),
       );
     });
@@ -601,7 +601,7 @@ describe('ReportsFinancialService', () => {
 
       const result = await service.getIncomeMonthAttribution(1, {
         ...period,
-        branchId: 5,
+        branchIds: [5],
       });
 
       expect(result.total).toBe(400000); // only the branch-5 payment

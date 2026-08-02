@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { resolvePeriod, branchWhere } from '../common/finance/period-helpers';
+import { resolvePeriod } from '../common/finance/period-helpers';
+import {
+  branchIdWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 
 // Above this many rows a single detail sheet stops being readable and starts
 // bloating the workbook — cap the query and let the caller flag truncation.
@@ -20,14 +24,13 @@ export class ReportsPaymentsService {
   async getPaymentLineItems(
     companyId: number,
     query: {
-      branchId?: number;
-      branchIds?: number[];
+      branchIds: ReportBranchIds;
       startDate?: string;
       endDate?: string;
     },
   ) {
     const period = resolvePeriod(query.startDate, query.endDate);
-    const branch = branchWhere(query);
+    const branch = branchIdWhere(query.branchIds);
     const where = {
       companyId,
       status: 'COMPLETED' as const,

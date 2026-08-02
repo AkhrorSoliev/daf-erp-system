@@ -49,10 +49,19 @@ import {
   periodTag,
   ComparisonInput,
 } from './reports-excel.comparison-sheets';
+import {
+  singleBranchId,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 
 export interface FinancialExcelQuery {
-  branchId?: number;
-  branchIds?: number[];
+  /**
+   * ONE resolved scope for the WHOLE workbook. The old `branchId` +
+   * `branchIds` pair was read differently by different sheets, so a single
+   * export could show the company's income on «Asosiy xulosa», 0 on «Foyda va
+   * zarar», and a third branch's name on the cover.
+   */
+  branchIds: ReportBranchIds;
   startDate?: string;
   endDate?: string;
   companyName?: string;
@@ -98,23 +107,24 @@ export class ReportsExcelService {
   constructor(private reports: ReportsService) {}
 
   async generate(companyId: number, query: FinancialExcelQuery): Promise<Buffer> {
+    const branchIds = query.branchIds ?? null;
     const scope = {
-      branchId: query.branchId,
-      branchIds: query.branchIds,
+      branchIds,
       startDate: query.startDate,
       endDate: query.endDate,
     };
     const periodScope = { startDate: query.startDate, endDate: query.endDate };
     const branchNames = query.branchNames ?? {};
-    // Debtor + balance-sheet scope must match so the Qarzdorlar total ties.
-    const debtorBranchIds =
-      query.branchIds && query.branchIds.length > 0
-        ? query.branchIds
-        : query.branchId
-          ? [query.branchId]
-          : undefined;
-    const companyWide =
-      !query.branchId && !(query.branchIds && query.branchIds.length > 0);
+    // Every sheet now reads THIS scope — including the ones that used to take
+    // their own (`getFinancialOverview`, the trends, `getReconciliation`).
+    const debtorBranchIds = branchIds ?? undefined;
+    const companyWide = branchIds === null;
+    // Payroll and the operational sheets are still typed `branchId?: number`;
+    // they re-confine themselves from `performedById`, so a multi-branch scope
+    // degrading to `undefined` is safe. An EMPTY scope would NOT be — it would
+    // leave them unfiltered while every other leg returned 0 — but the
+    // controller refuses that caller before we get here.
+    const salaryBranchId = singleBranchId(branchIds);
     // Computed-salary sheet is per calendar month — use the period's start month
     // (defaults to the current month, matching the frontend default).
     const now = new Date();
@@ -146,45 +156,32 @@ export class ReportsExcelService {
       debtHistory,
       outflows,
     ] = await Promise.all([
-      this.reports.getFinancialOverview(companyId, {
-        branchId: query.branchId,
-        startDate: query.startDate,
-        endDate: query.endDate,
-      }),
+      this.reports.getFinancialOverview(companyId, scope),
       this.reports.getProfitLoss(companyId, scope),
-      this.reports.getBalanceSheet(companyId, {
-        branchId: query.branchId,
-        branchIds: query.branchIds,
-      }),
+      this.reports.getBalanceSheet(companyId, { branchIds }),
       this.reports.getPaymentLineItems(companyId, scope),
       this.reports.getExpenseLineItems(companyId, scope),
-      // branchId is REQUIRED here: the revenue leg of this workbook is
+      // Branch scope is REQUIRED here: the revenue leg of this workbook is
       // branch-scoped, so leaving salary company-wide subtracts every branch's
-      // payroll from one branch's income. The API path was fixed in c490d68;
-      // this call site was missed, which is why the Excel "Sof foyda" sheet and
-      // the Foyda card disagreed for a filtered export.
+      // payroll from one branch's income.
       this.reports.getSalaryMonthly(
         companyId,
         monthStr,
         query.performedById ?? 0,
-        query.branchId,
+        salaryBranchId,
       ),
       this.reports.getDebtorLineItems(companyId, debtorBranchIds),
-      this.reports.getFinancialTrend(companyId, query.branchId),
+      this.reports.getFinancialTrend(companyId, branchIds),
       companyWide
         ? this.reports.getPerBranchSummary(companyId, periodScope)
         : Promise.resolve([]),
-      this.reports.getReconciliation(companyId, periodScope),
+      this.reports.getReconciliation(companyId, { ...periodScope, branchIds }),
       this.reports.getPriorPeriodSummary(companyId, scope),
       // Month-end debt + recovery — ledger-reconstructed, period-independent.
       this.reports.getMonthlyDebtRecovery(companyId),
       // Outflows the legacy netProfit misses (refunds / write-offs / gateway
       // fees) — feed the "Sof foyda" block.
-      this.reports.getPeriodOutflows(companyId, {
-        branchId: query.branchId,
-        startDate: query.startDate,
-        endDate: query.endDate,
-      }),
+      this.reports.getPeriodOutflows(companyId, scope),
     ]);
 
     // ─── Operational (non-financial) datasets ────────────────────────────────
@@ -194,8 +191,12 @@ export class ReportsExcelService {
     // to the period's month-start → today when the caller left them open.
     const opStart = query.startDate ?? `${monthStr}-01`;
     const opEnd = query.endDate ?? tashkentTodayStr();
-    const opQ = { branchId: query.branchId, startDate: opStart, endDate: opEnd };
-    const branchParams = { branchId: query.branchId, startDate: opStart, endDate: opEnd };
+    const opQ = { branchId: salaryBranchId, startDate: opStart, endDate: opEnd };
+    const branchParams = {
+      branchId: salaryBranchId,
+      startDate: opStart,
+      endDate: opEnd,
+    };
     const safe = async <T>(p: Promise<T>): Promise<T | null> => {
       try {
         return await p;
@@ -218,7 +219,11 @@ export class ReportsExcelService {
       safe(this.reports.getKpis(companyId, opQ)),
       safe(this.reports.getLeadAnalytics({ startDate: opStart, endDate: opEnd })),
       safe(this.reports.getDepartedStudentsSummary(companyId, branchParams)),
-      safe(this.reports.getDepartedStudentsDynamics(companyId, { branchId: query.branchId })),
+      safe(
+        this.reports.getDepartedStudentsDynamics(companyId, {
+          branchId: salaryBranchId,
+        }),
+      ),
       safe(this.reports.getDepartedStudentsReasons(companyId, branchParams)),
       safe(this.reports.getRoomUtilization(companyId, opQ)),
       safe(this.reports.getGroupAnalytics(companyId, opQ)),
@@ -282,14 +287,14 @@ export class ReportsExcelService {
           const [ov, att, ld] = await Promise.all([
             safe(
               this.reports.getFinancialOverview(companyId, {
-                branchId: query.branchId,
+                branchIds,
                 startDate: w.start,
                 endDate: w.end,
               }),
             ),
             safe(
               this.reports.getAttendanceAnalytics(companyId, {
-                branchId: query.branchId,
+                branchId: salaryBranchId,
                 startDate: w.start,
                 endDate: w.end,
               }),
@@ -307,7 +312,7 @@ export class ReportsExcelService {
         }),
       ),
       includeYearly
-        ? safe(this.reports.getYearlyTrend(companyId, query.branchId))
+        ? safe(this.reports.getYearlyTrend(companyId, branchIds))
         : Promise.resolve(null),
     ]);
 
@@ -349,7 +354,7 @@ export class ReportsExcelService {
         return this.reports.getRecognizedRevenue(companyId, {
           start: new Date(Date.UTC(y, mm - 1, 1)),
           end: new Date(Date.UTC(y, mm, 1)),
-          branchId: query.branchId,
+          branchIds,
         });
       }),
     );
@@ -375,7 +380,7 @@ export class ReportsExcelService {
             companyId,
             m,
             query.performedById ?? 0,
-            query.branchId,
+            salaryBranchId,
           ),
         })),
       );

@@ -403,7 +403,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('omits "Filial kesimida" when a branch is selected', async () => {
-    const wb = await load(await service.generate(1, { branchId: 1 }));
+    const wb = await load(await service.generate(1, { branchIds: [1] }));
     const names = wb.worksheets.map((w) => w.name);
     expect(names).not.toContain('Filial kesimida');
     expect(names).toHaveLength(22);
@@ -488,7 +488,7 @@ describe('ReportsExcelService', () => {
     // company-wide subtracted EVERY branch's payroll from ONE branch's income:
     // a Namangan-filtered export showed "Sof foyda" = −90.8M while the Foyda
     // card showed 0. The API path was fixed in c490d68; this call site was not.
-    await service.generate(1, { branchId: 2 } as any);
+    await service.generate(1, { branchIds: [2] } as any);
 
     expect(reports.getSalaryMonthly).toHaveBeenCalledWith(
       1,

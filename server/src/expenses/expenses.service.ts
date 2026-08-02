@@ -9,7 +9,11 @@ import { EntityHistoryService } from '../common/entity-history';
 import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
-import { resolvePeriod, branchWhere } from '../common/finance/period-helpers';
+import { resolvePeriod } from '../common/finance/period-helpers';
+import {
+  branchIdWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 import { renderPdf } from '../receipts/pdf/render';
 import {
   buildExpensesDoc,
@@ -129,16 +133,19 @@ export class ExpensesService {
   private buildWhere(
     query: ExpenseQueryDto,
     companyId: number,
+    branchIds: ReportBranchIds,
   ): Prisma.ExpenseWhereInput {
     return {
       companyId,
       deletedAt: null,
       // Every expense belongs to exactly one branch, and each branch's profit
       // is its own income minus its OWN costs (docs/branch-decisions.md D4).
-      // This filter was accepted by the DTO but never applied, so the list,
-      // the summary cards and the PDF always showed company-wide figures —
-      // while the PDF header printed the selected branch's name on top.
-      ...(query.branchId && { branchId: query.branchId }),
+      // The scope is resolved from the CALLER plus the branch they picked —
+      // taking `query.branchId` alone ignored a Branch Director's own
+      // confinement, so a Namangan director's page showed Fargona's 20 377 000
+      // so'm while the workbook's Xarajatlar sheet, scoped the other way,
+      // showed 0 for the same period.
+      ...branchIdWhere(branchIds),
       // TEACHER_ADVANCE is managed on the Ish haqi (salary) page now — advances
       // never surface in the expenses list / summary / PDF. Any other category
       // filter still applies; without one we simply exclude advances.
@@ -173,11 +180,15 @@ export class ExpensesService {
     createdBy: { select: { id: true, firstName: true, lastName: true } },
   } satisfies Prisma.ExpenseSelect;
 
-  async findAll(query: ExpenseQueryDto, companyId: number) {
+  async findAll(
+    query: ExpenseQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
-    const where = this.buildWhere(query, companyId);
+    const where = this.buildWhere(query, companyId, branchIds);
 
     const [data, total, byCatMethod] = await Promise.all([
       this.prisma.expense.findMany({
@@ -230,8 +241,12 @@ export class ExpensesService {
 
   // Returns every row matching the current filters, ignoring pagination (the
   // list endpoint caps pageSize at 100). Reused by the PDF export.
-  async exportAll(query: ExpenseQueryDto, companyId: number) {
-    const where = this.buildWhere(query, companyId);
+  async exportAll(
+    query: ExpenseQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    const where = this.buildWhere(query, companyId, branchIds);
     return this.prisma.expense.findMany({
       where,
       select: this.listSelect,
@@ -241,23 +256,24 @@ export class ExpensesService {
 
   /**
    * Every expense in the period for the Excel "Xarajatlar" line-item sheet.
-   * Unlike `exportAll` (single `branchId` via the DTO), this honours a Branch
-   * Director's resolved `branchIds[]` and reuses the shared `resolvePeriod`
-   * boundary so the sheet reconciles with the P&L expense figures. Adds the
+   * Takes the SAME resolved scope as the page (`buildWhere`) and reuses the
+   * shared `resolvePeriod` boundary, so the sheet reconciles with both the page
+   * and the P&L expense figures. It used to let a Branch Director's `branchIds`
+   * override the branch selected in the export dialog, which is how the same
+   * period read 20 377 000 on screen and 0 in the workbook. Adds the
    * TEACHER_ADVANCE recipient (`relatedUser`) for the "Ustoz" column. Row list
    * is capped; `total`/`count` come from an aggregate so they stay exact.
    */
   async exportAllForReport(
     companyId: number,
     query: {
-      branchId?: number;
-      branchIds?: number[];
+      branchIds: ReportBranchIds;
       startDate?: string;
       endDate?: string;
     },
   ) {
     const period = resolvePeriod(query.startDate, query.endDate);
-    const branch = branchWhere(query);
+    const branch = branchIdWhere(query.branchIds);
     const where: Prisma.ExpenseWhereInput = {
       companyId,
       deletedAt: null,
@@ -293,9 +309,10 @@ export class ExpensesService {
   async generateExpensesPdf(
     query: ExpenseQueryDto,
     companyId: number,
+    branchIds: ReportBranchIds,
   ): Promise<Buffer> {
     const [rows, company, branch] = await Promise.all([
-      this.exportAll(query, companyId),
+      this.exportAll(query, companyId, branchIds),
       this.prisma.company.findUnique({
         where: { id: companyId },
         select: { name: true },

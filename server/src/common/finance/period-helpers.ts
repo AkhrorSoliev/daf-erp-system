@@ -39,20 +39,13 @@ export function resolvePeriod(
 }
 
 /**
- * Branch filter shared by all statement queries. A Branch Director's resolved
- * scope (branchIds) takes precedence over an explicit branchId query param —
- * mirrors the existing getDebtWriteOffsSummary behaviour.
+ * `branchWhere` used to live here. It took BOTH a `branchId` and a `branchIds`
+ * and let the list win, so the branch a user picked in the switcher was
+ * discarded in favour of their whole scope — and any query that happened to
+ * read the other field disagreed with it. Use
+ * `common/finance/report-branch-scope.ts` instead: resolve ONE scope at the
+ * HTTP boundary (`resolveCallerReportBranchIds`) and pass it down.
  */
-export function branchWhere(opts: {
-  branchId?: number;
-  branchIds?: number[];
-}): { branchId?: number | { in: number[] } } {
-  if (opts.branchIds && opts.branchIds.length > 0) {
-    return { branchId: { in: opts.branchIds } };
-  }
-  if (opts.branchId) return { branchId: opts.branchId };
-  return {};
-}
 
 /** Whole-number percentage; 0 when the denominator is 0. */
 export function pct(part: number, whole: number): number {

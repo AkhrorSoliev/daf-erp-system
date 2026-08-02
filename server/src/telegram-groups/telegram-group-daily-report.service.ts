@@ -686,6 +686,8 @@ export class TelegramGroupDailyReportService {
       if (!caller) return null;
       const np = await this.reports.getMonthlyNetProfit(companyId, {
         month,
+        // Company-wide: the daily report covers the whole centre.
+        branchIds: null,
         performedById: caller.id,
       });
       return np.netProfit;

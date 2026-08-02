@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { CashMovementType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { resolvePeriod, branchWhere } from '../common/finance/period-helpers';
+import { resolvePeriod } from '../common/finance/period-helpers';
+import {
+  branchIdWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 
 export interface CashFlowQuery {
-  branchId?: number;
-  branchIds?: number[];
+  branchIds: ReportBranchIds;
   startDate?: string;
   endDate?: string;
 }
@@ -29,7 +32,7 @@ export class ReportsCashFlowService {
 
   async getCashFlow(companyId: number, query: CashFlowQuery) {
     const period = resolvePeriod(query.startDate, query.endDate);
-    const branch = branchWhere(query);
+    const branch = branchIdWhere(query.branchIds);
 
     const inPeriod = { gte: period.start, lte: period.endTs };
 

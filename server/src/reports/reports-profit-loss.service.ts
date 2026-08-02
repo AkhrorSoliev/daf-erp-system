@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ExpenseCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolvePeriod, pct } from '../common/finance/period-helpers';
 import {
-  resolvePeriod,
-  branchWhere,
-  pct,
-} from '../common/finance/period-helpers';
+  branchIdWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 
 export interface ProfitLossQuery {
-  branchId?: number;
-  branchIds?: number[];
+  branchIds: ReportBranchIds;
   startDate?: string;
   endDate?: string;
 }
@@ -35,15 +34,10 @@ export class ReportsProfitLossService {
 
   async getProfitLoss(companyId: number, query: ProfitLossQuery) {
     const period = resolvePeriod(query.startDate, query.endDate);
-    const branch = branchWhere(query);
-    // Same scope expressed as a plain id list, for relations that carry the
-    // branch on a joined row rather than on themselves.
-    const branchScopeIds =
-      query.branchIds && query.branchIds.length > 0
-        ? query.branchIds
-        : query.branchId
-          ? [query.branchId]
-          : null;
+    const branch = branchIdWhere(query.branchIds);
+    // Same scope as a plain id list, for relations that carry the branch on a
+    // joined row rather than on themselves.
+    const branchScopeIds = query.branchIds;
 
     const tsFilter = { gte: period.start, lte: period.endTs };
     const dateFilter = { gte: period.start, lte: period.endDate };

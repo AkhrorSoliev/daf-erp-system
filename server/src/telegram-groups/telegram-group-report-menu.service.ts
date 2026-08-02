@@ -273,9 +273,12 @@ export class TelegramGroupReportMenuService {
       await ctx.answerCbQuery().catch(() => undefined);
       const group = await this.resolveGroup(ctx);
       if (!group) return;
+      // Company-wide on purpose: the card goes to a group chat that already
+      // receives the whole centre's daily financials, and a group callback
+      // carries no per-user ERP identity to scope by.
       const o = await this.reportsFinancial.getFinancialOverview(
         group.companyId,
-        {},
+        { branchIds: null },
       );
       const monthKey = this.currentMonth();
       const month = this.monthLabel(monthKey);
@@ -327,6 +330,8 @@ export class TelegramGroupReportMenuService {
       if (!ceo) return null;
       const np = await this.reports.getMonthlyNetProfit(companyId, {
         month,
+        // Company-wide: a group chat has no per-user ERP identity to scope by.
+        branchIds: null,
         performedById: ceo.id,
       });
       return np.netProfit;
@@ -382,6 +387,8 @@ export class TelegramGroupReportMenuService {
         const { companyName, branchNames, performedById } =
           await this.excelContext(group.companyId);
         const buffer = await this.reportsExcel.generate(group.companyId, {
+          // Company-wide, matching the 'Barcha filiallar' label below.
+          branchIds: null,
           startDate: opts.startDate,
           endDate: opts.endDate,
           companyName,
