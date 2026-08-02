@@ -248,15 +248,38 @@ export class TelegramOauthService {
     }
 
     const payload = (await res.json().catch(() => null)) as
-      | { id_token?: string }
+      | { id_token?: string; error?: unknown; error_description?: unknown }
       | null;
+
+    // TELEGRAM XATONI HTTP 200 BILAN QAYTARADI. RFC 6749 §5.2 bo'yicha bu 400
+    // bo'lishi kerak, shuning uchun yuqoridagi `!res.ok` tekshiruvi bunga
+    // tushmaydi. Tasdiqlangan: soxta kod bilan so'rov `{"error":"invalid_grant"}`
+    // + HTTP 200 qaytardi. Ya'ni javob tanasidagi `error` ni ALOHIDA
+    // tekshirmasak, oqim «id_token yo'q» tarmog'iga tushib, sababi
+    // ko'rinmay qoladi.
+    if (payload?.error) {
+      // `error` va `error_description` — OAuth xato KODLARI, maxfiy emas
+      // (masalan `invalid_grant`, `invalid_client`). Token yoki secret emas.
+      this.logger.warn(
+        `Telegram token almashtirishni rad etdi: error=${String(
+          payload.error,
+        )}${
+          payload.error_description
+            ? ` description=${String(payload.error_description)}`
+            : ''
+        }`,
+      );
+      throw new UnauthorizedException(
+        "Telegram kirishni tasdiqlamadi. Qaytadan urinib ko'ring.",
+      );
+    }
+
     const idToken = payload?.id_token;
     if (!idToken) {
       // KUZATUV: bu yo'l ilgari JIMGINA otilardi va foydalanuvchi ko'radigan
       // xabar `verify()` ning xatosi bilan bir xil, ya'ni logda hech narsa
-      // qolmasdi. 2026-08-01 dagi nosozlikni tekshirishda aynan shu ikki
-      // yo'lni bir-biridan ajratib bo'lmadi. Qiymatlarni emas, faqat
-      // KALIT nomlarini yozamiz — tokenlar logga tushmasligi kerak.
+      // qolmasdi. Qiymatlarni emas, faqat KALIT nomlarini yozamiz — tokenlar
+      // logga tushmasligi kerak.
       this.logger.warn(
         `Telegram token javobida id_token yo'q. Kelgan kalitlar: ${
           payload ? Object.keys(payload).join(', ') || '(bo\'sh obyekt)' : '(JSON emas)'
