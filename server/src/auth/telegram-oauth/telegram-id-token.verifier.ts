@@ -102,16 +102,18 @@ export class TelegramIdTokenVerifier {
       );
     }
 
-    // `id` claim QIYMATI qaytarilmaydi — uni hech kim ishlatmaydi va katta
-    // Telegram id'lari `number` sifatida 2^53 dan oshib aniqligini yo'qotishi
-    // mumkin. Lekin claim MAVJUD va skalyar ekani tokenning qat'iy
-    // tekshiruvining bir qismi: bu shakl Telegram'ning haqiqiy `id_token`iga
-    // xos, shuning uchun tekshiruvni saqlab qolamiz.
-    const rawId = payload.id;
-    if (typeof rawId !== 'number' && typeof rawId !== 'string') {
-      throw new UnauthorizedException('Telegram javobi tekshirilmadi');
-    }
-
+    // `id` CLAIM'I TEKSHIRILMAYDI — Telegram uni yubormaydi.
+    //
+    // Hujjatdagi misol payload'da `id: 987654321` bor edi va biz o'shanga
+    // qarab uni majburiy qilgan edik. Lekin Telegram'ning o'z discovery
+    // hujjati (`/.well-known/openid-configuration` → `claims_supported`)
+    // faqat shularni sanaydi: aud, preferred_username, phone_number, exp,
+    // iat, iss, name, picture, sub. Natijada prod'da HAR BIR kirish jimgina
+    // «Telegram javobi tekshirilmadi» bilan rad etildi (2026-08-01).
+    //
+    // Qiymati bizga kerak ham emas: bu funksiya faqat `phoneNumber`
+    // qaytaradi, akkaunt esa telefon bo'yicha topiladi. Yo'q claim'ni talab
+    // qilish tekshiruvni kuchaytirmaydi — u shunchaki oqimni o'ldiradi.
     return { phoneNumber };
   }
 }

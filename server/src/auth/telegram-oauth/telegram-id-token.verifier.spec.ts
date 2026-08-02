@@ -147,12 +147,25 @@ describe('TelegramIdTokenVerifier', () => {
     );
   });
 
-  it("id claim yo'q bo'lsa rad etadi", async () => {
+  /**
+   * HAQIQIY TELEGRAM TOKENIDA `id` CLAIM'I YO'Q.
+   *
+   * `oauth.telegram.org/.well-known/openid-configuration` dagi
+   * `claims_supported` ro'yxati: aud, preferred_username, phone_number, exp,
+   * iat, iss, name, picture, sub. Hujjatdagi MISOL payload'da `id` bor edi va
+   * biz o'shanga qarab uni majburiy qilib qo'ygan edik — natijada prod'da har
+   * bir kirish «Telegram javobi tekshirilmadi» bilan rad etildi (2026-08-01).
+   *
+   * Qiymati bizga baribir kerak emas (`VerifiedTelegramIdentity` faqat
+   * `phoneNumber` qaytaradi), shuning uchun claim butunlay ixtiyoriy.
+   */
+  it("id claim YO'Q bo'lsa ham qabul qiladi (Telegram uni yubormaydi)", async () => {
     const { verifier, sign } = await harness();
     const { id: _omit, ...withoutId } = validPayload;
-    await expect(
-      verifier.verify(await sign(withoutId)),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    await expect(verifier.verify(await sign(withoutId))).resolves.toEqual({
+      phoneNumber: '998901234567',
+    });
   });
 
   it.each([
@@ -160,13 +173,17 @@ describe('TelegramIdTokenVerifier', () => {
     ['array', [1, 2]],
     ['boolean', true],
     ['null', null],
-  ])('id claim skalyar bo\'lmasa (%s) rad etadi', async (_label, badId) => {
-    const { verifier, sign } = await harness();
-    const token = await sign({ ...validPayload, id: badId as unknown });
-    await expect(verifier.verify(token)).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
-  });
+  ])(
+    'id claim g\'alati (%s) bo\'lsa ham to\'sib qo\'ymaydi — u ishlatilmaydi',
+    async (_label, oddId) => {
+      const { verifier, sign } = await harness();
+      const token = await sign({ ...validPayload, id: oddId as unknown });
+
+      await expect(verifier.verify(token)).resolves.toEqual({
+        phoneNumber: '998901234567',
+      });
+    },
+  );
 
   it("clientId bo'sh bo'lsa, boshqa jihatdan mukammal tokenni ham rad etadi", async () => {
     const { publicKey, privateKey } = await generateKeyPair('RS256');
