@@ -190,6 +190,46 @@ describe('TelegramOauthService', () => {
       expect(redis.set).not.toHaveBeenCalled();
     });
 
+    /**
+     * TELEGRAM XATONI HTTP 200 BILAN QAYTARADI (RFC 6749 §5.2 bo'yicha 400
+     * bo'lishi kerak edi). Tasdiqlangan: soxta kod bilan yuborilgan so'rov
+     * `{"error":"invalid_grant"}` + HTTP 200 qaytardi. `!res.ok` bunga
+     * tushmaydi, shuning uchun javob tanasidagi `error` alohida tekshirilishi
+     * shart — aks holda sabab logda ko'rinmaydi.
+     */
+    it('HTTP 200 ichidagi OAuth xatosini aniqlaydi va sababni logga yozadi', async () => {
+      mockTokenEndpoint({ error: 'invalid_grant' });
+      const { service, redis } = makeService();
+      const warn = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      const { redirectUrl } = await service.handleCallback('code-1', 'state-1');
+
+      expect(errorOf(redirectUrl)).toBeTruthy();
+      expect(redis.set).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('error=invalid_grant'),
+      );
+    });
+
+    it('error_description bo\'lsa uni ham logga qo\'shadi', async () => {
+      mockTokenEndpoint({
+        error: 'invalid_grant',
+        error_description: 'code_verifier mismatch',
+      });
+      const { service } = makeService();
+      const warn = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      await service.handleCallback('code-1', 'state-1');
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('description=code_verifier mismatch'),
+      );
+    });
+
     it('chet el raqamini o\'zgartirmasdan topuvchiga uzatadi', async () => {
       // Normalizatsiya topuvchining ishi (common/utils/phone.util) — bu yerda
       // raqamga tegilmasligi kerak, aks holda mamlakat kodi yo'qoladi.
