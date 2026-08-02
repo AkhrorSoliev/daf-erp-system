@@ -195,14 +195,22 @@ export function EditGroupForm({
   const onSubmit = async (values: EditGroupFormValues) => {
     setSubmitting(true);
     try {
-      // NOTE: branchId is deliberately NOT sent. This form used to include the
-      // header switcher's branch on every save, which silently moved the group
-      // — along with its students, lesson deductions and salary accruals — into
-      // whichever branch the admin happened to be viewing. A group's branch is
-      // fixed at creation; the backend ignores the field too.
+      // NOTE: branchId is sent on CREATE only. A group's branch is fixed at
+      // creation, so an EDIT must never carry it — this form used to include
+      // the header switcher's branch on every save, which silently moved the
+      // group (along with its students, lesson deductions and salary accruals)
+      // into whichever branch the admin happened to be viewing. The backend
+      // discards the field on PATCH and requires it on POST.
       const payload: any = {
         courseId: values.courseId,
       };
+      if (isAdd) {
+        if (!selectedBranch?.id) {
+          toast.error("Filial tanlanmagan — yuqoridan filialni tanlang");
+          return;
+        }
+        payload.branchId = selectedBranch.id;
+      }
       if (values.name) payload.name = values.name;
       if (values.level) payload.level = values.level;
       if (values.teacherId) payload.teacherIds = [values.teacherId];
