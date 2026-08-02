@@ -8,6 +8,84 @@
 
 ---
 
+## 0a. QAYTA TEKSHIRUV — 2026-07-30 (13 commit'dan keyin)
+
+Har bir topilma joriy kod bo'yicha qayta tekshirildi (10 guruh + har «tuzatildi» da'vosiga qarshi challenge). Testlar: 180 suite / 2253 test o'tdi.
+
+| Holat | Topilmalar |
+|---|---|
+| ✅ **TUZATILDI** | **H3**, **H5**, **H6**, **H7**, **H8**, **H13**, **H14**, **H15**, **H16**, **H17** |
+| ❌ **TUZATILMAGAN** | H1, H2, H4, H9–H12, H18–H32 (22 ta) |
+| 🔁 **REGRESSIYA** | yo'q (lekin H5 ichida yangi kesh xatosi — pastga qarang) |
+
+### ✅ H7, H8, H13–H17 — filial qamrovi (2026-08-02, prod'da o'lchandi)
+
+Ildiz sabab bitta edi: hisobot moduli **ikkita raqobatlashuvchi filial parametri** olib yurardi — `branchId`
+(switcher tanlagani) va `branchIds` (chaqiruvchining o'z qamrovi) — va har bir so'rov qaysi birini
+hurmat qilishni o'zi hal qilardi. `branchWhere()` esa `branchIds` ni **ustun** qo'yardi, ya'ni
+foydalanuvchi ataylab tanlagan filial jimgina tashlab yuborilardi.
+
+Endi: `common/finance/report-branch-scope.ts` — **qamrov shift (ceiling), tanlangan filial esa uni
+toraytiradi**. HTTP chegarasida bir marta hisoblanadi (`resolveCallerReportBranchIds`), qolgan hamma joyga
+tayyor javob uzatiladi. `branchWhere()` va `branchId`+`branchIds` juftligi butunlay o'chirildi — bu
+xato sinfini **tiplar darajasida** ifodalab bo'lmaydigan qildi.
+
+Qamrovi bo'sh chaqiruvchi (filiali yo'q direktor yoki o'z qamrovidan tashqaridagi filialni so'ragan)
+**403 oladi** — nolga to'la hisobot emas: ba'zi servislar o'z qamrovini `performedById` dan qayta
+chiqaradi, ya'ni hisobotning bir qismi baribir to'lardi va hujjat o'z-o'ziga zid bo'lardi.
+
+Prod o'lchovi (2026-08-02):
+```
+Ko'rsatkich          Farg'ona      Namangan    Σ        Jami
+Jami qarz            28 453 233           0    ✅       (avval: Namangan 27 748 684)
+Qarzdorlar soni             208           0    ✅       (avval: Namangan 177)
+Faol o'quvchilar            404           0    ✅       (avval: Namangan 407)
++ Tushum / Xarajat / Oylik / Dars — hammasi ✅
+Filialsiz qator: 0 ta
+```
+
+Qo'riqchi test: `reports-branch-scope-coverage.spec.ts` — qamrov berilganda hisobotning **har bir**
+so'rovida filial predikati borligini tekshiradi. Mutatsiya bilan sinaldi (bitta predikatni olib
+tashlash → 2 test yiqiladi). `scripts/audit-branch-scope-sum.ts` esa haqiqiy bazada Σ(filiallar) = jami
+ni o'lchaydi.
+
+### ✅ H3 — to'liq tuzatilgan (prod'da o'lchandi)
+`computePeriodBounds` endi `periodStartDate` / `periodEndDateExclusive` juftini ham qaytaradi va `@db.Date` ustunlarga aynan shular beriladi (`lt`, `lte` emas). Prod tekshiruvi:
+```
+IYUL oynasi (sana): 2026-07-01 … < 2026-08-01
+Iyul oynasidagi 3997 accrualdan lessonDate < 01.07 bo'lgani: 0 ta
+30.06 accruallari (80 ta) IYUNda qoldi — yo'qolmadi
+```
+Qoldiq (kichik): `scripts/forecast-full-salary-topup.ts` va `scripts/export-june-salary-excel.ts` hali eski davr mantiqining o'z nusxasini saqlaydi — hisobot yuzasi emas, lekin qayta yurgizilsa hisobotga mos kelmaydi.
+
+**Diqqat:** `scripts/audit-july-clean.ts` dagi «ORTIQCHA (30.06 ikki marta)» qatori endi **noto'g'ri yorliq** — u qonuniy carry-over'ni (407 accrual, 6 945 039 so'm, `creditPeriodDate` orqali «Oldingi oydan») ikki marta sanash deb ko'rsatadi. Qatorni olib tashlash kerak.
+
+### 🟡 H5 — kanonik manba joriy etildi, lekin ikki teshik qoldi
+To'rt yuza ham `getMonthlyNetProfit` ga o'tdi, kassa raqami rostgo'y «Kassa harakati (oyliksiz)» yorlig'i bilan qoldirildi. Qolgani:
+1. **Kesh kaliti `performedById` ni olmaydi** (`netProfitCacheKey(companyId, branchId, monthKey)`), lekin `getMonthlyNetProfit` ning oylik oyog'i **chaqiruvchiga qarab** qamrovlanadi (CEO → hamma filial, BD → o'z filiali). Ya'ni CEO va filial direktori bitta kesh yozuvini bo'lishadi → biri ikkinchisining raqamini bir kunga «zaharlashi» mumkin.
+2. **Karta keshsiz, grafik kunlik keshda** — joriy oy uchun ular kun ichida farq qilishi mumkin.
+3. **`profitBasis` frontendda ishlatilmagan** (client'da 0 ta joyda) — kanonik hisob xato bersa grafik jimgina kassa raqamini chizadi, foydalanuvchi bilmaydi.
+
+### 🟡 H6 — oy chegarasidagi davrlar tuzatildi, erkin sana oralig'i emas
+`reports-excel.month-range.ts` bilan **oyga tekislangan** exportlar (Telegram `rm:p3/p6/p12`, `rm:py`, web «Oxirgi 3 oy» / «Bu yil») haqiqatan tuzatildi. Lekin H6 nomlagan **erkin sana oralig'i** hali mos emas va endi **teskari tomonga** xato qiladi: tushum va oylik butun kalendar oylarga «yopishadi», xarajat/refund esa aniq kunlarni saqlaydi. O'lchangan: `10.06–15.07` exporti so'ralgan oynadan **tashqaridagi 133 492 800 so'm** tushumni qo'shib yuboradi.
+Qo'shimcha: ko'p oylik yo'lda `month=undefined` uzatilgani uchun varaq butun yig'indini «+ markaz qo'shimchasi» deb belgilaydi; «Oyliklar» varag'i va «Tekshiruv» dagi «Hisoblangan oylik (sof, shu oy)» qatori hali faqat boshlang'ich oyni ko'rsatadi (web exportda ogohlantirishsiz); `generate()` ni ko'p oylik oraliq bilan sinaydigan test yo'q.
+
+### 🟡 H7 — argument ulandi, lekin qamrov bir qavat pastda buziladi
+`getSalaryMonthly` ga 4-argument (`branchId`) endi ikkala Excel oyog'ida ham berilyapti va o'lchangan simptom (CEO + Namangan: Excel −90.8M vs karta 0) yo'qoldi. Lekin:
+- `branchId` **faqat ustozlar ro'yxatini** filtrlaydi (`salary-monthly.service.ts:105`); accrual / attendance / group / groupTeacher so'rovlarida filial predikati **yo'q** → har bir ustoz o'zining **butun kompaniya bo'yicha** covered+gap ini qo'shadi. Ikki filialga biriktirilgan ustoz paydo bo'lishi bilan Σ(filiallar) > kompaniya bo'ladi. **Bu aynan P7 ning go-live sharti.**
+- O'sha workbook'ning «Asosiy xulosa» varag'i hali `overview.salary.paid` ni ishlatadi — u company-wide.
+
+### 🟡 H16 — faqat oylik oyog'i tuzatildi
+BD `branchId` bermay export qilsa, workbook hali aralash: P&L / To'lovlar / Xarajatlar / Balans / Qarzdorlar `branchIds` bo'yicha, «Asosiy xulosa» / trend / period outflows / recognized revenue esa company-wide. «Tekshiruv» varag'i **har qanday chaqiruvchi uchun** company-wide.
+
+### ❌ Tekshirilgan va o'zgarmagani tasdiqlangan
+- **H1** — Telegram qatori o'sha (`{collectionPct}% yig'ildi`), bugun **112%**. `/overview` paneli ham o'sha. Ma'noli yig'im (shu oy to'langan ÷ shu oy hisoblangan) hech qayerda yo'q — `collectionPct` grep faqat o'sha 3 qatorni beradi.
+- **H2** — `lessonsPerMonth = exactDays.length * 4` ikkala joyda ham o'zgarmagan; 400 vs 443 dars (11%). Kalendar bo'yicha dars sanalarini hisoblaydigan tayyor kod **allaqachon bor** (`attendance/shared/schedule-resolver.ts`, `GroupScheduleSnapshot` bilan) — prognoz undan foydalanmaydi.
+- **H4** — `period-helpers.ts` va `overview-client.tsx` ga umuman tegilmagan (uchala kichik holat ham o'sha).
+  > Tuzatishda ehtiyot: `resolvePeriod.endDate` `@db.Date` ustunlarga beriladi (`expenses.service.ts:264` va h.k.) — hamma chegarani −5h siljitish ularni buzadi. H3 dagi kabi **ikki juft** chegara kerak.
+
+---
+
 ## 0. Bu hujjatni boshqa chatda qanday ishlatish
 
 Yangi chatda shundan biri bilan boshlang:
@@ -80,6 +158,29 @@ const lessonsPerMonth = (e.group.exactDays?.length ?? 0) * 4;
 
 Iyul 2026da chorshanba/payshanba/juma **5 marta** keladi → real reja 443, formula 400 → **11% kam**.
 Maxraj 11% kichik → foiz 11% oshiq. Faqat shuni tuzatsa: 109% → ~98%.
+
+**`× 4` kodning UCH joyida** (2026-07-30 holatiga, hammasi hali o'sha):
+| Fayl | Nimani boshqaradi |
+|---|---|
+| `reports-financial.service.ts:261` | /overview «Prognoz (bashorat)» + Excel «Prognoz (bashorat)» |
+| `telegram-group-daily-report.service.ts:629` | Telegram «Oylik prognoz» + undagi foiz |
+| `salary-overview.service.ts:334` (`computeExpectedMonthly`) | `expectedMonthly` — ekranda ko'rsatilmaydi, lekin ⚙ Sozlamalardagi ustozlar ro'yxatining **tartibini** belgilaydi (`:258-259`) |
+
+**Xato har oy boshqacha** (32 aktiv guruh, bayramlar chiqarilgan, sof kalendar):
+
+| Oy | Kalendar | Kod | Farq |
+|---|---|---|---|
+| may 2026 | 398 | 400 | −0.5% |
+| iyun 2026 | 434 | 400 | +8.5% |
+| iyul 2026 | 454 | 400 | **+13.5%** |
+| avgust 2026 | 432 | 400 | +8% |
+| sentyabr 2026 | 434 | 400 | +8.5% |
+| oktyabr 2026 | 446 | 400 | +11.5% |
+| noyabr 2026 | 420 | 400 | +5% |
+| dekabr 2026 | 448 | 400 | +12% |
+
+Kod rejasi **har oy bir xil (400)** — oy 28 kunmi, 31 kunmi, farqi yo'q. Skript: `scripts/diag-four-week-error.ts`.
+(Guruh boshi/oxiri chegarasi ham qo'llansa iyul 443 chiqadi — yo'nalish o'zgarmaydi.)
 
 Formula shuni ham hisobga olmaydi: bayramlar, bekor qilingan darslar, guruh boshi/oxiri, o'quvchining o'rtada qo'shilishi, FROZEN holat.
 
@@ -391,7 +492,7 @@ Excel tomoni **to'g'ri** — u ustunni aniq oyna bilan («31.05.2026—30.06.202
 | ~~**P4**~~ | ~~«Sof foyda» ni bitta manbaga keltirish (H5)~~ | ✅ **BAJARILDI 2026-07-30** — Telegram kunlik + `rm:cfin` kanonik manbaga o'tdi (xato bo'lsa «Kassa harakati» deb rostgo'y yorliq); trend grafigi ataylab kassa asosida qoldi, lekin «Kassa oqimi» deb qayta nomlandi | — |
 | **P5** | Prognozni kalendar bo'yicha hisoblash + oy boshida muzlatish (H2) | 11% xato; «dinamik» savol | O'rta-katta (yangi jadval) |
 | **P6** | Barcha davr oynalarini Toshkent helperlariga o'tkazish; brauzer sana hisoblamasin (H4) | Mintaqa muammosi, oy chegarasi | O'rta |
-| **P7** | Filial qamrovini bir xillashtirish (H7, H8, H13, H14, **H15, H16, H17**) | 2-filial ishga tushmasidan **oldin** shart | O'rta |
+| ~~**P7**~~ | ~~Filial qamrovini bir xillashtirish (H7, H8, H13, H14, H15, H16, H17)~~ | ✅ **BAJARILDI 2026-08-02** — bitta `ReportBranchIds` qamrovi (`common/finance/report-branch-scope.ts`) HTTP chegarasida hisoblanadi va hamma joyga uzatiladi; `branchId`+`branchIds` juftligi va `branchWhere()` o'chirildi. Prod: Namangan 28 453 233 → **0**, Σ(filiallar) = jami (7/7 ko'rsatkich). Qo'riqchi: `reports-branch-scope-coverage.spec.ts` | — |
 | **P8** | «O'tmish o'zgaradi» sinfi (H18, H19, H20, H21) — snapshot/frozen manbaga o'tkazish | `/reports/activity` iyun bandligi 25.7% → 39.4%; debt-history joriy oy qatori; gap narxi | O'rta-katta |
 | **P9** | Lid sanoqlari (H28, H29) — `deletedAt: null` + timestamp chegarasi | Telegram 106 vs Excel 49 | Kichik |
 | **P10** | Excel izohlarini tuzatish (H11), KPI davomat (H12), churn sanog'i (H30), «Asosiy xulosa» snapshot qatorlari (H9), Tekshiruv roll-forward (H10), qarz drill-down reversal (H31), payment-reports baseline (H32), kartalar asosi (H22) | Kichik-kichik chalkashliklar | Kichik |

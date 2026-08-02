@@ -7,10 +7,16 @@ import {
   Query,
   Res,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
+import {
+  isEmptyScope,
+  resolveCallerReportBranchIds,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 import { StudentPaymentsReportQueryDto } from './dto/student-payments-report-query.dto';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
@@ -114,16 +120,17 @@ export class ReportsController {
   // so the endpoint must reject them too (money-series data).
   @Get('financial-trend')
   @Roles('CEO', 'Branch Director')
-  getFinancialTrend(
+  async getFinancialTrend(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
   ) {
+    const branchIds = await this.resolveScope(userId, query.branchId);
     // Canonical profit per month, day-cached — so the chart behind the Foyda
     // card plots the same figure the card shows instead of a cash proxy.
     return this.reportsService.getFinancialTrendCanonical(
       companyId,
-      query.branchId,
+      branchIds,
       userId,
     );
   }
@@ -134,12 +141,13 @@ export class ReportsController {
   // month). Money breakdown → CEO/BD only, like `financial-trend`.
   @Get('income-month-attribution')
   @Roles('CEO', 'Branch Director')
-  getIncomeMonthAttribution(
+  async getIncomeMonthAttribution(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
     return this.reportsService.getIncomeMonthAttribution(companyId, {
-      branchId: query.branchId,
+      branchIds: await this.resolveScope(userId, query.branchId),
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -158,10 +166,11 @@ export class ReportsController {
     @Query() query: ReportsQueryDto,
     @CurrentUser() user: { id: number; companyId: number; roles: string[] },
   ) {
+    const branchIds = await this.resolveScope(user.id, query.branchId);
     const overview = await this.reportsService.getFinancialOverview(
       user.companyId,
       {
-        branchId: query.branchId,
+        branchIds,
         startDate: query.startDate,
         endDate: query.endDate,
       },
@@ -243,7 +252,7 @@ export class ReportsController {
     try {
       const np = await this.reportsService.getMonthlyNetProfit(user.companyId, {
         month,
-        branchId: query.branchId,
+        branchIds,
         performedById: user.id,
       });
       netProfit = np.netProfit;
@@ -309,10 +318,9 @@ export class ReportsController {
     @CurrentUser()
     user: { id: number; companyId: number; roles: string[] },
   ) {
-    const branchIds = await this.resolveBranchScopeForUser(user);
+    const branchIds = await this.resolveScope(user.id, query.branchId);
     return this.reportsService.getDebtWriteOffsSummary(user.companyId, {
-      branchId: query.branchId,
-      branchIds: branchIds ?? undefined,
+      branchIds,
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -328,7 +336,9 @@ export class ReportsController {
     @CurrentUser() user: { id: number; companyId: number; roles: string[] },
     @Res() res: Response,
   ) {
-    const branchIds = await this.resolveBranchScopeForUser(user);
+    // ONE scope for the whole workbook — cover page included, so the label can
+    // never name a branch the sheets were not built from.
+    const scope = await this.resolveScope(user.id, query.branchId);
     const [company, branches] = await Promise.all([
       this.prisma.company.findUnique({
         where: { id: user.companyId },
@@ -342,11 +352,10 @@ export class ReportsController {
     const branchNames: Record<number, string> = Object.fromEntries(
       branches.map((b) => [b.id, b.name]),
     );
-    const branchLabel = query.branchId
-      ? (branchNames[query.branchId] ?? `Filial #${query.branchId}`)
-      : branchIds && branchIds.length > 0
-        ? branchIds.map((id) => branchNames[id] ?? `#${id}`).join(', ')
-        : 'Barcha filiallar';
+    const branchLabel =
+      scope === null
+        ? 'Barcha filiallar'
+        : scope.map((id) => branchNames[id] ?? `Filial #${id}`).join(', ');
 
     // Parse the comparison request: CSV of "prev" | "yoy" | "custom" | "yearly".
     // When the param is entirely absent (old clients / direct API), fall back to
@@ -361,8 +370,7 @@ export class ReportsController {
             .filter((s) => validModes.includes(s));
 
     const buffer = await this.reportsExcelService.generate(user.companyId, {
-      branchId: query.branchId,
-      branchIds: branchIds ?? undefined,
+      branchIds: scope,
       startDate: query.startDate,
       endDate: query.endDate,
       companyName: company?.name ?? 'DaF Sprachzentrum',
@@ -384,19 +392,30 @@ export class ReportsController {
   }
 
   /**
-   * CEO: full company access (null = no branch filter).
-   * Branch Director: explicit UserBranch rows.
+   * The caller's scope intersected with the branch they picked — the ONE
+   * answer every money endpoint in this controller passes down.
+   *
+   * A confined caller with no branch in scope is REFUSED rather than served a
+   * zero-filled report: some downstream services re-derive their own scope from
+   * `performedById` and would fill part of that report with the caller's own
+   * branch, producing a document that is internally inconsistent and looks like
+   * a catastrophic loss.
    */
-  private async resolveBranchScopeForUser(user: {
-    id: number;
-    roles: string[];
-  }): Promise<number[] | null> {
-    if (user.roles.includes('CEO')) return null;
-    const rows = await this.prisma.userBranch.findMany({
-      where: { userId: user.id },
-      select: { branchId: true },
-    });
-    return rows.map((r) => r.branchId);
+  private async resolveScope(
+    userId: number,
+    requestedBranchId?: number,
+  ): Promise<ReportBranchIds> {
+    const ids = await resolveCallerReportBranchIds(
+      this.prisma,
+      userId,
+      requestedBranchId,
+    );
+    if (isEmptyScope(ids)) {
+      throw new ForbiddenException(
+        "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
+      );
+    }
+    return ids;
   }
 
   @Get('payment-reports')

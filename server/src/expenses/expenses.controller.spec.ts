@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
@@ -11,6 +12,18 @@ describe('ExpensesController — role guards + export delegation', () => {
   let controller: ExpensesController;
   let reflector: Reflector;
   let guard: RolesGuard;
+
+  // A CEO caller: `resolveCallerBranchScope` returns { kind: 'all' }, so the
+  // resolved report scope is null (every branch).
+  const mockPrisma = {
+    user: {
+      findFirst: jest.fn().mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'CEO' } }],
+      }),
+    },
+  };
 
   const mockService = {
     create: jest.fn().mockResolvedValue({}),
@@ -24,7 +37,10 @@ describe('ExpensesController — role guards + export delegation', () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ExpensesController],
-      providers: [{ provide: ExpensesService, useValue: mockService }],
+      providers: [
+        { provide: ExpensesService, useValue: mockService },
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
     }).compile();
 
     controller = module.get(ExpensesController);
@@ -78,9 +94,15 @@ describe('ExpensesController — role guards + export delegation', () => {
         },
       } as any;
 
-      await controller.exportPdf(query, 42, res);
+      await controller.exportPdf(query, 42, 7, res);
 
-      expect(mockService.generateExpensesPdf).toHaveBeenCalledWith(query, 42);
+      // The resolved branch scope travels WITH the filters — the page and the
+      // PDF must never be scoped differently.
+      expect(mockService.generateExpensesPdf).toHaveBeenCalledWith(
+        query,
+        42,
+        null,
+      );
       expect(headers['Content-Type']).toBe('application/pdf');
       expect(String(headers['Content-Disposition'])).toContain('attachment');
       expect(body).toBeDefined();

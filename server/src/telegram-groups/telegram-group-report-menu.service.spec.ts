@@ -242,7 +242,11 @@ describe('TelegramGroupReportMenuService', () => {
 
     await service.sendFinancialCard(ctx);
 
-    expect(reportsFinancial.getFinancialOverview).toHaveBeenCalledWith(1001, {});
+    // Company-wide, stated explicitly: a group chat carries no per-user ERP
+    // identity, so there is no branch to scope by.
+    expect(reportsFinancial.getFinancialOverview).toHaveBeenCalledWith(1001, {
+      branchIds: null,
+    });
     const text = (ctx.reply.mock.calls[0][0] as string).replace(/\u00A0/g, ' ');
     expect(text).toContain('Moliyaviy xulosa');
     expect(text).toContain('280 000 000');

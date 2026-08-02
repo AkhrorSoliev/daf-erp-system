@@ -70,8 +70,17 @@ describe('ReportsController — role guards', () => {
     }),
   };
 
+  // Branch scope now comes from `resolveCallerBranchScope`, which reads the
+  // caller's roles + mainBranch + UserBranch rows in ONE `user.findFirst`.
+  const asCeo = {
+    mainBranch: null,
+    branches: [],
+    roles: [{ role: { name: 'CEO' } }],
+  };
   const mockPrisma = {
-    userBranch: { findMany: jest.fn().mockResolvedValue([]) },
+    user: { findFirst: jest.fn().mockResolvedValue(asCeo) },
+    company: { findUnique: jest.fn().mockResolvedValue({ name: 'DaF' }) },
+    branch: { findMany: jest.fn().mockResolvedValue([]) },
   } as any;
 
   beforeEach(async () => {
@@ -474,6 +483,7 @@ describe('ReportsController — role guards', () => {
 
     it('returns ONLY payer count + avg payment for Administrator', async () => {
       const res = await controller.getFinancialOverview(query, {
+        id: 10003,
         companyId: 1,
         roles: ['Administrator'],
       });
@@ -482,6 +492,7 @@ describe('ReportsController — role guards', () => {
 
     it('returns ONLY payer count + avg payment for Cashier', async () => {
       const res = await controller.getFinancialOverview(query, {
+        id: 10004,
         companyId: 1,
         roles: ['Cashier'],
       });
@@ -490,6 +501,7 @@ describe('ReportsController — role guards', () => {
 
     it('never leaks income / expenses / profit / salary / LTV / CAC / ROI / debt to Administrator', async () => {
       const res: any = await controller.getFinancialOverview(query, {
+        id: 10003,
         companyId: 1,
         roles: ['Administrator'],
       });
@@ -520,29 +532,49 @@ describe('ReportsController — role guards', () => {
   });
 
   describe('branch scope resolver (private)', () => {
-    it('CEO gets null (no branch filter)', async () => {
-      mockPrisma.userBranch.findMany.mockResolvedValue([
-        { branchId: 99 }, // ignored for CEO
-      ]);
-      const result = await (controller as any).resolveBranchScopeForUser({
-        id: 1,
-        roles: ['CEO'],
-      });
-      expect(result).toBeNull();
-      expect(mockPrisma.userBranch.findMany).not.toHaveBeenCalled();
+    const asDirectorOf = (...branchIds: number[]) => ({
+      mainBranch: branchIds[0] ?? null,
+      branches: branchIds.map((branchId) => ({ branchId })),
+      roles: [{ role: { name: 'Branch Director' } }],
     });
 
-    it('Branch Director gets their UserBranch rows', async () => {
-      mockPrisma.userBranch.findMany.mockReset();
-      mockPrisma.userBranch.findMany.mockResolvedValue([
-        { branchId: 3 },
-        { branchId: 7 },
-      ]);
-      const result = await (controller as any).resolveBranchScopeForUser({
-        id: 2,
-        roles: ['Branch Director'],
-      });
-      expect(result).toEqual([3, 7]);
+    it('CEO with no branch picked spans everything', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(asCeo);
+      await expect((controller as any).resolveScope(1)).resolves.toBeNull();
+    });
+
+    it('CEO who picks a branch is narrowed to it', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(asCeo);
+      await expect((controller as any).resolveScope(1, 2)).resolves.toEqual([2]);
+    });
+
+    it('Branch Director defaults to their own branches', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(asDirectorOf(3, 7));
+      await expect((controller as any).resolveScope(2)).resolves.toEqual([3, 7]);
+    });
+
+    it('a picked branch NARROWS a director rather than being overridden', async () => {
+      // The old `branchWhere` let the director's whole scope win, so picking
+      // one branch still returned both — under a header naming one.
+      mockPrisma.user.findFirst.mockResolvedValue(asDirectorOf(3, 7));
+      await expect((controller as any).resolveScope(2, 7)).resolves.toEqual([7]);
+    });
+
+    it('REFUSES a branch outside the caller\'s scope', async () => {
+      // Serving zeros would be worse than a 403: services that re-derive their
+      // own scope from `performedById` would fill part of the report with the
+      // caller's own branch, so the document contradicts itself.
+      mockPrisma.user.findFirst.mockResolvedValue(asDirectorOf(3));
+      await expect((controller as any).resolveScope(2, 9)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('REFUSES a confined caller with no branch attached', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(asDirectorOf());
+      await expect((controller as any).resolveScope(2)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

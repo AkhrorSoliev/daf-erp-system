@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
+import {
+  branchIdWhere,
+  studentBranchWhere,
+  userBranchWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
 /** Fallback floor when a company has no `systemStartDate` (May 2026 cutover). */
@@ -77,11 +83,10 @@ export class ReportsFinancialService {
   async getDebtWriteOffsSummary(
     companyId: number,
     options: {
-      branchId?: number;
-      branchIds?: number[];
+      branchIds: ReportBranchIds;
       startDate?: string;
       endDate?: string;
-    } = {},
+    } = { branchIds: null },
   ): Promise<{
     totalAmount: number;
     count: number;
@@ -106,11 +111,10 @@ export class ReportsFinancialService {
         gte: new Date(periodStart),
         lte: new Date(periodEnd + 'T23:59:59.999Z'),
       },
-      ...(options.branchId && { branchId: options.branchId }),
-      ...(options.branchIds &&
-        options.branchIds.length > 0 && {
-          branchId: { in: options.branchIds },
-        }),
+      // Both a `branchId` and a `branchIds` used to be spread here, the second
+      // silently clobbering the first — the same class of bug the resolved
+      // scope exists to make unrepresentable.
+      ...branchIdWhere(options.branchIds),
     };
 
     const agg = await this.prisma.transaction.aggregate({
@@ -132,8 +136,26 @@ export class ReportsFinancialService {
    */
   async getFinancialOverview(
     companyId: number,
-    query: { branchId?: number; startDate?: string; endDate?: string },
+    query: {
+      /**
+       * Resolved by `resolveReportBranchIds` at the HTTP boundary — the
+       * caller's scope already intersected with the branch they picked.
+       * `null` = every branch. Never take a bare `branchId` here again: the
+       * three metrics below silently ignored it, so an empty Namangan showed
+       * 27 748 684 so'm of Fargona debt across 177 Fargona debtors.
+       */
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
+    const { branchIds } = query;
+    // One filter per shape of row: money rows carry `branchId`; students carry
+    // it on the `StudentBranch` join; employees on `mainBranch`/`UserBranch`.
+    const branchFilter = branchIdWhere(branchIds);
+    const studentFilter = studentBranchWhere(branchIds);
+    const employeeFilter =
+      branchIds === null ? {} : { user: userBranchWhere(branchIds) };
     const now = new Date();
     const start =
       query.startDate ??
@@ -152,7 +174,7 @@ export class ReportsFinancialService {
         companyId,
         status: 'COMPLETED',
         createdAt: dateFilter,
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       _sum: { amount: true },
       _count: true,
@@ -164,7 +186,7 @@ export class ReportsFinancialService {
         companyId,
         status: 'COMPLETED',
         createdAt: dateFilter,
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       _sum: { amount: true },
       _count: true,
@@ -180,7 +202,7 @@ export class ReportsFinancialService {
         companyId,
         type: 'LESSON_DEDUCTION',
         createdAt: dateFilter,
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       _sum: { amount: true },
     });
@@ -197,7 +219,7 @@ export class ReportsFinancialService {
         companyId,
         type: 'ADJUSTMENT',
         createdAt: dateFilter,
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       select: { amount: true, metadata: true },
     });
@@ -237,7 +259,7 @@ export class ReportsFinancialService {
           deletedAt: null,
           statusEnum: 'ACTIVE',
           companyId,
-          ...(query.branchId && { branchId: query.branchId }),
+          ...branchFilter,
         },
       },
       select: {
@@ -283,6 +305,7 @@ export class ReportsFinancialService {
         deletedAt: null,
         status: 'ACTIVE',
         balance: { lt: 0 },
+        ...studentFilter,
       },
       _sum: { balance: true },
       _count: true,
@@ -295,13 +318,23 @@ export class ReportsFinancialService {
     // Salary: paid + pending. Both are reported on the same basis — the
     // dashboard number reflects what actually leaves (or will leave) the
     // center.
+    // Neither SalaryPayment nor SalaryAccrual carries a `branchId` — payroll is
+    // per employee — so the branch has to come from the teacher. Without this a
+    // branch view subtracted the WHOLE company's payroll from that branch's own
+    // revenue, which is the opposite of the per-branch P&L rule in
+    // `docs/branch-decisions.md`.
     const [salaryPaid, salaryPending] = await Promise.all([
       this.prisma.salaryPayment.aggregate({
-        where: { companyId, status: 'PAID', paidAt: dateFilter },
+        where: {
+          companyId,
+          status: 'PAID',
+          paidAt: dateFilter,
+          ...employeeFilter,
+        },
         _sum: { amount: true },
       }),
       this.prisma.salaryAccrual.aggregate({
-        where: { companyId, salaryPaymentId: null },
+        where: { companyId, salaryPaymentId: null, ...employeeFilter },
         _sum: { amount: true },
       }),
     ]);
@@ -313,7 +346,7 @@ export class ReportsFinancialService {
         companyId,
         deletedAt: null,
         date: { gte: new Date(start), lte: new Date(end) },
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       _sum: { amount: true },
     });
@@ -335,7 +368,7 @@ export class ReportsFinancialService {
         deletedAt: null,
         category: 'TEACHER_ADVANCE',
         date: { gte: new Date(start), lte: new Date(end) },
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       _sum: { amount: true },
     });
@@ -348,7 +381,7 @@ export class ReportsFinancialService {
         deletedAt: null,
         category: 'TEACHER_ADVANCE',
         settledBySalaryPayment: { status: 'PAID', paidAt: dateFilter },
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       _sum: { amount: true },
     });
@@ -359,11 +392,17 @@ export class ReportsFinancialService {
         deletedAt: null,
         status: 'ACTIVE',
         balance: { lt: 0 },
+        ...studentFilter,
       },
     });
 
     const activeStudents = await this.prisma.student.aggregate({
-      where: { companyId, deletedAt: null, status: 'ACTIVE' },
+      where: {
+        companyId,
+        deletedAt: null,
+        status: 'ACTIVE',
+        ...studentFilter,
+      },
       _count: true,
       _sum: { balance: true },
     });
@@ -373,7 +412,7 @@ export class ReportsFinancialService {
       companyId,
       status: 'COMPLETED' as const,
       createdAt: dateFilter,
-      ...(query.branchId && { branchId: query.branchId }),
+      ...branchFilter,
     };
     const [periodPayerIncome, periodUniquePayers] = await Promise.all([
       this.prisma.payment.aggregate({
@@ -392,7 +431,7 @@ export class ReportsFinancialService {
         deletedAt: null,
         category: 'MARKETING',
         date: { gte: new Date(start), lte: new Date(end) },
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchFilter,
       },
       _sum: { amount: true },
     });
@@ -402,9 +441,7 @@ export class ReportsFinancialService {
         companyId,
         deletedAt: null,
         createdAt: dateFilter,
-        ...(query.branchId && {
-          branches: { some: { branchId: query.branchId } },
-        }),
+        ...studentFilter,
       },
     });
 
@@ -564,7 +601,11 @@ export class ReportsFinancialService {
    */
   async getIncomeMonthAttribution(
     companyId: number,
-    query: { branchId?: number; startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ): Promise<{
     period: { start: string; end: string };
     monthKey: string;
@@ -575,6 +616,9 @@ export class ReportsFinancialService {
     late: Array<{ monthKey: string; label: string; amount: number }>;
     payerCount: number;
   }> {
+    // Normalised once: the in-memory attribution leg below compares against it
+    // directly, and `undefined` there would silently reject every credit.
+    const branchIds = query.branchIds ?? null;
     const period = resolvePeriod(query.startDate, query.endDate);
     const boundaryKey = tashkentMonthKey(period.start);
     const startMs = period.start.getTime();
@@ -610,7 +654,7 @@ export class ReportsFinancialService {
         companyId,
         status: 'COMPLETED',
         createdAt: { gte: period.start, lte: period.endTs },
-        ...(query.branchId && { branchId: query.branchId }),
+        ...branchIdWhere(branchIds),
       },
     });
     const payerIds = periodPayers
@@ -692,7 +736,10 @@ export class ReportsFinancialService {
           r.type === 'PAYMENT' &&
           ts >= startMs &&
           ts <= endMs &&
-          (!query.branchId || r.branchId === query.branchId);
+          // In-memory leg of the same scope: a credit from ANOTHER branch still
+          // ages this student's debt, but is not this branch's income.
+          (branchIds === null ||
+            (r.branchId != null && branchIds.includes(r.branchId)));
 
         while (credit > 0 && head < queue.length) {
           const frag = queue[head];
@@ -747,7 +794,7 @@ export class ReportsFinancialService {
   /**
    * Monthly trend data for the last 6 months — used for KPI card charts.
    */
-  async getFinancialTrend(companyId: number, branchId?: number) {
+  async getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
     const now = new Date();
     const months: {
       label: string;
@@ -775,7 +822,15 @@ export class ReportsFinancialService {
       months.push({ label, monthKey, start, end });
     }
 
-    const branchFilter = branchId ? { branchId } : {};
+    const branchFilter = branchIdWhere(branchIds);
+    // The count legs (new students, unique payers) and the payroll leg carry
+    // the branch somewhere OTHER than on their own row, and all three were left
+    // unscoped — so a branch series plotted its own money against the whole
+    // company's headcount. Namangan's 2026 row read 0 / 0 / 0 for money beside
+    // "715 new students, 551 payers".
+    const studentFilter = studentBranchWhere(branchIds);
+    const employeeFilter =
+      branchIds === null ? {} : { user: userBranchWhere(branchIds) };
 
     const result = await Promise.all(
       months.map(async (m) => {
@@ -811,7 +866,12 @@ export class ReportsFinancialService {
             _sum: { amount: true },
           }),
           this.prisma.salaryPayment.aggregate({
-            where: { companyId, status: 'PAID', paidAt: dateFilter },
+            where: {
+              companyId,
+              status: 'PAID',
+              paidAt: dateFilter,
+              ...employeeFilter,
+            },
             _sum: { amount: true },
           }),
           this.prisma.expense.aggregate({
@@ -825,11 +885,21 @@ export class ReportsFinancialService {
             _sum: { amount: true },
           }),
           this.prisma.student.count({
-            where: { companyId, deletedAt: null, createdAt: dateFilter },
+            where: {
+              companyId,
+              deletedAt: null,
+              createdAt: dateFilter,
+              ...studentFilter,
+            },
           }),
           this.prisma.payment.groupBy({
             by: ['studentId'],
-            where: { companyId, status: 'COMPLETED', createdAt: dateFilter },
+            where: {
+              companyId,
+              status: 'COMPLETED',
+              createdAt: dateFilter,
+              ...branchFilter,
+            },
           }),
           // Advance cash paid this month — netted out of Xarajatlar (avanssiz).
           this.prisma.expense.aggregate({
@@ -902,7 +972,7 @@ export class ReportsFinancialService {
    * years accumulate. Uses the SAME avanssiz income/expense split as
    * `getFinancialTrend` so a year total equals the sum of its months.
    */
-  async getYearlyTrend(companyId: number, branchId?: number) {
+  async getYearlyTrend(companyId: number, branchIds: ReportBranchIds) {
     const now = new Date();
     const currentYear = now.getFullYear();
     const company = await this.prisma.company.findUnique({
@@ -917,7 +987,15 @@ export class ReportsFinancialService {
     const years: number[] = [];
     for (let y = firstYear; y <= currentYear; y++) years.push(y);
 
-    const branchFilter = branchId ? { branchId } : {};
+    const branchFilter = branchIdWhere(branchIds);
+    // The count legs (new students, unique payers) and the payroll leg carry
+    // the branch somewhere OTHER than on their own row, and all three were left
+    // unscoped — so a branch series plotted its own money against the whole
+    // company's headcount. Namangan's 2026 row read 0 / 0 / 0 for money beside
+    // "715 new students, 551 payers".
+    const studentFilter = studentBranchWhere(branchIds);
+    const employeeFilter =
+      branchIds === null ? {} : { user: userBranchWhere(branchIds) };
 
     return Promise.all(
       years.map(async (year) => {
@@ -954,15 +1032,30 @@ export class ReportsFinancialService {
             _sum: { amount: true },
           }),
           this.prisma.salaryPayment.aggregate({
-            where: { companyId, status: 'PAID', paidAt: dateFilter },
+            where: {
+              companyId,
+              status: 'PAID',
+              paidAt: dateFilter,
+              ...employeeFilter,
+            },
             _sum: { amount: true },
           }),
           this.prisma.student.count({
-            where: { companyId, deletedAt: null, createdAt: dateFilter },
+            where: {
+              companyId,
+              deletedAt: null,
+              createdAt: dateFilter,
+              ...studentFilter,
+            },
           }),
           this.prisma.payment.groupBy({
             by: ['studentId'],
-            where: { companyId, status: 'COMPLETED', createdAt: dateFilter },
+            where: {
+              companyId,
+              status: 'COMPLETED',
+              createdAt: dateFilter,
+              ...branchFilter,
+            },
           }),
           this.prisma.expense.aggregate({
             where: {
@@ -1423,9 +1516,12 @@ export class ReportsFinancialService {
   }
 
   /**
-   * Reconciliation data for the Excel "Tekshiruv" sheet. COMPANY-WIDE by design:
-   * student balances aren't cleanly branch-scoped, so scoping the roll-forward
-   * per branch would break the foot. The sheet labels this "(kompaniya bo'yicha)".
+   * Reconciliation data for the Excel "Tekshiruv" sheet.
+   *
+   * Scoped to the workbook's branch like every other sheet. It used to be
+   * company-wide unconditionally, so a branch-filtered export footed its
+   * reconciliation against every branch's ledger — a green tick that proved
+   * nothing about the branch the cover page named.
    *
    *  • student roll-forward — closing = current Σ Student.balance; opening =
    *    closing − Σ(all student-ledger transactions in the period). Foots by
@@ -1435,23 +1531,40 @@ export class ReportsFinancialService {
    */
   async getReconciliation(
     companyId: number,
-    query: { startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
     const period = resolvePeriod(query.startDate, query.endDate);
     const tsFilter = { gte: period.start, lte: period.endTs };
+    // Was company-wide unconditionally: a branch-filtered workbook footed its
+    // Tekshiruv sheet against every branch's ledger.
+    const branchFilter = branchIdWhere(query.branchIds);
+    const studentFilter = studentBranchWhere(query.branchIds);
 
+    // All three legs take the SAME scope, so the roll-forward still foots:
+    // closing (student balances) − activity (their ledger rows) = opening.
+    // Ledger rows are branch-stamped and students branch-joined, so a branch's
+    // balances and its own transactions line up.
     const [byType, storedAgg, ledgerAgg] = await Promise.all([
       this.prisma.transaction.groupBy({
         by: ['type'],
-        where: { companyId, studentId: { not: null }, createdAt: tsFilter },
+        where: {
+          companyId,
+          studentId: { not: null },
+          createdAt: tsFilter,
+          ...branchFilter,
+        },
         _sum: { amount: true },
       }),
       this.prisma.student.aggregate({
-        where: { companyId },
+        where: { companyId, ...studentFilter },
         _sum: { balance: true },
       }),
       this.prisma.transaction.aggregate({
-        where: { companyId, studentId: { not: null } },
+        where: { companyId, studentId: { not: null }, ...branchFilter },
         _sum: { amount: true },
       }),
     ]);
@@ -1506,10 +1619,15 @@ export class ReportsFinancialService {
    */
   async getPeriodOutflows(
     companyId: number,
-    query: { branchId?: number; startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
     const period = resolvePeriod(query.startDate, query.endDate);
     const tsFilter = { gte: period.start, lte: period.endTs };
+    const branchFilter = branchIdWhere(query.branchIds);
 
     const [refundRows, writeOffAgg, providerFeeAgg] = await Promise.all([
       // Active (non-reversed) REFUND rows — signed negative on the student
@@ -1523,7 +1641,7 @@ export class ReportsFinancialService {
           type: TransactionType.REFUND,
           reversedAt: null,
           createdAt: tsFilter,
-          ...(query.branchId && { branchId: query.branchId }),
+          ...branchFilter,
         },
         select: { amount: true },
       }),
@@ -1533,7 +1651,7 @@ export class ReportsFinancialService {
           type: TransactionType.DEBT_WRITE_OFF,
           reversedAt: null,
           createdAt: tsFilter,
-          ...(query.branchId && { branchId: query.branchId }),
+          ...branchFilter,
         },
         _sum: { amount: true },
       }),
@@ -1543,7 +1661,7 @@ export class ReportsFinancialService {
           companyId,
           status: 'COMPLETED',
           createdAt: tsFilter,
-          ...(query.branchId && { branchId: query.branchId }),
+          ...branchFilter,
         },
         _sum: { providerFee: true },
       }),
@@ -1564,11 +1682,16 @@ export class ReportsFinancialService {
   /**
    * The financial overview for the equal-length period immediately BEFORE the
    * requested one — powers the "Joriy vs O'tgan davr" comparison on the Excel
-   * summary. Branch scope follows `getFinancialOverview` (branchId only).
+   * summary. Takes the SAME resolved scope as `getFinancialOverview`, so the
+   * two columns of that comparison can never be read on different bases.
    */
   async getPriorPeriodSummary(
     companyId: number,
-    query: { branchId?: number; startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
     const period = resolvePeriod(query.startDate, query.endDate);
     const durationMs = period.endTs.getTime() - period.start.getTime();
@@ -1576,7 +1699,7 @@ export class ReportsFinancialService {
     const prevStart = new Date(prevEnd.getTime() - durationMs);
     const iso = (d: Date) => d.toISOString().slice(0, 10);
     return this.getFinancialOverview(companyId, {
-      branchId: query.branchId,
+      branchIds: query.branchIds,
       startDate: iso(prevStart),
       endDate: iso(prevEnd),
     });

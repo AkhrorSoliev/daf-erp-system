@@ -15,6 +15,11 @@ import { ReportsDepartedReasonsService } from './reports-departed-reasons.servic
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { ReportsCenterActivityService } from './reports-center-activity.service';
 import {
+  isEmptyScope,
+  singleBranchId,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
+import {
   ReportsProfitLossService,
   ProfitLossQuery,
 } from './reports-profit-loss.service';
@@ -41,8 +46,14 @@ import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
 
 // Shared shape for the Excel report's period + branch scope.
 export interface ReportScopeQuery {
-  branchId?: number;
-  branchIds?: number[];
+  /**
+   * ONE resolved branch scope (`resolveReportBranchIds`), never a raw
+   * `branchId` + `branchIds` pair. The pair is what let a single workbook hold
+   * three different scopes: the sheets built from `branchIds` showed 0 while
+   * the ones built from `branchId` showed the whole company, under a cover
+   * page naming a third thing.
+   */
+  branchIds: ReportBranchIds;
   startDate?: string;
   endDate?: string;
 }
@@ -101,7 +112,7 @@ export class ReportsService {
   // attendance date), the isolated basis the Foyda card + Excel "Sof foyda" use.
   getRecognizedRevenue(
     companyId: number,
-    opts: { start: Date; end: Date; branchId?: number },
+    opts: { start: Date; end: Date; branchIds: ReportBranchIds },
   ) {
     return this.financial.getRecognizedRevenue(companyId, opts);
   }
@@ -123,24 +134,41 @@ export class ReportsService {
     companyId: number,
     {
       month,
-      branchId,
+      branchIds,
       performedById,
-    }: { month: string; branchId?: number; performedById: number },
+    }: {
+      month: string;
+      branchIds: ReportBranchIds;
+      performedById: number;
+    },
   ): Promise<NetProfit> {
+    // A confined caller with no branch (or one asking for a branch outside
+    // their scope) gets zeros. Without this the revenue legs would all filter
+    // to nothing while `getSalaryMonthly` — which re-derives its own scope from
+    // `performedById` and so ignores an empty list — still returned that
+    // caller's payroll, printing a large fictitious LOSS.
+    if (isEmptyScope(branchIds)) {
+      return buildNetProfit(null, null, null, month, 0);
+    }
     const [y, m] = month.split('-').map(Number);
     const startDate = `${month}-01`;
     const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
-    const scope = { branchId, startDate, endDate };
+    const scope = { branchIds, startDate, endDate };
     const [recognizedRevenue, sm, pl, outflows] = await Promise.all([
       this.getRecognizedRevenue(companyId, {
         start: new Date(Date.UTC(y, m - 1, 1)),
         end: new Date(Date.UTC(y, m, 1)),
-        branchId,
+        branchIds,
       }),
       // Branch-scoped: subtracting company-wide payroll from ONE branch's
       // revenue is what made a freshly-opened branch look catastrophically
       // unprofitable in its first month.
-      this.getSalaryMonthly(companyId, month, performedById, branchId),
+      this.getSalaryMonthly(
+        companyId,
+        month,
+        performedById,
+        singleBranchId(branchIds),
+      ),
       this.getProfitLoss(companyId, scope),
       this.getPeriodOutflows(companyId, scope),
     ]);
@@ -157,7 +185,11 @@ export class ReportsService {
   }
   getReconciliation(
     companyId: number,
-    query: { startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
     return this.financial.getReconciliation(companyId, query);
   }
@@ -168,7 +200,11 @@ export class ReportsService {
   // gateway fees) — feed the Excel "Sof foyda" block.
   getPeriodOutflows(
     companyId: number,
-    query: { branchId?: number; startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
     return this.financial.getPeriodOutflows(companyId, query);
   }
@@ -226,12 +262,16 @@ export class ReportsService {
   // Financial
   getFinancialOverview(
     companyId: number,
-    query: { branchId?: number; startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
     return this.financial.getFinancialOverview(companyId, query);
   }
-  getFinancialTrend(companyId: number, branchId?: number) {
-    return this.financial.getFinancialTrend(companyId, branchId);
+  getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
+    return this.financial.getFinancialTrend(companyId, branchIds);
   }
 
   /**
@@ -250,22 +290,26 @@ export class ReportsService {
    */
   async getFinancialTrendCanonical(
     companyId: number,
-    branchId: number | undefined,
+    branchIds: ReportBranchIds,
     performedById: number,
   ) {
-    const rows = await this.financial.getFinancialTrend(companyId, branchId);
+    const rows = await this.financial.getFinancialTrend(companyId, branchIds);
+    // Cache key needs ONE id; a multi-branch scope has none, so those callers
+    // recompute rather than share a key that would collide with a single
+    // branch's entry.
+    const cacheBranch = singleBranchId(branchIds);
     return Promise.all(
       rows.map(async (row: any) => {
         try {
           const profit = await cachedNetProfit(
             this.redis,
             companyId,
-            branchId,
+            cacheBranch,
             row.monthKey,
             async () => {
               const np = await this.getMonthlyNetProfit(companyId, {
                 month: row.monthKey,
-                branchId,
+                branchIds,
                 performedById,
               });
               return np.netProfit;
@@ -280,12 +324,16 @@ export class ReportsService {
   }
   getIncomeMonthAttribution(
     companyId: number,
-    query: { branchId?: number; startDate?: string; endDate?: string },
+    query: {
+      branchIds: ReportBranchIds;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
     return this.financial.getIncomeMonthAttribution(companyId, query);
   }
-  getYearlyTrend(companyId: number, branchId?: number) {
-    return this.financial.getYearlyTrend(companyId, branchId);
+  getYearlyTrend(companyId: number, branchIds: ReportBranchIds) {
+    return this.financial.getYearlyTrend(companyId, branchIds);
   }
   getMonthlyDebtRecovery(companyId: number) {
     return this.financial.getMonthlyDebtRecovery(companyId);
