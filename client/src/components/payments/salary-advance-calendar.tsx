@@ -26,16 +26,6 @@ function toneFor(total: number, max: number): string {
   return TONES[0];
 }
 
-/** Millionni qisqartirib yozadi: 2 200 000 → "2.2M", 800 000 → "800K". */
-function compact(amount: number): string {
-  if (amount >= 1_000_000) {
-    const m = amount / 1_000_000;
-    return `${m >= 10 ? Math.round(m) : m.toFixed(1)}M`;
-  }
-  if (amount >= 1_000) return `${Math.round(amount / 1_000)}K`;
-  return formatPrice(amount);
-}
-
 /**
  * Oy setkasi: har bir kun katagida o'sha kunning jami avansi.
  * Sof ko'rsatish komponenti — o'zi ma'lumot olmaydi, holat tutmaydi.
@@ -99,7 +89,7 @@ export function SalaryAdvanceCalendar({
               }
               aria-pressed={selected}
               className={cn(
-                "flex min-h-[56px] flex-col items-start rounded-md border p-1.5 text-left transition-colors",
+                "flex min-h-[68px] flex-col items-start overflow-hidden rounded-md border p-1.5 text-left transition-colors",
                 day
                   ? cn(
                       toneFor(day.total, max),
@@ -113,8 +103,16 @@ export function SalaryAdvanceCalendar({
                 {dayNum}
               </span>
               {day && (
-                <span className="mt-auto text-xs font-semibold tabular-nums">
-                  {compact(day.total)}
+                // To'liq summa, qisqartirmasdan. uz-UZ ajratgichi uzilmas
+                // probel, ya'ni raqam bo'linmaydi — shuning uchun tor
+                // ekranlarda shrift kichrayadi, sig'masligi o'rniga.
+                <span className="mt-auto w-full leading-tight">
+                  <span className="block text-[9px] font-semibold tabular-nums sm:text-[11px] lg:text-xs">
+                    {formatPrice(day.total)}
+                  </span>
+                  <span className="block text-[8px] text-muted-foreground sm:text-[9px]">
+                    so&apos;m
+                  </span>
                 </span>
               )}
             </button>
