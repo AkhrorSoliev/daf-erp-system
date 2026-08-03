@@ -12,6 +12,7 @@ import { SalaryController } from './salary.controller';
 import { SalaryCronService } from './salary-cron.service';
 import { TeacherTimelineService } from './teacher-timeline.service';
 import { SalaryBreakdownService } from './salary-breakdown.service';
+import { SalaryAdvanceCalendarService } from './salary-advance-calendar.service';
 import { SalaryPeriodSettingsService } from './salary-period-settings.service';
 import { SalaryUserLifecycleListener } from './salary-user-lifecycle.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
@@ -32,6 +33,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
     SalaryCronService,
     TeacherTimelineService,
     SalaryBreakdownService,
+    SalaryAdvanceCalendarService,
     SalaryPeriodSettingsService,
     SalaryUserLifecycleListener,
   ],
