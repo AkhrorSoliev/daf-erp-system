@@ -12,6 +12,7 @@ import {
 import { SalaryService } from './salary.service';
 import { TeacherTimelineService } from './teacher-timeline.service';
 import { SalaryBreakdownService } from './salary-breakdown.service';
+import { SalaryAdvanceCalendarService } from './salary-advance-calendar.service';
 import { SalaryPeriodSettingsService } from './salary-period-settings.service';
 import {
   CreateSalaryConfigDto,
@@ -38,6 +39,7 @@ export class SalaryController {
     private timelineService: TeacherTimelineService,
     private breakdownService: SalaryBreakdownService,
     private periodSettingsService: SalaryPeriodSettingsService,
+    private advanceCalendarService: SalaryAdvanceCalendarService,
   ) {}
 
   // =========================================================================
@@ -306,6 +308,31 @@ export class SalaryController {
     return this.salaryService.getAdvancesForUser(
       userId,
       { month },
+      companyId,
+      performedById,
+    );
+  }
+
+  /**
+   * Kunlik avans kalendari — «Avanslar» tabi. Tanlangan oydagi barcha
+   * TEACHER_ADVANCE xarajatlari kun bo'yicha guruhlangan holda.
+   *
+   * Yo'l `advance-calendar`, `advances/calendar` EMAS: ikkinchisi yuqoridagi
+   * `advances/:userId` marshrutiga tushib, ParseIntPipe'da 400 bo'lardi.
+   *
+   * `SalaryMonthlyQueryDto` qayta ishlatiladi (month regex allaqachon shu
+   * yerda); undagi `search` bu endpoint uchun ma'nosiz, shuning uchun servisga
+   * faqat `month` uzatiladi.
+   */
+  @Get('advance-calendar')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getAdvanceCalendar(
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.advanceCalendarService.getCalendar(
+      { month: query.month },
       companyId,
       performedById,
     );
