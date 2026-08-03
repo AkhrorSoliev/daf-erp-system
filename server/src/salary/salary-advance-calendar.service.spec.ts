@@ -56,6 +56,7 @@ describe('SalaryAdvanceCalendarService', () => {
       },
       user: { findUnique: jest.fn().mockResolvedValue(ceoCaller) },
       expense: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -122,7 +123,7 @@ describe('SalaryAdvanceCalendarService', () => {
           id: 10006,
           firstName: 'Malika',
           lastName: 'Tosheva',
-          roles: [],
+          roles: [{ role: { id: 4, name: 'Teacher' } }],
         },
       }),
     ]);
@@ -135,6 +136,7 @@ describe('SalaryAdvanceCalendarService', () => {
       daysWithAdvances: 2,
       employeeCount: 2,
       maxDay: { date: '2026-07-15', total: 1_600_000 },
+      outsideRoster: { count: 0, total: 0 },
     });
   });
 
@@ -151,6 +153,7 @@ describe('SalaryAdvanceCalendarService', () => {
       daysWithAdvances: 0,
       employeeCount: 0,
       maxDay: null,
+      outsideRoster: { count: 0, total: 0 },
     });
   });
 
@@ -198,5 +201,59 @@ describe('SalaryAdvanceCalendarService', () => {
 
     expect(res.month).toBe('2026-05');
     expect(res.floorMonth).toBe('2026-05');
+  });
+
+  describe('oylik ro‘yxatidan tashqari avanslar', () => {
+    it('o‘qituvchi bo‘lmagan va FIXED_MONTHLY konfiguratsiyasi yo‘q xodimni sanaydi', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance({ id: 'a', amount: 1_000_000 }), // O'qituvchi — ro'yxatda
+        advance({
+          id: 'b',
+          amount: 450_000,
+          relatedUser: {
+            id: 10077,
+            firstName: 'Nodira',
+            lastName: 'Saidova',
+            roles: [{ role: { id: 5, name: 'Cashier' } }],
+          },
+        }),
+      ]);
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([]);
+
+      const res = await service.getCalendar({ month: '2026-07' }, 1, 10001);
+
+      expect(res.totals.outsideRoster).toEqual({ count: 1, total: 450_000 });
+    });
+
+    it('FIXED_MONTHLY konfiguratsiyasi bor xodimni ro‘yxatdan tashqari deb sanamaydi', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance({
+          id: 'b',
+          amount: 450_000,
+          relatedUser: {
+            id: 10077,
+            firstName: 'Nodira',
+            lastName: 'Saidova',
+            roles: [{ role: { id: 5, name: 'Cashier' } }],
+          },
+        }),
+      ]);
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+        { userId: 10077 },
+      ]);
+
+      const res = await service.getCalendar({ month: '2026-07' }, 1, 10001);
+
+      expect(res.totals.outsideRoster).toEqual({ count: 0, total: 0 });
+    });
+
+    it('avans bo‘lmasa konfiguratsiya so‘rovini umuman qilmaydi', async () => {
+      prisma.expense.findMany.mockResolvedValue([]);
+
+      const res = await service.getCalendar({ month: '2026-07' }, 1, 10001);
+
+      expect(res.totals.outsideRoster).toEqual({ count: 0, total: 0 });
+      expect(prisma.employeeSalaryConfig.findMany).not.toHaveBeenCalled();
+    });
   });
 });

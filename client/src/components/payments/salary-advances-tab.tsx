@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, HandCoins, TrendingUp, Users } from "lucide-react";
+import { CalendarDays, HandCoins, Info, TrendingUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MonthPicker } from "@/components/ui/month-picker";
@@ -49,6 +49,7 @@ interface CalendarResponse {
     daysWithAdvances: number;
     employeeCount: number;
     maxDay: { date: string; total: number } | null;
+    outsideRoster: { count: number; total: number };
   };
   advances: AdvanceRow[];
 }
@@ -204,6 +205,20 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
               setAddOpen(true);
             }}
           />
+        </div>
+      )}
+
+      {/* Kalendar barcha avanslarni ko'rsatadi, «Oyliklar» JAMI'si esa faqat
+          oylik ro'yxatidagi xodimlarnikini — farq yashirin qolmasin. */}
+      {totals && totals.outsideRoster.count > 0 && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <p>
+            {formatNumber(totals.outsideRoster.count)} ta avans (
+            {formatBalance(totals.outsideRoster.total)}) oylik ro&apos;yxatidan
+            tashqari xodimga berilgan — «Oyliklar» tabidagi Avans JAMI&apos;sida
+            ko&apos;rinmaydi.
+          </p>
         </div>
       )}
 

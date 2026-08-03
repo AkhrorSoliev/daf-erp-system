@@ -34,6 +34,12 @@ export interface AdvanceCalendarTotals {
   daysWithAdvances: number;
   employeeCount: number;
   maxDay: { date: string; total: number } | null;
+  /**
+   * «Oyliklar» jadvalidagi «Avans» JAMI'siga TUSHMAYDIGAN avanslar: oluvchi
+   * o'qituvchi ham emas, global FIXED_MONTHLY konfiguratsiyasi ham yo'q.
+   * Ikki raqam farq qilsa, farq yashirin qolmasligi uchun.
+   */
+  outsideRoster: { count: number; total: number };
 }
 
 /**
@@ -88,6 +94,7 @@ export class SalaryAdvanceCalendarService {
           daysWithAdvances: 0,
           employeeCount: 0,
           maxDay: null,
+          outsideRoster: { count: 0, total: 0 },
         } as AdvanceCalendarTotals,
         advances: [] as AdvanceCalendarRow[],
       };
@@ -180,6 +187,37 @@ export class SalaryAdvanceCalendarService {
       null,
     );
 
+    // Oylik ro'yxati = o'chirilmagan O'qituvchilar ∪ global FIXED_MONTHLY
+    // konfiguratsiyasi bor no-o'qituvchi xodimlar (getMonthly + computeStaff).
+    // Shu ikkalasiga ham kirmagan oluvchi «Oyliklar» JAMI'sida ko'rinmaydi.
+    const outsideRoster = { count: 0, total: 0 };
+    const nonTeacherIds = [
+      ...new Set(
+        advances
+          .filter((a) => !a.user.roles.some((r) => r.name === 'Teacher'))
+          .map((a) => a.user.id),
+      ),
+    ];
+    if (nonTeacherIds.length > 0) {
+      const configs = await this.prisma.employeeSalaryConfig.findMany({
+        where: {
+          companyId,
+          groupId: null,
+          salaryType: 'FIXED_MONTHLY',
+          userId: { in: nonTeacherIds },
+        },
+        select: { userId: true },
+      });
+      const withConfig = new Set(configs.map((c) => c.userId));
+      for (const a of advances) {
+        const isTeacher = a.user.roles.some((r) => r.name === 'Teacher');
+        if (!isTeacher && !withConfig.has(a.user.id)) {
+          outsideRoster.count += 1;
+          outsideRoster.total += a.amount;
+        }
+      }
+    }
+
     return {
       month,
       floorMonth,
@@ -190,6 +228,7 @@ export class SalaryAdvanceCalendarService {
         daysWithAdvances: days.length,
         employeeCount: employees.size,
         maxDay,
+        outsideRoster,
       },
       advances,
     };
