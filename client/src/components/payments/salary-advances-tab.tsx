@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { SummaryCard } from "./summary-card";
 import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
+import { SalaryAdvanceCalendar } from "./salary-advance-calendar";
 import { currentMonthKey } from "./salary-utils";
 
 export interface AdvanceDay {
@@ -76,6 +77,8 @@ function shortDay(iso: string): string {
 export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
   const { filters, setFilters } = useUrlFilters(filtersSchema);
   const [addOpen, setAddOpen] = useState(false);
+  // Tanlangan kun URL'ga yozilmaydi — u vaqtinchalik UI holati.
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const maxMonth = currentMonthKey();
   const month = filters.month || maxMonth;
@@ -101,7 +104,10 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
           value={shownMonth}
           minMonth={floorMonth}
           maxMonth={maxMonth}
-          onChange={(m) => setFilters({ month: m })}
+          onChange={(m) => {
+            setSelectedDate(null);
+            setFilters({ month: m });
+          }}
           className="sm:w-52"
         />
         <div className="flex-1" />
@@ -160,7 +166,32 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         </div>
       )}
 
-      {/* Kalendar va kun paneli Task 3–4 da shu yerga qo'shiladi. */}
+      {isLoading ? (
+        <Skeleton className="h-[360px] w-full" />
+      ) : data && data.days.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            Bu oyda avans berilmagan.
+          </p>
+          {canPay && (
+            <Button
+              variant="outline"
+              className="mt-3"
+              onClick={() => setAddOpen(true)}
+            >
+              <HandCoins className="size-4" />
+              Avans qo&apos;shish
+            </Button>
+          )}
+        </div>
+      ) : (
+        <SalaryAdvanceCalendar
+          month={shownMonth}
+          days={data?.days ?? []}
+          selectedDate={selectedDate}
+          onSelect={setSelectedDate}
+        />
+      )}
 
       <SalaryAddAdvanceDialog
         open={addOpen}
