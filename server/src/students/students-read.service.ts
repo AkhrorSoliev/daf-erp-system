@@ -436,7 +436,13 @@ export class StudentsReadService {
         studentId: id,
         deletedAt: null,
         ...(includeClosed ? {} : { status: EnrollmentStatus.ACTIVE }),
-        group: { companyId, deletedAt: null },
+        // includeClosed ALSO lifts the group's soft-delete filter. An archived
+        // group is "yopilgan" in exactly the sense the toggle means — and its
+        // attendance rows are still in the DB. Without this, a student whose
+        // only group was archived (204 students / 20 groups in prod when this
+        // was found) had a permanently empty Darslar tab that no toggle could
+        // open. Default (toggle off) still hides archived groups.
+        group: includeClosed ? { companyId } : { companyId, deletedAt: null },
       },
       orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],
       select: {
