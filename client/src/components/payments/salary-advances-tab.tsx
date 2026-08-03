@@ -12,6 +12,7 @@ import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { SummaryCard } from "./summary-card";
 import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
 import { SalaryAdvanceCalendar } from "./salary-advance-calendar";
+import { SalaryAdvanceDayPanel } from "./salary-advance-day-panel";
 import { currentMonthKey } from "./salary-utils";
 
 export interface AdvanceDay {
@@ -79,6 +80,8 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
   const [addOpen, setAddOpen] = useState(false);
   // Tanlangan kun URL'ga yozilmaydi — u vaqtinchalik UI holati.
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // Panel orqali ochilganda dialogga uzatiladigan sana.
+  const [addDate, setAddDate] = useState<Date | null>(null);
 
   const maxMonth = currentMonthKey();
   const month = filters.month || maxMonth;
@@ -185,18 +188,33 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
           )}
         </div>
       ) : (
-        <SalaryAdvanceCalendar
-          month={shownMonth}
-          days={data?.days ?? []}
-          selectedDate={selectedDate}
-          onSelect={setSelectedDate}
-        />
+        <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+          <SalaryAdvanceCalendar
+            month={shownMonth}
+            days={data?.days ?? []}
+            selectedDate={selectedDate}
+            onSelect={setSelectedDate}
+          />
+          <SalaryAdvanceDayPanel
+            date={selectedDate}
+            advances={data?.advances ?? []}
+            canPay={canPay}
+            onAdd={(d) => {
+              setAddDate(new Date(`${d}T00:00:00`));
+              setAddOpen(true);
+            }}
+          />
+        </div>
       )}
 
       <SalaryAddAdvanceDialog
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={(v) => {
+          setAddOpen(v);
+          if (!v) setAddDate(null);
+        }}
         onSaved={() => refetch()}
+        defaultDate={addDate}
       />
     </div>
   );

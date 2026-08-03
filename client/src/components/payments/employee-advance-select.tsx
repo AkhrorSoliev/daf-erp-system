@@ -28,7 +28,9 @@ const roleLabels: Record<number, string> = {
   5: "Kassir",
 };
 
-function employeeRoleLabel(roles: { id: number; name: string }[]): string {
+export function employeeRoleLabel(
+  roles: { id: number; name: string }[],
+): string {
   if (!roles?.length) return "";
   // Prefer the teaching role when present — the category is "Ustozga avans".
   const teacher = roles.find((r) => r.id === 4);

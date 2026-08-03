@@ -38,6 +38,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Bumped after a successful save so the salary table refetches (Avans cell). */
   onSaved: () => void;
+  /**
+   * Dialog ochilganda oldindan qo'yiladigan sana. Avans kalendarida kun tanlab
+   * «Bu kunga avans qo'shish» bosilganda o'sha kun keladi. Berilmasa — bugun.
+   */
+  defaultDate?: Date | null;
 }
 
 /**
@@ -46,7 +51,12 @@ interface Props {
  * unchanged); it just no longer lives on the Xarajatlar page. The recipient's
  * "Avans" cell in the salary table updates once this saves.
  */
-export function SalaryAddAdvanceDialog({ open, onOpenChange, onSaved }: Props) {
+export function SalaryAddAdvanceDialog({
+  open,
+  onOpenChange,
+  onSaved,
+  defaultDate,
+}: Props) {
   const { selectedBranch } = useBranchSwitcher();
 
   const [relatedUserId, setRelatedUserId] = useState("");
@@ -63,8 +73,8 @@ export function SalaryAddAdvanceDialog({ open, onOpenChange, onSaved }: Props) {
     setPaymentMethod("CASH");
     setAmount("");
     setDescription("Avans");
-    setDate(new Date());
-  }, [open]);
+    setDate(defaultDate ?? new Date());
+  }, [open, defaultDate]);
 
   // Staff who can receive an advance — loaded only while the dialog is open.
   const { data: employees, isLoading: employeesLoading } = useQuery({
