@@ -16,6 +16,7 @@ import { ReportsProfitLossService } from './reports-profit-loss.service';
 import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
 import { ReportsExcelService } from './reports-excel.service';
+import { ReportsExpectationService } from './reports-expectation.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { SalaryModule } from '../salary/salary.module';
@@ -41,12 +42,18 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsCashFlowService,
     ReportsBalanceSheetService,
     ReportsExcelService,
+    ReportsExpectationService,
   ],
   // Exposed so the Telegram admin bot's report menu can generate the same
   // financial Excel workbook + in-chat summary the /payments panel uses.
   // ReportsService is exported so the Telegram surfaces can read the ONE
   // canonical net-profit figure (`getMonthlyNetProfit`) instead of each
   // re-deriving its own.
-  exports: [ReportsExcelService, ReportsFinancialService, ReportsService],
+  exports: [
+    ReportsExcelService,
+    ReportsFinancialService,
+    ReportsService,
+    ReportsExpectationService,
+  ],
 })
 export class ReportsModule {}
