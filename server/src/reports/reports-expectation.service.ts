@@ -99,10 +99,17 @@ export class ReportsExpectationService {
     const monthStartStr = `${month}-01`;
     const monthEndStr = `${month}-${String(lastDay).padStart(2, '0')}`;
 
+    // EVERY group in scope, whatever its status today. A lesson that was held
+    // was held — if the group has since been completed, paused or archived,
+    // its past lessons must still count. Restricting this to ACTIVE groups is
+    // the H20 defect (`/reports/activity` builds its universe from live status
+    // and loses 35% of June's occupied hours); measured here, it dropped 235 of
+    // July's 5 143 billable attendances and 8.0 mln so'm.
+    //
+    // Only the FUTURE projection is limited to active groups — see
+    // `projectable` below.
     const groupWhere = {
       companyId,
-      deletedAt: null,
-      statusEnum: 'ACTIVE' as const,
       ...(branchIds && { branchId: { in: branchIds } }),
     };
 
@@ -111,6 +118,8 @@ export class ReportsExpectationService {
         where: groupWhere,
         select: {
           id: true,
+          statusEnum: true,
+          deletedAt: true,
           exactDays: true,
           startDate: true,
           endDate: true,
@@ -237,16 +246,25 @@ export class ReportsExpectationService {
         }
       }
 
+      // A completed / paused / archived / deleted group holds no lessons in the
+      // future, so it gets an empty roster and the calendar walk skips it. Its
+      // past attendances above are untouched. A PAUSED group can still carry
+      // ACTIVE enrollments, so this must be explicit rather than relying on the
+      // roster coming back empty on its own.
+      const projectable = g.statusEnum === 'ACTIVE' && g.deletedAt === null;
+
       return {
         groupId: g.id,
         exactDays: g.exactDays ?? [],
         startDateStr: g.startDate ? tashkentDateStr(g.startDate) : null,
         endDateStr: g.endDate ? tashkentDateStr(g.endDate) : null,
         scheduleSnapshots: g.scheduleSnapshots,
-        roster: g.enrollments.map((e) => ({
-          studentId: e.studentId,
-          perLesson: priceFor(e.studentId, e.student?.discountPercent ?? 0),
-        })),
+        roster: projectable
+          ? g.enrollments.map((e) => ({
+              studentId: e.studentId,
+              perLesson: priceFor(e.studentId, e.student?.discountPercent ?? 0),
+            }))
+          : [],
         datesWithAttendance,
         cancelledDates: cancelledByGroup.get(g.id) ?? new Set<string>(),
         coveredAttendances: covered,

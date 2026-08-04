@@ -52,6 +52,57 @@ describe('ReportsExpectationService', () => {
     );
   });
 
+  it('does NOT filter groups by live status — a held lesson was held', async () => {
+    // H20 class: building the group universe from today's status drops the past
+    // lessons of any group since completed, paused or archived. Measured on
+    // production it lost 235 of July's 5 143 attendances and 8.0 mln so'm.
+    await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: null,
+    });
+    const where = prisma.group.findMany.mock.calls[0][0].where;
+    expect(where.statusEnum).toBeUndefined();
+    expect(where.deletedAt).toBeUndefined();
+  });
+
+  it('counts an archived group\'s past lessons but projects no future ones', async () => {
+    prisma.group.findMany.mockResolvedValueOnce([
+      {
+        id: 'gone',
+        statusEnum: 'ARCHIVED',
+        deletedAt: null,
+        exactDays: ['monday'], // would otherwise project 5 August Mondays
+        startDate: null,
+        endDate: null,
+        scheduleSnapshots: [],
+        course: { price: 1_200_000, lessonPaymentCount: 12 },
+        contracts: [],
+        // A paused/archived group can still carry ACTIVE enrollments.
+        enrollments: [{ studentId: 10001, student: { discountPercent: 0 } }],
+      },
+    ]);
+    prisma.attendance.findMany.mockResolvedValueOnce([
+      {
+        id: 'a1',
+        groupId: 'gone',
+        studentId: 10001,
+        date: new Date('2026-08-03'),
+      },
+    ]);
+    prisma.transaction.findMany.mockResolvedValueOnce([
+      { attendanceId: 'a1', metadata: { perLessonCost: 100_000 } },
+    ]);
+
+    const r = await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: null,
+    });
+
+    expect(r.heldValue).toBe(100_000);
+    expect(r.heldLessons).toBe(1);
+    expect(r.remainingLessons).toBe(0);
+  });
+
   it('applies no branch predicate for an unrestricted caller', async () => {
     await service.getMonthlyExpectation(1, {
       month: '2026-08',
@@ -65,6 +116,8 @@ describe('ReportsExpectationService', () => {
     prisma.group.findMany.mockResolvedValueOnce([
       {
         id: 'g1',
+        statusEnum: 'ACTIVE',
+        deletedAt: null,
         exactDays: [],
         startDate: null,
         endDate: null,
@@ -90,6 +143,8 @@ describe('ReportsExpectationService', () => {
     prisma.group.findMany.mockResolvedValueOnce([
       {
         id: 'g1',
+        statusEnum: 'ACTIVE',
+        deletedAt: null,
         exactDays: ['monday'],
         startDate: null,
         endDate: null,
@@ -118,6 +173,8 @@ describe('ReportsExpectationService', () => {
     prisma.group.findMany.mockResolvedValueOnce([
       {
         id: 'g1',
+        statusEnum: 'ACTIVE',
+        deletedAt: null,
         exactDays: [],
         startDate: null,
         endDate: null,
@@ -159,6 +216,8 @@ describe('ReportsExpectationService', () => {
     prisma.group.findMany.mockResolvedValueOnce([
       {
         id: 'g1',
+        statusEnum: 'ACTIVE',
+        deletedAt: null,
         exactDays: [],
         startDate: null,
         endDate: null,
@@ -193,6 +252,8 @@ describe('ReportsExpectationService', () => {
     prisma.group.findMany.mockResolvedValueOnce([
       {
         id: 'g1',
+        statusEnum: 'ACTIVE',
+        deletedAt: null,
         exactDays: ['monday'],
         startDate: null,
         endDate: null,

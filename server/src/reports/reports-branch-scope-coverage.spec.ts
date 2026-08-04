@@ -190,6 +190,8 @@ describe('branch scope coverage — expectation service', () => {
 
   const scopedGroup = {
     id: 'g-in-scope',
+    statusEnum: 'ACTIVE',
+    deletedAt: null,
     exactDays: ['monday'],
     startDate: null,
     endDate: null,
