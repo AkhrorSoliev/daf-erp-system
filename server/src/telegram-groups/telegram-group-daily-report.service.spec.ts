@@ -235,6 +235,62 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).toContain('Qarz kechirildi: <b>900 000 so\'m</b> (1 ta');
   });
 
+  it('prints the shared collection ratio and never a percentage on the forecast', async () => {
+    const state = defaultState();
+    // One enrollment so the forecast line renders and can be inspected.
+    state.forecastEnrollments = [
+      {
+        studentId: 10001,
+        student: { discountPercent: 0 },
+        group: {
+          exactDays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+          course: { price: 1_200_000, lessonPaymentCount: 12 },
+          contracts: [],
+        },
+      },
+    ];
+    const getIncomeMonthAttribution = jest.fn().mockResolvedValue({
+      lessonsValue: 173_783_991,
+      currentMonth: 142_000_000,
+      collectionPct: 82,
+    });
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution,
+    });
+
+    const { message: raw } = await service.build(1001);
+    const message = raw.replace(/ /g, ' ');
+
+    expect(message).toContain("• Shu oyning darslari: <b>173 783 991 so'm</b>");
+    expect(message).toContain(
+      "• Shundan yig'ildi: <b>142 000 000 so'm</b> (<b>82%</b>)",
+    );
+    // The forecast survives as a plain figure — the ratio that used to hang off
+    // it (MTD cash ÷ `exactDays × 4`) is what printed 109–115% against the web
+    // page's 83%. A "% yig'ildi" must never be re-derived from the forecast.
+    expect(message).toContain('• Oylik prognoz (taxminiy reja): <b>');
+    expect(message).not.toMatch(/prognoz.*%/i);
+    // Company-wide, month-to-date — the window the "Oy boshidan" block reports.
+    expect(getIncomeMonthAttribution).toHaveBeenCalledWith(
+      1001,
+      expect.objectContaining({ branchIds: null, startDate: '2026-07-01' }),
+    );
+  });
+
+  it('drops the collection block rather than inventing a ratio when it fails', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest.fn().mockRejectedValue(new Error('boom')),
+    });
+
+    const { message } = await service.build(1001);
+
+    expect(message).not.toContain("Shundan yig'ildi");
+    expect(message).toContain('Tushum (haqiqiy)'); // rest of the report survives
+  });
+
   it('queries Attendance.date as a single DATE, never a {gte,lt} window (regression)', async () => {
     const state = defaultState();
     const prisma = makePrisma(state);

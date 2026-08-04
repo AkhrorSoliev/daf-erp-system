@@ -26,7 +26,7 @@ import {
  *   👥 O'quvchilar harakati — new vs departed students (net) + new leads
  *   🎓 Bugungi o'quv jarayoni — lessons held + attendance breakdown
  *   📌 Hozirgi holat        — active students + debt (with day-over-day ▲/▼)
- *   📅 Oy boshidan          — MTD income / expense / net + forecast collection %
+ *   📅 Oy boshidan          — MTD income / expense / net + lesson collection %
  *   💵 Ustozlar oyligi      — deserved / covered / center top-up (gap), MTD
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
@@ -36,8 +36,12 @@ import {
  *
  * Metric semantics mirror the CEO's `/payments/salary` and financial pages:
  *  - "Tushum (haqiqiy)" = cash actually received (COMPLETED payments), NOT billed.
+ *  - "Shu oyning darslari" / "Shundan yig'ildi" = the collection ratio, taken
+ *    from `getIncomeMonthAttribution` so the bot and /payments/overview divide
+ *    the SAME two figures. Never re-derive it here.
  *  - "Oylik prognoz"    = recognized-revenue forecast (same walk as
- *    reports-financial.service.ts); the % is a collection ratio, not a pace target.
+ *    reports-financial.service.ts). It carries NO percentage: `exactDays × 4`
+ *    assumes a 4-week month and runs 8–13% short on 5-week months.
  *  - "Markaz qo'shimchasi" = SalaryMonthly `gap` = fullDeserved − covered.
  */
 @Injectable()
@@ -278,11 +282,13 @@ export class TelegramGroupDailyReportService {
     // wrapped so a failure degrades gracefully rather than killing the report).
     // Tashkent calendar month of "today" — the window the MTD block reports on.
     const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
-    const [forecastIncome, salary, canonicalNet] = await Promise.all([
-      this.computeMonthlyForecast(companyId),
-      this.computeSalaryTopUp(companyId),
-      this.computeCanonicalNetProfit(companyId, monthKey),
-    ]);
+    const [forecastIncome, salary, canonicalNet, collection] =
+      await Promise.all([
+        this.computeMonthlyForecast(companyId),
+        this.computeSalaryTopUp(companyId),
+        this.computeCanonicalNetProfit(companyId, monthKey),
+        this.computeCollection(companyId),
+      ]);
 
     // ── Derive figures ────────────────────────────────────────────────────
     const todayIncome = todayPayments._sum.amount ?? 0;
@@ -313,10 +319,6 @@ export class TelegramGroupDailyReportService {
     const mtdAdvance = monthlyAdvances._sum.amount ?? 0;
     // Cash-only figure, kept for the «kassa harakati» reading below.
     const mtdCashNet = mtdIncome - mtdExpense - mtdAdvance;
-    const collectionPct =
-      forecastIncome && forecastIncome > 0
-        ? Math.round((mtdIncome / forecastIncome) * 100)
-        : null;
 
     const flags = this.buildFlagLines(todayFlags, attendancePct);
 
@@ -414,9 +416,25 @@ export class TelegramGroupDailyReportService {
         `• Kassa harakati (oyliksiz): <b>${formatSignedSum(mtdCashNet)}</b>`,
       );
     }
-    if (forecastIncome && forecastIncome > 0 && collectionPct !== null) {
+    // Collection, on the ONE basis /payments/overview shows. The old line read
+    // `MTD cash ÷ forecast` — two different things over a denominator that is
+    // a schedule guess, so it printed 109–115% while the web page called the
+    // same month 83%. Now both surfaces divide the SAME two figures.
+    if (collection && collection.lessonsValue > 0) {
       lines.push(
-        `• Oylik prognoz: <b>${formatSum(forecastIncome)}</b> → <b>${collectionPct}%</b> yig'ildi`,
+        `• Shu oyning darslari: <b>${formatSum(collection.lessonsValue)}</b>`,
+      );
+      lines.push(
+        `• Shundan yig'ildi: <b>${formatSum(collection.collected)}</b> (<b>${collection.pct}%</b>)`,
+      );
+    }
+    if (forecastIncome && forecastIncome > 0) {
+      // Kept as a plain figure. It carries NO percentage any more: the walk
+      // assumes every month is exactly 4 weeks (`exactDays × 4`), which runs
+      // 8–13% short on a 5-week month — fine as a rough plan, unfit as the
+      // denominator of a headline ratio. Audit P5 replaces the walk itself.
+      lines.push(
+        `• Oylik prognoz (taxminiy reja): <b>${formatSum(forecastIncome)}</b>`,
       );
     }
 
@@ -657,6 +675,48 @@ export class TelegramGroupDailyReportService {
    * Administrator caller so the figures are company-wide, not branch-scoped.
    * Returns null (block hidden) when no such user exists or the compute fails.
    */
+  /**
+   * Month-to-date collection on the SAME basis as the /overview "Tushum
+   * tarkibi" panel — `ReportsFinancialService.getIncomeMonthAttribution`, which
+   * returns both sides of the ratio (`lessonsValue`, `currentMonth`) already
+   * computed against one window.
+   *
+   * The previous line divided MTD cash by the schedule forecast, a different
+   * numerator over a different denominator than anything on the web page: the
+   * bot said 109–115% while /payments/overview called the same month 83%.
+   * Calling the shared service is what makes a repeat of that impossible —
+   * there is no second formula to drift.
+   *
+   * Company-wide (the report covers the whole centre) and MTD (1st → today,
+   * Tashkent), matching the "Oy boshidan" block it sits in. Returns null on
+   * failure so the block is simply dropped.
+   */
+  private async computeCollection(companyId: number): Promise<{
+    lessonsValue: number;
+    collected: number;
+    pct: number;
+  } | null> {
+    try {
+      const attribution = await this.reports.getIncomeMonthAttribution(
+        companyId,
+        {
+          branchIds: null,
+          startDate: firstOfThisMonthDate().toISOString().slice(0, 10),
+          endDate: tashkentTodayDate().toISOString().slice(0, 10),
+        },
+      );
+      if (attribution.collectionPct === null) return null;
+      return {
+        lessonsValue: attribution.lessonsValue,
+        collected: attribution.currentMonth,
+        pct: attribution.collectionPct,
+      };
+    } catch (e) {
+      this.logger.warn(`Collection ratio failed for company ${companyId}: ${e}`);
+      return null;
+    }
+  }
+
   /**
    * The ONE canonical "Sof foyda" — the same figure the /overview Foyda card and
    * the Excel «Sof foyda» sheet show (`ReportsService.getMonthlyNetProfit`).

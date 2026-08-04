@@ -24,6 +24,11 @@ describe('ReportsFinancialService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
+      // Feeds `getRecognizedRevenue`, which `getIncomeMonthAttribution` now
+      // calls for the collection denominator. Empty by default so the existing
+      // attribution cases keep their `transaction.findMany` mock order (the
+      // recognized-revenue walk short-circuits before its consumption query).
+      attendance: { findMany: jest.fn().mockResolvedValue([]) },
       student: {
         aggregate: jest
           .fn()
@@ -692,6 +697,116 @@ describe('ReportsFinancialService', () => {
       });
 
       expect(result.currentLabel).toBe('Yanvar 2026 – Iyun 2026');
+    });
+
+    it('divides the period\'s OWN income by the value of lessons held in it', async () => {
+      // Two lessons held in June, billed 150 000 each -> denominator 300 000.
+      prisma.attendance.findMany.mockResolvedValueOnce([
+        { id: 'a1', group: { course: { price: 1800000, lessonPaymentCount: 12 } } },
+        { id: 'a2', group: { course: { price: 1800000, lessonPaymentCount: 12 } } },
+      ]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        { attendanceId: 'a1', metadata: { perLessonCost: 150000 } },
+        { attendanceId: 'a2', metadata: { perLessonCost: 150000 } },
+      ]);
+      prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10001 }]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10001,
+          type: 'PAYMENT',
+          amount: 150000,
+          branchId: null,
+          createdAt: new Date('2026-06-10T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      expect(result.lessonsValue).toBe(300000);
+      expect(result.currentMonth).toBe(150000);
+      expect(result.collectionPct).toBe(50);
+    });
+
+    it('excludes old-debt settlement from the ratio (that is the point of it)', async () => {
+      prisma.attendance.findMany.mockResolvedValueOnce([
+        { id: 'a1', group: { course: { price: 1200000, lessonPaymentCount: 12 } } },
+      ]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        { attendanceId: 'a1', metadata: { perLessonCost: 100000 } },
+      ]);
+      prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10001 }]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10001,
+          type: 'LESSON_DEDUCTION',
+          amount: -500000, // May debt
+          branchId: null,
+          createdAt: new Date('2026-05-10T00:00:00Z'),
+        },
+        {
+          studentId: 10001,
+          type: 'PAYMENT',
+          amount: 500000, // June cash, but it only clears the May debt
+          branchId: null,
+          createdAt: new Date('2026-06-10T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      // Half a million came in, yet NOTHING was collected for June's own
+      // lesson — the old `cash ÷ forecast` line would have reported this month
+      // as a triumph.
+      expect(result.total).toBe(500000);
+      expect(result.lateTotal).toBe(500000);
+      expect(result.collectionPct).toBe(0);
+    });
+
+    it('reports a null ratio when no lesson was held (never divides by zero)', async () => {
+      prisma.payment.groupBy.mockResolvedValueOnce([]);
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      expect(result.lessonsValue).toBe(0);
+      expect(result.collectionPct).toBeNull();
+    });
+  });
+
+  describe('getRecognizedRevenue', () => {
+    const window = {
+      start: new Date('2026-06-01'),
+      end: new Date('2026-07-01'),
+    };
+
+    it('confines attendance to the caller scope', async () => {
+      // Regression: the signature destructured `branchId` while both callers
+      // passed `branchIds`, so the predicate was always `undefined` — a
+      // branch-filtered Foyda card subtracted ONE branch's payroll from the
+      // WHOLE company's revenue.
+      await service.getRecognizedRevenue(1, { ...window, branchIds: [7] });
+
+      expect(prisma.attendance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ group: { branchId: { in: [7] } } }),
+        }),
+      );
+    });
+
+    it('returns 0 for an empty scope rather than the whole company', async () => {
+      const result = await service.getRecognizedRevenue(1, {
+        ...window,
+        branchIds: [],
+      });
+
+      expect(result).toBe(0);
+      expect(prisma.attendance.findMany).not.toHaveBeenCalled();
+    });
+
+    it('applies no branch predicate for an unrestricted caller', async () => {
+      await service.getRecognizedRevenue(1, { ...window, branchIds: null });
+
+      const arg = prisma.attendance.findMany.mock.calls[0][0];
+      expect(arg.where.group).toBeUndefined();
     });
   });
 });

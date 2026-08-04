@@ -8,6 +8,37 @@
 
 ---
 
+## 0b. P3 BAJARILDI + YANGI TOPILMA H33 — 2026-08-04
+
+### ✅ H1 / P3 — yagona «Yig'im %»
+Telegram `mtdIncome ÷ recognizedRevenueForecast` (109–115%) va /overview `currentMonth ÷ total` (83%) o'rniga **bitta** ko'rsatkich: `ReportsFinancialService.getIncomeMonthAttribution` endi `lessonsValue` (shu davrda **o'tilgan** darslar qiymati = `getRecognizedRevenue`) va `collectionPct = currentMonth ÷ lessonsValue` qaytaradi. Telegram ham, /overview «Tushum tarkibi» paneli ham aynan shu metodni chaqiradi — ikkinchi formula qolmadi.
+
+Prod (2026-08-04, kompaniya bo'yicha):
+
+| Oy | Jami tushum | Shu davr uchun | O'tilgan darslar | **Yig'im** | (eski formula) |
+|---|---|---|---|---|---|
+| iyun | 171 933 329 | 133 621 653 | 165 086 661 | **81%** | 115% |
+| iyul | 170 378 987 | 142 064 938 | 173 783 991 | **82%** | 115% |
+| avgust (1–4) | 10 059 000 | 6 742 569 | 13 540 068 | **50%** | 7% |
+
+Eski formulada maxraj har oy bir xil (148.8M prognoz) bo'lgani uchun iyun va iyul **bir xil 115%** chiqardi — ya'ni u oylarni umuman ajratmasdi. Yangisi ajratadi va tuzilishi bo'yicha ma'noga ega. Oy o'rtasida 100% dan oshishi mumkin (o'quvchi keyingi oy tsiklini oldindan to'lasa) — bu haqiqiy signal, avvalgidek har oy takrorlanadigan 11% xato emas.
+
+Prognoz qatori qoldi, lekin **foizsiz**: `• Oylik prognoz (taxminiy reja): X`. Uning `exactDays × 4` xatosi P5 da tuzatiladi.
+
+Tekshiruv skriptlari: `scripts/verify-collection-ratio.ts` (haqiqiy servisni chaqiradi), `scripts/diag-lesson-coverage.ts`, `scripts/diag-coverage-crosscheck.ts`.
+
+### 📌 Nega «dars qoplanishi %» ishlatilmadi
+Dastlabki g'oya «qoplangan darslar ÷ o'tilgan darslar» edi. Prodda o'lchandi: **iyun/iyul/avgustda qoplanmagan bitta ham dars yo'q** — iyulda 5 143 ta billable davomatning hammasida tirik `LESSON_CONSUMPTION` bor, hatto bugun qarzdor 284 o'quvchining 3 101 ta darsida ham. Sababi: to'lov kelganda `processRetroactiveBillingForStudent` o'tmishdagi darslarni orqaga qarab hisoblaydi, ya'ni dars **kechroq** qoplanadi. Demak bu nisbat doim 100% — o'lchov emas. Shu bilan birga bu `lessonsValue` ni to'liq maxraj sifatida tasdiqlaydi.
+
+### ❗ H33 — `getRecognizedRevenue` filialni umuman hisobga olmasdi (TUZATILDI)
+`ReportsFinancialService.getRecognizedRevenue` imzosi `{ branchId?: number }` ni ochardi, lekin **ikkala chaqiruvchi ham** (`getMonthlyNetProfit`, `reports-excel.service.ts`) P7 dan keyin `branchIds` uzatadi. Ular o'zgaruvchi orqali uzatilgani uchun TypeScript ortiqcha-maydon tekshiruvini o'tkazib yuborgan → `branchId` **doim `undefined`** → filial predikati butunlay yo'qolgan.
+
+Ta'siri: filial tanlanganda Foyda kartasi va Excel «Sof foyda» **butun kompaniyaning** dars tushumidan **bitta filialning** oyligini ayirardi. Namanganda hozircha ma'lumot yo'q, shuning uchun simptom «Namangan tanlansa ham Farg'onaning 173M tushumi chiqadi» ko'rinishida edi — Namangan pul kirita boshlashi bilan raqam butunlay yolg'on bo'lardi.
+
+Tuzatildi: `branchIds: ReportBranchIds` + `group: { branchId: { in } }` + bo'sh qamrovda 0. Qo'riqchi testlar `reports-financial.service.spec.ts` da (`getRecognizedRevenue` describe bloki).
+
+---
+
 ## 0a. QAYTA TEKSHIRUV — 2026-07-30 (13 commit'dan keyin)
 
 Har bir topilma joriy kod bo'yicha qayta tekshirildi (10 guruh + har «tuzatildi» da'vosiga qarshi challenge). Testlar: 180 suite / 2253 test o'tdi.
@@ -132,6 +163,8 @@ railway run npx ts-node scripts/diag-report-mismatch.ts
 ---
 
 ## 2. H1 — Bitta "%" belgisi ostida uch xil ko'rsatkich
+
+> ✅ **TUZATILDI 2026-08-04** — 0b bo'limiga qarang. Quyidagisi tuzatishdan oldingi holat.
 
 | Joy | Formula | Qiymat |
 |---|---|---|
@@ -488,7 +521,7 @@ Excel tomoni **to'g'ri** — u ustunni aniq oyna bilan («31.05.2026—30.06.202
 |---|---|---|---|
 | ~~**P1**~~ | ~~`computePeriodBounds` ni ustun turiga moslash (H3)~~ | ✅ **BAJARILDI 2026-07-30** — iyul oynasi 01.07 dan boshlanadi, tizim raqami 90 824 433 → 89 005 090 (−1 819 343). H7 ham tuzatildi (PR #375). | — |
 | ~~**P2**~~ | ~~Excel ko'p oylik export (H6)~~ | ✅ **BAJARILDI 2026-07-30** — foyda oyoqlari davrdagi oylar bo'yicha yig'iladi (har oy o'z top-up asosi bilan), floordan oldingi oylar tashlanadi. `reports-excel.month-range.ts` | — |
-| **P3** | Telegramdagi «% yig'ildi» ni ma'noli formulaga o'tkazish + nomini to'liq yozish (H1) | 109% vs 83% chalkashligi | Kichik |
+| ~~**P3**~~ | ~~Telegramdagi «% yig'ildi» ni ma'noli formulaga o'tkazish (H1)~~ | ✅ **BAJARILDI 2026-08-04** — yagona formula `getIncomeMonthAttribution.collectionPct` = `shu davr uchun tushum ÷ shu davrda o'tilgan darslar qiymati`. Telegram ham, /overview paneli ham **shu bitta metodni** chaqiradi. Prognozdan foiz butunlay olib tashlandi (u endi shunchaki «taxminiy reja» qatori). Prod: iyun **81%**, iyul **82%**, avgust (4 kun) 50% — avval ikkala oy ham 115% edi. Yo'l-yo'lakay H33 (pastda) tuzatildi. | — |
 | ~~**P4**~~ | ~~«Sof foyda» ni bitta manbaga keltirish (H5)~~ | ✅ **BAJARILDI 2026-07-30** — Telegram kunlik + `rm:cfin` kanonik manbaga o'tdi (xato bo'lsa «Kassa harakati» deb rostgo'y yorliq); trend grafigi ataylab kassa asosida qoldi, lekin «Kassa oqimi» deb qayta nomlandi | — |
 | **P5** | Prognozni kalendar bo'yicha hisoblash + oy boshida muzlatish (H2) | 11% xato; «dinamik» savol | O'rta-katta (yangi jadval) |
 | **P6** | Barcha davr oynalarini Toshkent helperlariga o'tkazish; brauzer sana hisoblamasin (H4) | Mintaqa muammosi, oy chegarasi | O'rta |
