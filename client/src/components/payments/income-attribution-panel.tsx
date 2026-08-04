@@ -21,6 +21,10 @@ interface IncomeAttribution {
   lateTotal: number;
   late: { monthKey: string; label: string; amount: number }[];
   payerCount: number;
+  /** Value of the lessons actually HELD in this window (recognized revenue). */
+  lessonsValue: number;
+  /** `currentMonth / lessonsValue` — the one collection % the bot also shows. */
+  collectionPct: number | null;
 }
 
 interface Props {
@@ -179,6 +183,53 @@ export function IncomeAttributionPanel({ startDate, endDate }: Props) {
                 : "Shu davrning o'zi uchun to'langan (oldingi qarz uchun emas)"}
             </p>
           </div>
+
+          {/* Collection ratio — the SAME figure the 21:00 Telegram report
+              prints, from the same endpoint. The bot used to divide MTD cash by
+              the schedule forecast and show 109–115% while this page called the
+              month 83%; both now read `currentMonth / lessonsValue`. Keep the
+              wording in step with the bot's lines. */}
+          {data.collectionPct !== null && (
+            <div className="rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-sm font-medium">
+                  Yig&apos;im
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Yig'im foizi qanday hisoblanadi"
+                        className="inline-flex cursor-help text-muted-foreground"
+                      >
+                        <Info className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-72">
+                      Shu davrda o&apos;tilgan darslar qiymatining qanchasi shu
+                      davrning o&apos;zida yig&apos;ilgani. Eski qarz uchun
+                      tushgan pul bu yerga kirmaydi. Telegram hisobotidagi
+                      foiz ham aynan shu. 100% dan oshishi mumkin — o&apos;quvchi
+                      keyingi oy darslarini oldindan to&apos;lasa.
+                    </TooltipContent>
+                  </Tooltip>
+                </span>
+                <span className="text-sm font-semibold tabular-nums">
+                  {data.collectionPct}%
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-sky-500"
+                  style={{ width: `${Math.min(data.collectionPct, 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {isSingleMonth ? "Shu oyning" : "Shu davrning"} darslari{" "}
+                {formatPrice(data.lessonsValue)} so&apos;m — shundan{" "}
+                {formatPrice(data.currentMonth)} so&apos;m yig&apos;ildi
+              </p>
+            </div>
+          )}
 
           {/* Old-debt (late) payments, per prior month */}
           <div className="space-y-2">

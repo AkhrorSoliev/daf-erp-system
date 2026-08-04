@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
 import {
   branchIdWhere,
+  isEmptyScope,
   studentBranchWhere,
   userBranchWhere,
   type ReportBranchIds,
@@ -522,14 +523,24 @@ export class ReportsFinancialService {
    */
   async getRecognizedRevenue(
     companyId: number,
-    { start, end, branchId }: { start: Date; end: Date; branchId?: number },
+    {
+      start,
+      end,
+      branchIds,
+    }: { start: Date; end: Date; branchIds: ReportBranchIds },
   ): Promise<number> {
+    // Attendance carries no branch of its own — it inherits the GROUP's, the
+    // same stamp `SALARY_ACCRUAL` freezes. Both callers already passed
+    // `branchIds`, but this signature read `branchId`, so the field was always
+    // `undefined` and the filter silently vanished: a branch-filtered Foyda card
+    // subtracted ONE branch's payroll from the WHOLE company's revenue.
+    if (isEmptyScope(branchIds)) return 0;
     const atts = await this.prisma.attendance.findMany({
       where: {
         companyId,
         status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
         date: { gte: start, lt: end },
-        ...(branchId && { group: { branchId } }),
+        ...(branchIds && { group: { branchId: { in: branchIds } } }),
       },
       select: {
         id: true,
@@ -615,6 +626,8 @@ export class ReportsFinancialService {
     lateTotal: number;
     late: Array<{ monthKey: string; label: string; amount: number }>;
     payerCount: number;
+    lessonsValue: number;
+    collectionPct: number | null;
   }> {
     // Normalised once: the in-memory attribution leg below compares against it
     // directly, and `undefined` there would silently reject every credit.
@@ -635,6 +648,15 @@ export class ReportsFinancialService {
         ? monthLabel(boundaryKey)
         : `${monthLabel(boundaryKey)} – ${monthLabel(endMonthKey)}`;
 
+    // The collection denominator: what the period's OWN lessons were worth.
+    // `Attendance.date` is `@db.Date`, so the upper bound must be an unshifted
+    // UTC date and EXCLUSIVE — the H3 boundary rule (a `lte` end-of-day
+    // timestamp truncates back onto the last day and counts it twice).
+    const lessonsValue = await this.getRecognizedRevenue(companyId, {
+      start: period.start,
+      end: new Date(period.endDate.getTime() + 86_400_000),
+      branchIds,
+    });
     const empty = {
       period: { start: period.startStr, end: period.endStr },
       monthKey: boundaryKey,
@@ -644,6 +666,8 @@ export class ReportsFinancialService {
       lateTotal: 0,
       late: [] as Array<{ monthKey: string; label: string; amount: number }>,
       payerCount: 0,
+      lessonsValue,
+      collectionPct: lessonsValue > 0 ? 0 : null,
     };
 
     // Only students who received a COMPLETED payment in the period+branch need
@@ -788,6 +812,21 @@ export class ReportsFinancialService {
       lateTotal,
       late,
       payerCount: payerIds.length,
+      lessonsValue,
+      // "N% yig'ildi" with a MEANING: of the lessons actually HELD in this
+      // window, how much did the period's OWN cash cover? Both sides belong to
+      // the same window — old-debt settlement is excluded from the numerator
+      // (it is income for the month it was billed in) and future months
+      // contribute no lessons to the denominator. Unlike `cash ÷ forecast` it
+      // contains no schedule guess, and unlike `currentMonth ÷ total` the
+      // denominator is not the numerator's own parent.
+      //
+      // It CAN legitimately exceed 100%: a cycle prepaid in full is this
+      // period's income against lessons that will be held next month. That is a
+      // real signal (prepayment), not the old artefact where the denominator
+      // was simply 11% too small every month.
+      collectionPct:
+        lessonsValue > 0 ? Math.round((currentMonth / lessonsValue) * 100) : null,
     };
   }
 
