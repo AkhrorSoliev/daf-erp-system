@@ -261,6 +261,11 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).toContain(
       "\u2022 Oy oxiriga kutilyapti: <b>155 765 411 so'm</b>",
     );
+    // The month-plan reading: 142 000 000 of the whole 155 765 411, NOT of the
+    // 173 783 991 lessons already held (which is the 82% line above). Getting
+    // these two denominators the wrong way round is the whole point of the
+    // line, so assert the number, not just that a percent appears.
+    expect(message).toContain("\u2022 Oy rejasidan yig'ildi: <b>91%</b>");
     // The four-week forecast is gone from the message entirely \u2014 not renamed,
     // not demoted. Two near-identical numbers is the disease being cured.
     expect(message.toLowerCase()).not.toContain('prognoz');
@@ -287,7 +292,29 @@ describe('TelegramGroupDailyReportService', () => {
 
     expect(message).not.toContain("Shundan yig'ildi");
     expect(message).not.toContain('Oy oxiriga kutilyapti');
+    // The month-plan percentage needs BOTH figures — it must vanish with them
+    // rather than divide by a missing denominator.
+    expect(message).not.toContain("Oy rejasidan yig'ildi");
     expect(message).toContain('Tushum (haqiqiy)'); // rest of the report survives
+  });
+
+  it('keeps the month-end figure but drops the plan % when collection alone fails', async () => {
+    // Asymmetric failure: the percentage needs a numerator the other service
+    // owns. Printing the expectation without it is fine; printing a percentage
+    // computed from a missing numerator would be a fabricated figure.
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest.fn().mockRejectedValue(new Error('boom')),
+      getMonthlyExpectation: jest
+        .fn()
+        .mockResolvedValue({ expectedValue: 155_765_411 }),
+    });
+
+    const { message } = await service.build(1001);
+
+    expect(message).toContain('Oy oxiriga kutilyapti');
+    expect(message).not.toContain("Oy rejasidan yig'ildi");
   });
 
   it('queries Attendance.date as a single DATE, never a {gte,lt} window (regression)', async () => {
