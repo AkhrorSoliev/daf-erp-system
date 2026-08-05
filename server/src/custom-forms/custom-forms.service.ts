@@ -18,6 +18,10 @@ import {
   TYPES_WITH_OPTIONS,
 } from './dto/form-field.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 
 const SLUG_LENGTH = 10;
 const FIELD_ID_LENGTH = 8;
@@ -43,9 +47,18 @@ export class CustomFormsService {
 
   // ── Admin: CRUD ────────────────────────────────────────────────────────────
 
-  async list(companyId: number) {
+  /**
+   * A form's branch is its section's column's — the same chain a lead follows.
+   * Without it Namangan's admin sees Fargona's public form links and can hand
+   * one out, quietly filling the wrong branch's board.
+   */
+  async list(companyId: number, scope: ReportBranchIds) {
     const forms = await this.prisma.customForm.findMany({
-      where: { companyId, deletedAt: null },
+      where: {
+        companyId,
+        deletedAt: null,
+        section: { column: { ...branchIdWhere(scope) } },
+      },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -72,9 +85,14 @@ export class CustomFormsService {
     }));
   }
 
-  async findOne(id: string, companyId: number) {
+  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
     const form = await this.prisma.customForm.findFirst({
-      where: { id, companyId, deletedAt: null },
+      where: {
+        id,
+        companyId,
+        deletedAt: null,
+        section: { column: { ...branchIdWhere(scope) } },
+      },
       select: {
         id: true,
         slug: true,
@@ -116,8 +134,14 @@ export class CustomFormsService {
     dto: CreateCustomFormDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    await this.assertSectionAndSourceExist(dto.sectionId, dto.sourceId);
+    await this.assertSectionAndSourceExist(
+      companyId,
+      scope,
+      dto.sectionId,
+      dto.sourceId,
+    );
     const fields = this.normalizeFields(dto.fields);
     this.validateFields(fields);
 
@@ -154,9 +178,15 @@ export class CustomFormsService {
     dto: UpdateCustomFormDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
     const existing = await this.prisma.customForm.findFirst({
-      where: { id, companyId, deletedAt: null },
+      where: {
+        id,
+        companyId,
+        deletedAt: null,
+        section: { column: { ...branchIdWhere(scope) } },
+      },
       select: { id: true, title: true, isActive: true },
     });
     if (!existing) {
@@ -165,6 +195,8 @@ export class CustomFormsService {
 
     if (dto.sectionId !== undefined || dto.sourceId !== undefined) {
       await this.assertSectionAndSourceExist(
+        companyId,
+        scope,
         dto.sectionId,
         dto.sourceId === '' ? undefined : dto.sourceId,
       );
@@ -201,9 +233,19 @@ export class CustomFormsService {
     return updated;
   }
 
-  async remove(id: string, companyId: number, userId: number) {
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
     const existing = await this.prisma.customForm.findFirst({
-      where: { id, companyId, deletedAt: null },
+      where: {
+        id,
+        companyId,
+        deletedAt: null,
+        section: { column: { ...branchIdWhere(scope) } },
+      },
       select: { id: true, title: true, slug: true },
     });
     if (!existing) {
@@ -382,13 +424,26 @@ export class CustomFormsService {
     } satisfies Prisma.CustomFormSelect;
   }
 
+  /**
+   * A form routes every submission into one section, so choosing the section is
+   * choosing the BRANCH the resulting leads belong to. Neither lookup carried a
+   * `companyId`, let alone a branch, so a form could be pointed at another
+   * tenant's section and silently feed leads into their funnel.
+   */
   private async assertSectionAndSourceExist(
+    companyId: number,
+    scope: ReportBranchIds,
     sectionId?: string,
     sourceId?: string,
   ) {
     if (sectionId) {
       const section = await this.prisma.leadSection.findFirst({
-        where: { id: sectionId, deletedAt: null },
+        where: {
+          id: sectionId,
+          deletedAt: null,
+          companyId,
+          column: { ...branchIdWhere(scope) },
+        },
         select: { id: true },
       });
       if (!section) {
@@ -396,8 +451,10 @@ export class CustomFormsService {
       }
     }
     if (sourceId) {
+      // Sources stay company-level — "Instagram" and "Telegram" are the same
+      // channels whichever branch the lead lands in.
       const source = await this.prisma.leadSource.findFirst({
-        where: { id: sourceId, deletedAt: null },
+        where: { id: sourceId, deletedAt: null, companyId },
         select: { id: true },
       });
       if (!source) {

@@ -9,6 +9,11 @@ import { EntityHistoryService } from '../common/entity-history';
 import { CreateLeadColumnDto } from './dto/create-lead-column.dto';
 import { UpdateLeadColumnDto } from './dto/update-lead-column.dto';
 import { ReorderLeadColumnsDto } from './dto/reorder-lead-columns.dto';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+  requireSingleBranchForWrite,
+} from '../common/finance/report-branch-scope';
 
 /**
  * Board columns. One row is seeded as a fixed/system column (systemKey NEW)
@@ -22,21 +27,57 @@ export class LeadColumnsService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async create(dto: CreateLeadColumnDto, companyId: number, userId: number) {
+  /**
+   * Every id-addressed column operation resolves through here.
+   *
+   * `update` and `remove` matched on `{ id, deletedAt: null }` alone — no
+   * company, no branch — so a director could rename or delete the other
+   * branch's board structure. Deleting is guarded by the empty-sections check,
+   * but renaming was unguarded and silent.
+   */
+  private async ensureColumnInScope(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    const column = await this.prisma.leadColumn.findFirst({
+      where: { id, deletedAt: null, companyId, ...branchIdWhere(scope) },
+    });
+    if (!column) {
+      throw new NotFoundException('Ustun topilmadi');
+    }
+    return column;
+  }
+
+  async create(
+    dto: CreateLeadColumnDto,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
     const name = dto.name.trim();
     if (!name) {
       throw new BadRequestException("Ustun nomi bo'sh bo'lishi mumkin emas");
     }
 
+    // A column belongs to one branch, so a CEO on "Barcha filiallar" has not
+    // said enough to create one. Refusing beats picking a branch for them.
+    const branchId = requireSingleBranchForWrite(scope, 'Ustun yaratish');
+
+    // Uniqueness is per branch. It used to be global — not even scoped to the
+    // company — so once each branch keeps its own board, Namangan could not
+    // create a "Kechki kurs" column because Fargona already had one.
     const existing = await this.prisma.leadColumn.findFirst({
-      where: { name, deletedAt: null },
+      where: { name, deletedAt: null, companyId, branchId },
     });
     if (existing) {
-      throw new ConflictException('Bu nomdagi ustun allaqachon mavjud');
+      throw new ConflictException(
+        'Bu filialda shu nomdagi ustun allaqachon mavjud',
+      );
     }
 
     const maxOrder = await this.prisma.leadColumn.aggregate({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId, branchId },
       _max: { order: true },
     });
 
@@ -46,13 +87,15 @@ export class LeadColumnsService {
         order: (maxOrder._max.order ?? -1) + 1,
         isSystem: false,
         companyId,
+        branchId,
       },
+      include: { branch: { select: { id: true, name: true } } },
     });
 
     await this.entityHistoryService.recordCreate({
       entityType: 'LeadColumn',
       entityId: created.id,
-      newValues: { name: created.name },
+      newValues: { name: created.name, branchId: created.branchId },
       changedById: userId,
       companyId,
     });
@@ -63,6 +106,8 @@ export class LeadColumnsService {
       order: created.order,
       isSystem: created.isSystem,
       systemKey: created.systemKey,
+      branchId: created.branchId,
+      branch: created.branch,
       sections: [],
     };
   }
@@ -72,13 +117,9 @@ export class LeadColumnsService {
     dto: UpdateLeadColumnDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const existing = await this.prisma.leadColumn.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException('Ustun topilmadi');
-    }
+    const existing = await this.ensureColumnInScope(id, companyId, scope);
     if (existing.isSystem) {
       throw new BadRequestException(
         "Tizim ustuni nomini o'zgartirib bo'lmaydi",
@@ -91,10 +132,18 @@ export class LeadColumnsService {
     }
     if (name !== existing.name) {
       const clash = await this.prisma.leadColumn.findFirst({
-        where: { name, deletedAt: null, id: { not: id } },
+        where: {
+          name,
+          deletedAt: null,
+          id: { not: id },
+          companyId,
+          branchId: existing.branchId,
+        },
       });
       if (clash) {
-        throw new ConflictException('Bu nomdagi ustun allaqachon mavjud');
+        throw new ConflictException(
+          'Bu filialda shu nomdagi ustun allaqachon mavjud',
+        );
       }
     }
 
@@ -115,13 +164,13 @@ export class LeadColumnsService {
     return { id: updated.id, name: updated.name };
   }
 
-  async remove(id: string, companyId: number, userId: number) {
-    const existing = await this.prisma.leadColumn.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException('Ustun topilmadi');
-    }
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
+    const existing = await this.ensureColumnInScope(id, companyId, scope);
     if (existing.isSystem) {
       throw new BadRequestException("Tizim ustunini o'chirib bo'lmaydi");
     }
@@ -154,10 +203,23 @@ export class LeadColumnsService {
   /**
    * Reorders custom columns. The single system column (NEW) is always pinned to
    * position 0; custom columns follow at 1, 2, 3, ...
+   *
+   * Reordering is a per-branch operation: `order` is only meaningful within one
+   * board, and the request sends a complete list of ids. A caller spanning
+   * every branch would be sending Fargona's and Namangan's columns interleaved,
+   * so the scope must name exactly one branch.
    */
-  async reorder(dto: ReorderLeadColumnsDto) {
+  async reorder(
+    dto: ReorderLeadColumnsDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    const branchId = requireSingleBranchForWrite(
+      scope,
+      "Ustunlar tartibini o'zgartirish",
+    );
     const columns = await this.prisma.leadColumn.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId, branchId },
       select: { id: true, isSystem: true, systemKey: true },
     });
     const customIds = new Set(

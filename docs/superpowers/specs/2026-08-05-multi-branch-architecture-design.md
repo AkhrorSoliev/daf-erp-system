@@ -102,13 +102,51 @@ Xarajatda: `dto.branchId` mavjudligi + kompaniyaga tegishliligi + `assertCallerI
 
 | Model | Qaror | Sabab |
 |---|---|---|
-| `LeadColumn`, `LeadSection`, `LeadSource` | `companyId` | Doska tuzilishi — kompaniya darajasida qoladi. Filialga ko'paytirish butun doskani ikki nusxa qilardi |
-| `Lead` | `companyId` + `branchId` | Lid aniq bir filialga tegishli; doska ichida filial bo'yicha filtrlanadi |
+| `LeadColumn` | `companyId` + **`branchId`** | ⚠️ **2026-08-05 da o'zgartirildi — pastdagi izohga qarang** |
+| `LeadSection` | `companyId`, filial **ustundan** | Bo'limning filiali — ustuniniki. Uchta nusxa saqlash o'rniga bitta egasi |
+| `LeadSource` | `companyId` | «Instagram», «Telegram» — kanal filialga bog'liq emas |
+| `Lead` | `companyId` + `branchId` | Filial **bo'lim ustunidan** olinadi (mijoz yuborgan qiymat emas) |
 | `Holiday` | `companyId` + `branchId?` | `branchId = null` — kompaniya bo'yicha bayram (odatiy holat). Non-null — bitta filialning yopilishi |
 | `MockExamSection`, `MockExamParticipant` | `companyId` | |
 | `MockExam` | `companyId` + `branchId` | Imtihon aniq bir joyda o'tadi |
 
 `branchId` **nullable qo'shiladi → backfill → NOT NULL** (`Holiday` dan tashqari, u ataylab nullable qoladi).
+
+#### ⚠️ Bekor qilingan qaror: «doska tuzilishi kompaniya darajasida» (2026-08-05)
+
+Dastlab `LeadColumn` va `LeadSection` kompaniya darajasida qoldirilgan edi — asos:
+«filialga ko'paytirish butun doskani ikki nusxa qiladi va hech nima demaydi».
+
+**PROD ma'lumoti bu asosni yiqitdi.** Bo'limlar quyidagicha nomlangan:
+
+```
+Individual · Evro · A1 SPSH 15:00 Eldor · Kids · A1 DCHJ 10:00 Saida
+B1 DCHJ 8:00 · A1 SPSH 13:00 neu · A1 DCHJ 17:00 neu · A1 Intensiv
+```
+
+Ya'ni daraja + kunlar + soat + **o'qituvchi ismi**. Bu abstrakt voronka bosqichi
+emas — **shakllanayotgan guruh**. Eldorning Farg'onadagi 15:00 darsi Namanganda
+hech nimani anglatmaydi, va umumiy doska ikkala filialni bir-birining jadvalini
+o'qishga majbur qilardi. Mahsulot egasi 2026-08-05 da ustunlarni ham filialga
+bog'lashni tanladi.
+
+**Filial faqat `LeadColumn` da turadi.** Bo'limning filiali — ustuniniki, lidniki —
+bo'limi ustuniniki. Uni uchala jadvalga denormalizatsiya qilish sinxron saqlanishi
+kerak bo'lgan yana ikkita nusxa yaratardi va `moveSection` ularni ajratib yuborishi
+mumkin edi. Bitta egasi, va bo'lim ustun almashtira oladigan yagona joyda —
+`move` da — bir xil filial tekshiruvi.
+
+**Kutilmagan foyda:** ommaviy forma bo'limga yo'naltiradi, ya'ni formadan kelgan lid
+endi «filialsiz umumiy havza» ga emas, to'g'ridan-to'g'ri o'z filialiga tushadi.
+`leadBranchWhere` ning `OR branchId IS NULL` tarmog'i shu sababli endi amalda ishga
+tushmaydi — u faqat ma'lumot nuqsoni yuz bersa, qatorni **butunlay yashirish o'rniga
+ko'rsatish** uchun zaxira bo'lib qoladi.
+
+**Har bir filialga «Yangi Lidlar» tizim ustuni majburiy** (`systemKey='NEW'`): u
+lidning voronka bosqichini tiklaydi, va ustunsiz filialda bo'lim, bo'limsiz lid
+bo'lmaydi — doska boshi berk ko'cha bo'lardi. Migratsiya mavjud filiallarga,
+`BranchesService.create` esa yangilariga yozadi (kassa hisoblari bilan bir xil
+tranzaksiyada).
 
 ### 2.5 Moliyaviy FK va NOT NULL — alohida, darvozali qadam
 

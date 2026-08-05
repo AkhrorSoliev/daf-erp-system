@@ -67,8 +67,31 @@ describe('MockExamsService', () => {
           },
           1001,
           1,
+          [1],
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses to create an exam with no branch selected', async () => {
+      // The one exam production carried was created with `branchId: null` and
+      // became invisible to every branch view once the filter shipped — mock
+      // money is never written to the ledger, so the exam row is the only
+      // record of which branch earned it.
+      prisma.mockExamSection.findFirst.mockResolvedValue({ id: 'sec-1' });
+      await expect(
+        service.create(
+          {
+            sectionId: 'sec-1',
+            title: 'IELTS',
+            maxScore: 100,
+            subjects: sampleSubjects,
+          },
+          1001,
+          1,
+          null,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.mockExam.create).not.toHaveBeenCalled();
     });
 
     it('throws NotFound when section is missing', async () => {
@@ -83,6 +106,7 @@ describe('MockExamsService', () => {
           },
           1001,
           1,
+          [1],
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -100,6 +124,7 @@ describe('MockExamsService', () => {
           },
           1001,
           1,
+          [1],
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -118,6 +143,7 @@ describe('MockExamsService', () => {
           },
           1001,
           1,
+          [1],
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -137,6 +163,7 @@ describe('MockExamsService', () => {
           },
           1001,
           1,
+          [1],
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -173,6 +200,7 @@ describe('MockExamsService', () => {
         },
         1001,
         1,
+        [1],
       );
 
       // Subjects are seeded by the create call now — verify the nested
@@ -243,6 +271,7 @@ describe('MockExamsService', () => {
         },
         1001,
         1,
+        [1],
       );
 
       const createCall = prisma.mockExam.create.mock.calls[0][0];
@@ -262,7 +291,7 @@ describe('MockExamsService', () => {
       prisma.mockExamParticipant.count.mockResolvedValue(3);
       prisma.mockExam.count.mockResolvedValue(1);
 
-      const result = await service.revenueSummary();
+      const result = await service.revenueSummary(1001, null);
 
       expect(result.totalRevenue).toBe(230000);
       expect(result.totalPaid).toBe(3);
@@ -299,7 +328,7 @@ describe('MockExamsService', () => {
         _count: { participants: 0 },
       });
 
-      await service.update('e1', { description: 'Yangi tavsif' }, 1001, 1);
+      await service.update('e1', { description: 'Yangi tavsif' }, 1001, 1, null);
 
       expect(prisma.mockExam.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -317,7 +346,7 @@ describe('MockExamsService', () => {
         status: MockExamStatus.REGISTRATION_OPEN,
       });
       await expect(
-        service.changeStatus('e1', MockExamStatus.ANNOUNCED, 1001, 1),
+        service.changeStatus('e1', MockExamStatus.ANNOUNCED, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -349,6 +378,7 @@ describe('MockExamsService', () => {
         MockExamStatus.REGISTRATION_CLOSED,
         1001,
         1,
+        null,
       );
 
       expect(result.status).toBe(MockExamStatus.REGISTRATION_CLOSED);
@@ -406,7 +436,7 @@ describe('MockExamsService', () => {
       const fields = validFields();
       fields[1].id = fields[0].id;
       await expect(
-        service.update('e1', { formFields: fields as any }, 1001, 1),
+        service.update('e1', { formFields: fields as any }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -414,7 +444,7 @@ describe('MockExamsService', () => {
       prisma.mockExam.findFirst.mockResolvedValue(existingDraft);
       const fields = validFields().filter((f) => f.mapsTo !== 'phone');
       await expect(
-        service.update('e1', { formFields: fields as any }, 1001, 1),
+        service.update('e1', { formFields: fields as any }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -423,7 +453,7 @@ describe('MockExamsService', () => {
       const fields = validFields();
       fields[2].type = 'text';
       await expect(
-        service.update('e1', { formFields: fields as any }, 1001, 1),
+        service.update('e1', { formFields: fields as any }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -437,7 +467,7 @@ describe('MockExamsService', () => {
         required: false,
       } as any);
       await expect(
-        service.update('e1', { formFields: fields as any }, 1001, 1),
+        service.update('e1', { formFields: fields as any }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -466,6 +496,7 @@ describe('MockExamsService', () => {
         { formFields: validFields() as any },
         1001,
         1,
+        null,
       );
 
       expect(prisma.mockExam.update).toHaveBeenCalledWith(
@@ -484,7 +515,7 @@ describe('MockExamsService', () => {
         status: MockExamStatus.REGISTRATION_OPEN,
       });
 
-      const result = await service.remove('e1', 1001, 1);
+      const result = await service.remove('e1', 1001, 1, null);
 
       expect(result.message).toBeDefined();
       expect(prisma.mockExam.update).toHaveBeenCalledWith(

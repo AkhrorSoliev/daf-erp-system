@@ -186,3 +186,88 @@ bittalab chiqariladi:
 - 138 ta eski spec `tsc` xatosi (`docs/branch-tsc-known-issues.md` da ro'yxatlangan)
 - `Payment`/`Transaction`/`CashMovement.branchId` ni `NOT NULL` qilish
   (PRODda `Payment`/`Transaction` da 0 ta null, lekin `CashMovement` da 6 tasi **ataylab**)
+
+---
+
+# 2-relis — filialga bog'langan lid doskasi + mock imtihon scope'i
+
+**Sana:** 2026-08-05 · **Qamrov:** Faza 3c (mock) + Faza 3d (lid doskasi)
+
+## Nima o'zgardi va nega
+
+**Mock imtihon.** `list()`, `board()`, `findOne()` filialni umuman ko'rmasdi, va
+`update` / `changeStatus` / `remove` / `regeneratePdf` / `rebroadcast-results`
+`where: { id, deletedAt: null }` bilan ishlardi — na kompaniya, na filial. Id uuid
+bo'lgani uchun taxmin qilib bo'lmasdi, lekin id sizib chiqsa `changeStatus(ANNOUNCED)`
+**boshqa kompaniya ishtirokchilariga Telegram orqali natija PDF'ini tarqatardi**.
+Endi hammasi bitta `ensureExamInScope` dan o'tadi. Yaratishda filial **majburiy**.
+
+**Lid doskasi.** Birinchi bosqichda doska tuzilishi kompaniya darajasida qoldirilgan
+edi. PROD ma'lumoti bu qarorni rad etdi: bo'limlar «A1 SPSH 15:00 Eldor», «A1 DCHJ
+10:00 Saida» deb ataladi — daraja, kunlar, soat va **o'qituvchi**. Bu shakllanayotgan
+guruh, va Farg'ona o'qituvchisining 15:00 dars vaqti Namanganda hech nimani
+anglatmaydi. Endi filial **ustunda** turadi; bo'limning filiali — ustuniniki, lidniki
+— bo'limi ustuniniki.
+
+Yon ta'siri (foydali): ommaviy forma bo'limga yo'naltiradi, ya'ni **formadan kelgan
+lid endi filialsiz umumiy havzaga emas, to'g'ridan-to'g'ri o'z filialiga tushadi**.
+
+## Tartib — bitta migratsiya, kod bilan ketma-ket
+
+| Qadam | Nima |
+|---|---|
+| 0 | PROD ma'lumot tuzatuvi — **allaqachon bajarilgan** (pastga qarang) |
+| 1 | `20260807120000_lead_board_per_branch` |
+| 2 | Backend (`railway up`) |
+| 3 | Frontend (`vercel`) |
+
+**Migratsiya kod'dan OLDIN.** `LeadColumn.branchId` `NOT NULL` va **defaultsiz** —
+`@default(1001)` darsidan keyin ataylab shunday. Demak migratsiya bilan backend
+orasidagi oraliqda **eski kod ustun yarata olmaydi** (`NOT NULL` xatosi). O'qish
+buzilmaydi, faqat yangi ustun yaratish. Bu amal kuniga bir marta ham
+bajarilmaydi, oraliq esa bir-ikki daqiqa — shuning uchun ikkalasi **ketma-ket**
+bajariladi va oraliqda ustun yaratilmaydi.
+
+### 0-qadam — allaqachon bajarilgan PROD tuzatuvi
+
+```
+railway run npx ts-node scripts/assign-mock-exam-branch.ts          # dry run
+railway run npx ts-node scripts/assign-mock-exam-branch.ts --apply
+```
+
+Natija: «DaF Mock Imtihoni» (01.08.2026, 72 ishtirokchi, ARCHIVED) → Farg'ona.
+Bu **kod chiqishidan oldin** qilinishi shart edi: `branchIdWhere` `{ in: [...] }`
+ga aylanadi va `NULL` qatorni **ikkala** filial ko'rinishidan ham chiqaradi, ya'ni
+imtihon hech qayerda ko'rinmay qolardi. Tekshiruv: filialsiz imtihon **0 ta**.
+
+### 1-qadam — migratsiya
+
+```
+cd server
+railway run npx prisma db execute \
+  --file prisma/migrations/20260807120000_lead_board_per_branch/migration.sql
+railway run npx prisma migrate resolve \
+  --applied 20260807120000_lead_board_per_branch
+```
+
+Migratsiya o'zi to'xtaydi, agar:
+- kompaniya bittadan ko'p bo'lsa (backfill'ni taxmin qilmaydi);
+- oxirida biror ustun `branchId IS NULL` bo'lib qolsa;
+- biror tirik filialda «Yangi Lidlar» (`systemKey='NEW'`) ustuni bo'lmasa —
+  bunday filialning doskasi boshi berk ko'cha bo'lardi (ustunsiz bo'lim bo'lmaydi,
+  bo'limsiz lid bo'lmaydi), UI esa birinchi ustunni yaratish yo'lini bermaydi.
+
+PROD kutilgan natijasi (deploy oldidan o'lchangan): 15 ustun (5 tirik) → filial 1;
+Namanganga 1 ta «Yangi Lidlar» bootstrap.
+
+### Orqaga qaytarish
+
+```sql
+ALTER TABLE "LeadColumn" DROP CONSTRAINT IF EXISTS "LeadColumn_branchId_fkey";
+DROP INDEX IF EXISTS "LeadColumn_branchId_idx";
+ALTER TABLE "LeadColumn" DROP COLUMN IF EXISTS "branchId";
+DELETE FROM "LeadColumn" WHERE "systemKey"='NEW' AND "branchId" <> 1;  -- bootstrap
+```
+
+Mock imtihon biriktirishi **qaytarilmaydi** va qaytarilishi shart emas — imtihon
+haqiqatan Farg'onada o'tgan, `branchId=1` eski kodda ham to'g'ri o'qiladi.

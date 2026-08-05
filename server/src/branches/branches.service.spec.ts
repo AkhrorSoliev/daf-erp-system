@@ -222,6 +222,9 @@ describe('BranchesService — branch onboarding', () => {
       create: jest.fn((a: any) => Promise.resolve({ id: 5, ...a.data })),
     },
     cashAccount: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+    leadColumn: {
+      create: jest.fn((a: any) => Promise.resolve({ id: 'col-1', ...a.data })),
+    },
   };
 
   beforeEach(async () => {
@@ -297,8 +300,27 @@ describe('BranchesService — branch onboarding', () => {
     expect(rows.every((r: any) => r.branchId === 5)).toBe(true);
   });
 
-  it('creates the branch and its accounts in ONE transaction', async () => {
-    // Half a branch — one that exists but cannot take money — is worse than none.
+  it('bootstraps the fixed NEW leads column for the new branch', async () => {
+    // The board is per branch now. Without its own system column the branch has
+    // no column, therefore no section, therefore nowhere to put a lead — and
+    // the UI offers no way to create the first one.
+    await service.create(dto, 1001, 42);
+
+    expect(tx.leadColumn.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          systemKey: 'NEW',
+          isSystem: true,
+          branchId: 5,
+          companyId: 1001,
+        }),
+      }),
+    );
+  });
+
+  it('creates the branch, its accounts and its board in ONE transaction', async () => {
+    // Half a branch — one that exists but cannot take money or hold a lead — is
+    // worse than none.
     await service.create(dto, 1001, 42);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });

@@ -9,7 +9,9 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ReportBranchIds,
+  assertBranchInScope,
   branchIdWhere,
+  requireSingleBranchForWrite,
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamPdfService } from './mock-exam-pdf.service';
@@ -106,12 +108,40 @@ export class MockExamsService {
   }
 
   /**
+   * Every id-addressed exam operation goes through here.
+   *
+   * `update`, `changeStatus`, `remove`, `regeneratePdf` and `rebroadcastResults`
+   * each ran `where: { id, deletedAt: null }` — no company, no branch. The id is
+   * a uuid, so this was not trivially guessable, but it made every one of them a
+   * cross-tenant write the moment an id leaked: `changeStatus(ANNOUNCED)`
+   * broadcasts result PDFs to another company's participants over Telegram.
+   *
+   * Out of scope reads as 404 rather than 403 — a 403 would confirm the id
+   * exists elsewhere.
+   */
+  private async ensureExamInScope(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+    select?: Prisma.MockExamSelect,
+  ) {
+    const exam = await this.prisma.mockExam.findFirst({
+      where: { id, deletedAt: null, companyId, ...branchIdWhere(scope) },
+      ...(select ? { select } : {}),
+    });
+    if (!exam) {
+      throw new NotFoundException('Mock imtihon topilmadi');
+    }
+    return exam;
+  }
+
+  /**
    * Flat list of all exams sorted by exam date (most recent first; nulls
    * last). Used by the /mock-exams page table.
    */
-  async list() {
+  async list(companyId: number, scope: ReportBranchIds) {
     const exams = await this.prisma.mockExam.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId, ...branchIdWhere(scope) },
       orderBy: [{ examDate: 'desc' }, { createdAt: 'desc' }],
       include: {
         section: { select: { id: true, name: true, color: true } },
@@ -130,13 +160,17 @@ export class MockExamsService {
    * Board view: every active section with its (active) exams listed. Used
    * by the /mock-exams page to render section cards + their exam cards.
    */
-  async board() {
+  async board(companyId: number, scope: ReportBranchIds) {
+    // Sections stay company-level — they are grouping buckets ("Umumiy"), not
+    // per-branch structure like the leads board, whose sections name a specific
+    // teacher and time slot. Only the EXAMS inside them are branch-filtered, so
+    // a branch with no exams sees the familiar section cards, all empty.
     const sections = await this.prisma.mockExamSection.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId },
       orderBy: { order: 'asc' },
       include: {
         exams: {
-          where: { deletedAt: null },
+          where: { deletedAt: null, companyId, ...branchIdWhere(scope) },
           orderBy: [{ examDate: 'asc' }, { createdAt: 'desc' }],
           include: {
             _count: {
@@ -159,9 +193,9 @@ export class MockExamsService {
     }));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
     const exam = await this.prisma.mockExam.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId, ...branchIdWhere(scope) },
       include: {
         section: {
           select: { id: true, name: true, color: true },
@@ -180,11 +214,25 @@ export class MockExamsService {
     return this.toDetail(exam);
   }
 
-  async create(dto: CreateMockExamDto, companyId: number, userId: number) {
+  async create(
+    dto: CreateMockExamDto,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
     const title = dto.title.trim();
     if (!title) {
       throw new BadRequestException('Imtihon nomi bo\'sh bo\'lishi mumkin emas');
     }
+
+    // The venue is now mandatory. It used to default to `null`, and the one
+    // exam production carries was created that way — invisible to both branch
+    // views once the filter above exists, because an unassigned row belongs to
+    // no branch. Better to refuse at creation than to produce another.
+    const branchId =
+      dto.branchId != null
+        ? assertBranchInScope(dto.branchId, scope)
+        : requireSingleBranchForWrite(scope, 'Mock imtihon yaratish');
 
     // Resolve which section this exam belongs to. UI doesn't surface
     // sections right now — the user just creates an exam with a date.
@@ -194,7 +242,7 @@ export class MockExamsService {
     let sectionId = dto.sectionId;
     if (sectionId) {
       const section = await this.prisma.mockExamSection.findFirst({
-        where: { id: sectionId, deletedAt: null },
+        where: { id: sectionId, deletedAt: null, companyId },
       });
       if (!section) {
         throw new NotFoundException("Bo'lim topilmadi");
@@ -293,9 +341,9 @@ export class MockExamsService {
         // Stamped explicitly rather than left to the column default: the exam
         // is where mock revenue is attributed, and mock money is deliberately
         // NOT written to the ledger, so this row is the only record of which
-        // branch earned it. Null branch = venue not chosen yet.
+        // branch earned it.
         companyId,
-        branchId: dto.branchId ?? null,
+        branchId,
         subjects: {
           create: subjectInputs.map((s, idx) => ({
             name: s.name,
@@ -334,13 +382,13 @@ export class MockExamsService {
     dto: UpdateMockExamDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const existing = await this.prisma.mockExam.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException('Mock imtihon topilmadi');
-    }
+    const existing = (await this.ensureExamInScope(
+      id,
+      companyId,
+      scope,
+    )) as Prisma.MockExamGetPayload<Record<string, never>>;
 
     // Per product decision (2026-05-26): editing is always open — admins can
     // change the form fields, title, section, etc. at any time. The trade-off
@@ -349,7 +397,7 @@ export class MockExamsService {
 
     if (dto.sectionId !== undefined) {
       const section = await this.prisma.mockExamSection.findFirst({
-        where: { id: dto.sectionId, deletedAt: null },
+        where: { id: dto.sectionId, deletedAt: null, companyId },
       });
       if (!section) {
         throw new NotFoundException('Bo\'lim topilmadi');
@@ -483,13 +531,13 @@ export class MockExamsService {
     nextStatus: MockExamStatus,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const existing = await this.prisma.mockExam.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException('Mock imtihon topilmadi');
-    }
+    const existing = (await this.ensureExamInScope(
+      id,
+      companyId,
+      scope,
+    )) as Prisma.MockExamGetPayload<Record<string, never>>;
     if (!isValidMockExamStatusTransition(existing.status, nextStatus)) {
       throw new BadRequestException(
         `${existing.status} → ${nextStatus} o'tish ruxsat etilmagan`,
@@ -558,14 +606,18 @@ export class MockExamsService {
    * Used when admin wants to re-deliver the PDF after fixing scores or
    * after a delivery bug (e.g. wrong filename) without changing status.
    */
-  async rebroadcastResults(id: string) {
-    const exam = await this.prisma.mockExam.findFirst({
-      where: { id, deletedAt: null },
-      select: { id: true, status: true },
-    });
-    if (!exam) {
-      throw new NotFoundException('Mock imtihon topilmadi');
-    }
+  async rebroadcastResults(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    // Scope matters most here: this re-sends result PDFs over Telegram to every
+    // participant of the exam, so an unscoped id would message another
+    // company's students.
+    const exam = (await this.ensureExamInScope(id, companyId, scope, {
+      id: true,
+      status: true,
+    })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
         "Qayta yuborish faqat ANNOUNCED holatdagi imtihon uchun mavjud",
@@ -586,14 +638,11 @@ export class MockExamsService {
    * Forcing a fresh PDF generation — used after the admin edits scores
    * post-announcement (rare, but supported). Idempotent.
    */
-  async regeneratePdf(id: string) {
-    const exam = await this.prisma.mockExam.findFirst({
-      where: { id, deletedAt: null },
-      select: { id: true, status: true },
-    });
-    if (!exam) {
-      throw new NotFoundException('Mock imtihon topilmadi');
-    }
+  async regeneratePdf(id: string, companyId: number, scope: ReportBranchIds) {
+    const exam = (await this.ensureExamInScope(id, companyId, scope, {
+      id: true,
+      status: true,
+    })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
         "PDF faqat ANNOUNCED holatdagi imtihon uchun yaratiladi",
@@ -602,13 +651,17 @@ export class MockExamsService {
     return this.mockExamPdfService.generate(id);
   }
 
-  async remove(id: string, companyId: number, userId: number) {
-    const existing = await this.prisma.mockExam.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException('Mock imtihon topilmadi');
-    }
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
+    const existing = (await this.ensureExamInScope(
+      id,
+      companyId,
+      scope,
+    )) as Prisma.MockExamGetPayload<Record<string, never>>;
 
     await this.entityHistoryService.recordDelete({
       entityType: 'MockExam',

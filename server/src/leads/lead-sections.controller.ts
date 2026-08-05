@@ -14,7 +14,8 @@ import { UpdateLeadSectionDto } from './dto/update-lead-section.dto';
 import { MoveLeadSectionDto } from './dto/move-lead-section.dto';
 import { ReorderLeadSectionsDto } from './dto/reorder-lead-sections.dto';
 import { RestoreLeadSectionDto } from './dto/restore-lead-section.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('lead-sections')
@@ -31,14 +32,19 @@ export class LeadSectionsController {
     @Body() dto: CreateLeadSectionDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadSectionsService.create(dto, companyId, userId);
+    return this.leadSectionsService.create(dto, companyId, userId, scope);
   }
 
   // Declared before ':id' so "/lead-sections/reorder" is not captured as an id.
   @Patch('reorder')
-  reorder(@Body() dto: ReorderLeadSectionsDto) {
-    return this.leadSectionsService.reorder(dto);
+  reorder(
+    @Body() dto: ReorderLeadSectionsDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.leadSectionsService.reorder(dto, companyId, scope);
   }
 
   // Declared before ':id' so "/lead-sections/:id/move" resolves to this handler.
@@ -48,8 +54,9 @@ export class LeadSectionsController {
     @Body() dto: MoveLeadSectionDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadSectionsService.move(id, dto, companyId, userId);
+    return this.leadSectionsService.move(id, dto, companyId, userId, scope);
   }
 
   // Restores an archived section into a column, optionally with its leads.
@@ -59,8 +66,9 @@ export class LeadSectionsController {
     @Body() dto: RestoreLeadSectionDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.archiveService.restoreSection(id, dto, companyId, userId);
+    return this.archiveService.restoreSection(id, dto, companyId, userId, scope);
   }
 
   @Patch(':id')
@@ -69,8 +77,9 @@ export class LeadSectionsController {
     @Body() dto: UpdateLeadSectionDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadSectionsService.update(id, dto, companyId, userId);
+    return this.leadSectionsService.update(id, dto, companyId, userId, scope);
   }
 
   @Delete(':id')
@@ -78,7 +87,8 @@ export class LeadSectionsController {
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadSectionsService.remove(id, companyId, userId);
+    return this.leadSectionsService.remove(id, companyId, userId, scope);
   }
 }

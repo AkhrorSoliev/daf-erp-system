@@ -177,6 +177,23 @@ export class BranchesService {
         ],
       });
 
+      // The fixed NEW leads column, for the same reason as the cash accounts:
+      // the board is per branch now, and a branch with no column can hold no
+      // section, therefore no lead — its /leads page would be a dead end with
+      // no way out from the UI. `systemKey = 'NEW'` is also load-bearing (it is
+      // what resets a lead's funnel stage on arrival), so this is the one
+      // column that cannot be left to the admin to create.
+      await tx.leadColumn.create({
+        data: {
+          name: 'Yangi Lidlar',
+          order: 0,
+          isSystem: true,
+          systemKey: 'NEW',
+          branchId: created.id,
+          companyId,
+        },
+      });
+
       return created;
     });
 
