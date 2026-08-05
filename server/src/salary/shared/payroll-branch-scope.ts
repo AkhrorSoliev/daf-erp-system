@@ -6,7 +6,7 @@ type PrismaLike = PrismaService | Prisma.TransactionClient;
 /**
  * Which branch's payroll a caller may see or pay.
  *
- * - `all`    — CEO (and, by current policy, Administrator) span every branch.
+ * - `all`    — CEO only. Every other role is confined.
  * - `branch` — confined to exactly one branch.
  * - `none`   — confined, but no branch is known. Sees and pays NOTHING.
  *
@@ -21,8 +21,22 @@ export type PayrollBranchScope =
   | { kind: 'branch'; branchId: number }
   | { kind: 'none' };
 
-/** Roles that legitimately span branches. */
-const UNSCOPED_ROLES = ['CEO', 'Administrator'];
+/**
+ * Roles that legitimately span branches — the CEO, and only the CEO.
+ *
+ * Administrator used to sit here too, and the same `!CEO && !Administrator`
+ * shape was repeated across payroll, cash accounts, debtors, outreach and call
+ * logs. It contradicted D4/D6 (`docs/branch-decisions.md`): if every branch
+ * computes its own P&L from its own income, costs and payroll, then every
+ * employee below the CEO belongs to one branch and sees that branch. Batch 7
+ * had already confined Administrators for attendance and cash, leaving the role
+ * branch-confined in some modules and company-wide in others.
+ *
+ * A genuinely multi-branch Administrator is still supported — attach several
+ * `UserBranch` rows and they act in each. That is the supported mechanism;
+ * a blanket role exemption is not.
+ */
+const UNSCOPED_ROLES = ['CEO'];
 
 export async function resolvePayrollBranchScope(
   prisma: PrismaLike,

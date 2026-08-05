@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AttendanceStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveCallerReportBranchIds } from '../common/finance/report-branch-scope';
 import {
   tashkentDateStr,
   tashkentDayRangeUtc,
@@ -21,23 +22,15 @@ export class OutreachService {
     private absenceStreak: AbsenceStreakService,
   ) {}
 
-  // Branch Director sees only their own branch. CEO/Administrator see all
-  // branches in the company. JWT does not carry mainBranch — fetch it.
+  // CEO spans every branch; everyone else — Administrator included — is confined
+  // to the branches attached to them, and a caller with none sees nothing.
+  // Administrator used to be exempt alongside CEO, which contradicted D4/D6.
   private async resolveBranchScope(
     userId: number,
-    roles: string[],
+    _roles: string[],
   ): Promise<number[] | undefined> {
-    const isCeo = roles.includes('CEO');
-    const isAdmin = roles.includes('Administrator');
-    const isBd = roles.includes('Branch Director');
-    if (isCeo || isAdmin) return undefined;
-    if (!isBd) return [];
-
-    const caller = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { mainBranch: true },
-    });
-    return caller?.mainBranch ? [caller.mainBranch] : [];
+    const ids = await resolveCallerReportBranchIds(this.prisma, userId);
+    return ids ?? undefined;
   }
 
   async getTodayAbsentees(ctx: UserContext & { date?: string }) {

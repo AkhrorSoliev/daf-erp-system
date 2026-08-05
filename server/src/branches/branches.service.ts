@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { BranchStatus } from '@prisma/client';
+import { BranchStatus, CashAccountType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
@@ -11,6 +11,7 @@ import { BranchQueryDto } from './dto/branch-query.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 import { ChangeBranchStatusDto } from './dto/change-branch-status.dto';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class BranchesService {
@@ -21,10 +22,25 @@ export class BranchesService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async findAll(query: BranchQueryDto, companyId: number) {
+  async findAll(
+    query: BranchQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     // Caller company is authoritative; legacy ?company_id= filter is ignored
     // to prevent a user from querying another company's branches.
-    const where: any = { deletedAt: null, companyId };
+    //
+    // Branch-confined too: this endpoint IS the branch switcher's option list.
+    // It returned every branch in the company and the client hid the ones the
+    // user should not see — a UI filter, not a boundary. Now the server decides,
+    // so a scoped caller cannot enumerate (or select) a branch that is not
+    // theirs. `id: { in: … }` rather than `branchIdWhere`, because here the
+    // branch IS the row.
+    const where: any = {
+      deletedAt: null,
+      companyId,
+      ...(scope == null ? {} : { id: { in: scope } }),
+    };
 
     return this.prisma.branch.findMany({
       where,
@@ -42,9 +58,18 @@ export class BranchesService {
     });
   }
 
-  async findOne(id: number, companyId: number) {
+  async findOne(id: number, companyId: number, scope: ReportBranchIds) {
+    // The scope predicate is nested under AND, not spread: both target `id`,
+    // and a spread would REPLACE the requested id with `{ in: scope }` —
+    // returning whichever branch the caller happens to own instead of the one
+    // they asked for.
     const branch = await this.prisma.branch.findFirst({
-      where: { id, deletedAt: null, companyId },
+      where: {
+        id,
+        deletedAt: null,
+        companyId,
+        ...(scope == null ? {} : { AND: [{ id: { in: scope } }] }),
+      },
     });
 
     if (!branch) {
@@ -96,21 +121,63 @@ export class BranchesService {
     };
   }
 
+  /**
+   * A new branch must be OPERATIONALLY USABLE the moment it exists.
+   *
+   * Three defects met here. `startOfWorkingDay`/`endOfWorkingDay` were accepted
+   * by the DTO, sent by the client and then silently dropped — the `data` block
+   * never mentioned them — so branch #2 was created with NULL hours and every
+   * schedule fell back to a hardcoded 08:00–20:00 while branch #1 ran to 22:30.
+   * No cash accounts were created, so the first payment had nowhere to land
+   * (`resolveAccountId` now throws rather than drifting into a company account).
+   * And `nextId` came from an unscoped `findFirst` outside any transaction, so
+   * two concurrent creates could pick the same id.
+   *
+   * All of it now happens in ONE transaction: either the branch exists complete,
+   * or it does not exist.
+   */
   async create(dto: CreateBranchDto, companyId: number, userId?: number) {
-    const lastBranch = await this.prisma.branch.findFirst({
-      orderBy: { id: 'desc' },
-      select: { id: true },
-    });
-    const nextId = (lastBranch?.id ?? 0) + 1;
+    const branch = await this.prisma.$transaction(async (tx) => {
+      // No `id` — the database assigns it from `Branch_id_seq`.
+      //
+      // This used to be `findFirst({ orderBy: { id: 'desc' } }) + 1`, which two
+      // concurrent creates would both read as the same value. Scoping the query
+      // per company (an earlier attempt at a fix) made it worse rather than
+      // better: `Branch.id` is a GLOBAL primary key, so a per-company maximum
+      // guarantees a collision the moment a second company exists.
+      const created = await tx.branch.create({
+        data: {
+          name: dto.name,
+          address: dto.address,
+          phone: dto.phone,
+          // Previously dropped on the floor.
+          startOfWorkingDay: dto.startOfWorkingDay,
+          endOfWorkingDay: dto.endOfWorkingDay,
+          companyId,
+        },
+      });
 
-    const branch = await this.prisma.branch.create({
-      data: {
-        id: nextId,
-        name: dto.name,
-        address: dto.address,
-        phone: dto.phone,
-        companyId,
-      },
+      // CASH + BANK, the same pair `scripts/backfill-cash-accounts.ts` creates.
+      // Without them the branch takes no money at all: `CashAccount.branchId`
+      // is NOT NULL and there is no company-wide fallback any more (D4).
+      await tx.cashAccount.createMany({
+        data: [
+          {
+            name: `${dto.name} kassa`,
+            type: CashAccountType.CASH,
+            branchId: created.id,
+            companyId,
+          },
+          {
+            name: `${dto.name} bank`,
+            type: CashAccountType.BANK,
+            branchId: created.id,
+            companyId,
+          },
+        ],
+      });
+
+      return created;
     });
 
     await this.entityHistoryService.recordCreate({
@@ -122,6 +189,133 @@ export class BranchesService {
     });
 
     return branch;
+  }
+
+  /**
+   * What still stands between this branch and its first real student.
+   *
+   * Everything listed here was discovered the hard way while opening branch #2:
+   * a course is required to create a group, a group with no room is never drawn
+   * on the daily schedule, a teacher with no salary rate accrues NOTHING for
+   * every lesson they teach and it cannot be back-dated afterwards (~20 mln so'm
+   * went missing this way in May 2026), and with no branch administrator the
+   * attendance-escalation cron drops its alerts silently.
+   *
+   * Read-only. It reports; it does not fix.
+   */
+  async getReadiness(id: number, companyId: number, userId: number) {
+    // `@Roles('CEO','Branch Director')` proves the caller holds a role, not that
+    // this branch is theirs. Without this a Fargona director could read
+    // Namangan's readiness — including the names of teachers with no salary rate.
+    await this.assertCallerMayTouchBranch(id, userId);
+
+    const branch = await this.prisma.branch.findFirst({
+      where: { id, deletedAt: null, companyId },
+      select: {
+        id: true,
+        name: true,
+        startOfWorkingDay: true,
+        endOfWorkingDay: true,
+      },
+    });
+    if (!branch) throw new NotFoundException(`Branch #${id} topilmadi`);
+
+    const [cashTypes, roomCount, courseCount, adminCount, teachers] =
+      await Promise.all([
+        this.prisma.cashAccount.findMany({
+          where: { branchId: id, companyId, deletedAt: null },
+          select: { type: true },
+        }),
+        this.prisma.room.count({ where: { branchId: id, deletedAt: null } }),
+        this.prisma.course.count({ where: { branchId: id, deletedAt: null } }),
+        this.prisma.user.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            isActive: true,
+            roles: { some: { role: { name: 'Administrator' } } },
+            branches: { some: { branchId: id } },
+          },
+        }),
+        this.prisma.user.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            isActive: true,
+            roles: { some: { role: { name: 'Teacher' } } },
+            branches: { some: { branchId: id } },
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            salaryConfigs: {
+              where: { isActive: true },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        }),
+      ]);
+
+    const types = new Set(cashTypes.map((c) => c.type));
+    // Named so the UI can list exactly who to fix, not just "some teacher".
+    const teachersWithoutRate = teachers
+      .filter((t) => t.salaryConfigs.length === 0)
+      .map((t) => ({ id: t.id, name: `${t.firstName} ${t.lastName}` }));
+
+    const checks = [
+      {
+        key: 'cashAccount',
+        label: 'Naqd kassa',
+        ok: types.has(CashAccountType.CASH),
+        hint: "Filialga CASH kassasi kerak — busiz to'lov qabul qilinmaydi",
+      },
+      {
+        key: 'bankAccount',
+        label: 'Bank hisobi',
+        ok: types.has(CashAccountType.BANK),
+        hint: "Bank/karta tushumi uchun BANK hisobi kerak",
+      },
+      {
+        key: 'workingHours',
+        label: 'Ish vaqti',
+        ok: !!branch.startOfWorkingDay && !!branch.endOfWorkingDay,
+        hint: "Ish vaqti belgilanmasa jadval 08:00–20:00 ga tushadi",
+      },
+      {
+        key: 'course',
+        label: 'Kurs',
+        ok: courseCount > 0,
+        hint: 'Kurssiz guruh ochib bolmaydi',
+      },
+      {
+        key: 'room',
+        label: 'Xona',
+        ok: roomCount > 0,
+        hint: 'Xonasiz guruh kunlik jadvalda chizilmaydi',
+      },
+      {
+        key: 'administrator',
+        label: 'Administrator',
+        ok: adminCount > 0,
+        hint: "Administratorsiz davomat ogohlantirishlari hech kimga bormaydi",
+      },
+      {
+        key: 'teacherRates',
+        label: 'Ustoz stavkalari',
+        ok: teachersWithoutRate.length === 0,
+        hint: "Stavkasiz ustozning darslari uchun oylik YOZILMAYDI va keyin orqaga surib bo'lmaydi",
+        details: teachersWithoutRate,
+      },
+    ];
+
+    return {
+      branchId: branch.id,
+      branchName: branch.name,
+      ready: checks.every((c) => c.ok),
+      checks,
+    };
   }
 
   /**
@@ -249,7 +443,9 @@ export class BranchesService {
     return updated;
   }
 
-  async getStatusHistory(id: number, companyId: number) {
+  async getStatusHistory(id: number, companyId: number, userId: number) {
+    await this.assertCallerMayTouchBranch(id, userId);
+
     const branch = await this.prisma.branch.findFirst({
       where: { id, companyId },
       select: { id: true },

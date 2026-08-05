@@ -389,15 +389,21 @@ export class ReportsService {
   getYearlyTrend(companyId: number, branchIds: ReportBranchIds) {
     return this.financial.getYearlyTrend(companyId, branchIds);
   }
-  getMonthlyDebtRecovery(companyId: number) {
-    return this.financial.getMonthlyDebtRecovery(companyId);
+  getMonthlyDebtRecovery(companyId: number, scope: ReportBranchIds) {
+    return this.financial.getMonthlyDebtRecovery(companyId, scope);
   }
-  getMonthDebtDetail(companyId: number, monthKey: string) {
-    return this.financial.getMonthDebtDetail(companyId, monthKey);
+  getMonthDebtDetail(
+    companyId: number,
+    monthKey: string,
+    scope: ReportBranchIds,
+  ) {
+    return this.financial.getMonthDebtDetail(companyId, monthKey, scope);
   }
   getDebtWriteOffsSummary(
     companyId: number,
-    options?: Parameters<
+    // Required, not optional — the facade was the place the missing scope
+    // could still slip through.
+    options: Parameters<
       ReportsFinancialService['getDebtWriteOffsSummary']
     >[1],
   ) {
@@ -464,8 +470,11 @@ export class ReportsService {
   ) {
     return this.studentPayments.getStudentPaymentsReport(companyId, params);
   }
-  getStudentPaymentsFilterOptions(companyId: number) {
-    return this.studentPayments.getStudentPaymentsFilterOptions(companyId);
+  getStudentPaymentsFilterOptions(
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    return this.studentPayments.getStudentPaymentsFilterOptions(companyId, scope);
   }
 
   // Departed students — core

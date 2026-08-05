@@ -39,6 +39,7 @@ describe('TransactionsReadService', () => {
         10329,
         { types: 'PAYMENT,REFUND,LESSON_DEDUCTION' } as TransactionQueryDto,
         1001,
+        null
       );
 
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
@@ -311,7 +312,7 @@ describe('TransactionsReadService', () => {
 
   describe('getLessonTrail', () => {
     it('scopes strictly to LESSON_DEDUCTION + LESSON_CONSUMPTION', async () => {
-      await service.getLessonTrail(10329, 1001, {});
+      await service.getLessonTrail(10329, 1001, null, {});
 
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -387,7 +388,7 @@ describe('TransactionsReadService', () => {
         { id: 'a3', date: date('2026-05-08') },
       ]);
 
-      const res = await service.getLessonTrail(10329, 1001, {});
+      const res = await service.getLessonTrail(10329, 1001, null, {});
 
       expect(res.data).toHaveLength(1);
       expect(res.data[0].coverage).toEqual({
@@ -445,7 +446,7 @@ describe('TransactionsReadService', () => {
         .mockResolvedValueOnce(pageRows); // no consumption rows
       prisma.transaction.count.mockResolvedValueOnce(2);
 
-      const res = await service.getLessonTrail(10329, 1001, {});
+      const res = await service.getLessonTrail(10329, 1001, null, {});
 
       expect(res.data[0].coverage?.cycleSequenceNumber).toBe(1);
       expect(res.data[1].coverage?.cycleSequenceNumber).toBe(2);

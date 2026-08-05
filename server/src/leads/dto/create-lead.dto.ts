@@ -1,4 +1,6 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsInt, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateLeadDto {
   @IsString()
@@ -20,4 +22,15 @@ export class CreateLeadDto {
   @IsOptional()
   @IsString()
   sourceId?: string;
+
+  /**
+   * Which branch this lead belongs to. OPTIONAL by design — a lead from the
+   * public form or a cold call arrives before anyone knows. Null leaves it in
+   * the unassigned pool every branch works from; conversion to a student is
+   * where a branch becomes mandatory.
+   */
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  branchId?: number;
 }

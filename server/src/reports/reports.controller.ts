@@ -15,6 +15,7 @@ import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ExpectationHistoryQueryDto } from './dto/expectation-history-query.dto';
 import {
   isEmptyScope,
+  narrowToSingleBranch,
   resolveCallerReportBranchIds,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
@@ -32,7 +33,7 @@ import {
   AttendanceByGroupQueryDto,
   AttendanceTeacherPerfQueryDto,
 } from './dto/attendance-reports-query.dto';
-import { Roles, CurrentUser } from '../common/decorators';
+import { Roles, CurrentUser, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsExcelService } from './reports-excel.service';
@@ -51,64 +52,93 @@ export class ReportsController {
   getKpis(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getKpis(companyId, query);
+    return this.reportsService.getKpis(companyId, this.scoped(query, scope));
   }
 
   @Get('room-utilization')
   getRoomUtilization(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getRoomUtilization(companyId, query);
+    return this.reportsService.getRoomUtilization(
+      companyId,
+      this.scoped(query, scope),
+    );
   }
 
   @Get('center-activity')
   getCenterActivity(
     @Query() query: CenterActivityQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getCenterActivity(companyId, query);
+    return this.reportsService.getCenterActivity(
+      companyId,
+      this.scoped(query, scope),
+    );
   }
 
   @Get('teacher-performance')
   getTeacherPerformance(
     @Query() query: AttendanceTeacherPerfQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getTeacherPerformance(companyId, query);
+    return this.reportsService.getTeacherPerformance(
+      companyId,
+      this.scoped(query, scope),
+    );
   }
 
   @Get('attendance-analytics')
   getAttendanceAnalytics(
     @Query() query: AttendanceAnalyticsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getAttendanceAnalytics(companyId, query);
+    return this.reportsService.getAttendanceAnalytics(
+      companyId,
+      this.scoped(query, scope),
+    );
   }
 
   @Get('attendance-by-group')
   getAttendanceByGroup(
     @Query() query: AttendanceByGroupQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getAttendanceByGroup(companyId, query);
+    return this.reportsService.getAttendanceByGroup(
+      companyId,
+      this.scoped(query, scope),
+    );
   }
 
   @Get('attendance-by-course')
   getAttendanceByCourse(
     @Query() query: AttendanceByCourseQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getAttendanceByCourse(companyId, query);
+    return this.reportsService.getAttendanceByCourse(
+      companyId,
+      this.scoped(query, scope),
+    );
   }
 
   @Get('group-analytics')
   getGroupAnalytics(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getGroupAnalytics(companyId, query);
+    return this.reportsService.getGroupAnalytics(
+      companyId,
+      this.scoped(query, scope),
+    );
   }
 
   @Get('lead-analytics')
@@ -289,8 +319,11 @@ export class ReportsController {
   // — Administrators shouldn't see company-wide debt aggregates.
   @Get('monthly-debt-recovery')
   @Roles('CEO', 'Branch Director')
-  getMonthlyDebtRecovery(@CurrentUser('companyId') companyId: number) {
-    return this.reportsService.getMonthlyDebtRecovery(companyId);
+  getMonthlyDebtRecovery(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.reportsService.getMonthlyDebtRecovery(companyId, scope);
   }
 
   // Dedicated Excel workbook for the debt-history page (Umumiy + Qarzdorlar +
@@ -300,9 +333,13 @@ export class ReportsController {
   @Roles('CEO', 'Branch Director')
   async exportMonthlyDebtExcel(
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
     @Res() res: Response,
   ) {
-    const buffer = await this.reportsExcelService.generateDebtHistory(companyId);
+    const buffer = await this.reportsExcelService.generateDebtHistory(
+      companyId,
+      scope,
+    );
     const filename = `oylik-qarzdorlik-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
       'Content-Type',
@@ -319,11 +356,14 @@ export class ReportsController {
   getMonthDebtDetail(
     @Param('monthKey') monthKey: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) {
       throw new BadRequestException('monthKey formati YYYY-MM bo‘lishi kerak');
     }
-    return this.reportsService.getMonthDebtDetail(companyId, monthKey);
+    // The drill-down returns debtor NAMES and PHONES — it must never span
+    // branches for a confined caller.
+    return this.reportsService.getMonthDebtDetail(companyId, monthKey, scope);
   }
 
   // KPI summary for the "yo'qolgan o'quvchi" write-off flow — total
@@ -438,14 +478,50 @@ export class ReportsController {
     return ids;
   }
 
+  /**
+   * Replace a query's client-supplied `branchId` with the RESOLVED one.
+   *
+   * The operational reports below each take a single optional `branchId` and
+   * used to read it straight off the query string — a widening parameter, so a
+   * branch-confined caller got any branch they named and the whole company when
+   * they named none. The guard has already intersected their ceiling with their
+   * pick; this stamps that answer over whatever arrived.
+   *
+   * Returns a COPY. Mutating the DTO in place would leave the request object
+   * disagreeing with what was validated, and makes the override invisible at
+   * the call site.
+   */
+  private scoped<T extends { branchId?: number }>(
+    query: T,
+    scope: ReportBranchIds,
+  ): T {
+    return {
+      ...query,
+      branchId: narrowToSingleBranch(
+        scope,
+        () => {
+          throw new ForbiddenException(
+            "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
+          );
+        },
+        () => {
+          throw new BadRequestException(
+            'Bir nechta filialga kirish huquqingiz bor — filialni tanlang',
+          );
+        },
+      ),
+    };
+  }
+
   @Get('payment-reports')
   @Roles('CEO', 'Branch Director')
   getPaymentReports(
     @Query() query: PaymentReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getPaymentReports(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       startDate: query.startDate,
       endDate: query.endDate,
       months: query.months,
@@ -457,9 +533,10 @@ export class ReportsController {
   getTeacherPaymentReports(
     @Query() query: PaymentReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getTeacherPaymentReports(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -471,9 +548,10 @@ export class ReportsController {
     @Param('teacherId', ParseIntPipe) teacherId: number,
     @Query() query: PaymentReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getTeacherGroupsReport(companyId, teacherId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -484,9 +562,10 @@ export class ReportsController {
   getStudentPaymentsReport(
     @Query() query: StudentPaymentsReportQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getStudentPaymentsReport(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       groupIds: query.groupIds,
       teacherIds: query.teacherIds,
       methods: query.methods,
@@ -502,9 +581,10 @@ export class ReportsController {
   getDepartedStudentsSummary(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsSummary(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -514,9 +594,10 @@ export class ReportsController {
   getDepartedStudentsDynamics(
     @Query() query: DepartedStudentsBranchQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsDynamics(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
     });
   }
 
@@ -524,9 +605,10 @@ export class ReportsController {
   getDepartedStudentsByStatus(
     @Query() query: DepartedStudentsBranchQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsByStatus(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
     });
   }
 
@@ -534,9 +616,10 @@ export class ReportsController {
   getDepartedStudentsReasons(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsReasons(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
       startDate: query.startDate,
@@ -548,9 +631,10 @@ export class ReportsController {
   getTeacherChangeReasons(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getTeacherChangeReasons(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
       startDate: query.startDate,
@@ -562,9 +646,10 @@ export class ReportsController {
   getTransferReasons(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getTransferReasons(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
       startDate: query.startDate,
@@ -576,9 +661,10 @@ export class ReportsController {
   getDepartedStudentsList(
     @Query() query: DepartedStudentsListQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsList(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       status: query.status,
       debtorsOnly: query.debtorsOnly,
       page: query.page,
@@ -590,9 +676,10 @@ export class ReportsController {
   getDepartedStudentsByReason(
     @Query() query: DepartedStudentsByReasonQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsByReason(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
       startDate: query.startDate,
@@ -607,9 +694,10 @@ export class ReportsController {
   getDepartedStudentsGroupBy(
     @Query() query: DepartedStudentsGroupByQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsGroupBy(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       groupBy: query.groupBy,
     });
   }
@@ -618,9 +706,10 @@ export class ReportsController {
   getTeacherChangesList(
     @Query() query: DepartedStudentsSummaryQueryDto & { reasonId?: string },
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getTeacherChangesList(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
       startDate: query.startDate,
@@ -638,9 +727,10 @@ export class ReportsController {
       transferReasonId?: string;
     },
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getTransferredList(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       courseId: query.courseId,
       teacherIds: query.teacherIds,
       startDate: query.startDate,
@@ -655,9 +745,10 @@ export class ReportsController {
   getDepartedAfterTeacherChangeList(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedAfterTeacherChangeList(companyId, {
-      branchId: query.branchId,
+      branchId: this.scoped(query, scope).branchId,
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -665,7 +756,10 @@ export class ReportsController {
 
   @Get('student-payments/filter-options')
   @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
-  getStudentPaymentsFilterOptions(@CurrentUser('companyId') companyId: number) {
-    return this.reportsService.getStudentPaymentsFilterOptions(companyId);
+  getStudentPaymentsFilterOptions(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.reportsService.getStudentPaymentsFilterOptions(companyId, scope);
   }
 }

@@ -12,7 +12,8 @@ import { MockExamsService } from './mock-exams.service';
 import { CreateMockExamDto } from './dto/create-mock-exam.dto';
 import { UpdateMockExamDto } from './dto/update-mock-exam.dto';
 import { ChangeMockExamStatusDto } from './dto/change-mock-exam-status.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('mock-exams')
@@ -27,8 +28,11 @@ export class MockExamsController {
   }
 
   @Get('revenue-summary')
-  revenueSummary() {
-    return this.mockExamsService.revenueSummary();
+  revenueSummary(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.mockExamsService.revenueSummary(companyId, scope);
   }
 
   @Get('board')

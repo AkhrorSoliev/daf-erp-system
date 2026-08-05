@@ -44,6 +44,7 @@ describe('DashboardController', () => {
       await controller.getTodaySchedule(
         { branchId: 1, date: '2026-04-13' },
         1001,
+        null
       );
 
       expect(mockService.getTodaySchedule).toHaveBeenCalledWith(

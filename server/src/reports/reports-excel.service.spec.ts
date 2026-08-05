@@ -661,7 +661,7 @@ describe('ReportsExcelService', () => {
         truncated: false,
       });
 
-      const wb = await load(await service.generateDebtHistory(1));
+      const wb = await load(await service.generateDebtHistory(1, null));
       const names = wb.worksheets.map((w) => w.name);
       expect(names).toEqual([
         'Oylik qarzdorlik',
@@ -675,7 +675,54 @@ describe('ReportsExcelService', () => {
       // Payment row lands on Undirildi.
       const pRow = findRow(wb.getWorksheet('Undirildi')!, 'Iyun 2026');
       expect(pRow.getCell(4).value).toBe(80000);
-      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06');
+      // No scope passed => company-wide (a CEO who picked no branch).
+      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06', null);
+    });
+
+    it('passes the SAME branch scope to both legs of the workbook', async () => {
+      // The summary sheet and the detail sheets come from two different calls.
+      // Scoping one and not the other is exactly how a workbook came to print
+      // one branch's total above another branch's rows.
+      reports.getMonthlyDebtRecovery.mockResolvedValue({
+        months: [
+          {
+            monthKey: '2026-06',
+            label: 'Iyun 2026',
+            closingDebt: 0,
+            debtorCount: 0,
+            recovered: 0,
+            writtenOff: 0,
+            remaining: 0,
+            remainingDebtorCount: 0,
+            recoveryRate: 0,
+          },
+        ],
+        totals: {
+          closingDebt: 0,
+          recovered: 0,
+          writtenOff: 0,
+          remaining: 0,
+        },
+      });
+      reports.getMonthDebtDetail.mockResolvedValue({
+        monthKey: '2026-06',
+        label: 'Iyun 2026',
+        totals: {
+          closingDebt: 0,
+          recovered: 0,
+          writtenOff: 0,
+          remaining: 0,
+          debtorCount: 0,
+        },
+        debtors: [],
+        recoveredPayments: [],
+        writeOffs: [],
+        truncated: false,
+      });
+
+      await service.generateDebtHistory(1, [2]);
+      expect(reports.getMonthlyDebtRecovery).toHaveBeenCalledWith(1, [2]);
+      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06', [2]);
     });
   });
 });

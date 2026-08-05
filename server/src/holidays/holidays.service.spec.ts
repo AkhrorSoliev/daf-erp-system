@@ -137,14 +137,14 @@ describe('HolidaysService', () => {
 
   describe('create', () => {
     it('coerces endDate to date when not provided', async () => {
-      await service.create({ name: 'Yangi yil', date: '2026-01-01' }, 42);
+      await service.create({ name: 'Yangi yil', date: '2026-01-01' }, 42, 1001);
 
       expect(prisma.holiday.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           name: 'Yangi yil',
           date: new Date('2026-01-01'),
           endDate: new Date('2026-01-01'),
-        },
+        }),
       });
       expect(entityHistoryService.recordCreate).toHaveBeenCalled();
     });
@@ -153,13 +153,14 @@ describe('HolidaysService', () => {
       await service.create(
         { name: "Navro'z", date: '2026-03-21', endDate: '2026-03-23' },
         7,
+          1001,
       );
       expect(prisma.holiday.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           name: "Navro'z",
           date: new Date('2026-03-21'),
           endDate: new Date('2026-03-23'),
-        },
+        }),
       });
     });
 
@@ -168,6 +169,7 @@ describe('HolidaysService', () => {
         service.create(
           { name: 'X', date: '2026-03-23', endDate: '2026-03-21' },
           1,
+          1001,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -177,6 +179,7 @@ describe('HolidaysService', () => {
         service.create(
           { name: 'Too long', date: '2026-01-01', endDate: '2026-04-01' },
           1,
+          1001,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -186,7 +189,7 @@ describe('HolidaysService', () => {
         { id: 'g-1' },
         { id: 'g-2' },
       ]);
-      await service.create({ name: 'X', date: '2026-05-27' }, 1);
+      await service.create({ name: 'X', date: '2026-05-27' }, 1, 1001);
       expect(cascadeService.extendGroupEndDateForHoliday).toHaveBeenCalledTimes(
         2,
       );

@@ -1,6 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  ReportBranchIds,
+  branchIdWhere,
+  resolveCallerReportBranchIds,
+  studentBranchWhere,
+} from '../common/finance/report-branch-scope';
+import {
   EnrollmentStatus,
   PaymentPromiseStatus,
   Prisma,
@@ -33,25 +39,18 @@ export class PaymentsDebtorsService {
    */
   private async resolveBranchScope(
     userId: number,
-    roles: string[],
+    _roles: string[],
     requestedBranchId?: number,
   ): Promise<number[] | undefined> {
-    const isBd =
-      roles.includes('Branch Director') &&
-      !roles.includes('CEO') &&
-      !roles.includes('Administrator');
-    if (isBd) {
-      const caller = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { mainBranch: true },
-      });
-      const own = caller?.mainBranch ? [caller.mainBranch] : [];
-      if (requestedBranchId) {
-        return own.includes(requestedBranchId) ? [requestedBranchId] : [];
-      }
-      return own;
-    }
-    return requestedBranchId ? [requestedBranchId] : undefined;
+    // One resolver, not a fourth copy of the rule. The debtors list returns
+    // names, phones and balances, so an Administrator exemption meant the whole
+    // company's debtor contact list regardless of which branch they work in.
+    const ids = await resolveCallerReportBranchIds(
+      this.prisma,
+      userId,
+      requestedBranchId,
+    );
+    return ids ?? undefined;
   }
 
   /**
@@ -333,7 +332,7 @@ export class PaymentsDebtorsService {
 
   async getPending(
     companyId: number,
-    query: { branchId?: number; page?: number; pageSize?: number },
+    query: { branchIds: ReportBranchIds; page?: number; pageSize?: number },
   ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
@@ -346,9 +345,9 @@ export class PaymentsDebtorsService {
       enrollments: {
         some: { status: 'ACTIVE', deletedAt: null },
       },
-      ...(query.branchId && {
-        branches: { some: { branchId: query.branchId } },
-      }),
+      // Resolved scope, not a raw parameter — this list returns names, phones
+      // and balances of students who owe money.
+      ...studentBranchWhere(query.branchIds),
     };
 
     const [data, total] = await Promise.all([
@@ -390,9 +389,20 @@ export class PaymentsDebtorsService {
    * `suggestedPayment` (the full-cycle course price) are still surfaced
    * so the admin's payment dialog can pre-fill the right amount.
    */
-  async getDebtorsForGroup(groupId: string, companyId: number) {
+  async getDebtorsForGroup(
+    groupId: string,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    // Confined by the GROUP's branch: reaching a group by id from another
+    // branch returned its whole debtor roster.
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, companyId, deletedAt: null },
+      where: {
+        id: groupId,
+        companyId,
+        deletedAt: null,
+        ...branchIdWhere(branchIds),
+      },
       select: {
         course: { select: { price: true, lessonPaymentCount: true } },
       },

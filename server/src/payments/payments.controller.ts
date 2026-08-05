@@ -13,7 +13,8 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { AttachExternalPaymentDto } from './dto/attach-external.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 import { PaymentSource } from '@prisma/client';
 
@@ -109,8 +110,9 @@ export class PaymentsController {
   findAll(
     @Query() query: PaymentQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.paymentsService.findAll(query, companyId);
+    return this.paymentsService.findAll(query, companyId, branchIds);
   }
 
   /**
@@ -124,8 +126,16 @@ export class PaymentsController {
     @Query('studentId', ParseIntPipe) studentId: number,
     @Query('amount', ParseIntPipe) amount: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.paymentsService.previewPayment(studentId, amount, companyId);
+    // The projection reports the student's balance and debt, so it is confined
+    // the same way the student list is.
+    return this.paymentsService.previewPayment(
+      studentId,
+      amount,
+      companyId,
+      branchIds,
+    );
   }
 
   @Get('debtors')
@@ -171,9 +181,10 @@ export class PaymentsController {
   getPending(
     @Query() query: PaymentQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
     return this.paymentsService.getPending(companyId, {
-      branchId: query.branchId,
+      branchIds,
       page: query.page,
       pageSize: query.pageSize,
     });
@@ -183,16 +194,22 @@ export class PaymentsController {
   getDebtorsForGroup(
     @Param('groupId') groupId: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.paymentsService.getDebtorsForGroup(groupId, companyId);
+    return this.paymentsService.getDebtorsForGroup(
+      groupId,
+      companyId,
+      branchIds,
+    );
   }
 
   @Get(':id')
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.paymentsService.findOne(id, companyId);
+    return this.paymentsService.findOne(id, companyId, branchIds);
   }
 
   @Get('student/:studentId')
@@ -200,7 +217,13 @@ export class PaymentsController {
     @Param('studentId', ParseIntPipe) studentId: number,
     @Query() query: PaymentQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.paymentsService.findByStudent(studentId, query, companyId);
+    return this.paymentsService.findByStudent(
+      studentId,
+      query,
+      companyId,
+      branchIds,
+    );
   }
 }

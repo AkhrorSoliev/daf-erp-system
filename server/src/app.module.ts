@@ -52,7 +52,7 @@ import { OutreachModule } from './outreach/outreach.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
-import { JwtAuthGuard } from './common/guards';
+import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
 
 @Module({
   imports: [
@@ -113,6 +113,14 @@ import { JwtAuthGuard } from './common/guards';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // Runs after JwtAuthGuard (APP_GUARD order is registration order), so
+    // `request.user` is populated by the time it resolves the scope. It only
+    // COMPUTES `request.branchScope` — it never rejects — so an endpoint that
+    // has not opted in keeps its current behaviour.
+    {
+      provide: APP_GUARD,
+      useClass: BranchScopeGuard,
     },
   ],
 })

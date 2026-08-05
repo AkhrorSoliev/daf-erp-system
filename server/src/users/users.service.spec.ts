@@ -477,7 +477,7 @@ describe('UsersService — findAll companyId scoping', () => {
   });
 
   it('always filters by the supplied companyId', async () => {
-    await service.findAll({} as any, 1001);
+    await service.findAll({} as any, 1001, null);
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({

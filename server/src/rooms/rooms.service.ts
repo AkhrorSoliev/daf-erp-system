@@ -9,6 +9,10 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CountByBranchQueryDto } from './dto/count-by-branch-query.dto';
 import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class RoomsService {
@@ -34,11 +38,15 @@ export class RoomsService {
     }
   }
 
-  async findAll(query: RoomQueryDto, companyId: number) {
+  async findAll(
+    query: RoomQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     const where = {
-      branchId: query.branch_id,
       deletedAt: null,
       companyId,
+      ...branchIdWhere(scope),
     };
 
     const page = query.page ?? 1;
@@ -91,9 +99,9 @@ export class RoomsService {
     };
   }
 
-  async findOne(id: string, companyId: number) {
+  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
     const room = await this.prisma.room.findFirst({
-      where: { id, deletedAt: null, companyId },
+      where: { id, deletedAt: null, companyId, ...branchIdWhere(scope) },
       select: {
         id: true,
         name: true,

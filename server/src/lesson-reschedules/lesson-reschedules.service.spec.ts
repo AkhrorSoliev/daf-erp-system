@@ -340,6 +340,7 @@ describe('LessonReschedulesService', () => {
         'rs-1',
         { newRoomId: 'room-x', reason: 'updated note' },
         1,
+        null
       );
 
       const updateArgs = tx.lessonReschedule.update.mock.calls[0][0];

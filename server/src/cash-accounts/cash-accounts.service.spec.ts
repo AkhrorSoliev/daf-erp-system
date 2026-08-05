@@ -194,7 +194,12 @@ describe('CashAccountsService', () => {
 
   describe('findAll branch scope', () => {
     it('returns nothing for a Branch Director with no branch', async () => {
-      prisma.user.findUnique.mockResolvedValue({ mainBranch: null });
+      // Roles now come from the caller's DB record via the shared resolver.
+      prisma.user.findFirst.mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
       const res = await service.findAll({}, 1, 50, ['Branch Director']);
       expect(res).toEqual({ data: [], totalBalance: 0 });
       expect(prisma.cashAccount.findMany).not.toHaveBeenCalled();

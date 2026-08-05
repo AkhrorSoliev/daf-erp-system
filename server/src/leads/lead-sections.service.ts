@@ -47,6 +47,7 @@ export class LeadSectionsService {
         name,
         columnId: dto.columnId,
         order: (maxOrder._max.order ?? -1) + 1,
+        companyId,
       },
     });
 

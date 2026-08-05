@@ -51,13 +51,23 @@ export class TelegramGroupBroadcastService {
         status: TelegramGroupStatus.APPROVED,
         isActive: true,
         deletedAt: null,
-        // If branchId is specified on the event, send to:
-        //   - branch-scoped groups for that branch, AND
-        //   - company-wide groups (branchId IS NULL)
-        // Otherwise send to all approved groups for the company.
-        ...(opts.branchId
-          ? { OR: [{ branchId: opts.branchId }, { branchId: null }] }
-          : {}),
+        // A BRANCH-SPECIFIC event goes to that branch's groups and NOWHERE
+        // else. The `{ branchId: null }` arm used to be OR'd in here, which
+        // meant a group with no branch received EVERY branch's operational
+        // events — payments, attendance, debt, the 21:00 financial report. With
+        // one branch that was invisible; with two it is a leak, and in
+        // production every approved group was branch-less at the time the
+        // audit ran.
+        //
+        // An event with NO branch is a company-level one (product
+        // announcements) and still reaches every approved group — that is the
+        // `{}` fallback below, and it is deliberate: those messages are global
+        // product comms by design (`telegram-group-announcement.service.ts`).
+        //
+        // Consequence to know: a group that is still branch-less receives no
+        // branch-specific events at all. That is fail-closed on purpose —
+        // silence is recoverable, sending Fargona's figures to Namangan is not.
+        ...(opts.branchId ? { branchId: opts.branchId } : {}),
       },
     });
 

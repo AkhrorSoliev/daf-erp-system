@@ -20,6 +20,10 @@ import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
 import { generatePassword } from '../common/utils/password.util';
+import {
+  ReportBranchIds,
+  userBranchWhere,
+} from '../common/finance/report-branch-scope';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -76,14 +80,28 @@ export class TeachersService {
     private events: EventEmitter2,
   ) {}
 
-  async findAll(query: TeacherQueryDto, companyId: number) {
-    const { page = 1, pageSize = 10, search, branch_id } = query;
+  async findAll(
+    query: TeacherQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    const { page = 1, pageSize = 10, search } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = {
       roles: { some: { roleId: TEACHER_ROLE_ID } },
       deletedAt: null,
       companyId,
+      // D6: a teacher belongs to exactly one branch, so this is a confinement,
+      // not just a filter — a Fargona teacher must never appear in Namangan's
+      // operational screens, where assigning them to a group would book their
+      // pay to the wrong branch.
+      //
+      // Nested under AND, not spread: `userBranchWhere` returns an `OR`, and so
+      // does the search filter below. Spreading both at the top level would let
+      // whichever is assigned last silently erase the other — searching would
+      // have dropped the branch confinement entirely.
+      AND: [userBranchWhere(scope)],
     };
 
     if (search) {
@@ -91,10 +109,6 @@ export class TeachersService {
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
       ];
-    }
-
-    if (branch_id) {
-      where.branches = { some: { branchId: branch_id } };
     }
 
     const [data, total] = await Promise.all([
@@ -157,6 +171,21 @@ export class TeachersService {
       page,
       pageSize,
     };
+  }
+
+  async findByIdScoped(
+    id: number,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    if (scope != null) {
+      const inScope = await this.prisma.user.findFirst({
+        where: { id, companyId, deletedAt: null, AND: [userBranchWhere(scope)] },
+        select: { id: true },
+      });
+      if (!inScope) throw new NotFoundException("O'qituvchi topilmadi");
+    }
+    return this.findById(id, companyId);
   }
 
   async findById(id: number, companyId: number) {

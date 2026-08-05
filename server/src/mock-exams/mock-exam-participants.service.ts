@@ -7,6 +7,10 @@ import {
 import { MockExamStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ReportBranchIds,
+  studentBranchWhere,
+} from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamBillingService } from './mock-exam-billing.service';
 import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
@@ -37,8 +41,13 @@ export class MockExamParticipantsService {
     private eventEmitter: EventEmitter2,
   ) {}
 
-  async list(examId: string, query: ParticipantsQueryDto) {
-    await this.ensureExam(examId);
+  async list(
+    examId: string,
+    query: ParticipantsQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    await this.ensureExam(examId, companyId, branchIds);
 
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
@@ -116,8 +125,9 @@ export class MockExamParticipantsService {
     dto: AddManualParticipantDto,
     companyId: number,
     userId: number,
+    branchIds: ReportBranchIds,
   ) {
-    const exam = await this.ensureExam(examId);
+    const exam = await this.ensureExam(examId, companyId, branchIds);
     if (
       exam.status === MockExamStatus.GRADING ||
       exam.status === MockExamStatus.ANNOUNCED ||
@@ -198,6 +208,7 @@ export class MockExamParticipantsService {
           level: dto.level ?? null,
           examTime: dto.examTime ?? null,
           feeAmount,
+          companyId,
           telegramChatId: dto.telegramChatId?.trim() || null,
           firstName,
           lastName,
@@ -287,9 +298,14 @@ export class MockExamParticipantsService {
     dto: ConvertMockParticipantDto,
     companyId: number,
     userId: number,
+    branchIds: ReportBranchIds,
   ) {
+    // Branch isolation runs through the participant's EXAM — `companyId` alone
+    // is not a boundary once there is more than one branch.
+    await this.ensureParticipantInScope(participantId, companyId, branchIds);
+
     const participant = await this.prisma.mockExamParticipant.findFirst({
-      where: { id: participantId, deletedAt: null },
+      where: { id: participantId, deletedAt: null, companyId },
       select: {
         id: true,
         publicId: true,
@@ -391,9 +407,26 @@ export class MockExamParticipantsService {
    * the "Mock imtihonlar" tab on the student profile. Sorted by exam
    * date (most recent first; nulls last).
    */
-  async listForStudent(studentId: number) {
+  async listForStudent(
+    studentId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    // Gated on the STUDENT — this is the student's own exam history, so branch
+    // access follows the student rather than each exam.
+    const student = await this.prisma.student.findFirst({
+      where: {
+        id: studentId,
+        companyId,
+        deletedAt: null,
+        ...studentBranchWhere(branchIds),
+      },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+
     return this.prisma.mockExamParticipant.findMany({
-      where: { studentId, deletedAt: null },
+      where: { studentId, deletedAt: null, companyId },
       orderBy: [
         { exam: { examDate: { sort: 'desc', nulls: 'last' } } },
         { registeredAt: 'desc' },
@@ -438,9 +471,14 @@ export class MockExamParticipantsService {
     dto: MarkMockPaidDto,
     companyId: number,
     userId: number,
+    branchIds: ReportBranchIds,
   ) {
+    // Branch isolation runs through the participant's EXAM — `companyId` alone
+    // is not a boundary once there is more than one branch.
+    await this.ensureParticipantInScope(id, companyId, branchIds);
+
     const participant = await this.prisma.mockExamParticipant.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
       include: { exam: { select: { price: true, title: true } } },
     });
     if (!participant) {
@@ -514,9 +552,18 @@ export class MockExamParticipantsService {
     return updated;
   }
 
-  async remove(id: string, companyId: number, userId: number) {
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    // Branch isolation runs through the participant's EXAM — `companyId` alone
+    // is not a boundary once there is more than one branch.
+    await this.ensureParticipantInScope(id, companyId, branchIds);
+
     const existing = await this.prisma.mockExamParticipant.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!existing) {
       throw new NotFoundException('Ishtirokchi topilmadi');
@@ -542,14 +589,62 @@ export class MockExamParticipantsService {
     return { message: "Ishtirokchi o'chirildi" };
   }
 
-  private async ensureExam(examId: string) {
+  /**
+   * The one gate for everything reached through an exam.
+   *
+   * It used to be `where: { id: examId, deletedAt: null }` — no company, no
+   * branch. Every participant read and write hung off it, so an exam id from
+   * another company was enough to list its participants, mark one paid, convert
+   * one into a student or delete one. The methods below already RECEIVED
+   * `companyId`; they just never used it in the lookup.
+   *
+   * Company isolation via `MockExam.companyId`; branch isolation via the exam's
+   * own branch. A `branchId = null` exam is legacy/unassigned and stays visible
+   * to every branch on purpose — it belongs to none, so hiding it would strand
+   * it where nobody could assign it. It is excluded from branch FINANCIAL
+   * totals separately (see `revenueSummary`), which is what keeps
+   * `Σ(branches) + unassigned == company` true.
+   */
+  private async ensureExam(
+    examId: string,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
     const exam = await this.prisma.mockExam.findFirst({
-      where: { id: examId, deletedAt: null },
-      select: { id: true, status: true },
+      where: {
+        id: examId,
+        deletedAt: null,
+        companyId,
+        ...(branchIds == null
+          ? {}
+          : { OR: [{ branchId: { in: branchIds } }, { branchId: null }] }),
+      },
+      select: { id: true, status: true, branchId: true },
     });
     if (!exam) {
       throw new NotFoundException('Mock imtihon topilmadi');
     }
     return exam;
+  }
+
+  /**
+   * Participant gate — resolves through the participant's exam so the same
+   * company/branch rule applies to `markPaid`, `convertToStudent` and `remove`,
+   * all of which were `where: { id, deletedAt: null }`.
+   */
+  private async ensureParticipantInScope(
+    id: string,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    const participant = await this.prisma.mockExamParticipant.findFirst({
+      where: { id, deletedAt: null, companyId },
+      select: { id: true, examId: true },
+    });
+    if (!participant) {
+      throw new NotFoundException('Ishtirokchi topilmadi');
+    }
+    await this.ensureExam(participant.examId, companyId, branchIds);
+    return participant;
   }
 }

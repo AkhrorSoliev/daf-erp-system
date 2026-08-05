@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveCallerReportBranchIds } from '../common/finance/report-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { Prisma } from '@prisma/client';
@@ -37,25 +38,23 @@ export class CashAccountsService {
    */
   private async resolveBranchScope(
     userId: number,
-    roles: string[],
+    _roles: string[],
     requestedBranchId?: number,
   ): Promise<number[] | undefined> {
-    const isBd =
-      roles.includes('Branch Director') &&
-      !roles.includes('CEO') &&
-      !roles.includes('Administrator');
-    if (isBd) {
-      const caller = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { mainBranch: true },
-      });
-      const own = caller?.mainBranch ? [caller.mainBranch] : [];
-      if (requestedBranchId) {
-        return own.includes(requestedBranchId) ? [requestedBranchId] : [];
-      }
-      return own;
-    }
-    return requestedBranchId ? [requestedBranchId] : undefined;
+    // Delegates to the ONE resolver (`common/auth/branch-scope.ts`) instead of
+    // re-deriving the rule. The old copy exempted Administrator alongside CEO
+    // and confined only a Branch Director — so an Administrator of one branch
+    // could list, and move money between, every branch's kassa.
+    //
+    // `roles` is now unused: role names come from the caller's record, not from
+    // a JWT claim the client could shape.
+    const ids = await resolveCallerReportBranchIds(
+      this.prisma,
+      userId,
+      requestedBranchId,
+    );
+    // `null` (CEO, no pick) keeps its historical meaning here: no restriction.
+    return ids ?? undefined;
   }
 
   async create(dto: CreateCashAccountDto, userId: number, companyId: number) {

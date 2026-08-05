@@ -12,6 +12,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history/entity-history.service';
 
@@ -191,6 +192,16 @@ export class DebtWriteOffService {
         params.enrollmentId,
         params.companyId,
         client,
+      );
+
+      // Authorised INSIDE the transaction, with the transaction client: the
+      // student is only known once the enrollment is loaded, and a write-off
+      // forgives real debt in that branch's books.
+      await assertCallerMayWriteForStudent(
+        client,
+        params.performedById,
+        eligibility.details.studentId,
+        params.companyId,
       );
 
       if (!eligibility.eligible) {

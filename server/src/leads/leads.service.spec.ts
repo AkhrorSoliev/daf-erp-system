@@ -124,7 +124,8 @@ describe('LeadsService', () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
-      const result = await service.findAll({
+      const result = await service.findAll(
+        {
         search: 'Aziz',
         status: 'NEW' as any,
         columnId: 'col-1',
@@ -151,15 +152,46 @@ describe('LeadsService', () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
-      await service.findAll({});
+      await service.findAll({}, 1001, null);
 
       expect(prisma.lead.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { deletedAt: null },
+          where: expect.objectContaining({ deletedAt: null, companyId: 1001 }),
           skip: 0,
           take: 10,
         }),
       );
+    });
+
+    it('confines the list to the caller branch plus the unassigned pool', async () => {
+      // `Lead` had NO tenancy at all — this list returned every lead in the
+      // database. Null-branch leads stay visible because a lead from the public
+      // form arrives before anyone knows which branch it belongs to.
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll({}, 1001, [2]);
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where.companyId).toBe(1001);
+      expect(where.AND).toEqual([
+        { OR: [{ branchId: { in: [2] } }, { branchId: null }] },
+      ]);
+    });
+
+    it('keeps the branch confinement when a search term is present', async () => {
+      // Both the branch predicate and the search filter produce an `OR`; the
+      // branch one lives under AND so the search cannot overwrite it.
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll({ search: 'Aziz' }, 1001, [2]);
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where.AND).toEqual([
+        { OR: [{ branchId: { in: [2] } }, { branchId: null }] },
+      ]);
+      expect(where.OR).toBeDefined();
     });
 
     it('filters by contacted (called) leads', async () => {

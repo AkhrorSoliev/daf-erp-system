@@ -15,7 +15,13 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CountByBranchQueryDto } from './dto/count-by-branch-query.dto';
 import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
-import { CurrentUser, Roles, STAFF_ROLES } from '../common/decorators';
+import {
+  CurrentUser,
+  Roles,
+  STAFF_ROLES,
+  BranchScope,
+} from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('rooms')
@@ -38,8 +44,9 @@ export class RoomsController {
   findAll(
     @Query() query: RoomQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.roomsService.findAll(query, companyId);
+    return this.roomsService.findAll(query, companyId, branchScope);
   }
 
   // Staff only, same reason as the list above.
@@ -49,8 +56,9 @@ export class RoomsController {
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.roomsService.findOne(id, companyId);
+    return this.roomsService.findOne(id, companyId, branchScope);
   }
 
   @Post()

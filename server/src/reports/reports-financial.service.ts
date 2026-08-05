@@ -87,7 +87,10 @@ export class ReportsFinancialService {
       branchIds: ReportBranchIds;
       startDate?: string;
       endDate?: string;
-    } = { branchIds: null },
+      // No default. The last `= { branchIds: null }` in the money reports: a
+      // caller that passed nothing got every branch, which is precisely the
+      // failure mode the required parameter exists to prevent.
+    },
   ): Promise<{
     totalAmount: number;
     count: number;
@@ -1111,7 +1114,10 @@ export class ReportsFinancialService {
    * `DEBT_WRITE_OFF` is a separate column (forgiven, not cash) so the recovery
    * rate isn't inflated. remaining = closingDebt − recovered − writtenOff.
    */
-  async getMonthlyDebtRecovery(companyId: number): Promise<{
+  async getMonthlyDebtRecovery(
+    companyId: number,
+    scope: ReportBranchIds,
+  ): Promise<{
     months: Array<{
       monthKey: string;
       label: string;
@@ -1140,8 +1146,12 @@ export class ReportsFinancialService {
     const monthKeys = enumerateMonths(floorKey, tashkentMonthKey(new Date()));
 
     // Live balances for every student (any status, incl. archived debtors).
+    // Scoping this ONE query scopes the whole report: the cohort, the recovery
+    // tally and the drill-down lists all filter on the ids it returns. The
+    // report used to be company-wide by omission, so a Branch Director's
+    // drill-down listed the other branch's debtors by name and phone.
     const students = await this.prisma.student.findMany({
-      where: { companyId },
+      where: { companyId, ...studentBranchWhere(scope) },
       select: { id: true, balance: true },
     });
 
@@ -1308,6 +1318,7 @@ export class ReportsFinancialService {
   async getMonthDebtDetail(
     companyId: number,
     monthKey: string,
+    scope: ReportBranchIds,
   ): Promise<{
     monthKey: string;
     label: string;
@@ -1352,8 +1363,12 @@ export class ReportsFinancialService {
     truncated: boolean;
   }> {
     const LIST_CAP = 2000;
+    // Scoping this ONE query scopes the whole report: the cohort, the recovery
+    // tally and the drill-down lists all filter on the ids it returns. The
+    // report used to be company-wide by omission, so a Branch Director's
+    // drill-down listed the other branch's debtors by name and phone.
     const students = await this.prisma.student.findMany({
-      where: { companyId },
+      where: { companyId, ...studentBranchWhere(scope) },
       select: { id: true, balance: true },
     });
     const { boundary, cohort } = await this.reconstructMonthCohort(

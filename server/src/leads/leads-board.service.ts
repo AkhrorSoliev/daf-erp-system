@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { LeadStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { leadBranchWhere } from './shared/lead-scope';
 
 /**
  * Builds the leads board: every column with its sections and a per-section
@@ -12,9 +14,18 @@ import { PrismaService } from '../prisma/prisma.service';
 export class LeadsBoardService {
   constructor(private prisma: PrismaService) {}
 
-  async getBoard() {
+  /**
+   * The board had NO tenancy filter at all — `where: { deletedAt: null }`
+   * returned every column, section and lead in the database, so one branch's
+   * director could see, drag and delete another branch's leads.
+   *
+   * Board STRUCTURE (columns + sections) is company-level by design; only the
+   * LEAD COUNTS are branch-filtered, so both branches share one funnel layout
+   * while each sees its own pipeline.
+   */
+  async getBoard(companyId: number, scope: ReportBranchIds) {
     const columns = await this.prisma.leadColumn.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId },
       orderBy: { order: 'asc' },
       select: {
         id: true,
@@ -23,7 +34,7 @@ export class LeadsBoardService {
         isSystem: true,
         systemKey: true,
         sections: {
-          where: { deletedAt: null },
+          where: { deletedAt: null, companyId },
           orderBy: { order: 'asc' },
           select: { id: true, name: true, order: true },
         },
@@ -37,8 +48,10 @@ export class LeadsBoardService {
       // already excluded because deleting a lead sets deletedAt.)
       where: {
         deletedAt: null,
+        companyId,
         sectionId: { not: null },
         statusEnum: { not: LeadStatus.CONVERTED },
+        ...leadBranchWhere(scope),
       },
       _count: true,
     });

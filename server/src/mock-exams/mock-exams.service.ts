@@ -7,6 +7,10 @@ import {
 import { MockExamStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamPdfService } from './mock-exam-pdf.service';
 import { CreateMockExamDto } from './dto/create-mock-exam.dto';
@@ -54,9 +58,22 @@ export class MockExamsService {
    * payments (per the simple-billing decision), so this sum is the
    * canonical place to read mock revenue.
    */
-  async revenueSummary() {
+  async revenueSummary(companyId: number, scope: ReportBranchIds) {
+    // Every query here used to be company-blind AND branch-blind — the figure
+    // was "every paid mock participant in the database". With a second branch
+    // that stops being a rounding difference: Namangan's mock revenue is
+    // indistinguishable from Fargona's, and mock money is not written to the
+    // ledger (a deliberate decision), so this IS the only place it is counted.
+    const companyWhere = companyId != null ? { companyId } : {};
+    const examBranchWhere = branchIdWhere(scope);
+
     const paid = await this.prisma.mockExamParticipant.findMany({
-      where: { paid: true, deletedAt: null },
+      where: {
+        paid: true,
+        deletedAt: null,
+        ...companyWhere,
+        ...(scope == null ? {} : { exam: examBranchWhere }),
+      },
       select: { feeAmount: true, exam: { select: { price: true } } },
     });
 
@@ -68,8 +85,16 @@ export class MockExamsService {
     const totalPaid = paid.length;
 
     const [totalParticipants, totalExams] = await Promise.all([
-      this.prisma.mockExamParticipant.count({ where: { deletedAt: null } }),
-      this.prisma.mockExam.count({ where: { deletedAt: null } }),
+      this.prisma.mockExamParticipant.count({
+        where: {
+          deletedAt: null,
+          ...companyWhere,
+          ...(scope == null ? {} : { exam: examBranchWhere }),
+        },
+      }),
+      this.prisma.mockExam.count({
+        where: { deletedAt: null, ...companyWhere, ...examBranchWhere },
+      }),
     ]);
 
     return {
@@ -175,7 +200,7 @@ export class MockExamsService {
         throw new NotFoundException("Bo'lim topilmadi");
       }
     } else {
-      sectionId = await this.resolveDefaultSectionId(userId);
+      sectionId = await this.resolveDefaultSectionId(userId, companyId);
     }
 
     // Subjects come from the admin's checkbox/row list at create time
@@ -265,6 +290,12 @@ export class MockExamsService {
         formFields: this.defaultFormFields(),
         botStartPayload,
         createdById: userId,
+        // Stamped explicitly rather than left to the column default: the exam
+        // is where mock revenue is attributed, and mock money is deliberately
+        // NOT written to the ledger, so this row is the only record of which
+        // branch earned it. Null branch = venue not chosen yet.
+        companyId,
+        branchId: dto.branchId ?? null,
         subjects: {
           create: subjectInputs.map((s, idx) => ({
             name: s.name,
@@ -685,7 +716,10 @@ export class MockExamsService {
    * pick one. Picks the first active section by `order`; if no sections
    * exist (fresh install), creates a default "Umumiy" one.
    */
-  private async resolveDefaultSectionId(userId: number): Promise<string> {
+  private async resolveDefaultSectionId(
+    userId: number,
+    companyId: number,
+  ): Promise<string> {
     const first = await this.prisma.mockExamSection.findFirst({
       where: { deletedAt: null },
       orderBy: { order: 'asc' },
@@ -699,6 +733,7 @@ export class MockExamsService {
         color: null,
         order: 0,
         createdById: userId,
+        companyId,
       },
       select: { id: true },
     });

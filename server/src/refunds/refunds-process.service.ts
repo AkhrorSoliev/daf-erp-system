@@ -4,6 +4,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  assertCallerMayWriteForStudent,
+} from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { ContractStatus, Prisma, RefundStatus } from '@prisma/client';
 import { ProcessRefundDto } from './dto/process-refund.dto';
@@ -40,6 +43,15 @@ export class RefundsProcessService {
       },
     });
     if (!refund) throw new NotFoundException('Refund topilmadi');
+
+    // Processing is what actually pays the money out; approving/rejecting
+    // another branch's refund by id was reachable with `companyId` alone.
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      refund.studentId,
+      companyId,
+    );
 
     if (dto.status === RefundStatus.REJECTED) {
       assertValidTransition(
@@ -181,6 +193,14 @@ export class RefundsProcessService {
       },
     });
     if (!refund) throw new NotFoundException('Refund topilmadi');
+
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      params.performedById,
+      refund.studentId,
+      params.companyId,
+    );
+
     if (refund.status !== RefundStatus.COMPLETED) {
       throw new BadRequestException(
         'Faqat yakunlangan refundni bekor qilish mumkin',

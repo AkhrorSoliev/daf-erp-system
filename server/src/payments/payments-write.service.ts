@@ -21,6 +21,15 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PAYMENT_METHOD_LABEL } from './shared/method-label';
 import { formatSom } from './shared/format-som';
+// Aliased: this class carries its own null-tolerant `resolveStudentBranchId`
+// for the gateway webhooks. The manual path wants the FAIL-CLOSED one — a
+// student whose branch cannot be determined must not be able to take a payment
+// at all, because that row could never be attributed to a branch afterwards.
+import { resolveStudentBranchId as resolveStudentBranchIdStrict } from '../common/finance/resolve-branch';
+import {
+  assertCallerMayWriteForStudent,
+  assertCallerMayWriteForStudentInTx,
+} from '../common/auth/financial-write-scope';
 
 /**
  * Emitted after a successful payment commit (manual or gateway). Consumed
@@ -95,7 +104,38 @@ export class PaymentsWriteService {
       throw new NotFoundException("O'quvchi topilmadi");
     }
 
-    let resolvedBranchId = dto.branchId;
+    // The branch comes from the STUDENT, never from the client.
+    //
+    // `dto.branchId` is the header switcher's current pick, and it used to be
+    // written straight onto the Payment and its ledger row unless a contract
+    // happened to exist — and contracts are not used in practice, so in reality
+    // nothing checked it. Recording a Fargona student's payment while viewing
+    // Namangan booked the cash to Namangan while every lesson deduction for that
+    // student stayed in Fargona: income in one branch's books, the cost it pays
+    // for in the other's. That is exactly what D2 forbids.
+    //
+    // The client still sends it, and it is still worth sending — as a CONSISTENCY
+    // CHECK. A mismatch means the operator is looking at one branch and paying
+    // for a student in another, which is a mistake worth stopping rather than
+    // silently correcting.
+    // Resolving the branch is not authorising it. This also checks that the
+    // CALLER may write for this student — without it a Namangan cashier could
+    // post a Fargona student's payment and have it booked, correctly, to
+    // Fargona: right branch, wrong hands. Re-checked inside the transaction
+    // below, because a student can move branch between the two points.
+    let resolvedBranchId = await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      dto.studentId,
+      companyId,
+    );
+
+    if (dto.branchId != null && dto.branchId !== resolvedBranchId) {
+      throw new BadRequestException(
+        `To'lov filiali o'quvchining filialiga mos kelmaydi ` +
+          `(o'quvchi filiali: ${resolvedBranchId}, yuborilgan: ${dto.branchId})`,
+      );
+    }
 
     if (dto.contractId) {
       const contract = await this.prisma.contract.findFirst({
@@ -112,9 +152,9 @@ export class PaymentsWriteService {
           "Shartnoma topilmadi yoki bu o'quvchiga tegishli emas",
         );
       }
-      if (dto.branchId && contract.branchId !== dto.branchId) {
+      if (contract.branchId !== resolvedBranchId) {
         throw new BadRequestException(
-          "To'lov filiali shartnoma filialiga mos kelmaydi",
+          "Shartnoma filiali o'quvchining filialiga mos kelmaydi",
         );
       }
       resolvedBranchId = contract.branchId;
@@ -122,6 +162,25 @@ export class PaymentsWriteService {
 
     const { payment, studentBalance, carriedOver } = await this.prisma.$transaction(
       async (tx) => {
+        // Re-resolve AND re-authorise with the transaction client, inside the
+        // same Serializable snapshot as the rows below. The pre-check above is
+        // the fast, well-worded refusal; this is the one that actually holds if
+        // the student's branch or the caller's access changed in between.
+        //
+        // A contract-derived branch (checked above to equal the student's) stays
+        // authoritative for the write.
+        const txBranchId = await assertCallerMayWriteForStudentInTx(
+          tx,
+          userId,
+          dto.studentId,
+          companyId,
+        );
+        if (!dto.contractId && txBranchId !== resolvedBranchId) {
+          throw new BadRequestException(
+            "O'quvchining filiali o'zgardi — to'lovni qaytadan kiriting",
+          );
+        }
+
         const payment = await tx.payment.create({
           data: {
             studentId: dto.studentId,
@@ -280,6 +339,19 @@ export class PaymentsWriteService {
       },
     });
     if (!payment) throw new NotFoundException("To'lov topilmadi");
+
+    // Only when there IS a human caller. `performedById` is undefined for
+    // gateway-initiated reversals (a Payme cancel), which are trusted on a
+    // different basis — see `financial-write-scope.ts`. Inventing a caller here
+    // to keep the check uniform would be worse than the honest exemption.
+    if (params.performedById != null) {
+      await assertCallerMayWriteForStudent(
+        this.prisma,
+        params.performedById,
+        payment.studentId,
+        params.companyId,
+      );
+    }
 
     if (payment.status === PaymentStatus.REVERSED) {
       throw new BadRequestException("Bu to'lov allaqachon bekor qilingan");
@@ -451,6 +523,15 @@ export class PaymentsWriteService {
       },
     });
     if (!payment) throw new NotFoundException("To'lov topilmadi");
+
+    // A correction is reverse + re-post: real money moves, so the same branch
+    // ownership rule applies as for creating the payment.
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      payment.studentId,
+      companyId,
+    );
 
     if (payment.status !== PaymentStatus.COMPLETED) {
       throw new BadRequestException(

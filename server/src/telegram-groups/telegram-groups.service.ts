@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { TelegramGroupStatus } from '@prisma/client';
 import { EntityHistoryService } from '../common/entity-history';
 
@@ -116,6 +117,32 @@ export class TelegramGroupsService {
       );
     }
 
+    // A branch is now REQUIRED at approval. Approving without one produced a
+    // group that received every branch's events (see the broadcast filter);
+    // the client sent an empty body, so in practice every group was born that
+    // way. Company-wide groups are not created here — announcements reach all
+    // approved groups regardless.
+    if (branchId == null) {
+      throw new BadRequestException(
+        "Guruhni tasdiqlash uchun filial tanlanishi shart",
+      );
+    }
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, companyId: caller.companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!branch) {
+      throw new BadRequestException(`Filial #${branchId} topilmadi`);
+    }
+    // And the caller must own it — a Branch Director may approve a group for
+    // their own branch, not for the other one.
+    await assertCallerInBranch(
+      this.prisma,
+      caller.id,
+      branchId,
+      "Bu filial uchun guruh tasdiqlash huquqingiz yo'q",
+    );
+
     const group = await this.prisma.telegramGroup.findUnique({ where: { id } });
     if (!group || group.deletedAt) {
       throw new NotFoundException('Guruh topilmadi');
@@ -131,7 +158,7 @@ export class TelegramGroupsService {
       data: {
         status: TelegramGroupStatus.APPROVED,
         companyId: caller.companyId,
-        branchId: branchId ?? null,
+        branchId,
         approvedById: caller.id,
         approvedAt: new Date(),
         isActive: true,

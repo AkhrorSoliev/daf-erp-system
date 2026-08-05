@@ -15,8 +15,9 @@ import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards/roles.guard';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('groups')
 export class GroupsController {
@@ -28,7 +29,11 @@ export class GroupsController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
-  findAll(@Query() query: GroupQueryDto, @CurrentUser() currentUser: any) {
+  findAll(
+    @Query() query: GroupQueryDto,
+    @CurrentUser() currentUser: any,
+    @BranchScope() branchScope: ReportBranchIds,
+  ) {
     const roles: string[] = currentUser.roles ?? [];
     const isTeacherOnly =
       roles.includes('Teacher') &&
@@ -38,7 +43,11 @@ export class GroupsController {
     if (isTeacherOnly) {
       query.teacher_id = currentUser.id;
     }
-    return this.groupsService.findAll(query, currentUser.companyId);
+    return this.groupsService.findAll(
+      query,
+      currentUser.companyId,
+      branchScope,
+    );
   }
 
   @Get('schedule-conflicts')
@@ -157,8 +166,9 @@ export class GroupsController {
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.groupsService.findOne(id, companyId);
+    return this.groupsService.findOne(id, companyId, branchScope);
   }
 
   @Post()

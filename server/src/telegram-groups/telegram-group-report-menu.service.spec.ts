@@ -59,6 +59,7 @@ function makeDeps(overrides: { groupStatus?: string; systemStartDate?: Date | nu
     prisma,
     reportsExcel,
     reportsFinancial,
+        null
   );
   return { service, prisma, reportsExcel, reportsFinancial };
 }

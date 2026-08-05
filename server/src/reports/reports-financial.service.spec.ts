@@ -246,7 +246,7 @@ describe('ReportsFinancialService', () => {
         { studentId: 2 },
       ]);
 
-      const res = await service.getYearlyTrend(1);
+      const res = await service.getYearlyTrend(1, null);
 
       expect(Array.isArray(res)).toBe(true);
       expect(res.length).toBeGreaterThanOrEqual(1);

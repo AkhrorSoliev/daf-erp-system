@@ -45,6 +45,7 @@ export class LeadColumnsService {
         name,
         order: (maxOrder._max.order ?? -1) + 1,
         isSystem: false,
+        companyId,
       },
     });
 

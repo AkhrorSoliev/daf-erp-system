@@ -15,7 +15,12 @@ describe('MockExamParticipantsService', () => {
   beforeEach(async () => {
     prisma = {
       mockExam: {
-        findFirst: jest.fn(),
+        // `ensureExam` is now the company/branch gate for everything reached
+        // through an exam, so a participant write resolves it too. Default to
+        // an open exam in this company so existing cases are unaffected.
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'exam-1', status: 'REGISTRATION_OPEN', branchId: 1 }),
         // Pricing lookup used by addManual to compute the DaF-discounted
         // fee. Defaults to a free exam so existing tests are unaffected.
         findUnique: jest.fn().mockResolvedValue({ price: 0, studentPrice: null }),
@@ -157,6 +162,7 @@ describe('MockExamParticipantsService', () => {
           { firstName: 'A', lastName: 'B', phone: '901234567' },
           1001,
           1,
+        null
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -418,7 +424,7 @@ describe('MockExamParticipantsService', () => {
         paid: true,
       });
 
-      await service.markPaid('p1', { method: 'CASH' } as any, 1001, 1);
+      await service.markPaid('p1', { method: 'CASH' } as any, 1001, 1, null);
 
       expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ paid: true }) }),
@@ -442,7 +448,7 @@ describe('MockExamParticipantsService', () => {
         exam: { price: 0, title: 'Bepul' },
       });
       await expect(
-        service.markPaid('p1', { method: 'CASH' } as any, 1001, 1),
+        service.markPaid('p1', { method: 'CASH' } as any, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -455,7 +461,7 @@ describe('MockExamParticipantsService', () => {
         lastName: 'Karimov',
         phone: '901234567',
       });
-      await service.remove('p1', 1001, 1);
+      await service.remove('p1', 1001, 1, null);
       expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'p1' },

@@ -66,7 +66,7 @@ describe('LeadColumnsService', () => {
       const result = await service.create({ name: 'Sotuv' }, 1001, 1);
 
       expect(prisma.leadColumn.create).toHaveBeenCalledWith({
-        data: { name: 'Sotuv', order: 3, isSystem: false },
+        data: expect.objectContaining({ name: 'Sotuv', order: 3, isSystem: false }),
       });
       expect(result.sections).toEqual([]);
       expect(history.recordCreate).toHaveBeenCalled();

@@ -14,7 +14,13 @@ import { BranchQueryDto } from './dto/branch-query.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 import { ChangeBranchStatusDto } from './dto/change-branch-status.dto';
-import { CurrentUser, Roles, STAFF_ROLES } from '../common/decorators';
+import {
+  CurrentUser,
+  Roles,
+  STAFF_ROLES,
+  BranchCeiling,
+} from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('branches')
@@ -29,8 +35,12 @@ export class BranchesController {
   findAll(
     @Query() query: BranchQueryDto,
     @CurrentUser('companyId') companyId: number,
+    // The CEILING, not the current selection — this list IS the switcher's
+    // options. Narrowing it by the selected branch would leave the user unable
+    // to switch away from whatever they last picked.
+    @BranchCeiling() ceiling: ReportBranchIds,
   ) {
-    return this.branchesService.findAll(query, companyId);
+    return this.branchesService.findAll(query, companyId, ceiling);
   }
 
   // Staff only, same reason as the list above.
@@ -40,8 +50,30 @@ export class BranchesController {
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchCeiling() ceiling: ReportBranchIds,
   ) {
-    return this.branchesService.findOne(id, companyId);
+    return this.branchesService.findOne(id, companyId, ceiling);
+  }
+
+  /**
+   * Go-live checklist for a branch: cash accounts, working hours, at least one
+   * course / room / administrator, and no teacher without a salary rate.
+   *
+   * Read-only, and deliberately a separate endpoint rather than a gate on
+   * `create` — a branch is opened days before its rooms and teachers exist, so
+   * refusing to create one until it is complete would be unusable. What must
+   * not happen is the branch quietly LOOKING ready while a teacher accrues
+   * nothing for every lesson they teach.
+   */
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director')
+  @Get(':id/readiness')
+  getReadiness(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.branchesService.getReadiness(id, companyId, userId);
   }
 
   @Post()
@@ -85,7 +117,8 @@ export class BranchesController {
   getStatusHistory(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.branchesService.getStatusHistory(id, companyId);
+    return this.branchesService.getStatusHistory(id, companyId, userId);
   }
 }

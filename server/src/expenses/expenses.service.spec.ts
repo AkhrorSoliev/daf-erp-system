@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ExpenseCategory, ExpensePaymentMethod } from '@prisma/client';
 import { ExpensesService } from './expenses.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -24,6 +25,19 @@ describe('ExpensesService — findAll filters + summary', () => {
     },
     transaction: {
       findFirst: jest.fn(),
+    },
+    // Every expense write now verifies the named branch exists in this company
+    // and that the caller may act on it (`assertBranchWritable`). A CEO spans
+    // every branch, so the default caller here passes the check.
+    branch: {
+      findFirst: jest.fn().mockResolvedValue({ id: 1 }),
+    },
+    user: {
+      findFirst: jest.fn().mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'CEO' } }],
+      }),
     },
     $transaction: jest.fn(),
   };
@@ -70,7 +84,7 @@ describe('ExpensesService — findAll filters + summary', () => {
   const whereArg = () => prisma.expense.findMany.mock.calls[0][0].where;
 
   it('always scopes to companyId + deletedAt: null', async () => {
-    await service.findAll({} as ExpenseQueryDto, COMPANY_ID);
+    await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
     expect(whereArg()).toMatchObject({ companyId: COMPANY_ID, deletedAt: null });
   });
 
@@ -214,10 +228,72 @@ describe('ExpensesService — findAll filters + summary', () => {
     });
   });
 
+  describe('branch ownership on writes', () => {
+    // `dto.branchId` was written onto the Expense row AND its ledger entry with
+    // no validation at all — no existence check, no company check, no caller
+    // check. Since D4 makes every expense exactly one branch's cost, a wrong
+    // branch here is two wrong P&Ls, not a labelling slip.
+    const dto = {
+      category: 'RENT',
+      paymentMethod: 'CASH',
+      amount: 100,
+      description: 'x',
+      date: '2026-08-01',
+      branchId: 2,
+    } as any;
+
+    it('rejects a branch that does not exist in this company', async () => {
+      prisma.branch.findFirst.mockResolvedValueOnce(null);
+
+      await expect(service.create(dto, 42, COMPANY_ID)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("rejects a branch outside the caller's scope", async () => {
+      prisma.branch.findFirst.mockResolvedValueOnce({ id: 2 });
+      // A Fargona (branch 1) director booking a cost against Namangan (2).
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: 1,
+        branches: [{ branchId: 1 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(service.create(dto, 42, COMPANY_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('checks BOTH the current and the target branch on a move', async () => {
+      // Checking only the target would let someone reach into the other
+      // branch's books to move a cost OUT of them.
+      prisma.expense.findFirst.mockResolvedValue({
+        id: 'exp-1',
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+        deletedAt: null,
+      });
+      prisma.branch.findFirst.mockResolvedValue({ id: 1 });
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+      await service.update('exp-1', { branchId: 2 } as any, 42, COMPANY_ID);
+
+      const checked = prisma.branch.findFirst.mock.calls.map(
+        (c: any) => c[0].where.id,
+      );
+      expect(checked).toContain(1);
+      expect(checked).toContain(2);
+    });
+  });
+
   describe('remove', () => {
     const existing = {
       id: 'exp-1',
       amount: 100,
+      branchId: 1,
       companyId: COMPANY_ID,
       deletedAt: null,
     };

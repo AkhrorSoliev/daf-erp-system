@@ -24,8 +24,14 @@ import { DeleteStudentDto } from './dto/delete-student.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
 import { InitialBalanceDto } from './dto/initial-balance.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
-import { Roles, CurrentUser, STAFF_ROLES } from '../common/decorators';
+import {
+  Roles,
+  CurrentUser,
+  STAFF_ROLES,
+  BranchScope,
+} from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 
 @Controller('students')
@@ -45,7 +51,11 @@ export class StudentsController {
   @UseGuards(RolesGuard)
   @Roles(...STAFF_ROLES)
   @Get()
-  findAll(@Query() query: StudentQueryDto, @CurrentUser() currentUser: any) {
+  findAll(
+    @Query() query: StudentQueryDto,
+    @CurrentUser() currentUser: any,
+    @BranchScope() branchScope: ReportBranchIds,
+  ) {
     const roles: string[] = currentUser.roles ?? [];
     const isTeacherOnly =
       roles.includes('Teacher') &&
@@ -55,7 +65,11 @@ export class StudentsController {
     if (isTeacherOnly) {
       query.teacher_id = currentUser.id;
     }
-    return this.studentsService.findAll(query, currentUser.companyId);
+    return this.studentsService.findAll(
+      query,
+      currentUser.companyId,
+      branchScope,
+    );
   }
 
   @Get(':id')
@@ -64,8 +78,9 @@ export class StudentsController {
   findById(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.studentsService.findById(id, companyId);
+    return this.studentsService.findById(id, companyId, branchScope);
   }
 
   @Post()
@@ -318,12 +333,6 @@ export class StudentsController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.transactionsService.recordInitialBalance({
-      studentId: id,
-      amount: dto.amount,
-      note: dto.note,
-      companyId,
-      performedById: userId,
-    });
+    return this.studentsService.setInitialBalance(id, dto, userId, companyId);
   }
 }

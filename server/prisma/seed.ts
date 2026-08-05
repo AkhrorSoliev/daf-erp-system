@@ -272,6 +272,7 @@ async function seedLeadColumns() {
         systemKey: c.systemKey,
         order: c.order,
         isSystem: true,
+        companyId: COMPANY_ID,
       },
     });
   }
@@ -289,7 +290,9 @@ async function seedMockExamSections() {
     { name: 'Ichki testlar', color: '#10b981', order: 3 },
   ];
   for (const s of starter) {
-    await prisma.mockExamSection.create({ data: s });
+    await prisma.mockExamSection.create({
+      data: { ...s, companyId: COMPANY_ID },
+    });
   }
 }
 

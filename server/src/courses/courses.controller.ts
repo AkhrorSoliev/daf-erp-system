@@ -14,7 +14,13 @@ import { CourseQueryDto } from './dto/course-query.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { ChangeCourseStatusDto } from './dto/change-course-status.dto';
-import { CurrentUser, Roles, STAFF_ROLES } from '../common/decorators';
+import {
+  CurrentUser,
+  Roles,
+  STAFF_ROLES,
+  BranchScope,
+} from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('courses')
@@ -29,8 +35,9 @@ export class CoursesController {
   findAll(
     @Query() query: CourseQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.coursesService.findAll(query, companyId);
+    return this.coursesService.findAll(query, companyId, branchScope);
   }
 
   // Staff only, same reason as the list above.
@@ -40,8 +47,9 @@ export class CoursesController {
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.coursesService.findOne(id, companyId);
+    return this.coursesService.findOne(id, companyId, branchScope);
   }
 
   @Post()

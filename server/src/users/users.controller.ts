@@ -18,7 +18,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Roles } from '../common/decorators';
+import { Roles, BranchScope } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('users')
@@ -32,8 +33,9 @@ export class UsersController {
   findAll(
     @Query() query: UserQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.usersService.findAll(query, companyId);
+    return this.usersService.findAll(query, companyId, branchScope);
   }
 
   @Get(':id')
@@ -42,8 +44,9 @@ export class UsersController {
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.usersService.findById(id, companyId);
+    return this.usersService.findById(id, companyId, branchScope);
   }
 
   @Post()

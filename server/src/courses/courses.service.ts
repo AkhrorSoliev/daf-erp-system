@@ -7,6 +7,10 @@ import { CourseQueryDto } from './dto/course-query.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { ChangeCourseStatusDto } from './dto/change-course-status.dto';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class CoursesService {
@@ -17,11 +21,15 @@ export class CoursesService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async findAll(query: CourseQueryDto, companyId: number) {
+  async findAll(
+    query: CourseQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     const where = {
-      branchId: query.branch_id,
       deletedAt: null,
       companyId,
+      ...branchIdWhere(scope),
     };
 
     const page = query.page ?? 1;
@@ -54,9 +62,9 @@ export class CoursesService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(id: string, companyId: number) {
+  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
     const course = await this.prisma.course.findFirst({
-      where: { id, deletedAt: null, companyId },
+      where: { id, deletedAt: null, companyId, ...branchIdWhere(scope) },
       include: {
         branch: { select: { name: true } },
         _count: { select: { groups: { where: { deletedAt: null } } } },

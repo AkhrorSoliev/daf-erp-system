@@ -80,7 +80,7 @@ describe('LeadSectionsService', () => {
       );
 
       expect(prisma.leadSection.create).toHaveBeenCalledWith({
-        data: { name: 'Reklama', columnId: 'col-1', order: 3 },
+        data: expect.objectContaining({ name: 'Reklama', columnId: 'col-1', order: 3 }),
       });
       expect(result.leadCount).toBe(0);
       expect(history.recordCreate).toHaveBeenCalledWith(
