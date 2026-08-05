@@ -195,8 +195,9 @@ export function ExpectationHistoryDialog({ open, onOpenChange, month }: Props) {
                 Oy oxiriga kutilyapti — kunlik siljish
               </DialogTitle>
               <p className="text-sm text-muted-foreground">
-                Har kecha yozilgan surat. Qayta hisoblanmaydi — o&apos;sha kuni
-                tizim nima ko&apos;rgan bo&apos;lsa, o&apos;sha.
+                Har kuni kechqurun raqam qayta hisoblanadi va o&apos;sha kuni
+                qanday chiqqan bo&apos;lsa, shundayligicha saqlanadi. Chiziq
+                shu kunlik raqamlarni ko&apos;rsatadi.
               </p>
             </div>
             <MonthPicker
@@ -232,8 +233,9 @@ export function ExpectationHistoryDialog({ open, onOpenChange, month }: Props) {
                 {monthLabel(selected)} uchun yozuv yo&apos;q
               </p>
               <p className="max-w-sm text-sm text-muted-foreground">
-                Surat har kecha 23:40 da yoziladi. Yozuv boshlangan kundan
-                oldingi kunlar bo&apos;sh qoladi — ular qayta tiklanmaydi.
+                Raqam har kuni 23:40 da saqlanadi. Saqlash boshlangan kundan
+                oldingi kunlar bo&apos;sh qoladi, chunki o&apos;sha kunlarda
+                kim o&apos;qiyotganini endi bilib bo&apos;lmaydi.
               </p>
             </div>
           ) : (
