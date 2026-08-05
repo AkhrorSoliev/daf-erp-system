@@ -305,7 +305,7 @@ describe('StudentsService — status methods', () => {
   describe('multi-tenant filter (companyId)', () => {
     it('findById passes companyId in the where clause', async () => {
       prisma.student.findFirst.mockResolvedValueOnce(mockStudentSelect);
-      await service.findById(1, 1001);
+      await service.findById(1, 1001, null);
       expect(prisma.student.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ id: 1, companyId: 1001 }),

@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { LeadStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { leadBranchWhere } from './shared/lead-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
 import { StudentEnrollmentService } from '../students/student-enrollment.service';
@@ -71,11 +73,23 @@ export class LeadsService {
   }
 
   /** Filtered, paginated flat list of leads — drives the filter view. */
-  async findAll(query: LeadQueryDto) {
+  async findAll(
+    query: LeadQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
-    const where: Prisma.LeadWhereInput = { deletedAt: null };
+    // `Lead` had no tenancy at all — this list returned every lead in the
+    // database, names and phone numbers included. The branch predicate goes
+    // under AND because `leadBranchWhere` produces an `OR` and so does the
+    // search filter below; spreading both would let the search erase it.
+    const where: Prisma.LeadWhereInput = {
+      deletedAt: null,
+      companyId,
+      AND: [leadBranchWhere(scope)],
+    };
 
     const search = query.search?.trim();
     if (search) {
@@ -149,9 +163,13 @@ export class LeadsService {
   }
 
   /** Leads inside one section, ordered for board display. */
-  async getSectionLeads(sectionId: string) {
+  async getSectionLeads(
+    sectionId: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     const section = await this.prisma.leadSection.findFirst({
-      where: { id: sectionId, deletedAt: null },
+      where: { id: sectionId, deletedAt: null, companyId },
       select: { id: true },
     });
     if (!section) {
@@ -164,7 +182,9 @@ export class LeadsService {
       where: {
         sectionId,
         deletedAt: null,
+        companyId,
         statusEnum: { not: LeadStatus.CONVERTED },
+        ...leadBranchWhere(scope),
       },
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       select: LEAD_CARD_SELECT,
@@ -175,9 +195,9 @@ export class LeadsService {
   }
 
   /** Full lead detail for the detail drawer. */
-  async findOne(id: string) {
+  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
     const lead = await this.prisma.lead.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId, ...leadBranchWhere(scope) },
       select: {
         id: true,
         firstName: true,
@@ -358,16 +378,32 @@ export class LeadsService {
     }
 
     const section = await this.prisma.leadSection.findFirst({
-      where: { id: dto.sectionId, deletedAt: null },
+      where: { id: dto.sectionId, deletedAt: null, companyId },
       select: { id: true, column: { select: { systemKey: true } } },
     });
     if (!section) {
       throw new NotFoundException("Bo'lim topilmadi");
     }
 
+    // Optional on purpose: a lead from the public form or a cold call has no
+    // branch yet, and forcing one here would mean guessing. It becomes
+    // mandatory at conversion, where a branch-less student could take no
+    // payment (`convert` already refuses without one). When a branch IS given
+    // it must be real and ours — the column has an FK now, but a foreign
+    // company's branch id would still pass that.
+    if (dto.branchId != null) {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: dto.branchId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!branch) {
+        throw new BadRequestException(`Filial #${dto.branchId} topilmadi`);
+      }
+    }
+
     if (dto.sourceId) {
       const source = await this.prisma.leadSource.findFirst({
-        where: { id: dto.sourceId, deletedAt: null },
+        where: { id: dto.sourceId, deletedAt: null, companyId },
         select: { id: true },
       });
       if (!source) {
@@ -394,6 +430,8 @@ export class LeadsService {
         order: (maxOrder._max.order ?? -1) + 1,
         statusEnum,
         status: statusEnum.toLowerCase(),
+        companyId,
+        branchId: dto.branchId ?? null,
       },
       select: LEAD_CARD_SELECT,
     });
@@ -421,9 +459,15 @@ export class LeadsService {
     dto: UpdateLeadDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
     const existing = await this.prisma.lead.findFirst({
-      where: { id, deletedAt: null },
+      // `companyId` was accepted by this method and never used in the lookup —
+      // a lead id was enough to reach another company's (or branch's) lead.
+      // `leadBranchWhere` keeps the unassigned pool (`branchId = null`) visible,
+      // because a lead from the public form has no branch until someone picks
+      // one; it is excluded from branch ANALYTICS separately.
+      where: { id, deletedAt: null, companyId, ...leadBranchWhere(scope) },
       select: { id: true, firstName: true, lastName: true, phone: true },
     });
     if (!existing) {
@@ -452,7 +496,7 @@ export class LeadsService {
     if (dto.sourceId !== undefined) {
       if (dto.sourceId) {
         const source = await this.prisma.leadSource.findFirst({
-          where: { id: dto.sourceId, deletedAt: null },
+          where: { id: dto.sourceId, deletedAt: null, companyId },
           select: { id: true },
         });
         if (!source) {
@@ -497,9 +541,10 @@ export class LeadsService {
     dto: MoveLeadDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
     const lead = await this.prisma.lead.findFirst({
-      where: { id: leadId, deletedAt: null },
+      where: { id: leadId, deletedAt: null, companyId, ...leadBranchWhere(scope) },
       select: { id: true, sectionId: true, statusEnum: true },
     });
     if (!lead) {
@@ -507,7 +552,7 @@ export class LeadsService {
     }
 
     const section = await this.prisma.leadSection.findFirst({
-      where: { id: dto.sectionId, deletedAt: null },
+      where: { id: dto.sectionId, deletedAt: null, companyId },
       select: { id: true, column: { select: { systemKey: true } } },
     });
     if (!section) {
@@ -593,9 +638,15 @@ export class LeadsService {
     dto: MarkCalledLeadDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
     const existing = await this.prisma.lead.findFirst({
-      where: { id, deletedAt: null },
+      // `companyId` was accepted by this method and never used in the lookup —
+      // a lead id was enough to reach another company's (or branch's) lead.
+      // `leadBranchWhere` keeps the unassigned pool (`branchId = null`) visible,
+      // because a lead from the public form has no branch until someone picks
+      // one; it is excluded from branch ANALYTICS separately.
+      where: { id, deletedAt: null, companyId, ...leadBranchWhere(scope) },
       select: { id: true, calledAt: true },
     });
     if (!existing) {
@@ -643,6 +694,7 @@ export class LeadsService {
     dto: RemoveLeadDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
     const reason = dto.reason?.trim();
     if (!reason) {
@@ -650,7 +702,12 @@ export class LeadsService {
     }
 
     const existing = await this.prisma.lead.findFirst({
-      where: { id, deletedAt: null },
+      // `companyId` was accepted by this method and never used in the lookup —
+      // a lead id was enough to reach another company's (or branch's) lead.
+      // `leadBranchWhere` keeps the unassigned pool (`branchId = null`) visible,
+      // because a lead from the public form has no branch until someone picks
+      // one; it is excluded from branch ANALYTICS separately.
+      where: { id, deletedAt: null, companyId, ...leadBranchWhere(scope) },
       select: {
         id: true,
         sectionId: true,
@@ -701,9 +758,10 @@ export class LeadsService {
     dto: ConvertLeadDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
     const lead = await this.prisma.lead.findFirst({
-      where: { id: leadId, deletedAt: null },
+      where: { id: leadId, deletedAt: null, companyId, ...leadBranchWhere(scope) },
       select: {
         id: true,
         firstName: true,

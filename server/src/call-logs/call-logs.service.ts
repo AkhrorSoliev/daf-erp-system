@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CallOutcome, CallReason, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveCallerReportBranchIds } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import {
   tashkentDateStr,
@@ -166,23 +167,15 @@ export class CallLogsService {
     return { total, page, pageSize, items };
   }
 
-  // Branch Director sees only their own branch. CEO/Administrator see all
-  // branches in the company. Mirrors OutreachService.resolveBranchScope.
+  // CEO spans every branch; everyone else — Administrator included — is confined
+  // to their own. Call logs carry student names and phone numbers, so a
+  // company-wide Administrator view leaked the other branch's contact list.
   private async resolveBranchScope(
     userId: number,
-    roles: string[],
+    _roles: string[],
   ): Promise<number[] | undefined> {
-    const isCeo = roles.includes('CEO');
-    const isAdmin = roles.includes('Administrator');
-    const isBd = roles.includes('Branch Director');
-    if (isCeo || isAdmin) return undefined;
-    if (!isBd) return [];
-
-    const caller = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { mainBranch: true },
-    });
-    return caller?.mainBranch ? [caller.mainBranch] : [];
+    const ids = await resolveCallerReportBranchIds(this.prisma, userId);
+    return ids ?? undefined;
   }
 
   // Same branch-resolution order as PaymentPromisesService: active enrollment's

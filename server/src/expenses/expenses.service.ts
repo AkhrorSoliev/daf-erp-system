@@ -10,6 +10,7 @@ import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 import { resolvePeriod } from '../common/finance/period-helpers';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 import {
   branchIdWhere,
   type ReportBranchIds,
@@ -55,7 +56,40 @@ export class ExpensesService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
+  /**
+   * The named branch must exist, belong to this company, and be one the caller
+   * may act on.
+   *
+   * `dto.branchId` was written onto the Expense row AND its ledger entry with no
+   * check at all: a Fargona director could book a cost against Namangan (or
+   * against a branch id that does not exist — the column has no FK), which lands
+   * straight in that branch's P&L. D4 makes every expense exactly one branch's
+   * cost, so getting it wrong is not a labelling error, it is a wrong profit
+   * figure for two branches at once.
+   */
+  private async assertBranchWritable(
+    branchId: number,
+    companyId: number,
+    userId: number,
+  ): Promise<void> {
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!branch) {
+      throw new BadRequestException(`Filial #${branchId} topilmadi`);
+    }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      branchId,
+      "Bu filialga xarajat yozish huquqingiz yo'q",
+    );
+  }
+
   async create(dto: CreateExpenseDto, userId: number, companyId: number) {
+    await this.assertBranchWritable(dto.branchId, companyId, userId);
+
     // TEACHER_ADVANCE must name the recipient employee, and that employee
     // must belong to this company.
     if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
@@ -380,6 +414,14 @@ export class ExpensesService {
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
 
+    // Both sides: the caller must own the branch the row is IN, and the branch
+    // they are moving it TO. Checking only the target would let someone reach
+    // into the other branch's books to move a cost out of them.
+    await this.assertBranchWritable(existing.branchId, companyId, userId);
+    if (dto.branchId != null && dto.branchId !== existing.branchId) {
+      await this.assertBranchWritable(dto.branchId, companyId, userId);
+    }
+
     // Detect if the change touches financial fields. Description/date/branch/
     // receiptUrl edits do not require a ledger correction; amount or category
     // changes must be reflected in Transaction or cash-flow reports drift.
@@ -476,6 +518,10 @@ export class ExpensesService {
       where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
+
+    // Delete REVERSES a ledger entry and moves cash back into the branch's
+    // kassa, so it needs the same branch check as create/update.
+    await this.assertBranchWritable(existing.branchId, companyId, userId);
 
     // Find the associated EXPENSE ledger entry so we can reverse it.
     const ledgerEntry = await this.prisma.transaction.findFirst({

@@ -7,6 +7,9 @@ import { StudentsReadService } from './students-read.service';
 import { StudentsWriteService } from './students-write.service';
 import { StudentsStatusService } from './students-status.service';
 import { TransactionsService } from '../transactions/transactions.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 
 @Injectable()
 export class StudentsService {
@@ -15,14 +18,25 @@ export class StudentsService {
     private write: StudentsWriteService,
     private statusService: StudentsStatusService,
     private transactions: TransactionsService,
+    // Only for the branch-ownership check on `setInitialBalance`; this facade
+    // otherwise delegates rather than querying.
+    private prisma: PrismaService,
   ) {}
 
   // Reads
-  findAll(query: StudentQueryDto, companyId: number) {
-    return this.read.findAll(query, companyId);
+  findAll(
+    query: StudentQueryDto,
+    companyId: number,
+    branchScope: ReportBranchIds,
+  ) {
+    return this.read.findAll(query, companyId, branchScope);
   }
-  findById(id: number, companyId: number) {
-    return this.read.findById(id, companyId);
+  findById(
+    id: number,
+    companyId: number,
+    branchScope: ReportBranchIds,
+  ) {
+    return this.read.findById(id, companyId, branchScope);
   }
   getStatusHistory(id: number, companyId: number) {
     return this.read.getStatusHistory(id, companyId);
@@ -36,6 +50,30 @@ export class StudentsService {
   getLessonsOverview(id: number, companyId: number, includeClosed?: boolean) {
     return this.read.getLessonsOverview(id, companyId, includeClosed);
   }
+  /**
+   * One-shot opening balance for a student migrating from the old system.
+   *
+   * Routed through the service (the controller used to call
+   * `TransactionsService.recordInitialBalance` directly) so the branch
+   * ownership check has somewhere to live: this writes an `INITIAL_BALANCE`
+   * ledger row, which is money.
+   */
+  async setInitialBalance(
+    id: number,
+    dto: { amount: number; note?: string },
+    userId: number,
+    companyId: number,
+  ) {
+    await assertCallerMayWriteForStudent(this.prisma, userId, id, companyId);
+    return this.transactions.recordInitialBalance({
+      studentId: id,
+      amount: dto.amount,
+      note: dto.note,
+      companyId,
+      performedById: userId,
+    });
+  }
+
   getBalanceSummary(id: number, companyId: number) {
     return this.transactions.getBalanceSummary(id, companyId);
   }

@@ -1439,7 +1439,7 @@ describe('ReportsService', () => {
         { id: 'c1', name: 'German B1' },
       ]);
 
-      const result = await service.getStudentPaymentsFilterOptions(1);
+      const result = await service.getStudentPaymentsFilterOptions(1, null);
       expect(result).toEqual({
         groups: [{ id: 'g1', name: 'B1-01', branchId: 1 }],
         teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],

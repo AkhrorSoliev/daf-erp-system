@@ -118,17 +118,24 @@ describe('HolidaysController — role guards', () => {
     });
   });
 
-  describe('findAll() — no guard', () => {
-    it('should NOT have @Roles metadata (open to all authenticated users)', () => {
+  // These two used to assert the guard was ABSENT, which encoded the hole as if
+  // it were the contract — the same shape four other controller specs carried
+  // before Batch 7. Flipped so the test fails if the guard is ever removed.
+  describe('findAll() — staff only', () => {
+    it('has @Roles metadata excluding Student', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toBeUndefined();
+      expect(roles).toBeDefined();
+      expect(roles).not.toContain('Student');
     });
-  });
 
-  describe('findOne() — no guard', () => {
-    it('should NOT have @Roles metadata (open to all authenticated users)', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findOne);
-      expect(roles).toBeUndefined();
+    it('denies a Student-portal token', () => {
+      const ctx = mockExecutionContext(controller.findAll, ['Student']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('allows staff', () => {
+      const ctx = mockExecutionContext(controller.findAll, ['Administrator']);
+      expect(guard.canActivate(ctx)).toBe(true);
     });
   });
 });

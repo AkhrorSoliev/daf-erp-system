@@ -25,6 +25,17 @@ describe('RefundsProcessService — completion bound', () => {
 
   beforeEach(async () => {
     prisma = {
+      // The financial-write guard reads the acting user's roles/branches.
+      // A CEO spans every branch, so the default caller passes.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
+      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
       refund: {
         findFirst: jest.fn().mockResolvedValue({ ...baseRefund }),
         update: jest.fn().mockResolvedValue({}),

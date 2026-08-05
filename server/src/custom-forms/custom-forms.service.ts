@@ -344,7 +344,7 @@ export class CustomFormsService {
       _max: { order: true },
     });
     const created = await this.prisma.leadSource.create({
-      data: { name, order: (maxOrder._max.order ?? -1) + 1 },
+      data: { name, order: (maxOrder._max.order ?? -1) + 1, companyId },
       select: { id: true, name: true },
     });
     await this.entityHistoryService.recordCreate({

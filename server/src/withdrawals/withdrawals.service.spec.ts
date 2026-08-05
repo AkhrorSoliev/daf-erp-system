@@ -23,6 +23,15 @@ describe('WithdrawalsService', () => {
 
   beforeEach(async () => {
     prisma = {
+      // The financial-write guard reads the acting user's roles/branches.
+      // A CEO spans every branch, so the default caller passes.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
       student: {
         findFirst: jest.fn().mockResolvedValue(studentRow),
         update: jest.fn().mockResolvedValue({}),

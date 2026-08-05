@@ -178,7 +178,10 @@ export class ReportsExcelService {
       this.reports.getReconciliation(companyId, { ...periodScope, branchIds }),
       this.reports.getPriorPeriodSummary(companyId, scope),
       // Month-end debt + recovery — ledger-reconstructed, period-independent.
-      this.reports.getMonthlyDebtRecovery(companyId),
+      // Same resolved scope as every other leg of this workbook — passing it
+      // to one leg and not another is how a cover page came to name one branch
+      // while the sheet under it totalled another.
+      this.reports.getMonthlyDebtRecovery(companyId, branchIds),
       // Outflows the legacy netProfit misses (refunds / write-offs / gateway
       // fees) — feed the "Sof foyda" block.
       this.reports.getPeriodOutflows(companyId, scope),
@@ -436,11 +439,20 @@ export class ReportsExcelService {
    * Undirildi / Kechirilgan, each row tagged with its month label. All figures
    * flow through ReportsService (no Prisma here).
    */
-  async generateDebtHistory(companyId: number): Promise<Buffer> {
-    const debtHistory = await this.reports.getMonthlyDebtRecovery(companyId);
+  async generateDebtHistory(
+    companyId: number,
+    scope: ReportBranchIds,
+  ): Promise<Buffer> {
+    // Both legs take the SAME scope. Passing it to one and not the other is how
+    // a workbook came to print one branch's total on the summary sheet and
+    // another branch's rows underneath it.
+    const debtHistory = await this.reports.getMonthlyDebtRecovery(
+      companyId,
+      scope,
+    );
     const details = await Promise.all(
       debtHistory.months.map((m) =>
-        this.reports.getMonthDebtDetail(companyId, m.monthKey),
+        this.reports.getMonthDebtDetail(companyId, m.monthKey, scope),
       ),
     );
     const debtorRows = details.flatMap((d) =>

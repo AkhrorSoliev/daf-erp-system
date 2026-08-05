@@ -405,7 +405,7 @@ model UserBranch {
 }
 
 model Branch {
-  id                Int          @id
+  id                Int          @id @default(autoincrement())
   name              String
   address           String?
   phone             String?
@@ -434,6 +434,9 @@ model Branch {
   groups          Group[]
   courses         Course[]
   telegramGroups  TelegramGroup[]
+  leads           Lead[]
+  mockExams       MockExam[]
+  holidays        Holiday[]
 
   @@index([deletedAt])
   @@index([status])
@@ -633,6 +636,22 @@ model Lead {
 
   formSubmissions CustomFormSubmission[]
 
+  // `Lead` carried NEITHER companyId NOR branchId — `getBoard()` was
+  // `where: { deletedAt: null }`, i.e. every lead in the database. A Namangan
+  // director saw, moved and deleted Fargona's leads.
+  //
+  // `branchId` is nullable ON PURPOSE, unlike Student/Group: a lead arrives
+  // from a public form or a phone call BEFORE anyone knows which branch they
+  // will study at. Null means "not yet assigned" and is visible to every
+  // branch; conversion to a student is where the branch becomes mandatory
+  // (`LeadsService.convert` already throws without one).
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+  branchId  Int?
+  branch    Branch? @relation(fields: [branchId], references: [id])
+
+  @@index([companyId])
+  @@index([branchId])
   @@index([deletedAt])
   @@index([statusEnum])
   @@index([sectionId])
@@ -655,8 +674,16 @@ model LeadColumn {
   deletedBy       User?     @relation("LeadColumnDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  // Board STRUCTURE stays company-level: duplicating every column and section
+  // per branch would double the board without telling anyone anything. The
+  // branch dimension lives on `Lead` (below), so one board is filtered rather
+  // than two boards maintained.
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
   sections LeadSection[]
 
+  @@index([companyId])
   @@index([deletedAt])
   @@index([order])
 }
@@ -676,9 +703,13 @@ model LeadSection {
   deletedBy       User?     @relation("LeadSectionDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
   leads       Lead[]
   customForms CustomForm[]
 
+  @@index([companyId])
   @@index([deletedAt])
   @@index([columnId])
 }
@@ -697,9 +728,13 @@ model LeadSource {
   deletedBy       User?     @relation("LeadSourceDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
   leads       Lead[]
   customForms CustomForm[]
 
+  @@index([companyId])
   @@index([deletedAt])
 }
 
@@ -798,6 +833,10 @@ model MockExamSection {
   updatedAt       DateTime   @updatedAt
   exams           MockExam[]
 
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
   @@index([deletedAt])
   @@index([order])
 }
@@ -865,6 +904,19 @@ model MockExam {
   subjects     MockExamSubject[]
   participants MockExamParticipant[]
 
+  // Mock exams carried no tenancy at all: `revenueSummary()` summed `paid: true`
+  // across the WHOLE database and `update` did not even check `companyId`.
+  //
+  // `branchId` is where the exam is HELD — the bot's "Naqd (markazda)" line
+  // could not say which markaz, and Namangan's mock revenue could not be told
+  // apart from Fargona's. Nullable while the existing exams are backfilled.
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+  branchId  Int?
+  branch    Branch? @relation(fields: [branchId], references: [id])
+
+  @@index([companyId])
+  @@index([branchId])
   @@index([sectionId, status])
   @@index([deletedAt])
   @@index([registrationDeadline])
@@ -996,6 +1048,12 @@ model MockExamParticipant {
   // removed a participant that person could never register for the same
   // exam again — the bot answered "Siz allaqachon ro'yxatga olingansiz"
   // forever. Removing someone must actually free their slot.
+  // Denormalised from the exam so participant lists and revenue queries can be
+  // filtered without a join on every call site.
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
   @@index([examId, publicId])
   @@index([examId, deletedAt])
   @@index([studentId])
@@ -1222,6 +1280,21 @@ model Holiday {
 
   groupExtensions GroupHolidayExtension[]
 
+  // Holidays were GLOBAL ACROSS THE DATABASE — no company, no branch — while
+  // driving attendance validation, billing, group end-date cascades, the daily
+  // crons and the dashboard from ~15 call sites.
+  //
+  // `branchId` nullable is the meaningful state here, not a compromise: a null
+  // holiday is a company-wide one (Navro'z, Mustaqillik kuni), which is what
+  // almost every row is. A non-null one is a single branch closing — the case
+  // that previously could not be expressed at all.
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+  branchId  Int?
+  branch    Branch? @relation(fields: [branchId], references: [id])
+
+  @@index([companyId])
+  @@index([branchId])
   @@index([deletedAt])
   @@index([deletedAt, status, date, endDate])
 }
@@ -1390,6 +1463,14 @@ model Company {
   telegramGroups              TelegramGroup[]
   customForms                 CustomForm[]
   mockExamGatewayTransactions MockExamGatewayTransaction[]
+  leads                       Lead[]
+  leadColumns                 LeadColumn[]
+  leadSections                LeadSection[]
+  leadSources                 LeadSource[]
+  mockExamSections            MockExamSection[]
+  mockExams                   MockExam[]
+  mockExamParticipants        MockExamParticipant[]
+  holidays                    Holiday[]
 }
 
 enum TelegramGroupStatus {
@@ -2547,13 +2628,13 @@ enum ScholarshipType {
 // Splits a Contract.totalAmount into scheduled installments. Payments are
 // allocated to the oldest due installment as money lands.
 model InstallmentPlan {
-  id          String        @id @default(uuid())
+  id          String   @id @default(uuid())
   contractId  String
-  contract    Contract      @relation(fields: [contractId], references: [id])
+  contract    Contract @relation(fields: [contractId], references: [id])
   totalAmount Int
   companyId   Int
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   installments Installment[]
 

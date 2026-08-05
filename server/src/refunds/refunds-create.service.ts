@@ -4,6 +4,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  assertCallerMayWriteForStudent,
+} from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
 import {
@@ -36,7 +39,17 @@ export class RefundsCreateService {
    * Calculate refund amount and create a refund request. Refund is scoped to
    * an Enrollment — Contract is not used.
    */
-  async create(dto: CreateRefundDto, _userId: number, companyId: number) {
+  async create(dto: CreateRefundDto, userId: number, companyId: number) {
+    // A refund takes money OUT of the branch's kassa, so the caller must own
+    // the student's branch. `_userId` was unused here — the id was threaded
+    // through and never checked.
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      dto.studentId,
+      companyId,
+    );
+
     const enrollment = await this.loadEnrollment(
       dto.enrollmentId,
       dto.studentId,
@@ -122,6 +135,13 @@ export class RefundsCreateService {
    * All ledger writes happen inside one Serializable transaction.
    */
   async quickRefund(dto: QuickRefundDto, userId: number, companyId: number) {
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      dto.studentId,
+      companyId,
+    );
+
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, companyId, deletedAt: null },
       select: { id: true, balance: true },

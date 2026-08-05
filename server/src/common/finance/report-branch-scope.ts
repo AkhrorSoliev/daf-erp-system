@@ -88,6 +88,21 @@ export function studentBranchWhere(ids: ReportBranchIds | undefined): {
 }
 
 /**
+ * `where` fragment for a model whose branch lives on its Group — Attendance,
+ * Enrollment, SalaryAccrual, GroupTeacher.
+ *
+ * These carry no `branchId` of their own, and joining live is safe here for the
+ * same reason Batch 1c made it safe for payroll: a group's branch is fixed at
+ * creation (`UpdateGroupDto.branchId` is discarded), so the join can never
+ * retroactively re-attribute settled history.
+ */
+export function groupBranchWhere(ids: ReportBranchIds | undefined): {
+  group?: { branchId: { in: number[] } };
+} {
+  return ids == null ? {} : { group: { branchId: { in: ids } } };
+}
+
+/**
  * `where` fragment for an employee (User). `mainBranch` and `UserBranch` are
  * both consulted because different parts of the system wrote one or the other;
  * `common/auth/branch-scope.ts` merges them for the same reason.
@@ -130,6 +145,43 @@ export async function resolveCallerReportBranchIds(
 /** A confined scope with no branch in it: the caller must be shown NOTHING. */
 export function isEmptyScope(ids: ReportBranchIds | undefined): boolean {
   return ids != null && ids.length === 0;
+}
+
+/**
+ * Collapse a resolved scope into the single `branchId?: number` that the
+ * operational reports still speak, refusing every case the narrow shape cannot
+ * express faithfully.
+ *
+ * Those services (KPIs, attendance analytics, departed students, payment
+ * reports…) each take one optional branch id, and they took it straight off the
+ * query string: omitted meant company-wide and any id meant that branch, so a
+ * Namangan director read Fargona's numbers by editing a parameter.
+ *
+ * Rather than rewrite ~25 service signatures at once, the CONTROLLER narrows the
+ * query to the resolved answer. The three refusals matter more than the happy
+ * path — each is a case where returning a number would be worse than returning
+ * an error:
+ *
+ *   `[]`         → 403. The caller asked for a branch outside their ceiling, or
+ *                  has none attached. Zeros would read as "this branch earned
+ *                  nothing", which is a very different claim from "you may not
+ *                  look".
+ *   many         → 400. A multi-branch caller cannot be expressed as one id, and
+ *                  dropping the filter would silently serve the whole company.
+ *                  Ask them to pick. (In practice unreachable: employees hold one
+ *                  branch, and only a CEO — who resolves to `null` — spans more.)
+ *   `null`       → `undefined`. A CEO who picked nothing genuinely wants every
+ *                  branch; this is the ONE case where no filter is correct.
+ */
+export function narrowToSingleBranch(
+  ids: ReportBranchIds,
+  onEmpty: () => never,
+  onAmbiguous: () => never,
+): number | undefined {
+  if (ids == null) return undefined;
+  if (ids.length === 0) onEmpty();
+  if (ids.length > 1) onAmbiguous();
+  return ids[0];
 }
 
 /**

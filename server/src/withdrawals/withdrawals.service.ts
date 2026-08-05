@@ -10,6 +10,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { resolveStudentBranchId } from '../common/finance/resolve-branch';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
@@ -110,6 +111,15 @@ export class WithdrawalsService {
     userId: number,
     companyId: number,
   ) {
+    // Draining a student's positive balance into recognised revenue is a
+    // financial write like any other — the caller must own their branch.
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      dto.studentId,
+      companyId,
+    );
+
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, companyId, deletedAt: null },
       select: { id: true, balance: true },

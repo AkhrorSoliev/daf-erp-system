@@ -22,8 +22,9 @@ import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RestoreLeadDto } from './dto/restore-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('leads')
 @UseGuards(RolesGuard)
@@ -37,15 +38,22 @@ export class LeadsController {
 
   // Filtered, paginated flat list — used by the filter view.
   @Get()
-  findAll(@Query() query: LeadQueryDto) {
-    return this.leadsService.findAll(query);
+  findAll(
+    @Query() query: LeadQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.leadsService.findAll(query, companyId, scope);
   }
 
   // Full board: columns -> sections -> per-section lead counts.
   // Declared before ':id' so "/leads/board" is not captured as an id.
   @Get('board')
-  getBoard() {
-    return this.boardService.getBoard();
+  getBoard(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.boardService.getBoard(companyId, scope);
   }
 
   // Archived leads + sections (two-column leads archive). Declared before ':id'
@@ -57,8 +65,12 @@ export class LeadsController {
 
   // Lazily loaded when a section is expanded on the board.
   @Get('sections/:sectionId/leads')
-  getSectionLeads(@Param('sectionId') sectionId: string) {
-    return this.leadsService.getSectionLeads(sectionId);
+  getSectionLeads(
+    @Param('sectionId') sectionId: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.leadsService.getSectionLeads(sectionId, companyId, scope);
   }
 
   // Lazy hover preview (caller + latest comment). Declared before ':id' so the
@@ -77,8 +89,12 @@ export class LeadsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.leadsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.leadsService.findOne(id, companyId, scope);
   }
 
   @Post()
@@ -104,8 +120,9 @@ export class LeadsController {
     @Body() dto: MoveLeadDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadsService.move(id, dto, companyId, userId);
+    return this.leadsService.move(id, dto, companyId, userId, scope);
   }
 
   // Toggle the "called" marker — declared before ':id' so it resolves here.
@@ -115,8 +132,9 @@ export class LeadsController {
     @Body() dto: MarkCalledLeadDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadsService.markCalled(id, dto, companyId, userId);
+    return this.leadsService.markCalled(id, dto, companyId, userId, scope);
   }
 
   @Post(':id/convert')
@@ -125,8 +143,9 @@ export class LeadsController {
     @Body() dto: ConvertLeadDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadsService.convert(id, dto, companyId, userId);
+    return this.leadsService.convert(id, dto, companyId, userId, scope);
   }
 
   // Restores an archived lead into a chosen column + section.
@@ -146,8 +165,9 @@ export class LeadsController {
     @Body() dto: UpdateLeadDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadsService.update(id, dto, companyId, userId);
+    return this.leadsService.update(id, dto, companyId, userId, scope);
   }
 
   // Deleting a lead marks it LOST with a mandatory reason (sent in the body)
@@ -158,7 +178,8 @@ export class LeadsController {
     @Body() dto: RemoveLeadDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadsService.remove(id, dto, companyId, userId);
+    return this.leadsService.remove(id, dto, companyId, userId, scope);
   }
 }

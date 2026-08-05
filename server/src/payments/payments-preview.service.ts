@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { AttendanceStatus, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ReportBranchIds,
+  studentBranchWhere,
+} from '../common/finance/report-branch-scope';
 
 export interface PaymentBreakdownItem {
   kind: 'DEBT_REPAY' | 'CYCLE_FULL' | 'CYCLE_PARTIAL' | 'REMAINDER';
@@ -56,9 +60,17 @@ export class PaymentsPreviewService {
     studentId: number,
     amount: number,
     companyId: number,
+    branchIds: ReportBranchIds,
   ): Promise<PaymentPreview> {
+    // Confined like every other student read: the projection reports the
+    // student's live balance and outstanding debt.
     const student = await this.prisma.student.findFirst({
-      where: { id: studentId, companyId, deletedAt: null },
+      where: {
+        id: studentId,
+        companyId,
+        deletedAt: null,
+        ...studentBranchWhere(branchIds),
+      },
       select: { balance: true, discountPercent: true },
     });
     if (!student) {

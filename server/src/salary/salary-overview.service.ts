@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
+import {
+  resolvePayrollBranchScope,
+  scopeToBranchFilter,
+} from './shared/payroll-branch-scope';
 
 export interface SalaryOverviewQuery {
   page?: number;
@@ -34,19 +38,14 @@ export class SalaryOverviewService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
-    // Branch scope: CEO / Administrator see all; Branch Director only their
-    // own mainBranch (mirrors the matrix + batch-pay scoping).
-    const caller = await this.prisma.user.findUnique({
-      where: { id: performedById },
-      select: {
-        mainBranch: true,
-        roles: { select: { role: { select: { name: true } } } },
-      },
-    });
-    const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
-    const scoped =
-      !roleNames.includes('CEO') && !roleNames.includes('Administrator');
-    const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
+    // One shared resolver instead of a fifth hand-rolled copy of the same
+    // `!CEO && !Administrator` shape. CEO spans every branch; everyone else is
+    // confined, and an unknown scope sees NOTHING rather than everything.
+    const scope = await resolvePayrollBranchScope(this.prisma, performedById);
+    if (scope.kind === 'none') {
+      return { data: [], total: 0, page, pageSize };
+    }
+    const branchId = scopeToBranchFilter(scope);
 
     const search = query.search?.trim();
     const searchId = search && /^\d+$/.test(search) ? Number(search) : null;

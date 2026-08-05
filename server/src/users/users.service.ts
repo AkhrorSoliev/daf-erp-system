@@ -12,6 +12,10 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Prisma, UserStatus } from '@prisma/client';
 import { UploadService } from '../upload/upload.service';
+import {
+  ReportBranchIds,
+  userBranchWhere,
+} from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -150,13 +154,22 @@ export class UsersService {
     }
   }
 
-  async findAll(query: UserQueryDto, companyId: number) {
-    const { user_type, search, branch_id, active_only, page = 1, pageSize = 10 } = query;
+  async findAll(
+    query: UserQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    const { user_type, search, active_only, page = 1, pageSize = 10 } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = {
       deletedAt: null,
       companyId,
+      // Nested under AND because both this and the search filter below produce
+      // an `OR` — see the same note in `teachers.service.ts`. This list feeds
+      // the advance dialog and the task-assignee picker, which used to offer
+      // every branch's staff.
+      AND: [userBranchWhere(scope)],
     };
 
     // Assignee dropdowns (e.g. task assignment) pass active_only so that
@@ -186,10 +199,6 @@ export class UsersService {
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
       ];
-    }
-
-    if (branch_id) {
-      where.branches = { some: { branchId: branch_id } };
     }
 
     // We sort by student count (a computed field), so DB-level pagination
@@ -251,9 +260,21 @@ export class UsersService {
     return { data, total, page, pageSize };
   }
 
-  async findById(id: number, companyId: number) {
+  async findById(
+    id: number,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    // `updateUser` was already branch-confined (`assertCallerMayTouchUser`)
+    // because it can rewrite a password; the READ beside it was not, so one
+    // branch's admin could still open another branch's employee record.
     const user = await this.prisma.user.findFirst({
-      where: { id, companyId, deletedAt: null },
+      where: {
+        id,
+        companyId,
+        deletedAt: null,
+        AND: [userBranchWhere(scope)],
+      },
       select: userSelect,
     });
 

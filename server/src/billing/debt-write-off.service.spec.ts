@@ -23,6 +23,18 @@ function buildClient() {
     transaction: {
       findFirst: jest.fn().mockResolvedValue(null),
     },
+    // `executeWriteOff` authorises the caller INSIDE the transaction, with the
+    // transaction client — the student is only known once the enrollment is
+    // loaded. So the tx mock needs the same lookups the guard performs.
+    // A CEO spans every branch, so the default caller passes.
+    user: {
+      findFirst: jest.fn().mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'CEO' } }],
+      }),
+    },
+    studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
     $transaction: jest.fn().mockImplementation(async (cb: any) => cb(null)),
   };
 }

@@ -14,16 +14,23 @@ import { ChangeHolidayStatusDto } from './dto/change-holiday-status.dto';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayQueryDto } from './dto/holiday-query.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, STAFF_ROLES } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 
 @Controller('holidays')
 export class HolidaysController {
   constructor(private holidaysService: HolidaysService) {}
 
+  // Staff only + company-scoped. Both were missing: any authenticated token,
+  // including a student-portal one, could read every holiday in the database.
   @Get()
-  findAll(@Query() query: HolidayQueryDto) {
-    return this.holidaysService.findAll(query);
+  @UseGuards(RolesGuard)
+  @Roles(...STAFF_ROLES)
+  findAll(
+    @Query() query: HolidayQueryDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.holidaysService.findAll(query, companyId);
   }
 
   @Get(':id')
@@ -37,8 +44,9 @@ export class HolidaysController {
   create(
     @Body() dto: CreateHolidayDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.holidaysService.create(dto, userId);
+    return this.holidaysService.create(dto, userId, companyId);
   }
 
   @Patch(':id')

@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import api from "@/lib/api";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { TelegramAnnounceDialog } from "./telegram-announce-dialog";
@@ -54,6 +55,7 @@ export function TelegramGroupsClient() {
   const queryClient = useQueryClient();
   const user = useAuth((s) => s.user);
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  const { selectedBranch } = useBranchSwitcher();
   const [confirmAction, setConfirmAction] = useState<{
     kind: "approve" | "reject" | "unlink";
     group: PendingGroup | ApprovedGroup;
@@ -73,8 +75,18 @@ export function TelegramGroupsClient() {
   });
 
   const approveMutation = useMutation({
+    // The branch is REQUIRED now. This used to post an empty body, so every
+    // approved group was born branch-less — and a branch-less group received
+    // every branch's operational events, including the 21:00 financial report.
+    // Taken from the active branch: approving a group is a statement about
+    // which branch's events it should carry, and that is the branch you are
+    // looking at.
     mutationFn: (id: string) =>
-      api.post(`/telegram-groups/${id}/approve`, {}).then((r) => r.data),
+      api
+        .post(`/telegram-groups/${id}/approve`, {
+          branchId: selectedBranch?.id,
+        })
+        .then((r) => r.data),
     onSuccess: () => {
       toast.success("Guruh tasdiqlandi — bot guruhda e'lon yuboradi");
       queryClient.invalidateQueries({ queryKey: ["telegram-groups"] });

@@ -6,7 +6,7 @@ describe('PaymentsDebtorsService', () => {
   let service: PaymentsDebtorsService;
   let prisma: {
     student: { findMany: jest.Mock; count: jest.Mock; aggregate: jest.Mock };
-    user: { findUnique: jest.Mock };
+    user: { findUnique: jest.Mock; findFirst: jest.Mock };
     paymentPromise: { count: jest.Mock };
   };
 
@@ -17,7 +17,10 @@ describe('PaymentsDebtorsService', () => {
         count: jest.fn().mockResolvedValue(0),
         aggregate: jest.fn().mockResolvedValue({ _sum: { balance: 0 }, _count: 0 }),
       },
-      user: { findUnique: jest.fn().mockResolvedValue({ mainBranch: 7 }) },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ mainBranch: 7 }),
+        findFirst: jest.fn().mockResolvedValue({ mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] }),
+      },
       paymentPromise: { count: jest.fn().mockResolvedValue(0) },
     };
 
@@ -113,18 +116,39 @@ describe('PaymentsDebtorsService', () => {
       });
     });
 
-    it('scopes a Branch Director to their own mainBranch', async () => {
-      await service.getDebtors(1001, { userId: 9, roles: ['Branch Director'] });
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 9 },
-        select: { mainBranch: true },
+    it('scopes a Branch Director to their own branches', async () => {
+      // The shared resolver merges `mainBranch` and `UserBranch`, and reads the
+      // caller's roles from their record rather than the request context.
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: 7,
+        branches: [{ branchId: 7 }],
+        roles: [{ role: { name: 'Branch Director' } }],
       });
+      await service.getDebtors(1001, { userId: 9, roles: ['Branch Director'] });
       const where = prisma.student.findMany.mock.calls[0][0].where;
       expect(where.branches).toEqual({ some: { branchId: { in: [7] } } });
     });
 
+    it('scopes an Administrator too — the role is no longer company-wide', async () => {
+      // D4/D6: every employee below the CEO belongs to a branch and sees it.
+      // Administrator used to be exempt alongside CEO, so one branch's admin
+      // read the whole company's debtor names, phones and balances.
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: 2,
+        branches: [{ branchId: 2 }],
+        roles: [{ role: { name: 'Administrator' } }],
+      });
+      await service.getDebtors(1001, { userId: 9, roles: ['Administrator'] });
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.branches).toEqual({ some: { branchId: { in: [2] } } });
+    });
+
     it('returns empty for a Branch Director with no branch (never queries students)', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce({ mainBranch: null });
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
       const res = await service.getDebtors(1001, {
         userId: 9,
         roles: ['Branch Director'],

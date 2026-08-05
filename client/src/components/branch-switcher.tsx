@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Layers } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -17,44 +18,44 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
+const ALL_BRANCHES_LABEL = "Barcha filiallar";
+
 export function BranchSwitcher() {
   const { user } = useAuth();
-  const { branches, selectedBranch, selectBranch, fetchBranches } =
-    useBranchSwitcher();
+  const {
+    branches,
+    selectedBranch,
+    canSelectAll,
+    selectBranch,
+    fetchBranches,
+    hydrateFor,
+  } = useBranchSwitcher();
 
-  const isCeo = user?.roles.some((r) => r.name === "CEO");
+  const isCeo = user?.roles.some((r) => r.name === "CEO") ?? false;
 
   useEffect(() => {
+    if (!user) return;
     if (isCeo) {
-      fetchBranches();
-    } else if (user) {
-      // Non-CEO rollar uchun user.branches dan loaded holatini o'rnatish
-      const userBranches = (user.branches ?? []).map((b) => ({ id: b.id, name: b.name }));
-      const savedBranchId = localStorage.getItem("branchId");
-      const savedBranch = savedBranchId
-        ? userBranches.find((b) => b.id === Number(savedBranchId))
-        : null;
-      const selected = savedBranch ?? userBranches[0] ?? null;
-      if (selected) {
-        localStorage.setItem("branchId", String(selected.id));
-      }
-      useBranchSwitcher.setState({
-        branches: userBranches,
-        selectedBranch: useBranchSwitcher.getState().selectedBranch ?? selected,
-        loaded: true,
-      });
+      // `GET /branches` returns the caller's ceiling, so for a CEO that is every
+      // branch in the company.
+      useBranchSwitcher.setState({ canSelectAll: true });
+      void fetchBranches();
+      return;
     }
-  }, [isCeo, user, fetchBranches]);
+    // Non-CEO: seed from the signed-in user's own branches. No "Barcha
+    // filiallar" — a confined caller has no consolidated view to show, and the
+    // server would refuse it anyway.
+    hydrateFor(
+      (user.branches ?? []).map((b) => ({ id: b.id, name: b.name })),
+      false,
+    );
+  }, [isCeo, user, fetchBranches, hydrateFor]);
 
-  // CEO bo'lmasa yoki branchlar yuklanmagan bo'lsa, user ning o'z branchlarini ko'rsatamiz
-  const displayBranches = isCeo
-    ? branches
-    : (user?.branches ?? []).map((b) => ({ id: b.id, name: b.name }));
+  const label = selectedBranch?.name ?? ALL_BRANCHES_LABEL;
 
-  const selected =
-    selectedBranch ?? (displayBranches.length > 0 ? displayBranches[0] : null);
-
-  if (!selected || displayBranches.length === 0) return null;
+  // A confined user with no branch at all has nothing to switch between, and
+  // rendering an empty dropdown would suggest otherwise.
+  if (!canSelectAll && branches.length === 0) return null;
 
   return (
     <DropdownMenu>
@@ -65,8 +66,12 @@ export function BranchSwitcher() {
               type="button"
               className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium text-foreground hover:bg-accent transition-colors"
             >
-              <Building2 className="size-4 text-muted-foreground" />
-              <span className="max-w-[150px] truncate">{selected.name}</span>
+              {selectedBranch ? (
+                <Building2 className="size-4 text-muted-foreground" />
+              ) : (
+                <Layers className="size-4 text-muted-foreground" />
+              )}
+              <span className="max-w-[150px] truncate">{label}</span>
               <ChevronsUpDown className="size-3.5 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
@@ -74,11 +79,30 @@ export function BranchSwitcher() {
         <TooltipContent>Filialni tanlash</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start" className="w-56">
-        {displayBranches.map((branch) => (
+        {canSelectAll && (
+          <>
+            <DropdownMenuItem
+              onClick={() => {
+                if (selectedBranch !== null) selectBranch(null);
+              }}
+              className="flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <Layers className="size-4 text-muted-foreground" />
+                <span>{ALL_BRANCHES_LABEL}</span>
+              </div>
+              {selectedBranch === null && (
+                <Check className={cn("size-4 text-primary")} />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {branches.map((branch) => (
           <DropdownMenuItem
             key={branch.id}
             onClick={() => {
-              if (branch.id !== selected.id) {
+              if (branch.id !== selectedBranch?.id) {
                 selectBranch(branch);
               }
             }}
@@ -88,7 +112,7 @@ export function BranchSwitcher() {
               <Building2 className="size-4 text-muted-foreground" />
               <span>{branch.name}</span>
             </div>
-            {selected.id === branch.id && (
+            {selectedBranch?.id === branch.id && (
               <Check className={cn("size-4 text-primary")} />
             )}
           </DropdownMenuItem>

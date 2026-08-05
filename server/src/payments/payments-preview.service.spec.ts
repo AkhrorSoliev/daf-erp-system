@@ -54,7 +54,7 @@ describe('PaymentsPreviewService', () => {
       discountPercent: 0,
     });
 
-    const res = await service.preview(10001, 200000, 1001);
+    const res = await service.preview(10001, 200000, 1001, null);
 
     expect(res.scenario).toBe('NO_ENROLLMENT');
     expect(res.newBalance).toBe(300000);

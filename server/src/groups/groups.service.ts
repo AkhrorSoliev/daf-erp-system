@@ -6,6 +6,7 @@ import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import { GroupsReadService } from './groups-read.service';
 import { GroupsWriteService } from './groups-write.service';
 import { GroupsStatusService } from './groups-status.service';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class GroupsService {
@@ -16,8 +17,12 @@ export class GroupsService {
   ) {}
 
   // Reads
-  findAll(query: GroupQueryDto, companyId: number) {
-    return this.read.findAll(query, companyId);
+  findAll(
+    query: GroupQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    return this.read.findAll(query, companyId, scope);
   }
   getNextName(branchId: number, companyId: number) {
     return this.read.getNextName(branchId, companyId);
@@ -25,8 +30,8 @@ export class GroupsService {
   findStudentsByGroupId(groupId: string, companyId: number) {
     return this.read.findStudentsByGroupId(groupId, companyId);
   }
-  findOne(id: string, companyId: number) {
-    return this.read.findOne(id, companyId);
+  findOne(id: string, companyId: number, scope: ReportBranchIds) {
+    return this.read.findOne(id, companyId, scope);
   }
   getStatusHistory(id: string, companyId: number) {
     return this.read.getStatusHistory(id, companyId);

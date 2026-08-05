@@ -67,6 +67,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // DD.MM.YYYY or YYYY-MM-DD
 const DATE_RE = /^(\d{2}\.\d{2}\.\d{4}|\d{4}-\d{2}-\d{2})$/;
 
+/** The bot is single-tenant for now; see the fee-settlement call below. */
+const DEFAULT_COMPANY_ID = 1001;
+
 export function createMockExamRegistrationScene(
   prisma: PrismaService,
   mockExamBilling: MockExamBillingService,
@@ -617,6 +620,10 @@ async function finalizeRegistration(
 
     const created = await prisma.mockExamParticipant.create({
       data: {
+        // Same single-tenant constant the fee settlement below uses. The column
+        // default that used to supply this is gone — a multi-company schema must
+        // not have one company baked into it.
+        companyId: DEFAULT_COMPANY_ID,
         examId,
         publicId,
         studentId,
@@ -666,7 +673,7 @@ async function finalizeRegistration(
     try {
       const result = await mockExamBilling.tryDeductForStudent({
         studentId,
-        companyId: 1001, // DEFAULT_COMPANY_ID — bot is single-tenant for now
+        companyId: DEFAULT_COMPANY_ID,
       });
       autoPaid = result.paidCount > 0;
     } catch (err) {

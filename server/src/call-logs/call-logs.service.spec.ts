@@ -11,7 +11,7 @@ describe('CallLogsService', () => {
     student: { findFirst: jest.Mock };
     enrollment: { findFirst: jest.Mock };
     studentBranch: { findFirst: jest.Mock };
-    user: { findUnique: jest.Mock };
+    user: { findUnique: jest.Mock; findFirst: jest.Mock };
     callLog: { create: jest.Mock; findMany: jest.Mock; count: jest.Mock };
   };
   let history: { recordCreate: jest.Mock };
@@ -24,7 +24,12 @@ describe('CallLogsService', () => {
         findFirst: jest.fn().mockResolvedValue({ group: { branchId: 3 } }),
       },
       studentBranch: { findFirst: jest.fn().mockResolvedValue(null) },
-      user: { findUnique: jest.fn().mockResolvedValue({ mainBranch: 3 }) },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ mainBranch: 3 }),
+        findFirst: jest.fn().mockResolvedValue(
+          { mainBranch: 3, branches: [{ branchId: 3 }], roles: [{ role: { name: 'Branch Director' } }] },
+        ),
+      },
       callLog: {
         create: jest.fn().mockImplementation(({ data }) => ({ id: 'c1', ...data })),
         findMany: jest.fn().mockResolvedValue([]),
@@ -208,6 +213,13 @@ describe('CallLogsService', () => {
 
   describe('list', () => {
     it('CEO is not branch-scoped (no branchId filter)', async () => {
+      // Roles come from the caller's DB record now, not from the ctx — the
+      // client cannot claim a role it does not hold.
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'CEO' } }],
+      });
       await service.list({
         userId: 99,
         companyId: 1001,
@@ -222,7 +234,11 @@ describe('CallLogsService', () => {
     });
 
     it('Branch Director with no mainBranch returns empty without querying', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce({ mainBranch: null });
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
       const res = await service.list({
         userId: 99,
         companyId: 1001,
@@ -234,6 +250,11 @@ describe('CallLogsService', () => {
     });
 
     it('scopes to a single student when studentId is provided', async () => {
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: 3,
+        branches: [{ branchId: 3 }],
+        roles: [{ role: { name: 'Administrator' } }],
+      });
       await service.list({
         userId: 99,
         companyId: 1001,

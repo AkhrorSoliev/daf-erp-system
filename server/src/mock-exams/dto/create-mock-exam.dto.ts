@@ -130,4 +130,15 @@ export class CreateMockExamDto {
   @ValidateNested({ each: true })
   @Type(() => CreateMockExamSubjectDto)
   subjects: CreateMockExamSubjectDto[];
+
+  /**
+   * Where the exam is held. Optional — the venue is often decided after the
+   * exam is announced. Null means "not chosen yet", and the bot's
+   * "Naqd (markazda)" line stays generic; a set branch is what lets Namangan's
+   * mock revenue be told apart from Fargona's.
+   */
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  branchId?: number;
 }

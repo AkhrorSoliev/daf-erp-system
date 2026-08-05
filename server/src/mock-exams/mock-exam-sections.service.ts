@@ -62,6 +62,7 @@ export class MockExamSectionsService {
         color: dto.color ?? null,
         order: (maxOrder._max.order ?? -1) + 1,
         createdById: userId,
+        companyId,
       },
     });
 

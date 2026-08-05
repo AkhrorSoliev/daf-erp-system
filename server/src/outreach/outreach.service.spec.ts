@@ -67,7 +67,15 @@ describe('OutreachService', () => {
 
   beforeEach(async () => {
     prisma = {
-      user: { findUnique: jest.fn() },
+      // The shared resolver (`common/auth/branch-scope.ts`) reads the caller's
+      // roles and branches from the DB, so role names no longer come from the
+      // ctx the client shaped. Default caller is a CEO.
+      user: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(
+          { mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] },
+        ),
+      },
       attendance: { findMany: jest.fn(), count: jest.fn() },
       enrollment: { findMany: jest.fn() },
       lead: { findMany: jest.fn() },
@@ -115,7 +123,9 @@ describe('OutreachService', () => {
     });
 
     it('scopes Branch Director to their mainBranch', async () => {
-      prisma.user.findUnique.mockResolvedValue({ mainBranch: 42 });
+      prisma.user.findFirst.mockResolvedValue(
+        { mainBranch: 42, branches: [{ branchId: 42 }], roles: [{ role: { name: 'Branch Director' } }] },
+      );
       prisma.attendance.findMany.mockResolvedValue([]);
       await service.getTodayAbsentees({
         userId: 10001,
@@ -127,7 +137,9 @@ describe('OutreachService', () => {
     });
 
     it('returns empty when Branch Director has no mainBranch', async () => {
-      prisma.user.findUnique.mockResolvedValue({ mainBranch: null });
+      prisma.user.findFirst.mockResolvedValue(
+        { mainBranch: null, branches: [], roles: [{ role: { name: 'Branch Director' } }] },
+      );
       const res = await service.getTodayAbsentees({
         userId: 10001,
         companyId: 1,
@@ -307,7 +319,9 @@ describe('OutreachService', () => {
     });
 
     it('returns zeros when Branch Director has no mainBranch', async () => {
-      prisma.user.findUnique.mockResolvedValue({ mainBranch: null });
+      prisma.user.findFirst.mockResolvedValue(
+        { mainBranch: null, branches: [], roles: [{ role: { name: 'Branch Director' } }] },
+      );
       const res = await service.getStats({
         userId: 10001,
         companyId: 1,

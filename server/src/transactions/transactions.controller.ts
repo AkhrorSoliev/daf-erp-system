@@ -13,7 +13,8 @@ import { TransactionsService } from './transactions.service';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
 import { DebtWriteOffQueryDto } from './dto/debt-write-off-query.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('transactions')
@@ -29,8 +30,9 @@ export class TransactionsController {
   findAll(
     @Query() query: TransactionQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.transactionsService.findAll(query, companyId);
+    return this.transactionsService.findAll(query, companyId, branchIds);
   }
 
   @Get('student/:studentId')
@@ -39,8 +41,14 @@ export class TransactionsController {
     @Param('studentId', ParseIntPipe) studentId: number,
     @Query() query: TransactionQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.transactionsService.findByStudent(studentId, query, companyId);
+    return this.transactionsService.findByStudent(
+      studentId,
+      query,
+      companyId,
+      branchIds,
+    );
   }
 
   // FAZA 6.2 — Lesson trail (per-student "where did each so'm go?" report).
@@ -56,14 +64,20 @@ export class TransactionsController {
     @Query('page') page: string | undefined,
     @Query('pageSize') pageSize: string | undefined,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.transactionsService.getLessonTrail(studentId, companyId, {
-      contractId,
-      from,
-      to,
-      page: page ? parseInt(page, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
-    });
+    return this.transactionsService.getLessonTrail(
+      studentId,
+      companyId,
+      branchIds,
+      {
+        contractId,
+        from,
+        to,
+        page: page ? parseInt(page, 10) : undefined,
+        pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+      },
+    );
   }
 
   @Get('teacher/:teacherId')
@@ -72,8 +86,14 @@ export class TransactionsController {
     @Param('teacherId', ParseIntPipe) teacherId: number,
     @Query() query: TransactionQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.transactionsService.findByTeacher(teacherId, query, companyId);
+    return this.transactionsService.findByTeacher(
+      teacherId,
+      query,
+      companyId,
+      branchIds,
+    );
   }
 
   @Post('adjustment')

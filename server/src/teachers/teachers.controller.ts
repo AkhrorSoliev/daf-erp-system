@@ -16,8 +16,9 @@ import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
-import { Roles, CurrentUser } from '../common/decorators';
+import { Roles, CurrentUser, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('teachers')
 export class TeachersController {
@@ -32,8 +33,9 @@ export class TeachersController {
   findAll(
     @Query() query: TeacherQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.teachersService.findAll(query, companyId);
+    return this.teachersService.findAll(query, companyId, branchScope);
   }
 
   @Get(':id/groups')
@@ -52,8 +54,9 @@ export class TeachersController {
   findById(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.teachersService.findById(id, companyId);
+    return this.teachersService.findByIdScoped(id, companyId, branchScope);
   }
 
   @Post()

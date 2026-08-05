@@ -285,3 +285,44 @@ Shu sababli ustun qo'shilmadi — o'rniga haqiqiy muammo tuzatildi: **pul to'lay
 3. **Click/Payme bitta merchant hisobi** — kitobda ajratish to'g'ri ishlaydi, lekin bank tomonida pul bitta hisobga tushadi.
 4. **`branchId` ustunlari hozir FK emas** — mavjud bo'lmagan filial raqamini yozib qo'yish mumkin va u abadiy qoladi. Batch 10 da tuzatiladi.
 5. **`Administrator` roli hozir ataylab kompaniya darajasida** (`scoped = !CEO && !Administrator` naqshi bir necha modulda takrorlangan). D4 bilan bu ziddiyatda.
+
+---
+
+## Batch 11 — Scope arxitekturasi, tenancy va onboarding ✅ BAJARILDI 2026-08-05
+
+**Asos:** [2026-08-05-multi-branch-architecture-design.md](superpowers/specs/2026-08-05-multi-branch-architecture-design.md)
+
+Batch 0–7 dan keyin **yozish** tomoni yopilgan edi, **o'qish** tomoni esa ochiq qolgan: klient `?branch_id=` yuborardi, server uni so'zsiz qabul qilardi. Ya'ni filial cheklovi klient xotirasiga tayanardi.
+
+| # | Ish | Natija |
+|---|---|---|
+| 11.1 | **`BranchScopeGuard`** (global) | Har so'rovda BITTA scope: `ceiling ∩ requested`. `X-Branch-Id` sarlavhasi yoki `?branch_id=`. Hech narsani bloklamaydi — faqat `request.branchScope` ni hisoblaydi, shuning uchun o'tkazilmagan endpoint bugungidek ishlayveradi |
+| 11.2 | **P58** operatsion o'qishlar | `students`, `groups`, `teachers`, `users`, `rooms`, `courses`, `dashboard`, `branches` — list **va** `:id`. `branch_id` endi **kengaytiruvchi emas** |
+| 11.3 | **P57** hisobot endpointlari | ~25 ta endpoint `query.branchId` o'rniga hal qilingan scope'ni oladi (`this.scoped(query, scope)`). Bo'sh scope → **403**, ko'p filialli scope → **400** (nolga to'ldirilgan hisobot emas) |
+| 11.4 | **P13** qo'lda to'lov | Filial endi **o'quvchidan** olinadi (`resolveStudentBranchId`, fail-closed). `dto.branchId` — moslik tekshiruvi; mos kelmasa **400** |
+| 11.5 | **P16** xarajat | `create`/`update`/`delete` da filial mavjudligi + kompaniya + chaqiruvchi huquqi tekshiriladi. Ko'chirishda **ikkala** filial tekshiriladi |
+| 11.6 | **P59** Administrator | Filialga cheklandi (CEO qarori 2026-08-05). `!CEO && !Administrator` naqshi 5 joydan olib tashlandi — payroll, kassa, qarzdorlar, outreach, call-logs. Ko'p filialli admin `UserBranch` orqali qo'llab-quvvatlanadi |
+| 11.7 | **P95 + P98** filial ochish | `create` ish vaqtini **yozadi** (ilgari jimgina tashlanardi), CASH+BANK kassasini bitta tranzaksiyada yaratadi, `nextId` kompaniya bo'yicha va tranzaksiya ichida. Yangi `GET /branches/:id/readiness` — kassa/ish vaqti/kurs/xona/administrator/stavkasiz ustoz ro'yxati |
+| 11.8 | **P86, P87, P89, P100** tenancy | `Lead`(+`branchId`), `LeadColumn`, `LeadSection`, `LeadSource`, `Holiday`(+`branchId?`), `MockExam`(+`branchId?`), `MockExamSection`, `MockExamParticipant` — hammasiga `companyId`. Migratsiya: `20260805120000_branch_tenancy_leads_holidays_mock` |
+| 11.9 | **P63, P64** klient | `X-Branch-Id` interceptor'da; CEO uchun **«Barcha filiallar»** (default); eskirgan `localStorage` tanlovi ruxsat etilgan ro'yxatga solishtiriladi; logout'da tozalanadi |
+
+### Arxitektura qarori
+
+**Nega sarlavha, `?branch_id=` emas:** global `ValidationPipe` `forbidNonWhitelisted: true` bilan ishlaydi — har bir so'rovga query parametri qo'shish DTO'sida uni e'lon qilmagan **har bir endpointni 400 qiladi** (~100 DTO) va POST/PATCH tanasiga umuman yetmaydi. Sarlavha DTO validatsiyasidan o'tmaydi.
+
+**Nega JWT da emas:** token 1 soat yashaydi; da'vo bo'lsa xodimning filiali o'zgargandan keyin ham eski, **kengroq** scope bir soatgacha ishlab turardi. Guard bazadan o'qiydi va so'rovda memoizatsiya qiladi.
+
+**Klient hech qachon kengaytira olmaydi.** Sarlavha faqat chaqiruvchining shifti ichida toraytiradi.
+
+### Namangan `branchId` nullable bo'lgan uchta joy — ataylab
+
+- `Lead.branchId` — lid ommaviy formadan yoki qo'ng'iroqdan **filial ma'lum bo'lishidan oldin** keladi. Null = taqsimlanmagan, har filial ko'radi. Konvertatsiyada majburiy bo'ladi.
+- `Holiday.branchId` — null = **kompaniya bo'yicha** bayram (deyarli hamma qator). Non-null = bitta filialning yopilishi (ilgari ifodalab bo'lmasdi).
+- `MockExam.branchId` — imtihon joyi, e'lon qilingandan keyin belgilanadi.
+
+### Qolgan ish (bu batch'da yopilmagan)
+
+- **P71/P72/P73/P74** Telegram: guruh tasdiqlashda filial tanlanmaydi; `branchId=null` guruh hali ham **har qanday** filial hodisasini oladi. `DailyFinancialSnapshot` da `branchId` yo'q.
+- **P105 (qisman)** `Payment.branchId` / `Transaction.branchId` / `CashMovement.branchId` hali **nullable va FK emas**. NOT NULL migratsiyasi PRODda 0 ta null tasdiqlangandan **keyin** qilinsin.
+- **P104** `Course.branchId` hali nullable. PRODda null kurs yo'q, lekin sxema ruxsat beradi.
+- **P81–P85** cron ishlari.

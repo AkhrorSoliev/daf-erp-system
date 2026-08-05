@@ -7,6 +7,7 @@ import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PaymentsPreviewService } from './payments-preview.service';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class PaymentsService {
@@ -63,15 +64,26 @@ export class PaymentsService {
     return this.write.createFromExternal(params, outerTx);
   }
 
-  // Reads
-  findAll(query: PaymentQueryDto, companyId: number) {
-    return this.read.findAll(query, companyId);
+  // Reads — `branchIds` is required all the way through the facade. This is the
+  // call site that used to drop it (`this.read.findAll(query, companyId)`) and
+  // silently serve every branch's payments.
+  findAll(
+    query: PaymentQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    return this.read.findAll(query, companyId, branchIds);
   }
-  findOne(id: string, companyId: number) {
-    return this.read.findOne(id, companyId);
+  findOne(id: string, companyId: number, branchIds: ReportBranchIds) {
+    return this.read.findOne(id, companyId, branchIds);
   }
-  findByStudent(studentId: number, query: PaymentQueryDto, companyId: number) {
-    return this.read.findByStudent(studentId, query, companyId);
+  findByStudent(
+    studentId: number,
+    query: PaymentQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    return this.read.findByStudent(studentId, query, companyId, branchIds);
   }
 
   // Debtors
@@ -99,16 +111,25 @@ export class PaymentsService {
   }
   getPending(
     companyId: number,
-    query: { branchId?: number; page?: number; pageSize?: number },
+    query: { branchIds: ReportBranchIds; page?: number; pageSize?: number },
   ) {
     return this.debtors.getPending(companyId, query);
   }
-  getDebtorsForGroup(groupId: string, companyId: number) {
-    return this.debtors.getDebtorsForGroup(groupId, companyId);
+  getDebtorsForGroup(
+    groupId: string,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    return this.debtors.getDebtorsForGroup(groupId, companyId, branchIds);
   }
 
   // Preview
-  previewPayment(studentId: number, amount: number, companyId: number) {
-    return this.preview.preview(studentId, amount, companyId);
+  previewPayment(
+    studentId: number,
+    amount: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    return this.preview.preview(studentId, amount, companyId, branchIds);
   }
 }

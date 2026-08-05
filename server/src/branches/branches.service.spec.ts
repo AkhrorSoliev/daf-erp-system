@@ -205,3 +205,181 @@ describe('BranchesService — caller branch confinement', () => {
   });
 });
 
+
+/**
+ * Opening branch #2 exposed these three: working hours were accepted by the DTO
+ * and silently dropped, no cash accounts were created so the branch could not
+ * take money at all, and the new id came from an unscoped `findFirst` outside
+ * any transaction.
+ */
+describe('BranchesService — branch onboarding', () => {
+  let service: BranchesService;
+  let prisma: any;
+
+  const tx = {
+    branch: {
+      findFirst: jest.fn().mockResolvedValue({ id: 4 }),
+      create: jest.fn((a: any) => Promise.resolve({ id: 5, ...a.data })),
+    },
+    cashAccount: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    tx.branch.findFirst.mockResolvedValue({ id: 4 });
+    tx.branch.create.mockImplementation((a: any) =>
+      Promise.resolve({ id: 5, ...a.data }),
+    );
+
+    prisma = {
+      $transaction: jest.fn((fn: any) => fn(tx)),
+      branch: { findFirst: jest.fn() },
+      cashAccount: { findMany: jest.fn().mockResolvedValue([]) },
+      room: { count: jest.fn().mockResolvedValue(0) },
+      course: { count: jest.fn().mockResolvedValue(0) },
+      // `getReadiness` now checks branch ownership first — a CEO spans all.
+      user: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        BranchesService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: StatusHistoryService, useValue: { changeStatus: jest.fn() } },
+        { provide: StatusCascadeService, useValue: { cascade: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    service = module.get(BranchesService);
+  });
+
+  const dto = {
+    name: 'Namangan',
+    startOfWorkingDay: '08:00',
+    endOfWorkingDay: '22:30',
+    companyId: 1001,
+  } as any;
+
+  it('PERSISTS the working hours instead of dropping them', async () => {
+    // Branch #2 shipped with NULL hours because `data` never mentioned these,
+    // so every schedule silently fell back to a hardcoded 08:00–20:00.
+    await service.create(dto, 1001, 42);
+
+    expect(tx.branch.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          startOfWorkingDay: '08:00',
+          endOfWorkingDay: '22:30',
+        }),
+      }),
+    );
+  });
+
+  it('bootstraps a CASH and a BANK account for the new branch', async () => {
+    // `CashAccount.branchId` is NOT NULL and there is no company-wide fallback
+    // any more (D4), so without these the branch cannot take a single payment.
+    await service.create(dto, 1001, 42);
+
+    const rows = tx.cashAccount.createMany.mock.calls[0][0].data;
+    expect(rows.map((r: any) => r.type).sort()).toEqual(['BANK', 'CASH']);
+    expect(rows.every((r: any) => r.branchId === 5)).toBe(true);
+  });
+
+  it('creates the branch and its accounts in ONE transaction', async () => {
+    // Half a branch — one that exists but cannot take money — is worse than none.
+    await service.create(dto, 1001, 42);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT compute the id itself — the sequence does', async () => {
+    // `MAX(id) + 1` is unsafe under concurrency, and scoping it per company
+    // made it worse: `Branch.id` is a global primary key, so a per-company
+    // maximum collides by construction once a second company exists.
+    await service.create(dto, 1001, 42);
+
+    expect(tx.branch.findFirst).not.toHaveBeenCalled();
+    expect(tx.branch.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({ id: expect.anything() }),
+      }),
+    );
+  });
+
+  describe('readiness', () => {
+    beforeEach(() => {
+      prisma.branch.findFirst.mockResolvedValue({
+        id: 2,
+        name: 'Namangan',
+        startOfWorkingDay: '08:00',
+        endOfWorkingDay: '22:30',
+      });
+    });
+
+    it('reports NOT ready and names each missing piece', async () => {
+      const res = await service.getReadiness(2, 1001, 1);
+
+      expect(res.ready).toBe(false);
+      const failing = res.checks.filter((c) => !c.ok).map((c) => c.key);
+      expect(failing).toEqual(
+        expect.arrayContaining([
+          'cashAccount',
+          'bankAccount',
+          'course',
+          'room',
+          'administrator',
+        ]),
+      );
+    });
+
+    it('names the teachers who have no salary rate', async () => {
+      // A lesson taught without an active rate accrues NOTHING, and a rate
+      // cannot be back-dated into a closed period — so this must be caught
+      // BEFORE the first lesson, not after.
+      prisma.user.findMany.mockResolvedValue([
+        { id: 10001, firstName: 'Ali', lastName: 'Valiyev', salaryConfigs: [] },
+        { id: 10002, firstName: 'Zuhra', lastName: 'Karimova', salaryConfigs: [{ id: 'c1' }] },
+      ]);
+
+      const res = await service.getReadiness(2, 1001, 1);
+      const check = res.checks.find((c) => c.key === 'teacherRates')!;
+
+      expect(check.ok).toBe(false);
+      expect(check.details).toEqual([{ id: 10001, name: 'Ali Valiyev' }]);
+    });
+
+    it('reports ready when every check passes', async () => {
+      prisma.cashAccount.findMany.mockResolvedValue([
+        { type: 'CASH' },
+        { type: 'BANK' },
+      ]);
+      prisma.room.count.mockResolvedValue(1);
+      prisma.course.count.mockResolvedValue(1);
+      prisma.user.count.mockResolvedValue(1);
+      prisma.user.findMany.mockResolvedValue([
+        { id: 10001, firstName: 'Ali', lastName: 'Valiyev', salaryConfigs: [{ id: 'c1' }] },
+      ]);
+
+      const res = await service.getReadiness(2, 1001, 1);
+      expect(res.ready).toBe(true);
+    });
+
+    it('404s for a branch outside the company', async () => {
+      prisma.branch.findFirst.mockResolvedValue(null);
+      await expect(service.getReadiness(99, 1001, 1)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+});

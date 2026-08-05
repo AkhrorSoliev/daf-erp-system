@@ -85,7 +85,7 @@ const filtersSchema = {
 
 export function ExpensesClient() {
   const queryClient = useQueryClient();
-  const { selectedBranch } = useBranchSwitcher();
+  const { selectedBranch, loaded: branchLoaded } = useBranchSwitcher();
   const { filters, setFilter, setFilters, resetFilters } =
     useUrlFilters(filtersSchema);
 
@@ -154,7 +154,10 @@ export function ExpensesClient() {
     // Wait for the branch to hydrate. Without this the first request goes out
     // without a branch and the backend answers company-wide — a flash of the
     // other branch's expenses before the real list replaces it.
-    enabled: !!selectedBranch?.id,
+    // Enabled even with no branch picked: null is the CEO's "Barcha filiallar"
+    // and the server scopes the list from the request, so the consolidated view
+    // is a real, correct query rather than a reason to fetch nothing.
+    enabled: branchLoaded,
   });
 
   const refresh = () => {

@@ -42,13 +42,37 @@ export class HolidaysService {
   // service should use instead of querying prisma.holiday directly.
   // ---------------------------------------------------------------------------
 
-  async findActiveHolidayCovering(date: Date): Promise<HolidayCoverage | null> {
+  /**
+   * Which holidays apply to a branch.
+   *
+   * `branchId IS NULL` is a COMPANY-WIDE holiday (Navro'z, Mustaqillik kuni) —
+   * nearly every row — and applies everywhere. A non-null one is a single branch
+   * closing, which the model could not express at all before.
+   *
+   * `branchId === undefined` means the caller does not know or does not care,
+   * and gets every holiday. That is deliberate: these helpers have ~15 call
+   * sites across attendance validation, billing, group cascades, crons and the
+   * dashboard, and quietly changing what all of them see would be a far larger
+   * behavioural change than adding the capability. Call sites opt in as they
+   * learn their branch.
+   */
+  private branchWhere(branchId?: number) {
+    return branchId === undefined
+      ? {}
+      : { OR: [{ branchId: null }, { branchId }] };
+  }
+
+  async findActiveHolidayCovering(
+    date: Date,
+    branchId?: number,
+  ): Promise<HolidayCoverage | null> {
     return this.prisma.holiday.findFirst({
       where: {
         status: HolidayStatus.ACTIVE,
         deletedAt: null,
         date: { lte: date },
         endDate: { gte: date },
+        ...this.branchWhere(branchId),
       },
       select: { id: true, name: true, date: true, endDate: true },
     });
@@ -57,6 +81,7 @@ export class HolidaysService {
   async getActiveHolidaysInRange(
     rangeStart: Date,
     rangeEnd: Date,
+    branchId?: number,
   ): Promise<HolidayCoverage[]> {
     return this.prisma.holiday.findMany({
       where: {
@@ -64,6 +89,7 @@ export class HolidaysService {
         deletedAt: null,
         date: { lte: rangeEnd },
         endDate: { gte: rangeStart },
+        ...this.branchWhere(branchId),
       },
       select: { id: true, name: true, date: true, endDate: true },
     });
@@ -77,11 +103,16 @@ export class HolidaysService {
   async buildHolidayDateSet(
     rangeStart: Date,
     rangeEnd: Date,
+    branchId?: number,
   ): Promise<Set<string>> {
     const paddedStart = new Date(rangeStart.getTime() - 24 * 60 * 60 * 1000);
     const paddedEnd = new Date(rangeEnd.getTime() + 24 * 60 * 60 * 1000);
 
-    const holidays = await this.getActiveHolidaysInRange(paddedStart, paddedEnd);
+    const holidays = await this.getActiveHolidaysInRange(
+      paddedStart,
+      paddedEnd,
+      branchId,
+    );
 
     const rangeStartStr = tashkentDateStr(rangeStart);
     const rangeEndStr = tashkentDateStr(rangeEnd);
@@ -104,12 +135,15 @@ export class HolidaysService {
   // CRUD
   // ---------------------------------------------------------------------------
 
-  async findAll(query: HolidayQueryDto) {
+  async findAll(query: HolidayQueryDto, companyId?: number) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
+    // `GET /holidays` had no company filter and no `@Roles` guard, so any
+    // authenticated token could read every holiday in the database.
     const where: Prisma.HolidayWhereInput = {
       deletedAt: null,
+      ...(companyId != null ? { companyId } : {}),
       ...(query.search
         ? { name: { contains: query.search, mode: 'insensitive' } }
         : {}),
@@ -138,14 +172,20 @@ export class HolidaysService {
     return holiday;
   }
 
-  async create(dto: CreateHolidayDto, userId: number) {
+  async create(dto: CreateHolidayDto, userId: number, companyId: number) {
     const start = new Date(dto.date);
     const end = dto.endDate ? new Date(dto.endDate) : new Date(dto.date);
 
     this.validateRange(start, end);
 
     const holiday = await this.prisma.holiday.create({
-      data: { name: dto.name, date: start, endDate: end },
+      // Written explicitly, not left to the column default. The `@default(1001)`
+      // that `20260805120000` added was a migration convenience; relying on it
+      // at runtime would hardcode one company into a multi-company schema — and
+      // the following migration drops it. `branchId` stays null: a holiday with
+      // no branch is a COMPANY-WIDE one (Navro'z, Mustaqillik kuni), which is
+      // what nearly every row is.
+      data: { name: dto.name, date: start, endDate: end, companyId },
     });
 
     await this.entityHistoryService.recordCreate({

@@ -95,11 +95,18 @@ export function GroupsClient() {
   }, 300);
 
   const fetchFilterOptions = useCallback(async () => {
-    if (!selectedBranch) return;
+    // No early return on a missing branch any more: null now means "Barcha
+    // filiallar" (a real CEO selection), and bailing out left the room and
+    // teacher dropdowns permanently empty in that view. The server scopes both
+    // lists from the request's branch header, so omitting the parameter is
+    // exactly right for the consolidated view.
     try {
+      const branchParam = selectedBranch
+        ? { branch_id: selectedBranch.id }
+        : {};
       const [roomsRes, teachersRes] = await Promise.all([
-        api.get("/rooms", { params: { branch_id: selectedBranch.id, page: 1, pageSize: 100 } }),
-        api.get("/users", { params: { branch_id: selectedBranch.id, user_type: "Teacher", pageSize: 100 } }),
+        api.get("/rooms", { params: { ...branchParam, page: 1, pageSize: 100 } }),
+        api.get("/users", { params: { ...branchParam, user_type: "Teacher", pageSize: 100 } }),
       ]);
       setRooms(roomsRes.data.data.map((r: any) => ({ id: r.id, name: r.name })));
       setTeachers(teachersRes.data.data.map((t: any) => ({ id: t.id, firstName: t.firstName, lastName: t.lastName })));
@@ -113,7 +120,10 @@ export function GroupsClient() {
   }, [fetchFilterOptions]);
 
   const fetchGroups = useCallback(async () => {
-    if (!isTeacherOnly && (!branchLoaded || !selectedBranch)) {
+    // Wait for the branch store to HYDRATE, but do not require a branch to be
+    // picked — `selectedBranch === null` is the CEO's "Barcha filiallar", and
+    // treating it as "not ready" showed them a permanently empty group list.
+    if (!isTeacherOnly && !branchLoaded) {
       setLoading(false);
       return;
     }

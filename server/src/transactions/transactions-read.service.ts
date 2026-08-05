@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, TransactionType } from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
@@ -6,6 +6,12 @@ import {
   computeEnrollmentCoverage,
   type CoveragePrismaLike,
 } from '../billing/lesson-coverage.helper';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+  studentBranchWhere,
+  userBranchWhere,
+} from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class TransactionsReadService {
@@ -152,7 +158,15 @@ export class TransactionsReadService {
     studentId: number,
     query: TransactionQueryDto,
     companyId: number,
+    branchIds: ReportBranchIds,
   ) {
+    // Gated on the STUDENT, not on each row's branch — and the difference
+    // matters. This tab exists to explain the student's balance, so filtering
+    // the rows would hide historical `branchId = null` movements and leave the
+    // balance unexplained. The rule is: if you may see the student, you see
+    // their whole ledger; if you may not, you see nothing.
+    await this.assertStudentInScope(studentId, companyId, branchIds);
+
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
@@ -420,7 +434,10 @@ export class TransactionsReadService {
     teacherId: number,
     query: TransactionQueryDto,
     companyId: number,
+    branchIds: ReportBranchIds,
   ) {
+    await this.assertTeacherInScope(teacherId, companyId, branchIds);
+
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
@@ -475,6 +492,7 @@ export class TransactionsReadService {
   async getLessonTrail(
     studentId: number,
     companyId: number,
+    branchIds: ReportBranchIds,
     options: {
       contractId?: string;
       from?: string;
@@ -483,6 +501,8 @@ export class TransactionsReadService {
       pageSize?: number;
     } = {},
   ) {
+    await this.assertStudentInScope(studentId, companyId, branchIds);
+
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? 20;
 
@@ -622,18 +642,72 @@ export class TransactionsReadService {
   }
 
   /**
+   * "May this caller see this student at all?"
+   *
+   * Per-entity ledgers are gated by ENTITY access rather than by row
+   * attribution — see `findByStudent`. Out of scope reads as "not found" so the
+   * id itself leaks nothing.
+   */
+  private async assertStudentInScope(
+    studentId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<void> {
+    if (branchIds == null) return; // CEO, every branch
+    const student = await this.prisma.student.findFirst({
+      where: {
+        id: studentId,
+        companyId,
+        deletedAt: null,
+        ...studentBranchWhere(branchIds),
+      },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+  }
+
+  /** Teacher twin of `assertStudentInScope` (D6 — one teacher, one branch). */
+  private async assertTeacherInScope(
+    teacherId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<void> {
+    if (branchIds == null) return;
+    const teacher = await this.prisma.user.findFirst({
+      where: {
+        id: teacherId,
+        companyId,
+        deletedAt: null,
+        AND: [userBranchWhere(branchIds)],
+      },
+      select: { id: true },
+    });
+    if (!teacher) throw new NotFoundException("O'qituvchi topilmadi");
+  }
+
+  /**
    * Get all transactions (admin view) with filters.
    */
-  async findAll(query: TransactionQueryDto, companyId: number) {
+  async findAll(
+    query: TransactionQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
+    // Cross-student aggregate list → filter by the ROW's own branch, from the
+    // resolved scope. `query.branchId` was a widening parameter here.
+    //
+    // A `branchId = null` row is therefore invisible in any branch view. That
+    // is the intended "unassigned" semantics for an aggregate list: such a row
+    // belongs to no branch and shows up only company-wide.
     const where: Prisma.TransactionWhereInput = {
       companyId,
+      ...branchIdWhere(branchIds),
       ...(query.studentId && { studentId: query.studentId }),
       ...(query.teacherId && { teacherId: query.teacherId }),
       ...(query.type && { type: query.type }),
-      ...(query.branchId && { branchId: query.branchId }),
       ...(query.startDate &&
         query.endDate && {
           createdAt: {

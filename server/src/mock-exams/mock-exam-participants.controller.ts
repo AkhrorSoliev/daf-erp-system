@@ -13,7 +13,8 @@ import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
 import { ConvertMockParticipantDto } from './dto/convert-mock-participant.dto';
 import { ParticipantsQueryDto } from './dto/participants-query.dto';
 import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller()
@@ -28,14 +29,24 @@ export class MockExamParticipantsController {
   list(
     @Param('examId') examId: string,
     @Query() query: ParticipantsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.participantsService.list(examId, query);
+    return this.participantsService.list(examId, query, companyId, branchIds);
   }
 
   /** Mock exams a student has participated in — for /students/profile/[id] */
   @Get('students/:studentId/mock-exams')
-  listForStudent(@Param('studentId') studentId: string) {
-    return this.participantsService.listForStudent(Number(studentId));
+  listForStudent(
+    @Param('studentId') studentId: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
+  ) {
+    return this.participantsService.listForStudent(
+      Number(studentId),
+      companyId,
+      branchIds,
+    );
   }
 
   @Post('mock-exams/:examId/participants/manual')
@@ -44,8 +55,15 @@ export class MockExamParticipantsController {
     @Body() dto: AddManualParticipantDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.participantsService.addManual(examId, dto, companyId, userId);
+    return this.participantsService.addManual(
+      examId,
+      dto,
+      companyId,
+      userId,
+      branchIds,
+    );
   }
 
   @Post('mock-exam-participants/:id/mark-paid')
@@ -54,8 +72,15 @@ export class MockExamParticipantsController {
     @Body() dto: MarkMockPaidDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.participantsService.markPaid(id, dto, companyId, userId);
+    return this.participantsService.markPaid(
+      id,
+      dto,
+      companyId,
+      userId,
+      branchIds,
+    );
   }
 
   @Post('mock-exam-participants/:id/convert')
@@ -64,8 +89,15 @@ export class MockExamParticipantsController {
     @Body() dto: ConvertMockParticipantDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.participantsService.convertToStudent(id, dto, companyId, userId);
+    return this.participantsService.convertToStudent(
+      id,
+      dto,
+      companyId,
+      userId,
+      branchIds,
+    );
   }
 
   @Delete('mock-exam-participants/:id')
@@ -73,7 +105,8 @@ export class MockExamParticipantsController {
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.participantsService.remove(id, companyId, userId);
+    return this.participantsService.remove(id, companyId, userId, branchIds);
   }
 }

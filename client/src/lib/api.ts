@@ -1,6 +1,15 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 import { useAuth } from "@/hooks/use-auth";
+// Read from a pure module rather than the zustand store, so the interceptor
+// works on requests fired before the store hydrates.
+import {
+  ALL_BRANCHES,
+  BRANCH_STORAGE_KEY,
+  branchHeaderValue,
+} from "@/lib/branch-header";
+
+export { ALL_BRANCHES, BRANCH_STORAGE_KEY };
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -11,6 +20,30 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // The active branch travels on EVERY request as a header.
+  //
+  // It used to travel only as `?branch_id=`, added by hand in each of ~37
+  // components — so a page that forgot it silently got company-wide data under
+  // a header naming one branch. A header rather than a query parameter because
+  // the API's global ValidationPipe runs `forbidNonWhitelisted: true`: injecting
+  // a query param would 400 every endpoint whose DTO does not declare it, and
+  // could never reach a POST/PATCH body at all.
+  //
+  // This is a CONVENIENCE, not a security boundary. The server intersects it
+  // with the caller's own branches (`BranchScopeGuard`), so sending another
+  // branch's id here yields nothing rather than that branch's data.
+  if (typeof window !== "undefined") {
+    const branchId = branchHeaderValue(
+      localStorage.getItem(BRANCH_STORAGE_KEY),
+    );
+    // null covers both "nothing saved" and "Barcha filiallar": an absent header
+    // means "no pick", which the server resolves to the caller's full scope.
+    if (branchId) {
+      config.headers["X-Branch-Id"] = branchId;
+    }
+  }
+
   return config;
 });
 
@@ -102,6 +135,11 @@ api.interceptors.response.use(
         Cookies.remove("refreshToken");
         Cookies.remove("user");
         if (typeof window !== "undefined") {
+          // Clear the branch too. It outlived the session before, so the next
+          // user to sign in on this machine started out pinned to the previous
+          // user's branch — and for a branch-limited account that is a branch
+          // they may not even be allowed to see.
+          localStorage.removeItem(BRANCH_STORAGE_KEY);
           window.location.href = "/login";
         }
         return Promise.reject(refreshError);

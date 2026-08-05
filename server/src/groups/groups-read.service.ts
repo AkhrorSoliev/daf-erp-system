@@ -6,6 +6,10 @@ import { Prisma } from '@prisma/client';
 import { groupInclude, formatGroup } from './shared/group-include';
 import { computeNextGroupNumber } from './shared/next-group-number';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class GroupsReadService {
@@ -14,18 +18,22 @@ export class GroupsReadService {
     private statusHistoryService: StatusHistoryService,
   ) {}
 
-  async findAll(query: GroupQueryDto, companyId: number) {
+  async findAll(
+    query: GroupQueryDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
+    // From the resolved request scope, not `query.branch_id`. The raw parameter
+    // never confined anyone: omitted it listed every branch's groups, and a
+    // foreign id listed that branch's.
     const where: Prisma.GroupWhereInput = {
       deletedAt: null,
       companyId,
+      ...branchIdWhere(scope),
     };
-
-    if (query.branch_id) {
-      where.branchId = query.branch_id;
-    }
 
     if (query.statusEnum) {
       where.statusEnum = query.statusEnum as any;
@@ -88,7 +96,7 @@ export class GroupsReadService {
     const branchScope: Prisma.GroupWhereInput = {
       deletedAt: null,
       companyId,
-      ...(query.branch_id ? { branchId: query.branch_id } : {}),
+      ...branchIdWhere(scope),
     };
 
     const [
@@ -249,9 +257,12 @@ export class GroupsReadService {
     }));
   }
 
-  async findOne(id: string, companyId: number) {
+  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
+    // Branch-confined as well as company-confined: the group detail page is
+    // reachable by id from search, a teacher profile or a pasted link, and it
+    // carries the full student roster.
     const group = await this.prisma.group.findFirst({
-      where: { id, deletedAt: null, companyId },
+      where: { id, deletedAt: null, companyId, ...branchIdWhere(scope) },
       include: groupInclude,
     });
 

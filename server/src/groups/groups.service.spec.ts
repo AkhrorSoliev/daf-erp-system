@@ -689,7 +689,7 @@ describe('GroupsService — status methods', () => {
     }
 
     it('matches a single term against the group name OR a teacher name', async () => {
-      await service.findAll({ search: 'Valiyev' } as any, 1001);
+      await service.findAll({ search: 'Valiyev' } as any, 1001, null);
 
       expect(whereOf().AND).toEqual([
         {

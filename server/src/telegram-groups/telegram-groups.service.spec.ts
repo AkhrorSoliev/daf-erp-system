@@ -13,6 +13,16 @@ describe('TelegramGroupsService', () => {
   let service: TelegramGroupsService;
 
   const mockPrisma = {
+      // Approval now requires a real branch in this company, and checks the
+      // caller owns it. A CEO spans every branch.
+      branch: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
     telegramGroup: {
       upsert: jest.fn(),
       findUnique: jest.fn(),
@@ -61,7 +71,7 @@ describe('TelegramGroupsService', () => {
 
     it('404s when group does not exist', async () => {
       mockPrisma.telegramGroup.findUnique.mockResolvedValue(null);
-      await expect(service.approve('g1', caller)).rejects.toThrow(
+      await expect(service.approve('g1', caller, 1)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -72,7 +82,7 @@ describe('TelegramGroupsService', () => {
         status: TelegramGroupStatus.APPROVED,
         companyId: 999,
       });
-      await expect(service.approve('g1', caller)).rejects.toThrow(
+      await expect(service.approve('g1', caller, 1)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -89,7 +99,7 @@ describe('TelegramGroupsService', () => {
         company: { name: 'DaF' },
         approvedBy: { firstName: 'Akhror', lastName: 'Soliev' },
       });
-      await service.approve('g1', caller);
+      await service.approve('g1', caller, 1);
 
       expect(mockPrisma.telegramGroup.update).toHaveBeenCalledWith(
         expect.objectContaining({

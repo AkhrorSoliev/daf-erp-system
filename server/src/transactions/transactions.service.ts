@@ -6,6 +6,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { TransactionsWriteService } from './transactions-write.service';
 import { TransactionsReadService } from './transactions-read.service';
 
@@ -192,8 +193,9 @@ export class TransactionsService {
     studentId: number,
     query: TransactionQueryDto,
     companyId: number,
+    branchIds: ReportBranchIds,
   ) {
-    return this.read.findByStudent(studentId, query, companyId);
+    return this.read.findByStudent(studentId, query, companyId, branchIds);
   }
   getBalanceSummary(studentId: number, companyId: number) {
     return this.read.getBalanceSummary(studentId, companyId);
@@ -201,6 +203,7 @@ export class TransactionsService {
   getLessonTrail(
     studentId: number,
     companyId: number,
+    branchIds: ReportBranchIds,
     options?: {
       contractId?: string;
       from?: string;
@@ -209,17 +212,22 @@ export class TransactionsService {
       pageSize?: number;
     },
   ) {
-    return this.read.getLessonTrail(studentId, companyId, options);
+    return this.read.getLessonTrail(studentId, companyId, branchIds, options);
   }
   findByTeacher(
     teacherId: number,
     query: TransactionQueryDto,
     companyId: number,
+    branchIds: ReportBranchIds,
   ) {
-    return this.read.findByTeacher(teacherId, query, companyId);
+    return this.read.findByTeacher(teacherId, query, companyId, branchIds);
   }
-  findAll(query: TransactionQueryDto, companyId: number) {
-    return this.read.findAll(query, companyId);
+  findAll(
+    query: TransactionQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    return this.read.findAll(query, companyId, branchIds);
   }
   findDebtWriteOffs(
     companyId: number,

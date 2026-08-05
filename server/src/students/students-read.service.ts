@@ -11,6 +11,10 @@ import { StudentQueryDto } from './dto/student-query.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { getSystemStartDate } from '../common/finance/system-start-date';
+import {
+  ReportBranchIds,
+  studentBranchWhere,
+} from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class StudentsReadService {
@@ -19,8 +23,12 @@ export class StudentsReadService {
     private statusHistoryService: StatusHistoryService,
   ) {}
 
-  async findAll(query: StudentQueryDto, companyId: number) {
-    const { page = 1, pageSize = 10, search, status, branch_id } = query;
+  async findAll(
+    query: StudentQueryDto,
+    companyId: number,
+    branchScope: ReportBranchIds,
+  ) {
+    const { page = 1, pageSize = 10, search, status } = query;
     const skip = (page - 1) * pageSize;
 
     // Base where: company scope + search + teacher + branch (without status filter)
@@ -71,9 +79,13 @@ export class StudentsReadService {
       baseWhere.enrollments = { some: { AND: enrollmentConditions } };
     }
 
-    if (branch_id) {
-      baseWhere.branches = { some: { branchId: branch_id } };
-    }
+    // The branch comes from the resolved request scope, NOT from `query.branch_id`.
+    // The raw parameter was a WIDENING filter: omitting it returned the whole
+    // company and naming another branch returned that branch, so a Namangan
+    // administrator could read Fargona's roster — phones, parent phones,
+    // passport series, balances — by editing one query parameter. The guard has
+    // already intersected the caller's ceiling with whatever they asked for.
+    Object.assign(baseWhere, studentBranchWhere(branchScope));
 
     // Full where: base + status filter (for main query)
     const where: Prisma.StudentWhereInput = { ...baseWhere };
@@ -146,10 +158,8 @@ export class StudentsReadService {
     const levelCountBase: Prisma.StudentWhereInput = {
       deletedAt: null,
       companyId,
+      ...studentBranchWhere(branchScope),
     };
-    if (branch_id) {
-      levelCountBase.branches = { some: { branchId: branch_id } };
-    }
     const levelCountPromises = STUDENT_LEVELS.map((lvl) =>
       this.prisma.student.count({
         where: {
@@ -209,9 +219,17 @@ export class StudentsReadService {
     };
   }
 
-  async findById(id: number, companyId: number) {
+  async findById(
+    id: number,
+    companyId: number,
+    branchScope: ReportBranchIds,
+  ) {
+    // Confined by branch as well as company: `@Roles` proves the caller is
+    // staff, not that this student is theirs. A bare id let one branch's admin
+    // open any student in the company — full PII plus balance. Out of scope
+    // reads as "not found" rather than 403 so the id itself leaks nothing.
     const student = await this.prisma.student.findFirst({
-      where: { id, companyId },
+      where: { id, companyId, ...studentBranchWhere(branchScope) },
       select: studentSelect,
     });
 

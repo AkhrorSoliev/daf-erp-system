@@ -64,6 +64,22 @@ describe('PaymentsService', () => {
         findFirst: jest.fn().mockResolvedValue(mockContract),
         update: jest.fn().mockResolvedValue({}),
       },
+      // The payment branch is resolved from the STUDENT, not from the client —
+      // `create()` calls the fail-closed resolver before anything else.
+      // `mockContract.branchId` is 1, so this keeps the two consistent.
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+      // Debtor reads resolve the caller's branch ceiling from their record.
+      // Default caller here is a CEO, i.e. unrestricted.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
       payment: {
         create: jest.fn().mockResolvedValue(mockPayment),
         findFirst: jest.fn().mockResolvedValue(mockPayment),
@@ -247,16 +263,53 @@ describe('PaymentsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should resolve branchId from contract when not provided in dto', async () => {
+    // The branch a payment is booked to comes from the STUDENT. It used to come
+    // from whatever the client sent (the header switcher's current pick), which
+    // meant recording a Fargona student's payment while viewing Namangan booked
+    // the cash to Namangan while that student's lesson deductions stayed in
+    // Fargona — income in one branch's books, its cost in the other's (D2).
+    it('resolves branchId from the student, not from the dto', async () => {
+      prisma.studentBranch.findFirst.mockResolvedValue({ branchId: 2 });
+      prisma.contract.findFirst.mockResolvedValue({
+        id: 'contract-uuid-1',
+        branchId: 2,
+      });
+
+      await service.create({ ...dto, branchId: undefined }, userId, companyId);
+
+      expect(prisma.payment.create.mock.calls[0][0].data.branchId).toBe(2);
+    });
+
+    it('rejects a payment whose dto branch disagrees with the student', async () => {
+      prisma.studentBranch.findFirst.mockResolvedValue({ branchId: 1 });
+
+      await expect(
+        service.create({ ...dto, branchId: 2 }, userId, companyId),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a contract belonging to a different branch than the student', async () => {
+      prisma.studentBranch.findFirst.mockResolvedValue({ branchId: 1 });
       prisma.contract.findFirst.mockResolvedValue({
         id: 'contract-uuid-1',
         branchId: 3,
       });
 
-      await service.create({ ...dto, branchId: undefined }, userId, companyId);
+      await expect(
+        service.create({ ...dto, branchId: undefined }, userId, companyId),
+      ).rejects.toThrow(BadRequestException);
+    });
 
-      const createCall = prisma.payment.create.mock.calls[0][0];
-      expect(createCall.data.branchId).toBe(3);
+    it('refuses a payment for a student with no resolvable branch', async () => {
+      // Fail-closed: a row nobody can attribute later is worse than a refusal.
+      prisma.studentBranch.findFirst.mockResolvedValue(null);
+      prisma.enrollment.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.create({ ...dto, branchId: undefined }, userId, companyId),
+      ).rejects.toThrow();
+      expect(prisma.payment.create).not.toHaveBeenCalled();
     });
 
     it('should trigger retroactive billing inside the payment tx', async () => {
@@ -492,7 +545,7 @@ describe('PaymentsService', () => {
 
   describe('findAll()', () => {
     it('should exclude REVERSED payments by default when no status filter', async () => {
-      await service.findAll({} as any, 1001);
+      await service.findAll({} as any, 1001, null);
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where).toEqual(

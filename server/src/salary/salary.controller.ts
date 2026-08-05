@@ -27,7 +27,9 @@ import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { BatchPayDto } from './dto/batch-pay.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
 import { parseTashkentDateStart } from './shared/resolve-current-period';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import { singleBranchId } from '../common/finance/report-branch-scope';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('salary')
@@ -252,6 +254,11 @@ export class SalaryController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
+    // NOT branch-narrowed yet: `SalaryOverviewQuery` carries no `branchId`, and
+    // `SalaryOverviewService` resolves its own scope from the caller's
+    // `mainBranch`. Wiring the selection through needs that service changed too
+    // — tracked separately. A confined caller is still confined; what is
+    // missing is a CEO's ability to narrow.
     return this.salaryService.getOverview(query, companyId, userId);
   }
 
@@ -266,8 +273,22 @@ export class SalaryController {
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.salaryService.getMonthly(query, companyId, userId);
+    // The payroll resolver already honours a requested branch correctly — it
+    // just never received one. `/salary/monthly` took no branch input at all,
+    // so a CEO switching Fargona → Namangan saw the SAME company-wide numbers
+    // under a header naming the branch they picked. This is the reports module's
+    // "cover says one branch, totals say another" defect, still live in payroll.
+    //
+    // `singleBranchId` and not the raw header: the resolver takes one branch,
+    // and the scope has already been intersected with the caller's ceiling, so
+    // this can only narrow.
+    return this.salaryService.getMonthly(
+      { ...query, branchId: singleBranchId(scope) },
+      companyId,
+      userId,
+    );
   }
 
   /**

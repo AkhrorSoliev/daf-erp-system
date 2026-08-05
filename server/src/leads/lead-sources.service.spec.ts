@@ -97,7 +97,7 @@ describe('LeadSourcesService', () => {
       const result = await service.create({ name: 'Instagram' }, 1001, 1);
 
       expect(prisma.leadSource.create).toHaveBeenCalledWith({
-        data: { name: 'Instagram', order: 2 },
+        data: expect.objectContaining({ name: 'Instagram', order: 2 }),
       });
       expect(result).toEqual({ id: 'src-1', name: 'Instagram' });
       expect(history.recordCreate).toHaveBeenCalledWith(

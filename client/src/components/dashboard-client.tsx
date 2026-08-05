@@ -47,6 +47,7 @@ interface TodayScheduleResponse {
 
 export function DashboardClient() {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const user = useAuth((s) => s.user);
   const router = useRouter();
   const pathname = usePathname();
@@ -82,8 +83,15 @@ export function DashboardClient() {
           params: { branchId: selectedBranch!.id, date: dateParam },
         })
         .then((r) => r.data),
+    // The daily timetable is inherently a SINGLE branch's view — it is laid out
+    // against that branch's rooms and working hours — so unlike the other lists
+    // it cannot render a consolidated "Barcha filiallar". The query stays
+    // disabled without a branch and the UI says why (below) rather than showing
+    // an empty grid that looks like a day with no lessons.
     enabled: !!selectedBranch,
   });
+
+  const needsBranchPick = branchLoaded && !selectedBranch;
 
   // isPending stays true while the query is `enabled: false` (waiting for the
   // branch switcher to hydrate from the /branches request) AND while it's
@@ -91,7 +99,8 @@ export function DashboardClient() {
   // not only after the branch is resolved. Without this, in production the
   // /branches network round-trip leaves a visible gap where only the
   // DatePicker is rendered. See `useBranchSwitcher`.
-  const showSkeleton = isPending;
+  // Not while we are waiting for a branch PICK — that is a decision, not a load.
+  const showSkeleton = isPending && !needsBranchPick;
 
   // Teacher sees only their own lessons in the schedule table
   const myLessons = useMemo(() => {
@@ -149,6 +158,16 @@ export function DashboardClient() {
         />
       </div>
 
+      {needsBranchPick && (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <p className="text-sm font-medium">Kunlik jadval uchun filial tanlang</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Jadval bitta filialning xonalari va ish vaqti bo&apos;yicha
+            chiziladi, shuning uchun &laquo;Barcha filiallar&raquo; ko&apos;rinishida
+            ko&apos;rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.
+          </p>
+        </div>
+      )}
       {showSkeleton && <DashboardScheduleSkeleton />}
 
       {data?.isHoliday && (
