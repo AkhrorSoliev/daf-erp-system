@@ -195,8 +195,8 @@ export function ExpectationHistoryDialog({ open, onOpenChange, month }: Props) {
                 Oy oxiriga kutilyapti — kunlik siljish
               </DialogTitle>
               <p className="text-sm text-muted-foreground">
-                Har kuni kechqurun raqam qayta hisoblanadi va o&apos;sha kuni
-                qanday chiqqan bo&apos;lsa, shundayligicha saqlanadi. Chiziq
+                Har kuni kechqurun raqam qayta hisoblanadi va o&apos;sha
+                kungi holicha saqlanadi — keyin o&apos;zgarmaydi. Chiziq ana
                 shu kunlik raqamlarni ko&apos;rsatadi.
               </p>
             </div>
@@ -233,9 +233,9 @@ export function ExpectationHistoryDialog({ open, onOpenChange, month }: Props) {
                 {monthLabel(selected)} uchun yozuv yo&apos;q
               </p>
               <p className="max-w-sm text-sm text-muted-foreground">
-                Raqam har kuni 23:40 da saqlanadi. Saqlash boshlangan kundan
-                oldingi kunlar bo&apos;sh qoladi, chunki o&apos;sha kunlarda
-                kim o&apos;qiyotganini endi bilib bo&apos;lmaydi.
+                Raqam har kuni soat 23:40 da saqlanadi. Saqlash boshlangan
+                kundan oldingi kunlar bo&apos;sh qoladi — o&apos;sha paytda kim
+                o&apos;qiyotganini endi qayta tiklab bo&apos;lmaydi.
               </p>
             </div>
           ) : (
@@ -365,11 +365,13 @@ export function ExpectationHistoryDialog({ open, onOpenChange, month }: Props) {
               )}
 
               <p className="border-t pt-3 text-xs text-muted-foreground">
-                Chiziq faqat <strong>kutilayotgan</strong> raqamni ko&apos;rsatadi
-                — o&apos;zgarganda nimadir sodir bo&apos;lgan degani. O&apos;tilgan
-                darslar va yig&apos;ilgan pul har kuni tabiiy o&apos;sadi,
-                shuning uchun ular alohida chiziq emas: kursorni olib borsangiz
-                o&apos;sha kunning raqamlarida ko&apos;rinadi.
+                Chiziq faqat <strong>kutilayotgan</strong> raqamni
+                ko&apos;rsatadi — u qimirlagan bo&apos;lsa, o&apos;sha kuni
+                nimadir sodir bo&apos;lgan. O&apos;tilgan darslar va
+                yig&apos;ilgan pul esa har kuni o&apos;z-o&apos;zidan
+                o&apos;sadi, ularda kutilmagan narsa yo&apos;q — shuning uchun
+                alohida chiziq qilinmadi. Chiziqqa kursorni olib borsangiz
+                o&apos;sha kunning bu raqamlari ham chiqadi.
               </p>
             </div>
           )}

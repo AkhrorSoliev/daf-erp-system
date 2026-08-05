@@ -51,14 +51,14 @@ const kpiConfig: Record<
     title: "Tushumlar",
     color: "#16a34a",
     suffix: " so'm",
-    description: "Oxirgi 6 oydagi umumiy tushumlar dinamikasi",
+    description: "Oxirgi 6 oyda kassaga qancha pul kirgani",
   },
   expenses: {
     title: "Chiqimlar dinamikasi",
     color: "#dc2626",
     suffix: " so'm",
     description:
-      "Oxirgi 6 oydagi umumiy chiqimlar (operatsion xarajatlar + oyliklar) dinamikasi. Yuqoridagi karta esa faqat joriy davr operatsion xarajatlarini ko'rsatadi.",
+      "Oxirgi 6 oyda pul qayerga ketgani — xarajatlar va ustoz oyliklari birgalikda. Yuqoridagi karta esa faqat xarajatlarni ko'rsatadi, oyliksiz.",
   },
   profit: {
     // Same canonical basis as the Foyda card: recognised revenue minus deserved
@@ -69,40 +69,41 @@ const kpiConfig: Record<
     color: "#2563eb",
     suffix: " so'm",
     description:
-      "Oxirgi 6 oydagi sof foyda — kartadagi raqam bilan bir xil asosda. Kunda bir marta yangilanadi.",
+      "Oxirgi 6 oydagi sof foyda — kartadagi raqam bilan bir xil. Kuniga bir marta yangilanadi.",
   },
   activeBalance: {
     title: "Aktiv balans",
     color: "#7c3aed",
     suffix: " so'm",
-    description: "Faol o'quvchilarning umumiy balansi",
+    description:
+      "Faol o'quvchilar hisobidagi jami pul. Musbat bo'lsa — oldindan to'langan, manfiy bo'lsa — qarz.",
   },
   ltv: {
     title: "LTV — O'quvchi qiymati",
     color: "#8b5cf6",
     suffix: " so'm",
     description:
-      "Bir o'quvchidan olinadigan o'rtacha daromad. Yuqori bo'lsa — o'quvchilar uzoq muddatda ko'proq to'laydi.",
+      "Bitta o'quvchi o'rtacha qancha pul olib keladi. Yuqori bo'lsa — o'quvchilar uzoq qoladi va ko'proq to'laydi.",
   },
   cac: {
     title: "CAC — Jalb qilish narxi",
     color: "#d97706",
     suffix: " so'm",
     description:
-      "Yangi o'quvchini jalb qilish uchun sarflangan o'rtacha xarajat. Past bo'lsa — marketing samarali.",
+      "Bitta yangi o'quvchi olib kelish uchun o'rtacha qancha sarflangani. Past bo'lsa — marketing samarali.",
   },
   marketingRoi: {
     title: "Marketing ROI",
     color: "#059669",
     suffix: "%",
     description:
-      "Marketingga sarflangan mablag'ning qaytimi. 100% dan yuqori bo'lsa — foyda keltirmoqda.",
+      "Marketingga sarflangan pul qancha qaytgani. 100% dan yuqori bo'lsa — foyda keltiryapti.",
   },
   avgPayment: {
     title: "O'rtacha to'lov",
     color: "#0284c7",
     suffix: " so'm",
-    description: "Har bir to'lovning o'rtacha summasi",
+    description: "Bitta to'lov o'rtacha qancha bo'lgani",
   },
 };
 

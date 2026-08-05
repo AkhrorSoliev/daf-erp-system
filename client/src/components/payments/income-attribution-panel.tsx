@@ -118,10 +118,13 @@ export function IncomeAttributionPanel({
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-72">
-              Bu davrda tushgan pulni ikkiga ajratamiz: shu oy uchun to&apos;langan
-              pul va oldingi oylardagi qarzni yopgan &quot;kechikkan&quot;
-              to&apos;lovlar. Qarzdor o&apos;quvchining to&apos;lovi avval eng eski
-              qarzdan yopiladi.
+              Kassaga tushgan pul ikki xil bo&apos;ladi: shu oyning
+              o&apos;zi uchun to&apos;langani va eski qarzni yopish uchun
+              kelgani. Bu yerda ular ajratib ko&apos;rsatiladi.
+              <br />
+              <br />
+              Qarzi bor o&apos;quvchi pul to&apos;lasa, avval eng eski qarzi
+              yopiladi.
             </TooltipContent>
           </Tooltip>
         </div>
@@ -223,18 +226,25 @@ export function IncomeAttributionPanel({
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-72">
-                      Shu oy uchun yig&apos;ilgan pul ÷ oy oxiriga kutilayotgan
-                      summa. Eski qarz uchun tushgan pul suratga kirmaydi.
+                      Bu oy oxirigacha jami{" "}
+                      {formatPrice(expectedMonthEnd)} so&apos;m yig&apos;ilishi
+                      kerak. Hozirgacha {formatPrice(data.currentMonth)}{" "}
+                      so&apos;m yig&apos;ildi.
                       <br />
                       <br />
-                      Maxraj o&apos;zgarishi mumkin: yangi o&apos;quvchi
-                      qo&apos;shilsa oy kattalashadi va o&apos;sha pul kichikroq
-                      ulush bo&apos;lib qoladi — vazifa o&apos;sgani uchun.
+                      Eski qarz uchun kelgan pul bu hisobga kirmaydi — u
+                      pastdagi &quot;Eski qarzlar uchun&quot; qatorida.
                       <br />
                       <br />
-                      Shu oyda allaqachon o&apos;tilgan darslarga nisbatan
-                      yig&apos;im esa {data.collectionPct ?? 0}% (
-                      {formatPrice(data.lessonsValue)} so&apos;mdan).
+                      Yangi o&apos;quvchi qo&apos;shilsa oyning umumiy summasi
+                      kattalashadi va foiz o&apos;z-o&apos;zidan pasayadi. Bu
+                      yomonlik emas — shunchaki bajarish kerak bo&apos;lgan ish
+                      ko&apos;paygan.
+                      <br />
+                      <br />
+                      Agar butun oy emas, faqat shu kungacha o&apos;tib
+                      bo&apos;lingan darslarni olsak, yig&apos;im{" "}
+                      {data.collectionPct ?? 0}%.
                     </TooltipContent>
                   </Tooltip>
                 </span>
@@ -282,9 +292,9 @@ export function IncomeAttributionPanel({
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="max-w-72">
-                        Shu davr uchun yig&apos;ilgan pul ÷ shu davrda
-                        o&apos;tilgan darslar qiymati. Eski qarz uchun tushgan
-                        pul suratga kirmaydi.
+                        Shu davrda o&apos;tilgan darslarning pulidan qanchasi
+                        yig&apos;ilgani. Eski qarz uchun kelgan pul bu hisobga
+                        kirmaydi.
                       </TooltipContent>
                     </Tooltip>
                   </span>
