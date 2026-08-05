@@ -101,9 +101,10 @@ export class TelegramGroupDailyCronService {
           where: { id: g.id },
           data: { lastDailyReportAt: new Date() },
         });
-        // Persist tonight's baseline for tomorrow's ▲/▼ delta only after a
-        // confirmed send (idempotent upsert — safe to repeat per group).
-        await this.dailyReport.persistSnapshot(g.companyId, built.snapshot);
+        // The snapshot is NOT written here any more. Tying it to a confirmed
+        // send meant Sundays and holidays — when this cron does not run at all
+        // — had no row, so a month closing on a Sunday had no closing figure.
+        // `DailySnapshotCron` writes it every day at 23:40 instead.
         sent += 1;
       } catch (err: any) {
         const code = err?.response?.error_code ?? err?.code;

@@ -31,8 +31,8 @@ import {
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
  * The day-over-day debt delta reads the most recent PRIOR `DailyFinancialSnapshot`
- * row; the cron persists today's row via {@link persistSnapshot} only after a
- * successful send (so a failed send never poisons tomorrow's baseline).
+ * row. Writing that row is NOT this service's job — `DailySnapshotCron` does it
+ * every day at 23:40, including the Sundays and holidays this report skips.
  *
  * Metric semantics mirror the CEO's `/payments/salary` and financial pages:
  *  - "Tushum (haqiqiy)" = cash actually received (COMPLETED payments), NOT billed.
@@ -471,22 +471,11 @@ export class TelegramGroupDailyReportService {
     };
   }
 
-  /**
-   * Upserts tonight's snapshot. Called by the cron ONLY after a successful
-   * send so a delivery failure never becomes tomorrow's baseline. Keyed by
-   * (companyId, Tashkent date) — a same-day re-run overwrites, never stacks.
-   */
-  async persistSnapshot(
-    companyId: number,
-    snapshot: DailySnapshotData,
-  ): Promise<void> {
-    const date = tashkentTodayDate();
-    await this.prisma.dailyFinancialSnapshot.upsert({
-      where: { companyId_date: { companyId, date } },
-      create: { companyId, date, ...snapshot },
-      update: { ...snapshot },
-    });
-  }
+  // `persistSnapshot` lived here. It ran only after a confirmed Telegram send,
+  // and the Telegram cron skips Sundays and holidays — so those days had no
+  // snapshot at all, and a month closing on a Sunday had no closing figure.
+  // `DailySnapshotService` + `DailySnapshotCron` now write it every day,
+  // independently, per branch. Do not re-attach it to the send path.
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 

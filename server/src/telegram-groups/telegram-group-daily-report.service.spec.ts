@@ -468,25 +468,19 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).toContain("Qaytarilgan to'lov: <b>200 000 so'm</b>");
   });
 
-  it('persistSnapshot upserts today\'s figures keyed by company + date', async () => {
+  it('does NOT write the snapshot itself any more', async () => {
+    // Writing it here meant it only happened after a confirmed Telegram send,
+    // and this cron skips Sundays and holidays — so those days had no row and
+    // a month closing on a Sunday had no closing figure. `DailySnapshotCron`
+    // writes it every day instead. Do not re-attach it to the send path.
     const state = defaultState();
     const prisma = makePrisma(state);
     const service = await buildService(prisma, makeSalary(state));
 
-    await service.persistSnapshot(1001, {
-      totalDebt: 22_300_000,
-      debtorCount: 48,
-      activeStudents: 1240,
-      mtdIncome: 280_000_000,
-    });
+    await service.build(1001);
 
-    expect(prisma.dailyFinancialSnapshot.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { companyId_date: { companyId: 1001, date: expect.any(Date) } },
-        create: expect.objectContaining({ companyId: 1001, totalDebt: 22_300_000 }),
-        update: expect.objectContaining({ totalDebt: 22_300_000 }),
-      }),
-    );
+    expect(prisma.dailyFinancialSnapshot.upsert).not.toHaveBeenCalled();
+    expect((service as any).persistSnapshot).toBeUndefined();
   });
 });
 

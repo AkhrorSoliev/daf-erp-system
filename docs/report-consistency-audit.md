@@ -39,6 +39,22 @@ Tuzatildi: `branchIds: ReportBranchIds` + `group: { branchId: { in } }` + bo'sh 
 
 ---
 
+## 0d. H26 YOPILDI + kunlik surat — 2026-08-05
+
+Kunlik surat (`DailyFinancialSnapshot`) Telegram jo'natishidan **ajratildi**. Endi u o'z croni bilan **har kuni 23:40 da** yoziladi — yakshanba va bayramlar ham. Avval u faqat 21:00 hisoboti muvaffaqiyatli ketgandan keyin yozilardi, hisobot esa dam olish kunlari umuman yubormaydi: o'sha kunlari qator yo'q edi, va oyning oxirgi kuni yakshanbaga tushsa «oy yopilish raqami» yo'qolardi.
+
+**H26 shu bilan yopildi** — dushanba kunlari qarz «▲» belgisi uch kunlik o'zgarishni ko'rsatib, xabarda «kechagi kundan» deb yozilishi.
+
+Suratga qo'shildi: **filial ustuni** (`branchId`, NULL = kompaniya qatori) va uchta raqam — `expectedValue`, `lessonsHeldValue`, `collectedForMonth`. Foiz saqlanmaydi (komponentlaridan chiqadi). Filial qatorlarini hozircha hech bir ekran o'qimaydi; ular boshidan yoziladi, chunki o'tmish qayta tiklanmaydi.
+
+Migratsiya: `20260805140000_daily_snapshot_branch_and_expectation`. Nullable `branchId` tufayli **upsert ishlamaydi** (Postgresda `NULL = NULL` hech qachon rost emas) — `findFirst` + update/create ishlatiladi, ikkita indeks qo'riqlaydi.
+
+`GET /reports/expectation-history` (CEO/BD) — bir oylik tarixni qaytaradi, **yo'q kunni qayta hisoblamaydi**. Har kunga sabab voqealari ham qo'shiladi (o'quvchi qo'shildi/ketdi, guruh to'xtatildi, bayram yaratildi) — tizim allaqachon yozadigan jadvallardan, taxminsiz.
+
+`/payments/overview` da «Oy oxiriga kutilyapti» qatori bosiladigan bo'ldi: kunlik siljish grafigi, sezilarli pog'onalarda sabab yorlig'i bilan.
+
+---
+
 ## 0c. P5 BAJARILDI — 2026-08-05
 
 `exactDays × 4` prognozi butunlay o'chirildi. O'rniga **«Oy oxiriga kutilyapti»** — `ReportsExpectationService`: shu oy o'tilgan va qoplangan darslar + kalendar bo'yicha qolgan darslar. Bayram, bekor qilingan dars, guruh hayot sikli va jadval o'zgarish tarixi hisobga olinadi.
