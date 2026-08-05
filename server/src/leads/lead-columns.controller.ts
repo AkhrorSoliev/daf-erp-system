@@ -11,7 +11,8 @@ import { LeadColumnsService } from './lead-columns.service';
 import { CreateLeadColumnDto } from './dto/create-lead-column.dto';
 import { UpdateLeadColumnDto } from './dto/update-lead-column.dto';
 import { ReorderLeadColumnsDto } from './dto/reorder-lead-columns.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('lead-columns')
@@ -25,14 +26,19 @@ export class LeadColumnsController {
     @Body() dto: CreateLeadColumnDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadColumnsService.create(dto, companyId, userId);
+    return this.leadColumnsService.create(dto, companyId, userId, scope);
   }
 
   // Declared before ':id' so "/lead-columns/reorder" is not captured as an id.
   @Patch('reorder')
-  reorder(@Body() dto: ReorderLeadColumnsDto) {
-    return this.leadColumnsService.reorder(dto);
+  reorder(
+    @Body() dto: ReorderLeadColumnsDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.leadColumnsService.reorder(dto, companyId, scope);
   }
 
   @Patch(':id')
@@ -41,8 +47,9 @@ export class LeadColumnsController {
     @Body() dto: UpdateLeadColumnDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadColumnsService.update(id, dto, companyId, userId);
+    return this.leadColumnsService.update(id, dto, companyId, userId, scope);
   }
 
   @Delete(':id')
@@ -50,7 +57,8 @@ export class LeadColumnsController {
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.leadColumnsService.remove(id, companyId, userId);
+    return this.leadColumnsService.remove(id, companyId, userId, scope);
   }
 }

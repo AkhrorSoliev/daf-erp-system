@@ -118,8 +118,8 @@ async function main() {
       effectiveFrom: new Date('2020-01-01T00:00:00.000Z'),
     },
   });
-  // Leads board — two fixed (system) columns
-  await seedLeadColumns();
+  // NOTE: the leads board is seeded per branch inside `seedBranch` — a column
+  // now carries a `branchId`, so it cannot exist before the branches do.
   // Mock exams — starter sections (user can rename/delete)
   await seedMockExamSections();
   console.log('✓ Roles + company + salary period + lead columns + mock exam sections\n');
@@ -260,10 +260,11 @@ async function seedRoles() {
 // LEADS BOARD — FIXED COLUMNS
 // ============================================================================
 
-async function seedLeadColumns() {
-  // The board has a single fixed/system column. Custom columns are created by
-  // users at runtime. (The former "Aloqaga chiqilgan" / CONTACTED column was
-  // removed — leads are now organised purely by user-defined columns.)
+async function seedLeadColumns(branchId: number) {
+  // Each BRANCH has its own board with a single fixed/system column; custom
+  // columns are created by users at runtime. (The former "Aloqaga chiqilgan" /
+  // CONTACTED column was removed — leads are now organised purely by
+  // user-defined columns.)
   const fixed = [{ name: 'Yangi Lidlar', systemKey: 'NEW', order: 0 }];
   for (const c of fixed) {
     await prisma.leadColumn.create({
@@ -273,6 +274,7 @@ async function seedLeadColumns() {
         order: c.order,
         isSystem: true,
         companyId: COMPANY_ID,
+        branchId,
       },
     });
   }
@@ -377,6 +379,9 @@ async function seedBranch(
       endOfWorkingDay: '23:59',
     },
   });
+
+  // Leads board — the fixed (system) column this branch's board needs.
+  await seedLeadColumns(branch.id);
 
   // Rooms
   const rooms: string[] = [];

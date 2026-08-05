@@ -435,6 +435,7 @@ model Branch {
   courses         Course[]
   telegramGroups  TelegramGroup[]
   leads           Lead[]
+  leadColumns     LeadColumn[]
   mockExams       MockExam[]
   holidays        Holiday[]
 
@@ -674,16 +675,31 @@ model LeadColumn {
   deletedBy       User?     @relation("LeadColumnDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  // Board STRUCTURE stays company-level: duplicating every column and section
-  // per branch would double the board without telling anyone anything. The
-  // branch dimension lives on `Lead` (below), so one board is filtered rather
-  // than two boards maintained.
+  // Board STRUCTURE is per branch, not per company.
+  //
+  // The first cut kept it company-level on the theory that duplicating columns
+  // and sections would double the board without saying anything new. The
+  // production data says otherwise: sections are named "A1 SPSH 15:00 Eldor",
+  // "A1 DCHJ 10:00 Saida" — level, weekdays, hour and the TEACHER. Those are
+  // forming groups, and a Fargona teacher's 15:00 slot means nothing in
+  // Namangan. A shared board would force both branches to read each other's
+  // timetable to find their own.
+  //
+  // The branch sits on the COLUMN only; a section's branch is its column's, and
+  // a lead's is its section's column's. Denormalising it onto all three would
+  // create two more copies to keep in sync, and `moveSection` would be free to
+  // drift them apart. One owner, checked at the one place a section can change
+  // columns.
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+
   companyId Int
   company   Company @relation(fields: [companyId], references: [id])
 
   sections LeadSection[]
 
   @@index([companyId])
+  @@index([branchId])
   @@index([deletedAt])
   @@index([order])
 }

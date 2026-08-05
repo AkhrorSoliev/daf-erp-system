@@ -49,6 +49,14 @@ export interface LeadBoardColumn {
   order: number;
   isSystem: boolean;
   systemKey: string | null;
+  /**
+   * The board is per branch: a section names a level, weekday pattern, hour and
+   * teacher ("A1 SPSH 15:00 Eldor"), which is a forming group and belongs to
+   * one branch. Only a CEO viewing "Barcha filiallar" sees more than one branch
+   * at a time, and that is the only place this is rendered.
+   */
+  branchId: number;
+  branch: { id: number; name: string } | null;
   sections: LeadBoardSection[];
 }
 

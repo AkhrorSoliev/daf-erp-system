@@ -17,6 +17,7 @@
  * scope is a CEILING, the requested branch NARROWS within it. Resolve once at
  * the HTTP boundary, pass the answer everywhere.
  */
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { resolveCallerBranchScope } from '../auth/branch-scope';
 
 /**
@@ -198,4 +199,59 @@ export function singleBranchId(
   ids: ReportBranchIds | undefined,
 ): number | undefined {
   return ids != null && ids.length === 1 ? ids[0] : undefined;
+}
+
+/**
+ * The branch a NEW record must be stamped with, refusing every scope that
+ * cannot name exactly one.
+ *
+ * Reading tolerates an unresolved scope: `null` means "every branch" and a list
+ * means "these". Writing does not. A row has ONE branch, and the failure mode
+ * of guessing is silent — `branchId = null` is excluded from every branch view
+ * by `branchIdWhere`, so the record becomes invisible to both branches and
+ * cannot be re-attributed afterwards without knowing where it actually
+ * belonged. That is precisely how production ended up with a mock exam nobody's
+ * branch filter could see.
+ *
+ * All three ambiguous cases therefore refuse rather than default:
+ *
+ *   `null` → 400. A CEO on "Barcha filiallar" has not said where this happens.
+ *   `[]`   → 403. No branch attached, or one asked for outside the ceiling.
+ *   many   → 400. A multi-branch caller must pick.
+ *
+ * @param what noun phrase for the message, e.g. "Mock imtihon yaratish"
+ */
+export function requireSingleBranchForWrite(
+  ids: ReportBranchIds | undefined,
+  what: string,
+): number {
+  if (ids == null) {
+    throw new BadRequestException(`${what} uchun avval filialni tanlang`);
+  }
+  if (ids.length === 0) {
+    throw new ForbiddenException("Bu amal uchun filial huquqingiz yo'q");
+  }
+  if (ids.length > 1) {
+    throw new BadRequestException(`${what} uchun bitta filialni tanlang`);
+  }
+  return ids[0];
+}
+
+/**
+ * Validate a branch id the CLIENT supplied against the caller's ceiling.
+ *
+ * A body field naming a branch is a request, not an authorisation — without
+ * this check `POST` with `{ branchId: <other branch> }` writes into a branch the
+ * caller cannot even read. `null` (a CEO spanning everything) passes anything
+ * that exists; a confined caller passes only what is in their scope.
+ */
+export function assertBranchInScope(
+  branchId: number,
+  ids: ReportBranchIds | undefined,
+  message = 'Bu filialga yozish huquqingiz yo\'q',
+): number {
+  if (ids != null && !ids.includes(branchId)) {
+    throw new ForbiddenException(message);
+  }
+  return branchId;
 }

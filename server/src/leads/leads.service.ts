@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { LeadStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 import { leadBranchWhere } from './shared/lead-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
@@ -168,8 +171,16 @@ export class LeadsService {
     companyId: number,
     scope: ReportBranchIds,
   ) {
+    // Gated on the section's own branch (via its column), not just the leads
+    // inside it: an out-of-scope section must read as 404 rather than as an
+    // empty but existing one.
     const section = await this.prisma.leadSection.findFirst({
-      where: { id: sectionId, deletedAt: null, companyId },
+      where: {
+        id: sectionId,
+        deletedAt: null,
+        companyId,
+        column: { ...branchIdWhere(scope) },
+      },
       select: { id: true },
     });
     if (!section) {
@@ -379,26 +390,28 @@ export class LeadsService {
 
     const section = await this.prisma.leadSection.findFirst({
       where: { id: dto.sectionId, deletedAt: null, companyId },
-      select: { id: true, column: { select: { systemKey: true } } },
+      select: {
+        id: true,
+        column: { select: { systemKey: true, branchId: true } },
+      },
     });
     if (!section) {
       throw new NotFoundException("Bo'lim topilmadi");
     }
 
-    // Optional on purpose: a lead from the public form or a cold call has no
-    // branch yet, and forcing one here would mean guessing. It becomes
-    // mandatory at conversion, where a branch-less student could take no
-    // payment (`convert` already refuses without one). When a branch IS given
-    // it must be real and ours — the column has an FK now, but a foreign
-    // company's branch id would still pass that.
-    if (dto.branchId != null) {
-      const branch = await this.prisma.branch.findFirst({
-        where: { id: dto.branchId, companyId, deletedAt: null },
-        select: { id: true },
-      });
-      if (!branch) {
-        throw new BadRequestException(`Filial #${dto.branchId} topilmadi`);
-      }
+    // The SECTION decides the branch, and it always can now that the board is
+    // per branch. That closes the case this parameter existed for: a lead from
+    // a public form or a cold call used to arrive with no branch, sat in a pool
+    // visible from every branch, and was counted in none.
+    //
+    // A submitted `branchId` is still honoured as an assertion — it must AGREE
+    // with the section, because a lead placed on Fargona's board while claiming
+    // Namangan would be shown in one branch and counted in the other.
+    const branchId = section.column.branchId;
+    if (dto.branchId != null && dto.branchId !== branchId) {
+      throw new BadRequestException(
+        "Tanlangan bo'lim boshqa filialga tegishli — lidning filiali bo'lim bilan mos kelishi shart",
+      );
     }
 
     if (dto.sourceId) {
@@ -431,7 +444,7 @@ export class LeadsService {
         statusEnum,
         status: statusEnum.toLowerCase(),
         companyId,
-        branchId: dto.branchId ?? null,
+        branchId,
       },
       select: LEAD_CARD_SELECT,
     });
@@ -545,19 +558,36 @@ export class LeadsService {
   ) {
     const lead = await this.prisma.lead.findFirst({
       where: { id: leadId, deletedAt: null, companyId, ...leadBranchWhere(scope) },
-      select: { id: true, sectionId: true, statusEnum: true },
+      select: { id: true, sectionId: true, statusEnum: true, branchId: true },
     });
     if (!lead) {
       throw new NotFoundException('Lid topilmadi');
     }
 
+    // The target section must be reachable by this caller. Without the scope
+    // predicate a Namangan director could move their own lead onto Fargona's
+    // board — the read gate above only checks where the lead is coming FROM.
     const section = await this.prisma.leadSection.findFirst({
-      where: { id: dto.sectionId, deletedAt: null, companyId },
-      select: { id: true, column: { select: { systemKey: true } } },
+      where: {
+        id: dto.sectionId,
+        deletedAt: null,
+        companyId,
+        column: { ...branchIdWhere(scope) },
+      },
+      select: {
+        id: true,
+        column: { select: { systemKey: true, branchId: true } },
+      },
     });
     if (!section) {
       throw new NotFoundException("Bo'lim topilmadi");
     }
+
+    // Moving between branches is a real operation (a lead phones the other
+    // branch and is handed over), so it is allowed — but the lead's own branch
+    // must follow the board it now sits on. Leaving the two disagreeing is what
+    // makes a lead show in one branch's funnel and count in the other's.
+    const branchId = section.column.branchId;
 
     // Landing in the fixed NEW column resets the funnel stage; any custom
     // column leaves statusEnum untouched (CONTACTED column was removed).
@@ -576,6 +606,7 @@ export class LeadsService {
         order: (maxOrder._max.order ?? -1) + 1,
         statusEnum,
         status: statusEnum.toLowerCase(),
+        branchId,
       },
       select: LEAD_CARD_SELECT,
     });
@@ -583,8 +614,12 @@ export class LeadsService {
     await this.entityHistoryService.recordUpdate({
       entityType: 'Lead',
       entityId: leadId,
-      oldValues: { sectionId: lead.sectionId, statusEnum: lead.statusEnum },
-      newValues: { sectionId: dto.sectionId, statusEnum },
+      oldValues: {
+        sectionId: lead.sectionId,
+        statusEnum: lead.statusEnum,
+        branchId: lead.branchId,
+      },
+      newValues: { sectionId: dto.sectionId, statusEnum, branchId },
       changedById: userId,
       companyId,
     });

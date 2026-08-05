@@ -75,6 +75,7 @@ describe('CustomFormsService', () => {
           },
           1,
           10,
+          null,
         ),
       ).rejects.toThrow(/Ism maydoni majburiy/);
     });
@@ -92,6 +93,7 @@ describe('CustomFormsService', () => {
           },
           1,
           10,
+          null,
         ),
       ).rejects.toThrow(/majburiy bo'lishi kerak/);
     });
@@ -109,6 +111,7 @@ describe('CustomFormsService', () => {
           },
           1,
           10,
+          null,
         ),
       ).rejects.toThrow(/turi "phone"/);
     });
@@ -127,6 +130,7 @@ describe('CustomFormsService', () => {
           },
           1,
           10,
+          null,
         ),
       ).rejects.toThrow(/faqat bitta maydon/);
     });
@@ -143,6 +147,7 @@ describe('CustomFormsService', () => {
           },
           1,
           10,
+          null,
         ),
       ).rejects.toThrow(/kamida bitta variant/);
     });
@@ -156,6 +161,7 @@ describe('CustomFormsService', () => {
         { title: 'F1', sectionId: 'sec-1', fields: baseFields() },
         1,
         10,
+        null,
       );
       expect(prisma.customForm.create).toHaveBeenCalledWith(
         expect.objectContaining({

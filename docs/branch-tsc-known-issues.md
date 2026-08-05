@@ -49,7 +49,6 @@ Scope endi **majburiy parametr**, ya'ni bu xatolar mexanizmning ishlayotganini
 ko'rsatadi: har biri scope uzatmaydigan chaqiruvchi.
 
 - `server/src/mock-exams/mock-exam-participants.service.spec.ts`
-- `server/src/mock-exams/mock-exams.service.spec.ts`
 - `server/src/payments/payments.service.spec.ts`
 - `server/src/payments/payments-preview.service.spec.ts`
 - `server/src/transactions/transactions-read.service.spec.ts`

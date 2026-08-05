@@ -39,6 +39,12 @@ interface LeadColumnProps {
   canMoveRight: boolean;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  /**
+   * True only when the viewer is a CEO on "Barcha filiallar", where two
+   * branches' boards sit side by side and the column names alone ("Kechki
+   * kurs" exists in both) do not say which is which.
+   */
+  showBranch: boolean;
 }
 
 export function LeadColumn({
@@ -47,6 +53,7 @@ export function LeadColumn({
   canMoveRight,
   collapsed,
   onToggleCollapse,
+  showBranch,
 }: LeadColumnProps) {
   const moveColumn = useLeadsBoard((s) => s.moveColumn);
   const openCreateSection = useLeadsUi((s) => s.openCreateSection);
@@ -129,6 +136,11 @@ export function LeadColumn({
             <TooltipContent>Ustunni yopish</TooltipContent>
           </Tooltip>
           <h2 className="truncate text-sm font-semibold">{column.name}</h2>
+          {showBranch && column.branch && (
+            <span className="shrink-0 rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
+              {column.branch.name}
+            </span>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="shrink-0 cursor-default rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">

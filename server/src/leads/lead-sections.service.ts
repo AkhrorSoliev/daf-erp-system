@@ -11,6 +11,10 @@ import { CreateLeadSectionDto } from './dto/create-lead-section.dto';
 import { UpdateLeadSectionDto } from './dto/update-lead-section.dto';
 import { MoveLeadSectionDto } from './dto/move-lead-section.dto';
 import { ReorderLeadSectionsDto } from './dto/reorder-lead-sections.dto';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 
 /**
  * Sections are the collapsible cards inside a board column. Deleting a section
@@ -24,18 +28,62 @@ export class LeadSectionsService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async create(dto: CreateLeadSectionDto, companyId: number, userId: number) {
+  /**
+   * A section has no `branchId` of its own — its branch IS its column's.
+   *
+   * Resolving through the column rather than denormalising keeps one owner of
+   * the fact; the only place the two could drift is `move`, which is where the
+   * same-branch check below lives.
+   */
+  private async ensureSectionInScope(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    const section = await this.prisma.leadSection.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        companyId,
+        column: { ...branchIdWhere(scope) },
+      },
+      include: { column: { select: { id: true, branchId: true } } },
+    });
+    if (!section) {
+      throw new NotFoundException("Bo'lim topilmadi");
+    }
+    return section;
+  }
+
+  private async ensureColumnInScope(
+    columnId: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    const column = await this.prisma.leadColumn.findFirst({
+      where: { id: columnId, deletedAt: null, companyId, ...branchIdWhere(scope) },
+      select: { id: true, branchId: true, systemKey: true },
+    });
+    if (!column) {
+      throw new NotFoundException('Ustun topilmadi');
+    }
+    return column;
+  }
+
+  async create(
+    dto: CreateLeadSectionDto,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
     const name = dto.name.trim();
     if (!name) {
       throw new BadRequestException("Bo'lim nomi bo'sh bo'lishi mumkin emas");
     }
 
-    const column = await this.prisma.leadColumn.findFirst({
-      where: { id: dto.columnId, deletedAt: null },
-    });
-    if (!column) {
-      throw new NotFoundException('Ustun topilmadi');
-    }
+    // The column carries the branch, so no separate branch argument is needed —
+    // picking a column IS picking a branch, and one out of scope reads as 404.
+    await this.ensureColumnInScope(dto.columnId, companyId, scope);
 
     const maxOrder = await this.prisma.leadSection.aggregate({
       where: { columnId: dto.columnId, deletedAt: null },
@@ -73,13 +121,9 @@ export class LeadSectionsService {
     dto: UpdateLeadSectionDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const existing = await this.prisma.leadSection.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException("Bo'lim topilmadi");
-    }
+    const existing = await this.ensureSectionInScope(id, companyId, scope);
 
     const name = dto.name.trim();
     if (!name) {
@@ -109,13 +153,13 @@ export class LeadSectionsService {
    * section with its leads" as a group while keeping each section's batch
    * isolated from others.
    */
-  async remove(id: string, companyId: number, userId: number) {
-    const existing = await this.prisma.leadSection.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException("Bo'lim topilmadi");
-    }
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
+    const existing = await this.ensureSectionInScope(id, companyId, scope);
 
     const batchId = randomUUID();
     const now = new Date();
@@ -172,20 +216,24 @@ export class LeadSectionsService {
     dto: MoveLeadSectionDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const existing = await this.prisma.leadSection.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!existing) {
-      throw new NotFoundException("Bo'lim topilmadi");
-    }
+    const existing = await this.ensureSectionInScope(id, companyId, scope);
+    const column = await this.ensureColumnInScope(
+      dto.targetColumnId,
+      companyId,
+      scope,
+    );
 
-    const column = await this.prisma.leadColumn.findFirst({
-      where: { id: dto.targetColumnId, deletedAt: null },
-      select: { id: true, systemKey: true },
-    });
-    if (!column) {
-      throw new NotFoundException('Ustun topilmadi');
+    // This is the one operation that could break the "a section's branch is its
+    // column's" invariant, and it would do so silently: the section — with every
+    // lead in it — would land in the other branch's board without any of the
+    // leads' own `branchId` changing. A CEO spanning both branches can reach
+    // both columns, so scope alone does not stop it.
+    if (column.branchId !== existing.column.branchId) {
+      throw new BadRequestException(
+        "Bo'limni boshqa filialning ustuniga ko'chirib bo'lmaydi",
+      );
     }
 
     // Already in the target column — nothing to move (within-column ordering is
@@ -261,9 +309,17 @@ export class LeadSectionsService {
   }
 
   /** Reorders the sections of a single column top-to-bottom. */
-  async reorder(dto: ReorderLeadSectionsDto) {
+  async reorder(
+    dto: ReorderLeadSectionsDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    // The column is the unit of ordering and it carries the branch, so gating
+    // on the column is enough — no separate branch argument.
+    await this.ensureColumnInScope(dto.columnId, companyId, scope);
+
     const sections = await this.prisma.leadSection.findMany({
-      where: { columnId: dto.columnId, deletedAt: null },
+      where: { columnId: dto.columnId, deletedAt: null, companyId },
       select: { id: true },
     });
     const ids = new Set(sections.map((s) => s.id));

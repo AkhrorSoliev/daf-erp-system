@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { LeadStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import {
+  ReportBranchIds,
+  branchIdWhere,
+} from '../common/finance/report-branch-scope';
 import { leadBranchWhere } from './shared/lead-scope';
 
 /**
@@ -19,20 +22,26 @@ export class LeadsBoardService {
    * returned every column, section and lead in the database, so one branch's
    * director could see, drag and delete another branch's leads.
    *
-   * Board STRUCTURE (columns + sections) is company-level by design; only the
-   * LEAD COUNTS are branch-filtered, so both branches share one funnel layout
-   * while each sees its own pipeline.
+   * Board STRUCTURE is per BRANCH: a section names a level, weekday pattern,
+   * hour and teacher ("A1 SPSH 15:00 Eldor"), which is a forming group and
+   * therefore belongs to exactly one branch. Filtering the columns cascades to
+   * their sections for free, since a section's branch IS its column's.
+   *
+   * `branch` is returned so a CEO viewing every branch at once can tell two
+   * identically-shaped boards apart; a single-branch view ignores it.
    */
   async getBoard(companyId: number, scope: ReportBranchIds) {
     const columns = await this.prisma.leadColumn.findMany({
-      where: { deletedAt: null, companyId },
-      orderBy: { order: 'asc' },
+      where: { deletedAt: null, companyId, ...branchIdWhere(scope) },
+      orderBy: [{ branchId: 'asc' }, { order: 'asc' }],
       select: {
         id: true,
         name: true,
         order: true,
         isSystem: true,
         systemKey: true,
+        branchId: true,
+        branch: { select: { id: true, name: true } },
         sections: {
           where: { deletedAt: null, companyId },
           orderBy: { order: 'asc' },
@@ -66,6 +75,8 @@ export class LeadsBoardService {
       order: column.order,
       isSystem: column.isSystem,
       systemKey: column.systemKey,
+      branchId: column.branchId,
+      branch: column.branch,
       sections: column.sections.map((section) => ({
         id: section.id,
         name: section.name,

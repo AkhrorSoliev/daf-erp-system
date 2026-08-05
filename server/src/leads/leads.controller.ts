@@ -59,8 +59,11 @@ export class LeadsController {
   // Archived leads + sections (two-column leads archive). Declared before ':id'
   // so "/leads/archive" is not captured as an id.
   @Get('archive')
-  getArchive() {
-    return this.archiveService.getArchive();
+  getArchive(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.archiveService.getArchive(companyId, scope);
   }
 
   // Lazily loaded when a section is expanded on the board.
@@ -103,6 +106,8 @@ export class LeadsController {
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
   ) {
+    // No `@BranchScope()`: the branch comes from the chosen section's column,
+    // and `getBoard` already only offered sections this caller can reach.
     return this.leadsService.create(dto, companyId, userId);
   }
 
@@ -155,8 +160,9 @@ export class LeadsController {
     @Body() dto: RestoreLeadDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.archiveService.restoreLead(id, dto, companyId, userId);
+    return this.archiveService.restoreLead(id, dto, companyId, userId, scope);
   }
 
   @Patch(':id')

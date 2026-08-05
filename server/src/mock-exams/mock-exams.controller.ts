@@ -23,8 +23,11 @@ export class MockExamsController {
   constructor(private readonly mockExamsService: MockExamsService) {}
 
   @Get()
-  list() {
-    return this.mockExamsService.list();
+  list(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.mockExamsService.list(companyId, scope);
   }
 
   @Get('revenue-summary')
@@ -36,13 +39,20 @@ export class MockExamsController {
   }
 
   @Get('board')
-  board() {
-    return this.mockExamsService.board();
+  board(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.mockExamsService.board(companyId, scope);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.mockExamsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.mockExamsService.findOne(id, companyId, scope);
   }
 
   @Post()
@@ -50,8 +60,9 @@ export class MockExamsController {
     @Body() dto: CreateMockExamDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.mockExamsService.create(dto, companyId, userId);
+    return this.mockExamsService.create(dto, companyId, userId, scope);
   }
 
   @Patch(':id')
@@ -60,8 +71,9 @@ export class MockExamsController {
     @Body() dto: UpdateMockExamDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.mockExamsService.update(id, dto, companyId, userId);
+    return this.mockExamsService.update(id, dto, companyId, userId, scope);
   }
 
   @Patch(':id/status')
@@ -70,23 +82,33 @@ export class MockExamsController {
     @Body() dto: ChangeMockExamStatusDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
     return this.mockExamsService.changeStatus(
       id,
       dto.status,
       companyId,
       userId,
+      scope,
     );
   }
 
   @Post(':id/regenerate-pdf')
-  regeneratePdf(@Param('id') id: string) {
-    return this.mockExamsService.regeneratePdf(id);
+  regeneratePdf(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.mockExamsService.regeneratePdf(id, companyId, scope);
   }
 
   @Post(':id/rebroadcast-results')
-  rebroadcastResults(@Param('id') id: string) {
-    return this.mockExamsService.rebroadcastResults(id);
+  rebroadcastResults(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.mockExamsService.rebroadcastResults(id, companyId, scope);
   }
 
   @Delete(':id')
@@ -94,7 +116,8 @@ export class MockExamsController {
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.mockExamsService.remove(id, companyId, userId);
+    return this.mockExamsService.remove(id, companyId, userId, scope);
   }
 }

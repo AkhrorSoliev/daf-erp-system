@@ -67,7 +67,7 @@ describe('LeadsArchiveService', () => {
         // by section (legacy)
         .mockResolvedValueOnce([{ sectionId: 'sec-2', _count: { _all: 5 } }]);
 
-      const result = await service.getArchive();
+      const result = await service.getArchive(1001, null);
 
       expect(result.leads).toHaveLength(1);
       expect(result.sections).toEqual([
@@ -81,7 +81,7 @@ describe('LeadsArchiveService', () => {
     it('throws NotFound when the archived lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
       await expect(
-        service.restoreLead('x', { columnId: 'c', sectionId: 's' }, 1001, 1),
+        service.restoreLead('x', { columnId: 'c', sectionId: 's' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -94,6 +94,7 @@ describe('LeadsArchiveService', () => {
           { columnId: 'col-1', sectionId: 'sec-1' },
           1001,
           1,
+          null,
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -116,6 +117,7 @@ describe('LeadsArchiveService', () => {
         { columnId: 'col-1', sectionId: 'sec-1' },
         1001,
         7,
+        null,
       );
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
@@ -154,6 +156,7 @@ describe('LeadsArchiveService', () => {
         { columnId: 'col-1', sectionId: 'sec-1' },
         1001,
         7,
+        null,
       );
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
@@ -173,6 +176,7 @@ describe('LeadsArchiveService', () => {
           { targetColumnId: 'col-1', withLeads: false },
           1001,
           1,
+          null,
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -190,6 +194,7 @@ describe('LeadsArchiveService', () => {
           { targetColumnId: 'missing', withLeads: false },
           1001,
           1,
+          null,
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -210,6 +215,7 @@ describe('LeadsArchiveService', () => {
         { targetColumnId: 'col-2', withLeads: false },
         1001,
         1,
+        null,
       );
 
       expect(prisma.leadSection.update).toHaveBeenCalledWith(
@@ -246,6 +252,7 @@ describe('LeadsArchiveService', () => {
         { targetColumnId: 'col-2', withLeads: true },
         1001,
         1,
+        null,
       );
 
       expect(prisma.lead.findMany).toHaveBeenCalledWith(

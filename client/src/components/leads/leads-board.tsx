@@ -316,6 +316,13 @@ export function LeadsBoard() {
 
   const customColumns = board.filter((c) => !c.isSystem);
 
+  // Each branch runs its own board, so on "Barcha filiallar" two of them sit
+  // side by side and identical column names ("Kechki kurs" exists in both) stop
+  // being distinguishable. Label them only in that case — a single-branch view
+  // would just repeat the switcher.
+  const showBranch =
+    new Set(board.map((c) => c.branchId)).size > 1;
+
   return (
     <DndContext
       sensors={sensors}
@@ -338,6 +345,7 @@ export function LeadsBoard() {
               }
               collapsed={collapsedColumns.has(column.id)}
               onToggleCollapse={() => toggleColumnCollapse(column.id)}
+              showBranch={showBranch}
             />
           );
         })}

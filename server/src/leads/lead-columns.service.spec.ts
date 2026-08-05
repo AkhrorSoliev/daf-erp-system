@@ -47,7 +47,7 @@ describe('LeadColumnsService', () => {
   describe('create', () => {
     it('rejects a duplicate name', async () => {
       prisma.leadColumn.findFirst.mockResolvedValue({ id: 'existing' });
-      await expect(service.create({ name: 'Sotuv' }, 1001, 1)).rejects.toThrow(
+      await expect(service.create({ name: 'Sotuv' }, 1001, 1, [1])).rejects.toThrow(
         ConflictException,
       );
     });
@@ -61,15 +61,62 @@ describe('LeadColumnsService', () => {
         order: 3,
         isSystem: false,
         systemKey: null,
+        branchId: 1,
+        branch: { id: 1, name: "Farg'ona" },
       });
 
-      const result = await service.create({ name: 'Sotuv' }, 1001, 1);
+      const result = await service.create({ name: 'Sotuv' }, 1001, 1, [1]);
 
-      expect(prisma.leadColumn.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ name: 'Sotuv', order: 3, isSystem: false }),
-      });
+      expect(prisma.leadColumn.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: 'Sotuv',
+            order: 3,
+            isSystem: false,
+            // Stamped from the caller's scope: the board is per branch, so a
+            // column without one belongs to no board at all.
+            branchId: 1,
+          }),
+        }),
+      );
       expect(result.sections).toEqual([]);
       expect(history.recordCreate).toHaveBeenCalled();
+    });
+
+    it('refuses to create a column when no single branch is selected', async () => {
+      // A CEO viewing "Barcha filiallar" resolves to `null`. There is no
+      // sensible default: picking the lowest branch would put the column on a
+      // board they were not looking at, and leaving `branchId` unset is not
+      // even representable (the column is NOT NULL).
+      await expect(service.create({ name: 'Sotuv' }, 1001, 1, null)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.leadColumn.create).not.toHaveBeenCalled();
+    });
+
+    it('allows the same column name in a different branch', async () => {
+      // Uniqueness used to be global — not even per company — so once each
+      // branch keeps its own board, Namangan could not create "Kechki kurs"
+      // because Fargona already had one.
+      prisma.leadColumn.findFirst.mockResolvedValue(null);
+      prisma.leadColumn.aggregate.mockResolvedValue({ _max: { order: -1 } });
+      prisma.leadColumn.create.mockResolvedValue({
+        id: 'col-n',
+        name: 'Kechki kurs',
+        order: 0,
+        isSystem: false,
+        systemKey: null,
+        branchId: 2,
+        branch: { id: 2, name: 'Namangan' },
+      });
+
+      await service.create({ name: 'Kechki kurs' }, 1001, 1, [2]);
+
+      expect(prisma.leadColumn.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ name: 'Kechki kurs', branchId: 2 }),
+        }),
+      );
     });
   });
 
@@ -77,7 +124,7 @@ describe('LeadColumnsService', () => {
     it('throws NotFound for a missing column', async () => {
       prisma.leadColumn.findFirst.mockResolvedValue(null);
       await expect(
-        service.update('x', { name: 'Y' }, 1001, 1),
+        service.update('x', { name: 'Y' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -88,7 +135,7 @@ describe('LeadColumnsService', () => {
         isSystem: true,
       });
       await expect(
-        service.update('sys', { name: 'X' }, 1001, 1),
+        service.update('sys', { name: 'X' }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -98,7 +145,7 @@ describe('LeadColumnsService', () => {
         .mockResolvedValueOnce(null);
       prisma.leadColumn.update.mockResolvedValue({ id: 'col-1', name: 'New' });
 
-      const result = await service.update('col-1', { name: 'New' }, 1001, 1);
+      const result = await service.update('col-1', { name: 'New' }, 1001, 1, null);
 
       expect(result).toEqual({ id: 'col-1', name: 'New' });
       expect(history.recordUpdate).toHaveBeenCalled();
@@ -112,7 +159,7 @@ describe('LeadColumnsService', () => {
         isSystem: true,
         name: 'Yangi Lidlar',
       });
-      await expect(service.remove('sys', 1001, 1)).rejects.toThrow(
+      await expect(service.remove('sys', 1001, 1, null)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -124,7 +171,7 @@ describe('LeadColumnsService', () => {
         name: 'Sotuv',
       });
       prisma.leadSection.count.mockResolvedValue(2);
-      await expect(service.remove('col-1', 1001, 1)).rejects.toThrow(
+      await expect(service.remove('col-1', 1001, 1, null)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -137,7 +184,7 @@ describe('LeadColumnsService', () => {
       });
       prisma.leadSection.count.mockResolvedValue(0);
 
-      await service.remove('col-1', 1001, 1);
+      await service.remove('col-1', 1001, 1, null);
 
       expect(prisma.leadColumn.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -156,7 +203,7 @@ describe('LeadColumnsService', () => {
         { id: 'col-1', isSystem: false, systemKey: null },
       ]);
       await expect(
-        service.reorder({ columnIds: ['sys-1'] }),
+        service.reorder({ columnIds: ['sys-1'] }, 1001, [1]),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -167,7 +214,7 @@ describe('LeadColumnsService', () => {
         { id: 'col-b', isSystem: false, systemKey: null },
       ]);
 
-      await service.reorder({ columnIds: ['col-b', 'col-a'] });
+      await service.reorder({ columnIds: ['col-b', 'col-a'] }, 1001, [1]);
 
       expect(prisma.$transaction).toHaveBeenCalled();
     });
