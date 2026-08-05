@@ -43,6 +43,10 @@ import {
  *    plus the remaining scheduled slots), from `ReportsService
  *    .getMonthlyExpectation`. Never re-derive it here — the line it replaced
  *    was a local `exactDays × 4` walk that assumed every month was four weeks.
+ *  - "Oy rejasidan yig'ildi" = the two lines above divided: collected ÷ the
+ *    whole month. It answers "are we on track", which the held-lessons ratio
+ *    cannot — that one can read 50% on the 5th. Same pair of figures the
+ *    /payments/overview income drill-down shows, so the two cannot disagree.
  *  - "Markaz qo'shimchasi" = SalaryMonthly `gap` = fullDeserved − covered.
  */
 @Injectable()
@@ -436,6 +440,22 @@ export class TelegramGroupDailyReportService {
       lines.push(
         `• Oy oxiriga kutilyapti: <b>${formatSum(expectedValue)}</b>`,
       );
+      // How far through the month we are. "Shundan yig'ildi" above measures
+      // against the lessons already HELD, so it can read 50% on the 5th and say
+      // nothing about the month; this divides the same collected figure by the
+      // WHOLE month instead. Both numerator and denominator are already on the
+      // message above, and both come from the same services /payments/overview
+      // reads — no third figure is fetched, so the bot and the web page cannot
+      // drift apart.
+      //
+      // Deliberately unclamped: a reading above 100% would mean more was
+      // collected than the month is worth, and that should stay visible.
+      if (collection) {
+        const monthPlanPct = Math.round(
+          (collection.collected / expectedValue) * 100,
+        );
+        lines.push(`• Oy rejasidan yig'ildi: <b>${monthPlanPct}%</b>`);
+      }
     }
 
     // 💵 Ustozlar oyligi (only when there is real lesson data — skips the
