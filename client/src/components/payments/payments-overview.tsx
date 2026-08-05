@@ -240,7 +240,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="Chiqimlar"
               value={`${fmt(d.expenses)} so'm`}
               color="text-red-600 dark:text-red-400"
-              tooltip="Operatsion xarajatlar (ijara, marketing, jihoz va boshqalar). Ustoz oyliklari va avanslar bu yerga kirmaydi — ular alohida 'Ustoz oyliklari' kartasida ko'rsatiladi."
+              tooltip="Ijara, marketing, jihoz va shunga o'xshash xarajatlar. Ustoz oyliklari va avanslar bu yerga kirmaydi — ular alohida 'Ustoz oyliklari' kartasida."
               onClick={() => setChartKey("expenses")}
             />
             {/* 3. Foyda */}
@@ -249,7 +249,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="Foyda"
               value={`${fmt(d.netProfit)} so'm`}
               color={d.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
-              tooltip="Sof foyda: shu oy o'tilgan darslar tushumidan ustoz oyligi (o'quvchilar to'lagani + iyuldan markaz qo'shimchasi), xarajatlar va qaytarishlar ayirilgan. Har oy o'z darslari bo'yicha — kech to'lovlar aralashmaydi."
+              tooltip="Shu oy o'tilgan darslarning pulidan ustoz oyligi, xarajatlar va qaytarilgan pullar ayirilgan — qolgani markazga foyda. Har oy faqat o'z darslari bo'yicha, kech kelgan to'lovlar aralashmaydi."
               onClick={() => setChartKey("profit")}
             />
           </>
@@ -260,7 +260,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           label="To'lov qilganlar"
           value={`${d.ltvPayerCount ?? 0} ta`}
           color="text-blue-600 dark:text-blue-400"
-          tooltip="Tanlangan davrda kamida 1 marta to'lov qilgan o'quvchilar soni"
+          tooltip="Shu davrda kamida bir marta pul to'lagan o'quvchilar soni."
           subtitle="Davrda aktiv"
         />
         {canSeeFinancials && (
@@ -271,7 +271,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="LTV"
               value={`${fmt(d.ltv)} so'm`}
               color="text-violet-600 dark:text-violet-400"
-              tooltip="Tanlangan davrdagi o'rtacha o'quvchi qiymati — shu davrda to'lov qilgan o'quvchilardan o'rtacha daromad"
+              tooltip="Bitta o'quvchi shu davrda o'rtacha qancha pul olib kelgan. Yuqori bo'lsa — yaxshi."
               subtitle="Davriy o'quvchi qiymati"
               onClick={() => setChartKey("ltv")}
             />
@@ -281,7 +281,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="CAC"
               value={`${fmt(d.cac)} so'm`}
               color="text-amber-600 dark:text-amber-400"
-              tooltip={`Yangi o'quvchi jalb qilish narxi. Marketing: ${fmt(d.marketingExpenses)}, Yangi: ${d.newStudentCount} ta`}
+              tooltip={`Bitta yangi o'quvchi olib kelish qancha turgani. Marketingga ${fmt(d.marketingExpenses)} so'm sarflandi, ${d.newStudentCount} ta yangi o'quvchi keldi.`}
               subtitle="Jalb qilish narxi"
               onClick={() => setChartKey("cac")}
             />
@@ -291,7 +291,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="Marketing ROI"
               value={`${d.marketingRoi}%`}
               color={d.marketingRoi > 100 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}
-              tooltip="Marketing samaradorligi — sarflangan mablag'ning qaytimi foizda"
+              tooltip="Marketingga sarflangan pul qancha qaytganini ko'rsatadi. 100% dan yuqori bo'lsa — foyda keltiryapti."
               subtitle="Samaradorlik"
               onClick={() => setChartKey("marketingRoi")}
             />
@@ -303,7 +303,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           label="O'rtacha to'lov"
           value={`${fmt(d.avgPayment)} so'm`}
           color="text-sky-600 dark:text-sky-400"
-          tooltip="Har bir to'lovning o'rtacha summasi"
+          tooltip="Bitta to'lov o'rtacha qancha bo'lgani."
           subtitle="To'lov boshiga"
           onClick={canSeeFinancials ? () => setChartKey("avgPayment") : undefined}
         />
@@ -336,12 +336,19 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-72">
-                Shu oy allaqachon o&apos;tilgan darslar qiymati (
-                {fmt(d.forecast.expectedHeld)}) + kalendar bo&apos;yicha oy
-                oxirigacha qolgan darslar ({fmt(d.forecast.expectedRemaining)}).
-                Bayram, bekor qilingan dars va guruh jadvali hisobga olinadi.
-                Bu kassa bashorati emas — pul qachon kelishi bunga kirmaydi.
-                Kunlik siljishni ko&apos;rish uchun bosing.
+                Oy oxirigacha hamma dars jadval bo&apos;yicha o&apos;tsa,
+                o&apos;quvchilar jami shuncha darsga pul to&apos;lashi kerak.
+                <br />
+                <br />
+                Shundan {fmt(d.forecast.expectedHeld)} — allaqachon
+                o&apos;tilgan darslar, {fmt(d.forecast.expectedRemaining)} —
+                oy oxirigacha qolgani. Bayramlar, bekor qilingan darslar va
+                har guruhning dars kunlari hisobga olingan.
+                <br />
+                <br />
+                Bu pul qachon kelishini aytmaydi — faqat qancha
+                bo&apos;lishini. Kunma-kun qanday o&apos;zgarganini ko&apos;rish
+                uchun bosing.
               </TooltipContent>
             </Tooltip>
             {/* Hisoblangan darslar — real billed (Σ LESSON_DEDUCTION) */}
@@ -358,8 +365,9 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-64">
-                Bu davrda o&apos;quvchilarga real hisoblab yozilgan darslar
-                puli. Tushgan to&apos;lov va qarz aynan shu summadan kelib
+                Shu davrda haqiqatda o&apos;tilgan darslarning puli.
+                O&apos;quvchi to&apos;lagan bo&apos;lsa — tushum, hali
+                to&apos;lamagan bo&apos;lsa — qarz. Ikkalasi ham shu summadan
                 chiqadi.
               </TooltipContent>
             </Tooltip>
@@ -377,7 +385,9 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-64">
-                Bu davrda kassaga real tushgan to&apos;lovlar.
+                Shu davrda kassaga haqiqatda kirgan pul — qaysi oy uchun
+                to&apos;langanidan qat&apos;i nazar. Eski qarzni yopgan
+                to&apos;lovlar ham shu yerda.
               </TooltipContent>
             </Tooltip>
           </div>
@@ -402,13 +412,15 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-64">
-              Bu ustozlarning shu oy uchun HISOBLANGAN oyligi — Excel
-              &quot;Oyliklar&quot; varag&apos;i, Oyliklar sahifasi va
-              &quot;Foyda&quot; kartasi bilan aynan bir xil asosda (o&apos;quvchilar
-              to&apos;lagani + iyuldan markaz qo&apos;shimchasi). Naqd oylik odatda
-              keyingi oy boshida chiqadi.
+              Ustozlar shu oyda ishlab topgan pul. Hali qo&apos;llariga
+              berilmagan bo&apos;lishi mumkin — naqd oylik odatda keyingi oy
+              boshida chiqadi.
+              <br />
+              <br />
+              Bu raqam Oyliklar sahifasi, Excel va Foyda kartasidagi bilan bir
+              xil.
               {isCeo && selectedBranch
-                ? " Oylik barcha filiallar bo'yicha (Excel kabi), boshqa kartalar esa tanlangan filial bo'yicha."
+                ? " Faqat bitta farq: oylik barcha filiallar bo'yicha, qolgan kartalar esa siz tanlagan filial bo'yicha."
                 : ""}
             </TooltipContent>
           </Tooltip>
@@ -428,9 +440,8 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-64">
-                  Avans ayirilgach ustozlarga beriladigan summalar yig&apos;indisi.
-                  Excel &quot;Oyliklar&quot; varag&apos;idagi &quot;Sof
-                  to&apos;lanadigan&quot; ustuni bilan bir xil.
+                  Ustozlarning qo&apos;liga tegadigan qismi. Agar avans
+                  allaqachon berilgan bo&apos;lsa, u shu summadan ayirilgan.
                 </TooltipContent>
               </Tooltip>
               {/* b) Avanslarning jami yig'indisi */}
@@ -453,8 +464,8 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-64">
-                  Avans va sof to&apos;lanadigan oylik yig&apos;indisi — ustozlarga
-                  shu oy uchun beriladigan jami summa.
+                  Avans + qolgan oylik. Ya&apos;ni ustozlarga shu oy uchun
+                  beriladigan jami pul.
                 </TooltipContent>
               </Tooltip>
               {!d.salary.computed.hasLessonData && (
@@ -473,10 +484,30 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
 
         {/* Qarzdorlik majmui — backend forecast.outstandingReceivable + debtorExposure */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
-          <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-            <UserMinus className="size-3 text-red-500" />
-            Qarzdorlik majmui
-          </p>
+          {/* Bu blok tanlangan davrga bog'liq EMAS — u bugungi holat. Yonidagi
+              kartalar davr bo'yicha bo'lgani uchun buni aytib qo'yish shart,
+              aks holda "davr qarzi" deb o'qiladi. */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="cursor-help">
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <UserMinus className="size-3 text-red-500" />
+                  Qarzdorlik
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Bugungi holat
+                </p>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-64">
+              O&apos;quvchilarning bugungi kundagi jami qarzi — hamma oylar
+              bo&apos;yicha to&apos;planib qolgani.
+              <br />
+              <br />
+              Boshqa kartalardan farqi: bu yuqorida tanlangan davrga
+              bog&apos;liq emas, doim bugungi holatni ko&apos;rsatadi.
+            </TooltipContent>
+          </Tooltip>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Jami qarz</span>
@@ -517,9 +548,9 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="max-w-64">
-                    &quot;Yo&apos;qolgan o&apos;quvchi&quot; flow ostida joriy
-                    sikldan hisobdan chiqarilgan qarzlar. Jurnalga o&apos;tish
-                    uchun bosing.
+                    O&apos;quvchi butunlay ketib qolgani uchun undirib
+                    bo&apos;lmaydi deb kechirilgan qarzlar. Ro&apos;yxatni
+                    ko&apos;rish uchun bosing.
                   </TooltipContent>
                 </Tooltip>
               </div>
