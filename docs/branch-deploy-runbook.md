@@ -271,3 +271,68 @@ DELETE FROM "LeadColumn" WHERE "systemKey"='NEW' AND "branchId" <> 1;  -- bootst
 
 Mock imtihon biriktirishi **qaytarilmaydi** va qaytarilishi shart emas — imtihon
 haqiqatan Farg'onada o'tgan, `branchId=1` eski kodda ham to'g'ri o'qiladi.
+
+---
+
+# 3-relis — filial almashganda ma'lumot yangilanmasligi
+
+**Sana:** 2026-08-05 · **Qamrov:** faqat frontend · **Migratsiya:** yo'q
+
+## Nuqson
+
+Farg'onadan Namanganga o'tilganda lidlar doskasi eski ma'lumotni ko'rsatib
+turardi; faqat sahifani qo'lda yangilagandan keyin o'zgarardi.
+
+## Sabab — bitta emas, ikkita
+
+`BranchQuerySync` React Query keshini tozalaydi. Lekin **51 fayl** React
+Query'dan tashqarida ma'lumot oladi, va ular ikki xil:
+
+| Toifa | Soni | Nega tozalanmagan |
+|---|---|---|
+| Modul darajasidagi zustand store | **3** | Komponent o'lsa ham, marshrut o'zgarsa ham, kesh tozalansa ham **saqlanib qoladi** |
+| Komponent ichidagi `useState` + `useEffect` | **~47** | React Query keshiga umuman qaramaydi |
+
+Zustand toifasi yomonroq edi: `use-mock-exams-board` da `loaded: true`,
+`use-leads-board` da esa `loadedSections.has(sectionId)` qorovuli bor — ya'ni
+sahifa qaytadan ulansa ham **qayta yuklashdan bosh tortardi**.
+
+## Yechim — uch qatlam
+
+1. **`lib/branch-scoped-stores.ts`** — store'lar o'zini ro'yxatga oladi;
+   `BranchQuerySync` filial almashganda hammasini `getInitialState()` ga
+   qaytaradi. `getInitialState()` ishlatilgani uchun store'ga yangi maydon
+   qo'shilsa ham ro'yxat eskirmaydi.
+2. **`BranchScopedMain`** — dashboard `<main>` iga filial `key` i qo'yiladi, ya'ni
+   filial almashganda butun sahifa daraxti qaytadan ulanadi va har bir
+   `useEffect` yangidan ishlaydi. ~47 ta komponentni ham, kelajakda yoziladigan
+   har qanday komponentni ham hech kim eslamasdan qamrab oladi.
+3. **`branch-scoped-stores.test.ts`** — `src/hooks` dagi zustand store'larni
+   sanab chiqadi va yangi store ro'yxatga qo'shilmagan bo'lsa **yiqiladi**.
+   Ertangi store bu nuqsonni jimgina qaytara olmaydi.
+
+## Tartib muhim
+
+`<BranchQuerySync />` `query-provider.tsx` da `{children}` dan **oldin** turishi
+shart. React passiv effektlarni render tugash tartibida navbatga qo'yadi, ya'ni
+tozalash yangi ulangan sahifaning `fetch` idan **oldin** ishlaydi. Pastga
+ko'chirilsa tartib teskari bo'ladi: yangi sahifa `loadingBoard: true` qo'yadi,
+keyin reset uni bo'sh va yuklanmayotgan holatga qaytaradi — so'rov hali
+ketayotganida «ma'lumot yo'q» ko'rinadi. Ma'lumot oxir-oqibat to'g'ri keladi,
+lekin ko'rinishi noto'g'ri bo'ladi.
+
+## Chiqarish
+
+Faqat Vercel (migratsiya ham, backend ham o'zgarmagan):
+
+```bash
+git worktree add /tmp/deploy origin/main
+cd /tmp/deploy/client && cp -r <asosiy>/client/.vercel .vercel
+vercel --prod --yes
+# 4 domenni alias qilish: admin / lehrer / student / form
+```
+
+**Yon ta'siri (ataylab):** filial almashganda scroll holati, ochiq dialoglar va
+komponent ichidagi UI holati tiklanadi. Filial almashtirish — kontekstni
+ataylab o'zgartirish, filtr sozlash emas. Filtrlar URL'da saqlangani uchun
+omon qoladi.

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
 
 export type TaskStatus = "PENDING" | "SEEN" | "DONE";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -231,3 +232,8 @@ function deriveCommentStatus(
   if (anySeen) return "SEEN";
   return "PENDING";
 }
+
+// Tasks hang off students, groups and leads, all of which are branch-scoped,
+// so the board's contents change with the branch. See
+// `lib/branch-scoped-stores.ts`.
+registerBranchScopedStore(useTasksBoard);

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -730,3 +731,9 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
     }
   },
 }));
+
+// The board is per branch now — its columns, its sections and every lead in
+// them. Without this the store kept Fargona's board after a switch to Namangan,
+// and `fetchSectionLeads`'s `loadedSections` guard meant even a refetch skipped
+// every section already open. See `lib/branch-scoped-stores.ts`.
+registerBranchScopedStore(useLeadsBoard);
