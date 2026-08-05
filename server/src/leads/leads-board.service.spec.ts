@@ -38,7 +38,7 @@ describe('LeadsBoardService', () => {
     ]);
     prisma.lead.groupBy.mockResolvedValue([{ sectionId: 'sec-1', _count: 3 }]);
 
-    const board = await service.getBoard();
+    const board = await service.getBoard(1001, null);
 
     expect(board[0].sections[0].leadCount).toBe(3);
     expect(board[0].sections[1].leadCount).toBe(0);

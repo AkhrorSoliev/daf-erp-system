@@ -322,7 +322,7 @@ describe('ReportsExcelService', () => {
   };
 
   it('produces a non-empty xlsx buffer from every report source', async () => {
-    const buf = await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30' });
+    const buf = await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30', branchIds: null });
     expect(Buffer.isBuffer(buf)).toBe(true);
     expect(buf.length).toBeGreaterThan(0);
     expect(reports.getFinancialOverview).toHaveBeenCalled();
@@ -332,7 +332,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('builds the 23 expected sheets in order (company-wide, financial + operational)', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     expect(wb.worksheets.map((w) => w.name)).toEqual([
       'Muqova',
       'Asosiy xulosa',
@@ -363,6 +363,7 @@ describe('ReportsExcelService', () => {
   it('drops the live-state sheets for a PAST month when hidePointInTimeForPastPeriod is set', async () => {
     const wb = await load(
       await service.generate(1, {
+        branchIds: null,
         startDate: '2026-05-01',
         endDate: '2026-05-31',
         hidePointInTimeForPastPeriod: true,
@@ -391,6 +392,7 @@ describe('ReportsExcelService', () => {
     const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const wb = await load(
       await service.generate(1, {
+        branchIds: null,
         startDate: `${m}-01`,
         endDate: `${m}-28`,
         hidePointInTimeForPastPeriod: true,
@@ -411,14 +413,14 @@ describe('ReportsExcelService', () => {
   });
 
   it('shows the cash-basis net profit (= overview.netProfit) on Asosiy xulosa', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const row = findRow(wb.getWorksheet('Asosiy xulosa')!, 'Sof foyda (naqd asosida)');
     expect(row).toBeTruthy();
     expect(row.getCell(2).value).toBe(overview.netProfit);
   });
 
   it('builds the "Sof foyda" sheet subtracting deserved salary + expenses + refunds', async () => {
-    const wb = await load(await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30' }));
+    const wb = await load(await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30', branchIds: null }));
     const ws = wb.getWorksheet('Sof foyda')!;
     expect(ws).toBeTruthy();
     // 2026-06 is PRE top-up (TOPUP_EFFECTIVE_MONTH=2026-07): teacher salary =
@@ -435,7 +437,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('shows the accurate net profit on Asosiy xulosa (deserved salary + refunds)', async () => {
-    const wb = await load(await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30' }));
+    const wb = await load(await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30', branchIds: null }));
     const row = findRow(
       wb.getWorksheet('Asosiy xulosa')!,
       'Sof foyda (aniq — hisoblangan oylik + refund bilan)',
@@ -445,7 +447,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('includes the center top-up (fullDeserved) from 2026-07 on', async () => {
-    const wb = await load(await service.generate(1, { startDate: '2026-07-01', endDate: '2026-07-31' }));
+    const wb = await load(await service.generate(1, { startDate: '2026-07-01', endDate: '2026-07-31', branchIds: null }));
     const ws = wb.getWorksheet('Sof foyda')!;
     const teacher = findRow(ws, '−  Ustoz oyligi (hisoblangan + markaz qo‘shimchasi)');
     expect(teacher).toBeTruthy();
@@ -455,13 +457,13 @@ describe('ReportsExcelService', () => {
   });
 
   it('Qarzdorlar total ties to the balance-sheet debitorlik', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const debtorTotal = findRow(wb.getWorksheet('Qarzdorlar')!, 'Jami qarz');
     expect(debtorTotal.getCell(6).value).toBe(bs.assets.accountsReceivable);
   });
 
   it('every Tekshiruv tie reconciles (MOS, no XATO)', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const ws = wb.getWorksheet('Tekshiruv')!;
     const verdicts: string[] = [];
     ws.eachRow((row) => {
@@ -473,7 +475,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('shows computed monthly salaries on the Oyliklar sheet', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const ws = wb.getWorksheet('Oyliklar')!;
     const jami = findRow(ws, 'Jami');
     // Sof to'lanadigan total (col 7 after the carry-in/out columns were added).
@@ -499,7 +501,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('adds the center top-up undirish block to Oyliklar when the center fronted money', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const ws = wb.getWorksheet('Oyliklar')!;
     expect(findRow(ws, 'Jami qo‘shdi').getCell(2).value).toBe(
       salaryMonthly.totals.centerAdvanced,
@@ -513,7 +515,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('moves "Balanslashuv farqi" off the Balans sheet', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const balans = wb.getWorksheet('Balans')!;
     let hasGap = false;
     balans.eachRow((r) => {
@@ -523,7 +525,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('renders the operational sheets with data from the facade', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const kpiRow = findRow(wb.getWorksheet('KPI paneli')!, "Faol o'quvchilar");
     expect(kpiRow.getCell(2).value).toBe(120);
     const attRow = findRow(wb.getWorksheet('Davomat')!, 'Umumiy davomat');
@@ -541,6 +543,7 @@ describe('ReportsExcelService', () => {
   it('adds "Taqqoslash" + "Yillar kesimida" sheets when compareModes are requested', async () => {
     const wb = await load(
       await service.generate(1, {
+        branchIds: null,
         startDate: '2026-06-01',
         endDate: '2026-06-30',
         compareModes: ['prev', 'yoy', 'yearly'],
@@ -570,7 +573,7 @@ describe('ReportsExcelService', () => {
   });
 
   it('omits the comparison sheets when no compareModes are requested', async () => {
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     const names = wb.worksheets.map((w) => w.name);
     expect(names).not.toContain('Taqqoslash');
     expect(names).not.toContain('Yillar kesimida');
@@ -578,7 +581,7 @@ describe('ReportsExcelService', () => {
 
   it('renders an empty-note operational sheet when its source throws (workbook survives)', async () => {
     reports.getRoomUtilization.mockRejectedValue(new Error('boom'));
-    const wb = await load(await service.generate(1, {}));
+    const wb = await load(await service.generate(1, { branchIds: null }));
     // The whole workbook still builds (all 23 sheets present)...
     expect(wb.worksheets).toHaveLength(23);
     // ...and the failed sheet carries the "no data" note instead of crashing.
@@ -595,7 +598,7 @@ describe('ReportsExcelService', () => {
       ...pl,
       period: { start: '2026-07-01', end: '2999-12-31' },
     });
-    const wb = await load(await service.generate(1, { startDate: '2026-07-01', endDate: '2999-12-31' }));
+    const wb = await load(await service.generate(1, { startDate: '2026-07-01', endDate: '2999-12-31', branchIds: null }));
     const row = findRow(wb.getWorksheet('Muqova')!, 'Hisobot davri:');
     expect(String(row.getCell(2).value)).toContain('bugungi kungacha');
   });

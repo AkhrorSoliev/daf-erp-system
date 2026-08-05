@@ -70,3 +70,43 @@ export function scopeToBranchFilter(
 ): number | undefined {
   return scope.kind === 'branch' ? scope.branchId : undefined;
 }
+
+/**
+ * Intersect the caller's payroll scope with the branch they picked in the header.
+ *
+ * The scope is a CEILING; the request NARROWS within it — never the reverse.
+ * This is the same rule `report-branch-scope.ts` enforces for money reports, and
+ * it exists because the opposite let a Branch Director's workbook print one
+ * branch on the cover and another branch's totals inside.
+ *
+ * `blocked` rather than a silent fallback: a caller confined to Fargona who asks
+ * for Namangan must be REFUSED, not quietly served Fargona. Returning Fargona's
+ * payroll under a header naming Namangan is how a report comes to lie about
+ * whose money it is showing, and zeros would read as "this branch earned
+ * nothing" — a different claim from "you may not look".
+ *
+ * Lives here rather than inline in one caller because both payroll entry points
+ * need it: `resolveMonthlyScope` (the /payments/salary report) and
+ * `SalaryOverviewService` (the ⚙ Sozlamalar rate list). They had drifted once
+ * already — `/salary/monthly` honoured the header and `/salary/overview` did
+ * not, so a CEO switching branch saw one of the two change.
+ *
+ * @param requestedBranchId the header selection, already intersected with the
+ *   caller's HTTP-level ceiling by `BranchScopeGuard`
+ */
+export function narrowPayrollScope(
+  scope: PayrollBranchScope,
+  requestedBranchId: number | undefined,
+): { branchId: number | undefined; blocked: boolean } {
+  if (scope.kind === 'none') {
+    return { branchId: undefined, blocked: true };
+  }
+  if (scope.kind === 'branch') {
+    const mismatch =
+      requestedBranchId != null && requestedBranchId !== scope.branchId;
+    return { branchId: scope.branchId, blocked: mismatch };
+  }
+  // `all` — the CEO. The header is the only narrowing available, and `undefined`
+  // (no pick) genuinely means every branch.
+  return { branchId: requestedBranchId ?? undefined, blocked: false };
+}

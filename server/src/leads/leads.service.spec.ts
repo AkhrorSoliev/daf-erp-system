@@ -74,7 +74,7 @@ describe('LeadsService', () => {
   describe('getSectionLeads', () => {
     it('throws NotFound when the section is missing', async () => {
       prisma.leadSection.findFirst.mockResolvedValue(null);
-      await expect(service.getSectionLeads('missing')).rejects.toThrow(
+      await expect(service.getSectionLeads('missing', 1001, null)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -82,12 +82,15 @@ describe('LeadsService', () => {
     it('lists non-deleted, non-converted leads of the section', async () => {
       prisma.leadSection.findFirst.mockResolvedValue({ id: 'sec-1' });
       prisma.lead.findMany.mockResolvedValue([]);
-      await service.getSectionLeads('sec-1');
+      await service.getSectionLeads('sec-1', 1001, null);
       expect(prisma.lead.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             sectionId: 'sec-1',
             deletedAt: null,
+            // Company scoping is now part of the query — this assertion used to
+            // pass only because the argument was silently `undefined`.
+            companyId: 1001,
             statusEnum: { not: 'CONVERTED' },
           },
         }),
@@ -104,7 +107,7 @@ describe('LeadsService', () => {
         { entityId: 'lead-1', _count: { _all: 3 } },
       ]);
 
-      const result = await service.getSectionLeads('sec-1');
+      const result = await service.getSectionLeads('sec-1', 1001, null);
 
       expect(prisma.comment.groupBy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -126,12 +129,15 @@ describe('LeadsService', () => {
 
       const result = await service.findAll(
         {
-        search: 'Aziz',
-        status: 'NEW' as any,
-        columnId: 'col-1',
-        page: 2,
-        pageSize: 20,
-      });
+          search: 'Aziz',
+          status: 'NEW' as any,
+          columnId: 'col-1',
+          page: 2,
+          pageSize: 20,
+        },
+        1001,
+        null,
+      );
 
       expect(prisma.lead.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -198,7 +204,7 @@ describe('LeadsService', () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
-      await service.findAll({ called: 'true' });
+      await service.findAll({ called: 'true' }, 1001, null);
 
       expect(prisma.lead.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -215,7 +221,7 @@ describe('LeadsService', () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
-      await service.findAll({ hasComments: 'true' });
+      await service.findAll({ hasComments: 'true' }, 1001, null);
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -236,7 +242,7 @@ describe('LeadsService', () => {
   describe('findOne', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(
+      await expect(service.findOne('missing', 1001, null)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -330,7 +336,7 @@ describe('LeadsService', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
       await expect(
-        service.update('missing', { firstName: 'Yangi' }, 1001, 1),
+        service.update('missing', { firstName: 'Yangi' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -342,7 +348,7 @@ describe('LeadsService', () => {
         phone: '901234567',
       });
       await expect(
-        service.update('lead-1', { firstName: '   ' }, 1001, 1),
+        service.update('lead-1', { firstName: '   ' }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -355,7 +361,7 @@ describe('LeadsService', () => {
       });
       prisma.leadSource.findFirst.mockResolvedValue(null);
       await expect(
-        service.update('lead-1', { sourceId: 'src-x' }, 1001, 1),
+        service.update('lead-1', { sourceId: 'src-x' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -373,7 +379,7 @@ describe('LeadsService', () => {
         phone: '901234567',
       });
 
-      await service.update('lead-1', { firstName: 'Azizbek' }, 1001, 1);
+      await service.update('lead-1', { firstName: 'Azizbek' }, 1001, 1, null);
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -389,7 +395,7 @@ describe('LeadsService', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
       await expect(
-        service.move('missing', { sectionId: 'sec-2' }, 1001, 1),
+        service.move('missing', { sectionId: 'sec-2' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -401,7 +407,7 @@ describe('LeadsService', () => {
       });
       prisma.leadSection.findFirst.mockResolvedValue(null);
       await expect(
-        service.move('lead-1', { sectionId: 'missing' }, 1001, 1),
+        service.move('lead-1', { sectionId: 'missing' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -418,7 +424,7 @@ describe('LeadsService', () => {
       prisma.lead.aggregate.mockResolvedValue({ _max: { order: 1 } });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
 
-      await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 1);
+      await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 1, null);
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -445,7 +451,7 @@ describe('LeadsService', () => {
       prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
 
-      await service.move('lead-1', { sectionId: 'sec-9' }, 1001, 1);
+      await service.move('lead-1', { sectionId: 'sec-9' }, 1001, 1, null);
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -499,7 +505,7 @@ describe('LeadsService', () => {
   describe('remove', () => {
     it('rejects an empty reason', async () => {
       await expect(
-        service.remove('lead-1', { reason: '   ' }, 1001, 1),
+        service.remove('lead-1', { reason: '   ' }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.lead.findFirst).not.toHaveBeenCalled();
     });
@@ -507,7 +513,7 @@ describe('LeadsService', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
       await expect(
-        service.remove('missing', { reason: 'Javob bermadi' }, 1001, 1),
+        service.remove('missing', { reason: 'Javob bermadi' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -523,7 +529,7 @@ describe('LeadsService', () => {
         { reason: 'Narx qimmat keldi' },
         1001,
         1,
-      );
+       null);
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -554,7 +560,7 @@ describe('LeadsService', () => {
   describe('convert', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
-      await expect(service.convert('missing', {}, 1001, 1)).rejects.toThrow(
+      await expect(service.convert('missing', {}, 1001, 1, null)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -568,7 +574,7 @@ describe('LeadsService', () => {
         statusEnum: 'NEW',
         convertedStudentId: 10005,
       });
-      await expect(service.convert('lead-1', {}, 1001, 1)).rejects.toThrow(
+      await expect(service.convert('lead-1', {}, 1001, 1, null)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -589,7 +595,7 @@ describe('LeadsService', () => {
       students.create.mockResolvedValue({ id: 10007 });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
 
-      const result = await service.convert('lead-1', { branchId: 5 }, 1001, 1);
+      const result = await service.convert('lead-1', { branchId: 5 }, 1001, 1, null);
 
       expect(students.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -649,7 +655,7 @@ describe('LeadsService', () => {
         { branchId: 5, groupId: 'grp-1', startDate: '2026-06-28' },
         1001,
         1,
-      );
+       null);
 
       expect(students.create).toHaveBeenCalledWith(
         expect.objectContaining({ branchIds: [7] }),
@@ -671,7 +677,7 @@ describe('LeadsService', () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.convert('lead-1', { groupId: 'missing' }, 1001, 1),
+        service.convert('lead-1', { groupId: 'missing' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
       expect(students.create).not.toHaveBeenCalled();
       expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
@@ -685,7 +691,7 @@ describe('LeadsService', () => {
       });
 
       await expect(
-        service.convert('lead-1', { groupId: 'grp-done' }, 1001, 1),
+        service.convert('lead-1', { groupId: 'grp-done' }, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
       expect(students.create).not.toHaveBeenCalled();
       expect(enrollment.enrollToGroup).not.toHaveBeenCalled();
@@ -696,7 +702,7 @@ describe('LeadsService', () => {
       // A live student already exists on this phone → refuse to mint a second.
       prisma.student.findFirst.mockResolvedValue({ id: 10099 });
 
-      await expect(service.convert('lead-1', {}, 1001, 1)).rejects.toThrow(
+      await expect(service.convert('lead-1', {}, 1001, 1, null)).rejects.toThrow(
         BadRequestException,
       );
       expect(students.create).not.toHaveBeenCalled();
@@ -714,7 +720,7 @@ describe('LeadsService', () => {
         { existingStudentId: 10050 },
         1001,
         1,
-      );
+       null);
 
       expect(students.create).not.toHaveBeenCalled();
       expect(prisma.group.findFirst).not.toHaveBeenCalled();
@@ -742,7 +748,7 @@ describe('LeadsService', () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.convert('lead-1', { existingStudentId: 99999 }, 1001, 1),
+        service.convert('lead-1', { existingStudentId: 99999 }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
       expect(students.create).not.toHaveBeenCalled();
     });
@@ -827,7 +833,7 @@ describe('LeadsService', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
       await expect(
-        service.markCalled('missing', { called: true }, 1001, 1),
+        service.markCalled('missing', { called: true }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -838,7 +844,7 @@ describe('LeadsService', () => {
         calledAt: new Date('2026-06-16T10:00:00Z'),
       });
 
-      await service.markCalled('lead-1', { called: true }, 1001, 7);
+      await service.markCalled('lead-1', { called: true }, 1001, 7, null);
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -861,7 +867,7 @@ describe('LeadsService', () => {
 
       // A different user (9) re-marks; neither the timestamp nor the caller
       // identity may change — the (when, who) pair must stay coherent.
-      await service.markCalled('lead-1', { called: true }, 1001, 9);
+      await service.markCalled('lead-1', { called: true }, 1001, 9, null);
 
       const data = prisma.lead.update.mock.calls[0][0].data;
       expect(data.calledAt).toBeUndefined();
@@ -875,7 +881,7 @@ describe('LeadsService', () => {
       });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1', calledAt: null });
 
-      await service.markCalled('lead-1', { called: false }, 1001, 7);
+      await service.markCalled('lead-1', { called: false }, 1001, 7, null);
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({

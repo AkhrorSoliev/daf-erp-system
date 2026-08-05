@@ -556,7 +556,7 @@ describe('PaymentsService', () => {
     });
 
     it('should allow filtering by REVERSED status explicitly', async () => {
-      await service.findAll({ status: PaymentStatus.REVERSED } as any, 1001);
+      await service.findAll({ status: PaymentStatus.REVERSED } as any, 1001, null);
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where).toEqual(
@@ -567,7 +567,7 @@ describe('PaymentsService', () => {
     });
 
     it('should include source field in select', async () => {
-      await service.findAll({} as any, 1001);
+      await service.findAll({} as any, 1001, null);
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.select.source).toBe(true);
@@ -580,7 +580,7 @@ describe('PaymentsService', () => {
       const result = await service.findAll(
         { page: 1, pageSize: 10 } as any,
         1001,
-      );
+       null);
 
       expect(result).toEqual({
         data: [mockPaymentWithRelations],
@@ -594,7 +594,7 @@ describe('PaymentsService', () => {
       await service.findAll(
         { startDate: '2026-01-01', endDate: '2026-01-31' } as any,
         1001,
-      );
+       null);
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where.createdAt).toEqual({
@@ -608,7 +608,7 @@ describe('PaymentsService', () => {
     it('should return a payment by id', async () => {
       prisma.payment.findFirst.mockResolvedValue(mockPaymentWithRelations);
 
-      const result = await service.findOne('payment-uuid-1', 1001);
+      const result = await service.findOne('payment-uuid-1', 1001, null);
 
       expect(result).toEqual(mockPaymentWithRelations);
       expect(prisma.payment.findFirst).toHaveBeenCalledWith(
@@ -621,7 +621,7 @@ describe('PaymentsService', () => {
     it('should throw NotFoundException when payment is not found', async () => {
       prisma.payment.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent', 1001)).rejects.toThrow(
+      await expect(service.findOne('nonexistent', 1001, null)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -629,7 +629,7 @@ describe('PaymentsService', () => {
 
   describe('findByStudent()', () => {
     it('should exclude REVERSED payments by default', async () => {
-      await service.findByStudent(10001, {} as any, 1001);
+      await service.findByStudent(10001, {} as any, 1001, null);
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where).toEqual(
@@ -646,7 +646,7 @@ describe('PaymentsService', () => {
         10001,
         { status: PaymentStatus.REVERSED } as any,
         1001,
-      );
+       null);
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where.status).toBe(PaymentStatus.REVERSED);
@@ -660,7 +660,7 @@ describe('PaymentsService', () => {
         10001,
         { page: 2, pageSize: 5 } as any,
         1001,
-      );
+       null);
 
       expect(result).toEqual({
         data: [mockPaymentWithRelations],
@@ -713,7 +713,7 @@ describe('PaymentsService', () => {
       prisma.student.findMany.mockResolvedValue([]);
       prisma.student.count.mockResolvedValue(0);
 
-      const result = await service.getPending(1001, {});
+      const result = await service.getPending(1001, { branchIds: null });
 
       const findManyCall = prisma.student.findMany.mock.calls[0][0];
       expect(findManyCall.where).toEqual(

@@ -44,6 +44,7 @@ describe('ReportsProfitLossService', () => {
 
   it('builds a correct P&L with teacher/admin salary split and COGS', async () => {
     const pl = await service.getProfitLoss(1, {
+      branchIds: null,
       startDate: '2026-06-01',
       endDate: '2026-06-30',
     });
@@ -83,7 +84,7 @@ describe('ReportsProfitLossService', () => {
     prisma.expense.groupBy.mockResolvedValue([]);
     prisma.salaryPayment.findMany.mockResolvedValue([]);
 
-    const pl = await service.getProfitLoss(1, {});
+    const pl = await service.getProfitLoss(1, { branchIds: null });
     expect(pl.revenue.byType[0].type).toBe('TUITION');
     expect(pl.netProfit).toBe(500_000);
   });

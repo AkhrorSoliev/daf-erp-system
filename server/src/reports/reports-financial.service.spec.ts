@@ -57,7 +57,13 @@ describe('ReportsFinancialService', () => {
   });
 
   describe('getFinancialOverview', () => {
-    const period = { startDate: '2026-05-01', endDate: '2026-05-31' };
+    const period = {
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+      // Every branch — what these assertions already measured when the
+      // argument was silently `undefined`.
+      branchIds: null,
+    };
 
     it('reports income.billed as the absolute value of the LESSON_DEDUCTION sum', async () => {
       // LESSON_DEDUCTION amounts are stored negative (they reduce balance).
@@ -264,7 +270,7 @@ describe('ReportsFinancialService', () => {
       prisma.company.findUnique.mockResolvedValue({
         systemStartDate: new Date('2000-01-01'),
       });
-      const res = await service.getYearlyTrend(1);
+      const res = await service.getYearlyTrend(1, null);
       expect(res.length).toBeLessThanOrEqual(5);
     });
   });
@@ -296,7 +302,7 @@ describe('ReportsFinancialService', () => {
         // DEBT_WRITE_OFF: none
         .mockResolvedValueOnce([]);
 
-      const res = await service.getMonthlyDebtRecovery(1);
+      const res = await service.getMonthlyDebtRecovery(1, null);
 
       expect(res.months).toHaveLength(1);
       const m = res.months[0];
@@ -326,7 +332,7 @@ describe('ReportsFinancialService', () => {
         .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 300000 } }]) // PAYMENT
         .mockResolvedValueOnce([]); // DEBT_WRITE_OFF
 
-      const res = await service.getMonthlyDebtRecovery(1);
+      const res = await service.getMonthlyDebtRecovery(1, null);
       const m = res.months[0];
       expect(m.closingDebt).toBe(250000);
       expect(m.recovered).toBe(250000); // min(250k debt, 300k paid)
@@ -342,7 +348,7 @@ describe('ReportsFinancialService', () => {
         .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 150000 } }]) // PAYMENT recovery
         .mockResolvedValueOnce([]); // DEBT_WRITE_OFF
 
-      const res = await service.getMonthlyDebtRecovery(1);
+      const res = await service.getMonthlyDebtRecovery(1, null);
       const m = res.months[0];
       expect(m.closingDebt).toBe(150000); // reconstructed, not the live 0
       expect(m.debtorCount).toBe(1);
@@ -399,7 +405,7 @@ describe('ReportsFinancialService', () => {
         // woRows (write-offs)
         .mockResolvedValueOnce([]);
 
-      const res = await service.getMonthDebtDetail(1, '2026-06');
+      const res = await service.getMonthDebtDetail(1, '2026-06', null);
 
       expect(res.totals).toEqual({
         closingDebt: 200000,
@@ -440,7 +446,7 @@ describe('ReportsFinancialService', () => {
       prisma.student.findMany.mockResolvedValueOnce([{ id: 1, balance: 5000 }]);
       prisma.transaction.groupBy.mockResolvedValueOnce([]); // movesAfter → no negatives
 
-      const res = await service.getMonthDebtDetail(1, '2026-06');
+      const res = await service.getMonthDebtDetail(1, '2026-06', null);
 
       expect(res.debtors).toEqual([]);
       expect(res.totals.debtorCount).toBe(0);
@@ -449,7 +455,11 @@ describe('ReportsFinancialService', () => {
   });
 
   describe('getPeriodOutflows', () => {
-    const period = { startDate: '2026-06-01', endDate: '2026-06-30' };
+    const period = {
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+      branchIds: null,
+    };
 
     it('returns |Σ refunds|, |Σ write-offs| and Σ gateway fees', async () => {
       // REFUND rows are negative on the student ledger.
@@ -505,7 +515,11 @@ describe('ReportsFinancialService', () => {
   });
 
   describe('getIncomeMonthAttribution', () => {
-    const period = { startDate: '2026-06-01', endDate: '2026-06-30' };
+    const period = {
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+      branchIds: null,
+    };
 
     it('splits period income into real (current month) vs late (prior months) FIFO, oldest-first', async () => {
       prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10001 }]);
@@ -692,6 +706,7 @@ describe('ReportsFinancialService', () => {
       prisma.payment.groupBy.mockResolvedValueOnce([]);
 
       const result = await service.getIncomeMonthAttribution(1, {
+        branchIds: null,
         startDate: '2026-01-01',
         endDate: '2026-06-30',
       });

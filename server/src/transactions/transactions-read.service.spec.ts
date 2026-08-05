@@ -54,7 +54,7 @@ describe('TransactionsReadService', () => {
     });
 
     it('selects metadata so LESSON_DEDUCTION rows can be labelled on the tab', async () => {
-      await service.findByStudent(10329, {} as TransactionQueryDto, 1001);
+      await service.findByStudent(10329, {} as TransactionQueryDto, 1001, null);
 
       const arg = prisma.transaction.findMany.mock.calls[0][0];
       expect(arg.select.metadata).toBe(true);
@@ -65,7 +65,7 @@ describe('TransactionsReadService', () => {
         10329,
         { type: 'PAYMENT' } as TransactionQueryDto,
         1001,
-      );
+       null);
 
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -156,7 +156,7 @@ describe('TransactionsReadService', () => {
         10329,
         {} as TransactionQueryDto,
         1001,
-      );
+       null);
 
       expect(res.data[0].destination).toEqual({
         toLessons: 287500,
@@ -176,7 +176,7 @@ describe('TransactionsReadService', () => {
         10329,
         { page: 2, pageSize: 5 } as TransactionQueryDto,
         1001,
-      );
+       null);
 
       // Non-LESSON_DEDUCTION rows get coverage=null. PAYMENT rows pick up
       // a zero-summary destination (no LESSON_DEDUCTION fired in the

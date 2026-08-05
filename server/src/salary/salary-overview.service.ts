@@ -3,8 +3,8 @@ import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
 import {
+  narrowPayrollScope,
   resolvePayrollBranchScope,
-  scopeToBranchFilter,
 } from './shared/payroll-branch-scope';
 
 export interface SalaryOverviewQuery {
@@ -13,6 +13,45 @@ export interface SalaryOverviewQuery {
   search?: string;
   /** 'configured' = has at least one active rate; 'unconfigured' = none. */
   status?: 'all' | 'configured' | 'unconfigured';
+  /**
+   * The branch picked in the header. It can only ever NARROW — the caller's own
+   * payroll scope is the ceiling, and a confined caller naming another branch is
+   * refused rather than quietly served their own.
+   *
+   * Not a DTO field: the controller reads it from `X-Branch-Id` via
+   * `@BranchScope()` and spreads it in, exactly as `/salary/monthly` does.
+   */
+  branchId?: number;
+}
+
+/**
+ * The empty response, in the SAME shape a populated one has.
+ *
+ * The refusal path used to return `{ data, total, page, pageSize }` while the
+ * "no teachers" path also carried `period` and `pending`. Today's only consumer
+ * reads `data`, so nothing broke — but a response whose shape depends on the
+ * outcome is a trap for the next one, and the difference showed up exactly on
+ * the path a caller hits when they are refused.
+ */
+function emptyOverview(
+  page: number,
+  pageSize: number,
+  period: Awaited<ReturnType<typeof resolveCurrentPeriod>>,
+) {
+  return {
+    data: [] as never[],
+    total: 0,
+    page,
+    pageSize,
+    period,
+    pending: {
+      calculated: 0,
+      approved: 0,
+      approvedTotal: 0,
+      calculatedIds: [] as string[],
+      approvedIds: [] as string[],
+    },
+  };
 }
 
 /**
@@ -41,11 +80,22 @@ export class SalaryOverviewService {
     // One shared resolver instead of a fifth hand-rolled copy of the same
     // `!CEO && !Administrator` shape. CEO spans every branch; everyone else is
     // confined, and an unknown scope sees NOTHING rather than everything.
+    //
+    // `narrowPayrollScope` then applies the header selection. Without it this
+    // endpoint ignored the branch switcher entirely while `/salary/monthly`
+    // honoured it — so a CEO switching to Namangan saw the report change and the
+    // ⚙ Sozlamalar rate list keep listing every teacher in the company.
     const scope = await resolvePayrollBranchScope(this.prisma, performedById);
-    if (scope.kind === 'none') {
-      return { data: [], total: 0, page, pageSize };
+    const { branchId, blocked } = narrowPayrollScope(scope, query.branchId);
+
+    // Resolved before the refusal so every exit from this method returns the
+    // SAME shape. The payroll cycle is a company-wide setting, not branch data,
+    // so a refused caller learning it discloses nothing.
+    const period = await resolveCurrentPeriod(this.prisma, companyId, new Date());
+
+    if (blocked) {
+      return emptyOverview(page, pageSize, period);
     }
-    const branchId = scopeToBranchFilter(scope);
 
     const search = query.search?.trim();
     const searchId = search && /^\d+$/.test(search) ? Number(search) : null;
@@ -78,23 +128,9 @@ export class SalaryOverviewService {
     });
 
     const ids = teachers.map((t) => t.id);
-    const period = await resolveCurrentPeriod(this.prisma, companyId, new Date());
 
     if (ids.length === 0) {
-      return {
-        data: [],
-        total: 0,
-        page,
-        pageSize,
-        period,
-        pending: {
-          calculated: 0,
-          approved: 0,
-          approvedTotal: 0,
-          calculatedIds: [],
-          approvedIds: [],
-        },
-      };
+      return emptyOverview(page, pageSize, period);
     }
 
     // ─── Bulk fetches (one query each, keyed by userId) ───────────────────

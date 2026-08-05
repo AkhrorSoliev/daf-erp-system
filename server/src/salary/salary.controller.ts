@@ -253,13 +253,21 @@ export class SalaryController {
     @Query() query: SalaryOverviewQueryDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    // NOT branch-narrowed yet: `SalaryOverviewQuery` carries no `branchId`, and
-    // `SalaryOverviewService` resolves its own scope from the caller's
-    // `mainBranch`. Wiring the selection through needs that service changed too
-    // — tracked separately. A confined caller is still confined; what is
-    // missing is a CEO's ability to narrow.
-    return this.salaryService.getOverview(query, companyId, userId);
+    // The last payroll endpoint that ignored the header. A confined caller was
+    // always confined, but a CEO switching Fargona → Namangan watched
+    // `/salary/monthly` change while this rate list kept showing every teacher
+    // in the company — two payroll screens, one branch switch, two answers.
+    //
+    // `singleBranchId` for the same reason as `/salary/monthly`: the service
+    // takes one branch, and the scope has already been intersected with the
+    // caller's ceiling, so this can only narrow.
+    return this.salaryService.getOverview(
+      { ...query, branchId: singleBranchId(scope) },
+      companyId,
+      userId,
+    );
   }
 
   /**

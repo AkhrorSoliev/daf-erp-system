@@ -489,20 +489,20 @@ describe('UsersService — findAll companyId scoping', () => {
   });
 
   it('uses companyId even when query has unrelated filters', async () => {
-    await service.findAll({ search: 'foo', branch_id: 5 } as any, 2002);
+    await service.findAll({ search: 'foo', branch_id: 5 } as any, 2002, null);
     const callArg = prisma.user.findMany.mock.calls[0][0];
     expect(callArg.where.companyId).toBe(2002);
   });
 
   it('does NOT filter by status/isActive by default (employees list shows everyone)', async () => {
-    await service.findAll({} as any, 1001);
+    await service.findAll({} as any, 1001, null);
     const where = prisma.user.findMany.mock.calls[0][0].where;
     expect(where.isActive).toBeUndefined();
     expect(where.status).toBeUndefined();
   });
 
   it('restricts to ACTIVE users when active_only is set (assignee dropdowns)', async () => {
-    await service.findAll({ active_only: true } as any, 1001);
+    await service.findAll({ active_only: true } as any, 1001, null);
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({

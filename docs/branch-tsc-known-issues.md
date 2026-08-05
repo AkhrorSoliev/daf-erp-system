@@ -28,38 +28,38 @@ o'zgartirilmaydi** — aloqasiz faylga tegish alohida ishning predmeti.
 - `server/src/salary/salary-accrual.service.spec.ts`
 - `server/src/salary/salary-calculation.service.spec.ts`
 - `server/src/salary/salary-monthly-staff.service.spec.ts`
-- `server/src/salary/salary-overview.service.spec.ts` — `res.pending` (Faza 4 da yopiladi)
 
-## B toifa — filial ishidan, 1-bosqichdan oldin
+## B toifa — filial ishidan, 1-bosqichdan oldin — **YOPILDI (2026-08-05)**
 
-Oldingi batch `branchIds` ni majburiy qilgan, spec'lar esa yangilanmagan. Faza 2 da
-mexanik tuzatish 15 tasini yopdi; qolganlari `TS2345` (obyekt shakli) bo'lgani uchun
-qo'lda ko'rib chiqishni talab qiladi.
+Oldingi batch `branchIds` ni majburiy qilgan, spec'lar esa yangilanmagan. Hammasi
+tuzatildi: hisobot spec'lari endi so'rov obyektiga `branchIds: null` uzatadi
+(«barcha filiallar» — bu `undefined` jimgina aylanadigan qiymatning aynan o'zi,
+ya'ni birorta ham tasdiq o'zgarmadi).
 
-- `server/src/reports/reports-financial.service.spec.ts`
-- `server/src/reports/reports-excel.service.spec.ts`
-- `server/src/reports/reports-profit-loss.service.spec.ts`
-- `server/src/reports/reports-cash-flow.service.spec.ts`
-- `server/src/reports/reports-balance-sheet.service.spec.ts`
-- `server/src/expenses/expenses.service.spec.ts`
+Ro'yxat **bo'sh**.
 
-## C toifa — 2-bosqich (Faza 2 da defaultlar olib tashlangandan keyin)
+## C toifa — 2-bosqich (defaultlar olib tashlangandan keyin) — **YOPILDI (2026-08-05)**
 
-Scope endi **majburiy parametr**, ya'ni bu xatolar mexanizmning ishlayotganini
-ko'rsatadi: har biri scope uzatmaydigan chaqiruvchi.
+Scope majburiy parametr bo'lgach, har bir xato scope uzatmaydigan chaqiruvchini
+ko'rsatardi. Hammasi tuzatildi.
 
-- `server/src/mock-exams/mock-exam-participants.service.spec.ts`
-- `server/src/payments/payments.service.spec.ts`
-- `server/src/payments/payments-preview.service.spec.ts`
-- `server/src/transactions/transactions-read.service.spec.ts`
-- `server/src/leads/leads.service.spec.ts`
-- `server/src/leads/leads-board.service.spec.ts`
-- `server/src/users/users.service.spec.ts`
-- `server/src/students/students.service.spec.ts`
-- `server/src/students/students-read.service.spec.ts`
-- `server/src/groups/groups.service.spec.ts`
-- `server/src/dashboard/dashboard.controller.spec.ts`
-- `server/src/common/auth/operational-branch-scope.spec.ts`
+Bu **kosmetik emas edi**. Jest tip tekshirmaydi, ya'ni bu spec'lar ishlayverardi —
+scope o'rniga `undefined` uzatib, `branchIdWhere` uni `{}` ga, ya'ni **FILTRSIZ**
+holga keltirardi. Har biri scope'li chaqiruvni tekshiryapman deb, aslida tasodifan
+scope'siz chaqiruvning xulqini tasdiqlab turgan edi.
+
+Ikkita holat qo'lda ko'rib chiqildi va shuning uchun avtomatlashtirilmadi:
+- **Bir nechta argument yetishmaganda** — `getSectionLeads('sec-1')` ga
+  `(sectionId, companyId, scope)` kerak. `companyId` ni `null` bilan to'ldirish
+  mavjud bo'lmagan kompaniya bo'yicha filtrlashga olib kelardi; u yetishmasa, bu
+  buzuq test, defaultlanadigan scope emas.
+- **Argument obyekt literali bo'lmaganda** — `reports-financial` da u umumiy
+  `period` o'zgaruvchisi. Uch fixture yigirmata chaqiruvni qoplaydi.
+
+Skript: `server/scripts/fix-spec-branch-scope-args.ts` (faqat bitta argument
+yetishmagan holatni avtomatik tuzatadi; qolganini odamga ko'rsatadi).
+
+Ro'yxat **bo'sh**.
 
 ## E toifa — `scripts/`
 

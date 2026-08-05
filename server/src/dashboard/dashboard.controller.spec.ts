@@ -55,7 +55,7 @@ describe('DashboardController', () => {
     });
 
     it('should delegate to service without date when not provided', async () => {
-      await controller.getTodaySchedule({ branchId: 2 }, 1001);
+      await controller.getTodaySchedule({ branchId: 2 }, 1001, null);
 
       expect(mockService.getTodaySchedule).toHaveBeenCalledWith(
         2,

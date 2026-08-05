@@ -161,9 +161,10 @@ describe('operational reads are branch-confined', () => {
         groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
         enrollment: { groupBy: jest.fn().mockResolvedValue([]) },
       };
+      // UsersService takes four collaborators; the fifth was left over from an
+      // older signature and only ever compiled because jest does not typecheck.
       const service = new UsersService(
         prisma,
-        {} as any,
         {} as any,
         {} as any,
         {} as any,
@@ -182,9 +183,9 @@ describe('operational reads are branch-confined', () => {
           count: jest.fn().mockResolvedValue(0),
         },
       };
+      // RoomsService takes four collaborators, same as UsersService above.
       const service = new RoomsService(
         prisma,
-        {} as any,
         {} as any,
         {} as any,
         {} as any,

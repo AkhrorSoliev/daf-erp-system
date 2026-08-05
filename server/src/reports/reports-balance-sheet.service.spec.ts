@@ -33,7 +33,7 @@ describe('ReportsBalanceSheetService', () => {
   });
 
   it('derives assets, liabilities and equity', async () => {
-    const bs = await service.getBalanceSheet(1, {});
+    const bs = await service.getBalanceSheet(1, { branchIds: null });
 
     expect(bs.assets).toMatchObject({
       cash: 1_000_000,
