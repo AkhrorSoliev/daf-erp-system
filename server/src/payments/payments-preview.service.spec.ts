@@ -72,7 +72,7 @@ describe('PaymentsPreviewService', () => {
     prisma.enrollment.findMany.mockResolvedValue([baseEnrollment({ price: 414000, lpc: 12 })]);
     prisma.transaction.count.mockResolvedValue(3);
 
-    const res = await service.preview(10001, 300000, 1001);
+    const res = await service.preview(10001, 300000, 1001, null);
 
     // Debt 253k + 47k remainder; 47k < perLessonCost (34_500) only buys 1 lesson partial
     expect(res.scenario).toBe('SINGLE_ENROLLMENT');
@@ -100,7 +100,7 @@ describe('PaymentsPreviewService', () => {
     prisma.enrollment.findMany.mockResolvedValue([baseEnrollment({ price: 414000, lpc: 12 })]);
     prisma.transaction.count.mockResolvedValue(0);
 
-    const res = await service.preview(10001, 500000, 1001);
+    const res = await service.preview(10001, 500000, 1001, null);
 
     expect(res.scenario).toBe('SINGLE_ENROLLMENT');
     // 500_000 = 414_000 (full sikl) + 86_000 → 2 dars * 34_500 = 69_000 (partial) + 17_000 (remainder)
@@ -131,7 +131,7 @@ describe('PaymentsPreviewService', () => {
       { ...baseEnrollment({ price: 690000, lpc: 20 }), id: 'enr-2' },
     ]);
 
-    const res = await service.preview(10001, 500000, 1001);
+    const res = await service.preview(10001, 500000, 1001, null);
 
     expect(res.scenario).toBe('MULTI_ENROLLMENT');
     expect(res.primaryEnrollment).toBeNull();
@@ -156,7 +156,7 @@ describe('PaymentsPreviewService', () => {
       { date: new Date('2026-05-06') },
     ]);
 
-    const res = await service.preview(10001, 69000, 1001);
+    const res = await service.preview(10001, 69000, 1001, null);
 
     const debt = res.breakdown.find((b) => b.kind === 'DEBT_REPAY');
     expect(debt).toMatchObject({
@@ -182,7 +182,7 @@ describe('PaymentsPreviewService', () => {
     ]);
     prisma.transaction.count.mockResolvedValue(2);
 
-    const res = await service.preview(10001, 414000, 1001);
+    const res = await service.preview(10001, 414000, 1001, null);
 
     const full = res.breakdown.find((b) => b.kind === 'CYCLE_FULL');
     expect(full?.label).toContain('Kelgusi sikl');
@@ -200,7 +200,7 @@ describe('PaymentsPreviewService', () => {
     });
     prisma.enrollment.findMany.mockResolvedValue([baseEnrollment({ price: 414000, lpc: 12 })]);
 
-    const res = await service.preview(10001, 207000, 1001);
+    const res = await service.preview(10001, 207000, 1001, null);
 
     // Discounted full cycle = 207_000 → exactly one full cycle.
     expect(res.breakdown).toEqual([

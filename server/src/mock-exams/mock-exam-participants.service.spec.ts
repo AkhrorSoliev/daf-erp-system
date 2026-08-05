@@ -65,7 +65,7 @@ describe('MockExamParticipantsService', () => {
   describe('list', () => {
     it('throws NotFound when exam is missing', async () => {
       prisma.mockExam.findFirst.mockResolvedValue(null);
-      await expect(service.list('missing', {})).rejects.toThrow(
+      await expect(service.list('missing', {}, 1001, null)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -78,7 +78,7 @@ describe('MockExamParticipantsService', () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([]);
       prisma.mockExamParticipant.count.mockResolvedValue(0);
 
-      const result = await service.list('e1', { page: 2, pageSize: 5 });
+      const result = await service.list('e1', { page: 2, pageSize: 5 }, 1001, null);
       expect(result.page).toBe(2);
       expect(result.pageSize).toBe(5);
       expect(prisma.mockExamParticipant.findMany).toHaveBeenCalledWith(
@@ -94,7 +94,7 @@ describe('MockExamParticipantsService', () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([]);
       prisma.mockExamParticipant.count.mockResolvedValue(0);
 
-      await service.list('e1', { search: 'Aziz' });
+      await service.list('e1', { search: 'Aziz' }, 1001, null);
 
       expect(prisma.mockExamParticipant.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -113,11 +113,16 @@ describe('MockExamParticipantsService', () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([]);
       prisma.mockExamParticipant.count.mockResolvedValue(0);
 
-      await service.list('e1', {
-        examTime: '14:00',
-        level: 'B1',
-        paidStatus: 'cash',
-      } as any);
+      await service.list(
+        'e1',
+        {
+          examTime: '14:00',
+          level: 'B1',
+          paidStatus: 'cash',
+        } as any,
+        1001,
+        null,
+      );
 
       const arg = prisma.mockExamParticipant.findMany.mock.calls[0][0];
       expect(arg.where).toEqual(
@@ -138,7 +143,7 @@ describe('MockExamParticipantsService', () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([]);
       prisma.mockExamParticipant.count.mockResolvedValue(0);
 
-      await service.list('e1', { paidStatus: 'pending' } as any);
+      await service.list('e1', { paidStatus: 'pending' } as any, 1001, null);
 
       const arg = prisma.mockExamParticipant.findMany.mock.calls[0][0];
       expect(arg.where).toEqual(
@@ -178,7 +183,7 @@ describe('MockExamParticipantsService', () => {
           { firstName: '  ', lastName: 'B', phone: '901234567' },
           1001,
           1,
-        ),
+         null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -212,7 +217,7 @@ describe('MockExamParticipantsService', () => {
         { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
         1001,
         1,
-      );
+       null);
 
       // No Student row should be created — mock participants are not students.
       expect(prisma.student.create).not.toHaveBeenCalled();
@@ -252,7 +257,7 @@ describe('MockExamParticipantsService', () => {
         { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
         1001,
         1,
-      );
+       null);
 
       // No sequence allocation — we reuse the existing Student.id.
       expect(prisma.$queryRaw).not.toHaveBeenCalled();
@@ -284,7 +289,7 @@ describe('MockExamParticipantsService', () => {
         },
         1001,
         1,
-      );
+       null);
 
       const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
       expect(callArg.data.studentId).toBe(10117);
@@ -310,7 +315,7 @@ describe('MockExamParticipantsService', () => {
         { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
         1001,
         1,
-      );
+       null);
 
       const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
       expect(callArg.data.studentId).toBeNull();
@@ -340,7 +345,7 @@ describe('MockExamParticipantsService', () => {
         },
         1001,
         1,
-      );
+       null);
 
       // Student was resolved by id + company scope, not by phone.
       expect(prisma.student.findFirst).toHaveBeenCalledWith(
@@ -375,7 +380,7 @@ describe('MockExamParticipantsService', () => {
           },
           1001,
           1,
-        ),
+         null),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -401,7 +406,7 @@ describe('MockExamParticipantsService', () => {
           },
           1001,
           1,
-        ),
+         null),
       ).rejects.toThrow(BadRequestException);
     });
   });

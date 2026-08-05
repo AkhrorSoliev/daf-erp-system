@@ -1,7 +1,7 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  narrowPayrollScope,
   resolvePayrollBranchScope,
-  scopeToBranchFilter,
 } from './payroll-branch-scope';
 import {
   parseTashkentDateStart,
@@ -121,17 +121,10 @@ export async function resolveMonthlyScope(
     selfView,
   });
   // Fail CLOSED. A confined caller whose branch is unknown previously fell
-  // through to "no filter" and saw every branch's payroll.
-  let blocked = scope.kind === 'none';
-  let branchId = scopeToBranchFilter(scope);
-  if (scope.kind === 'branch') {
-    // A requested branch may only match the one the caller is confined to.
-    if (query.branchId != null && query.branchId !== scope.branchId) {
-      blocked = true;
-    }
-  } else if (scope.kind === 'all' && query.branchId != null) {
-    branchId = query.branchId;
-  }
+  // through to "no filter" and saw every branch's payroll. The intersection now
+  // lives in `payroll-branch-scope.ts` so `/salary/overview` applies the same
+  // rule — the two had drifted, and only this one honoured the header.
+  const { branchId, blocked } = narrowPayrollScope(scope, query.branchId);
 
   const search = query.search?.trim();
   const searchId = search && /^\d+$/.test(search) ? Number(search) : null;

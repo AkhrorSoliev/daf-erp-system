@@ -355,7 +355,7 @@ describe('StudentsService — status methods', () => {
     });
 
     it('findAll scopes base query to companyId', async () => {
-      await service.findAll({ page: 1, pageSize: 10 } as any, 1001);
+      await service.findAll({ page: 1, pageSize: 10 } as any, 1001, null);
       expect(prisma.student.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -372,7 +372,7 @@ describe('StudentsService — status methods', () => {
       await service.findAll(
         { page: 1, pageSize: 10, level: 'B1' } as any,
         1001,
-      );
+       null);
 
       expect(prisma.student.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -391,7 +391,7 @@ describe('StudentsService — status methods', () => {
     });
 
     it('does not attach enrollments filter when level is absent', async () => {
-      await service.findAll({ page: 1, pageSize: 10 } as any, 1001);
+      await service.findAll({ page: 1, pageSize: 10 } as any, 1001, null);
 
       const findManyCall = prisma.student.findMany.mock.calls[0][0];
       expect(findManyCall.where.enrollments).toBeUndefined();

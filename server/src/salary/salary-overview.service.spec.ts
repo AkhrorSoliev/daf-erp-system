@@ -189,10 +189,114 @@ describe('SalaryOverviewService', () => {
     );
   });
 
-  it('does NOT branch-scope for a CEO', async () => {
+  it('does NOT branch-scope for a CEO who picked no branch', async () => {
     await service.getOverview({}, 1, 999);
 
     const where = prisma.user.findMany.mock.calls[0][0].where;
     expect(where.branches).toBeUndefined();
+  });
+
+  /**
+   * This endpoint used to ignore the header switcher entirely: it resolved its
+   * scope from the caller's own `mainBranch` and nothing else. A CEO switching
+   * Fargona -> Namangan watched `/salary/monthly` change while this rate list
+   * kept listing every teacher in the company.
+   */
+  describe('honours the branch picked in the header', () => {
+    it('narrows a CEO to the branch they picked', async () => {
+      await service.getOverview({ branchId: 2 }, 1, 999);
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            branches: { some: { branchId: 2 } },
+          }),
+        }),
+      );
+    });
+
+    it('returns a DIFFERENT set per branch, so switching changes the list', async () => {
+      await service.getOverview({ branchId: 1 }, 1, 999);
+      await service.getOverview({ branchId: 2 }, 1, 999);
+
+      const first = prisma.user.findMany.mock.calls[0][0].where.branches;
+      const second = prisma.user.findMany.mock.calls[1][0].where.branches;
+      expect(first).toEqual({ some: { branchId: 1 } });
+      expect(second).toEqual({ some: { branchId: 2 } });
+    });
+
+    it('keeps a director on their own branch when they pick it', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: 7,
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await service.getOverview({ branchId: 7 }, 1, 555);
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            branches: { some: { branchId: 7 } },
+          }),
+        }),
+      );
+    });
+
+    it('REFUSES a director asking for another branch rather than serving their own', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: 7,
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      const res = await service.getOverview({ branchId: 2 }, 1, 555);
+
+      // No teacher query at all — refused before it could run.
+      expect(prisma.user.findMany).not.toHaveBeenCalled();
+      expect(res.data).toEqual([]);
+      expect(res.total).toBe(0);
+    });
+
+    it('refuses a caller with no branch at all (fail closed)', async () => {
+      // Two production Administrators had a null mainBranch. Falling through to
+      // "no filter" would show them every branch's payroll.
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: null,
+        roles: [{ role: { name: 'Administrator' } }],
+      });
+
+      const res = await service.getOverview({}, 1, 555);
+
+      expect(prisma.user.findMany).not.toHaveBeenCalled();
+      expect(res.data).toEqual([]);
+    });
+
+    it('returns the SAME shape when refused as when populated', async () => {
+      // The refusal path used to omit `period` and `pending`, so a consumer
+      // reading either crashed exactly on the response it was least likely to
+      // have tested.
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: null,
+        roles: [{ role: { name: 'Administrator' } }],
+      });
+
+      const refused = await service.getOverview({}, 1, 555);
+
+      expect(refused).toEqual(
+        expect.objectContaining({
+          data: [],
+          total: 0,
+          page: expect.any(Number),
+          pageSize: expect.any(Number),
+          period: expect.anything(),
+          pending: expect.objectContaining({
+            calculated: 0,
+            approved: 0,
+            approvedTotal: 0,
+            calculatedIds: [],
+            approvedIds: [],
+          }),
+        }),
+      );
+    });
   });
 });

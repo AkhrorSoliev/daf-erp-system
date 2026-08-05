@@ -60,7 +60,7 @@ describe('StudentsReadService', () => {
     });
 
     it('does not apply the ungrouped enrollment filter for other statuses', async () => {
-      await service.findAll({} as StudentQueryDto, 1001);
+      await service.findAll({} as StudentQueryDto, 1001, null);
 
       const where = prisma.student.findMany.mock.calls[0][0].where;
       expect(where.enrollments).toBeUndefined();

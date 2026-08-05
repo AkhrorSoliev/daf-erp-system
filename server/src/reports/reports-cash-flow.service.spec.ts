@@ -38,6 +38,7 @@ describe('ReportsCashFlowService', () => {
 
   it('reconstructs opening/closing balances from the ledger', async () => {
     const cf = await service.getCashFlow(1, {
+      branchIds: null,
       startDate: '2026-06-01',
       endDate: '2026-06-30',
     });

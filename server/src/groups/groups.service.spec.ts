@@ -719,7 +719,7 @@ describe('GroupsService — status methods', () => {
     });
 
     it('splits a multi-word term so every token must match (AND of ORs)', async () => {
-      await service.findAll({ search: '  Ali   Valiyev ' } as any, 1001);
+      await service.findAll({ search: '  Ali   Valiyev ' } as any, 1001, null);
 
       const and = whereOf().AND;
       expect(and).toHaveLength(2);
@@ -732,7 +732,7 @@ describe('GroupsService — status methods', () => {
     });
 
     it('does not attach a search clause when search is absent or blank', async () => {
-      await service.findAll({ search: '   ' } as any, 1001);
+      await service.findAll({ search: '   ' } as any, 1001, null);
       expect(whereOf().AND).toBeUndefined();
       expect(whereOf().name).toBeUndefined();
     });
