@@ -36,6 +36,13 @@ export interface SplitOptions {
   monthStartStr: string;
   monthEndStr: string;
   holidayDates: Set<string>;
+  /**
+   * Tashkent `YYYY-MM-DD`. Dates BEFORE this are history: a scheduled slot with
+   * no attendance row there is not evidence that a lesson happened, so nothing
+   * is projected onto it. Today itself still projects — its lesson may yet be
+   * taught and marked.
+   */
+  todayStr: string;
 }
 
 export interface LessonSplit {
@@ -55,12 +62,22 @@ export interface LessonSplit {
  * has attendance (then its rows are classified individually) or does not (then
  * today's roster stands in), every student-lesson is counted exactly once.
  *
- * A date that has already passed with no attendance stays on the REMAINING
- * side on purpose. Teachers routinely enter attendance late — an attendance
- * reminder cron exists for exactly that — and dropping those dates would make
- * the figure lurch on data-entry lag rather than on anything real. A lesson
- * that genuinely did not happen is recorded as a `LessonCancellation` and is
- * excluded above.
+ * A date that has already passed with NO attendance is projected onto by
+ * nothing. It was tempting to keep counting it on the grounds that teachers
+ * enter attendance late, but production disproved that: one group's 13
+ * scheduled July slots had no attendance since 7 May and never will. Without
+ * an attendance row there is no evidence the lesson happened, so counting it
+ * invents revenue — and worse, it makes the figure rise as data entry gets
+ * sloppier. Late entry now nudges the number UP by one lesson when it lands,
+ * which is small and points at the truth.
+ *
+ * A consequence worth relying on: for a CLOSED month nothing is projected, so
+ * `expectedValue` collapses exactly onto `heldValue`. `scripts/
+ * backtest-monthly-expectation.ts` uses that equality as its self-check.
+ *
+ * The unrecorded slots do not vanish as a concern — they are money nobody
+ * billed and salary nobody accrued — but they belong on a data-entry report
+ * (`scripts/diag-unrecorded-lessons.ts`), not inside a revenue figure.
  *
  * Future churn is deliberately NOT modelled. A "historically 5% leave" haircut
  * would be a hidden assumption nobody could decompose when the number came out
@@ -71,7 +88,7 @@ export interface LessonSplit {
  */
 export function splitMonthLessons(
   groups: ExpectationGroup[],
-  { monthStartStr, monthEndStr, holidayDates }: SplitOptions,
+  { monthStartStr, monthEndStr, holidayDates, todayStr }: SplitOptions,
 ): LessonSplit {
   let heldValue = 0;
   let heldLessons = 0;
@@ -106,6 +123,8 @@ export function splitMonthLessons(
       if (holidayDates.has(d)) continue;
       if (g.cancelledDates.has(d)) continue;
       if (g.datesWithAttendance.has(d)) continue;
+      // History with no attendance row: no evidence, no projection.
+      if (d < todayStr) continue;
       const days = resolveDays(d);
       // `null` = the date predates every snapshot, so the weekdays of that
       // period are unknown. Never project today's schedule backwards.

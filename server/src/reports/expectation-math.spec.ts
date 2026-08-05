@@ -26,10 +26,14 @@ const group = (over: Partial<ExpectationGroup> = {}): ExpectationGroup => ({
   ...over,
 });
 
-const opts = (holidays: string[] = []) => ({
+// `todayStr` before the month starts = the whole month is still ahead, so
+// every scheduled slot projects. Individual tests override it to sit inside
+// the month and check that history is left alone.
+const opts = (holidays: string[] = [], todayStr = '2026-07-31') => ({
   monthStartStr: '2026-08-01',
   monthEndStr: '2026-08-31',
   holidayDates: new Set(holidays),
+  todayStr,
 });
 
 describe('splitMonthLessons', () => {
@@ -145,5 +149,36 @@ describe('splitMonthLessons', () => {
     const r = splitMonthLessons([group({ roster: [] })], opts());
     expect(r.remainingLessons).toBe(0);
     expect(r.remainingValue).toBe(0);
+  });
+
+  it('never projects onto a past date that has no attendance', () => {
+    // Bugun 15-avgust. 3,5,7,10,12,14 o'tib ketgan va davomatsiz — dars
+    // bo'lganiga dalil yo'q, shuning uchun sanalmaydi.
+    // Qolgani: 17,19,21,24,26,28,31 = 7 sana.
+    const r = splitMonthLessons([group()], opts([], '2026-08-15'));
+    expect(r.remainingLessons).toBe(14); // 7 sana × 2 o'quvchi
+  });
+
+  it('still projects TODAY — its lesson may yet be taught and marked', () => {
+    // Bugun 17-avgust, dushanba — dars kuni. Davomat hali olinmagan bo'lishi
+    // mumkin (soat 10:00), shuning uchun u hisobda qoladi.
+    const r = splitMonthLessons([group()], opts([], '2026-08-17'));
+    expect(r.remainingLessons).toBe(14); // 17,19,21,24,26,28,31 × 2
+  });
+
+  it('a CLOSED month projects nothing — expected collapses onto held', () => {
+    // Butun oy o'tmishda: bitta ham kelajakdagi dars yo'q.
+    const r = splitMonthLessons(
+      [
+        group({
+          datesWithAttendance: new Set(['2026-08-03']),
+          coveredAttendances: [{ perLesson: 100_000 }],
+        }),
+      ],
+      opts([], '2026-09-01'),
+    );
+    expect(r.remainingLessons).toBe(0);
+    expect(r.remainingValue).toBe(0);
+    expect(r.heldValue).toBe(100_000);
   });
 });

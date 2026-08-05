@@ -8,6 +8,13 @@ describe('ReportsExpectationService', () => {
   let service: ReportsExpectationService;
   let prisma: any;
 
+  // The service projects only from TODAY onwards, so a floating clock would
+  // make these counts shrink as August 2026 passes. Pin it to the 1st.
+  beforeAll(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-01T06:00:00Z'));
+  });
+  afterAll(() => jest.useRealTimers());
+
   beforeEach(async () => {
     prisma = {
       group: { findMany: jest.fn().mockResolvedValue([]) },

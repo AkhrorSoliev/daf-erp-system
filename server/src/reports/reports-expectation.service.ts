@@ -272,10 +272,15 @@ export class ReportsExpectationService {
       };
     });
 
+    // `asOf` doubles as "today" when replaying, so a replay does not project
+    // onto days that were still in the future at the time.
+    const todayStr = asOf ?? tashkentDateStr(new Date());
+
     const split = splitMonthLessons(inputs, {
       monthStartStr,
       monthEndStr,
       holidayDates,
+      todayStr,
     });
 
     return {
