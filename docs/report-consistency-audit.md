@@ -39,6 +39,37 @@ Tuzatildi: `branchIds: ReportBranchIds` + `group: { branchId: { in } }` + bo'sh 
 
 ---
 
+## 0c. P5 BAJARILDI — 2026-08-05
+
+`exactDays × 4` prognozi butunlay o'chirildi. O'rniga **«Oy oxiriga kutilyapti»** — `ReportsExpectationService`: shu oy o'tilgan va qoplangan darslar + kalendar bo'yicha qolgan darslar. Bayram, bekor qilingan dars, guruh hayot sikli va jadval o'zgarish tarixi hisobga olinadi.
+
+Prod (2026-08-05):
+
+| Oy | O'tilgan va qoplangan | Qolgan | Kutilayotgan |
+|---|---|---|---|
+| iyul (yopilgan) | 173 783 991 | 0 | **173 783 991** |
+| avgust (4 kun) | 16 481 382 | 139 284 029 | **155 765 411** |
+
+Yopilgan oy uchun bashorat **aynan haqiqiy raqamga teng** — bu o'z-o'zini tekshirish mexanizmi (`scripts/backtest-monthly-expectation.ts`). Iyul bo'yicha aniqlik: 1-kunda 10.3% xato → 31-kunda 0%.
+
+### Qabul qilingan qarorlar (auditning 3-bo'limidagi taklifdan farqi)
+
+**Muzlatilgan reja jadvali QILINMADI.** Auditda `MonthlyPlanSnapshot` taklif qilingan edi. Rad etildi: reja yozilgan zahoti eskiradi, va uning yagona foydasi («oy boshida nima kutgandik») kunlik suratning 1-kundagi qatoridan bepul olinadi — bu B bo'lagida.
+
+**Kassa emas, dars qiymati.** Kassa bashorati «taxminan 82% to'lanadi» koeffitsiyentini talab qilardi, u esa atigi ikki oydan olingan va ichida oldindan to'lash, qarzdorlik va yangi tsikllar aralashgan. Kassa «Tushum (haqiqiy)» va yig'im foizi orqali ko'rinadi, faqat bashorat qilinmaydi.
+
+**O'tmishga proyeksiya qilinmaydi.** Jadvalda dars kuni bor, lekin davomat kiritilmagan bo'lsa — sanalmaydi. Dalilsiz daromad yozish noto'g'ri, va u teskari rag'bat beradi (ma'lumot qanchalik yomon kiritilsa, raqam shuncha katta). Iyulda bunday 21 ta guruh darsi bor edi (4 682 301) — endi raqamga kirmaydi. Ular alohida diagnostikada: `scripts/diag-unrecorded-lessons.ts`.
+
+### Yo'l-yo'lakay tuzatilgan H20 nusxasi
+
+Yangi servisning birinchi versiyasi davomatlarni faqat **hozir ACTIVE** guruhlardan olardi — auditdagi H20 xatosining aynan o'zi. Iyulda 25 ta yopilgan guruhning **235 ta darsi (8.0 mln)** tushib qolgan edi. Tuzatildi: o'tilgan dars guruhning bugungi holatiga qaramay sanaladi, faqat kelajak proyeksiyasi aktiv guruhlar bilan cheklanadi.
+
+### Yangi topilma — markaz qo'shimchasidagi bo'shliq (TUZATILMAGAN)
+
+Markaz qo'shimchasi (`computeGapAccruals`) faqat **settle qilinayotgan davrdagi** davomat yozuvlarini ko'radi. Agar davomat oy yopilgandan keyin kiritilsa va o'quvchi qarzdor bo'lsa, ustoz o'sha dars uchun **hech narsa olmaydi** — keyingi oyning croni eski davrga qaytib qaramaydi. O'quvchi keyin to'lasa, `creditPeriodDate` carry-over uni qutqaradi; to'lamasa — yo'qoladi. Iyulda 111 ta davomat accrualsiz qolgan, bir qismi shu bo'lishi mumkin. Alohida ish.
+
+---
+
 ## 0a. QAYTA TEKSHIRUV — 2026-07-30 (13 commit'dan keyin)
 
 Har bir topilma joriy kod bo'yicha qayta tekshirildi (10 guruh + har «tuzatildi» da'vosiga qarshi challenge). Testlar: 180 suite / 2253 test o'tdi.
@@ -523,7 +554,7 @@ Excel tomoni **to'g'ri** — u ustunni aniq oyna bilan («31.05.2026—30.06.202
 | ~~**P2**~~ | ~~Excel ko'p oylik export (H6)~~ | ✅ **BAJARILDI 2026-07-30** — foyda oyoqlari davrdagi oylar bo'yicha yig'iladi (har oy o'z top-up asosi bilan), floordan oldingi oylar tashlanadi. `reports-excel.month-range.ts` | — |
 | ~~**P3**~~ | ~~Telegramdagi «% yig'ildi» ni ma'noli formulaga o'tkazish (H1)~~ | ✅ **BAJARILDI 2026-08-04** — yagona formula `getIncomeMonthAttribution.collectionPct` = `shu davr uchun tushum ÷ shu davrda o'tilgan darslar qiymati`. Telegram ham, /overview paneli ham **shu bitta metodni** chaqiradi. Prognozdan foiz butunlay olib tashlandi (u endi shunchaki «taxminiy reja» qatori). Prod: iyun **81%**, iyul **82%**, avgust (4 kun) 50% — avval ikkala oy ham 115% edi. Yo'l-yo'lakay H33 (pastda) tuzatildi. | — |
 | ~~**P4**~~ | ~~«Sof foyda» ni bitta manbaga keltirish (H5)~~ | ✅ **BAJARILDI 2026-07-30** — Telegram kunlik + `rm:cfin` kanonik manbaga o'tdi (xato bo'lsa «Kassa harakati» deb rostgo'y yorliq); trend grafigi ataylab kassa asosida qoldi, lekin «Kassa oqimi» deb qayta nomlandi | — |
-| **P5** | Prognozni kalendar bo'yicha hisoblash + oy boshida muzlatish (H2) | 11% xato; «dinamik» savol | O'rta-katta (yangi jadval) |
+| ~~**P5**~~ | ~~Prognozni kalendar bo'yicha hisoblash (H2)~~ | ✅ **BAJARILDI 2026-08-05** — `exactDays × 4` ning uchala nusxasi o'chirildi, o'rniga `ReportsExpectationService` (kalendar + bayram + bekor qilingan dars + jadval tarixi). To'rtala yuzada bir xil raqam. Prod: iyul **173 783 991** (yopilgan oy uchun bashorat = haqiqiy), avgust 155 765 411. Muzlatilgan reja **qilinmadi** — pastdagi izohga qarang. | — |
 | **P6** | Barcha davr oynalarini Toshkent helperlariga o'tkazish; brauzer sana hisoblamasin (H4) | Mintaqa muammosi, oy chegarasi | O'rta |
 | ~~**P7**~~ | ~~Filial qamrovini bir xillashtirish (H7, H8, H13, H14, H15, H16, H17)~~ | ✅ **BAJARILDI 2026-08-02** — bitta `ReportBranchIds` qamrovi (`common/finance/report-branch-scope.ts`) HTTP chegarasida hisoblanadi va hamma joyga uzatiladi; `branchId`+`branchIds` juftligi va `branchWhere()` o'chirildi. Prod: Namangan 28 453 233 → **0**, Σ(filiallar) = jami (7/7 ko'rsatkich). Qo'riqchi: `reports-branch-scope-coverage.spec.ts` | — |
 | **P8** | «O'tmish o'zgaradi» sinfi (H18, H19, H20, H21) — snapshot/frozen manbaga o'tkazish | `/reports/activity` iyun bandligi 25.7% → 39.4%; debt-history joriy oy qatori; gap narxi | O'rta-katta |

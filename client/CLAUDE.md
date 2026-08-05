@@ -541,7 +541,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 | Route | Component | Purpose |
 |-------|-----------|---------|
-| `/payments/overview` | `overview-client.tsx` → `PaymentsOverview` | Dashboard: KPI cards (income, expenses, profit, LTV, CAC, ROI), date range picker, recent payments |
+| `/payments/overview` | `overview-client.tsx` → `PaymentsOverview` | Dashboard: KPI cards (income, expenses, profit, LTV, CAC, ROI), date range picker, recent payments. The "Tushum ko'rsatkichlari" card's first line is **Oy oxiriga kutilyapti** (`forecast.expectedMonthEnd`) — lesson value for the whole month, held-and-paid plus the remaining scheduled slots. It replaced "Prognoz (bashorat)", which assumed every month was four weeks and was rebuilt from the live roster on every request. Its tooltip breaks the figure into `expectedHeld` + `expectedRemaining`; do not relabel it as a cash forecast, and never compute a second one client-side. |
 | `/payments/salary` | `salary-client.tsx` → `salary-monthly-view.tsx` | **Month-selectable per-teacher salary report** (`GET /salary/monthly`). Pick a month (floor = `systemStartDate`/May 2026) → all teachers, no pagination. Columns: To'liq ishlangan (full deserved) · O'quvchilar to'lagan (covered) · Qo'shilishi kerak (top-up gap) · Avans · To'lanishi kerak (net) · Holat. Manual/Excel months (May) show `—` for the deserved/covered/gap split. Display-only; rate config + cycle-day live in a separate ⚙ Sozlamalar sheet, approve/pay via the breakdown drawer. `/payments/salary/config` redirects here. |
 | `/payments/expenses` | `expenses-client.tsx` | Expense list + create dialog |
 | `/payments/debtors` | — | Students with negative balance |
