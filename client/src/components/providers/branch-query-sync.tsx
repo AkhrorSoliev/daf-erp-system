@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { resetBranchScopedStores } from "@/lib/branch-scoped-stores";
 
 /**
  * Drops every cached server response when the active branch changes.
@@ -14,6 +15,22 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
  * happened to refetch them. With `staleTime: 5 * 60 * 1000` and
  * `refetchOnWindowFocus: false` (see `query-provider.tsx`), "something else"
  * could be five minutes away.
+ *
+ * REACT QUERY IS ONLY PART OF THE APP. 51 files fetch outside it, and clearing
+ * the query cache did nothing for any of them — which is why the leads board
+ * kept showing Fargona after a switch to Namangan until the user pressed
+ * refresh. They are handled by their own shape:
+ *
+ *   - module-level zustand stores → `resetBranchScopedStores()` below; they
+ *     outlive unmounts, so nothing else can clear them;
+ *   - component-local `useState` + `useEffect` → `BranchScopedMain`, which
+ *     remounts the page content so their effects re-run from scratch.
+ *
+ * The remount is driven by a `key` during render, not by this effect. What keeps
+ * the two in step is this component's POSITION: it is rendered before
+ * `{children}` in `query-provider.tsx`, so React queues its effect first and the
+ * caches are empty by the time the fresh page fetches. That ordering is
+ * documented where it is created — do not move this component below `children`.
  *
  * WHY CENTRAL RATHER THAN PER-KEY: only 8 of ~132 query keys mentioned the
  * branch. Adding it to the other 124 would fix today and miss tomorrow — every
@@ -56,6 +73,7 @@ export function BranchQuerySync() {
 
     void queryClient.cancelQueries();
     queryClient.removeQueries();
+    resetBranchScopedStores();
   }, [selectedBranch, loaded, queryClient]);
 
   return null;

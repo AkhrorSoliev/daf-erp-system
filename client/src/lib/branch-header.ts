@@ -32,6 +32,39 @@ export interface BranchOption {
   id: number;
 }
 
+/** What the switcher has resolved to, if anything. */
+export const BRANCH_KEY_BOOT = "boot";
+
+/**
+ * The React `key` that scopes the dashboard's page content to a branch.
+ *
+ * `BranchScopedMain` puts this on `<main>`, so a change unmounts the whole page
+ * subtree and every mount-time effect runs again. That is what reloads the ~47
+ * components that fetch with `useState` + `useEffect` instead of React Query —
+ * they never consult the query cache, so clearing it did nothing for them, and a
+ * branch switch left them showing the previous branch's rows until the user
+ * pressed refresh.
+ *
+ * Two values must not collide, which is why this is a function and not
+ * `String(id)`:
+ *
+ *   - `null` is a real selection ("Barcha filiallar"), not "nothing chosen";
+ *   - before the branch list resolves there is no selection at all, and keying
+ *     on the unresolved value would remount every page once on first paint,
+ *     throwing away the initial load's own in-flight requests.
+ *
+ * So "not resolved yet" gets a sentinel OUTSIDE the id space, and the first real
+ * resolution is the first key change — which is a no-op, because the page
+ * mounting for the first time has nothing stale to discard.
+ */
+export function branchScopeKey(
+  selectedBranch: BranchOption | null,
+  loaded: boolean,
+): string {
+  if (!loaded) return BRANCH_KEY_BOOT;
+  return selectedBranch ? String(selectedBranch.id) : ALL_BRANCHES;
+}
+
 /**
  * Restore a persisted selection, dropping it when it is no longer legal.
  *

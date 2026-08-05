@@ -2,6 +2,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -309,3 +310,9 @@ export const MOCK_EXAM_TRANSITION_INFO: Record<
   },
   ARCHIVED: {},
 };
+
+// A mock exam belongs to the branch it is HELD in, and mock revenue is never
+// written to the ledger — the exam row is the only record of which branch
+// earned it. The store's own `loaded` flag would otherwise keep the previous
+// branch's exams on screen after a switch. See `lib/branch-scoped-stores.ts`.
+registerBranchScopedStore(useMockExamsBoard);
