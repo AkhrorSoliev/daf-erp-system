@@ -12,6 +12,7 @@ import {
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
+import { ExpectationHistoryQueryDto } from './dto/expectation-history-query.dto';
 import {
   isEmptyScope,
   resolveCallerReportBranchIds,
@@ -271,15 +272,13 @@ export class ReportsController {
   async getExpectationHistory(
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
-    @Query() query: ReportsQueryDto,
-    @Query('month') month?: string,
+    @Query() query: ExpectationHistoryQueryDto,
   ) {
-    const target =
-      month && /^\d{4}-\d{2}$/.test(month)
-        ? month
-        : new Date().toISOString().slice(0, 7);
     return this.reportsService.getExpectationHistory(companyId, {
-      month: target,
+      // Its own DTO, not `ReportsQueryDto`: the global ValidationPipe runs with
+      // `forbidNonWhitelisted`, so a `month` the shared DTO does not declare is
+      // a 400 — which is how this shipped broken.
+      month: query.month ?? new Date().toISOString().slice(0, 7),
       branchIds: await this.resolveScope(userId, query.branchId),
     });
   }
