@@ -86,3 +86,53 @@ chiqarilgan; egaligi loyiha egasida, **tegilmaydi**.
 skript esa **tegilmadi** (allaqachon yurgizilgan, egaligi loyiha egasida):
 
 - `server/scripts/backfill-leads-board.ts`
+
+---
+
+# Route siyosati manifesti (Faza 2b, 2026-08-06)
+
+`tsc` ning ushlaydigan narsasi — **chaqiruv scope'ni unutgani**. Ushlamaydigani —
+**route umuman chaqirmagani**: to'g'ridan-to'g'ri Prisma so'rovi yozadigan yoki
+kompaniya darajasidagi yordamchida to'xtaydigan yangi kontroller toza
+kompilyatsiya bo'ladi va hamma filialga xizmat qiladi.
+
+`src/common/auth/branch-route-policy.ts` shuni yopadi. `scripts/route-inventory.ts`
+TypeScript AST orqali manbadagi **hamma** route'ni topadi (regex emas — bitta
+o'tkazib yuborilgan route qamrovni «to'liq» deb ko'rsatardi, bu esa tekshiruvsiz
+holatdan yomonroq), `branch-route-policy.spec.ts` esa manifestni haqiqat bilan
+solishtiradi.
+
+## Hozirgi holat
+
+| | Soni | Qanday aniqlanadi |
+|---|---|---|
+| `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
+| Qo'lda toifalangan | **63** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **207** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| **Jami** | **365** | |
+
+## Nega 207 ta «UNREVIEWED» deb qoldirildi
+
+Bir o'tirishda 207 ta route'ni toifalash raqamni nolga tushirardi, lekin hech kim
+o'ylab ko'rmagan ishonchli yorliqlar hosil qilardi. Noto'g'ri `COMPANY_WIDE` ni
+o'ylangan `COMPANY_WIDE` dan ajratib bo'lmaydi — va u aynan o'zini ushlashi kerak
+bo'lgan tekshiruvni o'chiradi. Ochiq tan olingan qarz yaxshiroq.
+
+## Mexanizm
+
+`UNREVIEWED_BUDGET` — **literal raqam**, `UNREVIEWED_ROUTES.length` emas. Aks holda
+tekshiruv o'z-o'ziga havola bo'lardi: ro'yxat cheksiz o'sib, tasdiq har safar
+o'taverardi. Ya'ni:
+
+- yangi endpoint manifestga qo'shilmasa → test yiqiladi;
+- yangi endpoint'ni `UNREVIEWED` ga «parking» qilib bo'lmaydi (budjet qotgan) →
+  yozilayotgan paytda toifalanadi, ya'ni u nima qilishini biladigan yagona onda;
+- o'chirilgan route manifestda qolsa → test yiqiladi;
+- `@Public()` route ochiq siyosatlardan birida bo'lmasa → test yiqiladi.
+
+Qamrovni kamaytirish oddiy ish: route'ni siyosat blokiga ko'chiring va
+`UNREVIEWED_BUDGET` ni yangi uzunlikka tushiring.
+
+**Bu uch qatlamdan ikkinchisi va ataylab eng zaifi:** uning vazifasi — hech narsa
+**unutilmasligi**, hamma narsa **to'g'ri** bo'lishi emas. To'g'riligini faqat
+salbiy integratsiya testlari isbotlaydi (`*.branch-isolation.spec.ts`).
