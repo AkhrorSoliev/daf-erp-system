@@ -215,8 +215,7 @@ export class SalaryOverviewService {
 
     const rows = teachers.map((t) => {
       const userConfigs = configsByUser.get(t.id) ?? [];
-      const expectedMonthly = this.computeExpectedMonthly(
-        userConfigs,
+      const activeStudentCount = this.countActiveStudents(
         groupsByUser.get(t.id) ?? [],
       );
       return {
@@ -234,7 +233,7 @@ export class SalaryOverviewService {
           groupId: c.groupId,
           group: c.group,
         })),
-        expectedMonthly,
+        activeStudentCount,
         actualEarned: earnedByUser.get(t.id) ?? 0,
         paidTotal: paidByUser.get(t.id) ?? 0,
         advancesTotal: advancesByUser.get(t.id) ?? 0,
@@ -250,13 +249,13 @@ export class SalaryOverviewService {
           ? rows.filter((r) => r.configs.length === 0)
           : rows;
 
-    // Sort: most "real ishlangan" first, then expected, then name. In-memory
+    // Sort: most "real ishlangan" first, then class size, then name. In-memory
     // pagination — per-company teacher counts are small (tens, not thousands).
     filtered.sort((a, b) => {
       if (b.actualEarned !== a.actualEarned)
         return b.actualEarned - a.actualEarned;
-      if (b.expectedMonthly !== a.expectedMonthly)
-        return b.expectedMonthly - a.expectedMonthly;
+      if (b.activeStudentCount !== a.activeStudentCount)
+        return b.activeStudentCount - a.activeStudentCount;
       const fn = a.user.firstName.localeCompare(b.user.firstName);
       return fn !== 0 ? fn : a.user.lastName.localeCompare(b.user.lastName);
     });
@@ -293,53 +292,19 @@ export class SalaryOverviewService {
   }
 
   /**
-   * Replicates `SalarySummaryService.getTeacherSalarySummary`'s expected-monthly
-   * math EXACTLY so the overview number matches the teacher profile:
-   *  - FIXED_MONTHLY (global) config → flat value.
-   *  - otherwise Σ over ACTIVE groups of (perStudentPerLesson × activeStudents
-   *    × lessonsPerMonth), where the group's own config wins over the global one.
+   * How many active students this teacher currently has across their groups —
+   * the ⚙ Sozlamalar list's tiebreak, used only for ordering.
+   *
+   * It replaced a money figure (`expectedMonthly`) that multiplied each group's
+   * students by `exactDays.length * 4` — the four-week forecast this codebase
+   * has now deleted everywhere. That number was never rendered; it only sorted
+   * the list, and ordering does not need a currency amount to be meaningful.
    */
-  private computeExpectedMonthly(
-    configs: {
-      salaryType: SalaryType;
-      value: number;
-      groupId: string | null;
-    }[],
+  private countActiveStudents(
     groups: {
-      group: {
-        id: string;
-        exactDays: string[];
-        course: { price: number; lessonPaymentCount: number };
-        _count: { enrollments: number };
-      };
+      group: { _count: { enrollments: number } };
     }[],
   ): number {
-    const fixedMonthly = configs.find(
-      (c) => c.salaryType === SalaryType.FIXED_MONTHLY,
-    );
-    if (fixedMonthly) return fixedMonthly.value;
-
-    const defaultConfig = configs.find((c) => !c.groupId);
-
-    let total = 0;
-    for (const { group } of groups) {
-      const groupConfig =
-        configs.find((c) => c.groupId === group.id) ?? defaultConfig;
-      if (!groupConfig || groupConfig.salaryType === SalaryType.FIXED_MONTHLY) {
-        continue;
-      }
-      const activeStudents = group._count.enrollments;
-      const lessonPaymentCount = group.course.lessonPaymentCount || 12;
-      const perLessonCost = Math.round(group.course.price / lessonPaymentCount);
-      const lessonsPerMonth = group.exactDays.length * 4;
-
-      const perStudentPerLesson =
-        groupConfig.salaryType === SalaryType.PERCENTAGE
-          ? Math.round((perLessonCost * groupConfig.value) / 100)
-          : Math.round(groupConfig.value / lessonPaymentCount);
-
-      total += perStudentPerLesson * activeStudents * lessonsPerMonth;
-    }
-    return total;
+    return groups.reduce((sum, { group }) => sum + group._count.enrollments, 0);
   }
 }

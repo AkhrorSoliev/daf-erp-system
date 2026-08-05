@@ -291,7 +291,7 @@ export class TelegramGroupReportMenuService {
         `💰 <b>Moliyaviy xulosa — ${month}</b>`,
         ``,
         `• Tushum (haqiqiy): <b>${formatSum(o.income.actual)}</b>`,
-        `• Kutilgan (prognoz): <b>${formatSum(o.forecast.recognizedRevenueForecast)}</b>`,
+        `• Oy oxiriga kutilyapti: <b>${formatSum(o.income.expected)}</b>`,
         `• Xarajat: <b>${formatSum(o.expenses)}</b>`,
         `• Ustoz oyligi (to'langan): <b>${formatSum(o.salary.paid)}</b>`,
         canonical !== null

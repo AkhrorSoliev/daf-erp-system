@@ -121,6 +121,22 @@ describe('ReportsService', () => {
           provide: require('../holidays/holidays.service').HolidaysService,
           useValue: holidaysService,
         },
+        {
+          // The overview folds «Oy oxiriga kutilyapti» in; its own maths is
+          // covered by reports-expectation.service.spec.ts.
+          provide:
+            require('./reports-expectation.service').ReportsExpectationService,
+          useValue: {
+            getMonthlyExpectation: jest.fn().mockResolvedValue({
+              month: '2026-08',
+              heldValue: 0,
+              heldLessons: 0,
+              remainingValue: 0,
+              remainingLessons: 0,
+              expectedValue: 0,
+            }),
+          },
+        },
       ],
     }).compile();
 

@@ -116,7 +116,7 @@ export function summarySheet(
 
   sectionHeader(ws, 'Qo‘shimcha ko‘rsatkichlar', 6);
   kvRow(ws, 'Hisoblangan daromad (darslar)', o.income?.billed ?? 0, 'Bu davrda o‘quvchilarga real hisoblab yozilgan darslar puli (accrual).');
-  kvRow(ws, 'Prognoz (bashorat)', o.income?.expected ?? 0, 'Barcha faol o‘quvchi to‘liq oy o‘qisa kutiladigan summa — haqiqiy hisob emas.');
+  kvRow(ws, 'Oy oxiriga kutilyapti', o.income?.expected ?? 0, 'Shu oy o‘tilgan darslar + kalendar bo‘yicha qolgan darslar qiymati. Kassa bashorati emas.');
   kvRow(
     ws,
     'Sof foyda (aniq — hisoblangan oylik + refund bilan)',
@@ -311,7 +311,7 @@ export function glossarySheet(wb: Workbook) {
   ws.columns = [{ width: 30 }, { width: 90 }];
   sheetTitle(ws, "Izoh / Lug‘at", 'Atamalarning sodda tilda izohi', 2);
   const terms: [string, string][] = [
-    ['Prognoz (bashorat)', 'Barcha faol o‘quvchi to‘liq oy o‘qisa kutiladigan taxminiy summa. Haqiqiy hisob emas.'],
+    ['Oy oxiriga kutilyapti', 'Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bayram, bekor qilingan dars va guruh jadvali hisobga olinadi. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi.'],
     ['Hisoblangan daromad', 'Bu davrda o‘quvchilarga real hisoblab yozilgan darslar puli (accrual). Tushgan to‘lov va qarz shundan kelib chiqadi.'],
     ['Tushgan tushum', 'Bu davrda kassaga real tushgan to‘lovlar (kassa asosida).'],
     ['Naqd vs Hisoblangan asos', 'Naqd (kassa) asos = real tushgan/chiqgan pul. Hisoblangan (accrual) asos = darslar bo‘yicha yozilgan qiymat.'],

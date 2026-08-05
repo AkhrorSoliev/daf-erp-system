@@ -3,10 +3,14 @@ import { SalaryOverviewService } from './salary-overview.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * The overview must reproduce the teacher-profile numbers (expectedMonthly +
- * actualEarned) in bulk, map paid/advances per teacher, attach the latest
- * payment, and surface the company-wide pending (CALCULATED / APPROVED) set
- * for the batch bar.
+ * The overview maps actualEarned / paid / advances per teacher in bulk,
+ * attaches the latest payment, and surfaces the company-wide pending
+ * (CALCULATED / APPROVED) set for the batch bar.
+ *
+ * It no longer carries an `expectedMonthly` figure: that was `students ×
+ * exactDays.length * 4 × rate`, the four-week forecast deleted across the
+ * codebase. It was never rendered — it only ordered this list — so the list now
+ * orders by active student count instead.
  */
 describe('SalaryOverviewService', () => {
   let service: SalaryOverviewService;
@@ -62,7 +66,7 @@ describe('SalaryOverviewService', () => {
     expect(prisma.employeeSalaryConfig.findMany).not.toHaveBeenCalled();
   });
 
-  it('computes expectedMonthly (PERCENTAGE) matching the profile formula and maps live totals', async () => {
+  it('maps live totals per teacher and counts their active students', async () => {
     prisma.user.findMany.mockResolvedValue([
       {
         id: 10010,
@@ -126,8 +130,9 @@ describe('SalaryOverviewService', () => {
 
     expect(res.data).toHaveLength(1);
     const row = res.data[0];
-    // 6000 (=20000*30%) × 5 students × 12 lessons.
-    expect(row.expectedMonthly).toBe(360_000);
+    // Ordering key only — the active students across this teacher's groups.
+    expect(row.activeStudentCount).toBe(5);
+    expect(row).not.toHaveProperty('expectedMonthly');
     expect(row.actualEarned).toBe(123_456);
     expect(row.paidTotal).toBe(700_000);
     expect(row.advancesTotal).toBe(50_000);
@@ -137,7 +142,7 @@ describe('SalaryOverviewService', () => {
     expect(res.pending.approved).toBe(0);
   });
 
-  it('uses the FIXED_MONTHLY value as expectedMonthly (ignores group sum)', async () => {
+  it('carries no money forecast for a FIXED_MONTHLY employee either', async () => {
     prisma.user.findMany.mockResolvedValue([
       {
         id: 10020,
@@ -160,7 +165,11 @@ describe('SalaryOverviewService', () => {
 
     const res = await service.getOverview({}, 1, 999);
 
-    expect(res.data[0].expectedMonthly).toBe(4_000_000);
+    // The config itself is still surfaced (the rate list renders it); what is
+    // gone is a derived monthly money figure nobody displayed.
+    expect(res.data[0].configs[0].value).toBe(4_000_000);
+    expect(res.data[0]).not.toHaveProperty('expectedMonthly');
+    expect(res.data[0].activeStudentCount).toBe(0);
   });
 
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {

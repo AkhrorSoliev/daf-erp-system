@@ -31,19 +31,26 @@ async function main() {
 
   const now = new Date(Date.now() + TZ);
   const thisMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  const args = process.argv.slice(2).filter((a) => /^\d{4}-\d{2}$/.test(a));
+  // `YYYY-MM` = whole month (MTD for the running one). `YYYY-MM-DD` = that
+  // month cut off at that day — use it to compare the SAME day-of-month across
+  // months, since the ratio climbs through a month and a day-4 reading is not
+  // comparable to a month-end one.
+  const args = process.argv
+    .slice(2)
+    .filter((a) => /^\d{4}-\d{2}(-\d{2})?$/.test(a));
   const months = args.length ? args : [thisMonth, '2026-07', '2026-06'];
 
   console.log(`Company: ${company.name} (#${company.id})\n`);
 
-  for (const monthKey of months) {
-    const [y, m] = monthKey.split('-').map(Number);
+  for (const spec of months) {
+    const [y, m, explicitDay] = spec.split('-').map(Number);
+    const monthKey = `${y}-${String(m).padStart(2, '0')}`;
     // Month-to-date for the running month (what the 21:00 bot reports), full
-    // month for a closed one.
+    // month for a closed one, or an explicit cut-off day when given.
     const isCurrent = monthKey === thisMonth;
-    const lastDay = isCurrent
-      ? now.getUTCDate()
-      : new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const lastDay =
+      explicitDay ??
+      (isCurrent ? now.getUTCDate() : new Date(Date.UTC(y, m, 0)).getUTCDate());
     const startDate = `${monthKey}-01`;
     const endDate = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 

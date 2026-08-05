@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsFinancialService } from './reports-financial.service';
+import { ReportsExpectationService } from './reports-expectation.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { HolidaysService } from '../holidays/holidays.service';
+import { RedisService } from '../redis/redis.service';
 
 /**
  * Structural guard: when a branch scope is given, EVERY query a money report
@@ -171,5 +174,99 @@ describe('branch scope coverage', () => {
         scoped: hasBranchPredicate(where),
       }).toEqual({ q: `${model}.${method}`, scoped: true });
     }
+  });
+});
+
+/**
+ * The expectation service is guarded separately because its scoping is a
+ * CHAIN, not a per-query predicate: only the group query carries `branchId`,
+ * and the attendance/consumption queries inherit it by filtering on the ids
+ * that query returned. The generic `hasBranchPredicate` helper above cannot
+ * see that, so the chain itself is what gets asserted here.
+ */
+describe('branch scope coverage — expectation service', () => {
+  let service: ReportsExpectationService;
+  let prisma: any;
+
+  const scopedGroup = {
+    id: 'g-in-scope',
+    statusEnum: 'ACTIVE',
+    deletedAt: null,
+    exactDays: ['monday'],
+    startDate: null,
+    endDate: null,
+    scheduleSnapshots: [],
+    course: { price: 1_200_000, lessonPaymentCount: 12 },
+    contracts: [],
+    enrollments: [{ studentId: 10001, student: { discountPercent: 0 } }],
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      group: { findMany: jest.fn().mockResolvedValue([scopedGroup]) },
+      attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      transaction: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ReportsExpectationService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: HolidaysService,
+          useValue: {
+            buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+          },
+        },
+        {
+          provide: RedisService,
+          useValue: { get: jest.fn().mockResolvedValue(null), setex: jest.fn() },
+        },
+      ],
+    }).compile();
+    service = module.get(ReportsExpectationService);
+  });
+
+  it('scopes the group and cancellation queries, and chains the rest to them', async () => {
+    await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: [7],
+    });
+
+    expect(prisma.group.findMany.mock.calls[0][0].where.branchId).toEqual({
+      in: [7],
+    });
+    expect(
+      prisma.lessonCancellation.findMany.mock.calls[0][0].where.group.branchId,
+    ).toEqual({ in: [7] });
+    // The chain: attendance sees ONLY the ids the scoped group query returned.
+    expect(prisma.attendance.findMany.mock.calls[0][0].where.groupId).toEqual({
+      in: ['g-in-scope'],
+    });
+  });
+
+  it('leaves every query unfiltered for a company-wide caller', async () => {
+    await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: null,
+    });
+
+    expect(
+      prisma.group.findMany.mock.calls[0][0].where.branchId,
+    ).toBeUndefined();
+    expect(
+      prisma.lessonCancellation.findMany.mock.calls[0][0].where.group.branchId,
+    ).toBeUndefined();
+  });
+
+  it('an empty scope reads NOTHING at all', async () => {
+    const r = await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: [],
+    });
+
+    expect(r.expectedValue).toBe(0);
+    expect(prisma.group.findMany).not.toHaveBeenCalled();
+    expect(prisma.attendance.findMany).not.toHaveBeenCalled();
   });
 });

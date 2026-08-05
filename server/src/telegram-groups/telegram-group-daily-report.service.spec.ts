@@ -235,59 +235,58 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).toContain('Qarz kechirildi: <b>900 000 so\'m</b> (1 ta');
   });
 
-  it('prints the shared collection ratio and never a percentage on the forecast', async () => {
+  it('prints the shared collection ratio and the month-end expectation', async () => {
     const state = defaultState();
-    // One enrollment so the forecast line renders and can be inspected.
-    state.forecastEnrollments = [
-      {
-        studentId: 10001,
-        student: { discountPercent: 0 },
-        group: {
-          exactDays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
-          course: { price: 1_200_000, lessonPaymentCount: 12 },
-          contracts: [],
-        },
-      },
-    ];
     const getIncomeMonthAttribution = jest.fn().mockResolvedValue({
       lessonsValue: 173_783_991,
       currentMonth: 142_000_000,
       collectionPct: 82,
     });
+    const getMonthlyExpectation = jest
+      .fn()
+      .mockResolvedValue({ expectedValue: 155_765_411 });
     const service = await buildService(makePrisma(state), makeSalary(state), {
       getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
       getIncomeMonthAttribution,
+      getMonthlyExpectation,
     });
 
     const { message: raw } = await service.build(1001);
-    const message = raw.replace(/ /g, ' ');
+    const message = raw.replace(/\u00A0/g, ' ');
 
-    expect(message).toContain("• Shu oyning darslari: <b>173 783 991 so'm</b>");
+    expect(message).toContain("\u2022 Shu oyning darslari: <b>173 783 991 so'm</b>");
     expect(message).toContain(
-      "• Shundan yig'ildi: <b>142 000 000 so'm</b> (<b>82%</b>)",
+      "\u2022 Shundan yig'ildi: <b>142 000 000 so'm</b> (<b>82%</b>)",
     );
-    // The forecast survives as a plain figure — the ratio that used to hang off
-    // it (MTD cash ÷ `exactDays × 4`) is what printed 109–115% against the web
-    // page's 83%. A "% yig'ildi" must never be re-derived from the forecast.
-    expect(message).toContain('• Oylik prognoz (taxminiy reja): <b>');
-    expect(message).not.toMatch(/prognoz.*%/i);
-    // Company-wide, month-to-date — the window the "Oy boshidan" block reports.
+    expect(message).toContain(
+      "\u2022 Oy oxiriga kutilyapti: <b>155 765 411 so'm</b>",
+    );
+    // The four-week forecast is gone from the message entirely \u2014 not renamed,
+    // not demoted. Two near-identical numbers is the disease being cured.
+    expect(message.toLowerCase()).not.toContain('prognoz');
+    // Both figures are company-wide and cover the report's own month.
     expect(getIncomeMonthAttribution).toHaveBeenCalledWith(
       1001,
       expect.objectContaining({ branchIds: null, startDate: '2026-07-01' }),
     );
+    expect(getMonthlyExpectation).toHaveBeenCalledWith(
+      1001,
+      expect.objectContaining({ branchIds: null, month: '2026-07' }),
+    );
   });
 
-  it('drops the collection block rather than inventing a ratio when it fails', async () => {
+  it('drops each block rather than inventing a figure when it fails', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
       getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
       getIncomeMonthAttribution: jest.fn().mockRejectedValue(new Error('boom')),
+      getMonthlyExpectation: jest.fn().mockRejectedValue(new Error('boom')),
     });
 
     const { message } = await service.build(1001);
 
     expect(message).not.toContain("Shundan yig'ildi");
+    expect(message).not.toContain('Oy oxiriga kutilyapti');
     expect(message).toContain('Tushum (haqiqiy)'); // rest of the report survives
   });
 
