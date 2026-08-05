@@ -42,12 +42,14 @@ interface FinancialOverview {
     byMethod: { method: string; amount: number; count: number }[];
   };
   /**
-   * Forecast and receivables (D.2). `expected` above is kept as an alias for
-   * `recognizedRevenueForecast` for backward compat; new clients should
-   * read from here.
+   * Month-end expectation and receivables (D.2). `income.expected` above is the
+   * same figure, kept for the Excel path.
    */
   forecast: {
-    recognizedRevenueForecast: number;
+    /** Lessons held-and-paid + the remaining scheduled ones, by lesson value. */
+    expectedMonthEnd: number;
+    expectedHeld: number;
+    expectedRemaining: number;
     outstandingReceivable: number;
     debtorExposure: { count: number; avgDebt: number };
   };
@@ -186,7 +188,9 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
   const empty: FinancialOverview = {
     income: { expected: 0, actual: 0, billed: 0, paymentCount: 0, byMethod: [] },
     forecast: {
-      recognizedRevenueForecast: 0,
+      expectedMonthEnd: 0,
+      expectedHeld: 0,
+      expectedRemaining: 0,
       outstandingReceivable: 0,
       debtorExposure: { count: 0, avgDebt: 0 },
     },
@@ -312,23 +316,25 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
             Tushum ko&apos;rsatkichlari
           </p>
           <div className="space-y-2.5">
-            {/* Prognoz — schedule-based projection, not a real figure */}
+            {/* Oy oxiriga kutilyapti — lesson value, calendar-based */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex justify-between text-sm cursor-help">
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <ArrowDownRight className="size-3.5 text-amber-500" />
-                    Prognoz (bashorat)
+                    Oy oxiriga kutilyapti
                   </span>
                   <span className="font-medium">
-                    {fmt(d.forecast.recognizedRevenueForecast)} so&apos;m
+                    {fmt(d.forecast.expectedMonthEnd)} so&apos;m
                   </span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-64">
-                Taxminiy reja — barcha aktiv o&apos;quvchi to&apos;liq oy dars
-                olsa kutiladigan summa. Haqiqiy hisob emas, shuning uchun
-                tushgan to&apos;lov va qarz bilan teng kelmaydi.
+              <TooltipContent side="bottom" className="max-w-72">
+                Shu oy allaqachon o&apos;tilgan darslar qiymati (
+                {fmt(d.forecast.expectedHeld)}) + kalendar bo&apos;yicha oy
+                oxirigacha qolgan darslar ({fmt(d.forecast.expectedRemaining)}).
+                Bayram, bekor qilingan dars va guruh jadvali hisobga olinadi.
+                Bu kassa bashorati emas — pul qachon kelishi bunga kirmaydi.
               </TooltipContent>
             </Tooltip>
             {/* Hisoblangan darslar — real billed (Σ LESSON_DEDUCTION) */}

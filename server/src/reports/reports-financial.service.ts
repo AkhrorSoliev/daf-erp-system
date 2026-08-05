@@ -234,69 +234,13 @@ export class ReportsFinancialService {
       (billedLessonsAgg._sum.amount ?? 0) + overchargeCorrectionSum,
     );
 
-    // Recognized revenue forecast: walks every active enrollment in scope
-    // and estimates monthly recognition from the group's weekly cadence.
-    //
-    // Per-enrollment pricing falls back through three sources:
-    //   1. Active Contract (studentId + groupId) — negotiated totalAmount /
-    //      lessonPaymentCount, so chegirmali shartnomalar are priced
-    //      exactly as agreed.
-    //   2. Course.price × (100 - Student.discountPercent) / 100 — the
-    //      per-student discount is the modern lever and is honored when no
-    //      contract is on file.
-    //   3. Course.price alone — defensive fallback if discountPercent is
-    //      missing/null.
-    //
-    // Walking enrollments instead of contracts means production data without
-    // any Contract rows (the common case today) still produces an honest
-    // forecast — and centers that adopt contracts later get per-contract
-    // pricing automatically for those enrollments, with the rest still
-    // estimated from course price.
-    const activeEnrollments = await this.prisma.enrollment.findMany({
-      where: {
-        status: 'ACTIVE',
-        deletedAt: null,
-        group: {
-          deletedAt: null,
-          statusEnum: 'ACTIVE',
-          companyId,
-          ...branchFilter,
-        },
-      },
-      select: {
-        studentId: true,
-        groupId: true,
-        student: { select: { discountPercent: true } },
-        group: {
-          select: {
-            exactDays: true,
-            course: { select: { price: true, lessonPaymentCount: true } },
-            contracts: {
-              where: { status: 'ACTIVE', deletedAt: null },
-              select: { studentId: true, totalAmount: true },
-            },
-          },
-        },
-      },
-    });
-    const recognizedRevenueForecast = activeEnrollments.reduce((sum, e) => {
-      const lpc = e.group.course.lessonPaymentCount || 12;
-      const lessonsPerMonth = (e.group.exactDays?.length ?? 0) * 4;
-      const contract = e.group.contracts.find(
-        (c) => c.studentId === e.studentId,
-      );
-      let perLesson: number;
-      if (contract) {
-        perLesson = Math.round(contract.totalAmount / lpc);
-      } else {
-        const discount = e.student?.discountPercent ?? 0;
-        const fullPerLesson = Math.round(e.group.course.price / lpc);
-        const clamped = Math.max(0, Math.min(100, discount));
-        perLesson = Math.round((fullPerLesson * (100 - clamped)) / 100);
-      }
-      return sum + perLesson * lessonsPerMonth;
-    }, 0);
-    const expectedIncome = recognizedRevenueForecast;
+    // The `exactDays × 4` revenue forecast used to live here. It assumed every
+    // month was four weeks (8–13% short on a five-week month) and was rebuilt
+    // from whoever was ACTIVE at request time, so a student leaving on the 25th
+    // was erased from the whole month and June and July both scored the same
+    // figure. `ReportsService.getFinancialOverview` now folds in
+    // `ReportsExpectationService.getMonthlyExpectation` instead — calendar-based
+    // lesson value. Do not reintroduce a second forecast here.
 
     // Outstanding receivable (D.2): total unpaid balance across active
     // debtors. Not a forecast — it's what the center is actually owed today.
@@ -464,7 +408,10 @@ export class ReportsFinancialService {
 
     return {
       income: {
-        expected: expectedIncome,
+        // `expected` is written by `ReportsService.getFinancialOverview`, which
+        // folds in the calendar-based month-end expectation. Zero here so a
+        // caller reaching this service directly never sees a stale forecast.
+        expected: 0,
         actual: totalIncome,
         billed: billedLessons,
         paymentCount: actualIncome._count,
@@ -475,7 +422,6 @@ export class ReportsFinancialService {
         })),
       },
       forecast: {
-        recognizedRevenueForecast,
         outstandingReceivable,
         debtorExposure: { count: debtorCount, avgDebt },
       },

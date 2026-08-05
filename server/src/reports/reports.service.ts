@@ -14,6 +14,7 @@ import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { ReportsCenterActivityService } from './reports-center-activity.service';
+import { ReportsExpectationService } from './reports-expectation.service';
 import {
   isEmptyScope,
   singleBranchId,
@@ -80,6 +81,7 @@ export class ReportsService {
     private salary: SalaryService,
     private debtors: PaymentsDebtorsService,
     private redis: RedisService,
+    private expectation: ReportsExpectationService,
   ) {}
 
   // Excel financial report — line-item + reconciliation data sources. Kept on
@@ -260,7 +262,22 @@ export class ReportsService {
   }
 
   // Financial
-  getFinancialOverview(
+  /**
+   * «Oy oxiriga kutilyapti» — the replacement for `recognizedRevenueForecast`.
+   *
+   * Lesson value, not cash: a cash projection would need an "about 82% gets
+   * paid" coefficient drawn from two months, and that coefficient bundles
+   * prepayment timing, debt and new-enrolment cycles into one number nobody can
+   * decompose when it comes out wrong.
+   */
+  getMonthlyExpectation(
+    companyId: number,
+    opts: { month: string; branchIds: ReportBranchIds; asOf?: string },
+  ) {
+    return this.expectation.getMonthlyExpectation(companyId, opts);
+  }
+
+  async getFinancialOverview(
     companyId: number,
     query: {
       branchIds: ReportBranchIds;
@@ -268,7 +285,30 @@ export class ReportsService {
       endDate?: string;
     },
   ) {
-    return this.financial.getFinancialOverview(companyId, query);
+    const overview = await this.financial.getFinancialOverview(
+      companyId,
+      query,
+    );
+    // Month = the period's START month, the same derivation the salary fold and
+    // the Excel `monthStr` already use. Audit H22 (cards sitting on different
+    // bases) is a known separate item — do not diverge from the convention here.
+    const month = (
+      query.startDate ?? new Date().toISOString().slice(0, 10)
+    ).slice(0, 7);
+    const expectation = await this.getMonthlyExpectation(companyId, {
+      month,
+      branchIds: query.branchIds,
+    });
+    return {
+      ...overview,
+      income: { ...overview.income, expected: expectation.expectedValue },
+      forecast: {
+        ...overview.forecast,
+        expectedMonthEnd: expectation.expectedValue,
+        expectedHeld: expectation.heldValue,
+        expectedRemaining: expectation.remainingValue,
+      },
+    };
   }
   getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
     return this.financial.getFinancialTrend(companyId, branchIds);

@@ -39,9 +39,10 @@ import {
  *  - "Shu oyning darslari" / "Shundan yig'ildi" = the collection ratio, taken
  *    from `getIncomeMonthAttribution` so the bot and /payments/overview divide
  *    the SAME two figures. Never re-derive it here.
- *  - "Oylik prognoz"    = recognized-revenue forecast (same walk as
- *    reports-financial.service.ts). It carries NO percentage: `exactDays × 4`
- *    assumes a 4-week month and runs 8–13% short on 5-week months.
+ *  - "Oy oxiriga kutilyapti" = lesson value for the whole month (held-and-paid
+ *    plus the remaining scheduled slots), from `ReportsService
+ *    .getMonthlyExpectation`. Never re-derive it here — the line it replaced
+ *    was a local `exactDays × 4` walk that assumed every month was four weeks.
  *  - "Markaz qo'shimchasi" = SalaryMonthly `gap` = fullDeserved − covered.
  */
 @Injectable()
@@ -282,9 +283,9 @@ export class TelegramGroupDailyReportService {
     // wrapped so a failure degrades gracefully rather than killing the report).
     // Tashkent calendar month of "today" — the window the MTD block reports on.
     const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
-    const [forecastIncome, salary, canonicalNet, collection] =
+    const [expectedValue, salary, canonicalNet, collection] =
       await Promise.all([
-        this.computeMonthlyForecast(companyId),
+        this.computeExpectation(companyId, monthKey),
         this.computeSalaryTopUp(companyId),
         this.computeCanonicalNetProfit(companyId, monthKey),
         this.computeCollection(companyId),
@@ -428,13 +429,12 @@ export class TelegramGroupDailyReportService {
         `• Shundan yig'ildi: <b>${formatSum(collection.collected)}</b> (<b>${collection.pct}%</b>)`,
       );
     }
-    if (forecastIncome && forecastIncome > 0) {
-      // Kept as a plain figure. It carries NO percentage any more: the walk
-      // assumes every month is exactly 4 weeks (`exactDays × 4`), which runs
-      // 8–13% short on a 5-week month — fine as a rough plan, unfit as the
-      // denominator of a headline ratio. Audit P5 replaces the walk itself.
+    if (expectedValue !== null && expectedValue > 0) {
+      // Lesson value, from the ONE canonical source. The line it replaces was a
+      // local `exactDays × 4` walk — a second implementation of a figure the web
+      // page also computed, and both were wrong the same way.
       lines.push(
-        `• Oylik prognoz (taxminiy reja): <b>${formatSum(forecastIncome)}</b>`,
+        `• Oy oxiriga kutilyapti: <b>${formatSum(expectedValue)}</b>`,
       );
     }
 
@@ -610,60 +610,30 @@ export class TelegramGroupDailyReportService {
   }
 
   /**
-   * Recognized-revenue forecast for the current month — the "Oylik prognoz".
-   * Mirrors `ReportsFinancialService.getFinancialOverview`'s
-   * `recognizedRevenueForecast` walk (active enrollment × weekly cadence ×
-   * per-lesson price, contract → discounted course price → course price). One
-   * findMany + in-memory reduce; returns null on failure so the line is simply
-   * dropped rather than breaking the whole report.
+   * «Oy oxiriga kutilyapti» from the ONE canonical source.
+   *
+   * This used to be a local `exactDays × 4` walk — a second implementation of a
+   * figure `/payments/overview` also computed, and both were wrong the same
+   * way: every month treated as four weeks (8–13% short on a five-week month)
+   * and rebuilt from whoever was ACTIVE at request time, so June and July both
+   * scored the same number.
+   *
+   * Company-wide (the report covers the whole centre). Returns null on failure
+   * so the line is dropped rather than breaking the report.
    */
-  private async computeMonthlyForecast(
+  private async computeExpectation(
     companyId: number,
+    month: string,
   ): Promise<number | null> {
     try {
-      const enrollments = await this.prisma.enrollment.findMany({
-        where: {
-          status: 'ACTIVE',
-          deletedAt: null,
-          group: { deletedAt: null, statusEnum: 'ACTIVE', companyId },
-        },
-        select: {
-          studentId: true,
-          student: { select: { discountPercent: true } },
-          group: {
-            select: {
-              exactDays: true,
-              course: { select: { price: true, lessonPaymentCount: true } },
-              contracts: {
-                where: { status: 'ACTIVE', deletedAt: null },
-                select: { studentId: true, totalAmount: true },
-              },
-            },
-          },
-        },
+      const e = await this.reports.getMonthlyExpectation(companyId, {
+        month,
+        branchIds: null,
       });
-      return enrollments.reduce((sum, e) => {
-        const lpc = e.group.course.lessonPaymentCount || 12;
-        const lessonsPerMonth = (e.group.exactDays?.length ?? 0) * 4;
-        const contract = e.group.contracts.find(
-          (c) => c.studentId === e.studentId,
-        );
-        let perLesson: number;
-        if (contract) {
-          perLesson = Math.round(contract.totalAmount / lpc);
-        } else {
-          const discount = Math.max(
-            0,
-            Math.min(100, e.student?.discountPercent ?? 0),
-          );
-          const fullPerLesson = Math.round(e.group.course.price / lpc);
-          perLesson = Math.round((fullPerLesson * (100 - discount)) / 100);
-        }
-        return sum + perLesson * lessonsPerMonth;
-      }, 0);
+      return e.expectedValue;
     } catch (err: any) {
       this.logger.warn(
-        `Prognoz compute failed for company ${companyId}: ${err?.message ?? err}`,
+        `Expectation failed for company ${companyId} (${month}): ${err?.message ?? err}`,
       );
       return null;
     }
