@@ -117,6 +117,12 @@ interface Props {
   /** Selected period (yyyy-MM-dd) — drives the income composition drill-down. */
   startDate?: string;
   endDate?: string;
+  /**
+   * «Oy oxiriga kutilyapti» for the period's month. The income drill-down
+   * measures collection against it, so it is threaded from the overview
+   * rather than fetched again — same request, same figure, no second answer.
+   */
+  expectedMonthEnd?: number;
 }
 
 export function KpiChartDialog({
@@ -125,6 +131,7 @@ export function KpiChartDialog({
   kpiKey,
   startDate,
   endDate,
+  expectedMonthEnd,
 }: Props) {
   const { selectedBranch } = useBranchSwitcher();
 
@@ -277,7 +284,11 @@ export function KpiChartDialog({
 
         {/* Income-only drill-down: real (this month) vs late (prior months). */}
         {kpiKey === "income" && startDate && endDate && (
-          <IncomeAttributionPanel startDate={startDate} endDate={endDate} />
+          <IncomeAttributionPanel
+            startDate={startDate}
+            endDate={endDate}
+            expectedMonthEnd={expectedMonthEnd}
+          />
         )}
       </DialogContent>
     </Dialog>

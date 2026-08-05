@@ -31,6 +31,12 @@ interface Props {
   /** yyyy-MM-dd — the same period the "Tushumlar" card is showing. */
   startDate: string;
   endDate: string;
+  /**
+   * «Oy oxiriga kutilyapti» — the denominator for "how far through the month
+   * are we". Threaded from the overview so the page shows ONE such figure,
+   * never a second answer fetched separately.
+   */
+  expectedMonthEnd?: number;
 }
 
 /**
@@ -57,7 +63,11 @@ function allocateShares(amounts: number[], total: number): number[] {
  * REAL income for the current month vs LATE payments settling prior-month debt,
  * broken out by which month. `real + Σ late = Tushumlar card figure`.
  */
-export function IncomeAttributionPanel({ startDate, endDate }: Props) {
+export function IncomeAttributionPanel({
+  startDate,
+  endDate,
+  expectedMonthEnd,
+}: Props) {
   const { selectedBranch } = useBranchSwitcher();
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -184,52 +194,117 @@ export function IncomeAttributionPanel({ startDate, endDate }: Props) {
             </p>
           </div>
 
-          {/* Collection ratio — the SAME figure the 21:00 Telegram report
-              prints, from the same endpoint. The bot used to divide MTD cash by
-              the schedule forecast and show 109–115% while this page called the
-              month 83%; both now read `currentMonth / lessonsValue`. Keep the
-              wording in step with the bot's lines. */}
-          {data.collectionPct !== null && (
+          {/* Oy rejasidan yig'ildi — the question a CEO actually asks: are we
+              on track for the month? Denominator is «Oy oxiriga kutilyapti»,
+              the same figure the card above shows.
+
+              It was built against lessons-held-so-far instead, because when
+              this block was written the month total was still the broken
+              `exactDays × 4` forecast and nothing could honestly be measured
+              against it. Once that was replaced the original meaning became
+              available again — this is that reconnection.
+
+              Note the denominator MOVES: new students enrol, the month gets
+              bigger, and the same cash becomes a smaller share. That is correct
+              — the target grew — and it is why the figure is worth watching. */}
+          {expectedMonthEnd != null && expectedMonthEnd > 0 && isSingleMonth && (
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-sm font-medium">
-                  Yig&apos;im
+                  Oy rejasidan yig&apos;ildi
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        aria-label="Yig'im foizi qanday hisoblanadi"
+                        aria-label="Bu foiz qanday hisoblanadi"
                         className="inline-flex cursor-help text-muted-foreground"
                       >
                         <Info className="size-3.5" aria-hidden="true" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-72">
-                      Shu davrda o&apos;tilgan darslar qiymatining qanchasi shu
-                      davrning o&apos;zida yig&apos;ilgani. Eski qarz uchun
-                      tushgan pul bu yerga kirmaydi. Telegram hisobotidagi
-                      foiz ham aynan shu. 100% dan oshishi mumkin — o&apos;quvchi
-                      keyingi oy darslarini oldindan to&apos;lasa.
+                      Shu oy uchun yig&apos;ilgan pul ÷ oy oxiriga kutilayotgan
+                      summa. Eski qarz uchun tushgan pul suratga kirmaydi.
+                      <br />
+                      <br />
+                      Maxraj o&apos;zgarishi mumkin: yangi o&apos;quvchi
+                      qo&apos;shilsa oy kattalashadi va o&apos;sha pul kichikroq
+                      ulush bo&apos;lib qoladi — vazifa o&apos;sgani uchun.
+                      <br />
+                      <br />
+                      Shu oyda allaqachon o&apos;tilgan darslarga nisbatan
+                      yig&apos;im esa {data.collectionPct ?? 0}% (
+                      {formatPrice(data.lessonsValue)} so&apos;mdan).
                     </TooltipContent>
                   </Tooltip>
                 </span>
                 <span className="text-sm font-semibold tabular-nums">
-                  {data.collectionPct}%
+                  {Math.round((data.currentMonth / expectedMonthEnd) * 100)}%
                 </span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full bg-sky-500"
-                  style={{ width: `${Math.min(data.collectionPct, 100)}%` }}
+                  style={{
+                    width: `${Math.min(
+                      Math.round((data.currentMonth / expectedMonthEnd) * 100),
+                      100,
+                    )}%`,
+                  }}
                 />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                {isSingleMonth ? "Shu oyning" : "Shu davrning"} darslari{" "}
-                {formatPrice(data.lessonsValue)} so&apos;m — shundan{" "}
-                {formatPrice(data.currentMonth)} so&apos;m yig&apos;ildi
+                Oy oxiriga {formatPrice(expectedMonthEnd)} so&apos;m
+                kutilyapti — shundan {formatPrice(data.currentMonth)} so&apos;m
+                yig&apos;ildi
               </p>
             </div>
           )}
+
+          {/* Fallback for a range with no month plan (Oxirgi 3 oy, Bu yil):
+              the month-end expectation is a single-month figure, so measure
+              against the lessons actually held in the window instead. Same
+              collection % the 21:00 Telegram report prints. */}
+          {!(expectedMonthEnd != null && expectedMonthEnd > 0 && isSingleMonth) &&
+            data.collectionPct !== null && (
+              <div className="rounded-lg border bg-card p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 text-sm font-medium">
+                    Yig&apos;im
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="Yig'im qanday hisoblanadi"
+                          className="inline-flex cursor-help text-muted-foreground"
+                        >
+                          <Info className="size-3.5" aria-hidden="true" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-72">
+                        Shu davr uchun yig&apos;ilgan pul ÷ shu davrda
+                        o&apos;tilgan darslar qiymati. Eski qarz uchun tushgan
+                        pul suratga kirmaydi.
+                      </TooltipContent>
+                    </Tooltip>
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {data.collectionPct}%
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-sky-500"
+                    style={{ width: `${Math.min(data.collectionPct, 100)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {isSingleMonth ? "Shu oyning" : "Shu davrning"} darslari{" "}
+                  {formatPrice(data.lessonsValue)} so&apos;m — shundan{" "}
+                  {formatPrice(data.currentMonth)} so&apos;m yig&apos;ildi
+                </p>
+              </div>
+            )}
 
           {/* Old-debt (late) payments, per prior month */}
           <div className="space-y-2">
