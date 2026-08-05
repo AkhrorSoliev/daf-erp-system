@@ -571,6 +571,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
         kpiKey={chartKey}
         startDate={startDate}
         endDate={endDate}
+        expectedMonthEnd={d.forecast.expectedMonthEnd}
       />
 
       {/* Kunlik surat tarixi — «Oy oxiriga kutilyapti» qatorini bosganda.
