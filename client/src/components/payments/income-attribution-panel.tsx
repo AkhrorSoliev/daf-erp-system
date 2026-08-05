@@ -159,32 +159,60 @@ export function IncomeAttributionPanel({
         </p>
       ) : (
         <div className="space-y-3">
-          {/* Instant visual: green = this month, amber = old debt */}
-          <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
-            {currentShare > 0 && (
-              <div
-                className="bg-green-500"
-                style={{ width: `${currentShare}%` }}
-              />
-            )}
-            {100 - currentShare > 0 && (
-              <div
-                className="bg-amber-500"
-                style={{ width: `${100 - currentShare}%` }}
-              />
-            )}
+          {/* One-glance split: green = this month, amber = old debt.
+              The bar shipped bare — no label, no percentage at either end —
+              so it read as decoration between the heading and the first card
+              and the reader had to guess what the two colours meant. Each end
+              now names its own side, mirrored so the label points at the
+              segment it describes. */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              {currentShare > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 shrink-0 rounded-full bg-green-500" />
+                  <span className="font-medium">
+                    {isSingleMonth ? "Shu oy uchun" : "Shu davr uchun"}
+                  </span>
+                  <span className="font-semibold tabular-nums">
+                    {currentShare}%
+                  </span>
+                </span>
+              )}
+              {100 - currentShare > 0 && (
+                <span className="ml-auto flex items-center gap-1.5">
+                  <span className="font-semibold tabular-nums">
+                    {100 - currentShare}%
+                  </span>
+                  <span className="font-medium">Eski qarz uchun</span>
+                  <span className="size-2 shrink-0 rounded-full bg-amber-500" />
+                </span>
+              )}
+            </div>
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
+              {currentShare > 0 && (
+                <div
+                  className="bg-green-500"
+                  style={{ width: `${currentShare}%` }}
+                />
+              )}
+              {100 - currentShare > 0 && (
+                <div
+                  className="bg-amber-500"
+                  style={{ width: `${100 - currentShare}%` }}
+                />
+              )}
+            </div>
           </div>
 
-          {/* This period's own income */}
+          {/* This period's own income. No percentage here — the labelled bar
+              two lines above already states it, and repeating it that close
+              reads as a second, different number. */}
           <div className="rounded-lg border bg-card p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-sm font-medium">
                 <span className="size-2.5 shrink-0 rounded-full bg-green-500" />
                 {isSingleMonth ? "Shu oy uchun" : "Shu davr uchun"} ·{" "}
                 {data.currentLabel}
-              </span>
-              <span className="text-xs font-medium text-muted-foreground tabular-nums">
-                {currentShare}%
               </span>
             </div>
             <p className="mt-1 text-xl font-bold leading-tight text-green-600 dark:text-green-400">
