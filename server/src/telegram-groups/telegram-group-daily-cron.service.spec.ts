@@ -76,7 +76,7 @@ describe('TelegramGroupDailyCronService', () => {
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
-  it('runs normally on a non-holiday day and persists tonight’s snapshot', async () => {
+  it('runs normally on a non-holiday day', async () => {
     findActiveHolidayCovering.mockResolvedValue(null);
     prisma.telegramGroup.findMany.mockResolvedValue([
       { id: 'g1', chatId: 111n, companyId: 1001 },
@@ -96,7 +96,9 @@ describe('TelegramGroupDailyCronService', () => {
       where: { id: 'g1' },
       data: { lastDailyReportAt: expect.any(Date) },
     });
-    expect(persistSnapshot).toHaveBeenCalledWith(1001, sampleSnapshot);
+    // The snapshot is NOT written from here any more — DailySnapshotCron owns
+    // it, so Sundays and holidays (when this cron does not run) still get a row.
+    expect(persistSnapshot).not.toHaveBeenCalled();
   });
 
   it('builds once per company and reuses it across that company’s groups', async () => {
@@ -112,7 +114,7 @@ describe('TelegramGroupDailyCronService', () => {
     // One build for the shared company, two sends, snapshot persisted per send.
     expect(build).toHaveBeenCalledTimes(1);
     expect(sendMessage).toHaveBeenCalledTimes(2);
-    expect(persistSnapshot).toHaveBeenCalledTimes(2);
+    expect(persistSnapshot).not.toHaveBeenCalled();
   });
 
   it('does not persist a snapshot when the send fails', async () => {

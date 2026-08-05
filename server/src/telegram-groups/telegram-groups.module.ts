@@ -7,6 +7,8 @@ import { TelegramGroupStatsService } from './telegram-group-stats.service';
 import { TelegramGroupBroadcastService } from './telegram-group-broadcast.service';
 import { TelegramGroupBroadcastListener } from './telegram-group-broadcast.listener';
 import { TelegramGroupDailyCronService } from './telegram-group-daily-cron.service';
+import { DailySnapshotService } from './daily-snapshot.service';
+import { DailySnapshotCron } from './daily-snapshot.cron';
 import { TelegramGroupAnnouncementService } from './telegram-group-announcement.service';
 import { TelegramGroupDigestBufferService } from './telegram-group-digest-buffer.service';
 import { TelegramGroupDigestService } from './telegram-group-digest.service';
@@ -34,6 +36,8 @@ import { ReportsModule } from '../reports/reports.module';
     TelegramGroupDigestCronService,
     TelegramAdminBotRegistrar,
     TelegramAdminBotService,
+    DailySnapshotService,
+    DailySnapshotCron,
   ],
   exports: [
     TelegramGroupsService,

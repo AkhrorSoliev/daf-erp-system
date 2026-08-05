@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { KpiChartDialog } from "./kpi-chart-dialog";
 import type { KpiKey } from "./kpi-chart-dialog";
+import { ExpectationHistoryDialog } from "./expectation-history-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -165,6 +166,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
   });
 
   const [chartKey, setChartKey] = useState<KpiKey | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -319,7 +321,11 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
             {/* Oy oxiriga kutilyapti — lesson value, calendar-based */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex justify-between text-sm cursor-help">
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen(true)}
+                  className="flex w-full cursor-pointer items-center justify-between rounded-md px-1 -mx-1 py-0.5 text-left text-sm transition-colors hover:bg-muted/60"
+                >
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <ArrowDownRight className="size-3.5 text-amber-500" />
                     Oy oxiriga kutilyapti
@@ -327,7 +333,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   <span className="font-medium">
                     {fmt(d.forecast.expectedMonthEnd)} so&apos;m
                   </span>
-                </div>
+                </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-72">
                 Shu oy allaqachon o&apos;tilgan darslar qiymati (
@@ -335,6 +341,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                 oxirigacha qolgan darslar ({fmt(d.forecast.expectedRemaining)}).
                 Bayram, bekor qilingan dars va guruh jadvali hisobga olinadi.
                 Bu kassa bashorati emas — pul qachon kelishi bunga kirmaydi.
+                Kunlik siljishni ko&apos;rish uchun bosing.
               </TooltipContent>
             </Tooltip>
             {/* Hisoblangan darslar — real billed (Σ LESSON_DEDUCTION) */}
@@ -564,6 +571,15 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
         kpiKey={chartKey}
         startDate={startDate}
         endDate={endDate}
+      />
+
+      {/* Kunlik surat tarixi — «Oy oxiriga kutilyapti» qatorini bosganda.
+          Oy sahifadagi davrning BOSHLANG'ICH oyidan olinadi, kartalar bilan
+          bir xil qoida. */}
+      <ExpectationHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        month={(startDate ?? new Date().toISOString().slice(0, 10)).slice(0, 7)}
       />
     </div>
   );

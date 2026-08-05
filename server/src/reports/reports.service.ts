@@ -15,6 +15,7 @@ import { ReportsDepartedReasonsService } from './reports-departed-reasons.servic
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { ReportsCenterActivityService } from './reports-center-activity.service';
 import { ReportsExpectationService } from './reports-expectation.service';
+import { ReportsExpectationHistoryService } from './reports-expectation-history.service';
 import {
   isEmptyScope,
   singleBranchId,
@@ -82,6 +83,7 @@ export class ReportsService {
     private debtors: PaymentsDebtorsService,
     private redis: RedisService,
     private expectation: ReportsExpectationService,
+    private expectationHistory: ReportsExpectationHistoryService,
   ) {}
 
   // Excel financial report — line-item + reconciliation data sources. Kept on
@@ -275,6 +277,18 @@ export class ReportsService {
     opts: { month: string; branchIds: ReportBranchIds; asOf?: string },
   ) {
     return this.expectation.getMonthlyExpectation(companyId, opts);
+  }
+
+  /**
+   * How «Oy oxiriga kutilyapti» moved day by day this month — straight from
+   * `DailyFinancialSnapshot`. Missing days stay missing; a reconstructed point
+   * would be a different claim wearing the same shape.
+   */
+  getExpectationHistory(
+    companyId: number,
+    opts: { month: string; branchIds: ReportBranchIds },
+  ) {
+    return this.expectationHistory.getMonthlyHistory(companyId, opts);
   }
 
   async getFinancialOverview(

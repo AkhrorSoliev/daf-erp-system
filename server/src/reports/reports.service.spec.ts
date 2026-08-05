@@ -122,6 +122,16 @@ describe('ReportsService', () => {
           useValue: holidaysService,
         },
         {
+          provide:
+            require('./reports-expectation-history.service')
+              .ReportsExpectationHistoryService,
+          useValue: {
+            getMonthlyHistory: jest
+              .fn()
+              .mockResolvedValue({ month: '2026-08', branchId: null, points: [] }),
+          },
+        },
+        {
           // The overview folds «Oy oxiriga kutilyapti» in; its own maths is
           // covered by reports-expectation.service.spec.ts.
           provide:

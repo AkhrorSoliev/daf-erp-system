@@ -263,6 +263,27 @@ export class ReportsController {
     return { ...overview, netProfit, salary: { ...overview.salary, computed } };
   }
 
+  // How «Oy oxiriga kutilyapti» moved day by day this month, read back from the
+  // daily snapshot. CEO + BD only — same gate as every other money figure.
+  // Missing days are returned as missing; nothing is reconstructed.
+  @Get('expectation-history')
+  @Roles('CEO', 'Branch Director')
+  async getExpectationHistory(
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @Query() query: ReportsQueryDto,
+    @Query('month') month?: string,
+  ) {
+    const target =
+      month && /^\d{4}-\d{2}$/.test(month)
+        ? month
+        : new Date().toISOString().slice(0, 7);
+    return this.reportsService.getExpectationHistory(companyId, {
+      month: target,
+      branchIds: await this.resolveScope(userId, query.branchId),
+    });
+  }
+
   // "Oylik qarzdorlik + undirish" — per-month closing debt (frozen, ledger-
   // reconstructed) + how much of each month's cohort has since been recovered.
   // Company-wide (student balances aren't cleanly branch-scoped). CEO + BD only

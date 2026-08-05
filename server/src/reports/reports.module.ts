@@ -17,6 +17,7 @@ import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsExpectationService } from './reports-expectation.service';
+import { ReportsExpectationHistoryService } from './reports-expectation-history.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { SalaryModule } from '../salary/salary.module';
@@ -43,6 +44,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsBalanceSheetService,
     ReportsExcelService,
     ReportsExpectationService,
+    ReportsExpectationHistoryService,
   ],
   // Exposed so the Telegram admin bot's report menu can generate the same
   // financial Excel workbook + in-chat summary the /payments panel uses.
@@ -54,6 +56,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsFinancialService,
     ReportsService,
     ReportsExpectationService,
+    ReportsExpectationHistoryService,
   ],
 })
 export class ReportsModule {}

@@ -449,6 +449,20 @@ The financial system is built on an **append-only ledger** principle — financi
   - `maxWait: 10000, timeout: 15000` configured for Neon serverless cold-start tolerance
 - **Methods**: `recordPayment()`, `deductLessonFee()`, `recordRefund()`, `recordSalaryPayment()`, `recordExpense()`, `reverseTransaction()`, `createAdjustment()`
 
+#### The daily snapshot is the one record that cannot be rebuilt
+
+`DailyFinancialSnapshot` — one row per company per Tashkent day, plus one per branch. Every other figure here is derivable from the ledger; this one is not, because «Oy oxiriga kutilyapti» depends on who was enrolled THAT day and the roster has moved by the time anyone asks. A day nobody wrote is gone.
+
+- **`DailySnapshotCron` writes it at 23:40 EVERY day**, Sundays and holidays included, from `DailySnapshotService`. It used to ride on the 21:00 Telegram cron and only after a confirmed send — but that cron skips days off, so those days had no row at all, a month closing on a Sunday had no closing figure, and the debt ▲/▼ delta silently compared against a three-day-old row while the message said "kechagi kundan" (audit H26). **Do not re-attach the write to the send path.** 23:40 rather than 21:00 so a payment entered at 22:00 still lands in its own day.
+- **Branch rows are written from the start** even though nothing reads them yet. Adding the dimension later would leave the past permanently blank — and the past is exactly what cannot be rebuilt.
+- **It is NOT an upsert.** The compound unique carries a nullable `branchId`, and in Postgres `NULL = NULL` is never true, so an upsert on the company-wide row would never match, always attempt an insert, and be rejected by the partial unique index on every run after the first. `findFirst` (which translates the null to `IS NULL`) then update-or-create is the correct shape. Two indexes back it: `@@unique([companyId, branchId, date])` and the partial `daily_snapshot_company_row_unique ... WHERE "branchId" IS NULL`, because the first does not stop duplicate company-wide rows.
+- **Components are stored, the percentage is not.** `lessonsHeldValue` and `collectedForMonth` are written; the collection % is derived on read. A stored copy can drift from its own components.
+- One scope failing must not cost the others their row — each is wrapped individually.
+
+`ReportsExpectationHistoryService` reads it back for one month (`GET /reports/expectation-history`, CEO/BD). It **never recomputes a missing day**: the record's whole value is "this is what we actually saw then", and a day rebuilt from today's roster would be a different claim wearing the same shape. Gaps stay gaps, and the chart draws them as gaps.
+
+It also returns per-day `events` — enrolment transitions (`EnrollmentStateLog`), group status changes away from ACTIVE and holiday creations (both from `EntityHistory`; `Holiday` has no `createdAt`, and it is the creation date, not the holiday's own date, that moved the figure). These are counts read from records the system already keeps, never inferred from the figure itself: a step with no matching event stays unexplained rather than acquiring a plausible-sounding reason.
+
 #### One month-end expectation — «Oy oxiriga kutilyapti»
 
 `ReportsExpectationService.getMonthlyExpectation` is the ONE projection of what a month's lessons are worth. It replaced `recognizedRevenueForecast`, which was wrong twice over: `lessonsPerMonth = exactDays.length * 4` treated every month as four weeks (8–13% short on a five-week month), and the walk was rebuilt from whoever was `ACTIVE` at request time, so a student leaving on the 25th was erased from the whole month. June and July both scored the same 148.8 mln — the figure could not tell two months apart. Three copies of that walk existed (`reports-financial`, the Telegram daily report, `salary-overview`); all three are deleted.

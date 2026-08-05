@@ -2641,18 +2641,39 @@ enum AlertSeverity {
 /// One row per company per Tashkent calendar day (upsert on same-day re-run);
 /// the delta compares today's live figures against the most recent PRIOR day's
 /// row, so a missing row (first run, or an off day) just means no delta shown.
+/// One row per company per Tashkent day, plus one per branch. The centre's only
+/// immutable daily record: every other figure can be recomputed later, this one
+/// cannot — a day nobody wrote is gone.
 model DailyFinancialSnapshot {
-  id             Int      @id @default(autoincrement())
-  companyId      Int
-  date           DateTime @db.Date
-  totalDebt      Int      @default(0)
-  debtorCount    Int      @default(0)
-  activeStudents Int      @default(0)
-  mtdIncome      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  /// NULL = the company-wide row. A branch row carries its branch id. Nothing
+  /// reads the branch rows yet; they are written from the start because the
+  /// history they build cannot be reconstructed once the day has passed.
+  branchId  Int?
+  date      DateTime @db.Date
 
-  @@unique([companyId, date])
+  totalDebt      Int @default(0)
+  debtorCount    Int @default(0)
+  activeStudents Int @default(0)
+  mtdIncome      Int @default(0)
+
+  /// «Oy oxiriga kutilyapti» as it stood that day (`getMonthlyExpectation`).
+  expectedValue     Int?
+  /// Value of the month's lessons held AND paid so far, that day.
+  lessonsHeldValue  Int?
+  /// Cash received this month that belongs to this month (the collection
+  /// numerator). The percentage is NOT stored — it is derivable from these two,
+  /// and a stored copy can drift from its own components.
+  collectedForMonth Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Postgres treats NULLs in a UNIQUE index as distinct, so this does NOT stop
+  /// a second company-wide row per day — the partial index
+  /// `daily_snapshot_company_row_unique` (see the migration) does.
+  @@unique([companyId, branchId, date])
   @@index([companyId, date])
 }
 
