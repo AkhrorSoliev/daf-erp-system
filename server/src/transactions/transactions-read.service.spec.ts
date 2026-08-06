@@ -39,7 +39,7 @@ describe('TransactionsReadService', () => {
         10329,
         { types: 'PAYMENT,REFUND,LESSON_DEDUCTION' } as TransactionQueryDto,
         1001,
-        null
+        null,
       );
 
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
@@ -65,7 +65,8 @@ describe('TransactionsReadService', () => {
         10329,
         { type: 'PAYMENT' } as TransactionQueryDto,
         1001,
-       null);
+        null,
+      );
 
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -74,7 +75,7 @@ describe('TransactionsReadService', () => {
       );
     });
 
-    it('aggregates PAYMENT destination into a flat toLessons + remainder summary', async () => {
+    it('reports where a payment went, replayed against the stored balances', async () => {
       const ts = (s: string) => new Date(`${s}T00:00:00Z`);
 
       const pageRows = [
@@ -95,28 +96,25 @@ describe('TransactionsReadService', () => {
         },
       ];
 
-      // Timeline drives the FIFO walk: 300k payment → 287.5k deduction
-      // (8 lessons), leaves 12.5k on balance.
+      // 300k payment → 287.5k deduction (8 lessons) → 12.5k never spent.
       const timeline = [
         { ...pageRows[0] },
         {
           id: 'd1',
           type: 'LESSON_DEDUCTION',
           amount: -287500,
+          balanceBefore: 300000,
+          balanceAfter: 12500,
           enrollmentId: 'enr-1',
           metadata: { lessonsCovered: 8 },
-          createdAt: ts('2026-05-05'),
         },
       ];
 
-      // The deduction-dates helper runs a second findMany over
-      // LESSON_DEDUCTION + LESSON_CONSUMPTION rows for the enrollments
-      // touched by the timeline. Same deduction + two consumption rows so
-      // first/last covered dates come back populated.
       const enrollmentTxs = [
         {
           id: 'd1',
           type: 'LESSON_DEDUCTION',
+          amount: -287500,
           enrollmentId: 'enr-1',
           attendanceId: null,
           metadata: { lessonsCovered: 8 },
@@ -125,6 +123,7 @@ describe('TransactionsReadService', () => {
         {
           id: 'c1',
           type: 'LESSON_CONSUMPTION',
+          amount: 0,
           enrollmentId: 'enr-1',
           attendanceId: 'a1',
           metadata: null,
@@ -133,6 +132,7 @@ describe('TransactionsReadService', () => {
         {
           id: 'c2',
           type: 'LESSON_CONSUMPTION',
+          amount: 0,
           enrollmentId: 'enr-1',
           attendanceId: 'a2',
           metadata: null,
@@ -140,12 +140,15 @@ describe('TransactionsReadService', () => {
         },
       ];
 
-      // findMany call order:
-      // 1) page slice 2) destination timeline 3) computeDeductionDates
-      prisma.transaction.findMany
-        .mockResolvedValueOnce(pageRows)
-        .mockResolvedValueOnce(timeline)
-        .mockResolvedValueOnce(enrollmentTxs);
+      // Keyed on the WHERE shape rather than on call order — the previous
+      // mockResolvedValueOnce chain silently fed the wrong rows to the wrong
+      // query as soon as the service issued one more round-trip.
+      prisma.transaction.findMany.mockImplementation((args: any) => {
+        const where = args?.where ?? {};
+        if (where.enrollmentId) return Promise.resolve(enrollmentTxs);
+        if (where.amount) return Promise.resolve(timeline);
+        return Promise.resolve(pageRows);
+      });
       prisma.transaction.count.mockResolvedValueOnce(1);
       prisma.attendance.findMany.mockResolvedValueOnce([
         { id: 'a1', date: ts('2026-05-05') },
@@ -156,14 +159,54 @@ describe('TransactionsReadService', () => {
         10329,
         {} as TransactionQueryDto,
         1001,
-       null);
+        null,
+      );
 
       expect(res.data[0].destination).toEqual({
+        amount: 300000,
+        toPreviousDebt: 0,
+        debtLessonCount: 0,
+        debtFirstLessonDate: null,
+        debtLastLessonDate: null,
         toLessons: 287500,
-        remainderInBalance: 12500,
+        lessonCount: 8,
         firstLessonDate: ts('2026-05-05'),
         lastLessonDate: ts('2026-05-13'),
+        toOther: 0,
+        unspent: 12500,
+        reconciled: true,
       });
+    });
+
+    it('walks the whole ledger, not just PAYMENT + LESSON_DEDUCTION', async () => {
+      // The old walk filtered the timeline down to two types and dropped
+      // `reversedAt` rows asymmetrically. Both are what made the card lie.
+      prisma.transaction.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          type: 'PAYMENT',
+          amount: 100000,
+          balanceBefore: 0,
+          balanceAfter: 100000,
+          enrollmentId: null,
+          metadata: null,
+        },
+      ]);
+      await service.findByStudent(10329, {} as TransactionQueryDto, 1001, null);
+
+      const timelineCall = prisma.transaction.findMany.mock.calls.find(
+        (c) => c[0]?.where?.amount,
+      );
+      expect(timelineCall).toBeDefined();
+      expect(timelineCall![0].where).toEqual({
+        studentId: 10329,
+        companyId: 1001,
+        amount: { not: 0 },
+      });
+      expect(timelineCall![0].orderBy).toEqual([
+        { createdAt: 'asc' },
+        { id: 'asc' },
+      ]);
     });
 
     it('returns the paginated envelope', async () => {
@@ -176,23 +219,18 @@ describe('TransactionsReadService', () => {
         10329,
         { page: 2, pageSize: 5 } as TransactionQueryDto,
         1001,
-       null);
+        null,
+      );
 
-      // Non-LESSON_DEDUCTION rows get coverage=null. PAYMENT rows pick up
-      // a zero-summary destination (no LESSON_DEDUCTION fired in the
-      // fully-mocked timeline).
+      // The fully-mocked row carries no balances, so the chain cannot be
+      // verified and no allocation is emitted — fail-closed by design.
       expect(res.data).toEqual([
         {
           id: 't1',
           type: 'PAYMENT',
           enrollmentId: null,
           coverage: null,
-          destination: {
-            toLessons: 0,
-            remainderInBalance: 0,
-            firstLessonDate: null,
-            lastLessonDate: null,
-          },
+          destination: null,
         },
       ]);
       expect(res.total).toBe(1);
@@ -205,7 +243,10 @@ describe('TransactionsReadService', () => {
     const ts = (s: string) => new Date(`${s}T00:00:00Z`);
 
     it('captures firstNegativeDate and counts unpaid lessons when student is in debt', async () => {
-      prisma.student.findFirst.mockResolvedValue({ id: 10260, balance: -253000 });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10260,
+        balance: -253000,
+      });
       // Ledger ordered ASC: payment, deduction, consumption, then the
       // attendance that pushes balance below zero, then more consumptions
       // after that point.
@@ -270,7 +311,10 @@ describe('TransactionsReadService', () => {
     });
 
     it('returns null firstNegativeDate when the balance has never been negative', async () => {
-      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 155000 });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: 155000,
+      });
       prisma.transaction.findMany.mockResolvedValueOnce([
         {
           type: 'PAYMENT',
@@ -302,6 +346,45 @@ describe('TransactionsReadService', () => {
       expect(res.lessonsAttended).toBe(1);
       expect(res.totalPaid).toBe(500000);
       expect(res.perLessonCost).toBe(34500);
+    });
+
+    it('excludes BOTH halves of a reversal pair from the summary', async () => {
+      // A reversal is a counter-row of the same type carrying
+      // `reversedAt: null`. Filtering on that field alone kept the undo and
+      // dropped the original, so the card counted the reversal as a fresh
+      // lesson and — via the old `Math.abs` — as fresh lesson cost.
+      prisma.student.findFirst.mockResolvedValue({ id: 10519, balance: 0 });
+      prisma.enrollment.findFirst.mockResolvedValue(null);
+
+      await service.getBalanceSummary(10519, 1001);
+
+      const where = prisma.transaction.findMany.mock.calls[0][0].where;
+      expect(where.reversedAt).toBeNull();
+      expect(where.reversedTransactionId).toBeNull();
+    });
+
+    it('never adds a positive LESSON_DEDUCTION to the lesson cost', async () => {
+      // Money going BACK to the student is not more lesson cost.
+      prisma.student.findFirst.mockResolvedValue({ id: 10284, balance: 0 });
+      prisma.enrollment.findFirst.mockResolvedValue(null);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          type: 'LESSON_DEDUCTION',
+          amount: -100000,
+          balanceAfter: -100000,
+          createdAt: ts('2026-05-01'),
+        },
+        {
+          type: 'LESSON_DEDUCTION',
+          amount: 40000,
+          balanceAfter: -60000,
+          createdAt: ts('2026-05-02'),
+        },
+      ]);
+
+      const res = await service.getBalanceSummary(10284, 1001);
+
+      expect(res.totalLessonCost).toBe(100000);
     });
 
     it('throws when student is not found', async () => {
@@ -398,6 +481,13 @@ describe('TransactionsReadService', () => {
         capacity: 8,
         firstCoveredDate: date('2026-05-05'),
         lastCoveredDate: date('2026-05-08'),
+        // Per-dars sanalari — pulni paket darajasida emas, dars darajasida
+        // taqsimlash uchun `ledger-replay` shularni oladi.
+        consumedDates: [
+          date('2026-05-05'),
+          date('2026-05-07'),
+          date('2026-05-08'),
+        ],
       });
     });
 

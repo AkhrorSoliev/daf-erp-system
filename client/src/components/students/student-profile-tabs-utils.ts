@@ -23,6 +23,12 @@ export const TRANSACTION_TYPE_INFO: Record<
   INITIAL_BALANCE: { label: "Boshlang'ich balans", variant: "outline" },
   BALANCE_WITHDRAWAL: { label: "Yechib olish", variant: "destructive" },
   LESSON_DEDUCTION: { label: "Darsga yechildi", variant: "outline" },
+  // These three move the balance too. Leaving them off the tab left 37 rows
+  // (4 296 450 so'm) of balance movement with no visible cause, so the list
+  // could not explain its own totals.
+  DISCOUNT_ADJUSTMENT: { label: "Chegirma tuzatishi", variant: "secondary" },
+  DEBT_WRITE_OFF: { label: "Qarz kechirildi", variant: "secondary" },
+  MOCK_EXAM_FEE: { label: "Mock imtihon to'lovi", variant: "outline" },
 };
 
 // LESSON_DEDUCTION metadata `mode` → human label for the "Tafsilot" column.
@@ -62,15 +68,29 @@ export interface StudentTransaction {
     firstCoveredDate: string | null;
     lastCoveredDate: string | null;
   } | null;
-  // Computed server-side for PAYMENT rows. Flat summary aimed at admins
-  // who just want to know "darslarga necha so'm ketdi va balansda necha
-  // qoldi" without Sikl-number jargon. Dates come from the covered lessons
-  // that the payment's FIFO slice funded.
+  // Computed server-side for PAYMENT rows by replaying the stored ledger.
+  //
+  // There is deliberately no "remainderInBalance" any more: the name claimed
+  // the money was sitting on the balance, which is what let a student read
+  // "233 339 qoldi" while owing 33 325. `unspent` is money that has not
+  // bought anything yet — say it in the past tense, never as a holding.
+  //
+  // `reconciled: false` means the ledger chain did not add up for this
+  // student. Render the balance facts only and suppress the allocation —
+  // a patched-up number is exactly the defect this replaced.
   destination: {
+    amount: number;
+    toPreviousDebt: number;
+    debtLessonCount: number;
+    debtFirstLessonDate: string | null;
+    debtLastLessonDate: string | null;
     toLessons: number;
-    remainderInBalance: number;
+    lessonCount: number;
     firstLessonDate: string | null;
     lastLessonDate: string | null;
+    toOther: number;
+    unspent: number;
+    reconciled: boolean;
   } | null;
   payment: { id: string; method: string; status: string } | null;
   performedBy: { firstName: string; lastName: string } | null;

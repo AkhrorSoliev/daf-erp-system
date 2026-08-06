@@ -23,6 +23,8 @@ import { Prisma, TransactionType } from '@prisma/client';
 export interface CoverageTx {
   id: string;
   type: TransactionType;
+  /** Ishorali summa — metadatasiz qatorlarda sig'imni tiklash uchun kerak. */
+  amount: number;
   enrollmentId: string | null;
   attendanceId: string | null;
   metadata: Prisma.JsonValue | null;
@@ -37,6 +39,13 @@ export interface CycleCoverage {
   coveredCount: number;
   firstCoveredDate: Date | null;
   lastCoveredDate: Date | null;
+  /**
+   * Shu paket qoplagan darslarning sanalari, o'sish tartibida.
+   * `ledger-replay` pul FIFO'sini paket darajasida emas, AYNAN SHU sanalar
+   * darajasida taqsimlaydi — aks holda paketning bir qismini moliyalagan
+   * to'lov butun paketning sana oralig'ini meros qilib olardi.
+   */
+  consumedDates: Date[];
 }
 
 export interface CoverageResult {
@@ -69,8 +78,18 @@ export function allocateCoverage(
 
   for (const [, list] of byEnrollment) {
     // createdAt ASC — deterministik FIFO.
+    // createdAt ASC. Bitta tranzaksiyada yozilgan yechim va iste'mol bir xil
+    // `createdAt` ga ega bo'lishi mumkin, shuning uchun teng vaqtda TUR
+    // hal qiladi: sikl avval OCHILADI, keyin undan dars iste'mol qilinadi.
+    // (Faqat `id` bo'yicha tiebreak qilish iste'molni o'z paketidan oldinga
+    // o'tkazib yuborardi va dars butunlay yo'qolardi.)
+    const typeRank = (t: CoverageTx) =>
+      t.type === TransactionType.LESSON_DEDUCTION ? 0 : 1;
     const ordered = [...list].sort(
-      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+      (a, b) =>
+        a.createdAt.getTime() - b.createdAt.getTime() ||
+        typeRank(a) - typeRank(b) ||
+        a.id.localeCompare(b.id),
     );
 
     let cycleSeq = 0;
@@ -85,7 +104,17 @@ export function allocateCoverage(
       if (tx.type === TransactionType.LESSON_DEDUCTION) {
         cycleSeq += 1;
         const md = (tx.metadata ?? {}) as Record<string, unknown>;
-        const capacity = Number(md.lessonsCovered) || 0;
+        // Metadatasiz eski qatorlar (PRODda ~128 ta) uchun sig'imni summadan
+        // tiklaymiz — aks holda `capacity = 0` bo'lib, bucket hech qachon
+        // dars qabul qilmaydi va darslar jimgina yo'qoladi.
+        const perLessonCost = Number(md.perLessonCost) || 0;
+        const declared = Number(md.lessonsCovered) || 0;
+        const capacity =
+          declared > 0
+            ? declared
+            : perLessonCost > 0
+              ? Math.max(1, Math.round(Math.abs(tx.amount) / perLessonCost))
+              : 1;
         buckets.push({
           deductionId: tx.id,
           cycleSequenceNumber: cycleSeq,
@@ -99,22 +128,22 @@ export function allocateCoverage(
           coveredCount: 0,
           firstCoveredDate: null,
           lastCoveredDate: null,
+          consumedDates: [],
         });
       } else if (tx.type === TransactionType.LESSON_CONSUMPTION) {
-        // Eng eski to'lmagan bucketga quyamiz (FIFO).
-        const bucket = buckets.find(
-          (b) => b.consumedDates.length < b.capacity,
-        );
+        // Eng eski to'lmagan bucketga quyamiz (FIFO). Bo'sh joy qolmasa
+        // darsni TASHLAB YUBORMAYMIZ — oxirgi bucketga overflow qilamiz.
+        // Eski `continue` shu yerda darsni jimgina yo'qotardi.
+        const bucket =
+          buckets.find((b) => b.consumedDates.length < b.capacity) ??
+          buckets[buckets.length - 1];
         if (!bucket) continue;
         const date = tx.attendanceId
           ? attDateMap.get(tx.attendanceId)
           : undefined;
         bucket.consumedDates.push(date ?? tx.createdAt);
         if (tx.attendanceId) {
-          cycleByAttendanceId.set(
-            tx.attendanceId,
-            bucket.cycleSequenceNumber,
-          );
+          cycleByAttendanceId.set(tx.attendanceId, bucket.cycleSequenceNumber);
         }
       }
     }
@@ -129,6 +158,7 @@ export function allocateCoverage(
       entry.coveredCount = sorted.length;
       entry.firstCoveredDate = sorted[0] ?? null;
       entry.lastCoveredDate = sorted[sorted.length - 1] ?? null;
+      entry.consumedDates = sorted;
     }
   }
 
@@ -143,12 +173,13 @@ export interface CoveragePrismaLike {
       select: {
         id: true;
         type: true;
+        amount: true;
         enrollmentId: true;
         attendanceId: true;
         metadata: true;
         createdAt: true;
       };
-      orderBy: { createdAt: 'asc' };
+      orderBy: Array<{ createdAt: 'asc' } | { id: 'asc' }>;
     }): Promise<CoverageTx[]>;
   };
   attendance: {
@@ -181,16 +212,22 @@ export async function computeEnrollmentCoverage(
         ],
       },
       reversedAt: null,
+      // Bekor qilingan qatorning QARSHI qatori ham `reversedAt: null` bilan
+      // yuradi — faqat `reversedAt` ni filtrlash uni "yangi iste'mol" deb
+      // sanashga olib kelardi (PRODda 189 qator). Bu yerda sanash — pul
+      // emas, DARS sanashi, shuning uchun juftlikning IKKALASI ham chiqadi.
+      reversedTransactionId: null,
     },
     select: {
       id: true,
       type: true,
+      amount: true,
       enrollmentId: true,
       attendanceId: true,
       metadata: true,
       createdAt: true,
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
   });
 
   const consumptionAttIds = txs
