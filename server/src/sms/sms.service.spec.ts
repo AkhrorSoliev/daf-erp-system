@@ -5,6 +5,8 @@ import { TelegramService } from '../telegram/telegram.service';
 import { EntityHistoryService } from '../common/entity-history';
 
 describe('SmsService', () => {
+  // The log is branch-gated now, so every read names its caller.
+  const CALLER_ID = 7;
   let service: SmsService;
   let prisma: any;
   let telegramService: any;
@@ -20,8 +22,26 @@ describe('SmsService', () => {
 
     prisma = {
       student: {
-        findFirst: jest.fn(),
+        // Default: the student exists. Individual tests override it — the
+        // "student not found" case sets it to null.
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 10001, telegramChatId: null }),
       },
+      // A CEO caller: `assertCallerMayTouchStudent` / `...MayTouchGroup` resolve
+      // roles from the caller's own record, never from the test's intent.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+        findMany: jest.fn().mockResolvedValue([{ branchId: 1 }]),
+      },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
       smsMessage: {
         create: jest.fn().mockImplementation(({ data }) => ({
           id: 'sms-1',
@@ -217,7 +237,7 @@ describe('SmsService', () => {
       prisma.smsMessage.findMany.mockResolvedValue(messages);
       prisma.smsMessage.count.mockResolvedValue(25);
 
-      const result = await service.getByStudent(10001, 1001, 2, 10);
+      const result = await service.getByStudent(10001, 1001, 2, 10, CALLER_ID);
 
       expect(result).toEqual({
         data: messages,
@@ -240,7 +260,7 @@ describe('SmsService', () => {
       prisma.smsMessage.findMany.mockResolvedValue([]);
       prisma.smsMessage.count.mockResolvedValue(0);
 
-      const result = await service.getByStudent(10001, 1001);
+      const result = await service.getByStudent(10001, 1001, undefined, undefined, CALLER_ID);
 
       expect(result).toEqual({
         data: [],

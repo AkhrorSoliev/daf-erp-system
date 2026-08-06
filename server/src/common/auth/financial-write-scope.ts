@@ -64,33 +64,17 @@ export async function assertCallerMayWriteForStudent(
 }
 
 /**
- * The same check, for the NON-money paths on a student.
+ * The NON-money check on a student lives in `auth/student-branch-scope.ts`
+ * (`assertCallerMayTouchStudent`), next to the group one it mirrors.
  *
- * One implementation, two names, because the call sites read differently and
- * the wrong message is its own small lie: editing a student's phone number or
- * expelling them is not "yozish pul", and an admin told it was would look for
- * a payment they never made.
- *
- * These paths needed it just as much. `PATCH /students/:id` carried
- * `branchIds`, so a director could edit another branch's student AND MOVE THEM
- * into their own; `PATCH /students/:id/status` cascades — EXPELLED or FROZEN
- * closes that student's enrolments in another branch's groups, which stops
- * their lessons and their teacher's accruals.
+ * It started here as a thin alias of the function above — same implementation,
+ * different message. It moved out when the READ paths needed it, because a
+ * profile tab must not inherit this file's two money-shaped decisions: a
+ * branch-less student raises a raw error here (an unattributable ledger row IS
+ * an emergency) and there is no existence check (the money callers all do
+ * their own). On a page someone merely opened, those become a 500 where a 403
+ * and a 404 belong. Money keeps the hard failure; that is the point of it.
  */
-export async function assertCallerMayTouchStudent(
-  prisma: PrismaLike,
-  userId: number | undefined,
-  studentId: number,
-  companyId: number,
-): Promise<number> {
-  return assertCallerMayWriteForStudent(
-    prisma,
-    userId,
-    studentId,
-    companyId,
-    "Bu o'quvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
-  );
-}
 
 /**
  * In-transaction check. `tx` MUST be the transaction client that will write the

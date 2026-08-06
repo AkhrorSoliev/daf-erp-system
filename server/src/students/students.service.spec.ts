@@ -11,6 +11,8 @@ import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('StudentsService — status methods', () => {
+  // The profile reads are branch-gated now, so each one names its caller.
+  const CEO_ID = 1;
   let service: StudentsService;
   let prisma: any;
   let statusHistoryService: any;
@@ -295,7 +297,7 @@ describe('StudentsService — status methods', () => {
     it('delegates to statusHistoryService.getHistory', async () => {
       prisma.student.findFirst.mockResolvedValue({ id: 1 });
 
-      await service.getStatusHistory(1, 1001);
+      await service.getStatusHistory(1, 1001, CEO_ID);
 
       expect(statusHistoryService.getHistory).toHaveBeenCalledWith(
         'Student',
@@ -306,7 +308,9 @@ describe('StudentsService — status methods', () => {
     it('throws NotFoundException when student not found', async () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
-      await expect(service.getStatusHistory(999, 1001)).rejects.toThrow(
+      await expect(
+        service.getStatusHistory(999, 1001, CEO_ID),
+      ).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -356,7 +360,7 @@ describe('StudentsService — status methods', () => {
 
     it('getStatusHistory scopes lookup to companyId', async () => {
       prisma.student.findFirst.mockResolvedValue({ id: 1 });
-      await service.getStatusHistory(1, 1001);
+      await service.getStatusHistory(1, 1001, CEO_ID);
       expect(prisma.student.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ id: 1, companyId: 1001 }),

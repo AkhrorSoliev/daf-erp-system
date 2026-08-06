@@ -62,7 +62,19 @@ describe('StudentEnrollmentService', () => {
       // The student already belongs to the group's branch (the normal case).
       studentBranch: {
         findMany: jest.fn().mockResolvedValue([{ branchId: 1 }]),
+        // Read by the caller guard on the enrollment paths. Same branch as the
+        // group below, which is the case the D5 rule forces anyway.
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
         create: jest.fn(),
+      },
+      // The caller: a CEO spans every branch. Roles come from this record,
+      // never from what the test intends the caller to be.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
       },
       studentExitReason: {
         findFirst: jest.fn(),

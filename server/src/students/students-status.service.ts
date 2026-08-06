@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { EnrollmentStatus, ExitType, Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { assertCallerMayTouchStudent } from '../common/auth/financial-write-scope';
+
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
@@ -14,6 +14,7 @@ import {
   validateFrozenRefundOverrides,
 } from './dto/change-student-status.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 
 const STATUS_TO_EXIT_TYPE: Partial<Record<StudentStatus, ExitType>> = {
   FROZEN: ExitType.FREEZE,

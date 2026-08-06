@@ -281,6 +281,41 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'The rest of the student and group surface: the profile READS, the '
+      + 'enrollment operations, and the roster. The list endpoints were scoped '
+      + 'and everything they linked to was not, so a director who typed another '
+      + 'branch\'s student id into the URL read the balance, the ledger summary, '
+      + 'the lesson history and the SMS log in full. Three of the enrollment '
+      + 'routes are addressed by an ENROLLMENT id and have always ignored the '
+      + '`:id` in the path, so each guards the enrollment\'s OWN student — '
+      + 'guarding the path parameter would let a caller pair one of their own '
+      + 'student ids with another branch\'s enrollment and pass. '
+      + '`write-off-cycle-debt` writes a DEBT_WRITE_OFF ledger row: money the '
+      + 'earlier `/payments`-`/refunds`-`/transactions` sweep never reached, '
+      + 'because it lives under `/students`. `GET /groups/:id/students` returns '
+      + 'phone and balance for the whole roster and its @Roles includes Teacher, '
+      + 'so it goes through `assertCallerMayTouchGroup` — assignment for a pure '
+      + 'teacher, branch for everyone else.',
+    routes: [
+      'GET /students/:id/status-history',
+      'GET /students/:id/balance-summary',
+      'GET /students/:id/active-enrollments-prepaid',
+      'GET /students/:id/closed-enrollments',
+      'GET /students/:id/lessons-overview',
+      'GET /students/:id/sms',
+      'POST /students/:id/sms',
+      'POST /students/:id/initial-balance',
+      'POST /students/:id/enroll',
+      'DELETE /students/:id/enroll/:enrollmentId',
+      'GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility',
+      'POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt',
+      'GET /groups/:id/students',
+      'GET /groups/:id/status-history',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -350,7 +385,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/ai-chat/:id',
   'DELETE /student-portal/photo',
-  'DELETE /students/:id/enroll/:enrollmentId',
   'DELETE /teachers/:id',
   'DELETE /telegram-groups/:id',
   'DELETE /users/:id',
@@ -373,8 +407,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /entity-history/:entityType/:entityId',
   'GET /gateways/events',
   'GET /group-teacher-change-reasons',
-  'GET /groups/:id/status-history',
-  'GET /groups/:id/students',
   'GET /groups/available-rooms',
   'GET /groups/available-slots',
   'GET /groups/available-teachers',
@@ -418,13 +450,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /student-portal/payments',
   'GET /student-portal/profile',
   'GET /student-portal/schedule',
-  'GET /students/:id/active-enrollments-prepaid',
-  'GET /students/:id/balance-summary',
-  'GET /students/:id/closed-enrollments',
-  'GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility',
-  'GET /students/:id/lessons-overview',
-  'GET /students/:id/sms',
-  'GET /students/:id/status-history',
   'GET /teachers/:id/groups',
   'GET /teachers/:id/salary-summary',
   'GET /teachers/:id/status-history',
@@ -484,10 +509,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /student-portal/attendance/scan',
   'POST /student-portal/payments/init',
   'POST /student-portal/photo',
-  'POST /students/:id/enroll',
-  'POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt',
-  'POST /students/:id/initial-balance',
-  'POST /students/:id/sms',
   'POST /teachers',
   'POST /telegram-groups/:id/reject',
   'POST /telegram-groups/announce',
@@ -508,4 +529,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 161;
+export const UNREVIEWED_BUDGET = 147;

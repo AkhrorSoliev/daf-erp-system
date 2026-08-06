@@ -156,8 +156,15 @@ export class GroupsController {
   findStudentsByGroupId(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.groupsService.findStudentsByGroupId(id, companyId);
+    return this.groupsService.findStudentsByGroupId(
+      id,
+      companyId,
+      userId,
+      roles,
+    );
   }
 
   @Get(':id')
@@ -212,8 +219,10 @@ export class GroupsController {
   getStatusHistory(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.groupsService.getStatusHistory(id, companyId);
+    return this.groupsService.getStatusHistory(id, companyId, userId, roles);
   }
 
   @Delete(':id')
