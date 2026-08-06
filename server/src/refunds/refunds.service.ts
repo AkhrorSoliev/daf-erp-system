@@ -1,3 +1,4 @@
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { Injectable } from '@nestjs/common';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
@@ -42,7 +43,7 @@ export class RefundsService {
   previewRefund(studentId: number, companyId: number, enrollmentId?: string) {
     return this.eligibility.previewRefund(studentId, companyId, enrollmentId);
   }
-  findAll(companyId: number) {
-    return this.eligibility.findAll(companyId);
+  findAll(companyId: number, branchIds: ReportBranchIds) {
+    return this.eligibility.findAll(companyId, branchIds);
   }
 }

@@ -32,6 +32,14 @@ export type BranchPolicy =
    */
   | 'BRANCH_SCOPED_BY_HEADER'
   /**
+   * The route resolves its own scope by calling
+   * `resolveCallerReportBranchIds(userId, query.branchId)` instead of taking
+   * `@BranchScope()`. Same ceiling ∩ requested rule, different plumbing — and
+   * the reason it needs its own name is that a reader grepping for the
+   * decorator would otherwise conclude these are unscoped.
+   */
+  | 'BRANCH_SCOPED_BY_SERVICE'
+  /**
    * Id-addressed: the branch comes from the RECORD, and the caller is checked
    * against it (`assertCallerMayWriteForStudent`, `assertCallerInBranch`,
    * `CashAccountsService.findOne(id, companyId, userId)`). Stronger than the
@@ -174,6 +182,48 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Cash accounts and expenses, audited route by route. Every id-addressed ' +
+      'cash operation resolves through `findOne(id, companyId, userId)` and its ' +
+      '`assertCallerInBranch`; `transfer` checks BOTH sides. Expenses call ' +
+      '`assertBranchWritable` on create and on update — for the old branch and ' +
+      'the new one, because moving an expense between branches changes whose ' +
+      'P&L carries it. `POST /cash-accounts` was the one gap: it verified the ' +
+      'branch belonged to the company but never that the CALLER could act on ' +
+      'it, so a director could open an account inside another branch\'s books.',
+    routes: [
+      'GET /cash-accounts/:id/movements',
+      'POST /cash-accounts',
+      'POST /cash-accounts/:id/reconcile',
+      'POST /cash-accounts/transfer',
+      'PATCH /cash-accounts/:id',
+      'DELETE /cash-accounts/:id',
+      'POST /expenses',
+      'PATCH /expenses/:id',
+      'DELETE /expenses/:id',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      'Scoped, but by their OWN call to `resolveCallerReportBranchIds(userId, ' +
+      'query.branchId)` rather than by `@BranchScope()` — so the ceiling ∩ ' +
+      'requested rule holds and a `?branchId=` cannot widen anything. Listed ' +
+      'here because the source does not evidence them the way the decorator ' +
+      'does, and a reader checking for the decorator would wrongly conclude ' +
+      'they are unscoped. Expenses additionally refuse an empty scope with 403 ' +
+      'rather than serving zeros.',
+    routes: [
+      'GET /cash-accounts',
+      'GET /expenses',
+      'GET /expenses/pdf',
+      'GET /payments/debtors',
+      'GET /payments/debtors/summary',
+      'GET /transactions/debt-write-offs',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -228,11 +278,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
  */
 export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /archive/:entityType/:id',
-  'DELETE /cash-accounts/:id',
   'DELETE /comments/:id',
   'DELETE /courses/:id',
   'DELETE /enrollment-transfer-reasons/:id',
-  'DELETE /expenses/:id',
   'DELETE /group-teacher-change-reasons/:id',
   'DELETE /groups/:id',
   'DELETE /holidays/:id',
@@ -267,8 +315,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /branches/:id/readiness',
   'GET /branches/:id/status-history',
   'GET /call-logs',
-  'GET /cash-accounts',
-  'GET /cash-accounts/:id/movements',
   'GET /comments',
   'GET /comments/created-tasks',
   'GET /comments/latest',
@@ -278,8 +324,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /courses/:id/status-history',
   'GET /enrollment-transfer-reasons',
   'GET /entity-history/:entityType/:entityId',
-  'GET /expenses',
-  'GET /expenses/pdf',
   'GET /gateways/events',
   'GET /group-teacher-change-reasons',
   'GET /groups/:id/status-history',
@@ -310,10 +354,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /outreach/removal-queue',
   'GET /outreach/stats',
   'GET /outreach/today-absentees',
-  'GET /payment-promises',
-  'GET /payments/debtors',
-  'GET /payments/debtors/summary',
-  'GET /refunds',
   'GET /reports/debt-write-offs-summary',
   'GET /reports/expectation-history',
   'GET /reports/financial-excel',
@@ -347,17 +387,14 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /telegram-groups/pending',
   'GET /telegram/channel-report/list',
   'GET /telegram/channel-report/summary',
-  'GET /transactions/debt-write-offs',
   'PATCH /branches/:id',
   'PATCH /branches/:id/status',
-  'PATCH /cash-accounts/:id',
   'PATCH /comments/:id',
   'PATCH /comments/:id/assignee-status',
   'PATCH /company/:id',
   'PATCH /courses/:id',
   'PATCH /courses/:id/status',
   'PATCH /enrollment-transfer-reasons/:id',
-  'PATCH /expenses/:id',
   'PATCH /group-teacher-change-reasons/:id',
   'PATCH /groups/:id',
   'PATCH /groups/:id/status',
@@ -372,7 +409,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /mock-exams/:examId/subjects/reorder',
   'PATCH /notifications/:id/read',
   'PATCH /notifications/read-all',
-  'PATCH /payment-promises/:id/cancel',
   'PATCH /rooms/:id',
   'PATCH /rooms/:id/status',
   'PATCH /student-exit-reasons/:id',
@@ -392,13 +428,9 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /attendance/:groupId/qr-session/stop',
   'POST /branches',
   'POST /call-logs',
-  'POST /cash-accounts',
-  'POST /cash-accounts/:id/reconcile',
-  'POST /cash-accounts/transfer',
   'POST /comments',
   'POST /courses',
   'POST /enrollment-transfer-reasons',
-  'POST /expenses',
   'POST /group-teacher-change-reasons',
   'POST /groups',
   'POST /holidays',
@@ -412,7 +444,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /mock-exams/:examId/subjects',
   'POST /notifications/devices',
   'POST /notifications/push/subscribe',
-  'POST /payment-promises',
   'POST /planned-absences/:groupId/date/:date',
   'POST /rooms',
   'POST /student-exit-reasons',
@@ -446,4 +477,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 206;
+export const UNREVIEWED_BUDGET = 187;

@@ -63,7 +63,7 @@ describe('PaymentPromisesService', () => {
         { studentId: 10264, promiseDate: '2026-06-12', comment: 'Maoshdan keyin' },
         99,
         1001,
-      );
+       null);
       expect(prisma.paymentPromise.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           studentId: 10264,
@@ -88,7 +88,7 @@ describe('PaymentPromisesService', () => {
           { studentId: 1, promiseDate: '2026-06-12', comment: 'x' },
           99,
           1001,
-        ),
+         null),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -104,7 +104,7 @@ describe('PaymentPromisesService', () => {
           { studentId: 10264, promiseDate: '2026-06-12', comment: 'x' },
           99,
           1001,
-        ),
+         null),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -116,7 +116,7 @@ describe('PaymentPromisesService', () => {
         studentId: 10264,
         status: 'OPEN',
       });
-      const res = await service.cancel('p1', 99, 1001);
+      const res = await service.cancel('p1', 99, 1001, null);
       expect(prisma.paymentPromise.update).toHaveBeenCalledWith({
         where: { id: 'p1' },
         data: expect.objectContaining({ status: 'CANCELLED', resolvedById: 99 }),
@@ -127,7 +127,7 @@ describe('PaymentPromisesService', () => {
 
     it('throws NotFound when there is no open promise', async () => {
       prisma.paymentPromise.findFirst.mockResolvedValueOnce(null);
-      await expect(service.cancel('nope', 99, 1001)).rejects.toBeInstanceOf(
+      await expect(service.cancel('nope', 99, 1001, null)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -185,6 +185,67 @@ describe('PaymentPromisesService', () => {
           1001,
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  /**
+   * Every method here was keyed on `(studentId, companyId)` alone, so naming an
+   * id was enough: a Namangan director could read a Fargona debtor's promise
+   * history, record a new promise on them, or cancel one. The identical gate
+   * already existed on the payment and transaction reads — the promises module
+   * was written alongside them and simply did not get it.
+   */
+  describe('confines the caller to their own branch', () => {
+    const NAMANGAN = [2];
+
+    /** The student lookup finds nothing once the branch predicate is applied. */
+    function studentOutOfScope() {
+      prisma.student.findFirst.mockResolvedValue(null);
+    }
+
+    it('refuses to read another branch student\'s promises', async () => {
+      studentOutOfScope();
+      await expect(
+        service.findByStudent(10264, 1001, NAMANGAN),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.paymentPromise.findMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses to record a promise on another branch student', async () => {
+      studentOutOfScope();
+      await expect(
+        service.create(
+          { studentId: 10264, promiseDate: '2026-06-12', comment: '' },
+          99,
+          1001,
+          NAMANGAN,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.paymentPromise.create).not.toHaveBeenCalled();
+    });
+
+    it('applies the branch predicate to the student lookup itself', async () => {
+      // The gate has to be IN the query. Fetching the student and comparing
+      // afterwards would still have loaded the row, and 404 rather than 403
+      // because a 403 confirms the id exists in the other branch.
+      studentOutOfScope();
+      await service.findByStudent(10264, 1001, NAMANGAN).catch(() => undefined);
+
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 10264,
+            branches: { some: { branchId: { in: NAMANGAN } } },
+          }),
+        }),
+      );
+    });
+
+    it('lets a CEO through — `null` means every branch', async () => {
+      await service.findByStudent(10264, 1001, null);
+      // No student lookup at all: the gate short-circuits rather than running a
+      // query whose predicate would be empty.
+      expect(prisma.paymentPromise.findMany).toHaveBeenCalled();
     });
   });
 });

@@ -52,9 +52,20 @@ describe('PaymentPromisesController — role guards', () => {
     expect(() => guard.canActivate(ctx(['Teacher']))).toThrow(ForbiddenException);
   });
 
-  it('delegates create to the service with userId + companyId', () => {
+  it('delegates create to the service with userId + companyId + branch scope', () => {
+    // The scope is what stops a Namangan director naming a Fargona student id:
+    // every method here was keyed on `(studentId, companyId)` alone, so an id
+    // was enough to read, create or cancel another branch's debt promise.
     const dto = { studentId: 10264, promiseDate: '2026-06-12', comment: 'x' };
-    controller.create(dto, 99, 1001);
-    expect(mockService.create).toHaveBeenCalledWith(dto, 99, 1001);
+    controller.create(dto, 99, 1001, [1]);
+    expect(mockService.create).toHaveBeenCalledWith(dto, 99, 1001, [1]);
+  });
+
+  it('threads the scope through the read and the cancel too', () => {
+    controller.findByStudent(10264, 1001, [2]);
+    expect(mockService.findByStudent).toHaveBeenCalledWith(10264, 1001, [2]);
+
+    controller.cancel('p1', 99, 1001, [2]);
+    expect(mockService.cancel).toHaveBeenCalledWith('p1', 99, 1001, [2]);
   });
 });

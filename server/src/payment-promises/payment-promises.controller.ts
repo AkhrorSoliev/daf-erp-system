@@ -11,7 +11,8 @@ import {
 } from '@nestjs/common';
 import { PaymentPromisesService } from './payment-promises.service';
 import { CreatePaymentPromiseDto } from './dto/create-payment-promise.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('payment-promises')
@@ -25,8 +26,9 @@ export class PaymentPromisesController {
     @Body() dto: CreatePaymentPromiseDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.promises.create(dto, userId, companyId);
+    return this.promises.create(dto, userId, companyId, scope);
   }
 
   @Patch(':id/cancel')
@@ -34,15 +36,17 @@ export class PaymentPromisesController {
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.promises.cancel(id, userId, companyId);
+    return this.promises.cancel(id, userId, companyId, scope);
   }
 
   @Get()
   findByStudent(
     @Query('studentId', ParseIntPipe) studentId: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.promises.findByStudent(studentId, companyId);
+    return this.promises.findByStudent(studentId, companyId, scope);
   }
 }

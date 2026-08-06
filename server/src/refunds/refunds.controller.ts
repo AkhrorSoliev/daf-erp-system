@@ -13,7 +13,8 @@ import { RefundsService } from './refunds.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller('refunds')
@@ -57,8 +58,13 @@ export class RefundsController {
   }
 
   @Get()
-  findAll(@CurrentUser('companyId') companyId: number) {
-    return this.refundsService.findAll(companyId);
+  findAll(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    // Was company-wide: a Namangan director read every Fargona refund, with the
+    // student's name and the amount on each row.
+    return this.refundsService.findAll(companyId, scope);
   }
 
   @Patch(':id/process')
