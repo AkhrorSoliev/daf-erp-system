@@ -151,3 +151,89 @@ describe('TransactionsWriteService — branch stamping', () => {
     });
   });
 });
+
+/**
+ * A payout can name the drawer it left.
+ *
+ * `resolveAccountId` picks the branch's OLDEST CASH account. In production that
+ * is an empty «Asosiy kassa», not the «Farg'ona filiali kassa» the money
+ * actually came from — so a caller that knows the account has to be able to
+ * say so, and the ledger row has to be able to say why it exists.
+ */
+describe('TransactionsWriteService.recordSalaryPayment — cash account + description', () => {
+  let service: TransactionsWriteService;
+  let prisma: any;
+  let cashMovements: any;
+
+  beforeEach(async () => {
+    prisma = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 7, balance: 5_000_000 }]),
+      $transaction: jest.fn((cb: any) => cb(prisma)),
+      transaction: { create: jest.fn().mockResolvedValue({ id: 'tx-1' }) },
+      user: {
+        update: jest.fn().mockResolvedValue({}),
+        findUnique: jest.fn().mockResolvedValue({ mainBranch: 1, branches: [] }),
+      },
+    };
+    cashMovements = { recordOutflow: jest.fn().mockResolvedValue(null) };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TransactionsWriteService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: CashMovementsService, useValue: cashMovements },
+      ],
+    }).compile();
+    service = module.get(TransactionsWriteService);
+  });
+
+  const base = {
+    userId: 7,
+    amount: 1_000_000,
+    salaryPaymentId: 'sp-1',
+    companyId: 1,
+    performedById: 99,
+  };
+
+  it('forwards an explicit cashAccountId to the cash journal', async () => {
+    await service.recordSalaryPayment({ ...base, cashAccountId: 'acc-42' });
+
+    expect(cashMovements.recordOutflow).toHaveBeenCalledWith(
+      expect.objectContaining({ cashAccountId: 'acc-42' }),
+      expect.anything(),
+    );
+  });
+
+  it('writes the given description onto BOTH the ledger row and the cash movement', async () => {
+    await service.recordSalaryPayment({
+      ...base,
+      description: "Oylik to'landi (tashqarida berilgani tasdiqlandi)",
+    });
+
+    expect(prisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          description: "Oylik to'landi (tashqarida berilgani tasdiqlandi)",
+        }),
+      }),
+    );
+    expect(cashMovements.recordOutflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Oylik to'landi (tashqarida berilgani tasdiqlandi)",
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('keeps the old behaviour when neither is given', async () => {
+    await service.recordSalaryPayment(base);
+
+    expect(cashMovements.recordOutflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cashAccountId: undefined,
+        description: "Oylik to'landi",
+      }),
+      expect.anything(),
+    );
+  });
+});

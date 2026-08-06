@@ -474,9 +474,19 @@ export class TransactionsWriteService {
       branchId?: number | null;
       companyId: number;
       performedById?: number;
+      /**
+       * Explicit kassa account. Without it `resolveAccountId` picks the branch's
+       * OLDEST CASH account, which in production is an empty «Asosiy kassa»
+       * rather than the drawer the money actually left. The month-settle flow
+       * lets the CEO name the account, so the cash journal matches reality.
+       */
+      cashAccountId?: string;
+      /** Ledger + cash-journal text. Defaults to the plain payout wording. */
+      description?: string;
     },
     tx?: Prisma.TransactionClient,
   ) {
+    const description = params.description ?? "Oylik to'landi";
     return this.runInTx(async (client) => {
       const users = await client.$queryRaw<{ id: number; balance: number }[]>`
         SELECT id, balance FROM "User" WHERE id = ${params.userId} FOR UPDATE
@@ -505,7 +515,7 @@ export class TransactionsWriteService {
           branchId,
           companyId: params.companyId,
           performedById: params.performedById,
-          description: "Oylik to'landi",
+          description,
         },
       });
 
@@ -521,8 +531,9 @@ export class TransactionsWriteService {
           companyId: params.companyId,
           branchId,
           amount: params.amount,
+          cashAccountId: params.cashAccountId,
           transactionId: transaction.id,
-          description: "Oylik to'landi",
+          description,
           performedById: params.performedById,
         },
         client,
