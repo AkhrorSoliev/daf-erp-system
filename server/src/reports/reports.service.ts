@@ -41,6 +41,7 @@ import {
   AttendanceTeacherPerfQueryDto,
 } from './dto/attendance-reports-query.dto';
 import { buildNetProfit, NetProfit } from './reports-excel.helpers';
+import { computeOwnMonthProfit } from './own-month-profit';
 import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
@@ -178,6 +179,55 @@ export class ReportsService {
     ]);
     return buildNetProfit(pl, sm, outflows, month, recognizedRevenue);
   }
+
+  /**
+   * «Oyning o'z foydasi» — the month's own money against the month's own costs.
+   * The ONE source for this figure: the Excel «Xulosa» sheet and the
+   * /payments/overview Foyda card both read it here, so a month can never be
+   * shown as self-sustaining on one surface and loss-making on the other.
+   */
+  async getOwnMonthProfit(
+    companyId: number,
+    {
+      month,
+      branchIds,
+      performedById,
+    }: { month: string; branchIds: ReportBranchIds; performedById: number },
+  ): Promise<{
+    month: string;
+    ownMoney: number;
+    cashTotal: number;
+    netProfit: NetProfit;
+    ownMonthProfit: number;
+  }> {
+    // Same fail-closed stance as getMonthlyNetProfit: a caller scoped to
+    // nothing gets zeros, never a report built from someone else's branch.
+    if (isEmptyScope(branchIds)) {
+      const empty = buildNetProfit(null, null, null, month, 0);
+      return {
+        month,
+        ownMoney: 0,
+        cashTotal: 0,
+        netProfit: empty,
+        ownMonthProfit: 0,
+      };
+    }
+    const [y, m] = month.split('-').map(Number);
+    const startDate = `${month}-01`;
+    const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+    const [attribution, netProfit] = await Promise.all([
+      this.getIncomeMonthAttribution(companyId, { branchIds, startDate, endDate }),
+      this.getMonthlyNetProfit(companyId, { month, branchIds, performedById }),
+    ]);
+    return {
+      month,
+      ownMoney: attribution.currentMonth,
+      cashTotal: attribution.total,
+      netProfit,
+      ownMonthProfit: computeOwnMonthProfit(attribution.currentMonth, netProfit),
+    };
+  }
+
   getDebtorLineItems(companyId: number, branchIds?: number[]) {
     return this.debtors.getDebtorLineItems(companyId, branchIds);
   }
