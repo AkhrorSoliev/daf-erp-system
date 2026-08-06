@@ -6,6 +6,18 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
+import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
+
+/**
+ * Group CRUD is `@Roles('CEO', 'Branch Director', 'Administrator')` — a Teacher
+ * cannot reach it at all, so the "pure teacher → check by assignment" half of
+ * `assertCallerMayTouchGroup` is unreachable here. An empty roles list takes
+ * the BRANCH path, which is the answer for every caller who can actually get
+ * this far; naming the constant says that on purpose rather than leaving a
+ * bare `[]` for the next reader to wonder about.
+ */
+const NO_TEACHER_PATH: string[] = [];
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -35,6 +47,16 @@ export class GroupsWriteService {
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
+    // "The branch exists" and "you may create in it" are different questions.
+    // A group's branch is fixed at creation and everything downstream — its
+    // students, lesson deductions and salary accruals — is booked there, so
+    // this is the only moment it can be got right.
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      dto.branchId,
+      "Bu filialda guruh yaratish huquqingiz yo'q",
+    );
 
     const course = await this.prisma.course.findFirst({
       where: { id: dto.courseId, deletedAt: null },
@@ -243,6 +265,10 @@ export class GroupsWriteService {
     if (!existing) {
       throw new NotFoundException(`Guruh #${id} topilmadi`);
     }
+    // Renaming, re-rooming or re-teachering another branch's group changes
+    // that branch's timetable and, through `assertTeachersHaveRate`, who gets
+    // paid for it.
+    await assertCallerMayTouchGroup(this.prisma, userId as number, NO_TEACHER_PATH, id);
 
     if (dto.teacherIds) {
       const teacherCount = await this.prisma.user.count({
@@ -473,6 +499,8 @@ export class GroupsWriteService {
     if (!group) {
       throw new NotFoundException(`Guruh #${id} topilmadi`);
     }
+    // Archiving cascades to every enrolment in the group.
+    await assertCallerMayTouchGroup(this.prisma, userId, NO_TEACHER_PATH, id);
 
     // Archive bypasses normal status transition validation
     await this.prisma.statusHistory.create({

@@ -54,17 +54,42 @@ export async function assertCallerMayWriteForStudent(
   userId: number | undefined,
   studentId: number,
   companyId: number,
+  message = "Bu o'quvchi boshqa filialga tegishli — unga pul yozish huquqingiz yo'q",
 ): Promise<number> {
   // Fail-closed: a student whose branch cannot be determined can take no money
   // at all, because the resulting row could never be attributed afterwards.
   const branchId = await resolveStudentBranchId(prisma, studentId, companyId);
-  await assertCallerInBranch(
+  await assertCallerInBranch(prisma, userId, branchId, message);
+  return branchId;
+}
+
+/**
+ * The same check, for the NON-money paths on a student.
+ *
+ * One implementation, two names, because the call sites read differently and
+ * the wrong message is its own small lie: editing a student's phone number or
+ * expelling them is not "yozish pul", and an admin told it was would look for
+ * a payment they never made.
+ *
+ * These paths needed it just as much. `PATCH /students/:id` carried
+ * `branchIds`, so a director could edit another branch's student AND MOVE THEM
+ * into their own; `PATCH /students/:id/status` cascades — EXPELLED or FROZEN
+ * closes that student's enrolments in another branch's groups, which stops
+ * their lessons and their teacher's accruals.
+ */
+export async function assertCallerMayTouchStudent(
+  prisma: PrismaLike,
+  userId: number | undefined,
+  studentId: number,
+  companyId: number,
+): Promise<number> {
+  return assertCallerMayWriteForStudent(
     prisma,
     userId,
-    branchId,
-    "Bu o'quvchi boshqa filialga tegishli — unga pul yozish huquqingiz yo'q",
+    studentId,
+    companyId,
+    "Bu o'quvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
   );
-  return branchId;
 }
 
 /**

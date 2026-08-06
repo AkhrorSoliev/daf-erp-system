@@ -135,8 +135,8 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **102** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **169** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **110** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **161** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
@@ -208,3 +208,24 @@ to'rtala modul ham shundan o'qiydi.
 Ikkalasini «soddalashtirish» oson, shuning uchun `group-branch-scope.spec.ts`
 har ikkalasini alohida qotiradi (jumladan: o'qituvchi **va** BD roli birga
 bo'lgan holat — u sof o'qituvchi emas, ya'ni filial yo'lidan ketadi).
+
+## Audit 3-bosqich — o'quvchi va guruh yozish yo'llari (2026-08-06)
+
+Sakkizta id bo'yicha yozish yo'li **faqat `companyId`** ni tekshirardi:
+
+| Route | Boshqa filialda nima qila olardi |
+|---|---|
+| `PATCH /students/:id` | O'quvchini tahrirlash **va uni o'z filialiga ko'chirish** (`branchIds` tanada) — balansi, ro'yxatlari va ustozining kelgusi accrual'lari bilan birga |
+| `PATCH /students/:id/status` | EXPELLED/FROZEN **kaskad qiladi**: o'quvchining ro'yxatlari yopiladi, darslari va ustoz hisobi to'xtaydi |
+| `DELETE /students/:id`, `POST /students` | Arxivlash / begona filialda yaratish |
+| `POST /groups` | Guruh **umrbod bog'lanadigan** filialni tanlash |
+| `PATCH /groups/:id`, `/status`, `DELETE` | Nomini, xonasini, o'qituvchisini o'zgartirish; CANCELLED **hamma ro'yxatni yopadi** |
+
+`assertSingleValidBranch` allaqachon bor edi va **filial tekshiruviga o'xshaydi**
+— bu nuqson omon qolganining bir sababi. Lekin u **maqsad filial haqiqiymi**
+deb so'raydi, **chaqiruvchi haqlimi** deb emas.
+
+Yordamchi: `assertCallerMayTouchStudent` — `assertCallerMayWriteForStudent` bilan
+bitta amalga oshirish, ikkita nom. Xabar boshqacha ataylab: o'quvchini
+chetlatish «pul yozish» emas, va shunday deb aytilgan admin bo'lmagan to'lovni
+qidiradi.

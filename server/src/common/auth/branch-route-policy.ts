@@ -258,6 +258,29 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Id-addressed student and group writes. Each resolves the record\'s own ' +
+      'branch and checks the caller against it — `assertCallerMayTouchStudent` ' +
+      'and `assertCallerMayTouchGroup`. They were `companyId`-only, and two of ' +
+      'them carry a branch in the BODY: `PATCH /students/:id` accepts ' +
+      '`branchIds`, so a director could edit another branch\'s student and move ' +
+      'them into their own, and `POST /groups` names the branch a group is ' +
+      'fixed to for life. The status changes cascade — a student going EXPELLED ' +
+      'closes their enrolments, a group going CANCELLED closes every enrolment ' +
+      'in it — so they reach another branch\'s roster and payroll.',
+    routes: [
+      'POST /students',
+      'PATCH /students/:id',
+      'PATCH /students/:id/status',
+      'DELETE /students/:id',
+      'POST /groups',
+      'PATCH /groups/:id',
+      'PATCH /groups/:id/status',
+      'DELETE /groups/:id',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -316,7 +339,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /courses/:id',
   'DELETE /enrollment-transfer-reasons/:id',
   'DELETE /group-teacher-change-reasons/:id',
-  'DELETE /groups/:id',
   'DELETE /holidays/:id',
   'DELETE /lead-sources/:id',
   'DELETE /lesson-teacher-overrides/:id',
@@ -328,7 +350,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/ai-chat/:id',
   'DELETE /student-portal/photo',
-  'DELETE /students/:id',
   'DELETE /students/:id/enroll/:enrollmentId',
   'DELETE /teachers/:id',
   'DELETE /telegram-groups/:id',
@@ -420,8 +441,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /courses/:id/status',
   'PATCH /enrollment-transfer-reasons/:id',
   'PATCH /group-teacher-change-reasons/:id',
-  'PATCH /groups/:id',
-  'PATCH /groups/:id/status',
   'PATCH /holidays/:id',
   'PATCH /holidays/:id/status',
   'PATCH /lead-sources/:id',
@@ -437,8 +456,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /student-exit-reasons/:id',
   'PATCH /student-portal/name',
   'PATCH /student-portal/password',
-  'PATCH /students/:id',
-  'PATCH /students/:id/status',
   'PATCH /teachers/:id',
   'PATCH /teachers/:id/status',
   'PATCH /users/:id',
@@ -451,7 +468,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /courses',
   'POST /enrollment-transfer-reasons',
   'POST /group-teacher-change-reasons',
-  'POST /groups',
   'POST /holidays',
   'POST /lead-sources',
   'POST /leads',
@@ -468,7 +484,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /student-portal/attendance/scan',
   'POST /student-portal/payments/init',
   'POST /student-portal/photo',
-  'POST /students',
   'POST /students/:id/enroll',
   'POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt',
   'POST /students/:id/initial-balance',
@@ -493,4 +508,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 169;
+export const UNREVIEWED_BUDGET = 161;
