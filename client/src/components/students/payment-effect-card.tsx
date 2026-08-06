@@ -68,20 +68,22 @@ export function PaymentEffectCard({
   currentBalance,
   isLatestPayment,
   perLessonCost,
+  unpaidLessons,
 }: {
   transaction: StudentTransaction;
   /** O'quvchining BUGUNGI balansi — kartadagi holat emas. */
   currentBalance: number;
   isLatestPayment: boolean;
   perLessonCost: number | null;
+  /**
+   * Yuqoridagi balans kartasi bilan BIR XIL manbadan (`unpaidLessonsCount`).
+   * Ilgari bu yerda balansdan `ceil()` bilan hisoblanardi — bitta sahifada
+   * ikkita raqam paydo bo'lish xavfi bor edi.
+   */
+  unpaidLessons: number;
 }) {
   const dest = t.destination;
   const debtBefore = Math.max(0, -t.balanceBefore);
-
-  const unpaidLessons =
-    currentBalance < 0 && perLessonCost && perLessonCost > 0
-      ? Math.ceil(Math.abs(currentBalance) / perLessonCost)
-      : 0;
 
   // 8 so'm "ishlatilmay qoldi" desa, nega ishlatilmagani so'raladi. Sababi
   // oddiy: bir darsga yetmagan.

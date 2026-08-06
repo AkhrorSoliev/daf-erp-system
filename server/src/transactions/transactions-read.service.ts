@@ -44,8 +44,8 @@ export class TransactionsReadService {
    *   - currentBalance       — student.balance (the canonical number)
    *   - perLessonCost        — primary enrollment's price / lessonPaymentCount
    *   - lastPaymentDate      — most recent COMPLETED PAYMENT createdAt
-   *   - firstNegativeDate    — first ledger row where balanceAfter < 0
-   *   - unpaidLessonsCount   — LESSON_CONSUMPTION rows on/after firstNegativeDate
+   *   - debtSinceDate        — start of the CURRENT debt spell (null if clear)
+   *   - unpaidLessonsCount   — lessons consumed during that spell
    *
    * Pure projection — no mutation. The "active" filter excludes reversed
    * rows everywhere so the totals always reconcile with the live balance.
@@ -105,7 +105,7 @@ export class TransactionsReadService {
     let totalPaid = 0;
     let paymentCount = 0;
     let lastPaymentDate: Date | null = null;
-    let firstNegativeDate: Date | null = null;
+    let debtSinceDate: Date | null = null;
     let unpaidLessonsCount = 0;
 
     for (const row of ledger) {
@@ -124,13 +124,19 @@ export class TransactionsReadService {
         lessonsAttended += 1;
       }
 
-      if (firstNegativeDate === null && row.balanceAfter < 0) {
-        firstNegativeDate = row.createdAt;
+      // The debt spell RESETS the moment the balance recovers. Counting from
+      // the first time a student ever dipped made the figure only ever grow:
+      // #10460 paid 800 000 so'm after their first dip and the card still read
+      // "25 ta dars to'lovsiz" while they owed exactly one lesson.
+      if (row.balanceAfter < 0) {
+        if (debtSinceDate === null) debtSinceDate = row.createdAt;
+      } else {
+        debtSinceDate = null;
+        unpaidLessonsCount = 0;
       }
       if (
-        firstNegativeDate !== null &&
-        row.type === TransactionType.LESSON_CONSUMPTION &&
-        row.createdAt >= firstNegativeDate
+        debtSinceDate !== null &&
+        row.type === TransactionType.LESSON_CONSUMPTION
       ) {
         unpaidLessonsCount += 1;
       }
@@ -170,7 +176,7 @@ export class TransactionsReadService {
       currentBalance: student.balance,
       perLessonCost,
       lastPaymentDate,
-      firstNegativeDate,
+      debtSinceDate,
       unpaidLessonsCount,
     };
   }

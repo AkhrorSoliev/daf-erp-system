@@ -13,7 +13,14 @@ export interface BalanceSummary {
   currentBalance: number;
   perLessonCost: number | null;
   lastPaymentDate: string | null;
-  firstNegativeDate: string | null;
+  /**
+   * Start of the CURRENT debt spell — null once the balance recovers. It is
+   * NOT "the first time this student ever went negative": that figure only
+   * ever grew, so a student who had paid 800 000 so'm since their first dip
+   * still read "25 ta dars to'lovsiz" while owing a single lesson.
+   */
+  debtSinceDate: string | null;
+  /** Lessons taken during that spell — the ONE unpaid-lesson count on the tab. */
   unpaidLessonsCount: number;
 }
 
@@ -82,14 +89,17 @@ function DebtCard({ data }: { data: BalanceSummary }) {
         </div>
       </dl>
 
-      {(data.firstNegativeDate ||
-        data.lastPaymentDate ||
-        data.unpaidLessonsCount > 0) && (
+      {(data.debtSinceDate || data.lastPaymentDate) && (
         <div className="mt-3 space-y-1 border-t border-red-200 pt-3 text-xs text-red-900/80 dark:border-red-900/40 dark:text-red-300/80">
-          {data.firstNegativeDate && (
+          {data.debtSinceDate && (
+            // One sentence, not two. "06.06 dan keyin to'lovsiz: 25 ta dars"
+            // sat on its own line and read as a second, contradictory claim.
             <p>
-              <span className="font-medium">Qarz boshlangan sana:</span>{" "}
-              {format(new Date(data.firstNegativeDate), "dd.MM.yyyy")}
+              <span className="font-medium">Qarzda:</span>{" "}
+              {format(new Date(data.debtSinceDate), "dd.MM.yyyy")} dan beri
+              {data.unpaidLessonsCount > 0 && (
+                <> · {data.unpaidLessonsCount} ta dars to&apos;lanmagan</>
+              )}
             </p>
           )}
           {data.lastPaymentDate && (
@@ -103,15 +113,6 @@ function DebtCard({ data }: { data: BalanceSummary }) {
                 })}{" "}
                 avval)
               </span>
-            </p>
-          )}
-          {data.firstNegativeDate && data.unpaidLessonsCount > 0 && (
-            <p>
-              <span className="font-medium">
-                {format(new Date(data.firstNegativeDate), "dd.MM")} dan keyin
-                to&apos;lovsiz:
-              </span>{" "}
-              {data.unpaidLessonsCount} ta dars
             </p>
           )}
         </div>
