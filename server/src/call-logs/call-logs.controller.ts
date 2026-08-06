@@ -2,8 +2,9 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { CallLogsService } from './call-logs.service';
 import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { ListCallLogsQueryDto } from './dto/list-call-logs-query.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('call-logs')
 @UseGuards(RolesGuard)
@@ -26,7 +27,14 @@ export class CallLogsController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.callLogs.list({ userId, companyId, roles, query });
+    return this.callLogs.list({
+      userId,
+      companyId,
+      roles,
+      branchScope,
+      query,
+    });
   }
 }

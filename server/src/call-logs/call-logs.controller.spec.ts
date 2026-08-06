@@ -60,11 +60,12 @@ describe('CallLogsController — role guards', () => {
 
     it('list delegates with user context, roles and query', async () => {
       const query = { page: 1, pageSize: 20 } as any;
-      await controller.list(query, 10001, 1, ['Branch Director']);
+      await controller.list(query, 10001, 1, ['Branch Director'], [2]);
       expect(mockService.list).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],
+        branchScope: [2],
         query,
       });
     });

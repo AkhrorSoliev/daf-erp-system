@@ -24,6 +24,8 @@ import {
   ReportBranchIds,
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
+import { assertCallerMayTouchUser } from '../common/auth/user-branch-scope';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -224,7 +226,50 @@ export class TeachersService {
     return formatTeacher(user, count);
   }
 
-  async create(dto: CreateTeacherDto, companyId: number) {
+
+  /**
+   * May this caller act on this teacher?
+   *
+   * A teacher IS a `User`, and `PATCH /users/:id` has been branch-confined
+   * since the object-level sweep — but `/teachers/:id` edits the SAME rows and
+   * was never touched. It accepts `password` and `login`, so a Branch Director
+   * of one branch could set the password of the other branch's teacher and
+   * sign in as them. Production has 15 teachers, 10 in Fargona and 5 in
+   * Namangan, so both doors were reachable and only one was locked.
+   *
+   * The rule is not re-derived here — `assertCallerMayTouchUser` is the same
+   * function `UsersService` calls. Two doors, one lock.
+   */
+  async assertCallerMayTouchTeacher(
+    teacherId: number,
+    callerId: number | undefined,
+  ): Promise<void> {
+    await assertCallerMayTouchUser(
+      this.prisma,
+      callerId,
+      teacherId,
+      "Bu o'qituvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
+    );
+  }
+
+  async create(
+    dto: CreateTeacherDto,
+    companyId: number,
+    callerId?: number,
+  ) {
+    // `dto.branchId` decides which branch the new teacher belongs to, which in
+    // turn decides whose payroll carries them. A caller may only create into a
+    // branch they hold; a branch-less teacher (onboarding) is left alone,
+    // exactly as `GroupsWriteService` leaves one unassigned.
+    if (dto.branchId != null) {
+      await assertCallerInBranch(
+        this.prisma,
+        callerId,
+        dto.branchId,
+        "Bu filialda o'qituvchi yaratish huquqingiz yo'q",
+      );
+    }
+
     // Telefon raqam tekshirish
     const existing = await this.prisma.user.findFirst({
       where: { phone: dto.phone, deletedAt: null },
@@ -265,7 +310,12 @@ export class TeachersService {
     };
   }
 
-  async update(id: number, dto: UpdateTeacherDto, companyId: number) {
+  async update(
+    id: number,
+    dto: UpdateTeacherDto,
+    companyId: number,
+    callerId?: number,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
@@ -278,6 +328,10 @@ export class TeachersService {
     if (!user) {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
+
+    // `UpdateTeacherDto` carries `password` and `login`. Existence first so a
+    // stale id answers 404, then the branch.
+    await this.assertCallerMayTouchTeacher(id, callerId);
 
     // Eski rasmni o'chirish (yangi rasm kelsa yoki null bo'lsa)
     if (dto.photo !== undefined && user.photo && dto.photo !== user.photo) {
@@ -335,6 +389,10 @@ export class TeachersService {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
+    // Deactivating a teacher closes their salary config and stops their
+    // accruals — someone else's payroll, from someone else's branch.
+    await this.assertCallerMayTouchTeacher(id, userId);
+
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'User',
       entityId: String(id),
@@ -382,7 +440,11 @@ export class TeachersService {
     return formatTeacher(updated);
   }
 
-  async getStatusHistory(id: number, companyId: number) {
+  async getStatusHistory(
+    id: number,
+    companyId: number,
+    callerId?: number,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
@@ -395,6 +457,8 @@ export class TeachersService {
     if (!user) {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
+
+    await this.assertCallerMayTouchTeacher(id, callerId);
 
     return this.statusHistoryService.getHistory('User', String(id));
   }
@@ -412,6 +476,8 @@ export class TeachersService {
     if (!user) {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
+
+    await this.assertCallerMayTouchTeacher(id, deletedById);
 
     // Guruhlardan olib tashlash + tarixga yozish
     const teacherGroups = await this.prisma.groupTeacher.findMany({
@@ -467,7 +533,11 @@ export class TeachersService {
     return { message: "O'qituvchi muvaffaqiyatli o'chirildi" };
   }
 
-  async findGroupsByTeacherId(teacherId: number, companyId: number) {
+  async findGroupsByTeacherId(
+    teacherId: number,
+    companyId: number,
+    callerId?: number,
+  ) {
     // Ensure teacher exists (and belongs to the caller's company)
     const user = await this.prisma.user.findFirst({
       where: {
@@ -482,6 +552,8 @@ export class TeachersService {
     if (!user) {
       throw new NotFoundException(`O'qituvchi #${teacherId} topilmadi`);
     }
+
+    await this.assertCallerMayTouchTeacher(teacherId, callerId);
 
     const groups = await this.prisma.group.findMany({
       where: {

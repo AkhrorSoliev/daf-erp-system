@@ -135,8 +135,8 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **132** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **139** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **147** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **124** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
@@ -320,3 +320,48 @@ Filtr olib tashlandi. Qorovul **filial savolini qo'shishi** kerak, boshqa
 savolga jimgina javob berishi emas — orqasidagi o'qishlar bu masalada
 o'zaro ham kelishmaydi (`getStatusHistory` arxivni ko'rsatadi, boshqa uchtasi
 o'zi 404 qiladi). Regressiya testi qo'shildi.
+
+## Audit 6-bosqich — o'qituvchilar, qidiruv, aloqa markazi (2026-08-06)
+
+### 1. Bitta yozuvga ikkita eshik, biri qulflanmagan
+
+O'qituvchi — bu `User`. `PATCH /users/:id` obyekt darajasidagi auditda
+filialga bog'langan edi. Lekin **`/teachers/:id` xuddi shu qatorlarni
+tahrirlaydi** va unga tegilmagan: faqat `companyId`.
+
+`UpdateTeacherDto` **`password` va `login`** qabul qiladi. Ya'ni bir filial
+direktori **ikkinchi filial o'qituvchisining parolini o'rnatib, uning nomidan
+tizimga kira olardi**. PRODda 15 o'qituvchi: **10 Farg'ona, 5 Namangan** —
+qulflanmagan eshik haqiqiy joyga olib borardi.
+
+Qoida qayta yozilmadi: `assertCallerMayTouchTeacher` → o'sha
+`assertCallerMayTouchUser`. Har bir qorovul metodning **o'z mavjudlik
+tekshiruvidan keyin** turadi, shuning uchun eski id hamon 404 beradi.
+
+### 2. Filial qoidasining uchta yashirin nusxasi
+
+Qidiruv, aloqa markazi va qo'ng'iroqlar jurnali **filialga bog'langan edi** —
+lekin har biri o'z nusxasi bilan, va har bir nusxa kanonik qoidadan farq qilardi:
+
+| | Nuqson |
+|---|---|
+| Qidiruv | faqat `UserBranch` ni o'qirdi, `mainBranch` ni **e'tiborsiz qoldirardi** → faqat o'sha yerda yozilgan xodim uchun qidiruv **jimgina bo'sh** bo'lardi (latent: PRODdagi 20 ta CEO bo'lmagan xodimning hammasida `UserBranch` bor) |
+| Uchalasi ham | **filial almashtirgichni** umuman ko'rmasdi — CEO Namanganni tanlasa ham ikkala filialni ko'rardi |
+
+Ikkinchisi — **shu auditni boshlagan shikoyatning o'zi**, hech kim tekshirmagan
+uchta sahifada.
+
+Endi uchalasi `@BranchScope()` ning **yakuniy qiymatini** oladi va yashirin
+resolverlar o'chirildi. Dekoratorning o'z hujjatida yozilgan: «servis ichida
+scope'ni qayta hisoblamang — bir so'rovda ikkita scope bo'lgani uchun hisobot
+muqovasida bir filial, jamida boshqasi chiqqan edi».
+
+Manifest bu route'larni **e'lon qilmaydi**: `@BranchScope()` olgan handler
+o'zini isbotlaydi, uni qayta e'lon qilish — hal bo'lgan faktga ikkinchi,
+zaifroq da'vo qo'shish (manifest testi buni ushladi).
+
+### 3. `POST /call-logs`
+
+Qatorni **o'quvchi filialiga** yozardi — bu to'g'ri — lekin chaqiruvchi shu
+o'quvchi bilan ishlay oladimi, deb so'ramasdi. `WILL_PAY` natijasi esa
+`PaymentPromise` ochadi va **begona filialning qarzdorlar oqimiga** tushadi.

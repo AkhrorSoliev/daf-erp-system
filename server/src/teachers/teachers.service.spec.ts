@@ -25,6 +25,17 @@ describe('TeachersService — status methods', () => {
     roles: [{ roleId: 4 }],
   };
 
+  // `assertCallerMayTouchTeacher` reads the CALLER through the same
+  // `user.findFirst` mock. A CEO caller spans every branch, so the cases below
+  // exercise the status/delete logic rather than the confinement — which has
+  // its own spec.
+  const mockCeoCaller = {
+    id: 2,
+    mainBranch: null,
+    branches: [],
+    roles: [{ role: { name: 'CEO' } }],
+  };
+
   const auditData = {
     statusChangedAt: new Date(),
     statusChangedById: 1,
@@ -34,7 +45,16 @@ describe('TeachersService — status methods', () => {
   beforeEach(async () => {
     prisma = {
       user: {
-        findFirst: jest.fn().mockResolvedValue(mockTeacher),
+        // Answers by id rather than by call order: the guard now runs AFTER
+        // each method's own existence check, so the sequence differs per
+        // method and an order-based mock would encode that ordering.
+        findFirst: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve(
+              where?.id === mockCeoCaller.id ? mockCeoCaller : mockTeacher,
+            ),
+          ),
         update: jest.fn().mockResolvedValue({
           ...mockTeacher,
           roles: [{ role: { id: 4, name: 'Teacher' } }],
@@ -106,10 +126,16 @@ describe('TeachersService — status methods', () => {
     });
 
     it('removes Redis block key when status is ACTIVE', async () => {
-      prisma.user.findFirst.mockResolvedValue({
-        ...mockTeacher,
-        status: 'SUSPENDED',
-      });
+      // Keep answering by id — this test only needs the TEACHER to start
+      // SUSPENDED; blanket-overriding the mock would also make the caller
+      // lookup return a teacher with no `role` shape.
+      prisma.user.findFirst.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where?.id === mockCeoCaller.id
+            ? mockCeoCaller
+            : { ...mockTeacher, status: 'SUSPENDED' },
+        ),
+      );
 
       await service.changeStatus(1, { status: 'ACTIVE' as any }, 2, 1001);
 

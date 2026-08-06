@@ -44,8 +44,9 @@ export class TeachersController {
   findGroupsByTeacherId(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') callerId: number,
   ) {
-    return this.teachersService.findGroupsByTeacherId(id, companyId);
+    return this.teachersService.findGroupsByTeacherId(id, companyId, callerId);
   }
 
   @Get(':id')
@@ -65,8 +66,9 @@ export class TeachersController {
   create(
     @Body() dto: CreateTeacherDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') callerId: number,
   ) {
-    return this.teachersService.create(dto, companyId);
+    return this.teachersService.create(dto, companyId, callerId);
   }
 
   @Patch(':id')
@@ -76,8 +78,9 @@ export class TeachersController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateTeacherDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') callerId: number,
   ) {
-    return this.teachersService.update(id, dto, companyId);
+    return this.teachersService.update(id, dto, companyId, callerId);
   }
 
   @Patch(':id/status')
@@ -95,10 +98,16 @@ export class TeachersController {
   @Get(':id/salary-summary')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director')
-  getSalarySummary(
+  async getSalarySummary(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') callerId: number,
   ) {
+    // The guard lives here rather than in `SalaryService`, which is shared
+    // with the payroll surfaces that do their own `resolvePayrollBranchScope`.
+    // Adding a second, different confinement inside it would give one method
+    // two branch rules.
+    await this.teachersService.assertCallerMayTouchTeacher(id, callerId);
     return this.salaryService.getTeacherSalarySummary(id, companyId);
   }
 
@@ -108,8 +117,9 @@ export class TeachersController {
   getStatusHistory(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') callerId: number,
   ) {
-    return this.teachersService.getStatusHistory(id, companyId);
+    return this.teachersService.getStatusHistory(id, companyId, callerId);
   }
 
   @Delete(':id')

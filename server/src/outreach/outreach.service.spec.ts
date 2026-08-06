@@ -106,6 +106,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
       });
 
       const today = tashkentDateStr(new Date());
@@ -122,28 +123,28 @@ describe('OutreachService', () => {
       );
     });
 
-    it('scopes Branch Director to their mainBranch', async () => {
-      prisma.user.findFirst.mockResolvedValue(
-        { mainBranch: 42, branches: [{ branchId: 42 }], roles: [{ role: { name: 'Branch Director' } }] },
-      );
+    it('scopes a Branch Director to the resolved scope', async () => {
+      // The scope now arrives from `@BranchScope()` — ceiling ∩ switcher —
+      // instead of being re-derived here from `mainBranch` alone.
       prisma.attendance.findMany.mockResolvedValue([]);
       await service.getTodayAbsentees({
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],
+        branchScope: [42],
       });
       const call = prisma.attendance.findMany.mock.calls[0][0];
       expect(call.where.group.branchId).toEqual({ in: [42] });
     });
 
-    it('returns empty when Branch Director has no mainBranch', async () => {
-      prisma.user.findFirst.mockResolvedValue(
-        { mainBranch: null, branches: [], roles: [{ role: { name: 'Branch Director' } }] },
-      );
+    it('returns empty on an EMPTY scope, without querying', async () => {
+      // `[]` is nothing, never everything — a caller with no branch attached,
+      // or one who asked for a branch outside their ceiling.
       const res = await service.getTodayAbsentees({
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],
+        branchScope: [],
       });
       expect(res.total).toBe(0);
       expect(prisma.attendance.findMany).not.toHaveBeenCalled();
@@ -155,6 +156,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
       });
       const call = prisma.attendance.findMany.mock.calls[0][0];
       expect(call.where.group.branchId).toBeUndefined();
@@ -166,6 +168,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
         date: '2026-05-15',
       });
       expect(res.date).toBe('2026-05-15');
@@ -188,6 +191,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
       });
       expect(res.items.map((i) => i.attendanceId)).toEqual(['b', 'c', 'a']);
     });
@@ -235,6 +239,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
       });
       const where = prisma.paymentPromise.findMany.mock.calls[0][0].where;
       expect(where.status).toEqual({ in: ['OPEN', 'BROKEN'] });
@@ -252,6 +257,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
       });
       expect(res.total).toBe(0);
     });
@@ -283,6 +289,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
       });
       expect(res.items.map((i) => i.enrollmentId)).toEqual(['e2', 'e1']);
     });
@@ -308,6 +315,7 @@ describe('OutreachService', () => {
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
       });
 
       expect(res).toEqual({
@@ -318,14 +326,12 @@ describe('OutreachService', () => {
       });
     });
 
-    it('returns zeros when Branch Director has no mainBranch', async () => {
-      prisma.user.findFirst.mockResolvedValue(
-        { mainBranch: null, branches: [], roles: [{ role: { name: 'Branch Director' } }] },
-      );
+    it('returns zeros on an EMPTY scope', async () => {
       const res = await service.getStats({
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],
+        branchScope: [],
       });
       expect(res).toEqual({
         todayAbsentees: 0,

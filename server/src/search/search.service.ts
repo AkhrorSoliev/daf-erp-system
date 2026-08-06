@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { SearchPeopleService } from './search-people.service';
 import { SearchContentService } from './search-content.service';
 import { CategoryResult, SearchContext } from './shared/search-helpers';
@@ -15,15 +14,13 @@ export interface QuickSearchResult {
   users: CategoryResult;
   teachers: CategoryResult;
   groups: CategoryResult;
-  courses: CategoryResult;
-}
+  courses: CategoryResult;}
 
 @Injectable()
 export class SearchService {
   private readonly logger = new Logger(SearchService.name);
 
   constructor(
-    private prisma: PrismaService,
     private people: SearchPeopleService,
     private content: SearchContentService,
   ) {}
@@ -34,7 +31,7 @@ export class SearchService {
   ): Promise<QuickSearchResult> {
     const start = Date.now();
     const trimmed = search.trim();
-    const branchIds = await this.getUserBranchIds(ctx);
+    const branchIds = ctx.branchScope;
 
     const [students, users, teachers, groups, courses] = await Promise.all([
       this.people.searchStudents(trimmed, ctx.companyId, branchIds, 5),
@@ -63,7 +60,7 @@ export class SearchService {
   ) {
     const trimmed = search.trim();
     const skip = (page - 1) * pageSize;
-    const branchIds = await this.getUserBranchIds(ctx);
+    const branchIds = ctx.branchScope;
     const start = Date.now();
 
     let result: CategoryResult = { items: [], total: 0 };
@@ -126,18 +123,4 @@ export class SearchService {
     return { data: result.items, total: result.total, page, pageSize };
   }
 
-  /**
-   * CEO sees all branches; Branch Director sees only their branches.
-   * Returns null for CEO (no branch filter needed).
-   */
-  private async getUserBranchIds(ctx: SearchContext): Promise<number[] | null> {
-    if (ctx.roles.includes('CEO')) return null;
-
-    const userBranches = await this.prisma.userBranch.findMany({
-      where: { userId: ctx.userId },
-      select: { branchId: true },
-    });
-
-    return userBranches.map((ub) => ub.branchId);
-  }
 }

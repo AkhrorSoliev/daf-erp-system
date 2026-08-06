@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CallOutcome, CallReason, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { resolveCallerReportBranchIds } from '../common/finance/report-branch-scope';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import {
   tashkentDateStr,
@@ -10,6 +10,7 @@ import {
 import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
 import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { ListCallLogsQueryDto } from './dto/list-call-logs-query.dto';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 
 // Uzbek labels for the audit trail (EntityHistory is read by humans).
 const REASON_LABEL: Record<CallReason, string> = {
@@ -32,6 +33,8 @@ interface ListContext {
   companyId: number;
   roles: string[];
   query: ListCallLogsQueryDto;
+  /** The request's RESOLVED scope from `@BranchScope()`. */
+  branchScope: ReportBranchIds;
 }
 
 @Injectable()
@@ -53,6 +56,18 @@ export class CallLogsService {
       select: { id: true },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
+
+    // The row is attributed to the STUDENT's branch (below), which is right —
+    // but resolving a branch is not authorising one. A call log carries a
+    // note about a conversation with somebody's customer, and a WILL_PAY
+    // outcome opens a `PaymentPromise` on that student, so it reaches the
+    // debtors workflow of a branch the caller may not even view.
+    await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      dto.studentId,
+      companyId,
+    );
 
     const branchId = await this.resolveStudentBranch(dto.studentId, companyId);
     const note = dto.note?.trim() || null;
@@ -119,7 +134,7 @@ export class CallLogsService {
     const pageSize = ctx.query.pageSize ?? 20;
     const skip = (page - 1) * pageSize;
 
-    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    const branchIds = this.toBranchIds(ctx.branchScope);
     if (branchIds && branchIds.length === 0) {
       return { total: 0, page, pageSize, items: [] };
     }
@@ -170,12 +185,22 @@ export class CallLogsService {
   // CEO spans every branch; everyone else — Administrator included — is confined
   // to their own. Call logs carry student names and phone numbers, so a
   // company-wide Administrator view leaked the other branch's contact list.
-  private async resolveBranchScope(
-    userId: number,
-    _roles: string[],
-  ): Promise<number[] | undefined> {
-    const ids = await resolveCallerReportBranchIds(this.prisma, userId);
-    return ids ?? undefined;
+  /**
+   * The request's RESOLVED scope, straight from `@BranchScope()`.
+   *
+   * This used to call `resolveCallerReportBranchIds(userId)` itself with no
+   * requested branch, so the page ignored the header switcher entirely: a CEO
+   * who picked Namangan still saw both branches. Taking the decorator's value
+   * fixes that AND removes a private copy of the rule — re-deriving a scope
+   * inside a service is the documented mistake that had a workbook printing
+   * one branch on its cover and another in its totals.
+   *
+   * `null` (every branch) becomes `undefined` here because that is what these
+   * queries already spell "no restriction" as; `[]` stays `[]`, and stays
+   * nothing.
+   */
+  private toBranchIds(scope: ReportBranchIds): number[] | undefined {
+    return scope ?? undefined;
   }
 
   // Same branch-resolution order as PaymentPromisesService: active enrollment's

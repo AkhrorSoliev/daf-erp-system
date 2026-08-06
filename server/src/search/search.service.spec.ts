@@ -5,11 +5,20 @@ import { SearchPeopleService } from './search-people.service';
 import { SearchContentService } from './search-content.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-const ceoCtx: SearchContext = { companyId: 1, roles: ['CEO'], userId: 10001 };
+// The scope now arrives RESOLVED from `@BranchScope()` — the service no
+// longer derives it, so the fixtures carry it instead of a `userBranch` mock.
+// `null` = every branch (a CEO who picked none); `[1, 3]` = exactly those.
+const ceoCtx: SearchContext = {
+  companyId: 1,
+  roles: ['CEO'],
+  userId: 10001,
+  branchScope: null,
+};
 const bdCtx: SearchContext = {
   companyId: 1,
   roles: ['Branch Director'],
   userId: 10002,
+  branchScope: [1, 3],
 };
 
 describe('SearchService', () => {
@@ -331,26 +340,12 @@ describe('SearchService', () => {
     it('should NOT filter by branch for CEO', async () => {
       await service.quickSearch('test', ceoCtx);
 
-      // CEO: no branch filter, no userBranch lookup
-      expect(prisma.userBranch.findMany).not.toHaveBeenCalled();
-
       const studentCall = prisma.student.findMany.mock.calls[0][0];
       expect(studentCall.where.branches).toBeUndefined();
     });
 
     it('should filter by branch for Branch Director', async () => {
-      prisma.userBranch.findMany.mockResolvedValue([
-        { branchId: 1 },
-        { branchId: 3 },
-      ]);
-
       await service.quickSearch('test', bdCtx);
-
-      // Should have fetched user branches
-      expect(prisma.userBranch.findMany).toHaveBeenCalledWith({
-        where: { userId: 10002 },
-        select: { branchId: true },
-      });
 
       // Student should be filtered by branch
       const studentCall = prisma.student.findMany.mock.calls[0][0];

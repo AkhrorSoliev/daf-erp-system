@@ -224,6 +224,7 @@ describe('CallLogsService', () => {
         userId: 99,
         companyId: 1001,
         roles: ['CEO'],
+        branchScope: null,
         query: {},
       });
       expect(prisma.callLog.findMany).toHaveBeenCalledWith(
@@ -233,16 +234,14 @@ describe('CallLogsService', () => {
       );
     });
 
-    it('Branch Director with no mainBranch returns empty without querying', async () => {
-      prisma.user.findFirst.mockResolvedValueOnce({
-        mainBranch: null,
-        branches: [],
-        roles: [{ role: { name: 'Branch Director' } }],
-      });
+    it('an EMPTY scope returns empty without querying', async () => {
+      // The scope now arrives resolved from `@BranchScope()`; `[]` is nothing,
+      // never everything.
       const res = await service.list({
         userId: 99,
         companyId: 1001,
         roles: ['Branch Director'],
+        branchScope: [],
         query: {},
       });
       expect(res).toEqual({ total: 0, page: 1, pageSize: 20, items: [] });
@@ -259,6 +258,7 @@ describe('CallLogsService', () => {
         userId: 99,
         companyId: 1001,
         roles: ['Administrator'],
+        branchScope: [3],
         query: { studentId: 10264 },
       });
       expect(prisma.callLog.findMany).toHaveBeenCalledWith(
