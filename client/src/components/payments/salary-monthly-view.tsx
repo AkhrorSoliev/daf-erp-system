@@ -66,7 +66,7 @@ interface MonthlyRow {
   isFixedMonthly: boolean;
   fullDeserved: number | null;
   covered: number | null;
-  gap: number | null;
+  centerFunded: number | null;
   advances: number;
   netToPay: number;
   centerAdvanced: number;
@@ -81,7 +81,7 @@ interface MonthlyResponse {
   totals: {
     fullDeserved: number;
     covered: number;
-    gap: number;
+    centerFunded: number;
     advances: number;
     netToPay: number;
     // Center top-up lifecycle (company-level card): advanced (X) / recovered
@@ -251,13 +251,15 @@ export function SalaryMonthlyView({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger className="inline-flex items-center gap-1">
-                      Qo&apos;shilishi kerak
+                      Markaz qo&apos;shdi
                       <Info className="size-3.5 text-muted-foreground" />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-56">
-                      Markaz o&apos;z yonidan qo&apos;shishi kerak bo&apos;lgan summa
-                      (to&apos;liq ishlangan − o&apos;quvchilar to&apos;lagan). O&apos;quvchi
-                      keyin to&apos;lasa kamayadi.
+                    <TooltipContent className="max-w-64">
+                      Markazning o&apos;z hisobidan bergan qismi. Oy yopilmaguncha
+                      bu prognoz — o&apos;quvchi to&apos;lasa kamayadi; oy yopilgach
+                      markaz haqiqatan bergan summa bo&apos;lib qoladi. Keyin
+                      o&apos;quvchi to&apos;lasa, pul markazga qaytadi (pastdagi
+                      &laquo;undirildi&raquo;), ustozga qayta yozilmaydi.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -341,9 +343,11 @@ export function SalaryMonthlyView({
                     </TableCell>
                     <TableCell className="text-right">
                       <MoneyOrDash
-                        value={row.gap}
+                        value={row.centerFunded}
                         className={cn(
-                          row.gap && row.gap > 0 && "font-medium text-amber-700 dark:text-amber-400",
+                          row.centerFunded &&
+                            row.centerFunded > 0 &&
+                            "font-medium text-amber-700 dark:text-amber-400",
                         )}
                       />
                     </TableCell>
@@ -402,7 +406,7 @@ export function SalaryMonthlyView({
                   {formatPrice(totals.covered)}
                 </TableCell>
                 <TableCell className="text-right font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                  {formatPrice(totals.gap)}
+                  {formatPrice(totals.centerFunded)}
                 </TableCell>
                 <TableCell className="text-right font-semibold tabular-nums">
                   {formatPrice(totals.advances)}
@@ -423,7 +427,7 @@ export function SalaryMonthlyView({
       {!isLoading && totals && totals.centerAdvanced > 0 && (
         <div className="rounded-md border bg-muted/20 p-4">
           <div className="mb-3 flex items-center gap-1.5 text-sm font-medium">
-            Markaz qo&apos;shimchasi (bu oy, umumiy)
+            Markaz qo&apos;shimchasi — undirish holati (bu oy)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>

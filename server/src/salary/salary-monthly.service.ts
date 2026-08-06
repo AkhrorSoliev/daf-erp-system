@@ -18,7 +18,7 @@ export type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 /**
  * Net-to-pay base per month. **Faza 2 (July center top-up):** from
  * `TOPUP_EFFECTIVE_MONTH` on, the net-to-pay shown is the FULL deserved salary —
- * `covered` (students-paid) PLUS `gap` (the center's top-up), minus advances —
+ * `covered` (students-paid) PLUS `centerFunded` (the center's leg), minus advances —
  * because the cron now actually PAYS that (`SalaryCalculationService` Phase 0).
  * Earlier months stay on the covered base, so a given month's shown and paid
  * figures always agree. Already-settled months show their real
@@ -34,19 +34,28 @@ function dateStr(d: Date): string {
 /**
  * "Ustozlar oyligi" — per-teacher salary report for ONE selected month.
  *
- * Columns produced per teacher:
- *  - `fullDeserved`  = all lessons actually held that month × rate (covered + gap)
- *  - `covered`       = the portion backed by students who actually paid (live accruals)
- *  - `gap`           = top-up the center would add (fullDeserved − covered)
+ * The month's earnings are split BY FUNDER, and that split is computed the same
+ * way no matter whether the month has been settled yet:
+ *  - `covered`       = accruals a student's payment backed (`wasCenterTopUp` false)
+ *  - `centerFunded`  = written center top-up accruals (`wasCenterTopUp` true)
+ *                      PLUS billable lessons that still carry no accrual × rate
+ *  - `fullDeserved`  = `covered` + `centerFunded` (all lessons held × rate)
  *  - `advances`      = TEACHER_ADVANCE given during the calendar month
  *  - `netToPay`      = base (see NET_BASE) − advances, or the settled payment's net
  *
+ * Settlement moves money from the second term of `centerFunded` to the first,
+ * and nothing else: an in-progress month carries the center's leg entirely as a
+ * forecast, a settled month entirely as written accruals, and the totals match
+ * across the boundary. The earlier shape summed EVERY accrual into `covered`,
+ * so the night the cron settled July it reported 15.5 mln so'm of the center's
+ * own money as "o'quvchilar to'lagan" and showed a 0 top-up.
+ *
  * Manual/Excel months (no per-lesson accruals — e.g. May, whose config only
  * became effective in June) have `hasLessonData = false`, so the deserved /
- * covered / gap columns come back `null` (rendered as "—"). We never fabricate
- * those numbers from a proxy rate.
+ * covered / centerFunded columns come back `null` (rendered as "—"). We never
+ * fabricate those numbers from a proxy rate.
  *
- * The deserved/covered/gap math is the SAME as the read-only forecast script
+ * The deserved math is the SAME as the read-only forecast script
  * (`scripts/forecast-full-salary-topup.ts`), ported into a bulk in-memory sweep
  * (one query per input, no per-lesson DB lookups).
  */
@@ -130,7 +139,7 @@ export class SalaryMonthlyService {
       covered: 0,
       carriedIn: 0,
       carriedOut: 0,
-      gap: 0,
+      centerFunded: 0,
       advances: 0,
       netToPay: 0,
       // Center top-up lifecycle (company-level summary card):
@@ -388,9 +397,13 @@ export class SalaryMonthlyService {
 
     // ─── Step 4: per-teacher aggregation (single pass over attendances) ──
     interface Agg {
-      covered: number;
+      /** Every live accrual in the period, whoever funded it. */
+      accrued: number;
+      /** …of which a student's payment backed (`wasCenterTopUp` false). */
+      studentFunded: number;
       carriedIn: number;
       coveredAtt: Set<string>;
+      /** Billable lessons with NO accrual yet — the center's unsettled leg. */
       gap: number;
       gapUnits: number;
       noConfigUnits: number;
@@ -401,7 +414,8 @@ export class SalaryMonthlyService {
     const agg = new Map<number, Agg>();
     for (const id of ids) {
       agg.set(id, {
-        covered: 0,
+        accrued: 0,
+        studentFunded: 0,
         carriedIn: 0,
         coveredAtt: new Set(),
         gap: 0,
@@ -415,13 +429,22 @@ export class SalaryMonthlyService {
     for (const ac of accruals) {
       const a = agg.get(ac.userId);
       if (!a) continue;
-      a.covered += ac.amount;
+      a.accrued += ac.amount;
+      // THE funder split, and the reason this report can describe a settled and
+      // an in-progress month with one rule. `wasCenterTopUp` is sticky, so an
+      // accrual the center fronted stays on the center's side of the split even
+      // after the student pays it back — the money the teacher was paid that
+      // month still came from the center. The pay-back is a separate event, and
+      // it is what `centerStillFronted` / `centerRecovered` below report.
+      //
+      // Summing everything into `covered` (the old shape) meant that the moment
+      // the cron settled a month, 15.5 mln so'm the center had just paid was
+      // relabelled "o'quvchilar to'lagan" and the top-up column dropped to 0.
+      if (ac.wasCenterTopUp) a.centerAdvanced += ac.amount;
+      else a.studentFunded += ac.amount;
       // A carried-IN accrual (creditPeriodDate set → lessonDate was a prior month).
       if (ac.creditPeriodDate) a.carriedIn += ac.amount;
       if (ac.attendanceId) a.coveredAtt.add(ac.attendanceId);
-      // Center top-up lifecycle: advanced = ever-fronted; stillFronted = not yet
-      // recovered. recovered (Y) = advanced − stillFronted (computed in totals).
-      if (ac.wasCenterTopUp) a.centerAdvanced += ac.amount;
       if (ac.isCenterTopUp) a.centerStillFronted += ac.amount;
     }
     for (const att of attendances) {
@@ -455,15 +478,25 @@ export class SalaryMonthlyService {
     // ─── Step 5+6: build rows ────────────────────────────────────────────
     const rows = teachers.map((t) => {
       const a = agg.get(t.id)!;
-      const hasLessonData = a.covered !== 0 || a.gapUnits !== 0;
-      // Center top-up (gap) is a real figure ONLY from TOPUP_EFFECTIVE_MONTH on.
-      // Before that there is NO top-up, so a "Qo'shilishi kerak" number only
-      // confuses — hide it (gap = 0) and treat deserved = covered for pre-July.
+      // Keyed off the accrual TOTAL, not the student leg: a month the center
+      // funded end to end has `studentFunded = 0` and would otherwise blank out
+      // its columns as if there were no lesson data at all.
+      const hasLessonData = a.accrued !== 0 || a.gapUnits !== 0;
+      // The forecast leg is a real figure ONLY from TOPUP_EFFECTIVE_MONTH on.
+      // Before that the center tops up nothing, so a "qo'shilishi kerak" number
+      // only confuses — drop it and let deserved = what students covered.
       const showGap = isTopUpMonth(month);
       const rawGap = showGap ? a.gap : 0;
-      const fullDeserved = hasLessonData ? a.covered + rawGap : null;
-      const covered = hasLessonData ? a.covered : null;
-      const gap = hasLessonData ? rawGap : null;
+      // The center's leg, whatever phase the month is in: what it has ALREADY
+      // paid (written top-up accruals) plus what it still owes for lessons that
+      // have not been settled yet. A settled month has no second term, an
+      // in-progress one has no first — the formula does not branch on that.
+      const rawCenterFunded = a.centerAdvanced + rawGap;
+      const fullDeserved = hasLessonData
+        ? a.studentFunded + rawCenterFunded
+        : null;
+      const covered = hasLessonData ? a.studentFunded : null;
+      const centerFunded = hasLessonData ? rawCenterFunded : null;
       const advances = advancesByUser.get(t.id) ?? 0;
       const payment = paymentByUser.get(t.id) ?? null;
 
@@ -478,7 +511,7 @@ export class SalaryMonthlyService {
         // what students covered. Keeps the shown netToPay equal to what the cron
         // will actually pay for this month.
         const base =
-          isTopUpMonth(month) && hasLessonData ? a.covered + a.gap : a.covered;
+          isTopUpMonth(month) && hasLessonData ? a.accrued + a.gap : a.accrued;
         netToPay = Math.max(0, base - advances);
       }
 
@@ -500,12 +533,13 @@ export class SalaryMonthlyService {
         // `covered`). Both are informational transparency columns.
         carriedIn: a.carriedIn,
         carriedOut: carriedOutMap.get(t.id) ?? 0,
-        gap,
+        centerFunded,
         advances,
         netToPay,
-        // Per-teacher "Markaz qo'shdi" = how much the center fronted for this
-        // teacher this period (X). stillFronted is carried for the totals card
-        // (company-level Y/Z), not shown per row.
+        // `centerAdvanced` is the WRITTEN part of `centerFunded` (X) — what the
+        // center has actually handed over — and with `centerStillFronted` (Z)
+        // it drives the company-level recovery card. For an in-progress month
+        // it is 0 while `centerFunded` already carries the forecast.
         centerAdvanced: a.centerAdvanced,
         centerStillFronted: a.centerStillFronted,
         payment: payment
@@ -532,7 +566,7 @@ export class SalaryMonthlyService {
         covered: s.covered + (r.covered ?? 0),
         carriedIn: s.carriedIn + r.carriedIn,
         carriedOut: s.carriedOut + r.carriedOut,
-        gap: s.gap + (r.gap ?? 0),
+        centerFunded: s.centerFunded + (r.centerFunded ?? 0),
         advances: s.advances + r.advances,
         netToPay: s.netToPay + r.netToPay,
         centerAdvanced: s.centerAdvanced + r.centerAdvanced,

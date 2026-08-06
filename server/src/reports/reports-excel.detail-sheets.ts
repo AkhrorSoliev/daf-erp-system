@@ -143,7 +143,7 @@ export function salariesSheet(wb: Workbook, salaries: any, period: string) {
       `${r.user?.firstName ?? ''} ${r.user?.lastName ?? ''}`.trim(),
       r.covered ?? '—',
       r.carriedIn ?? 0,
-      r.gap ?? '—',
+      r.centerFunded ?? '—',
       r.fullDeserved ?? '—',
       r.advances ?? 0,
       r.netToPay ?? 0,
@@ -158,7 +158,7 @@ export function salariesSheet(wb: Workbook, salaries: any, period: string) {
   const t = salaries?.totals ?? {};
   totalsRow(
     ws,
-    ['Jami', t.covered ?? 0, t.carriedIn ?? 0, t.gap ?? 0, t.fullDeserved ?? 0, t.advances ?? 0, t.netToPay ?? 0, t.carriedOut ?? 0, ''],
+    ['Jami', t.covered ?? 0, t.carriedIn ?? 0, t.centerFunded ?? 0, t.fullDeserved ?? 0, t.advances ?? 0, t.netToPay ?? 0, t.carriedOut ?? 0, ''],
     [2, 3, 4, 5, 6, 7, 8],
   );
   if (lastDataRow >= firstDataRow) dataBar(ws, `G${firstDataRow}:G${lastDataRow}`);

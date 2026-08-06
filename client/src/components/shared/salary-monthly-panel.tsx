@@ -26,7 +26,7 @@ import {
  * One person's row from the monthly salary report.
  *
  * Teacher rows carry the per-lesson split (`fullDeserved` / `covered` /
- * `gap`); non-teaching fixed-salary staff carry a flat `monthly`. Both carry
+ * `centerFunded`); non-teaching fixed-salary staff carry a flat `monthly`. Both carry
  * `advances` and `netToPay`.
  */
 export interface MonthlyUserRow {
@@ -35,7 +35,7 @@ export interface MonthlyUserRow {
   isFixedMonthly?: boolean;
   fullDeserved?: number | null;
   covered?: number | null;
-  gap?: number | null;
+  centerFunded?: number | null;
   /** Non-teaching FIXED_MONTHLY staff only. */
   monthly?: number;
   advances: number;
@@ -212,10 +212,10 @@ export function SalaryMonthlyPanel({ userId, scope }: Props) {
               />
               <MoneyCard
                 label="Markaz qo'shimchasi"
-                value={row.gap}
-                tooltip="Markaz o'z yonidan qo'shishi kerak bo'lgan summa (to'liq ishlangan − o'quvchilar to'lagan). O'quvchi keyin to'lasa kamayadi."
+                value={row.centerFunded}
+                tooltip="Markazning o'z hisobidan qo'shgan (yoki oy yopilgunicha qo'shadigan) qismi. Oy yopilgach bu raqam qolaveradi — o'quvchi keyin to'lasa, pul markazga qaytadi, ustozga qayta yozilmaydi."
                 valueClassName={
-                  (row.gap ?? 0) > 0 ? "text-amber-600 dark:text-amber-400" : ""
+                  (row.centerFunded ?? 0) > 0 ? "text-amber-600 dark:text-amber-400" : ""
                 }
               />
               <MoneyCard
