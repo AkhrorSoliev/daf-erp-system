@@ -45,6 +45,12 @@ interface ApprovedGroup {
   chatId: string;
   title: string;
   branch: { id: number; name: string } | null;
+  /**
+   * This group deliberately watches every branch. Without it the table could
+   * not tell an org-wide chat from one nobody had assigned — both showed "—"
+   * under Filial, and only one of them was a mistake.
+   */
+  receivesAllBranches: boolean;
   isActive: boolean;
   approvedBy: { id: number; firstName: string; lastName: string } | null;
   approvedAt: string | null;
@@ -154,7 +160,44 @@ export function TelegramGroupsClient() {
       }[confirmAction.kind]
     : null;
 
-  const anyPending = approveMutation.isPending || rejectMutation.isPending || unlinkMutation.isPending;
+  /**
+   * Repoint an already-approved group. Two production groups were approved
+   * before a branch was required, so they receive no branch events at all —
+   * without this the only fix was a database script.
+   */
+  const scopeMutation = useMutation({
+    mutationFn: ({
+      id,
+      receivesAllBranches,
+    }: {
+      id: string;
+      receivesAllBranches: boolean;
+    }) =>
+      api
+        .patch(`/telegram-groups/${id}`, {
+          receivesAllBranches,
+          // Clearing the branch is only legal alongside the flag; the server
+          // refuses the state where a group has neither.
+          ...(receivesAllBranches ? {} : { branchId: selectedBranch?.id }),
+        })
+        .then((r) => r.data),
+    onSuccess: (_d, vars) => {
+      toast.success(
+        vars.receivesAllBranches
+          ? "Guruh barcha filiallarni kuzatadi"
+          : "Guruh filialga bog'landi",
+      );
+      queryClient.invalidateQueries({ queryKey: ["telegram-groups", "approved"] });
+    },
+    onError: (e) =>
+      toast.error(getErrorMessage(e, "Guruh sozlamasini o'zgartirib bo'lmadi")),
+  });
+
+  const anyPending =
+    approveMutation.isPending ||
+    rejectMutation.isPending ||
+    unlinkMutation.isPending ||
+    scopeMutation.isPending;
 
   return (
     <div className="space-y-8">
@@ -290,7 +333,15 @@ export function TelegramGroupsClient() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{g.branch?.name ?? "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {g.receivesAllBranches ? (
+                      <Badge variant="secondary">Barcha filiallar</Badge>
+                    ) : g.branch ? (
+                      g.branch.name
+                    ) : (
+                      <Badge variant="destructive">belgilanmagan</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm">
                     {g.approvedBy
                       ? `${g.approvedBy.firstName} ${g.approvedBy.lastName}`
@@ -302,15 +353,39 @@ export function TelegramGroupsClient() {
                       : "—"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setConfirmAction({ kind: "unlink", group: g })}
-                      disabled={anyPending}
-                    >
-                      <Trash2 className="size-4 mr-1" />
-                      Uzish
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      {isCeo && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            scopeMutation.mutate({
+                              id: g.id,
+                              receivesAllBranches: !g.receivesAllBranches,
+                            })
+                          }
+                          disabled={anyPending}
+                          title={
+                            g.receivesAllBranches
+                              ? "Faqat tanlangan filialga bog'lash"
+                              : "Barcha filiallarni kuzatadigan qilish"
+                          }
+                        >
+                          {g.receivesAllBranches
+                            ? "Filialga bog'lash"
+                            : "Barcha filiallar"}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmAction({ kind: "unlink", group: g })}
+                        disabled={anyPending}
+                      >
+                        <Trash2 className="size-4 mr-1" />
+                        Uzish
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

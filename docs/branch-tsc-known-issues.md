@@ -79,6 +79,34 @@ chiqarilgan; egaligi loyiha egasida, **tegilmaydi**.
 - `server/scripts/send-daily-report-now.ts`
 - `server/scripts/verify-monthly-net-profit.ts`
 
+## E toifa — `e90edfe` dan keyin eskirgan skriptlar (2026-08-06 da aniqlandi)
+
+`e90edfe` («Split the monthly salary report by who funded each lesson») oylik
+hisobot `totals` tuzilishini o'zgartirdi: `gap` o'rniga `centerFunded` /
+`centerAdvanced` / `centerStillFronted` / `centerRecovered` keldi. Quyidagi bir
+martalik skriptlar hali eski `totals.gap` ni o'qiydi.
+
+Ular ilgari qorovulga ko'rinmasdi, chunki `tsc` inkremental keshi o'zgarmagan
+fayllarni qayta tekshirmagan; `prisma generate` keshni bekor qilganda chiqdi.
+**Bu 2026-08-06 dagi ish natijasi emas** — nuqson `e90edfe` dan beri mavjud va
+faqat endi ko'rindi.
+
+Tegilmaydi: bular allaqachon yurgizilgan bir martalik diagnostikalar, egaligi
+loyiha egasida. Agar qaytadan kerak bo'lsa, `totals.gap` ni yangi maydonlarga
+almashtirish kifoya.
+
+- `server/scripts/audit-july-clean.ts`
+- `server/scripts/audit-payment-destination.ts`
+- `server/scripts/finalize-june-salary-display.ts`
+- `server/scripts/probe-june-salary-card.ts`
+
+Loyiha egasining hali commit qilinmagan, shu sabab bilan buzuq skriptlari
+(repozitoriyada yo'q, lekin diskda bor):
+
+- `server/scripts/audit-july-teacher-salaries.ts`
+- `server/scripts/diag-gap-vs-collection.ts`
+- `server/scripts/july-teacher-salary-report.ts`
+
 ## E toifa — qo'shimcha (Faza 7 dan keyin)
 
 `@default(1001)` olib tashlangandan keyin `companyId` Prisma'da **majburiy** bo'ldi.
@@ -107,13 +135,13 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **63** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **207** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **65** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **206** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
-## Nega 207 ta «UNREVIEWED» deb qoldirildi
+## Nega 206 ta «UNREVIEWED» deb qoldirildi
 
-Bir o'tirishda 207 ta route'ni toifalash raqamni nolga tushirardi, lekin hech kim
+Bir o'tirishda 200 dan ortiq route'ni toifalash raqamni nolga tushirardi, lekin hech kim
 o'ylab ko'rmagan ishonchli yorliqlar hosil qilardi. Noto'g'ri `COMPANY_WIDE` ni
 o'ylangan `COMPANY_WIDE` dan ajratib bo'lmaydi — va u aynan o'zini ushlashi kerak
 bo'lgan tekshiruvni o'chiradi. Ochiq tan olingan qarz yaxshiroq.
