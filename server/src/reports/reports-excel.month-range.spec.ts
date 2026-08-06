@@ -74,19 +74,19 @@ describe('sumMonthlySalaries', () => {
   const month = (
     m: string,
     covered: number,
-    gap: number,
+    centerFunded: number,
     staff = 0,
   ) => ({
     month: m,
     salaries: {
-      totals: { covered, gap, fullDeserved: covered + gap },
+      totals: { covered, centerFunded, fullDeserved: covered + centerFunded },
       staffTotals: { monthly: staff },
     },
   });
 
   it('applies each month’s own top-up basis', () => {
     // 2026-06 predates the top-up era → contributes `covered` only.
-    // 2026-07 onward → contributes covered + gap.
+    // 2026-07 onward → contributes covered + centerFunded.
     const agg = sumMonthlySalaries([
       month('2026-06', 40_000, 5_000),
       month('2026-07', 60_000, 9_000),
@@ -94,7 +94,7 @@ describe('sumMonthlySalaries', () => {
 
     expect(agg.totals.fullDeserved).toBe(40_000 + 69_000);
     expect(agg.totals.covered).toBe(100_000);
-    expect(agg.totals.gap).toBe(14_000);
+    expect(agg.totals.centerFunded).toBe(14_000);
   });
 
   it('sums staff salary across months', () => {
@@ -107,7 +107,7 @@ describe('sumMonthlySalaries', () => {
 
   it('treats a manual/config-gap month (null split) as zero, not fabricated', () => {
     const agg = sumMonthlySalaries([
-      { month: '2026-05', salaries: { totals: { covered: null, gap: null, fullDeserved: null } } },
+      { month: '2026-05', salaries: { totals: { covered: null, centerFunded: null, fullDeserved: null } } },
       month('2026-07', 60_000, 9_000),
     ]);
     expect(agg.totals.fullDeserved).toBe(69_000);
@@ -116,7 +116,7 @@ describe('sumMonthlySalaries', () => {
 
   it('returns zeros for an empty month list', () => {
     const agg = sumMonthlySalaries([]);
-    expect(agg.totals).toEqual({ fullDeserved: 0, covered: 0, gap: 0 });
+    expect(agg.totals).toEqual({ fullDeserved: 0, covered: 0, centerFunded: 0 });
     expect(agg.staffTotals.monthly).toBe(0);
   });
 });

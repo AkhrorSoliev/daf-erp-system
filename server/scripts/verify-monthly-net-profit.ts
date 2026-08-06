@@ -52,15 +52,24 @@ async function main(prismaClient: PrismaClient) {
     const startDate = `${month}-01`;
     const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
 
+    // `null` = every branch: a CEO caller who has not picked one in the header
+    // switcher. The whole-company figure is what this script verifies.
+    const branchIds = null;
+
     const [recognizedRevenue, sm, pl, outflows, old] = await Promise.all([
       financial.getRecognizedRevenue(COMPANY_ID, {
         start: new Date(Date.UTC(y, m - 1, 1)),
         end: new Date(Date.UTC(y, m, 1)),
+        branchIds,
       }),
       salaryMonthly.getMonthly({ month }, COMPANY_ID, ceo.id),
-      profitLoss.getProfitLoss(COMPANY_ID, { startDate, endDate }),
-      financial.getPeriodOutflows(COMPANY_ID, { startDate, endDate }),
-      financial.getFinancialOverview(COMPANY_ID, { startDate, endDate }),
+      profitLoss.getProfitLoss(COMPANY_ID, { startDate, endDate, branchIds }),
+      financial.getPeriodOutflows(COMPANY_ID, { startDate, endDate, branchIds }),
+      financial.getFinancialOverview(COMPANY_ID, {
+        startDate,
+        endDate,
+        branchIds,
+      }),
     ]);
 
     const np = buildNetProfit(pl, sm, outflows, month, recognizedRevenue);
@@ -75,7 +84,7 @@ async function main(prismaClient: PrismaClient) {
     console.log(`  − Qaytarishlar (refund)          : ${som(np.refunds)}`);
     console.log(`  ═ SOF FOYDA                      : ${som(np.netProfit)}   (marja ${np.netMarginPercent}%)`);
     console.log(`    (memo: write-off ${som(np.memo.writeOffs)}, avans ${som(np.memo.advances)})`);
-    console.log(`    salary.totals: covered=${som(sm.totals.covered)} gap=${som(sm.totals.gap)} fullDeserved=${som(sm.totals.fullDeserved)}`);
+    console.log(`    salary.totals: covered=${som(sm.totals.covered)} markaz=${som(sm.totals.centerFunded)} fullDeserved=${som(sm.totals.fullDeserved)}`);
   }
   console.log('\n  Bu — card/Excel aynan ko‘rsatadigan raqamlar. Read-only, hech narsa o‘zgarmadi.\n');
 }

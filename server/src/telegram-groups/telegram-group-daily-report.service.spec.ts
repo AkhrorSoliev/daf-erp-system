@@ -37,7 +37,7 @@ interface State {
   salaryTotals: {
     fullDeserved: number | null;
     covered: number;
-    gap: number;
+    centerFunded: number;
   } | null;
 }
 
@@ -75,7 +75,7 @@ function defaultState(): State {
     yesterdaySnapshot: { totalDebt: 21_100_000, debtorCount: 46 },
     forecastEnrollments: [],
     ceo: { id: 1 },
-    salaryTotals: { fullDeserved: 40_000_000, covered: 32_000_000, gap: 8_000_000 },
+    salaryTotals: { fullDeserved: 40_000_000, covered: 32_000_000, centerFunded: 8_000_000 },
   };
 }
 
@@ -158,7 +158,7 @@ function makeSalary(state: State) {
       totals: state.salaryTotals ?? {
         fullDeserved: 0,
         covered: 0,
-        gap: 0,
+        centerFunded: 0,
       },
     })),
   };
@@ -426,7 +426,7 @@ describe('TelegramGroupDailyReportService', () => {
 
   it('hides the salary block when getMonthly returns all-zero (config-gap month)', async () => {
     const state = defaultState();
-    state.salaryTotals = { fullDeserved: 0, covered: 0, gap: 0 };
+    state.salaryTotals = { fullDeserved: 0, covered: 0, centerFunded: 0 };
     const service = await buildService(makePrisma(state), makeSalary(state));
 
     const { message: raw } = await service.build(1001);

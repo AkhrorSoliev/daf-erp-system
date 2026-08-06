@@ -61,7 +61,7 @@ export interface MonthlySalaryTotals {
   totals?: {
     fullDeserved?: number | null;
     covered?: number | null;
-    gap?: number | null;
+    centerFunded?: number | null;
   } | null;
   staffTotals?: { monthly?: number | null } | null;
 }
@@ -77,19 +77,22 @@ export interface MonthlySalaryTotals {
  */
 export function sumMonthlySalaries(
   perMonth: { month: string; salaries: MonthlySalaryTotals }[],
-): { totals: { fullDeserved: number; covered: number; gap: number }; staffTotals: { monthly: number } } {
+): {
+  totals: { fullDeserved: number; covered: number; centerFunded: number };
+  staffTotals: { monthly: number };
+} {
   let fullDeserved = 0;
   let covered = 0;
-  let gap = 0;
+  let centerFunded = 0;
   let staffMonthly = 0;
 
   for (const { month, salaries } of perMonth) {
     const t = salaries?.totals ?? {};
     const monthCovered = t.covered ?? 0;
-    const monthGap = t.gap ?? 0;
+    const monthCenter = t.centerFunded ?? 0;
     const monthFull = t.fullDeserved ?? 0;
     covered += monthCovered;
-    gap += monthGap;
+    centerFunded += monthCenter;
     // A manual/config-gap month reports null for the split; it contributes 0
     // rather than a fabricated figure.
     fullDeserved += isTopUpMonth(month) ? monthFull : monthCovered;
@@ -97,7 +100,7 @@ export function sumMonthlySalaries(
   }
 
   return {
-    totals: { fullDeserved, covered, gap },
+    totals: { fullDeserved, covered, centerFunded },
     staffTotals: { monthly: staffMonthly },
   };
 }

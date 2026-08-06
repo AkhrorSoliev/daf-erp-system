@@ -5,10 +5,12 @@ import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * The monthly report resolves a picked month to its payroll period, then per
- * teacher computes covered (live accruals), gap (uncovered billable × rate),
- * fullDeserved = covered + gap, advances (given that month), and a net-to-pay
- * that never double-subtracts a settled payment's advances. Manual/config-gap
- * months (May) report blank (`null`) per-lesson columns.
+ * teacher splits the month's earnings BY FUNDER: `covered` (accruals a student
+ * actually paid for), `centerFunded` (written center top-up accruals PLUS the
+ * still-unsettled billable lessons × rate), and `fullDeserved` = the two added.
+ * The split is computed the same way whether or not the month has been settled
+ * — settlement only moves money from the forecast leg to the written leg.
+ * Manual/config-gap months (May) report blank (`null`) per-lesson columns.
  */
 describe('SalaryMonthlyService', () => {
   let service: SalaryMonthlyService;
@@ -88,7 +90,7 @@ describe('SalaryMonthlyService', () => {
       covered: 0,
       carriedIn: 0,
       carriedOut: 0,
-      gap: 0,
+      centerFunded: 0,
       advances: 0,
       netToPay: 0,
       centerAdvanced: 0,
@@ -123,7 +125,7 @@ describe('SalaryMonthlyService', () => {
     expect(res.staffTotals.netToPay).toBe(5_000_000);
   });
 
-  it('computes covered + gap + fullDeserved for a PERCENTAGE teacher', async () => {
+  it('IN-PROGRESS month: the center leg is the not-yet-settled lessons (forecast)', async () => {
     prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
     prisma.group.findMany.mockResolvedValue([
       { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } }, // perLesson = 20_000
@@ -159,12 +161,118 @@ describe('SalaryMonthlyService', () => {
     const row = res.data[0];
     expect(row.hasLessonData).toBe(true);
     expect(row.covered).toBe(6_000);
-    expect(row.gap).toBe(6_000);
+    expect(row.centerFunded).toBe(6_000);
     expect(row.fullDeserved).toBe(12_000);
     expect(row.netToPay).toBe(12_000); // FULL base (covered + gap) − 0 advances
     expect(res.totals).toEqual(
-      expect.objectContaining({ fullDeserved: 12_000, covered: 6_000, gap: 6_000 }),
+      expect.objectContaining({ fullDeserved: 12_000, covered: 6_000, centerFunded: 6_000 }),
     );
+  });
+
+  /**
+   * The SAME month once the cron has settled it. Phase 0 turned the uncovered
+   * lesson into a written center-funded accrual, so the forecast leg is now 0 —
+   * but the funder split must be IDENTICAL to the in-progress case above.
+   * Counting a written top-up as `covered` is what made a settled month claim
+   * students had paid money they never paid.
+   */
+  it('SETTLED month: the same split, with the center leg now written as accruals', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        salaryType: 'PERCENTAGE',
+        value: 30,
+        effectiveFrom: new Date('2026-05-01'),
+        effectiveTo: null,
+        config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+      },
+    ]);
+    // a1 the student paid for; a2 the center fronted at settlement.
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      {
+        userId: 10010,
+        attendanceId: 'a1',
+        amount: 6_000,
+        creditPeriodDate: null,
+        isCenterTopUp: false,
+        wasCenterTopUp: false,
+      },
+      {
+        userId: 10010,
+        attendanceId: 'a2',
+        amount: 6_000,
+        creditPeriodDate: null,
+        isCenterTopUp: true,
+        wasCenterTopUp: true,
+      },
+    ]);
+    prisma.attendance.findMany.mockResolvedValue([
+      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
+      { id: 'a2', studentId: 20001, groupId: 'g1', date: new Date('2026-07-12') },
+    ]);
+    prisma.attendance.groupBy.mockResolvedValue([
+      { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    const row = res.data[0];
+    // Byte-for-byte the in-progress month's numbers — settlement moved the
+    // center's 6 000 from the forecast leg to the written leg, nothing else.
+    expect(row.covered).toBe(6_000);
+    expect(row.centerFunded).toBe(6_000);
+    expect(row.fullDeserved).toBe(12_000);
+    expect(row.netToPay).toBe(12_000);
+    expect(res.totals).toEqual(
+      expect.objectContaining({
+        covered: 6_000,
+        centerFunded: 6_000,
+        fullDeserved: 12_000,
+      }),
+    );
+  });
+
+  /**
+   * `hasLessonData` decides whether the per-lesson columns render at all. It
+   * used to key off `covered` — which, once that stopped including the center's
+   * money, would blank out a teacher whose whole month the center funded.
+   */
+  it('SETTLED month funded ENTIRELY by the center still reports its columns', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      {
+        userId: 10010,
+        attendanceId: 'a1',
+        amount: 6_000,
+        creditPeriodDate: null,
+        isCenterTopUp: true,
+        wasCenterTopUp: true,
+      },
+    ]);
+    prisma.attendance.findMany.mockResolvedValue([
+      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    const row = res.data[0];
+    expect(row.hasLessonData).toBe(true);
+    expect(row.covered).toBe(0); // students paid nothing
+    expect(row.centerFunded).toBe(6_000);
+    expect(row.fullDeserved).toBe(6_000);
+    expect(row.netToPay).toBe(6_000);
   });
 
   it('exposes carriedIn (part of covered) and carriedOut per teacher', async () => {
@@ -225,7 +333,7 @@ describe('SalaryMonthlyService', () => {
 
     const row = res.data[0];
     expect(row.fullDeserved).toBe(6_000); // covered only — no top-up before July
-    expect(row.gap).toBe(0); // hidden for pre-July months
+    expect(row.centerFunded).toBe(0); // hidden for pre-July months
     expect(row.netToPay).toBe(6_000); // COVERED base − 0 advances (no top-up)
   });
 
@@ -307,7 +415,7 @@ describe('SalaryMonthlyService', () => {
     expect(row.hasLessonData).toBe(false);
     expect(row.fullDeserved).toBeNull();
     expect(row.covered).toBeNull();
-    expect(row.gap).toBeNull();
+    expect(row.centerFunded).toBeNull();
     expect(row.netToPay).toBe(20_840_343); // the entered manual amount
     expect(row.payment?.status).toBe('CALCULATED');
   });
@@ -359,7 +467,7 @@ describe('SalaryMonthlyService', () => {
 
     const row = res.data[0];
     expect(row.isFixedMonthly).toBe(true);
-    expect(row.gap).toBeNull(); // no fabricated per-lesson gap
+    expect(row.centerFunded).toBeNull(); // no fabricated per-lesson gap
     expect(row.hasLessonData).toBe(false);
   });
 
@@ -412,6 +520,12 @@ describe('SalaryMonthlyService', () => {
     expect(res.totals.centerStillFronted).toBe(6_000);
     // recovered (Y) = X − Z = 6_000 (a3, which was fronted then paid back)
     expect(res.totals.centerRecovered).toBe(6_000);
+    // A RECOVERED top-up stays on the center's leg for the month it funded: the
+    // center did pay the teacher then, and getting the money back later is a
+    // separate cash event (the X/Y/Z card). Only a1 was ever student money.
+    expect(row.covered).toBe(6_000);
+    expect(row.centerFunded).toBe(12_000);
+    expect(row.fullDeserved).toBe(18_000);
   });
 
   it('BR-09: tops up a committed student but withholds a new student below the threshold', async () => {
@@ -444,7 +558,7 @@ describe('SalaryMonthlyService', () => {
     const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
 
     // Only the committed student's uncovered lesson becomes a gap.
-    expect(res.data[0].gap).toBe(6_000);
+    expect(res.data[0].centerFunded).toBe(6_000);
   });
 
   it('the gap sweep includes ABSENT (a held lesson earns the teacher)', async () => {
@@ -488,7 +602,7 @@ describe('SalaryMonthlyService', () => {
 
     const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
 
-    expect(res.data[0].gap).toBe(6_000); // only 07-05, not 07-20
+    expect(res.data[0].centerFunded).toBe(6_000); // only 07-05, not 07-20
   });
 
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {

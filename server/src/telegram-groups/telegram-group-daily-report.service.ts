@@ -27,7 +27,7 @@ import {
  *   🎓 Bugungi o'quv jarayoni — lessons held + attendance breakdown
  *   📌 Hozirgi holat        — active students + debt (with day-over-day ▲/▼)
  *   📅 Oy boshidan          — MTD income / expense / net + lesson collection %
- *   💵 Ustozlar oyligi      — deserved / covered / center top-up (gap), MTD
+ *   💵 Ustozlar oyligi      — deserved / students-paid / center-funded, MTD
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
  * The day-over-day debt delta reads the most recent PRIOR `DailyFinancialSnapshot`
@@ -47,7 +47,9 @@ import {
  *    whole month. It answers "are we on track", which the held-lessons ratio
  *    cannot — that one can read 50% on the 5th. Same pair of figures the
  *    /payments/overview income drill-down shows, so the two cannot disagree.
- *  - "Markaz qo'shimchasi" = SalaryMonthly `gap` = fullDeserved − covered.
+ *  - "Markaz qo'shimchasi" = SalaryMonthly `centerFunded` — the center's own
+ *    leg of the month: top-up accruals it has already written PLUS the lessons
+ *    it still has to front. It does NOT drop to 0 once the month is settled.
  */
 @Injectable()
 export class TelegramGroupDailyReportService {
@@ -465,7 +467,7 @@ export class TelegramGroupDailyReportService {
       lines.push(`💵 <b>Ustozlar oyligi (oy boshidan)</b>`);
       lines.push(`• To'liq ishlangan: <b>${formatSum(salary.fullDeserved)}</b>`);
       lines.push(`• O'quvchilar to'lagan: <b>${formatSum(salary.covered)}</b>`);
-      lines.push(`• 🏛 Markaz qo'shimchasi: <b>${formatSum(salary.gap)}</b>`);
+      lines.push(`• 🏛 Markaz qo'shimchasi: <b>${formatSum(salary.centerFunded)}</b>`);
     }
 
     // 💼 Xodimlar oyligi — non-teaching fixed-salary staff (independent of the
@@ -775,14 +777,14 @@ export class TelegramGroupDailyReportService {
       if (
         totals.fullDeserved === 0 &&
         totals.covered === 0 &&
-        totals.gap === 0
+        totals.centerFunded === 0
       ) {
-        return { fullDeserved: null, covered: 0, gap: 0, staffNet };
+        return { fullDeserved: null, covered: 0, centerFunded: 0, staffNet };
       }
       return {
         fullDeserved: totals.fullDeserved,
         covered: totals.covered,
-        gap: totals.gap,
+        centerFunded: totals.centerFunded,
         staffNet,
       };
     } catch (err: any) {
@@ -804,7 +806,7 @@ export interface DailySnapshotData {
 interface SalaryTopUp {
   fullDeserved: number | null;
   covered: number;
-  gap: number;
+  centerFunded: number;
   /** Net payable to non-teaching FIXED_MONTHLY staff this month (Σ staff netToPay). */
   staffNet: number;
 }
