@@ -112,6 +112,8 @@ export class TransactionsService {
       salaryPaymentId: string;
       companyId: number;
       performedById?: number;
+      cashAccountId?: string;
+      description?: string;
     },
     tx?: Prisma.TransactionClient,
   ) {

@@ -25,6 +25,7 @@ import { SalaryMatrixQueryDto } from './dto/salary-matrix-query.dto';
 import { SalaryOverviewQueryDto } from './dto/salary-overview-query.dto';
 import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { BatchPayDto } from './dto/batch-pay.dto';
+import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
 import { parseTashkentDateStart } from './shared/resolve-current-period';
 import { CurrentUser, Roles, BranchScope } from '../common/decorators';
@@ -402,6 +403,45 @@ export class SalaryController {
         ? parseTashkentDateStart(dto.asOfDate)
         : undefined,
     });
+  }
+
+  /**
+   * What a month-wide settle would close, for the confirmation dialog: every
+   * still-unpaid payroll row of the month, its total, and the branches whose
+   * kassa the money leaves. Read-only.
+   *
+   * A dedicated endpoint rather than a reuse of `/salary/monthly`: that table
+   * shows ONE payment per employee, and a re-calculated month legitimately
+   * carries several rows per person (June 2026 has two for six teachers). The
+   * dialog must list exactly what it is about to settle.
+   *
+   * Declared before the `:id` routes — Nest matches in declaration order, so a
+   * literal segment has to come first if a parameterised sibling is ever added.
+   */
+  @Get('payments/settle-month/preview')
+  @Roles('CEO')
+  previewSettleMonth(
+    @Query('month') month: string | undefined,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.salaryService.previewSettleMonth(month, companyId, userId);
+  }
+
+  /**
+   * Mark a whole month's payroll PAID — for salaries handed over OUTSIDE the
+   * system at the amounts the system had already calculated. CEO-only:
+   * irreversible and month-wide. A Branch Director still settles a single
+   * employee through `POST /salary/payments/:id/pay`.
+   */
+  @Post('payments/settle-month')
+  @Roles('CEO')
+  settleMonth(
+    @Body() dto: SettleMonthDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.salaryService.settleMonth(dto, companyId, userId);
   }
 
   @Patch('payments/:id/approve')

@@ -19,6 +19,8 @@ import {
 } from './salary-monthly.service';
 import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryPaymentService } from './salary-payment.service';
+import { SalarySettleMonthService } from './salary-settle-month.service';
+import { SettleMonthDto } from './dto/settle-month.dto';
 
 @Injectable()
 export class SalaryService {
@@ -30,6 +32,7 @@ export class SalaryService {
     private monthly: SalaryMonthlyService,
     private calculation: SalaryCalculationService,
     private payment: SalaryPaymentService,
+    private settleMonthService: SalarySettleMonthService,
   ) {}
 
   // Config
@@ -162,5 +165,17 @@ export class SalaryService {
     performedById: number,
   ) {
     return this.payment.batchPay(params, performedById);
+  }
+
+  // Month-wide settle for payroll handed over outside the system.
+  previewSettleMonth(
+    month: string | undefined,
+    companyId: number,
+    performedById: number,
+  ) {
+    return this.settleMonthService.preview(month, companyId, performedById);
+  }
+  settleMonth(dto: SettleMonthDto, companyId: number, performedById: number) {
+    return this.settleMonthService.settle(dto, companyId, performedById);
   }
 }
