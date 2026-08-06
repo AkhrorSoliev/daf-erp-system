@@ -224,6 +224,40 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Lessons — attendance and the three modules that manipulate the same ' +
+      'lessons. All four resolve through `assertCallerMayTouchGroup`: a PURE ' +
+      'teacher by group assignment (the stronger test — being in the branch ' +
+      'does not entitle you to another teacher\'s register), everyone else by ' +
+      'the group\'s branch. Attendance alone had this rule, privately, so ' +
+      'cancellations, reschedules and planned absences each shipped checking ' +
+      '`companyId` and stopping. Cancelling was the worst of them: it flips ' +
+      'attendance to EXCUSED, reverses the LESSON_CONSUMPTION, restores prepaid ' +
+      'lessons and reverses the teacher\'s SalaryAccrual — real money in a ' +
+      'branch the caller cannot even view.',
+    routes: [
+      'GET /attendance/:groupId/calendar',
+      'GET /attendance/:groupId/date/:date',
+      'GET /attendance/:groupId/dates',
+      'GET /attendance/:groupId/lesson-sequence',
+      'GET /attendance/:groupId/stats',
+      'POST /attendance/:groupId/date/:date',
+      'POST /attendance/:groupId/qr-session/rotate',
+      'POST /attendance/:groupId/qr-session/start',
+      'POST /attendance/:groupId/qr-session/stop',
+      'GET /lesson-cancellations',
+      'POST /lesson-cancellations',
+      'DELETE /lesson-cancellations/:id',
+      'GET /lesson-reschedules',
+      'POST /lesson-reschedules',
+      'PATCH /lesson-reschedules/:id',
+      'DELETE /lesson-reschedules/:id',
+      'POST /planned-absences/:groupId/date/:date',
+      'DELETE /planned-absences/:id',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -285,14 +319,11 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /groups/:id',
   'DELETE /holidays/:id',
   'DELETE /lead-sources/:id',
-  'DELETE /lesson-cancellations/:id',
-  'DELETE /lesson-reschedules/:id',
   'DELETE /lesson-teacher-overrides/:id',
   'DELETE /mock-exam-sections/:id',
   'DELETE /mock-exam-subjects/:id',
   'DELETE /notifications/devices',
   'DELETE /notifications/push/unsubscribe',
-  'DELETE /planned-absences/:id',
   'DELETE /rooms/:id',
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/ai-chat/:id',
@@ -305,11 +336,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /archive/:entityType',
   'GET /archive/:entityType/:id',
   'GET /archive/counts',
-  'GET /attendance/:groupId/calendar',
-  'GET /attendance/:groupId/date/:date',
-  'GET /attendance/:groupId/dates',
-  'GET /attendance/:groupId/lesson-sequence',
-  'GET /attendance/:groupId/stats',
   'GET /branches',
   'GET /branches/:id',
   'GET /branches/:id/readiness',
@@ -340,8 +366,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /lead-sources/filter',
   'GET /leads/:id/hover-summary',
   'GET /leads/by-student/:studentId',
-  'GET /lesson-cancellations',
-  'GET /lesson-reschedules',
   'GET /lesson-reschedules/available-rooms',
   'GET /lesson-teacher-overrides',
   'GET /mock-exam-sections',
@@ -402,7 +426,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /holidays/:id/status',
   'PATCH /lead-sources/:id',
   'PATCH /leads/reorder',
-  'PATCH /lesson-reschedules/:id',
   'PATCH /mock-exam-sections/:id',
   'PATCH /mock-exam-sections/reorder',
   'PATCH /mock-exam-subjects/:id',
@@ -422,10 +445,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /users/password',
   'PATCH /users/profile',
   'POST /archive/:entityType/:id/restore',
-  'POST /attendance/:groupId/date/:date',
-  'POST /attendance/:groupId/qr-session/rotate',
-  'POST /attendance/:groupId/qr-session/start',
-  'POST /attendance/:groupId/qr-session/stop',
   'POST /branches',
   'POST /call-logs',
   'POST /comments',
@@ -436,15 +455,12 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /holidays',
   'POST /lead-sources',
   'POST /leads',
-  'POST /lesson-cancellations',
-  'POST /lesson-reschedules',
   'POST /mock-exam-sections',
   'POST /mock-exams/:examId/recalculate-ranks',
   'POST /mock-exams/:examId/scores/bulk',
   'POST /mock-exams/:examId/subjects',
   'POST /notifications/devices',
   'POST /notifications/push/subscribe',
-  'POST /planned-absences/:groupId/date/:date',
   'POST /rooms',
   'POST /student-exit-reasons',
   'POST /student-portal/ai-chat',
@@ -477,4 +493,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 187;
+export const UNREVIEWED_BUDGET = 169;

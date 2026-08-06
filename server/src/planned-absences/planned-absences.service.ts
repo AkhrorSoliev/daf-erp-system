@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { EnrollmentStatus, PlannedAbsenceKind } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { AttendanceValidationService } from '../attendance/attendance-validation.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { UpsertPlannedAbsenceDto } from './dto/upsert-planned-absence.dto';
@@ -51,6 +52,17 @@ export class PlannedAbsencesService {
         'Sababli (uzrli) belgilash uchun sabab kiritilishi shart',
       );
     }
+
+    // `validateLessonDate` below checks the group exists in this company and
+    // that the date is a real, non-cancelled lesson — it says nothing about
+    // whether THIS caller may act on that group. A pre-mark seeds the
+    // attendance form, so an unguarded one lets a director stage another
+    // branch's register.
+    //
+    // Placed after the body validation, not before: a malformed request is
+    // rejected without touching the database at all, and the group named in a
+    // malformed request was never going to be acted on.
+    await assertCallerMayTouchGroup(this.prisma, userId, roles, groupId);
 
     // 1. Reuse the attendance lesson-date validation. The caller is always
     // CEO / Branch Director / Administrator (controller @Roles), so the lesson
@@ -171,7 +183,12 @@ export class PlannedAbsencesService {
     return planned;
   }
 
-  async remove(id: string, userId: number, companyId: number) {
+  async remove(
+    id: string,
+    userId: number,
+    companyId: number,
+    roles: string[] = [],
+  ) {
     // Only an unconsumed pre-mark can be removed — once the lesson's attendance
     // was finalized the row is consumed and the real Attendance row owns the
     // outcome.
@@ -188,6 +205,13 @@ export class PlannedAbsencesService {
     if (!planned) {
       throw new NotFoundException('Oldindan belgilash topilmadi');
     }
+    // Gated on the pre-mark's own group — the same authority as creating it.
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      userId,
+      roles,
+      planned.groupId,
+    );
 
     await this.prisma.plannedAbsence.delete({ where: { id: planned.id } });
 

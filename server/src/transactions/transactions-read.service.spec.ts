@@ -242,7 +242,7 @@ describe('TransactionsReadService', () => {
   describe('getBalanceSummary', () => {
     const ts = (s: string) => new Date(`${s}T00:00:00Z`);
 
-    it('captures firstNegativeDate and counts unpaid lessons when student is in debt', async () => {
+    it('captures debtSinceDate and counts unpaid lessons when student is in debt', async () => {
       prisma.student.findFirst.mockResolvedValue({
         id: 10260,
         balance: -253000,
@@ -302,15 +302,60 @@ describe('TransactionsReadService', () => {
         currentBalance: -253000,
         perLessonCost: 34500,
         lastPaymentDate: ts('2026-05-05'),
-        firstNegativeDate: ts('2026-05-20'),
-        // The deduction at 2026-05-20 took balance below zero. The
+        debtSinceDate: ts('2026-05-20'),
+        // The deduction at 2026-05-20 took the balance below zero; the
         // consumption at that same instant and the one on 05-21 both fall
-        // on/after firstNegativeDate.
+        // inside the spell.
         unpaidLessonsCount: 2,
       });
     });
 
-    it('returns null firstNegativeDate when the balance has never been negative', async () => {
+    it('restarts the debt spell when a payment clears the balance', async () => {
+      // The old walk latched on the FIRST dip and never let go, so a student
+      // who paid off their debt and later fell one lesson short still read
+      // "25 ta dars to'lovsiz". Only the CURRENT spell counts.
+      prisma.student.findFirst.mockResolvedValue({ id: 10460, balance: -33325 });
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: -33333,
+          createdAt: ts('2026-06-06'),
+        },
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: -66666,
+          createdAt: ts('2026-06-09'),
+        },
+        {
+          type: 'PAYMENT',
+          amount: 400000,
+          balanceAfter: 333334,
+          createdAt: ts('2026-06-25'),
+        },
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: 300001,
+          createdAt: ts('2026-06-27'),
+        },
+        {
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          balanceAfter: -33325,
+          createdAt: ts('2026-08-04'),
+        },
+      ]);
+      prisma.enrollment.findFirst.mockResolvedValue(null);
+
+      const res = await service.getBalanceSummary(10460, 1001);
+
+      expect(res.debtSinceDate).toEqual(ts('2026-08-04'));
+      expect(res.unpaidLessonsCount).toBe(1);
+    });
+
+    it('returns null debtSinceDate when the balance has never been negative', async () => {
       prisma.student.findFirst.mockResolvedValue({
         id: 10001,
         balance: 155000,
@@ -341,7 +386,7 @@ describe('TransactionsReadService', () => {
 
       const res = await service.getBalanceSummary(10001, 1001);
 
-      expect(res.firstNegativeDate).toBeNull();
+      expect(res.debtSinceDate).toBeNull();
       expect(res.unpaidLessonsCount).toBe(0);
       expect(res.lessonsAttended).toBe(1);
       expect(res.totalPaid).toBe(500000);

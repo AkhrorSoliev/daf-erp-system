@@ -27,9 +27,31 @@ describe('LessonReschedulesService', () => {
       },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       enrollment: { findFirst: jest.fn() },
+      // A reschedule rewrites a group's timetable, so the caller is now checked
+      // against that group's branch (`assertCallerMayTouchGroup`). A CEO spans
+      // every branch — the shape these cases assume.
+      groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
     };
     prisma = {
       group: { findFirst: jest.fn(), findMany: jest.fn() },
+      // A reschedule rewrites a group's timetable, so the caller is now checked
+      // against that group's branch (`assertCallerMayTouchGroup`). A CEO spans
+      // every branch — the shape these cases assume.
+      groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
       room: { findMany: jest.fn() },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
@@ -340,7 +362,9 @@ describe('LessonReschedulesService', () => {
         'rs-1',
         { newRoomId: 'room-x', reason: 'updated note' },
         1,
-        null
+        // A real caller id: the branch guard resolves the acting user, and an
+        // unidentified one is refused on purpose (fail-closed).
+        99,
       );
 
       const updateArgs = tx.lessonReschedule.update.mock.calls[0][0];

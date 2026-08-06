@@ -135,8 +135,8 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **84** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **187** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **102** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **169** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
@@ -181,3 +181,30 @@ Qolgan 32 tasi **to'g'ri himoyalangan** ekan — kassa hisoblari
 (`assertBranchWritable` ikkala yo'nalishda), qarzdorlar, qarz kechirishlar.
 Ular endi manifestda o'z mexanizmi bilan yozilgan, ya'ni keyingi o'quvchi
 qaytadan tekshirmaydi.
+
+## Audit 2-bosqich — dars route'lari (2026-08-06)
+
+Davomatning o'zi **himoyalangan** edi (`verifyGroupAccess`, 9 ta route). Lekin
+**aynan o'sha darslarni o'zgartiradigan uchta qo'shni modul** faqat `companyId`
+ni tekshirardi:
+
+| Modul | Nima qila olardi |
+|---|---|
+| `lesson-cancellations` | Boshqa filial darsini bekor qilish. Bu **billing'ni qaytaradi**: davomat EXCUSED ga aylanadi, `LESSON_CONSUMPTION` bekor qilinadi, prepaid darslar tiklanadi, ustozning `SalaryAccrual` i qaytariladi |
+| `lesson-reschedules` | Boshqa filial darsining sanasi, xonasi va o'qituvchisini o'zgartirish |
+| `planned-absences` | Boshqa filial guruhida o'quvchini oldindan belgilash (davomat formasini oldindan to'ldiradi) |
+
+Sabab: qoida `attendance.controller.ts` ichida **xususiy** edi. Endi
+`common/auth/group-branch-scope.ts` da — `assertCallerMayTouchGroup`, va
+to'rtala modul ham shundan o'qiydi.
+
+**Qoidaning ikki yarmi ataylab boshqacha:**
+- **Sof o'qituvchi** — guruhga biriktirilganligi bo'yicha. Bu **kuchliroq** test:
+  filialda bo'lish boshqa o'qituvchining jurnaliga huquq bermaydi.
+- **Qolganlar** (Admin, BD, CEO) — **filial** bo'yicha. Admin o'z filialining
+  hamma guruhi bilan ishlaydi, guruhma-guruh biriktirish uni o'z ishidan
+  to'sib qo'yardi.
+
+Ikkalasini «soddalashtirish» oson, shuning uchun `group-branch-scope.spec.ts`
+har ikkalasini alohida qotiradi (jumladan: o'qituvchi **va** BD roli birga
+bo'lgan holat — u sof o'qituvchi emas, ya'ni filial yo'lidan ketadi).
