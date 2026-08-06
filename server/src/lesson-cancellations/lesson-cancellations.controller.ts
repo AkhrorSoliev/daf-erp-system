@@ -46,6 +46,10 @@ export class LessonCancellationsController {
       from,
       to,
       teacherIdScope: isTeacherOnly ? userId : undefined,
+      // Non-teachers were unconstrained: the teacher branch below kept a
+      // teacher inside their own groups, and everyone above them read any
+      // branch's cancellations.
+      caller: { userId, roles },
     });
   }
 
@@ -55,8 +59,9 @@ export class LessonCancellationsController {
     @Body() dto: CreateLessonCancellationDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.create(dto, companyId, userId);
+    return this.service.create(dto, companyId, userId, roles);
   }
 
   @Delete(':id')
@@ -65,7 +70,8 @@ export class LessonCancellationsController {
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.remove(id, companyId, userId);
+    return this.service.remove(id, companyId, userId, roles);
   }
 }

@@ -7,6 +7,7 @@ import {
 import { AttendanceStatus, GroupStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonRescheduleDto } from './dto/create-lesson-reschedule.dto';
@@ -70,8 +71,23 @@ export class LessonReschedulesService {
   async findByGroup(
     groupId: string,
     companyId: number,
-    options?: { from?: string; to?: string; teacherIdScope?: number },
+    options?: {
+      from?: string;
+      to?: string;
+      teacherIdScope?: number;
+      caller?: { userId: number; roles: string[] };
+    },
   ) {
+    // Only the teacher branch below was constrained; everyone above a teacher
+    // could read any branch's reschedules by naming a group id.
+    if (options?.teacherIdScope === undefined && options?.caller) {
+      await assertCallerMayTouchGroup(
+        this.prisma,
+        options.caller.userId,
+        options.caller.roles,
+        groupId,
+      );
+    }
     if (options?.teacherIdScope !== undefined) {
       const isAssigned = await this.prisma.groupTeacher.findFirst({
         where: { groupId, teacherId: options.teacherIdScope },
@@ -121,11 +137,13 @@ export class LessonReschedulesService {
     dto: CreateLessonRescheduleDto,
     companyId: number,
     scheduledById: number,
+    roles: string[] = [],
   ) {
     const reschedule = await this.createInTransaction(
       dto,
       companyId,
       scheduledById,
+      roles,
     );
     // Fire-and-forget event after the tx commits — the listener handles
     // Telegram + 4-channel teacher notifications. Errors there are
@@ -149,6 +167,7 @@ export class LessonReschedulesService {
     dto: CreateLessonRescheduleDto,
     companyId: number,
     scheduledById: number,
+    roles: string[] = [],
   ) {
     const originalDate = this.parseDate(dto.originalDate);
     const newDate = this.parseDate(dto.newDate);
@@ -182,6 +201,12 @@ export class LessonReschedulesService {
 
     return this.prisma.$transaction(
       async (tx) => {
+        // A reschedule rewrites a group's timetable — its date, room and
+        // teacher — and through attendance that reaches billing. Checked here
+        // rather than before the transaction because the group is read anyway
+        // and a refusal rolls the whole thing back.
+        await assertCallerMayTouchGroup(tx, scheduledById, roles, dto.groupId);
+
         const group = await tx.group.findFirst({
           where: { id: dto.groupId, companyId, deletedAt: null },
           select: {
@@ -435,6 +460,7 @@ export class LessonReschedulesService {
     dto: UpdateLessonRescheduleDto,
     companyId: number,
     userId: number,
+    roles: string[] = [],
   ) {
     // Notify only if a user-visible field actually changes — silent edits
     // to `reason` shouldn't spam students or teachers with "schedule
@@ -461,6 +487,10 @@ export class LessonReschedulesService {
           },
         });
         if (!existing) throw new NotFoundException("Ko'chirish topilmadi");
+
+        // Checked here rather than before the transaction: the row is already
+        // being read, and a refusal rolls everything back anyway.
+        await assertCallerMayTouchGroup(tx, userId, roles, existing.groupId);
 
         const group = await tx.group.findFirst({
           where: { id: existing.groupId, companyId, deletedAt: null },
@@ -663,11 +693,17 @@ export class LessonReschedulesService {
    * attendance on either date. Admins must re-take attendance manually
    * on whichever date the lesson actually happened. UI explains this.
    */
-  async remove(id: string, companyId: number, userId: number) {
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    roles: string[] = [],
+  ) {
     const existing = await this.prisma.lessonReschedule.findFirst({
       where: { id, companyId, deletedAt: null },
     });
     if (!existing) throw new NotFoundException('Ko\'chirish topilmadi');
+    await assertCallerMayTouchGroup(this.prisma, userId, roles, existing.groupId);
     return this.prisma.$transaction(async (tx) => {
       const row = await tx.lessonReschedule.update({
         where: { id },

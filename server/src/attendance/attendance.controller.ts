@@ -9,7 +9,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { assertCallerInBranch } from '../common/auth/branch-scope';
+import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { AttendanceService } from './attendance.service';
 import { QrAttendanceService } from './qr-attendance.service';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
@@ -35,46 +35,19 @@ export class AttendanceController {
   ) {}
 
   /**
-   * Verify the caller may touch this group's attendance.
+   * Verify the caller may touch this group's lessons.
    *
-   * Attendance is a money path: saving it deducts from student balances and
-   * writes teacher accruals. Only pure teachers were ever checked here, so an
-   * Administrator or Branch Director of one branch could take attendance for
-   * ANOTHER branch's group — billing its students and paying its teacher.
-   *
-   * A pure teacher is checked by assignment, which is the stronger test (since
-   * the group-teacher guard, a teacher can only be assigned inside their own
-   * branch). Everyone else is checked by branch; a CEO spans all of them.
+   * The rule itself lives in `common/auth/group-branch-scope.ts` — it used to
+   * be private to this controller, and the three sibling modules that
+   * manipulate the SAME lessons (cancellations, reschedules, planned absences)
+   * each shipped without it.
    */
-  private async verifyGroupAccess(
-    groupId: string,
-    roles: string[],
-    userId: number,
-  ) {
-    const isTeacherOnly =
-      roles.length > 0 && roles.every((r) => r === 'Teacher');
-
-    if (isTeacherOnly) {
-      const isAssigned = await this.prisma.groupTeacher.findUnique({
-        where: { groupId_teacherId: { groupId, teacherId: userId } },
-      });
-      if (!isAssigned) {
-        throw new ForbiddenException('Siz bu guruhga biriktirilmagansiz');
-      }
-      return;
-    }
-
-    const group = await this.prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
-      select: { branchId: true },
-    });
-    if (!group) {
-      throw new NotFoundException('Guruh topilmadi');
-    }
-    await assertCallerInBranch(
+  private verifyGroupAccess(groupId: string, roles: string[], userId: number) {
+    return assertCallerMayTouchGroup(
       this.prisma,
       userId,
-      group.branchId,
+      roles,
+      groupId,
       "Bu guruh boshqa filialga tegishli — davomat bilan ishlash huquqingiz yo'q",
     );
   }

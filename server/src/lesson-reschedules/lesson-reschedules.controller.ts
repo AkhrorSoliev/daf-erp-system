@@ -41,6 +41,7 @@ export class LessonReschedulesController {
       from,
       to,
       teacherIdScope: isTeacherOnly ? userId : undefined,
+      caller: { userId, roles },
     });
   }
 
@@ -59,8 +60,9 @@ export class LessonReschedulesController {
     @Body() dto: CreateLessonRescheduleDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.create(dto, companyId, userId);
+    return this.service.create(dto, companyId, userId, roles);
   }
 
   @Patch(':id')
@@ -70,8 +72,9 @@ export class LessonReschedulesController {
     @Body() dto: UpdateLessonRescheduleDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.update(id, dto, companyId, userId);
+    return this.service.update(id, dto, companyId, userId, roles);
   }
 
   @Delete(':id')
@@ -80,7 +83,8 @@ export class LessonReschedulesController {
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.remove(id, companyId, userId);
+    return this.service.remove(id, companyId, userId, roles);
   }
 }

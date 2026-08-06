@@ -11,6 +11,10 @@ describe('PlannedAbsencesService', () => {
   let prisma: {
     enrollment: { findFirst: jest.Mock };
     attendance: { findUnique: jest.Mock };
+    // Read by the group-branch guard the pre-mark now goes through.
+    group: { findFirst: jest.Mock };
+    groupTeacher: { findUnique: jest.Mock };
+    user: { findFirst: jest.Mock };
     plannedAbsence: {
       upsert: jest.Mock;
       findFirst: jest.Mock;
@@ -31,6 +35,18 @@ describe('PlannedAbsencesService', () => {
         upsert: jest.fn(),
         findFirst: jest.fn(),
         delete: jest.fn(),
+      },
+      // A pre-mark seeds the attendance form, so the caller is now checked
+      // against the group's branch (`assertCallerMayTouchGroup`). A CEO spans
+      // every branch — the shape these cases assume.
+      group: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
       },
     };
     validation = {

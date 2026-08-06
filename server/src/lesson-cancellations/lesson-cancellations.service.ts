@@ -7,6 +7,7 @@ import {
 import { AttendanceStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
@@ -56,8 +57,24 @@ export class LessonCancellationsService {
   async findByGroup(
     groupId: string,
     companyId: number,
-    options?: { from?: string; to?: string; teacherIdScope?: number },
+    options?: {
+      from?: string;
+      to?: string;
+      teacherIdScope?: number;
+      caller?: { userId: number; roles: string[] };
+    },
   ) {
+    // A non-teacher was unconstrained here: the teacher branch below kept a
+    // teacher inside their own groups, and everyone above them could read any
+    // branch's cancellations by naming a group id.
+    if (options?.teacherIdScope === undefined && options?.caller) {
+      await assertCallerMayTouchGroup(
+        this.prisma,
+        options.caller.userId,
+        options.caller.roles,
+        groupId,
+      );
+    }
     if (options?.teacherIdScope !== undefined) {
       const isAssigned = await this.prisma.groupTeacher.findFirst({
         where: { groupId, teacherId: options.teacherIdScope },
@@ -115,7 +132,19 @@ export class LessonCancellationsService {
     dto: CreateLessonCancellationDto,
     companyId: number,
     cancelledById: number,
+    roles: string[] = [],
   ) {
+    // Cancelling a lesson REVERSES its billing: attendance flips to EXCUSED,
+    // the `LESSON_CONSUMPTION` is reversed, prepaid lessons are restored and
+    // the teacher's `SalaryAccrual` is undone. Doing that to another branch's
+    // lesson is real money in books the caller cannot even read.
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      cancelledById,
+      roles,
+      dto.groupId,
+    );
+
     const date = this.parseDate(dto.date);
 
     const cancellation = await this.prisma.$transaction(
@@ -298,13 +327,26 @@ export class LessonCancellationsService {
    * admins must re-take the attendance manually if the lesson actually
    * happened. This avoids surprising auto-rebill on a typo correction.
    */
-  async remove(id: string, companyId: number, userId: number) {
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    roles: string[] = [],
+  ) {
     const cancellation = await this.prisma.lessonCancellation.findFirst({
       where: { id, companyId, deletedAt: null },
     });
     if (!cancellation) {
       throw new NotFoundException('Bekor qilingan dars topilmadi');
     }
+    // Gated on the cancellation's own group — deleting the record is what lets
+    // the lesson be re-taken, so it is the same authority as creating it.
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      userId,
+      roles,
+      cancellation.groupId,
+    );
 
     return this.prisma.$transaction(async (tx) => {
       await tx.lessonCancellation.update({

@@ -33,6 +33,17 @@ describe('LessonCancellationsService', () => {
         update: jest.fn(),
       },
       enrollment: { findFirst: jest.fn() },
+      // Cancelling reverses a lesson's billing, so the caller is now checked
+      // against the GROUP's branch (`assertCallerMayTouchGroup`). A CEO spans
+      // every branch, which is the shape these existing cases assume.
+      groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
     };
     prisma = {
       ...tx,
@@ -272,6 +283,10 @@ describe('LessonCancellationsService', () => {
         groupId: 'group-1',
         date: new Date('2026-04-15T00:00:00Z'),
       });
+      // Deleting the record is what lets the lesson be re-taken, so it carries
+      // the same authority as creating the cancellation — and therefore the
+      // same group lookup.
+      tx.group.findFirst.mockResolvedValue({ branchId: 1 });
       tx.lessonCancellation.update.mockResolvedValue({});
 
       await service.remove('cancel-1', 1, 99);

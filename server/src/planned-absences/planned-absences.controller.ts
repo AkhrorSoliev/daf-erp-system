@@ -37,7 +37,8 @@ export class PlannedAbsencesController {
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.plannedAbsences.remove(id, userId, companyId);
+    return this.plannedAbsences.remove(id, userId, companyId, roles);
   }
 }

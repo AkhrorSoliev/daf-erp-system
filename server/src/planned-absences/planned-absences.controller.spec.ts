@@ -70,8 +70,12 @@ describe('PlannedAbsencesController — role guards', () => {
     });
 
     it('remove delegates to the service with id + user context', async () => {
-      await controller.remove('pa1', 99, 1);
-      expect(mockService.remove).toHaveBeenCalledWith('pa1', 99, 1);
+      await controller.remove('pa1', 99, 1, undefined as never);
+      // `roles` is threaded through so the caller is checked against the
+      // pre-mark's own group branch. `undefined` here is this test's absent
+      // user context; the service treats a missing roles list as "not a pure
+      // teacher" and takes the branch path, which is the safe default.
+      expect(mockService.remove).toHaveBeenCalledWith('pa1', 99, 1, undefined);
     });
   });
 });
