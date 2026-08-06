@@ -131,8 +131,12 @@ export function StudentProfileTabs({
       .get(`/transactions/student/${student.id}`, {
         params: {
           pageSize: 20,
+          // Every type that MOVES THE BALANCE. The list is the tab's
+          // contract: if a row changed the balance and is missing here, the
+          // feed shows a jump with no cause. Only LESSON_CONSUMPTION
+          // (amount = 0) is intentionally absent — it belongs to "Darslar".
           types:
-            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION",
+            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION,DISCOUNT_ADJUSTMENT,DEBT_WRITE_OFF,MOCK_EXAM_FEE",
         },
       })
       .then((res) => setTransactions(res.data.data))

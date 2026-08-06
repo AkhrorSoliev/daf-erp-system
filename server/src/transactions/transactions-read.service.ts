@@ -12,6 +12,19 @@ import {
   studentBranchWhere,
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
+import {
+  replayStudentLedger,
+  splitLessonSlices,
+  type CreditAllocation,
+  type LessonSlice,
+} from '../common/finance/ledger-replay';
+
+/**
+ * What the "To'lovlar" tab renders under a payment. `reconciled: false` means
+ * the ledger chain did not add up — the UI must show the balance facts only
+ * and suppress the allocation, never a patched-up number.
+ */
+export type PaymentDestination = CreditAllocation & { reconciled: boolean };
 
 @Injectable()
 export class TransactionsReadService {
@@ -55,6 +68,14 @@ export class TransactionsReadService {
         studentId,
         companyId,
         reversedAt: null,
+        // A reversal is written as a counter-row of the SAME type, and the
+        // counter-row itself carries `reversedAt: null` — so filtering on
+        // that field alone drops the original and KEEPS the reversal. The
+        // card then counted the undo as a fresh lesson (189 consumption rows
+        // across 95 students) and, via `Math.abs` below, as fresh lesson cost
+        // (124 rows, 4 572 301 so'm across 65 students). A summary answers
+        // "what stands today", so both halves of the pair must go.
+        reversedTransactionId: null,
         type: {
           in: [
             TransactionType.PAYMENT,
@@ -76,7 +97,7 @@ export class TransactionsReadService {
         balanceAfter: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
 
     let lessonsAttended = 0;
@@ -95,7 +116,10 @@ export class TransactionsReadService {
           lastPaymentDate = row.createdAt;
         }
       } else if (row.type === TransactionType.LESSON_DEDUCTION) {
-        totalLessonCost += Math.abs(row.amount);
+        // Signed, never `Math.abs`. A positive LESSON_DEDUCTION is money
+        // going BACK to the student; treating it as more lesson cost is the
+        // same defect the payment card had.
+        if (row.amount < 0) totalLessonCost += -row.amount;
       } else if (row.type === TransactionType.LESSON_CONSUMPTION) {
         lessonsAttended += 1;
       }
@@ -235,10 +259,10 @@ export class TransactionsReadService {
     const coverageMap = await this.computeDeductionCoverage(rows);
 
     // Attach "destination" info to PAYMENT rows so the admin sees, on the
-    // same row, where the money went: FIFO across the student's full
-    // payment + deduction timeline.
+    // same row, where the money went — replayed against the stored ledger.
     const destinationMap = await this.computePaymentDestination(
       studentId,
+      companyId,
       rows,
     );
 
@@ -252,83 +276,64 @@ export class TransactionsReadService {
   }
 
   /**
-   * For every PAYMENT row on the page, compute a flat "where did the money
-   * go?" summary admins can scan in one glance:
+   * For every PAYMENT row on the page, answer "where did this money go?" by
+   * REPLAYING the student's stored ledger — not by re-deriving it.
    *
-   *   - toLessons          — total so'm the payment funded for lessons
-   *   - remainderInBalance — leftover that's still sitting on the balance
-   *   - firstLessonDate    — earliest covered lesson date across allocations
-   *   - lastLessonDate     — latest covered lesson date across allocations
+   * The previous implementation kept a FIFO queue of payments and funded only
+   * the deductions that came AFTER each payment. A lesson taken on credit
+   * (empty queue) fell through the loop and no later payment ever covered it,
+   * so the money that actually cleared that debt was reported as
+   * "remainderInBalance" — money the student did not have. Measured on
+   * production: 540 of 569 students showed a wrong card, and one student read
+   * their card as "I had 233 339 so'm" while sitting at −33 325.
    *
-   * Implementation: FIFO-allocate each PAYMENT slice against the student's
-   * full LESSON_DEDUCTION timeline, then aggregate by payment. Per-deduction
-   * coverage dates come from the same FIFO-over-consumptions logic used by
-   * the LESSON_DEDUCTION coverage map. Reversed rows are excluded.
+   * Three properties of this version, each load-bearing:
    *
-   * Earlier iterations exposed per-Sikl bullet allocations on the UI, but
-   * admins found "Sikl #3" / "Sikl #4" jargon confusing — especially when
-   * the same payment funded two different cycle numbers and the next
-   * payment funded different ones again. The summary shape drops the
-   * jargon entirely.
+   *   - EVERY balance-moving row is included. ADJUSTMENT alone accounted for
+   *     316 rows across 254 students that the old walk could not see.
+   *   - NO reversal filter. A reversal is written as a counter-row of the same
+   *     type, so including both sides nets to zero and keeps the chain
+   *     unbroken (0 breaks over 28 950 production rows; filtering the original
+   *     only produced 99). This also kills the old `Math.abs` double-charge.
+   *   - FAIL-CLOSED. If the replayed chain ever disagrees with the stored
+   *     `balanceBefore` / `balanceAfter`, `reconciled` comes back false and the
+   *     caller hides the allocation rather than showing a patched number.
+   *
+   * The per-lesson slice map is what keeps the date range honest: a payment
+   * that funds part of a 5-lesson batch reports only the lessons it paid for.
    */
   private async computePaymentDestination(
     studentId: number,
+    companyId: number,
     pageRows: Array<{ id: string; type: TransactionType }>,
-  ): Promise<
-    Map<
-      string,
-      {
-        toLessons: number;
-        remainderInBalance: number;
-        firstLessonDate: Date | null;
-        lastLessonDate: Date | null;
-      }
-    >
-  > {
-    const result = new Map<
-      string,
-      {
-        toLessons: number;
-        remainderInBalance: number;
-        firstLessonDate: Date | null;
-        lastLessonDate: Date | null;
-      }
-    >();
+  ): Promise<Map<string, PaymentDestination>> {
+    const result = new Map<string, PaymentDestination>();
 
-    const paymentIdsInPage = pageRows
-      .filter((r) => r.type === TransactionType.PAYMENT)
-      .map((r) => r.id);
-    if (paymentIdsInPage.length === 0) return result;
+    const pageCreditIds = new Set(
+      pageRows
+        .filter((r) => r.type === TransactionType.PAYMENT)
+        .map((r) => r.id),
+    );
+    if (pageCreditIds.size === 0) return result;
 
-    // Full student timeline: PAYMENT (COMPLETED, not reversed) + non-reversed
-    // LESSON_DEDUCTION rows, oldest first.
+    // The student's complete money timeline. `amount: { not: 0 }` drops
+    // LESSON_CONSUMPTION audit rows (amount = 0) — they move nothing and are
+    // the one row type written without a balance lock.
     const timeline = await this.prisma.transaction.findMany({
-      where: {
-        studentId,
-        type: {
-          in: [TransactionType.PAYMENT, TransactionType.LESSON_DEDUCTION],
-        },
-        reversedAt: null,
-        OR: [
-          { type: TransactionType.LESSON_DEDUCTION },
-          { payment: { status: 'COMPLETED' } },
-        ],
-      },
+      where: { studentId, companyId, amount: { not: 0 } },
       select: {
         id: true,
         type: true,
         amount: true,
+        balanceBefore: true,
+        balanceAfter: true,
         enrollmentId: true,
         metadata: true,
-        createdAt: true,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
 
-    // Per-deduction covered date range — fetched once for every enrollment
-    // referenced by the timeline so we can aggregate first/last dates on
-    // the payment side without re-walking consumptions per page-PAYMENT.
-    const enrollmentIdsInTimeline = Array.from(
+    const enrollmentIds = Array.from(
       new Set(
         timeline
           .filter(
@@ -338,90 +343,30 @@ export class TransactionsReadService {
           .map((t) => t.enrollmentId as string),
       ),
     );
-    // Per-deduction qoplangan sana oralig'i — shared coverage dvigateli orqali.
-    const { byDeduction: deductionDates } = await computeEnrollmentCoverage(
+    const { byDeduction } = await computeEnrollmentCoverage(
       this.prisma as unknown as CoveragePrismaLike,
-      enrollmentIdsInTimeline,
+      enrollmentIds,
     );
 
-    // Seed an empty entry for every page payment so the UI gets a stable
-    // shape even when nothing has been deducted yet.
-    for (const id of paymentIdsInPage) {
-      result.set(id, {
-        toLessons: 0,
-        remainderInBalance: 0,
-        firstLessonDate: null,
-        lastLessonDate: null,
-      });
+    const lessonSlices = new Map<string, LessonSlice[]>();
+    for (const row of timeline) {
+      if (row.type !== TransactionType.LESSON_DEDUCTION) continue;
+      lessonSlices.set(
+        row.id,
+        splitLessonSlices(
+          row.amount,
+          row.metadata,
+          byDeduction.get(row.id)?.consumedDates ?? [],
+        ),
+      );
     }
 
-    // FIFO queue of remaining payment amounts.
-    const queue: Array<{ paymentId: string; remaining: number }> = [];
+    const replay = replayStudentLedger(timeline, lessonSlices);
 
-    const widenDateRange = (
-      paymentId: string,
-      first: Date | null,
-      last: Date | null,
-    ) => {
-      const entry = result.get(paymentId);
-      if (!entry) return;
-      if (first) {
-        if (
-          entry.firstLessonDate === null ||
-          first.getTime() < entry.firstLessonDate.getTime()
-        ) {
-          entry.firstLessonDate = first;
-        }
-      }
-      if (last) {
-        if (
-          entry.lastLessonDate === null ||
-          last.getTime() > entry.lastLessonDate.getTime()
-        ) {
-          entry.lastLessonDate = last;
-        }
-      }
-    };
-
-    for (const tx of timeline) {
-      if (tx.type === TransactionType.PAYMENT) {
-        queue.push({ paymentId: tx.id, remaining: Number(tx.amount) || 0 });
-        continue;
-      }
-
-      // LESSON_DEDUCTION — drain from queue head FIFO.
-      let needed = Math.abs(tx.amount);
-      const dates = deductionDates.get(tx.id) ?? {
-        firstCoveredDate: null,
-        lastCoveredDate: null,
-      };
-
-      while (needed > 0 && queue.length > 0) {
-        const head = queue[0];
-        const take = Math.min(needed, head.remaining);
-
-        if (paymentIdsInPage.includes(head.paymentId)) {
-          const entry = result.get(head.paymentId)!;
-          entry.toLessons += take;
-          widenDateRange(
-            head.paymentId,
-            dates.firstCoveredDate,
-            dates.lastCoveredDate,
-          );
-        }
-
-        head.remaining -= take;
-        needed -= take;
-        if (head.remaining === 0) queue.shift();
-      }
-    }
-
-    // Anything left in the queue is still on balance — surface as
-    // remainderInBalance on the corresponding page payments.
-    for (const head of queue) {
-      if (!paymentIdsInPage.includes(head.paymentId)) continue;
-      const entry = result.get(head.paymentId)!;
-      entry.remainderInBalance += head.remaining;
+    for (const id of pageCreditIds) {
+      const alloc = replay.byCredit.get(id);
+      if (!alloc) continue;
+      result.set(id, { ...alloc, reconciled: replay.reconciled });
     }
 
     return result;

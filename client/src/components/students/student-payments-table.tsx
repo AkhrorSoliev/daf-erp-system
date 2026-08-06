@@ -11,7 +11,6 @@ import {
   MoreHorizontal,
   Pencil,
   RotateCcw,
-  Wallet,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +30,7 @@ import {
   CorrectPaymentDialog,
   type CorrectablePayment,
 } from "./correct-payment-dialog";
+import { PaymentEffectCard } from "./payment-effect-card";
 import {
   PAYMENT_METHOD_LABELS,
   type StudentTransaction,
@@ -119,6 +119,15 @@ export function StudentPaymentsTable({
 
   const months = useMemo(() => groupByMonth(transactions), [transactions]);
 
+  // Rows arrive newest-first, so the first incoming PAYMENT is the latest one.
+  // Only that card carries the "Bugun" line — an older card must not imply
+  // that its closing balance is the student's balance now.
+  const latestPaymentId = useMemo(
+    () =>
+      transactions.find((t) => t.type === "PAYMENT" && t.amount > 0)?.id ?? null,
+    [transactions],
+  );
+
   const isCorrectable = (t: StudentTransaction): boolean => {
     if (t.type !== "PAYMENT" || !t.payment?.id) return false;
     if (t.payment.status !== "COMPLETED" || t.amount <= 0) return false;
@@ -164,6 +173,9 @@ export function StudentPaymentsTable({
               month={m}
               isCorrectable={isCorrectable}
               onCorrect={(p) => setCorrectTarget(p)}
+              currentBalance={balance}
+              latestPaymentId={latestPaymentId}
+              perLessonCost={summary?.perLessonCost ?? null}
             />
           ))}
         </div>
@@ -188,10 +200,16 @@ function MonthSection({
   month,
   isCorrectable,
   onCorrect,
+  currentBalance,
+  latestPaymentId,
+  perLessonCost,
 }: {
   month: MonthGroup;
   isCorrectable: (t: StudentTransaction) => boolean;
   onCorrect: (p: CorrectablePayment) => void;
+  currentBalance: number;
+  latestPaymentId: string | null;
+  perLessonCost: number | null;
 }) {
   return (
     <section className="space-y-2">
@@ -220,6 +238,9 @@ function MonthSection({
               transaction={t}
               isCorrectable={isCorrectable(t)}
               onCorrect={onCorrect}
+              currentBalance={currentBalance}
+              isLatestPayment={t.id === latestPaymentId}
+              perLessonCost={perLessonCost}
             />
           ) : (
             <SimpleEventCard key={t.id} transaction={t} />
@@ -234,10 +255,16 @@ function PaymentCard({
   transaction: t,
   isCorrectable,
   onCorrect,
+  currentBalance,
+  isLatestPayment,
+  perLessonCost,
 }: {
   transaction: StudentTransaction;
   isCorrectable: boolean;
   onCorrect: (p: CorrectablePayment) => void;
+  currentBalance: number;
+  isLatestPayment: boolean;
+  perLessonCost: number | null;
 }) {
   const methodLabel = t.payment?.method
     ? (PAYMENT_METHOD_LABELS[t.payment.method] ?? t.payment.method)
@@ -245,9 +272,10 @@ function PaymentCard({
   const cashier = t.performedBy
     ? `${t.performedBy.firstName} ${t.performedBy.lastName}`
     : null;
-  const dest = t.destination;
-  const hasDestination =
-    !!dest && (dest.toLessons > 0 || dest.remainderInBalance > 0);
+  // Gated on the row having balances at all — NOT on the allocation being
+  // non-zero. The old `toLessons > 0 || remainderInBalance > 0` test made a
+  // payment that went entirely to old debt vanish from the card silently.
+  const hasEffect = Number.isFinite(t.balanceBefore);
 
   return (
     <article className="rounded-lg border bg-card p-4">
@@ -308,48 +336,13 @@ function PaymentCard({
         </div>
       </div>
 
-      {/* Ketdi: 2-3 qatorlik aniq summary */}
-      {hasDestination && (
-        <div className="mt-3 border-t pt-3">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Bu pul ketdi:
-          </p>
-          <ul className="space-y-1.5 text-sm">
-            {dest!.toLessons > 0 && (
-              <li className="flex items-baseline justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-foreground">
-                  <BookOpen className="size-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                  <span>
-                    Darslarga
-                    {dest!.firstLessonDate && (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        ({format(new Date(dest!.firstLessonDate), "dd.MM")}
-                        {dest!.lastLessonDate &&
-                          dest!.firstLessonDate !== dest!.lastLessonDate &&
-                          ` — ${format(new Date(dest!.lastLessonDate), "dd.MM")}`}
-                        )
-                      </span>
-                    )}
-                  </span>
-                </span>
-                <span className="shrink-0 font-mono tabular-nums">
-                  {fmt(dest!.toLessons)} so&apos;m
-                </span>
-              </li>
-            )}
-            {dest!.remainderInBalance > 0 && (
-              <li className="flex items-baseline justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-foreground">
-                  <Wallet className="size-4 shrink-0 text-slate-500" />
-                  <span>Balansga qoldi</span>
-                </span>
-                <span className="shrink-0 font-mono tabular-nums">
-                  {fmt(dest!.remainderInBalance)} so&apos;m
-                </span>
-              </li>
-            )}
-          </ul>
-        </div>
+      {hasEffect && (
+        <PaymentEffectCard
+          transaction={t}
+          currentBalance={currentBalance}
+          isLatestPayment={isLatestPayment}
+          perLessonCost={perLessonCost}
+        />
       )}
     </article>
   );

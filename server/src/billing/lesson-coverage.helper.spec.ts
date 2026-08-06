@@ -17,9 +17,10 @@ function deduction(
   return {
     id,
     type: TransactionType.LESSON_DEDUCTION,
+    amount: -1000 * lessonsCovered,
     enrollmentId,
     attendanceId: null,
-    metadata: { lessonsCovered },
+    metadata: { lessonsCovered, perLessonCost: 1000 },
     createdAt: d(createdAt),
   };
 }
@@ -33,6 +34,7 @@ function consumption(
   return {
     id,
     type: TransactionType.LESSON_CONSUMPTION,
+    amount: 0,
     enrollmentId,
     attendanceId,
     metadata: { perLessonCost: 1000 },
@@ -116,11 +118,13 @@ describe('allocateCoverage', () => {
     expect(byDeduction.get('b-1')?.cycleSequenceNumber).toBe(1);
   });
 
-  it('ignores consumptions with no available bucket', () => {
+  it('overflows into the last bucket instead of dropping a lesson', () => {
+    // Sig'imdan oshgan iste'mol ilgari JIMGINA yo'qolardi (`continue`), ya'ni
+    // o'tilgan dars hech qaysi siklga tegishli bo'lmay qolardi. Endi u
+    // oxirgi paketga qo'shiladi — dars ledgerda bor, demak u ko'rinishi shart.
     const txs: CoverageTx[] = [
       deduction('ded-1', 'enr-1', 1, '2026-06-01T00:00:00Z'),
       consumption('c-1', 'enr-1', 'att-1', '2026-06-02T00:00:00Z'),
-      // capacity to'ldi — bu consumption hech bucketga tushmaydi
       consumption('c-2', 'enr-1', 'att-2', '2026-06-03T00:00:00Z'),
     ];
     const attDates = new Map<string, Date>([
@@ -131,8 +135,27 @@ describe('allocateCoverage', () => {
       txs,
       attDates,
     );
+    expect(byDeduction.get('ded-1')?.coveredCount).toBe(2);
+    expect(byDeduction.get('ded-1')?.consumedDates).toEqual([
+      d('2026-06-02'),
+      d('2026-06-03'),
+    ]);
+    expect(cycleByAttendanceId.get('att-2')).toBe(1);
+  });
+
+  it('opens the cycle before consuming from it when timestamps tie', () => {
+    // Yechim va iste'mol bitta tranzaksiyada yozilsa `createdAt` bir xil
+    // bo'ladi. Faqat `id` bo'yicha tartiblash iste'molni oldinga o'tkazib,
+    // darsni yo'qotardi ('c-1' < 'ded-1').
+    const txs: CoverageTx[] = [
+      consumption('c-1', 'enr-1', 'att-1', '2026-06-01T00:00:00Z'),
+      deduction('ded-1', 'enr-1', 2, '2026-06-01T00:00:00Z'),
+    ];
+    const { byDeduction } = allocateCoverage(
+      txs,
+      new Map([['att-1', d('2026-06-01')]]),
+    );
     expect(byDeduction.get('ded-1')?.coveredCount).toBe(1);
-    expect(cycleByAttendanceId.has('att-2')).toBe(false);
   });
 });
 
@@ -146,14 +169,16 @@ describe('computeEnrollmentCoverage', () => {
     const res = await computeEnrollmentCoverage(prisma, []);
     expect(res.byDeduction.size).toBe(0);
     expect(res.cycleByAttendanceId.size).toBe(0);
-    expect((prisma.transaction.findMany as jest.Mock)).not.toHaveBeenCalled();
+    expect(prisma.transaction.findMany as jest.Mock).not.toHaveBeenCalled();
   });
 
   it('queries with reversedAt: null and joins attendance dates', async () => {
-    const txFindMany = jest.fn().mockResolvedValue([
-      deduction('ded-1', 'enr-1', 2, '2026-06-01T00:00:00Z'),
-      consumption('c-1', 'enr-1', 'att-1', '2026-06-02T00:00:00Z'),
-    ]);
+    const txFindMany = jest
+      .fn()
+      .mockResolvedValue([
+        deduction('ded-1', 'enr-1', 2, '2026-06-01T00:00:00Z'),
+        consumption('c-1', 'enr-1', 'att-1', '2026-06-02T00:00:00Z'),
+      ]);
     const attFindMany = jest
       .fn()
       .mockResolvedValue([{ id: 'att-1', date: d('2026-06-02') }]);
