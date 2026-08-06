@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CashAccountsService } from './cash-accounts.service';
 import { CashMovementsService } from './cash-movements.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -109,6 +109,34 @@ describe('CashAccountsService', () => {
           1,
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it("refuses to open an account in a branch the caller may not act on", async () => {
+      // "The branch exists in this company" and "you may act on it" are
+      // different questions, and only the first was asked. Every OTHER
+      // cash-account operation resolves through `findOne(id, companyId,
+      // userId)` and its `assertCallerInBranch` — creation had no record to
+      // look up yet, so a Fargona director could open an account inside
+      // Namangan's books. They could not then USE it (every id-addressed path
+      // is guarded), which is why nothing broke visibly; what they could do is
+      // leave an account Namangan never asked for in Namangan's list, and
+      // `resolveAccountId` picks by branch + type, so an automatic refund or
+      // salary movement could land in it.
+      prisma.branch.findFirst.mockResolvedValue({ id: 2 });
+      prisma.user.findFirst.mockResolvedValue({
+        mainBranch: 1,
+        branches: [{ branchId: 1 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(
+        service.create(
+          { name: 'Namangan kassa', type: CashAccountType.CASH, branchId: 2 },
+          7,
+          1,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 

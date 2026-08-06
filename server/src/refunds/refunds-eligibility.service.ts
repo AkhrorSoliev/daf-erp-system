@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  ReportBranchIds,
+  studentBranchWhere,
+} from '../common/finance/report-branch-scope';
+import {
   AttendanceStatus,
   EnrollmentStatus,
   PaymentStatus,
@@ -219,9 +223,22 @@ export class RefundsEligibilityService {
     return activeEnrollments[0];
   }
 
-  async findAll(companyId: number) {
+  /**
+   * The refund list, confined to the caller's branches.
+   *
+   * It was `where: { companyId }` alone — every refund in the company, with the
+   * student's name, the amount and the group. A Namangan director opening
+   * /payments read Fargona's refunds in full.
+   *
+   * `Refund` carries no `branchId` of its own, so the scope goes through the
+   * STUDENT's branch — the same `StudentBranch` join every student list filters
+   * on, so this page slices the same way the rest of the app does. Scoping via
+   * the enrollment's group would disagree for a student who transferred
+   * branches after the refund was raised.
+   */
+  async findAll(companyId: number, branchIds: ReportBranchIds) {
     return this.prisma.refund.findMany({
-      where: { companyId },
+      where: { companyId, student: studentBranchWhere(branchIds) },
       select: {
         id: true,
         requestedAmount: true,

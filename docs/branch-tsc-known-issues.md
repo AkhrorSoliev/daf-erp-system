@@ -135,11 +135,11 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **65** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **206** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **84** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **187** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
-## Nega 206 ta «UNREVIEWED» deb qoldirildi
+## Nega qolgani «UNREVIEWED» deb qoldirildi
 
 Bir o'tirishda 200 dan ortiq route'ni toifalash raqamni nolga tushirardi, lekin hech kim
 o'ylab ko'rmagan ishonchli yorliqlar hosil qilardi. Noto'g'ri `COMPANY_WIDE` ni
@@ -164,3 +164,20 @@ Qamrovni kamaytirish oddiy ish: route'ni siyosat blokiga ko'chiring va
 **Bu uch qatlamdan ikkinchisi va ataylab eng zaifi:** uning vazifasi — hech narsa
 **unutilmasligi**, hamma narsa **to'g'ri** bo'lishi emas. To'g'riligini faqat
 salbiy integratsiya testlari isbotlaydi (`*.branch-isolation.spec.ts`).
+
+## Audit natijasi (2026-08-06)
+
+Pul va o'quvchi ma'lumotiga tegadigan 35 ta toifalanmagan route kodini o'qib
+tekshirildi. **Uchta haqiqiy nuqson topildi** — hammasi tuzatildi:
+
+| Nuqson | Nima bo'lardi |
+|---|---|
+| `POST /cash-accounts` chaqiruvchini tekshirmasdi | Farg'ona direktori Namangan kitoblariga kassa ocha olardi. Ishlata olmasdi (id bo'yicha amallar himoyalangan), lekin `resolveAccountId` filial+tur bo'yicha tanlagani uchun avtomatik qaytarish yoki oylik o'sha kassaga tushishi mumkin edi |
+| `GET /refunds` filial scope'i **umuman yo'q** | Namangan direktori Farg'onaning **barcha** qaytarishlarini ko'rardi — o'quvchi ismi, summa, guruh |
+| `payment-promises` (3 ta route) o'quvchi filialini tekshirmasdi | Id nomlash yetarli edi: begona filial qarzdorining va'da tarixini o'qish, unga yangi va'da yozish yoki bekor qilish |
+
+Qolgan 32 tasi **to'g'ri himoyalangan** ekan — kassa hisoblari
+(`resolveCallerReportBranchIds` + `assertCallerInBranch`), xarajatlar
+(`assertBranchWritable` ikkala yo'nalishda), qarzdorlar, qarz kechirishlar.
+Ular endi manifestda o'z mexanizmi bilan yozilgan, ya'ni keyingi o'quvchi
+qaytadan tekshirmaydi.

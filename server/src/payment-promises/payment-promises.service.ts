@@ -7,6 +7,10 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreatePaymentPromiseDto } from './dto/create-payment-promise.dto';
+import {
+  ReportBranchIds,
+  studentBranchWhere,
+} from '../common/finance/report-branch-scope';
 
 @Injectable()
 export class PaymentPromisesService {
@@ -16,13 +20,50 @@ export class PaymentPromisesService {
   ) {}
 
   /**
+   * The student must be one this caller can act on.
+   *
+   * Every method here was keyed on `(studentId, companyId)` alone, so naming a
+   * student id was enough — a Namangan director could read a Fargona debtor's
+   * promise history, record a new promise on them, or cancel one. The same gate
+   * already existed on the payment and transaction reads
+   * (`transactions-read.service.ts`); the promises module was written alongside
+   * them and did not get it.
+   *
+   * 404, not 403: a 403 confirms the id exists in another branch, and the rows
+   * behind it carry the amount, the date and the admin's note.
+   */
+  private async assertStudentInScope(
+    studentId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<void> {
+    if (branchIds == null) return; // CEO — every branch
+    const student = await this.prisma.student.findFirst({
+      where: {
+        id: studentId,
+        companyId,
+        deletedAt: null,
+        ...studentBranchWhere(branchIds),
+      },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+  }
+
+  /**
    * Record a debtor's commitment to pay by a date. One OPEN promise per
    * student is enforced by a partial unique index (P2002 → friendly Uzbek
    * 400). The promise auto-resolves to KEPT when a payment restores the
    * balance (see PaymentsWriteService.settleKeptPromises), or is flipped to
    * BROKEN by the daily cron if the date passes while the student still owes.
    */
-  async create(dto: CreatePaymentPromiseDto, userId: number, companyId: number) {
+  async create(
+    dto: CreatePaymentPromiseDto,
+    userId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    await this.assertStudentInScope(dto.studentId, companyId, branchIds);
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, companyId, deletedAt: null },
       select: { id: true, balance: true },
@@ -146,11 +187,19 @@ export class PaymentPromisesService {
     return created;
   }
 
-  async cancel(id: string, userId: number, companyId: number) {
+  async cancel(
+    id: string,
+    userId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
     const promise = await this.prisma.paymentPromise.findFirst({
       where: { id, companyId, status: 'OPEN' },
     });
     if (!promise) throw new NotFoundException("Belgilangan to'lov sanasi topilmadi");
+    // Gated on the promise's STUDENT, because the promise itself carries no
+    // branch — cancelling one is a write on that student's debt record.
+    await this.assertStudentInScope(promise.studentId, companyId, branchIds);
 
     const updated = await this.prisma.paymentPromise.update({
       where: { id },
@@ -169,7 +218,15 @@ export class PaymentPromisesService {
     return updated;
   }
 
-  findByStudent(studentId: number, companyId: number) {
+  async findByStudent(
+    studentId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    // Gate on the student, then return their history in full — the per-entity
+    // rule this codebase uses everywhere: access is decided once, at the
+    // entity, rather than by filtering rows the caller already reached.
+    await this.assertStudentInScope(studentId, companyId, branchIds);
     return this.prisma.paymentPromise.findMany({
       where: { studentId, companyId },
       orderBy: { createdAt: 'desc' },

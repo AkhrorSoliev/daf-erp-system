@@ -72,6 +72,23 @@ export class CashAccountsService {
     });
     if (!branch) throw new BadRequestException('Filial topilmadi');
 
+    // The branch existing in this company is not the same question as the
+    // caller being allowed to act on it. Every OTHER cash-account operation
+    // goes through `findOne(id, companyId, userId)` and its
+    // `assertCallerInBranch`, but creation had no record to look up yet — so a
+    // Fargona director could open an account inside Namangan's books. They
+    // could not then use it (every id-addressed path is guarded), which is why
+    // this went unnoticed; what they could do is leave an account Namangan
+    // never asked for sitting in Namangan's list, and `resolveAccountId` picks
+    // accounts by branch and type, so an automatic refund or salary movement
+    // could land in it.
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      dto.branchId,
+      "Bu filialda kassa ochish huquqingiz yo'q",
+    );
+
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.cashAccount.create({
         data: {
