@@ -15,6 +15,7 @@ import {
   LatestCommentQueryDto,
 } from './dto/comment-query.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
+import { assertCallerMayTouchCommentEntity } from '../common/auth/comment-entity-scope';
 
 // Asia/Tashkent ish kuni va ish soati cheklovi (08:00 dan 18:00 gacha,
 // dushanba–shanba, yakshanba dam). DueDate ushbu deraza tashqarisida
@@ -69,7 +70,30 @@ export class CommentsService {
     private eventEmitter: EventEmitter2,
   ) {}
 
-  async create(dto: CreateCommentDto, userId: number, companyId: number) {
+  /**
+   * A comment thread carries what staff say about a person — a student's
+   * payment excuses, a lead's objections, an employee's performance. It is not
+   * weaker than the record it hangs off, so it is gated as that record is.
+   *
+   * Nothing checked the entity at all before: not that it existed, not that it
+   * belonged to this company, not that it belonged to this caller's branch.
+   * `entityType` was a free string, so the polymorphism had no edge either.
+   */
+  async create(
+    dto: CreateCommentDto,
+    userId: number,
+    companyId: number,
+    roles: string[] = [],
+  ) {
+    await assertCallerMayTouchCommentEntity(
+      this.prisma,
+      userId,
+      roles,
+      dto.entityType,
+      dto.entityId,
+      companyId,
+    );
+
     if (dto.isTask && (!dto.assigneeIds || dto.assigneeIds.length === 0)) {
       throw new BadRequestException(
         "Topshiriq uchun kamida bitta mas'ul shaxs tanlang",
@@ -78,6 +102,33 @@ export class CommentsService {
 
     if (dto.isTask && dto.dueDate) {
       assertDueDateInWorkingWindow(dto.dueDate);
+    }
+
+    // `assigneeIds` reached `create` unvalidated: any integer that happened to
+    // be a real `User.id` became an assignee, including one from ANOTHER
+    // COMPANY — a cross-tenant write that only failed if the id did not exist
+    // at all. The company and the deleted/inactive flags are checked here.
+    //
+    // Branch is deliberately NOT checked. The obvious rule — the assignee must
+    // share the entity's branch — would refuse assigning a task to the CEO,
+    // who is branch-less by design and is a legitimate recipient. Production
+    // carries one task and no cross-branch assignment, so there is nothing to
+    // correct and no evidence for which rule is right; picking one blind would
+    // break a working flow to close a hole nobody has opened. The entity
+    // itself is confined above, which is what leaked.
+    if (dto.isTask && dto.assigneeIds?.length) {
+      const found = await this.prisma.user.count({
+        where: {
+          id: { in: dto.assigneeIds },
+          companyId,
+          deletedAt: null,
+        },
+      });
+      if (found !== new Set(dto.assigneeIds).size) {
+        throw new BadRequestException(
+          "Mas'ul shaxslardan biri topilmadi yoki bu kompaniyaga tegishli emas",
+        );
+      }
     }
 
     const comment = await this.prisma.comment.create({
@@ -128,7 +179,20 @@ export class CommentsService {
     return comment;
   }
 
-  async findByEntity(query: CommentQueryDto, companyId: number) {
+  async findByEntity(
+    query: CommentQueryDto,
+    companyId: number,
+    userId?: number,
+    roles: string[] = [],
+  ) {
+    await assertCallerMayTouchCommentEntity(
+      this.prisma,
+      userId,
+      roles,
+      query.entityType,
+      query.entityId,
+      companyId,
+    );
     const page = query.page || 1;
     const pageSize = query.pageSize || 20;
     const skip = (page - 1) * pageSize;
@@ -153,7 +217,20 @@ export class CommentsService {
     return { data, total, page, pageSize };
   }
 
-  async getLatestComment(query: LatestCommentQueryDto, companyId: number) {
+  async getLatestComment(
+    query: LatestCommentQueryDto,
+    companyId: number,
+    userId?: number,
+    roles: string[] = [],
+  ) {
+    await assertCallerMayTouchCommentEntity(
+      this.prisma,
+      userId,
+      roles,
+      query.entityType,
+      query.entityId,
+      companyId,
+    );
     const comment = await this.prisma.comment.findFirst({
       where: {
         entityType: query.entityType,

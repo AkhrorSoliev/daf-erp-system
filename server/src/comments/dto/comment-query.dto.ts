@@ -1,9 +1,13 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsInt, IsIn, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { COMMENTABLE_ENTITY_TYPES } from '../../common/auth/comment-entity-scope';
+import type { CommentableEntityType } from '../../common/auth/comment-entity-scope';
 
 export class CommentQueryDto {
-  @IsString()
-  entityType: string;
+  // See `CreateCommentDto` — the read side is the same list, because a thread
+  // you cannot scope is one you cannot safely return either.
+  @IsIn(COMMENTABLE_ENTITY_TYPES as unknown as string[])
+  entityType: CommentableEntityType;
 
   @IsString()
   entityId: string;
@@ -22,8 +26,8 @@ export class CommentQueryDto {
 }
 
 export class LatestCommentQueryDto {
-  @IsString()
-  entityType: string;
+  @IsIn(COMMENTABLE_ENTITY_TYPES as unknown as string[])
+  entityType: CommentableEntityType;
 
   @IsString()
   entityId: string;

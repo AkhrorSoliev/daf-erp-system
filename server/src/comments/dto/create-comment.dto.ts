@@ -8,10 +8,17 @@ import {
   IsDateString,
   MinLength,
 } from 'class-validator';
+import { COMMENTABLE_ENTITY_TYPES } from '../../common/auth/comment-entity-scope';
+import type { CommentableEntityType } from '../../common/auth/comment-entity-scope';
 
 export class CreateCommentDto {
-  @IsString()
-  entityType: string;
+  // A closed list, not a free string. `Comment.entityType` is a bare `String`
+  // in the schema and this DTO accepted anything, so whatever the client sent
+  // became a valid thread — on an entity nobody checked existed, belonged to
+  // this company, or belonged to this caller's branch. An unknown type now
+  // fails here rather than creating a thread that cannot be scoped.
+  @IsIn(COMMENTABLE_ENTITY_TYPES as unknown as string[])
+  entityType: CommentableEntityType;
 
   @IsString()
   entityId: string;

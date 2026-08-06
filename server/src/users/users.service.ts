@@ -22,6 +22,7 @@ import {
   USER_DEACTIVATED_EVENT,
   UserDeactivatedEvent,
 } from '../common/events/user-lifecycle.events';
+import { assertCallerMayTouchUserRecord } from '../common/auth/user-branch-scope';
 
 const userSelect = {
   id: true,
@@ -437,10 +438,10 @@ export class UsersService {
   /**
    * A non-CEO caller may only edit staff of their OWN branch.
    *
-   * `updateUser` only checked the company, so a Branch Director could pass
-   * another branch's employee id and edit them — including `password`, which
-   * this endpoint accepts. One branch's director could take over the other
-   * branch's accounts.
+   * The rule itself now lives in `common/auth/user-branch-scope.ts`. It moved
+   * out when comments on an employee profile became a second caller: a branch
+   * rule with two private copies is exactly how three lesson modules ended up
+   * unguarded while `attendance.controller` held the only copy.
    */
   private async assertCallerMayTouchUser(
     target: { id: number; mainBranch: number | null; branches: any[] },
@@ -457,24 +458,10 @@ export class UsersService {
       },
     });
     if (!caller) throw new ForbiddenException('Foydalanuvchi topilmadi');
-    if (caller.roles.some((r) => r.role.name === 'CEO')) return;
 
-    const callerBranches = new Set<number>([
-      ...caller.branches.map((b) => b.branchId),
-      ...(caller.mainBranch != null ? [caller.mainBranch] : []),
-    ]);
-    const targetBranches = new Set<number>([
-      ...target.branches.map((b: any) => b.branch?.id ?? b.branchId),
-      ...(target.mainBranch != null ? [target.mainBranch] : []),
-    ]);
-    // Fail closed: an unscoped caller, or a target with no branch at all, is
-    // not something a branch-level user may edit.
-    const overlap = [...targetBranches].some((b) => callerBranches.has(b));
-    if (callerBranches.size === 0 || targetBranches.size === 0 || !overlap) {
-      throw new ForbiddenException(
-        "Siz faqat o'z filialingiz xodimlarini tahrirlashingiz mumkin",
-      );
-    }
+    // The target is already loaded here (via `userSelect`), so the record
+    // variant is used rather than the loading one — same rule, one less query.
+    assertCallerMayTouchUserRecord(target, caller, changedById);
   }
 
   async updateUser(

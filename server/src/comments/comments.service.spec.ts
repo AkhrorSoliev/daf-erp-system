@@ -12,7 +12,7 @@ import { EntityHistoryService } from '../common/entity-history';
 
 const mockComment = {
   id: 'comment-uuid-1',
-  entityType: 'Student',
+  entityType: 'Student' as const,
   entityId: '10001',
   content: "Bu talaba hujjatlari to'liq emas",
   isTask: false,
@@ -43,6 +43,8 @@ const mockTaskComment = {
 };
 
 describe('CommentsService', () => {
+  // The entity guard needs a caller; a CEO spans every branch.
+  const CEO_ID = 1;
   let service: CommentsService;
   let prisma: any;
   let entityHistoryService: any;
@@ -61,6 +63,27 @@ describe('CommentsService', () => {
       commentAssignee: {
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
+      },
+      // The entity guard resolves the commented-on record's branch. These
+      // fixtures put the entity and the caller in the same branch — the case
+      // under test here is the comment logic, not the confinement, which has
+      // its own spec.
+      student: { findFirst: jest.fn().mockResolvedValue({ id: 10001 }) },
+      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+      group: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
+      lead: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 1,
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+        // Assignees are checked against the company now. The fixtures use one
+        // assignee, so one match is the passing answer.
+        count: jest.fn().mockResolvedValue(1),
       },
     };
 
@@ -91,7 +114,7 @@ describe('CommentsService', () => {
   describe('create', () => {
     it('should create a regular comment', async () => {
       const dto = {
-        entityType: 'Student',
+        entityType: 'Student' as const,
         entityId: '10001',
         content: 'Test izoh',
       };
@@ -101,7 +124,7 @@ describe('CommentsService', () => {
       expect(prisma.comment.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            entityType: 'Student',
+            entityType: 'Student' as const,
             entityId: '10001',
             content: 'Test izoh',
             isTask: false,
@@ -122,7 +145,7 @@ describe('CommentsService', () => {
       prisma.comment.create.mockResolvedValue(mockTaskComment);
 
       const dto = {
-        entityType: 'Student',
+        entityType: 'Student' as const,
         entityId: '10001',
         content: 'Hujjatlarni tekshiring',
         isTask: true,
@@ -156,7 +179,7 @@ describe('CommentsService', () => {
 
     it('should throw if task has no assignees', async () => {
       const dto = {
-        entityType: 'Student',
+        entityType: 'Student' as const,
         entityId: '10001',
         content: 'Test',
         isTask: true,
@@ -174,7 +197,7 @@ describe('CommentsService', () => {
     describe('dueDate working-window validation', () => {
       function taskDto(dueDate: string) {
         return {
-          entityType: 'Student',
+          entityType: 'Student' as const,
           entityId: '10001',
           content: 'Call back',
           isTask: true,
@@ -230,7 +253,7 @@ describe('CommentsService', () => {
         await expect(
           service.create(
             {
-              entityType: 'Student',
+              entityType: 'Student' as const,
               entityId: '10001',
               content: 'Just a note',
               isTask: false,
@@ -248,17 +271,19 @@ describe('CommentsService', () => {
     it('should return paginated comments', async () => {
       const result = await service.findByEntity(
         {
-          entityType: 'Student',
+          entityType: 'Student' as const,
           entityId: '10001',
           page: 1,
           pageSize: 20,
         },
         1001,
+        CEO_ID,
+        ['CEO'],
       );
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Student', entityId: '10001', companyId: 1001 },
+          where: { entityType: 'Student' as const, entityId: '10001', companyId: 1001 },
           orderBy: { createdAt: 'desc' },
           skip: 0,
           take: 20,
@@ -277,15 +302,17 @@ describe('CommentsService', () => {
     it('should return the latest comment', async () => {
       const result = await service.getLatestComment(
         {
-          entityType: 'Student',
+          entityType: 'Student' as const,
           entityId: '10001',
         },
         1001,
+        CEO_ID,
+        ['CEO'],
       );
 
       expect(prisma.comment.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Student', entityId: '10001', companyId: 1001 },
+          where: { entityType: 'Student' as const, entityId: '10001', companyId: 1001 },
           orderBy: { createdAt: 'desc' },
         }),
       );
@@ -297,10 +324,12 @@ describe('CommentsService', () => {
 
       const result = await service.getLatestComment(
         {
-          entityType: 'Student',
+          entityType: 'Student' as const,
           entityId: '99999',
         },
         1001,
+        CEO_ID,
+        ['CEO'],
       );
 
       expect(result).toBeNull();
@@ -415,7 +444,7 @@ describe('CommentsService', () => {
         id: 'comment-uuid-2',
         content: 'Test task',
         authorId: 1,
-        entityType: 'Student',
+        entityType: 'Student' as const,
         entityId: '10001',
         companyId: 1001,
         author: { id: 1, name: 'CEO' },

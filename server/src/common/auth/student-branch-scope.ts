@@ -47,8 +47,18 @@ export async function assertCallerMayTouchStudent(
   companyId: number,
   message = "Bu o'quvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
 ): Promise<number> {
+  // NOT filtered on `deletedAt`, deliberately. This asks "is this a real
+  // student of this company", so the caller gets a 404 rather than the branch
+  // resolver's error — it is not the place that decides whether ARCHIVED
+  // students are visible, and the reads behind it do not agree on that anyway:
+  // `getStatusHistory` and `findById` serve archived students, while
+  // `getLessonsOverview`, `getClosedEnrollments` and
+  // `getActiveEnrollmentsWithPrepaid` each 404 them on their own. Adding the
+  // filter here overrode all of them at once and took 23 archived students'
+  // profiles offline — a guard should add the branch question, not silently
+  // answer a different one.
   const student = await prisma.student.findFirst({
-    where: { id: studentId, companyId, deletedAt: null },
+    where: { id: studentId, companyId },
     select: { id: true },
   });
   if (!student) {
