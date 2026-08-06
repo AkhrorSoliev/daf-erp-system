@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { HandCoins, Info, Search, Settings2 } from "lucide-react";
+import { BadgeCheck, HandCoins, Info, Search, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,7 @@ import {
   monthLabel,
 } from "./salary-utils";
 import { SalarySettingsSheet } from "./salary-settings-sheet";
+import { SettleMonthDialog } from "./salary-settle-month-dialog";
 import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
 import {
   SalaryAdvanceBreakdownDrawer,
@@ -138,6 +139,7 @@ export function SalaryMonthlyView({
   const { filters, setFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settleOpen, setSettleOpen] = useState(false);
   const [addAdvanceOpen, setAddAdvanceOpen] = useState(false);
   const [advanceTarget, setAdvanceTarget] = useState<AdvanceTarget | null>(
     null,
@@ -168,6 +170,23 @@ export function SalaryMonthlyView({
   const shownMonth = data?.month ?? month;
   const monthHasNoData =
     rows.length > 0 && rows.every((r) => !r.hasLessonData);
+
+  // How many payroll rows this month still carries as unpaid. Read from the
+  // settle preview, not from the table: the table shows one payment per
+  // employee, and a re-calculated month can carry several per person.
+  const { data: settlePreview } = useQuery({
+    queryKey: ["settle-month-preview", shownMonth, refreshKey],
+    queryFn: () =>
+      api
+        .get<{ rows: unknown[]; total: number }>(
+          "/salary/payments/settle-month/preview",
+          { params: { month: shownMonth } },
+        )
+        .then((r) => r.data),
+    enabled: isCeo,
+    staleTime: 0,
+  });
+  const unpaidCount = settlePreview?.rows.length ?? 0;
 
   return (
     <div className="space-y-4">
@@ -212,6 +231,16 @@ export function SalaryMonthlyView({
           >
             <HandCoins className="size-4" />
             Avans qo&apos;shish
+          </Button>
+        )}
+        {isCeo && unpaidCount > 0 && (
+          <Button
+            variant="outline"
+            className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+            onClick={() => setSettleOpen(true)}
+          >
+            <BadgeCheck className="size-4" />
+            Oylik berilganini tasdiqlash ({unpaidCount} ta)
           </Button>
         )}
         {isCeo && (
@@ -506,6 +535,16 @@ export function SalaryMonthlyView({
             </span>
           )}
         </div>
+      )}
+
+      {/* Confirm a month paid outside the system — CEO */}
+      {isCeo && (
+        <SettleMonthDialog
+          open={settleOpen}
+          month={shownMonth}
+          onOpenChange={setSettleOpen}
+          onSettled={bumpRefresh}
+        />
       )}
 
       {/* Settings (rate rules + cycle day) — CEO */}
