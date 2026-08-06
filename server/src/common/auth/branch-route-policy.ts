@@ -331,10 +331,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/monthly/user/:userId',
       'GET /salary/payments',
       'GET /salary/payments/:id/breakdown',
+      'GET /salary/payments/settle-month/preview',
       'GET /salary/timeline/:userId',
       'PATCH /salary/payments/:id/approve',
       'POST /salary/payments/:id/pay',
       'POST /salary/payments/batch-pay',
+      'POST /salary/payments/settle-month',
     ],
   },
   {

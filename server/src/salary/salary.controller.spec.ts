@@ -32,6 +32,16 @@ describe('SalaryController @Roles metadata', () => {
         expect(rolesFor(method)).toEqual(['CEO']);
       },
     );
+
+    // A month-wide settle is irreversible and spans every branch's payroll, so
+    // it sits with the CEO writes rather than with the per-payment payouts a
+    // Branch Director may run.
+    it.each(['previewSettleMonth', 'settleMonth'] as const)(
+      '%s requires CEO',
+      (method) => {
+        expect(rolesFor(method)).toEqual(['CEO']);
+      },
+    );
   });
 
   describe('CEO + Branch Director allowed (payouts)', () => {
