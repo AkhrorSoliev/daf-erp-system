@@ -147,6 +147,12 @@ describe('ReportsService', () => {
             }),
           },
         },
+        {
+          // Own maths covered by reports-student-flow.service.spec.ts.
+          provide:
+            require('./reports-student-flow.service').ReportsStudentFlowService,
+          useValue: { getStudentFlow: jest.fn() },
+        },
       ],
     }).compile();
 

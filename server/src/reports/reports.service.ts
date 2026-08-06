@@ -16,6 +16,7 @@ import { ReportsTeacherChangesService } from './reports-teacher-changes.service'
 import { ReportsCenterActivityService } from './reports-center-activity.service';
 import { ReportsExpectationService } from './reports-expectation.service';
 import { ReportsExpectationHistoryService } from './reports-expectation-history.service';
+import { ReportsStudentFlowService } from './reports-student-flow.service';
 import {
   isEmptyScope,
   singleBranchId,
@@ -85,6 +86,7 @@ export class ReportsService {
     private redis: RedisService,
     private expectation: ReportsExpectationService,
     private expectationHistory: ReportsExpectationHistoryService,
+    private studentFlow: ReportsStudentFlowService,
   ) {}
 
   // Excel financial report — line-item + reconciliation data sources. Kept on
@@ -339,6 +341,15 @@ export class ReportsService {
     opts: { month: string; branchIds: ReportBranchIds },
   ) {
     return this.expectationHistory.getMonthlyHistory(companyId, opts);
+  }
+
+  // Student figures for the Excel «O'quvchilar» sheet — see
+  // reports-student-flow.service.ts for why this exists.
+  getStudentFlow(
+    companyId: number,
+    opts: { month: string; branchIds: ReportBranchIds },
+  ) {
+    return this.studentFlow.getStudentFlow(companyId, opts);
   }
 
   async getFinancialOverview(
