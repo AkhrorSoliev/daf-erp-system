@@ -254,12 +254,12 @@ export class ReportsController {
       );
       const t = sm.totals;
       // Config-gap / manual months (e.g. May cutover) have no per-lesson data —
-      // the deserved/covered/gap columns come back as 0 there; the card renders a
-      // "o'tish oyi" note instead of a fake 0, mirroring the Excel "—".
+      // the deserved/covered/centerFunded columns come back as 0 there; the card
+      // renders a "o'tish oyi" note instead of a fake 0, mirroring the Excel "—".
       const hasLessonData =
         (t.fullDeserved ?? 0) !== 0 ||
         (t.covered ?? 0) !== 0 ||
-        (t.gap ?? 0) !== 0;
+        (t.centerFunded ?? 0) !== 0;
       computed = {
         month: sm.month,
         hasLessonData,
