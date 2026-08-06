@@ -1,9 +1,10 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { OutreachService } from './outreach.service';
-import { Roles } from '../common/decorators';
+import { Roles, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { TodayAbsenteesQueryDto } from './dto/today-absentees-query.dto';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('outreach')
 @UseGuards(RolesGuard)
@@ -16,8 +17,9 @@ export class OutreachController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.outreach.getStats({ userId, companyId, roles });
+    return this.outreach.getStats({ userId, companyId, roles, branchScope });
   }
 
   @Get('today-absentees')
@@ -26,11 +28,13 @@ export class OutreachController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
     return this.outreach.getTodayAbsentees({
       userId,
       companyId,
       roles,
+      branchScope,
       date: query.date,
     });
   }
@@ -40,8 +44,9 @@ export class OutreachController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.outreach.getRemovalQueue({ userId, companyId, roles });
+    return this.outreach.getRemovalQueue({ userId, companyId, roles, branchScope });
   }
 
   @Get('promises')
@@ -49,7 +54,8 @@ export class OutreachController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.outreach.getActivePromises({ userId, companyId, roles });
+    return this.outreach.getActivePromises({ userId, companyId, roles, branchScope });
   }
 }

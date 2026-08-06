@@ -354,6 +354,33 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Teachers, and one call-log write. A teacher IS a `User`, and '
+      + '`PATCH /users/:id` has been branch-confined since the object-level '
+      + 'sweep — but `/teachers/:id` edits the SAME rows and was never touched. '
+      + 'It accepts `password` and `login`, so a Branch Director of one branch '
+      + 'could set the password of the other branch\'s teacher and sign in as '
+      + 'them. Production has 15 teachers, 10 in Fargona and 5 in Namangan: two '
+      + 'doors to one record, one of them locked. They share '
+      + '`assertCallerMayTouchUser` rather than a second copy of the rule, and '
+      + 'each guard sits AFTER its method\'s own existence check so a stale id '
+      + 'still answers 404. `POST /call-logs` attributed the row to the '
+      + 'student\'s branch but never asked whether the caller could act on that '
+      + 'student — and a WILL_PAY outcome opens a `PaymentPromise` that lands '
+      + 'in another branch\'s debtors workflow.',
+    routes: [
+      'POST /teachers',
+      'PATCH /teachers/:id',
+      'PATCH /teachers/:id/status',
+      'DELETE /teachers/:id',
+      'GET /teachers/:id/groups',
+      'GET /teachers/:id/salary-summary',
+      'GET /teachers/:id/status-history',
+      'POST /call-logs',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -424,7 +451,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/ai-chat/:id',
   'DELETE /student-portal/photo',
-  'DELETE /teachers/:id',
   'DELETE /telegram-groups/:id',
   'DELETE /users/:id',
   'GET /archive/:entityType',
@@ -434,7 +460,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /branches/:id',
   'GET /branches/:id/readiness',
   'GET /branches/:id/status-history',
-  'GET /call-logs',
   'GET /company',
   'GET /company/:id',
   'GET /courses/:id/status-history',
@@ -462,10 +487,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /notifications',
   'GET /notifications/stream',
   'GET /notifications/unread-count',
-  'GET /outreach/promises',
-  'GET /outreach/removal-queue',
-  'GET /outreach/stats',
-  'GET /outreach/today-absentees',
   'GET /reports/debt-write-offs-summary',
   'GET /reports/expectation-history',
   'GET /reports/financial-excel',
@@ -475,8 +496,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /reports/lead-analytics',
   'GET /rooms/:id/status-history',
   'GET /rooms/count-by-branch',
-  'GET /search',
-  'GET /search/quick',
   'GET /student-exit-reasons',
   'GET /student-portal/ai-chat',
   'GET /student-portal/ai-chat/:id',
@@ -485,9 +504,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /student-portal/payments',
   'GET /student-portal/profile',
   'GET /student-portal/schedule',
-  'GET /teachers/:id/groups',
-  'GET /teachers/:id/salary-summary',
-  'GET /teachers/:id/status-history',
   'GET /telegram-groups',
   'GET /telegram-groups/pending',
   'GET /telegram/channel-report/list',
@@ -514,14 +530,11 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /student-exit-reasons/:id',
   'PATCH /student-portal/name',
   'PATCH /student-portal/password',
-  'PATCH /teachers/:id',
-  'PATCH /teachers/:id/status',
   'PATCH /users/:id',
   'PATCH /users/password',
   'PATCH /users/profile',
   'POST /archive/:entityType/:id/restore',
   'POST /branches',
-  'POST /call-logs',
   'POST /courses',
   'POST /enrollment-transfer-reasons',
   'POST /group-teacher-change-reasons',
@@ -541,7 +554,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /student-portal/attendance/scan',
   'POST /student-portal/payments/init',
   'POST /student-portal/photo',
-  'POST /teachers',
   'POST /telegram-groups/:id/reject',
   'POST /telegram-groups/announce',
   'POST /telegram/employee-link',
@@ -561,4 +573,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 139;
+export const UNREVIEWED_BUDGET = 124;

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AttendanceStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { resolveCallerReportBranchIds } from '../common/finance/report-branch-scope';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import {
   tashkentDateStr,
   tashkentDayRangeUtc,
@@ -13,6 +13,8 @@ interface UserContext {
   userId: number;
   companyId: number;
   roles: string[];
+  /** The request's RESOLVED scope from `@BranchScope()`. */
+  branchScope: ReportBranchIds;
 }
 
 @Injectable()
@@ -22,15 +24,22 @@ export class OutreachService {
     private absenceStreak: AbsenceStreakService,
   ) {}
 
-  // CEO spans every branch; everyone else — Administrator included — is confined
-  // to the branches attached to them, and a caller with none sees nothing.
-  // Administrator used to be exempt alongside CEO, which contradicted D4/D6.
-  private async resolveBranchScope(
-    userId: number,
-    _roles: string[],
-  ): Promise<number[] | undefined> {
-    const ids = await resolveCallerReportBranchIds(this.prisma, userId);
-    return ids ?? undefined;
+  /**
+   * The request's RESOLVED scope, straight from `@BranchScope()`.
+   *
+   * This used to call `resolveCallerReportBranchIds(userId)` itself with no
+   * requested branch, so the page ignored the header switcher entirely: a CEO
+   * who picked Namangan still saw both branches. Taking the decorator's value
+   * fixes that AND removes a private copy of the rule — re-deriving a scope
+   * inside a service is the documented mistake that had a workbook printing
+   * one branch on its cover and another in its totals.
+   *
+   * `null` (every branch) becomes `undefined` here because that is what these
+   * queries already spell "no restriction" as; `[]` stays `[]`, and stays
+   * nothing.
+   */
+  private toBranchIds(scope: ReportBranchIds): number[] | undefined {
+    return scope ?? undefined;
   }
 
   async getTodayAbsentees(ctx: UserContext & { date?: string }) {
@@ -38,7 +47,7 @@ export class OutreachService {
     // backward compatibility with the no-arg endpoint.
     const dateStr = ctx.date ?? tashkentDateStr(new Date());
     const date = utcMidnightFromDateStr(dateStr);
-    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    const branchIds = this.toBranchIds(ctx.branchScope);
     // Empty array means "no branches assigned" — return nothing instead of
     // matching every branch via Prisma's missing-filter shortcut.
     if (branchIds && branchIds.length === 0) {
@@ -133,7 +142,7 @@ export class OutreachService {
   // cheap SQL aggregates; removalQueue reuses the same fan-out as
   // getRemovalQueue (acceptable because the page only fetches stats once).
   async getStats(ctx: UserContext) {
-    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    const branchIds = this.toBranchIds(ctx.branchScope);
     if (branchIds && branchIds.length === 0) {
       return {
         todayAbsentees: 0,
@@ -199,7 +208,7 @@ export class OutreachService {
    * date has passed. Overdue first, then by promise date ascending.
    */
   async getActivePromises(ctx: UserContext) {
-    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    const branchIds = this.toBranchIds(ctx.branchScope);
     if (branchIds && branchIds.length === 0) return { total: 0, items: [] };
 
     const promises = await this.prisma.paymentPromise.findMany({
@@ -260,7 +269,7 @@ export class OutreachService {
   }
 
   async getRemovalQueue(ctx: UserContext) {
-    const branchIds = await this.resolveBranchScope(ctx.userId, ctx.roles);
+    const branchIds = this.toBranchIds(ctx.branchScope);
     if (branchIds && branchIds.length === 0) {
       return { total: 0, items: [] };
     }

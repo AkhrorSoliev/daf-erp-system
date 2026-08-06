@@ -92,51 +92,60 @@ describe('OutreachController — role guards', () => {
   // catches accidental param-decorator typos.
   describe('handler wiring', () => {
     it('getTodayAbsentees delegates to service with user context and no date', async () => {
-      await controller.getTodayAbsentees({}, 10001, 1, ['CEO']);
+      await controller.getTodayAbsentees({}, 10001, 1, ['CEO'], null);
       expect(mockService.getTodayAbsentees).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
         date: undefined,
       });
     });
 
     it('getTodayAbsentees forwards the date query param', async () => {
-      await controller.getTodayAbsentees({ date: '2026-06-01' }, 10001, 1, [
-        'CEO',
-      ]);
+      await controller.getTodayAbsentees(
+        { date: '2026-06-01' },
+        10001,
+        1,
+        ['CEO'],
+        null,
+      );
       expect(mockService.getTodayAbsentees).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['CEO'],
+        branchScope: null,
         date: '2026-06-01',
       });
     });
 
     it('getRemovalQueue delegates to service with user context', async () => {
-      await controller.getRemovalQueue(10001, 1, ['Branch Director']);
+      await controller.getRemovalQueue(10001, 1, ['Branch Director'], [2]);
       expect(mockService.getRemovalQueue).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],
+        branchScope: [2],
       });
     });
 
     it('getStats delegates to service with user context', async () => {
-      await controller.getStats(10001, 1, ['Administrator']);
+      await controller.getStats(10001, 1, ['Administrator'], [2]);
       expect(mockService.getStats).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['Administrator'],
+        branchScope: [2],
       });
     });
 
     it('getActivePromises delegates to service with user context', async () => {
-      await controller.getActivePromises(10001, 1, ['Branch Director']);
+      await controller.getActivePromises(10001, 1, ['Branch Director'], [2]);
       expect(mockService.getActivePromises).toHaveBeenCalledWith({
         userId: 10001,
         companyId: 1,
         roles: ['Branch Director'],
+        branchScope: [2],
       });
     });
   });

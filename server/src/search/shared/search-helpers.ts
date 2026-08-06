@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import type { ReportBranchIds } from '../../common/finance/report-branch-scope';
 
 export interface SearchItem {
   id: number | string;
@@ -21,6 +22,21 @@ export interface SearchContext {
   companyId: number;
   roles: string[];
   userId: number;
+  /**
+   * The request's RESOLVED branch scope, straight from `@BranchScope()`.
+   *
+   * Search used to derive its own from `UserBranch` alone, which differed from
+   * the canonical rule twice over: it ignored `mainBranch` (a staff member
+   * recorded only there resolved to `[]` and search went silently empty — 25
+   * active staff in production all carry `UserBranch` rows, so latent rather
+   * than live), and it ignored the branch SWITCHER entirely, so a CEO who
+   * picked Namangan still searched everything.
+   *
+   * Re-deriving a scope inside a service is the documented mistake: two scopes
+   * in one request is how a workbook came to print one branch on its cover and
+   * another in its totals.
+   */
+  branchScope: ReportBranchIds;
 }
 
 /**
