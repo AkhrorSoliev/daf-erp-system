@@ -7,6 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, StudentStatus, TransactionType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayTouchStudent } from '../common/auth/financial-write-scope';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
@@ -219,6 +220,13 @@ export class StudentsWriteService {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 
+    // `assertSingleValidBranch` below asks whether the TARGET branch is real;
+    // this asks whether the CALLER may act on this student at all. Without it a
+    // director could edit another branch's student — and, because `branchIds`
+    // is editable here, move them into their own branch along with their
+    // balance, their enrolments and their teacher's future accruals.
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
+
     // Editing branches is allowed, but only to another single valid branch —
     // clearing them would strand the student outside every branch view.
     if (dto.branchIds !== undefined) {
@@ -372,6 +380,7 @@ export class StudentsWriteService {
     if (!student) {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
+    await assertCallerMayTouchStudent(this.prisma, deletedById, id, companyId);
 
     await this.statusHistoryService.changeStatus({
       entityType: 'Student',

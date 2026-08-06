@@ -32,6 +32,17 @@ describe('StudentsWriteService — branch validation', () => {
 
   beforeEach(async () => {
     prisma = {
+      // The caller is now checked against the student's branch
+      // (`assertCallerMayTouchStudent`) — editing or expelling
+      // another branch's student was open. A CEO spans all.
+      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
       student: {
         findFirst: jest.fn().mockResolvedValue(null),
       },

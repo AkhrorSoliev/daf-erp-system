@@ -60,6 +60,10 @@ describe('StudentsService — status methods', () => {
 
   beforeEach(async () => {
     prisma = {
+      // The caller is now checked against the student's branch
+      // (`assertCallerMayTouchStudent`): editing, expelling or
+      // archiving another branch's student was open. A CEO spans all.
+      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
       student: {
         findFirst: jest.fn().mockResolvedValue(mockStudent),
         update: jest.fn().mockResolvedValue(mockStudentSelect),
@@ -68,6 +72,12 @@ describe('StudentsService — status methods', () => {
       },
       user: {
         create: jest.fn().mockResolvedValue({ id: 10001 }),
+        // Read by the caller-branch guard.
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
       },
       enrollment: {
         count: jest.fn().mockResolvedValue(0),

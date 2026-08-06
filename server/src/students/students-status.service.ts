@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { EnrollmentStatus, ExitType, Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayTouchStudent } from '../common/auth/financial-write-scope';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
@@ -44,6 +45,11 @@ export class StudentsStatusService {
     if (!student) {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
+    // A status change CASCADES: EXPELLED or FROZEN closes this student's
+    // enrolments, which stops their lessons and their teacher's accruals. Done
+    // to another branch's student that is someone else's roster and someone
+    // else's payroll.
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
 
     // GRADUATED is automatic only — set by StatusCascadeService when a
     // group's status flips to COMPLETED. Manual selection is rejected.

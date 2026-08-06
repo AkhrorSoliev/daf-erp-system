@@ -66,7 +66,8 @@ describe('GroupsService — status methods', () => {
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
       // `findMany` backs the "teacher belongs to this group's branch" guard —
       // empty means no teacher from a foreign branch was requested.
-      user: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({ mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] }), count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
       // Every assigned teacher already has a salary rate (the normal case).
       employeeSalaryConfig: {
         findMany: jest
@@ -76,6 +77,10 @@ describe('GroupsService — status methods', () => {
           ),
       },
       groupTeacher: {
+        // Read by `assertCallerMayTouchGroup`'s teacher branch. Group CRUD is
+        // never reached by a pure teacher (@Roles excludes them), so this is
+        // only here to keep the guard's lookup from throwing.
+        findUnique: jest.fn().mockResolvedValue(null),
         deleteMany: jest.fn(),
         createMany: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
