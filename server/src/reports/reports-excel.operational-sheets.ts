@@ -26,6 +26,8 @@ import {
   dataBar,
   colorScale,
   fmtDate,
+  dmy,
+  tashkentTodayStr,
 } from './reports-excel.helpers';
 
 const DEC1 = '#,##0.0';
@@ -204,7 +206,9 @@ export function studentFlowSheet(
 export function roomUtilizationSheet(wb: Workbook, util: any, period: string) {
   const ws = wb.addWorksheet('Xonalar bandligi');
   ws.columns = [{ width: 26 }, { width: 12 }, { width: 12 }, { width: 14 }, { width: 16 }, { width: 16 }];
-  sheetTitle(ws, 'Xonalar bandligi', "Joriy holat (davrga bog'liq emas)", 6);
+  // Every sheet in the report states its window in the same fixed shape — a
+  // dated "Bugungi holat" rather than a vague "period-independent" label.
+  sheetTitle(ws, 'Xonalar bandligi', `Bugungi holat: ${dmy(tashkentTodayStr())}`, 6);
   if (!util) {
     emptyNote(ws);
     return;
@@ -242,7 +246,8 @@ export function roomUtilizationSheet(wb: Workbook, util: any, period: string) {
 export function groupFillSheet(wb: Workbook, groups: any, period: string) {
   const ws = wb.addWorksheet("Guruhlar to'ldirilishi");
   ws.columns = [{ width: 32 }, { width: 14 }, { width: 12 }, { width: 16 }];
-  sheetTitle(ws, "Guruhlar to'ldirilishi", 'Joriy holat', 4);
+  // Same fixed "Bugungi holat: DD.MM.YYYY" shape as every other live-state sheet.
+  sheetTitle(ws, "Guruhlar to'ldirilishi", `Bugungi holat: ${dmy(tashkentTodayStr())}`, 4);
   if (!groups) {
     emptyNote(ws);
     return;

@@ -11,6 +11,7 @@ import {
   nowLabel,
   buildNetProfit,
 } from './reports-excel.helpers';
+import { uzMonthLabel } from './reports-excel.v2-helpers';
 import {
   coverSheet,
   summarySheet,
@@ -398,7 +399,9 @@ export class ReportsExcelService {
     if (!dropPointInTime) balanceSheet(wb, bs);
     paymentsSheet(wb, payments, branchNames, period);
     expensesSheet(wb, expenses, branchNames, period);
-    salariesSheet(wb, salaries, period);
+    // `salaries` covers monthStr alone (a per-month view by design, even
+    // inside a multi-month export) — name THAT month, not the whole period.
+    salariesSheet(wb, salaries, period, uzMonthLabel(monthStr));
     if (!dropPointInTime) debtorsSheet(wb, debtors, branchNames);
     trendSheet(wb, trend);
     // Past-safe: reconstructed from the ledger, so never gated by dropPointInTime.

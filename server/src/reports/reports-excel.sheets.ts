@@ -310,28 +310,20 @@ export function glossarySheet(wb: Workbook) {
   const ws = wb.addWorksheet('Izoh');
   ws.columns = [{ width: 30 }, { width: 90 }];
   sheetTitle(ws, "Izoh / Lug‘at", 'Atamalarning sodda tilda izohi', 2);
+  // Ten plain-language terms only — the prior 21-term accounting glossary
+  // (Roll-forward, Cash tie-out, LTV/CAC/ROI jargon) and the "Metodika" row
+  // are gone; a reader who needs this sheet is not a bookkeeper.
   const terms: [string, string][] = [
-    ['Oy oxiriga kutilyapti', 'Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bayram, bekor qilingan dars va guruh jadvali hisobga olinadi. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi.'],
-    ['Hisoblangan daromad', 'Bu davrda o‘quvchilarga real hisoblab yozilgan darslar puli (accrual). Tushgan to‘lov va qarz shundan kelib chiqadi.'],
-    ['Tushgan tushum', 'Bu davrda kassaga real tushgan to‘lovlar (kassa asosida).'],
-    ['Naqd vs Hisoblangan asos', 'Naqd (kassa) asos = real tushgan/chiqgan pul. Hisoblangan (accrual) asos = darslar bo‘yicha yozilgan qiymat.'],
-    ['Ustozlar ulushi (tannarx)', 'Xizmat ko‘rsatish tannarxi — darslar uchun ustozlarga to‘lanadigan qism (COGS).'],
-    ['O‘quvchilar to‘lagan (covered)', 'Ustoz oyligining o‘quvchilar puli bilan qoplangan qismi.'],
-    ['Markaz qo‘shimchasi (gap)', 'Ustoz oyligining o‘quvchi to‘lamagani uchun markaz o‘z hisobidan qoplagan qismi.'],
-    ['Yalpi marja', 'Yalpi foyda ÷ Daromad × 100 — tannarxdan keyingi foydalilik foizi.'],
-    ['Sof marja', 'Sof foyda ÷ Daromad × 100 — barcha xarajatlardan keyingi foydalilik foizi.'],
+    ['Oy oxiriga kutilyapti', 'Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi.'],
+    ["O'tilgan darslar qiymati", 'Bu davrda o‘quvchilarga real hisoblab yozilgan darslar puli. Tushgan to‘lov va qarz shundan kelib chiqadi.'],
+    ['Tushgan tushum', 'Bu davrda kassaga real tushgan to‘lovlar (naqd, Payme, Click va h.k.).'],
+    ["Oyning o'z foydasi", '«Sof foyda» bo‘limidagi asosiy raqam: Tushum − Ustoz oyligi − Admin oyligi − Xarajat − Qaytarishlar. Barcha real chiqimlardan keyin qolgan sof pul.'],
+    ['O‘quvchilar to‘lagan (ustoz oyligida)', 'Ustoz oyligining o‘quvchilar puli bilan qoplangan qismi.'],
+    ['Markaz qo‘shimchasi', 'Ustoz oyligining o‘quvchi to‘lamagani uchun markaz o‘z hisobidan qoplagan qismi.'],
     ['Avans', 'Ustozga davr ichida oldindan berilgan pul. Oylik hisoblanganda hisobga olinadi.'],
-    ['Oldindan to‘lov', 'O‘quvchi kelajakdagi darslar uchun oldindan to‘lagan, hali sarflanmagan pul (deferred revenue).'],
-    ['Debitorlik', 'O‘quvchilarning bizga qarzi — manfiy balans yig‘indisi.'],
-    ['Sof foyda (aniq)', '«Sof foyda» bo‘limidagi asosiy raqam: Tushum − Ustoz oyligi (HISOBLANGAN) − Admin oyligi − Operatsion xarajat (avanssiz) − Qaytarishlar. Barcha real chiqimlardan keyin qolgan sof pul.'],
-    ['Ustoz oyligi (hisoblangan vs naqd)', 'Hisoblangan = shu oy darslari uchun ustozlar HAQ QILGAN oylik (naqd keyingi oy chiqsa ham). Naqd = shu davrda real to‘langan. Naqd asosda oylik ko‘pincha 0 ko‘rinib, foydani sun‘iy oshiradi — shuning uchun aniq foydada hisoblangan olinadi.'],
-    ['Sof foyda (ikki asos)', 'Asosiy xulosadagi "naqd asosida" sof foyda kassa bilan bir xil (ustoz oyligi keyingi oy to‘langani uchun yuqori). "Aniq" sof foyda hisoblangan oylik + refund bilan — «Sof foyda» bo‘limiga qarang.'],
-    ['Roll-forward (aylanma)', 'Boshi + harakat − reversal = oxiri. Har bir qoldiq shu tarzda footlab isbotlanadi.'],
-    ['Cash tie-out', 'Tushgan pul, to‘lovlar va Foyda-zarar daromadi bir-biriga mos kelishi tekshiruvi.'],
-    ['LTV', 'Bir to‘lovchi o‘quvchidan davr ichida olingan o‘rtacha daromad.'],
-    ['CAC', 'Bitta yangi o‘quvchini jalb qilish uchun sarflangan o‘rtacha marketing xarajati.'],
-    ['Marketing ROI', 'Marketingga sarflangan mablag‘ning qaytimi (%).'],
-    ['Balanslashuv farqi', 'Bir yozuvli tizimda Aktiv − (Passiv + Kapital) farqi — yashirilmaydi, oshkor ko‘rsatiladi.'],
+    ['Oldindan to‘lov', 'O‘quvchi kelajakdagi darslar uchun oldindan to‘lagan, hali sarflanmagan pul.'],
+    ['Debitorlik (qarz)', 'O‘quvchilarning bizga qarzi — manfiy balans yig‘indisi.'],
+    ['Sof marja', 'Sof foyda ÷ Tushum × 100 — har 100 so‘m tushumdan qancha foyda qolgani.'],
   ];
   tableHeader(ws, ['Atama', 'Izoh']);
   terms.forEach(([term, def]) => {
@@ -339,8 +331,4 @@ export function glossarySheet(wb: Workbook) {
     r.getCell(1).font = { bold: true };
     r.getCell(2).alignment = { wrapText: true, vertical: 'top' };
   });
-  ws.addRow([]);
-  const meta = ws.addRow(['Metodika', 'Davr chegaralari: sana oralig‘i bo‘yicha. Oy o‘rtasida yuklab olinsa — oy boshidan bugungacha. Balans/qarzdorlik joriy holat (davr oxiri emas). Tizim bir yozuvli ledgerdan hosil qilinadi.']);
-  meta.getCell(1).font = { bold: true };
-  meta.getCell(2).alignment = { wrapText: true, vertical: 'top' };
 }

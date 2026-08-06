@@ -321,6 +321,26 @@ describe('ReportsExcelService', () => {
     return found;
   };
 
+  /**
+   * Small helper for the "carried-over sheet fixes" tests below: runs
+   * `service.generate` with per-test query overrides, optionally swapping in
+   * one mock dataset (`expenses`), and loads the result the same way `load`
+   * does everywhere else in this file.
+   */
+  const buildWorkbook = async (opts: {
+    startDate?: string;
+    endDate?: string;
+    expenses?: any;
+  }): Promise<Workbook> => {
+    if (opts.expenses) {
+      reports.getExpenseLineItems.mockResolvedValueOnce(opts.expenses);
+    }
+    const query: any = { branchIds: null };
+    if (opts.startDate) query.startDate = opts.startDate;
+    if (opts.endDate) query.endDate = opts.endDate;
+    return load(await service.generate(1, query));
+  };
+
   it('produces a non-empty xlsx buffer from every report source', async () => {
     const buf = await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30', branchIds: null });
     expect(Buffer.isBuffer(buf)).toBe(true);
@@ -726,6 +746,54 @@ describe('ReportsExcelService', () => {
       await service.generateDebtHistory(1, [2]);
       expect(reports.getMonthlyDebtRecovery).toHaveBeenCalledWith(1, [2]);
       expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06', [2]);
+    });
+  });
+
+  describe('carried-over sheet fixes', () => {
+    it('«Oyliklar» names the month its data actually covers', async () => {
+      // `salaries` is fetched for `monthStr` alone — the period's FIRST month
+      // (2026-05) — even inside this 3-month export; Oyliklar stays a
+      // per-month view by design (see reports-excel.month-range.ts). The
+      // subtitle must name THAT month, not the whole 01.05–31.07 period it
+      // used to print above data that only ever covered May.
+      const wb = await buildWorkbook({ startDate: '2026-05-01', endDate: '2026-07-31' });
+      const ws = wb.getWorksheet('Oyliklar')!;
+      expect(String(ws.getRow(2).getCell(1).value)).toContain('May 2026');
+    });
+
+    it('«Xarajatlar» warns when the Boshqa bucket dominates', async () => {
+      const wb = await buildWorkbook({
+        expenses: {
+          rows: [
+            { date: '2026-06-10', category: 'OTHER', amount: 65_515_000 },
+            { date: '2026-06-11', category: 'RENT', amount: 18_000_000 },
+          ],
+          total: 83_515_000,
+        },
+      });
+      const ws = wb.getWorksheet('Xarajatlar')!;
+      const text: string[] = [];
+      ws.eachRow((r) => text.push(String(r.getCell(1).value ?? '')));
+      expect(text.join('\n')).toContain('«Boshqa» ulushi');
+    });
+
+    it('«Izoh» carries ten plain-language terms and no accounting jargon', async () => {
+      const wb = await buildWorkbook({});
+      const ws = wb.getWorksheet('Izoh')!;
+      const text: string[] = [];
+      ws.eachRow((r) => text.push(String(r.getCell(1).value ?? '')));
+      const joined = text.join('\n');
+      expect(joined).toContain("O'tilgan darslar qiymati");
+      expect(joined).toContain("Oyning o'z foydasi");
+      expect(joined).not.toContain('Roll-forward');
+      expect(joined).not.toContain('Cash tie-out');
+      expect(joined).not.toContain('Balanslashuv farqi');
+    });
+
+    it('«Xonalar bandligi» states its window as a dated "Bugungi holat"', async () => {
+      const wb = await buildWorkbook({});
+      const ws = wb.getWorksheet('Xonalar bandligi')!;
+      expect(String(ws.getRow(2).getCell(1).value)).toContain('Bugungi holat:');
     });
   });
 });
