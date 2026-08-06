@@ -78,6 +78,22 @@ const valueFor = (ws: Worksheet, label: string): any => {
   });
   return v;
 };
+// Locates a columnHeader row by its first cell and returns cols 2-4 — the
+// header shape a `compareRow` call would put a previous-month label into.
+// Block 6's "Ko'rsatkich" header collides in column 1 with blocks 1/2's real
+// comparison header ("Ko'rsatkich" | curLabel | prevLabel | 'Farq' | 'Izoh'),
+// so a second-cell value narrows to the right row when the label alone is
+// ambiguous (block 6's is 'Soni', blocks 1/2's is the current-month label).
+const headerCells = (ws: Worksheet, firstCellLabel: string, secondCellLabel?: string): any[] => {
+  let cells: any[] = [];
+  ws.eachRow((r) => {
+    if (cells.length) return;
+    if (String(r.getCell(1).value ?? '') !== firstCellLabel) return;
+    if (secondCellLabel !== undefined && String(r.getCell(2).value ?? '') !== secondCellLabel) return;
+    cells = [2, 3, 4].map((c) => r.getCell(c).value);
+  });
+  return cells;
+};
 
 describe('summarySheetV2', () => {
   let ws: Worksheet;
@@ -144,5 +160,29 @@ describe('summarySheetV2', () => {
 
   it('shows the payment count and payer count together', () => {
     expect(textOf(ws).join('\n')).toContain("530 ta to'lov · 387 ta o'quvchi");
+  });
+
+  // Customer demand 6: blocks 3-6 must never grow a comparison column. This
+  // asserts the header ROW cells directly rather than a whole-sheet text
+  // substring — a substring check can't tell "no header at all" apart from
+  // "a header, containing the previous month's label", which is exactly the
+  // historical defect (an empty 'Iyun 2026' column with nothing beneath it).
+  it('locks blocks 3-6 header rows to their fixed shape — no comparison column can sneak back in', () => {
+    const prevLabel = 'Iyun 2026';
+    const block3 = headerCells(ws, 'Qaysi oyning darsi uchun');
+    const block4 = headerCells(ws, "Qachon to'langan");
+    const block5 = headerCells(ws, "Yo'nalish");
+    const block6a = headerCells(ws, "Ko'rsatkich", 'Soni');
+    const block6b = headerCells(ws, 'Iyul 2026 harakati');
+
+    expect(block3).toEqual(['Summa', 'Jamidan %', '']);
+    expect(block4).toEqual(['Summa', 'Jamidan %', '']);
+    expect(block5).toEqual(['Summa', 'Jamidan %', '']);
+    expect(block6a).toEqual(['Soni', '', '']);
+    expect(block6b).toEqual(['Soni', '', '']);
+
+    for (const cells of [block3, block4, block5, block6a, block6b]) {
+      expect(cells).not.toContain(prevLabel);
+    }
   });
 });
