@@ -10,6 +10,9 @@ import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
+import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 
 @Injectable()
 export class StudentEnrollmentService {
@@ -60,6 +63,19 @@ export class StudentEnrollmentService {
         "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
       );
     }
+
+    // The GROUP's branch is the one checked, not the student's, and that
+    // choice matters in both directions. The rule below forces them equal when
+    // the student already has a branch — but when they do NOT, the enrollment
+    // ASSIGNS one, and checking a branch the student does not have yet would
+    // check nothing at all. Whichever way that lands, it lands on the group's
+    // branch, so that is what the caller must hold.
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      group.branchId,
+      "Bu guruh boshqa filialga tegishli — unga o'quvchi qo'shish huquqingiz yo'q",
+    );
 
     // A student belongs to exactly one branch. Enrolling into another branch's
     // group used to succeed silently, leaving the student listed under one
@@ -350,6 +366,19 @@ export class StudentEnrollmentService {
       throw new NotFoundException('Faol yozuv topilmadi');
     }
 
+    // Anchored on the ENROLLMENT's own student, never the `:id` in the path —
+    // which this method has always ignored (`_studentId`). Guarding the path
+    // parameter would let a caller pass one of their OWN students' ids
+    // alongside another branch's enrollment id and satisfy the check while
+    // acting on someone else's record. The enrollment is what gets closed, so
+    // the enrollment names the student who must be theirs.
+    await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      enrollment.studentId,
+      companyId,
+    );
+
     // Load the student — already scoped by the enrollment query above.
     const student = await this.prisma.student.findUnique({
       where: { id: enrollment.studentId },
@@ -559,7 +588,25 @@ export class StudentEnrollmentService {
     _studentId: number,
     enrollmentId: string,
     companyId: number,
+    userId?: number,
   ) {
+    // The eligibility answer names the amount and the reason a debt could be
+    // erased. It is the read that precedes the write, and it is addressed by
+    // the same enrollment id — so it is gated the same way, on the
+    // enrollment's own student rather than the ignored `:id` in the path.
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { id: enrollmentId, deletedAt: null, student: { companyId } },
+      select: { studentId: true },
+    });
+    if (!enrollment) {
+      throw new NotFoundException('Yozuv topilmadi');
+    }
+    await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      enrollment.studentId,
+      companyId,
+    );
     return this.debtWriteOffService.computeEligibility(enrollmentId, companyId);
   }
 
@@ -595,6 +642,18 @@ export class StudentEnrollmentService {
         "Faol yozuv uchun hisobdan chiqarish 'Guruhdan chiqarish' oynasi orqali bajariladi",
       );
     }
+
+    // This writes a DEBT_WRITE_OFF ledger row — it erases what a student owes.
+    // The earlier money-route sweep walked `/payments`, `/refunds`,
+    // `/transactions` and `/withdrawals` by path and never reached it, because
+    // it lives at `/students/:id/enrollments/:enrollmentId/...`. Money is not
+    // where the URL says it is.
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      enrollment.studentId,
+      companyId,
+    );
 
     const result = await this.debtWriteOffService.executeWriteOff({
       enrollmentId,

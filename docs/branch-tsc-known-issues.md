@@ -135,8 +135,8 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **110** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **161** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **124** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **147** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
@@ -229,3 +229,48 @@ Yordamchi: `assertCallerMayTouchStudent` — `assertCallerMayWriteForStudent` bi
 bitta amalga oshirish, ikkita nom. Xabar boshqacha ataylab: o'quvchini
 chetlatish «pul yozish» emas, va shunday deb aytilgan admin bo'lmagan to'lovni
 qidiradi.
+
+## Audit 4-bosqich — o'quvchi profili, ro'yxatga olish, guruh ro'yxati (2026-08-06)
+
+14 ta route. Uchta naqsh:
+
+### 1. Ro'yxat qamrab olingan, u ochadigan sahifa yo'q
+
+`findAll`/`findById` `ReportBranchIds` oladi. Orqasidagi **har bir tab**
+`companyId` bilan javob berardi: balans, ledger xulosasi, darslar tarixi, SMS
+jurnali, status izi. O'quvchi id'lari ketma-ket besh xonali son.
+
+O'qishlar **scope filtri emas, chaqiruvchi qorovuli** oldi. Bitta yozuv haqidagi
+so'rovga scope predikati bo'sh tab qaytaradi — bu «bu o'quvchida to'lov yo'q»
+deb o'qiladi, ya'ni haqiqiy javob qiyofasidagi noto'g'ri javob.
+
+### 2. Yo'ldagi `:id` e'tiborsiz qoldirilgan
+
+Uchta route enrollment id bilan manzillanadi va `_studentId` ni **hech qachon
+o'qimagan**. Yo'l parametrini tekshirish tuzoq bo'lardi: chaqiruvchi **o'zining**
+o'quvchisi id'sini begona filial enrollment id'si bilan juftlab, tekshiruvdan
+o'tib ketardi. Har biri enrollment'ning **o'z** o'quvchisiga bog'landi.
+
+`write-off-cycle-debt` DEBT_WRITE_OFF yozadi — **pul**. Oldingi pul auditi
+`/payments`, `/refunds`, `/transactions`, `/withdrawals` yo'llari bo'yicha
+yurgan va bunga yetib bormagan. **Pul URL aytgan joyda emas.**
+
+### 3. `@Roles` egalikni isbotlamaydi
+
+`GET /groups/:id/students` telefon va balansni qaytaradi, `@Roles` ichida
+Teacher bor va **yagona tekshiruv shu edi** — ya'ni istalgan o'qituvchi
+kompaniyaning istalgan guruhini id bo'yicha o'qiy olardi.
+
+### Qorovulning o'zi ham tuzatildi
+
+`assertCallerMayTouchStudent` `common/auth/student-branch-scope.ts` ga ko'chdi
+(guruh yordamchisi bilan simmetrik). Pul versiyasidan **uchta ataylab farq**:
+
+| | Pul (`assertCallerMayWriteForStudent`) | Pul emas |
+|---|---|---|
+| Filialsiz o'quvchi | xom `Error` → **500** (atributsiz ledger qatori — favqulodda holat) | **403** rad etish |
+| Mavjudlik | chaqiruvchilar o'zi 404 qiladi | oldin tekshiriladi → **404** |
+| Xabar | «pul yozish huquqi» | «u bilan ishlash huquqi» |
+
+Sababi: shunchaki ochilgan sahifada 500 noto'g'ri. Prod tekshirildi —
+**824 tirik o'quvchi, 0 tasi filialsiz**, ya'ni bu chiziq allaqachon turibdi.

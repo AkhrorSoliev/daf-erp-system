@@ -10,6 +10,7 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 
 @Injectable()
 export class StudentsService {
@@ -18,8 +19,8 @@ export class StudentsService {
     private write: StudentsWriteService,
     private statusService: StudentsStatusService,
     private transactions: TransactionsService,
-    // Only for the branch-ownership check on `setInitialBalance`; this facade
-    // otherwise delegates rather than querying.
+    // Holds the branch-ownership checks below; this facade otherwise
+    // delegates rather than querying.
     private prisma: PrismaService,
   ) {}
 
@@ -38,16 +39,44 @@ export class StudentsService {
   ) {
     return this.read.findById(id, companyId, branchScope);
   }
-  getStatusHistory(id: number, companyId: number) {
+  /**
+   * The id-addressed profile reads.
+   *
+   * `findAll` / `findById` take a `ReportBranchIds` scope, so the LIST is
+   * confined — but every tab on the profile behind it was `companyId`-only.
+   * A Namangan director who typed a Fargona student's id into the URL got the
+   * balance, the ledger summary, the lesson history, the SMS log and the status
+   * trail in full. The list they could not see; the profile they could.
+   *
+   * These take the caller's id rather than a scope because they answer a
+   * question about ONE student: the gate is "may you reach this record", and
+   * once you may, you see it whole. A scope predicate would silently return an
+   * empty tab instead of a refusal, which reads as "nothing here" — a worse
+   * answer than "not yours".
+   */
+  async getStatusHistory(id: number, companyId: number, userId?: number) {
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     return this.read.getStatusHistory(id, companyId);
   }
-  getActiveEnrollmentsWithPrepaid(id: number, companyId: number) {
+  async getActiveEnrollmentsWithPrepaid(
+    id: number,
+    companyId: number,
+    userId?: number,
+  ) {
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     return this.read.getActiveEnrollmentsWithPrepaid(id, companyId);
   }
-  getClosedEnrollments(id: number, companyId: number) {
+  async getClosedEnrollments(id: number, companyId: number, userId?: number) {
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     return this.read.getClosedEnrollments(id, companyId);
   }
-  getLessonsOverview(id: number, companyId: number, includeClosed?: boolean) {
+  async getLessonsOverview(
+    id: number,
+    companyId: number,
+    includeClosed?: boolean,
+    userId?: number,
+  ) {
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     return this.read.getLessonsOverview(id, companyId, includeClosed);
   }
   /**
@@ -74,7 +103,8 @@ export class StudentsService {
     });
   }
 
-  getBalanceSummary(id: number, companyId: number) {
+  async getBalanceSummary(id: number, companyId: number, userId?: number) {
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     return this.transactions.getBalanceSummary(id, companyId);
   }
 

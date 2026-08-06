@@ -7,7 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, StudentStatus, TransactionType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { assertCallerMayTouchStudent } from '../common/auth/financial-write-scope';
+
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
@@ -20,6 +20,7 @@ import {
   studentSelect,
   formatStudent,
 } from './shared/student-select';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 
 /**
  * Pure recompute of the retroactive discount adjustment.

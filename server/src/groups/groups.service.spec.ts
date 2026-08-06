@@ -398,10 +398,16 @@ describe('GroupsService — status methods', () => {
       // while the attendance/lesson tabs used firstName-asc, so the same group
       // showed students in two different orders. All roster queries must use
       // the one shared STUDENT_ROSTER_ORDER_BY.
-      prisma.group.findFirst.mockResolvedValue({ id: 'g1', companyId: 1001 });
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'g1',
+        companyId: 1001,
+        branchId: 1,
+      });
       prisma.enrollment.findMany.mockResolvedValue([]);
 
-      await service.findStudentsByGroupId('g1', 1001);
+      // The roster is branch-gated now: a CEO spans every branch, and the
+      // roles list is what routes a caller to the assignment check instead.
+      await service.findStudentsByGroupId('g1', 1001, 1, ['CEO']);
 
       expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ orderBy: STUDENT_ROSTER_ORDER_BY }),

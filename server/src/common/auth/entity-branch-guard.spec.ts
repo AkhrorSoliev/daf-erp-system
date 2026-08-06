@@ -1,8 +1,9 @@
-import { ForbiddenException } from '@nestjs/common';
-import { assertCallerMayTouchStudent } from './financial-write-scope';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { assertCallerMayTouchStudent } from './student-branch-scope';
 
 /**
- * The id-addressed student writes were company-scoped only.
+ * The id-addressed student routes were company-scoped only — writes first,
+ * and then, when the sweep reached them, the profile READS.
  *
  * `PATCH /students/:id` accepted `branchIds`, so a Namangan director could edit
  * a Fargona student AND MOVE THEM into Namangan — taking their balance, their
@@ -10,6 +11,9 @@ import { assertCallerMayTouchStudent } from './financial-write-scope';
  * `PATCH /students/:id/status` is worse in a quieter way: EXPELLED or FROZEN
  * cascades to that student's enrolments, stopping lessons in another branch's
  * groups and the accruals that follow from them.
+ * The reads leaked the same student without changing anything: the LIST was
+ * branch-scoped, but `balance-summary`, `lessons-overview`, `closed-enrollments`
+ * and the SMS log behind it answered on `companyId` alone.
  *
  * `assertSingleValidBranch` was already there and reads like a branch check,
  * which is part of why this survived — but it asks whether the TARGET branch is
@@ -17,10 +21,16 @@ import { assertCallerMayTouchStudent } from './financial-write-scope';
  */
 describe('assertCallerMayTouchStudent', () => {
   function prismaFor(opts: {
+    exists?: boolean;
     studentBranch: number | null;
     caller: { mainBranch: number | null; branchIds: number[]; role: string };
   }) {
     return {
+      student: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue(opts.exists === false ? null : { id: 10264 }),
+      },
       studentBranch: {
         findFirst: jest
           .fn()
@@ -69,14 +79,39 @@ describe('assertCallerMayTouchStudent', () => {
     ).resolves.toBe(2);
   });
 
-  it('fails closed when the student has no branch at all', async () => {
-    // `resolveStudentBranchId` throws rather than returning null. A student
-    // nobody can attribute is not a student anybody may quietly edit — and by
-    // D5 this state should not exist, so hitting it is itself the signal.
-    const prisma = prismaFor({ studentBranch: null, caller: FARGONA_DIRECTOR });
+  it('404s a deleted or foreign-company student before touching branches', async () => {
+    // Existence comes first so an admin opening an archived student's profile
+    // gets "topilmadi" rather than the branch resolver's error. The money
+    // callers all 404 themselves before reaching here; the profile reads have
+    // no lookup of their own.
+    const prisma = prismaFor({
+      exists: false,
+      studentBranch: 1,
+      caller: FARGONA_DIRECTOR,
+    });
     await expect(
       assertCallerMayTouchStudent(prisma, 7, 10264, 1001),
-    ).rejects.toThrow(/filial aniqlanmadi/);
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(
+      (prisma as never as { studentBranch: { findFirst: jest.Mock } })
+        .studentBranch.findFirst,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('REFUSES a student with no branch — it does not crash', async () => {
+    // The money guard raises a raw error here on purpose: an unattributable
+    // ledger row is a data emergency. Opening a profile is not, so this path
+    // fails closed as a 403 rather than a 500 on a page someone merely
+    // clicked. (Production: 824 live students, 0 without a branch.)
+    const prisma = prismaFor({ studentBranch: null, caller: FARGONA_DIRECTOR });
+    const err = await assertCallerMayTouchStudent(
+      prisma,
+      7,
+      10264,
+      1001,
+    ).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect((err as Error).message).toMatch(/filial aniqlanmadi/);
   });
 
   it('refuses an unidentified caller', async () => {
@@ -87,10 +122,10 @@ describe('assertCallerMayTouchStudent', () => {
   });
 
   it('carries a message about the STUDENT, not about money', async () => {
-    // The money variant and this one share an implementation but not a
-    // sentence: telling an admin that expelling a student failed because they
-    // "may not write money" sends them looking for a payment that does not
-    // exist.
+    // The money variant and this one are deliberately separate functions, and
+    // the sentence is one of the reasons: telling an admin that expelling a
+    // student failed because they "may not write money there" sends them
+    // looking for a payment that does not exist.
     const prisma = prismaFor({ studentBranch: 2, caller: FARGONA_DIRECTOR });
     await expect(
       assertCallerMayTouchStudent(prisma, 7, 10264, 1001),

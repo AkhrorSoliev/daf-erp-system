@@ -124,8 +124,9 @@ export class StudentsController {
   getStatusHistory(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.studentsService.getStatusHistory(id, companyId);
+    return this.studentsService.getStatusHistory(id, companyId, userId);
   }
 
   @Get(':id/active-enrollments-prepaid')
@@ -134,8 +135,13 @@ export class StudentsController {
   getActiveEnrollmentsWithPrepaid(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.studentsService.getActiveEnrollmentsWithPrepaid(id, companyId);
+    return this.studentsService.getActiveEnrollmentsWithPrepaid(
+      id,
+      companyId,
+      userId,
+    );
   }
 
   /**
@@ -149,8 +155,9 @@ export class StudentsController {
   getBalanceSummary(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.studentsService.getBalanceSummary(id, companyId);
+    return this.studentsService.getBalanceSummary(id, companyId, userId);
   }
 
   @Post(':id/enroll')
@@ -203,8 +210,9 @@ export class StudentsController {
   getClosedEnrollments(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.studentsService.getClosedEnrollments(id, companyId);
+    return this.studentsService.getClosedEnrollments(id, companyId, userId);
   }
 
   // O'quvchi monitoringi uchun "Darslar" ko'rinishi — har guruh bo'yicha
@@ -218,11 +226,13 @@ export class StudentsController {
     @Param('id', ParseIntPipe) id: number,
     @Query('includeClosed') includeClosed: string | undefined,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
     return this.studentsService.getLessonsOverview(
       id,
       companyId,
       includeClosed === 'true',
+      userId,
     );
   }
 
@@ -239,11 +249,13 @@ export class StudentsController {
     @Param('id', ParseIntPipe) id: number,
     @Param('enrollmentId') enrollmentId: string,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
     return this.studentEnrollmentService.getDebtWriteOffEligibility(
       id,
       enrollmentId,
       companyId,
+      userId,
     );
   }
 
@@ -277,12 +289,14 @@ export class StudentsController {
     @Param('id', ParseIntPipe) id: number,
     @Query() query: PaginationDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
     return this.smsService.getByStudent(
       id,
       companyId,
       query.page,
       query.pageSize,
+      userId,
     );
   }
 
@@ -301,6 +315,7 @@ export class StudentsController {
       'MANUAL',
       userId,
       companyId,
+      { assertCallerBranch: true },
     );
   }
 
