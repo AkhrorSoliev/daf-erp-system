@@ -105,6 +105,20 @@ export function expensesSheet(
   if (expenses?.truncated) {
     ws.addRow(["Ko‘p yozuv — faqat birinchi 10 000 tasi ko‘rsatildi. Davrni qisqartiring."]);
   }
+  // An oversized "Boshqa" bucket means the month's spending cannot be read at
+  // all — June 2026 hid 65 515 000 so'm (71% of operating spend) in it. The
+  // report surfaces that rather than presenting the split as meaningful.
+  const otherTotal = (expenses?.rows ?? [])
+    .filter((e: any) => e.category === 'OTHER')
+    .reduce((s: number, e: any) => s + (e.amount ?? 0), 0);
+  const grand = expenses?.total ?? 0;
+  if (grand > 0 && otherTotal / grand > 0.3) {
+    const pct = Math.round((otherTotal / grand) * 1000) / 10;
+    const w = ws.addRow([
+      `DIQQAT: «Boshqa» ulushi ${pct}% (${otherTotal.toLocaleString('ru-RU')} so'm) — bu xarajatlar toifalanmagan, shuning uchun nimaga sarflangani hisobotdan bilinmaydi.`,
+    ]);
+    w.getCell(1).font = { bold: true, color: { argb: 'FFB06A00' } };
+  }
   freezeAndFilter(ws, header.number, 8);
   sheetNotes(ws, [
     'Bu davrda qilingan har bir xarajat (ijara, kommunal, marketing va h.k.).',
@@ -115,13 +129,21 @@ export function expensesSheet(
 }
 
 // ---- Sheet 8: Oyliklar (computed monthly — the /payments/salary view) ----
-export function salariesSheet(wb: Workbook, salaries: any, period: string) {
+export function salariesSheet(
+  wb: Workbook,
+  salaries: any,
+  period: string,
+  monthLabel: string,
+) {
   const ws = wb.addWorksheet('Oyliklar');
   ws.columns = [
     { width: 26 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 },
     { width: 14 }, { width: 16 }, { width: 16 }, { width: 14 },
   ];
-  sheetTitle(ws, 'Ustozlar oyligi — hisoblangan (shu oy uchun)', period, 9);
+  // The sheet is a per-month view by design (`salaries` is fetched for a single
+  // month, even inside a multi-month export) — the header names THAT month, so
+  // a 3-month export no longer prints the whole period above one month's payroll.
+  sheetTitle(ws, 'Ustozlar oyligi — hisoblangan', `${monthLabel} darslari uchun`, 9);
   const rows = salaries?.data ?? [];
   const header = tableHeader(ws, [
     'Ustoz',

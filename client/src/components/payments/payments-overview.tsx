@@ -75,6 +75,7 @@ interface FinancialOverview {
   };
   expenses: number;
   netProfit: number;
+  ownMonthProfit?: number | null;
   debtorCount: number;
   activeBalance: number;
   activeStudentCount: number;
@@ -199,6 +200,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     salary: { paid: 0, pending: 0, advances: 0, computed: null },
     expenses: 0,
     netProfit: 0,
+    ownMonthProfit: null,
     debtorCount: 0,
     activeBalance: 0,
     activeStudentCount: 0,
@@ -249,7 +251,12 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               label="Foyda"
               value={`${fmt(d.netProfit)} so'm`}
               color={d.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
-              tooltip="Shu oy o'tilgan darslarning pulidan ustoz oyligi, xarajatlar va qaytarilgan pullar ayirilgan — qolgani markazga foyda. Har oy faqat o'z darslari bo'yicha, kech kelgan to'lovlar aralashmaydi."
+              subtitle={
+                d.ownMonthProfit == null
+                  ? undefined
+                  : `Oyning o'z foydasi: ${fmt(d.ownMonthProfit)} so'm`
+              }
+              tooltip="Shu oy o'tilgan darslarning pulidan ustoz oyligi, xarajatlar va qaytarilgan pullar ayirilgan — qolgani markazga foyda. «Oyning o'z foydasi» esa boshqa savolga javob beradi: shu oyning O'Z puli shu oyning xarajatini qopladimi. Manfiy bo'lsa — oy eski qarz undirish yoki oldingi oylar puli hisobiga yopilgan."
               onClick={() => setChartKey("profit")}
             />
           </>

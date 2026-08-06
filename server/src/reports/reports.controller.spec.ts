@@ -35,6 +35,9 @@ describe('ReportsController — role guards', () => {
     }),
     // Canonical monthly net profit — overrides overview.netProfit on the card.
     getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 12_345_678 }),
+    // «Oyning o'z foydasi» — default resolves so unrelated tests in this file
+    // (which don't care about the field) aren't left exercising the catch path.
+    getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
     getPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherGroupsReport: jest.fn().mockResolvedValue({}),
@@ -528,6 +531,70 @@ describe('ReportsController — role guards', () => {
         netProfit: 12_345_678,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
+    });
+  });
+
+  describe('financial-overview — ownMonthProfit', () => {
+    beforeEach(() => {
+      mockService.getFinancialOverview.mockResolvedValue({
+        ltvPayerCount: 188,
+        avgPayment: 326071,
+      });
+    });
+
+    afterEach(() => {
+      mockService.getFinancialOverview.mockResolvedValue({});
+      mockService.getOwnMonthProfit.mockResolvedValue({ ownMonthProfit: null });
+    });
+
+    const query = {} as any;
+
+    it('adds the own-month profit for a CEO caller', async () => {
+      mockService.getOwnMonthProfit.mockResolvedValueOnce({
+        month: '2026-07',
+        ownMoney: 142_064_938,
+        cashTotal: 170_378_987,
+        netProfit: { netProfit: 35_976_444 },
+        ownMonthProfit: 4_257_391,
+      });
+
+      const out: any = await controller.getFinancialOverview(query, {
+        id: 10_456,
+        companyId: 1,
+        roles: ['CEO'],
+      });
+
+      expect(out.ownMonthProfit).toBe(4_257_391);
+    });
+
+    it('falls back to null when the figure cannot be computed', async () => {
+      mockService.getOwnMonthProfit.mockRejectedValueOnce(new Error('boom'));
+
+      const out: any = await controller.getFinancialOverview(query, {
+        id: 10_456,
+        companyId: 1,
+        roles: ['CEO'],
+      });
+
+      expect(out.ownMonthProfit).toBeNull();
+    });
+
+    it('is stripped for an Administrator caller', async () => {
+      mockService.getOwnMonthProfit.mockResolvedValueOnce({
+        month: '2026-07',
+        ownMoney: 1,
+        cashTotal: 1,
+        netProfit: { netProfit: 1 },
+        ownMonthProfit: 4_257_391,
+      });
+
+      const out: any = await controller.getFinancialOverview(query, {
+        id: 9,
+        companyId: 1,
+        roles: ['Administrator'],
+      });
+
+      expect(out.ownMonthProfit).toBeUndefined();
     });
   });
 

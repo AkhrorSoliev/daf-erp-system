@@ -147,6 +147,12 @@ describe('ReportsService', () => {
             }),
           },
         },
+        {
+          // Own maths covered by reports-student-flow.service.spec.ts.
+          provide:
+            require('./reports-student-flow.service').ReportsStudentFlowService,
+          useValue: { getStudentFlow: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -1445,6 +1451,64 @@ describe('ReportsService', () => {
         teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
         courses: [{ id: 'c1', name: 'German B1' }],
       });
+    });
+  });
+
+  describe('getOwnMonthProfit', () => {
+    it('combines attribution + net profit into the own-month figure', async () => {
+      const svc: any = service;
+      jest.spyOn(svc, 'getIncomeMonthAttribution').mockResolvedValue({
+        total: 170_378_987,
+        currentMonth: 142_064_938,
+        lateTotal: 28_314_049,
+        late: [],
+      });
+      jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
+        teacherSalary: 95_834_547,
+        adminSalary: 0,
+        operatingExpenses: 41_773_000,
+        refunds: 200_000,
+        netProfit: 35_976_444,
+      });
+
+      const out = await svc.getOwnMonthProfit(1, {
+        month: '2026-07',
+        branchIds: null,
+        performedById: 10_456,
+      });
+
+      expect(out.ownMoney).toBe(142_064_938);
+      expect(out.cashTotal).toBe(170_378_987);
+      expect(out.ownMonthProfit).toBe(4_257_391);
+      expect(out.netProfit.netProfit).toBe(35_976_444);
+    });
+
+    it('passes the month-end date bounds to the attribution query', async () => {
+      const svc: any = service;
+      const attr = jest.spyOn(svc, 'getIncomeMonthAttribution').mockResolvedValue({
+        total: 0, currentMonth: 0, lateTotal: 0, late: [],
+      });
+      jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
+        teacherSalary: 0, adminSalary: 0, operatingExpenses: 0, refunds: 0, netProfit: 0,
+      });
+
+      await svc.getOwnMonthProfit(1, { month: '2026-02', branchIds: [7], performedById: 1 });
+
+      expect(attr).toHaveBeenCalledWith(1, {
+        branchIds: [7],
+        startDate: '2026-02-01',
+        endDate: '2026-02-28',
+      });
+    });
+
+    it('an empty branch scope returns zeros without querying', async () => {
+      const svc: any = service;
+      const attr = jest.spyOn(svc, 'getIncomeMonthAttribution');
+      const out = await svc.getOwnMonthProfit(1, {
+        month: '2026-07', branchIds: [], performedById: 1,
+      });
+      expect(out.ownMonthProfit).toBe(0);
+      expect(attr).not.toHaveBeenCalled();
     });
   });
 });

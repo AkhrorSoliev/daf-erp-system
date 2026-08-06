@@ -291,7 +291,28 @@ export class ReportsController {
       netProfit = overview.netProfit;
     }
 
-    return { ...overview, netProfit, salary: { ...overview.salary, computed } };
+    // «Oyning o'z foydasi» — the month's own money against its own costs.
+    // A positive Foyda card can still sit on a month that did not pay for
+    // itself (June 2026: profit +4.7M, own-month −26.8M, propped up by May
+    // debt recovery). Defensive: a failure yields null, never breaks the card.
+    let ownMonthProfit: number | null = null;
+    try {
+      const own = await this.reportsService.getOwnMonthProfit(user.companyId, {
+        month,
+        branchIds,
+        performedById: user.id,
+      });
+      ownMonthProfit = own.ownMonthProfit;
+    } catch {
+      ownMonthProfit = null;
+    }
+
+    return {
+      ...overview,
+      netProfit,
+      ownMonthProfit,
+      salary: { ...overview.salary, computed },
+    };
   }
 
   // How «Oy oxiriga kutilyapti» moved day by day this month, read back from the
