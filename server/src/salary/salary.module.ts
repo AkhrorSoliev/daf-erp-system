@@ -8,6 +8,7 @@ import { SalaryMonthlyService } from './salary-monthly.service';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryPaymentService } from './salary-payment.service';
+import { SalarySettleMonthService } from './salary-settle-month.service';
 import { SalaryController } from './salary.controller';
 import { SalaryCronService } from './salary-cron.service';
 import { TeacherTimelineService } from './teacher-timeline.service';
@@ -30,6 +31,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
     SalaryStaffMonthlyService,
     SalaryCalculationService,
     SalaryPaymentService,
+    SalarySettleMonthService,
     SalaryCronService,
     TeacherTimelineService,
     SalaryBreakdownService,
