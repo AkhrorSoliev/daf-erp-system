@@ -164,7 +164,10 @@ export class SalarySettleMonthService {
       select: { id: true, branchId: true, name: true },
     });
     const accById = new Map(accounts.map((a) => [a.id, a]));
-    const accountByBranch = new Map<number, string>();
+    const slicesByBranch = new Map<
+      number,
+      { cashAccountId: string; amount: number }[]
+    >();
     for (const a of dto.accounts) {
       const found = accById.get(a.cashAccountId);
       if (!found) {
@@ -177,7 +180,9 @@ export class SalarySettleMonthService {
           `«${found.name}» hisobi boshqa filialga tegishli — har filial o'z kassasidan to'laydi`,
         );
       }
-      accountByBranch.set(a.branchId, a.cashAccountId);
+      const list = slicesByBranch.get(a.branchId) ?? [];
+      list.push({ cashAccountId: a.cashAccountId, amount: a.amount });
+      slicesByBranch.set(a.branchId, list);
     }
 
     // ─── Per-payment pre-flight: nothing is written until all of this holds ──
@@ -190,13 +195,36 @@ export class SalarySettleMonthService {
       );
     }
     const noAccount = rows
-      .filter((r) => !accountByBranch.has(r.branchId as number))
+      .filter((r) => !slicesByBranch.has(r.branchId as number))
       .map((r) => r.fullName);
     if (noAccount.length) {
       throw new BadRequestException(
         `Bu xodimlar filiali uchun kassa hisobi tanlanmadi: ${noAccount.join(', ')}`,
       );
     }
+    // Each branch's named amounts must add up to exactly that branch's payroll:
+    // otherwise the cash journal would move a different figure than the ledger.
+    const totalByBranch = new Map<number, number>();
+    for (const r of rows) {
+      const b = r.branchId as number;
+      totalByBranch.set(b, (totalByBranch.get(b) ?? 0) + r.amount);
+    }
+    for (const [branchId, slices] of slicesByBranch) {
+      const branchTotal = totalByBranch.get(branchId);
+      if (branchTotal === undefined) {
+        throw new BadRequestException(
+          `Filial #${branchId} uchun bu oyda to'lanmagan oylik yo'q, lekin kassa hisobi tanlangan`,
+        );
+      }
+      const named = slices.reduce((s, x) => s + x.amount, 0);
+      if (named !== branchTotal) {
+        throw new BadRequestException(
+          `Kassalar bo'yicha taqsimot filial jamiga teng emas: ${named} ≠ ${branchTotal}`,
+        );
+      }
+    }
+
+    const sliceByPayment = allocateCashSlices(rows, slicesByBranch);
     for (const r of rows) {
       if (r.status === SalaryPaymentStatus.CALCULATED) {
         assertValidTransition(
@@ -235,7 +263,7 @@ export class SalarySettleMonthService {
             salaryPaymentId: r.paymentId,
             companyId,
             performedById,
-            cashAccountId: accountByBranch.get(r.branchId as number),
+            cashSlices: sliceByPayment.get(r.paymentId),
             description: SETTLE_DESCRIPTION,
           },
           tx,
@@ -349,6 +377,60 @@ export class SalarySettleMonthService {
       total: rows.reduce((s, r) => s + r.amount, 0),
     };
   }
+}
+
+/**
+ * Spread each branch's named per-account amounts across that branch's payments.
+ *
+ * The operator says "68 737 619 left the kassa and 11 346 096 left the bank",
+ * not "Jamsher's share left the kassa" — a month later nobody reconstructs the
+ * per-person routing, and asking for it would invite guesses. So this walks the
+ * payments in order and draws from each account until it is exhausted, letting
+ * ONE payment straddle two accounts (`recordSalaryPayment` writes a movement
+ * per slice).
+ *
+ * What this guarantees is the thing the accounts exist for: **each account's
+ * total is exactly what the operator stated**. What it does NOT claim is which
+ * employee's money came from which drawer — that is an allocation, not a
+ * record, and the UI says so. Nothing downstream depends on it: the payment
+ * amount, the teacher's balance and the ledger row are all per-employee and
+ * untouched by where the cash slice landed.
+ *
+ * Caller has already checked that per branch Σ(slices) === Σ(payments), so the
+ * walk always closes exactly and no payment is left partly unfunded.
+ */
+export function allocateCashSlices(
+  rows: { paymentId: string; branchId: number | null; amount: number }[],
+  slicesByBranch: Map<number, { cashAccountId: string; amount: number }[]>,
+): Map<string, { cashAccountId: string; amount: number }[]> {
+  const out = new Map<string, { cashAccountId: string; amount: number }[]>();
+  // Mutable copy — the originals belong to the caller.
+  const remaining = new Map<number, { cashAccountId: string; left: number }[]>();
+  for (const [branchId, slices] of slicesByBranch) {
+    remaining.set(
+      branchId,
+      slices.map((s) => ({ cashAccountId: s.cashAccountId, left: s.amount })),
+    );
+  }
+
+  for (const row of rows) {
+    if (row.branchId == null) continue;
+    const pool = remaining.get(row.branchId);
+    if (!pool) continue;
+
+    const slices: { cashAccountId: string; amount: number }[] = [];
+    let unfunded = row.amount;
+    for (const acc of pool) {
+      if (unfunded === 0) break;
+      if (acc.left === 0) continue;
+      const take = Math.min(acc.left, unfunded);
+      slices.push({ cashAccountId: acc.cashAccountId, amount: take });
+      acc.left -= take;
+      unfunded -= take;
+    }
+    out.set(row.paymentId, slices);
+  }
+  return out;
 }
 
 /** Audit marker on the payment itself, alongside `paidById` / `paidAt`. */

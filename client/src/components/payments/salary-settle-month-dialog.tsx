@@ -16,13 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -96,7 +89,10 @@ export function SettleMonthDialog({
   onSettled,
 }: Props) {
   const [paidAt, setPaidAt] = useState<Date>(() => new Date());
-  const [accountByBranch, setAccountByBranch] = useState<Record<number, string>>(
+  // How much left each account, keyed by account id. A branch's payroll is
+  // routinely part cash and part card, so this is an amount per account rather
+  // than one chosen account per branch.
+  const [amountByAccount, setAmountByAccount] = useState<Record<string, string>>(
     {},
   );
   const [typedTotal, setTypedTotal] = useState("");
@@ -126,13 +122,33 @@ export function SettleMonthDialog({
   const rows = useMemo(() => preview?.rows ?? [], [preview]);
   const branches = useMemo(() => preview?.branches ?? [], [preview]);
 
-  // Every branch in the batch must have an account picked, and the retyped
-  // digits must equal the total exactly. Typing the sum IS the confirmation:
-  // it is the one number the operator has to have read.
-  const allBranchesChosen =
-    branches.length > 0 && branches.every((b) => !!accountByBranch[b.branchId]);
+  const digits = (v: string) => Number(v.replace(/\D/g, "") || 0);
+
+  /** Per branch: what was named across its accounts vs what it owes. */
+  const branchState = useMemo(
+    () =>
+      branches.map((b) => {
+        const owed = branchTotal(rows, b.branchId);
+        const branchAccounts = (accounts ?? []).filter(
+          (a) => a.branchId === b.branchId,
+        );
+        const named = branchAccounts.reduce(
+          (s, a) => s + digits(amountByAccount[a.id] ?? ""),
+          0,
+        );
+        return { ...b, owed, named, remaining: owed - named, branchAccounts };
+      }),
+    [branches, rows, accounts, amountByAccount],
+  );
+
+  // Every branch's named amounts must close exactly, and the retyped digits
+  // must equal the total. Typing the sum IS the confirmation: it is the one
+  // number the operator has to have read.
+  const allBranchesBalanced =
+    branchState.length > 0 && branchState.every((b) => b.remaining === 0);
   const totalMatches = typedTotal.replace(/\D/g, "") === String(total);
-  const canSubmit = allBranchesChosen && totalMatches && total > 0 && !submitting;
+  const canSubmit =
+    allBranchesBalanced && totalMatches && total > 0 && !submitting;
 
   const periodStart = preview ? new Date(preview.period.periodStart) : undefined;
 
@@ -145,10 +161,16 @@ export function SettleMonthDialog({
         {
           month,
           paidAt: toDateStr(paidAt),
-          accounts: branches.map((b) => ({
-            branchId: b.branchId,
-            cashAccountId: accountByBranch[b.branchId],
-          })),
+          accounts: branchState.flatMap((b) =>
+            b.branchAccounts
+              .map((a) => ({
+                branchId: b.branchId,
+                cashAccountId: a.id,
+                amount: digits(amountByAccount[a.id] ?? ""),
+              }))
+              // An account nobody drew from is not part of the story.
+              .filter((a) => a.amount > 0),
+          ),
           confirmAmount: total,
         },
       );
@@ -247,54 +269,72 @@ export function SettleMonthDialog({
                 />
               </div>
 
-              {branches.map((b) => {
-                const chosen = accounts?.find(
-                  (a) => a.id === accountByBranch[b.branchId],
-                );
-                const after = chosen
-                  ? chosen.balance - branchTotal(rows, b.branchId)
-                  : null;
-                return (
-                  <div key={b.branchId} className="space-y-2">
-                    <Label>{b.branchName} — qaysi kassadan chiqdi?</Label>
-                    <Select
-                      value={accountByBranch[b.branchId] ?? ""}
-                      onValueChange={(v) =>
-                        setAccountByBranch((prev) => ({
-                          ...prev,
-                          [b.branchId]: v,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Kassa hisobini tanlang" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(accounts ?? [])
-                          .filter((a) => a.branchId === b.branchId)
-                          .map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name} — {formatPrice(a.balance)} so&apos;m
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    {after !== null && (
-                      <p
-                        className={
-                          after < 0
-                            ? "text-xs text-amber-600 dark:text-amber-500"
-                            : "text-xs text-muted-foreground"
-                        }
-                      >
-                        Keyin: {formatPrice(after)} so&apos;m
-                        {after < 0 &&
-                          " — bu hisobda yetarli mablag' ko'rinmayapti, lekin pul haqiqatda chiqib ketgan bo'lsa davom eting."}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+              {branchState.map((b) => (
+                <div key={b.branchId} className="space-y-2">
+                  <Label>
+                    {b.branchName} — qaysi hisobdan qancha chiqdi?
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Bir qismi naqd, bir qismi karta bo&apos;lsa — ikkalasiga ham
+                    yozing. Yig&apos;indisi {formatPrice(b.owed)} so&apos;m
+                    bo&apos;lishi kerak.
+                  </p>
+
+                  {b.branchAccounts.map((a) => {
+                    const taken = digits(amountByAccount[a.id] ?? "");
+                    const after = a.balance - taken;
+                    return (
+                      <div key={a.id} className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1 pt-2">
+                          <p className="truncate text-sm">
+                            {a.name}{" "}
+                            <span className="text-muted-foreground">
+                              ({a.type === "CASH" ? "naqd pul" : "bank / karta"})
+                            </span>
+                          </p>
+                          <p
+                            className={
+                              taken > 0 && after < 0
+                                ? "text-xs text-amber-600 dark:text-amber-500"
+                                : "text-xs text-muted-foreground"
+                            }
+                          >
+                            Hozir {formatPrice(a.balance)}
+                            {taken > 0 && ` → keyin ${formatPrice(after)}`} so&apos;m
+                          </p>
+                        </div>
+                        <Input
+                          className="w-40 shrink-0 text-right tabular-nums"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="0"
+                          value={amountByAccount[a.id] ?? ""}
+                          onChange={(e) =>
+                            setAmountByAccount((prev) => ({
+                              ...prev,
+                              [a.id]: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+
+                  <p
+                    className={
+                      b.remaining === 0
+                        ? "text-xs font-medium text-emerald-600 dark:text-emerald-500"
+                        : "text-xs font-medium text-destructive"
+                    }
+                  >
+                    {b.remaining === 0
+                      ? `To'g'ri — jami ${formatPrice(b.named)} so'm`
+                      : b.remaining > 0
+                        ? `Yana ${formatPrice(b.remaining)} so'm taqsimlanmagan`
+                        : `${formatPrice(-b.remaining)} so'm ortiqcha yozilgan`}
+                  </p>
+                </div>
+              ))}
 
               <div className="space-y-2">
                 <Label htmlFor="settle-total">
