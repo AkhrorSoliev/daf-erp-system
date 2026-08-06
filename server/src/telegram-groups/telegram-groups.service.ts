@@ -108,6 +108,7 @@ export class TelegramGroupsService {
     id: string,
     caller: { id: number; companyId: number; roles: string[] },
     branchId?: number | null,
+    receivesAllBranches = false,
   ) {
     const isAllowed =
       caller.roles.includes('CEO') || caller.roles.includes('Branch Director');
@@ -117,31 +118,41 @@ export class TelegramGroupsService {
       );
     }
 
-    // A branch is now REQUIRED at approval. Approving without one produced a
-    // group that received every branch's events (see the broadcast filter);
-    // the client sent an empty body, so in practice every group was born that
-    // way. Company-wide groups are not created here — announcements reach all
-    // approved groups regardless.
-    if (branchId == null) {
+    // Approval must SAY something about branches — either which one, or that
+    // this group deliberately watches all of them. Silence used to be allowed
+    // and the client sent an empty body, so every group was born branch-less
+    // and received every branch's events; closing that made a branch mandatory,
+    // which in turn left no way to declare a genuine org-wide group.
+    if (branchId == null && !receivesAllBranches) {
       throw new BadRequestException(
-        "Guruhni tasdiqlash uchun filial tanlanishi shart",
+        "Guruhni tasdiqlash uchun filial tanlang yoki «barcha filiallar» ni belgilang",
       );
     }
-    const branch = await this.prisma.branch.findFirst({
-      where: { id: branchId, companyId: caller.companyId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!branch) {
-      throw new BadRequestException(`Filial #${branchId} topilmadi`);
+    if (branchId != null) {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, companyId: caller.companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!branch) {
+        throw new BadRequestException(`Filial #${branchId} topilmadi`);
+      }
+      // And the caller must own it — a Branch Director may approve a group for
+      // their own branch, not for the other one.
+      await assertCallerInBranch(
+        this.prisma,
+        caller.id,
+        branchId,
+        "Bu filial uchun guruh tasdiqlash huquqingiz yo'q",
+      );
     }
-    // And the caller must own it — a Branch Director may approve a group for
-    // their own branch, not for the other one.
-    await assertCallerInBranch(
-      this.prisma,
-      caller.id,
-      branchId,
-      "Bu filial uchun guruh tasdiqlash huquqingiz yo'q",
-    );
+    // "Watches every branch" is a company-level decision, so it is CEO-only. A
+    // Branch Director granting it would be handing themselves the other
+    // branch's payment and attendance traffic through a chat they control.
+    if (receivesAllBranches && !caller.roles.includes('CEO')) {
+      throw new ForbiddenException(
+        "«Barcha filiallar» ni faqat CEO belgilay oladi",
+      );
+    }
 
     const group = await this.prisma.telegramGroup.findUnique({ where: { id } });
     if (!group || group.deletedAt) {
@@ -158,7 +169,8 @@ export class TelegramGroupsService {
       data: {
         status: TelegramGroupStatus.APPROVED,
         companyId: caller.companyId,
-        branchId,
+        branchId: branchId ?? null,
+        receivesAllBranches,
         approvedById: caller.id,
         approvedAt: new Date(),
         isActive: true,
@@ -179,6 +191,7 @@ export class TelegramGroupsService {
           title: updated.title,
           companyId: updated.companyId,
           branchId: updated.branchId,
+          receivesAllBranches: updated.receivesAllBranches,
         },
         changedById: caller.id,
         companyId: caller.companyId,
@@ -188,6 +201,106 @@ export class TelegramGroupsService {
       );
 
     return updated;
+  }
+
+  /**
+   * Change which branches an approved group watches.
+   *
+   * Kept separate from `approve` because it is the operation that FIXES a
+   * mistake — and the mistake this exists for already happened: two production
+   * groups were approved before a branch was required, went branch-less, and
+   * silently stopped receiving operational events when the leak was closed.
+   * Without this they could only be repaired by a database script.
+   */
+  async updateScope(
+    id: string,
+    caller: { id: number; companyId: number; roles: string[] },
+    dto: { branchId?: number | null; receivesAllBranches?: boolean },
+  ) {
+    const group = await this.prisma.telegramGroup.findFirst({
+      where: { id, companyId: caller.companyId, deletedAt: null },
+    });
+    if (!group) {
+      throw new NotFoundException('Guruh topilmadi');
+    }
+
+    const branchId =
+      dto.branchId !== undefined ? dto.branchId : group.branchId;
+    const receivesAllBranches =
+      dto.receivesAllBranches !== undefined
+        ? dto.receivesAllBranches
+        : group.receivesAllBranches;
+
+    // The one state that must not be reachable: no branch and no flag. That is
+    // exactly the shape that reads as "assigned to nothing" and receives
+    // nothing, with no record of whether anyone meant it.
+    if (branchId == null && !receivesAllBranches) {
+      throw new BadRequestException(
+        "Guruh filialsiz qololmaydi — filial tanlang yoki «barcha filiallar» ni belgilang",
+      );
+    }
+
+    // Same ceiling as approval, in both directions: a director may point a
+    // group at their own branch, and only a CEO may hand it every branch.
+    if (branchId != null && branchId !== group.branchId) {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, companyId: caller.companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!branch) {
+        throw new BadRequestException(`Filial #${branchId} topilmadi`);
+      }
+      await assertCallerInBranch(
+        this.prisma,
+        caller.id,
+        branchId,
+        "Bu filial uchun guruh sozlash huquqingiz yo'q",
+      );
+    }
+    // Moving a group AWAY from a branch is as sensitive as moving it in — it is
+    // that branch's traffic being redirected.
+    if (group.branchId != null && group.branchId !== branchId) {
+      await assertCallerInBranch(
+        this.prisma,
+        caller.id,
+        group.branchId,
+        "Bu guruh boshqa filialga tegishli",
+      );
+    }
+    if (
+      receivesAllBranches &&
+      !group.receivesAllBranches &&
+      !caller.roles.includes('CEO')
+    ) {
+      throw new ForbiddenException(
+        "«Barcha filiallar» ni faqat CEO belgilay oladi",
+      );
+    }
+
+    const updated = await this.prisma.telegramGroup.update({
+      where: { id },
+      data: { branchId, receivesAllBranches },
+    });
+
+    await this.entityHistory
+      .recordUpdate({
+        entityType: 'TelegramGroup',
+        entityId: id,
+        oldValues: {
+          branchId: group.branchId,
+          receivesAllBranches: group.receivesAllBranches,
+        },
+        newValues: { branchId, receivesAllBranches },
+        changedById: caller.id,
+        companyId: caller.companyId,
+      })
+      .catch(() => undefined);
+
+    return {
+      id: updated.id,
+      branchId: updated.branchId,
+      receivesAllBranches: updated.receivesAllBranches,
+    };
   }
 
   async reject(id: string, caller: { id?: number; companyId?: number; roles: string[] }) {

@@ -159,6 +159,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Telegram group administration. The group row carries the branch whose ' +
+      'operational events it receives, so `assertCallerInBranch` is checked ' +
+      'against that record — in BOTH directions on a change, because pointing a ' +
+      'group away from a branch redirects that branch\'s payment and attendance ' +
+      'traffic just as much as pointing one at it. The `receivesAllBranches` ' +
+      'flag is CEO-only for the same reason: granting it hands a chat every ' +
+      'branch\'s money traffic.',
+    routes: [
+      'POST /telegram-groups/:id/approve',
+      'PATCH /telegram-groups/:id',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -412,7 +427,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /students/:id/initial-balance',
   'POST /students/:id/sms',
   'POST /teachers',
-  'POST /telegram-groups/:id/approve',
   'POST /telegram-groups/:id/reject',
   'POST /telegram-groups/announce',
   'POST /telegram/employee-link',
@@ -432,4 +446,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 207;
+export const UNREVIEWED_BUDGET = 206;

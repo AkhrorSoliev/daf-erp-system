@@ -5,6 +5,7 @@ import {
   Get,
   Logger,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import { TelegramAdminBotService } from './telegram-admin-bot.service';
 import { TelegramGroupAnnouncementService } from './telegram-group-announcement.service';
 import { announceApproval } from './telegram-admin-bot-registrar';
 import { ApproveGroupDto } from './dto/approve-group.dto';
+import { UpdateTelegramGroupDto } from './dto/update-telegram-group.dto';
 import { AnnounceFeatureDto } from './dto/announce-feature.dto';
 
 @Controller('telegram-groups')
@@ -56,6 +58,9 @@ export class TelegramGroupsController {
       chatId: g.chatId.toString(),
       title: g.title,
       branch: g.branch,
+      // Without this the settings table cannot tell an org-wide group from one
+      // nobody has assigned — the very confusion the flag exists to remove.
+      receivesAllBranches: g.receivesAllBranches,
       isActive: g.isActive,
       approvedBy: g.approvedBy,
       approvedAt: g.approvedAt?.toISOString() ?? null,
@@ -70,7 +75,12 @@ export class TelegramGroupsController {
     @Body() dto: ApproveGroupDto,
     @CurrentUser() user: { id: number; companyId: number; roles: string[] },
   ) {
-    const updated = await this.groupsService.approve(id, user, dto.branchId);
+    const updated = await this.groupsService.approve(
+      id,
+      user,
+      dto.branchId,
+      dto.receivesAllBranches ?? false,
+    );
 
     // Tell the group it has been approved (best-effort — don't fail the API
     // call if the bot isn't running locally).
@@ -98,8 +108,26 @@ export class TelegramGroupsController {
       status: updated.status,
       companyId: updated.companyId,
       branchId: updated.branchId,
+      receivesAllBranches: updated.receivesAllBranches,
       approvedAt: updated.approvedAt?.toISOString() ?? null,
     };
+  }
+
+  /**
+   * Repoint an already-approved group at a branch, or at all of them.
+   *
+   * Not part of `approve` because this is the operation that FIXES a group that
+   * was approved before a branch was required — two production groups are in
+   * exactly that state and would otherwise need a database script.
+   */
+  @Patch(':id')
+  @Roles('CEO', 'Branch Director')
+  async updateScope(
+    @Param('id') id: string,
+    @Body() dto: UpdateTelegramGroupDto,
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+  ) {
+    return this.groupsService.updateScope(id, user, dto);
   }
 
   @Post(':id/reject')

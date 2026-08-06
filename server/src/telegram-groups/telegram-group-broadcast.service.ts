@@ -67,7 +67,21 @@ export class TelegramGroupBroadcastService {
         // Consequence to know: a group that is still branch-less receives no
         // branch-specific events at all. That is fail-closed on purpose —
         // silence is recoverable, sending Fargona's figures to Namangan is not.
-        ...(opts.branchId ? { branchId: opts.branchId } : {}),
+        //
+        // `receivesAllBranches` is the way OUT of that silence, and it is a
+        // declaration rather than an inference. Before it existed, an org-wide
+        // monitoring group and a group nobody had assigned yet looked identical
+        // (`branchId = null`), so the rule above could not keep one loud while
+        // keeping the other quiet. Now it can: the flag is additive — it never
+        // narrows anything, it only adds groups that asked to see everything.
+        ...(opts.branchId
+          ? {
+              OR: [
+                { branchId: opts.branchId },
+                { receivesAllBranches: true },
+              ],
+            }
+          : {}),
       },
     });
 

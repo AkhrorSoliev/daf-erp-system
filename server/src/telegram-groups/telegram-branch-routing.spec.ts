@@ -13,18 +13,28 @@
  * The rule now has three cases, not two, and they are deliberately different.
  */
 describe('telegram branch routing', () => {
-  /** Mirrors the `where` the broadcast service builds. */
-  function recipients(
-    eventBranchId: number | null,
-    groups: { title: string; branchId: number | null }[],
-  ) {
-    if (eventBranchId == null) return groups; // company-level → everyone
-    return groups.filter((g) => g.branchId === eventBranchId);
+  interface Group {
+    title: string;
+    branchId: number | null;
+    receivesAllBranches?: boolean;
   }
 
-  const fargonaGroup = { title: 'Moliya-DaF Fergana', branchId: 1 };
-  const namanganGroup = { title: 'Moliya-DaF Namangan', branchId: 2 };
-  const unmapped = { title: 'eski guruh', branchId: null };
+  /** Mirrors the `where` the broadcast service builds. */
+  function recipients(eventBranchId: number | null, groups: Group[]) {
+    if (eventBranchId == null) return groups; // company-level → everyone
+    return groups.filter(
+      (g) => g.branchId === eventBranchId || g.receivesAllBranches === true,
+    );
+  }
+
+  const fargonaGroup: Group = { title: 'Moliya-DaF Fergana', branchId: 1 };
+  const namanganGroup: Group = { title: 'Moliya-DaF Namangan', branchId: 2 };
+  const unmapped: Group = { title: 'eski guruh', branchId: null };
+  const orgWide: Group = {
+    title: 'DaF Sprachzentrum Organisation',
+    branchId: null,
+    receivesAllBranches: true,
+  };
   const all = [fargonaGroup, namanganGroup, unmapped];
 
   describe('branch-specific operational events', () => {
@@ -64,5 +74,46 @@ describe('telegram branch routing', () => {
     // Under the old rule a Fargona-only event reached the unmapped group too.
     expect(oldRule(1)).toContain(unmapped);
     expect(recipients(1, all)).not.toContain(unmapped);
+  });
+
+  /**
+   * `branchId = null` used to mean two things at once: "nobody assigned this
+   * group yet" and "this is the org-wide monitoring chat". Closing the leak
+   * above made them indistinguishable and silenced the second kind — two
+   * production groups went quiet for operational events with no way to say they
+   * were meant to be loud. `receivesAllBranches` separates the two.
+   */
+  describe('an org-wide group declares itself', () => {
+    const withOrg = [fargonaGroup, namanganGroup, unmapped, orgWide];
+
+    it('receives EVERY branch event, not just one', () => {
+      expect(recipients(1, withOrg).map((g) => g.title)).toContain(orgWide.title);
+      expect(recipients(2, withOrg).map((g) => g.title)).toContain(orgWide.title);
+    });
+
+    it('does not stop the branch group from receiving its own event', () => {
+      // The flag is ADDITIVE. If it narrowed anything, promoting an org group
+      // would silently take a branch's own chat off its own traffic.
+      expect(recipients(1, withOrg).map((g) => g.title)).toEqual(
+        expect.arrayContaining([fargonaGroup.title, orgWide.title]),
+      );
+      expect(recipients(1, withOrg)).toHaveLength(2);
+    });
+
+    it('leaves a genuinely unassigned group silent', () => {
+      // The whole point of the flag: it is a DECLARATION. A group that has not
+      // made it stays fail-closed, so "not configured yet" cannot masquerade as
+      // "watches everything".
+      expect(recipients(1, withOrg).map((g) => g.title)).not.toContain(
+        unmapped.title,
+      );
+      expect(recipients(2, withOrg).map((g) => g.title)).not.toContain(
+        unmapped.title,
+      );
+    });
+
+    it('still receives company-level announcements like everyone else', () => {
+      expect(recipients(null, withOrg)).toHaveLength(4);
+    });
   });
 });

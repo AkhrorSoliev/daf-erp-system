@@ -1515,6 +1515,27 @@ model TelegramGroup {
   approvedBy   User?     @relation("TelegramGroupApprovedBy", fields: [approvedById], references: [id])
   approvedAt   DateTime?
 
+  /**
+   * This group watches EVERY branch, deliberately.
+   *
+   * `branchId = null` used to carry two different meanings at once: "nobody has
+   * assigned this group yet" (a mistake to fix) and "this is the org-wide
+   * monitoring group" (correct, and permanent). Once branch events stopped
+   * going to branch-less groups — which they had to, or one branch's payments
+   * and attendance leaked into another's chat — the two became
+   * indistinguishable, and the org-wide groups went quiet with no way to say
+   * they were meant to be loud.
+   *
+   * So the intent is declared rather than inferred. `branchId` goes back to
+   * meaning only "which branch", and stays fail-closed when unset. A group with
+   * this flag receives every branch's operational events regardless of
+   * `branchId`; it is additive, never a filter.
+   *
+   * The distinction is the same one this schema draws elsewhere between what a
+   * record is VISIBLE to and what it is ATTRIBUTED to.
+   */
+  receivesAllBranches Boolean @default(false)
+
   isActive          Boolean   @default(true)
   lastDailyReportAt DateTime?
   createdAt         DateTime  @default(now())
