@@ -79,11 +79,25 @@ describe('assertCallerMayTouchStudent', () => {
     ).resolves.toBe(2);
   });
 
-  it('404s a deleted or foreign-company student before touching branches', async () => {
-    // Existence comes first so an admin opening an archived student's profile
-    // gets "topilmadi" rather than the branch resolver's error. The money
-    // callers all 404 themselves before reaching here; the profile reads have
-    // no lookup of their own.
+  it('does NOT filter archived students — the reads behind it decide that', async () => {
+    // Regression: the first version filtered `deletedAt: null`, which 404'd
+    // all 23 archived students' profiles at once. `getStatusHistory` and
+    // `findById` serve them; three sibling reads refuse them on their own.
+    // The guard adds the branch question and leaves that one alone.
+    const prisma = prismaFor({ studentBranch: 1, caller: FARGONA_DIRECTOR });
+    await assertCallerMayTouchStudent(prisma, 7, 10264, 1001);
+    const where = (
+      prisma as never as { student: { findFirst: jest.Mock } }
+    ).student.findFirst.mock.calls[0][0].where;
+    expect(where).not.toHaveProperty('deletedAt');
+    expect(where).toMatchObject({ id: 10264, companyId: 1001 });
+  });
+
+  it('404s a foreign-company student before touching branches', async () => {
+    // Existence comes first so an admin opening a stale link gets "topilmadi"
+    // rather than the branch resolver's error. The money callers all 404
+    // themselves before reaching here; the profile reads have no lookup of
+    // their own.
     const prisma = prismaFor({
       exists: false,
       studentBranch: 1,

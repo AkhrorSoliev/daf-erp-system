@@ -49,7 +49,7 @@ export class CommentsController {
       }
     }
 
-    return this.commentsService.create(dto, userId, companyId);
+    return this.commentsService.create(dto, userId, companyId, roles);
   }
 
   @Get('my-tasks')
@@ -73,8 +73,10 @@ export class CommentsController {
   findByEntity(
     @Query() query: CommentQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.commentsService.findByEntity(query, companyId);
+    return this.commentsService.findByEntity(query, companyId, userId, roles);
   }
 
   @Get('latest')
@@ -83,8 +85,15 @@ export class CommentsController {
   getLatestComment(
     @Query() query: LatestCommentQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.commentsService.getLatestComment(query, companyId);
+    return this.commentsService.getLatestComment(
+      query,
+      companyId,
+      userId,
+      roles,
+    );
   }
 
   @Patch(':id')

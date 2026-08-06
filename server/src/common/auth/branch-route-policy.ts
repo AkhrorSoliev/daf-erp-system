@@ -316,6 +316,44 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Comments, gated by the record they hang off. `entityType` was a free '
+      + 'string and NOTHING checked the entity — not that it existed, not the '
+      + 'company, not the branch — so `?entityType=Student&entityId=<any id>` '
+      + 'returned every note staff had written about that student. Production '
+      + 'carries 748: Student 487, Lead 232, Group 29. '
+      + '`assertCallerMayTouchCommentEntity` delegates to each record\'s own '
+      + 'guard rather than inventing a fifth branch rule, and the DTO now '
+      + 'validates against a closed four-type list so an unknown type fails '
+      + 'instead of creating a thread nobody can scope. Lead is the one '
+      + 'exception and it is deliberate: `branchId` null means the shared '
+      + 'unassigned pool, matching `leadBranchWhere`, because a new enquiry '
+      + 'must be commentable before anyone knows which branch will teach them.',
+    routes: [
+      'POST /comments',
+      'GET /comments',
+      'GET /comments/latest',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      'Own tasks, own authorship. `my-tasks` and `assignee-status` are keyed '
+      + 'on the caller\'s own `CommentAssignee` row; `created-tasks` on '
+      + '`authorId`. `PATCH` and `DELETE /comments/:id` are author-or-CEO, '
+      + 'which is STRICTER than branch — a director cannot edit a colleague\'s '
+      + 'note even inside their own branch — so a branch check would add '
+      + 'nothing.',
+    routes: [
+      'GET /comments/my-tasks',
+      'GET /comments/created-tasks',
+      'PATCH /comments/:id',
+      'PATCH /comments/:id/assignee-status',
+      'DELETE /comments/:id',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -372,7 +410,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
  */
 export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /archive/:entityType/:id',
-  'DELETE /comments/:id',
   'DELETE /courses/:id',
   'DELETE /enrollment-transfer-reasons/:id',
   'DELETE /group-teacher-change-reasons/:id',
@@ -398,10 +435,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /branches/:id/readiness',
   'GET /branches/:id/status-history',
   'GET /call-logs',
-  'GET /comments',
-  'GET /comments/created-tasks',
-  'GET /comments/latest',
-  'GET /comments/my-tasks',
   'GET /company',
   'GET /company/:id',
   'GET /courses/:id/status-history',
@@ -461,8 +494,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /telegram/channel-report/summary',
   'PATCH /branches/:id',
   'PATCH /branches/:id/status',
-  'PATCH /comments/:id',
-  'PATCH /comments/:id/assignee-status',
   'PATCH /company/:id',
   'PATCH /courses/:id',
   'PATCH /courses/:id/status',
@@ -491,7 +522,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /archive/:entityType/:id/restore',
   'POST /branches',
   'POST /call-logs',
-  'POST /comments',
   'POST /courses',
   'POST /enrollment-transfer-reasons',
   'POST /group-teacher-change-reasons',
@@ -531,4 +561,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 147;
+export const UNREVIEWED_BUDGET = 139;

@@ -135,8 +135,8 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **124** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **147** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **132** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **139** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
@@ -274,3 +274,49 @@ kompaniyaning istalgan guruhini id bo'yicha o'qiy olardi.
 
 Sababi: shunchaki ochilgan sahifada 500 noto'g'ri. Prod tekshirildi —
 **824 tirik o'quvchi, 0 tasi filialsiz**, ya'ni bu chiziq allaqachon turibdi.
+
+## Audit 5-bosqich — izohlar (2026-08-06)
+
+`Comment.entityType` sxemada oddiy `String`, DTO esa **istalgan satrni**
+qabul qilardi. Va **hech narsa tekshirilmasdi**: obyekt bormi, shu kompaniyanikimi,
+shu chaqiruvchining filialidami — hech biri.
+
+`GET /comments?entityType=Student&entityId=<istalgan id>` → o'sha o'quvchi haqida
+xodimlar yozgan **barcha izoh**. PRODda 748 ta izoh: Student 487, Lead 232,
+Group 29.
+
+**Yechim: beshinchi filial qoidasi o'ylab topilmadi.** Har bir tur o'z
+yozuvining qorovuliga uzatiladi (`assertCallerMayTouchStudent` /
+`...Group` / `...User` / `assertCallerInBranch`). DTO endi **yopiq ro'yxatga**
+tekshiradi — noma'lum tur endi thread yaratmaydi, 400 beradi.
+
+**Lead — ataylab istisno.** `branchId = null` «hali biriktirilmagan» degani va
+`leadBranchWhere` uni har filial ishlaydigan umumiy havza deb qaraydi. Bu yerda
+rad etsak, **yangi so'rov haqidagi birinchi izohni yozib bo'lmasdi**. Arxivlangan
+(LOST) lidga ham `deletedAt` filtri qo'yilmadi — arxiv sahifasining butun mazmuni
+o'sha «nega yo'qotdik» izohlari.
+
+`PATCH` / `DELETE /comments/:id` **muallif-yoki-CEO** — bu filialdan **qattiqroq**
+(direktor o'z filialidagi hamkasbining izohini ham tahrirlay olmaydi), shuning
+uchun filial tekshiruvi hech narsa qo'shmaydi.
+
+### Yon topilma: `assigneeIds` umuman tekshirilmasdi
+
+Har qanday butun son real `User.id` bo'lsa mas'ul bo'lib qolardi — **boshqa
+kompaniyaniki ham**. Endi kompaniya + `deletedAt` tekshiriladi.
+
+**Filial ataylab tekshirilmadi:** «mas'ul obyekt filialida bo'lsin» qoidasi
+CEO'ga topshiriq berishni bloklardi (u dizayn bo'yicha filialsiz). PRODda 1 ta
+topshiriq va 0 ta filiallararo biriktirma — ya'ni tuzatadigan narsa yo'q va
+qaysi qoida to'g'riligiga dalil ham yo'q.
+
+## Regressiya: PR #413 arxivlangan o'quvchilarni yopib qo'ygan edi
+
+`assertCallerMayTouchStudent` mavjudlik tekshiruviga `deletedAt: null` qo'shgan
+edim. PRODda **23 ta arxivlangan o'quvchi** bor va ularning profili ochiladi
+(`findById` bu filtrni qo'ymaydi). Natijada ularning tablari 404 bergan.
+
+Filtr olib tashlandi. Qorovul **filial savolini qo'shishi** kerak, boshqa
+savolga jimgina javob berishi emas — orqasidagi o'qishlar bu masalada
+o'zaro ham kelishmaydi (`getStatusHistory` arxivni ko'rsatadi, boshqa uchtasi
+o'zi 404 qiladi). Regressiya testi qo'shildi.

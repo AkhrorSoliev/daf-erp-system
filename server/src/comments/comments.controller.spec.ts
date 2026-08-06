@@ -34,20 +34,28 @@ describe('CommentsController.create — task permission gate', () => {
   it('CEO keeps task fields when creating a task comment', async () => {
     const dto = taskDto();
     await controller.create(dto, 1, 1, ['CEO']);
+    // roles are forwarded now — the entity guard needs them to route a pure
+    // teacher to the group-assignment check instead of the branch one.
+    const FORWARDED_ROLES = ['CEO'];
     expect(service.create).toHaveBeenCalledWith(
       expect.objectContaining({ isTask: true, assigneeIds: [10001] }),
       1,
       1,
+      FORWARDED_ROLES,
     );
   });
 
   it('Branch Director keeps task fields when creating a task comment', async () => {
     const dto = taskDto();
     await controller.create(dto, 1, 1, ['Branch Director']);
+    // roles are forwarded now — the entity guard needs them to route a pure
+    // teacher to the group-assignment check instead of the branch one.
+    const FORWARDED_ROLES = ['Branch Director'];
     expect(service.create).toHaveBeenCalledWith(
       expect.objectContaining({ isTask: true, assigneeIds: [10001] }),
       1,
       1,
+      FORWARDED_ROLES,
     );
   });
 
@@ -56,30 +64,42 @@ describe('CommentsController.create — task permission gate', () => {
   it('Administrator keeps task fields when creating a task comment', async () => {
     const dto = taskDto();
     await controller.create(dto, 1, 1, ['Administrator']);
+    // roles are forwarded now — the entity guard needs them to route a pure
+    // teacher to the group-assignment check instead of the branch one.
+    const FORWARDED_ROLES = ['Administrator'];
     expect(service.create).toHaveBeenCalledWith(
       expect.objectContaining({ isTask: true, assigneeIds: [10001] }),
       1,
       1,
+      FORWARDED_ROLES,
     );
   });
 
   it('Cashier cannot create task — falls back to plain comment', async () => {
     const dto = taskDto();
     await controller.create(dto, 1, 1, ['Cashier']);
+    // roles are forwarded now — the entity guard needs them to route a pure
+    // teacher to the group-assignment check instead of the branch one.
+    const FORWARDED_ROLES = ['Cashier'];
     expect(service.create).toHaveBeenCalledWith(
       expect.objectContaining({ isTask: false, assigneeIds: undefined }),
       1,
       1,
+      FORWARDED_ROLES,
     );
   });
 
   it('Teacher cannot create task — falls back to plain comment', async () => {
     const dto = taskDto();
     await controller.create(dto, 1, 1, ['Teacher']);
+    // roles are forwarded now — the entity guard needs them to route a pure
+    // teacher to the group-assignment check instead of the branch one.
+    const FORWARDED_ROLES = ['Teacher'];
     expect(service.create).toHaveBeenCalledWith(
       expect.objectContaining({ isTask: false, assigneeIds: undefined }),
       1,
       1,
+      FORWARDED_ROLES,
     );
   });
 });
