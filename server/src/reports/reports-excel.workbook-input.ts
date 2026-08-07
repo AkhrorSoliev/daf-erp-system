@@ -144,7 +144,7 @@ export interface SummarySources {
   attributionCur: any;
   /** Next month's attribution — null when that month has not started yet. */
   attributionNext: any;
-  expectation: { remainingValue: number };
+  expectation: { expectedValue: number; remainingValue: number };
   payments: any;
   pl: any;
   students: StudentFlow;
@@ -166,6 +166,15 @@ export function buildSummaryInput(s: SummarySources): SummaryInput {
     unpaid: s.expectation.remainingValue,
     paidEarlier:
       s.recognizedRevenue - s.attributionCur.currentMonth - paidNextMonth,
+    // The block foots to the month's FULL lesson value, not its recognized
+    // revenue. `recognized` counts lessons held AND paid, so the first three
+    // rows sum to exactly that (`heldValue`); `unpaid` is the expectation
+    // engine's `remainingValue`, which also carries lessons not yet held. Only
+    // `expectedValue = heldValue + remainingValue` covers all four, so only it
+    // ties in an in-progress month. A CLOSED month has `remainingValue = 0`
+    // and collapses back onto `recognized` — which is why the approved July
+    // output is byte-identical either way.
+    total: s.expectation.expectedValue,
   };
 
   return {

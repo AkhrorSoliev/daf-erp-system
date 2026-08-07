@@ -466,6 +466,52 @@ describe('ReportsExcelService', () => {
     expect(findRow(ws, '=  SOF FOYDA').getCell(2).value).toBe(190_000);
   });
 
+  it('totals «Xulosa» block 4 at the full lesson value, not the recognised revenue', async () => {
+    // The mock month is IN PROGRESS: 1 000 000 held-and-paid + 120 000 still
+    // unpaid = 1 120 000 of lesson value. Footing the block on the recognised
+    // revenue alone printed a total the four rows above it overshot.
+    const wb = await buildWorkbook(
+      {},
+      { startDate: '2026-06-01', endDate: '2026-06-30' },
+    );
+    const ws = wb.getWorksheet('Xulosa')!;
+    expect(findRow(ws, 'Iyun 2026 darslari qiymati').getCell(2).value).toBe(
+      expectation.expectedValue,
+    );
+    expect(expectation.expectedValue).toBeGreaterThan(1_000_000);
+  });
+
+  it("renders a Filiallar row per branch, with the branch's WHOLE payroll", async () => {
+    // The sheet this replaced left salary out of the per-branch profit
+    // entirely; teacher + admin is what makes a branch row a real P&L.
+    const wb = await buildWorkbook(
+      {},
+      { branchNames: { 1: 'Markaz', 2: 'Namangan' } },
+    );
+    const ws = wb.getWorksheet('Filiallar')!;
+    const markaz = findRow(ws, 'Markaz');
+    expect(findRow(ws, 'Namangan')).toBeTruthy();
+
+    expect(markaz.getCell(2).value).toBe(netProfit.revenue);
+    expect(markaz.getCell(3).value).toBe(ownMonthProfit.cashTotal);
+    expect(markaz.getCell(4).value).toBe(
+      netProfit.teacherSalary + netProfit.adminSalary,
+    );
+    // A regression to teacher-only pay must fail here, not just look smaller.
+    expect(markaz.getCell(4).value).not.toBe(netProfit.teacherSalary);
+    expect(markaz.getCell(5).value).toBe(netProfit.operatingExpenses);
+    expect(markaz.getCell(6).value).toBe(netProfit.refunds);
+    expect(markaz.getCell(7).value).toBe(netProfit.netProfit);
+    expect(markaz.getCell(8).value).toBe(debtors.total);
+    expect(markaz.getCell(9).value).toBe(studentFlow.inGroup);
+
+    // Each row is that branch's OWN report — re-issued single-branch.
+    expect(reports.getDebtorLineItems).toHaveBeenCalledWith(1, [2]);
+    expect(findRow(ws, 'Jami').getCell(4).value).toBe(
+      2 * (netProfit.teacherSalary + netProfit.adminSalary),
+    );
+  });
+
   it('Qarzdorlar total ties to the balance-sheet debitorlik', async () => {
     const wb = await buildWorkbook({}, { include: ['qarzdorlar'] });
     const debtorTotal = findRow(wb.getWorksheet('Qarzdorlar')!, 'Jami qarz');
