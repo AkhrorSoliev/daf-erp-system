@@ -475,18 +475,35 @@ export class TransactionsWriteService {
       companyId: number;
       performedById?: number;
       /**
-       * Explicit kassa account. Without it `resolveAccountId` picks the branch's
-       * OLDEST CASH account, which in production is an empty «Asosiy kassa»
-       * rather than the drawer the money actually left. The month-settle flow
-       * lets the CEO name the account, so the cash journal matches reality.
+       * Which kassa account(s) the money left, and how much from each.
+       *
+       * Without it `resolveAccountId` picks the branch's OLDEST CASH account,
+       * which in production is an empty «Asosiy kassa» rather than the drawer
+       * the money actually left. A LIST rather than one id because a payout is
+       * routinely part cash and part card — the July payroll was — and the cash
+       * journal has to say so. `CashMovement.transactionId` is a plain column
+       * with no unique constraint, and `reverseByTransactionId` already unwinds
+       * every movement it finds, so several slices per payout are safe.
+       *
+       * Slices must sum to `amount`; a mismatch throws rather than silently
+       * booking a different figure to the journal than to the ledger.
        */
-      cashAccountId?: string;
+      cashSlices?: { cashAccountId: string; amount: number }[];
       /** Ledger + cash-journal text. Defaults to the plain payout wording. */
       description?: string;
     },
     tx?: Prisma.TransactionClient,
   ) {
     const description = params.description ?? "Oylik to'landi";
+    const slices = params.cashSlices?.filter((s) => s.amount > 0) ?? [];
+    if (slices.length) {
+      const sliced = slices.reduce((s, x) => s + x.amount, 0);
+      if (sliced !== params.amount) {
+        throw new Error(
+          `Kassa taqsimoti to'lov summasiga teng emas: ${sliced} ≠ ${params.amount}`,
+        );
+      }
+    }
     return this.runInTx(async (client) => {
       const users = await client.$queryRaw<{ id: number; balance: number }[]>`
         SELECT id, balance FROM "User" WHERE id = ${params.userId} FOR UPDATE
@@ -526,18 +543,24 @@ export class TransactionsWriteService {
 
       // Salary leaves the PAYEE'S BRANCH kassa — under D4 each branch carries
       // its own payroll cost, so one branch's cash must never settle another's.
-      await this.cashMovements.recordOutflow(
-        {
-          companyId: params.companyId,
-          branchId,
-          amount: params.amount,
-          cashAccountId: params.cashAccountId,
-          transactionId: transaction.id,
-          description,
-          performedById: params.performedById,
-        },
-        client,
-      );
+      // One movement per named account, else a single resolved one as before.
+      const outflows = slices.length
+        ? slices.map((s) => ({ cashAccountId: s.cashAccountId, amount: s.amount }))
+        : [{ cashAccountId: undefined, amount: params.amount }];
+      for (const out of outflows) {
+        await this.cashMovements.recordOutflow(
+          {
+            companyId: params.companyId,
+            branchId,
+            amount: out.amount,
+            cashAccountId: out.cashAccountId,
+            transactionId: transaction.id,
+            description,
+            performedById: params.performedById,
+          },
+          client,
+        );
+      }
 
       return transaction;
     }, tx);

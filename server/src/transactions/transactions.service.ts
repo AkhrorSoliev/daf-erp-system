@@ -112,7 +112,7 @@ export class TransactionsService {
       salaryPaymentId: string;
       companyId: number;
       performedById?: number;
-      cashAccountId?: string;
+      cashSlices?: { cashAccountId: string; amount: number }[];
       description?: string;
     },
     tx?: Prisma.TransactionClient,

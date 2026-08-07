@@ -195,13 +195,57 @@ describe('TransactionsWriteService.recordSalaryPayment — cash account + descri
     performedById: 99,
   };
 
-  it('forwards an explicit cashAccountId to the cash journal', async () => {
-    await service.recordSalaryPayment({ ...base, cashAccountId: 'acc-42' });
+  it('forwards an explicit cash account to the journal', async () => {
+    await service.recordSalaryPayment({
+      ...base,
+      cashSlices: [{ cashAccountId: 'acc-42', amount: 1_000_000 }],
+    });
 
     expect(cashMovements.recordOutflow).toHaveBeenCalledWith(
-      expect.objectContaining({ cashAccountId: 'acc-42' }),
+      expect.objectContaining({ cashAccountId: 'acc-42', amount: 1_000_000 }),
       expect.anything(),
     );
+  });
+
+  // The July payroll was handed over part cash, part card. One movement per
+  // account is what lets the cash journal say that.
+  it('writes one movement per account when a payout is split', async () => {
+    await service.recordSalaryPayment({
+      ...base,
+      cashSlices: [
+        { cashAccountId: 'kassa', amount: 600_000 },
+        { cashAccountId: 'bank', amount: 400_000 },
+      ],
+    });
+
+    expect(cashMovements.recordOutflow).toHaveBeenCalledTimes(2);
+    expect(cashMovements.recordOutflow).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ cashAccountId: 'kassa', amount: 600_000 }),
+      expect.anything(),
+    );
+    expect(cashMovements.recordOutflow).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ cashAccountId: 'bank', amount: 400_000 }),
+      expect.anything(),
+    );
+    // The ledger still carries the payout as ONE row.
+    expect(prisma.transaction.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses slices that do not sum to the payout', async () => {
+    await expect(
+      service.recordSalaryPayment({
+        ...base,
+        cashSlices: [
+          { cashAccountId: 'kassa', amount: 600_000 },
+          { cashAccountId: 'bank', amount: 300_000 },
+        ],
+      }),
+    ).rejects.toThrow(/teng emas/);
+
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(cashMovements.recordOutflow).not.toHaveBeenCalled();
   });
 
   it('writes the given description onto BOTH the ledger row and the cash movement', async () => {
@@ -228,9 +272,11 @@ describe('TransactionsWriteService.recordSalaryPayment — cash account + descri
   it('keeps the old behaviour when neither is given', async () => {
     await service.recordSalaryPayment(base);
 
+    expect(cashMovements.recordOutflow).toHaveBeenCalledTimes(1);
     expect(cashMovements.recordOutflow).toHaveBeenCalledWith(
       expect.objectContaining({
         cashAccountId: undefined,
+        amount: 1_000_000,
         description: "Oylik to'landi",
       }),
       expect.anything(),

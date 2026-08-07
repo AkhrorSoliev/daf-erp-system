@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { SalarySettleMonthService } from './salary-settle-month.service';
+import {
+  SalarySettleMonthService,
+  allocateCashSlices,
+} from './salary-settle-month.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { resolveMonthlyScope } from './shared/resolve-monthly-scope';
@@ -84,7 +87,7 @@ describe('SalarySettleMonthService', () => {
   const dto = (over: Partial<any> = {}) => ({
     month: '2026-07',
     paidAt: '2026-08-05',
-    accounts: [{ branchId: 1, cashAccountId: 'acc-1' }],
+    accounts: [{ branchId: 1, cashAccountId: 'acc-1', amount: 1_000_000 }],
     confirmAmount: 1_000_000,
     ...over,
   });
@@ -219,7 +222,7 @@ describe('SalarySettleMonthService', () => {
           userId: 10010,
           amount: 1_000_000,
           salaryPaymentId: 'sp-1',
-          cashAccountId: 'acc-1',
+          cashSlices: [{ cashAccountId: 'acc-1', amount: 1_000_000 }],
           performedById: 42,
           description: "Oylik to'landi (tashqarida berilgani tasdiqlandi)",
         }),
@@ -264,6 +267,138 @@ describe('SalarySettleMonthService', () => {
 
       expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
       expect(res.count).toBe(0);
+    });
+  });
+
+  describe('settle — split across kassa and bank', () => {
+    // The July payroll was handed over part cash, part card.
+    const twoPayments = () => [
+      payment({ id: 'sp-1', amount: 700_000 }),
+      payment({ id: 'sp-2', userId: 10008, amount: 300_000 }),
+    ];
+
+    it('refuses a split whose parts do not add up to the branch total', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue(twoPayments());
+
+      await expect(
+        service.settle(
+          dto({
+            accounts: [
+              { branchId: 1, cashAccountId: 'kassa', amount: 600_000 },
+              { branchId: 1, cashAccountId: 'bank', amount: 300_000 },
+            ],
+          }) as any,
+          1,
+          42,
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
+    });
+
+    it('draws each payout from the named accounts, straddling where needed', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue(twoPayments());
+      prisma.cashAccount.findMany.mockResolvedValue([
+        { id: 'kassa', branchId: 1, name: "Farg'ona kassa" },
+        { id: 'bank', branchId: 1, name: "Farg'ona bank" },
+      ]);
+
+      await service.settle(
+        dto({
+          accounts: [
+            { branchId: 1, cashAccountId: 'kassa', amount: 600_000 },
+            { branchId: 1, cashAccountId: 'bank', amount: 400_000 },
+          ],
+        }) as any,
+        1,
+        42,
+      );
+
+      // sp-1 (700k) empties the kassa's 600k and takes 100k from the bank;
+      // sp-2 (300k) takes the bank's remaining 300k.
+      expect(transactions.recordSalaryPayment).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          salaryPaymentId: 'sp-1',
+          cashSlices: [
+            { cashAccountId: 'kassa', amount: 600_000 },
+            { cashAccountId: 'bank', amount: 100_000 },
+          ],
+        }),
+        expect.anything(),
+      );
+      expect(transactions.recordSalaryPayment).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          salaryPaymentId: 'sp-2',
+          cashSlices: [{ cashAccountId: 'bank', amount: 300_000 }],
+        }),
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('allocateCashSlices', () => {
+    const rows = (...amounts: number[]) =>
+      amounts.map((amount, i) => ({
+        paymentId: `p${i}`,
+        branchId: 1,
+        amount,
+      }));
+
+    it('gives every payment one slice when a single account funds them all', () => {
+      const out = allocateCashSlices(
+        rows(700_000, 300_000),
+        new Map([[1, [{ cashAccountId: 'kassa', amount: 1_000_000 }]]]),
+      );
+
+      expect(out.get('p0')).toEqual([
+        { cashAccountId: 'kassa', amount: 700_000 },
+      ]);
+      expect(out.get('p1')).toEqual([
+        { cashAccountId: 'kassa', amount: 300_000 },
+      ]);
+    });
+
+    it('keeps each account total exactly as stated, whatever the straddle', () => {
+      const out = allocateCashSlices(
+        rows(500_000, 400_000, 100_000),
+        new Map([
+          [
+            1,
+            [
+              { cashAccountId: 'kassa', amount: 250_000 },
+              { cashAccountId: 'bank', amount: 750_000 },
+            ],
+          ],
+        ]),
+      );
+
+      const perAccount = new Map<string, number>();
+      for (const slices of out.values()) {
+        for (const s of slices) {
+          perAccount.set(
+            s.cashAccountId,
+            (perAccount.get(s.cashAccountId) ?? 0) + s.amount,
+          );
+        }
+      }
+      expect(perAccount.get('kassa')).toBe(250_000);
+      expect(perAccount.get('bank')).toBe(750_000);
+
+      // And every payment is fully funded — no shortfall, no overdraw.
+      for (const [id, slices] of out) {
+        const row = rows(500_000, 400_000, 100_000).find((r) => r.paymentId === id)!;
+        expect(slices.reduce((s, x) => s + x.amount, 0)).toBe(row.amount);
+      }
+    });
+
+    it('skips a branch with no accounts rather than inventing one', () => {
+      const out = allocateCashSlices(
+        [{ paymentId: 'p0', branchId: 2, amount: 100 }],
+        new Map([[1, [{ cashAccountId: 'kassa', amount: 100 }]]]),
+      );
+      expect(out.size).toBe(0);
     });
   });
 });

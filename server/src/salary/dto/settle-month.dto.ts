@@ -17,6 +17,15 @@ export class SettleMonthAccountDto {
 
   @IsString()
   cashAccountId!: string;
+
+  /**
+   * How much of that branch's payroll left THIS account. A branch may appear
+   * more than once: the July payroll was handed over part cash, part card, and
+   * the cash journal has to be able to say so.
+   */
+  @IsInt()
+  @Min(1)
+  amount!: number;
 }
 
 export class SettleMonthDto {
@@ -34,8 +43,11 @@ export class SettleMonthDto {
   paidAt!: string;
 
   /**
-   * One kassa account per branch present in the batch. A list, not a single id:
-   * each branch pays its own payroll from its own drawer (D4).
+   * Where the money left from, per branch: `{ branchId, cashAccountId, amount }`.
+   * Each branch pays its own payroll from its own drawer (D4), and per branch
+   * the amounts must add up to exactly that branch's total — a branch may be
+   * listed twice when its payroll came part from the kassa and part from the
+   * bank.
    */
   @IsArray()
   @ArrayMinSize(1)
