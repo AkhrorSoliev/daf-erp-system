@@ -381,6 +381,46 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'The audit log, employee writes, and the branch record itself. '
+      + '`GET /entity-history/:entityType/:entityId` took both parameters off '
+      + 'the URL and checked only `companyId` — 17 727 rows across 23 types in '
+      + 'production, each carrying the before-and-after of every changed field, '
+      + 'and `Student` alone is 9 031 of them. It is a VIEW of records, so it '
+      + 'delegates to each record\'s own guard; the five types with no branch '
+      + 'dimension are NAMED, because "I cannot scope this" and "this has no '
+      + 'branch" must not answer alike. `POST /users` already validated that '
+      + 'the branches were real, which is the `assertSingleValidBranch` trap '
+      + 'again — creating a user IS granting access, so a Fargona director '
+      + 'could mint a Branch Director OF NAMANGAN with a password of their '
+      + 'choosing. `DELETE /users/:id` archived across branches while '
+      + '`PATCH /users/:id` beside it was locked. Branches were already '
+      + 'confined by `assertCallerMayTouchBranch`; they are listed so the next '
+      + 'reader does not have to re-derive that.',
+    routes: [
+      'GET /entity-history/:entityType/:entityId',
+      'POST /users',
+      'DELETE /users/:id',
+      'PATCH /users/:id',
+      'GET /branches/:id/readiness',
+      'GET /branches/:id/status-history',
+      'PATCH /branches/:id',
+      'PATCH /branches/:id/status',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      'The caller acting on their own account. Both take the id from '
+      + '`@CurrentUser(\'id\')` and never from the request, so there is no '
+      + 'other account they could reach and a branch check would gate nothing.',
+    routes: [
+      'PATCH /users/password',
+      'PATCH /users/profile',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
@@ -452,19 +492,15 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /student-portal/ai-chat/:id',
   'DELETE /student-portal/photo',
   'DELETE /telegram-groups/:id',
-  'DELETE /users/:id',
   'GET /archive/:entityType',
   'GET /archive/:entityType/:id',
   'GET /archive/counts',
   'GET /branches',
   'GET /branches/:id',
-  'GET /branches/:id/readiness',
-  'GET /branches/:id/status-history',
   'GET /company',
   'GET /company/:id',
   'GET /courses/:id/status-history',
   'GET /enrollment-transfer-reasons',
-  'GET /entity-history/:entityType/:entityId',
   'GET /gateways/events',
   'GET /group-teacher-change-reasons',
   'GET /groups/available-rooms',
@@ -508,8 +544,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /telegram-groups/pending',
   'GET /telegram/channel-report/list',
   'GET /telegram/channel-report/summary',
-  'PATCH /branches/:id',
-  'PATCH /branches/:id/status',
   'PATCH /company/:id',
   'PATCH /courses/:id',
   'PATCH /courses/:id/status',
@@ -530,9 +564,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /student-exit-reasons/:id',
   'PATCH /student-portal/name',
   'PATCH /student-portal/password',
-  'PATCH /users/:id',
-  'PATCH /users/password',
-  'PATCH /users/profile',
   'POST /archive/:entityType/:id/restore',
   'POST /branches',
   'POST /courses',
@@ -558,7 +589,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /telegram-groups/announce',
   'POST /telegram/employee-link',
   'POST /upload',
-  'POST /users',
   'PUT /lesson-teacher-overrides/:groupId/:date',
 ];
 
@@ -573,4 +603,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 124;
+export const UNREVIEWED_BUDGET = 114;

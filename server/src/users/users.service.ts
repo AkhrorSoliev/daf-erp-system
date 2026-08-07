@@ -22,7 +22,11 @@ import {
   USER_DEACTIVATED_EVENT,
   UserDeactivatedEvent,
 } from '../common/events/user-lifecycle.events';
-import { assertCallerMayTouchUserRecord } from '../common/auth/user-branch-scope';
+import {
+  assertCallerMayTouchUser,
+  assertCallerMayTouchUserRecord,
+} from '../common/auth/user-branch-scope';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 
 const userSelect = {
   id: true,
@@ -140,6 +144,27 @@ export class UsersService {
     if (mainBranch && hasBranches && !branchIds!.includes(mainBranch)) {
       throw new BadRequestException(
         "Asosiy filial tanlangan filiallar orasida bo'lishi kerak",
+      );
+    }
+
+    // …and the CALLER must hold every one of them.
+    //
+    // The check above reads like a branch check and is part of why this
+    // survived — but it asks whether the branch is REAL, the same trap
+    // `assertSingleValidBranch` set on students. Creating a user IS granting
+    // access: without this, a Fargona director could create a Branch Director
+    // OF NAMANGAN, with a password they chose, in a branch they cannot even
+    // view. A CEO spans everything and passes; a caller who holds neither
+    // branch is refused for both.
+    for (const branchId of [
+      ...(branchIds ?? []),
+      ...(mainBranch != null ? [mainBranch] : []),
+    ]) {
+      await assertCallerInBranch(
+        this.prisma,
+        callerUserId,
+        branchId,
+        "Bu filialga xodim qo'shish huquqingiz yo'q",
       );
     }
   }
@@ -575,6 +600,16 @@ export class UsersService {
     }
 
     this.assertSameCompany(user.companyId, callerCompanyId);
+    // `updateUser` right beside this has been branch-confined since the
+    // object-level sweep; archiving was not. Same record, same severity —
+    // an archived employee loses their account — through the door nobody
+    // locked.
+    await assertCallerMayTouchUser(
+      this.prisma,
+      deletedById,
+      id,
+      "Siz faqat o'z filialingiz xodimlarini arxivlashingiz mumkin",
+    );
 
     await this.prisma.user.update({
       where: { id },

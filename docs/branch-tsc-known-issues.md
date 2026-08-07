@@ -135,8 +135,8 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **147** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **124** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **157** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **114** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **365** | |
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
@@ -365,3 +365,69 @@ zaifroq da'vo qo'shish (manifest testi buni ushladi).
 Qatorni **o'quvchi filialiga** yozardi — bu to'g'ri — lekin chaqiruvchi shu
 o'quvchi bilan ishlay oladimi, deb so'ramasdi. `WILL_PAY` natijasi esa
 `PaymentPromise` ochadi va **begona filialning qarzdorlar oqimiga** tushadi.
+
+## Audit 7-bosqich — audit jurnali va xodim yozishlari (2026-08-07)
+
+### 1. Audit jurnali to'liq ochiq edi
+
+`GET /entity-history/:entityType/:entityId` — ikkala parametr ham URL'dan,
+tekshiruv esa faqat `companyId`. PRODda **17 727 qator, 23 tur**, va yuk —
+`oldValues`/`newValues`, ya'ni **o'zgargan har bir maydonning oldingi va
+keyingi qiymati**.
+
+| Tur | Qatorlar |
+|---|---|
+| Student | 9 031 |
+| Group | 2 367 |
+| GroupAttendance | 1 763 |
+| Enrollment | 1 471 |
+| Payment | 1 344 |
+| Lead | 979 |
+
+Parol o'zgarishi ham shu yerda alohida yozuv sifatida chiqadi.
+
+**Yechim:** audit jurnali — yozuvlarning **ko'rinishi**, shuning uchun o'sha
+yozuvlar qanday qo'riqlansa, shunday qo'riqlanadi. 24-chi filial qoidasi
+o'ylab topilmadi.
+
+**Null `branchId` uch xil ma'no bildiradi va ularni tenglashtirish ikki
+tomonga ham xato bo'lardi:**
+
+| Jadval | null nima degani | Qaror |
+|---|---|---|
+| Lead, MockExam, TelegramGroup, Course, Holiday | **biriktirilmagan havza** — har filial ishlaydi | ruxsat |
+| Payment | **tarixiy, atributsiz qator**; `branchIdWhere` uni filial o'qishlaridan chiqaradi, invariant esa `Σ(filiallar) + taqsimlanmagan == kompaniya` | faqat **hamma filialni qamragan** chaqiruvchi |
+| Expense, Room, LeadColumn | NOT NULL | savol yo'q |
+
+Filial o'lchovi umuman yo'q beshta tur (`CustomForm`, `LeadSource`,
+`MockExamSection`, `StudentExitReason`, `DepartureReason`) **nomma-nom**
+sanaladi — «bu nima ekanini bilmayman» va «bunda filial yo'q» **bir xil javob
+bermasligi kerak**. Tanilmagan tur rad etiladi, va test PRODdagi 23 turning
+hammasi qamralganini tekshiradi.
+
+### 2. `POST /users` — yana o'sha tuzoq
+
+`assertRoleAndBranchRules` filiallarni **sanaydi** va kompaniyadan tashqaridagini
+rad etadi. Bu **filial haqiqiymi** degan savol — `assertSingleValidBranch`
+o'quvchilarda qo'ygan tuzoqning aynan o'zi.
+
+Foydalanuvchi yaratish — bu **kirish huquqini berish**. Ya'ni Farg'ona direktori
+**Namangan Branch Director'ini**, o'zi tanlagan parol bilan, ko'ra olmaydigan
+filialda yarata olardi.
+
+Avtorizatsiya **so'rov shakli tekshirilgandan keyin** turadi: `mainBranch`
+`branchIds` ichida emasligi har kimda ham xato, va adminni «huquqingiz yo'q»
+deb chalg'itmaslik kerak — uning qo'lida aslida xato yozuv bor.
+
+### 3. `DELETE /users/:id`
+
+Faqat `companyId`. Yonidagi `PATCH /users/:id` obyekt darajasidagi auditdan
+beri qulflangan — arxivlash esa yo'q. Arxivlangan xodim akkauntini yo'qotadi.
+
+### Qamrovdan tashqarida qoldirilgan, ataylab
+
+`POST /users` da **rol eskalatsiyasi** faqat CEO uchun cheklangan
+(`CEO_ROLE_ID`). Ya'ni Administrator **o'z filialida** Branch Director yarata
+oladi. Bu haqiqiy muammo, lekin **filial auditining mavzusi emas** — kodda
+allaqachon namuna bor (`GRANTABLE_ROLE_IDS`, telegram xodim havolalari uchun),
+shuni bu yerga ham qo'llash alohida qaror.
