@@ -2,11 +2,11 @@
  * «Oylar» (month-by-month) and «Filiallar» (per-branch) sheets — the two
  * trend views of the redesigned "Hisobot" Excel workbook (v2).
  *
- * Ported block-for-block from the CEO-approved prototype
- * (server/scripts/_namuna-hisobot-v2.ts, sections "2. OYLAR" and
- * "3. FILIALLAR") onto the Task 6 primitives. Do not reorder columns or
- * reword labels — the layout was approved line by line against production
- * data, and the tests below index cells positionally.
+ * Ported block-for-block from the CEO-approved prototype — a throwaway script
+ * that rendered these two sheets ("2. OYLAR" and "3. FILIALLAR") against
+ * production data and was signed off line by line before being deleted. Do not
+ * reorder columns or reword labels: this layout IS the approval, and the tests
+ * below index cells positionally.
  *
  * The one thing both sheets exist to fix: readers kept mistaking a single
  * "revenue" column for cash actually collected. Every row now carries BOTH

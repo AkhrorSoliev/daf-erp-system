@@ -3,10 +3,10 @@
  * kim o'qiyapti / Statusi bo'yicha (bugungi holat) / <Oy> harakati / Guruhdan
  * chiqqanlar keyin qayerga ketdi (<Oy>).
  *
- * Ported block-for-block from the CEO-approved prototype
- * (server/scripts/_namuna-hisobot-v2.ts, section "7. O'QUVCHILAR") onto the
- * Task 6 primitives. Do not reorder sections or reword labels — the layout
- * was approved line by line against production data.
+ * Ported block-for-block from the CEO-approved prototype — a throwaway script
+ * that rendered this exact sheet ("7. O'QUVCHILAR") against production data and
+ * was signed off line by line before being deleted. Do not reorder sections or
+ * reword labels: this layout IS the approval.
  *
  * Two things this sheet deliberately does NOT do, both load-bearing:
  *  - No share/percentage column. The previous version divided "students who

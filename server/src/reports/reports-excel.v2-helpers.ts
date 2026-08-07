@@ -2,8 +2,9 @@
  * Presentation primitives for the redesigned "Hisobot" Excel workbook (v2).
  * Lighter visual language than reports-excel.helpers.ts: a navy TEXT title
  * with a rule under block labels, fills only on header/total rows — no
- * full-width navy bands. Ported verbatim from the CEO-approved prototype
- * (server/scripts/_namuna-hisobot-v2.ts), renamed to their permanent names.
+ * full-width navy bands. Ported verbatim from the CEO-approved prototype — a
+ * throwaway script that rendered the whole workbook against production data and
+ * was signed off before being deleted — renamed to their permanent names.
  *
  * Palette/number-format constants are reused from reports-excel.helpers.ts —
  * only the two fills below (header row, total row) are new here.

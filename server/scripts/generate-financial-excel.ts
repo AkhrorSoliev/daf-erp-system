@@ -20,20 +20,7 @@ import { Workbook } from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { ReportsFinancialService } from '../src/reports/reports-financial.service';
-import { ReportsProfitLossService } from '../src/reports/reports-profit-loss.service';
-import { ReportsCashFlowService } from '../src/reports/reports-cash-flow.service';
-import { ReportsBalanceSheetService } from '../src/reports/reports-balance-sheet.service';
-import { ReportsPaymentsService } from '../src/reports/reports-payments.service';
-import { ExpensesService } from '../src/expenses/expenses.service';
-import { SalaryMonthlyService } from '../src/salary/salary-monthly.service';
-import { PaymentsDebtorsService } from '../src/payments/payments-debtors.service';
-import { ReportsExcelService } from '../src/reports/reports-excel.service';
-import { ReportsOverviewService } from '../src/reports/reports-overview.service';
-import { ReportsAttendanceAnalyticsService } from '../src/reports/reports-attendance-analytics.service';
-import { ReportsDepartedStudentsService } from '../src/reports/reports-departed-students.service';
-import { ReportsDepartedReasonsService } from '../src/reports/reports-departed-reasons.service';
-import { ReportsTeacherChangesService } from '../src/reports/reports-teacher-changes.service';
+import { buildExcelService } from './build-report-services';
 
 async function main() {
   const prisma = new PrismaService();
@@ -41,60 +28,10 @@ async function main() {
   const startDate = process.argv[2];
   const endDate = process.argv[3];
 
-  // Real service instances; only PrismaService-backed reads are exercised, so
-  // the unused constructor deps (TransactionsService, EntityHistoryService) are
-  // safely null for the methods this script calls.
-  const financial = new ReportsFinancialService(prisma as any);
-  const profitLoss = new ReportsProfitLossService(prisma as any);
-  const cashFlow = new ReportsCashFlowService(prisma as any);
-  const balance = new ReportsBalanceSheetService(prisma as any);
-  const payments = new ReportsPaymentsService(prisma as any);
-  const expenses = new ExpensesService(prisma as any, null as any, null as any);
-  const salaryMonthly = new SalaryMonthlyService(prisma as any);
-  const debtors = new PaymentsDebtorsService(prisma as any);
-
-  // Redis-cached operational services (getRoomUtilization / getTeacher* /
-  // getAttendanceAnalytics). A no-op cache → always compute fresh (get miss,
-  // setex discarded) so the standalone script needs no live Redis.
-  const redisStub: any = {
-    get: async () => null,
-    setex: async () => undefined,
-  };
-  const overview = new ReportsOverviewService(prisma as any, redisStub);
-  const attendanceAnalytics = new ReportsAttendanceAnalyticsService(prisma as any, redisStub);
-  const departedStudents = new ReportsDepartedStudentsService(prisma as any);
-  const departedReasons = new ReportsDepartedReasonsService(prisma as any);
-  const teacherChanges = new ReportsTeacherChangesService(prisma as any);
-
-  const facade: any = {
-    getFinancialOverview: (c: number, q: any) => financial.getFinancialOverview(c, q),
-    getProfitLoss: (c: number, q: any) => profitLoss.getProfitLoss(c, q),
-    getCashFlow: (c: number, q: any) => cashFlow.getCashFlow(c, q),
-    getBalanceSheet: (c: number, q: any) => balance.getBalanceSheet(c, q),
-    getPaymentLineItems: (c: number, q: any) => payments.getPaymentLineItems(c, q),
-    getExpenseLineItems: (c: number, q: any) => expenses.exportAllForReport(c, q),
-    getSalaryMonthly: (c: number, month: string, performedById: number) =>
-      salaryMonthly.getMonthly({ month }, c, performedById),
-    getDebtorLineItems: (c: number, b?: number[]) => debtors.getDebtorLineItems(c, b),
-    getFinancialTrend: (c: number, b?: number) => financial.getFinancialTrend(c, b),
-    getYearlyTrend: (c: number, b?: number) => financial.getYearlyTrend(c, b),
-    getPerBranchSummary: (c: number, q: any) => payments.getPerBranchSummary(c, q),
-    getReconciliation: (c: number, q: any) => financial.getReconciliation(c, q),
-    getPriorPeriodSummary: (c: number, q: any) => financial.getPriorPeriodSummary(c, q),
-    // Operational (non-financial) feeds.
-    getKpis: (c: number, q: any) => overview.getKpis(c, q),
-    getRoomUtilization: (c: number, q: any) => overview.getRoomUtilization(c, q),
-    getGroupAnalytics: (c: number, q: any) => overview.getGroupAnalytics(c, q),
-    getLeadAnalytics: (q: any) => overview.getLeadAnalytics(q),
-    getTeacherPerformance: (c: number, q: any) => attendanceAnalytics.getTeacherPerformance(c, q),
-    getAttendanceAnalytics: (c: number, q: any) => attendanceAnalytics.getAttendanceAnalytics(c, q),
-    getDepartedStudentsSummary: (c: number, p: any) => departedStudents.getDepartedStudentsSummary(c, p),
-    getDepartedStudentsDynamics: (c: number, p: any) => departedStudents.getDepartedStudentsDynamics(c, p),
-    getDepartedStudentsReasons: (c: number, p: any) => departedReasons.getDepartedStudentsReasons(c, p),
-    getTeacherChangesList: (c: number, p: any) => teacherChanges.getTeacherChangesList(c, p),
-  };
-
-  const excel = new ReportsExcelService(facade);
+  // Shared with the pre-flight script on purpose — see build-report-services.ts.
+  // The hand-rolled facade that used to live here silently fell eight methods
+  // behind ReportsExcelService.generate and stopped working altogether.
+  const excel = buildExcelService(prisma);
 
   const company = await prisma.company.findFirst({ select: { id: true, name: true } });
   if (!company) throw new Error('Company topilmadi');

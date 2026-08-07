@@ -14,18 +14,23 @@
  * figures below.
  *
  * The expected figures were measured against PRODUCTION on 2026-08-06 for
- * July 2026, company-wide. They are kept in two lists because they do not age
- * alike, and treating them alike would make this script cry wolf every day:
+ * July 2026, company-wide. Each row carries its OWN drift rule (`drift`),
+ * because the figures do not age alike — treating them alike would either make
+ * the script cry wolf every day or let a regression through unnoticed:
  *
- *   QOTIRILGAN (frozen) — a closed month's cash, expenses and attendance.
- *     Only a reversal can move these, so a mismatch is a real failure and the
- *     script exits non-zero.
- *   JONLI (live) — recognised lesson value, teacher salary and the figures
- *     derived from them, plus today's roster counts. When a July debtor pays in
- *     August, retroactive billing writes the consumption dated to the LESSON,
- *     so July's lesson value and the teacher's covered salary both grow after
- *     the fact. That is the system working; the script prints the delta and
- *     does not fail.
+ *   frozen       — a closed month's cash, expenses and attendance. Only a
+ *                  reversal can move these, so any difference is a failure.
+ *   monotone-up  — recognised lesson value and the salary it covers. When a
+ *                  July debtor pays in August, retroactive billing writes the
+ *                  consumption dated to the LESSON, so July's figure GROWS
+ *                  after the fact. That mechanism only ever adds: a DECREASE
+ *                  means a reversal or a code regression, and fails the run.
+ *   band         — figures derived from both a growing revenue and a growing
+ *                  cost (the two profit lines), and today's roster counts.
+ *                  Direction is not guaranteed, so the bound is a tolerance
+ *                  around the recorded value; outside it, the run fails.
+ *   report-only  — «Hali to'lanmay qolgan», whose all-paid value is a sentence
+ *                  rather than a number, so no band can be drawn around it.
  *
  * Structural assertions (sheet list, forbidden strings, no Cyrillic, block 4's
  * footing, Filiallar vs Xulosa) are always hard failures — they check the
@@ -36,23 +41,7 @@ import { Workbook, Worksheet } from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { ReportsService } from '../src/reports/reports.service';
-import { ReportsExcelService } from '../src/reports/reports-excel.service';
-import { ReportsOverviewService } from '../src/reports/reports-overview.service';
-import { ReportsAttendanceAnalyticsService } from '../src/reports/reports-attendance-analytics.service';
-import { ReportsFinancialService } from '../src/reports/reports-financial.service';
-import { ReportsPaymentsService } from '../src/reports/reports-payments.service';
-import { ReportsTeacherChangesService } from '../src/reports/reports-teacher-changes.service';
-import { ReportsProfitLossService } from '../src/reports/reports-profit-loss.service';
-import { ReportsBalanceSheetService } from '../src/reports/reports-balance-sheet.service';
-import { ReportsExpectationService } from '../src/reports/reports-expectation.service';
-import { ReportsStudentFlowService } from '../src/reports/reports-student-flow.service';
-import { HolidaysService } from '../src/holidays/holidays.service';
-import { ExpensesService } from '../src/expenses/expenses.service';
-import { SalaryService } from '../src/salary/salary.service';
-import { SalaryMonthlyService } from '../src/salary/salary-monthly.service';
-import { SalaryStaffMonthlyService } from '../src/salary/salary-monthly-staff.service';
-import { PaymentsDebtorsService } from '../src/payments/payments-debtors.service';
+import { buildExcelService } from './build-report-services';
 
 // ── The period under test ───────────────────────────────────────────────────
 const MONTH_START = '2026-07-01';
@@ -78,96 +67,152 @@ const SHEETS = [
 const FORBIDDEN = ['undefined', 'NaN', 'null', '[object Object]'];
 
 /**
- * Sheets whose every cell is text this codebase WROTE — labels, month names,
- * category names, izoh lines, plus figures. Cyrillic here is a defect in the
- * report's own vocabulary and fails the run.
+ * Cells that echo text staff typed into the DATABASE, by sheet and COLUMN
+ * index. Cyrillic there is reported as a warning naming every cell — a
+ * data-cleanup list, not a workbook defect: production genuinely holds
+ * Cyrillic-spelled student names, and a report that transliterated somebody's
+ * name would be falsifying a financial record.
  *
- * The line-item sheets are deliberately excluded. They echo student, teacher
- * and expense text exactly as staff typed it into the database, and production
- * genuinely holds Cyrillic-spelled student names. A report that transliterated
- * somebody's name would be falsifying a record, so those hits are reported as a
- * warning naming every cell — a data-cleanup list, not a workbook defect.
+ * Everywhere else — every other column of these sheets included — Cyrillic is
+ * a defect in the report's OWN vocabulary (a column header, a «Jami» row, a
+ * category or status label, a footer) and HARD-FAILS. Exempting whole sheets,
+ * as this check first did, would have hidden exactly the bug it exists for.
+ *
+ * Column indices are read off the sheet builders, not guessed:
+ *   To'lovlar  (reports-excel.detail-sheets.ts, paymentsSheet)  3 = O'quvchi,
+ *              8 = Qabul qildi — both person names.
+ *   Xarajatlar (expensesSheet)  5 = Izoh (free text), 7 = Ustoz,
+ *              8 = Kim kiritdi.
+ *   Oyliklar   (salariesSheet)  1 = Ustoz/Xodim name, 2 = Lavozim (free text).
+ * «O'quvchilar» carries no database text at all — it is pure counts and
+ * report-authored labels (reports-excel.students-sheet.ts), so it stays fully
+ * hard-failing. Branch, room and group NAMES are deliberately NOT exempt: the
+ * centre authored those and can respell them, and «Filiallar» already holds
+ * branch names under a hard failure.
+ *
+ * The residual: column 1 of «Oyliklar» also carries its «Jami» and section
+ * labels, so a Cyrillic one there would only warn. Narrowing further would
+ * mean tracking row ranges through the builders, which is a heavier coupling
+ * than the bug is worth.
  */
-const NARRATIVE_SHEETS = new Set(['Xulosa', 'Oylar', 'Filiallar', 'Izoh']);
+const DB_TEXT_COLUMNS: Record<string, number[]> = {
+  "To'lovlar": [3, 8],
+  Xarajatlar: [5, 7, 8],
+  Oyliklar: [1, 2],
+};
 
 // ── Expected figures, «Xulosa» sheet, column 1 = label / column 2 = value ────
+
+/**
+ * How far this figure may legitimately move away from the recorded value.
+ *   frozen       — not at all.
+ *   monotone-up  — upwards only; a decrease is a reversal or a regression.
+ *   band         — either way, up to `tolerance` (a fraction of the recorded
+ *                  value); outside it, the run fails.
+ *   report-only  — no bound can be drawn (the value is a sentence).
+ */
+type Drift =
+  | { kind: 'frozen' }
+  | { kind: 'monotone-up' }
+  | { kind: 'band'; tolerance: number }
+  | { kind: 'report-only' };
 
 interface Expectation {
   label: string;
   expected: number | string;
+  drift: Drift;
   /** Why this figure may (or may not) legitimately differ from the measurement. */
   izoh: string;
 }
 
-/** A mismatch here is a real failure — these cannot move without a reversal. */
-const QOTIRILGAN: Expectation[] = [
+const FROZEN: Drift = { kind: 'frozen' };
+const GROWS: Drift = { kind: 'monotone-up' };
+/** Profit lines: revenue and cost both grow, so the net can move either way. */
+const PROFIT_BAND: Drift = { kind: 'band', tolerance: 0.05 };
+/** Roster counts are «today» figures — they move with every enrolment. */
+const ROSTER_BAND: Drift = { kind: 'band', tolerance: 0.15 };
+
+const KUTILGAN: Expectation[] = [
   {
     label: 'Jami tushgan pul',
     expected: 170_378_987,
+    drift: FROZEN,
     izoh: "Iyulda kassaga kirgan pul — yopilgan oy, faqat to'lov bekor qilinsa o'zgaradi.",
   },
   {
     label: `${MONTH_LABEL}ning o'z puli`,
     expected: 142_064_938,
+    drift: FROZEN,
     izoh: "Shu pulning iyul darslariga tegishli qismi — u ham yopilgan.",
   },
   {
     label: '−  Xarajatlar (ijara, marketing, kommunal…)',
     expected: 41_773_000,
+    drift: FROZEN,
     izoh: "O'tgan oyning xarajatlari kiritilib bo'lingan.",
   },
   {
     label: `Darsga qatnashdi (${MONTH_LABEL})`,
     expected: 444,
+    drift: FROZEN,
     izoh: "O'tgan oyning davomati o'zgarmaydi.",
   },
-];
-
-/** These grow when a July debtor pays later — print the delta, never fail. */
-const JONLI: Expectation[] = [
   {
     label: "O'tilgan darslar qiymati",
     expected: 173_783_991,
-    izoh: "Kechikkan to'lov darsning o'z oyiga yoziladi, shuning uchun o'sadi.",
+    drift: GROWS,
+    izoh: "Kechikkan to'lov darsning o'z oyiga yoziladi — faqat o'sadi, kamaymaydi.",
   },
   {
     label: '−  Ustoz oyligi (jami hisoblangan)',
     expected: 95_834_547,
-    izoh: "Qoplangan dars ko'paygani sari ustoz oyligi ham o'sadi.",
+    drift: GROWS,
+    izoh: "Qoplangan dars ko'paygani sari ustoz oyligi ham o'sadi; kamayishi mumkin emas.",
   },
   {
     label: "o'quvchilar to'lagan qismi",
     expected: 80_321_275,
-    izoh: "Yuqoridagi oylikning ichki bo'linishi — u bilan birga siljiydi.",
+    drift: GROWS,
+    izoh: "Qarzdor to'lagan sari o'quvchilar qoplagan ulush faqat ortadi.",
   },
   {
+    // NOT monotone: for a month whose payroll is still being settled the
+    // centre's leg carries a forecast sweep, and a debtor paying moves that
+    // slice over to «o'quvchilar to'lagan». Its parent line above IS asserted
+    // monotone, so a regression in the pair still has to get past a hard bound.
     label: "markaz qo'shimchasi",
     expected: 15_513_272,
-    izoh: "Qarzdor to'laganda markaz qo'shimchasi qoplanadi va kamayadi.",
+    drift: PROFIT_BAND,
+    izoh: "Qarzdor to'laganda markaz qo'shimchasi qoplanib kamayishi ham mumkin.",
   },
   {
     label: '=  SOF FOYDA',
     expected: 35_976_444,
-    izoh: "Yuqoridagi ikki jonli raqamdan chiqadi.",
+    drift: PROFIT_BAND,
+    izoh: "Daromad ham, ustoz oyligi ham o'sadi — sof foyda ikki tomonga siljiydi.",
   },
   {
     label: `=  ${MONTH_LABEL.toUpperCase()}NING O'Z FOYDASI`,
     expected: 4_257_391,
-    izoh: "O'z puli qotirilgan, lekin oylik jonli — shuning uchun siljishi mumkin.",
+    drift: PROFIT_BAND,
+    izoh: "O'z puli qotirilgan, lekin oylik o'sadi — shuning uchun ikki tomonga siljiydi.",
   },
   {
     label: "Hali to'lanmay qolgan",
     expected: "Yo'q — hammasi to'langan",
-    izoh: "Bekor qilingan to'lov bu qatorni qaytadan ochib yuborishi mumkin.",
+    drift: { kind: 'report-only' },
+    izoh: "Hammasi to'langanda bu qator raqam emas, jumla — chegara qo'yib bo'lmaydi.",
   },
   {
     label: "Guruhda o'qiyapti",
     expected: 427,
+    drift: ROSTER_BAND,
     izoh: "«Bugungi» holat — har kuni o'zgaradi.",
   },
   {
     label: "Guruhsiz (statusi faol, guruhi yo'q)",
     expected: 76,
+    drift: ROSTER_BAND,
     izoh: "«Bugungi» holat — har kuni o'zgaradi.",
   },
 ];
@@ -187,7 +232,7 @@ const pad = (s: string, n: number) => (s.length >= n ? s : s + ' '.repeat(n - s.
 
 // ── Verdict collection ──────────────────────────────────────────────────────
 
-let frozenFails = 0;
+let figureFails = 0;
 let structuralFails = 0;
 let drifted = 0;
 let matched = 0;
@@ -205,7 +250,7 @@ function drift(line: string): void {
 
 function fail(line: string, structural: boolean): void {
   if (structural) structuralFails++;
-  else frozenFails++;
+  else figureFails++;
   console.log(`  XATO      ${line}`);
 }
 
@@ -232,10 +277,30 @@ function rowValue(wb: Workbook, sheet: string, label: string): unknown {
   return hit ? found : undefined;
 }
 
-/** Numeric column-2 value, or 0 when the row is absent (an optional row). */
-function optionalNumber(wb: Workbook, sheet: string, label: string): number {
-  const v = rowValue(wb, sheet, label);
-  return typeof v === 'number' ? v : 0;
+/**
+ * «Xulosa» rows that are printed only when non-zero. Every OTHER label must
+ * exist: a renamed or dropped row read as 0 would make the Filiallar tie pass
+ * vacuously — 0 on both sides proves nothing, and the tie is the check that
+ * catches money falling through an unattributed branch.
+ */
+const OPTIONAL_SUMMARY_ROWS = new Set([
+  '−  Xodimlar oyligi',
+  "−  O'quvchilarga qaytarilgan",
+]);
+
+/**
+ * Numeric column-2 value of a «Xulosa» row. A missing row is a structural
+ * failure unless the label is legitimately conditional; NaN then propagates
+ * into the comparison so the tie can never read as satisfied.
+ */
+function summaryNumber(wb: Workbook, label: string): number {
+  const v = rowValue(wb, 'Xulosa', label);
+  if (v === undefined) {
+    if (OPTIONAL_SUMMARY_ROWS.has(label)) return 0;
+    fail(`Xulosa · «${label}» qatori topilmadi — solishtirish mumkin emas`, true);
+    return NaN;
+  }
+  return typeof v === 'number' ? v : NaN;
 }
 
 /**
@@ -257,6 +322,8 @@ function cellText(value: unknown): string | null {
 interface CellHit {
   sheet: string;
   address: string;
+  /** 1-based column, so a hit can be judged against DB_TEXT_COLUMNS. */
+  column: number;
   text: string;
 }
 
@@ -264,25 +331,28 @@ interface CellHit {
 function scanCells(wb: Workbook): { forbidden: CellHit[]; cyrillic: CellHit[] } {
   const forbidden: CellHit[] = [];
   const cyrillic: CellHit[] = [];
+  // Escaped on purpose: a file whose job is finding Cyrillic should not carry
+  // Cyrillic characters of its own. U+0400–U+052F = Cyrillic + Supplement.
   const CYRILLIC = /[Ѐ-ԯ]/;
   wb.eachSheet((ws: Worksheet) => {
     ws.eachRow({ includeEmpty: false }, (row) => {
       row.eachCell({ includeEmpty: false }, (cell) => {
+        const at = { sheet: ws.name, address: cell.address, column: Number(cell.col) };
         // A non-finite number stringifies to "NaN"/"Infinity" in Excel too.
         if (typeof cell.value === 'number' && !Number.isFinite(cell.value)) {
-          forbidden.push({ sheet: ws.name, address: cell.address, text: String(cell.value) });
+          forbidden.push({ ...at, text: String(cell.value) });
           return;
         }
         const text = cellText(cell.value);
         if (text == null) return;
         for (const bad of FORBIDDEN) {
           if (text.includes(bad)) {
-            forbidden.push({ sheet: ws.name, address: cell.address, text });
+            forbidden.push({ ...at, text });
             break;
           }
         }
         if (CYRILLIC.test(text)) {
-          cyrillic.push({ sheet: ws.name, address: cell.address, text });
+          cyrillic.push({ ...at, text });
         }
       });
     });
@@ -290,29 +360,86 @@ function scanCells(wb: Workbook): { forbidden: CellHit[]; cyrillic: CellHit[] } 
   return { forbidden, cyrillic };
 }
 
+/** True when the cell is one the DATABASE fills in, not the report. */
+function echoesDatabaseText(hit: CellHit): boolean {
+  return (DB_TEXT_COLUMNS[hit.sheet] ?? []).includes(hit.column);
+}
+
 // ── Checks ──────────────────────────────────────────────────────────────────
 
-function checkFigures(wb: Workbook, list: Expectation[], live: boolean): void {
+/** Human wording of a row's drift rule, printed next to every verdict. */
+function ruleText(d: Drift): string {
+  switch (d.kind) {
+    case 'frozen':
+      return "qoida: qotirilgan — o'zgarishi mumkin emas";
+    case 'monotone-up':
+      return "qoida: faqat o'sishi mumkin";
+    case 'band':
+      return `qoida: ±${Math.round(d.tolerance * 100)}% chegara`;
+    case 'report-only':
+      return 'qoida: faqat xabar beriladi';
+  }
+}
+
+/**
+ * Applies ONE row's own drift rule. Returns the verdict; the caller prints it.
+ * A rule violation is a figure failure (exit 1) — that is the whole point of
+ * bounding the live figures instead of releasing them.
+ */
+function judge(
+  e: Expectation,
+  got: unknown,
+): { verdict: 'mos' | 'siljidi' | 'xato'; sabab?: string } {
+  if (got === e.expected) return { verdict: 'mos' };
+  if (e.drift.kind === 'report-only') return { verdict: 'siljidi' };
+  if (e.drift.kind === 'frozen') {
+    return { verdict: 'xato', sabab: e.izoh };
+  }
+  if (typeof got !== 'number' || typeof e.expected !== 'number') {
+    // A number turning into text (or the reverse) is a rendering change, never
+    // ordinary drift — no rule below can be applied to it.
+    return { verdict: 'xato', sabab: "Qiymat turi o'zgargan (raqam ↔ matn)." };
+  }
+  if (e.drift.kind === 'monotone-up') {
+    if (got > e.expected) return { verdict: 'siljidi' };
+    return {
+      verdict: 'xato',
+      sabab:
+        "KAMAYDI. Bu raqamni faqat kechikkan to'lov qimirlatadi, u esa faqat " +
+        "qo'shadi. Kamayish — bekor qilingan yozuv yoki koddagi regressiya, oddiy siljish emas.",
+    };
+  }
+  const limit = Math.abs(e.expected) * e.drift.tolerance;
+  if (Math.abs(got - e.expected) <= limit) return { verdict: 'siljidi' };
+  return {
+    verdict: 'xato',
+    sabab: `Ruxsat etilgan ±${Math.round(e.drift.tolerance * 100)}% (${num(Math.round(limit))}) chegarasidan chiqdi.`,
+  };
+}
+
+function checkFigures(wb: Workbook, list: Expectation[]): void {
   for (const e of list) {
     const got = rowValue(wb, 'Xulosa', e.label);
     const head = `${pad(e.label, 44)} kutilgan ${pad(show(e.expected), 14)}`;
     if (got === undefined) {
-      // A missing row is a STRUCTURAL defect whichever list it sits in — the
+      // A missing row is a STRUCTURAL defect whichever rule governs it — the
       // sheet no longer carries the line the director is meant to read.
       fail(`${head} — qator topilmadi`, true);
       continue;
     }
-    if (got === e.expected) {
-      ok(`${head} o'lchandi ${show(got)}`);
-      continue;
-    }
     const delta =
-      typeof got === 'number' && typeof e.expected === 'number'
-        ? `  (Δ ${got >= e.expected ? '+' : ''}${num(got - e.expected)})`
+      typeof got === 'number' && typeof e.expected === 'number' && got !== e.expected
+        ? `  (Δ ${got > e.expected ? '+' : ''}${num(got - e.expected)})`
         : '';
     const line = `${head} o'lchandi ${show(got)}${delta}`;
-    if (live) drift(`${line}\n            ${e.izoh}`);
-    else fail(`${line}\n            ${e.izoh}`, false);
+    const { verdict, sabab } = judge(e, got);
+    if (verdict === 'mos') {
+      ok(line);
+    } else if (verdict === 'siljidi') {
+      drift(`${line}\n            ${e.izoh}  [${ruleText(e.drift)}]`);
+    } else {
+      fail(`${line}\n            ${sabab}  [${ruleText(e.drift)}]`, false);
+    }
   }
 }
 
@@ -333,11 +460,10 @@ function checkContent(wb: Workbook): void {
     const sample = forbidden.slice(0, 5).map((h) => `${h.sheet}!${h.address} = ${h.text}`);
     fail(`${forbidden.length} ta katakda taqiqlangan matn bor\n            ${sample.join('\n            ')}`, true);
   }
-  const own = cyrillic.filter((h) => NARRATIVE_SHEETS.has(h.sheet));
-  const data = cyrillic.filter((h) => !NARRATIVE_SHEETS.has(h.sheet));
-  const narrative = [...NARRATIVE_SHEETS].join(', ');
+  const own = cyrillic.filter((h) => !echoesDatabaseText(h));
+  const data = cyrillic.filter(echoesDatabaseText);
   if (own.length === 0) {
-    ok(`Hisobotning o'z matnida kirill harfi yo'q (${narrative})`);
+    ok("Hisobotning o'z matnida kirill harfi yo'q (barcha varaqlar, bazadan kelgan ustunlardan tashqari)");
   } else {
     const sample = own.map((h) => `${h.sheet}!${h.address} = ${h.text}`);
     fail(`${own.length} ta katakda kirill harfi bor\n            ${sample.join('\n            ')}`, true);
@@ -354,6 +480,12 @@ function checkContent(wb: Workbook): void {
  * Block 4's four rows must foot to its own total. The «Hali to'lanmay qolgan»
  * row renders the good case as words rather than a bare 0, so a non-numeric
  * value there IS zero.
+ *
+ * Do not over-trust a green line here: «oldin to'langan» is computed as a
+ * RESIDUAL, so three of the four rows collapse algebraically and what this
+ * actually asserts is `recognizedRevenue === expectation.heldValue`. That is
+ * still a worthwhile two-engine tie (the revenue leg and the expectation leg
+ * are computed independently), but it is not four independent numbers footing.
  */
 function checkBlock4(wb: Workbook): void {
   const parts = [
@@ -407,20 +539,21 @@ function checkBranchTotals(wb: Workbook): void {
   // Column 4 carries teacher + admin pay together, so the Xulosa side adds its
   // two payroll lines. «Xodimlar oyligi» is only printed when non-zero.
   const pairs: Array<[string, number, number]> = [
-    ["O'tilgan darslar qiymati", cell(2), optionalNumber(wb, 'Xulosa', "O'tilgan darslar qiymati")],
-    ['Kassaga tushgan pul', cell(3), optionalNumber(wb, 'Xulosa', 'Jami tushgan pul')],
+    ["O'tilgan darslar qiymati", cell(2), summaryNumber(wb, "O'tilgan darslar qiymati")],
+    ['Kassaga tushgan pul', cell(3), summaryNumber(wb, 'Jami tushgan pul')],
     [
       'Ustoz + xodimlar oyligi',
       cell(4),
-      optionalNumber(wb, 'Xulosa', '−  Ustoz oyligi (jami hisoblangan)') +
-        optionalNumber(wb, 'Xulosa', '−  Xodimlar oyligi'),
+      summaryNumber(wb, '−  Ustoz oyligi (jami hisoblangan)') +
+        summaryNumber(wb, '−  Xodimlar oyligi'),
     ],
-    ['Xarajat', cell(5), optionalNumber(wb, 'Xulosa', '−  Xarajatlar (ijara, marketing, kommunal…)')],
-    ['Qaytarilgan', cell(6), optionalNumber(wb, 'Xulosa', "−  O'quvchilarga qaytarilgan")],
-    ['SOF FOYDA', cell(7), optionalNumber(wb, 'Xulosa', '=  SOF FOYDA')],
-    ["Guruhda o'qiyapti", cell(9), optionalNumber(wb, 'Xulosa', "Guruhda o'qiyapti")],
+    ['Xarajat', cell(5), summaryNumber(wb, '−  Xarajatlar (ijara, marketing, kommunal…)')],
+    ['Qaytarilgan', cell(6), summaryNumber(wb, "−  O'quvchilarga qaytarilgan")],
+    ['SOF FOYDA', cell(7), summaryNumber(wb, '=  SOF FOYDA')],
+    ["Guruhda o'qiyapti", cell(9), summaryNumber(wb, "Guruhda o'qiyapti")],
   ];
   for (const [name, branchSum, summary] of pairs) {
+    // NaN === NaN is false, so a row that could not be read can never tie.
     if (branchSum === summary) {
       ok(`Filiallar «Jami» = Xulosa · ${pad(name, 26)} ${num(summary)}`);
     } else {
@@ -430,75 +563,6 @@ function checkBranchTotals(wb: Workbook): void {
       );
     }
   }
-}
-
-// ── Wiring ──────────────────────────────────────────────────────────────────
-
-/**
- * Builds the REAL ReportsService the HTTP path uses, hand-wired against a
- * PrismaClient instead of Nest DI, so this check exercises the same
- * orchestration a CEO's "Excel yuklab olish" click does. Deps the workbook
- * never touches are left null — a wrong assumption there fails loudly with a
- * TypeError rather than silently reporting a different number.
- */
-function buildExcelService(prisma: PrismaService): ReportsExcelService {
-  // A no-op cache → always compute fresh (get miss, setex discarded), so the
-  // script needs no live Redis and can never read a stale cached figure.
-  const redis: any = { get: async () => null, setex: async () => undefined };
-
-  const financial = new ReportsFinancialService(prisma as any);
-  const payments = new ReportsPaymentsService(prisma as any);
-  const profitLoss = new ReportsProfitLossService(prisma as any);
-  const balanceSheet = new ReportsBalanceSheetService(prisma as any);
-  const overview = new ReportsOverviewService(prisma as any, redis);
-  const attendance = new ReportsAttendanceAnalyticsService(prisma as any, redis);
-  const teacherChanges = new ReportsTeacherChangesService(prisma as any);
-  const studentFlow = new ReportsStudentFlowService(prisma as any);
-  const holidays = new HolidaysService(prisma as any, null as any, null as any, null as any);
-  const expectation = new ReportsExpectationService(prisma as any, holidays, redis);
-  const expenses = new ExpensesService(prisma as any, null as any, null as any);
-  const salaryMonthly = new SalaryMonthlyService(
-    prisma as any,
-    new SalaryStaffMonthlyService(prisma as any),
-  );
-  const salary = new SalaryService(
-    null as any, // config
-    null as any, // accrual
-    null as any, // summary
-    null as any, // overview
-    salaryMonthly,
-    null as any, // calculation
-    null as any, // payment
-    null as any, // settleMonth
-  );
-  const debtors = new PaymentsDebtorsService(prisma as any);
-
-  const reports = new ReportsService(
-    overview,
-    attendance,
-    financial,
-    payments,
-    null as any, // teacherPayments
-    null as any, // studentPayments
-    null as any, // departedStudents
-    null as any, // departedLists
-    null as any, // departedReasons
-    teacherChanges,
-    null as any, // centerActivity
-    profitLoss,
-    null as any, // cashFlow
-    balanceSheet,
-    expenses,
-    null as any, // salaryPayments
-    salary,
-    debtors,
-    redis,
-    expectation,
-    null as any, // expectationHistory
-    studentFlow,
-  );
-
-  return new ReportsExcelService(reports);
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
@@ -555,11 +619,13 @@ async function main() {
   const wb = new Workbook();
   await wb.xlsx.load(buffer as unknown as ArrayBuffer);
 
+  // Printed in two sections purely for readability — the rule that judges each
+  // line comes from the row itself, not from the section it is printed under.
   console.log("\n--- 1. QOTIRILGAN RAQAMLAR (o'zgarmasligi shart) ---");
-  checkFigures(wb, QOTIRILGAN, false);
+  checkFigures(wb, KUTILGAN.filter((e) => e.drift.kind === 'frozen'));
 
-  console.log("\n--- 2. JONLI RAQAMLAR (o'zgarishi mumkin — faqat farq ko'rsatiladi) ---");
-  checkFigures(wb, JONLI, true);
+  console.log('\n--- 2. CHEGARALANGAN RAQAMLAR (siljishi mumkin, lekin chegara bilan) ---');
+  checkFigures(wb, KUTILGAN.filter((e) => e.drift.kind !== 'frozen'));
 
   console.log('\n--- 3. TUZILISH ---');
   checkSheets(wb);
@@ -576,10 +642,10 @@ async function main() {
   console.log('\n' + '='.repeat(78));
   console.log(`Fayl:   ${outPath}  (${(buffer.length / 1024).toFixed(1)} KB)`);
   console.log(`Mos:    ${matched} ta`);
-  console.log(`Siljidi: ${drifted} ta (jonli raqam — xato emas)`);
+  console.log(`Siljidi: ${drifted} ta (chegara ichida — xato emas)`);
   console.log(`Diqqat: ${warnings} ta (baza ma'lumoti — xato emas)`);
-  console.log(`Xato:   ${frozenFails} ta qotirilgan raqam, ${structuralFails} ta tuzilish`);
-  const bad = frozenFails + structuralFails;
+  console.log(`Xato:   ${figureFails} ta raqam, ${structuralFails} ta tuzilish`);
+  const bad = figureFails + structuralFails;
   console.log(bad === 0 ? 'NATIJA: MUVAFFAQIYATLI' : 'NATIJA: MUVAFFAQIYATSIZ');
   console.log('='.repeat(78));
 

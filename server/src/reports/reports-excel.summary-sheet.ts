@@ -4,10 +4,10 @@
  * DARSLARINING PULI QAYERDAN KELGAN (4) / PUL QAYERGA KETDI (5) /
  * O'QUVCHILAR (6).
  *
- * Ported block-for-block from the CEO-approved prototype
- * (server/scripts/_namuna-hisobot-v2.ts, section "1. XULOSA") onto the
- * Task 6 primitives. Do not reorder blocks or reword labels — the layout
- * was approved line by line against production data.
+ * Ported block-for-block from the CEO-approved prototype — a throwaway script
+ * that rendered this exact sheet ("1. XULOSA") against production data and was
+ * signed off line by line before being deleted. Do not reorder blocks or
+ * reword labels: this layout IS the approval.
  */
 import { Workbook, Worksheet, Row } from 'exceljs';
 import { NetProfit, NUM, PCT, GREEN, RED, SUBTLE } from './reports-excel.helpers';
