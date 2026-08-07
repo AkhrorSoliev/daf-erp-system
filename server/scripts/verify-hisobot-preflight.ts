@@ -283,10 +283,11 @@ function rowValue(wb: Workbook, sheet: string, label: string): unknown {
  * vacuously — 0 on both sides proves nothing, and the tie is the check that
  * catches money falling through an unattributed branch.
  */
-const OPTIONAL_SUMMARY_ROWS = new Set([
-  '−  Xodimlar oyligi',
-  "−  O'quvchilarga qaytarilgan",
-]);
+// Only «Xodimlar oyligi» is genuinely conditional — the summary sheet gates it
+// on `adminSalary > 0`. «O'quvchilarga qaytarilgan» renders unconditionally, so
+// treating it as optional left one vacuous-pass path: the row dropped AND the
+// branch column legitimately 0 would tie 0 against 0 and prove nothing.
+const OPTIONAL_SUMMARY_ROWS = new Set(['−  Xodimlar oyligi']);
 
 /**
  * Numeric column-2 value of a «Xulosa» row. A missing row is a structural
@@ -333,7 +334,7 @@ function scanCells(wb: Workbook): { forbidden: CellHit[]; cyrillic: CellHit[] } 
   const cyrillic: CellHit[] = [];
   // Escaped on purpose: a file whose job is finding Cyrillic should not carry
   // Cyrillic characters of its own. U+0400–U+052F = Cyrillic + Supplement.
-  const CYRILLIC = /[Ѐ-ԯ]/;
+  const CYRILLIC = /[\u0400-\u052F]/;
   wb.eachSheet((ws: Worksheet) => {
     ws.eachRow({ includeEmpty: false }, (row) => {
       row.eachCell({ includeEmpty: false }, (cell) => {
