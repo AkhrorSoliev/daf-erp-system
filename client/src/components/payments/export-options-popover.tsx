@@ -139,7 +139,10 @@ export function ExportOptionsPopover({
             Qo&apos;shimcha bo&apos;limlar (ixtiyoriy)
           </Label>
           <p className="text-xs text-muted-foreground">
-            Bo&apos;sh qoldirilsa — 10 varaqli qisqa hisobot chiqadi.
+            {/* No exact count: the «Filiallar» sheet renders only for a
+                company-wide scope, so a single-branch download is one short —
+                and the branch selector sits right above this line. */}
+            Bo&apos;sh qoldirilsa — qisqa hisobot chiqadi (~10 varaq).
           </p>
           {EXTRA_OPTS.map((o) => (
             <div key={o.key} className="flex items-start gap-2">

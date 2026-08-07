@@ -332,6 +332,25 @@ describe('ReportsExcelService', () => {
       ]);
     });
 
+    it('an explicit empty include is that same ten-sheet default', async () => {
+      // What the controller passes for every request that names no group —
+      // including one from a stale page still sending the retired `?compare=`
+      // params, whose values are dropped before they reach here.
+      const wb = await buildWorkbook({}, { include: [] });
+      expect(wb.worksheets.map((w) => w.name)).toEqual([
+        'Xulosa',
+        'Oylar',
+        'Filiallar',
+        'Oyliklar',
+        'Xarajatlar',
+        "To'lovlar",
+        "O'quvchilar",
+        'Davomat',
+        'Xonalar bandligi',
+        'Izoh',
+      ]);
+    });
+
     it('has no Muqova sheet — the removed cover listed a Pul oqimi sheet that never existed', async () => {
       const wb = await buildWorkbook({});
       expect(wb.getWorksheet('Muqova')).toBeUndefined();
@@ -750,18 +769,22 @@ describe('ReportsExcelService', () => {
   });
 
   describe('carried-over sheet fixes', () => {
-    it('«Oyliklar» names the month its data actually covers', async () => {
-      // `salaries` is fetched for `monthStr` alone — the period's FIRST month
-      // (2026-05) — even inside this 3-month export; Oyliklar stays a
-      // per-month view by design (see reports-excel.month-range.ts). The
-      // subtitle must name THAT month, not the whole 01.05–31.07 period it
-      // used to print above data that only ever covered May.
+    it('«Oyliklar» names the DELIVERED month, not the period start', async () => {
+      // Oyliklar stays a per-month view even inside this 3-month export (see
+      // reports-excel.month-range.ts), so the subtitle must name one month
+      // rather than the whole 01.05–31.07 period. WHICH month is not the
+      // caller's choice: `getSalaryMonthly` clamps a request below the
+      // reporting floor up to that floor, exactly as the mock does here
+      // (asked 2026-05, delivered 2026-06). Naming `startDate`'s month would
+      // print «May 2026» above June's payroll.
       const wb = await buildWorkbook(
         {},
         { startDate: '2026-05-01', endDate: '2026-07-31' },
       );
       const ws = wb.getWorksheet('Oyliklar')!;
-      expect(String(ws.getRow(2).getCell(1).value)).toContain('May 2026');
+      const subtitle = String(ws.getRow(2).getCell(1).value);
+      expect(subtitle).toContain('Iyun 2026');
+      expect(subtitle).not.toContain('May 2026');
     });
 
     it('«Xarajatlar» warns when the Boshqa bucket dominates', async () => {

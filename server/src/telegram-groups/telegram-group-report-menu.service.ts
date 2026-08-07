@@ -191,7 +191,10 @@ export class TelegramGroupReportMenuService {
     const { startDate, endDate } = this.presetRange(months);
     const caption =
       `⚡ <b>Oxirgi ${months} oy hisoboti</b>\n` +
-      `⚠️ 'Oyliklar' varag'i faqat boshlang'ich oyni ko'rsatadi (yig'indi emas).`;
+      // Not «boshlang'ich oy»: the salary report clamps a month earlier than the
+      // reporting floor up to that floor, so the sheet may hold a LATER month
+      // than the period starts with. Its own header names which one.
+      `⚠️ 'Oyliklar' varag'i faqat bitta oyni ko'rsatadi (yig'indi emas).`;
     await this.generateAndSend(ctx, {
       startDate,
       endDate,
@@ -208,7 +211,9 @@ export class TelegramGroupReportMenuService {
   async sendYearlyExcel(ctx: Context, year: number): Promise<void> {
     const caption =
       `📅 <b>Yillik hisobot — ${year}</b>\n` +
-      `⚠️ 'Oyliklar' varag'i faqat yanvar oyini ko'rsatadi (yig'indi emas).`;
+      // Not «yanvar»: January is before the reporting floor, so the salary
+      // report clamps up to the floor month and the sheet holds THAT month.
+      `⚠️ 'Oyliklar' varag'i faqat bitta oyni ko'rsatadi (yig'indi emas).`;
     await this.generateAndSend(ctx, {
       startDate: `${year}-01-01`,
       endDate: `${year}-12-31`,

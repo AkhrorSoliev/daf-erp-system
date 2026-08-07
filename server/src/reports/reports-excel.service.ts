@@ -339,9 +339,11 @@ export class ReportsExcelService {
     summarySheetV2(wb, summaryInput);
     monthsSheet(wb, monthRows, scopeLine);
     if (companyWide) branchesSheet(wb, branchRows, periodLine, scopeLine);
-    // `salaries` covers monthStr alone (a per-month view by design, even inside
-    // a multi-month export) — name THAT month, not the whole period.
-    salariesSheet(wb, salaries, period, uzMonthLabel(monthStr));
+    // `salaries` covers ONE month (a per-month view by design, even inside a
+    // multi-month export), and `getSalaryMonthly` CLAMPS a too-early request up
+    // to the reporting floor — so the delivered month is not always `monthStr`.
+    // Name the month the data came from, or the header lies about its own rows.
+    salariesSheet(wb, salaries, period, uzMonthLabel(salaries.month));
     expensesSheet(wb, expenses, branchNames, period);
     paymentsSheet(wb, payments, branchNames, period);
     studentsSheet(wb, studentFlow, periodLine, scopeLine);
