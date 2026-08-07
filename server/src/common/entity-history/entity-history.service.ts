@@ -3,6 +3,7 @@ import { EntityAction, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeChangedFields, stripSensitiveFields } from './diff.util';
+import { assertCallerMayReadEntityHistory } from '../auth/entity-history-scope';
 
 interface BaseHistoryParams {
   entityType: string;
@@ -127,12 +128,35 @@ export class EntityHistoryService {
     });
   }
 
+  /**
+   * @param caller present on the HTTP path, absent for internal readers.
+   *
+   * The endpoint took `entityType` and `entityId` straight off the URL and
+   * checked only `companyId`, so any staff member could read the full edit
+   * trail of any record in the company — 17 727 rows across 23 types in
+   * production, each carrying the before-and-after of every changed field.
+   * `assertCallerMayReadEntityHistory` gates it as the underlying record is
+   * gated. The parameter is optional so an internal caller reading history
+   * for its own purposes is not forced to invent a user id; every HTTP route
+   * passes one.
+   */
   async getHistory(
     entityType: string,
     entityId: string,
     companyId: number,
     options?: { page?: number; pageSize?: number },
+    caller?: { userId: number; roles: string[] },
   ) {
+    if (caller) {
+      await assertCallerMayReadEntityHistory(
+        this.prisma,
+        caller.userId,
+        caller.roles ?? [],
+        entityType,
+        String(entityId),
+        companyId,
+      );
+    }
     const page = options?.page || 1;
     const pageSize = options?.pageSize || 10;
     const skip = (page - 1) * pageSize;
