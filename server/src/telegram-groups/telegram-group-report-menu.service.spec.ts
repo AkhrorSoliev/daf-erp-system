@@ -77,7 +77,7 @@ describe('TelegramGroupReportMenuService', () => {
     expect(kb).toContain("Ko'proq imkoniyatlar");
   });
 
-  it('sendMonthExcel generates a single-month workbook with no comparison', async () => {
+  it('sendMonthExcel generates a single-month workbook with the default sheets', async () => {
     const { service, reportsExcel } = makeDeps();
     const ctx = makeCtx();
 
@@ -88,41 +88,38 @@ describe('TelegramGroupReportMenuService', () => {
       expect.objectContaining({
         startDate: '2026-06-01',
         endDate: '2026-06-30',
-        compareModes: [],
+        include: [],
         performedById: 7,
         companyName: 'DaF Sprachzentrum',
       }),
     );
     const [, extra] = ctx.replyWithDocument.mock.calls[0];
     expect(ctx.replyWithDocument.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ filename: 'moliyaviy-hisobot-2026-06.xlsx' }),
+      expect.objectContaining({ filename: 'hisobot-2026-06.xlsx' }),
     );
-    expect(extra.caption).toContain("To'liq moliyaviy hisobot — 06.2026");
+    expect(extra.caption).toContain('Hisobot — 06.2026');
   });
 
-  it('sendComparisonExcel puts the LATER month as the period and the earlier as compare', async () => {
-    const { service, reportsExcel } = makeDeps();
-    const ctx = makeCtx();
+  // Every sheet a caption names must exist in the file it is attached to. The
+  // «Taqqoslash» / «Asosiy xulosa» / KPI / Guruhlar sheets are gone, so no bot
+  // message may mention them.
+  it('never names a sheet the workbook no longer contains', async () => {
+    const { service } = makeDeps();
+    const gone = ['Taqqoslash', 'Asosiy xulosa', 'KPI', 'Guruhlar'];
 
-    // Pass reversed to prove ordering: earlier=2026-05, later=2026-06.
-    await service.sendComparisonExcel(ctx, '2026-06', '2026-05');
-
-    expect(reportsExcel.generate).toHaveBeenCalledWith(
-      1001,
-      expect.objectContaining({
-        startDate: '2026-06-01',
-        endDate: '2026-06-30',
-        compareModes: ['custom'],
-        compareStartDate: '2026-05-01',
-        compareEndDate: '2026-05-31',
-      }),
-    );
-    expect(ctx.replyWithDocument.mock.calls[0][0].filename).toBe(
-      'taqqoslash-2026-06-vs-2026-05.xlsx',
-    );
+    for (const send of [
+      (ctx: any) => service.sendMonthExcel(ctx, '2026-06'),
+      (ctx: any) => service.sendPresetExcel(ctx, 3),
+      (ctx: any) => service.sendYearlyExcel(ctx, 2026),
+    ]) {
+      const ctx = makeCtx();
+      await send(ctx);
+      const caption = ctx.replyWithDocument.mock.calls[0][1].caption as string;
+      for (const sheet of gone) expect(caption).not.toContain(sheet);
+    }
   });
 
-  it('sendYearlyExcel spans the full year with the yearly comparison sheet', async () => {
+  it('sendYearlyExcel spans the full year as a plain range export', async () => {
     const { service, reportsExcel } = makeDeps();
     const ctx = makeCtx();
 
@@ -133,9 +130,25 @@ describe('TelegramGroupReportMenuService', () => {
       expect.objectContaining({
         startDate: '2026-01-01',
         endDate: '2026-12-31',
-        compareModes: ['yearly'],
+        include: [],
       }),
     );
+  });
+
+  it('answers a stale comparison button instead of leaving it spinning', async () => {
+    const { service, reportsExcel } = makeDeps();
+    const ctx = makeCtx();
+
+    await service.showRetiredComparison(ctx);
+
+    expect(reportsExcel.generate).not.toHaveBeenCalled();
+    expect(ctx.answerCbQuery.mock.calls[0][0]).toContain(
+      'Davrlar taqqoslash olib tashlandi',
+    );
+    // The root menu comes back, minus the retired branch.
+    const kb = JSON.stringify(ctx.editMessageText.mock.calls[0][1]);
+    expect(kb).toContain('rm:full');
+    expect(kb).not.toContain('rm:cmp');
   });
 
   it('sendPresetExcel(3) builds a trailing 3-month range ending this month', async () => {
@@ -150,7 +163,7 @@ describe('TelegramGroupReportMenuService', () => {
       expect.objectContaining({
         startDate: '2026-05-01',
         endDate: '2026-07-31',
-        compareModes: [],
+        include: [],
       }),
     );
   });
@@ -263,7 +276,6 @@ describe('TelegramGroupReportMenuService', () => {
     expect(ctx.reply).toHaveBeenCalled();
     const kb = JSON.stringify(ctx.reply.mock.calls[0][1]);
     expect(kb).toContain('rm:full');
-    expect(kb).toContain('rm:cmp');
     expect(kb).toContain('rm:pre');
     expect(kb).toContain('rm:cfin');
   });

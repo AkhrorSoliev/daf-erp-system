@@ -15,18 +15,11 @@ export class ReportsQueryDto {
   @IsString()
   endDate?: string;
 
-  // Comparison controls for the Excel report's "Taqqoslash" sheet.
-  // `compare` is a CSV of the requested bases: "prev" (previous equal-length
-  // period), "yoy" (same period last year), "custom" (compareStartDate/End).
+  // Optional sheet groups for the Excel export: CSV of
+  // "buxgalteriya" | "marketing" | "qarzdorlar". Absent = the ten defaults.
+  // (It replaced `compare`/`compareStartDate`/`compareEndDate` — the workbook
+  // no longer builds a comparison sheet for them to drive.)
   @IsOptional()
   @IsString()
-  compare?: string;
-
-  @IsOptional()
-  @IsString()
-  compareStartDate?: string;
-
-  @IsOptional()
-  @IsString()
-  compareEndDate?: string;
+  include?: string;
 }

@@ -66,13 +66,6 @@ export interface FinancialExcelQuery {
    * stays available but stays out of the way.
    */
   include?: string[];
-  // ACCEPTED BUT IGNORED. The «Taqqoslash» / «Yillar kesimida» sheets these
-  // drove are gone; the fields stay only so the current callers (the reports
-  // controller and the Telegram report menu) keep compiling until they are
-  // rewritten to send `include` instead.
-  compareModes?: string[];
-  compareStartDate?: string;
-  compareEndDate?: string;
   // When true AND the requested period ends before the current month, the
   // point-in-time sheets (Xonalar bandligi, plus the opt-in Balans and
   // Qarzdorlar) are omitted — they always read LIVE state (current balances,

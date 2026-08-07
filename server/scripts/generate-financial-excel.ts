@@ -1,5 +1,5 @@
 /**
- * Standalone generator for the "Moliyaviy hisobot" Excel — produces EXACTLY the
+ * Standalone generator for the "Hisobot" Excel — produces EXACTLY the
  * same workbook the /payments/overview "Excel yuklab olish" button gives in
  * production (same ReportsExcelService, same read-only queries). Bypasses the
  * HTTP layer + full Nest bootstrap (no crons/listeners) by wiring just the
@@ -10,6 +10,10 @@
  *
  * start/end are optional YYYY-MM-DD; default = current calendar month (the
  * frontend default). Company-wide (CEO view — all branches).
+ *
+ * Ten sheets by default. `INCLUDE=buxgalteriya,marketing,qarzdorlar` adds the
+ * same opt-in groups the download popover offers — the «Tekshiruv» ties printed
+ * below only exist when `buxgalteriya` is requested.
  */
 import 'dotenv/config'; // loads server/.env for dev; `railway run` env wins in prod (dotenv doesn't override)
 import { Workbook } from 'exceljs';
@@ -112,33 +116,29 @@ async function main() {
     select: { id: true },
   });
 
-  // Optional custom comparison range: argv[4]=compareStart, argv[5]=compareEnd.
-  const compareStartDate = process.argv[4];
-  const compareEndDate = process.argv[5];
-  const compareModes = process.env.COMPARE
-    ? process.env.COMPARE.split(',')
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : compareStartDate && compareEndDate
-      ? ['prev', 'yoy', 'custom', 'yearly']
-      : ['prev', 'yoy', 'yearly'];
+  // Optional opt-in sheet groups, same tokens the download popover offers:
+  //   INCLUDE=buxgalteriya,marketing,qarzdorlar
+  const include = (process.env.INCLUDE ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const buffer = await excel.generate(company.id, {
+    // Company-wide (CEO view) — matches the 'Barcha filiallar' label.
+    branchIds: null,
     startDate,
     endDate,
     companyName: company.name,
     branchLabel: 'Barcha filiallar',
     branchNames,
     performedById: ceo?.id ?? 0,
-    compareModes,
-    compareStartDate,
-    compareEndDate,
+    include,
   });
 
   const outDir = path.join(__dirname, '..', 'reports');
   fs.mkdirSync(outDir, { recursive: true });
   const stamp = startDate && endDate ? `${startDate}_${endDate}` : new Date().toISOString().slice(0, 10);
-  const outPath = path.join(outDir, `moliyaviy-hisobot-${stamp}.xlsx`);
+  const outPath = path.join(outDir, `hisobot-${stamp}.xlsx`);
   fs.writeFileSync(outPath, buffer);
 
   // Re-read the produced workbook and print a summary so we can confirm the
@@ -164,8 +164,7 @@ async function main() {
   console.log(`Hajmi:     ${(buffer.length / 1024).toFixed(1)} KB`);
   console.log(`Kompaniya: ${company.name} (#${company.id}), filiallar: ${branches.length}`);
   console.log(`Varaqlar:  ${wb.worksheets.map((w) => w.name).join(', ')}`);
-  console.log(`Davr:      ${cell('Muqova', 'Hisobot davri:', 2)}`);
-  console.log(`Sof foyda: ${cell('Asosiy xulosa', 'Sof foyda', 2)}`);
+  console.log(`Sof foyda: ${cell('Xulosa', '=  SOF FOYDA', 2)}`);
   console.log('--- Tekshiruv (ties) ---');
   ties.forEach((t) => console.log('  ' + t));
   console.log('==================================================');
