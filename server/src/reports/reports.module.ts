@@ -4,6 +4,7 @@ import { ReportsService } from './reports.service';
 import { ReportsOverviewService } from './reports-overview.service';
 import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytics.service';
 import { ReportsFinancialService } from './reports-financial.service';
+import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsTeacherPaymentsService } from './reports-teacher-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
@@ -32,6 +33,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsOverviewService,
     ReportsAttendanceAnalyticsService,
     ReportsFinancialService,
+    ReportsDebtHistoryService,
     ReportsPaymentsService,
     ReportsTeacherPaymentsService,
     ReportsStudentPaymentsService,
@@ -56,6 +58,7 @@ import { PaymentsModule } from '../payments/payments.module';
   exports: [
     ReportsExcelService,
     ReportsFinancialService,
+    ReportsDebtHistoryService,
     ReportsService,
     ReportsExpectationService,
     ReportsExpectationHistoryService,

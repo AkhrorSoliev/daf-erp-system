@@ -6,6 +6,10 @@ import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsOverviewService } from './reports-overview.service';
 import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytics.service';
 import { ReportsFinancialService } from './reports-financial.service';
+import {
+  ReportsDebtHistoryService,
+  type DebtStatusFilter,
+} from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsTeacherPaymentsService } from './reports-teacher-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
@@ -68,6 +72,7 @@ export class ReportsService {
     private overview: ReportsOverviewService,
     private attendanceAnalytics: ReportsAttendanceAnalyticsService,
     private financial: ReportsFinancialService,
+    private debtHistory: ReportsDebtHistoryService,
     private payments: ReportsPaymentsService,
     private teacherPayments: ReportsTeacherPaymentsService,
     private studentPayments: ReportsStudentPaymentsService,
@@ -452,6 +457,32 @@ export class ReportsService {
   }
   getMonthlyDebtRecovery(companyId: number, scope: ReportBranchIds) {
     return this.financial.getMonthlyDebtRecovery(companyId, scope);
+  }
+  /**
+   * The /payments/debt-history page's whole dataset — roll-forward, cohort and
+   * longest-standing debtors from one ledger replay. Distinct from
+   * `getMonthlyDebtRecovery` (cohort only), which the Excel workbook still uses.
+   */
+  getDebtHistory(
+    companyId: number,
+    scope: ReportBranchIds,
+    statusFilter?: DebtStatusFilter,
+  ) {
+    return this.debtHistory.getDebtHistory(companyId, scope, statusFilter);
+  }
+  /** Who still owes money that arose in one given month (debt aging). */
+  getMonthAgingDetail(
+    companyId: number,
+    monthKey: string,
+    scope: ReportBranchIds,
+    statusFilter?: DebtStatusFilter,
+  ) {
+    return this.debtHistory.getMonthAgingDetail(
+      companyId,
+      monthKey,
+      scope,
+      statusFilter,
+    );
   }
   getMonthDebtDetail(
     companyId: number,

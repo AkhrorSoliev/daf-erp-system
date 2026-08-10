@@ -13,6 +13,7 @@ import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ExpectationHistoryQueryDto } from './dto/expectation-history-query.dto';
+import { DebtHistoryQueryDto } from './dto/debt-history-query.dto';
 import {
   isEmptyScope,
   narrowToSingleBranch,
@@ -347,6 +348,47 @@ export class ReportsController {
     return this.reportsService.getMonthlyDebtRecovery(companyId, scope);
   }
 
+  // Everything the /payments/debt-history page renders, from ONE ledger replay:
+  // the month-by-month debt roll-forward (opening + added − paid − forgiven −
+  // other = closing), each month's cohort recovery, the current status split
+  // and the longest-standing debtors. CEO + BD only — company-wide debt.
+  //
+  // Declared BEFORE the ":monthKey" param route so "history" isn't captured.
+  @Get('monthly-debt-recovery/history')
+  @Roles('CEO', 'Branch Director')
+  getDebtHistory(
+    @Query() query: DebtHistoryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.reportsService.getDebtHistory(companyId, scope, query.status);
+  }
+
+  // Who still owes money that arose in ONE month — the page's month dialog.
+  // Distinct from the cohort ":monthKey/detail" below, which answers "who ended
+  // that month in debt"; this answers "whose charges FROM that month are still
+  // unpaid", so the same student shows a different figure under each month.
+  @Get('monthly-debt-recovery/:monthKey/aging')
+  @Roles('CEO', 'Branch Director')
+  getMonthAgingDetail(
+    @Param('monthKey') monthKey: string,
+    @Query() query: DebtHistoryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) {
+      throw new BadRequestException('monthKey formati YYYY-MM bo‘lishi kerak');
+    }
+    // Returns debtor NAMES and PHONES — it must never span branches for a
+    // confined caller.
+    return this.reportsService.getMonthAgingDetail(
+      companyId,
+      monthKey,
+      scope,
+      query.status,
+    );
+  }
+
   // Dedicated Excel workbook for the debt-history page (Umumiy + Qarzdorlar +
   // Undirildi + Kechirilgan sheets). CEO/BD only. Note: this static route must
   // be declared BEFORE the ":monthKey" param route so "excel" isn't captured.
@@ -407,9 +449,9 @@ export class ReportsController {
     });
   }
 
-  // Comprehensive financial report as a downloadable Excel workbook — CEO + BD
-  // only. Sheets: Umumiy / Foyda va zarar / Pul oqimi / Balans / Daromad /
-  // Xarajatlar. Auth-gated by @Roles; the frontend fetches it as a blob.
+  // The "Hisobot" Excel workbook — CEO + BD only. Ten sheets by default;
+  // `?include=buxgalteriya,marketing,qarzdorlar` bolts on the opt-in groups.
+  // Auth-gated by @Roles; the frontend fetches it as a blob.
   @Get('financial-excel')
   @Roles('CEO', 'Branch Director')
   async exportFinancialExcel(
@@ -438,17 +480,14 @@ export class ReportsController {
         ? 'Barcha filiallar'
         : scope.map((id) => branchNames[id] ?? `Filial #${id}`).join(', ');
 
-    // Parse the comparison request: CSV of "prev" | "yoy" | "custom" | "yearly".
-    // When the param is entirely absent (old clients / direct API), fall back to
-    // sensible defaults; an explicit empty string means "no comparisons".
-    const validModes = ['prev', 'yoy', 'custom', 'yearly'];
-    const compareModes =
-      query.compare === undefined
-        ? ['prev', 'yoy', 'yearly']
-        : query.compare
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => validModes.includes(s));
+    // Opt-in sheet groups: CSV of the three known tokens. Unknown tokens are
+    // dropped rather than refused — a stale bookmark should still download the
+    // ten-sheet default report, not fail.
+    const validGroups = ['buxgalteriya', 'marketing', 'qarzdorlar'];
+    const include = (query.include ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => validGroups.includes(s));
 
     const buffer = await this.reportsExcelService.generate(user.companyId, {
       branchIds: scope,
@@ -458,11 +497,17 @@ export class ReportsController {
       branchLabel,
       branchNames,
       performedById: user.id,
-      compareModes,
-      compareStartDate: query.compareStartDate,
-      compareEndDate: query.compareEndDate,
+      include,
     });
-    const filename = `moliyaviy-hisobot-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    // The dates land in a response header, so they are stripped down to the
+    // characters a date can contain — a quote or newline in the query string
+    // must never be able to shape `Content-Disposition`.
+    const stamp =
+      [query.startDate, query.endDate]
+        .filter((d): d is string => !!d)
+        .map((d) => d.replace(/[^0-9A-Za-z-]/g, ''))
+        .join('_') || new Date().toISOString().slice(0, 10);
+    const filename = `hisobot-${stamp}.xlsx`;
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

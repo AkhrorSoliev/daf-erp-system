@@ -34,9 +34,13 @@ type ResolvedGroup = {
  *   rm:open                       open the menu (fresh message under the report)
  *   rm:root | rm:close            back to root / dismiss
  *   rm:full → rm:fy:YYYY → rm:fm:YYYY-MM     full monthly Excel
- *   rm:cmp  → rm:ca:YYYY-MM → rm:cb:A:B      two-month comparison Excel
  *   rm:pre  → rm:p3 | rm:p6 | rm:p12 | rm:py:YYYY   preset range Excel
  *   rm:card → rm:cfin             in-chat financial summary card
+ *
+ * The two-month comparison branch (rm:cmp → rm:ca → rm:cb) was REMOVED: the
+ * workbook no longer carries a «Taqqoslash» sheet, so that leaf produced a file
+ * identical to a plain single-month export while its caption promised two
+ * periods side by side. Two months are two taps of «To'liq hisobot» now.
  */
 @Injectable()
 export class TelegramGroupReportMenuService {
@@ -93,6 +97,26 @@ export class TelegramGroupReportMenuService {
     await ctx.deleteMessage().catch(() => undefined);
   }
 
+  /**
+   * rm:cmp / rm:ca / rm:cb — the retired two-month comparison branch. Menus
+   * already sitting in group chats still carry those buttons, so the tap gets
+   * an honest answer and the root menu back rather than a dead spinner.
+   */
+  async showRetiredComparison(ctx: Context): Promise<void> {
+    await ctx
+      .answerCbQuery(
+        "Davrlar taqqoslash olib tashlandi. Har bir oyni «To'liq hisobot» dan alohida yuklab oling.",
+        { show_alert: true },
+      )
+      .catch(() => undefined);
+    await ctx
+      .editMessageText('📋 <b>Hisobot menyusi</b>', {
+        parse_mode: 'HTML',
+        ...this.rootKeyboard(),
+      })
+      .catch(() => undefined);
+  }
+
   /** rm:full — year picker. */
   async showFullYears(ctx: Context): Promise<void> {
     const group = await this.resolveGroup(ctx);
@@ -133,85 +157,18 @@ export class TelegramGroupReportMenuService {
   async sendMonthExcel(ctx: Context, month: string): Promise<void> {
     const { startDate, endDate } = this.monthRange(month);
     const isPast = month < this.currentMonth();
+    // «Xonalar bandligi» is the only live-state sheet left in the bot's export
+    // (Balans / Qarzdorlar are opt-in groups the bot does not request), so it
+    // is the only one the caption may name.
     const caption =
-      `📊 <b>To'liq moliyaviy hisobot — ${this.monthLabel(month)}</b>\n` +
+      `📊 <b>Hisobot — ${this.monthLabel(month)}</b>\n` +
       (isPast
-        ? `ℹ️ Joriy-holat varaqlari (Balans, Qarzdorlar, KPI, Xonalar, Guruhlar) o'tgan oy uchun aniq bo'lmagani sabab chiqarilmadi.`
-        : `⚠️ Balans, qarzdorlar, KPI, xona bandligi — joriy holatni ko'rsatadi.`);
+        ? `ℹ️ 'Xonalar bandligi' varag'i o'tgan oy uchun aniq bo'lmagani sabab chiqarilmadi.`
+        : `⚠️ 'Xonalar bandligi' varag'i joriy holatni ko'rsatadi.`);
     await this.generateAndSend(ctx, {
       startDate,
       endDate,
-      compareModes: [],
-      filename: `moliyaviy-hisobot-${month}.xlsx`,
-      caption,
-    });
-  }
-
-  /** rm:cmp — first-month picker for a comparison. */
-  async showCmpMonthA(ctx: Context): Promise<void> {
-    const group = await this.resolveGroup(ctx);
-    if (!group) return;
-    const months = await this.availableMonths(group.companyId);
-    const rows = this.chunk(
-      months.map((m) =>
-        Markup.button.callback(this.monthLabel(m), `rm:ca:${m}`),
-      ),
-      3,
-    );
-    rows.push([Markup.button.callback('« Orqaga', 'rm:root')]);
-    await this.edit(ctx, '🔀 <b>1-oyni tanlang:</b>', Markup.inlineKeyboard(rows));
-  }
-
-  /** rm:ca:YYYY-MM — second-month picker (first month carried in callback_data). */
-  async showCmpMonthB(ctx: Context, monthA: string): Promise<void> {
-    const group = await this.resolveGroup(ctx);
-    if (!group) return;
-    const months = (await this.availableMonths(group.companyId)).filter(
-      (m) => m !== monthA,
-    );
-    if (months.length === 0) {
-      await ctx.answerCbQuery('Taqqoslash uchun boshqa oy yo\'q').catch(() => undefined);
-      return;
-    }
-    const rows = this.chunk(
-      months.map((m) =>
-        Markup.button.callback(this.monthLabel(m), `rm:cb:${monthA}:${m}`),
-      ),
-      3,
-    );
-    rows.push([Markup.button.callback('« Orqaga', 'rm:cmp')]);
-    await this.edit(
-      ctx,
-      `🔀 <b>2-oyni tanlang</b> (1-oy: ${this.monthLabel(monthA)}):`,
-      Markup.inlineKeyboard(rows),
-    );
-  }
-
-  /** rm:cb:A:B — generate + send the two-month comparison Excel. */
-  async sendComparisonExcel(
-    ctx: Context,
-    monthA: string,
-    monthB: string,
-  ): Promise<void> {
-    // The later month is the report's main period; the earlier is the compare
-    // baseline. Only the Taqqoslash / Asosiy xulosa sheets show both.
-    const [earlier, later] = [monthA, monthB].sort();
-    const main = this.monthRange(later);
-    const base = this.monthRange(earlier);
-    const laterIsPast = later < this.currentMonth();
-    const caption =
-      `🔀 <b>Davrlar taqqoslash — ${this.monthLabel(later)} ↔ ${this.monthLabel(earlier)}</b>\n` +
-      `ℹ️ Ikkala davr faqat 'Taqqoslash' va 'Asosiy xulosa' varaqlarida yonma-yon; qolgan varaqlar ${this.monthLabel(later)} uchun.` +
-      (laterIsPast
-        ? `\nℹ️ Joriy-holat varaqlari (Balans, Qarzdorlar, KPI, Xonalar, Guruhlar) chiqarilmadi.`
-        : '');
-    await this.generateAndSend(ctx, {
-      startDate: main.startDate,
-      endDate: main.endDate,
-      compareModes: ['custom'],
-      compareStartDate: base.startDate,
-      compareEndDate: base.endDate,
-      filename: `taqqoslash-${later}-vs-${earlier}.xlsx`,
+      filename: `hisobot-${month}.xlsx`,
       caption,
     });
   }
@@ -234,23 +191,32 @@ export class TelegramGroupReportMenuService {
     const { startDate, endDate } = this.presetRange(months);
     const caption =
       `⚡ <b>Oxirgi ${months} oy hisoboti</b>\n` +
-      `⚠️ 'Oyliklar' varag'i faqat boshlang'ich oyni ko'rsatadi (yig'indi emas).`;
+      // Not «boshlang'ich oy»: the salary report clamps a month earlier than the
+      // reporting floor up to that floor, so the sheet may hold a LATER month
+      // than the period starts with. Its own header names which one.
+      `⚠️ 'Oyliklar' varag'i faqat bitta oyni ko'rsatadi (yig'indi emas).`;
     await this.generateAndSend(ctx, {
       startDate,
       endDate,
-      compareModes: [],
       filename: `hisobot-${months}oy.xlsx`,
       caption,
     });
   }
 
-  /** rm:py:YYYY — full-year Excel with the "Yillar kesimida" sheet. */
+  /**
+   * rm:py:YYYY — a plain Jan–Dec period export. It used to request a «Yillar
+   * kesimida» sheet; that sheet is gone, so this is a range like any other and
+   * the caption promises nothing more than the range.
+   */
   async sendYearlyExcel(ctx: Context, year: number): Promise<void> {
-    const caption = `📅 <b>Yillik hisobot — ${year}</b>`;
+    const caption =
+      `📅 <b>Yillik hisobot — ${year}</b>\n` +
+      // Not «yanvar»: January is before the reporting floor, so the salary
+      // report clamps up to the floor month and the sheet holds THAT month.
+      `⚠️ 'Oyliklar' varag'i faqat bitta oyni ko'rsatadi (yig'indi emas).`;
     await this.generateAndSend(ctx, {
       startDate: `${year}-01-01`,
       endDate: `${year}-12-31`,
-      compareModes: ['yearly'],
       filename: `yillik-${year}.xlsx`,
       caption,
     });
@@ -348,9 +314,6 @@ export class TelegramGroupReportMenuService {
     opts: {
       startDate: string;
       endDate: string;
-      compareModes: string[];
-      compareStartDate?: string;
-      compareEndDate?: string;
       filename: string;
       caption: string;
     },
@@ -395,11 +358,11 @@ export class TelegramGroupReportMenuService {
           branchLabel: 'Barcha filiallar',
           branchNames,
           performedById,
-          compareModes: opts.compareModes,
-          compareStartDate: opts.compareStartDate,
-          compareEndDate: opts.compareEndDate,
-          // Past-month exports drop the live-state sheets (Balans, Qarzdorlar,
-          // KPI, Xonalar, Guruhlar) — they can't be rebuilt for a past date.
+          // The ten default sheets only — the bot delivers one readable file,
+          // and the opt-in groups belong to the web download's checkboxes.
+          include: [],
+          // Past-month exports drop the live-state sheets («Xonalar bandligi»
+          // here) — they can't be rebuilt for a past date.
           hidePointInTimeForPastPeriod: true,
         });
         await ctx.replyWithDocument(
@@ -513,7 +476,6 @@ export class TelegramGroupReportMenuService {
   private rootKeyboard() {
     return Markup.inlineKeyboard([
       [Markup.button.callback("📊 To'liq hisobot", 'rm:full')],
-      [Markup.button.callback('🔀 Davrlar hisoboti', 'rm:cmp')],
       [Markup.button.callback('⚡ Tez hisobotlar', 'rm:pre')],
       [Markup.button.callback('💰 Moliyaviy xulosa (bu oy)', 'rm:cfin')],
       [Markup.button.callback('✖️ Yopish', 'rm:close')],

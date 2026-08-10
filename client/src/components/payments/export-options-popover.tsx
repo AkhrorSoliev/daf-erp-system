@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
@@ -11,7 +10,6 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Popover,
   PopoverContent,
@@ -25,22 +23,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Comparison bases offered on download. "custom" reveals a date-range pair.
-const COMPARE_OPTS = [
-  { key: "prev", label: "Oldingi davr" },
-  { key: "yoy", label: "O'tgan yil (shu davr)" },
-  { key: "yearly", label: "Yillar kesimida" },
-  { key: "custom", label: "Maxsus davr" },
+// Sheet groups offered on download. Unticked = the ten-sheet report only.
+const EXTRA_OPTS = [
+  {
+    key: "buxgalteriya",
+    label: "Buxgalteriya",
+    hint: "Foyda va zarar, Balans, Tekshiruv",
+  },
+  {
+    key: "marketing",
+    label: "Marketing va ustozlar",
+    hint: "Lidlar, ustozlar samaradorligi",
+  },
+  {
+    key: "qarzdorlar",
+    label: "Qarzdorlar ro'yxati",
+    hint: "Har bir qarzdor o'quvchi",
+  },
 ] as const;
 
-type CompareKey = (typeof COMPARE_OPTS)[number]["key"];
+type ExtraKey = (typeof EXTRA_OPTS)[number]["key"];
 
 /**
- * Export options for the /payments/overview financial Excel — lets the user pick
- * the branch (Barcha filiallar / bitta filial) and which comparisons to include
- * (previous period / last year / multi-year / a custom range) before downloading.
- * The download itself is an auth-gated blob fetch (same as before), now with the
- * branch + compare params threaded through.
+ * Export options for the /payments/overview "Hisobot" Excel — lets the user
+ * pick the branch (Barcha filiallar / bitta filial) and which optional sheet
+ * groups to bolt onto the ten-sheet default before downloading. The download
+ * itself is an auth-gated blob fetch.
  */
 export function ExportOptionsPopover({
   startStr,
@@ -55,39 +63,27 @@ export function ExportOptionsPopover({
 
   const [open, setOpen] = useState(false);
   const [branchId, setBranchId] = useState<string>("all"); // "all" | branchId
-  // Default: no comparisons — an untouched download yields ONLY the selected
-  // period's report. Comparisons are opt-in via the checkboxes below.
-  const [modes, setModes] = useState<Record<CompareKey, boolean>>({
-    prev: false,
-    yoy: false,
-    yearly: false,
-    custom: false,
+  // Default: none ticked — an untouched download yields the short ten-sheet
+  // report. Everything else is opt-in via the checkboxes below.
+  const [extras, setExtras] = useState<Record<ExtraKey, boolean>>({
+    buxgalteriya: false,
+    marketing: false,
+    qarzdorlar: false,
   });
-  const [cmpStart, setCmpStart] = useState<Date>(
-    startOfMonth(subMonths(new Date(), 1)),
-  );
-  const [cmpEnd, setCmpEnd] = useState<Date>(
-    endOfMonth(subMonths(new Date(), 1)),
-  );
   const [exporting, setExporting] = useState(false);
 
-  const toggle = (k: CompareKey) =>
-    setModes((m) => ({ ...m, [k]: !m[k] }));
+  const toggle = (k: ExtraKey) => setExtras((m) => ({ ...m, [k]: !m[k] }));
 
   const download = async () => {
     setExporting(true);
     try {
-      const active = COMPARE_OPTS.filter((o) => modes[o.key]).map((o) => o.key);
+      const active = EXTRA_OPTS.filter((o) => extras[o.key]).map((o) => o.key);
       const params: Record<string, string | number> = {
         startDate: startStr,
         endDate: endStr,
-        compare: active.join(","),
+        include: active.join(","),
       };
       if (branchId !== "all") params.branchId = Number(branchId);
-      if (modes.custom) {
-        params.compareStartDate = format(cmpStart, "yyyy-MM-dd");
-        params.compareEndDate = format(cmpEnd, "yyyy-MM-dd");
-      }
       const res = await api.get("/reports/financial-excel", {
         params,
         responseType: "blob",
@@ -95,7 +91,7 @@ export function ExportOptionsPopover({
       const url = URL.createObjectURL(res.data as Blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `moliyaviy-hisobot-${startStr}_${endStr}.xlsx`;
+      a.download = `hisobot-${startStr}_${endStr}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
       setOpen(false);
@@ -137,50 +133,36 @@ export function ExportOptionsPopover({
           </Select>
         </div>
 
-        {/* Taqqoslash */}
+        {/* Qo'shimcha bo'limlar */}
         <div className="space-y-2">
           <Label className="text-xs font-medium text-muted-foreground">
-            Taqqoslash (ixtiyoriy)
+            Qo&apos;shimcha bo&apos;limlar (ixtiyoriy)
           </Label>
           <p className="text-xs text-muted-foreground">
-            Bo&apos;sh qoldirilsa — faqat tanlangan davr hisoboti chiqadi.
+            {/* No exact count: the «Filiallar» sheet renders only for a
+                company-wide scope, so a single-branch download is one short —
+                and the branch selector sits right above this line. */}
+            Bo&apos;sh qoldirilsa — qisqa hisobot chiqadi (~10 varaq).
           </p>
-          {COMPARE_OPTS.map((o) => (
-            <div key={o.key} className="flex items-center gap-2">
+          {EXTRA_OPTS.map((o) => (
+            <div key={o.key} className="flex items-start gap-2">
               <Checkbox
-                id={`cmp-${o.key}`}
-                checked={modes[o.key]}
+                id={`extra-${o.key}`}
+                checked={extras[o.key]}
                 onCheckedChange={() => toggle(o.key)}
+                className="mt-0.5"
               />
               <Label
-                htmlFor={`cmp-${o.key}`}
-                className="cursor-pointer text-sm font-normal"
+                htmlFor={`extra-${o.key}`}
+                className="cursor-pointer flex-col items-start gap-0.5 text-sm leading-tight font-normal"
               >
                 {o.label}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {o.hint}
+                </span>
               </Label>
             </div>
           ))}
-          {modes.custom && (
-            <div className="flex items-center gap-2 pl-6 pt-1">
-              <DatePicker
-                value={cmpStart}
-                onChange={(d) => d && setCmpStart(d)}
-                className="w-32"
-                maxDate={cmpEnd}
-                defaultMonth={cmpEnd}
-                placeholder="Boshi"
-              />
-              <span className="text-xs text-muted-foreground">—</span>
-              <DatePicker
-                value={cmpEnd}
-                onChange={(d) => d && setCmpEnd(d)}
-                className="w-32"
-                minDate={cmpStart}
-                defaultMonth={cmpStart}
-                placeholder="Oxiri"
-              />
-            </div>
-          )}
         </div>
 
         <Button onClick={download} disabled={exporting} className="w-full">

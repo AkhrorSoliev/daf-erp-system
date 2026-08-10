@@ -97,14 +97,14 @@ export class TelegramAdminBotRegistrar {
       this.reportMenu.sendMonthExcel(ctx, ctx.match[1]),
     );
 
-    // Period comparison: pick month A → pick month B → one Excel.
-    bot.action('rm:cmp', (ctx) => this.reportMenu.showCmpMonthA(ctx));
-    bot.action(/^rm:ca:(\d{4}-\d{2})$/, (ctx) =>
-      this.reportMenu.showCmpMonthB(ctx, ctx.match[1]),
-    );
-    bot.action(/^rm:cb:(\d{4}-\d{2}):(\d{4}-\d{2})$/, (ctx) =>
-      this.reportMenu.sendComparisonExcel(ctx, ctx.match[1], ctx.match[2]),
-    );
+    // The comparison branch is retired (the workbook has no «Taqqoslash»
+    // sheet). Menus posted to groups before that still carry these buttons, so
+    // answer them with an explanation instead of leaving the tap spinning.
+    const retired = (ctx: Context) =>
+      this.reportMenu.showRetiredComparison(ctx);
+    bot.action('rm:cmp', retired);
+    bot.action(/^rm:ca:(\d{4}-\d{2})$/, retired);
+    bot.action(/^rm:cb:(\d{4}-\d{2}):(\d{4}-\d{2})$/, retired);
 
     // Presets + in-chat card.
     bot.action('rm:pre', (ctx) => this.reportMenu.showPresets(ctx));

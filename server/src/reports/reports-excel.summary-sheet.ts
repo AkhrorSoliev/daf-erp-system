@@ -4,10 +4,10 @@
  * DARSLARINING PULI QAYERDAN KELGAN (4) / PUL QAYERGA KETDI (5) /
  * O'QUVCHILAR (6).
  *
- * Ported block-for-block from the CEO-approved prototype
- * (server/scripts/_namuna-hisobot-v2.ts, section "1. XULOSA") onto the
- * Task 6 primitives. Do not reorder blocks or reword labels — the layout
- * was approved line by line against production data.
+ * Ported block-for-block from the CEO-approved prototype — a throwaway script
+ * that rendered this exact sheet ("1. XULOSA") against production data and was
+ * signed off line by line before being deleted. Do not reorder blocks or
+ * reword labels: this layout IS the approval.
  */
 import { Workbook, Worksheet, Row } from 'exceljs';
 import { NetProfit, NUM, PCT, GREEN, RED, SUBTLE } from './reports-excel.helpers';
@@ -36,7 +36,17 @@ export interface SummaryInput {
   attribution: { total: number; currentMonth: number; late: Array<{ label: string; amount: number }> };
   paymentCount: number;
   payerCount: number;
-  lessonMoney: { paidInMonth: number; paidEarlier: number; paidNextMonth: number; unpaid: number };
+  /**
+   * Block 4's four rows plus the total they foot to. `total` is the month's
+   * FULL lesson value — see buildBlock4 for why it is not `cur.recognized`.
+   */
+  lessonMoney: {
+    paidInMonth: number;
+    paidEarlier: number;
+    paidNextMonth: number;
+    unpaid: number;
+    total: number;
+  };
   nextMonthLabel: string;
   cashOut: Array<{ label: string; amount: number }>;
   students: StudentFlow;
@@ -147,10 +157,17 @@ function buildBlock3(ws: Worksheet, input: SummaryInput, curLabel: string): void
 
 /** Block 4 — this month's LESSON VALUE broken down by when it was paid. No comparison columns. */
 function buildBlock4(ws: Worksheet, input: SummaryInput, curLabel: string): void {
-  const { lessonMoney, nextMonthLabel, cur } = input;
+  const { lessonMoney, nextMonthLabel } = input;
   blockTitle(ws, `4.  ${curLabel} DARSLARINING PULI QAYERDAN KELGAN`, 5);
   columnHeader(ws, ["Qachon to'langan", 'Summa', 'Jamidan %', '', 'Izoh']);
-  const total = cur.recognized;
+  // The denominator is the month's FULL lesson value, NOT its recognized
+  // revenue. Recognized counts only lessons that were held AND paid, but the
+  // fourth row below is what has NOT been paid — including lessons not yet
+  // held. In a closed month the two figures coincide (nothing is unpaid), so
+  // this changes nothing for a finished month; in an in-progress one, footing
+  // on recognized printed a total the rows above it overshot several times
+  // over, and every «Jamidan %» with it.
+  const total = lessonMoney.total;
   pctRow(ws, `${curLabel} ichida to'langan`, lessonMoney.paidInMonth, total, '');
   pctRow(ws, `${curLabel}dan oldin to'langan (balansdagi pul)`, lessonMoney.paidEarlier, total,
     "O'quvchi avvalroq to'lab qo'ygan, puli balansida turgan edi — dars o'tilganda o'shandan yechilgan.");

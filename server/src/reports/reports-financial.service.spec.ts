@@ -388,7 +388,10 @@ describe('ReportsFinancialService', () => {
       prisma.transaction.groupBy
         .mockResolvedValueOnce([]) // movesAfter
         .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 80000 } }]) // PAYMENT
-        .mockResolvedValueOnce([]); // DEBT_WRITE_OFF
+        .mockResolvedValueOnce([]) // DEBT_WRITE_OFF
+        // headcounts: distinct payers / forgiven students
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 80000 } }])
+        .mockResolvedValueOnce([]);
       prisma.transaction.findMany
         // payRows (recovered payments)
         .mockResolvedValueOnce([
@@ -413,6 +416,15 @@ describe('ReportsFinancialService', () => {
         writtenOff: 0,
         remaining: 120000,
         debtorCount: 1,
+        // The cohort still owes 200k TODAY even though 80k of the June debt
+        // was recovered — `remaining` and `debtNow` are different questions and
+        // the drill-down must show both.
+        debtNow: 200000,
+        debtorsNow: 1,
+        // ONE person paid, via ONE payment row — the two are counted apart so
+        // the UI never renders a row count beside a headcount.
+        payerCount: 1,
+        forgivenCount: 0,
       });
       // Detail foots to the aggregate.
       expect(res.debtors.reduce((s, d) => s + d.monthEndDebt, 0)).toBe(
@@ -440,6 +452,107 @@ describe('ReportsFinancialService', () => {
       );
       expect(res.writeOffs).toHaveLength(0);
       expect(res.truncated).toBe(false);
+    });
+
+    it('keeps BOTH halves of a reversed payment so the list foots to the aggregate', async () => {
+      // `reverseTransaction` writes the counter-row with the ORIGINAL's type
+      // and `reversedAt: null`. Filtering `reversedAt: null` therefore dropped
+      // the payment and KEPT its undo, leaving bare negative rows in the list —
+      // 6 of them in May 2026 alone, and the list stopped summing to the
+      // aggregate above it (201.5 mln shown against 202.8 mln tallied).
+      prisma.student.findMany
+        .mockResolvedValueOnce([{ id: 1, balance: -200000 }])
+        .mockResolvedValueOnce([
+          {
+            id: 1,
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            phone: null,
+            enrollments: [],
+          },
+        ]);
+      prisma.transaction.groupBy
+        .mockResolvedValueOnce([]) // movesAfter
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 0 } }]) // PAYMENT nets to 0
+        .mockResolvedValueOnce([]) // DEBT_WRITE_OFF
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 0 } }]) // payers
+        .mockResolvedValueOnce([]); // forgiven
+      prisma.transaction.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 'rev',
+            studentId: 1,
+            amount: -80000,
+            createdAt: new Date('2026-07-06'),
+            reversedAt: null,
+            reversedTransactionId: 'p1',
+            student: { firstName: 'Ali', lastName: 'Valiyev' },
+            performedBy: null,
+            payment: null,
+          },
+          {
+            id: 'p1',
+            studentId: 1,
+            amount: 80000,
+            createdAt: new Date('2026-07-05'),
+            reversedAt: new Date('2026-07-06'),
+            reversedTransactionId: null,
+            student: { firstName: 'Ali', lastName: 'Valiyev' },
+            performedBy: null,
+            payment: { method: 'CASH' },
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      const res = await service.getMonthDebtDetail(1, '2026-06', null);
+
+      // The query must NOT carry a reversal filter.
+      const payWhere = prisma.transaction.findMany.mock.calls[0][0].where;
+      expect(payWhere).not.toHaveProperty('reversedAt');
+
+      expect(res.recoveredPayments).toHaveLength(2);
+      expect(
+        res.recoveredPayments.reduce((s, p) => s + p.amount, 0),
+      ).toBe(res.totals.recovered);
+      expect(res.recoveredPayments.find((p) => p.id === 'p1')?.isReversed).toBe(
+        true,
+      );
+      expect(res.recoveredPayments.find((p) => p.id === 'rev')?.isReversal).toBe(
+        true,
+      );
+    });
+
+    it('claims a write-off BEFORE payment so forgiveness is never squeezed out', async () => {
+      // Both compete for the same capped debt. The write-off is an explicit act
+      // naming this debt; the payment attribution is inferred from oldest-first
+      // settlement, so the explicit one wins. The other order reported 2.43 mln
+      // so'm of real write-offs as 0.43 mln.
+      prisma.student.findMany
+        .mockResolvedValueOnce([{ id: 1, balance: -100000 }])
+        .mockResolvedValueOnce([
+          {
+            id: 1,
+            firstName: 'Ali',
+            lastName: 'V',
+            phone: null,
+            enrollments: [],
+          },
+        ]);
+      prisma.transaction.groupBy
+        .mockResolvedValueOnce([]) // movesAfter → debt 100k
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 100000 } }]) // paid enough to absorb the cap
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 40000 } }]) // …and 40k was forgiven
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 100000 } }]) // payers
+        .mockResolvedValueOnce([{ studentId: 1, _sum: { amount: 40000 } }]); // forgiven
+      prisma.transaction.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const res = await service.getMonthDebtDetail(1, '2026-06', null);
+
+      expect(res.totals.writtenOff).toBe(40000);
+      expect(res.totals.recovered).toBe(60000);
+      expect(res.totals.remaining).toBe(0);
     });
 
     it('short-circuits (no enrichment / list queries) when the month has no debtors', async () => {

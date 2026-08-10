@@ -42,6 +42,10 @@ describe('LessonBillingService', () => {
     // share the same jest.fn instances across the inner and outer scope.
     tx = {
       $queryRaw: jest.fn(),
+      // The reverse path steps the cycle counter back with an atomic
+      // `GREATEST(x - 1, 0)` rather than a read-then-write, so it needs raw
+      // execution here too.
+      $executeRaw: jest.fn(),
       transaction: {
         findFirst: jest.fn().mockResolvedValue(null),
         // `settleDeferredAccruals` walks deferred SINGLE_UNCOVERED rows;
@@ -141,7 +145,9 @@ describe('LessonBillingService', () => {
 
   describe('Misol 1 — full cycle billing on first PRESENT', () => {
     beforeEach(() => {
-      tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 0 }]);
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
+      ]);
       tx.student.findUnique.mockResolvedValue({ balance: 400_000 });
     });
 
@@ -169,7 +175,10 @@ describe('LessonBillingService', () => {
       });
       expect(tx.enrollment.update).toHaveBeenCalledWith({
         where: { id: 'enroll-1' },
-        data: { prepaidLessonsRemaining: 11 },
+        // A full batch also restarts the lesson-by-lesson counter: if the
+        // batch runs out mid-cycle the next uncovered lesson is lesson 0 of a
+        // NEW cycle, not a continuation of this one.
+        data: { prepaidLessonsRemaining: 11, cycleLessonIndex: 0 },
       });
     });
 
@@ -211,7 +220,9 @@ describe('LessonBillingService', () => {
 
   describe('Misol 2 — partial billing when balance < full cycle', () => {
     beforeEach(() => {
-      tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 0 }]);
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
+      ]);
       tx.student.findUnique.mockResolvedValue({ balance: 200_000 });
     });
 
@@ -240,7 +251,7 @@ describe('LessonBillingService', () => {
       });
       expect(tx.enrollment.update).toHaveBeenCalledWith({
         where: { id: 'enroll-1' },
-        data: { prepaidLessonsRemaining: 5 },
+        data: { prepaidLessonsRemaining: 5, cycleLessonIndex: 0 },
       });
     });
   });
@@ -257,7 +268,9 @@ describe('LessonBillingService', () => {
 
   describe('insufficient balance — SINGLE_UNCOVERED, deferred accrual', () => {
     beforeEach(() => {
-      tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 0 }]);
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
+      ]);
       tx.student.findUnique.mockResolvedValue({ balance: 1_000 });
     });
 
@@ -309,7 +322,16 @@ describe('LessonBillingService', () => {
         oldStatus: null,
         newStatus: AttendanceStatus.PRESENT,
       });
-      expect(tx.enrollment.update).not.toHaveBeenCalled();
+      // The cycle counter DOES advance (this lesson consumed a slot of the
+      // cycle), but no prepaid unit may be handed out — the student paid for
+      // nothing here.
+      const updates = tx.enrollment.update.mock.calls.map(
+        (c: any[]) => c[0].data,
+      );
+      expect(updates).toEqual([{ cycleLessonIndex: 1 }]);
+      for (const d of updates) {
+        expect(d).not.toHaveProperty('prepaidLessonsRemaining');
+      }
     });
   });
 
@@ -350,6 +372,117 @@ describe('LessonBillingService', () => {
       expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
         expect.objectContaining({ deductionTransactionId: 'previous-batch' }),
       );
+    });
+  });
+
+  // ============================================================
+  // Cycle rounding — a cycle must bill its exact price
+  // ============================================================
+
+  describe('cycle rounding — lesson-by-lesson billing closes on the price', () => {
+    /** Bill one uncovered lesson at cycle position `index`. */
+    const billAt = async (index: number, price = 400_000) => {
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0, cycleLessonIndex: index },
+      ]);
+      tx.group.findUnique.mockResolvedValue({
+        ...baseGroup,
+        course: { price, lessonPaymentCount: 12 },
+      });
+      tx.student.findUnique.mockResolvedValue({ balance: 0 });
+      transactionsService.deductLessonFee.mockClear();
+      tx.enrollment.update.mockClear();
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
+      return transactionsService.deductLessonFee.mock.calls[0][0].amount;
+    };
+
+    it('charges the base price for every lesson but the last', async () => {
+      for (const i of [0, 1, 5, 10]) {
+        expect(await billAt(i)).toBe(33_333);
+      }
+    });
+
+    it('settles the remainder on the cycle`s last lesson', async () => {
+      // 12 × 33 333 = 399 996 under the old rule — four so'm short of the
+      // course price, which is the drift this whole change removes.
+      expect(await billAt(11)).toBe(33_337);
+    });
+
+    it('a whole cycle billed lesson by lesson sums to the course price', async () => {
+      let total = 0;
+      for (let i = 0; i < 12; i++) total += await billAt(i);
+      expect(total).toBe(400_000);
+    });
+
+    it('takes the remainder OFF the last lesson when the price rounds up', async () => {
+      // 500 000 / 12 → 41 667; twelve of those is 500 004, i.e. the centre was
+      // OVERCHARGING four so'm a cycle. Four of the eight sub-1000 debtors on
+      // production owed exactly a multiple of this.
+      expect(await billAt(0, 500_000)).toBe(41_667);
+      expect(await billAt(11, 500_000)).toBe(41_663);
+      let total = 0;
+      for (let i = 0; i < 12; i++) total += await billAt(i, 500_000);
+      expect(total).toBe(500_000);
+    });
+
+    it('advances the cycle counter and wraps at the cycle length', async () => {
+      await billAt(4);
+      expect(tx.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'enroll-1' },
+        data: { cycleLessonIndex: 5 },
+      });
+      await billAt(11);
+      expect(tx.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'enroll-1' },
+        data: { cycleLessonIndex: 0 },
+      });
+    });
+
+    it('survives a row that somehow has no counter instead of writing NaN', async () => {
+      // The counter arrives from a raw `$queryRaw`; `undefined + 1` would be
+      // NaN and the Int write would throw, silently losing the lesson.
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0 },
+      ]);
+      tx.student.findUnique.mockResolvedValue({ balance: 0 });
+      transactionsService.deductLessonFee.mockClear();
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
+      expect(transactionsService.deductLessonFee.mock.calls[0][0].amount).toBe(
+        33_333,
+      );
+      expect(tx.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'enroll-1' },
+        data: { cycleLessonIndex: 1 },
+      });
+    });
+
+    it('never lets a partial refill overdraw the balance', async () => {
+      // floor(399 999 / 33 333) = 12, but twelve lessons now cost 400 000.
+      // The partial branch's contract is that it never drives the balance
+      // negative, so it must settle for eleven.
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
+      ]);
+      tx.group.findUnique.mockResolvedValue(baseGroup);
+      tx.student.findUnique.mockResolvedValue({ balance: 399_999 });
+      transactionsService.deductLessonFee.mockClear();
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
+      const call = transactionsService.deductLessonFee.mock.calls[0][0];
+      expect(call.lessonsCovered).toBe(11);
+      expect(call.amount).toBe(366_663);
+      expect(call.amount).toBeLessThanOrEqual(399_999);
     });
   });
 
@@ -441,6 +574,31 @@ describe('LessonBillingService', () => {
       );
       // No free prepaid lesson.
       expect(tx.enrollment.update).not.toHaveBeenCalled();
+    });
+
+    it('steps the cycle counter back when an uncovered lesson is un-marked', async () => {
+      // Otherwise the next lesson is priced as if this one still counted, and
+      // a cycle whose LAST lesson was un-marked would never charge the
+      // settling amount at all.
+      tx.transaction.findFirst
+        .mockResolvedValueOnce({ id: 'consumption-1' })
+        .mockResolvedValueOnce({
+          id: 'uncovered-deduction-1',
+          metadata: { mode: 'SINGLE_UNCOVERED' },
+        });
+
+      await service.processAttendanceBilling(tx, {
+        ...baseParams,
+        oldStatus: AttendanceStatus.PRESENT,
+        newStatus: AttendanceStatus.EXCUSED,
+      });
+
+      expect(tx.$executeRaw).toHaveBeenCalled();
+      // Atomic `GREATEST(x - 1, 0)` rather than read-then-write: the counter
+      // can already be 0 when an older lesson is flipped after a batch reset.
+      const sql = tx.$executeRaw.mock.calls[0][0].join('?');
+      expect(sql).toContain('cycleLessonIndex');
+      expect(sql).toContain('GREATEST');
     });
   });
 

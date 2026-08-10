@@ -42,6 +42,10 @@ const input = (over: Partial<SummaryInput> = {}): SummaryInput =>
       paidEarlier: 25_486_916,
       paidNextMonth: 6_232_137,
       unpaid: 0,
+      // Closed month: nothing is left unpaid, so the full lesson value
+      // collapses onto the recognised revenue — 142 064 938 + 25 486 916 +
+      // 6 232 137 + 0.
+      total: 173_783_991,
     },
     nextMonthLabel: 'Avgust 2026',
     cashOut: [
@@ -71,13 +75,16 @@ const textOf = (ws: Worksheet): string[] => {
   ws.eachRow((r) => out.push(String(r.getCell(1).value ?? '')));
   return out;
 };
-const valueFor = (ws: Worksheet, label: string): any => {
+// `col` defaults to the amount cell; column 3 is the «Jamidan %» cell that
+// blocks 3/4/5 put beside it.
+const valueFor = (ws: Worksheet, label: string, col = 2): any => {
   let v: any;
   ws.eachRow((r) => {
-    if (v === undefined && String(r.getCell(1).value ?? '') === label) v = r.getCell(2).value;
+    if (v === undefined && String(r.getCell(1).value ?? '') === label) v = r.getCell(col).value;
   });
   return v;
 };
+const pctFor = (ws: Worksheet, label: string): any => valueFor(ws, label, 3);
 // Locates a columnHeader row by its first cell and returns cols 2-4 — the
 // header shape a `compareRow` call would put a previous-month label into.
 // Block 6's "Ko'rsatkich" header collides in column 1 with blocks 1/2's real
@@ -134,9 +141,69 @@ describe('summarySheetV2', () => {
   it('prints the unpaid amount when there is one', () => {
     const wb = new Workbook();
     summarySheetV2(wb, input({
-      lessonMoney: { paidInMonth: 1, paidEarlier: 1, paidNextMonth: 1, unpaid: 143_884_239 },
+      lessonMoney: { paidInMonth: 1, paidEarlier: 1, paidNextMonth: 1, unpaid: 143_884_239, total: 143_884_242 },
     }));
     expect(valueFor(wb.getWorksheet('Xulosa')!, "Hali to'lanmay qolgan")).toBe(143_884_239);
+  });
+
+  // Block 4's denominator is the month's FULL lesson value, not its recognised
+  // revenue. In a CLOSED month the two are the same figure, which is why this
+  // pair of tests exists: the July case pins the customer-approved output, the
+  // August case is the one that used to print four rows summing to ~169 mln
+  // under a 25.5 mln total with percentages to match.
+  it('totals a CLOSED month at its recognised revenue, unchanged', () => {
+    // Production 2026-07 — the view the customer approved. Nothing unpaid, so
+    // the full lesson value IS the recognised revenue and the output is the
+    // same figure either way.
+    expect(valueFor(ws, 'Iyul 2026 darslari qiymati')).toBe(173_783_991);
+    expect(pctFor(ws, "Iyul 2026 ichida to'langan")).toBe(81.7);
+    expect(pctFor(ws, "Iyul 2026dan oldin to'langan (balansdagi pul)")).toBe(
+      14.7,
+    );
+    expect(pctFor(ws, "Avgust 2026da to'langan (kechikkan)")).toBe(3.6);
+  });
+
+  it('totals an IN-PROGRESS month at the full lesson value, above its recognised revenue', () => {
+    // Production 2026-08 as of 07.08: recognised (held AND paid) 25 558 818,
+    // still unpaid 143 884 239, full lesson value 169 443 057. Footing on the
+    // recognised revenue printed four rows summing to ~169 mln under a
+    // 25.5 mln total, with percentages to match.
+    const wb = new Workbook();
+    summarySheetV2(
+      wb,
+      input({
+        month: '2026-08',
+        prevMonth: '2026-07',
+        nextMonthLabel: 'Sentabr 2026',
+        cur: { np: np(), covered: 1, centerFunded: 1, recognized: 25_558_818 },
+        lessonMoney: {
+          paidInMonth: 18_000_000,
+          paidEarlier: 7_558_818,
+          paidNextMonth: 0,
+          unpaid: 143_884_239,
+          total: 169_443_057,
+        },
+      }),
+    );
+    const aug = wb.getWorksheet('Xulosa')!;
+
+    const rows = [
+      valueFor(aug, "Avgust 2026 ichida to'langan"),
+      valueFor(aug, "Avgust 2026dan oldin to'langan (balansdagi pul)"),
+      valueFor(aug, "Sentabr 2026da to'langan (kechikkan)"),
+      valueFor(aug, "Hali to'lanmay qolgan"),
+    ];
+    const total = valueFor(aug, 'Avgust 2026 darslari qiymati');
+    expect(total).toBe(169_443_057);
+    expect(rows.reduce((a: number, b: number) => a + b, 0)).toBe(total);
+    expect(total).toBeGreaterThan(25_558_818); // > recognised revenue
+
+    expect(pctFor(aug, "Avgust 2026 ichida to'langan")).toBe(10.6);
+    expect(pctFor(aug, "Avgust 2026dan oldin to'langan (balansdagi pul)")).toBe(
+      4.5,
+    );
+    expect(pctFor(aug, "Sentabr 2026da to'langan (kechikkan)")).toBe(0);
+    expect(pctFor(aug, "Hali to'lanmay qolgan")).toBe(84.9);
   });
 
   it('has no KASSADA QOLDI row', () => {

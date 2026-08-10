@@ -1246,6 +1246,14 @@ model Enrollment {
   // when balance allows. Unused prepaid is refunded to balance on
   // DROPPED/TRANSFERRED so money doesn't stay locked to a closed enrollment.
   prepaidLessonsRemaining Int              @default(0)
+  // Where this enrollment stands inside the current billing cycle, 0-based.
+  //
+  // Needed only by the lesson-by-lesson path a debtor is billed on: there is no
+  // prepaid batch there, so nothing else records that the next lesson is the
+  // twelfth and must settle the cycle's rounding remainder (see
+  // `billing/lesson-price.ts`). Reset to 0 whenever a full/partial batch starts
+  // a fresh cycle, and decremented when an attendance is flipped back.
+  cycleLessonIndex        Int              @default(0)
   // Date this student starts appearing in attendance and being billed for
   // this group. Set explicitly during enroll (admin picks "from which lesson")
   // to support late joiners. Lessons before this date never bill or accrue

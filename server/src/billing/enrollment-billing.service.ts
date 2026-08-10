@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { AttendanceStatus, Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { cycleCostFor } from './lesson-price';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 
@@ -28,6 +29,54 @@ export class EnrollmentBillingService {
     private transactionsService: TransactionsService,
     private salaryAccrualService: SalaryAccrualService,
   ) {}
+
+  /**
+   * What to credit back for `remaining` unused lessons of the batch that paid
+   * for them.
+   *
+   * Priced against the BATCH, not per lesson: `remaining × perLessonCost` is
+   * short by the cycle's rounding remainder (five unused lessons of a 400 000 /
+   * 12 cycle refund 166 665 while the student is owed 166 669), and it reads
+   * the undiscounted figure, so a discounted student was over-refunded. Taking
+   * the deduction's own `amount` and subtracting what the consumed lessons cost
+   * fixes both at once — the two halves always add back to what was charged,
+   * whatever the price and whatever the discount.
+   *
+   * Legacy rows with no usable metadata fall back to the old per-lesson math.
+   */
+  private async resolvePrepaidRefund(
+    tx: Prisma.TransactionClient,
+    enrollmentId: string,
+    course: { price: number; lessonPaymentCount: number | null },
+    remaining: number,
+  ): Promise<number> {
+    if (remaining <= 0) return 0;
+    const recentDeduction = await tx.transaction.findFirst({
+      where: {
+        enrollmentId,
+        type: TransactionType.LESSON_DEDUCTION,
+        reversedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { amount: true, metadata: true },
+    });
+    const meta = recentDeduction?.metadata as
+      | { perLessonCost?: number; lessonsCovered?: number }
+      | null
+      | undefined;
+    const batchLessons = Number(meta?.lessonsCovered ?? 0);
+    const batchAmount = Math.abs(recentDeduction?.amount ?? 0);
+
+    if (batchLessons > 0 && batchAmount > 0 && remaining <= batchLessons) {
+      const consumed = batchLessons - remaining;
+      return batchAmount - cycleCostFor(batchAmount, batchLessons, consumed);
+    }
+
+    return (
+      remaining *
+      (await this.resolvePerLessonCost(tx, enrollmentId, course))
+    );
+  }
 
   /**
    * Resolve perLessonCost for an enrollment using the same priority chain
@@ -100,12 +149,12 @@ export class EnrollmentBillingService {
     const lessons = enrollment.prepaidLessonsRemaining;
     if (lessons <= 0) return null;
 
-    const perLessonCost = await this.resolvePerLessonCost(
+    const refundAmount = await this.resolvePrepaidRefund(
       tx,
       enrollment.id,
       enrollment.group.course,
+      lessons,
     );
-    const refundAmount = lessons * perLessonCost;
 
     await this.transactionsService.createAdjustment(
       {
@@ -198,12 +247,6 @@ export class EnrollmentBillingService {
       return null;
     }
 
-    const perLessonCost = await this.resolvePerLessonCost(
-      tx,
-      enrollment.id,
-      enrollment.group.course,
-    );
-
     let extraReversed = 0;
 
     if (targetLessons > currentPrepaid) {
@@ -280,7 +323,12 @@ export class EnrollmentBillingService {
       }
     }
 
-    const refundAmount = targetLessons * perLessonCost;
+    const refundAmount = await this.resolvePrepaidRefund(
+      tx,
+      enrollment.id,
+      enrollment.group.course,
+      targetLessons,
+    );
 
     if (refundAmount > 0) {
       await this.transactionsService.createAdjustment(

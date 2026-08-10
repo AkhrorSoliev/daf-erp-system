@@ -6,6 +6,12 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  baseLessonPrice,
+  cycleCostFor,
+  lessonPriceAt,
+  lessonsAffordable,
+} from './lesson-price';
 import { TransactionsService } from '../transactions/transactions.service';
 import {
   SalaryAccrualService,
@@ -406,8 +412,13 @@ export class LessonBillingService {
     // both decrement prepaid. Serializable + this lock is the
     // belt-and-braces concurrency guard.
     const enrollments = await tx.$queryRaw<
-      { id: string; prepaidLessonsRemaining: number; startDate: Date | null }[]
-    >`SELECT id, "prepaidLessonsRemaining", "startDate" FROM "Enrollment" WHERE id = ${p.enrollmentId} FOR UPDATE`;
+      {
+        id: string;
+        prepaidLessonsRemaining: number;
+        startDate: Date | null;
+        cycleLessonIndex: number;
+      }[]
+    >`SELECT id, "prepaidLessonsRemaining", "startDate", "cycleLessonIndex" FROM "Enrollment" WHERE id = ${p.enrollmentId} FOR UPDATE`;
     if (!enrollments.length) {
       this.logger.warn(
         `Enrollment ${p.enrollmentId} not found — skipping bill`,
@@ -460,14 +471,20 @@ export class LessonBillingService {
 
     const lessonPaymentCount = group.course.lessonPaymentCount || 12;
     const fullCycleCost = group.course.price;
-    const perLessonCost = Math.round(fullCycleCost / lessonPaymentCount);
+    // The nominal figure every lesson but the cycle's last is charged, and the
+    // one `metadata.perLessonCost` keeps carrying — salary accrual, the refund
+    // path and the UI all read it and their contract is unchanged.
+    const perLessonCost = baseLessonPrice(fullCycleCost, lessonPaymentCount);
     const discountedFullCycleCost = applyDiscount(
       fullCycleCost,
       discountPercent,
     );
-    const discountedPerLessonCost = applyDiscount(
-      perLessonCost,
-      discountPercent,
+    // Derived from the DISCOUNTED cycle, not by discounting the per-lesson
+    // figure: rounding a discount per lesson reintroduces exactly the drift
+    // this change removes.
+    const discountedPerLessonCost = baseLessonPrice(
+      discountedFullCycleCost,
+      lessonPaymentCount,
     );
     const contractId = group.contracts[0]?.id;
 
@@ -521,16 +538,38 @@ export class LessonBillingService {
         );
         await tx.enrollment.update({
           where: { id: p.enrollmentId },
-          data: { prepaidLessonsRemaining: lessonPaymentCount - 1 },
+          // A fresh cycle starts here, so the lesson-by-lesson counter resets:
+          // if this batch runs out mid-cycle, the next uncovered lesson is
+          // lesson 0 of a NEW cycle, not a continuation of the old one.
+          data: {
+            prepaidLessonsRemaining: lessonPaymentCount - 1,
+            cycleLessonIndex: 0,
+          },
         });
         coverageTransactionId = deduction.id;
       } else if (
         discountedPerLessonCost > 0 &&
         balance >= discountedPerLessonCost
       ) {
-        const lessonsCovered = Math.floor(balance / discountedPerLessonCost);
-        const partialAmount = lessonsCovered * discountedPerLessonCost;
-        const fullAmount = lessonsCovered * perLessonCost;
+        // Counted against the CUMULATIVE price, not `floor(balance / per)`:
+        // the cycle's last lesson can cost more than the base figure, so the
+        // naive count can pick one lesson too many and overdraw a branch whose
+        // whole contract is that it never drives the balance negative.
+        const lessonsCovered = lessonsAffordable(
+          discountedFullCycleCost,
+          lessonPaymentCount,
+          balance,
+        );
+        const partialAmount = cycleCostFor(
+          discountedFullCycleCost,
+          lessonPaymentCount,
+          lessonsCovered,
+        );
+        const fullAmount = cycleCostFor(
+          fullCycleCost,
+          lessonPaymentCount,
+          lessonsCovered,
+        );
         const deduction = await this.transactionsService.deductLessonFee(
           {
             studentId: p.studentId,
@@ -550,7 +589,10 @@ export class LessonBillingService {
         );
         await tx.enrollment.update({
           where: { id: p.enrollmentId },
-          data: { prepaidLessonsRemaining: lessonsCovered - 1 },
+          data: {
+            prepaidLessonsRemaining: lessonsCovered - 1,
+            cycleLessonIndex: 0,
+          },
         });
         coverageTransactionId = deduction.id;
       } else if (discountedPerLessonCost > 0) {
@@ -564,10 +606,26 @@ export class LessonBillingService {
         // `salaryDeferred: true` + `uncoveredAmount` mark the deduction so
         // `processRetroactiveBillingForStudent()` can settle it (and write
         // the missing accrual) when a payment lands.
+        // This is the ONLY path where a cycle is billed lesson by lesson, so
+        // it is the only one that has to know which lesson of the cycle it is
+        // on: the last one carries the rounding remainder. Twelve lessons at a
+        // flat `round(price / 12)` came to 500 004 on a 500 000 course, which
+        // is where four of the eight sub-1000 debtors came from.
+        // Coerced rather than trusted: this comes back from a raw `$queryRaw`,
+        // and an undefined here would compute `NaN` and fail the write on an
+        // Int column — a lesson silently not billed.
+        const index = Number.isFinite(enrollment.cycleLessonIndex)
+          ? enrollment.cycleLessonIndex
+          : 0;
+        const thisLessonPrice = lessonPriceAt(
+          discountedFullCycleCost,
+          lessonPaymentCount,
+          index,
+        );
         await this.transactionsService.deductLessonFee(
           {
             studentId: p.studentId,
-            amount: discountedPerLessonCost,
+            amount: thisLessonPrice,
             attendanceId: p.attendanceId,
             enrollmentId: p.enrollmentId,
             contractId,
@@ -577,12 +635,23 @@ export class LessonBillingService {
             perLessonCost,
             lessonsCovered: 1,
             discountPercent,
-            fullAmount: perLessonCost,
+            fullAmount: lessonPriceAt(
+              fullCycleCost,
+              lessonPaymentCount,
+              index,
+            ),
             salaryDeferred: true,
-            uncoveredAmount: discountedPerLessonCost,
+            uncoveredAmount: thisLessonPrice,
           },
           tx,
         );
+        // Advance into the cycle. It wraps at the cycle length so the counter
+        // can be read directly by `lessonPriceAt` without a reset of its own;
+        // a full/partial batch resets it because that starts a new cycle.
+        await tx.enrollment.update({
+          where: { id: p.enrollmentId },
+          data: { cycleLessonIndex: (index + 1) % lessonPaymentCount },
+        });
         // Leave coverageTransactionId undefined: the consumption row below
         // still gets written (audit + idempotency), but the SalaryAccrual
         // loop short-circuits — accrual is deferred per B.1.
@@ -716,6 +785,12 @@ export class LessonBillingService {
           },
           tx,
         );
+        // Step back inside the cycle too. Without this the next lesson would
+        // be priced as if this one still counted, and a cycle that had its
+        // last lesson un-marked would never charge the settling amount.
+        // `GREATEST(...,0)` because the counter may already be at 0 when an
+        // older lesson is flipped after a batch reset it.
+        await tx.$executeRaw`UPDATE "Enrollment" SET "cycleLessonIndex" = GREATEST("cycleLessonIndex" - 1, 0) WHERE id = ${p.enrollmentId}`;
       } else {
         // Normal prepaid / refill path: give the consumed prepaid unit back.
         await tx.enrollment.update({

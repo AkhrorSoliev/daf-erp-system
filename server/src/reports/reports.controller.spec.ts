@@ -1,7 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import {
+  ArgumentMetadata,
+  ForbiddenException,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { Response } from 'express';
 import { ReportsController } from './reports.controller';
+import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsService } from './reports.service';
 import { ReportsExcelService } from './reports-excel.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -62,6 +68,13 @@ describe('ReportsController — role guards', () => {
     getMonthlyDebtRecovery: jest
       .fn()
       .mockResolvedValue({ months: [], totals: {} }),
+    getDebtHistory: jest.fn().mockResolvedValue({
+      months: [],
+      totals: { debtAdded: 0, debtPaid: 0, debtForgiven: 0, debtOther: 0 },
+      current: { debt: 0, debtorCount: 0, delta: 0, byStatus: [] },
+      longestDebtors: [],
+      statusFilter: 'all',
+    }),
     getMonthDebtDetail: jest.fn().mockResolvedValue({
       monthKey: '2026-06',
       label: 'Iyun 2026',
@@ -86,21 +99,19 @@ describe('ReportsController — role guards', () => {
     branch: { findMany: jest.fn().mockResolvedValue([]) },
   } as any;
 
+  const mockExcel = {
+    generate: jest.fn().mockResolvedValue(Buffer.from('')),
+    generateDebtHistory: jest.fn().mockResolvedValue(Buffer.from('')),
+  };
+
   beforeEach(async () => {
+    mockExcel.generate.mockClear();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ReportsController],
       providers: [
         { provide: ReportsService, useValue: mockService },
         { provide: PrismaService, useValue: mockPrisma },
-        {
-          provide: ReportsExcelService,
-          useValue: {
-            generate: jest.fn().mockResolvedValue(Buffer.from('')),
-            generateDebtHistory: jest
-              .fn()
-              .mockResolvedValue(Buffer.from('')),
-          },
-        },
+        { provide: ReportsExcelService, useValue: mockExcel },
       ],
     }).compile();
 
@@ -182,6 +193,7 @@ describe('ReportsController — role guards', () => {
     'getTeacherPaymentReports',
     'getTeacherGroupsReport',
     'getMonthlyDebtRecovery',
+    'getDebtHistory',
     'getMonthDebtDetail',
     'exportMonthlyDebtExcel',
     'getFinancialTrend',
@@ -359,6 +371,63 @@ describe('ReportsController — role guards', () => {
           ),
         ).toThrow(ForbiddenException);
       }
+    });
+  });
+
+  // Client and server deploy separately here, so for one release a page served
+  // before the `include` switch is still out there sending `?compare=`. With
+  // `forbidNonWhitelisted` that is a 400, and since the download is fetched as
+  // a blob the CEO gets a bare red toast and no file. The DTO therefore still
+  // ACCEPTS the three retired params — and nothing may read them.
+  describe('exportFinancialExcel() — retired compare params are accepted and ignored', () => {
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    });
+    const meta: ArgumentMetadata = {
+      type: 'query',
+      metatype: ReportsQueryDto,
+    };
+    const staleQuery = {
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+      compare: 'prev,yoy',
+      compareStartDate: '2026-05-01',
+      compareEndDate: '2026-05-31',
+    };
+
+    it('validates instead of 400-ing', async () => {
+      await expect(pipe.transform(staleQuery, meta)).resolves.toEqual(
+        expect.objectContaining({ compare: 'prev,yoy' }),
+      );
+    });
+
+    it('still builds the ten-sheet default — nothing reads the shim', async () => {
+      const dto = (await pipe.transform(staleQuery, meta)) as ReportsQueryDto;
+      const res = {
+        setHeader: jest.fn(),
+        end: jest.fn(),
+      } as unknown as Response;
+
+      await controller.exportFinancialExcel(
+        dto,
+        { id: 10001, companyId: 1, roles: ['CEO'] },
+        res,
+      );
+
+      // `include: []` IS the ten-sheet default (asserted sheet by sheet in
+      // reports-excel.service.spec.ts). No compare* value reaches the builder.
+      expect(mockExcel.generate).toHaveBeenCalledTimes(1);
+      const passed = mockExcel.generate.mock.calls[0][1] as Record<
+        string,
+        unknown
+      >;
+      expect(passed.include).toEqual([]);
+      expect(Object.keys(passed).filter((k) => k.startsWith('compare'))).toEqual(
+        [],
+      );
+      expect(res.end).toHaveBeenCalled();
     });
   });
 
