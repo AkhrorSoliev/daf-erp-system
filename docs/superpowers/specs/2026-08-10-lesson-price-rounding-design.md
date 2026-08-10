@@ -32,20 +32,22 @@ Misollar: `#10005` — 10 ta dars, 3 so'm chiqindi. `#10008` — 30 ta dars, 10 
 
 ---
 
-## 2. Yechim — to'planuvchi yaxlitlash
+## 2. Yechim — oxirgi dars tsiklni yopadi
 
-Har darsning narxi mustaqil yaxlitlanmaydi; **shu darsgacha bo'lgan jami** minus **oldingi darsgacha bo'lgan jami** sifatida hisoblanadi:
+Har dars odatdagi yaxlitlangan narxda qoladi, **tsiklning oxirgi darsi** esa qolgan farqni o'ziga oladi:
 
 ```
-lessonPriceAt(cycleCost, n, i) =
-  round(cycleCost × (i+1) / n) − round(cycleCost × i / n)
+base       = round(cycleCost / n)
+i < n−1    → base
+i = n−1    → cycleCost − base × (n−1)
 ```
 
-`400 000 / 12` uchun: `i = 0..10` → **33 333**, `i = 11` → `400 000 − 366 663` = **33 337**. Jami aynan **400 000**.
+`400 000 / 12`: 11 ta dars **33 333**, o'n ikkinchisi **33 337**. Jami aynan **400 000**.
+`500 000 / 12`: 11 ta dars **41 667**, o'n ikkinchisi **41 663**. Jami aynan **500 000**.
 
-Kafolatlar: tsikl yig'indisi aynan `cycleCost`; har bir dars o'rtacha narxdan ko'pi bilan 1 so'mga farq qiladi; `n = 1` va `cycleCost = 0` da ham to'g'ri ishlaydi.
+**Nega to'planuvchi yaxlitlash emas.** Muqobil variant farqni tsikl bo'ylab tarqatadi (3-, 6-, 9-darslar 33 334 bo'lib chiqadi). U ham kitobni yopadi, lekin o'quvchiga «nega mening 3-darsim 1 so'm qimmat?» degan savolga javob yo'q. Bitta yopuvchi dars tushuntiriladi. Test buni qat'iy belgilaydi: birinchi `n−1` dars **hozirgi narxda qoladi**, ya'ni mavjud cheklar o'zgarmaydi.
 
-Joylashuvi: `server/src/billing/lesson-price.ts` — sof funksiya, Prisma'siz, o'z testi bilan.
+Joylashuvi: `server/src/billing/lesson-price.ts` — `baseLessonPrice` / `lessonPriceAt` / `cycleCostFor` / `lessonsAffordable`, sof funksiyalar, Prisma'siz, 20 ta testi bilan.
 
 ---
 
@@ -55,14 +57,11 @@ Joylashuvi: `server/src/billing/lesson-price.ts` — sof funksiya, Prisma'siz, o
 
 Hozir ham `discountedFullCycleCost` ni yaxlit yechadi. Chiqindi yo'q.
 
-### 3.2 `PARTIAL` — hisoblagichsiz tuzatiladi
+### 3.2 `PARTIAL` — faqat oxirgi dars uchun tuzatiladi
 
-Hozir: `lessonsCovered × perLessonCost` (masalan `3 × 33 333 = 99 999`).
-Bo'ladi: `cumulative(lessonsCovered)` (masalan `round(400 000 × 3/12) = 100 000`).
+Oxirgidan boshqa darslar narxi o'zgarmagani uchun `N < n` bo'lgan to'plamlar **bugungidek** qoladi (`3 × 33 333 = 99 999`). Farq faqat to'plam tsiklning oxirgi darsini qamrasa paydo bo'ladi.
 
-**Diqqat — bu yerda overdraft xavfi bor.** `lessonsCovered` hozir `floor(balance / perLessonCost)` bilan topiladi. Balans `99 999` bo'lsa `N = 3` chiqadi, yangi narx esa `100 000` — balansdan oshib ketadi va `PARTIAL` hech qachon balansni manfiyga tushirmasligi qoidasi buziladi.
-
-Shuning uchun `N` **yangi narx bo'yicha** topiladi: `cumulative(N) ≤ balance` shartini qanoatlantiruvchi eng katta `N`. Amalda `floor` dan boshlab pastga bir-ikki qadam yetadi.
+**Overdraft xavfi shu yerda.** `lessonsCovered = floor(balance / perLessonCost)` bo'lsa, balans `399 999` da `N = 12` chiqadi, yangi narxda esa 12 ta dars `400 000` turadi — balansdan oshadi va `PARTIAL` hech qachon manfiyga tushirmasligi qoidasi buziladi. Shuning uchun `lessonsAffordable()` ishlatiladi: u oxirgi darsni alohida tekshiradi va bu holatda `11` qaytaradi.
 
 ### 3.3 `SINGLE_UNCOVERED` — hisoblagich kerak
 
@@ -84,7 +83,7 @@ Dars narxi: `lessonPriceAt(cycleCost, n, enrollment.cycleLessonIndex)`.
 
 **`metadata.perLessonCost`.** Bu maydon ko'rsatish, oylik hisobi va prepaid qaytarish uchun ishlatiladi — **nomi va ma'nosi o'zgarmaydi**, unda o'rtacha (nominal) narx qoladi. Yozuvda haqiqatda yechilgan summa `amount` da turibdi, shuning uchun ledger to'g'ri.
 
-**Prepaid qaytarish** (`EnrollmentBillingService`). Hozir `prepaidLessonsRemaining × metadata.perLessonCost`. Yangi usulda `cumulative(n) − cumulative(n − remaining)` bo'ladi — shunda qaytarish ham aniq bo'ladi va yangi chiqindi tug'ilmaydi.
+**Prepaid qaytarish** (`EnrollmentBillingService`). Hozir `prepaidLessonsRemaining × metadata.perLessonCost`. Yangi usulda `cycleCostFor(n) − cycleCostFor(n − remaining)` bo'ladi — shunda o'quvchi guruhdan chiqqanda qaytariladigan pul ham tsiklga aniq mos keladi.
 
 **Oylik hisobi.** `perLessonAccrual` dars narxidan foiz oladi; 4 so'mlik farq ustoz oyligini ~1 so'mga o'zgartiradi. Qayd etiladi, alohida chora ko'rilmaydi.
 
@@ -115,7 +114,7 @@ Kurs kesimida bir tsiklning xatosi (`round(narx/dars) × dars − narx`):
 
 **Muhim natija:** gap faqat hisobot shovqinida emas — 500 000 lik kurslarda o'quvchidan har tsiklda **4 so'm ortiqcha undirilmoqda**. Tuzatish buni to'xtatadi.
 
-**1-qadam** — `lesson-price.ts` + unit testlar (funksiyaning o'zi).
+**1-qadam** — `lesson-price.ts` + unit testlar. **BAJARILDI** (20/20 test).
 **2-qadam** — migratsiya: `Enrollment.cycleLessonIndex`. Loyihada `prisma migrate dev` buzuq → `diff` + `db execute` + `resolve` ([branch-deploy-runbook.md](../../branch-deploy-runbook.md), 86-qator).
 **3-qadam** — `lesson-billing.service.ts` uchta rejimga qo'llash + prepaid qaytarish.
 **4-qadam** — testlar: 12 ta bittalab yozilgan dars aynan tsikl narxini beradi; `PARTIAL` balansdan oshmaydi; bekor qilishda hisoblagich kamayadi; chegirmali holat.
