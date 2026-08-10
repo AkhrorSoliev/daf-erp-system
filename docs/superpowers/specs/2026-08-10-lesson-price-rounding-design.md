@@ -115,10 +115,24 @@ Kurs kesimida bir tsiklning xatosi (`round(narx/dars) × dars − narx`):
 **Muhim natija:** gap faqat hisobot shovqinida emas — 500 000 lik kurslarda o'quvchidan har tsiklda **4 so'm ortiqcha undirilmoqda**. Tuzatish buni to'xtatadi.
 
 **1-qadam** — `lesson-price.ts` + unit testlar. **BAJARILDI** (20/20 test).
-**2-qadam** — migratsiya: `Enrollment.cycleLessonIndex`. Loyihada `prisma migrate dev` buzuq → `diff` + `db execute` + `resolve` ([branch-deploy-runbook.md](../../branch-deploy-runbook.md), 86-qator).
-**3-qadam** — `lesson-billing.service.ts` uchta rejimga qo'llash + prepaid qaytarish.
-**4-qadam** — testlar: 12 ta bittalab yozilgan dars aynan tsikl narxini beradi; `PARTIAL` balansdan oshmaydi; bekor qilishda hisoblagich kamayadi; chegirmali holat.
-**5-qadam** — 0-qadamdagi o'lchovni takrorlash (prod nusxasida yangi kod bilan) va farqni qayd etish.
+**2-qadam — BAJARILDI.** `prisma/migrations/20260810120000_enrollment_cycle_lesson_index/`. `NOT NULL DEFAULT 0`, ya'ni jonli jadvalga xavfsiz va eski kod uni shunchaki e'tiborsiz qoldiradi. **PROD'ga hali qo'llanmagan** — deploy paytida `db execute` + `resolve` ([branch-deploy-runbook.md](../../branch-deploy-runbook.md), 86-qator).
+
+**3-qadam — BAJARILDI.** `lesson-billing.service.ts`: `FULL_CYCLE`/`PARTIAL` hisoblagichni nolga tushiradi, `PARTIAL` sonni `lessonsAffordable()` bilan topadi (overdraft yopildi), `SINGLE_UNCOVERED` narxni `lessonPriceAt(index)` dan oladi va hisoblagichni oshiradi, `reverse()` uni atomik `GREATEST(x−1, 0)` bilan qaytaradi. Chegirma endi tsikl narxiga qo'llanadi.
+
+Yo'l-yo'lakay ikkita nuqson topildi va tuzatildi:
+- **`NaN` xavfi** — hisoblagich xom `$queryRaw` dan keladi; `undefined + 1` `NaN` bergan va Int ustunga yozishda yiqilgan bo'lardi (dars jimgina hisoblanmay qolardi). Endi majburiy songa keltiriladi.
+- **Prepaid qaytarish** — `qolgan × perLessonCost` tsikl qoldig'ini o'quvchiga qaytarmasdi **va** chegirmasiz raqamni o'qigani uchun chegirmali o'quvchiga ortiqcha qaytarardi. Endi to'plamning **o'z summasi**dan sarflangani ayiriladi, ya'ni ikki bo'lak har doim yechilgan summani qayta hosil qiladi.
+
+**4-qadam — BAJARILDI.** `lesson-price.spec.ts` 20 ta test; `lesson-billing.service.spec.ts` da yangi «cycle rounding» bloki (tsikl aynan yopiladi, ikkala yo'nalish, hisoblagich aylanadi, `NaN` himoyasi, `PARTIAL` overdraft, bekor qilishda kamayish). Billing to'plami **104/104**, butun backend **2813/2813**.
+
+**5-qadam — BAJARILDI.** Lokal PROD nusxasida barcha 8 kurs tekshirildi:
+
+| Kurs | Eski 12× | Yangi jami | Holat |
+|---|---|---|---|
+| Standart, A 1 | 399 996 | **400 000** | ✓ |
+| Standart B2, B1, B1 Telc | 500 004 | **500 000** | ✓ |
+| Vorbereitung | 549 996 | **550 000** | ✓ |
+| A2, Intensive | to'g'ri edi | o'zgarmadi | ✓ |
 
 ---
 
