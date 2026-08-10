@@ -100,7 +100,20 @@ O'tgan tranzaksiyalar (ledger append-only — qayta hisoblanmaydi) · `Student.b
 
 ## 6. Bajarish tartibi
 
-**0-qadam — o'lchash (kod yozishdan oldin).** Prod nusxasida hozirgi 8 ta mayda qarzdorni bitta-bitta ochib, har birining chiqindisi aynan yaxlitlashdanmi yoki to'lov summasidanmi ekanini aniqlash. Natija hujjatga yoziladi. Shunda «nima tuzaldi» taxmin emas, o'lchov bo'ladi.
+**0-qadam — o'lchash. BAJARILDI (2026-08-10).** `scripts/measure-lesson-rounding-residuals.ts`.
+
+Kurs kesimida bir tsiklning xatosi (`round(narx/dars) × dars − narx`):
+
+| Kurs | Narx / dars | Xato | Yo'nalish |
+|---|---|---|---|
+| Standart, A 1 | 400 000 / 12 | −4 | kam yozadi → o'quvchi foydasiga |
+| Vorbereitung | 550 000 / 12 | −4 | kam yozadi |
+| **Standart B2, B1, B1 Telc** | **500 000 / 12** | **+4** | **ortiqcha yozadi → QARZ tug'iladi** |
+| A2, Intensive | 450 000 / 12, 690 000 / 20 | 0 | toza |
+
+1000 so'mdan kam qarzi bor 8 ta o'quvchidan **4 tasining qarzi aynan +4 ning karrasi** va ular 500 000 lik kursda: #10435, #10045, #10433 (1 tsikl), #10048 (3 tsikl) — jami 24 so'm. Qolgan 4 tasi (2, 329, 659, 665) yaxlitlashdan emas: uchtasi 400 000 lik kursda, u yerda xato teskari yo'nalishda.
+
+**Muhim natija:** gap faqat hisobot shovqinida emas — 500 000 lik kurslarda o'quvchidan har tsiklda **4 so'm ortiqcha undirilmoqda**. Tuzatish buni to'xtatadi.
 
 **1-qadam** — `lesson-price.ts` + unit testlar (funksiyaning o'zi).
 **2-qadam** — migratsiya: `Enrollment.cycleLessonIndex`. Loyihada `prisma migrate dev` buzuq → `diff` + `db execute` + `resolve` ([branch-deploy-runbook.md](../../branch-deploy-runbook.md), 86-qator).
