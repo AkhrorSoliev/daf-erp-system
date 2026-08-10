@@ -9,64 +9,13 @@ import {
   userBranchWhere,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
-
-const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
-/** Fallback floor when a company has no `systemStartDate` (May 2026 cutover). */
-const DEBT_FLOOR_MONTH = '2026-05';
-const UZ_MONTHS = [
-  'Yanvar',
-  'Fevral',
-  'Mart',
-  'Aprel',
-  'May',
-  'Iyun',
-  'Iyul',
-  'Avgust',
-  'Sentabr',
-  'Oktabr',
-  'Noyabr',
-  'Dekabr',
-];
-
-/** Tashkent calendar month key ("YYYY-MM") of an instant. */
-function tashkentMonthKey(d: Date): string {
-  const t = new Date(d.getTime() + TASHKENT_OFFSET_MS);
-  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-/** "May 2026" label for a "YYYY-MM" key. */
-function monthLabel(monthKey: string): string {
-  const [y, m] = monthKey.split('-').map(Number);
-  return `${UZ_MONTHS[m - 1]} ${y}`;
-}
-
-/** Inclusive list of "YYYY-MM" keys from `fromKey` to `toKey`. */
-function enumerateMonths(fromKey: string, toKey: string): string[] {
-  const out: string[] = [];
-  let [y, m] = fromKey.split('-').map(Number);
-  const [ty, tm] = toKey.split('-').map(Number);
-  while (y < ty || (y === ty && m <= tm)) {
-    out.push(`${y}-${String(m).padStart(2, '0')}`);
-    m++;
-    if (m > 12) {
-      m = 1;
-      y++;
-    }
-  }
-  return out;
-}
-
-/**
- * The exclusive UTC boundary marking the END of Tashkent month `monthKey` —
- * i.e. the first instant of the FOLLOWING Tashkent month. A transaction with
- * `createdAt >= this` happened strictly AFTER the month closed. (monthKey's
- * 1-based month equals the 0-based index of the next month, so `Date.UTC(y, m, 1)`
- * is already the next month's first day; subtract the offset for Tashkent midnight.)
- */
-function tashkentMonthEndBoundary(monthKey: string): Date {
-  const [y, m] = monthKey.split('-').map(Number);
-  return new Date(Date.UTC(y, m, 1) - TASHKENT_OFFSET_MS);
-}
+import {
+  DEBT_FLOOR_MONTH,
+  enumerateMonths,
+  monthLabel,
+  tashkentMonthEndBoundary,
+  tashkentMonthKey,
+} from './debt-history.util';
 
 @Injectable()
 export class ReportsFinancialService {
@@ -1292,10 +1241,15 @@ export class ReportsFinancialService {
     }
 
     const cohort = base.map((c) => {
-      const recovered = Math.min(c.debt, Math.max(0, payMap.get(c.id) ?? 0));
-      const writtenOff = Math.min(
-        c.debt - recovered,
-        Math.max(0, woMap.get(c.id) ?? 0),
+      // Write-off is claimed FIRST: it is an explicit act naming this debt,
+      // while the payment attribution is inferred from oldest-first settlement.
+      // The other order let a debtor who also paid absorb the whole cap, and
+      // their forgiveness vanished from the column — 2.43 mln so'm of real
+      // write-offs were reported as 0.43 mln.
+      const writtenOff = Math.min(c.debt, Math.max(0, woMap.get(c.id) ?? 0));
+      const recovered = Math.min(
+        c.debt - writtenOff,
+        Math.max(0, payMap.get(c.id) ?? 0),
       );
       return {
         id: c.id,
@@ -1328,6 +1282,18 @@ export class ReportsFinancialService {
       writtenOff: number;
       remaining: number;
       debtorCount: number;
+      /** What this same cohort owes TODAY — the figure `remaining` is NOT. */
+      debtNow: number;
+      debtorsNow: number;
+      /**
+       * How many of the cohort's PEOPLE later paid / were forgiven. The lists
+       * below are rows, not people, and the two are wildly different (June
+       * 2026: 310 payment rows from 178 students). Without these the UI can
+       * only show row counts beside a headcount, which reads as "310 of the
+       * 352 paid" — a claim nobody made.
+       */
+      payerCount: number;
+      forgivenCount: number;
     };
     debtors: Array<{
       id: number;
@@ -1339,6 +1305,8 @@ export class ReportsFinancialService {
       recovered: number;
       writtenOff: number;
       remaining: number;
+      /** Live balance, so the frozen figure can be read against today's. */
+      currentDebt: number;
     }>;
     recoveredPayments: Array<{
       id: string;
@@ -1349,6 +1317,10 @@ export class ReportsFinancialService {
       method: string | null;
       createdAt: Date;
       performedBy: string | null;
+      /** The original of a payment that was later rolled back. */
+      isReversed: boolean;
+      /** The counter-row itself (negative amount). */
+      isReversal: boolean;
     }>;
     writeOffs: Array<{
       id: string;
@@ -1359,6 +1331,8 @@ export class ReportsFinancialService {
       reason: string | null;
       performedBy: string | null;
       createdAt: Date;
+      isReversed: boolean;
+      isReversal: boolean;
     }>;
     truncated: boolean;
   }> {
@@ -1377,6 +1351,11 @@ export class ReportsFinancialService {
       students,
     );
     const cohortIds = cohort.map((c) => c.id);
+    const balanceNow = new Map(students.map((s) => [s.id, s.balance]));
+    const liveDebt = (id: number) => {
+      const bal = balanceNow.get(id) ?? 0;
+      return bal < 0 ? -bal : 0;
+    };
 
     const totals = {
       closingDebt: cohort.reduce((s, c) => s + c.monthEndDebt, 0),
@@ -1384,6 +1363,14 @@ export class ReportsFinancialService {
       writtenOff: cohort.reduce((s, c) => s + c.writtenOff, 0),
       remaining: cohort.reduce((s, c) => s + c.remaining, 0),
       debtorCount: cohort.length,
+      // `remaining` answers "how much of THAT month's debt is unpaid"; this
+      // answers "what do these people owe now". They diverge by every so'm of
+      // debt the cohort has taken on since, and reading one as the other is the
+      // single biggest misreading this page invited.
+      debtNow: cohort.reduce((s, c) => s + liveDebt(c.id), 0),
+      debtorsNow: cohort.filter((c) => liveDebt(c.id) > 0).length,
+      payerCount: 0,
+      forgivenCount: 0,
     };
 
     if (cohortIds.length === 0) {
@@ -1397,6 +1384,39 @@ export class ReportsFinancialService {
         truncated: false,
       };
     }
+
+    // Headcounts, computed by grouping rather than by de-duplicating the capped
+    // lists below — a month past LIST_CAP would otherwise undercount silently.
+    // Net sum > 0 so a student whose only payment was fully reversed is not
+    // counted as having paid.
+    const [payerGroups, forgivenGroups] = await Promise.all([
+      this.prisma.transaction.groupBy({
+        by: ['studentId'],
+        where: {
+          companyId,
+          studentId: { in: cohortIds },
+          type: TransactionType.PAYMENT,
+          createdAt: { gte: boundary },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.transaction.groupBy({
+        by: ['studentId'],
+        where: {
+          companyId,
+          studentId: { in: cohortIds },
+          type: TransactionType.DEBT_WRITE_OFF,
+          createdAt: { gte: boundary },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+    totals.payerCount = payerGroups.filter(
+      (g) => (g._sum.amount ?? 0) > 0,
+    ).length;
+    totals.forgivenCount = forgivenGroups.filter(
+      (g) => (g._sum.amount ?? 0) > 0,
+    ).length;
 
     const [enriched, payRows, woRows] = await Promise.all([
       this.prisma.student.findMany({
@@ -1412,19 +1432,26 @@ export class ReportsFinancialService {
           },
         },
       }),
+      // NO reversal filter, deliberately. `reverseTransaction` writes its
+      // counter-row with the ORIGINAL's type and `reversedAt: null`, so
+      // `reversedAt: null` here kept the undo and dropped the payment it undid
+      // — the list then showed bare negative rows and no longer summed to the
+      // aggregate above (6 such rows in May alone). Both halves are returned,
+      // flagged, and net to zero exactly like the aggregate.
       this.prisma.transaction.findMany({
         where: {
           companyId,
           studentId: { in: cohortIds },
           type: TransactionType.PAYMENT,
           createdAt: { gte: boundary },
-          reversedAt: null,
         },
         select: {
           id: true,
           studentId: true,
           amount: true,
           createdAt: true,
+          reversedAt: true,
+          reversedTransactionId: true,
           student: { select: { firstName: true, lastName: true } },
           performedBy: { select: { firstName: true, lastName: true } },
           payment: { select: { method: true } },
@@ -1438,7 +1465,6 @@ export class ReportsFinancialService {
           studentId: { in: cohortIds },
           type: TransactionType.DEBT_WRITE_OFF,
           createdAt: { gte: boundary },
-          reversedAt: null,
         },
         select: {
           id: true,
@@ -1447,6 +1473,8 @@ export class ReportsFinancialService {
           createdAt: true,
           description: true,
           metadata: true,
+          reversedAt: true,
+          reversedTransactionId: true,
           student: { select: { firstName: true, lastName: true } },
           performedBy: { select: { firstName: true, lastName: true } },
         },
@@ -1472,6 +1500,7 @@ export class ReportsFinancialService {
           recovered: c.recovered,
           writtenOff: c.writtenOff,
           remaining: c.remaining,
+          currentDebt: liveDebt(c.id),
         };
       })
       .sort((a, b) => b.monthEndDebt - a.monthEndDebt);
@@ -1488,6 +1517,8 @@ export class ReportsFinancialService {
       method: t.payment?.method ?? null,
       createdAt: t.createdAt,
       performedBy: fullName(t.performedBy),
+      isReversed: t.reversedAt != null,
+      isReversal: t.reversedTransactionId != null,
     }));
 
     const writeOffs = woRows.slice(0, LIST_CAP).map((t) => {
@@ -1501,6 +1532,8 @@ export class ReportsFinancialService {
         reason: meta?.reason ?? t.description ?? null,
         performedBy: fullName(t.performedBy),
         createdAt: t.createdAt,
+        isReversed: t.reversedAt != null,
+        isReversal: t.reversedTransactionId != null,
       };
     });
 

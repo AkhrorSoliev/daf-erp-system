@@ -13,6 +13,7 @@ import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ExpectationHistoryQueryDto } from './dto/expectation-history-query.dto';
+import { DebtHistoryQueryDto } from './dto/debt-history-query.dto';
 import {
   isEmptyScope,
   narrowToSingleBranch,
@@ -345,6 +346,47 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getMonthlyDebtRecovery(companyId, scope);
+  }
+
+  // Everything the /payments/debt-history page renders, from ONE ledger replay:
+  // the month-by-month debt roll-forward (opening + added − paid − forgiven −
+  // other = closing), each month's cohort recovery, the current status split
+  // and the longest-standing debtors. CEO + BD only — company-wide debt.
+  //
+  // Declared BEFORE the ":monthKey" param route so "history" isn't captured.
+  @Get('monthly-debt-recovery/history')
+  @Roles('CEO', 'Branch Director')
+  getDebtHistory(
+    @Query() query: DebtHistoryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.reportsService.getDebtHistory(companyId, scope, query.status);
+  }
+
+  // Who still owes money that arose in ONE month — the page's month dialog.
+  // Distinct from the cohort ":monthKey/detail" below, which answers "who ended
+  // that month in debt"; this answers "whose charges FROM that month are still
+  // unpaid", so the same student shows a different figure under each month.
+  @Get('monthly-debt-recovery/:monthKey/aging')
+  @Roles('CEO', 'Branch Director')
+  getMonthAgingDetail(
+    @Param('monthKey') monthKey: string,
+    @Query() query: DebtHistoryQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) {
+      throw new BadRequestException('monthKey formati YYYY-MM bo‘lishi kerak');
+    }
+    // Returns debtor NAMES and PHONES — it must never span branches for a
+    // confined caller.
+    return this.reportsService.getMonthAgingDetail(
+      companyId,
+      monthKey,
+      scope,
+      query.status,
+    );
   }
 
   // Dedicated Excel workbook for the debt-history page (Umumiy + Qarzdorlar +

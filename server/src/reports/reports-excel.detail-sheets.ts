@@ -325,6 +325,96 @@ export function trendSheet(wb: Workbook, trend: any) {
   ], 5);
 }
 
+// ---- Sheet: Qarz harakati (roll-forward) ----
+// The one debt view whose columns SUM: every so'm is attributed to the month it
+// moved in and to the reason that moved it, so a «Jami» over the flow columns is
+// meaningful. The balance columns (opening/closing) are deliberately left out of
+// that total — adding month-end balances counts the same debt once per month.
+export function debtFlowSheet(wb: Workbook, history: any) {
+  const ws = wb.addWorksheet('Qarz harakati');
+  ws.columns = [
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 16 },
+    { width: 16 },
+    { width: 18 },
+    { width: 16 },
+    { width: 40 },
+  ];
+  sheetTitle(
+    ws,
+    'Qarz harakati',
+    'Oy boshi + yangi qarz − to‘landi − kechirildi − boshqa = oy oxiri',
+    9,
+  );
+  const months = Array.isArray(history?.months) ? history.months : [];
+  const header = tableHeader(ws, [
+    'Oy',
+    'Oy boshidagi qarz',
+    'Yangi qarz (+)',
+    'To‘landi (−)',
+    'Kechirildi (−)',
+    'Boshqa (−)',
+    'Oy oxiridagi qarz',
+    'O‘zgarish',
+    'Izoh',
+  ]);
+  const firstDataRow = header.number + 1;
+  months.forEach((m: any) => {
+    const notes: string[] = [];
+    if (m.isCurrent) notes.push('Oy hali tugamagan — raqamlar o‘zgaradi');
+    if (m.monthKey === '2026-05')
+      notes.push('Pul oqimi to‘liq emas (o‘tish davri)');
+    const r = ws.addRow([
+      m.label,
+      m.openingDebt,
+      m.debtAdded,
+      m.debtPaid,
+      m.debtForgiven,
+      m.debtOther,
+      m.closingDebt,
+      m.delta,
+      notes.join('; '),
+    ]);
+    [2, 3, 4, 5, 6, 7, 8].forEach((c) => (r.getCell(c).numFmt = NUM));
+    const ic = r.getCell(9);
+    ic.font = { italic: true, size: 9, color: { argb: SUBTLE } };
+    ic.alignment = { wrapText: true, vertical: 'top' };
+  });
+  const t = history?.totals ?? {
+    debtAdded: 0,
+    debtPaid: 0,
+    debtForgiven: 0,
+    debtOther: 0,
+  };
+  // Opening/closing are balances, not flows — a column total there would be the
+  // same double count the old «Jami qarz» row printed.
+  totalsRow(
+    ws,
+    [
+      'Jami',
+      '',
+      t.debtAdded,
+      t.debtPaid,
+      t.debtForgiven,
+      t.debtOther,
+      '',
+      '',
+      'Qoldiq ustunlari qo‘shilmaydi — oxirgi oyning oxiri = bugungi qarz',
+    ],
+    [3, 4, 5, 6],
+  );
+  freezeAndFilter(ws, header.number, 9);
+  sheetNotes(ws, [
+    'Har bir so‘m FAQAT bir marta va faqat o‘zi harakatlangan oyga yoziladi, shuning uchun oqim ustunlari qo‘shiladi.',
+    'Oy oxiridagi qarz — muzlagan raqam: o‘tgan oy uchun keyin o‘zgarmaydi. Joriy oy bundan mustasno.',
+    '«Boshqa» — tuzatish (ADJUSTMENT), boshlang‘ich balans va pul qaytarish: qarzni kamaytiradi, lekin markaz yiqqan pul emas.',
+    'Qarz = Σ max(0, −balans). Balans manfiydan musbatga o‘tsa, faqat manfiy qismi hisoblanadi.',
+  ]);
+}
+
 // ---- Sheet: Oylik qarzdorlik (undirish) ----
 // Ledger-reconstructed month-end debt with recovery. NOT a live-state sheet, so
 // it is never dropped for past-period exports (unlike Qarzdorlar/Balans).
@@ -381,27 +471,28 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
     ic.alignment = { wrapText: true, vertical: 'top' };
   });
   const lastDataRow = ws.rowCount;
-  const t = debtHistory?.totals ?? {
-    closingDebt: 0,
-    recovered: 0,
-    writtenOff: 0,
-    remaining: 0,
-  };
-  // Debtor counts aren't summable across months (cohorts overlap) → left blank.
+  // NOTHING on this sheet is summable across months. Each row is a COHORT
+  // measured over a nested window: a payment made in August counts toward May's
+  // recovery, June's and July's alike, and the same debtor appears in every
+  // month they owed. Production check: 551 distinct debtors, 1 573 cohort
+  // memberships (2.85 months each) — the old «Jami» row printed 317 mln so'm of
+  // closing debt against 83.75 mln actually outstanding, and 93.6 mln recovered
+  // against a 69.2 mln non-duplicated ceiling. The flow totals live on the
+  // «Qarz harakati» sheet, which is the one built to be added up.
   totalsRow(
     ws,
     [
       'Jami',
-      t.closingDebt,
-      '',
-      t.recovered,
-      t.writtenOff,
-      t.remaining,
       '',
       '',
       '',
+      '',
+      '',
+      '',
+      '',
+      'Bu varaqda ustunlar qo‘shilmaydi — har oy alohida kogorta, ular bir-birini qoplaydi. Jami uchun «Qarz harakati» varag‘iga qarang.',
     ],
-    [2, 4, 5, 6],
+    [],
   );
   if (lastDataRow >= firstDataRow) {
     dataBar(ws, `B${firstDataRow}:B${lastDataRow}`);

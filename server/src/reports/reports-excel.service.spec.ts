@@ -250,6 +250,13 @@ describe('ReportsExcelService', () => {
       .fn()
       .mockResolvedValue({ refunds: 10_000, writeOffs: 5_000, providerFees: 0 }),
     getMonthlyDebtRecovery: jest.fn().mockResolvedValue(debtHistory),
+    getDebtHistory: jest.fn().mockResolvedValue({
+      months: [],
+      totals: { debtAdded: 0, debtPaid: 0, debtForgiven: 0, debtOther: 0 },
+      current: { debt: 0, debtorCount: 0, delta: 0, byStatus: [] },
+      longestDebtors: [],
+      statusFilter: 'all',
+    }),
     getMonthDebtDetail: jest.fn().mockResolvedValue({
       monthKey: '2026-06',
       label: 'Iyun 2026',
@@ -643,7 +650,7 @@ describe('ReportsExcelService', () => {
   });
 
   describe('generateDebtHistory', () => {
-    it('builds the 4 debt sheets (Umumiy + Qarzdorlar + Undirildi + Kechirilgan) with detail', async () => {
+    it('builds the 5 debt sheets (Harakat + Kogorta + Qarzdorlar + Undirildi + Kechirilgan) with detail', async () => {
       reports.getMonthlyDebtRecovery.mockResolvedValueOnce({
         months: [
           {
@@ -705,7 +712,10 @@ describe('ReportsExcelService', () => {
 
       const wb = await load(await service.generateDebtHistory(1, null));
       const names = wb.worksheets.map((w) => w.name);
+      // «Qarz harakati» leads: it is the only debt sheet whose columns add up,
+      // so it is the one a reader should meet first.
       expect(names).toEqual([
+        'Qarz harakati',
         'Oylik qarzdorlik',
         'Qarzdorlar',
         'Undirildi',
@@ -763,6 +773,7 @@ describe('ReportsExcelService', () => {
       });
 
       await service.generateDebtHistory(1, [2]);
+      expect(reports.getDebtHistory).toHaveBeenCalledWith(1, [2]);
       expect(reports.getMonthlyDebtRecovery).toHaveBeenCalledWith(1, [2]);
       expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06', [2]);
     });

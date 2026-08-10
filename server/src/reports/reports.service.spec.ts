@@ -5,6 +5,7 @@ import { RedisService } from '../redis/redis.service';
 import { ReportsOverviewService } from './reports-overview.service';
 import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytics.service';
 import { ReportsFinancialService } from './reports-financial.service';
+import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsTeacherPaymentsService } from './reports-teacher-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
@@ -100,6 +101,7 @@ describe('ReportsService', () => {
         ReportsOverviewService,
         ReportsAttendanceAnalyticsService,
         ReportsFinancialService,
+        ReportsDebtHistoryService,
         ReportsPaymentsService,
         ReportsTeacherPaymentsService,
         ReportsStudentPaymentsService,

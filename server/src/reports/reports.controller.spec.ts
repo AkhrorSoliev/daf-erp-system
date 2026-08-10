@@ -68,6 +68,13 @@ describe('ReportsController — role guards', () => {
     getMonthlyDebtRecovery: jest
       .fn()
       .mockResolvedValue({ months: [], totals: {} }),
+    getDebtHistory: jest.fn().mockResolvedValue({
+      months: [],
+      totals: { debtAdded: 0, debtPaid: 0, debtForgiven: 0, debtOther: 0 },
+      current: { debt: 0, debtorCount: 0, delta: 0, byStatus: [] },
+      longestDebtors: [],
+      statusFilter: 'all',
+    }),
     getMonthDebtDetail: jest.fn().mockResolvedValue({
       monthKey: '2026-06',
       label: 'Iyun 2026',
@@ -186,6 +193,7 @@ describe('ReportsController — role guards', () => {
     'getTeacherPaymentReports',
     'getTeacherGroupsReport',
     'getMonthlyDebtRecovery',
+    'getDebtHistory',
     'getMonthDebtDetail',
     'exportMonthlyDebtExcel',
     'getFinancialTrend',

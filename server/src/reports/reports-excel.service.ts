@@ -25,6 +25,7 @@ import {
   salariesSheet,
   debtorsSheet,
   monthlyDebtSheet,
+  debtFlowSheet,
   debtorsCohortSheet,
   recoveredPaymentsSheet,
   writeOffsSheet,
@@ -383,10 +384,11 @@ export class ReportsExcelService {
 
   /**
    * Dedicated "Oylik qarzdorlik" workbook for the /payments/debt-history page —
-   * separate from the main report. Four sheets: Umumiy (the month summary,
-   * reusing `monthlyDebtSheet`) + per-student detail for Qarzdorlar /
-   * Undirildi / Kechirilgan, each row tagged with its month label. All figures
-   * flow through ReportsService (no Prisma here).
+   * separate from the main report. Five sheets: «Qarz harakati» (the
+   * roll-forward, the only one whose columns add up) + «Oylik qarzdorlik» (the
+   * per-month cohort, which must never be summed) + per-student detail for
+   * Qarzdorlar / Undirildi / Kechirilgan, each row tagged with its month label.
+   * All figures flow through ReportsService (no Prisma here).
    */
   async generateDebtHistory(
     companyId: number,
@@ -395,10 +397,14 @@ export class ReportsExcelService {
     // Both legs take the SAME scope. Passing it to one and not the other is how
     // a workbook came to print one branch's total on the summary sheet and
     // another branch's rows underneath it.
-    const debtHistory = await this.reports.getMonthlyDebtRecovery(
-      companyId,
-      scope,
-    );
+    // Two views of the same ledger, on purpose: the roll-forward (adds up) and
+    // the cohort (does not). Both take the SAME scope — passing it to one and
+    // not the other is how a workbook came to print one branch's total on the
+    // summary sheet and another branch's rows underneath it.
+    const [flow, debtHistory] = await Promise.all([
+      this.reports.getDebtHistory(companyId, scope),
+      this.reports.getMonthlyDebtRecovery(companyId, scope),
+    ]);
     const details = await Promise.all(
       debtHistory.months.map((m) =>
         this.reports.getMonthDebtDetail(companyId, m.monthKey, scope),
@@ -417,6 +423,7 @@ export class ReportsExcelService {
     const wb = new Workbook();
     wb.creator = 'DaF Sprachzentrum ERP';
     wb.created = new Date(0);
+    debtFlowSheet(wb, flow);
     monthlyDebtSheet(wb, debtHistory);
     debtorsCohortSheet(wb, debtorRows);
     recoveredPaymentsSheet(wb, payRows);
