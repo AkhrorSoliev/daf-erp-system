@@ -181,21 +181,24 @@ Jadval, filtrlar, 4 ta karta, `⋮` amallar (to'lov · qo'ng'iroq · va'da).
 Backend ishi yo'q — `getDebtors` allaqachon `promise` va `lastCall` beradi.
 `/payments/debtors` yangi sahifaga yo'naltiriladi.
 
-**Faza 2 — «Qachondan beri»**
+**Faza 2 — «Markaz qoplagani» paneli**
+Oy tanlagichli panel: X / Y / Z lifecycle + o'quvchilar ro'yxati. Backend ishi yo'q —
+`GET /salary/monthly/center-topup` allaqachon bor va Administratorga ochiq. Faza 1 dan
+keyin darrov qilinadi, chunki eng arzoni. Oylik sahifasidagi dialog **qoladi** (u yerda
+kontekst boshqa: ustoz oyligini ko'rib turib «bu pul kimdan?») va shu panelga havola qiladi.
+
+**Faza 3 — «Qachondan beri»**
 `debt-age-cache.ts` + `GET /payments/debtors` javobiga `debtSince` qo'shiladi.
 Ustun va «qarz yoshi» filtri. Testlar: kesh, TTL, Redis yiqilgan holat.
 
-**Faza 3 — «Dinamika» ko'rinishi**
+**Faza 4 — «Dinamika» ko'rinishi**
 `debt-history` komponentlari ko'chiriladi, endpointlarga Administrator/Kassir
 qo'shiladi + kontroller guard testlari yangilanadi.
 `/payments/debt-history` yo'naltiriladi.
 
-**Faza 4 — «Kechirilganlar» ko'rinishi**
+**Faza 5 — «Kechirilganlar» ko'rinishi**
 `debt-write-offs` ko'chiriladi va 560 qatorli fayl bo'linadi. Rollar kengaytiriladi
 (`reverse` CEO'da qoladi). `/payments/debt-write-offs` yo'naltiriladi.
-
-**Faza 5 — «Markaz qoplagani» paneli**
-Oy tanlagichli panel. Oylik sahifasidagi dialog qoladi va shu yerga havola qiladi.
 
 **Faza 6 — `/outreach` dan va'dalar olinadi**
 Tab o'chiriladi, o'rniga «Muddati o'tgan va'dalar: N» bandchasi.
