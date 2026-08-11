@@ -3,7 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, HandCoins, Info, Search, Settings2 } from "lucide-react";
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  HandCoins,
+  Info,
+  Search,
+  Settings2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +52,7 @@ import {
 import { SalarySettingsSheet } from "./salary-settings-sheet";
 import { SettleMonthDialog } from "./salary-settle-month-dialog";
 import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
+import { SalaryCenterTopUpDialog } from "./salary-center-topup-dialog";
 import {
   SalaryAdvanceBreakdownDrawer,
   type AdvanceTarget,
@@ -90,6 +98,8 @@ interface MonthlyResponse {
     centerAdvanced: number;
     centerRecovered: number;
     centerStillFronted: number;
+    /** Still collectable for THIS month: min(debt today, month's lesson cost). */
+    centerOwedByStudents: number;
   };
   // Non-teaching FIXED_MONTHLY staff (admin/cashier/director) — flat salary.
   staff: StaffRow[];
@@ -129,6 +139,53 @@ function MoneyOrDash({
   return <span className={cn("tabular-nums", className)}>{formatPrice(value)}</span>;
 }
 
+/**
+ * A card figure that opens its own drill-down.
+ *
+ * A bare number carries no hint that it does anything, and the card holds four
+ * of them — two inert, two not. The dotted underline says "link" and the arrow
+ * says "this opens something", so the two live figures read as different in
+ * kind from "Jami qo'shdi" / "Undirildi" rather than merely differently
+ * coloured. Falls back to plain text at zero: an affordance that opens an empty
+ * dialog is worse than none.
+ */
+function DrillDownAmount({
+  value,
+  onClick,
+  label,
+  className,
+}: {
+  value: number;
+  onClick: () => void;
+  /** Read out by screen readers and shown on hover — the number alone is mute. */
+  label: string;
+  className?: string;
+}) {
+  if (value <= 0)
+    return (
+      <div className={cn("text-lg font-semibold tabular-nums", className)}>
+        {formatPrice(value)}
+      </div>
+    );
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "group inline-flex items-center gap-1.5 rounded-sm text-lg font-semibold tabular-nums",
+        "underline decoration-dotted underline-offset-4 transition hover:decoration-solid",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className,
+      )}
+    >
+      {formatPrice(value)}
+      <ArrowUpRight className="size-4 shrink-0 opacity-50 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+    </button>
+  );
+}
+
 export function SalaryMonthlyView({
   isCeo,
   canPay,
@@ -141,6 +198,7 @@ export function SalaryMonthlyView({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [addAdvanceOpen, setAddAdvanceOpen] = useState(false);
+  const [topUpOpen, setTopUpOpen] = useState(false);
   const [advanceTarget, setAdvanceTarget] = useState<AdvanceTarget | null>(
     null,
   );
@@ -470,7 +528,7 @@ export function SalaryMonthlyView({
               </Tooltip>
             </TooltipProvider>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="text-xs text-muted-foreground">
                 Jami qo&apos;shdi
@@ -485,12 +543,40 @@ export function SalaryMonthlyView({
                 {formatPrice(totals.centerRecovered)}
               </div>
             </div>
+            {/* What can actually be collected from the people the center
+                fronted for — their debt TODAY. Deliberately NOT part of the
+                X = Y + Z arithmetic of the other three cells: it is a live
+                balance, not a share of this month's payroll. */}
+            <div>
+              <div className="text-xs text-muted-foreground">
+                O&apos;quvchilardan olinishi kerak
+              </div>
+              <DrillDownAmount
+                value={totals.centerOwedByStudents}
+                onClick={() => setTopUpOpen(true)}
+                label="O'quvchilardan olinishi kerak bo'lgan summa — kimdan undirish kerakligini ko'rish"
+              />
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Shu oy darslaridan qolgani
+              </div>
+            </div>
             <div>
               <div className="text-xs text-muted-foreground">
                 Qolgan (markaz)
               </div>
-              <div className="text-lg font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                {formatPrice(totals.centerStillFronted)}
+              {/* The only actionable figure of the three: X and Y are history,
+                  Z is money still to be collected. Clicking it opens the list
+                  of students it is owed by. */}
+              <DrillDownAmount
+                value={totals.centerStillFronted}
+                onClick={() => setTopUpOpen(true)}
+                label="Markaz qoplagan, hali qaytmagan summa — kimdan undirish kerakligini ko'rish"
+                className="text-amber-700 dark:text-amber-400"
+              />
+              {/* Symmetric with the cell to its left: each says what its number
+                  is priced on, and the underline + icon carry the "clickable". */}
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Ustoz ulushi
               </div>
             </div>
           </div>
@@ -565,6 +651,16 @@ export function SalaryMonthlyView({
           onSaved={bumpRefresh}
         />
       )}
+
+      {/* "Qolgan (markaz)" drill-down — who the center is still owed by.
+          Fed the SAME month + search the table uses, so its totals foot to the
+          card figure that opened it. */}
+      <SalaryCenterTopUpDialog
+        open={topUpOpen}
+        onOpenChange={setTopUpOpen}
+        month={shownMonth}
+        search={filters.search}
+      />
 
       {/* Avans breakdown drawer (opened from the Avans cell) */}
       <SalaryAdvanceBreakdownDrawer

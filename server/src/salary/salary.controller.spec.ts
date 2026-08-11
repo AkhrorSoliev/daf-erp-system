@@ -64,6 +64,9 @@ describe('SalaryController @Roles metadata', () => {
       'getMatrix',
       'getOverview',
       'getMonthly',
+      // The "Qolgan (markaz)" drill-down explains a figure already on the
+      // salary page, so it is gated exactly like the page that shows it.
+      'getCenterTopUpStudents',
       'getAdvances',
       'getAdvanceCalendar',
       'getPaymentBreakdown',

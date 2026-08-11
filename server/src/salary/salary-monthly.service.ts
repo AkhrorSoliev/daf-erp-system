@@ -12,6 +12,7 @@ import {
   type SalaryMonthlyQuery,
 } from './shared/resolve-monthly-scope';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
+import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
 
 export type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 
@@ -103,24 +104,17 @@ export class SalaryMonthlyService {
     // front so it is returned even on the zero-teacher early-return below.
     const { staff, staffTotals } = await this.staff.computeStaff(scope);
 
-    // Teacher roster for this month, in branch scope. `blocked` means the
-    // caller is branch-confined but has no branch — an impossible filter is
-    // used so they see nothing, rather than falling through to every branch.
-    const where: Prisma.UserWhereInput = {
-      deletedAt: null,
+    // Teacher roster for this month, in branch scope. Shared with the center
+    // top-up drill-down so the card's total and the student list behind it can
+    // never be computed over two different rosters.
+    const where: Prisma.UserWhereInput = buildTeacherRosterWhere({
       companyId,
-      roles: { some: { role: { name: 'Teacher' } } },
-      ...(blocked && { id: -1 }),
-      ...(userId !== undefined && { id: userId }),
-      ...(branchId !== undefined && { branches: { some: { branchId } } }),
-      ...(search && {
-        OR: [
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          ...(searchId !== null ? [{ id: searchId }] : []),
-        ],
-      }),
-    };
+      blocked,
+      userId,
+      branchId,
+      search,
+      searchId,
+    });
 
     const teachers = await this.prisma.user.findMany({
       where,
@@ -148,6 +142,9 @@ export class SalaryMonthlyService {
       centerAdvanced: 0,
       centerStillFronted: 0,
       centerRecovered: 0,
+      // Today's total debt of the students the center is still fronting for —
+      // the collectable figure the recovery drill-down lists per student.
+      centerOwedByStudents: 0,
     };
     if (ids.length === 0) {
       return {
@@ -199,6 +196,10 @@ export class SalaryMonthlyService {
           creditPeriodDate: true,
           isCenterTopUp: true,
           wasCenterTopUp: true,
+          // Who the center fronted for, and what those lessons cost — the two
+          // inputs to `centerOwedByStudents` below.
+          studentId: true,
+          perLessonCost: true,
         },
       }),
       // Billable attendances in the period (for the GAP sweep). Every held
@@ -411,6 +412,8 @@ export class SalaryMonthlyService {
       centerAdvanced: number;
       centerStillFronted: number;
     }
+    /** studentId → cost of THIS period's lessons the center is still fronting. */
+    const frontedCostByStudent = new Map<number, number>();
     const agg = new Map<number, Agg>();
     for (const id of ids) {
       agg.set(id, {
@@ -445,7 +448,14 @@ export class SalaryMonthlyService {
       // A carried-IN accrual (creditPeriodDate set → lessonDate was a prior month).
       if (ac.creditPeriodDate) a.carriedIn += ac.amount;
       if (ac.attendanceId) a.coveredAtt.add(ac.attendanceId);
-      if (ac.isCenterTopUp) a.centerStillFronted += ac.amount;
+      if (ac.isCenterTopUp) {
+        a.centerStillFronted += ac.amount;
+        frontedCostByStudent.set(
+          ac.studentId,
+          (frontedCostByStudent.get(ac.studentId) ?? 0) +
+            (ac.perLessonCost ?? 0),
+        );
+      }
     }
     for (const att of attendances) {
       const g = groupMap.get(att.groupId);
@@ -572,11 +582,46 @@ export class SalaryMonthlyService {
         centerAdvanced: s.centerAdvanced + r.centerAdvanced,
         centerStillFronted: s.centerStillFronted + r.centerStillFronted,
         centerRecovered: 0, // filled below (X − Z)
+        centerOwedByStudents: 0, // filled below (one query over the debtors)
       }),
       { ...zeroTotals },
     );
     // recovered (Y) = advanced (X) − still-fronted (Z).
     totals.centerRecovered = totals.centerAdvanced - totals.centerStillFronted;
+
+    // What is still collectable FOR THIS MONTH from the students the center
+    // fronted for: `min(their debt today, what this month's fronted lessons
+    // cost)`.
+    //
+    // Both caps are load-bearing, and the two figures that use only one of them
+    // are each wrong in a way that was seen on production July 2026:
+    //
+    //  - the lesson cost alone (21 234 015) ignores every payment made since.
+    //    #10026 showed 345 000 while owing 156 000 — he paid 400 000 on 14.07,
+    //    and an admin ringing him would have asked for twice the real amount.
+    //  - the debt alone (33 144 760) is every month's debt at once, so the
+    //    figure did not change when the month picker did. 115 students owed
+    //    more than this month's lessons; 14.3 mln of that belonged elsewhere.
+    //
+    // The minimum is an UPPER BOUND on this month's unpaid share, not an exact
+    // split: attributing a payment to a particular lesson would need a full
+    // FIFO replay of the ledger, and a bound that is honest about being a bound
+    // beats a precise-looking number nobody can reproduce. A student who has
+    // cleared their balance contributes 0, so hiding them from the drill-down
+    // does not move this total.
+    if (frontedCostByStudent.size > 0) {
+      const debtors = await this.prisma.student.findMany({
+        where: {
+          id: { in: [...frontedCostByStudent.keys()] },
+          balance: { lt: 0 },
+        },
+        select: { id: true, balance: true },
+      });
+      totals.centerOwedByStudents = debtors.reduce(
+        (s, d) => s + Math.min(-d.balance, frontedCostByStudent.get(d.id) ?? 0),
+        0,
+      );
+    }
 
     return { month, floorMonth, period, data: rows, totals, staff, staffTotals };
   }

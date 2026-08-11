@@ -24,6 +24,7 @@ import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
 import { SalaryMatrixQueryDto } from './dto/salary-matrix-query.dto';
 import { SalaryOverviewQueryDto } from './dto/salary-overview-query.dto';
 import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
+import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { BatchPayDto } from './dto/batch-pay.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
@@ -43,6 +44,7 @@ export class SalaryController {
     private breakdownService: SalaryBreakdownService,
     private periodSettingsService: SalaryPeriodSettingsService,
     private advanceCalendarService: SalaryAdvanceCalendarService,
+    private centerTopUpService: SalaryCenterTopUpService,
   ) {}
 
   // =========================================================================
@@ -294,6 +296,30 @@ export class SalaryController {
     // and the scope has already been intersected with the caller's ceiling, so
     // this can only narrow.
     return this.salaryService.getMonthly(
+      { ...query, branchId: singleBranchId(scope) },
+      companyId,
+      userId,
+    );
+  }
+
+  /**
+   * "Qolgan (markaz)" drill-down — markaz qaysi o'quvchilar uchun ustozlarga
+   * pul to'lab bergani va o'sha pul kimdan undirilishi kerakligi.
+   *
+   * Kartani ko'radigan rollar bilan bir xil gate: bu karta ostidagi raqamning
+   * yoyilmasi, yangi ma'lumot emas.
+   */
+  @Get('monthly/center-topup')
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getCenterTopUpStudents(
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    // Same `singleBranchId(scope)` narrowing as `/salary/monthly` — the card's
+    // total and this list must be computed over one and the same branch scope.
+    return this.centerTopUpService.getStudents(
       { ...query, branchId: singleBranchId(scope) },
       companyId,
       userId,
