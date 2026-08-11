@@ -320,7 +320,11 @@ export class SalaryController {
     // Same `singleBranchId(scope)` narrowing as `/salary/monthly` — the card's
     // total and this list must be computed over one and the same branch scope.
     return this.centerTopUpService.getStudents(
-      { ...query, branchId: singleBranchId(scope) },
+      {
+        ...query,
+        allMonths: query.allMonths === 'true',
+        branchId: singleBranchId(scope),
+      },
       companyId,
       userId,
     );

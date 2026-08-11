@@ -81,6 +81,33 @@ describe('SalaryCenterTopUpService', () => {
     service = module.get(SalaryCenterTopUpService);
   });
 
+  it('spans every month when asked, and says which months each debt came from', async () => {
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      accrual({ lessonDate: new Date('2026-07-10') }),
+      accrual({ lessonDate: new Date('2026-07-20'), attendanceId: 'a2' }),
+      accrual({ lessonDate: new Date('2026-08-05'), attendanceId: 'a3' }),
+    ]);
+    prisma.student.findMany.mockResolvedValue([student(10001)]);
+
+    const res = await service.getStudents(
+      { month: '2026-08', allMonths: true },
+      1001,
+      1,
+    );
+
+    // The period predicate is dropped entirely — a debt is one debt, and
+    // scoping to the picked month is what opened the page on an empty August.
+    const where = prisma.salaryAccrual.findMany.mock.calls[0][0].where;
+    expect(where.OR).toBeUndefined();
+
+    expect(res.data[0].months).toEqual([
+      { monthKey: '2026-07', lessons: 2, centerPaid: 40_000 },
+      { monthKey: '2026-08', lessons: 1, centerPaid: 20_000 },
+    ]);
+    expect(res.totals.monthKeys).toEqual(['2026-07', '2026-08']);
+    expect(res.totals.lessonCount).toBe(3);
+  });
+
   it('asks only for accruals the center is STILL fronting', async () => {
     await service.getStudents({ month: '2026-07' }, 1001, 1);
 

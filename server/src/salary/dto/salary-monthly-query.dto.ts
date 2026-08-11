@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Matches } from 'class-validator';
+import { IsIn, IsOptional, IsString, Matches } from 'class-validator';
 
 /**
  * Query for the "Ustozlar oyligi" monthly report — one row per teacher for a
@@ -16,4 +16,18 @@ export class SalaryMonthlyQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  /**
+   * Center top-up drill-down only: `'true'` spans EVERY month the center has
+   * fronted instead of the single `month`.
+   *
+   * The default view of the debt page needs this because a student's debt is
+   * one debt, not a stack of monthly ones — and because defaulting to the
+   * current month opened the page on an empty August while every July debtor
+   * sat behind a picker. The single-month mode stays for the salary card's
+   * dialog, which must foot to the figure that was clicked.
+   */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  allMonths?: string;
 }

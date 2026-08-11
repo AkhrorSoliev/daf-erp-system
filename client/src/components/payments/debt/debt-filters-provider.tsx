@@ -2,7 +2,6 @@
 
 import { createContext, use, type ReactNode } from "react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { currentMonthKey } from "../salary-utils";
 
 /**
  * Every filter the debt page owns, in one schema.
@@ -20,7 +19,10 @@ export const DEBT_FILTER_SCHEMA = {
   promise: { type: "string", defaultValue: "all" },
   page: { type: "number", defaultValue: 1 },
   pageSize: { type: "number", defaultValue: 10 },
-  /** Center top-up view only — that figure is month-scoped, the list is not. */
+  /**
+   * Center top-up view only. Empty = the whole period, which is the default:
+   * a debt builds up across months, so opening on one of them hides the rest.
+   */
   month: { type: "string", defaultValue: "" },
 } as const;
 
@@ -47,10 +49,4 @@ export function useDebtFilters() {
   if (!ctx)
     throw new Error("useDebtFilters faqat DebtFiltersProvider ichida ishlaydi");
   return ctx;
-}
-
-/** The selected month, defaulting to the current one when the URL is silent. */
-export function useSelectedMonth() {
-  const { filters } = useDebtFilters();
-  return filters.month || currentMonthKey();
 }

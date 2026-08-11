@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  monthKeyOf,
   resolveMonthlyScope,
   type SalaryMonthlyQuery,
 } from './shared/resolve-monthly-scope';
@@ -43,7 +44,7 @@ export class SalaryCenterTopUpService {
   constructor(private prisma: PrismaService) {}
 
   async getStudents(
-    query: SalaryMonthlyQuery,
+    query: SalaryMonthlyQuery & { allMonths?: boolean },
     companyId: number,
     performedById: number,
   ) {
@@ -54,6 +55,7 @@ export class SalaryCenterTopUpService {
       performedById,
     );
     const { month, floorMonth, period } = scope;
+    const allMonths = query.allMonths === true;
 
     const emptyTotals = {
       centerPaid: 0,
@@ -62,6 +64,8 @@ export class SalaryCenterTopUpService {
       lessonCount: 0,
       studentCount: 0,
       inactiveStudentCount: 0,
+      /** Every month the returned rows draw on, newest first. */
+      monthKeys: [] as string[],
     };
 
     const teachers = await this.prisma.user.findMany({
@@ -84,7 +88,14 @@ export class SalaryCenterTopUpService {
         // lesson back, so this is exactly the part still outstanding.
         // `wasCenterTopUp` would re-list students who have already settled.
         isCenterTopUp: true,
-        ...accrualPeriodWhere(scope),
+        // `allMonths` drops the period bound entirely rather than widening it.
+        // The debt a student carries is one debt, not a stack of monthly ones,
+        // and asking "which month is this from" of a single balance has no
+        // answer — so the page's default view spans everything the center has
+        // fronted and reports WHICH months each student's lessons fall in.
+        // A bound is still implicit: `isCenterTopUp` only exists from the
+        // top-up era on (2026-07).
+        ...(allMonths ? {} : accrualPeriodWhere(scope)),
       },
       select: {
         userId: true,
@@ -99,6 +110,10 @@ export class SalaryCenterTopUpService {
       return { month, floorMonth, period, data: [], totals: emptyTotals };
     }
 
+    interface MonthBucket {
+      lessons: number;
+      centerPaid: number;
+    }
     interface Bucket {
       lessons: number;
       centerPaid: number;
@@ -107,9 +122,17 @@ export class SalaryCenterTopUpService {
       teacherIds: Set<number>;
       firstLesson: Date;
       lastLesson: Date;
+      /** Per-month split of this student's fronted lessons. */
+      months: Map<string, MonthBucket>;
     }
     const byStudent = new Map<number, Bucket>();
+    const allMonthKeys = new Set<string>();
     for (const a of accruals) {
+      // Bucketed by the month the LESSON falls in — "when did this arise" —
+      // rather than by the payroll period that settled it. A student whose
+      // debt spans July and August should read as spanning July and August.
+      const key = monthKeyOf(a.lessonDate);
+      allMonthKeys.add(key);
       const b = byStudent.get(a.studentId);
       if (!b) {
         byStudent.set(a.studentId, {
@@ -120,6 +143,7 @@ export class SalaryCenterTopUpService {
           teacherIds: new Set([a.userId]),
           firstLesson: a.lessonDate,
           lastLesson: a.lessonDate,
+          months: new Map([[key, { lessons: 1, centerPaid: a.amount }]]),
         });
         continue;
       }
@@ -130,6 +154,13 @@ export class SalaryCenterTopUpService {
       b.teacherIds.add(a.userId);
       if (a.lessonDate < b.firstLesson) b.firstLesson = a.lessonDate;
       if (a.lessonDate > b.lastLesson) b.lastLesson = a.lessonDate;
+      const m = b.months.get(key);
+      if (m) {
+        m.lessons += 1;
+        m.centerPaid += a.amount;
+      } else {
+        b.months.set(key, { lessons: 1, centerPaid: a.amount });
+      }
     }
 
     const groupIds = [
@@ -201,10 +232,21 @@ export class SalaryCenterTopUpService {
           })),
           firstLesson: b.firstLesson,
           lastLesson: b.lastLesson,
+          /**
+           * Which months this student's fronted lessons fall in, oldest first.
+           * A debt that built up over July AND August has to say so — reading
+           * one month's slice as the whole story is what sent the page to an
+           * empty August and hid every July debtor behind a picker.
+           */
+          months: [...b.months.entries()]
+            .sort(([a], [c]) => a.localeCompare(c))
+            .map(([monthKey, m]) => ({
+              monthKey,
+              lessons: m.lessons,
+              centerPaid: m.centerPaid,
+            })),
         };
       })
-      // Biggest center exposure first — that is the order a recovery call list
-      // is worked through.
       // Biggest collectable debt first — that is the order a recovery call list
       // is worked through. (It used to sort by the center's own outlay, which
       // is not what the caller is trying to bring in.)
@@ -227,8 +269,9 @@ export class SalaryCenterTopUpService {
         // has to be chased by hand. Counted here so the UI can say so.
         inactiveStudentCount:
           t.inactiveStudentCount + (r.student.status === 'ACTIVE' ? 0 : 1),
+        monthKeys: t.monthKeys,
       }),
-      { ...emptyTotals },
+      { ...emptyTotals, monthKeys: [...allMonthKeys].sort() },
     );
 
     return { month, floorMonth, period, data: rows, totals };

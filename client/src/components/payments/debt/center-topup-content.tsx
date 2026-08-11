@@ -48,6 +48,8 @@ export interface TopUpRow {
   teachers: { id: number; name: string }[];
   firstLesson: string;
   lastLesson: string;
+  /** Which months this student's fronted lessons fall in, oldest first. */
+  months: { monthKey: string; lessons: number; centerPaid: number }[];
 }
 
 export interface TopUpResponse {
@@ -60,6 +62,7 @@ export interface TopUpResponse {
     lessonCount: number;
     studentCount: number;
     inactiveStudentCount: number;
+    monthKeys: string[];
   };
 }
 
@@ -91,13 +94,18 @@ const PAGE_SIZES = [10, 20, 30, 40, 50];
 const hasDebt = (r: TopUpRow) => r.studentDebt > 0;
 
 interface Props {
-  /** The month to report on. The picker, when there is one, lives in the parent. */
+  /**
+   * The month to report on, or `"all"` for every month the center has fronted.
+   * The picker, when there is one, lives in the parent.
+   */
   month: string;
   /** Teacher-name filter, so this can foot to a filtered salary table. */
   search?: string;
   /** false while a Dialog holding this is closed — skips the request. */
   enabled?: boolean;
 }
+
+export const ALL_MONTHS = "all";
 
 /**
  * "Markaz qo'shimchasi — kimdan undirish kerak": the students the center is
@@ -113,11 +121,17 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  const allMonths = month === ALL_MONTHS;
+
   const { data, isLoading } = useQuery<TopUpResponse>({
     queryKey: ["salary-center-topup", month, search ?? ""],
     queryFn: async () => {
       const res = await api.get("/salary/monthly/center-topup", {
-        params: { month: month || undefined, search: search || undefined },
+        params: {
+          month: allMonths ? undefined : month || undefined,
+          allMonths: allMonths ? "true" : undefined,
+          search: search || undefined,
+        },
       });
       return res.data;
     },
@@ -191,8 +205,9 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
   if (!data || data.data.length === 0) {
     return (
       <div className="py-10 text-center text-sm text-muted-foreground">
-        {monthLabel(month)}da markaz qoplagan, hali qaytmagan dars yo&apos;q —
-        hammasi undirilgan.
+        {allMonths
+          ? "Markaz qoplagan, hali qaytmagan dars yo'q — hammasi undirilgan."
+          : `${monthLabel(month)}da markaz qoplagan, hali qaytmagan dars yo'q. Butun davrni ko'rish uchun oy tanlovini «Butun davr»ga qo'ying.`}
       </div>
     );
   }
@@ -205,7 +220,8 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
         <div>
           <div className="text-xs text-muted-foreground">
             Markaz ustozlarga to&apos;lagan
-            {isFiltered && <span className="ml-1">— tanlangan</span>}
+            {allMonths ? " — butun davr" : ` — ${monthLabel(month)}`}
+            {isFiltered && <span className="ml-1">(tanlangan)</span>}
           </div>
           <div className="text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-400">
             {formatPrice(shown.centerPaid)} so&apos;m
@@ -234,9 +250,9 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
           </div>
           <div className="mt-0.5 text-xs text-muted-foreground">
             Har o&apos;quvchining profilidagi qarzi — telefonda aynan shu summa
-            so&apos;raladi. Oy tanlovi kimlar ro&apos;yxatga tushishini
-            o&apos;zgartiradi, qarzning o&apos;zini emas: qarz oylarga
-            bo&apos;linmaydi.
+            so&apos;raladi. Qarz oylarga bo&apos;linmaydi; qaysi oylardagi
+            darslar sababli qarzdor bo&apos;lgani «Qaysi oylardan»
+            ustunida ko&apos;rinadi.
           </div>
         </div>
       </div>
@@ -275,6 +291,10 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>O&apos;quvchi</TableHead>
               <TableHead>Guruh</TableHead>
+              {/* A debt built up over several months has to say so — one
+                  month's slice read as the whole story is what sent this page
+                  to an empty August with every July debtor behind a picker. */}
+              <TableHead>Qaysi oylardan</TableHead>
               <TableHead className="text-right">Darslar</TableHead>
               {/* Two columns, two questions — nothing else. The month's lesson
                   price used to sit between them and was neither: not what the
@@ -291,7 +311,7 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
             {pageRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   Bu holatda o&apos;quvchi yo&apos;q — filtrni o&apos;zgartirib
@@ -333,6 +353,23 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
                       {format(new Date(r.lastLesson), "dd.MM.yyyy")}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {r.months.map((m) => (
+                        <Badge
+                          key={m.monthKey}
+                          variant="outline"
+                          className="font-normal"
+                          title={`${monthLabel(m.monthKey)}: ${m.lessons} dars · markaz ${formatPrice(m.centerPaid)} so'm`}
+                        >
+                          {monthLabel(m.monthKey)}
+                          <span className="ml-1 text-muted-foreground">
+                            {m.lessons}
+                          </span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {r.lessons}
                   </TableCell>
@@ -352,6 +389,7 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
               <TableRow>
                 <TableCell className="border-r" />
                 <TableCell className="font-semibold">Jami</TableCell>
+                <TableCell />
                 <TableCell />
                 <TableCell className="text-right font-semibold tabular-nums">
                   {shown.lessons}
