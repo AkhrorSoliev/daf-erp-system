@@ -98,7 +98,7 @@ interface MonthlyResponse {
     centerAdvanced: number;
     centerRecovered: number;
     centerStillFronted: number;
-    /** Still collectable for THIS month: min(debt today, month's lesson cost). */
+    /** Debt of the students the center fronted for, as their profiles show it. */
     centerOwedByStudents: number;
   };
   // Non-teaching FIXED_MONTHLY staff (admin/cashier/director) — flat salary.
@@ -557,7 +557,7 @@ export function SalaryMonthlyView({
                 label="O'quvchilardan olinishi kerak bo'lgan summa — kimdan undirish kerakligini ko'rish"
               />
               <div className="mt-0.5 text-xs text-muted-foreground">
-                Shu oy darslaridan qolgani
+                Shu o&apos;quvchilarning qarzi
               </div>
             </div>
             <div>

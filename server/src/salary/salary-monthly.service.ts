@@ -196,10 +196,8 @@ export class SalaryMonthlyService {
           creditPeriodDate: true,
           isCenterTopUp: true,
           wasCenterTopUp: true,
-          // Who the center fronted for, and what those lessons cost — the two
-          // inputs to `centerOwedByStudents` below.
+          // Who the center fronted for — the input to `centerOwedByStudents`.
           studentId: true,
-          perLessonCost: true,
         },
       }),
       // Billable attendances in the period (for the GAP sweep). Every held
@@ -412,8 +410,8 @@ export class SalaryMonthlyService {
       centerAdvanced: number;
       centerStillFronted: number;
     }
-    /** studentId → cost of THIS period's lessons the center is still fronting. */
-    const frontedCostByStudent = new Map<number, number>();
+    /** Students the center is still fronting lessons for, this period. */
+    const frontedStudentIds = new Set<number>();
     const agg = new Map<number, Agg>();
     for (const id of ids) {
       agg.set(id, {
@@ -450,11 +448,7 @@ export class SalaryMonthlyService {
       if (ac.attendanceId) a.coveredAtt.add(ac.attendanceId);
       if (ac.isCenterTopUp) {
         a.centerStillFronted += ac.amount;
-        frontedCostByStudent.set(
-          ac.studentId,
-          (frontedCostByStudent.get(ac.studentId) ?? 0) +
-            (ac.perLessonCost ?? 0),
-        );
+        frontedStudentIds.add(ac.studentId);
       }
     }
     for (const att of attendances) {
@@ -589,38 +583,26 @@ export class SalaryMonthlyService {
     // recovered (Y) = advanced (X) − still-fronted (Z).
     totals.centerRecovered = totals.centerAdvanced - totals.centerStillFronted;
 
-    // What is still collectable FOR THIS MONTH from the students the center
-    // fronted for: `min(their debt today, what this month's fronted lessons
-    // cost)`.
+    // What can be collected from the students the center fronted for: the sum
+    // of their debts as their profiles show them.
     //
-    // Both caps are load-bearing, and the two figures that use only one of them
-    // are each wrong in a way that was seen on production July 2026:
+    // The MONTH scopes the set of students, not the debt of each. Two attempts
+    // to scope the debt itself were both wrong on production July 2026. The
+    // month's lesson cost (21 234 015) ignores every payment made since —
+    // #10026 showed 345 000 while owing 156 000. Capping at `min(debt, lesson
+    // cost)` (18 865 019) was worse in a quieter way: the drill-down then
+    // reported 466 662 for #10058 while his profile said 624 989, so the admin
+    // ringing him had two numbers and no rule for choosing. A balance settles
+    // oldest-first across every month; it has no per-month share to report.
     //
-    //  - the lesson cost alone (21 234 015) ignores every payment made since.
-    //    #10026 showed 345 000 while owing 156 000 — he paid 400 000 on 14.07,
-    //    and an admin ringing him would have asked for twice the real amount.
-    //  - the debt alone (33 144 760) is every month's debt at once, so the
-    //    figure did not change when the month picker did. 115 students owed
-    //    more than this month's lessons; 14.3 mln of that belonged elsewhere.
-    //
-    // The minimum is an UPPER BOUND on this month's unpaid share, not an exact
-    // split: attributing a payment to a particular lesson would need a full
-    // FIFO replay of the ledger, and a bound that is honest about being a bound
-    // beats a precise-looking number nobody can reproduce. A student who has
-    // cleared their balance contributes 0, so hiding them from the drill-down
-    // does not move this total.
-    if (frontedCostByStudent.size > 0) {
+    // A student who has cleared their balance contributes 0, which is why
+    // hiding them from the drill-down list does not move this total.
+    if (frontedStudentIds.size > 0) {
       const debtors = await this.prisma.student.findMany({
-        where: {
-          id: { in: [...frontedCostByStudent.keys()] },
-          balance: { lt: 0 },
-        },
-        select: { id: true, balance: true },
+        where: { id: { in: [...frontedStudentIds] }, balance: { lt: 0 } },
+        select: { balance: true },
       });
-      totals.centerOwedByStudents = debtors.reduce(
-        (s, d) => s + Math.min(-d.balance, frontedCostByStudent.get(d.id) ?? 0),
-        0,
-      );
+      totals.centerOwedByStudents = debtors.reduce((s, d) => s - d.balance, 0);
     }
 
     return { month, floorMonth, period, data: rows, totals, staff, staffTotals };

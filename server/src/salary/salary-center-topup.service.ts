@@ -24,16 +24,19 @@ import {
  * `getMonthly`'s `totals.centerStillFronted`. Re-deriving either half is how the
  * two surfaces would come to disagree, so neither is re-derived.
  *
- * **Two different sums, both real.** `centerPaid` is what the CENTER spent (the
- * teacher's share of the lesson — e.g. 30%). `studentOwed` is what the STUDENT
- * owes for those same lessons (the full lesson price). On production July 2026
- * they are 10 987 285 and 21 234 015 — recovering the second is what makes the
- * first whole. Showing only one of them answers the wrong question, so both are
- * returned and the UI shows both.
+ * **Two different sums, and only one of them is month-scoped.** `centerPaid` is
+ * what the CENTER spent on this month's fronted lessons (the teacher's share).
+ * `studentDebt` is what that student owes TODAY — the figure on their profile,
+ * and the one an admin reads out on the phone.
  *
- * `perLessonCost` is the frozen price stamped on the accrual at write time, not
- * a live course-price join: a course that got more expensive in August must not
- * inflate what a July debtor is asked for.
+ * The debt is deliberately NOT sliced by month, and two attempts to slice it
+ * were both wrong. Reporting the month's lesson cost ignores every payment made
+ * since (#10026 showed 345 000 while owing 156 000). Capping it at
+ * `min(debt, month's lessons)` failed more quietly: #10058 then read 466 662
+ * against a profile saying 624 989, leaving an admin mid-call with two numbers
+ * and no way to choose. A balance settles oldest-first across every month, so
+ * it has no per-month share to report; what the month scopes is who appears
+ * here and what the center paid for them.
  */
 @Injectable()
 export class SalaryCenterTopUpService {
@@ -170,18 +173,24 @@ export class SalaryCenterTopUpService {
           lessons: b.lessons,
           centerPaid: b.centerPaid,
           /**
-           * What is still to be collected FOR THIS MONTH — `min(debt today,
-           * what this month's fronted lessons cost)`. See the long note in
-           * `SalaryMonthlyService`: the lesson cost alone ignores payments made
-           * since (#10026 read 345 000 while owing 156 000), and the raw debt
-           * alone is every month at once, so it did not change when the month
-           * picker did.
+           * What to ask this student for: their debt as the profile shows it.
+           *
+           * This is deliberately NOT month-scoped, and two earlier attempts to
+           * make it so were both wrong. The month's lesson cost ignores every
+           * payment since (#10026 read 345 000 while owing 156 000). Capping it
+           * at `min(debt, month's lessons)` was worse in a quieter way: #10058
+           * then read 466 662 while his profile said 624 989, so an admin on
+           * the phone had two numbers and no way to choose.
+           *
+           * A balance cannot be divided by month — the ledger settles
+           * oldest-first across everything — and an admin does not collect a
+           * month, they collect a debt. What the month DOES scope is who
+           * appears here and what the center paid out for them; both of those
+           * still move with the picker.
            */
-          studentDebt: Math.min(s.balance < 0 ? -s.balance : 0, b.studentOwed),
+          studentDebt: s.balance < 0 ? -s.balance : 0,
           /** This month's fronted lessons at their frozen price. Audit only. */
           studentOwed: b.studentOwed,
-          /** The student's whole debt, every month. Audit only. */
-          totalDebt: s.balance < 0 ? -s.balance : 0,
           groups: [...b.groupIds].map((id) => ({
             id,
             name: groupName.get(id) ?? id,

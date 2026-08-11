@@ -246,7 +246,7 @@ describe('SalaryCenterTopUpService', () => {
     expect(drill.totals.centerPaid).toBe(card.totals.centerStillFronted);
   });
 
-  it('bounds each student by BOTH their debt and this month`s lessons', async () => {
+  it('reports the debt the student profile shows, never a monthly slice', async () => {
     prisma.salaryAccrual.findMany.mockResolvedValue([
       accrual(), // perLessonCost 33 333
       accrual({ attendanceId: 'a2' }),
@@ -254,25 +254,24 @@ describe('SalaryCenterTopUpService', () => {
       accrual({ studentId: 10003, attendanceId: 'a4' }),
     ]);
     prisma.student.findMany.mockResolvedValue([
-      // Debt is SMALLER than the two lessons — he has paid since. Charging the
-      // lesson cost (66 666) is what #10026 did: twice the real figure.
+      // Owes LESS than the two lessons cost — he has paid since. Reporting the
+      // lesson cost (66 666) is the #10026 defect: twice the real figure.
       student(10001, { balance: -20_000 }),
-      // Debt is LARGER than this month's one lesson — the surplus is another
-      // month's and must not be counted here.
+      // Owes MORE than this month's one lesson. Capping at the lesson cost is
+      // the #10058 defect: the row said 466 662, the profile said 624 989.
       student(10002, { balance: -500_000 }),
-      // Cleared: nothing to collect, contributes 0.
+      // Cleared: nothing to collect, never listed.
       student(10003, { balance: 5_000 }),
     ]);
 
     const res = await service.getStudents({ month: '2026-07' }, 1001, 1);
 
     const byId = new Map(res.data.map((r) => [r.student.id, r]));
-    expect(byId.get(10001)!.studentDebt).toBe(20_000); // capped by the debt
-    expect(byId.get(10002)!.studentDebt).toBe(33_333); // capped by the month
-    expect(byId.get(10002)!.totalDebt).toBe(500_000); // audit-only
+    expect(byId.get(10001)!.studentDebt).toBe(20_000);
+    expect(byId.get(10002)!.studentDebt).toBe(500_000);
     expect(byId.get(10003)!.studentDebt).toBe(0);
-    expect(res.totals.studentDebt).toBe(53_333);
-    // Biggest collectable figure first — the order a call list is worked.
+    expect(res.totals.studentDebt).toBe(520_000);
+    // Biggest debt first — the order a call list is worked.
     expect(res.data[0].student.id).toBe(10002);
   });
 });
