@@ -193,12 +193,52 @@ describe('ReportsController — role guards', () => {
     'getTeacherPaymentReports',
     'getTeacherGroupsReport',
     'getMonthlyDebtRecovery',
-    'getDebtHistory',
-    'getMonthDebtDetail',
-    'exportMonthlyDebtExcel',
     'getFinancialTrend',
     'getIncomeMonthAttribution',
   ] as const;
+
+  // Widened 2026-08-12 for the single debt page (/payments/debt): the debt
+  // history, its month drill-down and its Excel are tabs there, and the CEO's
+  // call was that the page must not change shape by viewer. `getDebtWriteOffsSummary`
+  // joins them for the same reason. `getMonthlyDebtRecovery` above is NOT in this
+  // set — it is the cohort report behind the Excel workbook, not a page.
+  const debtPageEndpoints = [
+    'getDebtHistory',
+    'getMonthDebtDetail',
+    'exportMonthlyDebtExcel',
+    'getDebtWriteOffsSummary',
+  ] as const;
+
+  for (const method of debtPageEndpoints) {
+    describe(`${method}() — debt page, every staff role`, () => {
+      it(`allows CEO, BD, Administrator and Cashier on ${method}`, () => {
+        expect(reflector.get<string[]>(ROLES_KEY, controller[method])).toEqual([
+          'CEO',
+          'Branch Director',
+          'Administrator',
+          'Cashier',
+        ]);
+        for (const role of [
+          'CEO',
+          'Branch Director',
+          'Administrator',
+          'Cashier',
+        ]) {
+          expect(
+            guard.canActivate(mockExecutionContext(controller[method], [role])),
+          ).toBe(true);
+        }
+      });
+
+      it('still denies Teacher', () => {
+        expect(() =>
+          guard.canActivate(
+            mockExecutionContext(controller[method], ['Teacher']),
+          ),
+        ).toThrow(ForbiddenException);
+      });
+    });
+  }
 
   for (const method of narrowedEndpoints) {
     describe(`${method}() — method-level @Roles`, () => {
@@ -310,31 +350,9 @@ describe('ReportsController — role guards', () => {
     });
   });
 
-  describe('getDebtWriteOffsSummary() guard — CEO + BD only', () => {
-    it('allows CEO', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
-        'CEO',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Branch Director', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
-        'Branch Director',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('denies Administrator (financial-correction aggregate hidden from Admin)', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
-        'Administrator',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-    it('denies Cashier', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
-        'Cashier',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
+  // Role coverage for getDebtWriteOffsSummary lives in the `debtPageEndpoints`
+  // loop above — it is one of the four the debt page reads.
+  describe('getDebtWriteOffsSummary() — still closed to Teacher', () => {
     it('denies Teacher', () => {
       const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
         'Teacher',

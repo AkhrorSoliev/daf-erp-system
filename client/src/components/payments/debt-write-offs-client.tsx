@@ -171,17 +171,10 @@ export function DebtWriteOffsClient() {
   const resetFilterPage = () => setPage(1);
 
   return (
+    // No heading of its own: this renders both as its own page and as a tab of
+    // /payments/debt, and only the caller knows which title the reader is
+    // already looking at. The page supplies one; the tab supplies its own line.
     <div className="space-y-6">
-      <header className="flex flex-col gap-1">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">
-          Qarz hisobdan chiqarishlar
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          &quot;Yo&apos;qolgan o&apos;quvchi&quot; flow ostida joriy sikldan
-          hisobdan chiqarilgan qarzlar jurnali
-        </p>
-      </header>
-
       <SummaryCard totalAmount={totalAmount} totalRows={totalRows} />
 
       <div className="flex flex-wrap items-center gap-2">

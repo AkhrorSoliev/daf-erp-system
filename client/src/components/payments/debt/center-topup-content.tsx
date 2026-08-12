@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+
 import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +26,7 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
-import { monthLabel } from "../salary-utils";
+import { monthLabel, monthShort } from "../salary-utils";
 
 export interface TopUpRow {
   student: {
@@ -92,6 +92,24 @@ const PAGE_SIZES = [10, 20, 30, 40, 50];
  * anything", so that is what decides.
  */
 const hasDebt = (r: TopUpRow) => r.studentDebt > 0;
+
+/**
+ * Month chip text: "Iyul", not "Iyul 2026".
+ *
+ * Three chips carrying the same year read as three long labels the eye has to
+ * strip before it can compare them. The year comes back only when a row
+ * actually straddles two of them — "Dekabr, Yanvar" is genuinely ambiguous
+ * without it. The full label stays in the chip's tooltip either way.
+ */
+function chipLabel(
+  monthKey: string,
+  months: TopUpRow["months"],
+): string {
+  const years = new Set(months.map((m) => m.monthKey.slice(0, 4)));
+  return years.size > 1
+    ? `${monthShort(monthKey)} ’${monthKey.slice(2, 4)}`
+    : monthShort(monthKey);
+}
 
 interface Props {
   /**
@@ -346,26 +364,23 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
                       )}
                     </div>
                   </TableCell>
+                  {/* The first/last lesson dates used to sit under the group
+                      name. The months column says the same thing in less room,
+                      so the exact dates moved into its tooltip. */}
                   <TableCell className="text-sm">
                     {r.groups.map((g) => g.name).join(", ")}
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(r.firstLesson), "dd.MM")} —{" "}
-                      {format(new Date(r.lastLesson), "dd.MM.yyyy")}
-                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {r.months.map((m) => (
                         <Badge
                           key={m.monthKey}
-                          variant="outline"
-                          className="font-normal"
+                          variant="secondary"
+                          className="px-1.5 py-0 text-[11px] font-normal"
                           title={`${monthLabel(m.monthKey)}: ${m.lessons} dars · markaz ${formatPrice(m.centerPaid)} so'm`}
                         >
-                          {monthLabel(m.monthKey)}
-                          <span className="ml-1 text-muted-foreground">
-                            {m.lessons}
-                          </span>
+                          {chipLabel(m.monthKey, r.months)}
+                          <span className="ml-1 opacity-60">{m.lessons}</span>
                         </Badge>
                       ))}
                     </div>

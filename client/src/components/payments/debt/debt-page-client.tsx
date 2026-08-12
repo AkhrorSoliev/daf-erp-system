@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DebtFiltersProvider, useDebtFilters } from "./debt-filters-provider";
 import { DebtorsView } from "./debtors-view";
 import { CenterTopUpView } from "./center-topup-view";
+import { DynamicsView } from "./dynamics-view";
+import { WriteOffsView } from "./write-offs-view";
 
 /**
  * One page for everything to do with money owed to the center.
@@ -23,6 +25,8 @@ import { CenterTopUpView } from "./center-topup-view";
 const TABS = [
   { value: "qarzdorlar", label: "Qarzdorlar" },
   { value: "markaz", label: "Markaz qoplagani" },
+  { value: "dinamika", label: "Dinamika" },
+  { value: "kechirilgan", label: "Kechirilganlar" },
 ] as const;
 
 export function DebtPageClient() {
@@ -71,6 +75,12 @@ function DebtPageTabs() {
         </TabsContent>
         <TabsContent value="markaz" className="mt-6">
           <CenterTopUpView />
+        </TabsContent>
+        <TabsContent value="dinamika" className="mt-6">
+          <DynamicsView />
+        </TabsContent>
+        <TabsContent value="kechirilgan" className="mt-6">
+          <WriteOffsView />
         </TabsContent>
       </Tabs>
     </div>

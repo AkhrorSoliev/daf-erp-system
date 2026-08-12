@@ -24,6 +24,8 @@ export const DEBT_FILTER_SCHEMA = {
    * a debt builds up across months, so opening on one of them hides the rest.
    */
   month: { type: "string", defaultValue: "" },
+  /** Dynamics view only — whose debt the roll-forward is about. */
+  holat: { type: "string", defaultValue: "all" },
 } as const;
 
 type DebtFilters = ReturnType<typeof useUrlFilters<typeof DEBT_FILTER_SCHEMA>>;

@@ -355,7 +355,7 @@ export class ReportsController {
   //
   // Declared BEFORE the ":monthKey" param route so "history" isn't captured.
   @Get('monthly-debt-recovery/history')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   getDebtHistory(
     @Query() query: DebtHistoryQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -369,7 +369,7 @@ export class ReportsController {
   // that month in debt"; this answers "whose charges FROM that month are still
   // unpaid", so the same student shows a different figure under each month.
   @Get('monthly-debt-recovery/:monthKey/aging')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   getMonthAgingDetail(
     @Param('monthKey') monthKey: string,
     @Query() query: DebtHistoryQueryDto,
@@ -393,7 +393,7 @@ export class ReportsController {
   // Undirildi + Kechirilgan sheets). CEO/BD only. Note: this static route must
   // be declared BEFORE the ":monthKey" param route so "excel" isn't captured.
   @Get('monthly-debt-recovery/excel')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   async exportMonthlyDebtExcel(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -415,7 +415,7 @@ export class ReportsController {
 
   // Per-month drill-down: who owed at month-end, who paid, who was written off.
   @Get('monthly-debt-recovery/:monthKey/detail')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   getMonthDebtDetail(
     @Param('monthKey') monthKey: string,
     @CurrentUser('companyId') companyId: number,
@@ -435,7 +435,7 @@ export class ReportsController {
   // tighter than the class default since Administrators should not see
   // financial-correction aggregates.
   @Get('debt-write-offs-summary')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   async getDebtWriteOffsSummary(
     @Query() query: ReportsQueryDto,
     @CurrentUser()
