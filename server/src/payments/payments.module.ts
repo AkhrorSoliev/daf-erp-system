@@ -3,6 +3,7 @@ import { PaymentsService } from './payments.service';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
+import { DebtAgeService } from './debt-age.service';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
@@ -19,6 +20,7 @@ import { MockExamsModule } from '../mock-exams/mock-exams.module';
     PaymentsWriteService,
     PaymentsReadService,
     PaymentsDebtorsService,
+    DebtAgeService,
     PaymentsPreviewService,
     PaymentEventsListener,
   ],

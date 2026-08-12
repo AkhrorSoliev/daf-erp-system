@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentStatus, TransactionType } from '@prisma/client';
+import { replayDebtOrigin } from '../common/finance/debt-origin';
 import {
   type ReportBranchIds,
   studentBranchWhere,
@@ -527,47 +528,18 @@ export class ReportsDebtHistoryService {
       const paid = new Map<string, number>();
       const added = new Map<string, number>();
 
-      // FIFO aging queue: every uncovered charge is parked under the month it
-      // landed in, and every credit eats the OLDEST fragment first — which is
-      // how the billing engine itself settles. Whatever is left at the end IS
-      // the student's current debt, already split by where it came from.
-      const aging: Array<{ month: string; left: number }> = [];
-      let head = 0;
-      let prepaid = 0;
+      // Where the debt came from and how long it has stood: one shared rule,
+      // in `common/finance/debt-origin`. The debtors list reads the same
+      // function, so the two surfaces cannot describe one student differently.
+      const origin = replayDebtOrigin(list);
+      since = origin.since;
+      for (const [k, v] of origin.addedByMonth) added.set(k, v);
 
       for (const r of list) {
         const key = tashkentMonthKey(r.createdAt);
         const before = debt;
         balance += r.amount;
         debt = balance < 0 ? -balance : 0;
-
-        if (r.amount < 0) {
-          // A charge: an advance absorbs it first; only the uncovered remainder
-          // becomes debt attributable to this month.
-          let debit = -r.amount;
-          const absorbed = Math.min(prepaid, debit);
-          prepaid -= absorbed;
-          debit -= absorbed;
-          if (debit > 0) {
-            aging.push({ month: key, left: debit });
-            added.set(key, (added.get(key) ?? 0) + debit);
-          }
-        } else {
-          let credit = r.amount;
-          while (credit > 0 && head < aging.length) {
-            const frag = aging[head];
-            const take = Math.min(credit, frag.left);
-            frag.left -= take;
-            credit -= take;
-            if (frag.left === 0) head++;
-          }
-          if (credit > 0) prepaid += credit;
-        }
-
-        // The streak that matters is "in debt continuously until now", so it
-        // restarts every time the balance climbs back to zero or above.
-        if (before === 0 && debt > 0) since = r.createdAt;
-        else if (debt === 0) since = null;
 
         const change = debt - before;
         if (change !== 0) {
@@ -592,16 +564,8 @@ export class ReportsDebtHistoryService {
         touched.set(key, debt);
       }
 
-      // Whatever survived the FIFO walk is this student's live debt, already
-      // labelled by origin month.
-      const mine = new Map<string, number>();
-      for (let i = head; i < aging.length; i++) {
-        const frag = aging[i];
-        if (frag.left > 0) {
-          mine.set(frag.month, (mine.get(frag.month) ?? 0) + frag.left);
-        }
-      }
-      if (mine.size > 0) agingPerStudent.set(student.id, mine);
+      if (origin.byMonth.size > 0)
+        agingPerStudent.set(student.id, origin.byMonth);
       if (added.size > 0) addedPerStudent.set(student.id, added);
 
       // Carry the last known debt across months with no ledger activity.

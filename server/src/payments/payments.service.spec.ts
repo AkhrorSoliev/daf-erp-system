@@ -5,6 +5,7 @@ import { PaymentsService } from './payments.service';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
+import { DebtAgeService } from './debt-age.service';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -142,6 +143,10 @@ describe('PaymentsService', () => {
         PaymentsWriteService,
         PaymentsReadService,
         PaymentsDebtorsService,
+        {
+          provide: DebtAgeService,
+          useValue: { getDebtAges: jest.fn().mockResolvedValue(new Map()) },
+        },
         PaymentsPreviewService,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },

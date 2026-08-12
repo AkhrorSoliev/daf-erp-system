@@ -16,10 +16,11 @@ import { DebtWriteOffsClient } from "../debt-write-offs-client";
 export function WriteOffsView() {
   return (
     <div className="space-y-4">
-      <p className="max-w-2xl text-sm text-muted-foreground">
-        Undirib bo&apos;lmagani uchun hisobdan chiqarilgan qarzlar. Bu pul
-        qaytmaydi — shuning uchun u &laquo;Jami qarz&raquo;dan chiqib ketgan,
-        lekin yo&apos;qolib qolmagan: sababi va kim qilgani shu yerda qoladi.
+      {/* One line. The previous three explained the accounting; a reader who
+          opens a tab called "Kechirilganlar" already knows why they are here. */}
+      <p className="text-sm text-muted-foreground">
+        O&apos;quvchi o&apos;qishni tashlagani uchun undirilmaydigan deb
+        belgilangan qarzlar.
       </p>
       <DebtWriteOffsClient />
     </div>

@@ -309,10 +309,12 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>O&apos;quvchi</TableHead>
               <TableHead>Guruh</TableHead>
-              {/* A debt built up over several months has to say so — one
-                  month's slice read as the whole story is what sent this page
-                  to an empty August with every July debtor behind a picker. */}
-              <TableHead>Qaysi oylardan</TableHead>
+              {/* NOT "which months is the debt from" — that is a different set
+                  and a bigger one. Production August 2026: the center fronted
+                  only July, while these students' debt runs from May
+                  (#10050 owes 633 323 dating to 2026-05). Naming this column
+                  after the debt would have it answer a question it cannot. */}
+              <TableHead>Markaz qoplagan oylar</TableHead>
               <TableHead className="text-right">Darslar</TableHead>
               {/* Two columns, two questions — nothing else. The month's lesson
                   price used to sit between them and was neither: not what the

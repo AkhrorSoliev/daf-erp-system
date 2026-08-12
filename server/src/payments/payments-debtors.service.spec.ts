@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentsDebtorsService } from './payments-debtors.service';
+import { DebtAgeService } from './debt-age.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 describe('PaymentsDebtorsService', () => {
@@ -27,6 +28,10 @@ describe('PaymentsDebtorsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsDebtorsService,
+        {
+          provide: DebtAgeService,
+          useValue: { getDebtAges: jest.fn().mockResolvedValue(new Map()) },
+        },
         { provide: PrismaService, useValue: prisma },
       ],
     }).compile();

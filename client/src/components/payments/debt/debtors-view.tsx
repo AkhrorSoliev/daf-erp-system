@@ -263,6 +263,7 @@ export function DebtorsView() {
                   <TableHead>Guruh</TableHead>
                   <TableHead>To&apos;lov sanasi / Izoh</TableHead>
                   <TableHead className="text-right">Qarz</TableHead>
+                  <TableHead>Qachondan beri</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>

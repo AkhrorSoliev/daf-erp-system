@@ -22,10 +22,15 @@ import {
 } from '../billing/lesson-coverage.helper';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
+import { DebtAgeService } from './debt-age.service';
+import { wholeMonthsBetween } from '../common/finance/debt-origin';
 
 @Injectable()
 export class PaymentsDebtorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private debtAge: DebtAgeService,
+  ) {}
 
   /**
    * Resolve the effective branch scope for a debtors query.
@@ -187,13 +192,35 @@ export class PaymentsDebtorsService {
       this.prisma.student.count({ where }),
     ]);
 
+    // "Since when" for the page's rows. Read from a day-cached whole-company
+    // replay, because a balance carries no history of its own — payments settle
+    // the oldest charge first, so the answer needs the ledger, not the number.
+    const ages = await this.debtAge.getDebtAges(companyId);
+    const now = new Date();
+
     return {
       data: data.map(({ paymentPromises = [], callLogs = [], ...s }) => {
         const promise = paymentPromises[0] ?? null;
         const call = callLogs[0] ?? null;
+        const age = ages.get(s.id) ?? null;
         return {
           ...s,
           debtAmount: s.balance < 0 ? -s.balance : 0,
+          /**
+           * When this debt started, and which months it is made of. Null when
+           * the cached replay has not seen this student yet (a debt taken on
+           * since the cache was built) — the column renders "—" rather than
+           * guessing a date from the balance.
+           */
+          debtSince: age?.since ?? null,
+          debtMonths: age
+            ? wholeMonthsBetween(new Date(age.since), now)
+            : null,
+          debtByMonth: age
+            ? Object.entries(age.months)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([monthKey, amount]) => ({ monthKey, amount }))
+            : [],
           promise: promise
             ? {
                 promiseDate: promise.promiseDate.toISOString(),

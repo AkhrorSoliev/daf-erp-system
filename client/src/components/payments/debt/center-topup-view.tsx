@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { currentMonthKey, monthLabel, monthsBetween } from "../salary-utils";
+import { MonthPicker } from "@/components/ui/month-picker";
+import { currentMonthKey } from "../salary-utils";
 import { ALL_MONTHS, CenterTopUpContent } from "./center-topup-content";
 import { useDebtFilters } from "./debt-filters-provider";
 
@@ -22,44 +16,41 @@ const FLOOR_MONTH = "2026-07";
  * student's debt is one debt built up across months, so opening on "this month"
  * both hid every earlier debtor behind a control and, in an August with no
  * settled payroll yet, showed an empty page under a heading promising a list.
- * A plain `<Select>` rather than a `MonthPicker`, because "Butun davr" is one
- * of the choices and a calendar cannot offer it.
+ *
+ * The control is the project's `MonthPicker` — year arrows over a grid of all
+ * twelve months — rather than a flat list of the months that happen to have
+ * data. A list is shorter today and stops being readable the moment the top-up
+ * era spans a year. "Butun davr" rides on top of the grid as the picker's
+ * clear option.
  */
 export function CenterTopUpView() {
-  const { setFilters } = useDebtFilters();
-  const { filters } = useDebtFilters();
-  const value = filters.month || ALL_MONTHS;
-  const months = monthsBetween(FLOOR_MONTH, currentMonthKey()).reverse();
+  const { filters, setFilters } = useDebtFilters();
+  const month = filters.month;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="max-w-2xl text-sm text-muted-foreground">
           Markaz o&apos;quvchilar to&apos;lamagan darslar uchun ustozlarga pul
           to&apos;lab bergan. Bu yerda o&apos;sha pul kimdan undirilishi
-          kerakligi ko&apos;rinadi.
+          kerakligi ko&apos;rinadi.{" "}
+          <span className="text-foreground">
+            Davr tanlovi qaysi oydagi darslar hisobga olinishini belgilaydi —
+            o&apos;quvchining qarz summasi o&apos;zgarmaydi.
+          </span>
         </p>
-        <Select
-          value={value}
-          onValueChange={(v) =>
-            setFilters({ month: v === ALL_MONTHS ? "" : v, page: 1 })
-          }
-        >
-          <SelectTrigger className="w-44" aria-label="Davr">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_MONTHS}>Butun davr</SelectItem>
-            {months.map((m) => (
-              <SelectItem key={m} value={m}>
-                {monthLabel(m)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MonthPicker
+          value={month || null}
+          placeholder="Butun davr"
+          onChange={(v) => setFilters({ month: v, page: 1 })}
+          onClear={() => setFilters({ month: "", page: 1 })}
+          minMonth={FLOOR_MONTH}
+          maxMonth={currentMonthKey()}
+          className="w-56 shrink-0"
+        />
       </div>
 
-      <CenterTopUpContent month={value} />
+      <CenterTopUpContent month={month || ALL_MONTHS} />
     </div>
   );
 }
