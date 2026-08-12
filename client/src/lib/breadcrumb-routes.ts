@@ -34,8 +34,8 @@ export const routeLabels: Record<string, string> = {
   archive: "Arxiv",
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
-  // /payments/debt — qarzdorlik bo'yicha yagona sahifa (qarzdorlar ro'yxati,
-  // markaz qoplagani; keyingi fazalarda dinamika va kechirilganlar).
+  // /payments/debt — qarzdorlik bo'yicha yagona sahifa: qarzdorlar ro'yxati,
+  // markaz qoplagani, oylik qarzdorlik va kechirilganlar.
   debt: "Qarzdorlik",
   expenses: "Xarajatlar",
   // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).

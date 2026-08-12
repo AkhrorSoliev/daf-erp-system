@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DebtFiltersProvider, useDebtFilters } from "./debt-filters-provider";
 import { DebtorsView } from "./debtors-view";
 import { CenterTopUpView } from "./center-topup-view";
-import { DynamicsView } from "./dynamics-view";
+import { MonthlyDebtView } from "./monthly-debt-view";
 import { WriteOffsView } from "./write-offs-view";
 
 /**
@@ -18,14 +18,18 @@ import { WriteOffsView } from "./write-offs-view";
  * The tabs here are not those five surfaces relocated. Payment promises and
  * "longest-standing debtors" are not views at all — a promise is a property of
  * a debtor (the list endpoint already returns it) and "longest-standing" is a
- * sort. What remains are genuinely different questions: who owes now, and what
- * the center has fronted for them this month. The monthly dynamics and the
- * write-off archive follow in later phases.
+ * sort. What remains are genuinely different questions: who owes now, what the
+ * center has fronted for them, how the total moved month by month, and what was
+ * given up on.
+ *
+ * Tab labels reuse the names the system already has — "Oylik qarzdorlik" is
+ * what the sidebar and the page it replaces both call that table. A new word
+ * for an existing thing is one more thing to learn.
  */
 const TABS = [
   { value: "qarzdorlar", label: "Qarzdorlar" },
   { value: "markaz", label: "Markaz qoplagani" },
-  { value: "dinamika", label: "Dinamika" },
+  { value: "oylik", label: "Oylik qarzdorlik" },
   { value: "kechirilgan", label: "Kechirilganlar" },
 ] as const;
 
@@ -76,8 +80,8 @@ function DebtPageTabs() {
         <TabsContent value="markaz" className="mt-6">
           <CenterTopUpView />
         </TabsContent>
-        <TabsContent value="dinamika" className="mt-6">
-          <DynamicsView />
+        <TabsContent value="oylik" className="mt-6">
+          <MonthlyDebtView />
         </TabsContent>
         <TabsContent value="kechirilgan" className="mt-6">
           <WriteOffsView />

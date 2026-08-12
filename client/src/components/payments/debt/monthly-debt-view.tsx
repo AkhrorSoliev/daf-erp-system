@@ -18,7 +18,11 @@ import type {
 import { useDebtFilters } from "./debt-filters-provider";
 
 /**
- * "Dinamika": how the debt moved month by month.
+ * "Oylik qarzdorlik": how the debt moved month by month.
+ *
+ * Named after what the system already calls it — the sidebar entry and the
+ * page it replaces both say "Oylik qarzdorlik". "Dinamika" was a new word for
+ * a thing that had one.
  *
  * This is the shortened form of `/payments/debt-history`. Two of that page's
  * four blocks are not carried over, because on this page they would be saying
@@ -34,7 +38,7 @@ import { useDebtFilters } from "./debt-filters-provider";
  * what was added, paid, forgiven, closing balance, and the recovery rate. The
  * status tiles survive as a filter bar because they scope that table.
  */
-export function DynamicsView() {
+export function MonthlyDebtView() {
   const { filters, setFilters } = useDebtFilters();
   const statusFilter = (filters.holat || "all") as DebtStatusFilter;
   const [target, setTarget] = useState<DebtMonth | null>(null);
