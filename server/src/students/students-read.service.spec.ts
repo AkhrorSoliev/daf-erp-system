@@ -235,6 +235,25 @@ describe('StudentsReadService', () => {
       expect(where.status).toBeUndefined();
     });
 
+    // A soft-deleted GROUP used to hide the lessons even with the toggle on,
+    // because the group filter was unconditional. The student's attendance is
+    // still in the DB — "yopilgan guruhlarni ko'rsatish" must reach it.
+    it('includeClosed=true also reaches enrollments whose group is soft-deleted', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.enrollment.findMany.mockResolvedValue([]);
+      await service.getLessonsOverview(10001, 1001, true);
+      const where = prisma.enrollment.findMany.mock.calls[0][0].where;
+      expect(where.group).toEqual({ companyId: 1001 });
+    });
+
+    it('keeps soft-deleted groups hidden by default (toggle off)', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.enrollment.findMany.mockResolvedValue([]);
+      await service.getLessonsOverview(10001, 1001);
+      const where = prisma.enrollment.findMany.mock.calls[0][0].where;
+      expect(where.group).toEqual({ companyId: 1001, deletedAt: null });
+    });
+
     it('floors the attendance query to company.systemStartDate (April hidden)', async () => {
       prisma.student.findFirst.mockResolvedValue({ id: 10001 });
       prisma.company.findUnique.mockResolvedValue({
