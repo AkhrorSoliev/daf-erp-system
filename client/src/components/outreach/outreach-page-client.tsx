@@ -5,13 +5,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TodayAbsenteesTab } from "./today-absentees-tab";
 import { RemovalQueueTab } from "./removal-queue-tab";
-import { PaymentPromisesTab } from "./payment-promises-tab";
 import { CallHistoryTab } from "./call-history-tab";
 import { LogCallDialog, type LogCallPrefill } from "./log-call-dialog";
 import { OutreachStatsWidget } from "./outreach-stats";
+import { OverduePromisesBanner } from "./overdue-promises-banner";
 
 const DEFAULT_TAB = "absentees";
-const VALID_TABS = new Set(["absentees", "removals", "promises", "history"]);
+const VALID_TABS = new Set(["absentees", "removals", "history"]);
 
 export function OutreachPageClient() {
   const router = useRouter();
@@ -43,19 +43,23 @@ export function OutreachPageClient() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Aloqa markazi</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Darsga kelmaganlar, ko&apos;p dars qoldirganlar va to&apos;lov
-          sanalari bilan ishlang — qo&apos;ng&apos;iroq qiling va natijasini qayd
-          eting
+          Darsga kelmaganlar va ko&apos;p dars qoldirganlar bilan ishlang —
+          qo&apos;ng&apos;iroq qiling va natijasini qayd eting
         </p>
       </div>
 
       <OutreachStatsWidget />
 
+      {/* Payment dates moved to /payments/debt, where the debt itself is. This
+          is not a stub for it: the tab was a list, and what an admin needs here
+          is the signal that some are overdue plus a way through. Leaving the
+          list behind would have split the debt work across two pages. */}
+      <OverduePromisesBanner />
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="absentees">Bugungi kelmaganlar</TabsTrigger>
           <TabsTrigger value="removals">Ko&apos;p dars qoldirganlar</TabsTrigger>
-          <TabsTrigger value="promises">To&apos;lov sanalari</TabsTrigger>
           <TabsTrigger value="history">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
         </TabsList>
 
@@ -71,12 +75,6 @@ export function OutreachPageClient() {
         <TabsContent value="removals" className="mt-4">
           <RemovalQueueTab
             isActive={activeTab === "removals"}
-            onLogCall={openLogCall}
-          />
-        </TabsContent>
-        <TabsContent value="promises" className="mt-4">
-          <PaymentPromisesTab
-            isActive={activeTab === "promises"}
             onLogCall={openLogCall}
           />
         </TabsContent>
