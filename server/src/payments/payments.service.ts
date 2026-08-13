@@ -95,7 +95,7 @@ export class PaymentsService {
       page?: number;
       pageSize?: number;
       search?: string;
-      sortBy?: 'balance' | 'firstName' | 'lastName';
+      sortBy?: 'balance' | 'firstName' | 'lastName' | 'debtSince';
       order?: 'asc' | 'desc';
       promise?: 'has_open' | 'overdue';
       status?: StudentStatus | 'all';

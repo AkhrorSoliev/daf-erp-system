@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 describe('PaymentsDebtorsService', () => {
   let service: PaymentsDebtorsService;
+  let debtAge: { getDebtAges: jest.Mock };
   let prisma: {
     student: { findMany: jest.Mock; count: jest.Mock; aggregate: jest.Mock };
     user: { findUnique: jest.Mock; findFirst: jest.Mock };
@@ -25,13 +26,12 @@ describe('PaymentsDebtorsService', () => {
       paymentPromise: { count: jest.fn().mockResolvedValue(0) },
     };
 
+    debtAge = { getDebtAges: jest.fn().mockResolvedValue(new Map()) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsDebtorsService,
-        {
-          provide: DebtAgeService,
-          useValue: { getDebtAges: jest.fn().mockResolvedValue(new Map()) },
-        },
+        { provide: DebtAgeService, useValue: debtAge },
         { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
@@ -40,6 +40,37 @@ describe('PaymentsDebtorsService', () => {
   });
 
   describe('getDebtors', () => {
+
+    it('orders by debt age across the WHOLE set, not just the page', async () => {
+      // The date is not a column, so this cannot be an `orderBy`. Sorting only
+      // the page would make page 2 disagree with page 1 about who is oldest.
+      prisma.student.findMany
+        .mockResolvedValueOnce([{ id: 1 }, { id: 2 }, { id: 3 }])
+        .mockResolvedValueOnce([
+          { id: 3, balance: -300, enrollments: [] },
+          { id: 1, balance: -100, enrollments: [] },
+        ]);
+      prisma.student.count.mockResolvedValue(3);
+      debtAge.getDebtAges.mockResolvedValue(
+        new Map([
+          [1, { since: '2026-06-01T00:00:00.000Z', months: {} }],
+          [3, { since: '2026-05-01T00:00:00.000Z', months: {} }],
+          // #2 has no dated streak yet — unknown sorts LAST, not first.
+        ]),
+      );
+
+      const res = await service.getDebtors(1001, {
+        userId: 1,
+        roles: ['CEO'],
+        sortBy: 'debtSince',
+        pageSize: 2,
+      });
+
+      const second = prisma.student.findMany.mock.calls[1][0];
+      expect(second.where).toEqual({ id: { in: [3, 1] } });
+      // The database returns ids in its own order; the page is re-ordered.
+      expect(res.data.map((d: any) => d.id)).toEqual([3, 1]);
+    });
     it('filters by negative balance + company, every status, no branch filter for CEO', async () => {
       await service.getDebtors(1001, { userId: 1, roles: ['CEO'] });
       const arg = prisma.student.findMany.mock.calls[0][0];

@@ -59,6 +59,9 @@ export const SORT_OPTIONS = [
   { value: "debt_high", label: "Eng katta qarz", sortBy: "balance", order: "asc" },
   { value: "debt_low", label: "Eng kichik qarz", sortBy: "balance", order: "desc" },
   { value: "name", label: "Ism (A-Z)", sortBy: "firstName", order: "asc" },
+  // Replaces the "Eng uzoq qarzdorlar" panel that used to sit on the monthly
+  // page: the same people, ordered by how long they have owed.
+  { value: "oldest", label: "Eng uzoq qarzdor", sortBy: "debtSince", order: "asc" },
 ] as const;
 
 /**

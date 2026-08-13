@@ -9,7 +9,6 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { DebtFlowTable } from "../debt-history/debt-flow-table";
 import { MonthCohortDialog } from "../debt-history/month-cohort-dialog";
-import { LongestDebtorsTable } from "../debt-history/longest-debtors-table";
 import { DebtStatusFilterBar } from "./debt-status-filter-bar";
 import type {
   DebtHistoryResponse,
@@ -32,9 +31,9 @@ import { useDebtFilters } from "./debt-filters-provider";
  *
  *  - the big "Hozirgi qarz" figure is the "Jami qarz" card one tab to the left,
  *    down to the so'm;
- *  - "Eng uzoq qarzdorlar" is the debtor list sorted by age. It is rendered
- *    below for now — the old page it came from is gone, and a panel is better
- *    than losing the information until that sort exists.
+ *  - "Eng uzoq qarzdorlar" is the debtor list sorted by age, and is now the
+ *    "Eng uzoq qarzdor" option on that list's sort — the same people in a
+ *    different order never needed a table of their own.
  *
  * What is genuinely only here is the roll-forward itself: opening balance,
  * what was added, paid, forgiven, closing balance, and the recovery rate. The
@@ -108,12 +107,6 @@ export function MonthlyDebtView() {
       />
 
       <DebtFlowTable data={data} isLoading={isLoading} onSelectMonth={setTarget} />
-
-      {/* TEMPORARY. This belongs on the debtor list as a sort — "longest
-          standing" is an ordering of the same people, not a separate view. It
-          stays here until that sort exists, because deleting the panel first
-          would remove the only place the information can be seen. */}
-      <LongestDebtorsTable debtors={data?.longestDebtors} isLoading={isLoading} />
 
       {/* The dialog inherits the filter so its list can never describe a
           different population than the row that opened it. */}

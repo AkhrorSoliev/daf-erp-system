@@ -104,7 +104,7 @@ export class PaymentsDebtorsService {
       page?: number;
       pageSize?: number;
       search?: string;
-      sortBy?: 'balance' | 'firstName' | 'lastName';
+      sortBy?: 'balance' | 'firstName' | 'lastName' | 'debtSince';
       order?: 'asc' | 'desc';
       promise?: 'has_open' | 'overdue';
       /** Student status; 'all' (the page default) drops the filter entirely. */
@@ -158,9 +158,43 @@ export class PaymentsDebtorsService {
           ? { lastName: dir }
           : { balance: query.order ? dir : 'asc' };
 
+    // "Since when" for the page's rows, and — when that is the sort — the key
+    // the page order is built from. Read from a day-cached whole-company
+    // replay, because a balance carries no history of its own: payments settle
+    // the oldest charge first, so the answer needs the ledger, not the number.
+    const ages = await this.debtAge.getDebtAges(companyId);
+
+    // Sorting by debt age cannot be an `orderBy`: the date is not a column.
+    // So the ids are fetched, ordered in memory and sliced, and only the page
+    // is loaded in full. Safe because the set is small — 423 debtors on
+    // production — and it keeps pagination honest, which sorting just the
+    // current page would not.
+    let pageIds: number[] | null = null;
+    if (query.sortBy === 'debtSince') {
+      const all = await this.prisma.student.findMany({
+        where,
+        select: { id: true },
+      });
+      const key = (id: number) => ages.get(id)?.since ?? null;
+      const ordered = all
+        .map((s) => s.id)
+        .sort((a, b) => {
+          const A = key(a);
+          const B = key(b);
+          // A debt the cached replay has not dated yet sorts last rather than
+          // first — an unknown age is not the oldest one.
+          if (A === null && B === null) return a - b;
+          if (A === null) return 1;
+          if (B === null) return -1;
+          if (A === B) return a - b;
+          return dir === 'desc' ? (A < B ? 1 : -1) : A < B ? -1 : 1;
+        });
+      pageIds = ordered.slice((page - 1) * pageSize, page * pageSize);
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.student.findMany({
-        where,
+        where: pageIds ? { id: { in: pageIds } } : where,
         select: {
           id: true,
           firstName: true,
@@ -207,21 +241,24 @@ export class PaymentsDebtorsService {
             },
           },
         },
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        ...(pageIds
+          ? {}
+          : { orderBy, skip: (page - 1) * pageSize, take: pageSize }),
       }),
       this.prisma.student.count({ where }),
     ]);
 
-    // "Since when" for the page's rows. Read from a day-cached whole-company
-    // replay, because a balance carries no history of its own — payments settle
-    // the oldest charge first, so the answer needs the ledger, not the number.
-    const ages = await this.debtAge.getDebtAges(companyId);
     const now = new Date();
+    // `findMany({ id: { in } })` returns database order, not the order asked
+    // for, so the age sort is reapplied to the loaded page.
+    const ordered = pageIds
+      ? pageIds
+          .map((id) => data.find((d) => d.id === id))
+          .filter((d): d is (typeof data)[number] => !!d)
+      : data;
 
     return {
-      data: data.map(({ paymentPromises = [], callLogs = [], ...s }) => {
+      data: ordered.map(({ paymentPromises = [], callLogs = [], ...s }) => {
         const promise = paymentPromises[0] ?? null;
         const call = callLogs[0] ?? null;
         const age = ages.get(s.id) ?? null;

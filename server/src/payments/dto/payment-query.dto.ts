@@ -38,8 +38,8 @@ export class PaymentQueryDto extends PaginationDto {
   // Debtors list sorting. Defaults (no params) keep `balance asc` =
   // largest debt first.
   @IsOptional()
-  @IsIn(['balance', 'firstName', 'lastName'])
-  sortBy?: 'balance' | 'firstName' | 'lastName';
+  @IsIn(['balance', 'firstName', 'lastName', 'debtSince'])
+  sortBy?: 'balance' | 'firstName' | 'lastName' | 'debtSince';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])
