@@ -35,7 +35,10 @@ export const routeLabels: Record<string, string> = {
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
   // /payments/debt — qarzdorlik bo'yicha yagona sahifa: qarzdorlar ro'yxati,
-  // markaz qoplagani, oylik qarzdorlik va kechirilganlar.
+  // markaz qoplagani, oylik qarzdorlik va kechirilganlar. The three paths it
+  // replaced only redirect now, so they never render a breadcrumb and need no
+  // label — a label for a segment nobody can land on is one more thing to keep
+  // true for no reader.
   debt: "Qarzdorlik",
   expenses: "Xarajatlar",
   // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).
@@ -46,9 +49,6 @@ export const routeLabels: Record<string, string> = {
   // /payments/salary/settings — CEO oylik davri sozlamalari sahifasi.
   // /profile/salary — Teacher portalida ustozning o'z oyligi sahifasi.
   config: "Oylik belgilash",
-  debtors: "Qarzdorlar",
-  "debt-history": "Oylik qarzdorlik",
-  "debt-write-offs": "Qarz hisobdan chiqarishlar",
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",
   search: "Qidiruv natijalari",
