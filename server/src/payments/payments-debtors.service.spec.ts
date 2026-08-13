@@ -40,15 +40,14 @@ describe('PaymentsDebtorsService', () => {
   });
 
   describe('getDebtors', () => {
-    it('filters by negative balance + active + company, no branch filter for CEO', async () => {
+    it('filters by negative balance + company, every status, no branch filter for CEO', async () => {
       await service.getDebtors(1001, { userId: 1, roles: ['CEO'] });
       const arg = prisma.student.findMany.mock.calls[0][0];
       expect(arg.where).toEqual(
         expect.objectContaining({
           companyId: 1001,
           deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
+            balance: { lt: 0 },
         }),
       );
       expect(arg.where.branches).toBeUndefined();

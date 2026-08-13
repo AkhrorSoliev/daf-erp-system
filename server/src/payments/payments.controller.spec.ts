@@ -121,6 +121,7 @@ describe('PaymentsController — role guards', () => {
       controller.getDebtorSummary({ branchId: 5 } as any, 99, 1001, ['CEO']);
       expect(mockService.getDebtorSummary).toHaveBeenCalledWith(1001, {
         branchId: 5,
+        status: 'all',
         userId: 99,
         roles: ['CEO'],
       });

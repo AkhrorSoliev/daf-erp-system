@@ -61,6 +61,20 @@ export const SORT_OPTIONS = [
   { value: "name", label: "Ism (A-Z)", sortBy: "firstName", order: "asc" },
 ] as const;
 
+/**
+ * Every status, not just ACTIVE. A frozen or expelled student still owes the
+ * money — hiding them made this tab report 37 998 992 while the monthly tab
+ * reported 84 555 445 on the same page, with 45 mln sitting in rows nobody
+ * could open.
+ */
+const STATUS_OPTIONS = [
+  { value: "all", label: "Barcha holatlar" },
+  { value: "ACTIVE", label: "Faol" },
+  { value: "FROZEN", label: "Muzlatilgan" },
+  { value: "EXPELLED", label: "Chetlatilgan" },
+  { value: "GRADUATED", label: "Bitirgan" },
+] as const;
+
 const PROMISE_OPTIONS = [
   { value: "all", label: "Barcha qarzdorlar" },
   { value: "has_open", label: "Sana belgilangan" },
@@ -112,6 +126,7 @@ export function DebtorsView() {
       filters.search,
       filters.sort,
       filters.promise,
+      filters.holat,
       filters.page,
       filters.pageSize,
     ],
@@ -126,17 +141,18 @@ export function DebtorsView() {
             sortBy: sortMeta.sortBy,
             order: sortMeta.order,
             promise: filters.promise === "all" ? undefined : filters.promise,
+            studentStatus: filters.holat,
           },
         })
         .then((r) => r.data),
   });
 
   const { data: summary } = useQuery({
-    queryKey: ["debtors", "summary", selectedBranch?.id],
+    queryKey: ["debtors", "summary", selectedBranch?.id, filters.holat],
     queryFn: () =>
       api
         .get<DebtorSummary>("/payments/debtors/summary", {
-          params: { branchId: selectedBranch?.id },
+          params: { branchId: selectedBranch?.id, studentStatus: filters.holat },
         })
         .then((r) => r.data),
   });
@@ -147,8 +163,9 @@ export function DebtorsView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Balansi minus bo&apos;lgan faol o&apos;quvchilar
-          {selectedBranch ? ` — ${selectedBranch.name}` : ""}
+          Balansi minus bo&apos;lgan o&apos;quvchilar — muzlatilgan va
+          chetlatilganlar ham, chunki qarz ular bilan ketmaydi
+          {selectedBranch ? ` · ${selectedBranch.name}` : ""}
         </p>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 size-4" />
@@ -165,6 +182,11 @@ export function DebtorsView() {
           tone="red"
           label="Jami qarz"
           value={summary ? formatBalance(summary.totalDebt) : "—"}
+          hint={
+            filters.holat === "all"
+              ? "Hamma holatdagi qarzdorlar"
+              : `Faqat: ${STATUS_OPTIONS.find((o) => o.value === filters.holat)?.label}`
+          }
         />
         <SummaryCard
           icon={<Users className="size-5 text-slate-700 dark:text-slate-300" />}
@@ -217,6 +239,21 @@ export function DebtorsView() {
             {SORT_OPTIONS.map((s) => (
               <SelectItem key={s.value} value={s.value}>
                 {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.holat}
+          onValueChange={(v) => setFilters({ holat: v, page: 1 })}
+        >
+          <SelectTrigger className="w-48" aria-label="O'quvchi holati">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>

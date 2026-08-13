@@ -153,6 +153,7 @@ export class PaymentsController {
       sortBy: query.sortBy,
       order: query.order,
       promise: query.promise,
+      status: query.studentStatus ?? 'all',
       userId,
       roles,
     });
@@ -172,6 +173,7 @@ export class PaymentsController {
   ) {
     return this.paymentsService.getDebtorSummary(companyId, {
       branchId: query.branchId,
+      status: query.studentStatus ?? 'all',
       userId,
       roles,
     });

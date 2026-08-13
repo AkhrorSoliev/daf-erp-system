@@ -59,17 +59,28 @@ export class PaymentsDebtorsService {
   }
 
   /**
-   * Canonical "active debtor" predicate, shared by the list, the count and
-   * the summary aggregate so the page's table and cards can never drift.
+   * Canonical debtor predicate, shared by the list, the count and the summary
+   * aggregate so the page's table and cards can never drift.
+   *
+   * `status` defaults to ACTIVE because the Excel line-item sheet ties to the
+   * balance sheet's `accountsReceivable`, which counts active students — that
+   * caller must not move. The PAGE passes `'all'`: a frozen or expelled student
+   * still owes the money, and hiding them made the debtors tab report
+   * 37 998 992 while the monthly tab reported 84 555 445 on the same screen,
+   * with the 45 mln difference sitting in students nobody could open.
    */
   private debtorWhere(
     companyId: number,
     branchIds?: number[],
+    status: StudentStatus | 'all' = StudentStatus.ACTIVE,
   ): Prisma.StudentWhereInput {
     return {
       companyId,
+      // Soft-deleted students stay out, per the archive rule. They are the one
+      // slice the monthly tab counts and this one does not — 4 students,
+      // 1 019 318 so'm — which the page states rather than hides.
       deletedAt: null,
-      status: StudentStatus.ACTIVE,
+      ...(status === 'all' ? {} : { status }),
       balance: { lt: 0 },
       ...(branchIds
         ? { branches: { some: { branchId: { in: branchIds } } } }
@@ -87,6 +98,8 @@ export class PaymentsDebtorsService {
       sortBy?: 'balance' | 'firstName' | 'lastName';
       order?: 'asc' | 'desc';
       promise?: 'has_open' | 'overdue';
+      /** Student status; 'all' (the page default) drops the filter entirely. */
+      status?: StudentStatus | 'all';
       userId: number;
       roles: string[];
     },
@@ -103,7 +116,7 @@ export class PaymentsDebtorsService {
       return { data: [], total: 0, page, pageSize };
     }
 
-    const where = this.debtorWhere(companyId, branchIds);
+    const where = this.debtorWhere(companyId, branchIds, query.status ?? 'all');
 
     // Payment-promise filter — students with an active / broken promise.
     if (query.promise === 'has_open') {
@@ -307,7 +320,12 @@ export class PaymentsDebtorsService {
    */
   async getDebtorSummary(
     companyId: number,
-    query: { branchId?: number; userId: number; roles: string[] },
+    query: {
+      branchId?: number;
+      status?: StudentStatus | 'all';
+      userId: number;
+      roles: string[];
+    },
   ) {
     const branchIds = await this.resolveBranchScope(
       query.userId,
@@ -324,7 +342,7 @@ export class PaymentsDebtorsService {
       };
     }
 
-    const where = this.debtorWhere(companyId, branchIds);
+    const where = this.debtorWhere(companyId, branchIds, query.status ?? 'all');
     const promiseScope: Prisma.PaymentPromiseWhereInput = {
       companyId,
       ...(branchIds ? { branchId: { in: branchIds } } : {}),

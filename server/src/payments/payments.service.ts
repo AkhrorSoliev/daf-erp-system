@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { StudentStatus } from '@prisma/client';
 import { PaymentMethod, PaymentSource, Prisma } from '@prisma/client';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
@@ -97,6 +98,7 @@ export class PaymentsService {
       sortBy?: 'balance' | 'firstName' | 'lastName';
       order?: 'asc' | 'desc';
       promise?: 'has_open' | 'overdue';
+      status?: StudentStatus | 'all';
       userId: number;
       roles: string[];
     },
@@ -105,7 +107,12 @@ export class PaymentsService {
   }
   getDebtorSummary(
     companyId: number,
-    query: { branchId?: number; userId: number; roles: string[] },
+    query: {
+      branchId?: number;
+      status?: StudentStatus | 'all';
+      userId: number;
+      roles: string[];
+    },
   ) {
     return this.debtors.getDebtorSummary(companyId, query);
   }

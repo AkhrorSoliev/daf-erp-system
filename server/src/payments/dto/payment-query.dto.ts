@@ -50,4 +50,12 @@ export class PaymentQueryDto extends PaginationDto {
   @IsOptional()
   @IsIn(['has_open', 'overdue'])
   promise?: 'has_open' | 'overdue';
+
+  /**
+   * Debtors list: student status. `'all'` (the default) lists every debtor
+   * whatever their status — a frozen or expelled student still owes the money.
+   */
+  @IsOptional()
+  @IsIn(['all', 'ACTIVE', 'FROZEN', 'EXPELLED', 'GRADUATED'])
+  studentStatus?: 'all' | 'ACTIVE' | 'FROZEN' | 'EXPELLED' | 'GRADUATED';
 }
