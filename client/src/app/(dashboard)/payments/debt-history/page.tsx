@@ -1,10 +1,8 @@
-import { Suspense } from "react";
-import { DebtHistoryView } from "@/components/payments/debt-history/debt-history-view";
+import { redirect } from "next/navigation";
 
+// Moved into /payments/debt as the "Oylik qarzdorlik" tab. A redirect, not a
+// deletion: this path is in browser histories, bookmarks and Telegram messages,
+// and a 404 would read as the report being gone.
 export default function DebtHistoryPage() {
-  return (
-    <Suspense>
-      <DebtHistoryView />
-    </Suspense>
-  );
+  redirect("/payments/debt?tab=oylik");
 }

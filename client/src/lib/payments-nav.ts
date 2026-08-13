@@ -5,8 +5,6 @@ import {
   Banknote,
   UserMinus,
   Activity,
-  Eraser,
-  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,10 +21,9 @@ export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Kutilyotgan to'lovlar", url: "/payments/pending", icon: Clock },
   { title: "Xarajatlar", url: "/payments/expenses", icon: Receipt, visibleForRoles: [1, 2] },
   { title: "Ish haqi", url: "/payments/salary", icon: Banknote, visibleForRoles: [1, 2] },
-  // One entry for debt. "Oylik qarzdorlik" and "Qarz hisobdan chiqarishlar"
-  // below become tabs of this page in later phases and lose their own entries.
+  // One entry for everything owed to the center. The three pages it replaced —
+  // Qarzdorlar, Oylik qarzdorlik, Qarz hisobdan chiqarishlar — are tabs of it
+  // now, and their paths redirect here.
   { title: "Qarzdorlik", url: "/payments/debt", icon: UserMinus },
-  { title: "Oylik qarzdorlik", url: "/payments/debt-history", icon: CalendarClock, visibleForRoles: [1, 2] },
   { title: "To'lov tizimlari jurnali", url: "/payments/gateway-events", icon: Activity, visibleForRoles: [1] },
-  { title: "Qarz hisobdan chiqarishlar", url: "/payments/debt-write-offs", icon: Eraser, visibleForRoles: [1, 2] },
 ];

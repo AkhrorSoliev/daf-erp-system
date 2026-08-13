@@ -1,21 +1,7 @@
-import { DebtWriteOffsClient } from "@/components/payments/debt-write-offs-client";
+import { redirect } from "next/navigation";
 
-// The heading lives here rather than in the client, because that client is
-// also a tab on /payments/debt where this title would be the second one on
-// screen. Whoever renders it knows what the reader is already looking at.
+// Moved into /payments/debt as the "Kechirilganlar" tab. Redirected rather than
+// deleted, for the same reason as the debtor list before it.
 export default function DebtWriteOffsPage() {
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-1">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">
-          Qarz hisobdan chiqarishlar
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          &quot;Yo&apos;qolgan o&apos;quvchi&quot; flow ostida joriy sikldan
-          hisobdan chiqarilgan qarzlar jurnali
-        </p>
-      </header>
-      <DebtWriteOffsClient />
-    </div>
-  );
+  redirect("/payments/debt?tab=kechirilgan");
 }

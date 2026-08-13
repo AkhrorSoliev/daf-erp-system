@@ -537,7 +537,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link
-                      href="/payments/debt-write-offs"
+                      href="/payments/debt?tab=kechirilgan"
                       className="flex justify-between text-sm group cursor-help"
                     >
                       <span className="text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground">

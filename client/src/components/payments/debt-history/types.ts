@@ -1,4 +1,4 @@
-/** Shared shapes for the /payments/debt-history page. Mirrors the API. */
+/** Shared shapes for the debt page's "Oylik qarzdorlik" tab. Mirrors the API. */
 
 export type DebtStatusFilter = "all" | "active" | "inactive";
 
