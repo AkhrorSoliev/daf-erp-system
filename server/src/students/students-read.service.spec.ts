@@ -90,6 +90,7 @@ describe('StudentsReadService', () => {
           id: 'enr-1',
           status: 'ACTIVE',
           startDate: new Date('2026-06-01'),
+          createdAt: new Date('2026-06-01'),
           group: {
             id: 'grp-1',
             name: '#001',
@@ -158,6 +159,7 @@ describe('StudentsReadService', () => {
           id: 'enr-1',
           status: 'ACTIVE',
           startDate: new Date('2026-05-01'),
+          createdAt: new Date('2026-05-01'),
           group: {
             id: 'grp-1',
             name: '#014',
@@ -203,6 +205,7 @@ describe('StudentsReadService', () => {
           id: 'enr-1',
           status: 'ACTIVE',
           startDate: new Date('2026-05-01'),
+          createdAt: new Date('2026-05-01'),
           group: {
             id: 'grp-1',
             name: '#int',
@@ -254,6 +257,104 @@ describe('StudentsReadService', () => {
       expect(where.group).toEqual({ companyId: 1001, deletedAt: null });
     });
 
+    // Ordering is the whole point of the tab: a student's lesson history must
+    // read top-to-bottom as newest-to-oldest. The old `status asc, createdAt
+    // asc` mixed two different measures — an ACTIVE group sat on top no matter
+    // how long ago its last lesson was, and the closed ones below ran oldest
+    // first. Real case: #10399, whose August ACTIVE group was listed above the
+    // May/June closed ones, which were themselves in reverse order.
+    it('orders groups by their most recent lesson, newest first', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.company.findUnique.mockResolvedValue({ systemStartDate: null });
+      const enr = (
+        id: string,
+        groupId: string,
+        name: string,
+        status: string,
+        createdAt: string,
+      ) => ({
+        id,
+        status,
+        startDate: new Date(createdAt),
+        createdAt: new Date(createdAt),
+        group: {
+          id: groupId,
+          name,
+          course: { name: 'A1', lessonPaymentCount: 12 },
+        },
+      });
+      // Returned in enrollment-creation order, like the SQL does.
+      prisma.enrollment.findMany.mockResolvedValue([
+        enr('enr-27', 'grp-27', '#027', 'DROPPED', '2026-05-01'),
+        enr('enr-33', 'grp-33', '#033', 'DROPPED', '2026-05-21'),
+        enr('enr-51', 'grp-51', '#051', 'ACTIVE', '2026-08-11'),
+      ]);
+      const att = (groupId: string, date: string) => ({
+        id: `att-${groupId}-${date}`,
+        groupId,
+        date: new Date(date),
+        status: 'PRESENT',
+      });
+      prisma.attendance.findMany.mockResolvedValue([
+        att('grp-27', '2026-05-09'),
+        att('grp-27', '2026-05-21'),
+        att('grp-33', '2026-05-22'),
+        att('grp-33', '2026-05-29'),
+        att('grp-51', '2026-08-11'),
+      ]);
+
+      const res = await service.getLessonsOverview(10001, 1001, true);
+
+      expect(res.groups.map((g) => g.groupName)).toEqual([
+        '#051', // 11.08
+        '#033', // 29.05
+        '#027', // 21.05
+      ]);
+    });
+
+    it('places a group with no lessons yet by its start date, not last', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+      prisma.company.findUnique.mockResolvedValue({ systemStartDate: null });
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'enr-old',
+          status: 'DROPPED',
+          startDate: new Date('2026-05-01'),
+          createdAt: new Date('2026-05-01'),
+          group: {
+            id: 'grp-old',
+            name: '#027',
+            course: { name: 'A1', lessonPaymentCount: 12 },
+          },
+        },
+        {
+          // Enrolled today, first lesson not held yet — belongs on top.
+          id: 'enr-new',
+          status: 'ACTIVE',
+          startDate: new Date('2026-08-13'),
+          createdAt: new Date('2026-08-13'),
+          group: {
+            id: 'grp-new',
+            name: '#051',
+            course: { name: 'A1', lessonPaymentCount: 12 },
+          },
+        },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-1',
+          groupId: 'grp-old',
+          date: new Date('2026-05-09'),
+          status: 'PRESENT',
+        },
+      ]);
+
+      const res = await service.getLessonsOverview(10001, 1001, true);
+
+      expect(res.groups.map((g) => g.groupName)).toEqual(['#051', '#027']);
+      expect(res.groups[0].total).toBe(0);
+    });
+
     it('floors the attendance query to company.systemStartDate (April hidden)', async () => {
       prisma.student.findFirst.mockResolvedValue({ id: 10001 });
       prisma.company.findUnique.mockResolvedValue({
@@ -264,6 +365,7 @@ describe('StudentsReadService', () => {
           id: 'enr-1',
           status: 'ACTIVE',
           startDate: new Date('2026-05-01'),
+          createdAt: new Date('2026-05-01'),
           group: {
             id: 'grp-1',
             name: '#020',
@@ -289,6 +391,7 @@ describe('StudentsReadService', () => {
           id: 'enr-1',
           status: 'ACTIVE',
           startDate: null,
+          createdAt: new Date('2026-05-01'),
           group: {
             id: 'grp-1',
             name: '#020',
