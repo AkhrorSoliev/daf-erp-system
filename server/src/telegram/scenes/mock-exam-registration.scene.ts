@@ -14,7 +14,6 @@ import {
   SHARED_PHONE_INVALID,
 } from '../../common/utils/phone.util';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MockExamBillingService } from '../../mock-exams/mock-exam-billing.service';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
 import { resolveParticipantFee } from '../../mock-exams/mock-exam-pricing.util';
 
@@ -72,7 +71,6 @@ const DEFAULT_COMPANY_ID = 1001;
 
 export function createMockExamRegistrationScene(
   prisma: PrismaService,
-  mockExamBilling: MockExamBillingService,
   paymentLinkService: PaymentLinkService,
   _bot: Telegraf<BotContext>,
 ): Scenes.BaseScene<BotContext> {
@@ -239,7 +237,7 @@ export function createMockExamRegistrationScene(
   scene.action(/^me_opt:(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const value = ctx.match[1];
-    await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, value);
+    await handleAnswer(ctx, prisma, paymentLinkService, value);
   });
 
   // Phone share via Telegram Contact
@@ -254,7 +252,7 @@ export function createMockExamRegistrationScene(
       await ctx.reply(SHARED_PHONE_INVALID);
       return;
     }
-    await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, phone);
+    await handleAnswer(ctx, prisma, paymentLinkService, phone);
   });
 
   // Free-text input
@@ -301,7 +299,7 @@ export function createMockExamRegistrationScene(
         );
         return;
       }
-      await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, phone);
+      await handleAnswer(ctx, prisma, paymentLinkService, phone);
       return;
     }
     if (field.type === 'email') {
@@ -309,7 +307,7 @@ export function createMockExamRegistrationScene(
         await ctx.reply("Email manzili noto'g'ri. Qayta kiriting:");
         return;
       }
-      await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, text);
+      await handleAnswer(ctx, prisma, paymentLinkService, text);
       return;
     }
     if (field.type === 'number') {
@@ -318,7 +316,7 @@ export function createMockExamRegistrationScene(
         await ctx.reply("Son noto'g'ri. Qayta kiriting:");
         return;
       }
-      await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, n);
+      await handleAnswer(ctx, prisma, paymentLinkService, n);
       return;
     }
     if (field.type === 'date') {
@@ -328,7 +326,7 @@ export function createMockExamRegistrationScene(
         );
         return;
       }
-      await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, text);
+      await handleAnswer(ctx, prisma, paymentLinkService, text);
       return;
     }
     // text / textarea
@@ -342,7 +340,7 @@ export function createMockExamRegistrationScene(
       await ctx.reply(MULTI_WORD_NAME_HINT);
       return;
     }
-    await handleAnswer(ctx, prisma, mockExamBilling, paymentLinkService, text);
+    await handleAnswer(ctx, prisma, paymentLinkService, text);
   });
 
   return scene;
@@ -475,7 +473,6 @@ async function askField(ctx: BotContext, field: FormField) {
 async function handleAnswer(
   ctx: BotContext,
   prisma: PrismaService,
-  mockExamBilling: MockExamBillingService,
   paymentLinkService: PaymentLinkService,
   rawValue: string | number | boolean,
 ) {
@@ -500,13 +497,12 @@ async function handleAnswer(
   }
 
   // All fields answered — write participant
-  await finalizeRegistration(ctx, prisma, mockExamBilling, paymentLinkService);
+  await finalizeRegistration(ctx, prisma, paymentLinkService);
 }
 
 async function finalizeRegistration(
   ctx: BotContext,
   prisma: PrismaService,
-  mockExamBilling: MockExamBillingService,
   paymentLinkService: PaymentLinkService,
 ) {
   const logger = new Logger('MockExamRegistrationScene.finalize');
@@ -664,25 +660,6 @@ async function finalizeRegistration(
     return;
   }
 
-  // If this is a DaF student, try to settle the mock fee from their
-  // balance immediately. Saves them an extra payment step when they
-  // already have funds. Failures here are non-fatal — registration
-  // succeeded either way; the user can still pay via Payme/Click later.
-  let autoPaid = false;
-  if (studentId !== null) {
-    try {
-      const result = await mockExamBilling.tryDeductForStudent({
-        studentId,
-        companyId: DEFAULT_COMPANY_ID,
-      });
-      autoPaid = result.paidCount > 0;
-    } catch (err) {
-      logger.warn(
-        `Auto-deduct from balance failed for student ${studentId}: ${(err as Error).message}`,
-      );
-    }
-  }
-
   // `feeAmount` (computed above) is what this participant owes — the DaF
   // discount is already baked in.
   const price = feeAmount;
@@ -696,17 +673,22 @@ async function finalizeRegistration(
     lines.push(`🕐 Tanlangan vaqt: <b>${examTime}</b>`);
   }
 
-  // Build the payment keyboard when there's a fee and the participant
-  // isn't already paid (auto-deducted DaF students skip this). Payme/Click
-  // are URL buttons (open the provider app/web checkout with merchant id +
-  // amount pre-filled). A "Naqd (markazda)" callback button is always
-  // offered alongside so the user can choose to pay cash on arrival.
+  // Build the payment keyboard. Payme/Click are URL buttons (open the
+  // provider app/web checkout with merchant id + amount pre-filled), and
+  // "Naqd (markazda)" sits alongside for paying on arrival.
+  //
+  // EVERY registrant sees this, DaF students included. A branch used to skip
+  // it: their lesson balance was deducted a few lines above, so they were
+  // never offered a choice — just told afterwards that the money had gone.
+  // That balance is prepayment for LESSONS, and the fee was usually collected
+  // in cash at the desk as well, so 21 students on the August 2026 exam paid
+  // twice. Do not add a path that pays a mock fee without the payer choosing it.
   type KbButton =
     | ReturnType<typeof Markup.button.url>
     | ReturnType<typeof Markup.button.callback>;
   const keyboardRows: KbButton[][] = [];
   let hasPayLinks = false;
-  if (!autoPaid && price > 0) {
+  if (price > 0) {
     try {
       const links = await paymentLinkService.buildLinks(publicId, price);
       const payRow: KbButton[] = [];
@@ -733,9 +715,7 @@ async function finalizeRegistration(
     }
   }
 
-  if (autoPaid) {
-    lines.push('', `💳 To'lov balansingizdan yechib olindi (${price} so'm).`);
-  } else if (price > 0) {
+  if (price > 0) {
     lines.push('', `💳 To'lov: <b>${price.toLocaleString('uz-UZ')} so'm</b>`);
     if (hasPayLinks) {
       lines.push(

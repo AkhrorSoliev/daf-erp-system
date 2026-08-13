@@ -9,7 +9,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
 import {
   PaymentMethod,
   PaymentSource,
@@ -92,7 +91,6 @@ export class PaymentsWriteService {
     private lessonBillingService: LessonBillingService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
-    private mockExamBilling: MockExamBillingService,
   ) {}
 
   async create(dto: CreatePaymentDto, userId: number, companyId: number) {
@@ -232,18 +230,13 @@ export class PaymentsWriteService {
             },
           );
 
-        // After lesson fees, auto-settle any pending mock exam fees this
-        // student has registered for. Uses the same balance-walk pattern
-        // — oldest mock first, stops when balance can't cover the next
-        // one. Idempotent: already-paid mocks are filtered out.
-        await this.mockExamBilling.tryDeductForStudent(
-          {
-            studentId: dto.studentId,
-            companyId,
-            performedById: userId,
-          },
-          tx,
-        );
+        // A lesson payment settles LESSONS. It used to also drain the fresh
+        // balance into any unpaid mock exam registration, which is how 15 of
+        // 21 students on the August 2026 exam lost 30 000 so'm each: they
+        // stood at the desk paying for lessons, having already handed over
+        // cash for the mock, and neither they nor the cashier could see the
+        // second charge leave. Mock fees are collected on their own — cash,
+        // Payme or Click — and never out of money left here for lessons.
 
         const updatedStudent = await tx.student.findUnique({
           where: { id: dto.studentId },
@@ -909,17 +902,10 @@ export class PaymentsWriteService {
           },
         );
 
-      // And settle any pending mock exam fees too — DaF student paid via
-      // Payme/Click using their student id; this drains the freshly-topped
-      // balance into any unpaid mocks they're registered for.
-      await this.mockExamBilling.tryDeductForStudent(
-        {
-          studentId: params.studentId,
-          companyId: params.companyId,
-          performedById: params.performedById,
-        },
-        tx,
-      );
+      // Gateway top-ups fund lessons only, for the same reason as the manual
+      // path above. A mock fee paid through Payme/Click carries the
+      // participant's publicId and is settled by MockExamGatewayBillingService
+      // against that registration directly — it never routes via the balance.
 
       const updatedStudent = await tx.student.findUnique({
         where: { id: params.studentId },
