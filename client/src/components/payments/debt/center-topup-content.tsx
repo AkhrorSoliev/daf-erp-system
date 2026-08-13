@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { AlertTriangle, HandCoins, UserMinus, Users, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  HandCoins,
+  Info,
+  UserMinus,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -58,6 +65,13 @@ export interface TopUpRow {
 
 export interface TopUpResponse {
   month: string;
+  /**
+   * true when the month is not settled yet: these lessons are ALREADY HELD but
+   * payroll has not run, so the center has not paid for them — it will. Kept as
+   * a separate state and never merged into the paid figures, because money out
+   * of the till and money about to leave it are not the same number.
+   */
+  isForecast: boolean;
   data: TopUpRow[];
   totals: {
     centerPaid: number;
@@ -161,6 +175,8 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
     staleTime: 0,
   });
 
+  const isForecast = data?.isForecast ?? false;
+
   // A different month (or a new filter) is a different list — never leave the
   // reader on page 4 of a set that now has one page.
   useEffect(() => {
@@ -229,7 +245,7 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
       <div className="py-10 text-center text-sm text-muted-foreground">
         {allMonths
           ? "Markaz qoplagan, hali qaytmagan dars yo'q — hammasi undirilgan."
-          : `${monthLabel(month)}da markaz qoplagan, hali qaytmagan dars yo'q. Butun davrni ko'rish uchun oy tanlovini «Butun davr»ga qo'ying.`}
+          : `${monthLabel(month)}da markaz qoplagan dars yo'q — bu oyda hali dars o'tilmagan yoki hamma o'quvchi to'lagan.`}
       </div>
     );
   }
@@ -245,9 +261,13 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
         <SummaryCard
           tone="amber"
           icon={<HandCoins className="size-5 text-amber-700 dark:text-amber-300" />}
-          label="Markaz to'lagan"
+          label={isForecast ? "Markaz to'laydi" : "Markaz to'lagan"}
           value={`${formatPrice(shown.centerPaid)} so'm`}
-          hint="Kassadan ustozlarga chiqqan pul"
+          hint={
+            isForecast
+              ? "Oy yopilganda ustozlarga chiqadi — hali chiqmagan"
+              : "Kassadan ustozlarga chiqqan pul"
+          }
         />
         <SummaryCard
           tone="red"
@@ -261,7 +281,7 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
           icon={<Users className="size-5 text-slate-700 dark:text-slate-300" />}
           label="O'quvchilar"
           value={`${shown.students} ta`}
-          hint={`${shown.lessons} ta dars qoplangan`}
+          hint={`${shown.lessons} ta dars ${isForecast ? "qoplanadi" : "qoplangan"}`}
         />
         <SummaryCard
           tone="violet"
@@ -273,6 +293,18 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
           hint="Darsga kelmaydi — pul o'zi qaytmaydi"
         />
       </div>
+
+      {isForecast && (
+        <div className="mb-4 flex items-start gap-2 rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <span>
+            <b>{monthLabel(month)} oyligi hali yopilmagan.</b> Darslar
+            o&apos;tilgan, lekin markaz ustozlarga hali to&apos;lagani yo&apos;q
+            — bu pul oy yopilganda chiqadi. Ya&apos;ni hozir undirilsa, markaz
+            umuman to&apos;lamaydi.
+          </span>
+        </div>
+      )}
 
       <p className="mb-4 text-xs text-muted-foreground">
         {allMonths ? "Butun davr" : monthLabel(month)}
@@ -327,13 +359,17 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
                   only July, while these students' debt runs from May
                   (#10050 owes 633 323 dating to 2026-05). Naming this column
                   after the debt would have it answer a question it cannot. */}
-              <TableHead>Markaz qoplagan oylar</TableHead>
+              <TableHead>
+                {isForecast ? "Qoplanadigan oylar" : "Markaz qoplagan oylar"}
+              </TableHead>
               <TableHead className="text-right">Darslar</TableHead>
               {/* Two columns, two questions — nothing else. The month's lesson
                   price used to sit between them and was neither: not what the
                   center spent, not what anyone owes now. */}
               <TableHead className="text-right">
-                Markaz ustozga to&apos;lagan
+                {isForecast
+                  ? "Markaz to'laydi"
+                  : "Markaz ustozga to'lagan"}
               </TableHead>
               <TableHead className="text-right">
                 O&apos;quvchining qarzi

@@ -13,6 +13,7 @@ import {
 } from './shared/resolve-monthly-scope';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
+import { sweepGapLessons } from './shared/gap-sweep';
 
 export type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 
@@ -451,32 +452,31 @@ export class SalaryMonthlyService {
         frontedStudentIds.add(ac.studentId);
       }
     }
-    for (const att of attendances) {
-      const g = groupMap.get(att.groupId);
-      if (!g) continue;
-      // BR-09: withhold the new-student top-up gap until the student has
-      // attended >= threshold lessons in this group (mirrors the cron sweep so
-      // the shown gap equals what will be paid).
-      const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
-      if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
-      // No center top-up for a lesson held after the student went inactive.
-      if (cappedByInactivity(att.studentId, att.date)) continue;
-      const lpc = g.course.lessonPaymentCount || 12;
-      const perLessonCost = Math.round(g.course.price / lpc);
-      const dStr = dateStr(att.date);
-      for (const tid of resolveTeachers(att.groupId, dStr)) {
-        const a = agg.get(tid);
-        if (!a) continue; // teacher outside branch scope / search page
-        if (a.coveredAtt.has(att.id)) continue; // already covered → in `covered`
-        if (a.isFixedMonthly) continue; // flat salary — no per-lesson gap
-        const v = resolveRate(tid, att.groupId, att.date);
-        if (v) {
-          a.gap += perLessonAccrual(v, perLessonCost, lpc);
-          a.gapUnits += 1;
-        } else {
-          a.noConfigUnits += 1; // config gap — do NOT fabricate (May signature)
-        }
-      }
+    // Which lessons the center still has to front. Shared with the center
+    // top-up drill-down, which sums the SAME sweep by student instead of by
+    // teacher — so the payroll column and the list of people it is owed by are
+    // computed from one set of exclusions.
+    const sweep = sweepGapLessons({
+      attendances,
+      groupMap,
+      resolveTeachers,
+      resolveRate,
+      inScope: (tid) => agg.has(tid),
+      isCovered: (tid, attId) => agg.get(tid)?.coveredAtt.has(attId) ?? false,
+      isFixedMonthly: (tid) => agg.get(tid)?.isFixedMonthly ?? false,
+      heldByStudentGroup,
+      inactiveSince,
+      dateStr,
+    });
+    for (const l of sweep.lessons) {
+      const a = agg.get(l.teacherId);
+      if (!a) continue;
+      a.gap += l.amount;
+      a.gapUnits += 1;
+    }
+    for (const [tid, n] of sweep.noConfigUnits) {
+      const a = agg.get(tid);
+      if (a) a.noConfigUnits = n;
     }
 
     // ─── Step 5+6: build rows ────────────────────────────────────────────

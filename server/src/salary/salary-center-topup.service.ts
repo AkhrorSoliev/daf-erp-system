@@ -10,6 +10,9 @@ import {
   buildTeacherRosterWhere,
 } from './shared/teacher-roster-where';
 import { DebtAgeService } from '../common/finance/debt-age.service';
+import { sweepGapLessons } from './shared/gap-sweep';
+import { pickActiveVersion, type RateVersion } from './shared/deserved-math';
+import { SalaryType } from '@prisma/client';
 
 /**
  * "Markaz qo'shimchasi — qolgan" drill-down: WHO the center is still owed by.
@@ -47,6 +50,171 @@ export class SalaryCenterTopUpService {
     private debtAge: DebtAgeService,
   ) {}
 
+  /**
+   * The lessons the center has not paid for YET, shaped like the accruals it
+   * will become. Same `sweepGapLessons` `getMonthly` reports as the forecast
+   * leg of `centerFunded`, so the tab and the payroll column cannot disagree
+   * about which lessons qualify.
+   */
+  private async sweepForecast(
+    scope: Awaited<ReturnType<typeof resolveMonthlyScope>>,
+    teacherIds: number[],
+  ) {
+    const {
+      companyId,
+      periodStart,
+      periodEnd,
+      periodStartDate,
+      periodEndDateExclusive,
+    } = scope;
+
+    const [attendances, groups, groupTeachers, overrides, versionRows, covered,
+      heldCounts, inactiveStudents] = await Promise.all([
+      this.prisma.attendance.findMany({
+        where: {
+          companyId,
+          status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+          date: { gte: periodStartDate, lt: periodEndDateExclusive },
+        },
+        select: { id: true, studentId: true, groupId: true, date: true },
+      }),
+      this.prisma.group.findMany({
+        where: { companyId },
+        select: {
+          id: true,
+          course: { select: { price: true, lessonPaymentCount: true } },
+        },
+      }),
+      this.prisma.groupTeacher.findMany({
+        select: { groupId: true, teacherId: true },
+      }),
+      this.prisma.lessonTeacherOverride.findMany({
+        where: { deletedAt: null },
+        select: { groupId: true, date: true, teacherIds: true },
+      }),
+      this.prisma.employeeSalaryConfigVersion.findMany({
+        where: { companyId, config: { isActive: true } },
+        select: {
+          salaryType: true,
+          value: true,
+          effectiveFrom: true,
+          effectiveTo: true,
+          config: { select: { userId: true, groupId: true, salaryType: true } },
+        },
+      }),
+      // Lessons that already carry an accrual — a student paid for them, so the
+      // center owes nothing.
+      this.prisma.salaryAccrual.findMany({
+        where: {
+          companyId,
+          userId: { in: teacherIds },
+          reversedAt: null,
+          OR: [
+            { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
+            {
+              creditPeriodDate: null,
+              lessonDate: { gte: periodStartDate, lt: periodEndDateExclusive },
+            },
+          ],
+        },
+        select: { userId: true, attendanceId: true },
+      }),
+      this.prisma.attendance.groupBy({
+        by: ['studentId', 'groupId'],
+        where: {
+          companyId,
+          status: { in: ['PRESENT', 'LATE'] },
+          date: { lt: periodEndDateExclusive },
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.student.findMany({
+        where: { companyId, status: { not: 'ACTIVE' }, statusChangedAt: { not: null } },
+        select: { id: true, statusChangedAt: true },
+      }),
+    ]);
+
+    const dateStr = (d: Date) => d.toISOString().slice(0, 10);
+    const groupMap = new Map(groups.map((g) => [g.id, g]));
+    const rosterMap = new Map<string, number[]>();
+    for (const gt of groupTeachers) {
+      rosterMap.set(gt.groupId, [
+        ...(rosterMap.get(gt.groupId) ?? []),
+        gt.teacherId,
+      ]);
+    }
+    const overrideMap = new Map<string, number[]>();
+    for (const o of overrides) {
+      overrideMap.set(`${o.groupId}::${dateStr(o.date)}`, o.teacherIds);
+    }
+    const versByKey = new Map<string, RateVersion[]>();
+    const fixedMonthly = new Set<number>();
+    for (const r of versionRows) {
+      const key = `${r.config.userId}::${r.config.groupId ?? 'GLOBAL'}`;
+      versByKey.set(key, [
+        ...(versByKey.get(key) ?? []),
+        {
+          salaryType: r.salaryType,
+          value: r.value,
+          effectiveFrom: r.effectiveFrom,
+          effectiveTo: r.effectiveTo,
+        },
+      ]);
+      if (r.config.salaryType === SalaryType.FIXED_MONTHLY && r.config.groupId == null) {
+        fixedMonthly.add(r.config.userId);
+      }
+    }
+    const coveredByTeacher = new Set(
+      covered
+        .filter((c) => c.attendanceId)
+        .map((c) => `${c.userId}::${c.attendanceId}`),
+    );
+    const held = new Map<string, number>();
+    for (const h of heldCounts) {
+      held.set(`${h.studentId}::${h.groupId}`, h._count._all);
+    }
+    const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const inactiveSince = new Map<number, string>();
+    for (const s of inactiveStudents) {
+      if (s.statusChangedAt) {
+        inactiveSince.set(
+          s.id,
+          new Date(s.statusChangedAt.getTime() + TASHKENT_OFFSET_MS)
+            .toISOString()
+            .slice(0, 10),
+        );
+      }
+    }
+    const inScope = new Set(teacherIds);
+
+    const { lessons } = sweepGapLessons({
+      attendances,
+      groupMap,
+      resolveTeachers: (groupId, d) =>
+        overrideMap.get(`${groupId}::${d}`) ?? rosterMap.get(groupId) ?? [],
+      resolveRate: (tid, groupId, at) =>
+        pickActiveVersion(versByKey.get(`${tid}::${groupId}`), at) ??
+        pickActiveVersion(versByKey.get(`${tid}::GLOBAL`), at),
+      inScope: (tid) => inScope.has(tid),
+      isCovered: (tid, attId) => coveredByTeacher.has(`${tid}::${attId}`),
+      isFixedMonthly: (tid) => fixedMonthly.has(tid),
+      heldByStudentGroup: held,
+      inactiveSince,
+      dateStr,
+    });
+
+    // Shaped like the accrual rows the caller aggregates, so one loop serves
+    // both states.
+    return lessons.map((l) => ({
+      userId: l.teacherId,
+      studentId: l.studentId,
+      groupId: l.groupId,
+      amount: l.amount,
+      perLessonCost: l.perLessonCost,
+      lessonDate: l.lessonDate,
+    }));
+  }
+
   async getStudents(
     query: SalaryMonthlyQuery & { allMonths?: boolean },
     companyId: number,
@@ -77,7 +245,14 @@ export class SalaryCenterTopUpService {
       select: { id: true, firstName: true, lastName: true },
     });
     if (teachers.length === 0) {
-      return { month, floorMonth, period, data: [], totals: emptyTotals };
+      return {
+        month,
+        floorMonth,
+        period,
+        data: [],
+        totals: emptyTotals,
+        isForecast: false,
+      };
     }
     const teacherName = new Map(
       teachers.map((t) => [t.id, `${t.firstName} ${t.lastName}`.trim()]),
@@ -110,8 +285,28 @@ export class SalaryCenterTopUpService {
         lessonDate: true,
       },
     });
-    if (accruals.length === 0) {
-      return { month, floorMonth, period, data: [], totals: emptyTotals };
+    // An unsettled month has no written top-up accruals yet — payroll runs at
+    // month end — so the list would be empty exactly while it is most useful.
+    // The FORECAST leg fills it: lessons already held that the center will have
+    // to front, from the same sweep `getMonthly` reports as `centerFunded`.
+    // Production August 2026 carried 10 078 921 so'm of it, invisible until the
+    // month closed and the money had already gone out.
+    const forecast =
+      accruals.length === 0 && !allMonths
+        ? await this.sweepForecast(scope, teachers.map((t) => t.id))
+        : [];
+    const isForecast = forecast.length > 0;
+    const source = isForecast ? forecast : accruals;
+
+    if (source.length === 0) {
+      return {
+        month,
+        floorMonth,
+        period,
+        data: [],
+        totals: emptyTotals,
+        isForecast: false,
+      };
     }
 
     interface MonthBucket {
@@ -131,7 +326,7 @@ export class SalaryCenterTopUpService {
     }
     const byStudent = new Map<number, Bucket>();
     const allMonthKeys = new Set<string>();
-    for (const a of accruals) {
+    for (const a of source) {
       // Bucketed by the month the LESSON falls in — "when did this arise" —
       // rather than by the payroll period that settled it. A student whose
       // debt spans July and August should read as spanning July and August.
@@ -167,9 +362,7 @@ export class SalaryCenterTopUpService {
       }
     }
 
-    const groupIds = [
-      ...new Set(accruals.map((a) => a.groupId)),
-    ];
+    const groupIds = [...new Set(source.map((a) => a.groupId))];
     // Day-cached whole-company replay, shared with the debtors list so the two
     // tabs cannot describe one student's debt differently.
     const ages = await this.debtAge.getDebtAges(companyId);
@@ -290,6 +483,6 @@ export class SalaryCenterTopUpService {
       { ...emptyTotals, monthKeys: [...allMonthKeys].sort() },
     );
 
-    return { month, floorMonth, period, data: rows, totals };
+    return { month, floorMonth, period, data: rows, totals, isForecast };
   }
 }

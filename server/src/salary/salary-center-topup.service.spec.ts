@@ -68,6 +68,15 @@ describe('SalaryCenterTopUpService', () => {
           ]),
       },
       salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
+      // The forecast sweep runs only when a month has no written accruals yet;
+      // these answer empty so these tests stay about the settled path.
+      attendance: {
+        findMany: jest.fn().mockResolvedValue([]),
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
+      groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfigVersion: { findMany: jest.fn().mockResolvedValue([]) },
       student: { findMany: jest.fn().mockResolvedValue([]) },
       group: {
         findMany: jest
