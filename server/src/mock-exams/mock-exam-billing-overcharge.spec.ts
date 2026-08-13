@@ -1,35 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { readFileSync, readdirSync, statSync } from 'fs';
+import { join } from 'path';
 import { MockExamBillingService } from './mock-exam-billing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 
 /**
- * Regressions for the August 2026 mock-exam overcharge, where 690 000 so'm was
- * taken out of students' LESSON balances for an exam the desk had already
- * collected cash for, and another 810 000 sat armed for the next payment each
- * of those students made.
+ * Guards the rule that came out of the August 2026 overcharge: a mock exam fee
+ * never comes out of a Student's balance.
+ *
+ * That balance is prepayment for LESSONS. The centre collects mock fees at the
+ * desk, so a silent deduction meant 21 students paid twice — 690 000 so'm —
+ * and 810 000 more sat armed for their next lesson payment. The two channels
+ * could not see each other, which is why neither the student nor the cashier
+ * ever caught it.
  */
-describe('MockExamBillingService — overcharge guards', () => {
+describe('Mock exam fees never touch a lesson balance', () => {
   let service: MockExamBillingService;
   let prisma: any;
   let transactions: { reverseTransaction: jest.Mock };
 
   const STUDENT = 10500;
-  const COMPANY = 1001;
 
   beforeEach(async () => {
     prisma = {
-      mockExamParticipant: { findMany: jest.fn().mockResolvedValue([]), update: jest.fn() },
-      $queryRaw: jest.fn().mockResolvedValue([{ id: STUDENT, balance: 500_000 }]),
-      student: { update: jest.fn() },
-      transaction: {
-        create: jest.fn().mockResolvedValue({ id: 'tx-1' }),
-        findMany: jest.fn().mockResolvedValue([]),
-      },
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 2 }) },
-      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
-      $transaction: jest.fn((cb: any) => cb(prisma)),
+      transaction: { findMany: jest.fn().mockResolvedValue([]) },
     };
     transactions = { reverseTransaction: jest.fn() };
 
@@ -37,7 +32,6 @@ describe('MockExamBillingService — overcharge guards', () => {
       providers: [
         MockExamBillingService,
         { provide: PrismaService, useValue: prisma },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: TransactionsService, useValue: transactions },
       ],
     }).compile();
@@ -45,67 +39,74 @@ describe('MockExamBillingService — overcharge guards', () => {
     service = module.get(MockExamBillingService);
   });
 
-  describe('a finished exam can no longer reach a balance', () => {
-    it('excludes GRADING / ANNOUNCED / ARCHIVED exams from the unpaid sweep', async () => {
-      await service.tryDeductForStudent({ studentId: STUDENT, companyId: COMPANY });
+  describe('no charging path exists', () => {
+    it('the billing service exposes no way to deduct a fee', () => {
+      // `tryDeductForStudent` is deleted, not merely unwired. A method left
+      // behind "for later" is the one a future change reconnects.
+      expect((service as any).tryDeductForStudent).toBeUndefined();
 
-      expect(prisma.mockExamParticipant.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            studentId: STUDENT,
-            paid: false,
-            deletedAt: null,
-            exam: {
-              deletedAt: null,
-              status: { notIn: ['GRADING', 'ANNOUNCED', 'ARCHIVED'] },
-            },
-          }),
-        }),
-      );
+      const chargeLike = Object.getOwnPropertyNames(
+        Object.getPrototypeOf(service),
+      ).filter((m) => /deduct|charge|settle|bill/i.test(m));
+      expect(chargeLike).toEqual([]);
     });
 
-    it('deducts nothing when every unpaid row belongs to a finished exam', async () => {
-      // The scoped query returns nothing — that IS the guard doing its job.
-      prisma.mockExamParticipant.findMany.mockResolvedValue([]);
+    // A source scan rather than a behavioural test, because the failure mode is
+    // a NEW call site appearing somewhere in the tree — which no test of the
+    // existing paths would ever see.
+    //
+    // Comments are stripped first: the billing service's own header explains at
+    // length why the method was removed, and that history is worth keeping
+    // readable. Only real code counts.
+    it('nothing under src/ calls a mock-fee deduction', () => {
+      const stripComments = (s: string) =>
+        s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
-      const result = await service.tryDeductForStudent({
-        studentId: STUDENT,
-        companyId: COMPANY,
-      });
-
-      expect(result).toEqual({ paidCount: 0, deductedAmount: 0 });
-      expect(prisma.transaction.create).not.toHaveBeenCalled();
-      expect(prisma.student.update).not.toHaveBeenCalled();
+      const offenders: string[] = [];
+      const walk = (dir: string) => {
+        for (const entry of readdirSync(dir)) {
+          const full = join(dir, entry);
+          if (statSync(full).isDirectory()) {
+            walk(full);
+            continue;
+          }
+          if (!entry.endsWith('.ts') || entry.endsWith('.spec.ts')) continue;
+          const code = stripComments(readFileSync(full, 'utf8'));
+          if (/tryDeductForStudent|mockExamBilling\s*\.\s*\w*[Dd]educt/.test(code)) {
+            offenders.push(full);
+          }
+        }
+      };
+      walk(join(__dirname, '..'));
+      expect(offenders).toEqual([]);
     });
 
-    it('still bills an exam whose registration is open', async () => {
-      prisma.mockExamParticipant.findMany.mockResolvedValue([
-        {
-          id: 'p-open',
-          examId: 'e-open',
-          feeAmount: 30_000,
-          telegramChatId: null,
-          publicId: 10500,
-          exam: { price: 40_000, title: 'A1 Mock' },
-        },
-      ]);
-
-      const result = await service.tryDeductForStudent({
-        studentId: STUDENT,
-        companyId: COMPANY,
-      });
-
-      expect(result).toEqual({ paidCount: 1, deductedAmount: 30_000 });
-      expect(prisma.transaction.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ type: 'MOCK_EXAM_FEE', amount: -30_000 }),
-        }),
+    it('the payment write path does not reference mock exam billing', () => {
+      // 15 of the 21 students lost their money here, at the cashier's desk,
+      // weeks after registering: a lesson payment landed and was immediately
+      // drained. A lesson payment settles lessons.
+      const src = readFileSync(
+        join(__dirname, '..', 'payments', 'payments-write.service.ts'),
+        'utf8',
       );
+      expect(src).not.toMatch(/mockExamBilling/);
+      expect(src).not.toMatch(/MockExamBillingService/);
+    });
+
+    it('the Telegram registration scene does not reference mock exam billing', () => {
+      // The scene used to deduct BEFORE building the payment menu, so a student
+      // with funds never saw the "Naqd (markazda)" button at all.
+      const src = readFileSync(
+        join(__dirname, '..', 'telegram', 'scenes', 'mock-exam-registration.scene.ts'),
+        'utf8',
+      );
+      expect(src).not.toMatch(/mockExamBilling/);
+      expect(src).not.toMatch(/MockExamBillingService/);
     });
   });
 
-  describe('refundParticipantFee', () => {
-    it('reverses the fee a removed participant paid from balance', async () => {
+  describe('refundParticipantFee — still needed for historical rows', () => {
+    it('reverses a fee a removed participant had paid from balance', async () => {
       prisma.transaction.findMany.mockResolvedValue([
         { id: 'tx-fee', amount: -30_000, studentId: STUDENT },
       ]);
@@ -136,8 +137,6 @@ describe('MockExamBillingService — overcharge guards', () => {
     });
 
     it('is a no-op for a cash / gateway payer who never touched their balance', async () => {
-      prisma.transaction.findMany.mockResolvedValue([]);
-
       const returned = await service.refundParticipantFee('p-cash');
 
       expect(returned).toBe(0);

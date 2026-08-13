@@ -38,7 +38,6 @@ import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.s
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
 import { EntityHistoryService } from '../common/entity-history';
-import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
 
 /**
@@ -96,7 +95,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private uploadService: UploadService,
     private usersService: UsersService,
     private entityHistoryService: EntityHistoryService,
-    private mockExamBilling: MockExamBillingService,
     private paymentLinkService: PaymentLinkService,
     private gateStats: TelegramChannelGateStatsService,
   ) {}
@@ -233,7 +231,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     const mockExamScene = createMockExamRegistrationScene(
       this.prisma,
-      this.mockExamBilling,
       this.paymentLinkService,
       this.bot,
     );

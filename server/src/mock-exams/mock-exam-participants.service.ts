@@ -252,22 +252,12 @@ export class MockExamParticipantsService {
         companyId,
       });
 
-      // If this manual entry is linked to a real DaF student, try to
-      // settle the mock fee from their balance right away. Non-fatal:
-      // failures here are logged but don't block the registration.
-      if (studentId !== null) {
-        try {
-          await this.mockExamBilling.tryDeductForStudent({
-            studentId,
-            companyId,
-            performedById: userId,
-          });
-        } catch (err) {
-          this.logger.warn(
-            `Auto-deduct after manual add failed for student ${studentId}: ${(err as Error).message}`,
-          );
-        }
-      }
+      // A DaF student's balance is NOT touched here. It used to be settled
+      // on the spot "to save them a payment step", which meant a student who
+      // had funds never got asked — and the admin adding them had no idea
+      // money had just left the student's lesson balance. The fee is
+      // collected the same way it is for everyone else: cash at the desk
+      // (`markPaid`) or Payme/Click against the participant's publicId.
 
       return created;
     } catch (error) {
