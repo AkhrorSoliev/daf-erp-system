@@ -437,6 +437,13 @@ export class StudentsReadService {
    *
    * `includeClosed=false` (default) — faqat ACTIVE enrollment'lar. true bo'lsa
    * yopilganlar (FROZEN/COMPLETED/DROPPED/TRANSFERRED) ham qo'shiladi.
+   *
+   * TARTIB: guruhlar ENG SO'NGGI dars sanasi bo'yicha kamayish tartibida —
+   * eng oxirgi o'qigan guruhi tepada, eskilari pastda. Avval tartib
+   * `status asc, createdAt asc` edi: bu ikki xil o'lchovni aralashtirardi, ya'ni
+   * faol guruh darsi qachon bo'lganidan qat'i nazar tepaga chiqar, yopilganlari
+   * esa o'z ichida eskidan yangiga qarab terilardi. O'quvchining dars tarixi
+   * shu sababli vaqt bo'yicha uzilib ko'rinardi.
    */
   async getLessonsOverview(
     id: number,
@@ -462,11 +469,15 @@ export class StudentsReadService {
         // open. Default (toggle off) still hides archived groups.
         group: includeClosed ? { companyId } : { companyId, deletedAt: null },
       },
-      orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],
+      // Haqiqiy tartib pastda, dars sanalari yig'ilgandan keyin beriladi (SQL
+      // buni qila olmaydi — kalit attendance'dan keladi). Bu yerdagi tartib
+      // faqat teng holatlar uchun barqaror asos.
+      orderBy: [{ createdAt: 'asc' }],
       select: {
         id: true,
         status: true,
         startDate: true,
+        createdAt: true,
         group: {
           select: {
             id: true,
@@ -500,6 +511,12 @@ export class StudentsReadService {
       select: { id: true, groupId: true, date: true, status: true },
       orderBy: { date: 'asc' },
     });
+
+    // enrollmentId → tartib kaliti (pastdagi sort uchun). Kalit = guruhning eng
+    // so'nggi dars sanasi; darsi hali yo'q guruh uchun enrollment startDate,
+    // u ham bo'lmasa yozilgan sana. Hali darsi yo'q YANGI guruh shu tufayli
+    // tepada qoladi — bo'sh kalit bilan u eng pastga tushib ketardi.
+    const sortKey = new Map<string, string>();
 
     const groups = enrollments.map((e) => {
       // lpc = kurs darslari soni (NEVER hardcoded 12) — sikl blok o'lchami.
@@ -558,6 +575,18 @@ export class StudentsReadService {
         (a, b) => a.cycleSequenceNumber - b.cycleSequenceNumber,
       );
 
+      // lessons sana bo'yicha o'sish tartibida → oxirgisi eng so'nggi dars.
+      // Ikki guruhning so'nggi darsi bir kunga to'g'ri kelishi mumkin (bir
+      // kunda eski guruhdan chiqib yangisiga o'tgan o'quvchi), shuning uchun
+      // kalitga createdAt qo'shiladi: teng kunda keyinroq yozilgani tepada.
+      const lastDate =
+        lessons.length > 0
+          ? lessons[lessons.length - 1].date
+          : e.startDate
+            ? tashkentDateStr(e.startDate)
+            : tashkentDateStr(e.createdAt);
+      sortKey.set(e.id, `${lastDate}|${e.createdAt.toISOString()}`);
+
       return {
         enrollmentId: e.id,
         groupId: e.group.id,
@@ -570,6 +599,14 @@ export class StudentsReadService {
         cycles,
         lessons,
       };
+    });
+
+    // Eng so'nggi dars sanasi bo'yicha kamayish tartibi. Sanalar "YYYY-MM-DD"
+    // bo'lgani uchun matn solishtiruvi xronologik solishtiruv bilan bir xil.
+    groups.sort((a, b) => {
+      const ka = sortKey.get(a.enrollmentId) ?? '';
+      const kb = sortKey.get(b.enrollmentId) ?? '';
+      return kb.localeCompare(ka);
     });
 
     return { studentId: id, groups };
