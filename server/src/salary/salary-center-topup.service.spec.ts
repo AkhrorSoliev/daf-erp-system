@@ -3,6 +3,7 @@ import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { SalaryMonthlyService } from './salary-monthly.service';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DebtAgeService } from '../common/finance/debt-age.service';
 
 /**
  * The "Qolgan (markaz)" drill-down: which students the center is still owed by
@@ -17,6 +18,9 @@ import { PrismaService } from '../prisma/prisma.service';
 describe('SalaryCenterTopUpService', () => {
   let service: SalaryCenterTopUpService;
   let prisma: any;
+  // The debt-month breakdown comes from the shared day-cached replay; these
+  // tests are about the accrual grouping, so it answers empty by default.
+  let debtAge: { getDebtAges: jest.Mock };
 
   const ceoCaller = { mainBranch: 1, roles: [{ role: { name: 'CEO' } }] };
 
@@ -45,6 +49,7 @@ describe('SalaryCenterTopUpService', () => {
   });
 
   beforeEach(async () => {
+    debtAge = { getDebtAges: jest.fn().mockResolvedValue(new Map()) };
     prisma = {
       company: {
         findUnique: jest
@@ -75,6 +80,7 @@ describe('SalaryCenterTopUpService', () => {
       providers: [
         SalaryCenterTopUpService,
         { provide: PrismaService, useValue: prisma },
+        { provide: DebtAgeService, useValue: debtAge },
       ],
     }).compile();
 

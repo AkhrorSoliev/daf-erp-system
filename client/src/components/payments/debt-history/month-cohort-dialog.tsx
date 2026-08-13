@@ -34,6 +34,7 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { STATUS_COLORS } from "./types";
+import { DebtMonthsBadge } from "../debt/debt-months-badge";
 import type {
   AgingDebtor,
   DebtMonth,
@@ -113,93 +114,6 @@ function StudentLink({
     >
       <span className="text-muted-foreground">#{id}</span> {label}
     </Link>
-  );
-}
-
-/**
- * The marker the figure needs: this student's debt does not live only in the
- * month being looked at. Hovering names the other months and amounts, so a
- * small number here is never mistaken for the whole picture.
- */
-function SpreadMarker({
-  debtor,
-  monthKey,
-  monthLabel,
-}: {
-  debtor: AgingDebtor;
-  monthKey: string;
-  monthLabel: string;
-}) {
-  if (debtor.otherMonths.length === 0) return null;
-
-  // The month being viewed belongs IN the list, not outside it. Listing only
-  // "the other months" made the reader assemble the picture themselves from a
-  // number on the row plus a sentence in a tooltip.
-  const breakdown = [
-    ...debtor.otherMonths,
-    { monthKey, label: monthLabel, amount: debtor.monthUnpaid },
-  ].sort((a, b) => (a.monthKey < b.monthKey ? -1 : 1));
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="ml-1.5 inline-flex cursor-help items-center gap-0.5 rounded bg-amber-100 px-1 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-            <Layers className="size-3" />
-            {breakdown.length} oy
-          </span>
-        </TooltipTrigger>
-        {/* A compact aligned table beats prose here: the reader is comparing
-            numbers, and `tabular-nums` + right alignment is what makes them
-            comparable at a glance. */}
-        {/* The base TooltipContent is an `inline-flex` ROW on a DARK surface
-            (`bg-foreground text-background`). Two stacked blocks therefore
-            landed side by side, and `text-muted-foreground` / default borders
-            were invisible against it — which is why this panel did not render
-            as designed. `flex-col items-stretch` restores the stack, and the
-            muted tones are expressed against the dark background. */}
-        <TooltipContent className="w-64 flex-col items-stretch gap-0 p-0">
-          <div className="border-b border-background/20 px-3 py-2">
-            <p className="text-xs font-semibold">
-              {`${debtor.firstName} ${debtor.lastName}`.trim()}
-            </p>
-            <p className="text-[11px] text-background/70">
-              To&apos;lanmagan qarzi qaysi oyda paydo bo&apos;lgan
-            </p>
-          </div>
-          <div className="px-3 py-2">
-            {breakdown.map((o) => {
-              const isCurrent = o.monthKey === monthKey;
-              return (
-                <div
-                  key={o.monthKey}
-                  className={cn(
-                    "flex items-baseline justify-between gap-3 py-0.5 text-xs",
-                    isCurrent && "font-semibold",
-                  )}
-                >
-                  <span>
-                    {o.label}
-                    {isCurrent && (
-                      <span className="ml-1 font-normal text-background/70">
-                        (ochilgan oy)
-                      </span>
-                    )}
-                  </span>
-                  <span className="tabular-nums">{formatPrice(o.amount)}</span>
-                </div>
-              );
-            })}
-            <div className="mt-1.5 flex items-baseline justify-between gap-3 border-t border-background/20 pt-1.5 text-xs font-semibold">
-              <span>Jami qarzi</span>
-              <span className="tabular-nums">
-                {formatPrice(debtor.totalDebt)}
-              </span>
-            </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 }
 
@@ -411,10 +325,18 @@ export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right font-medium tabular-nums text-red-600 dark:text-red-400">
                       {formatPrice(d.monthUnpaid)}
-                      <SpreadMarker
-                        debtor={d}
-                        monthKey={target?.monthKey ?? ""}
-                        monthLabel={target?.label ?? ""}
+                      <DebtMonthsBadge
+                        className="ml-1.5"
+                        studentName={`${d.firstName} ${d.lastName}`.trim()}
+                        months={[
+                          ...d.otherMonths,
+                          {
+                            monthKey: target?.monthKey ?? "",
+                            amount: d.monthUnpaid,
+                          },
+                        ]}
+                        totalDebt={d.totalDebt}
+                        highlightMonthKey={target?.monthKey}
                       />
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">

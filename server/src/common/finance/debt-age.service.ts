@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
-import { replayDebtOrigin } from '../common/finance/debt-origin';
-import { secondsUntilTashkentMidnight } from '../reports/net-profit-cache';
+import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../redis/redis.service';
+import { replayDebtOrigin } from './debt-origin';
+import { secondsUntilTashkentMidnight } from '../../reports/net-profit-cache';
 
 /** One student's debt, dated and split by where it came from. */
 export interface DebtAge {

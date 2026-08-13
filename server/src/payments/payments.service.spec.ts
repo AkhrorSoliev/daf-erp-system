@@ -5,7 +5,7 @@ import { PaymentsService } from './payments.service';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
-import { DebtAgeService } from './debt-age.service';
+import { DebtAgeService } from './../common/finance/debt-age.service';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';

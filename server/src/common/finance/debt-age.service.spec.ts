@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionType } from '@prisma/client';
 import { DebtAgeService } from './debt-age.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../redis/redis.service';
 
 /**
  * The service is plumbing around `replayDebtOrigin` (tested on its own), so

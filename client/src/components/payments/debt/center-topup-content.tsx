@@ -27,6 +27,7 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { monthLabel, monthShort } from "../salary-utils";
+import { DebtMonthsBadge } from "./debt-months-badge";
 
 export interface TopUpRow {
   student: {
@@ -44,6 +45,8 @@ export interface TopUpRow {
   studentDebt: number;
   /** This month's fronted lessons at their frozen price. Not rendered. */
   studentOwed: number;
+  /** Which months the DEBT is made of — not the months the center covered. */
+  debtByMonth: { monthKey: string; amount: number }[];
   groups: { id: string; name: string }[];
   teachers: { id: number; name: string }[];
   firstLesson: string;
@@ -393,9 +396,20 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
                   <TableCell className="text-right tabular-nums text-amber-700 dark:text-amber-400">
                     {formatPrice(r.centerPaid)}
                   </TableCell>
-                  {/* Always > 0 — a zero-debt row never reaches here. */}
-                  <TableCell className="text-right font-semibold tabular-nums text-red-600 dark:text-red-400">
-                    {formatPrice(r.studentDebt)}
+                  {/* Always > 0 — a zero-debt row never reaches here. The badge
+                      appears only when the debt spans more than one month, so
+                      the single figure is never read as one month's arrears. */}
+                  <TableCell className="text-right">
+                    <span className="inline-flex items-center gap-1.5">
+                      <DebtMonthsBadge
+                        studentName={`${r.student.firstName} ${r.student.lastName}`.trim()}
+                        months={r.debtByMonth}
+                        totalDebt={r.studentDebt}
+                      />
+                      <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">
+                        {formatPrice(r.studentDebt)}
+                      </span>
+                    </span>
                   </TableCell>
                 </TableRow>
               ))

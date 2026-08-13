@@ -9,6 +9,7 @@ import {
   accrualPeriodWhere,
   buildTeacherRosterWhere,
 } from './shared/teacher-roster-where';
+import { DebtAgeService } from '../common/finance/debt-age.service';
 
 /**
  * "Markaz qo'shimchasi — qolgan" drill-down: WHO the center is still owed by.
@@ -41,7 +42,10 @@ import {
  */
 @Injectable()
 export class SalaryCenterTopUpService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private debtAge: DebtAgeService,
+  ) {}
 
   async getStudents(
     query: SalaryMonthlyQuery & { allMonths?: boolean },
@@ -166,6 +170,9 @@ export class SalaryCenterTopUpService {
     const groupIds = [
       ...new Set(accruals.map((a) => a.groupId)),
     ];
+    // Day-cached whole-company replay, shared with the debtors list so the two
+    // tabs cannot describe one student's debt differently.
+    const ages = await this.debtAge.getDebtAges(companyId);
     const [students, groups] = await Promise.all([
       this.prisma.student.findMany({
         where: { id: { in: [...byStudent.keys()] } },
@@ -220,6 +227,15 @@ export class SalaryCenterTopUpService {
            * still move with the picker.
            */
           studentDebt: s.balance < 0 ? -s.balance : 0,
+          /**
+           * Which months that debt is actually made of — NOT the same as the
+           * months the center covered lessons. Production August 2026: the
+           * center fronted only July, while these students' debt runs from May.
+           * Without this the single figure reads as one month's arrears.
+           */
+          debtByMonth: Object.entries(ages.get(s.id)?.months ?? {})
+            .sort(([a], [c]) => a.localeCompare(c))
+            .map(([monthKey, amount]) => ({ monthKey, amount })),
           /** This month's fronted lessons at their frozen price. Audit only. */
           studentOwed: b.studentOwed,
           groups: [...b.groupIds].map((id) => ({

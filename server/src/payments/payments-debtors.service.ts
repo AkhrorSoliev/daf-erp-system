@@ -22,7 +22,7 @@ import {
 } from '../billing/lesson-coverage.helper';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
-import { DebtAgeService } from './debt-age.service';
+import { DebtAgeService } from '../common/finance/debt-age.service';
 import { wholeMonthsBetween } from '../common/finance/debt-origin';
 
 @Injectable()

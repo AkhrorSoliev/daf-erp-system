@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { DebtAgeModule } from './common/finance/debt-age.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
@@ -68,6 +69,7 @@ import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
     ...(process.env.CRONS_ENABLED === 'false' ? [] : [ScheduleModule.forRoot()]),
     EventEmitterModule.forRoot(),
     PrismaModule,
+    DebtAgeModule,
     RedisModule,
     AiModule,
     AuthModule,

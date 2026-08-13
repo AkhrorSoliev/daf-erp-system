@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentsDebtorsService } from './payments-debtors.service';
-import { DebtAgeService } from './debt-age.service';
+import { DebtAgeService } from './../common/finance/debt-age.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 describe('PaymentsDebtorsService', () => {
