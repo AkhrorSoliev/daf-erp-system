@@ -647,6 +647,58 @@ describe('LessonBillingService', () => {
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
     });
 
+    it('still settles deferred salary when the roster is empty', async () => {
+      // The lessons were taught while the student was enrolled; the enrolment
+      // going FROZEN/DROPPED afterwards does not un-teach them. Returning early
+      // here left #10210 with 491 664 of coverage unapplied after they paid
+      // 490 000 and cleared their balance.
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      tx.transaction.findMany = jest.fn().mockResolvedValue([
+        {
+          id: 'ded-1',
+          attendanceId: 'att-1',
+          enrollmentId,
+          branchId: 1,
+          metadata: {
+            salaryDeferred: true,
+            uncoveredAmount: 33_333,
+            perLessonCost: 33_333,
+          },
+        },
+      ]);
+      tx.student.findUnique = jest.fn().mockResolvedValue({ balance: 0 });
+      tx.attendance.findUnique = jest
+        .fn()
+        .mockResolvedValue({ date: new Date('2026-07-10'), groupId });
+      tx.transaction.update = jest.fn().mockResolvedValue({});
+
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      expect(result.billedAttendances).toBe(0);
+      // The deferred row is settled: the teacher is credited and the flags
+      // clear, which is what flips `isCenterTopUp` off in the accrual.
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId,
+          attendanceId: 'att-1',
+          deductionTransactionId: 'ded-1',
+        }),
+      );
+      expect(tx.transaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              salaryDeferred: false,
+              uncoveredAmount: 0,
+            }),
+          }),
+        }),
+      );
+    });
+
     it('returns 0 when student has enrollments but no unpaid attendance', async () => {
       setupOneEnrollmentWith([]);
       const result = await service.processRetroactiveBillingForStudent(tx, {
