@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { StudentStatusBadge } from "./student-status-badge";
+import { StudentDebtOrigin } from "./student-debt-origin";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import {
   Tooltip,
@@ -166,6 +167,16 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
             </Badge>
           );
         })()}
+
+        {/* Only when they actually owe. A debt is one number on this card, and
+            most debts here are built from several months — the badge is what
+            stops that number reading as this month's arrears. */}
+        {student.balance < 0 && (
+          <StudentDebtOrigin
+            studentId={student.id}
+            studentName={`${student.firstName} ${student.lastName}`.trim()}
+          />
+        )}
       </div>
 
       {/* Contact info */}

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { replayDebtOrigin } from './debt-origin';
+import { assertCallerMayTouchStudent } from '../auth/student-branch-scope';
 import { secondsUntilTashkentMidnight } from '../../reports/net-profit-cache';
 
 /** One student's debt, dated and split by where it came from. */
@@ -89,6 +90,50 @@ export class DebtAgeService {
     ).catch((e) => this.logger.warn(`Kesh yozilmadi (${key}): ${e}`));
 
     return toMap(computed);
+  }
+
+  /**
+   * One student's answer, for their profile page.
+   *
+   * Reads the day's cached map when it is warm, so the profile and the debtors
+   * list say the same thing about the same person. When it is cold it replays
+   * just this student instead of the whole company — a profile visit must not
+   * pay for 422 people's ledgers, and in that case the live answer is the
+   * better one anyway.
+   */
+  async getForStudent(
+    companyId: number,
+    studentId: number,
+    userId?: number,
+  ): Promise<DebtAge | null> {
+    // Branch guard, same as every other id-addressed student read: this returns
+    // how much someone owes and since when, so a director must not reach it by
+    // typing another branch's id into the URL.
+    await assertCallerMayTouchStudent(this.prisma, userId, studentId, companyId);
+    try {
+      const hit = await withTimeout(
+        this.redis.get(this.key(companyId)),
+        CACHE_READ_TIMEOUT_MS,
+      );
+      if (hit) {
+        const map = JSON.parse(hit) as DebtAgeMap;
+        return map[studentId] ?? null;
+      }
+    } catch (e) {
+      this.logger.warn(`Kesh o'qilmadi (bitta o'quvchi): ${e}`);
+    }
+
+    const rows = await this.prisma.transaction.findMany({
+      where: { companyId, studentId, amount: { not: 0 } },
+      select: { studentId: true, type: true, amount: true, createdAt: true },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    const origin = replayDebtOrigin(rows);
+    if (!origin.since) return null;
+    return {
+      since: origin.since.toISOString(),
+      months: Object.fromEntries(origin.byMonth),
+    };
   }
 
   private async compute(companyId: number): Promise<DebtAgeMap> {
