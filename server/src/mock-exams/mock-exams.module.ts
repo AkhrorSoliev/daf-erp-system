@@ -14,9 +14,10 @@ import { MockExamBillingService } from './mock-exam-billing.service';
 import { MockExamPdfService } from './mock-exam-pdf.service';
 import { MockExamDeadlineCronService } from './mock-exam-deadline-cron.service';
 import { UploadModule } from '../upload/upload.module';
+import { TransactionsModule } from '../transactions/transactions.module';
 
 @Module({
-  imports: [UploadModule],
+  imports: [UploadModule, TransactionsModule],
   controllers: [
     MockExamSectionsController,
     MockExamsController,

@@ -11,6 +11,7 @@ describe('MockExamParticipantsService', () => {
   let service: MockExamParticipantsService;
   let prisma: any;
   let history: any;
+  let billingMock: any;
 
   beforeEach(async () => {
     prisma = {
@@ -48,7 +49,11 @@ describe('MockExamParticipantsService', () => {
       recordStatusChange: jest.fn(),
       recordRestore: jest.fn(),
     };
-    const billing = { tryDeductForStudent: jest.fn().mockResolvedValue({ paidCount: 0, deductedAmount: 0 }) };
+    const billing = {
+      tryDeductForStudent: jest.fn().mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
+      refundParticipantFee: jest.fn().mockResolvedValue(0),
+    };
+    billingMock = billing;
     const eventEmitter = { emit: jest.fn() };
     const mod: TestingModule = await Test.createTestingModule({
       providers: [
@@ -474,6 +479,47 @@ describe('MockExamParticipantsService', () => {
         }),
       );
       expect(history.recordDelete).toHaveBeenCalled();
+    });
+
+    // Two students on the August 2026 exam were billed 30 000 so'm twice: the
+    // admin deleted their registration (fee kept, `paid` still true on the dead
+    // row) and they re-registered minutes later. The per-exam unique index only
+    // counts live rows, so nothing stopped the second charge.
+    it('returns the fee to the balance before the row is removed', async () => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+      });
+      billingMock.refundParticipantFee.mockResolvedValue(30_000);
+
+      const res = await service.remove('p1', 1001, 1, null);
+
+      expect(billingMock.refundParticipantFee).toHaveBeenCalledWith('p1', 1);
+      expect(res.refunded).toBe(30_000);
+      expect(res.message).toContain('30');
+
+      // The refund must happen BEFORE the soft delete — afterwards the fee's
+      // participant is gone and nothing links the money back to it.
+      const refundOrder = billingMock.refundParticipantFee.mock.invocationCallOrder[0];
+      const deleteOrder = prisma.mockExamParticipant.update.mock.invocationCallOrder[0];
+      expect(refundOrder).toBeLessThan(deleteOrder);
+    });
+
+    it('says nothing about money when the participant paid cash', async () => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+      });
+      billingMock.refundParticipantFee.mockResolvedValue(0);
+
+      const res = await service.remove('p1', 1001, 1, null);
+
+      expect(res.refunded).toBe(0);
+      expect(res.message).toBe("Ishtirokchi o'chirildi");
     });
   });
 });

@@ -569,10 +569,22 @@ export class MockExamParticipantsService {
       throw new NotFoundException('Ishtirokchi topilmadi');
     }
 
+    // Give the money back BEFORE the row disappears. A removed registration
+    // that keeps its fee is money the centre holds for nothing — and because
+    // the per-exam unique index only counts live rows, the same person can
+    // register again and be charged twice over.
+    const refunded = await this.mockExamBilling.refundParticipantFee(id, userId);
+
     await this.prisma.mockExamParticipant.update({
       where: { id },
       data: { deletedAt: new Date(), deletedById: userId },
     });
+
+    if (refunded > 0) {
+      this.logger.log(
+        `Participant ${id} removed — ${refunded} so'm returned to balance`,
+      );
+    }
 
     await this.entityHistoryService.recordDelete({
       entityType: 'MockExamParticipant',
@@ -586,7 +598,13 @@ export class MockExamParticipantsService {
       companyId,
     });
 
-    return { message: "Ishtirokchi o'chirildi" };
+    return {
+      message:
+        refunded > 0
+          ? `Ishtirokchi o'chirildi, ${refunded.toLocaleString('ru-RU')} so'm balansga qaytarildi`
+          : "Ishtirokchi o'chirildi",
+      refunded,
+    };
   }
 
   /**

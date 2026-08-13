@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MockExamBillingService } from './mock-exam-billing.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { TransactionsService } from '../transactions/transactions.service';
 
 describe('MockExamBillingService — branch attribution', () => {
   let service: MockExamBillingService;
@@ -38,6 +39,10 @@ describe('MockExamBillingService — branch attribution', () => {
         MockExamBillingService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: TransactionsService,
+          useValue: { reverseTransaction: jest.fn() },
+        },
       ],
     }).compile();
 
