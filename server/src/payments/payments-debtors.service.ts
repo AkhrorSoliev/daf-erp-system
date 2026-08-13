@@ -74,13 +74,22 @@ export class PaymentsDebtorsService {
     branchIds?: number[],
     status: StudentStatus | 'all' = StudentStatus.ACTIVE,
   ): Prisma.StudentWhereInput {
+    // Archived students ARE included on the page. The archive rule normally
+    // hides soft-deleted rows, and this is a deliberate exception: a debt is
+    // not archived along with the record. Production carried 4 of them owing
+    // 1 019 318, and the reasons show why leaving them out was wrong — "o'qishni
+    // tashladi", "darsga kelmagan, qarzdorlik yozgan". (One, #10323, is a
+    // duplicate account whose 153 328 is phantom; it now becomes visible enough
+    // to clean up rather than quietly padding a total nobody could open.)
+    const archived = status === 'all' || status === StudentStatus.ARCHIVED;
     return {
       companyId,
-      // Soft-deleted students stay out, per the archive rule. They are the one
-      // slice the monthly tab counts and this one does not — 4 students,
-      // 1 019 318 so'm — which the page states rather than hides.
-      deletedAt: null,
-      ...(status === 'all' ? {} : { status }),
+      ...(archived ? {} : { deletedAt: null }),
+      ...(status === 'all'
+        ? {}
+        : status === StudentStatus.ARCHIVED
+          ? { deletedAt: { not: null } }
+          : { status }),
       balance: { lt: 0 },
       ...(branchIds
         ? { branches: { some: { branchId: { in: branchIds } } } }

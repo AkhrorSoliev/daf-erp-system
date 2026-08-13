@@ -690,13 +690,16 @@ describe('PaymentsService', () => {
       });
 
       const findManyCall = prisma.student.findMany.mock.calls[0][0];
+      // No `deletedAt: null` and no status: the page lists every debtor,
+      // archived included — a debt is not archived with the student record.
       expect(findManyCall.where).toEqual(
         expect.objectContaining({
           companyId: 1001,
-          deletedAt: null,
           balance: { lt: 0 },
         }),
       );
+      expect(findManyCall.where.deletedAt).toBeUndefined();
+      expect(findManyCall.where.status).toBeUndefined();
       expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
     });
 

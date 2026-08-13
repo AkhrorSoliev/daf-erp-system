@@ -46,7 +46,7 @@ describe('PaymentsDebtorsService', () => {
       expect(arg.where).toEqual(
         expect.objectContaining({
           companyId: 1001,
-          deletedAt: null,
+          // No `deletedAt: null` — archived debtors are listed as well.
             balance: { lt: 0 },
         }),
       );

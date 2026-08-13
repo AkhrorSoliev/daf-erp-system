@@ -62,10 +62,10 @@ export const SORT_OPTIONS = [
 ] as const;
 
 /**
- * Every status, not just ACTIVE. A frozen or expelled student still owes the
- * money — hiding them made this tab report 37 998 992 while the monthly tab
- * reported 84 555 445 on the same page, with 45 mln sitting in rows nobody
- * could open.
+ * Every status, archived included. A frozen, expelled or archived student still
+ * owes the money — hiding them made this tab report 37 998 992 while the
+ * monthly tab reported 84 555 445 on the same page, with the difference sitting
+ * in rows nobody could open.
  */
 const STATUS_OPTIONS = [
   { value: "all", label: "Barcha holatlar" },
@@ -73,6 +73,7 @@ const STATUS_OPTIONS = [
   { value: "FROZEN", label: "Muzlatilgan" },
   { value: "EXPELLED", label: "Chetlatilgan" },
   { value: "GRADUATED", label: "Bitirgan" },
+  { value: "ARCHIVED", label: "Arxivlangan" },
 ] as const;
 
 const PROMISE_OPTIONS = [

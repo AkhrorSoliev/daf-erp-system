@@ -56,6 +56,12 @@ export class PaymentQueryDto extends PaginationDto {
    * whatever their status — a frozen or expelled student still owes the money.
    */
   @IsOptional()
-  @IsIn(['all', 'ACTIVE', 'FROZEN', 'EXPELLED', 'GRADUATED'])
-  studentStatus?: 'all' | 'ACTIVE' | 'FROZEN' | 'EXPELLED' | 'GRADUATED';
+  @IsIn(['all', 'ACTIVE', 'FROZEN', 'EXPELLED', 'GRADUATED', 'ARCHIVED'])
+  studentStatus?:
+    | 'all'
+    | 'ACTIVE'
+    | 'FROZEN'
+    | 'EXPELLED'
+    | 'GRADUATED'
+    | 'ARCHIVED';
 }
