@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, HandCoins, UserMinus, Users, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -28,6 +28,7 @@ import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { monthLabel, monthShort } from "../salary-utils";
 import { DebtMonthsBadge } from "./debt-months-badge";
+import { SummaryCard } from "../summary-card";
 
 export interface TopUpRow {
   student: {
@@ -235,48 +236,57 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
 
   return (
     <>
-      {/* The two sums, side by side. Keeping them apart is the point: one is
-          the center's cost, the other is what to collect. */}
-      <div className="mb-4 grid gap-4 rounded-md border bg-muted/20 p-4 sm:grid-cols-2">
-        <div>
-          <div className="text-xs text-muted-foreground">
-            Markaz ustozlarga to&apos;lagan
-            {allMonths ? " — butun davr" : ` — ${monthLabel(month)}`}
-            {isFiltered && <span className="ml-1">(tanlangan)</span>}
-          </div>
-          <div className="text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-            {formatPrice(shown.centerPaid)} so&apos;m
-          </div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            {shown.students} o&apos;quvchi · {shown.lessons} dars
-            {/* The salary card reports the raw flag and this list does not, so
-                the gap gets one line. Without it the two numbers look like a
-                bug; with more than a line it reads as an excuse. */}
-            {alreadyBack.count > 0 && (
-              <span>
-                {" "}
-                · kartada {formatPrice(data.totals.centerPaid)} — farqi puli
-                qaytgan {alreadyBack.count} o&apos;quvchi
-              </span>
-            )}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">
-            O&apos;quvchilardan olinishi kerak
-            {isFiltered && <span className="ml-1">— tanlangan</span>}
-          </div>
-          <div className="text-xl font-semibold tabular-nums text-red-600 dark:text-red-400">
-            {formatPrice(shown.studentDebt)} so&apos;m
-          </div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            Har o&apos;quvchining profilidagi qarzi — telefonda aynan shu summa
-            so&apos;raladi. Qarz oylarga bo&apos;linmaydi; qaysi oylardagi
-            darslar sababli qarzdor bo&apos;lgani «Qaysi oylardan»
-            ustunida ko&apos;rinadi.
-          </div>
-        </div>
+      {/* Four cards, each answering one question a reader actually has:
+          what did this cost us, what can we get back, from how many people,
+          and how many of them are beyond automatic recovery. The hints carry
+          the meaning — a finance number under a three-word label is read as
+          whatever the reader already assumed. */}
+      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryCard
+          tone="amber"
+          icon={<HandCoins className="size-5 text-amber-700 dark:text-amber-300" />}
+          label="Markaz to'lagan"
+          value={`${formatPrice(shown.centerPaid)} so'm`}
+          hint="Kassadan ustozlarga chiqqan pul"
+        />
+        <SummaryCard
+          tone="red"
+          icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
+          label="Olinishi kerak"
+          value={`${formatPrice(shown.studentDebt)} so'm`}
+          hint="Shu o'quvchilarning bugungi jami qarzi"
+        />
+        <SummaryCard
+          tone="slate"
+          icon={<Users className="size-5 text-slate-700 dark:text-slate-300" />}
+          label="O'quvchilar"
+          value={`${shown.students} ta`}
+          hint={`${shown.lessons} ta dars qoplangan`}
+        />
+        <SummaryCard
+          tone="violet"
+          icon={
+            <UserMinus className="size-5 text-violet-700 dark:text-violet-300" />
+          }
+          label="Faol emas"
+          value={`${shown.inactive} ta`}
+          hint="Darsga kelmaydi — pul o'zi qaytmaydi"
+        />
       </div>
+
+      <p className="mb-4 text-xs text-muted-foreground">
+        {allMonths ? "Butun davr" : monthLabel(month)}
+        {isFiltered && " · tanlangan holat"} · qarz oylarga bo&apos;linmaydi:
+        telefonda o&apos;quvchining to&apos;liq qarzi so&apos;raladi, u qaysi
+        oylardan yig&apos;ilgani &laquo;⧉&raquo; nishonida ko&apos;rinadi.
+        {alreadyBack.count > 0 && (
+          <>
+            {" "}
+            Oylik kartasida {formatPrice(data.totals.centerPaid)} turibdi —
+            farqi puli qaytgan {alreadyBack.count} o&apos;quvchi.
+          </>
+        )}
+      </p>
 
       {shown.inactive > 0 && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
