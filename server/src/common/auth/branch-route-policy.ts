@@ -301,6 +301,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',
+      'GET /students/:id/debt-origin',
       'GET /students/:id/active-enrollments-prepaid',
       'GET /students/:id/closed-enrollments',
       'GET /students/:id/lessons-overview',

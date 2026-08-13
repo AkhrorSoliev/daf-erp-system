@@ -57,6 +57,15 @@ export interface Debtor {
     createdAt: string;
     calledByName: string;
   } | null;
+  /**
+   * When the unbroken debt streak began, and which months it is made of.
+   * Null when the day's cached ledger replay has not seen this student yet —
+   * a debt taken on since the cache was built renders "—" rather than a date
+   * guessed from the balance.
+   */
+  debtSince: string | null;
+  debtMonths: number | null;
+  debtByMonth: { monthKey: string; amount: number }[];
 }
 
 export function DebtorRow({
@@ -126,6 +135,9 @@ export function DebtorRow({
       <TableCell className="text-right font-medium text-red-600 tabular-nums">
         {formatBalance(debtor.debtAmount)}
       </TableCell>
+      <TableCell className="text-sm">
+        <DebtAge debtor={debtor} />
+      </TableCell>
       <TableCell>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -147,6 +159,59 @@ export function DebtorRow({
         </DropdownMenu>
       </TableCell>
     </TableRow>
+  );
+}
+
+/**
+ * How long this debt has stood, and which months it is made of.
+ *
+ * The headline is the age, because that is what changes how a call goes — a
+ * week is a reminder, five months is a different conversation. The month
+ * breakdown sits under it in the tooltip: 168 of production's 422 debtors owe
+ * across more than one month, so "since May" alone would hide that most of the
+ * money is actually July's.
+ */
+function DebtAge({ debtor }: { debtor: Debtor }) {
+  if (!debtor.debtSince || debtor.debtMonths === null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const months = debtor.debtMonths;
+  const label =
+    months === 0 ? "shu oydan" : months === 1 ? "1 oy" : `${months} oy`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="cursor-default">
+          <span
+            className={
+              months >= 3
+                ? "font-medium text-red-600 dark:text-red-400"
+                : undefined
+            }
+          >
+            {label}
+          </span>
+          <div className="text-xs text-muted-foreground">
+            {format(new Date(debtor.debtSince), "dd.MM.yyyy")}
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[260px]">
+        <div className="font-medium">
+          {format(new Date(debtor.debtSince), "dd.MM.yyyy")} dan beri qarzdor
+        </div>
+        {debtor.debtByMonth.length > 0 && (
+          <div className="mt-1 space-y-0.5">
+            {debtor.debtByMonth.map((m) => (
+              <div key={m.monthKey} className="flex justify-between gap-3">
+                <span>{m.monthKey}</span>
+                <span className="tabular-nums">{formatBalance(m.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

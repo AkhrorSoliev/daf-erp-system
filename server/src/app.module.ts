@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { DebtAgeModule } from './common/finance/debt-age.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
@@ -57,9 +58,18 @@ import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ScheduleModule.forRoot(),
+    // Crons are ON unless explicitly switched off. The default has to be "on"
+    // because production sets no such variable — a flag that defaults to off
+    // would silently stop payroll, the nightly snapshot and every reminder.
+    //
+    // `CRONS_ENABLED=false` exists for one case: pointing a LOCAL server at the
+    // production database to look at a real page. Without it, that laptop runs
+    // the schedule too — attendance reminders go out to real teachers every 30
+    // minutes, the 23:40 snapshot is written, and the 02:00 payroll fires.
+    ...(process.env.CRONS_ENABLED === 'false' ? [] : [ScheduleModule.forRoot()]),
     EventEmitterModule.forRoot(),
     PrismaModule,
+    DebtAgeModule,
     RedisModule,
     AiModule,
     AuthModule,

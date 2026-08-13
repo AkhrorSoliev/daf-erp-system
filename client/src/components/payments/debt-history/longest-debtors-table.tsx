@@ -100,7 +100,7 @@ export function LongestDebtorsTable({ debtors, isLoading }: Props) {
           </p>
         </div>
         <Button variant="outline" size="sm" className="shrink-0" asChild>
-          <Link href="/payments/debtors">
+          <Link href="/payments/debt">
             Barcha qarzdorlar
             <ArrowRight className="size-4" />
           </Link>

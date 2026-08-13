@@ -157,12 +157,12 @@ export function DebtWriteOffsClient() {
       await api.post(`/billing/debt-write-offs/${reverseTarget.id}/reverse`, {
         reason: reverseReason.trim(),
       });
-      toast.success("Hisobdan chiqarish bekor qilindi");
+      toast.success("Kechirish qaytarib olindi — o'quvchi yana qarzdor");
       setReverseTarget(null);
       setReverseReason("");
       queryClient.invalidateQueries({ queryKey: ["debt-write-offs"] });
     } catch (err) {
-      toast.error(getErrorMessage(err, "Bekor qilishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, "Qaytarib olishda xatolik yuz berdi"));
     } finally {
       setReversing(false);
     }
@@ -171,17 +171,10 @@ export function DebtWriteOffsClient() {
   const resetFilterPage = () => setPage(1);
 
   return (
+    // No heading of its own: this renders both as its own page and as a tab of
+    // /payments/debt, and only the caller knows which title the reader is
+    // already looking at. The page supplies one; the tab supplies its own line.
     <div className="space-y-6">
-      <header className="flex flex-col gap-1">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">
-          Qarz hisobdan chiqarishlar
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          &quot;Yo&apos;qolgan o&apos;quvchi&quot; flow ostida joriy sikldan
-          hisobdan chiqarilgan qarzlar jurnali
-        </p>
-      </header>
-
       <SummaryCard totalAmount={totalAmount} totalRows={totalRows} />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -191,7 +184,7 @@ export function DebtWriteOffsClient() {
             setFrom(d);
             resetFilterPage();
           }}
-          placeholder="Boshlanish"
+          placeholder="Qaysi kundan"
           className="w-40"
           maxDate={to ?? undefined}
           defaultMonth={to ?? undefined}
@@ -203,7 +196,7 @@ export function DebtWriteOffsClient() {
             setTo(d);
             resetFilterPage();
           }}
-          placeholder="Tugash"
+          placeholder="Qaysi kungacha"
           className="w-40"
           minDate={from ?? undefined}
           defaultMonth={from ?? undefined}
@@ -218,15 +211,16 @@ export function DebtWriteOffsClient() {
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
+          {/* "Faqat amaldagilar" did not say what it was about. A write-off can
+              be undone by the CEO; this chooses whether those undone rows show. */}
           <SelectContent>
-            <SelectItem value="active">Faqat amaldagilar</SelectItem>
-            <SelectItem value="all">Hammasi (bekor qilinganlar bilan)</SelectItem>
+            <SelectItem value="active">Qaytarib olinganlarsiz</SelectItem>
+            <SelectItem value="all">Qaytarib olinganlari bilan</SelectItem>
           </SelectContent>
         </Select>
+        {/* No "Sahifa hajmi:" label — the project's filter bars carry meaning
+            in the control, not in a caption beside it. */}
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            Sahifa hajmi:
-          </span>
           <Select
             value={String(pageSize)}
             onValueChange={(v) => {
@@ -234,13 +228,13 @@ export function DebtWriteOffsClient() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-20">
+            <SelectTrigger className="w-28" aria-label="Sahifadagi qatorlar">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PAGE_SIZE_OPTIONS.map((n) => (
                 <SelectItem key={n} value={String(n)}>
-                  {n}
+                  {n} qator
                 </SelectItem>
               ))}
             </SelectContent>
@@ -318,18 +312,16 @@ function SummaryCard({
           <TrendingDown className="size-5 text-amber-700 dark:text-amber-300" />
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            Tanlangan davrda hisobdan chiqarilgan jami
-          </p>
+          {/* Was "TANLANGAN DAVRDA HISOBDAN CHIQARILGAN JAMI" in small caps —
+              six words of bookkeeping to label one number. */}
+          <p className="text-xs text-muted-foreground">Kechirilgan qarz</p>
           <p className="font-heading text-2xl font-semibold text-amber-700 dark:text-amber-300">
             {formatBalance(totalAmount)}
           </p>
         </div>
       </div>
       <div className="text-right">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-          Operatsiyalar soni
-        </p>
+        <p className="text-xs text-muted-foreground">Nechta marta</p>
         <p className="text-2xl font-medium tabular-nums">
           {formatNumber(totalRows)}
         </p>
@@ -378,10 +370,13 @@ function DebtWriteOffsTable({
           <TableHead className="w-12 border-r">#</TableHead>
           <TableHead>Sana</TableHead>
           <TableHead>O&apos;quvchi</TableHead>
-          <TableHead>Sikl</TableHead>
-          <TableHead className="text-right">Summa</TableHead>
+          {/* Was "Sikl", printed as "#3 • 5 ABS". The cycle number is internal
+              bookkeeping and "ABS" is a database word; what the reader needs
+              to know is why the student was written off — they stopped coming. */}
+          <TableHead>Kelmagan darslar</TableHead>
+          <TableHead className="text-right">Kechirilgan</TableHead>
           <TableHead>Sabab</TableHead>
-          <TableHead>Bajardi</TableHead>
+          <TableHead>Kim kechirdi</TableHead>
           <TableHead className="w-12" />
         </TableRow>
       </TableHeader>
@@ -413,9 +408,13 @@ function DebtWriteOffsTable({
                 )}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {row.metadata?.cycleNumber
-                  ? `#${row.metadata.cycleNumber} • ${row.metadata.cycleAbsentCount ?? 0} ABS`
-                  : "—"}
+                {row.metadata?.cycleAbsentCount != null ? (
+                  <span title={`${row.metadata.cycleNumber ?? "?"}-tsikl`}>
+                    {row.metadata.cycleAbsentCount} ta
+                  </span>
+                ) : (
+                  "—"
+                )}
               </TableCell>
               <TableCell
                 className={`text-right tabular-nums font-medium ${isReversed ? "line-through" : "text-amber-700 dark:text-amber-300"}`}
@@ -429,7 +428,7 @@ function DebtWriteOffsTable({
                 {isReversed && (
                   <Badge variant="outline" className="mt-1">
                     <RotateCcw className="mr-1 size-3" />
-                    Bekor qilingan
+                    Qaytarib olingan
                   </Badge>
                 )}
               </TableCell>
@@ -458,7 +457,7 @@ function DebtWriteOffsTable({
                         className="text-destructive focus:text-destructive"
                       >
                         <RotateCcw className="mr-2 size-4" />
-                        Bekor qilish
+                        Kechirishni qaytarib olish
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -497,19 +496,22 @@ function ReverseDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Hisobdan chiqarishni bekor qilish</AlertDialogTitle>
+          <AlertDialogTitle>Kechirishni qaytarib olish</AlertDialogTitle>
           <AlertDialogDescription>
             {target ? (
               <>
                 <span className="font-medium text-foreground">
                   {target.student?.firstName} {target.student?.lastName}
                 </span>{" "}
-                — {formatBalance(target.amount)} qaytariladi va o&apos;quvchi
-                balansidan ushbu miqdor qaytadan ayriladi. Bu amal append-only
-                ledger qoidalariga muvofiq teskari yozuv sifatida qayd etiladi.
+                {/* Was "append-only ledger qoidalariga muvofiq teskari yozuv
+                    sifatida qayd etiladi" — the storage design, in a dialog
+                    whose reader needs to know one thing: the debt comes back. */}
+                yana {formatBalance(target.amount)} qarzdor bo&apos;ladi.
+                Kechirish bekor bo&apos;ladi, lekin ro&apos;yxatdan
+                o&apos;chmaydi — kim va nega qaytarib olgani yozib qoladi.
               </>
             ) : (
-              "Hisobdan chiqarishni bekor qilasizmi?"
+              "Kechirishni qaytarib olasizmi?"
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -519,7 +521,7 @@ function ReverseDialog({
             htmlFor="reverse-reason"
             className="text-xs text-muted-foreground"
           >
-            Bekor qilish sababi (majburiy, kamida 5 belgi)
+            Nega qaytarib olinyapti? (majburiy, kamida 5 belgi)
           </Label>
           <Textarea
             id="reverse-reason"
@@ -549,7 +551,7 @@ function ReverseDialog({
             ) : (
               <>
                 <Eraser className="mr-2 size-4" />
-                Bekor qilish
+                Qaytarib olish
               </>
             )}
           </AlertDialogAction>

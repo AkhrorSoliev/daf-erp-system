@@ -22,10 +22,15 @@ import {
 } from '../billing/lesson-coverage.helper';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
+import { DebtAgeService } from '../common/finance/debt-age.service';
+import { wholeMonthsBetween } from '../common/finance/debt-origin';
 
 @Injectable()
 export class PaymentsDebtorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private debtAge: DebtAgeService,
+  ) {}
 
   /**
    * Resolve the effective branch scope for a debtors query.
@@ -54,17 +59,37 @@ export class PaymentsDebtorsService {
   }
 
   /**
-   * Canonical "active debtor" predicate, shared by the list, the count and
-   * the summary aggregate so the page's table and cards can never drift.
+   * Canonical debtor predicate, shared by the list, the count and the summary
+   * aggregate so the page's table and cards can never drift.
+   *
+   * `status` defaults to ACTIVE because the Excel line-item sheet ties to the
+   * balance sheet's `accountsReceivable`, which counts active students — that
+   * caller must not move. The PAGE passes `'all'`: a frozen or expelled student
+   * still owes the money, and hiding them made the debtors tab report
+   * 37 998 992 while the monthly tab reported 84 555 445 on the same screen,
+   * with the 45 mln difference sitting in students nobody could open.
    */
   private debtorWhere(
     companyId: number,
     branchIds?: number[],
+    status: StudentStatus | 'all' = StudentStatus.ACTIVE,
   ): Prisma.StudentWhereInput {
+    // Archived students ARE included on the page. The archive rule normally
+    // hides soft-deleted rows, and this is a deliberate exception: a debt is
+    // not archived along with the record. Production carried 4 of them owing
+    // 1 019 318, and the reasons show why leaving them out was wrong — "o'qishni
+    // tashladi", "darsga kelmagan, qarzdorlik yozgan". (One, #10323, is a
+    // duplicate account whose 153 328 is phantom; it now becomes visible enough
+    // to clean up rather than quietly padding a total nobody could open.)
+    const archived = status === 'all' || status === StudentStatus.ARCHIVED;
     return {
       companyId,
-      deletedAt: null,
-      status: StudentStatus.ACTIVE,
+      ...(archived ? {} : { deletedAt: null }),
+      ...(status === 'all'
+        ? {}
+        : status === StudentStatus.ARCHIVED
+          ? { deletedAt: { not: null } }
+          : { status }),
       balance: { lt: 0 },
       ...(branchIds
         ? { branches: { some: { branchId: { in: branchIds } } } }
@@ -82,6 +107,8 @@ export class PaymentsDebtorsService {
       sortBy?: 'balance' | 'firstName' | 'lastName';
       order?: 'asc' | 'desc';
       promise?: 'has_open' | 'overdue';
+      /** Student status; 'all' (the page default) drops the filter entirely. */
+      status?: StudentStatus | 'all';
       userId: number;
       roles: string[];
     },
@@ -98,7 +125,7 @@ export class PaymentsDebtorsService {
       return { data: [], total: 0, page, pageSize };
     }
 
-    const where = this.debtorWhere(companyId, branchIds);
+    const where = this.debtorWhere(companyId, branchIds, query.status ?? 'all');
 
     // Payment-promise filter — students with an active / broken promise.
     if (query.promise === 'has_open') {
@@ -187,13 +214,35 @@ export class PaymentsDebtorsService {
       this.prisma.student.count({ where }),
     ]);
 
+    // "Since when" for the page's rows. Read from a day-cached whole-company
+    // replay, because a balance carries no history of its own — payments settle
+    // the oldest charge first, so the answer needs the ledger, not the number.
+    const ages = await this.debtAge.getDebtAges(companyId);
+    const now = new Date();
+
     return {
       data: data.map(({ paymentPromises = [], callLogs = [], ...s }) => {
         const promise = paymentPromises[0] ?? null;
         const call = callLogs[0] ?? null;
+        const age = ages.get(s.id) ?? null;
         return {
           ...s,
           debtAmount: s.balance < 0 ? -s.balance : 0,
+          /**
+           * When this debt started, and which months it is made of. Null when
+           * the cached replay has not seen this student yet (a debt taken on
+           * since the cache was built) — the column renders "—" rather than
+           * guessing a date from the balance.
+           */
+          debtSince: age?.since ?? null,
+          debtMonths: age
+            ? wholeMonthsBetween(new Date(age.since), now)
+            : null,
+          debtByMonth: age
+            ? Object.entries(age.months)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([monthKey, amount]) => ({ monthKey, amount }))
+            : [],
           promise: promise
             ? {
                 promiseDate: promise.promiseDate.toISOString(),
@@ -280,7 +329,12 @@ export class PaymentsDebtorsService {
    */
   async getDebtorSummary(
     companyId: number,
-    query: { branchId?: number; userId: number; roles: string[] },
+    query: {
+      branchId?: number;
+      status?: StudentStatus | 'all';
+      userId: number;
+      roles: string[];
+    },
   ) {
     const branchIds = await this.resolveBranchScope(
       query.userId,
@@ -297,7 +351,7 @@ export class PaymentsDebtorsService {
       };
     }
 
-    const where = this.debtorWhere(companyId, branchIds);
+    const where = this.debtorWhere(companyId, branchIds, query.status ?? 'all');
     const promiseScope: Prisma.PaymentPromiseWhereInput = {
       companyId,
       ...(branchIds ? { branchId: { in: branchIds } } : {}),

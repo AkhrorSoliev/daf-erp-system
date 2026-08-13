@@ -96,6 +96,7 @@ describe('SalaryMonthlyService', () => {
       centerAdvanced: 0,
       centerStillFronted: 0,
       centerRecovered: 0,
+      centerOwedByStudents: 0,
     });
     expect(prisma.attendance.findMany).not.toHaveBeenCalled();
     // Staff is computed even on the zero-teacher early return.

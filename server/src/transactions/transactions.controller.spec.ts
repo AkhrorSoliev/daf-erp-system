@@ -58,17 +58,22 @@ describe('TransactionsController — debt write-off audit guards', () => {
       ]);
       expect(guard.canActivate(ctx)).toBe(true);
     });
-    it('denies Administrator (financial audit is BD+CEO only)', () => {
+    // Widened 2026-08-12 for the single debt page (/payments/debt), which
+    // shows write-offs as a tab. The CEO's call: the page must not hide parts
+    // of itself per role, because a screen whose shape changes by viewer is a
+    // screen nobody can be told how to use. Reversing a write-off — the one
+    // action that moves money back — stays CEO-only.
+    it('allows Administrator (debt page tab)', () => {
       const ctx = mockExecutionContext(controller.findDebtWriteOffs, [
         'Administrator',
       ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+      expect(guard.canActivate(ctx)).toBe(true);
     });
-    it('denies Cashier', () => {
+    it('allows Cashier (debt page tab)', () => {
       const ctx = mockExecutionContext(controller.findDebtWriteOffs, [
         'Cashier',
       ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+      expect(guard.canActivate(ctx)).toBe(true);
     });
     it('denies Teacher', () => {
       const ctx = mockExecutionContext(controller.findDebtWriteOffs, [
@@ -79,12 +84,17 @@ describe('TransactionsController — debt write-off audit guards', () => {
   });
 
   describe('endpoint metadata sanity', () => {
-    it('findDebtWriteOffs is annotated with CEO + Branch Director only', () => {
+    it('findDebtWriteOffs is readable by every staff role on the debt page', () => {
       const roles = reflector.get<string[]>(
         ROLES_KEY,
         controller.findDebtWriteOffs,
       );
-      expect(roles).toEqual(['CEO', 'Branch Director']);
+      expect(roles).toEqual([
+        'CEO',
+        'Branch Director',
+        'Administrator',
+        'Cashier',
+      ]);
     });
   });
 

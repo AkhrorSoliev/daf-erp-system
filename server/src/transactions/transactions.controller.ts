@@ -118,7 +118,7 @@ export class TransactionsController {
   // rows. Cashier/Teacher have no business reading financial corrections,
   // hence the explicit role list.
   @Get('debt-write-offs')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   async findDebtWriteOffs(
     @Query() query: DebtWriteOffQueryDto,
     @CurrentUser()

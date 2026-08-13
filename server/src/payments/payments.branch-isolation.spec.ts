@@ -15,6 +15,13 @@ import { TransactionsReadService } from '../transactions/transactions-read.servi
  *
  * Fargona = branch 1 (all real data), Namangan = branch 2 (starts empty).
  */
+/**
+ * `getPending` and `getDebtorsForGroup` never read debt ages; this keeps the
+ * constructor satisfied without dragging the replay into a branch-scope test.
+ */
+const debtAgeStub = () =>
+  ({ getDebtAges: jest.fn().mockResolvedValue(new Map()) }) as any;
+
 describe('money reads are branch-isolated', () => {
   const FARGONA = [1];
   const NAMANGAN = [2];
@@ -126,7 +133,7 @@ describe('money reads are branch-isolated', () => {
           count: jest.fn().mockResolvedValue(0),
         },
       };
-      const service = new PaymentsDebtorsService(prisma);
+      const service = new PaymentsDebtorsService(prisma, debtAgeStub());
       await service.getPending(COMPANY, { branchIds: NAMANGAN });
       expect(confinedTo(captured, NAMANGAN)).toBe(true);
     });
@@ -138,7 +145,7 @@ describe('money reads are branch-isolated', () => {
           findFirst: jest.fn((a) => ((captured = a.where), Promise.resolve(null))),
         },
       };
-      const service = new PaymentsDebtorsService(prisma);
+      const service = new PaymentsDebtorsService(prisma, debtAgeStub());
       await expect(
         service.getDebtorsForGroup('grp-fargona', COMPANY, NAMANGAN),
       ).rejects.toBeInstanceOf(NotFoundException);

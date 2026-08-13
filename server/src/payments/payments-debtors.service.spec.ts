@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentsDebtorsService } from './payments-debtors.service';
+import { DebtAgeService } from './../common/finance/debt-age.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 describe('PaymentsDebtorsService', () => {
@@ -27,6 +28,10 @@ describe('PaymentsDebtorsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsDebtorsService,
+        {
+          provide: DebtAgeService,
+          useValue: { getDebtAges: jest.fn().mockResolvedValue(new Map()) },
+        },
         { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
@@ -35,15 +40,14 @@ describe('PaymentsDebtorsService', () => {
   });
 
   describe('getDebtors', () => {
-    it('filters by negative balance + active + company, no branch filter for CEO', async () => {
+    it('filters by negative balance + company, every status, no branch filter for CEO', async () => {
       await service.getDebtors(1001, { userId: 1, roles: ['CEO'] });
       const arg = prisma.student.findMany.mock.calls[0][0];
       expect(arg.where).toEqual(
         expect.objectContaining({
           companyId: 1001,
-          deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
+          // No `deletedAt: null` — archived debtors are listed as well.
+            balance: { lt: 0 },
         }),
       );
       expect(arg.where.branches).toBeUndefined();

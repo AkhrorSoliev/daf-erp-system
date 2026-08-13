@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +51,17 @@ interface MonthPickerProps {
   minMonth?: string;
   /** Latest selectable month ("YYYY-MM"); later months are disabled. */
   maxMonth?: string;
+  /**
+   * Makes "no month" a real answer rather than an empty state: the trigger
+   * gains a small ✕ once a month is picked, and the placeholder names what
+   * clearing means ("Butun davr").
+   *
+   * The clear lives on the TRIGGER, not inside the popover — the popover is a
+   * year and twelve months, and an extra full-width button on top of it reads
+   * as a thirteenth choice. Omit this prop and the picker renders exactly as
+   * it always has.
+   */
+  onClear?: () => void;
 }
 
 function formatMonth(value: string | null | undefined): string | null {
@@ -72,6 +83,7 @@ export function MonthPicker({
   id,
   minMonth,
   maxMonth,
+  onClear,
 }: MonthPickerProps) {
   const minYear = minMonth ? parseInt(minMonth.slice(0, 4), 10) : null;
   const maxYear = maxMonth ? parseInt(maxMonth.slice(0, 4), 10) : null;
@@ -97,23 +109,57 @@ export function MonthPicker({
     setOpen(false);
   };
 
+  const showClear = !!onClear && !!value && !disabled;
+
+  const trigger = (
+    <PopoverTrigger asChild>
+      <Button
+        id={id}
+        variant="outline"
+        disabled={disabled}
+        data-empty={!value}
+        className={cn(
+          "w-full justify-start text-left font-normal data-[empty=true]:text-muted-foreground",
+          // Room for the ✕ that sits over the button's right edge.
+          showClear && "pr-9",
+          // When the clear is available the wrapper carries the caller's
+          // sizing, so the button just fills it.
+          onClear ? undefined : className,
+        )}
+      >
+        <CalendarIcon className="mr-2 size-4" />
+        {formatMonth(value) ?? <span>{placeholder}</span>}
+      </Button>
+    </PopoverTrigger>
+  );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          variant="outline"
-          disabled={disabled}
-          data-empty={!value}
-          className={cn(
-            "w-full justify-start text-left font-normal data-[empty=true]:text-muted-foreground",
-            className,
+      {/* The ✕ cannot live inside the trigger — a button inside a button is
+          invalid markup and swallows the click. It is a sibling laid over the
+          trigger's right edge instead, and only when there is something to
+          clear. Callers without `onClear` render exactly as before. */}
+      {onClear ? (
+        <div className={cn("relative", className)}>
+          {trigger}
+          {showClear && (
+            <button
+              type="button"
+              aria-label="Tanlangan oyni bekor qilish"
+              onClick={onClear}
+              className={cn(
+                "absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5",
+                "text-muted-foreground transition-colors hover:text-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              )}
+            >
+              <X className="size-3.5" />
+            </button>
           )}
-        >
-          <CalendarIcon className="mr-2 size-4" />
-          {formatMonth(value) ?? <span>{placeholder}</span>}
-        </Button>
-      </PopoverTrigger>
+        </div>
+      ) : (
+        trigger
+      )}
       <PopoverContent className="w-64 p-3" align="start">
         <div className="mb-3 flex items-center justify-between">
           <Button

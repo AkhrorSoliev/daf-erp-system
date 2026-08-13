@@ -17,11 +17,19 @@ export function SummaryCard({
   label,
   value,
   tone,
+  hint,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   tone: SummaryCardTone;
+  /**
+   * One short line saying what the number IS. A finance figure under a
+   * three-word label is read as whatever the reader already expected — the
+   * hint is where "kassadan chiqqan pul" gets said instead of assumed.
+   * Optional, so the cards that need no explaining stay quiet.
+   */
+  hint?: string;
 }) {
   const toneClass: Record<SummaryCardTone, string> = {
     red: "bg-red-100 dark:bg-red-900/40",
@@ -41,6 +49,11 @@ export function SummaryCard({
         <p className="truncate font-heading text-xl font-semibold tabular-nums">
           {value}
         </p>
+        {hint && (
+          <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+            {hint}
+          </p>
+        )}
       </div>
     </div>
   );

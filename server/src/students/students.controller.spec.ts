@@ -6,6 +6,7 @@ import { StudentsService } from './students.service';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { SmsService } from '../sms/sms.service';
 import { TransactionsService } from '../transactions/transactions.service';
+import { DebtAgeService } from '../common/finance/debt-age.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -31,6 +32,10 @@ describe('StudentsController — debt write-off role guards', () => {
         { provide: StudentEnrollmentService, useValue: mockEnrollmentService },
         { provide: SmsService, useValue: mockSmsService },
         { provide: TransactionsService, useValue: mockTransactionsService },
+        {
+          provide: DebtAgeService,
+          useValue: { getForStudent: jest.fn().mockResolvedValue(null) },
+        },
       ],
     }).compile();
 

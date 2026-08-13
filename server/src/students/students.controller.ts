@@ -33,6 +33,7 @@ import {
 import { RolesGuard } from '../common/guards';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { TransactionsService } from '../transactions/transactions.service';
+import { DebtAgeService } from '../common/finance/debt-age.service';
 
 @Controller('students')
 export class StudentsController {
@@ -41,6 +42,7 @@ export class StudentsController {
     private studentEnrollmentService: StudentEnrollmentService,
     private smsService: SmsService,
     private transactionsService: TransactionsService,
+    private debtAge: DebtAgeService,
   ) {}
 
   // Staff only. Without this the global JwtAuthGuard let ANY valid token —
@@ -234,6 +236,25 @@ export class StudentsController {
       includeClosed === 'true',
       userId,
     );
+  }
+
+  /**
+   * "Qarzi qachondan beri va qaysi oylardan" for the profile page's balance
+   * badge. Returns null when the student owes nothing.
+   *
+   * Same shared replay the debtors list and the center top-up tab read, so a
+   * student's debt is not described one way on a list and another on their own
+   * page. Read-only, and gated like the profile that shows it.
+   */
+  @Get(':id/debt-origin')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  getDebtOrigin(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.debtAge.getForStudent(companyId, id, userId);
   }
 
   // Eligibility check for the "yo'qolgan o'quvchi" write-off flow. Returns

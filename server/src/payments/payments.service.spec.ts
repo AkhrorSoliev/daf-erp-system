@@ -5,6 +5,7 @@ import { PaymentsService } from './payments.service';
 import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
+import { DebtAgeService } from './../common/finance/debt-age.service';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -142,6 +143,10 @@ describe('PaymentsService', () => {
         PaymentsWriteService,
         PaymentsReadService,
         PaymentsDebtorsService,
+        {
+          provide: DebtAgeService,
+          useValue: { getDebtAges: jest.fn().mockResolvedValue(new Map()) },
+        },
         PaymentsPreviewService,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
@@ -685,13 +690,16 @@ describe('PaymentsService', () => {
       });
 
       const findManyCall = prisma.student.findMany.mock.calls[0][0];
+      // No `deletedAt: null` and no status: the page lists every debtor,
+      // archived included — a debt is not archived with the student record.
       expect(findManyCall.where).toEqual(
         expect.objectContaining({
           companyId: 1001,
-          deletedAt: null,
           balance: { lt: 0 },
         }),
       );
+      expect(findManyCall.where.deletedAt).toBeUndefined();
+      expect(findManyCall.where.status).toBeUndefined();
       expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
     });
 

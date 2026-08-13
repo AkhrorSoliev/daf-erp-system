@@ -34,6 +34,9 @@ export const routeLabels: Record<string, string> = {
   archive: "Arxiv",
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
+  // /payments/debt — qarzdorlik bo'yicha yagona sahifa: qarzdorlar ro'yxati,
+  // markaz qoplagani, oylik qarzdorlik va kechirilganlar.
+  debt: "Qarzdorlik",
   expenses: "Xarajatlar",
   // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).
   // "Ish haqi" stays the term for ONE person's salary (profile tabs), so the

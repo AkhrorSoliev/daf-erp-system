@@ -3,7 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, HandCoins, Info, Search, Settings2 } from "lucide-react";
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  HandCoins,
+  Info,
+  Search,
+  Settings2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +97,8 @@ interface MonthlyResponse {
     centerAdvanced: number;
     centerRecovered: number;
     centerStillFronted: number;
+    /** Debt of the students the center fronted for, as their profiles show it. */
+    centerOwedByStudents: number;
   };
   // Non-teaching FIXED_MONTHLY staff (admin/cashier/director) — flat salary.
   staff: StaffRow[];
@@ -127,6 +136,57 @@ function MoneyOrDash({
   if (value == null)
     return <span className="text-muted-foreground">—</span>;
   return <span className={cn("tabular-nums", className)}>{formatPrice(value)}</span>;
+}
+
+/**
+ * A card figure that links to where it is explained.
+ *
+ * A bare number carries no hint that it does anything, and the card holds four
+ * of them — two inert, two not. The dotted underline says "link" and the arrow
+ * says "this goes somewhere", so the two live figures read as different in kind
+ * from "Jami qo'shdi" / "Undirildi" rather than merely differently coloured.
+ *
+ * It is a `<Link>`, not a button opening a dialog. The same list already lives
+ * on /payments/debt, and a dialog holding a second copy meant two places to
+ * keep in step — plus a list nobody could open in a new tab or send to a
+ * colleague. Falls back to plain text at zero: an affordance leading to an
+ * empty list is worse than none.
+ */
+function DrillDownAmount({
+  value,
+  href,
+  label,
+  className,
+}: {
+  value: number;
+  /** Where the figure is explained. A real link, so Cmd-click opens a tab. */
+  href: string;
+  /** Read out by screen readers and shown on hover — the number alone is mute. */
+  label: string;
+  className?: string;
+}) {
+  if (value <= 0)
+    return (
+      <div className={cn("text-lg font-semibold tabular-nums", className)}>
+        {formatPrice(value)}
+      </div>
+    );
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "group inline-flex items-center gap-1.5 rounded-sm text-lg font-semibold tabular-nums",
+        "underline decoration-dotted underline-offset-4 transition hover:decoration-solid",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className,
+      )}
+    >
+      {formatPrice(value)}
+      <ArrowUpRight className="size-4 shrink-0 opacity-50 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+    </Link>
+  );
 }
 
 export function SalaryMonthlyView({
@@ -470,7 +530,7 @@ export function SalaryMonthlyView({
               </Tooltip>
             </TooltipProvider>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="text-xs text-muted-foreground">
                 Jami qo&apos;shdi
@@ -485,12 +545,40 @@ export function SalaryMonthlyView({
                 {formatPrice(totals.centerRecovered)}
               </div>
             </div>
+            {/* What can actually be collected from the people the center
+                fronted for — their debt TODAY. Deliberately NOT part of the
+                X = Y + Z arithmetic of the other three cells: it is a live
+                balance, not a share of this month's payroll. */}
+            <div>
+              <div className="text-xs text-muted-foreground">
+                O&apos;quvchilardan olinishi kerak
+              </div>
+              <DrillDownAmount
+                value={totals.centerOwedByStudents}
+                href={`/payments/debt?tab=markaz&month=${shownMonth}`}
+                label="O'quvchilardan olinishi kerak bo'lgan summa — kimdan undirish kerakligini ko'rish"
+              />
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Shu o&apos;quvchilarning qarzi
+              </div>
+            </div>
             <div>
               <div className="text-xs text-muted-foreground">
                 Qolgan (markaz)
               </div>
-              <div className="text-lg font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                {formatPrice(totals.centerStillFronted)}
+              {/* The only actionable figure of the three: X and Y are history,
+                  Z is money still to be collected. Clicking it opens the list
+                  of students it is owed by. */}
+              <DrillDownAmount
+                value={totals.centerStillFronted}
+                href={`/payments/debt?tab=markaz&month=${shownMonth}`}
+                label="Markaz qoplagan, hali qaytmagan summa — kimdan undirish kerakligini ko'rish"
+                className="text-amber-700 dark:text-amber-400"
+              />
+              {/* Symmetric with the cell to its left: each says what its number
+                  is priced on, and the underline + icon carry the "clickable". */}
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Ustoz ulushi
               </div>
             </div>
           </div>
