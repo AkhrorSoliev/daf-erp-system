@@ -122,7 +122,7 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 
 #### Key access rules
 
-- **Salary/financial endpoints** — restrict to `@Roles('CEO', 'Branch Director')` only
+- **Salary/financial endpoints** — restrict to `@Roles('CEO', 'Branch Director')` only. **Exception, decided 2026-08-12:** the four READ endpoints behind `/payments/debt` (`GET /reports/monthly-debt-recovery/history` · `/:monthKey/aging` · `/:monthKey/detail` · `/excel`, plus `GET /reports/debt-write-offs-summary` and `GET /transactions/debt-write-offs`) are open to every staff role, because that page must not change shape by viewer — a screen whose tabs appear or vanish per role is one nobody can be told how to use. The WRITE that moves money back, `POST /billing/debt-write-offs/:id/reverse`, stays CEO-only. `GET /reports/monthly-debt-recovery` (the cohort report behind the Excel workbook, not a page) was deliberately NOT widened
 - **Group CRUD** — `@Roles('CEO', 'Branch Director', 'Administrator')`
 - **Settings/configuration endpoints** — restrict to `@Roles('CEO', 'Branch Director', 'Administrator')` — roles like Teacher and Cashier must not access these
 - **Branch Director scope** — when a Branch Director makes a request, service-level logic must filter data to **only their branch** (using `@CurrentUser('branches')` or `@CurrentUser('mainBranch')`)
@@ -946,6 +946,7 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 | Reverse refund | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Create expense | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Financial reports | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Debt page reads (history, aging, write-off list) | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 ### Comments & Task Assignment
 
