@@ -135,10 +135,6 @@ interface Props {
    * The picker, when there is one, lives in the parent.
    */
   month: string;
-  /** Teacher-name filter, so this can foot to a filtered salary table. */
-  search?: string;
-  /** false while a Dialog holding this is closed — skips the request. */
-  enabled?: boolean;
 }
 
 export const ALL_MONTHS = "all";
@@ -147,12 +143,13 @@ export const ALL_MONTHS = "all";
  * "Markaz qo'shimchasi — kimdan undirish kerak": the students the center is
  * still owed by for a month's payroll top-up.
  *
- * Rendered in two places — inside the salary page's dialog (where the month
- * comes from the card that was clicked) and as a tab on the debt page (where a
- * picker chooses it). The month arrives as a prop rather than a `showPicker`
- * boolean, so neither caller has to opt out of the other's chrome.
+ * One home, on /payments/debt. The salary page used to render a second copy in
+ * a dialog; its card now links here instead, because two places showing one
+ * list meant two to keep in step and a list that could not be opened in a tab
+ * or sent to someone. The month arrives as a prop so the picker can live in
+ * the parent.
  */
-export function CenterTopUpContent({ month, search, enabled = true }: Props) {
+export function CenterTopUpContent({ month }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -160,18 +157,16 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
   const allMonths = month === ALL_MONTHS;
 
   const { data, isLoading } = useQuery<TopUpResponse>({
-    queryKey: ["salary-center-topup", month, search ?? ""],
+    queryKey: ["salary-center-topup", month],
     queryFn: async () => {
       const res = await api.get("/salary/monthly/center-topup", {
         params: {
           month: allMonths ? undefined : month || undefined,
           allMonths: allMonths ? "true" : undefined,
-          search: search || undefined,
         },
       });
       return res.data;
     },
-    enabled,
     staleTime: 0,
   });
 
@@ -181,7 +176,7 @@ export function CenterTopUpContent({ month, search, enabled = true }: Props) {
   // reader on page 4 of a set that now has one page.
   useEffect(() => {
     setPage(1);
-  }, [month, search, statusFilter]);
+  }, [month, statusFilter]);
 
   const rows = useMemo(() => {
     // Students with nothing left to collect are never listed. They are not bad
