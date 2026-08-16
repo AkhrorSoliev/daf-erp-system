@@ -552,7 +552,9 @@ The financial section lives under `/payments/*` with these sub-pages:
 - **`salary-monthly-view.tsx`** — the main `/payments/salary` table (`GET /salary/monthly?month=YYYY-MM&search=`, URL-persisted via `useUrlFilters`). A `MonthPicker` (with `minMonth` floor = response `floorMonth`, `maxMonth` = current month) drives the selected month; no pagination (every teacher renders). Columns: **To'liq ishlangan** (`fullDeserved`), **O'quvchilar to'lagan** (`covered`), **Markaz qo'shdi** (`centerFunded`, amber when >0), **Avans**, **To'lanishi kerak** (`netToPay`, semibold), **Holat** (SalaryPayment status badge). A `MoneyOrDash` helper renders `—` when `hasLessonData` is false (manual/Excel months like May); an amber banner explains such months. JAMI footer sums the columns (deserved/covered/centerFunded exclude manual months). Clicking a row with a payment opens `salary-breakdown-drawer`. **Display-only** — no rate editing / approve / pay in the rows. Below the table, a **"Markaz qo'shimchasi — undirish holati"** card shows the company-level center top-up lifecycle for the selected month — Jami qo'shdi (X) / Undirildi (Y) / Qolgan markaz (Z), from `totals.centerAdvanced/centerRecovered/centerStillFronted`. Rendered only when `centerAdvanced > 0` (past settled top-up months; hidden for the in-progress month where nothing has been fronted YET — that month's centre money lives in the per-teacher **Markaz qo'shdi** column as a forecast). The card is the recovery lifecycle, NOT a second copy of the column.
 - **Markaz qo'shimchasi drill-down** — the salary page's card no longer opens a dialog: its two live figures («Qolgan (markaz)» and «O'quvchilardan olinishi kerak») are `<Link>`s to `/payments/debt?tab=markaz&month=…`, where the list lives as `debt/center-topup-content.tsx`. A dialog holding a second copy meant two places to keep in step and a list nobody could open in a new tab. The list shows exactly TWO money columns — **Markaz ustozga to'lagan** (the center's outlay) and **O'quvchining qarzi** (their debt today, the same figure as their profile). Two other versions of that second column were tried and removed: what the lessons cost (#10026 showed 345 000 against a real debt of 156 000) and `min(debt, lesson cost)` (#10058 showed 466 662 against a profile saying 624 989). An UNSETTLED month shows the forecast leg instead — lessons held that payroll has not paid for yet — labelled «Markaz to'laydi» over a banner, never merged into the paid figures.
 - **`salary-settle-month-dialog.tsx`** — «Oylik berilganini tasdiqlash» (CEO-only button in the `/payments/salary` filter row, shown only when the selected month still carries unpaid payroll). Confirms salaries that were **handed over outside the system** at the amounts the system had already calculated. Reads `GET /salary/payments/settle-month/preview` — a dedicated endpoint, NOT the table, because the table shows one payment per employee while a re-calculated month carries several per person (June 2026: two rows for six teachers), and the dialog must list exactly what it settles. It asks for three things: the real handover **date** (`DatePicker`, `maxDate` today, `minDate` period start), **how much left each kassa account** of every branch in the batch — an amount per account, not one chosen account, because a payroll routinely goes out part cash and part card; each branch's amounts must close to its own total exactly, and each row shows a live "Hozir X → keyin Y" projection that warns in amber when an account goes negative but never blocks (the money really did leave) — and the **total retyped in digits**. Typing the sum is the confirmation rather than a random code: the total is the one number the operator has to have read, and the server re-checks it against the live set. **This dialog's table is deliberately NOT paginated** — a confirmation dialog that hides part of what it is confirming works against its own purpose.
-- **`salary-settings-sheet.tsx`** — ⚙ Sozlamalar Sheet (CEO-only button in the filter row). Two sections: **Hisoblash davri** (embeds `salary-period-control.tsx`) and **Ustoz stavkalari** (fetches `GET /salary/overview?pageSize=100`; per teacher a rate-badge row + pencil → `salary-config-row-sheet`, checkbox multi-select → `salary-config-bulk-dialog`). This is where rate rules + cycle-day are managed, kept OUT of the display report. `onChanged` bumps the report's refreshKey.
+- **`salary-settings-sheet.tsx`** — ⚙ Sozlamalar Sheet (CEO-only button in the filter row). Three sections: **Hisoblash davri** (embeds `salary-period-control.tsx`), **Ustoz stavkalari** (fetches `GET /salary/overview?pageSize=100`; per teacher a rate-badge row + pencil → `salary-config-row-sheet`, checkbox multi-select → `salary-config-bulk-dialog`) and **Xodimlar stavkalari** (`salary-staff-config-list.tsx` → `GET /salary/staff-config`). This is where rate rules + cycle-day are managed, kept OUT of the display report. `onChanged` bumps the report's refreshKey.
+  - **One search box drives both lists** — "who is still missing a rate?" is a single question and must not depend on which list the person is in. Both rate editors are the SAME `SalaryConfigRowSheet`; the sheet holds the whole `EditTarget` (not a user id) because the two lists come from different endpoints. The staff rows pass their real `roles`, so `isTeacher` is false and the editor offers FIXED_MONTHLY alone — a staff member can never be given a per-lesson rate by accident.
+  - **Why staff need their own list rather than a widened `/salary/overview`:** that endpoint computes groups, active students and `actualEarned` per teacher, all structurally 0 for a fixed-monthly administrator — rows that read "earned nothing" next to a full month's salary. It is also the reason the "Xodimlar oyligi" section of the report sat empty from July 2026 until this shipped: the report lists staff who HAVE a rate, and there was no screen on which to set one.
 - **`salary-period-control.tsx`** — cycle-start-day control. Now embedded inside `salary-settings-sheet` (was previously at the top of the overview). Shows the current period range + day; CEO changes the day via a select → confirm `AlertDialog` → `POST /salary/period-settings`.
 - **`salary-config-bulk-dialog.tsx`** + **`salary-config-row-sheet.tsx`** — CEO assigns salary rates: bulk dialog applies a rate to many selected teachers; row sheet edits one teacher's rules (select type FIXED_MONTHLY / PERCENTAGE / FIXED_PER_STUDENT → enter value → save). PERCENTAGE and FIXED_PER_STUDENT only shown for teachers (role id 4). Both are now invoked **inline** from `salary-overview-view` (the standalone config page was removed).
 - **`possible-deductions-info.tsx`** — pure-static info card listing the deductions that may be applied outside the system. Takes a `variant` prop: `"teacher"` shows only "Ustoz oyligidan — 12%", `"all"` (default) shows all six items (Ustoz 12%, Markaz qo'shimchasi 12%, Markaz daromad 4%, Click/Payme/Uzum 2%). Rendered in: salary-breakdown-drawer (default `"all"` — part of the company-wide /payments/salary admin page), teacher-salary-client (lehrer portal, `"teacher"` — teacher viewing their own salary), teacher-profile-tabs and employee-profile-tabs (admin Ish haqi tab, `"teacher"` — view scoped to one teacher's salary). Has no state, no API calls, no calculations. Numbers are documentation, not configuration — not enforced by any code.
@@ -700,6 +702,39 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - **Balance display**: Shows current balance (green if positive, red if negative/debt)
 - **Payment history**: Fetched from `GET /student-portal/payments` — shows transaction list with amounts and timestamps
 - **Payme reference docs (UZ)**: `docs/payme-uz/index.html` — 25-page Uzbek-language reference covering Merchant API, Subscribe API, checkout initialization (GET/POST), sandbox testing, error codes, and mobile integration; mirrors the official `developer.help.paycom.uz` structure
+
+### Position vs role in the employee form
+
+`edit-employee-form.tsx` asks for **Lavozim** (`position`, required, free text)
+before it asks for **Tizim huquqi** (`roleIds`, optional). The job title is what
+every list renders; the roles are only access.
+
+- The **"Kirish ma'lumotlari"** section (login + password) is its own
+  component, `employee-credentials-section.tsx`, rendered by
+  `edit-employee-form.tsx` only when at least one role is selected
+  (`hasRoles`). A role-less employee cannot sign in — the backend refuses a
+  password for them — so showing the fields would only mislead. Do not make
+  them unconditional.
+- **That gate is only half the contract, and both halves are load-bearing.**
+  `toggleRole` clears `login` and `password` on the form the moment the last
+  role is removed, and `onSubmit` separately omits both fields from the
+  payload whenever `roleIds` is empty. The payload gate is the half that
+  actually guarantees the backend will accept the request — the server only
+  refuses a request that *sends* credentials on a role-less account, so a
+  refactor that dropped the payload gate while keeping the field-clearing
+  would silently re-break "demote an administrator to a role-less cleaner"
+  the next time someone left stale form state around. The field-clearing is
+  what keeps the visible form honest in the meantime. Keep both.
+- Password is required on create **only when a role is given**.
+- Branch stays required for everyone except a CEO, role-less employees
+  included: a branch-less employee appears in no branch list and on no payroll
+  report.
+- Render the label with `positionLabel(user)` from
+  `components/payments/salary-utils.ts` — job title first, falling back to the
+  role for employees created before the column existed. Do not read
+  `user.roles` directly for a "Lavozim" column; a cleaner has none.
+- Editing an existing employee pre-fills Lavozim from their role label, which
+  is how the field gets backfilled without a script.
 
 ### Employee & Teacher Status (Faollik holati)
 
