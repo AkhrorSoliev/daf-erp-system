@@ -5,6 +5,7 @@ import {
   IsInt,
   IsIn,
   MinLength,
+  MaxLength,
   Matches,
 } from 'class-validator';
 
@@ -42,6 +43,12 @@ export class UpdateUserDto {
   @IsOptional()
   @IsInt()
   mainBranch?: number;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2, { message: "Lavozim kamida 2 ta belgidan iborat bo'lishi kerak" })
+  @MaxLength(60, { message: 'Lavozim 60 ta belgidan oshmasligi kerak' })
+  position?: string;
 
   @IsOptional()
   @IsArray()
