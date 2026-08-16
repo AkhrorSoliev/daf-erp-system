@@ -1,6 +1,10 @@
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
-import { SCENES, DEFAULT_COMPANY_ID } from '../constants';
+import {
+  SCENES,
+  DEFAULT_COMPANY_ID,
+  derivePositionForRoles,
+} from '../constants';
 import {
   ASK_FIRST_NAME,
   ASK_LAST_NAME,
@@ -367,6 +371,7 @@ export function createEmployeeRegistrationScene(
         companyId: DEFAULT_COMPANY_ID,
         mainBranch: data.branchId ?? undefined,
         telegramChatId: chatId,
+        position: derivePositionForRoles(roleIds),
         roleIds,
         branchIds: data.branchId ? [data.branchId] : undefined,
       });

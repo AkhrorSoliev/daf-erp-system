@@ -33,3 +33,30 @@ export const GRANTABLE_ROLE_IDS = {
   ADMINISTRATOR: [4, 5],
 } as const satisfies Record<string, readonly number[]>;
 export const DEFAULT_COMPANY_ID = 1001;
+
+/**
+ * The `User.position` job title to write for a bot-registered employee, keyed
+ * by role id. Mirrors `roleLabel` in
+ * `client/src/components/payments/salary-utils.ts` exactly — same ids, same
+ * labels — so the position shown on an employee registered via Telegram
+ * matches what the salary/employee UI would already call that role.
+ */
+export const POSITION_LABELS: Record<number, string> = {
+  1: 'Direktor',
+  2: 'Filial direktori',
+  3: 'Administrator',
+  4: "O'qituvchi",
+  5: 'Kassir',
+};
+
+/**
+ * Derives the position to store for an employee granted these roles. When a
+ * link grants several roles at once, the LOWEST role id wins (the senior
+ * role), same tiebreak as `roleLabel`. Empty/unknown input yields ''  — the
+ * caller (`assertRoleAndBranchRules`) is what turns that into a rejection.
+ */
+export function derivePositionForRoles(roleIds: number[]): string {
+  if (!roleIds.length) return '';
+  const lowestRoleId = [...roleIds].sort((a, b) => a - b)[0];
+  return POSITION_LABELS[lowestRoleId] ?? '';
+}

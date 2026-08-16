@@ -542,15 +542,22 @@ export class UsersService {
     this.assertSameCompany(user.companyId, callerCompanyId);
     await this.assertCallerMayTouchUser(user as any, changedById);
 
-    // If roles, branches or the job title are being modified, re-validate
-    // the combined state.
+    // If roles, branches, the job title, or credentials are being modified,
+    // re-validate the combined state. `password`/`login` are included even
+    // though they don't touch roles or branches: an explicit credential
+    // write is exactly the case `assertRoleAndBranchRules` must see to
+    // refuse it when the account (already, or as of this same request) has
+    // no role — omitting them here is how a role-less account could
+    // previously acquire a password through this endpoint alone.
+    let nextRoleIds: number[] | undefined;
     if (
       dto.roleIds !== undefined ||
       dto.branchIds !== undefined ||
-      dto.position !== undefined
+      dto.position !== undefined ||
+      dto.password !== undefined ||
+      dto.login !== undefined
     ) {
-      const nextRoleIds =
-        dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
+      nextRoleIds = dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
       const nextBranchIds =
         dto.branchIds ?? user.branches.map((ub: any) => ub.branch.id);
       const nextMainBranch =
@@ -586,6 +593,20 @@ export class UsersService {
     }
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    // Stripping an employee's last role IS removing their system access.
+    // `assertRoleAndBranchRules` above only refuses an EXPLICIT credential
+    // write landing on a role-less account — it cannot refuse this case,
+    // because the DTO has no way to ask for a login/password to be cleared,
+    // and refusing the demotion itself would make "turn an administrator
+    // into a role-less cleaner" impossible through the UI. So when the
+    // RESULTING role set is empty, the stored credentials are nulled here
+    // instead: a bcrypt hash and a login that grant nothing are exactly what
+    // "no role" is supposed to mean.
+    if (nextRoleIds && nextRoleIds.length === 0) {
+      updateData.password = null;
+      updateData.login = null;
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
