@@ -28,6 +28,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { roleLabel } from "@/components/payments/salary-utils";
+import { EmployeeCredentialsSection } from "./employee-credentials-section";
 
 const CEO_ROLE_ID = 1;
 const TEACHER_ROLE_ID = 4;
@@ -111,7 +112,7 @@ const schema = z
     }
   });
 
-type FormValues = z.infer<typeof schema>;
+export type FormValues = z.infer<typeof schema>;
 
 interface EditEmployeeFormProps {
   employee: EmployeeUser | null;
@@ -173,6 +174,12 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       ? current.filter((id) => id !== roleId)
       : [...current, roleId];
     form.setValue("roleIds", next, { shouldValidate: true });
+    // Losing the last role hides the Kirish ma'lumotlari section — clear the
+    // fields too, so stale state can never be resubmitted once it reappears.
+    if (next.length === 0) {
+      form.setValue("login", "");
+      form.setValue("password", "");
+    }
     // Role changes affect branchIds requirement (non-CEO needs branches)
     if (form.formState.isSubmitted) {
       void form.trigger("branchIds");
@@ -202,8 +209,14 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
         branchIds: values.branchIds,
       };
       if (values.phone) payload.phone = values.phone;
-      if (values.login) payload.login = values.login;
-      if (values.password) payload.password = values.password;
+      // A role-less employee can never carry a login/password — the backend
+      // rejects both, and it already nulls them itself when the saved role
+      // set is empty. Only forward what the (now-hidden) fields hold when a
+      // role is actually present.
+      if (values.roleIds.length > 0) {
+        if (values.login) payload.login = values.login;
+        if (values.password) payload.password = values.password;
+      }
       if (values.gender) payload.gender = values.gender;
       if (values.mainBranch) payload.mainBranch = Number(values.mainBranch);
       if (isEdit && values.status) payload.status = values.status;
@@ -314,41 +327,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       {/* Kirish ma'lumotlari — faqat tizim roli berilganda.
           Rolsiz xodim baribir kira olmaydi (backend parolni rad etadi), shuning
           uchun maydonlarni ko'rsatish faqat chalg'itadi. */}
-      {hasRoles && (
-        <section className="space-y-5 border-t px-6 py-5">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Kirish ma&apos;lumotlari
-          </h3>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="login">Login</Label>
-              <Input
-                id="login"
-                placeholder="Login"
-                autoComplete="off"
-                {...form.register("login")}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">
-                {isEdit ? "Yangi parol" : "Parol *"}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={isEdit ? "O'zgartirmaslik uchun bo'sh qoldiring" : "Parol"}
-                autoComplete="new-password"
-                {...form.register("password")}
-              />
-              {form.formState.errors.password && (
-                <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
-              )}
-            </div>
-          </div>
-
-        </section>
-      )}
+      {hasRoles && <EmployeeCredentialsSection form={form} isEdit={isEdit} />}
 
       {/* Lavozim va filial */}
       <section className="space-y-5 border-t px-6 py-5">
