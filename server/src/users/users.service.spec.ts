@@ -744,6 +744,38 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
     );
   });
 
+  // The mirror of the two refusals above. `CreateUserDto.password` became
+  // `@IsOptional()` so a role-less employee could be created without one —
+  // which left NOTHING on the server requiring a password for an employee who
+  // DOES hold a role. The only thing asking was a zod schema in the browser.
+  it('rol berilgan xodimni parolsiz yaratishni rad etadi', async () => {
+    prisma.role.findMany.mockResolvedValue([{ id: 3 }]);
+
+    await expect(
+      service.create(
+        { ...base, position: 'Administrator', roleIds: [3] },
+        1, // CEO caller
+      ),
+    ).rejects.toThrow('Tizim roli berilgan xodim uchun parol majburiy');
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it('rol + parol bilan yaratish ishlayveradi', async () => {
+    prisma.role.findMany.mockResolvedValue([{ id: 3 }]);
+
+    await expect(
+      service.create(
+        {
+          ...base,
+          position: 'Administrator',
+          roleIds: [3],
+          password: 'parol123',
+        },
+        1,
+      ),
+    ).resolves.toBeDefined();
+  });
+
   it('lavozimni saqlashdan oldin trim qiladi', async () => {
     await service.create(
       { ...base, position: '  Qorovul  ', roleIds: [] },
@@ -966,6 +998,88 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
     const data = updateMock.mock.calls[0][0].data;
     expect(data.password).toBeNull();
     expect(data.login).toBeNull();
+  });
+
+  // The re-promotion hole: demoting an administrator nulls their credentials
+  // (test c), and the edit-mode form asks for nothing ("O'zgartirmaslik uchun
+  // bo'sh qoldiring" — a placeholder that asserts a stored password which no
+  // longer exists). Giving the role back therefore produced an account holding
+  // real access that nobody could ever sign into.
+  it('d) rolsiz akkauntga parolsiz rol qaytarishni rad etadi', async () => {
+    target = {
+      id: 25,
+      companyId: 1001,
+      mainBranch: null,
+      status: 'ACTIVE',
+      isActive: true,
+      password: null, // demotion nulled it
+      login: null,
+      roles: [],
+      branches: [{ branch: { id: 500, name: 'Main' } }],
+      company: { id: 1001, name: 'Test' },
+      groupTeachers: [],
+    };
+
+    await expect(
+      service.updateUser(25, { roleIds: [3] } as any, 99, 1001),
+    ).rejects.toThrow('Tizim roli berilgan xodim uchun parol majburiy');
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('d) rolni parol bilan birga qaytarish ishlaydi', async () => {
+    target = {
+      id: 26,
+      companyId: 1001,
+      mainBranch: null,
+      status: 'ACTIVE',
+      isActive: true,
+      password: null,
+      login: null,
+      roles: [],
+      branches: [{ branch: { id: 500, name: 'Main' } }],
+      company: { id: 1001, name: 'Test' },
+      groupTeachers: [],
+    };
+
+    await service.updateUser(
+      26,
+      { roleIds: [3], password: 'yangiParol1' } as any,
+      99,
+      1001,
+    );
+
+    expect(updateMock).toHaveBeenCalled();
+    expect(typeof updateMock.mock.calls[0][0].data.password).toBe('string');
+  });
+
+  // The regression this rule must NOT cause: an ordinary edit sends no
+  // password, and an administrator who already has one must stay editable.
+  it("d) parolli rol egasini oddiy tahrirlash (parolsiz) ishlayveradi", async () => {
+    target = {
+      id: 27,
+      companyId: 1001,
+      mainBranch: null,
+      status: 'ACTIVE',
+      isActive: true,
+      password: '$2b$10$saqlangan.hash',
+      login: '901234567',
+      roles: [{ role: { id: 3, name: 'Administrator' } }],
+      branches: [{ branch: { id: 500, name: 'Main' } }],
+      company: { id: 1001, name: 'Test' },
+      groupTeachers: [],
+    };
+
+    await service.updateUser(
+      27,
+      { position: 'Bosh administrator' } as any,
+      99,
+      1001,
+    );
+
+    expect(updateMock).toHaveBeenCalled();
+    const data = updateMock.mock.calls[0][0].data;
+    expect(data.position).toBe('Bosh administrator');
+    expect(data.password).toBeUndefined(); // stored hash untouched
   });
 
   it('rol saqlanib qolsa, login/parol NULL qilinmaydi (oddiy parol yangilash ishlayveradi)', async () => {

@@ -190,21 +190,45 @@ export class AuthController {
   }
 
   // Step 2: verify the code → returns a single-use reset token.
+  // Same portal scope as step 1 — all three steps must resolve the SAME
+  // account, or the reset lands on whichever account sharing that phone was
+  // updated most recently.
   @Public()
   @HttpCode(200)
   @Post('forgot-password/verify')
-  async forgotPasswordVerify(@Body() dto: ForgotPasswordVerifyDto) {
-    return this.forgotPasswordService.verifyCode(dto.phone, dto.code);
+  async forgotPasswordVerify(
+    @Body() dto: ForgotPasswordVerifyDto,
+    @Req() req,
+  ) {
+    return this.forgotPasswordService.verifyCode(
+      dto.phone,
+      dto.code,
+      // `ip` stays unset: this controller has never passed one, so the verify
+      // IP guard has never run. Switching it on is a real change to how users
+      // are throttled and does not belong in a portal-scoping fix.
+      undefined,
+      resolveAllowedRoleIds(
+        req.headers['origin'] as string | undefined,
+        req.headers['x-portal'] as string | undefined,
+      ),
+    );
   }
 
   // Step 3: set a new password using the reset token.
   @Public()
   @HttpCode(200)
   @Post('forgot-password/reset')
-  async forgotPasswordReset(@Body() dto: ForgotPasswordResetDto) {
+  async forgotPasswordReset(
+    @Body() dto: ForgotPasswordResetDto,
+    @Req() req,
+  ) {
     return this.forgotPasswordService.resetPassword(
       dto.resetToken,
       dto.newPassword,
+      resolveAllowedRoleIds(
+        req.headers['origin'] as string | undefined,
+        req.headers['x-portal'] as string | undefined,
+      ),
     );
   }
 }

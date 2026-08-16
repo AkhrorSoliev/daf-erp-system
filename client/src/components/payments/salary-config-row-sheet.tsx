@@ -30,6 +30,7 @@ import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
+import { positionLabel } from "./salary-utils";
 
 interface SimpleEmployee {
   id: number;
@@ -37,6 +38,8 @@ interface SimpleEmployee {
   lastName: string;
   branches: { id: number; name: string }[];
   roles: { id: number; name: string }[];
+  /** Job title. A role-less employee (a cleaner, a guard) has only this. */
+  position?: string | null;
 }
 
 interface SalaryConfig {
@@ -59,14 +62,6 @@ const SALARY_TYPE_LABEL: Record<string, string> = {
   PERCENTAGE: "Foiz (%)",
   FIXED_PER_STUDENT: "O'quvchi boshiga (so'm)",
   FIXED_MONTHLY: "Oylik (qattiq summa)",
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  CEO: "Direktor",
-  "Branch Director": "Filial direktori",
-  Administrator: "Administrator",
-  Teacher: "O'qituvchi",
-  Cashier: "Kassir",
 };
 
 interface Props {
@@ -199,9 +194,10 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
     }
   };
 
-  const role = employee
-    ? ROLE_LABELS[employee.roles[0]?.name ?? ""] ?? "—"
-    : "";
+  // Job title first: this sheet now opens for role-less staff too, and
+  // `roles[0]` gives them nothing but a dash. `positionLabel` keeps the role
+  // as the fallback for employees created before the column existed.
+  const role = employee ? positionLabel(employee) : "";
   const branch = employee?.branches[0]?.name ?? "—";
 
   return (

@@ -87,7 +87,16 @@ export class UsersService {
     mainBranch: number | null | undefined,
     companyId: number,
     callerUserId?: number,
-    opts?: { position?: string | null; hasCredentials?: boolean },
+    opts?: {
+      position?: string | null;
+      hasCredentials?: boolean;
+      /**
+       * Whether the account will hold a stored password once this write lands
+       * (`dto.password`, or an existing hash left untouched). `undefined` means
+       * "not asked" — the caller did not put credentials in play.
+       */
+      passwordAfter?: boolean;
+    },
   ) {
     // Role escalation guard: only CEO can grant CEO role
     if (callerUserId && roleIds?.includes(CEO_ROLE_ID)) {
@@ -195,6 +204,21 @@ export class UsersService {
         callerUserId,
         branchId,
         "Bu filialga xodim qo'shish huquqingiz yo'q",
+      );
+    }
+
+    // The converse of the refusal above, and just as load-bearing: a role IS
+    // system access, and access nobody can reach is an account that lies about
+    // itself. Without this the only thing asking for a password was a zod
+    // schema in the browser — and the backend is the security boundary. It
+    // bites through the UI too: demote an administrator to role-less (the
+    // credentials are nulled) and promote them back, and the edit form asks
+    // for nothing, leaving a real role behind a password that does not exist.
+    // Ordered last so an authorization failure (branch, role escalation) is
+    // still reported before a missing password.
+    if (hasRoles && opts?.passwordAfter === false) {
+      throw new BadRequestException(
+        'Tizim roli berilgan xodim uchun parol majburiy',
       );
     }
   }
@@ -441,7 +465,11 @@ export class UsersService {
       data.mainBranch,
       data.companyId,
       callerUserId,
-      { position, hasCredentials: !!(data.password || data.login) },
+      {
+        position,
+        hasCredentials: !!(data.password || data.login),
+        passwordAfter: !!data.password,
+      },
     );
 
     const hashedPassword = data.password
@@ -532,7 +560,11 @@ export class UsersService {
   ) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
-      select: userSelect,
+      // `password` rides along ONLY so the rules below can ask whether the
+      // account already has one — a role holder left with none can never sign
+      // in. It is never returned: the response is built from `updated`, and
+      // `computeChangedFields` drops `password` from the audit trail.
+      select: { ...userSelect, password: true },
     });
 
     if (!user) {
@@ -573,6 +605,11 @@ export class UsersService {
           // employee with no title yet must stay editable.
           position: dto.position !== undefined ? dto.position : undefined,
           hasCredentials: !!(dto.password || dto.login),
+          // An ordinary edit of a credentialed employee sends no password and
+          // must stay untouched — hence the stored hash, not `dto.password`
+          // alone. Only an account that would END this write with a role and
+          // no password at all is refused.
+          passwordAfter: !!dto.password || !!user.password,
         },
       );
     }
