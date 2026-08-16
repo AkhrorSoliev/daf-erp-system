@@ -37,6 +37,7 @@ const userSelect = {
   gender: true,
   balance: true,
   login: true,
+  position: true,
   companyId: true,
   mainBranch: true,
   isActive: true,
@@ -86,6 +87,7 @@ export class UsersService {
     mainBranch: number | null | undefined,
     companyId: number,
     callerUserId?: number,
+    opts?: { position?: string | null; hasCredentials?: boolean },
   ) {
     // Role escalation guard: only CEO can grant CEO role
     if (callerUserId && roleIds?.includes(CEO_ROLE_ID)) {
@@ -104,24 +106,52 @@ export class UsersService {
       }
     }
 
-    if (!roleIds?.length) return;
+    // A job title is what every list, badge and payroll row reads. It is the
+    // one field that must be there whether or not the person can sign in.
+    if (opts && opts.position !== undefined) {
+      if (!opts.position?.trim()) {
+        throw new BadRequestException("Lavozim ko'rsatilishi shart");
+      }
+    }
 
-    const hasCeoRole = roleIds.includes(CEO_ROLE_ID);
-    const hasTeacherRole = roleIds.includes(TEACHER_ROLE_ID);
+    const hasRoles = !!roleIds?.length;
     const hasBranches = !!branchIds && branchIds.length > 0;
 
-    // Teacher must have at least one branch (more specific error first)
-    if (hasTeacherRole && !hasCeoRole && !hasBranches) {
+    // No role means no sign-in, and a password is the second, independent
+    // guarantee of that (`validateUser` refuses an account with none). Accept
+    // one here and that guarantee is gone — so refuse rather than ignore.
+    if (!hasRoles && opts?.hasCredentials) {
       throw new BadRequestException(
-        "O'qituvchi uchun kamida bitta filial tanlanishi shart",
+        "Tizim roli berilmagan xodimga login yoki parol berib bo'lmaydi",
       );
     }
 
-    // Non-CEO employees must have at least one branch
-    if (!hasCeoRole && !hasBranches) {
-      throw new BadRequestException(
-        "CEO bo'lmagan xodim uchun kamida bitta filial tanlanishi shart",
-      );
+    // A branch-less employee appears in no branch list and on no payroll
+    // report, so this holds for the role-less too — which the old early
+    // `return` skipped entirely.
+    if (!hasRoles) {
+      if (!hasBranches) {
+        throw new BadRequestException(
+          'Rolsiz xodim uchun kamida bitta filial tanlanishi shart',
+        );
+      }
+    } else {
+      const hasCeoRole = roleIds!.includes(CEO_ROLE_ID);
+      const hasTeacherRole = roleIds!.includes(TEACHER_ROLE_ID);
+
+      // Teacher must have at least one branch (more specific error first)
+      if (hasTeacherRole && !hasCeoRole && !hasBranches) {
+        throw new BadRequestException(
+          "O'qituvchi uchun kamida bitta filial tanlanishi shart",
+        );
+      }
+
+      // Non-CEO employees must have at least one branch
+      if (!hasCeoRole && !hasBranches) {
+        throw new BadRequestException(
+          "CEO bo'lmagan xodim uchun kamida bitta filial tanlanishi shart",
+        );
+      }
     }
 
     // Branches must belong to the same company
@@ -376,6 +406,7 @@ export class UsersService {
       lastName: string;
       companyId: number;
       login?: string;
+      position?: string;
       password?: string;
       phone?: string;
       photo?: string;
@@ -402,12 +433,15 @@ export class UsersService {
       }
     }
 
+    const position = data.position?.trim() ?? '';
+
     await this.assertRoleAndBranchRules(
       data.roleIds,
       data.branchIds,
       data.mainBranch,
       data.companyId,
       callerUserId,
+      { position, hasCredentials: !!(data.password || data.login) },
     );
 
     const hashedPassword = data.password
@@ -428,6 +462,7 @@ export class UsersService {
           mainBranch: data.mainBranch || null,
           telegramChatId: data.telegramChatId || null,
           login: data.login || null,
+          position,
           password: hashedPassword || null,
           roles: data.roleIds?.length
             ? { create: data.roleIds.map((roleId) => ({ roleId })) }
@@ -507,8 +542,13 @@ export class UsersService {
     this.assertSameCompany(user.companyId, callerCompanyId);
     await this.assertCallerMayTouchUser(user as any, changedById);
 
-    // If roles or branches are being modified, re-validate combined state
-    if (dto.roleIds !== undefined || dto.branchIds !== undefined) {
+    // If roles, branches or the job title are being modified, re-validate
+    // the combined state.
+    if (
+      dto.roleIds !== undefined ||
+      dto.branchIds !== undefined ||
+      dto.position !== undefined
+    ) {
       const nextRoleIds =
         dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
       const nextBranchIds =
@@ -521,6 +561,12 @@ export class UsersService {
         nextMainBranch,
         user.companyId,
         changedById,
+        {
+          // Only validated when the caller actually sends one — an existing
+          // employee with no title yet must stay editable.
+          position: dto.position !== undefined ? dto.position : undefined,
+          hasCredentials: !!(dto.password || dto.login),
+        },
       );
     }
 
@@ -529,6 +575,7 @@ export class UsersService {
     if (dto.lastName !== undefined) updateData.lastName = dto.lastName;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.login !== undefined) updateData.login = dto.login;
+    if (dto.position !== undefined) updateData.position = dto.position.trim();
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
     if (dto.telegramChatId !== undefined)

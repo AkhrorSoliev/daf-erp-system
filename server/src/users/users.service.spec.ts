@@ -230,6 +230,7 @@ describe('UsersService — role escalation and branch validation', () => {
           lastName: 'B',
           companyId: 1001,
           password: 'pass1',
+          position: 'Administrator',
           roleIds: [1],
         },
         99,
@@ -247,6 +248,7 @@ describe('UsersService — role escalation and branch validation', () => {
           lastName: 'B',
           companyId: 1001,
           password: 'pass1',
+          position: 'Administrator',
           roleIds: [3],
           branchIds: [],
         },
@@ -265,6 +267,7 @@ describe('UsersService — role escalation and branch validation', () => {
           lastName: 'B',
           companyId: 1001,
           password: 'pass1',
+          position: 'Administrator',
           roleIds: [4],
         },
         99,
@@ -283,6 +286,7 @@ describe('UsersService — role escalation and branch validation', () => {
           lastName: 'B',
           companyId: 1001,
           password: 'pass1',
+          position: 'Administrator',
           roleIds: [3],
           branchIds: [9999],
         },
@@ -302,6 +306,7 @@ describe('UsersService — role escalation and branch validation', () => {
           lastName: 'B',
           companyId: 1001,
           password: 'pass1',
+          position: 'Administrator',
           roleIds: [3],
           branchIds: [500],
           mainBranch: 999,
@@ -322,6 +327,7 @@ describe('UsersService — role escalation and branch validation', () => {
           lastName: 'B',
           companyId: 1001,
           password: 'pass1',
+          position: 'Administrator',
           roleIds: [1],
           branchIds: [],
         },
@@ -339,6 +345,7 @@ describe('UsersService — role escalation and branch validation', () => {
         lastName: 'B',
         companyId: 1001,
         password: 'pass1',
+        position: 'Administrator',
         roleIds: [1],
       }),
     ).resolves.toBeDefined();
@@ -621,6 +628,128 @@ describe('UsersService — updateUser branch confinement', () => {
     await expect(
       service.updateUser(7, { firstName: 'Yangi' } as any, 99, 1001),
     ).rejects.toThrow(/o'z filialingiz xodimlarini/);
+  });
+});
+
+describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
+  let service: UsersService;
+  let prisma: any;
+
+  const CEO_CALLER = {
+    mainBranch: null,
+    branches: [],
+    roles: [{ role: { name: 'CEO' } }],
+  };
+
+  const createdUser = {
+    id: 10500,
+    firstName: 'Zulfiya',
+    lastName: 'Karimova',
+    position: 'Farrosh',
+    companyId: 1001,
+    roles: [],
+    branches: [{ branch: { id: 7, name: "Farg'ona filiali" } }],
+    groupTeachers: [],
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue(CEO_CALLER),
+        findUnique: jest.fn().mockResolvedValue(CEO_CALLER),
+        create: jest.fn().mockResolvedValue(createdUser),
+      },
+      role: { findMany: jest.fn().mockResolvedValue([]) },
+      branch: { count: jest.fn().mockResolvedValue(1) },
+      $transaction: jest.fn((cb: any) => cb(prisma)),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: UploadService, useValue: {} },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get(UsersService);
+  });
+
+  const base = {
+    firstName: 'Zulfiya',
+    lastName: 'Karimova',
+    companyId: 1001,
+    branchIds: [7],
+  };
+
+  it('rolsiz, lavozimli va filialli xodimni yaratadi', async () => {
+    await service.create(
+      { ...base, position: 'Farrosh', roleIds: [] },
+      1, // CEO caller
+    );
+
+    expect(prisma.user.create).toHaveBeenCalled();
+    const data = prisma.user.create.mock.calls[0][0].data;
+    expect(data.position).toBe('Farrosh');
+    expect(data.password).toBeNull();
+    // Rolsiz xodimda `roles` umuman yozilmaydi.
+    expect(data.roles).toBeUndefined();
+  });
+
+  it('lavozimsiz xodimni rad etadi', async () => {
+    await expect(
+      service.create({ ...base, position: '   ', roleIds: [] }, 1),
+    ).rejects.toThrow("Lavozim ko'rsatilishi shart");
+  });
+
+  it('rolsiz va filialsiz xodimni rad etadi', async () => {
+    await expect(
+      service.create(
+        { ...base, branchIds: [], position: 'Qorovul', roleIds: [] },
+        1,
+      ),
+    ).rejects.toThrow('Rolsiz xodim uchun kamida bitta filial tanlanishi shart');
+  });
+
+  it('rolsiz xodimga parol berishni rad etadi', async () => {
+    await expect(
+      service.create(
+        { ...base, position: 'Farrosh', roleIds: [], password: 'parol123' },
+        1,
+      ),
+    ).rejects.toThrow(
+      'Tizim roli berilmagan xodimga login yoki parol berib bo\'lmaydi',
+    );
+  });
+
+  it('rolsiz xodimga login berishni ham rad etadi', async () => {
+    await expect(
+      service.create(
+        { ...base, position: 'Farrosh', roleIds: [], login: 'farrosh' },
+        1,
+      ),
+    ).rejects.toThrow(
+      'Tizim roli berilmagan xodimga login yoki parol berib bo\'lmaydi',
+    );
+  });
+
+  it('lavozimni saqlashdan oldin trim qiladi', async () => {
+    await service.create(
+      { ...base, position: '  Qorovul  ', roleIds: [] },
+      1,
+    );
+    expect(prisma.user.create.mock.calls[0][0].data.position).toBe('Qorovul');
   });
 });
 
