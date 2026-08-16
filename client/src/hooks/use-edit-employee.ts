@@ -8,6 +8,7 @@ export interface EmployeeUser {
   photo: string | null;
   gender: string | null;
   login: string | null;
+  position: string | null;
   telegramChatId: string | null;
   mainBranch: number | null;
   balance: number;

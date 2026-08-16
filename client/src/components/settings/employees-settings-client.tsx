@@ -43,6 +43,7 @@ import { EmployeeRowActions } from "./employee-row-actions";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
 import { TelegramLinkDialog } from "./telegram-link-dialog";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
+import { positionLabel } from "@/components/payments/salary-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -272,11 +273,9 @@ export function EmployeesSettingsClient() {
                         </Badge>
                       </div>
                       <div className="flex flex-wrap gap-1 mt-0.5">
-                        {emp.roles.map((r) => (
-                          <span key={r.id} className="text-xs text-muted-foreground">
-                            {ROLE_LABELS[r.name] || r.name}
-                          </span>
-                        ))}
+                        <span className="text-xs text-muted-foreground">
+                          {positionLabel(emp)}
+                        </span>
                       </div>
                       {emp.phone && (
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -342,9 +341,14 @@ export function EmployeesSettingsClient() {
                       {emp.firstName} {emp.lastName}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="font-medium">{positionLabel(emp)}</span>
                         {emp.roles.map((r) => (
-                          <Badge key={r.id} variant={ROLE_VARIANTS[r.name] || "outline"}>
+                          <Badge
+                            key={r.id}
+                            variant={ROLE_VARIANTS[r.name] || "outline"}
+                            className="text-[10px] font-normal"
+                          >
                             {ROLE_LABELS[r.name] || r.name}
                           </Badge>
                         ))}

@@ -30,12 +30,33 @@ const ROLE_LABELS: Record<number, string> = {
   5: "Kassir",
 };
 
+/**
+ * The employee's "Lavozim" from a flat role list. Lowest role id wins, so a
+ * Branch Director who is also an Administrator reads as the senior of the two.
+ */
+export function roleLabel(roles: { id: number }[] | undefined): string {
+  if (!roles?.length) return "—";
+  const ids = roles.map((r) => r.id).sort((a, b) => a - b);
+  return ROLE_LABELS[ids[0]] ?? "—";
+}
+
+/** Same, for the nested `{ role: { id } }` shape the user endpoints return. */
 export function primaryRoleLabel(
   roles: { role: { id: number } }[] | undefined,
 ): string {
-  if (!roles?.length) return "—";
-  const ids = roles.map((r) => r.role.id).sort((a, b) => a - b);
-  return ROLE_LABELS[ids[0]] ?? "—";
+  return roleLabel(roles?.map((r) => r.role));
+}
+
+/**
+ * What to call an employee. The job title wins because it is the only label a
+ * role-less employee has — a cleaner carries no role by design. Employees
+ * created before the column exists fall back to their role.
+ */
+export function positionLabel(user: {
+  position?: string | null;
+  roles?: { id: number }[];
+}): string {
+  return user.position?.trim() || roleLabel(user.roles);
 }
 
 const UZ_MONTHS = [

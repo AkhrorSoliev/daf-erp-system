@@ -27,6 +27,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
+import { roleLabel } from "@/components/payments/salary-utils";
 
 const CEO_ROLE_ID = 1;
 const TEACHER_ROLE_ID = 4;
@@ -59,25 +60,33 @@ const schema = z
     gender: z.enum(["MALE", "FEMALE", ""]).optional(),
     status: z.string().optional(),
     mainBranch: z.string().optional(),
-    roleIds: z.array(z.number()).min(1, "Kamida bitta lavozim tanlang"),
+    position: z
+      .string()
+      .trim()
+      .min(2, "Lavozim kamida 2 ta belgidan iborat bo'lishi kerak")
+      .max(60, "Lavozim 60 ta belgidan oshmasligi kerak"),
+    roleIds: z.array(z.number()),
     branchIds: z.array(z.number()),
     isEdit: z.boolean(),
   })
   .superRefine((data, ctx) => {
     const hasCeoRole = data.roleIds.includes(CEO_ROLE_ID);
     const hasTeacherRole = data.roleIds.includes(TEACHER_ROLE_ID);
+    const hasRoles = data.roleIds.length > 0;
 
     if (!hasCeoRole && data.branchIds.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["branchIds"],
-        message: hasTeacherRole
-          ? "O'qituvchi uchun kamida bitta filial tanlang"
-          : "Kamida bitta filial tanlang",
+        message: !hasRoles
+          ? "Tizimga kirmaydigan xodim uchun ham filial tanlanishi shart"
+          : hasTeacherRole
+            ? "O'qituvchi uchun kamida bitta filial tanlang"
+            : "Kamida bitta filial tanlang",
       });
     }
 
-    if (!data.isEdit) {
+    if (!data.isEdit && hasRoles) {
       if (!data.password || data.password.length < 4) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -129,6 +138,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       lastName: employee?.lastName ?? "",
       phone: employee?.phone ?? "",
       login: employee?.login ?? "",
+      position: employee?.position ?? roleLabel(employee?.roles ?? []).replace("—", ""),
       password: "",
       gender: (employee?.gender as "MALE" | "FEMALE" | "") ?? "",
       status: employee?.status ?? "ACTIVE",
@@ -187,6 +197,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       const payload: Record<string, any> = {
         firstName: values.firstName,
         lastName: values.lastName,
+        position: values.position,
         roleIds: values.roleIds,
         branchIds: values.branchIds,
       };
@@ -217,6 +228,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
   };
 
   const watchRoleIds = form.watch("roleIds");
+  const hasRoles = watchRoleIds.length > 0;
   const watchBranchIds = form.watch("branchIds");
 
   if (branchesLoading) {
@@ -299,40 +311,44 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
         </div>
       </section>
 
-      {/* Kirish ma'lumotlari */}
-      <section className="space-y-5 border-t px-6 py-5">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Kirish ma&apos;lumotlari
-        </h3>
+      {/* Kirish ma'lumotlari — faqat tizim roli berilganda.
+          Rolsiz xodim baribir kira olmaydi (backend parolni rad etadi), shuning
+          uchun maydonlarni ko'rsatish faqat chalg'itadi. */}
+      {hasRoles && (
+        <section className="space-y-5 border-t px-6 py-5">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Kirish ma&apos;lumotlari
+          </h3>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="login">Login</Label>
-            <Input
-              id="login"
-              placeholder="Login"
-              autoComplete="off"
-              {...form.register("login")}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="login">Login</Label>
+              <Input
+                id="login"
+                placeholder="Login"
+                autoComplete="off"
+                {...form.register("login")}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">
+                {isEdit ? "Yangi parol" : "Parol *"}
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder={isEdit ? "O'zgartirmaslik uchun bo'sh qoldiring" : "Parol"}
+                autoComplete="new-password"
+                {...form.register("password")}
+              />
+              {form.formState.errors.password && (
+                <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
+              )}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password">
-              {isEdit ? "Yangi parol" : "Parol *"}
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder={isEdit ? "O'zgartirmaslik uchun bo'sh qoldiring" : "Parol"}
-              autoComplete="new-password"
-              {...form.register("password")}
-            />
-            {form.formState.errors.password && (
-              <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
-            )}
-          </div>
-        </div>
 
-      </section>
+        </section>
+      )}
 
       {/* Lavozim va filial */}
       <section className="space-y-5 border-t px-6 py-5">
@@ -340,9 +356,27 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
           Lavozim va filial
         </h3>
 
+        <div className="space-y-1.5">
+          <Label htmlFor="position">Lavozim *</Label>
+          <Input
+            id="position"
+            placeholder="Masalan: Farrosh, Qorovul, Administrator"
+            {...form.register("position")}
+          />
+          {form.formState.errors.position && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.position.message}
+            </p>
+          )}
+        </div>
+
         {/* Roles */}
         <div className="space-y-2.5">
-          <Label>Lavozimlar *</Label>
+          <Label>Tizim huquqi</Label>
+          <p className="text-xs text-muted-foreground">
+            Rol berilmasa, xodim tizimga kira olmaydi — faqat ro'yxatda turadi
+            va oylik oladi.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {ROLES.map((role) => {
               const checked = watchRoleIds.includes(role.id);
