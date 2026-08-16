@@ -176,6 +176,29 @@ describe('AuthService', () => {
       const seen = where.OR.map((c: any) => JSON.stringify(c));
       expect(new Set(seen).size).toBe(seen.length);
     });
+
+    it('parolsiz xodimni hech qanday portal filtri bilan kirita olmaydi', async () => {
+      // A role-less employee (a cleaner, a guard) is created without a password.
+      // This is the guarantee that holds even on localhost, where the portal
+      // role filter is null and therefore applies nothing.
+      prisma.user.findFirst.mockResolvedValue({
+        id: 10500,
+        firstName: 'Zulfiya',
+        lastName: 'Karimova',
+        position: 'Farrosh',
+        password: null,
+        roles: [],
+        branches: [{ branch: { id: 7, name: "Farg'ona filiali" } }],
+      });
+
+      await expect(
+        service.validateUser('901234567', 'nimadir', null),
+      ).resolves.toBeNull();
+
+      await expect(
+        service.validateUser('901234567', 'nimadir', [1, 2, 3, 5]),
+      ).resolves.toBeNull();
+    });
   });
 
   describe('findAccountByIdentifier', () => {
