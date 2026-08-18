@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { headers } from "next/headers";
 import { LoginForm } from "./login-form";
 import { StudentLoginForm } from "./student-login-form";
@@ -24,6 +25,41 @@ export default async function LoginPage() {
           <StudentLoginForm />
         </main>
         <LoginFooter portal={portal} />
+      </div>
+    );
+  }
+
+  // Admin portal (admin.dafzentrum.uz) — full-bleed photo background. The form
+  // moves onto a translucent panel and the footer onto a translucent strip so
+  // both stay readable in light and dark themes over the photo.
+  if (portal === "admin") {
+    return (
+      <div className="relative flex min-h-screen flex-col">
+        <div className="absolute inset-0">
+          <Image
+            src="/login-admin-background.jpg"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-slate-950/20 dark:bg-slate-950/55" />
+        </div>
+
+        <div className="relative flex justify-end p-4">
+          <ThemeToggle />
+        </div>
+        <main className="relative flex flex-1 items-center justify-center px-4 py-8">
+          {/* `.liquid-glass` (globals.css) carries the whole pane: tinted
+              translucency, refracted rim, specular pools and the load sheen. */}
+          <div className="liquid-glass w-full max-w-sm rounded-[28px] p-6 sm:p-8">
+            <LoginForm portal={portal} />
+          </div>
+        </main>
+        <div className="relative bg-background/85 backdrop-blur-sm">
+          <LoginFooter portal={portal} />
+        </div>
       </div>
     );
   }

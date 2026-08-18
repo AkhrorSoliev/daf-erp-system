@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lightning } from "@phosphor-icons/react";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { formatPhoneWithCodeInput } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
@@ -87,8 +88,8 @@ export function StudentLoginForm() {
             inputMode="tel"
             autoComplete="username"
             required
-            value={login}
-            onChange={(e) => setLogin(e.target.value)}
+            value={formatPhoneWithCodeInput(login)}
+            onChange={(e) => setLogin(e.target.value.replace(/\D/g, ""))}
             placeholder="998 90 123 45 67"
           />
         </Field>

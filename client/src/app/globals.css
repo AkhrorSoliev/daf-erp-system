@@ -535,6 +535,143 @@
   }
 }
 
+
+/* --- Liquid glass (admin login card) ---------------------------------------
+   macOS 26 style glass, built from three layers: a tinted body that takes its
+   colour from the blurred + saturated photo behind it, a rim that reads as
+   refracted light (bright where the light enters, faint on the far edge) and a
+   specular sheen that sweeps across once as the page loads. */
+@layer components {
+  .liquid-glass {
+    position: relative;
+    isolation: isolate;
+    /* The sheen sweeps past the far edge, so the pane has to clip it. */
+    overflow: hidden;
+    border: 0;
+    background-image: linear-gradient(
+      158deg,
+      rgba(255, 255, 255, 0.84) 0%,
+      rgba(255, 255, 255, 0.66) 46%,
+      rgba(255, 255, 255, 0.76) 100%
+    );
+    backdrop-filter: blur(40px) saturate(190%);
+    -webkit-backdrop-filter: blur(40px) saturate(190%);
+    /* Rim first (refracted light: brightest along the top edge, thinning round
+       the far side), then the inner shade that makes the pane read as thick
+       glass rather than a flat wash, then the pane floating off the photo. */
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+      inset 1px 0 0 0 rgba(255, 255, 255, 0.5),
+      inset -1px 0 0 0 rgba(255, 255, 255, 0.28),
+      inset 0 -1px 0 0 rgba(255, 255, 255, 0.4),
+      inset 0 -22px 36px -28px rgba(9, 22, 60, 0.5),
+      0 30px 68px -26px rgba(5, 16, 50, 0.55),
+      0 8px 22px -14px rgba(5, 16, 50, 0.4);
+  }
+
+  /* Content rides above both glass layers. */
+  .liquid-glass > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Specular pools: light gathers top-left, the photo's blue bounces back
+     through the bottom-right corner. */
+  .liquid-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image:
+      radial-gradient(
+        130% 85% at 10% -5%,
+        rgba(255, 255, 255, 0.6),
+        transparent 62%
+      ),
+      radial-gradient(
+        95% 65% at 105% 108%,
+        rgba(120, 170, 255, 0.3),
+        transparent 68%
+      );
+  }
+
+  /* One-pass sheen on load — the glass catching the light as it settles. */
+  .liquid-glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image: linear-gradient(
+      104deg,
+      transparent 34%,
+      rgba(255, 255, 255, 0.5) 46%,
+      rgba(255, 255, 255, 0.12) 56%,
+      transparent 68%
+    );
+    transform: translateX(-130%);
+    animation: glass-sheen 1.5s cubic-bezier(0.22, 0.61, 0.36, 1) 0.4s both;
+  }
+
+  .dark .liquid-glass {
+    background-image: linear-gradient(
+      158deg,
+      rgba(46, 56, 78, 0.62) 0%,
+      rgba(16, 21, 34, 0.48) 46%,
+      rgba(32, 40, 60, 0.58) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+      inset 1px 0 0 0 rgba(255, 255, 255, 0.16),
+      inset -1px 0 0 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 0 rgba(255, 255, 255, 0.12),
+      inset 0 -22px 40px -28px rgba(0, 0, 0, 0.7),
+      0 34px 76px -28px rgba(0, 0, 0, 0.75),
+      0 8px 22px -14px rgba(0, 0, 0, 0.5);
+  }
+
+  .dark .liquid-glass::before {
+    background-image:
+      radial-gradient(
+        130% 85% at 10% -5%,
+        rgba(255, 255, 255, 0.16),
+        transparent 62%
+      ),
+      radial-gradient(
+        95% 65% at 105% 108%,
+        rgba(90, 140, 235, 0.22),
+        transparent 68%
+      );
+  }
+
+  .dark .liquid-glass::after {
+    background-image: linear-gradient(
+      104deg,
+      transparent 34%,
+      rgba(255, 255, 255, 0.22) 46%,
+      rgba(255, 255, 255, 0.06) 56%,
+      transparent 68%
+    );
+  }
+}
+
+@keyframes glass-sheen {
+  to {
+    transform: translateX(130%);
+  }
+}
+
+/* Reduced motion → the glass is simply already settled. */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
