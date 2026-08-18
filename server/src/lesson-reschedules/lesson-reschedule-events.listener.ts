@@ -8,6 +8,7 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { truncateChars } from '../common/utils/text.util';
 import type { LessonReschedulePayload } from './lesson-reschedules.service';
 
 const WEEKDAY_LABEL: Record<number, string> = {
@@ -159,7 +160,7 @@ export class LessonRescheduleEventsListener {
           oquvchilarga_yuborildi: studentsNotified,
           telegramsiz_oquvchilar: studentsMissing,
           ustozlarga_yuborildi: teachersNotified,
-          matn_namunasi: studentText.slice(0, 120),
+          matn_namunasi: truncateChars(studentText, 120),
         },
         changedById: p.scheduledById,
         companyId: p.companyId,

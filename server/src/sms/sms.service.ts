@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { truncateChars } from '../common/utils/text.util';
 import { TelegramService } from '../telegram/telegram.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { SmsMessageType } from '@prisma/client';
@@ -109,7 +110,10 @@ export class SmsService {
       newValues: {
         action: status === 'SENT' ? 'SMS_YUBORILDI' : 'SMS_YUBORILMADI',
         tur: type === 'AUTO' ? 'Avtomatik' : "Qo'lda",
-        xabar: content.replace(/<[^>]*>/g, '').slice(0, 100),
+        // Code-point safe: a plain slice(0, 100) cut the receipt between the
+        // two halves of the 📄 in the template, and jsonb refuses a lone
+        // surrogate — the receipt went out but its audit row was rejected.
+        xabar: truncateChars(content.replace(/<[^>]*>/g, ''), 100),
         holat: status === 'SENT' ? 'Yuborildi' : errorMessage,
       },
       changedById: senderUserId,

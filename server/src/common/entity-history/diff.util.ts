@@ -1,3 +1,5 @@
+import { stripLoneSurrogates } from '../utils/text.util';
+
 const EXCLUDED_KEYS = new Set([
   'updatedAt',
   'createdAt',
@@ -16,6 +18,18 @@ function isPlainValue(value: unknown): boolean {
   if (Array.isArray(value)) return false;
   if (typeof value === 'object') return false;
   return true;
+}
+
+/**
+ * PostgreSQL rejects a lone UTF-16 surrogate in `jsonb` ("invalid input syntax
+ * for type json"), and a caller that truncated a string with a plain
+ * `slice(n)` can easily hand us one — that is how the 2026-08-18 payment
+ * receipts lost their audit rows. Every history payload passes through here,
+ * so cleaning strings at this single point means no caller can break the
+ * write, whatever they did upstream.
+ */
+function jsonSafe(value: unknown): unknown {
+  return typeof value === 'string' ? stripLoneSurrogates(value) : value;
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -44,8 +58,8 @@ export function computeChangedFields(
         oldValues[key] = oldObj[key] ? 'eski rasm' : null;
         newValues[key] = newObj[key] ? 'yangi rasm' : null;
       } else {
-        oldValues[key] = oldObj[key] ?? null;
-        newValues[key] = newObj[key] ?? null;
+        oldValues[key] = jsonSafe(oldObj[key] ?? null);
+        newValues[key] = jsonSafe(newObj[key] ?? null);
       }
       hasChanges = true;
     }
@@ -61,7 +75,7 @@ export function stripSensitiveFields(
   for (const key of Object.keys(obj)) {
     if (EXCLUDED_KEYS.has(key)) continue;
     if (!isPlainValue(obj[key])) continue;
-    result[key] = obj[key] ?? null;
+    result[key] = jsonSafe(obj[key] ?? null);
   }
   return result;
 }
