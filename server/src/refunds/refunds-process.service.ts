@@ -173,6 +173,12 @@ export class RefundsProcessService {
    * the Refund row, we walk back the ledger entry and restore the contract
    * state it mutated. Intended for "we approved by mistake" scenarios.
    *
+   * A quick refund funds itself by cancelling prepaid lessons, so undoing it
+   * means undoing that too: reverse the release ADJUSTMENT and put the lessons
+   * back on the enrollment. Without this the student kept the credit and lost
+   * the lessons — which is how #10655's phantom balance had to be cleaned up by
+   * hand in July 2026.
+   *
    * Guardrails:
    *   - Refund must belong to caller's company
    *   - Refund must be COMPLETED (no-op on earlier states)
@@ -188,6 +194,7 @@ export class RefundsProcessService {
         id: true,
         studentId: true,
         contractId: true,
+        enrollmentId: true,
         approvedAmount: true,
         status: true,
       },
@@ -222,6 +229,19 @@ export class RefundsProcessService {
       );
     }
 
+    // Transaction carries no refund FK, so the release adjustment is found by
+    // the tag `releasePrepaidLessons` wrote into its metadata.
+    const releaseEntry = await this.prisma.transaction.findFirst({
+      where: {
+        studentId: refund.studentId,
+        type: 'ADJUSTMENT',
+        reversedTransactionId: null,
+        reversedAt: null,
+        metadata: { path: ['refundId'], equals: id },
+      },
+      select: { id: true, metadata: true },
+    });
+
     const approvedAmount = refund.approvedAmount ?? 0;
 
     return this.prisma.$transaction(
@@ -234,6 +254,28 @@ export class RefundsProcessService {
           },
           tx,
         );
+
+        if (releaseEntry) {
+          await this.transactionsService.reverseTransaction(
+            releaseEntry.id,
+            {
+              performedById: params.performedById,
+              reason: params.reason ?? 'Refund bekor qilindi',
+            },
+            tx,
+          );
+
+          const meta = releaseEntry.metadata as {
+            lessonsReleased?: number;
+          } | null;
+          const lessons = Number(meta?.lessonsReleased ?? 0);
+          if (lessons > 0 && refund.enrollmentId) {
+            await tx.enrollment.update({
+              where: { id: refund.enrollmentId },
+              data: { prepaidLessonsRemaining: { increment: lessons } },
+            });
+          }
+        }
 
         // Undo the contract paidAmount decrement done by the original
         // refund. Contract status stays REFUNDED — operators change it
