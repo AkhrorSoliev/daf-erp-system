@@ -8,6 +8,11 @@ describe('RefundsEligibilityService', () => {
   let prisma: any;
 
   const studentRow = { id: 10001, balance: 100_000 };
+  const lastPaymentRow = {
+    amount: 150_000,
+    method: 'PAYME',
+    createdAt: new Date('2026-08-12T09:30:00Z'),
+  };
   const enrollmentRow = {
     id: 'enr-1',
     groupId: 'group-1',
@@ -31,6 +36,7 @@ describe('RefundsEligibilityService', () => {
       attendance: { count: jest.fn().mockResolvedValue(0) },
       payment: {
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 400_000 } }),
+        findFirst: jest.fn().mockResolvedValue(lastPaymentRow),
       },
       transaction: {
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
@@ -165,6 +171,46 @@ describe('RefundsEligibilityService', () => {
       });
       const result = await service.previewRefund(10001, 1);
       expect(result.paidAmount).toBe(750_000);
+    });
+  });
+
+  describe('last payment', () => {
+    // The refund is taken out of the money that most recently came in, so the
+    // dialog has to show which payment that was. It reads the SAME set the
+    // paidAmount total is summed from, or the two lines could disagree.
+    it('reads the newest payment from the same filter paidAmount is summed over', async () => {
+      await service.previewRefund(10001, 1);
+
+      expect(prisma.payment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            studentId: 10001,
+            companyId: 1,
+            status: 'COMPLETED',
+          }),
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+    });
+
+    it('returns the last payment amount, method and date', async () => {
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.lastPayment).toEqual({
+        amount: 150_000,
+        method: 'PAYME',
+        paidAt: lastPaymentRow.createdAt,
+      });
+    });
+
+    it('returns null when the student has never paid', async () => {
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: null } });
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.lastPayment).toBeNull();
+      expect(result.paidAmount).toBe(0);
     });
   });
 
