@@ -78,6 +78,10 @@ describe('SalaryCenterTopUpService', () => {
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: { findMany: jest.fn().mockResolvedValue([]) },
       student: { findMany: jest.fn().mockResolvedValue([]) },
+      // How much of each fronted lesson is still unpaid. Empty by default: no
+      // deduction row means nothing has been paid against the lesson, so the
+      // centre's whole advance is still out — the state these tests describe.
+      transaction: { findMany: jest.fn().mockResolvedValue([]) },
       group: {
         findMany: jest
           .fn()
@@ -311,9 +315,73 @@ describe('SalaryCenterTopUpService', () => {
     const byId = new Map(res.data.map((r) => [r.student.id, r]));
     expect(byId.get(10001)!.studentDebt).toBe(20_000);
     expect(byId.get(10002)!.studentDebt).toBe(500_000);
-    expect(byId.get(10003)!.studentDebt).toBe(0);
+    // Cleared: nothing left to bring in, so the row is not on a call list at
+    // all. Its spend still counts in the totals, which describe the month.
+    expect(byId.has(10003)).toBe(false);
     expect(res.totals.studentDebt).toBe(520_000);
-    // Biggest debt first — the order a call list is worked.
+    // Biggest RECOVERABLE amount first — the order a call list is worked.
+    // Both cap at 20 000 here (#10001 by his balance, #10002 by his single
+    // lesson), so the tiebreak decides, and it is the larger total debt: of
+    // two calls worth the same to the centre, make the bigger one first.
+    expect(res.data.map((r) => r.centerUnrecovered)).toEqual([20_000, 20_000]);
     expect(res.data[0].student.id).toBe(10002);
+  });
+
+  it('caps what the centre can still get back at what the lesson still owes', async () => {
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      accrual({ studentId: 10001, attendanceId: 'a1' }),
+      accrual({ studentId: 10002, attendanceId: 'a2' }),
+    ]);
+    prisma.student.findMany.mockResolvedValue([
+      student(10001, { balance: -329 }),
+      student(10002, { balance: -50_000 }),
+    ]);
+    prisma.transaction.findMany.mockResolvedValue([
+      // Paid all but 329 of a 33 333 lesson: the centre's 20 000 came back with
+      // that payment, so at most 329 of it is still out. Production #10593.
+      { attendanceId: 'a1', metadata: { uncoveredAmount: 329 } },
+      // Settled to the last so'm — the accrual flag has simply not caught up.
+      { attendanceId: 'a2', metadata: { uncoveredAmount: 0 } },
+    ]);
+
+    const res = await service.getStudents({ month: '2026-07' }, 1001, 1);
+
+    expect(res.data).toHaveLength(1);
+    expect(res.data[0].student.id).toBe(10001);
+    expect(res.data[0].centerUnrecovered).toBe(329);
+    // The spend itself is untouched by any of this — it is what left the till.
+    expect(res.data[0].centerPaid).toBe(20_000);
+    // ...and the month's total still matches the card the drill-down opens
+    // from, repaid students included.
+    expect(res.totals.centerPaid).toBe(40_000);
+    expect(res.totals.centerUnrecovered).toBe(329);
+  });
+
+  it('never claims back more than the student owes in total', async () => {
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      accrual({ studentId: 10001, attendanceId: 'a1' }),
+      accrual({ studentId: 10001, attendanceId: 'a2' }),
+      accrual({ studentId: 10002, attendanceId: 'a3' }),
+    ]);
+    prisma.student.findMany.mockResolvedValue([
+      // Paid down to 5 000 — the per-lesson metadata still reads unpaid because
+      // their deferred settlement has not run, so without the balance cap the
+      // row would ask for 40 000 from someone owing 5 000.
+      student(10001, { balance: -5_000 }),
+      // Settled in full: the centre's money is back, whatever the flag says.
+      student(10002, { balance: 0 }),
+    ]);
+    // Metadata says nothing has been paid on any of the three lessons.
+    prisma.transaction.findMany.mockResolvedValue([]);
+
+    const res = await service.getStudents({ month: '2026-07' }, 1001, 1);
+
+    expect(res.data).toHaveLength(1);
+    expect(res.data[0].student.id).toBe(10001);
+    expect(res.data[0].centerUnrecovered).toBe(5_000);
+    // The spend is a fact about the past and stays whole, for both students...
+    expect(res.totals.centerPaid).toBe(60_000);
+    // ...and the page can say why it exceeds the rows on screen.
+    expect(res.totals.repaidStudentCount).toBe(1);
   });
 });
