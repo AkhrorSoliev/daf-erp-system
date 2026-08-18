@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -26,12 +27,19 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 
+interface LastPayment {
+  amount: number;
+  method: string;
+  paidAt: string;
+}
+
 interface RefundPreview {
   enrollmentId: string;
   groupId: string;
   groupName: string;
   courseName: string;
   paidAmount: number;
+  lastPayment: LastPayment | null;
   studentBalance: number;
   lessonsCompleted: number;
   totalLessons: number;
@@ -60,6 +68,9 @@ const refundMethods = [
   { value: "CLICK", label: "Click" },
   { value: "UZUM", label: "Uzum" },
 ];
+
+const methodLabel = (value: string) =>
+  refundMethods.find((m) => m.value === value)?.label ?? value;
 
 export function RefundDialog({
   open,
@@ -91,7 +102,12 @@ export function RefundDialog({
     setLoadError(null);
     api
       .get<RefundPreview>(`/refunds/preview/${studentId}`)
-      .then(({ data }) => setPreview(data))
+      .then(({ data }) => {
+        setPreview(data);
+        // Money goes back the way it came in — default the method to whatever
+        // the last payment used. The operator can still change it.
+        if (data.lastPayment) setRefundMethod(data.lastPayment.method);
+      })
       .catch((err) => {
         setPreview(null);
         setLoadError(getErrorMessage(err, "Ma'lumotlarni yuklashda xatolik"));
@@ -180,6 +196,25 @@ export function RefundDialog({
                     {formatPrice(preview.paidAmount)} so&apos;m
                   </span>
                 </div>
+                {preview.lastPayment && (
+                  <div className="flex items-start justify-between">
+                    <span className="text-muted-foreground">
+                      Oxirgi to&apos;lov:
+                    </span>
+                    <span className="text-right">
+                      <span className="block font-medium">
+                        {formatPrice(preview.lastPayment.amount)} so&apos;m
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {format(
+                          new Date(preview.lastPayment.paidAt),
+                          "dd.MM.yyyy",
+                        )}{" "}
+                        &middot; {methodLabel(preview.lastPayment.method)}
+                      </span>
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">
                     O&apos;tilgan darslar:

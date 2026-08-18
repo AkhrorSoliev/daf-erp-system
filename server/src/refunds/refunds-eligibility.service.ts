@@ -80,6 +80,26 @@ export class RefundsEligibilityService {
     });
     const paidAmount = paymentsAgg._sum.amount ?? 0;
 
+    // The operator refunds out of the money that most recently came in, so the
+    // dialog shows which payment that was. Same filter as `paidAmount` above —
+    // reading a different set would let the two lines contradict each other.
+    const lastPaymentRow = await this.prisma.payment.findFirst({
+      where: {
+        studentId,
+        companyId,
+        status: PaymentStatus.COMPLETED,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { amount: true, method: true, createdAt: true },
+    });
+    const lastPayment = lastPaymentRow
+      ? {
+          amount: lastPaymentRow.amount,
+          method: lastPaymentRow.method,
+          paidAt: lastPaymentRow.createdAt,
+        }
+      : null;
+
     // Lesson-deduction ledger scoped to this enrollment. Both reversal entries
     // (`reversedTransactionId: null`) AND reversed originals (`reversedAt: null`)
     // are excluded so the consumed total isn't double-counted.
@@ -129,6 +149,7 @@ export class RefundsEligibilityService {
       groupName: enrollment.group.name,
       courseName: enrollment.group.course.name,
       paidAmount,
+      lastPayment,
       studentBalance: student.balance,
       lessonsCompleted,
       totalLessons,
