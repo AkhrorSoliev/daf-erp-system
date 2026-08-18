@@ -41,12 +41,10 @@ interface RefundPreview {
   paidAmount: number;
   lastPayment: LastPayment | null;
   studentBalance: number;
-  lessonsCompleted: number;
-  totalLessons: number;
+  lessonsAttended: number;
+  prepaidLessons: number;
+  prepaidValue: number;
   perLessonCost: number;
-  attendanceConsumed: number;
-  ledgerConsumed: number;
-  overDeducted: number;
   previousRefunds: number;
   maxRefundable: number;
   suggestedAmount: number;
@@ -220,9 +218,7 @@ export function RefundDialog({
                     O&apos;tilgan darslar:
                   </span>
                   <span className="font-medium">
-                    {preview.lessonsCompleted} / {preview.totalLessons}
-                    {preview.perLessonCost > 0 &&
-                      ` (${formatPrice(preview.attendanceConsumed)} so'm)`}
+                    {preview.lessonsAttended} ta
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -233,13 +229,19 @@ export function RefundDialog({
                     {formatPrice(preview.studentBalance)} so&apos;m
                   </span>
                 </div>
-                {preview.overDeducted > 0 && (
-                  <div className="flex items-center justify-between">
+                {preview.prepaidLessons > 0 && (
+                  <div className="flex items-start justify-between">
                     <span className="text-muted-foreground">
-                      Foydalanilmagan darslar:
+                      Oldindan to&apos;langan darslar:
                     </span>
-                    <span className="font-medium">
-                      {formatPrice(preview.overDeducted)} so&apos;m
+                    <span className="text-right">
+                      <span className="block font-medium">
+                        {preview.prepaidLessons} ta &middot;{" "}
+                        {formatPrice(preview.prepaidValue)} so&apos;m
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        Kerak bo&apos;lsa bekor qilinadi
+                      </span>
                     </span>
                   </div>
                 )}
@@ -254,7 +256,7 @@ export function RefundDialog({
                   </div>
                 )}
                 <div className="border-t pt-2 flex items-center justify-between">
-                  <span className="font-medium">To&apos;liq qaytarish:</span>
+                  <span className="font-medium">Qaytarish mumkin:</span>
                   <span className="text-lg font-bold text-green-600">
                     {formatPrice(preview.maxRefundable)} so&apos;m
                   </span>
@@ -296,6 +298,15 @@ export function RefundDialog({
                     qaytarish mumkin
                   </p>
                 )}
+                {!overMax &&
+                  rawAmount > Math.max(0, preview.studentBalance) &&
+                  preview.prepaidLessons > 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Balansdagi pul yetmaydi — yetishmagan qismi oldindan
+                      to&apos;langan darslarni bekor qilish hisobidan
+                      qaytariladi
+                    </p>
+                  )}
               </div>
 
               <div className="space-y-2">

@@ -769,6 +769,13 @@ export class TransactionsWriteService {
       // Optional: system-triggered adjustments (status cascades) may have no
       // acting user; the ledger column is nullable.
       performedById?: number;
+      /**
+       * Optional audit trail. A refund that frees prepaid lessons posts an
+       * ADJUSTMENT for the money it releases and has to find that same row
+       * again to reverse it — Transaction carries no refund FK, so the link
+       * travels here as `{ refundId, lessonsReleased }`.
+       */
+      metadata?: Prisma.InputJsonValue;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -804,6 +811,7 @@ export class TransactionsWriteService {
           companyId: params.companyId,
           performedById: params.performedById,
           description: params.description,
+          ...(params.metadata !== undefined && { metadata: params.metadata }),
         },
       });
 

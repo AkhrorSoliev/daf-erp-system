@@ -9,14 +9,13 @@ import {
 } from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import {
   AttendanceStatus,
   EnrollmentStatus,
-  PaymentStatus,
   Prisma,
   RefundStatus,
 } from '@prisma/client';
-import { CreateRefundDto } from './dto/create-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 
 const REFUND_METHOD_LABEL: Record<string, string> = {
@@ -33,104 +32,25 @@ export class RefundsCreateService {
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
     private entityHistoryService: EntityHistoryService,
+    private enrollmentBilling: EnrollmentBillingService,
   ) {}
-
-  /**
-   * Calculate refund amount and create a refund request. Refund is scoped to
-   * an Enrollment — Contract is not used.
-   */
-  async create(dto: CreateRefundDto, userId: number, companyId: number) {
-    // A refund takes money OUT of the branch's kassa, so the caller must own
-    // the student's branch. `_userId` was unused here — the id was threaded
-    // through and never checked.
-    await assertCallerMayWriteForStudent(
-      this.prisma,
-      userId,
-      dto.studentId,
-      companyId,
-    );
-
-    const enrollment = await this.loadEnrollment(
-      dto.enrollmentId,
-      dto.studentId,
-      companyId,
-    );
-
-    const lessonsCompleted = await this.countAttendance(
-      enrollment.groupId,
-      dto.studentId,
-    );
-
-    const totalLessons = enrollment.group.course.lessonPaymentCount;
-    const coursePrice = enrollment.group.course.price;
-    const perLessonCost =
-      totalLessons > 0 ? Math.round(coursePrice / totalLessons) : 0;
-
-    const paidAmount = await this.sumPayments(dto.studentId, companyId);
-    const consumedAmount = await this.sumLessonDeductions(enrollment.id);
-    const previousRefundsTotal = await this.sumPriorRefunds(enrollment.id);
-
-    let requestedAmount: number;
-
-    if (
-      !enrollment.startDate ||
-      enrollment.startDate > new Date() ||
-      lessonsCompleted === 0
-    ) {
-      // Kurs boshlanmagan / hali davomat yo'q — 100% qaytarish
-      requestedAmount = Math.max(0, paidAmount - previousRefundsTotal);
-    } else if (lessonsCompleted / totalLessons >= 0.5) {
-      throw new BadRequestException(
-        "Kursning 50% dan ortiq qismi o'tilgan. Pul qaytarilmaydi",
-      );
-    } else {
-      requestedAmount = Math.max(
-        0,
-        paidAmount - consumedAmount - previousRefundsTotal,
-      );
-    }
-
-    const deductions = {
-      consumedFromLedger: consumedAmount,
-      lessonsObserved: lessonsCompleted,
-      perLessonCost,
-      previousRefunds: previousRefundsTotal,
-      tax: 0,
-      bankFee: 0,
-    };
-
-    const refund = await this.prisma.refund.create({
-      data: {
-        studentId: dto.studentId,
-        enrollmentId: enrollment.id,
-        requestedAmount,
-        lessonsCompleted,
-        totalLessons,
-        deductions,
-        status: RefundStatus.REQUESTED,
-        reason: dto.reason,
-        companyId,
-      },
-    });
-
-    return {
-      ...refund,
-      perLessonCost,
-      consumedAmount: deductions.consumedFromLedger,
-    };
-  }
 
   /**
    * Single-shot refund where the admin types the refund amount manually.
    *
-   * Ledger compensation: the system deducts a full cycle at enrollment
-   * (see AttendanceService), so if the student quits after only a few
-   * lessons the ledger shows the whole cycle as consumed. That leaves a
-   * gap between "lessons actually attended × perLessonCost" and "amount
-   * deducted from balance". Before writing the REFUND entry, we post an
-   * ADJUSTMENT that restores the unused portion to the balance so the
-   * refund decrement lands on a balance that matches reality. Without this
-   * the balance would drift negative by the over-deduction amount.
+   * A payout is funded from the free balance first. When that is not enough,
+   * the shortfall is covered by CANCELLING prepaid lessons — the fewest that
+   * cover it — which credits their money and decrements
+   * `prepaidLessonsRemaining` in one step. The student leaves with fewer
+   * lessons ahead of them, which is what taking the money back means.
+   *
+   * What this replaced credited `deductions − PRESENT/LATE attendance` to the
+   * balance and left the counter alone. That difference is not over-deduction:
+   * the ledger deducts exactly `attendance + prepaidLessonsRemaining`, so it is
+   * the ABSENT lessons (billable here) plus lessons still reserved. The lessons
+   * stayed covered while their money came back, and since neither side of the
+   * subtraction changed, the next refund offered the whole thing again.
+   * #10393 was credited 266 664 so'm on 2026-08-18, #10655 233 331 before it.
    *
    * All ledger writes happen inside one Serializable transaction.
    */
@@ -154,22 +74,40 @@ export class RefundsCreateService {
       companyId,
     );
 
-    const lessonsCompleted = await this.countAttendance(
+    // Double-click protection. The dialog disables its own button while a
+    // request is in flight, which is no protection at all against a retry, a
+    // second tab, or a direct API call — and a refund moves real cash.
+    const recentDuplicate = await this.prisma.refund.findFirst({
+      where: {
+        studentId: dto.studentId,
+        enrollmentId: enrollment.id,
+        approvedAmount: dto.amount,
+        status: RefundStatus.COMPLETED,
+        createdAt: { gte: new Date(Date.now() - 60_000) },
+      },
+      select: { id: true },
+    });
+    if (recentDuplicate) {
+      throw new BadRequestException(
+        "Shu summadagi qaytarish hozirgina yozildi — takror yuborilmadi",
+      );
+    }
+
+    const lessonsAttended = await this.countAttendance(
       enrollment.groupId,
       dto.studentId,
     );
-
     const totalLessons = enrollment.group.course.lessonPaymentCount;
-    const coursePrice = enrollment.group.course.price;
-    const perLessonCost =
-      totalLessons > 0 ? Math.round(coursePrice / totalLessons) : 0;
-    const attendanceConsumed = lessonsCompleted * perLessonCost;
-
-    const ledgerConsumed = await this.sumLessonDeductions(enrollment.id);
     const previousRefundsTotal = await this.sumPriorRefunds(enrollment.id);
 
-    const overDeducted = Math.max(0, ledgerConsumed - attendanceConsumed);
-    const maxRefundable = Math.max(0, student.balance + overDeducted);
+    const prepaidLessons = enrollment.prepaidLessonsRemaining;
+    const prepaidValue = await this.enrollmentBilling.prepaidRefundValue(
+      this.prisma,
+      enrollment.id,
+      enrollment.group.course,
+      prepaidLessons,
+    );
+    const maxRefundable = Math.max(0, student.balance + prepaidValue);
 
     if (dto.amount > maxRefundable) {
       throw new BadRequestException(
@@ -177,13 +115,37 @@ export class RefundsCreateService {
       );
     }
 
+    // Free balance first; only what it cannot cover comes out of the lessons.
+    // Walk up rather than divide: lesson prices are not uniform — the last
+    // lesson of a cycle absorbs the rounding remainder — so `ceil(shortfall /
+    // perLesson)` picks the wrong count at the edges. The walk is at most one
+    // cycle long.
+    const shortfall = dto.amount - student.balance;
+    let lessonsToRelease = 0;
+    if (shortfall > 0) {
+      for (let n = 1; n <= prepaidLessons; n++) {
+        const value = await this.enrollmentBilling.prepaidRefundValue(
+          this.prisma,
+          enrollment.id,
+          enrollment.group.course,
+          n,
+        );
+        if (value >= shortfall) {
+          lessonsToRelease = n;
+          break;
+        }
+      }
+      // The max check above already passed, so the whole prepaid block is worth
+      // enough; rounding just kept any single step from crossing the line.
+      if (lessonsToRelease === 0) lessonsToRelease = prepaidLessons;
+    }
+
     const deductions = {
-      attendanceConsumed,
-      ledgerConsumed,
-      overDeductedRestored: overDeducted,
       balanceBeforeRefund: student.balance,
-      lessonsObserved: lessonsCompleted,
-      perLessonCost,
+      prepaidLessonsBefore: prepaidLessons,
+      prepaidValueBefore: prepaidValue,
+      lessonsReleased: lessonsToRelease,
+      lessonsAttended,
       previousRefunds: previousRefundsTotal,
       tax: 0,
       bankFee: 0,
@@ -200,7 +162,7 @@ export class RefundsCreateService {
             enrollmentId: enrollment.id,
             requestedAmount: dto.amount,
             approvedAmount: dto.amount,
-            lessonsCompleted,
+            lessonsCompleted: lessonsAttended,
             totalLessons,
             deductions,
             status: RefundStatus.COMPLETED,
@@ -213,19 +175,19 @@ export class RefundsCreateService {
           },
         });
 
-        if (overDeducted > 0) {
-          await this.transactionsService.createAdjustment(
-            {
-              studentId: dto.studentId,
-              amount: overDeducted,
-              description:
-                'Refund: foydalanilmagan darslar balansga qaytarildi',
-              companyId,
-              performedById: userId,
-            },
-            tx,
-          );
-        }
+        const released =
+          lessonsToRelease > 0
+            ? await this.enrollmentBilling.releasePrepaidLessons(tx, {
+                enrollmentId: enrollment.id,
+                lessons: lessonsToRelease,
+                reason: `Pul qaytarish: ${lessonsToRelease} ta oldindan to'langan dars bekor qilindi`,
+                performedById: userId,
+                metadata: {
+                  refundId: refundRow.id,
+                  lessonsReleased: lessonsToRelease,
+                },
+              })
+            : null;
 
         await this.transactionsService.recordRefund(
           {
@@ -238,12 +200,13 @@ export class RefundsCreateService {
           tx,
         );
 
-        return refundRow;
+        return { refundRow, releasedAmount: released?.refunded ?? 0 };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
-    const balanceAfter = student.balance + overDeducted - dto.amount;
+    const balanceAfter =
+      student.balance + refund.releasedAmount - dto.amount;
     await this.entityHistoryService.recordStatusChange({
       entityType: 'Student',
       entityId: dto.studentId,
@@ -251,6 +214,7 @@ export class RefundsCreateService {
       newValues: {
         balans: balanceAfter,
         qaytarilgan_summa: dto.amount,
+        bekor_qilingan_darslar: lessonsToRelease,
         usul: REFUND_METHOD_LABEL[dto.refundMethod] ?? dto.refundMethod,
         guruh: enrollment.group.name,
         sabab: dto.reason ?? null,
@@ -260,7 +224,7 @@ export class RefundsCreateService {
       companyId,
     });
 
-    return refund;
+    return refund.refundRow;
   }
 
   // -- helpers ---------------------------------------------------------------
@@ -282,6 +246,7 @@ export class RefundsCreateService {
         groupId: true,
         status: true,
         startDate: true,
+        prepaidLessonsRemaining: true,
         group: {
           select: {
             name: true,
@@ -315,31 +280,6 @@ export class RefundsCreateService {
         status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
       },
     });
-  }
-
-  private async sumPayments(studentId: number, companyId: number) {
-    const agg = await this.prisma.payment.aggregate({
-      where: {
-        studentId,
-        companyId,
-        status: PaymentStatus.COMPLETED,
-      },
-      _sum: { amount: true },
-    });
-    return agg._sum.amount ?? 0;
-  }
-
-  private async sumLessonDeductions(enrollmentId: string) {
-    const agg = await this.prisma.transaction.aggregate({
-      where: {
-        enrollmentId,
-        type: 'LESSON_DEDUCTION',
-        reversedTransactionId: null,
-        reversedAt: null,
-      },
-      _sum: { amount: true },
-    });
-    return Math.abs(agg._sum.amount ?? 0);
   }
 
   private async sumPriorRefunds(enrollmentId: string) {

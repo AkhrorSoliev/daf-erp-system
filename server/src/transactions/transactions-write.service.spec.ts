@@ -283,3 +283,73 @@ describe('TransactionsWriteService.recordSalaryPayment — cash account + descri
     );
   });
 });
+
+/**
+ * Adjustment audit trail.
+ *
+ * A refund that cancels prepaid lessons posts an ADJUSTMENT for the money it
+ * frees up, and reversing that refund has to find the same row again. There is
+ * no refund FK on Transaction, so the link travels in `metadata`.
+ */
+describe('TransactionsWriteService.createAdjustment', () => {
+  let service: TransactionsWriteService;
+  let prisma: any;
+
+  const COMPANY = 1001;
+  const STUDENT = 10500;
+
+  beforeEach(async () => {
+    prisma = {
+      $transaction: jest.fn((cb: any) => cb(prisma)),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: STUDENT, balance: 0 }]),
+      transaction: { create: jest.fn().mockResolvedValue({ id: 'tx-1' }) },
+      student: {
+        update: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue({ id: STUDENT }),
+      },
+      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 2 }) },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TransactionsWriteService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: CashMovementsService, useValue: { recordInflow: jest.fn(), recordOutflow: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get(TransactionsWriteService);
+  });
+
+  it('writes metadata onto the ADJUSTMENT row when given', async () => {
+    await service.createAdjustment({
+      studentId: STUDENT,
+      amount: 50_000,
+      description: 'test',
+      companyId: COMPANY,
+      metadata: { refundId: 'ref-1', lessonsReleased: 2 },
+    });
+
+    expect(prisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'ADJUSTMENT',
+          metadata: { refundId: 'ref-1', lessonsReleased: 2 },
+        }),
+      }),
+    );
+  });
+
+  it('omits the field entirely when no metadata is given', async () => {
+    await service.createAdjustment({
+      studentId: STUDENT,
+      amount: 50_000,
+      description: 'test',
+      companyId: COMPANY,
+    });
+
+    const data = prisma.transaction.create.mock.calls[0][0].data;
+    expect('metadata' in data).toBe(false);
+  });
+});

@@ -646,13 +646,18 @@ When adding a new id-addressed mutation, check the record's branch against the c
 
 #### Refunds Module (`src/refunds/`)
 
-- **Endpoints**: `POST /refunds`, `GET /refunds`, `PATCH /refunds/:id/process`, `POST /refunds/:id/reverse` (CEO-only)
-- **Eligibility policy**:
-  - Course not started → 100% refund (minus prior refunds)
-  - 50%+ lessons completed → 0% (no refund)
-  - <50% completed → `paidAmount - consumedFromLedger - priorRefunds`
-- `consumedFromLedger` = sum of LESSON_DEDUCTION transactions for the contract (ledger is source of truth)
-- **Status transitions**: `REQUESTED → [APPROVED, REJECTED]`, `APPROVED → [PROCESSING, COMPLETED]`, `PROCESSING → COMPLETED`
+- **Endpoints**: `GET /refunds/preview/:studentId`, `POST /refunds/quick`, `GET /refunds`, `PATCH /refunds/:id/process`, `POST /refunds/:id/reverse` (CEO-only)
+- **A refund is funded from exactly two places**: the student's free balance, and the lessons they have paid for but not yet taken (`Enrollment.prepaidLessonsRemaining`). Money already spent on attended lessons is gone. **ABSENT counts as attended here** — a held lesson is a billed lesson.
+  - `maxRefundable = max(0, balance + prepaidRefundValue(prepaidLessonsRemaining))`
+  - Free balance is drawn first. Only the shortfall comes out of the lessons, and `quickRefund` cancels the **fewest** lessons that cover it — walking up from one lesson rather than dividing, because a cycle's last lesson absorbs the rounding remainder and is not the base price.
+  - Cancelling means `EnrollmentBillingService.releasePrepaidLessons`: credit their money via an `ADJUSTMENT` **and decrement the counter in the same step**. The student leaves with fewer lessons ahead of them, which is what taking the money back means.
+- **Never re-derive "unused lessons" from attendance.** The version removed in 2026-08 computed `overDeducted = lesson deductions − PRESENT/LATE attendance` and credited it back. The ledger deducts exactly `attendance + prepaidLessonsRemaining`, so that difference is *always* the ABSENT lessons plus lessons still reserved — never over-deduction. It credited money nobody had paid, left `prepaidLessonsRemaining` untouched so the same lessons stayed covered (one payment counted twice), and since neither side of the subtraction changed, **every subsequent refund offered the whole thing again**. #10393 gained 266 664 so'm on 2026-08-18 and its refund ceiling ROSE from 266 681 to 433 345; #10655 gained 233 331 in July and had to be cleaned up by hand. 281 of 420 active enrollments were exposed, 54.9 mln so'm in total.
+- **Pricing goes through `EnrollmentBillingService.prepaidRefundValue`** — the batch's own `amount`, so discounts, contract prices and the cycle rounding remainder are all already in it. Do not recompute `course.price / lessonPaymentCount` at a call site; that figure ignores the student's discount.
+- **`reverse()` unwinds both halves.** The release `ADJUSTMENT` is tagged `metadata = { refundId, lessonsReleased }` (Transaction has no refund FK), so reversing a refund reverses that row too and increments `prepaidLessonsRemaining` back. Reversing only the payout leaves the student holding the credit AND missing the lessons.
+- **No "% of course" rule.** The old 50%-completed gate divided by `lessonPaymentCount`, which is the size of a **billing cycle**, not the course — a student 19 lessons into a 12-lesson cycle read as "158% attended". There is no total-lessons figure in the schema to divide by, so the warning was removed rather than made up. The preview warns about something true instead (no prepaid lessons → balance only).
+- **`quickRefund` is idempotent-ish at the door**: an identical `(student, enrollment, amount)` COMPLETED refund inside 60 s is refused. The dialog's disabled button is not protection against a retry, a second tab, or a direct API call.
+- The old `POST /refunds` request/approve flow was **deleted** — no screen ever called it, and it computed `paidAmount` at student level against `consumedAmount` at enrollment level, over-refunding anyone in more than one group.
+- **Status transitions**: `REQUESTED → [APPROVED, REJECTED]`, `APPROVED → [PROCESSING, COMPLETED]`, `PROCESSING → COMPLETED`. `quickRefund` writes `COMPLETED` directly.
 - Reverse CEO-only; contract stays REFUNDED (manual re-open if needed)
 
 #### Expenses Module (`src/expenses/`)

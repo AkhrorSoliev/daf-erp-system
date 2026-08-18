@@ -43,8 +43,12 @@ export class EnrollmentBillingService {
    * whatever the price and whatever the discount.
    *
    * Legacy rows with no usable metadata fall back to the old per-lesson math.
+   *
+   * Public because the refund dialog has to quote the SAME figure the refund
+   * will actually credit — a second implementation is how the two drifted
+   * apart in the first place.
    */
-  private async resolvePrepaidRefund(
+  async prepaidRefundValue(
     tx: Prisma.TransactionClient,
     enrollmentId: string,
     course: { price: number; lessonPaymentCount: number | null },
@@ -149,33 +153,100 @@ export class EnrollmentBillingService {
     const lessons = enrollment.prepaidLessonsRemaining;
     if (lessons <= 0) return null;
 
-    const refundAmount = await this.resolvePrepaidRefund(
+    // Releasing every remaining lesson IS the general release with the counter
+    // run down to nothing, so it goes through the same path — the two used to
+    // be separate copies of the same arithmetic.
+    return this.releasePrepaidLessons(tx, {
+      enrollmentId: params.enrollmentId,
+      lessons,
+      reason:
+        params.reason ??
+        "Yozilishdan chiqishda qaytarilmagan dars uchun balans tiklash",
+      performedById: params.performedById,
+    });
+  }
+
+  /**
+   * Cancel `lessons` prepaid lessons and put their money back on the balance.
+   *
+   * Differs from `refundPrepaidWithOverride` in the one way that matters here:
+   * that method ZEROES the counter, because on FROZEN whatever is left over is
+   * forfeited. This one decrements by exactly `lessons`, for the case where the
+   * student stays in the group and is only taking part of their money back — the
+   * lessons they did not pay for are cancelled, the rest stay theirs.
+   *
+   * MUST run inside an outer Serializable transaction.
+   */
+  async releasePrepaidLessons(
+    tx: Prisma.TransactionClient,
+    params: {
+      enrollmentId: string;
+      lessons: number;
+      reason?: string;
+      performedById?: number;
+      metadata?: Prisma.InputJsonValue;
+    },
+  ): Promise<{ refunded: number; lessons: number } | null> {
+    if (params.lessons < 0) {
+      throw new BadRequestException(
+        "Bekor qilinadigan dars soni manfiy bo'lishi mumkin emas",
+      );
+    }
+    if (params.lessons === 0) return null;
+
+    const enrollment = await tx.enrollment.findUnique({
+      where: { id: params.enrollmentId },
+      select: {
+        id: true,
+        studentId: true,
+        prepaidLessonsRemaining: true,
+        group: {
+          select: {
+            branchId: true,
+            companyId: true,
+            course: { select: { price: true, lessonPaymentCount: true } },
+          },
+        },
+      },
+    });
+    if (!enrollment) return null;
+
+    if (params.lessons > enrollment.prepaidLessonsRemaining) {
+      throw new BadRequestException(
+        `Faqat ${enrollment.prepaidLessonsRemaining} ta oldindan to'langan darsni bekor qilish mumkin`,
+      );
+    }
+
+    const refundAmount = await this.prepaidRefundValue(
       tx,
       enrollment.id,
       enrollment.group.course,
-      lessons,
+      params.lessons,
     );
 
-    await this.transactionsService.createAdjustment(
-      {
-        studentId: enrollment.studentId,
-        amount: refundAmount,
-        description:
-          params.reason ??
-          "Yozilishdan chiqishda qaytarilmagan dars uchun balans tiklash",
-        branchId: enrollment.group.branchId,
-        companyId: enrollment.group.companyId,
-        performedById: params.performedById,
-      },
-      tx,
-    );
+    if (refundAmount > 0) {
+      await this.transactionsService.createAdjustment(
+        {
+          studentId: enrollment.studentId,
+          amount: refundAmount,
+          description:
+            params.reason ??
+            `${params.lessons} ta oldindan to'langan dars bekor qilindi`,
+          branchId: enrollment.group.branchId,
+          companyId: enrollment.group.companyId,
+          performedById: params.performedById,
+          ...(params.metadata !== undefined && { metadata: params.metadata }),
+        },
+        tx,
+      );
+    }
 
     await tx.enrollment.update({
       where: { id: params.enrollmentId },
-      data: { prepaidLessonsRemaining: 0 },
+      data: { prepaidLessonsRemaining: { decrement: params.lessons } },
     });
 
-    return { refunded: refundAmount, lessons };
+    return { refunded: refundAmount, lessons: params.lessons };
   }
 
   /**
@@ -323,7 +394,7 @@ export class EnrollmentBillingService {
       }
     }
 
-    const refundAmount = await this.resolvePrepaidRefund(
+    const refundAmount = await this.prepaidRefundValue(
       tx,
       enrollment.id,
       enrollment.group.course,
