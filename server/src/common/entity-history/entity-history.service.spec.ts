@@ -114,4 +114,65 @@ describe('EntityHistoryService', () => {
       expect(prisma.entityHistory.create).toHaveBeenCalledTimes(1);
     });
   });
+
+  /**
+   * A history row must never be the thing that breaks the operation it is
+   * describing. On 2026-08-18 a payment receipt was delivered, its SmsMessage
+   * row written, and then `entityHistory.create` was refused by PostgreSQL
+   * because a caller's own truncation had left half an emoji in the payload —
+   * "invalid input syntax for type json". Callers were fixed, but this layer
+   * is the single funnel every history write goes through, so it sanitises
+   * too: no future caller can poison the audit trail the same way.
+   */
+  describe('jsonb safety', () => {
+    it('strips a lone surrogate from recordCreate values', async () => {
+      await service.recordCreate({
+        entityType: 'Student',
+        entityId: 10001,
+        newValues: { xabar: 'Chek yuborildi \uD83D' },
+        companyId: 1,
+      });
+
+      const data = prisma.entityHistory.create.mock.calls[0][0].data;
+      expect(data.newValues.xabar).toBe('Chek yuborildi ');
+    });
+
+    it('leaves a well-formed emoji alone', async () => {
+      await service.recordCreate({
+        entityType: 'Student',
+        entityId: 10001,
+        newValues: { xabar: 'Chek \u{1F4C4}' },
+        companyId: 1,
+      });
+
+      const data = prisma.entityHistory.create.mock.calls[0][0].data;
+      expect(data.newValues.xabar).toBe('Chek \u{1F4C4}');
+    });
+
+    it('sanitises both sides of an update diff', async () => {
+      await service.recordUpdate({
+        entityType: 'Student',
+        entityId: 10001,
+        oldValues: { ism: 'Eski \uD83D' },
+        newValues: { ism: 'Yangi \uDCC4' },
+        companyId: 1,
+      });
+
+      const data = prisma.entityHistory.create.mock.calls[0][0].data;
+      expect(data.oldValues.ism).toBe('Eski ');
+      expect(data.newValues.ism).toBe('Yangi ');
+    });
+
+    it('does not disturb non-string values', async () => {
+      await service.recordCreate({
+        entityType: 'Student',
+        entityId: 10001,
+        newValues: { soni: 42, bor: true, yoq: null },
+        companyId: 1,
+      });
+
+      const data = prisma.entityHistory.create.mock.calls[0][0].data;
+      expect(data.newValues).toEqual({ soni: 42, bor: true, yoq: null });
+    });
+  });
 });
