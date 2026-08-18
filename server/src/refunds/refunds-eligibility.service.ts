@@ -210,6 +210,14 @@ export class RefundsEligibilityService {
       if (!enrollment) {
         throw new NotFoundException("Bu o'quvchining bunday guruhi topilmadi");
       }
+      // Same gate `quickRefund`'s loadEnrollment applies. Quoting a refund for
+      // a group the payout would reject sends the operator to a 400 on the
+      // button they have just filled in.
+      if (enrollment.status !== EnrollmentStatus.ACTIVE) {
+        throw new BadRequestException(
+          'Faqat faol guruhdan pul qaytarish mumkin',
+        );
+      }
       return enrollment;
     }
 

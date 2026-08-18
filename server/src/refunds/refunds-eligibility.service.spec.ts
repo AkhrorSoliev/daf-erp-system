@@ -110,6 +110,20 @@ describe('RefundsEligibilityService', () => {
     );
   });
 
+  // The dialog must refuse what the refund itself would refuse. `quickRefund`
+  // only accepts an ACTIVE enrollment, so a preview that happily quoted a
+  // DROPPED group sent the operator to a 400 on the button they just filled in.
+  it('rejects a non-ACTIVE enrollment even when named explicitly', async () => {
+    prisma.enrollment.findFirst.mockResolvedValue({
+      ...enrollmentRow,
+      status: 'DROPPED',
+    });
+
+    await expect(service.previewRefund(10001, 1, 'enr-1')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
   describe('payments aggregation', () => {
     it('sums COMPLETED non-reversed payments at the student level', async () => {
       await service.previewRefund(10001, 1);
