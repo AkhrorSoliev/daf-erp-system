@@ -29,3 +29,9 @@ server/audit-output/
 .claude/scheduled_tasks.lock
 .claude/review-output/
 .windsurf/
+# One-off diagnostic / probe scripts written during debugging sessions.
+# Convention: a leading underscore marks a throwaway script. Reusable audit
+# tooling keeps its plain name (audit-*, diag-*, verify-*) and IS committed.
+server/scripts/_*.ts
+server/.tmp-*
+server/*.xlsx
