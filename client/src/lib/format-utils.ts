@@ -30,6 +30,33 @@ export function formatPhoneInput(raw: string): string {
   return parts.join(" ");
 }
 
+/** Xalqaro raqam uzunligi chegarasi (E.164: maksimal 15 raqam). */
+const MAX_PHONE_DIGITS = 15;
+
+/** Mamlakat kodi bilan yozilgan raqamning guruh o'lchamlari: 998 90 123 45 67. */
+const PHONE_WITH_CODE_GROUPS = [3, 2, 3, 2, 2];
+
+/**
+ * Mamlakat kodi bilan teriladigan input uchun jonli formatlash:
+ * "998901234567" → "998 90 123 45 67" (faqat "+" addon alohida chiqadi).
+ *
+ * Chet el raqami boshqa uzunlikda bo'lishi mumkin, shuning uchun guruhlardan
+ * ortgan raqamlar oxiriga bitta bo'lak bo'lib qo'shiladi — hech qachon
+ * kesilmaydi. State'da faqat raw raqamlar saqlanadi.
+ */
+export function formatPhoneWithCodeInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, MAX_PHONE_DIGITS);
+  const parts: string[] = [];
+  let cursor = 0;
+  for (const size of PHONE_WITH_CODE_GROUPS) {
+    if (cursor >= digits.length) break;
+    parts.push(digits.slice(cursor, cursor + size));
+    cursor += size;
+  }
+  if (cursor < digits.length) parts.push(digits.slice(cursor));
+  return parts.join(" ");
+}
+
 // Locale uchun yagona Intl.NumberFormat namunasi. O'zbek tilidagi
 // foydalanuvchi guruh ajratuvchi sifatida bo'sh joyni va kasr ajratuvchi
 // sifatida vergulni kutadi: 1 500 000,5 — bu uz-UZ konvensiyasi.

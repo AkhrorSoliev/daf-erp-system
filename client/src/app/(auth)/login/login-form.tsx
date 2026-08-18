@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { formatPhoneWithCodeInput } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
@@ -59,7 +60,8 @@ export function LoginForm({ portal }: LoginFormProps) {
     setError("");
     setLoading(true);
 
-    // Raqamni serverga YOZILGANIDEK yuboramiz: normalizatsiya (O'zbekiston →
+    // Inputda faqat raqamlar saqlanadi (bo'sh joylar — ko'rinish uchun), shuning
+    // uchun serverga raqamlar HOLICHA ketadi: normalizatsiya (O'zbekiston →
     // 9 xona, chet el → kod bilan) serverda, common/utils/phone.util da.
     // Klientda kesish chet el raqamining mamlakat kodini yo'q qilardi.
     const loginValue = login.trim();
@@ -120,8 +122,8 @@ export function LoginForm({ portal }: LoginFormProps) {
               type="text"
               autoComplete="username"
               required
-              value={login}
-              onChange={(e) => setLogin(e.target.value)}
+              value={formatPhoneWithCodeInput(login)}
+              onChange={(e) => setLogin(e.target.value.replace(/\D/g, ""))}
               placeholder="998 90 123 45 67"
               inputMode="tel"
               className="flex h-10 w-full rounded-r-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
