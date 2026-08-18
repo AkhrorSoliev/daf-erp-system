@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
-import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 import { BranchScope, CurrentUser, Roles } from '../common/decorators';
@@ -22,16 +21,6 @@ import { RolesGuard } from '../common/guards';
 @Roles('CEO', 'Branch Director', 'Administrator')
 export class RefundsController {
   constructor(private refundsService: RefundsService) {}
-
-  @Post()
-  @Roles('CEO', 'Branch Director', 'Administrator')
-  create(
-    @Body() dto: CreateRefundDto,
-    @CurrentUser('id') userId: number,
-    @CurrentUser('companyId') companyId: number,
-  ) {
-    return this.refundsService.create(dto, userId, companyId);
-  }
 
   @Post('quick')
   @Roles('CEO', 'Branch Director', 'Administrator')

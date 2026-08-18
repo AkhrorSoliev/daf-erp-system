@@ -13,11 +13,9 @@ import { EnrollmentBillingService } from '../billing/enrollment-billing.service'
 import {
   AttendanceStatus,
   EnrollmentStatus,
-  PaymentStatus,
   Prisma,
   RefundStatus,
 } from '@prisma/client';
-import { CreateRefundDto } from './dto/create-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 
 const REFUND_METHOD_LABEL: Record<string, string> = {
@@ -36,91 +34,6 @@ export class RefundsCreateService {
     private entityHistoryService: EntityHistoryService,
     private enrollmentBilling: EnrollmentBillingService,
   ) {}
-
-  /**
-   * Calculate refund amount and create a refund request. Refund is scoped to
-   * an Enrollment — Contract is not used.
-   */
-  async create(dto: CreateRefundDto, userId: number, companyId: number) {
-    // A refund takes money OUT of the branch's kassa, so the caller must own
-    // the student's branch. `_userId` was unused here — the id was threaded
-    // through and never checked.
-    await assertCallerMayWriteForStudent(
-      this.prisma,
-      userId,
-      dto.studentId,
-      companyId,
-    );
-
-    const enrollment = await this.loadEnrollment(
-      dto.enrollmentId,
-      dto.studentId,
-      companyId,
-    );
-
-    const lessonsCompleted = await this.countAttendance(
-      enrollment.groupId,
-      dto.studentId,
-    );
-
-    const totalLessons = enrollment.group.course.lessonPaymentCount;
-    const coursePrice = enrollment.group.course.price;
-    const perLessonCost =
-      totalLessons > 0 ? Math.round(coursePrice / totalLessons) : 0;
-
-    const paidAmount = await this.sumPayments(dto.studentId, companyId);
-    const consumedAmount = await this.sumLessonDeductions(enrollment.id);
-    const previousRefundsTotal = await this.sumPriorRefunds(enrollment.id);
-
-    let requestedAmount: number;
-
-    if (
-      !enrollment.startDate ||
-      enrollment.startDate > new Date() ||
-      lessonsCompleted === 0
-    ) {
-      // Kurs boshlanmagan / hali davomat yo'q — 100% qaytarish
-      requestedAmount = Math.max(0, paidAmount - previousRefundsTotal);
-    } else if (lessonsCompleted / totalLessons >= 0.5) {
-      throw new BadRequestException(
-        "Kursning 50% dan ortiq qismi o'tilgan. Pul qaytarilmaydi",
-      );
-    } else {
-      requestedAmount = Math.max(
-        0,
-        paidAmount - consumedAmount - previousRefundsTotal,
-      );
-    }
-
-    const deductions = {
-      consumedFromLedger: consumedAmount,
-      lessonsObserved: lessonsCompleted,
-      perLessonCost,
-      previousRefunds: previousRefundsTotal,
-      tax: 0,
-      bankFee: 0,
-    };
-
-    const refund = await this.prisma.refund.create({
-      data: {
-        studentId: dto.studentId,
-        enrollmentId: enrollment.id,
-        requestedAmount,
-        lessonsCompleted,
-        totalLessons,
-        deductions,
-        status: RefundStatus.REQUESTED,
-        reason: dto.reason,
-        companyId,
-      },
-    });
-
-    return {
-      ...refund,
-      perLessonCost,
-      consumedAmount: deductions.consumedFromLedger,
-    };
-  }
 
   /**
    * Single-shot refund where the admin types the refund amount manually.
@@ -367,31 +280,6 @@ export class RefundsCreateService {
         status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
       },
     });
-  }
-
-  private async sumPayments(studentId: number, companyId: number) {
-    const agg = await this.prisma.payment.aggregate({
-      where: {
-        studentId,
-        companyId,
-        status: PaymentStatus.COMPLETED,
-      },
-      _sum: { amount: true },
-    });
-    return agg._sum.amount ?? 0;
-  }
-
-  private async sumLessonDeductions(enrollmentId: string) {
-    const agg = await this.prisma.transaction.aggregate({
-      where: {
-        enrollmentId,
-        type: 'LESSON_DEDUCTION',
-        reversedTransactionId: null,
-        reversedAt: null,
-      },
-      _sum: { amount: true },
-    });
-    return Math.abs(agg._sum.amount ?? 0);
   }
 
   private async sumPriorRefunds(enrollmentId: string) {

@@ -1,6 +1,5 @@
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { Injectable } from '@nestjs/common';
-import { CreateRefundDto } from './dto/create-refund.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 import { RefundsCreateService } from './refunds-create.service';
@@ -16,9 +15,6 @@ export class RefundsService {
   ) {}
 
   // Create
-  create(dto: CreateRefundDto, userId: number, companyId: number) {
-    return this.createService.create(dto, userId, companyId);
-  }
   quickRefund(dto: QuickRefundDto, userId: number, companyId: number) {
     return this.createService.quickRefund(dto, userId, companyId);
   }
