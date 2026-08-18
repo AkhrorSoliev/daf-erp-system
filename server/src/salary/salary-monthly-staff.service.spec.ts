@@ -116,6 +116,66 @@ describe('SalaryStaffMonthlyService', () => {
     });
   });
 
+  // The point of the whole staff section: a cleaner is on payroll and has NO
+  // system role. Reading the position from `roles[0]` printed "—" for exactly
+  // that employee. The test above keeps the role-name fallback honest for
+  // accounts created before `User.position` existed.
+  it("names a role-less employee by their position (roles[0] would be '—')", async () => {
+    prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+      {
+        id: 'cfg1',
+        userId: 10500,
+        user: {
+          firstName: 'Zulfiya',
+          lastName: 'Karimova',
+          position: 'Farrosh',
+          roles: [], // rolsiz xodim
+          branches: [{ branch: { id: 7, name: "Farg'ona filiali" } }],
+        },
+      },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        configId: 'cfg1',
+        value: 2_000_000,
+        effectiveFrom: tsh(2026, 5, 1),
+        effectiveTo: null,
+      },
+    ]);
+
+    const res = await service.computeStaff(juneScope());
+
+    expect(res.staff).toHaveLength(1);
+    expect(res.staff[0].user.position).toBe('Farrosh');
+  });
+
+  it('prefers the job title over the role name when both exist', async () => {
+    prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+      {
+        ...adminConfig,
+        user: { ...adminConfig.user, position: 'Bosh administrator' },
+      },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        configId: 'cfg1',
+        value: 5_000_000,
+        effectiveFrom: tsh(2026, 5, 1),
+        effectiveTo: null,
+      },
+    ]);
+
+    const res = await service.computeStaff(juneScope());
+    expect(res.staff[0].user.position).toBe('Bosh administrator');
+  });
+
+  it('asks the database for the job title', async () => {
+    await service.computeStaff(juneScope());
+    const select =
+      prisma.employeeSalaryConfig.findMany.mock.calls[0][0].select.user.select;
+    expect(select.position).toBe(true);
+  });
+
   it('prorates a mid-cycle hire and nets advances', async () => {
     prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
     prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([

@@ -280,6 +280,7 @@ model User {
   gender         Gender?
   balance        Int        @default(0)
   login          String?
+  position       String?
   password       String?
   isActive       Boolean    @default(true)
   status         UserStatus @default(ACTIVE)

@@ -606,8 +606,8 @@ export function SalaryMonthlyView({
               Xodimlarga (administrator, kassir, direktor) hali oylik
               belgilanmagan.
               {isCeo
-                ? " Belgilash uchun ⚙ Sozlamalar → Stavkalar."
-                : " CEO ⚙ Sozlamalar bo'limida belgilaydi."}
+                ? " Belgilash uchun ⚙ Sozlamalar → Xodimlar stavkalari."
+                : " CEO ⚙ Sozlamalar → Xodimlar stavkalari bo'limida belgilaydi."}
             </span>
           </div>
         ))}

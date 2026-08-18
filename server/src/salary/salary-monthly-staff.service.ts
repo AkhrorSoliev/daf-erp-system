@@ -12,7 +12,12 @@ export interface StaffRow {
     id: number;
     firstName: string;
     lastName: string;
-    /** First role name — the employee's "Lavozim". */
+    /**
+     * The employee's "Lavozim" — `User.position`, falling back to their first
+     * role name for accounts created before the column existed. A cleaner or a
+     * guard has a position and NO role, so reading `roles[0]` alone printed a
+     * dash for exactly the employee this report exists to pay.
+     */
     position: string | null;
     branch: { id: number; name: string } | null;
   };
@@ -102,6 +107,7 @@ export class SalaryStaffMonthlyService {
           select: {
             firstName: true,
             lastName: true,
+            position: true,
             roles: { select: { role: { select: { name: true } } } },
             branches: {
               select: { branch: { select: { id: true, name: true } } },
@@ -205,7 +211,7 @@ export class SalaryStaffMonthlyService {
           id: c.userId,
           firstName: c.user.firstName,
           lastName: c.user.lastName,
-          position: c.user.roles[0]?.role.name ?? null,
+          position: c.user.position ?? c.user.roles[0]?.role.name ?? null,
           branch: c.user.branches[0]?.branch ?? null,
         },
         monthly,

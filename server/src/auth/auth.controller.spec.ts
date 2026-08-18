@@ -64,17 +64,53 @@ describe('AuthController — forgot-password endpoints', () => {
     ]);
   });
 
-  it('verify → delegates phone + code', async () => {
-    await controller.forgotPasswordVerify({ phone: '901234567', code: '1234' } as any);
-    expect(forgot.verifyCode).toHaveBeenCalledWith('901234567', '1234');
+  it('verify → delegates phone + code with no portal scope off a bare request', async () => {
+    await controller.forgotPasswordVerify(
+      { phone: '901234567', code: '1234' } as any,
+      { headers: {} },
+    );
+    expect(forgot.verifyCode).toHaveBeenCalledWith(
+      '901234567',
+      '1234',
+      undefined,
+      null,
+    );
+  });
+
+  // All three steps must resolve the SAME account. `resolveByPhone` breaks a
+  // shared-phone tie on `updatedAt desc`, so a step that forgets the portal
+  // scope can send the code to one account and write the password to another.
+  it('verify → scopes to the portal roles from the Origin header', async () => {
+    await controller.forgotPasswordVerify(
+      { phone: '901234567', code: '1234' } as any,
+      { headers: { origin: 'https://admin.dafzentrum.uz' } },
+    );
+    expect(forgot.verifyCode).toHaveBeenCalledWith(
+      '901234567',
+      '1234',
+      undefined,
+      [1, 2, 3, 5],
+    );
   });
 
   it('reset → delegates token + new password', async () => {
-    await controller.forgotPasswordReset({
-      resetToken: 'tok',
-      newPassword: 'newpass123',
-    } as any);
-    expect(forgot.resetPassword).toHaveBeenCalledWith('tok', 'newpass123');
+    await controller.forgotPasswordReset(
+      { resetToken: 'tok', newPassword: 'newpass123' } as any,
+      { headers: {} },
+    );
+    expect(forgot.resetPassword).toHaveBeenCalledWith(
+      'tok',
+      'newpass123',
+      null,
+    );
+  });
+
+  it('reset → scopes to the portal roles (X-Portal, native app)', async () => {
+    await controller.forgotPasswordReset(
+      { resetToken: 'tok', newPassword: 'newpass123' } as any,
+      { headers: { 'x-portal': 'student' } },
+    );
+    expect(forgot.resetPassword).toHaveBeenCalledWith('tok', 'newpass123', [6]);
   });
 });
 

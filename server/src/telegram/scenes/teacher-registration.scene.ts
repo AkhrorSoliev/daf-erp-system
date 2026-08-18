@@ -362,6 +362,7 @@ export function createTeacherRegistrationScene(
         companyId: DEFAULT_COMPANY_ID,
         mainBranch: data.branchId ?? undefined,
         telegramChatId: chatId,
+        position: "O'qituvchi",
         roleIds: [TEACHER_ROLE_ID],
         branchIds: data.branchId ? [data.branchId] : undefined,
       });

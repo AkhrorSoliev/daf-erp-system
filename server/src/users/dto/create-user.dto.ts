@@ -4,8 +4,8 @@ import {
   IsArray,
   IsInt,
   IsIn,
-  IsNotEmpty,
   MinLength,
+  MaxLength,
   Matches,
 } from 'class-validator';
 
@@ -29,10 +29,10 @@ export class CreateUserDto {
   @IsString()
   login?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Parol majburiy' })
   @MinLength(4, { message: "Parol kamida 4 ta belgidan iborat bo'lishi kerak" })
-  password: string;
+  password?: string;
 
   @IsOptional()
   @IsIn(['MALE', 'FEMALE'])
@@ -42,9 +42,15 @@ export class CreateUserDto {
   @IsInt()
   mainBranch?: number;
 
+  @IsString()
+  @MinLength(2, { message: "Lavozim kamida 2 ta belgidan iborat bo'lishi kerak" })
+  @MaxLength(60, { message: 'Lavozim 60 ta belgidan oshmasligi kerak' })
+  position: string;
+
+  @IsOptional()
   @IsArray()
   @IsInt({ each: true })
-  roleIds: number[];
+  roleIds?: number[];
 
   @IsOptional()
   @IsArray()

@@ -23,8 +23,10 @@ import { CreateSalaryPeriodSettingDto } from './dto/salary-period-setting.dto';
 import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
 import { SalaryMatrixQueryDto } from './dto/salary-matrix-query.dto';
 import { SalaryOverviewQueryDto } from './dto/salary-overview-query.dto';
+import { SalaryStaffConfigQueryDto } from './dto/salary-staff-config-query.dto';
 import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
+import { SalaryStaffConfigService } from './salary-staff-config.service';
 import { BatchPayDto } from './dto/batch-pay.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
@@ -45,6 +47,7 @@ export class SalaryController {
     private periodSettingsService: SalaryPeriodSettingsService,
     private advanceCalendarService: SalaryAdvanceCalendarService,
     private centerTopUpService: SalaryCenterTopUpService,
+    private staffConfigService: SalaryStaffConfigService,
   ) {}
 
   // =========================================================================
@@ -267,6 +270,37 @@ export class SalaryController {
     // takes one branch, and the scope has already been intersected with the
     // caller's ceiling, so this can only narrow.
     return this.salaryService.getOverview(
+      { ...query, branchId: singleBranchId(scope) },
+      companyId,
+      userId,
+    );
+  }
+
+  /**
+   * "Xodimlar stavkalari" — o'qituvchi bo'lmagan xodimlar (administrator,
+   * kassir, filial direktori) va ularning hozirgi oylik stavkasi. ⚙ Sozlamalar
+   * oynasidagi ro'yxat shu yerdan keladi.
+   *
+   * `/salary/overview` dan alohida: u ustozning darslari/accruallariga
+   * qurilgan, FIXED_MONTHLY xodim uchun esa bu ustunlar ma'nosiz nol beradi.
+   *
+   * Administrator ataylab KIRITILMAGAN (`/salary/overview` dan farqli): bu
+   * ro'yxat xodimlarning — jumladan filial direktorining — o'z maoshini
+   * ko'rsatadi, va `docs/role-access.md` bo'yicha "Salary config" faqat
+   * CEO + Branch Director huquqi.
+   */
+  @Get('staff-config')
+  @Roles('CEO', 'Branch Director')
+  getStaffConfig(
+    @Query() query: SalaryStaffConfigQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    // `singleBranchId` for the same reason as `/salary/overview`: the service
+    // takes one branch, and the scope has already been intersected with the
+    // caller's ceiling, so this can only narrow.
+    return this.staffConfigService.listStaff(
       { ...query, branchId: singleBranchId(scope) },
       companyId,
       userId,

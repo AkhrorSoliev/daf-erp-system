@@ -142,6 +142,7 @@ export class ForgotPasswordService {
     rawPhone: string,
     code: string,
     ip?: string,
+    allowedRoleIds?: number[] | null,
   ): Promise<{ resetToken: string }> {
     const phone = this.normalize(rawPhone);
     if (!phone) throw new BadRequestException(INVALID_CODE_MESSAGE);
@@ -185,8 +186,14 @@ export class ForgotPasswordService {
     }
 
     // Correct — burn the code (single use) and mint a phone-bound reset token.
+    // The portal scope is passed here for the same reason step 1 passes it:
+    // `resolveByPhone` picks the most recently updated of EVERY account on the
+    // phone, so an unscoped resolve can land on a different account than the
+    // one the code was sent to. Since the branch, that other account may be a
+    // role-less employee sharing an office number — one that must never hold a
+    // password at all.
     await this.redis.del(codeKey(phone));
-    const target = await this.reset.resolveByPhone(phone);
+    const target = await this.reset.resolveByPhone(phone, allowedRoleIds);
     if (!target) throw new BadRequestException(INVALID_CODE_MESSAGE);
 
     const token = randomBytes(32).toString('hex');
@@ -203,6 +210,7 @@ export class ForgotPasswordService {
   async resetPassword(
     resetToken: string,
     newPassword: string,
+    allowedRoleIds?: number[] | null,
   ): Promise<{ message: string }> {
     // getdel is atomic: a concurrent request with the same token can never read
     // it after we consume it (single-use guarantee, no get→del race).
@@ -218,7 +226,13 @@ export class ForgotPasswordService {
 
     // Re-resolve the account NOW — it may have been archived/suspended/deleted
     // between verify and reset. Confirm the token still maps to the same user.
-    const target = await this.reset.resolveByPhone(payload.phone);
+    // Scoped to the portal for the same reason as steps 1 and 2: all three must
+    // resolve the SAME account, or the write lands somewhere the code never
+    // went. The `userId` equality below is the second half of that guarantee.
+    const target = await this.reset.resolveByPhone(
+      payload.phone,
+      allowedRoleIds,
+    );
     if (!target || target.userId !== payload.userId) {
       throw new BadRequestException(SESSION_EXPIRED_MESSAGE);
     }

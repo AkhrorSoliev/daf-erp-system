@@ -37,6 +37,7 @@ const userSelect = {
   gender: true,
   balance: true,
   login: true,
+  position: true,
   companyId: true,
   mainBranch: true,
   isActive: true,
@@ -86,6 +87,16 @@ export class UsersService {
     mainBranch: number | null | undefined,
     companyId: number,
     callerUserId?: number,
+    opts?: {
+      position?: string | null;
+      hasCredentials?: boolean;
+      /**
+       * Whether the account will hold a stored password once this write lands
+       * (`dto.password`, or an existing hash left untouched). `undefined` means
+       * "not asked" — the caller did not put credentials in play.
+       */
+      passwordAfter?: boolean;
+    },
   ) {
     // Role escalation guard: only CEO can grant CEO role
     if (callerUserId && roleIds?.includes(CEO_ROLE_ID)) {
@@ -104,24 +115,52 @@ export class UsersService {
       }
     }
 
-    if (!roleIds?.length) return;
+    // A job title is what every list, badge and payroll row reads. It is the
+    // one field that must be there whether or not the person can sign in.
+    if (opts && opts.position !== undefined) {
+      if (!opts.position?.trim()) {
+        throw new BadRequestException("Lavozim ko'rsatilishi shart");
+      }
+    }
 
-    const hasCeoRole = roleIds.includes(CEO_ROLE_ID);
-    const hasTeacherRole = roleIds.includes(TEACHER_ROLE_ID);
+    const hasRoles = !!roleIds?.length;
     const hasBranches = !!branchIds && branchIds.length > 0;
 
-    // Teacher must have at least one branch (more specific error first)
-    if (hasTeacherRole && !hasCeoRole && !hasBranches) {
+    // No role means no sign-in, and a password is the second, independent
+    // guarantee of that (`validateUser` refuses an account with none). Accept
+    // one here and that guarantee is gone — so refuse rather than ignore.
+    if (!hasRoles && opts?.hasCredentials) {
       throw new BadRequestException(
-        "O'qituvchi uchun kamida bitta filial tanlanishi shart",
+        "Tizim roli berilmagan xodimga login yoki parol berib bo'lmaydi",
       );
     }
 
-    // Non-CEO employees must have at least one branch
-    if (!hasCeoRole && !hasBranches) {
-      throw new BadRequestException(
-        "CEO bo'lmagan xodim uchun kamida bitta filial tanlanishi shart",
-      );
+    // A branch-less employee appears in no branch list and on no payroll
+    // report, so this holds for the role-less too — which the old early
+    // `return` skipped entirely.
+    if (!hasRoles) {
+      if (!hasBranches) {
+        throw new BadRequestException(
+          'Rolsiz xodim uchun kamida bitta filial tanlanishi shart',
+        );
+      }
+    } else {
+      const hasCeoRole = roleIds!.includes(CEO_ROLE_ID);
+      const hasTeacherRole = roleIds!.includes(TEACHER_ROLE_ID);
+
+      // Teacher must have at least one branch (more specific error first)
+      if (hasTeacherRole && !hasCeoRole && !hasBranches) {
+        throw new BadRequestException(
+          "O'qituvchi uchun kamida bitta filial tanlanishi shart",
+        );
+      }
+
+      // Non-CEO employees must have at least one branch
+      if (!hasCeoRole && !hasBranches) {
+        throw new BadRequestException(
+          "CEO bo'lmagan xodim uchun kamida bitta filial tanlanishi shart",
+        );
+      }
     }
 
     // Branches must belong to the same company
@@ -165,6 +204,21 @@ export class UsersService {
         callerUserId,
         branchId,
         "Bu filialga xodim qo'shish huquqingiz yo'q",
+      );
+    }
+
+    // The converse of the refusal above, and just as load-bearing: a role IS
+    // system access, and access nobody can reach is an account that lies about
+    // itself. Without this the only thing asking for a password was a zod
+    // schema in the browser — and the backend is the security boundary. It
+    // bites through the UI too: demote an administrator to role-less (the
+    // credentials are nulled) and promote them back, and the edit form asks
+    // for nothing, leaving a real role behind a password that does not exist.
+    // Ordered last so an authorization failure (branch, role escalation) is
+    // still reported before a missing password.
+    if (hasRoles && opts?.passwordAfter === false) {
+      throw new BadRequestException(
+        'Tizim roli berilgan xodim uchun parol majburiy',
       );
     }
   }
@@ -376,6 +430,7 @@ export class UsersService {
       lastName: string;
       companyId: number;
       login?: string;
+      position?: string;
       password?: string;
       phone?: string;
       photo?: string;
@@ -402,12 +457,19 @@ export class UsersService {
       }
     }
 
+    const position = data.position?.trim() ?? '';
+
     await this.assertRoleAndBranchRules(
       data.roleIds,
       data.branchIds,
       data.mainBranch,
       data.companyId,
       callerUserId,
+      {
+        position,
+        hasCredentials: !!(data.password || data.login),
+        passwordAfter: !!data.password,
+      },
     );
 
     const hashedPassword = data.password
@@ -428,6 +490,7 @@ export class UsersService {
           mainBranch: data.mainBranch || null,
           telegramChatId: data.telegramChatId || null,
           login: data.login || null,
+          position,
           password: hashedPassword || null,
           roles: data.roleIds?.length
             ? { create: data.roleIds.map((roleId) => ({ roleId })) }
@@ -497,7 +560,11 @@ export class UsersService {
   ) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
-      select: userSelect,
+      // `password` rides along ONLY so the rules below can ask whether the
+      // account already has one — a role holder left with none can never sign
+      // in. It is never returned: the response is built from `updated`, and
+      // `computeChangedFields` drops `password` from the audit trail.
+      select: { ...userSelect, password: true },
     });
 
     if (!user) {
@@ -507,10 +574,22 @@ export class UsersService {
     this.assertSameCompany(user.companyId, callerCompanyId);
     await this.assertCallerMayTouchUser(user as any, changedById);
 
-    // If roles or branches are being modified, re-validate combined state
-    if (dto.roleIds !== undefined || dto.branchIds !== undefined) {
-      const nextRoleIds =
-        dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
+    // If roles, branches, the job title, or credentials are being modified,
+    // re-validate the combined state. `password`/`login` are included even
+    // though they don't touch roles or branches: an explicit credential
+    // write is exactly the case `assertRoleAndBranchRules` must see to
+    // refuse it when the account (already, or as of this same request) has
+    // no role — omitting them here is how a role-less account could
+    // previously acquire a password through this endpoint alone.
+    let nextRoleIds: number[] | undefined;
+    if (
+      dto.roleIds !== undefined ||
+      dto.branchIds !== undefined ||
+      dto.position !== undefined ||
+      dto.password !== undefined ||
+      dto.login !== undefined
+    ) {
+      nextRoleIds = dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
       const nextBranchIds =
         dto.branchIds ?? user.branches.map((ub: any) => ub.branch.id);
       const nextMainBranch =
@@ -521,6 +600,17 @@ export class UsersService {
         nextMainBranch,
         user.companyId,
         changedById,
+        {
+          // Only validated when the caller actually sends one — an existing
+          // employee with no title yet must stay editable.
+          position: dto.position !== undefined ? dto.position : undefined,
+          hasCredentials: !!(dto.password || dto.login),
+          // An ordinary edit of a credentialed employee sends no password and
+          // must stay untouched — hence the stored hash, not `dto.password`
+          // alone. Only an account that would END this write with a role and
+          // no password at all is refused.
+          passwordAfter: !!dto.password || !!user.password,
+        },
       );
     }
 
@@ -529,6 +619,7 @@ export class UsersService {
     if (dto.lastName !== undefined) updateData.lastName = dto.lastName;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.login !== undefined) updateData.login = dto.login;
+    if (dto.position !== undefined) updateData.position = dto.position.trim();
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
     if (dto.telegramChatId !== undefined)
@@ -539,6 +630,20 @@ export class UsersService {
     }
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    // Stripping an employee's last role IS removing their system access.
+    // `assertRoleAndBranchRules` above only refuses an EXPLICIT credential
+    // write landing on a role-less account — it cannot refuse this case,
+    // because the DTO has no way to ask for a login/password to be cleared,
+    // and refusing the demotion itself would make "turn an administrator
+    // into a role-less cleaner" impossible through the UI. So when the
+    // RESULTING role set is empty, the stored credentials are nulled here
+    // instead: a bcrypt hash and a login that grant nothing are exactly what
+    // "no role" is supposed to mean.
+    if (nextRoleIds && nextRoleIds.length === 0) {
+      updateData.password = null;
+      updateData.login = null;
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {

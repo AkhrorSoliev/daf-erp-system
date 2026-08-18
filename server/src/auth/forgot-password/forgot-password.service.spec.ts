@@ -48,6 +48,8 @@ function makeRedis() {
 const sha = (c: string) => createHash('sha256').update(c).digest('hex');
 const PHONE = '901234567';
 const TARGET = { userId: 10001, studentId: 10050, companyId: 1 };
+/** admin.dafzentrum.uz — CEO / BD / Administrator / Cashier. */
+const ADMIN_ROLE_IDS = [1, 2, 3, 5];
 
 function build() {
   const redis = makeRedis();
@@ -161,6 +163,32 @@ describe('ForgotPasswordService', () => {
       expect(redis.store.has(`otp_reset:rtoken:${resetToken}`)).toBe(true);
     });
 
+    // A phone is not unique, and `resolveByPhone` breaks the tie on
+    // `updatedAt desc`. Step 1 scoped that lookup to the portal's roles and
+    // steps 2/3 did not, so the code could be sent to an administrator while
+    // the password landed on a freshly-created role-less employee sharing the
+    // office number — an account that must never hold a password at all.
+    it('scopes the resolve to the portal, so a role-less account is never picked', async () => {
+      const { service, redis, reset } = build();
+      const ROLELESS = { userId: 10500, companyId: 1 }; // farrosh, hech qanday rolsiz
+      // Only an UNSCOPED resolve can reach the role-less account.
+      reset.resolveByPhone.mockImplementation(async (_p: string, ids?: number[] | null) =>
+        ids?.length ? null : ROLELESS,
+      );
+      await redis.set(
+        `otp_reset:code:${PHONE}`,
+        JSON.stringify({ h: sha('1234'), n: 3 }),
+        'EX',
+        300,
+      );
+
+      await expect(
+        service.verifyCode(PHONE, '1234', undefined, ADMIN_ROLE_IDS),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(reset.resolveByPhone).toHaveBeenCalledWith(PHONE, ADMIN_ROLE_IDS);
+      expect(redis.store.has(`otp_reset:rtoken:`)).toBe(false);
+    });
+
     it('decrements attempts on a wrong code and burns it after 3 failures', async () => {
       const { service, redis } = build();
       const key = `otp_reset:code:${PHONE}`;
@@ -209,6 +237,39 @@ describe('ForgotPasswordService', () => {
       await expect(
         service.resetPassword(token, 'another123'),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    // Same defect as in step 2, at the step that actually writes the hash: the
+    // re-resolve must ask the same question step 1 asked, or the newest
+    // account on that phone wins and the password is written onto it.
+    it('resolves the account within the portal scope before writing the password', async () => {
+      const { service, redis, reset } = build();
+      const token = 'tok456';
+      const ROLELESS = { userId: 10500, companyId: 1 };
+      reset.resolveByPhone.mockImplementation(async (_p: string, ids?: number[] | null) =>
+        ids?.length ? TARGET : ROLELESS,
+      );
+      await redis.set(
+        `otp_reset:rtoken:${token}`,
+        JSON.stringify({ ...TARGET, phone: PHONE }),
+        'EX',
+        600,
+      );
+
+      await service.resetPassword(token, 'newpass123', ADMIN_ROLE_IDS);
+
+      expect(reset.resolveByPhone).toHaveBeenCalledWith(PHONE, ADMIN_ROLE_IDS);
+      expect(reset.applyNewPassword).toHaveBeenCalledWith(
+        TARGET,
+        'newpass123',
+        'SMS orqali tiklandi',
+      );
+      // The role-less account never receives a password.
+      expect(reset.applyNewPassword).not.toHaveBeenCalledWith(
+        ROLELESS,
+        expect.anything(),
+        expect.anything(),
+      );
     });
   });
 });

@@ -96,6 +96,21 @@ describe('SalaryController @Roles metadata', () => {
     });
   });
 
+  describe('Staff rate list (⚙ Sozlamalar → Xodimlar stavkalari)', () => {
+    // Unlike `getOverview` (teacher rates), this list carries the pay of the
+    // administrative staff themselves — including whoever is looking at it —
+    // so it follows the "Salary config" row of docs/role-access.md rather than
+    // the wider read gate. Administrator is deliberately excluded.
+    it('getStaffConfig allows CEO and Branch Director only', () => {
+      expect(rolesFor('getStaffConfig')).toEqual(['CEO', 'Branch Director']);
+    });
+
+    it('is narrower than the teacher rate list it sits beside', () => {
+      expect(rolesFor('getStaffConfig')).not.toContain('Administrator');
+      expect(rolesFor('getOverview')).toContain('Administrator');
+    });
+  });
+
   describe('Per-user monthly row (profile tab + profile card)', () => {
     // Money for ONE named teacher — same gate as the profile salary tab it
     // backs (`/teachers/:id/salary-summary`), i.e. Administrator is excluded.
