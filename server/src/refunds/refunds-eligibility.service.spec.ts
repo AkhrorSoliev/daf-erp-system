@@ -2,10 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RefundsEligibilityService } from './refunds-eligibility.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 
 describe('RefundsEligibilityService', () => {
   let service: RefundsEligibilityService;
   let prisma: any;
+  let billing: any;
 
   const studentRow = { id: 10001, balance: 100_000 };
   const lastPaymentRow = {
@@ -16,6 +18,8 @@ describe('RefundsEligibilityService', () => {
   const enrollmentRow = {
     id: 'enr-1',
     groupId: 'group-1',
+    status: 'ACTIVE',
+    prepaidLessonsRemaining: 0,
     group: {
       name: 'TOS-101',
       course: {
@@ -48,10 +52,13 @@ describe('RefundsEligibilityService', () => {
       },
     };
 
+    billing = { prepaidRefundValue: jest.fn().mockResolvedValue(0) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RefundsEligibilityService,
         { provide: PrismaService, useValue: prisma },
+        { provide: EnrollmentBillingService, useValue: billing },
       ],
     }).compile();
 
@@ -101,53 +108,6 @@ describe('RefundsEligibilityService', () => {
     await expect(service.previewRefund(10001, 1, 'enr-foreign')).rejects.toThrow(
       NotFoundException,
     );
-  });
-
-  describe('ledger filter regression (reversedAt:null)', () => {
-    // The bug: the original aggregate used only `reversedTransactionId: null`,
-    // which excluded reversal entries but STILL counted reversed originals.
-    // After a lesson reversal, the consumed total was double-charged. The
-    // fix uses both `reversedTransactionId: null` AND `reversedAt: null`.
-    it('uses both reversedTransactionId:null AND reversedAt:null on the enrollment-scoped query', async () => {
-      await service.previewRefund(10001, 1);
-
-      expect(prisma.transaction.aggregate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            enrollmentId: 'enr-1',
-            type: 'LESSON_DEDUCTION',
-            reversedTransactionId: null,
-            reversedAt: null,
-          }),
-        }),
-      );
-    });
-
-    it('reversed originals do not inflate ledgerConsumed', async () => {
-      prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
-      prisma.attendance.count.mockResolvedValue(2);
-
-      const result = await service.previewRefund(10001, 1);
-
-      expect(result.ledgerConsumed).toBe(0);
-      expect(result.attendanceConsumed).toBe(2 * Math.round(400_000 / 12));
-      expect(result.overDeducted).toBe(0);
-    });
-
-    it('genuinely consumed lessons still count toward ledgerConsumed', async () => {
-      prisma.transaction.aggregate.mockResolvedValue({
-        _sum: { amount: -400_000 },
-      });
-      prisma.attendance.count.mockResolvedValue(8);
-
-      const result = await service.previewRefund(10001, 1);
-
-      expect(result.ledgerConsumed).toBe(400_000);
-      expect(result.attendanceConsumed).toBe(8 * Math.round(400_000 / 12));
-      expect(result.overDeducted).toBe(
-        400_000 - 8 * Math.round(400_000 / 12),
-      );
-    });
   });
 
   describe('payments aggregation', () => {
@@ -214,17 +174,91 @@ describe('RefundsEligibilityService', () => {
     });
   });
 
-  describe('warnings', () => {
-    it('flags >50% completion as a non-eligible warning', async () => {
-      prisma.attendance.count.mockResolvedValue(7);
+
+  /**
+   * What a refund may return.
+   *
+   * This used to be derived: `lesson deductions − PRESENT/LATE attendance`. That
+   * difference is never "money over-deducted" — the ledger always deducts
+   * exactly `attendance + prepaidLessonsRemaining`, so the gap is precisely the
+   * ABSENT lessons (which ARE billable here) plus the lessons already reserved
+   * for future dates. Restoring it credited a student money nobody paid, twice
+   * over, and the counter it should have consumed stayed untouched.
+   */
+  describe('what may be refunded', () => {
+    it('is the free balance plus the value of the prepaid lessons', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 17 });
+      prisma.enrollment.findMany.mockResolvedValue([
+        { ...enrollmentRow, prepaidLessonsRemaining: 6 },
+      ]);
+      billing.prepaidRefundValue.mockResolvedValue(199_998);
+
       const result = await service.previewRefund(10001, 1);
-      expect(result.warning).toMatch(/50%/);
+
+      expect(result.prepaidLessons).toBe(6);
+      expect(result.prepaidValue).toBe(199_998);
+      expect(result.maxRefundable).toBe(200_015);
     });
 
-    it('no warning when <50% attended', async () => {
-      prisma.attendance.count.mockResolvedValue(3);
+    it('does not grow with ABSENT lessons', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 0 });
+      prisma.enrollment.findMany.mockResolvedValue([
+        { ...enrollmentRow, prepaidLessonsRemaining: 0 },
+      ]);
+      prisma.attendance.count.mockResolvedValue(5);
+
       const result = await service.previewRefund(10001, 1);
-      expect(result.warning).toBeNull();
+
+      expect(result.maxRefundable).toBe(0);
+    });
+
+    it('nets a negative balance off the prepaid value', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: -50_000 });
+      prisma.enrollment.findMany.mockResolvedValue([
+        { ...enrollmentRow, prepaidLessonsRemaining: 3 },
+      ]);
+      billing.prepaidRefundValue.mockResolvedValue(99_999);
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.maxRefundable).toBe(49_999);
+    });
+
+    it('never goes below zero for a debtor with no prepaid lessons', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: -80_000 });
+      prisma.enrollment.findMany.mockResolvedValue([
+        { ...enrollmentRow, prepaidLessonsRemaining: 0 },
+      ]);
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.maxRefundable).toBe(0);
+    });
+
+    it('prices the prepaid lessons through the billing service, not its own math', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { ...enrollmentRow, prepaidLessonsRemaining: 4 },
+      ]);
+
+      await service.previewRefund(10001, 1);
+
+      expect(billing.prepaidRefundValue).toHaveBeenCalledWith(
+        prisma,
+        'enr-1',
+        expect.objectContaining({ price: 400_000, lessonPaymentCount: 12 }),
+        4,
+      );
+    });
+
+    it('warns when there is nothing but free balance to draw on', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 10_000 });
+      prisma.enrollment.findMany.mockResolvedValue([
+        { ...enrollmentRow, prepaidLessonsRemaining: 0 },
+      ]);
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.warning).toMatch(/balansdagi/i);
     });
   });
 });

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import {
   ReportBranchIds,
   studentBranchWhere,
@@ -17,7 +18,10 @@ import {
 
 @Injectable()
 export class RefundsEligibilityService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private enrollmentBilling: EnrollmentBillingService,
+  ) {}
 
   /**
    * Compute the refund breakdown for a student without creating anything.
@@ -65,7 +69,6 @@ export class RefundsEligibilityService {
     const coursePrice = enrollment.group.course.price;
     const perLessonCost =
       totalLessons > 0 ? Math.round(coursePrice / totalLessons) : 0;
-    const attendanceConsumed = lessonsCompleted * perLessonCost;
 
     // Money that has come in for this student. Without per-enrollment payment
     // tagging, all completed non-reversed payments are summed at the student
@@ -100,20 +103,6 @@ export class RefundsEligibilityService {
         }
       : null;
 
-    // Lesson-deduction ledger scoped to this enrollment. Both reversal entries
-    // (`reversedTransactionId: null`) AND reversed originals (`reversedAt: null`)
-    // are excluded so the consumed total isn't double-counted.
-    const ledgerAgg = await this.prisma.transaction.aggregate({
-      where: {
-        enrollmentId: enrollment.id,
-        type: 'LESSON_DEDUCTION',
-        reversedTransactionId: null,
-        reversedAt: null,
-      },
-      _sum: { amount: true },
-    });
-    const ledgerConsumed = Math.abs(ledgerAgg._sum.amount ?? 0);
-
     const priorRefunds = await this.prisma.refund.aggregate({
       where: {
         enrollmentId: enrollment.id,
@@ -129,19 +118,38 @@ export class RefundsEligibilityService {
     });
     const previousRefundsTotal = priorRefunds._sum.approvedAmount ?? 0;
 
-    // Cycle-deduction at enrollment can leave the ledger showing more
-    // "consumed" than the student actually attended. The unused portion
-    // is still money we owe back — add it to the max alongside the
-    // current balance to compute what a full close-out looks like.
-    const overDeducted = Math.max(0, ledgerConsumed - attendanceConsumed);
-    const maxRefundable = Math.max(0, student.balance + overDeducted);
+    // What a refund may draw on, from the two things that actually hold money:
+    // the free balance, and the lessons already paid for but not yet taken.
+    //
+    // It used to be derived as `lesson deductions − PRESENT/LATE attendance`.
+    // That difference is never "money over-deducted": the ledger deducts
+    // exactly `attendance + prepaidLessonsRemaining`, so the gap is precisely
+    // the ABSENT lessons — which ARE billable here — plus lessons already
+    // reserved for future dates. Handing it back credited students money
+    // nobody had paid, and because `prepaidLessonsRemaining` went untouched the
+    // same lessons stayed covered, so one payment was counted twice. #10393 was
+    // credited 266 664 so'm that way on 2026-08-18, #10655 233 331 before that.
+    const prepaidLessons = enrollment.prepaidLessonsRemaining;
+    const prepaidValue = await this.enrollmentBilling.prepaidRefundValue(
+      this.prisma,
+      enrollment.id,
+      enrollment.group.course,
+      prepaidLessons,
+    );
+
+    const maxRefundable = Math.max(0, student.balance + prepaidValue);
     const suggestedAmount = maxRefundable;
 
-    const halfCourseAttended =
-      totalLessons > 0 && lessonsCompleted / totalLessons >= 0.5;
-    const warning = halfCourseAttended
-      ? "Diqqat: kursning 50% dan ortig'i o'tilgan"
-      : null;
+    // The old warning claimed a percentage of the course was done, dividing by
+    // `lessonPaymentCount` — the size of a BILLING CYCLE, not the course. A
+    // student 19 lessons into a 12-lesson cycle read as "158% attended", so the
+    // warning fired for nearly everyone and told nobody anything. There is no
+    // total-lessons figure anywhere in the schema to divide by, so the honest
+    // move is to say something true instead.
+    const warning =
+      prepaidLessons === 0 && student.balance > 0
+        ? "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi"
+        : null;
 
     return {
       enrollmentId: enrollment.id,
@@ -151,12 +159,10 @@ export class RefundsEligibilityService {
       paidAmount,
       lastPayment,
       studentBalance: student.balance,
-      lessonsCompleted,
-      totalLessons,
+      lessonsAttended: lessonsCompleted,
+      prepaidLessons,
+      prepaidValue,
       perLessonCost,
-      attendanceConsumed,
-      ledgerConsumed,
-      overDeducted,
       previousRefunds: previousRefundsTotal,
       maxRefundable,
       suggestedAmount,
@@ -185,6 +191,8 @@ export class RefundsEligibilityService {
         select: {
           id: true,
           groupId: true,
+          status: true,
+          prepaidLessonsRemaining: true,
           group: {
             select: {
               name: true,
@@ -216,6 +224,8 @@ export class RefundsEligibilityService {
       select: {
         id: true,
         groupId: true,
+        status: true,
+        prepaidLessonsRemaining: true,
         group: {
           select: {
             name: true,
