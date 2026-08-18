@@ -254,7 +254,10 @@ Expected: FAIL — `service.releasePrepaidLessons is not a function`
     course: { price: number; lessonPaymentCount: number | null },
     lessons: number,
   ): Promise<number> {
-    // ... mavjud resolvePrepaidRefund tanasi, `remaining` → `lessons`
+    // Tana o'zgarmaydi — mavjud `resolvePrepaidRefund` ning aynan o'zi,
+    // faqat parametr nomi `remaining` dan `lessons` ga o'zgaradi. Metod
+    // `private` dan `public` ga chiqadi va yangi nom oladi; `refundPrepaidToBalance`
+    // hamda `refundPrepaidWithOverride` ichidagi ikkala chaqiruv ham yangilanadi.
   }
 ```
 
@@ -480,7 +483,18 @@ describe('prepaid asosidagi limit', () => {
   };
 
   const billing = { prepaidRefundValue: jest.fn().mockResolvedValue(0) };
-  // providers: [..., { provide: EnrollmentBillingService, useValue: billing }]
+```
+
+`TestingModule` quruvchisiga uchinchi provayder qo'shiladi:
+
+```ts
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        RefundsEligibilityService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: EnrollmentBillingService, useValue: billing },
+      ],
+    }).compile();
 ```
 
 Mavjud `warnings` describe blokidagi 50% testlarini o'chir — ogohlantirish o'zgardi.
@@ -564,8 +578,65 @@ git commit -m "Read what a refund may return from the prepaid counter"
 
 ```ts
 describe('RefundsCreateService.quickRefund', () => {
-  // ... standart TestingModule quruvchisi, mocklar:
-  // prisma, transactionsService, entityHistoryService, enrollmentBilling
+  let service: RefundsCreateService;
+  let prisma: any;
+  let transactionsService: any;
+  let enrollmentBilling: any;
+  let student: any;
+  let enrollment: any;
+
+  beforeEach(async () => {
+    student = { id: 10001, balance: 0 };
+    enrollment = {
+      id: 'enr-1',
+      groupId: 'group-1',
+      status: 'ACTIVE',
+      startDate: new Date('2026-07-01'),
+      prepaidLessonsRemaining: 0,
+      group: {
+        name: '#011',
+        course: { name: 'Standart', price: 400_000, lessonPaymentCount: 12 },
+      },
+    };
+
+    prisma = {
+      student: { findFirst: jest.fn(() => Promise.resolve(student)) },
+      enrollment: { findFirst: jest.fn(() => Promise.resolve(enrollment)) },
+      attendance: { count: jest.fn().mockResolvedValue(0) },
+      refund: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { approvedAmount: 0 } }),
+      },
+      $transaction: jest.fn((cb: any) =>
+        cb({ refund: { create: jest.fn().mockResolvedValue({ id: 'ref-1' }) } }),
+      ),
+    };
+    transactionsService = {
+      recordRefund: jest.fn().mockResolvedValue({ id: 'tx-1' }),
+    };
+    enrollmentBilling = {
+      prepaidRefundValue: jest.fn().mockResolvedValue(0),
+      releasePrepaidLessons: jest.fn().mockResolvedValue(null),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        RefundsCreateService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: TransactionsService, useValue: transactionsService },
+        { provide: EnrollmentBillingService, useValue: enrollmentBilling },
+        { provide: EntityHistoryService, useValue: { recordStatusChange: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get(RefundsCreateService);
+  });
+
+  // `assertCallerMayWriteForStudent` real Prisma so'rovlarini qiladi — testda
+  // uni butunlay mocklaymiz, filial huquqi bu yerda tekshirilmaydi.
+  jest.mock('../common/auth/financial-write-scope', () => ({
+    assertCallerMayWriteForStudent: jest.fn().mockResolvedValue(undefined),
+  }));
 
   it('balans yetsa hech qanday darsni bekor qilmaydi', async () => {
     student.balance = 500_000;
@@ -596,8 +667,8 @@ describe('RefundsCreateService.quickRefund', () => {
       99, 1,
     );
 
-    // 100 000 − 17 = 99 983 kerak → 3 dars (99 999) yetmaydi, 4 dars kerak emas:
-    // 99 999 >= 99 983, demak 3 dars.
+    // Yetishmovchilik: 100 000 − 17 = 99 983.
+    // 2 dars = 66 666 (kam), 3 dars = 99 999 (yetadi) → 3 dars bekor qilinadi.
     expect(enrollmentBilling.releasePrepaidLessons).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ enrollmentId: 'enr-1', lessons: 3 }),
@@ -738,11 +809,24 @@ Tranzaksiya ichida `if (overDeducted > 0) createAdjustment(...)` blokini almasht
 
 `balanceAfter` hisobini yangila:
 
+Buning uchun tranzaksiya endi ikkita qiymat qaytarsin:
+
 ```ts
-    const balanceAfter = student.balance + releasedAmount - dto.amount;
+      const released = lessonsToRelease > 0
+        ? await this.enrollmentBilling.releasePrepaidLessons(tx, { /* yuqoridagidek */ })
+        : null;
+      // ...
+      return { refundRow, releasedAmount: released?.refunded ?? 0 };
 ```
 
-bunda `releasedAmount` tranzaksiyadan qaytarilgan `{ refunded }` qiymati.
+va tranzaksiyadan keyin:
+
+```ts
+    const balanceAfter =
+      student.balance + refund.releasedAmount - dto.amount;
+```
+
+`quickRefund` oxirida `return refund.refundRow;` qaytariladi — tashqi shartnoma o'zgarmaydi.
 
 - [ ] **Step 4: Testlar o'tishini tekshir**
 
