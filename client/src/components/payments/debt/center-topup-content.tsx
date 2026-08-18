@@ -8,10 +8,12 @@ import {
   AlertTriangle,
   HandCoins,
   Info,
+  Search,
   UserMinus,
   Users,
   Wallet,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -33,8 +35,8 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
-import { monthLabel, monthShort } from "../salary-utils";
 import { DebtMonthsBadge } from "./debt-months-badge";
+import { monthLabel, monthShort } from "../salary-utils";
 import { SummaryCard } from "../summary-card";
 
 export interface TopUpRow {
@@ -47,8 +49,13 @@ export interface TopUpRow {
     status: string;
   };
   lessons: number;
-  /** What the CENTER paid the teacher for those lessons. */
+  /** What the CENTER paid the teacher for those lessons. Company total only. */
   centerPaid: number;
+  /**
+   * Of that spend, how much has NOT come back — capped by what the student
+   * still owes for those lessons. THE figure this list is worked from.
+   */
+  centerUnrecovered: number;
   /** What to ask for: the student's debt today, same figure as their profile. */
   studentDebt: number;
   /** This month's fronted lessons at their frozen price. Not rendered. */
@@ -75,6 +82,9 @@ export interface TopUpResponse {
   data: TopUpRow[];
   totals: {
     centerPaid: number;
+    centerUnrecovered: number;
+    /** Counted in `centerPaid`, but repaid in full so they carry no row. */
+    repaidStudentCount: number;
     studentDebt: number;
     studentOwed: number;
     lessonCount: number;
@@ -109,7 +119,7 @@ const PAGE_SIZES = [10, 20, 30, 40, 50];
  * The live balance is the ledger's own answer to "does this person still owe us
  * anything", so that is what decides.
  */
-const hasDebt = (r: TopUpRow) => r.studentDebt > 0;
+const hasDebt = (r: TopUpRow) => r.centerUnrecovered > 0;
 
 /**
  * Month chip text: "Iyul", not "Iyul 2026".
@@ -151,6 +161,7 @@ export const ALL_MONTHS = "all";
  */
 export function CenterTopUpContent({ month }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -176,7 +187,7 @@ export function CenterTopUpContent({ month }: Props) {
   // reader on page 4 of a set that now has one page.
   useEffect(() => {
     setPage(1);
-  }, [month, statusFilter]);
+  }, [month, statusFilter, search]);
 
   const rows = useMemo(() => {
     // Students with nothing left to collect are never listed. They are not bad
@@ -185,8 +196,27 @@ export function CenterTopUpContent({ month }: Props) {
     let all = (data?.data ?? []).filter(hasDebt);
     if (statusFilter !== "all")
       all = all.filter((r) => r.student.status === statusFilter);
+    // Client-side, unlike the debtors tab next door: that list is paged by the
+    // server, this one already holds every row, so filtering here is instant
+    // and costs no request. Matches the three things the row actually shows —
+    // name, id, phone — with digits normalised so "+998 90 141 05 14",
+    // "910410514" and "90 141" all find the same person.
+    const q = search.trim().toLowerCase();
+    if (q) {
+      const digits = q.replace(/\D/g, "");
+      all = all.filter((r) => {
+        const name =
+          `${r.student.firstName} ${r.student.lastName}`.toLowerCase();
+        if (name.includes(q)) return true;
+        if (String(r.student.id).includes(q.replace(/^#/, ""))) return true;
+        return (
+          digits.length > 0 &&
+          (r.student.phone ?? "").replace(/\D/g, "").includes(digits)
+        );
+      });
+    }
     return all;
-  }, [data, statusFilter]);
+  }, [data, statusFilter, search]);
 
   // EVERY figure on screen follows the filter — headline sums, footer and the
   // inactive warning alike. A header reporting the whole month next to a table
@@ -196,30 +226,24 @@ export function CenterTopUpContent({ month }: Props) {
       rows.reduce(
         (t, r) => ({
           centerPaid: t.centerPaid + r.centerPaid,
+          centerUnrecovered: t.centerUnrecovered + r.centerUnrecovered,
           studentDebt: t.studentDebt + r.studentDebt,
           lessons: t.lessons + r.lessons,
           students: t.students + 1,
           inactive: t.inactive + (r.student.status === "ACTIVE" ? 0 : 1),
         }),
-        { centerPaid: 0, studentDebt: 0, lessons: 0, students: 0, inactive: 0 },
+        {
+          centerPaid: 0,
+          centerUnrecovered: 0,
+          studentDebt: 0,
+          lessons: 0,
+          students: 0,
+          inactive: 0,
+        },
       ),
     [rows],
   );
-  const isFiltered = statusFilter !== "all";
-
-  // How much of the salary card's "Qolgan (markaz)" has, by the balance,
-  // already come back. Computed over the WHOLE response, not the filtered rows
-  // — it is a statement about that card, which this filter does not change.
-  const alreadyBack = useMemo(
-    () =>
-      (data?.data ?? [])
-        .filter((r) => !hasDebt(r))
-        .reduce(
-          (t, r) => ({ sum: t.sum + r.centerPaid, count: t.count + 1 }),
-          { sum: 0, count: 0 },
-        ),
-    [data],
-  );
+  const isFiltered = statusFilter !== "all" || search.trim() !== "";
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const pageRows = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -267,9 +291,13 @@ export function CenterTopUpContent({ month }: Props) {
         <SummaryCard
           tone="red"
           icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
-          label="Olinishi kerak"
-          value={`${formatPrice(shown.studentDebt)} so'm`}
-          hint="Shu o'quvchilarning bugungi jami qarzi"
+          label={isForecast ? "Qoplanishi kerak" : "Hali qaytmagan"}
+          value={`${formatPrice(shown.centerUnrecovered)} so'm`}
+          hint={
+            isForecast
+              ? "Oy yopilguncha undirilsa, markaz to'lamaydi"
+              : "Chiqqan puldan hali undirilmagani"
+          }
         />
         <SummaryCard
           tone="slate"
@@ -303,14 +331,18 @@ export function CenterTopUpContent({ month }: Props) {
 
       <p className="mb-4 text-xs text-muted-foreground">
         {allMonths ? "Butun davr" : monthLabel(month)}
-        {isFiltered && " · tanlangan holat"} · qarz oylarga bo&apos;linmaydi:
-        telefonda o&apos;quvchining to&apos;liq qarzi so&apos;raladi, u qaysi
-        oylardan yig&apos;ilgani &laquo;⧉&raquo; nishonida ko&apos;rinadi.
-        {alreadyBack.count > 0 && (
+        {isFiltered && " · filtrlangan"} · &laquo;Markaz hali
+        olmagan&raquo; — jami qarzning markaz ustozlarga chiqarib bo&apos;lgan
+        qismi. &laquo;Jami qarzi&raquo; esa o&apos;quvchining profilidagi to&apos;liq
+        qarzi: unga markaz qoplamagan oldingi oylar ham kiradi, qaysilari
+        ekani &laquo;⧉&raquo; nishonida.
+        {!isFiltered && data.totals.repaidStudentCount > 0 && (
           <>
             {" "}
-            Oylik kartasida {formatPrice(data.totals.centerPaid)} turibdi —
-            farqi puli qaytgan {alreadyBack.count} o&apos;quvchi.
+            Oylik sahifasidagi kartada {formatPrice(data.totals.centerPaid)}{" "}
+            turibdi — farqi puli to&apos;liq qaytgan{" "}
+            {data.totals.repaidStudentCount} o&apos;quvchi, ular bu
+            ro&apos;yxatda ko&apos;rinmaydi.
           </>
         )}
       </p>
@@ -327,6 +359,17 @@ export function CenterTopUpContent({ month }: Props) {
       )}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ism, telefon yoki ID bo'yicha qidirish…"
+            spellCheck={false}
+            aria-label="Ro'yxat ichidan qidirish"
+            className="pl-8"
+          />
+        </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-52">
             <SelectValue />
@@ -358,16 +401,27 @@ export function CenterTopUpContent({ month }: Props) {
                 {isForecast ? "Qoplanadigan oylar" : "Markaz qoplagan oylar"}
               </TableHead>
               <TableHead className="text-right">Darslar</TableHead>
-              {/* Two columns, two questions — nothing else. The month's lesson
-                  price used to sit between them and was neither: not what the
-                  center spent, not what anyone owes now. */}
-              <TableHead className="text-right">
-                {isForecast
-                  ? "Markaz to'laydi"
-                  : "Markaz ustozga to'lagan"}
+              {/* ONE money column per row, deliberately. The centre's spend
+                  used to sit beside it and read as a second thing to collect:
+                  #10593 showed "markaz 16 667" next to "qarzi 329" and the
+                  question it produced every time was why we were chasing 329
+                  after paying out 16 667. The answer — the student had already
+                  paid 33 004 of the lesson, so the advance came back with it —
+                  is a fact about the past, and an admin ringing someone needs
+                  only the figure they will read out. The spend stays on the
+                  summary card above, where it is a company total, not an
+                  instruction. */}
+              <TableHead className="border-l text-right">
+                {isForecast ? "Markaz to'laydi" : "Markaz hali olmagan"}
               </TableHead>
-              <TableHead className="text-right">
-                O&apos;quvchining qarzi
+              {/* The whole the column before it is a part of. An admin on the
+                  phone asks for the DEBT, not for the centre's share of it, and
+                  that debt routinely predates the top-up era: production August
+                  2026 fronted July only, while #10050's 633 323 dates to May.
+                  The badge opens the month-by-month split, because a single
+                  figure spanning four months reads as one month's arrears. */}
+              <TableHead className="border-l text-right">
+                Jami qarzi
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -378,8 +432,9 @@ export function CenterTopUpContent({ month }: Props) {
                   colSpan={7}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
-                  Bu holatda o&apos;quvchi yo&apos;q — filtrni o&apos;zgartirib
-                  ko&apos;ring.
+                  {search.trim()
+                    ? `«${search.trim()}» bo'yicha hech kim topilmadi.`
+                    : "Bu holatda o'quvchi yo'q — filtrni o'zgartirib ko'ring."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -423,7 +478,7 @@ export function CenterTopUpContent({ month }: Props) {
                           key={m.monthKey}
                           variant="secondary"
                           className="px-1.5 py-0 text-[11px] font-normal"
-                          title={`${monthLabel(m.monthKey)}: ${m.lessons} dars · markaz ${formatPrice(m.centerPaid)} so'm`}
+                          title={`${monthLabel(m.monthKey)}: ${m.lessons} dars`}
                         >
                           {chipLabel(m.monthKey, r.months)}
                           <span className="ml-1 opacity-60">{m.lessons}</span>
@@ -434,13 +489,13 @@ export function CenterTopUpContent({ month }: Props) {
                   <TableCell className="text-right tabular-nums">
                     {r.lessons}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums text-amber-700 dark:text-amber-400">
-                    {formatPrice(r.centerPaid)}
-                  </TableCell>
                   {/* Always > 0 — a zero-debt row never reaches here. The badge
                       appears only when the debt spans more than one month, so
                       the single figure is never read as one month's arrears. */}
-                  <TableCell className="text-right">
+                  <TableCell className="border-l text-right font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                    {formatPrice(r.centerUnrecovered)}
+                  </TableCell>
+                  <TableCell className="border-l text-right">
                     <span className="inline-flex items-center gap-1.5">
                       <DebtMonthsBadge
                         studentName={`${r.student.firstName} ${r.student.lastName}`.trim()}
@@ -466,10 +521,10 @@ export function CenterTopUpContent({ month }: Props) {
                 <TableCell className="text-right font-semibold tabular-nums">
                   {shown.lessons}
                 </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                  {formatPrice(shown.centerPaid)}
+                <TableCell className="border-l text-right font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                  {formatPrice(shown.centerUnrecovered)}
                 </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums text-red-600 dark:text-red-400">
+                <TableCell className="border-l text-right font-semibold tabular-nums text-red-600 dark:text-red-400">
                   {formatPrice(shown.studentDebt)}
                 </TableCell>
               </TableRow>

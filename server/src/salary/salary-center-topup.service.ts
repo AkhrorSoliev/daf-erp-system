@@ -12,7 +12,7 @@ import {
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { sweepGapLessons } from './shared/gap-sweep';
 import { pickActiveVersion, type RateVersion } from './shared/deserved-math';
-import { SalaryType } from '@prisma/client';
+import { SalaryType, TransactionType } from '@prisma/client';
 
 /**
  * "Markaz qo'shimchasi — qolgan" drill-down: WHO the center is still owed by.
@@ -209,6 +209,7 @@ export class SalaryCenterTopUpService {
       userId: l.teacherId,
       studentId: l.studentId,
       groupId: l.groupId,
+      attendanceId: l.attendanceId,
       amount: l.amount,
       perLessonCost: l.perLessonCost,
       lessonDate: l.lessonDate,
@@ -231,6 +232,13 @@ export class SalaryCenterTopUpService {
 
     const emptyTotals = {
       centerPaid: 0,
+      centerUnrecovered: 0,
+      /**
+       * Students whose advance came back in full, so they are counted in
+       * `centerPaid` but carry no row. Without this the page shows a smaller
+       * spend than the salary card it opened from and cannot say why.
+       */
+      repaidStudentCount: 0,
       studentDebt: 0,
       studentOwed: 0,
       lessonCount: 0,
@@ -280,6 +288,7 @@ export class SalaryCenterTopUpService {
         userId: true,
         studentId: true,
         groupId: true,
+        attendanceId: true,
         amount: true,
         perLessonCost: true,
         lessonDate: true,
@@ -309,6 +318,49 @@ export class SalaryCenterTopUpService {
       };
     }
 
+    // What the student has NOT paid yet on each fronted lesson. The centre's
+    // advance is repaid out of whatever the student pays for that lesson, so
+    // what is still owed TO THE CENTRE for it can never exceed either side:
+    // `min(advance, outstanding)`. A lesson 99% paid leaves the centre the last
+    // 1%, not the whole advance — production #10593 read "markaz 16 667" beside
+    // a 329 so'm balance and had an admin ringing to collect an advance that
+    // had already come back with the payment.
+    //
+    // No row at all (a forecast lesson, not billed yet) means nothing has been
+    // paid against it, so the full lesson cost is outstanding.
+    const deductions = await this.prisma.transaction.findMany({
+      where: {
+        attendanceId: {
+          in: source
+            .map((a) => a.attendanceId)
+            .filter((id): id is string => id !== null),
+        },
+        type: TransactionType.LESSON_DEDUCTION,
+        reversedAt: null,
+      },
+      select: { attendanceId: true, metadata: true },
+    });
+    const outstandingByLesson = new Map<string, number>();
+    for (const d of deductions) {
+      if (!d.attendanceId) continue;
+      const raw = Number(
+        ((d.metadata ?? {}) as Record<string, unknown>).uncoveredAmount ?? 0,
+      );
+      outstandingByLesson.set(
+        d.attendanceId,
+        Number.isFinite(raw) ? Math.max(0, raw) : 0,
+      );
+    }
+    // A null lesson id (legacy accrual) has nothing to look up, so it falls to
+    // the same default as an unbilled one: assume none of it has been paid.
+    const unrecoveredOf = (a: (typeof source)[number]) =>
+      Math.min(
+        a.amount,
+        (a.attendanceId === null
+          ? undefined
+          : outstandingByLesson.get(a.attendanceId)) ?? a.perLessonCost,
+      );
+
     interface MonthBucket {
       lessons: number;
       centerPaid: number;
@@ -316,6 +368,7 @@ export class SalaryCenterTopUpService {
     interface Bucket {
       lessons: number;
       centerPaid: number;
+      centerUnrecovered: number;
       studentOwed: number;
       groupIds: Set<string>;
       teacherIds: Set<number>;
@@ -337,6 +390,7 @@ export class SalaryCenterTopUpService {
         byStudent.set(a.studentId, {
           lessons: 1,
           centerPaid: a.amount,
+          centerUnrecovered: unrecoveredOf(a),
           studentOwed: a.perLessonCost,
           groupIds: new Set([a.groupId]),
           teacherIds: new Set([a.userId]),
@@ -348,6 +402,7 @@ export class SalaryCenterTopUpService {
       }
       b.lessons += 1;
       b.centerPaid += a.amount;
+      b.centerUnrecovered += unrecoveredOf(a);
       b.studentOwed += a.perLessonCost;
       b.groupIds.add(a.groupId);
       b.teacherIds.add(a.userId);
@@ -386,7 +441,7 @@ export class SalaryCenterTopUpService {
     const studentMap = new Map(students.map((s) => [s.id, s]));
     const groupName = new Map(groups.map((g) => [g.id, g.name]));
 
-    const rows = [...byStudent.entries()]
+    const allRows = [...byStudent.entries()]
       // A student row with no student record is data we cannot act on — drop it
       // rather than render a nameless "#10123" the CEO cannot call.
       .filter(([studentId]) => studentMap.has(studentId))
@@ -403,6 +458,29 @@ export class SalaryCenterTopUpService {
           },
           lessons: b.lessons,
           centerPaid: b.centerPaid,
+          /**
+           * THE figure the recovery list is worked from: of what the centre
+           * advanced for this student, how much has not come back. Unlike
+           * `centerPaid` — a record of past spend that stays put forever — this
+           * falls to zero as they pay.
+           *
+           * Capped twice, and both caps earn their place. Per lesson, by what
+           * is still owed ON that lesson: an advance cannot outlive the payment
+           * that repaid it (#10593 — 16 667 fronted, 329 left). Then per
+           * student, by their whole balance: nobody can be made to return more
+           * than they owe. The second cap is not belt-and-braces — the
+           * per-lesson figure comes from deduction metadata that only settles
+           * when retroactive billing runs, and for the students whose
+           * settlement is still pending it reads high. Production 2026-08-18:
+           * 14 rows claimed more than the student owed, #10439 claiming 80 000
+           * from someone at a zero balance. Capping here keeps the column
+           * inside the "Jami qarzi" beside it, which is the whole it is a part
+           * of, without waiting on that backlog to clear.
+           */
+          centerUnrecovered: Math.min(
+            b.centerUnrecovered,
+            s.balance < 0 ? -s.balance : 0,
+          ),
           /**
            * What to ask this student for: their debt as the profile shows it.
            *
@@ -456,19 +534,32 @@ export class SalaryCenterTopUpService {
             })),
         };
       })
-      // Biggest collectable debt first — that is the order a recovery call list
-      // is worked through. (It used to sort by the center's own outlay, which
-      // is not what the caller is trying to bring in.)
+      // Biggest recoverable amount first — that is the order a recovery call
+      // list is worked through. (It used to sort by the center's own outlay,
+      // which is not what the caller is trying to bring in.)
       .sort(
         (a, b) =>
+          b.centerUnrecovered - a.centerUnrecovered ||
           b.studentDebt - a.studentDebt ||
-          b.centerPaid - a.centerPaid ||
           a.student.firstName.localeCompare(b.student.firstName),
       );
 
-    const totals = rows.reduce(
+    // Nothing left to bring in — the advance came back with the student's
+    // payment — so the row is not an answer to "who do I ring". The accrual
+    // flag is simply coarser than the money: it clears only when a lesson is
+    // settled to the last so'm, which is why #10593 sat on this list owing 329
+    // after the centre's 16 667 had already returned.
+    const rows = allRows.filter((r) => r.centerUnrecovered > 0);
+
+    // Totals describe the MONTH, not the filtered list — `centerPaid` here has
+    // to keep equalling the salary card's "Qolgan (markaz)", and dropping the
+    // repaid students from the sum would make the drill-down contradict the
+    // card it opens from. Their `centerUnrecovered` is zero, so that figure is
+    // the same either way.
+    const totals = allRows.reduce(
       (t, r) => ({
         centerPaid: t.centerPaid + r.centerPaid,
+        centerUnrecovered: t.centerUnrecovered + r.centerUnrecovered,
         studentDebt: t.studentDebt + r.studentDebt,
         studentOwed: t.studentOwed + r.studentOwed,
         lessonCount: t.lessonCount + r.lessons,
@@ -478,9 +569,14 @@ export class SalaryCenterTopUpService {
         // has to be chased by hand. Counted here so the UI can say so.
         inactiveStudentCount:
           t.inactiveStudentCount + (r.student.status === 'ACTIVE' ? 0 : 1),
+        repaidStudentCount: t.repaidStudentCount,
         monthKeys: t.monthKeys,
       }),
-      { ...emptyTotals, monthKeys: [...allMonthKeys].sort() },
+      {
+        ...emptyTotals,
+        repaidStudentCount: allRows.length - rows.length,
+        monthKeys: [...allMonthKeys].sort(),
+      },
     );
 
     return { month, floorMonth, period, data: rows, totals, isForecast };
