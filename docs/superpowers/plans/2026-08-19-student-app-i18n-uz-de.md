@@ -306,6 +306,8 @@ git commit -m "Read copy through the language store so screens re-render on swit
 - Modify: `student-app/src/app/scan.tsx`
 - Modify: `student-app/src/app/settings.tsx`
 - Modify: `student-app/src/design/components/tab-bar.tsx`
+- Modify: `student-app/src/app/(tabs)/darslar.tsx` (faqat «Tez orada» matni)
+- Modify: `student-app/src/app/(tabs)/resurslar.tsx` (faqat «Tez orada» matni)
 
 **Interfaces:**
 - Consumes: `useT` (Task 1); `t.more`, `t.about`, `t.faq`, `t.scan`, `t.settings`, `t.nav` bo'limlari

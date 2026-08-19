@@ -650,13 +650,16 @@ describe('AppVersionGuard', () => {
   it('rejects an outdated native app with 426', () => {
     process.env.MIN_APP_VERSION = '2.0.0';
     const guard = new AppVersionGuard();
+
+    let caught: unknown;
     try {
       guard.canActivate(ctx({ 'x-portal': 'student', 'x-app-version': '1.9.0' }));
-      throw new Error('expected the guard to throw');
     } catch (err) {
-      expect(err).toBeInstanceOf(HttpException);
-      expect((err as HttpException).getStatus()).toBe(426);
+      caught = err;
     }
+
+    expect(caught).toBeInstanceOf(HttpException);
+    expect((caught as HttpException).getStatus()).toBe(426);
   });
 
   it('rejects a native app that sends no version once a floor is set', () => {
