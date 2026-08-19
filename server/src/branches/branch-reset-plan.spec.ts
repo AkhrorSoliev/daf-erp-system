@@ -76,7 +76,9 @@ function fakePrisma(data: {
     },
     dailyFinancialSnapshot: {
       findMany: jest.fn(async ({ where }: any) =>
-        d.snapshots.filter((r) => inList(r.branchId, where?.branchId)),
+        d.snapshots.filter(
+          (r) => inList(r.branchId, where?.branchId) && inList(r.id, where?.id),
+        ),
       ),
     },
   } as any;
@@ -180,5 +182,15 @@ describe('verifyBranchResetPlan', () => {
       rooms: [...namanganish.rooms, { id: 'r-fargona', branchId: 1 }],
     });
     await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/r-fargona/);
+  });
+
+  it('boshqa filialning kunlik suratini tutadi', async () => {
+    const [, plan] = await clean();
+    plan.snapshotIds.push(999);
+    const prisma = fakePrisma({
+      ...namanganish,
+      snapshots: [...namanganish.snapshots, { id: 999, branchId: 1 }],
+    });
+    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/999/);
   });
 });

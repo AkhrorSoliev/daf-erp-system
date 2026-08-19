@@ -161,6 +161,22 @@ export async function verifyBranchResetPlan(
     }
   }
 
+  if (plan.snapshotIds.length) {
+    const strays = await prisma.dailyFinancialSnapshot.findMany({
+      where: { id: { in: plan.snapshotIds } },
+      select: { id: true, branchId: true },
+    });
+    for (const s of strays) {
+      // `branchId: null` — kompaniya darajasidagi qator — reset rejasida
+      // HECH QACHON bo'lmasligi kerak, shuning uchun bu ham muammo hisoblanadi.
+      if (s.branchId === null) {
+        problems.push(`Surat #${s.id} kompaniya darajasidagi qator (branchId yo'q)`);
+      } else if (s.branchId !== plan.branchId) {
+        problems.push(`Surat #${s.id} #${s.branchId} filialga tegishli`);
+      }
+    }
+  }
+
   const scoped: [string, string[], () => Promise<{ id: string; branchId: number | null }[]>][] = [
     [
       'Guruh',
