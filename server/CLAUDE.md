@@ -7,6 +7,24 @@ An ERP system for **DaF Sprachzentrum** language school. Backend API serving the
 > **Roles:** CEO, Branch Director, Administrator, Teacher, Cashier. The system supports **multiple branches** (filials).
 > Roles are stored in a `Role` table with fixed IDs (1–6: CEO=1, Branch Director=2, Administrator=3, Teacher=4, Cashier=5, **Student=6**), linked to users via `UserRole` join table (many-to-many). The Student role id is exposed as `STUDENT_ROLE_ID` constant in `src/students/shared/student-select.ts`.
 
+## Arxitektura qarorlari (ADR)
+
+**`docs/adr/` — qaytarish qiyin bo'lgan qarorlar jurnali.** Kodni o'zgartirishdan
+oldin [docs/adr/README.md](../docs/adr/README.md) indeksini ko'ring: agar tegayotgan
+joyingiz ADR bilan qoplangan bo'lsa, o'sha ADR **majburiy qoida** — kod unga
+moslashadi, teskarisi emas.
+
+Hozirgi ADR'lar quyidagilarni qamraydi: filial ajratilishi (0001), fail-closed
+filial qamrovi (0002), route siyosati manifesti (0003), ledger'ga langarlangan
+balans (0004), hisobot pastki chegarasi (0005), oylikning yagona manbasi (0006),
+lavozim va rol farqi (0007), ro'yxatdan o'tish aktori (0008).
+
+**Yangi ADR qachon yoziladi:** ma'lumot modeli, pul semantikasi, filial qoidasi,
+fail-open/fail-closed tanlovi yoki tashqi xizmat tanlovi o'zgarsa — ADR **o'sha
+ishning o'zi bilan bitta PR ichida** yoziladi. Qabul qilingan ADR hech qachon
+tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
+`Almashtirildi` ga o'tadi. Batafsil: [docs/adr/README.md](../docs/adr/README.md).
+
 ## Tech Stack
 
 - **NestJS** (TypeScript) — API framework
@@ -624,6 +642,7 @@ A `@Roles()` guard proves the caller has a role, not that the record is theirs. 
 - `resolveCallerBranchScope(prisma, userId)` → `{ kind: 'all' }` for a CEO (deliberately branch-less, spans everything) or `{ kind: 'branches', branchIds }` for everyone else, merging `mainBranch` and `UserBranch` because different parts of the system wrote one or the other. A non-CEO with no branch gets an **empty** list — nothing, never everything.
 - **The scope is a SET, deliberately.** An Administrator normally works in one branch, but attaching several is supported: pick multiple branches on the employee form and they act in each exactly like a local admin. Confining to `mainBranch` alone would lock a multi-branch admin out of every branch but one. `mainBranch` remains the tiebreak for the places that need a single answer (payroll, outreach).
 - `assertCallerInBranch(prisma, userId, branchId, message?)` — throws `ForbiddenException` unless the caller may act on that branch.
+- **A write with no signed-in caller must SAY so.** `UsersService.create` takes a required `UserWriteActor` — `{ kind: 'user', id }` or `{ kind: 'self-registration' }` — never a bare optional `callerUserId`. Only `self-registration` skips the per-branch caller check, and only because `generateEmployeeLinkPayload` already applied the same branch + role ceiling when it HMAC-signed the invitation link. Treating a missing argument as "skip the check" is what broke Telegram staff registration for twelve days across both branches (see ADR-0008): the bot is the one caller-less path in the system, the branch guard refused it, and a bare `catch {}` in the scene turned a total outage into a polite apology with nothing in the logs. Registration scenes now log the failure. When adding a caller-less path, add an actor variant — do not widen the "no caller" case.
 
 Applied to:
 

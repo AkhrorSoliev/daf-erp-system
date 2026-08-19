@@ -106,7 +106,7 @@ describe('UsersController — role guards', () => {
       );
       expect(mockService.create).toHaveBeenCalledWith(
         expect.objectContaining({ companyId: 1001 }),
-        42,
+        { kind: 'user', id: 42 },
       );
     });
   });

@@ -5,8 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Pencil,
-  BookOpen,
-  Clock,
   Users,
   Banknote,
   FileText,
@@ -175,24 +173,6 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               icon={<Users className="h-4 w-4 text-muted-foreground" />}
               label="Guruhlar"
               value={`${groupCount} ta`}
-            />
-            <InfoRow
-              icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-              label="Kurs davomiyligi"
-              value={
-                course.courseDuration
-                  ? `${course.courseDuration} oy`
-                  : "—"
-              }
-            />
-            <InfoRow
-              icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
-              label="Darslar soni"
-              value={
-                course.lessonDuration
-                  ? `${course.lessonDuration} ta`
-                  : "—"
-              }
             />
             <InfoRow
               icon={<RefreshCw className="h-4 w-4 text-muted-foreground" />}

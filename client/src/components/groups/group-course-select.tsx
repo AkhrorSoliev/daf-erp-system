@@ -42,7 +42,6 @@ export function GroupCourseSelect({
           {courses.map((c) => (
             <SelectItem key={c.id} value={c.id}>
               {c.name}
-              {c.courseDuration ? ` (${c.courseDuration} oy)` : ""}
             </SelectItem>
           ))}
         </SelectContent>

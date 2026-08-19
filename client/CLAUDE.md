@@ -6,6 +6,24 @@ An ERP system for **DaF Sprachzentrum** language school. Manages branches, staff
 
 > **Language:** The entire UI of this project is in **Uzbek** (O'zbek tili). All labels, placeholders, messages, and user-facing text must be written in Uzbek.
 
+## Arxitektura qarorlari (ADR)
+
+**`docs/adr/` — qaytarish qiyin bo'lgan qarorlar jurnali.** Kodni o'zgartirishdan
+oldin [docs/adr/README.md](../docs/adr/README.md) indeksini ko'ring: agar tegayotgan
+joyingiz ADR bilan qoplangan bo'lsa, o'sha ADR **majburiy qoida** — kod unga
+moslashadi, teskarisi emas.
+
+Hozirgi ADR'lar quyidagilarni qamraydi: filial ajratilishi (0001), fail-closed
+filial qamrovi (0002), route siyosati manifesti (0003), ledger'ga langarlangan
+balans (0004), hisobot pastki chegarasi (0005), oylikning yagona manbasi (0006),
+lavozim va rol farqi (0007), ro'yxatdan o'tish aktori (0008).
+
+**Yangi ADR qachon yoziladi:** ma'lumot modeli, pul semantikasi, filial qoidasi,
+fail-open/fail-closed tanlovi yoki tashqi xizmat tanlovi o'zgarsa — ADR **o'sha
+ishning o'zi bilan bitta PR ichida** yoziladi. Qabul qilingan ADR hech qachon
+tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
+`Almashtirildi` ga o'tadi. Batafsil: [docs/adr/README.md](../docs/adr/README.md).
+
 ## Roles
 
 - **CEO** (id: 1) — Full system access
@@ -681,7 +699,7 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 
 **Responsive shell (`student-portal-layout.tsx`):** mobile + tablet (`< lg`) get the native-app feel (centered column, floating bottom nav); desktop (`>= lg`) swaps to a persistent left side rail + wider column. Role-gates to Student (role id 6).
 
-**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground. AI is the raised center coral FAB.
+**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground.
 
 `help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; desktop drops it from the rail and lists it in a `lg`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
 

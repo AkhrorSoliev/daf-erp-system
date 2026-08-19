@@ -24,8 +24,8 @@ export interface FeatureCardProps {
   className?: string;
 }
 
-// Bold gradient feature tile — the headline call-to-action (e.g. the AI Deutsch
-// Tutor card). Renders as a Link when `href` is set, else a button.
+// Bold gradient feature tile — the headline call-to-action on a screen.
+// Renders as a Link when `href` is set, else a button.
 export function FeatureCard({
   title,
   subtitle,

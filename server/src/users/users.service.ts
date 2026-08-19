@@ -72,6 +72,33 @@ function formatUser(user: any) {
 const CEO_ROLE_ID = 1;
 const TEACHER_ROLE_ID = 4;
 
+/**
+ * Who is performing a write that grants access.
+ *
+ * `user` — a signed-in caller. Every branch the write touches is checked
+ * against the branches that caller actually holds, because creating a user IS
+ * granting access to a branch.
+ *
+ * `self-registration` — the Telegram bot, where the person being created is a
+ * stranger holding a signed invitation link and there is simply no caller to
+ * confine. The authorisation happened when the link was minted:
+ * `generateEmployeeLinkPayload` refuses a branch the requester does not hold
+ * and roles above their own level, then HMAC-signs the pair, and the bot
+ * verifies that signature before the scene ever starts. That is the same
+ * ceiling `assertCallerInBranch` applies to the signed-in path — reached one
+ * step earlier.
+ *
+ * It is a stated variant rather than an absent argument on purpose. The
+ * absence of a caller used to mean "skip the check" by accident, which is how
+ * bot registration broke: a rule meant to confine branch directors ended up
+ * refusing the one caller-less path in the system, silently. Now a write that
+ * forgets its caller is refused, and the only way past the branch check is to
+ * say out loud that nobody is behind this write.
+ */
+export type UserWriteActor =
+  | { kind: 'user'; id: number }
+  | { kind: 'self-registration' };
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -86,7 +113,7 @@ export class UsersService {
     branchIds: number[] | undefined,
     mainBranch: number | null | undefined,
     companyId: number,
-    callerUserId?: number,
+    actor: UserWriteActor,
     opts?: {
       position?: string | null;
       hasCredentials?: boolean;
@@ -98,10 +125,19 @@ export class UsersService {
       passwordAfter?: boolean;
     },
   ) {
-    // Role escalation guard: only CEO can grant CEO role
-    if (callerUserId && roleIds?.includes(CEO_ROLE_ID)) {
+    // Fail closed before any rule reads the actor: a caller-shaped actor with
+    // no id is a bug at the call site, and it must never fall through to the
+    // permissive branch the way a missing argument once did.
+    if (actor.kind === 'user' && actor.id == null) {
+      throw new ForbiddenException('Foydalanuvchi aniqlanmadi');
+    }
+
+    // Role escalation guard: only CEO can grant CEO role.
+    // A self-registration has no caller to escalate FROM — the equivalent
+    // ceiling (`GRANTABLE_ROLE_IDS`) was applied to whoever minted the link.
+    if (actor.kind === 'user' && roleIds?.includes(CEO_ROLE_ID)) {
       const caller = await this.prisma.user.findUnique({
-        where: { id: callerUserId },
+        where: { id: actor.id },
         select: {
           roles: { select: { role: { select: { name: true } } } },
         },
@@ -109,9 +145,7 @@ export class UsersService {
       const callerIsCeo =
         caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
       if (!callerIsCeo) {
-        throw new ForbiddenException(
-          'CEO rolini faqat CEO tayinlashi mumkin',
-        );
+        throw new ForbiddenException('CEO rolini faqat CEO tayinlashi mumkin');
       }
     }
 
@@ -174,7 +208,7 @@ export class UsersService {
       });
       if (validCount !== branchIds!.length) {
         throw new BadRequestException(
-          "Tanlangan filiallar bu kompaniyaga tegishli emas",
+          'Tanlangan filiallar bu kompaniyaga tegishli emas',
         );
       }
     }
@@ -195,16 +229,23 @@ export class UsersService {
     // OF NAMANGAN, with a password they chose, in a branch they cannot even
     // view. A CEO spans everything and passes; a caller who holds neither
     // branch is refused for both.
-    for (const branchId of [
-      ...(branchIds ?? []),
-      ...(mainBranch != null ? [mainBranch] : []),
-    ]) {
-      await assertCallerInBranch(
-        this.prisma,
-        callerUserId,
-        branchId,
-        "Bu filialga xodim qo'shish huquqingiz yo'q",
-      );
+    //
+    // A self-registration is skipped here and ONLY here: there is no caller to
+    // hold a branch, and the branch it is being written into came from a
+    // signature that already encoded exactly this permission (see
+    // `UserWriteActor`). Every other rule above still ran.
+    if (actor.kind === 'user') {
+      for (const branchId of [
+        ...(branchIds ?? []),
+        ...(mainBranch != null ? [mainBranch] : []),
+      ]) {
+        await assertCallerInBranch(
+          this.prisma,
+          actor.id,
+          branchId,
+          "Bu filialga xodim qo'shish huquqingiz yo'q",
+        );
+      }
     }
 
     // The converse of the refusal above, and just as load-bearing: a role IS
@@ -216,6 +257,8 @@ export class UsersService {
     // for nothing, leaving a real role behind a password that does not exist.
     // Ordered last so an authorization failure (branch, role escalation) is
     // still reported before a missing password.
+    //
+    // NOTE: applies to self-registration too — the bot always generates one.
     if (hasRoles && opts?.passwordAfter === false) {
       throw new BadRequestException(
         'Tizim roli berilgan xodim uchun parol majburiy',
@@ -340,11 +383,7 @@ export class UsersService {
     return { data, total, page, pageSize };
   }
 
-  async findById(
-    id: number,
-    companyId: number,
-    scope: ReportBranchIds,
-  ) {
+  async findById(id: number, companyId: number, scope: ReportBranchIds) {
     // `updateUser` was already branch-confined (`assertCallerMayTouchUser`)
     // because it can rewrite a password; the READ beside it was not, so one
     // branch's admin could still open another branch's employee record.
@@ -440,7 +479,7 @@ export class UsersService {
       roleIds?: number[];
       branchIds?: number[];
     },
-    callerUserId?: number,
+    actor: UserWriteActor,
   ) {
     // Validate role IDs exist
     if (data.roleIds?.length) {
@@ -464,7 +503,7 @@ export class UsersService {
       data.branchIds,
       data.mainBranch,
       data.companyId,
-      callerUserId,
+      actor,
       {
         position,
         hasCredentials: !!(data.password || data.login),
@@ -599,7 +638,7 @@ export class UsersService {
         nextBranchIds,
         nextMainBranch,
         user.companyId,
-        changedById,
+        { kind: 'user', id: changedById },
         {
           // Only validated when the caller actually sends one — an existing
           // employee with no title yet must stay editable.
@@ -691,11 +730,7 @@ export class UsersService {
     return formatUser(updated);
   }
 
-  async softDelete(
-    id: number,
-    deletedById: number,
-    callerCompanyId?: number,
-  ) {
+  async softDelete(id: number, deletedById: number, callerCompanyId?: number) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });

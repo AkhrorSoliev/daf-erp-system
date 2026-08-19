@@ -26,7 +26,6 @@ import { CommentsModule } from './comments/comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
 import { AttendanceModule } from './attendance/attendance.module';
-import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
@@ -71,7 +70,6 @@ import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
     PrismaModule,
     DebtAgeModule,
     RedisModule,
-    AiModule,
     AuthModule,
     UsersModule,
     BranchesModule,

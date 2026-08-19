@@ -1,7 +1,6 @@
 import {
   House,
   CalendarBlank,
-  Sparkle,
   Wallet,
   DotsThreeOutline,
   ChartLineUp,
@@ -26,8 +25,6 @@ export interface StudentNavItem {
    *   student navigates to often)
    */
   slot: "tab" | "more" | "both" | "help";
-  /** Renders as the raised center coral FAB in the bottom nav (AI). */
-  raised?: boolean;
   /** Accent tone for the More-hub icon tile. */
   tone?: LumioTone;
 }
@@ -43,14 +40,6 @@ export const studentNavItems: StudentNavItem[] = [
     icon: CalendarBlank,
     slot: "both",
     tone: "sky",
-  },
-  {
-    title: "AI",
-    url: "/portal/ai",
-    icon: Sparkle,
-    slot: "tab",
-    raised: true,
-    tone: "grape",
   },
   {
     title: "To'lovlar",
@@ -102,7 +91,7 @@ export const bottomNavItems = studentNavItems.filter(
 );
 
 /**
- * Desktop side rail: both + more (AI shown as a feature card, not a rail row).
+ * Desktop side rail: both + more.
  * `help` items are deliberately absent — on desktop they hang off Settings.
  */
 export const railNavItems = studentNavItems.filter(

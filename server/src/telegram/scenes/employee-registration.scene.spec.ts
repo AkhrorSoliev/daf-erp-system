@@ -66,6 +66,12 @@ describe('employee-registration.scene — confirm_registration', () => {
     const payload = usersService.create.mock.calls[0][0];
     expect(payload.position).toBe('Administrator');
     expect(payload.roleIds).toEqual([3]);
+    // The actor must be stated. `UsersService.create` runs the branch-scope
+    // guard for a caller-shaped actor, and there is no caller here — passing
+    // nothing is what made every bot registration fail with a Forbidden.
+    expect(usersService.create.mock.calls[0][1]).toEqual({
+      kind: 'self-registration',
+    });
   });
 
   it('picks the SENIOR (lowest id) role for a multi-role grant, e.g. Filial direktori over Kassir', async () => {

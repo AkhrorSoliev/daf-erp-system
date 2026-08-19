@@ -21,6 +21,7 @@ import {
 
 import { queryClient } from '@/api/query-client';
 import { useAuth } from '@/auth/auth-store';
+import { useLanguageStore } from '@/i18n';
 import { useThemeStore } from '@/design/theme';
 import { ThemeTransitionProvider } from '@/design/theme-transition';
 import { useColors, themeColors } from '@/design/colors';
@@ -40,6 +41,8 @@ export default function RootLayout() {
   const hydrate = useAuth((s) => s.hydrate);
   const hydrateTheme = useThemeStore((s) => s.hydrate);
   const [themeReady, setThemeReady] = useState(false);
+  const hydrateLang = useLanguageStore((s) => s.hydrate);
+  const [langReady, setLangReady] = useState(false);
 
   const { colorScheme } = useColorScheme();
   const colors = useColors();
@@ -71,7 +74,8 @@ export default function RootLayout() {
   useEffect(() => {
     hydrate();
     hydrateTheme().finally(() => setThemeReady(true));
-  }, [hydrate, hydrateTheme]);
+    hydrateLang().finally(() => setLangReady(true));
+  }, [hydrate, hydrateTheme, hydrateLang]);
 
   // Theme the Android system navigation bar to match (no-op on iOS / older builds).
   useEffect(() => {
@@ -80,7 +84,7 @@ export default function RootLayout() {
     NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark').catch(() => {});
   }, [colors.bg, isDark]);
 
-  const ready = fontsLoaded && status !== 'loading' && themeReady;
+  const ready = fontsLoaded && status !== 'loading' && themeReady && langReady;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
