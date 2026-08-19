@@ -173,12 +173,6 @@ export function GroupInfoCard({
             value={format(new Date(group.endDate), "dd.MM.yyyy")}
           />
         )}
-        {group.course.courseDuration && (
-          <InfoRow
-            label="Davomiyligi"
-            value={`${group.course.courseDuration} oy`}
-          />
-        )}
         <InfoRow
           label="Narxi"
           value={`${formatPrice(group.course.price)} so'm`}

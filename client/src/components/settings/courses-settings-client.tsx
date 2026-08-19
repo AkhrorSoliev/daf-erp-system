@@ -163,8 +163,6 @@ export function CoursesSettingsClient() {
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Kurs nomi</TableHead>
-              <TableHead>Davomiyligi</TableHead>
-              <TableHead>Darslar soni</TableHead>
               <TableHead>Sikl darslari</TableHead>
               <TableHead>Narxi</TableHead>
               <TableHead>Holati</TableHead>
@@ -174,14 +172,14 @@ export function CoursesSettingsClient() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={6}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -202,16 +200,6 @@ export function CoursesSettingsClient() {
                   <TableCell className="font-medium">
                     <Link href={`/settings/courses/${course.id}`} className="absolute inset-0" />
                     {course.name}
-                  </TableCell>
-                  <TableCell>
-                    {course.courseDuration
-                      ? `${course.courseDuration} oy`
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    {course.lessonDuration
-                      ? `${course.lessonDuration} ta`
-                      : "—"}
                   </TableCell>
                   <TableCell>
                     {course.lessonPaymentCount
