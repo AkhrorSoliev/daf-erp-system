@@ -185,28 +185,28 @@ export const uz = {
     contact: 'Aloqa',
     version: (v: string) => `Ilova versiyasi ${v}`,
   },
-  faq: [
-    {
+  faq: {
+    topUp: {
       q: "Balansni qanday to'ldiraman?",
       a: "Ko'proq → To'lovlar bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
     },
-    {
+    attendance: {
       q: 'Davomat qanday belgilanadi?',
       a: "Darsga kelganingizda Asosiy sahifadagi «QR bilan belgilash» tugmasini bosib, dars QR kodini skanerlang.",
     },
-    {
+    negativeBalance: {
       q: "Balansim manfiy bo'lsa nima bo'ladi?",
       a: "Manfiy balans qarzdorlikni bildiradi. Darslarni davom ettirish uchun iltimos balansni to'ldiring.",
     },
-    {
+    scheduleAndAttendance: {
       q: 'Jadvalim va davomatim qayerda?',
       a: "Asosiy sahifada balans, bugungi darslar va davomat ko'rsatkichlari jamlangan.",
     },
-    {
+    profilePhoto: {
       q: "Profil rasmini qanday o'zgartiraman?",
       a: "Ko'proq → Profil bo'limiga kiring, rasm ustiga bosing va galereya yoki kameradan rasm tanlang.",
     },
-  ],
+  },
 };
 
 /** The canonical string shape every language file must satisfy. */

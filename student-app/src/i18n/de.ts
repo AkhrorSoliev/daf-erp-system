@@ -177,26 +177,26 @@ export const de: Dict = {
     contact: 'Kontakt',
     version: (v: string) => `App-Version ${v}`,
   },
-  faq: [
-    {
+  faq: {
+    topUp: {
       q: 'Wie lade ich mein Guthaben auf?',
       a: 'Gehen Sie zu Mehr → Zahlungen, wählen Sie den Betrag und zahlen Sie mit Payme oder Click. Das Guthaben wird in wenigen Sekunden aktualisiert.',
     },
-    {
+    attendance: {
       q: 'Wie wird die Anwesenheit erfasst?',
-      a: 'Wenn Sie zum Unterricht kommen, tippen Sie auf der Startseite auf «Mit QR einchecken» und scannen Sie den Unterrichts-QR-Code.',
+      a: 'Wenn Sie zum Unterricht kommen, tippen Sie auf der Startseite auf „Mit QR einchecken" und scannen Sie den Unterrichts-QR-Code.',
     },
-    {
+    negativeBalance: {
       q: 'Was passiert, wenn mein Guthaben negativ ist?',
       a: 'Ein negatives Guthaben bedeutet Schulden. Bitte laden Sie Ihr Guthaben auf, um den Unterricht fortzusetzen.',
     },
-    {
+    scheduleAndAttendance: {
       q: 'Wo finde ich meinen Stundenplan und meine Anwesenheit?',
       a: 'Auf der Startseite sind Guthaben, heutige Kurse und Anwesenheitsübersicht zusammengefasst.',
     },
-    {
+    profilePhoto: {
       q: 'Wie ändere ich mein Profilfoto?',
       a: 'Gehen Sie zu Mehr → Profil, tippen Sie auf das Foto und wählen Sie ein Bild aus Galerie oder Kamera.',
     },
-  ],
+  },
 };

@@ -9,7 +9,7 @@ export default function Faq() {
       <StackHeader title={t.tabs.faq} />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-3 p-5 pt-2">
-          {t.faq.map((f, i) => (
+          {Object.values(t.faq).map((f, i) => (
             <FadeIn key={i} index={i}>
               <Card className="gap-1.5">
                 <Text variant="h3">{f.q}</Text>
