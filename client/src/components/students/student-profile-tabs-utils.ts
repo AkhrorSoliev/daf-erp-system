@@ -85,9 +85,22 @@ export interface StudentTransaction {
     debtFirstLessonDate: string | null;
     debtLastLessonDate: string | null;
     toLessons: number;
+    // `lessonCount` — shu pul to'lagan darslarning HAMMASI (o'tilgani ham,
+    // oldindan to'langani ham). `firstLessonDate`/`lastLessonDate` oralig'i
+    // esa faqat O'TILGANLARINI qamraydi — ikkisini bitta qatorda yonma-yon
+    // yozish (#10601: "10 ta darsga yetdi · 12.08 — 19.08") ikki xil
+    // to'plamni bitta gap qilib ko'rsatgan edi. Shuning uchun quyidagi ikki
+    // son bor: qaysi qismi o'tilgan, qaysi qismi oldinda.
     lessonCount: number;
+    heldLessonCount: number;
+    pendingLessonCount: number;
     firstLessonDate: string | null;
     lastLessonDate: string | null;
+    // Oldinda turgan darslarning TAXMINIY oxirgi sanasi — guruh jadvalidan
+    // proyeksiya, fakt emas. `null` = ayta olmaymiz (jadval noma'lum, bir
+    // nechta guruh aralashgan, yoki guruh tugab qolgan). UI uni "taxminan"
+    // deb belgilamasa, o'sha eski nuqson yangi shaklda qaytadi.
+    projectedLastLessonDate: string | null;
     toOther: number;
     unspent: number;
     reconciled: boolean;

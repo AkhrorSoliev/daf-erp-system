@@ -84,6 +84,21 @@ export interface CreditAllocation {
   /** Shu puldan (qarz yopilgandan keyin) darslarga ketgani. */
   toLessons: number;
   lessonCount: number;
+  /**
+   * `lessonCount` dan ALLAQACHON O'TILGANI — ya'ni sanasi bor qismi.
+   * `firstLessonDate`/`lastLessonDate` oralig'i aynan shu darslarni qamraydi,
+   * `lessonCount` ni emas. Ikkisi teng bo'lmasa, karta oraliqni butun songa
+   * tegishli qilib ko'rsatmasligi kerak (#10601: 10 dars, oraliq 3 tasiniki).
+   */
+  heldLessonCount: number;
+  /** `lessonCount` dan hali O'TILMAGANI — oldindan to'langan darslar. */
+  pendingLessonCount: number;
+  /**
+   * O'sha kutilayotgan darslarni yozgan LESSON_DEDUCTION id'lari. Chaqiruvchi
+   * shular orqali guruh jadvalini topib, "qachongacha yetadi" ni proyeksiya
+   * qiladi — replay'ning o'zi jadvalni bilmaydi va bilishi ham shart emas.
+   */
+  pendingDeductionIds: string[];
   firstLessonDate: Date | null;
   lastLessonDate: Date | null;
   /** Dars bo'lmagan yechimlar: pul qaytarish, imtihon to'lovi, withdrawal. */
@@ -108,6 +123,8 @@ interface CashFragment {
 
 interface DebtFragment {
   key: string;
+  /** Bu bo'lakni yozgan qator — kutilayotgan darslarni paketiga bog'lash uchun. */
+  rowId: string;
   remaining: number;
   date: Date | null;
   isLesson: boolean;
@@ -121,6 +138,9 @@ const blankAllocation = (amount: number): CreditAllocation => ({
   debtLastLessonDate: null,
   toLessons: 0,
   lessonCount: 0,
+  heldLessonCount: 0,
+  pendingLessonCount: 0,
+  pendingDeductionIds: [],
   firstLessonDate: null,
   lastLessonDate: null,
   toOther: 0,
@@ -210,7 +230,7 @@ export function replayStudentLedger(
       if (alloc) {
         if (d.isLesson) {
           alloc.toLessons += take;
-          countLesson(alloc, d.key, d.date);
+          countLesson(alloc, d.key, d.date, d.rowId);
         } else {
           alloc.toOther += take;
         }
@@ -233,11 +253,24 @@ export function replayStudentLedger(
     alloc: CreditAllocation,
     key: string,
     date: Date | null,
+    rowId: string,
   ) => {
     const seen = lessonKeys.get(alloc);
     if (seen && !seen.has(key)) {
       seen.add(key);
       alloc.lessonCount += 1;
+      // Sanasi yo'q bo'lak = hali o'tilmagan dars. U `lessonCount` ga kiradi
+      // (puli to'langan), lekin sana oralig'ini KENGAYTIRMAYDI — shuning
+      // uchun ikkalasini alohida sanaymiz, aks holda karta "10 ta dars ·
+      // 12.08 — 19.08" deb ikki xil to'plamni bitta qatorda aytadi.
+      if (date) {
+        alloc.heldLessonCount += 1;
+      } else {
+        alloc.pendingLessonCount += 1;
+        if (!alloc.pendingDeductionIds.includes(rowId)) {
+          alloc.pendingDeductionIds.push(rowId);
+        }
+      }
     }
     const range = { first: alloc.firstLessonDate, last: alloc.lastLessonDate };
     widen(range, date);
@@ -324,7 +357,7 @@ export function replayStudentLedger(
           if (alloc) {
             if (isLesson) {
               alloc.toLessons += take;
-              countLesson(alloc, key, slice.date);
+              countLesson(alloc, key, slice.date, row.id);
             } else {
               alloc.toOther += take;
             }
@@ -336,7 +369,13 @@ export function replayStudentLedger(
         }
 
         if (need > 0) {
-          debt.push({ key, remaining: need, date: slice.date, isLesson });
+          debt.push({
+            key,
+            rowId: row.id,
+            remaining: need,
+            date: slice.date,
+            isLesson,
+          });
         }
       }
     }

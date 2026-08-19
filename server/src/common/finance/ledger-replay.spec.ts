@@ -300,6 +300,53 @@ describe('replayStudentLedger — the defect classes this replaces', () => {
     expect(b.lastLessonDate).toEqual(d('2026-08-08'));
   });
 
+  it('separates lessons already held from prepaid ones still ahead', () => {
+    // #10601 (12.08.2026): 440 000 so'm 10 darslik paketni to'ladi, lekin
+    // o'sha paytda faqat 3 tasi o'tilgan edi. Karta "10 ta darsga yetdi ·
+    // 12.08 — 19.08" deb yozardi — son 10 ta darsni, sana esa faqat 3 tasini
+    // tasvirlardi. Endi qolgani alohida sanaladi.
+    const rows = chain([pay('P', 333330), ded('D', -333330)]);
+    const slices: LessonSlice[] = [
+      { cost: 33333, date: d('2026-08-12') },
+      { cost: 33333, date: d('2026-08-17') },
+      { cost: 33333, date: d('2026-08-19') },
+      ...Array.from({ length: 7 }, () => ({ cost: 33333, date: null })),
+    ];
+    const r = replayStudentLedger(rows, new Map([['D', slices]]));
+    const p = r.byCredit.get('P')!;
+
+    expect(p.toLessons).toBe(333330);
+    expect(p.lessonCount).toBe(10);
+    // Sana oralig'i FAQAT o'tilgan darslarniki — shuning uchun u nechta
+    // darsni qamrayotgani ochiq aytiladi.
+    expect(p.heldLessonCount).toBe(3);
+    expect(p.pendingLessonCount).toBe(7);
+    expect(p.firstLessonDate).toEqual(d('2026-08-12'));
+    expect(p.lastLessonDate).toEqual(d('2026-08-19'));
+    // Kelajakdagi darslarni qaysi paket yozgani — sana proyeksiyasi uchun.
+    expect(p.pendingDeductionIds).toEqual(['D']);
+  });
+
+  it('reports no pending lessons when every funded slice was held', () => {
+    const rows = chain([pay('P', 66666), ded('D', -66666)]);
+    const r = replayStudentLedger(
+      rows,
+      new Map([
+        [
+          'D',
+          [
+            { cost: 33333, date: d('2026-08-12') },
+            { cost: 33333, date: d('2026-08-14') },
+          ],
+        ],
+      ]),
+    );
+    const p = r.byCredit.get('P')!;
+    expect(p.heldLessonCount).toBe(2);
+    expect(p.pendingLessonCount).toBe(0);
+    expect(p.pendingDeductionIds).toEqual([]);
+  });
+
   it('fails closed when the stored chain does not add up', () => {
     // Zanjirda teshik (qator tushib qolgan) — biz yamalgan son emas,
     // "ishonchsiz" belgisini qaytaramiz.
