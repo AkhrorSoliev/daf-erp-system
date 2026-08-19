@@ -1,0 +1,594 @@
+/**
+ * Filialni bo'shatish rejasi — nima o'chishi va bu xavfsizmi.
+ *
+ * Namangan (#2) go-live'dan oldin seed ma'lumot bilan to'ldirilgan va noldan
+ * qayta ochish uchun tozalanishi kerak bo'ldi. Bu modul o'chirishning O'ZINI
+ * qilmaydi: u aniq ID ro'yxatlarini yig'adi, `branch-reset-execute.ts` esa
+ * faqat shu ro'yxatlarga tayanadi.
+ *
+ * Nega ochiq `WHERE branchId = ?` emas. O'chirish qaytarib bo'lmaydi va
+ * noto'g'ri yozilgan bitta shart butun filialni yo'q qilishi mumkin. Ro'yxat
+ * esa yig'ilgandan keyin `verifyBranchResetPlan` bilan qayta so'raladi: har bir
+ * ID chindan ham shu filialga tegishli ekani ikkinchi marta, mustaqil ravishda
+ * tasdiqlanadi.
+ */
+import { Prisma, PrismaClient } from '@prisma/client';
+
+type PrismaLike = PrismaClient | Prisma.TransactionClient;
+
+/** Tekshiruvdan o'tmagan reja. Chiqishi — tranzaksiya bekor bo'lishi. */
+export class BranchResetUnsafeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BranchResetUnsafeError';
+  }
+}
+
+export interface BranchResetPlan {
+  branchId: number;
+  branchName: string;
+  companyId: number;
+  /** Shu filialga biriktirilgan o'quvchilar. */
+  studentIds: number[];
+  /** Ularning login akkauntlari (`Student.userId`), null bo'lganlari tushadi. */
+  studentUserIds: number[];
+  /** Filial xodimlari — bir nechta filialda turganlari CHIQARIB TASHLANGAN. */
+  staffUserIds: number[];
+  /** Ataylab saqlangan ko'p filialli foydalanuvchilar (hozircha faqat CEO). */
+  keptUserIds: number[];
+  enrollmentIds: string[];
+  groupIds: string[];
+  roomIds: string[];
+  courseIds: string[];
+  snapshotIds: number[];
+}
+
+export async function buildBranchResetPlan(
+  prisma: PrismaLike,
+  branchId: number,
+): Promise<BranchResetPlan> {
+  const branch = await prisma.branch.findUnique({
+    where: { id: branchId },
+    select: { id: true, name: true, companyId: true },
+  });
+  if (!branch) {
+    throw new BranchResetUnsafeError(`Filial #${branchId} topilmadi`);
+  }
+
+  const studentLinks = await prisma.studentBranch.findMany({
+    where: { branchId },
+    select: { studentId: true },
+  });
+  const studentIds = studentLinks.map((r) => r.studentId);
+
+  const students = studentIds.length
+    ? await prisma.student.findMany({
+        where: { id: { in: studentIds } },
+        select: { id: true, userId: true },
+      })
+    : [];
+  const studentUserIds = students
+    .map((s) => s.userId)
+    .filter((id): id is number => id != null);
+
+  // Xodimlar. Bir nechta filialda turgan har qanday foydalanuvchi chiqarib
+  // tashlanadi — bu qoida CEO uchun yozilmagan, umumiy: agar odam boshqa
+  // filialda ham ishlayotgan bo'lsa, uni o'chirish o'sha filialni ham buzadi.
+  const branchStaff = await prisma.userBranch.findMany({
+    where: { branchId },
+    select: { userId: true },
+  });
+  const candidateIds = branchStaff.map((r) => r.userId);
+  const allLinksOfCandidates = candidateIds.length
+    ? await prisma.userBranch.findMany({
+        where: { userId: { in: candidateIds } },
+        select: { userId: true, branchId: true },
+      })
+    : [];
+  const linkCount = new Map<number, number>();
+  for (const link of allLinksOfCandidates) {
+    linkCount.set(link.userId, (linkCount.get(link.userId) ?? 0) + 1);
+  }
+  const staffUserIds = candidateIds.filter((id) => (linkCount.get(id) ?? 0) <= 1);
+  const keptUserIds = candidateIds.filter((id) => (linkCount.get(id) ?? 0) > 1);
+
+  const groups = await prisma.group.findMany({
+    where: { branchId },
+    select: { id: true },
+  });
+  const groupIds = groups.map((g) => g.id);
+
+  const enrollments = groupIds.length
+    ? await prisma.enrollment.findMany({
+        where: { groupId: { in: groupIds } },
+        select: { id: true },
+      })
+    : [];
+
+  const rooms = await prisma.room.findMany({ where: { branchId }, select: { id: true } });
+  const courses = await prisma.course.findMany({ where: { branchId }, select: { id: true } });
+  const snapshots = await prisma.dailyFinancialSnapshot.findMany({
+    where: { branchId },
+    select: { id: true },
+  });
+
+  return {
+    branchId,
+    branchName: branch.name,
+    companyId: branch.companyId,
+    studentIds,
+    studentUserIds,
+    staffUserIds,
+    keptUserIds,
+    enrollmentIds: enrollments.map((e) => e.id),
+    groupIds,
+    roomIds: rooms.map((r) => r.id),
+    courseIds: courses.map((c) => c.id),
+    snapshotIds: snapshots.map((s) => s.id),
+  };
+}
+
+/**
+ * Rejani mustaqil ravishda qayta so'rab tekshiradi. `buildBranchResetPlan`
+ * to'g'ri ishlaganiga ishonmaydi: har bir ID to'plami DB dan yana bir bor
+ * o'qiladi va boshqa filialga tegishli bironta qator yo'qligi tasdiqlanadi.
+ */
+export async function verifyBranchResetPlan(
+  prisma: PrismaLike,
+  plan: BranchResetPlan,
+): Promise<void> {
+  const problems: string[] = [];
+
+  if (plan.studentIds.length) {
+    const strays = await prisma.studentBranch.findMany({
+      where: { studentId: { in: plan.studentIds } },
+      select: { studentId: true, branchId: true },
+    });
+    for (const s of strays) {
+      if (s.branchId !== plan.branchId) {
+        problems.push(`O'quvchi #${s.studentId} #${s.branchId} filialda ham turibdi`);
+      }
+    }
+  }
+
+  if (plan.staffUserIds.length) {
+    const strays = await prisma.userBranch.findMany({
+      where: { userId: { in: plan.staffUserIds } },
+      select: { userId: true, branchId: true },
+    });
+    for (const u of strays) {
+      if (u.branchId !== plan.branchId) {
+        problems.push(`Xodim #${u.userId} #${u.branchId} filialda ham turibdi`);
+      }
+    }
+  }
+
+  // `studentUserIds` — `verifyBranchResetPlan` tekshiradigan yagona ID
+  // to'plami emas edi, lekin eng xavflisi: `UserBranch.userId` va
+  // `GroupTeacher.teacherId` ikkalasi ham CASCADE, shuning uchun
+  // `Student.userId` boshqa filialdagi xodim akkauntiga ishora qilib qolsa,
+  // o'sha akkaunt, uning rollari, filial bog'lanishi va dars biriktirmalari
+  // jimgina yo'q bo'lib ketardi.
+  if (plan.studentUserIds.length) {
+    const strayBranches = await prisma.userBranch.findMany({
+      where: { userId: { in: plan.studentUserIds } },
+      select: { userId: true, branchId: true },
+    });
+    for (const u of strayBranches) {
+      if (u.branchId !== plan.branchId) {
+        problems.push(
+          `O'quvchi akkaunti #${u.userId} #${u.branchId} filialda xodim sifatida ham turibdi`,
+        );
+      }
+    }
+    const keptSet = new Set(plan.keptUserIds);
+    for (const id of plan.studentUserIds) {
+      if (keptSet.has(id)) {
+        problems.push(`O'quvchi akkaunti #${id} saqlanadigan foydalanuvchilar ro'yxatida ham bor`);
+      }
+    }
+  }
+
+  if (plan.snapshotIds.length) {
+    const strays = await prisma.dailyFinancialSnapshot.findMany({
+      where: { id: { in: plan.snapshotIds } },
+      select: { id: true, branchId: true },
+    });
+    for (const s of strays) {
+      // `branchId: null` — kompaniya darajasidagi qator — reset rejasida
+      // HECH QACHON bo'lmasligi kerak, shuning uchun bu ham muammo hisoblanadi.
+      if (s.branchId === null) {
+        problems.push(`Surat #${s.id} kompaniya darajasidagi qator (branchId yo'q)`);
+      } else if (s.branchId !== plan.branchId) {
+        problems.push(`Surat #${s.id} #${s.branchId} filialga tegishli`);
+      }
+    }
+  }
+
+  const scoped: [string, string[], () => Promise<{ id: string; branchId: number | null }[]>][] = [
+    [
+      'Guruh',
+      plan.groupIds,
+      () =>
+        prisma.group.findMany({
+          where: { id: { in: plan.groupIds } },
+          select: { id: true, branchId: true },
+        }),
+    ],
+    [
+      'Xona',
+      plan.roomIds,
+      () =>
+        prisma.room.findMany({
+          where: { id: { in: plan.roomIds } },
+          select: { id: true, branchId: true },
+        }),
+    ],
+    [
+      'Kurs',
+      plan.courseIds,
+      () =>
+        prisma.course.findMany({
+          where: { id: { in: plan.courseIds } },
+          select: { id: true, branchId: true },
+        }),
+    ],
+  ];
+  for (const [label, ids, query] of scoped) {
+    if (!ids.length) continue;
+    for (const row of await query()) {
+      if (row.branchId !== plan.branchId) {
+        problems.push(`${label} ${row.id} #${row.branchId} filialga tegishli`);
+      }
+    }
+  }
+
+  if (problems.length) {
+    throw new BranchResetUnsafeError(
+      `Reja xavfsiz emas, o'chirish bekor qilindi:\n  - ${problems.join('\n  - ')}`,
+    );
+  }
+}
+
+/**
+ * Filialda pul tarixi yo'qligini tekshiradi.
+ *
+ * Bu fayl repozitoriyadagi eng xavfli kod bo'ladi: u tiklab bo'lmaydigan
+ * o'chirishni bajaradi. Namangan hozir bo'sh, lekin skript qoladi va kimdir
+ * uni keyinroq boshqa filialga qaratishi mumkin. Qorovul buni imkonsiz qiladi:
+ * bironta to'lov, tranzaksiya, davomat, oylik hisoblanmasi, shartnoma,
+ * qaytarish, kassa harakati yoki xarajat topilsa — skript umuman ishlamaydi.
+ *
+ * Bunday filialni tozalash kerak bo'lsa, bu qorovulni chetlab o'tish emas,
+ * moliyaviy tarixni nima qilish kerakligi haqida alohida qaror kerak.
+ */
+export async function assertBranchIsFinanciallyEmpty(
+  prisma: PrismaLike,
+  plan: BranchResetPlan,
+): Promise<void> {
+  const { studentIds, groupIds, enrollmentIds, branchId } = plan;
+
+  // Har bir yo'l — filialga qanday bog'langan bo'lsa, shu orqali topiladi.
+  // Faqat HOZIRGI StudentBranch ro'yxatiga (studentIds) tayanish yetarli
+  // emas: o'quvchi keyinroq boshqa filialga o'tkazilgan bo'lishi mumkin, va
+  // pul yozuvi baribir shu filialning branchId'sini ko'tarib qoladi (Contract
+  // uchun bu maydon MAJBURIY). Shuning uchun Payment/Transaction/Contract
+  // "studentId shu ro'yxatda BOR" YOKI "branchId shu filial" — ikkalasidan
+  // birortasi kifoya. Refund'da branchId ustuni yo'q, shuning uchun ikkinchi
+  // mustaqil yo'l sifatida enrollmentId ishlatiladi — guruhning filiali umr
+  // bo'yi o'zgarmaydi (docs/branch-decisions.md), shu sababli enrollmentIds
+  // orqali topish xuddi shunday ishonchli. Attendance va SalaryAccrual
+  // groupId bo'yicha kalitlangan holicha qoladi — bu ham xuddi shu sababdan
+  // to'g'ri. CashMovement va Expense har doim branchId bo'yicha, chunki
+  // ularda boshqa yo'l yo'q.
+  const studentClause = studentIds.length ? { studentId: { in: studentIds } } : null;
+  const groupClause = groupIds.length ? { groupId: { in: groupIds } } : null;
+  const enrollmentClause = enrollmentIds.length ? { enrollmentId: { in: enrollmentIds } } : null;
+  const branchClause = { branchId };
+
+  /**
+   * Faqat bo'sh bo'lmagan shartlardan OR yig'adi. Agar birorta ham shart
+   * bo'lmasa (masalan, o'quvchisi ham, enrollmenti ham yo'q Refund uchun) —
+   * `null` qaytadi va tekshiruv o'tkazib yuboriladi. Bu eskisidan farqli:
+   * eski kod "o'quvchi yo'q bo'lsa — tekshirmay 0" derdi HAR BIR shart uchun
+   * alohida, garchi boshqa (masalan branchId) yo'l orqali topilishi mumkin
+   * bo'lsa ham.
+   */
+  const buildOr = (
+    clauses: (Record<string, unknown> | null)[],
+  ): { OR: Record<string, unknown>[] } | null => {
+    const present = clauses.filter((c): c is Record<string, unknown> => c !== null);
+    return present.length ? { OR: present } : null;
+  };
+
+  const countIf = (
+    where: Record<string, unknown> | null,
+    run: (where: Record<string, unknown>) => Promise<number>,
+  ): Promise<number> => (where ? run(where) : Promise.resolve(0));
+
+  const paymentWhere = buildOr([studentClause, branchClause]);
+  const transactionWhere = buildOr([studentClause, branchClause]);
+  const contractWhere = buildOr([studentClause, branchClause]);
+  const refundWhere = buildOr([studentClause, enrollmentClause]);
+
+  const checks: [string, () => Promise<number>][] = [
+    ['Payment', () => countIf(paymentWhere, (where) => prisma.payment.count({ where }))],
+    ['Transaction', () => countIf(transactionWhere, (where) => prisma.transaction.count({ where }))],
+    ['Attendance', () => countIf(groupClause, (where) => prisma.attendance.count({ where }))],
+    ['SalaryAccrual', () => countIf(groupClause, (where) => prisma.salaryAccrual.count({ where }))],
+    ['Contract', () => countIf(contractWhere, (where) => prisma.contract.count({ where }))],
+    ['Refund', () => countIf(refundWhere, (where) => prisma.refund.count({ where }))],
+    ['CashMovement', () => prisma.cashMovement.count({ where: branchClause })],
+    ['Expense', () => prisma.expense.count({ where: branchClause })],
+  ];
+
+  const found: string[] = [];
+  for (const [label, run] of checks) {
+    const count = await run();
+    if (count > 0) found.push(`${label}: ${count}`);
+  }
+
+  if (found.length) {
+    throw new BranchResetUnsafeError(
+      `Filial #${branchId} (${plan.branchName}) da moliyaviy tarix bor, ` +
+        `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
+    );
+  }
+}
+
+/**
+ * `executeBranchReset` O'CHIRMAYDIGAN har bir RESTRICT bog'liqlikni sanaydi.
+ *
+ * `assertBranchIsFinanciallyEmpty` pul tarixini (Payment, Transaction,
+ * Contract, Refund, CashMovement, Expense, Attendance, SalaryAccrual)
+ * tekshiradi — bu qorovul boshqa narsani tekshiradi: qo'ng'iroq jurnali,
+ * izohlar, chegirmalar, stipendiyalar, AI suhbatlari va oylik konfiguratsiyasi
+ * kabi RESTRICT bilan bog'langan, lekin `executeBranchReset` HECH QACHON
+ * o'chirmaydigan jadvallar. Ular bo'sh bo'lishi Task 2'ning moliyaviy qorovuli
+ * bilan KAFOLATLANMAYDI — masalan Comment yoki CallLog pul harakatlantirmaydi,
+ * shuning uchun moliyaviy tarix yo'q filialda ham bo'lishi mumkin.
+ *
+ * Bunday qator topilsa, transaksiya boshlanishidan OLDIN rad javobi beriladi.
+ * Aks holda `executeBranchReset` o'rtada FK xatosiga urilib to'xtaydi va nima
+ * uni to'xtatganini tashqi loglardan qidirish kerak bo'lardi.
+ */
+export async function assertNoBlockingDependents(
+  prisma: PrismaLike,
+  plan: BranchResetPlan,
+): Promise<void> {
+  const { branchId, groupIds, studentIds, courseIds, staffUserIds, studentUserIds } = plan;
+  const allUserIds = [...staffUserIds, ...studentUserIds];
+
+  const groupClause = groupIds.length ? { groupId: { in: groupIds } } : null;
+  const studentClause = studentIds.length ? { studentId: { in: studentIds } } : null;
+  const courseClause = courseIds.length ? { courseId: { in: courseIds } } : null;
+
+  /** `column` — bir xil `allUserIds` ro'yxatiga ishora qiluvchi ustun nomi turlicha. */
+  const userClause = (column: string): Record<string, unknown> | null =>
+    allUserIds.length ? { [column]: { in: allUserIds } } : null;
+
+  const countIf = (
+    where: Record<string, unknown> | null,
+    run: (where: Record<string, unknown>) => Promise<number>,
+  ): Promise<number> => (where ? run(where) : Promise.resolve(0));
+
+  const checks: [string, () => Promise<number>][] = [
+    // groupIds bo'yicha kalitlangan
+    ['Attendance.groupId', () => countIf(groupClause, (where) => prisma.attendance.count({ where }))],
+    [
+      'LessonCancellation.groupId',
+      () => countIf(groupClause, (where) => prisma.lessonCancellation.count({ where })),
+    ],
+    [
+      'LessonReschedule.groupId',
+      () => countIf(groupClause, (where) => prisma.lessonReschedule.count({ where })),
+    ],
+    [
+      'LessonTeacherOverride.groupId',
+      () => countIf(groupClause, (where) => prisma.lessonTeacherOverride.count({ where })),
+    ],
+    [
+      'PlannedAbsence.groupId',
+      () => countIf(groupClause, (where) => prisma.plannedAbsence.count({ where })),
+    ],
+    [
+      'SalaryAccrual.groupId',
+      () => countIf(groupClause, (where) => prisma.salaryAccrual.count({ where })),
+    ],
+    // studentIds bo'yicha kalitlangan
+    [
+      'Attendance.studentId',
+      () => countIf(studentClause, (where) => prisma.attendance.count({ where })),
+    ],
+    ['CallLog.studentId', () => countIf(studentClause, (where) => prisma.callLog.count({ where }))],
+    ['Contract.studentId', () => countIf(studentClause, (where) => prisma.contract.count({ where }))],
+    ['Discount.studentId', () => countIf(studentClause, (where) => prisma.discount.count({ where }))],
+    ['Payment.studentId', () => countIf(studentClause, (where) => prisma.payment.count({ where }))],
+    [
+      'PaymentPromise.studentId',
+      () => countIf(studentClause, (where) => prisma.paymentPromise.count({ where })),
+    ],
+    [
+      'PlannedAbsence.studentId',
+      () => countIf(studentClause, (where) => prisma.plannedAbsence.count({ where })),
+    ],
+    ['Refund.studentId', () => countIf(studentClause, (where) => prisma.refund.count({ where }))],
+    [
+      'SalaryAccrual.studentId',
+      () => countIf(studentClause, (where) => prisma.salaryAccrual.count({ where })),
+    ],
+    [
+      'Scholarship.studentId',
+      () => countIf(studentClause, (where) => prisma.scholarship.count({ where })),
+    ],
+    // courseIds bo'yicha kalitlangan
+    ['Contract.courseId', () => countIf(courseClause, (where) => prisma.contract.count({ where }))],
+    // staffUserIds ∪ studentUserIds bo'yicha kalitlangan
+    [
+      'AiConversation.userId',
+      () => countIf(userClause('userId'), (where) => prisma.aiConversation.count({ where })),
+    ],
+    [
+      'CallLog.calledById',
+      () => countIf(userClause('calledById'), (where) => prisma.callLog.count({ where })),
+    ],
+    ['Comment.authorId', () => countIf(userClause('authorId'), (where) => prisma.comment.count({ where }))],
+    [
+      'CommentAssignee.userId',
+      () => countIf(userClause('userId'), (where) => prisma.commentAssignee.count({ where })),
+    ],
+    [
+      'EmployeeSalaryConfig.userId',
+      () => countIf(userClause('userId'), (where) => prisma.employeeSalaryConfig.count({ where })),
+    ],
+    [
+      'Expense.createdById',
+      () => countIf(userClause('createdById'), (where) => prisma.expense.count({ where })),
+    ],
+    [
+      'LessonCancellation.cancelledById',
+      () => countIf(userClause('cancelledById'), (where) => prisma.lessonCancellation.count({ where })),
+    ],
+    [
+      'LessonReschedule.scheduledById',
+      () => countIf(userClause('scheduledById'), (where) => prisma.lessonReschedule.count({ where })),
+    ],
+    [
+      'LessonTeacherOverride.setById',
+      () => countIf(userClause('setById'), (where) => prisma.lessonTeacherOverride.count({ where })),
+    ],
+    [
+      'PaymentPromise.createdById',
+      () => countIf(userClause('createdById'), (where) => prisma.paymentPromise.count({ where })),
+    ],
+    [
+      'SalaryAccrual.userId',
+      () => countIf(userClause('userId'), (where) => prisma.salaryAccrual.count({ where })),
+    ],
+    [
+      'SalaryPayment.userId',
+      () => countIf(userClause('userId'), (where) => prisma.salaryPayment.count({ where })),
+    ],
+  ];
+
+  const found: string[] = [];
+  for (const [label, run] of checks) {
+    const count = await run();
+    if (count > 0) found.push(`${label}: ${count}`);
+  }
+
+  if (found.length) {
+    throw new BranchResetUnsafeError(
+      `Filial #${branchId} (${plan.branchName}) da o'chirilmaydigan bog'liq yozuvlar bor, ` +
+        `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
+    );
+  }
+}
+
+/**
+ * Reja TASHQARISIDA turgan qatorlar reja ICHIDAGI biror ID ga ishora
+ * qilmayotganini tekshiradi.
+ *
+ * Yuqoridagi uch qorovul faqat "bu ID lar chindan ham shu filialga
+ * tegishlimi" deb so'raydi — bittasi ham "reja tashqarisidan kimdir shu ID ga
+ * ishora qilyaptimi" deb so'ramaydi. RESTRICT chekkalar o'zini o'zi himoya
+ * qiladi: `executeBranchReset` FK xatosiga urilib butun tranzaksiya bekor
+ * bo'ladi. SET NULL va CASCADE chekkalar himoyasiz — ular boshqa filialga
+ * tegishli qatorni SONI o'zgarmasdan turib jimgina mutatsiya qiladi (yoki
+ * o'chiradi), va bu mutatsiya na zaxirada, na `reset-branch.ts`ning
+ * oldin/keyin sanoq jadvalida umuman ko'rinadi.
+ *
+ * Olti chekka — hammasi Task 2/3 qorovullari qamramaydigan, lekin
+ * `executeBranchReset` tomonidan bevosita o'chirilmaydigan modellarga
+ * ishora qiladi:
+ *   - GroupTeacher.teacherId (CASCADE)
+ *   - Group.roomId (SET NULL)
+ *   - Contract.groupId (SET NULL)
+ *   - EmployeeSalaryConfig.groupId (SET NULL)
+ *   - MockExamParticipant.studentId (SET NULL)
+ *   - AiConversation.studentId (SET NULL)
+ *
+ * Ishlab chiqarishda o'lchangan (2026-08-19): bu oltitasining har biri
+ * Namangan uchun HOZIR nol — shuning uchun bu qorovul haqiqiy ishga
+ * to'sqinlik qilmaydi, lekin uni doimiy kodga aylantiradi.
+ */
+export async function assertNoInboundReferences(
+  prisma: PrismaLike,
+  plan: BranchResetPlan,
+): Promise<void> {
+  const { branchId, studentIds, groupIds, roomIds, staffUserIds, studentUserIds } = plan;
+  const allUserIds = [...staffUserIds, ...studentUserIds];
+
+  const found: string[] = [];
+
+  // GroupTeacher.teacherId (CASCADE) — teacherId reja foydalanuvchisi, lekin
+  // o'sha yozuv ishora qiluvchi guruh BOSHQA filialga tegishli.
+  if (allUserIds.length) {
+    const rows = await prisma.groupTeacher.findMany({
+      where: { teacherId: { in: allUserIds } },
+      select: { teacherId: true, groupId: true },
+    });
+    if (rows.length) {
+      const groupIdsToCheck = [...new Set(rows.map((r) => r.groupId))];
+      const groupBranches = await prisma.group.findMany({
+        where: { id: { in: groupIdsToCheck } },
+        select: { id: true, branchId: true },
+      });
+      const branchOf = new Map(groupBranches.map((g) => [g.id, g.branchId]));
+      const count = rows.filter((r) => branchOf.get(r.groupId) !== branchId).length;
+      if (count > 0) found.push(`GroupTeacher.teacherId: ${count}`);
+    }
+  }
+
+  // Group.roomId (SET NULL) — roomId reja xonasi, lekin o'sha xonani
+  // ko'rsatayotgan guruh BOSHQA filialga tegishli.
+  if (roomIds.length) {
+    const rows = await prisma.group.findMany({
+      where: { roomId: { in: roomIds } },
+      select: { id: true, branchId: true },
+    });
+    const count = rows.filter((r) => r.branchId !== branchId).length;
+    if (count > 0) found.push(`Group.roomId: ${count}`);
+  }
+
+  // Contract.groupId (SET NULL) — groupId reja guruhi, lekin shartnoma
+  // egasi (studentId) reja o'quvchisi EMAS.
+  if (groupIds.length) {
+    const count = await prisma.contract.count({
+      where: { groupId: { in: groupIds }, studentId: { notIn: studentIds } },
+    });
+    if (count > 0) found.push(`Contract.groupId: ${count}`);
+  }
+
+  // EmployeeSalaryConfig.groupId (SET NULL) — groupId reja guruhi, lekin
+  // konfiguratsiya egasi (userId) reja foydalanuvchisi EMAS.
+  if (groupIds.length) {
+    const count = await prisma.employeeSalaryConfig.count({
+      where: { groupId: { in: groupIds }, userId: { notIn: allUserIds } },
+    });
+    if (count > 0) found.push(`EmployeeSalaryConfig.groupId: ${count}`);
+  }
+
+  // MockExamParticipant.studentId (SET NULL)
+  if (studentIds.length) {
+    const count = await prisma.mockExamParticipant.count({
+      where: { studentId: { in: studentIds } },
+    });
+    if (count > 0) found.push(`MockExamParticipant.studentId: ${count}`);
+  }
+
+  // AiConversation.studentId (SET NULL)
+  if (studentIds.length) {
+    const count = await prisma.aiConversation.count({
+      where: { studentId: { in: studentIds } },
+    });
+    if (count > 0) found.push(`AiConversation.studentId: ${count}`);
+  }
+
+  if (found.length) {
+    throw new BranchResetUnsafeError(
+      `Filial #${branchId} (${plan.branchName}) ga tashqaridan ishora qiluvchi qatorlar bor, ` +
+        `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
+    );
+  }
+}
