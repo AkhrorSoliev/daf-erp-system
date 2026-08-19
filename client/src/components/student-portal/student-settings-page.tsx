@@ -12,6 +12,7 @@ import {
 } from "./lumio";
 import { StudentPasswordDialog } from "./student-password-dialog";
 import { useStudentProfile } from "./lib/queries";
+import { settingsHelpItems } from "@/lib/student-nav-items";
 
 // Settings answers "how does the app behave" — theme and security. Everything
 // that describes *who the student is* (photo, name, contact details) lives on
@@ -53,6 +54,26 @@ export function StudentSettingsPage() {
           subtitle="Ism, rasm va aloqa ma'lumotlari"
           href="/portal/profile"
         />
+      </Section>
+
+      {/*
+        Desktop only. The rail has no row for FAQ / Biz haqimizda, so they hang
+        off Settings there. On mobile the "Ko'proq" hub already lists them and a
+        second entry point would just be a duplicate.
+      */}
+      <Section title="Yordam" className="hidden lg:flex">
+        {settingsHelpItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <ListRow
+              key={item.url}
+              icon={<Icon weight="bold" />}
+              iconTone={item.tone}
+              label={item.title}
+              href={item.url}
+            />
+          );
+        })}
       </Section>
 
       <StudentPasswordDialog

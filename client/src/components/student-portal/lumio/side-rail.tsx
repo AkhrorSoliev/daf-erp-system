@@ -4,7 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Sparkle, CaretRight } from "@phosphor-icons/react";
-import { railNavItems, moreRoutes } from "@/lib/student-nav-items";
+import {
+  railNavItems,
+  moreRoutes,
+  settingsHelpItems,
+} from "@/lib/student-nav-items";
 import { useStudentProfile } from "../lib/queries";
 import { ThemeSegmented } from "./theme-segmented";
 import { Avatar } from "./avatar";
@@ -22,6 +26,14 @@ export function LumioSideRail({ className }: { className?: string }) {
     if (url === "/portal") return pathname === "/portal";
     if (url === "/portal/more") {
       return moreRoutes.some((r) => pathname.startsWith(r));
+    }
+    // FAQ and Biz haqimizda have no rail row of their own — on desktop they are
+    // reached from Settings, so keep Settings lit while one of them is open.
+    if (url === "/portal/settings") {
+      return (
+        pathname.startsWith(url) ||
+        settingsHelpItems.some((i) => pathname.startsWith(i.url))
+      );
     }
     return pathname.startsWith(url);
   }

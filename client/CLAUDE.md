@@ -681,7 +681,9 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 
 **Responsive shell (`student-portal-layout.tsx`):** mobile + tablet (`< lg`) get the native-app feel (centered column, floating bottom nav); desktop (`>= lg`) swaps to a persistent left side rail + wider column. Role-gates to Student (role id 6).
 
-**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) lists `more`. AI is the raised center coral FAB.
+**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground. AI is the raised center coral FAB.
+
+`help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; desktop drops it from the rail and lists it in a `lg`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
 
 **Key screen components:**
 - `student-home-page.tsx` — dashboard (greeting, stats, schedule)
