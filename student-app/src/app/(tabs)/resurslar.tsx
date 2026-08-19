@@ -7,7 +7,7 @@ export default function Resurslar() {
   return (
     <Screen>
       <View className="flex-1 p-5">
-        <ScreenHeader title="Resurslar" />
+        <ScreenHeader title={t.nav.resurslar} />
         <View className="flex-1 items-center justify-center pb-24">
           <EmptyState icon="library-outline" title={t.common.comingSoon} description="Resurslar bo'limi tayyorlanmoqda." />
         </View>

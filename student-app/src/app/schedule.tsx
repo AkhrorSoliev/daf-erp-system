@@ -6,13 +6,13 @@ import { useSchedule } from '@/api/queries/use-schedule';
 import { useT } from '@/i18n';
 
 const WEEKDAYS = [
-  { key: 'monday', label: 'Dushanba' },
-  { key: 'tuesday', label: 'Seshanba' },
-  { key: 'wednesday', label: 'Chorshanba' },
-  { key: 'thursday', label: 'Payshanba' },
-  { key: 'friday', label: 'Juma' },
-  { key: 'saturday', label: 'Shanba' },
-  { key: 'sunday', label: 'Yakshanba' },
+  { key: 'monday' },
+  { key: 'tuesday' },
+  { key: 'wednesday' },
+  { key: 'thursday' },
+  { key: 'friday' },
+  { key: 'saturday' },
+  { key: 'sunday' },
 ] as const;
 
 const DAY_BY_INDEX = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -45,7 +45,7 @@ export default function Schedule() {
       >
         <View className="gap-5 p-5 pt-2">
           {items.length === 0 ? (
-            <EmptyState icon="calendar-outline" title="Jadval bo'sh" description={t.common.comingSoon} />
+            <EmptyState icon="calendar-outline" title={t.schedule.empty} description={t.common.comingSoon} />
           ) : (
             WEEKDAYS.map((day) => {
               const lessons = items
@@ -57,13 +57,13 @@ export default function Schedule() {
                 <View key={day.key} className="gap-2.5">
                   <View className="flex-row items-center gap-2 px-1">
                     <Text variant="title" className={isToday ? 'text-coral-500' : undefined}>
-                      {day.label}
+                      {t.schedule.weekdays[day.key]}
                     </Text>
-                    {isToday ? <Badge label="Bugun" tone="coral" /> : null}
+                    {isToday ? <Badge label={t.schedule.today} tone="coral" /> : null}
                   </View>
 
                   {lessons.length === 0 ? (
-                    <Text variant="muted" className="px-1">Dars yo&apos;q</Text>
+                    <Text variant="muted" className="px-1">{t.schedule.noLesson}</Text>
                   ) : (
                     lessons.map((s) => (
                       <Card key={`${day.key}-${s.groupId}`} className="flex-row gap-3.5">

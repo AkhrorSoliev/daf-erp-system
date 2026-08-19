@@ -7,7 +7,7 @@ export default function Darslar() {
   return (
     <Screen>
       <View className="flex-1 p-5">
-        <ScreenHeader title="Darslar" />
+        <ScreenHeader title={t.nav.darslar} />
         <View className="flex-1 items-center justify-center pb-24">
           <EmptyState icon="school-outline" title={t.common.comingSoon} description="Darslar bo'limi tayyorlanmoqda." />
         </View>

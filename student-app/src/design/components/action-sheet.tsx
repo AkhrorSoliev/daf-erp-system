@@ -2,6 +2,7 @@ import { Modal, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
+import { useT } from '@/i18n';
 import { Text } from './text';
 
 export type ActionSheetOption = {
@@ -24,6 +25,7 @@ export function ActionSheet({
   title?: string;
 }) {
   const colors = useColors();
+  const t = useT();
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <Pressable className="flex-1 justify-end bg-black/50" onPress={onClose}>
@@ -57,7 +59,7 @@ export function ActionSheet({
           ))}
           <Pressable onPress={onClose} className="mt-1 items-center rounded-md bg-sunk py-3.5 active:opacity-80">
             <Text variant="label" className="text-fg-muted">
-              Bekor qilish
+              {t.common.cancel}
             </Text>
           </Pressable>
         </Pressable>

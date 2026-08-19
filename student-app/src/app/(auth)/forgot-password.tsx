@@ -74,7 +74,7 @@ export default function ForgotPassword() {
     try {
       await resetPasswordWithToken(resetToken, newPassword);
       Alert.alert(c.successTitle, c.successMessage, [
-        { text: 'OK', onPress: () => router.back() },
+        { text: t.common.ok, onPress: () => router.back() },
       ]);
     } catch (e) {
       setError(getErrorMessage(e));

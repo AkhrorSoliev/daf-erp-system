@@ -29,13 +29,13 @@ export default function Profile() {
   const photoMut = useMutation({
     mutationFn: (uri: string) => uploadPhoto(uri),
     onSuccess: () => q.refetch(),
-    onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
+    onError: (error) => Alert.alert(t.common.errorTitle, getErrorMessage(error)),
   });
 
   const deleteMut = useMutation({
     mutationFn: () => deletePhoto(),
     onSuccess: () => q.refetch(),
-    onError: (error) => Alert.alert('Xatolik', getErrorMessage(error)),
+    onError: (error) => Alert.alert(t.common.errorTitle, getErrorMessage(error)),
   });
 
   const photoBusy = photoMut.isPending || deleteMut.isPending;
@@ -68,16 +68,16 @@ export default function Profile() {
                     <Ionicons name="camera" size={15} color="#FFFFFF" />
                   </View>
                 </View>
-                <Text variant="muted">{photoBusy ? 'Yuklanmoqda...' : "Rasmni o'zgartirish"}</Text>
+                <Text variant="muted">{photoBusy ? t.profile.uploading : t.profile.changePhoto}</Text>
               </Pressable>
 
               <Text variant="title">{`${p.firstName} ${p.lastName}`.trim()}</Text>
 
               <View className="w-full">
-                <Row label="Telefon" value={formatPhone(p.phone)} />
-                <Row label="Login" value={p.login} />
-                <Row label="Telegram" value={p.telegram} />
-                <Row label="Filial" value={p.branches.map((b) => b.name).join(', ') || null} last />
+                <Row label={t.profile.phone} value={formatPhone(p.phone)} />
+                <Row label={t.profile.login} value={p.login} />
+                <Row label={t.profile.telegram} value={p.telegram} />
+                <Row label={t.profile.branch} value={p.branches.map((b) => b.name).join(', ') || null} last />
               </View>
             </Card>
           ) : null}
@@ -87,12 +87,12 @@ export default function Profile() {
       <ActionSheet
         visible={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title="Profil rasmi"
+        title={t.profile.photoSheetTitle}
         options={[
-          { label: 'Galereyadan tanlash', icon: 'images-outline', onPress: pickFromLibrary },
-          { label: 'Kameradan olish', icon: 'camera-outline', onPress: pickFromCamera },
+          { label: t.profile.pickGallery, icon: 'images-outline', onPress: pickFromLibrary },
+          { label: t.profile.pickCamera, icon: 'camera-outline', onPress: pickFromCamera },
           ...(p?.photo
-            ? [{ label: "Rasmni o'chirish", icon: 'trash-outline' as const, onPress: () => deleteMut.mutate(), destructive: true }]
+            ? [{ label: t.profile.deletePhoto, icon: 'trash-outline' as const, onPress: () => deleteMut.mutate(), destructive: true }]
             : []),
         ]}
       />

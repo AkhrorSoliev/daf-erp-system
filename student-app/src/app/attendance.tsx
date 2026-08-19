@@ -4,14 +4,17 @@ import { Badge, Card, EmptyState, LoadingCards, ProgressBar, Screen, StackHeader
 import { tokens } from '@/design/tokens';
 import { useAttendanceHistory, useAttendanceStats } from '@/api/queries/use-attendance';
 import { formatDate } from '@/lib/format';
+import { attStatus } from '@/lib/labels';
 import { useT } from '@/i18n';
 import type { AttendanceStatus } from '@/api/types';
 
-const STATUS: Record<AttendanceStatus, { label: string; tone: BadgeTone }> = {
-  PRESENT: { label: 'Keldi', tone: 'success' },
-  LATE: { label: 'Kechikdi', tone: 'warning' },
-  ABSENT: { label: 'Kelmadi', tone: 'danger' },
-  EXCUSED: { label: 'Sababli', tone: 'neutral' },
+// Badge only accepts BadgeTone — attStatus()'s tone is a Tailwind text-color
+// class (shared shape with labels.ts), so map status → BadgeTone locally.
+const BADGE_TONE: Record<AttendanceStatus, BadgeTone> = {
+  PRESENT: 'success',
+  LATE: 'warning',
+  ABSENT: 'danger',
+  EXCUSED: 'neutral',
 };
 
 const SEG = { present: tokens.color.success, late: tokens.color.warning, absent: tokens.color.danger, excused: '#9DB0BC' };
@@ -54,6 +57,7 @@ export default function Attendance() {
   const s = stats.data;
   const groups = history.data ?? [];
   const refreshing = stats.isRefetching || history.isRefetching;
+  const status = attStatus(t);
 
   return (
     <Screen>
@@ -76,7 +80,7 @@ export default function Attendance() {
           {s ? (
             <Card className="gap-3.5">
               <View className="flex-row items-center justify-between">
-                <Text variant="muted">Umumiy davomat</Text>
+                <Text variant="muted">{t.attendance.total}</Text>
                 <Text variant="num" className={`text-[30px] ${percentClass(s.percentage)}`}>{s.percentage}%</Text>
               </View>
 
@@ -92,10 +96,10 @@ export default function Attendance() {
               ) : null}
 
               <View className="flex-row flex-wrap gap-x-4 gap-y-1.5">
-                <Legend color={SEG.present} label={`Keldi: ${s.present}`} />
-                <Legend color={SEG.late} label={`Kechikdi: ${s.late}`} />
-                <Legend color={SEG.absent} label={`Kelmadi: ${s.absent}`} />
-                <Legend color={SEG.excused} label={`Sababli: ${s.excused}`} />
+                <Legend color={SEG.present} label={`${t.attendance.present}: ${s.present}`} />
+                <Legend color={SEG.late} label={`${t.attendance.late}: ${s.late}`} />
+                <Legend color={SEG.absent} label={`${t.attendance.absent}: ${s.absent}`} />
+                <Legend color={SEG.excused} label={`${t.attendance.excused}: ${s.excused}`} />
               </View>
             </Card>
           ) : null}
@@ -107,7 +111,7 @@ export default function Attendance() {
                 <Badge label={`${g.stats.percentage}%`} tone={percentTone(g.stats.percentage)} />
               </View>
               {g.records.length === 0 ? (
-                <Text variant="muted" className="px-1">Yozuv yo&apos;q</Text>
+                <Text variant="muted" className="px-1">{t.attendance.noRecords}</Text>
               ) : (
                 g.records.slice(0, 20).map((r, i) => (
                   <View
@@ -115,7 +119,7 @@ export default function Attendance() {
                     className="flex-row items-center justify-between rounded-card border border-border bg-surface px-4 py-3"
                   >
                     <Text variant="bodyStrong">{formatDate(r.date)}</Text>
-                    <Badge label={STATUS[r.status]?.label ?? r.status} tone={STATUS[r.status]?.tone ?? 'neutral'} />
+                    <Badge label={status[r.status]?.label ?? r.status} tone={BADGE_TONE[r.status] ?? 'neutral'} />
                   </View>
                 ))
               )}

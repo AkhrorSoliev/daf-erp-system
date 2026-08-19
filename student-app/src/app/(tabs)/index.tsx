@@ -33,7 +33,7 @@ export default function Home() {
   if (q.isError || !q.data) {
     return (
       <Screen className="justify-center">
-        <EmptyState icon="cloud-offline-outline" title={t.common.error} description="Ma'lumotni yuklab bo'lmadi" />
+        <EmptyState icon="cloud-offline-outline" title={t.common.error} description={t.common.loadFailed} />
       </Screen>
     );
   }
@@ -74,13 +74,13 @@ export default function Home() {
               <Text className="font-bodyx text-[11px] uppercase tracking-[1px] text-white/80">{t.home.balance}</Text>
               <Text variant="num" className="mt-1 text-[34px] leading-[40px] text-white">{formatSom(p.balance)}</Text>
               <View className="mt-3 self-start rounded-pill bg-white/20 px-3 py-1">
-                <Text className="font-bodymd text-[12px] text-white">{inDebt ? 'Qarzdorlik mavjud' : 'Joriy balans'}</Text>
+                <Text className="font-bodymd text-[12px] text-white">{inDebt ? t.home.inDebt : t.home.current}</Text>
               </View>
             </View>
           </FadeIn>
 
           <FadeIn index={1}>
-            <Button label="QR bilan davomatga belgilash" variant="teal" iconBefore="qr-code" onPress={() => router.push('/scan')} />
+            <Button label={t.home.qrCheckIn} variant="teal" iconBefore="qr-code" onPress={() => router.push('/scan')} />
           </FadeIn>
 
           {/* Attendance summary → full screen */}
@@ -114,14 +114,14 @@ export default function Home() {
           <FadeIn index={3}>
             <View className="gap-2.5">
               <View className="flex-row items-center justify-between px-1">
-                <Text variant="title">Bugungi darslar</Text>
+                <Text variant="title">{t.home.todayLessons}</Text>
                 <Pressable onPress={() => router.push('/schedule')} className="flex-row items-center gap-0.5 active:opacity-70">
-                  <Text variant="muted" className="text-coral-600 dark:text-coral-400">Butun jadval</Text>
+                  <Text variant="muted" className="text-coral-600 dark:text-coral-400">{t.home.fullSchedule}</Text>
                   <Ionicons name="chevron-forward" size={16} color={tokens.color.primary} />
                 </Pressable>
               </View>
               {todayLessons.length === 0 ? (
-                <Text variant="muted" className="px-1">Bugun dars yo&apos;q</Text>
+                <Text variant="muted" className="px-1">{t.home.noLessonsToday}</Text>
               ) : (
                 todayLessons.map((l) => (
                   <Card key={l.groupId} className="flex-row gap-3.5">
@@ -142,9 +142,9 @@ export default function Home() {
           {/* Groups */}
           <FadeIn index={4}>
             <View className="gap-2.5">
-              <Text variant="title">Guruhlarim</Text>
+              <Text variant="title">{t.home.myGroups}</Text>
               {p.groups.length === 0 ? (
-                <Text variant="muted" className="px-1">Faol guruh yo&apos;q</Text>
+                <Text variant="muted" className="px-1">{t.home.noActiveGroups}</Text>
               ) : (
                 p.groups.map((g) => (
                   <ListRow
