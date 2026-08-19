@@ -9,7 +9,7 @@ export default function Resurslar() {
       <View className="flex-1 p-5">
         <ScreenHeader title={t.nav.resurslar} />
         <View className="flex-1 items-center justify-center pb-24">
-          <EmptyState icon="library-outline" title={t.common.comingSoon} description="Resurslar bo'limi tayyorlanmoqda." />
+          <EmptyState icon="library-outline" title={t.common.comingSoon} description={t.common.sectionInProgress(t.nav.resurslar)} />
         </View>
       </View>
     </Screen>

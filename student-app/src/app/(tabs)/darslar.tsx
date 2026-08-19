@@ -9,7 +9,7 @@ export default function Darslar() {
       <View className="flex-1 p-5">
         <ScreenHeader title={t.nav.darslar} />
         <View className="flex-1 items-center justify-center pb-24">
-          <EmptyState icon="school-outline" title={t.common.comingSoon} description="Darslar bo'limi tayyorlanmoqda." />
+          <EmptyState icon="school-outline" title={t.common.comingSoon} description={t.common.sectionInProgress(t.nav.darslar)} />
         </View>
       </View>
     </Screen>

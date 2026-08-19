@@ -21,6 +21,7 @@ export const uz = {
     comingSoon: 'Tez orada',
     showPassword: "Parolni ko'rsatish",
     hidePassword: 'Parolni yashirish',
+    sectionInProgress: (section: string) => `${section} bo'limi tayyorlanmoqda.`,
   },
   // Bottom tab-bar labels.
   nav: {

@@ -18,6 +18,7 @@ export const de: Dict = {
     comingSoon: 'Demnächst',
     showPassword: 'Passwort anzeigen',
     hidePassword: 'Passwort verbergen',
+    sectionInProgress: (section: string) => `Der Bereich ${section} wird vorbereitet.`,
   },
   nav: {
     index: 'Start',
