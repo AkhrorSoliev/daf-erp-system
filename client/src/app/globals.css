@@ -794,3 +794,43 @@ button {
     opacity: 0.4;
   }
 }
+
+/* --- Radio: live playback indicator -------------------------------------
+   Three bars that rise and fall while a station is actually playing. This is
+   state, not decoration: it is the only thing distinguishing "connected and
+   streaming" from "paused" at a glance, since live radio has no progress bar
+   to fill. Bars freeze at rest height when playback stops. */
+@keyframes radio-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.lumio .radio-bar {
+  transform-origin: bottom;
+  animation: radio-bar 900ms var(--ease-out, ease-out) infinite;
+}
+
+/* Prime-ish offsets so the three bars never line up into a single pulse. */
+.lumio .radio-bar:nth-child(1) {
+  animation-duration: 780ms;
+}
+.lumio .radio-bar:nth-child(2) {
+  animation-duration: 1120ms;
+  animation-delay: 140ms;
+}
+.lumio .radio-bar:nth-child(3) {
+  animation-duration: 940ms;
+  animation-delay: 320ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lumio .radio-bar {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+}

@@ -21,11 +21,14 @@ const THEME_OPTIONS: SegmentOption<ThemeMode>[] = [
 export interface ThemeSegmentedProps {
   /** "full" — labelled (Settings), "compact" — icon-only (rail footer). */
   variant?: "full" | "compact";
+  /** Stacked instead of side-by-side — for the collapsed 72px rail. */
+  orientation?: "horizontal" | "vertical";
   className?: string;
 }
 
 export function ThemeSegmented({
   variant = "full",
+  orientation = "horizontal",
   className,
 }: ThemeSegmentedProps) {
   const { theme, setTheme } = useTheme();
@@ -33,18 +36,19 @@ export function ThemeSegmented({
   React.useEffect(() => setMounted(true), []);
 
   const compact = variant === "compact";
+  const vertical = orientation === "vertical";
 
   // `theme` is undefined until next-themes has read localStorage. Rendering the
   // control before that would both mismatch hydration and flash the wrong
   // segment, so hold a same-size placeholder: track padding (2 x 6px) plus the
-  // button height — 52px full, 44px compact.
+  // button height — 52px full, 44px compact, 108px stacked (3 x 32px + 12px).
   if (!mounted) {
     return (
       <div
         aria-hidden
         className={cn(
           "rounded-pill bg-sunk",
-          compact ? "h-[44px]" : "h-[52px]",
+          vertical ? "h-[108px]" : compact ? "h-[44px]" : "h-[52px]",
           className,
         )}
       />
@@ -57,6 +61,7 @@ export function ThemeSegmented({
       value={(theme as ThemeMode) ?? "system"}
       onChange={setTheme}
       compact={compact}
+      orientation={orientation}
       className={className}
     />
   );

@@ -692,16 +692,23 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 
 **Lumio design system (`src/components/student-portal/lumio/`):**
 - Self-contained primitive library (barrel: `lumio/index.ts`) mirroring the student-app's design components: `Button`, `Card`, `FeatureCard`, `IconTile`, `ListRow`, `Badge`, `StatChip`, `Avatar`, `ProgressBar`, `ProgressRing`, `SegmentedControl`, `Section`, `ThemeSegmented`, `EmptyState`, `Screen`/`ScreenHeader`/`StackHeader`, `FadeIn`, `Skeleton`, `Input`/`Field`, `BottomSheet`.
-- **Theme control:** the portal uses `ThemeSegmented` in **both** places — labelled (`variant="full"`) on `/portal/settings`, icon-only (`variant="compact"`) in the desktop rail footer. Do not put the admin `components/theme-toggle.tsx` (lucide, cycle-through) inside `/portal/*`: one state driven by two interaction models is exactly what this replaced. `theme-toggle.tsx` itself stays — the admin sidebar, dashboard header, `/login`, `error.tsx` and `not-found.tsx` all use it.
-- `Screen` takes `narrow` (`lg:max-w-[600px]`) for text-and-rows screens; the shell's 980px column leaves them stretched. `StackHeader`'s back chevron is mobile-only — desktop navigates from the rail, and `/portal/more` is not on it.
+- **Theme control:** the portal uses `ThemeSegmented` in **both** places — labelled (`variant="full"`) on `/portal/settings`, icon-only (`variant="compact"`) in the rail footer, stacked (`orientation="vertical"`) when the rail is collapsed. Do not put the admin `components/theme-toggle.tsx` (lucide, cycle-through) inside `/portal/*`: one state driven by two interaction models is exactly what this replaced. `theme-toggle.tsx` itself stays — the admin sidebar, dashboard header, `/login`, `error.tsx` and `not-found.tsx` all use it.
+- `Screen` takes `narrow` (`md:max-w-[600px]`) for text-and-rows screens; the shell's 720/980px column leaves them stretched. `StackHeader`'s back chevron is mobile-only — from md up the student navigates from the rail, and `/portal/more` is not on it.
 - **Always build portal screens from these primitives**, not raw shadcn — keeps the native-app look consistent. Accent tones live in `lumio/tones.ts` (`TILE_TONE`: coral / sky / teal / grape / amber / ink).
-- Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile/tablet) and `lumio/side-rail.tsx` (desktop left rail). Mobile has no top header — each screen renders its own `ScreenHeader`/`StackHeader` title. The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
+- Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile) and `lumio/side-rail.tsx` (tablet + desktop left rail). Mobile has no top header — each screen renders its own `ScreenHeader`/`StackHeader` title. The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
 
-**Responsive shell (`student-portal-layout.tsx`):** mobile + tablet (`< lg`) get the native-app feel (centered column, floating bottom nav); desktop (`>= lg`) swaps to a persistent left side rail + wider column. Role-gates to Student (role id 6).
+**Responsive shell (`student-portal-layout.tsx`):** mobile (`< md`) gets the native-app feel (centered column, floating bottom nav); tablet and desktop (`>= md`) swap to a persistent left side rail + wider column. Role-gates to Student (role id 6). The two nav forms are mutually exclusive — never both on one viewport.
 
-**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground.
+**Collapsible rail (`student-portal/lib/sidebar-store.ts`):** the rail has two widths, 72px icons-only and 240px with labels, toggled from a control at the bottom of its nav column and remembered in `localStorage` (`daf.portal.sidebar`).
 
-`help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; desktop drops it from the rail and lists it in a `lg`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
+- The store's `mode` is `"auto" | "collapsed" | "expanded"`. **`auto` is a pre-hydration state, never a state the student picks** — it renders as pure CSS (narrow at md, wide at lg) so the server markup and the first client paint agree. The shell calls `resolve()` once on mount, which swaps it for the stored choice, or, for a student who has never toggled, for the width their screen implies.
+- After that the mode is explicit and does **not** re-derive from the viewport. A deliberate toggle must survive turning a tablet sideways or dragging a window narrower.
+- Three pieces of chrome depend on the rail's width — the rail, the content column's left padding, and the docked radio player's left offset. Their class fragments live in the store as `RAIL_WIDTH` / `CONTENT_INSET` / `PLAYER_INSET`; **do not retype the pixel values in a component**, or the player will drift over the rail the next time a width changes.
+- The rail renders the expanded markup under `auto`, so the `<aside>` keeps `overflow-hidden` — that is what stops a single frame of clipped labels at the narrow md width.
+
+**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; the rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground.
+
+`help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; from md up it is dropped from the rail and listed in an `md`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
 
 **Key screen components:**
 - `student-home-page.tsx` — dashboard (greeting, stats, schedule)
@@ -713,9 +720,45 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - `student-name-dialog.tsx` / `student-password-dialog.tsx` — controlled (`open` / `onOpenChange`) edit dialogs
 - `student-more-hub.tsx` — "Ko'proq" landing (secondary nav)
 - `student-faq-page.tsx` / `student-about-page.tsx` — FAQ + about screens
+- `student-radio-page.tsx` — `/portal/radio`, the German live-radio browser (see below)
 - `student-logout-button.tsx` — logout action
 - Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
 - Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
+
+#### Radio (`/portal/radio`)
+
+German-language live radio, so a student can keep the language playing while they
+work. `student-radio-page.tsx` is only a chooser — playback lives in the shell.
+
+- **The station list is static** (`src/lib/radio-stations.ts`), built once from
+  [radio-browser.info](https://api.radio-browser.info) and verified by hand. That
+  directory is **not** called at runtime, deliberately: its DNS currently resolves
+  to a single server, and the `User-Agent` it asks callers to send is a forbidden
+  header in browsers, so honouring it would need a backend proxy. 26 curated
+  stations do not justify either.
+- **Rules for adding a station:** `https://` only (the portal is TLS, so a plain
+  `http://` stream is silently blocked as mixed content); no HLS `.m3u8` (plain
+  `<audio>` cannot play it outside Safari); MP3 or AAC at ≥ 96 kbps; and **no
+  session token in the URL** — those expire and the station dies weeks later.
+  `npm run radio:check` (`client/scripts/check-radio.mjs`) connects to every
+  stream and, for anything broken, prints the URL radio-browser now holds for that
+  `uuid`. It never edits the list — a replacement still needs a human to confirm
+  it is the main channel and not a themed sub-stream.
+- **No "now playing" track line.** Only 5 of the 26 send ICY `StreamTitle`; the
+  German public broadcasters (ARD, Deutschlandfunk, WDR, BR) send none. A UI built
+  around the current song would be blank on most of the list, so the station is the
+  identity. For the same reason there is no station artwork: of the logos
+  radio-browser holds, most are missing, wrong-shaped or on third-party hosts that
+  already 403. Category glyphs carry the identity instead.
+- **`radio-store.ts` creates the `<audio>` element at module scope, not in a
+  component** — that is what makes playback survive navigation between portal
+  screens. Do not move it into React; remounting the element mid-stream restarts
+  the connection. The shell renders `RadioHost` (Media Session metadata for
+  lock-screen controls, and the stop-on-unmount that prevents audio outliving its
+  UI), `RadioMiniPlayer` and `RadioNowPlaying`.
+- **Audio is never proxied through our backend** — the browser connects straight to
+  the broadcaster. Re-streaming would be re-transmission, with the bandwidth bill
+  and the licensing exposure that implies. We ship the list of URLs, nothing else.
 
 **Profile vs Settings:** Profile = *who the student is* (photo, name, phone, login, telegram, branch). Settings = *how the app behaves* (theme, password). Every field is editable in exactly one place — do not add a second entry point for the same field. Remaining portal UX findings and the phase order: `docs/student-portal-ux-audit.md`.
 

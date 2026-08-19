@@ -15,6 +15,22 @@ async function bootstrap() {
     }),
   );
 
+  // Which portal the browser is on is derived from the host prefix
+  // (`student.` / `lehrer.` / …), so testing a non-admin portal locally means
+  // browsing `student.localhost:3000` rather than `localhost:3000`. Browsers
+  // resolve `*.localhost` to the loopback address on their own, but the origin
+  // still has to be allowed here. Development only — production keeps the
+  // explicit list below and nothing else.
+  const devOrigins =
+    process.env.NODE_ENV === 'production'
+      ? []
+      : [
+          'http://student.localhost:3000',
+          'http://lehrer.localhost:3000',
+          'http://invoice.localhost:3000',
+          'http://form.localhost:3000',
+        ];
+
   app.enableCors({
     origin: [
       'http://localhost:3000',
@@ -24,6 +40,7 @@ async function bootstrap() {
       'https://student.dafzentrum.uz',
       'https://invoice.dafzentrum.uz',
       'https://form.dafzentrum.uz',
+      ...devOrigins,
     ],
     credentials: true,
   });

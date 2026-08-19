@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { bottomNavItems, moreRoutes } from "@/lib/student-nav-items";
 
-// Floating glass bottom-nav pill — mobile + tablet only (hidden at lg). Active
+// Floating glass bottom-nav pill — mobile only (hidden at md, where the side
+// rail takes over; the shell passes that class in). Active
 // tabs turn coral. Geometry mirrors the student-app LumioTabBar (68px pill,
 // 34px radius).
 export function LumioBottomNav({ className }: { className?: string }) {

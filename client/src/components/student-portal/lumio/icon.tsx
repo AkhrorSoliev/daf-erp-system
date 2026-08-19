@@ -19,6 +19,8 @@ export {
   SignIn,
   CaretRight,
   CaretLeft,
+  CaretLineLeft,
+  CaretLineRight,
   Camera,
   Check,
   CheckCircle,
@@ -49,6 +51,24 @@ export {
   Image as ImageIcon,
   Eye,
   EyeSlash,
+  // Radio screen + persistent player.
+  Radio,
+  Broadcast,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  SpeakerHigh,
+  SpeakerSlash,
+  ArrowClockwise,
+  Heart,
+  CaretDown,
+  // Radio category glyphs.
+  Newspaper,
+  MusicNotes,
+  Waveform,
+  PianoKeys,
+  VinylRecord,
 } from "@phosphor-icons/react";
 
 export type { Icon, IconWeight } from "@phosphor-icons/react";

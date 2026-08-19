@@ -130,6 +130,31 @@ app.enableCors({
 
 When adding new frontend domains, update this list.
 
+### Development-only origins
+
+Which portal the browser is on is derived from the host prefix (`student.`,
+`lehrer.`, …), so `localhost:3000` always resolves to the **admin** portal and a
+student or teacher cannot sign in there. Testing another portal locally means
+browsing `student.localhost:3000` — browsers map `*.localhost` to the loopback
+address on their own, no `/etc/hosts` entry needed.
+
+Those origins are appended to the list above **only when `NODE_ENV !== 'production'`**:
+
+```typescript
+const devOrigins =
+  process.env.NODE_ENV === "production"
+    ? []
+    : [
+        "http://student.localhost:3000",
+        "http://lehrer.localhost:3000",
+        "http://invoice.localhost:3000",
+        "http://form.localhost:3000",
+      ];
+```
+
+Production is unaffected — the deployed API still allows exactly the seven
+domains listed above.
+
 > **Note:** The `/team-deploy` command automatically checks for CORS mismatches when deploying frontend changes and warns you if a new domain needs to be added.
 
 ## Quick Deploy (CLI Skill)
