@@ -49,13 +49,17 @@ describe('UsersService — branch confinement', () => {
   beforeEach(async () => {
     prisma = {
       user: {
-        findFirst: jest.fn().mockImplementation(({ where }: any) =>
-          Promise.resolve(
-            where?.id === FARGONA_DIRECTOR ? fargonaDirector : namanganStaff,
+        findFirst: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve(
+              where?.id === FARGONA_DIRECTOR ? fargonaDirector : namanganStaff,
+            ),
           ),
-        ),
         findUnique: jest.fn().mockResolvedValue(fargonaDirector),
-        create: jest.fn().mockResolvedValue({ id: 999, roles: [], branches: [] }),
+        create: jest
+          .fn()
+          .mockResolvedValue({ id: 999, roles: [], branches: [] }),
         update: jest.fn().mockResolvedValue(namanganStaff),
       },
       // Every named branch is real and in the company — the point is that
@@ -109,7 +113,7 @@ describe('UsersService — branch confinement', () => {
           branchIds: [NAMANGAN],
           mainBranch: NAMANGAN,
         },
-        FARGONA_DIRECTOR,
+        { kind: 'user', id: FARGONA_DIRECTOR },
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.user.create).not.toHaveBeenCalled();
@@ -130,7 +134,7 @@ describe('UsersService — branch confinement', () => {
           branchIds: [FARGONA, NAMANGAN],
           mainBranch: FARGONA,
         },
-        FARGONA_DIRECTOR,
+        { kind: 'user', id: FARGONA_DIRECTOR },
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.user.create).not.toHaveBeenCalled();
@@ -148,7 +152,7 @@ describe('UsersService — branch confinement', () => {
         branchIds: [FARGONA],
         mainBranch: FARGONA,
       },
-      FARGONA_DIRECTOR,
+      { kind: 'user', id: FARGONA_DIRECTOR },
     );
     expect(prisma.user.create).toHaveBeenCalled();
   });
@@ -169,7 +173,7 @@ describe('UsersService — branch confinement', () => {
           branchIds: [NAMANGAN],
           mainBranch: FARGONA,
         },
-        FARGONA_DIRECTOR,
+        { kind: 'user', id: FARGONA_DIRECTOR },
       ),
     ).rejects.toThrow(/Asosiy filial.*orasida/);
   });
@@ -208,7 +212,7 @@ describe('UsersService — branch confinement', () => {
         branchIds: [NAMANGAN],
         mainBranch: NAMANGAN,
       },
-      1,
+      { kind: 'user', id: 1 },
     );
     expect(prisma.user.create).toHaveBeenCalled();
     await service.softDelete(NAMANGAN_STAFF, 1, 1001);

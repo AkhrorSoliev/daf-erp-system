@@ -68,5 +68,8 @@ describe('teacher-registration.scene — confirm_registration', () => {
     expect(payload.roleIds).toEqual([4]);
     expect(payload.login).toBe('901234567');
     expect(typeof payload.password).toBe('string');
+    expect(usersService.create.mock.calls[0][1]).toEqual({
+      kind: 'self-registration',
+    });
   });
 });

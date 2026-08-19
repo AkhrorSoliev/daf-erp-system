@@ -3,6 +3,8 @@
 **Sana:** 2026-07-29 · **Kontekst:** filial #2 "Namangan filiali" ishga tushirilmoqda.
 Bog'liq: [branch-readiness-issues.md](branch-readiness-issues.md) (106 muammo auditi), [branch-action-plan.md](branch-action-plan.md) (bajarish rejasi), [branch-finance-split-plan.md](branch-finance-split-plan.md) (eski, moliya bo'yicha reja).
 
+> **Eslatma:** bu hujjatdagi D1–D8 qarorlari [ADR-0001](adr/0001-bir-yozuv-bitta-filial.md) va [ADR-0002](adr/0002-filial-qamrovi-fail-closed.md) da rasmiylashtirilgan. Bu fayl asl CEO qarorlari matni sifatida saqlanadi.
+
 Bu qarorlar **majburiy qoida** — kodni shu qoidalarga moslashtiramiz, teskarisi emas.
 
 ---

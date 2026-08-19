@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
 import { SCENES, TEACHER_ROLE_ID, DEFAULT_COMPANY_ID } from '../constants';
@@ -20,6 +21,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { UsersService } from '../../users/users.service';
 import { message } from 'telegraf/filters';
+
+const logger = new Logger('TeacherRegistrationScene');
 
 export function createTeacherRegistrationScene(
   prisma: PrismaService,
@@ -351,21 +354,25 @@ export function createTeacherRegistrationScene(
       const password = generatePassword();
 
       // User yaratish
-      await usersService.create({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        photo: data.photo,
-        gender: data.gender,
-        login: data.phone,
-        password,
-        companyId: DEFAULT_COMPANY_ID,
-        mainBranch: data.branchId ?? undefined,
-        telegramChatId: chatId,
-        position: "O'qituvchi",
-        roleIds: [TEACHER_ROLE_ID],
-        branchIds: data.branchId ? [data.branchId] : undefined,
-      });
+      await usersService.create(
+        {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          photo: data.photo,
+          gender: data.gender,
+          login: data.phone,
+          password,
+          companyId: DEFAULT_COMPANY_ID,
+          mainBranch: data.branchId ?? undefined,
+          telegramChatId: chatId,
+          position: "O'qituvchi",
+          roleIds: [TEACHER_ROLE_ID],
+          branchIds: data.branchId ? [data.branchId] : undefined,
+        },
+        // Nobody is signed in here — see the employee scene for the full note.
+        { kind: 'self-registration' },
+      );
 
       ctx.session.processing = false;
       await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
@@ -379,8 +386,12 @@ export function createTeacherRegistrationScene(
       });
 
       await ctx.scene.leave();
-    } catch {
+    } catch (error) {
       ctx.session.processing = false;
+      logger.error(
+        `O'qituvchi ro'yxatdan o'tishi muvaffaqiyatsiz (chat ${chatId}, filial ${data.branchId})`,
+        error as Error,
+      );
       await ctx.reply(
         "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
       );

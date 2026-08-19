@@ -6,6 +6,24 @@ An ERP system for **DaF Sprachzentrum** language school. Manages branches, staff
 
 > **Language:** The entire UI of this project is in **Uzbek** (O'zbek tili). All labels, placeholders, messages, and user-facing text must be written in Uzbek.
 
+## Arxitektura qarorlari (ADR)
+
+**`docs/adr/` — qaytarish qiyin bo'lgan qarorlar jurnali.** Kodni o'zgartirishdan
+oldin [docs/adr/README.md](../docs/adr/README.md) indeksini ko'ring: agar tegayotgan
+joyingiz ADR bilan qoplangan bo'lsa, o'sha ADR **majburiy qoida** — kod unga
+moslashadi, teskarisi emas.
+
+Hozirgi ADR'lar quyidagilarni qamraydi: filial ajratilishi (0001), fail-closed
+filial qamrovi (0002), route siyosati manifesti (0003), ledger'ga langarlangan
+balans (0004), hisobot pastki chegarasi (0005), oylikning yagona manbasi (0006),
+lavozim va rol farqi (0007), ro'yxatdan o'tish aktori (0008).
+
+**Yangi ADR qachon yoziladi:** ma'lumot modeli, pul semantikasi, filial qoidasi,
+fail-open/fail-closed tanlovi yoki tashqi xizmat tanlovi o'zgarsa — ADR **o'sha
+ishning o'zi bilan bitta PR ichida** yoziladi. Qabul qilingan ADR hech qachon
+tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
+`Almashtirildi` ga o'tadi. Batafsil: [docs/adr/README.md](../docs/adr/README.md).
+
 ## Roles
 
 - **CEO** (id: 1) — Full system access
