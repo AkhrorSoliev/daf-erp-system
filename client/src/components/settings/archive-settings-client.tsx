@@ -435,8 +435,12 @@ function deletedByName(item: any): string {
 
 function getDisplayName(entityType: string, item: any): string {
   switch (entityType) {
+    // `User` carries firstName/lastName, never a `name` column, so reading
+    // `item.name` here rendered "Noma'lum" for every archived staff member.
     case "users":
-      return item.name || "Noma'lum";
+      return (
+        `${item.firstName || ""} ${item.lastName || ""}`.trim() || "Noma'lum"
+      );
     case "students":
       return (
         `${item.firstName || ""} ${item.lastName || ""}`.trim() || "Noma'lum"
