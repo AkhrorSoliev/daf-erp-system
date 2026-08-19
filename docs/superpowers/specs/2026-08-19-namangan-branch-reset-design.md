@@ -114,7 +114,10 @@ Tartib child → parent, RESTRICT bog'liqliklar birinchi.
 
 **1-qadam — o'quvchi tomoni**
 `SmsMessage` (87) → `EnrollmentStateLog` (90) → `Enrollment` (87) →
-`StudentBranch` (84) → `Student` (84) → `UserRole` + `User` (84 ta o'quvchi akkaunti)
+`StudentBranch` (84) → `Student` (84) → `Notification` + `UserRole` + `User`
+(84 ta o'quvchi akkaunti). `Notification.userId` RESTRICT — o'quvchi
+akkauntlariniki ham, xodimlarniki (3-qadam) kabi, `User`dan oldin ketishi
+SHART; bu qator avval yo'q edi va kod bilan mos kelmasdi.
 
 **2-qadam — guruh / xona / kurs**
 `GroupScheduleSnapshot` (17), `GroupHolidayExtension` (8) → `Group` (12) →
@@ -137,30 +140,63 @@ ishora qiluvchi qatorlar.
 
 | Bayroq | Xatti-harakat |
 |---|---|
-| `--dry-run` (standart) | Faqat sanaydi va ro'yxat chiqaradi. Hech nima o'chmaydi. |
+| (bayroqsiz, standart) | Faqat sanaydi va ro'yxat chiqaradi. Hech nima o'chmaydi (`--confirm` yo'q). |
+| `--dry-run` | ANIQ dry-run: `--confirm` berilgan bo'lsa ham hech nima o'chirilmaydi, bu holat stdout'ga yoziladi. |
 | `--backup` | O'chishdan oldin barcha qatorlarni `scripts/backups/` ichiga JSON qilib yozadi |
-| `--confirm="<filial nomi>"` | Haqiqiy o'chirish. Bayroqsiz hech qachon yozmaydi. |
+| `--confirm="<filial nomi>"` | Haqiqiy o'chirish. `--dry-run` bilan birga berilsa — e'tiborga olinmaydi. |
 
 Skript filial ID sini argument sifatida oladi (`--branch=2`), va `--confirm`
 qiymati DB dagi filial nomiga **aynan** mos kelishi tekshiriladi — noto'g'ri
 filialni tasodifan tozalashning oldi olinadi. Namangan uchun bu qiymat
 `Namangan filali` (prod'da nom shu tarzda, bitta `i` tushib qolgan holda saqlangan).
 
+Yuqoridagi to'rttadan boshqa bayroq (masalan `--dryrun`, `--dry_run`, biror
+matn xatosi) xato bilan rad etiladi — noma'lum bayroq "ishladi" degan
+noto'g'ri taassurot qoldirmasligi kerak, jimgina e'tiborsiz qoldirilmaydi.
+
 ### Xavfsizlik kafolatlari
 
 1. **Ochiq `WHERE "branchId" = 2` ishlatilmaydi.** Har bir `DELETE` tranzaksiya
    boshida bir marta yig'ilgan aniq ID ro'yxatiga tayanadi (`WHERE id = ANY($ids)`).
 2. **Assert:** yig'ilgan har bir ID to'plami filial #2 ga tegishli ekani qayta
-   tekshiriladi (o'quvchilar `StudentBranch`, guruhlar/xonalar/kurslar `branchId`,
-   xodimlar `UserBranch` bo'yicha). Bironta begona ID topilsa — `throw`, tranzaksiya
-   bekor.
+   tekshiriladi (o'quvchilar `StudentBranch`, o'quvchi akkauntlari `UserBranch`,
+   guruhlar/xonalar/kurslar `branchId`, xodimlar `UserBranch` bo'yicha). Bironta
+   begona ID topilsa — `throw`, tranzaksiya bekor.
 3. **CEO qorovuli:** o'chiriladigan foydalanuvchilar ro'yxatidan `UserBranch`
    qatorlari soni 1 dan ko'p bo'lgan har qanday foydalanuvchi chiqarib tashlanadi.
    Hozir bu faqat #10562, lekin qoida umumiy.
 4. **Bitta `$transaction`** — yarim o'chgan holat bo'lishi mumkin emas.
-5. **Oldin/keyin sanoq:** skript filial #1 ga tegishli barcha jadval sanoqlarini
-   o'chishdan oldin va keyin oladi va farqni chop etadi. Farq **0 bo'lishi shart**;
-   aks holda natija xato deb hisoblanadi.
+5. **Oldin/keyin sanoq — YUQORI CHEGARA, TENGLIK EMAS.** Skript boshqa
+   filiallarga tegishli (branch-scoped) hamda kompaniya bo'ylab olingan
+   (`users`, `payments`, `transactions`, `attendances`, `salaryAccruals`,
+   `cashAccounts`, `leadColumns`, `entityHistory`) bir nechta jadval sanog'ini
+   o'chirishdan oldin va keyin oladi. Har bir sanoqning tushishi reset
+   o'chirgan qatorlar soniga **TENGDAN OSHMASLIGI** kerak (`≤`), aks holda
+   natija xato deb hisoblanadi. Nega tenglik emas: `$transaction` 120
+   soniyagacha davom etishi mumkin, va shu oyna ichida boshqa admin amaliyoti
+   (yangi o'quvchi, yangi audit yozuvi) parallel yozadi — bu tushishni
+   kutilganidan hatto kamroq (yoki manfiy) ko'rsatishi mumkin, va bu signal
+   EMAS. Signal faqat tushish kutilganidan **ko'p** bo'lganda.
+   Bu tekshiruv nimani ANIQLAYDI: gross ortiqcha o'chirishni — masalan boshqa
+   filialning guruhi xato ravishda reja ID ro'yxatiga kirib qolishi. Nimani
+   ANIQLAMAYDI: 6-banddagi SET NULL/CASCADE mutatsiyalarini — ular boshqa
+   filialning qatorini SONI o'zgarmasdan turib jimgina o'zgartiradi (masalan
+   `Contract.groupId` NULL bo'lib qoladi), shuning uchun bu sanoqda umuman
+   ko'rinmaydi.
+6. **Tashqaridan ishora tekshiruvi (`assertNoInboundReferences`):** reja
+   TASHQARISIDAGI qatorlar reja ICHIDAGI biror ID ga ishora qilayotganini
+   tekshiradi — `GroupTeacher.teacherId` (CASCADE), `Group.roomId` (SET NULL),
+   `Contract.groupId` (SET NULL), `EmployeeSalaryConfig.groupId` (SET NULL),
+   `MockExamParticipant.studentId` (SET NULL), `AiConversation.studentId`
+   (SET NULL). Bittasi topilsa ham — rad javobi; tranzaksiya boshlanishidan
+   OLDIN ham, ICHIDA ham tekshiriladi. Ishlab chiqarishda o'lchangan
+   (2026-08-19): oltitasi ham Namangan uchun hozir nol.
+7. **Saqlanishi SHART bo'lgan qatorlar tekshiruvi:** `Branch` qatorining o'zi,
+   ikkala `CashAccount` va `systemKey='NEW'` `LeadColumn` + uning
+   `LeadSection`i o'chirishdan oldin va keyin **ANIQ TENG** sanaladi (na ko'p,
+   na kam). 5-banddagi sanoq bu filialni ATAYLAB chetlab o'tadi (u "boshqa
+   filial buzilmadimi" deb so'raydi) — shuning uchun eng muhim kafolat
+   ("filial hali ham pul qabul qila oladimi") mustaqil, alohida o'lchanadi.
 
 ## 7. Bajarish tartibi
 

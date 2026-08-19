@@ -3,6 +3,7 @@ import {
   verifyBranchResetPlan,
   assertBranchIsFinanciallyEmpty,
   assertNoBlockingDependents,
+  assertNoInboundReferences,
   BranchResetUnsafeError,
   BranchResetPlan,
 } from './branch-reset-plan';
@@ -12,8 +13,12 @@ import {
  * tenglik. Barcha soxta mijozlar (fakePrisma va fakePrismaWithMoney) shu bitta
  * funksiyani ishlatadi — ikkinchi mos keltiruvchi yozilmaydi.
  */
-const inList = (v: unknown, w: any): boolean =>
-  w === undefined ? true : Array.isArray(w?.in) ? w.in.includes(v) : v === w;
+const inList = (v: unknown, w: any): boolean => {
+  if (w === undefined) return true;
+  if (Array.isArray(w?.in)) return w.in.includes(v);
+  if (Array.isArray(w?.notIn)) return !w.notIn.includes(v);
+  return v === w;
+};
 
 /**
  * Prisma o'rniga qo'yiladigan soxta mijoz. Faqat reja yig'uvchi va tekshiruvchi
@@ -24,11 +29,12 @@ function fakePrisma(data: {
   studentBranches?: { studentId: number; branchId: number }[];
   students?: { id: number; userId: number | null }[];
   userBranches?: { userId: number; branchId: number }[];
-  groups?: { id: string; branchId: number }[];
+  groups?: { id: string; branchId: number; roomId?: string | null }[];
   rooms?: { id: string; branchId: number }[];
   courses?: { id: string; branchId: number }[];
   enrollments?: { id: string; groupId: string }[];
   snapshots?: { id: number; branchId: number | null }[];
+  groupTeachers?: { groupId: string; teacherId: number }[];
 }) {
   const d = {
     branch:
@@ -43,6 +49,7 @@ function fakePrisma(data: {
     courses: data.courses ?? [],
     enrollments: data.enrollments ?? [],
     snapshots: data.snapshots ?? [],
+    groupTeachers: data.groupTeachers ?? [],
   };
   return {
     branch: { findUnique: jest.fn(async () => d.branch) },
@@ -67,7 +74,19 @@ function fakePrisma(data: {
     },
     group: {
       findMany: jest.fn(async ({ where }: any) =>
-        d.groups.filter((r) => inList(r.branchId, where?.branchId) && inList(r.id, where?.id)),
+        d.groups.filter(
+          (r) =>
+            inList(r.branchId, where?.branchId) &&
+            inList(r.id, where?.id) &&
+            inList(r.roomId ?? null, where?.roomId),
+        ),
+      ),
+    },
+    groupTeacher: {
+      findMany: jest.fn(async ({ where }: any) =>
+        d.groupTeachers.filter(
+          (r) => inList(r.teacherId, where?.teacherId) && inList(r.groupId, where?.groupId),
+        ),
       ),
     },
     room: {
@@ -204,6 +223,71 @@ describe('verifyBranchResetPlan', () => {
     });
     await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/999/);
   });
+
+  it("o'quvchi akkaunti boshqa filialda xodim sifatida ham turgan bo'lsa tutadi", async () => {
+    const [, plan] = await clean();
+    // 20795 — Namangan o'quvchisi #10795ning akkaunti; endi u boshqa
+    // filialda (#1) xodim sifatida ham UserBranch qatoriga ega bo'lib qoladi.
+    const prisma = fakePrisma({
+      ...namanganish,
+      userBranches: [...namanganish.userBranches, { userId: 20795, branchId: 1 }],
+    });
+    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/20795/);
+  });
+
+  it("o'quvchi akkaunti saqlanadigan (kept) foydalanuvchilar ro'yxatiga ham kirib qolsa tutadi", async () => {
+    const [prisma, plan] = await clean();
+    plan.keptUserIds.push(20795); // 20795 studentUserIds ichida ham bor
+    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/20795/);
+  });
+});
+
+describe('assertNoInboundReferences', () => {
+  it("bog'lanish yo'q toza rejadan o'tkazadi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {});
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoInboundReferences(prisma, plan)).resolves.toBeUndefined();
+  });
+
+  it("boshqa filial guruhidagi GroupTeacher.teacherId (reja foydalanuvchisi) ni tutadi", async () => {
+    const prisma = fakePrismaWithMoney(
+      {
+        ...namanganish,
+        groups: [...namanganish.groups, { id: 'g-fargona', branchId: 1 }],
+        groupTeachers: [{ groupId: 'g-fargona', teacherId: 10768 }],
+      },
+      {},
+    );
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
+      /GroupTeacher\.teacherId: 1/,
+    );
+  });
+
+  it('reja o\'quvchisiga bog\'langan MockExamParticipant.studentId ni tutadi', async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      mockExamParticipant: [{ id: 'mep-1', studentId: 10795 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
+      /MockExamParticipant\.studentId: 1/,
+    );
+  });
+
+  it('ikkita turli bloklovchini bitta xabarda sanaydi', async () => {
+    const prisma = fakePrismaWithMoney(
+      {
+        ...namanganish,
+        groups: [...namanganish.groups, { id: 'g-fargona', branchId: 1 }],
+        groupTeachers: [{ groupId: 'g-fargona', teacherId: 10768 }],
+      },
+      { mockExamParticipant: [{ id: 'mep-1', studentId: 10795 }] },
+    );
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
+      /GroupTeacher\.teacherId: 1[\s\S]*MockExamParticipant\.studentId: 1/,
+    );
+  });
 });
 
 type MoneyModel =
@@ -229,7 +313,11 @@ type MoneyModel =
   | 'comment'
   | 'commentAssignee'
   | 'employeeSalaryConfig'
-  | 'salaryPayment';
+  | 'salaryPayment'
+  // `assertNoInboundReferences` bilan bog'liq — SET NULL/CASCADE bilan
+  // bog'langan, reja tashqarisidan reja ichidagi ID ga ishora qilishi
+  // mumkin bo'lgan jadvallar.
+  | 'mockExamParticipant';
 
 /**
  * `where` ni HAQIQATDA hisobga oladi: top-level `OR` massivi (har bir shart
@@ -279,6 +367,7 @@ function fakePrismaWithMoney(
     'commentAssignee',
     'employeeSalaryConfig',
     'salaryPayment',
+    'mockExamParticipant',
   ];
   for (const model of models) {
     const modelRows = rows[model] ?? [];

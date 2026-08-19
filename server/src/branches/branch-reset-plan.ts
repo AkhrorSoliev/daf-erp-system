@@ -163,6 +163,32 @@ export async function verifyBranchResetPlan(
     }
   }
 
+  // `studentUserIds` — `verifyBranchResetPlan` tekshiradigan yagona ID
+  // to'plami emas edi, lekin eng xavflisi: `UserBranch.userId` va
+  // `GroupTeacher.teacherId` ikkalasi ham CASCADE, shuning uchun
+  // `Student.userId` boshqa filialdagi xodim akkauntiga ishora qilib qolsa,
+  // o'sha akkaunt, uning rollari, filial bog'lanishi va dars biriktirmalari
+  // jimgina yo'q bo'lib ketardi.
+  if (plan.studentUserIds.length) {
+    const strayBranches = await prisma.userBranch.findMany({
+      where: { userId: { in: plan.studentUserIds } },
+      select: { userId: true, branchId: true },
+    });
+    for (const u of strayBranches) {
+      if (u.branchId !== plan.branchId) {
+        problems.push(
+          `O'quvchi akkaunti #${u.userId} #${u.branchId} filialda xodim sifatida ham turibdi`,
+        );
+      }
+    }
+    const keptSet = new Set(plan.keptUserIds);
+    for (const id of plan.studentUserIds) {
+      if (keptSet.has(id)) {
+        problems.push(`O'quvchi akkaunti #${id} saqlanadigan foydalanuvchilar ro'yxatida ham bor`);
+      }
+    }
+  }
+
   if (plan.snapshotIds.length) {
     const strays = await prisma.dailyFinancialSnapshot.findMany({
       where: { id: { in: plan.snapshotIds } },
@@ -454,6 +480,114 @@ export async function assertNoBlockingDependents(
   if (found.length) {
     throw new BranchResetUnsafeError(
       `Filial #${branchId} (${plan.branchName}) da o'chirilmaydigan bog'liq yozuvlar bor, ` +
+        `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
+    );
+  }
+}
+
+/**
+ * Reja TASHQARISIDA turgan qatorlar reja ICHIDAGI biror ID ga ishora
+ * qilmayotganini tekshiradi.
+ *
+ * Yuqoridagi uch qorovul faqat "bu ID lar chindan ham shu filialga
+ * tegishlimi" deb so'raydi — bittasi ham "reja tashqarisidan kimdir shu ID ga
+ * ishora qilyaptimi" deb so'ramaydi. RESTRICT chekkalar o'zini o'zi himoya
+ * qiladi: `executeBranchReset` FK xatosiga urilib butun tranzaksiya bekor
+ * bo'ladi. SET NULL va CASCADE chekkalar himoyasiz — ular boshqa filialga
+ * tegishli qatorni SONI o'zgarmasdan turib jimgina mutatsiya qiladi (yoki
+ * o'chiradi), va bu mutatsiya na zaxirada, na `reset-branch.ts`ning
+ * oldin/keyin sanoq jadvalida umuman ko'rinadi.
+ *
+ * Olti chekka — hammasi Task 2/3 qorovullari qamramaydigan, lekin
+ * `executeBranchReset` tomonidan bevosita o'chirilmaydigan modellarga
+ * ishora qiladi:
+ *   - GroupTeacher.teacherId (CASCADE)
+ *   - Group.roomId (SET NULL)
+ *   - Contract.groupId (SET NULL)
+ *   - EmployeeSalaryConfig.groupId (SET NULL)
+ *   - MockExamParticipant.studentId (SET NULL)
+ *   - AiConversation.studentId (SET NULL)
+ *
+ * Ishlab chiqarishda o'lchangan (2026-08-19): bu oltitasining har biri
+ * Namangan uchun HOZIR nol — shuning uchun bu qorovul haqiqiy ishga
+ * to'sqinlik qilmaydi, lekin uni doimiy kodga aylantiradi.
+ */
+export async function assertNoInboundReferences(
+  prisma: PrismaLike,
+  plan: BranchResetPlan,
+): Promise<void> {
+  const { branchId, studentIds, groupIds, roomIds, staffUserIds, studentUserIds } = plan;
+  const allUserIds = [...staffUserIds, ...studentUserIds];
+
+  const found: string[] = [];
+
+  // GroupTeacher.teacherId (CASCADE) — teacherId reja foydalanuvchisi, lekin
+  // o'sha yozuv ishora qiluvchi guruh BOSHQA filialga tegishli.
+  if (allUserIds.length) {
+    const rows = await prisma.groupTeacher.findMany({
+      where: { teacherId: { in: allUserIds } },
+      select: { teacherId: true, groupId: true },
+    });
+    if (rows.length) {
+      const groupIdsToCheck = [...new Set(rows.map((r) => r.groupId))];
+      const groupBranches = await prisma.group.findMany({
+        where: { id: { in: groupIdsToCheck } },
+        select: { id: true, branchId: true },
+      });
+      const branchOf = new Map(groupBranches.map((g) => [g.id, g.branchId]));
+      const count = rows.filter((r) => branchOf.get(r.groupId) !== branchId).length;
+      if (count > 0) found.push(`GroupTeacher.teacherId: ${count}`);
+    }
+  }
+
+  // Group.roomId (SET NULL) — roomId reja xonasi, lekin o'sha xonani
+  // ko'rsatayotgan guruh BOSHQA filialga tegishli.
+  if (roomIds.length) {
+    const rows = await prisma.group.findMany({
+      where: { roomId: { in: roomIds } },
+      select: { id: true, branchId: true },
+    });
+    const count = rows.filter((r) => r.branchId !== branchId).length;
+    if (count > 0) found.push(`Group.roomId: ${count}`);
+  }
+
+  // Contract.groupId (SET NULL) — groupId reja guruhi, lekin shartnoma
+  // egasi (studentId) reja o'quvchisi EMAS.
+  if (groupIds.length) {
+    const count = await prisma.contract.count({
+      where: { groupId: { in: groupIds }, studentId: { notIn: studentIds } },
+    });
+    if (count > 0) found.push(`Contract.groupId: ${count}`);
+  }
+
+  // EmployeeSalaryConfig.groupId (SET NULL) — groupId reja guruhi, lekin
+  // konfiguratsiya egasi (userId) reja foydalanuvchisi EMAS.
+  if (groupIds.length) {
+    const count = await prisma.employeeSalaryConfig.count({
+      where: { groupId: { in: groupIds }, userId: { notIn: allUserIds } },
+    });
+    if (count > 0) found.push(`EmployeeSalaryConfig.groupId: ${count}`);
+  }
+
+  // MockExamParticipant.studentId (SET NULL)
+  if (studentIds.length) {
+    const count = await prisma.mockExamParticipant.count({
+      where: { studentId: { in: studentIds } },
+    });
+    if (count > 0) found.push(`MockExamParticipant.studentId: ${count}`);
+  }
+
+  // AiConversation.studentId (SET NULL)
+  if (studentIds.length) {
+    const count = await prisma.aiConversation.count({
+      where: { studentId: { in: studentIds } },
+    });
+    if (count > 0) found.push(`AiConversation.studentId: ${count}`);
+  }
+
+  if (found.length) {
+    throw new BranchResetUnsafeError(
+      `Filial #${branchId} (${plan.branchName}) ga tashqaridan ishora qiluvchi qatorlar bor, ` +
         `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
     );
   }

@@ -15,7 +15,7 @@
 - CEO Sherali Yodgorov (`User.id = 10562`) va uning `UserBranch(userId=10562, branchId=2)` qatori tegilmaydi.
 - `Branch` qatorining o'zi, 2 ta `CashAccount` va `systemKey='NEW'` `LeadColumn` + uning `LeadSection` i saqlanadi. Ular `branches.service.create()` da faqat bir marta quriladi va UI'dan qayta yaratib bo'lmaydi.
 - Kod izohlari va CLI chiqishi lotin alifbosidagi o'zbek tilida. Kirill yoki arab harflari ishlatilmaydi.
-- Farg'ona filiali (`Branch.id = 1`) ga tegishli bironta qator o'zgarmaydi. Bu skript tomonidan oldin/keyin sanoq bilan isbotlanadi.
+- Farg'ona filiali (`Branch.id = 1`) ga tegishli bironta qator o'zgarmasligi kerak. Skriptning oldin/keyin sanoq tekshiruvi buni TO'LIQ ISBOTLAMAYDI — u faqat YUQORI CHEGARA (tenglik emas: `$transaction` davomida parallel yozuvlar bo'lishi mumkin), va u SET NULL/CASCADE orqali sodir bo'ladigan, sonni o'zgartirmaydigan mutatsiyalarni (masalan `Contract.groupId` NULL bo'lib qolishi) umuman ko'ra olmaydi. Bunday mutatsiyalarni oldindan yo'qqa chiqarish uchun alohida `assertNoInboundReferences` qorovuli bor (Task 2ga qo'shimcha, quyida) — u reja TASHQARISIDAGI hech bir qator reja ICHIDAGI ID ga ishora qilmasligini tranzaksiya boshlanishidan oldin ham, ichida ham tekshiradi. Filialning o'zi, uning `CashAccount`lari va lid ustuni/bo'limi esa alohida, ANIQ TENGLIK bilan tekshiriladi (`preservedTotals`) — chunki oldin/keyin sanoq bu filialni ATAYLAB chetlab o'tadi.
 
 ---
 
@@ -931,9 +931,9 @@ A branch without a cash account takes no money at all."
  * mumkin.
  *
  * Usage:
- *   npx tsx scripts/reset-branch.ts --branch=2                          (dry-run)
- *   npx tsx scripts/reset-branch.ts --branch=2 --backup                 (dry-run + zaxira)
- *   npx tsx scripts/reset-branch.ts --branch=2 --backup --confirm="Namangan filali"
+ *   npx ts-node scripts/reset-branch.ts --branch=2                          (dry-run)
+ *   npx ts-node scripts/reset-branch.ts --branch=2 --backup                 (dry-run + zaxira)
+ *   npx ts-node scripts/reset-branch.ts --branch=2 --backup --confirm="Namangan filali"
  *
  * Prod uchun oldiga `railway run` qo'shing.
  *
@@ -1197,7 +1197,7 @@ server/scripts/backups/
 
 Lokal seed DB ning 2-filialida 20 to'lov va 4326 tranzaksiya bor, demak qorovul to'xtatishi SHART.
 
-Run: `cd server && npx tsx scripts/reset-branch.ts --branch=2`
+Run: `cd server && npx ts-node scripts/reset-branch.ts --branch=2`
 Expected: `BranchResetUnsafeError: Filial #2 (Samarqand filiali) da moliyaviy tarix bor, bo'shatish rad etildi:` va ro'yxatda `Payment: 20`, `Transaction: 4326`. Exit code 1.
 
 - [ ] **Step 5: Commit**
@@ -1317,22 +1317,22 @@ void main();
 
 - [ ] **Step 2: Fixture'ni ishga tushirish**
 
-Run: `cd server && npx tsx scripts/_fixture-throwaway-branch.ts`
+Run: `cd server && npx ts-node scripts/_fixture-throwaway-branch.ts`
 Expected: `Sinov filiali yaratildi: #<id> "Sinov filiali"` — chiqqan `<id>` ni keyingi qadamlarda ishlating.
 
 - [ ] **Step 3: Dry-run**
 
-Run: `cd server && npx tsx scripts/reset-branch.ts --branch=<id>`
+Run: `cd server && npx ts-node scripts/reset-branch.ts --branch=<id>`
 Expected: Jadvalda `O'quvchi 3`, `O'quvchi akkaunti 3`, `Xodim 1`, `Enrollment 3`, `Guruh 1`, `Xona 1`, `Kurs 1`. Oxirida `DRY-RUN` va `Hech nima o'chirilmadi.`
 
 - [ ] **Step 4: Noto'g'ri tasdiqlash nomi rad etilishini tekshirish**
 
-Run: `cd server && npx tsx scripts/reset-branch.ts --branch=<id> --confirm="Boshqa nom"`
+Run: `cd server && npx ts-node scripts/reset-branch.ts --branch=<id> --confirm="Boshqa nom"`
 Expected: `--confirm nomi mos kelmadi.` va exit code 1. Hech nima o'chmaydi.
 
 - [ ] **Step 5: To'liq ishga tushirish**
 
-Run: `cd server && npx tsx scripts/reset-branch.ts --branch=<id> --backup --confirm="Sinov filiali"`
+Run: `cd server && npx ts-node scripts/reset-branch.ts --branch=<id> --backup --confirm="Sinov filiali"`
 Expected:
 - `Zaxira` bo'limida JSON fayl yo'li
 - `O'chirilmoqda` jadvalida `student 3`, `user 4`, `smsMessage 3`, `enrollment 3`, `group 1`, `room 1`, `course 1`, `notification 1`
@@ -1341,12 +1341,12 @@ Expected:
 
 - [ ] **Step 6: Ikkinchi marta ishga tushirish xavfsizligini tekshirish (idempotentlik)**
 
-Run: `cd server && npx tsx scripts/reset-branch.ts --branch=<id> --confirm="Sinov filiali"`
+Run: `cd server && npx ts-node scripts/reset-branch.ts --branch=<id> --confirm="Sinov filiali"`
 Expected: Barcha sanoqlar 0, xato yo'q, `Boshqa filiallarning ma'lumoti o'zgarmadi.`
 
 - [ ] **Step 7: Filial va uning kassasi qolganini tekshirish**
 
-`tsx -e` nisbiy `import` larni ishonchli hal qilmaydi, shuning uchun tekshiruv vaqtinchalik faylga yoziladi.
+`ts-node -e` nisbiy `import` larni ishonchli hal qilmaydi, shuning uchun tekshiruv vaqtinchalik faylga yoziladi.
 
 Run (`<id>` ni Step 2 dagi raqamga almashtiring):
 ```bash
@@ -1364,7 +1364,7 @@ const id = Number(process.argv[2]);
   await p.$disconnect();
 })();
 EOF
-npx tsx scripts/_verify-reset.ts <id>
+npx ts-node scripts/_verify-reset.ts <id>
 ```
 Expected: `branch` qatori mavjud (nomi `Sinov filiali`); `students`, `groups`, `rooms`, `courses`, `staff` — hammasi 0.
 
@@ -1382,7 +1382,7 @@ const id = Number(process.argv[2]);
   await p.$disconnect();
 })();
 EOF
-npx tsx scripts/_drop-fixture.ts <id> && rm scripts/_verify-reset.ts scripts/_drop-fixture.ts scripts/_fixture-throwaway-branch.ts
+npx ts-node scripts/_drop-fixture.ts <id> && rm scripts/_verify-reset.ts scripts/_drop-fixture.ts scripts/_fixture-throwaway-branch.ts
 ```
 Expected: `sinov filiali #<id> o'chirildi`
 
@@ -1419,7 +1419,7 @@ were still there afterwards."
 
 - [ ] **Step 1: Prod'da dry-run**
 
-Run: `cd server && railway run npx tsx scripts/reset-branch.ts --branch=2`
+Run: `cd server && railway run npx ts-node scripts/reset-branch.ts --branch=2`
 
 Expected — jadval AYNAN shu sonlarni ko'rsatishi kerak (2026-08-19 da o'lchangan):
 
@@ -1446,7 +1446,7 @@ Chiqishni to'liq ko'rsating va o'chirishga ruxsat so'rang.
 
 Run:
 ```bash
-cd server && railway run npx tsx scripts/reset-branch.ts --branch=2 --backup --confirm="Namangan filali"
+cd server && railway run npx ts-node scripts/reset-branch.ts --branch=2 --backup --confirm="Namangan filali"
 ```
 
 Expected:
@@ -1461,7 +1461,7 @@ Expected:
 
 Run:
 ```bash
-cd server && railway run npx tsx scripts/reset-branch.ts --branch=2
+cd server && railway run npx ts-node scripts/reset-branch.ts --branch=2
 ```
 Expected: barcha sanoqlar 0, `Bir nechta filialda turgan foydalanuvchilar: 10562` hali ham ko'rinadi, `DRY-RUN`.
 
@@ -1484,7 +1484,7 @@ const p = makePrisma();
   await p.$disconnect();
 })();
 EOF
-railway run npx tsx scripts/_verify-namangan.ts
+railway run npx ts-node scripts/_verify-namangan.ts
 ```
 Expected: `branch: Namangan filali 08:00 22:00 ACTIVE`; `cashAccounts: 2`; `leadColumns: 1`; `ceoLink: 1`; `fargonaStudents: 788`; `fargonaGroups: 60`; `fargonaStaff: 27`.
 

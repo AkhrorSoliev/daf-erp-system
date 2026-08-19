@@ -5,15 +5,22 @@
  * mumkin.
  *
  * Usage:
- *   npx tsx scripts/reset-branch.ts --branch=2                          (dry-run)
- *   npx tsx scripts/reset-branch.ts --branch=2 --backup                 (dry-run + zaxira)
- *   npx tsx scripts/reset-branch.ts --branch=2 --backup --confirm="Namangan filali"
+ *   npx ts-node scripts/reset-branch.ts --branch=2                          (dry-run)
+ *   npx ts-node scripts/reset-branch.ts --branch=2 --dry-run                (aniq dry-run)
+ *   npx ts-node scripts/reset-branch.ts --branch=2 --backup                 (dry-run + zaxira)
+ *   npx ts-node scripts/reset-branch.ts --branch=2 --backup --confirm="Namangan filali"
  *
  * Prod uchun oldiga `railway run` qo'shing.
  *
  * `--confirm` qiymati DB dagi filial nomiga AYNAN mos kelishi kerak. Bu
  * `--branch=1` deb xato yozib qo'yishdan himoya qiladi: noto'g'ri raqam bilan
  * nom mos kelmaydi va skript to'xtaydi.
+ *
+ * `--dry-run` MAJBURIY dry-run: berilsa, `--confirm` bo'lsa ham hech nima
+ * o'chirilmaydi — bu holat stdout'ga ochiq yoziladi, jimgina e'tiborsiz
+ * qoldirilmaydi. Noma'lum bayroq (masalan `--dryrun` yoki `--dry_run`) xato
+ * bilan to'xtaydi — "bayroq yozilgan, demak ishladi" degan noto'g'ri taassurot
+ * qoldirmaslik uchun.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -23,6 +30,7 @@ import {
   verifyBranchResetPlan,
   assertBranchIsFinanciallyEmpty,
   assertNoBlockingDependents,
+  assertNoInboundReferences,
   BranchResetPlan,
 } from '../src/branches/branch-reset-plan';
 import { executeBranchReset, buildHistoryWhere } from '../src/branches/branch-reset-execute';
@@ -32,10 +40,29 @@ interface Args {
   branchId: number;
   backup: boolean;
   confirm: string | null;
+  dryRun: boolean;
 }
+
+/** `parse()` qabul qiladigan yagona bayroqlar ro'yxati — noma'lum bayroq shu ro'yxat bilan xabarda ko'rsatiladi. */
+const ACCEPTED_FLAGS = ['branch', 'backup', 'confirm', 'dry-run'];
 
 function parse(): Args {
   const argv = process.argv.slice(2);
+
+  // Noma'lum bayroqni jimgina o'tkazib yubormaslik: bir harflik xato
+  // (`--dryrun`, `--dry_run`) haqiqiy o'chirishga olib kelmasligi kerak.
+  for (const token of argv) {
+    if (!token.startsWith('--')) continue;
+    const name = token.slice(2).split('=')[0];
+    if (!ACCEPTED_FLAGS.includes(name)) {
+      console.error(
+        `Noma'lum bayroq: --${name}\n` +
+          `Qabul qilinadigan bayroqlar: ${ACCEPTED_FLAGS.map((f) => `--${f}`).join(', ')}`,
+      );
+      process.exit(1);
+    }
+  }
+
   const value = (name: string) => {
     const token = argv.find((a) => a.startsWith(`--${name}=`));
     return token ? token.slice(name.length + 3) : null;
@@ -45,18 +72,32 @@ function parse(): Args {
     console.error("--branch=<id> kerak. Masalan: --branch=2");
     process.exit(1);
   }
+
+  const dryRun = argv.includes('--dry-run');
+  const confirmValue = value('confirm');
+  if (dryRun && confirmValue !== null) {
+    console.log(
+      "  --dry-run berilgan: --confirm E'TIBORGA OLINMAYDI, hech nima o'chirilmaydi.",
+    );
+  }
+
   return {
     branchId: Number(branch),
     backup: argv.includes('--backup'),
-    confirm: value('confirm'),
+    // --dry-run bosh ustunlik qiladi: confirm berilgan bo'lsa ham majburan
+    // null qilinadi, shuning uchun quyidagi "args.confirm === null" tekshiruvi
+    // DRY-RUN yo'lini avtomatik tanlaydi.
+    confirm: dryRun ? null : confirmValue,
+    dryRun,
   };
 }
 
 /**
- * Boshqa filiallarning jadval sanoqlari. O'chishdan oldin va keyin olinadi;
- * farq bo'lsa — o'chirish o'z doirasidan chiqib ketgan.
+ * BOSHQA filiallarga tegishli, haqiqatda filial-doirali sanoqlar (`branchId:
+ * { not: excludeBranchId }`). O'chishdan oldin va keyin olinadi; tushish
+ * bo'lsa — o'chirish o'z doirasidan chiqib ketgan.
  */
-async function otherBranchTotals(
+async function otherBranchScopedTotals(
   prisma: PrismaClient,
   excludeBranchId: number,
 ): Promise<Record<string, number>> {
@@ -77,10 +118,24 @@ async function otherBranchTotals(
     rooms: await prisma.room.count({ where: { branchId: not } }),
     courses: await prisma.course.count({ where: { branchId: not } }),
     staffLinks: await prisma.userBranch.count({ where: { branchId: not } }),
-    users: await prisma.user.count(),
     enrollments: otherGroupIds.length
       ? await prisma.enrollment.count({ where: { groupId: { in: otherGroupIds } } })
       : 0,
+  };
+}
+
+/**
+ * KOMPANIYA BO'YLAB — filial bo'yicha EMAS — olingan sanoqlar. Reset
+ * qilinayotgan filialning o'zi ham shu sonlarga kiradi (moliyaviy qorovul
+ * uning ulushi har doim 0 ekanini kafolatlaydi, shuning uchun bu global
+ * sonlarni "boshqa filial" sifatida o'qish xato emas — lekin ular filial
+ * bo'yicha filtrlanmaganini bilib turish kerak, aks holda bu jadvaldagi
+ * "tushish 0 bo'lishi kerak" degan qatorlar filial-doirali qatorlar bilan
+ * bir xil narsani isbotlayotgandek noto'g'ri o'qiladi).
+ */
+async function companyWideTotals(prisma: PrismaClient): Promise<Record<string, number>> {
+  return {
+    users: await prisma.user.count(),
     payments: await prisma.payment.count(),
     transactions: await prisma.transaction.count(),
     attendances: await prisma.attendance.count(),
@@ -88,6 +143,38 @@ async function otherBranchTotals(
     cashAccounts: await prisma.cashAccount.count(),
     leadColumns: await prisma.leadColumn.count(),
     entityHistory: await prisma.entityHistory.count(),
+  };
+}
+
+/** Ikkalasini bitta jadvalga birlashtiradi — chaqiruvchi ikkisini alohida bilishi shart emas. */
+async function driftTotals(
+  prisma: PrismaClient,
+  excludeBranchId: number,
+): Promise<Record<string, number>> {
+  return {
+    ...(await otherBranchScopedTotals(prisma, excludeBranchId)),
+    ...(await companyWideTotals(prisma)),
+  };
+}
+
+/**
+ * SAQLANISHI SHART bo'lgan to'rttasi — reset REJASI ATAYLAB tegmaydigan
+ * qatorlar: `Branch` qatorining o'zi, ikkala `CashAccount`, systemKey='NEW'
+ * `LeadColumn` va uning `LeadSection`i. Bular `driftTotals` da yo'q, chunki
+ * u aynan RESET QILINAYOTGAN filialni EXCLUDE qiladi — demak eng muhim
+ * kafolat hech qachon o'lchanmasdi. `LeadSection`ning o'zida `branchId` yo'q
+ * ("Board STRUCTURE is per branch" — `prisma/schema.prisma`), filial uning
+ * `column` munosabati orqali topiladi.
+ */
+async function preservedTotals(
+  prisma: PrismaClient,
+  branchId: number,
+): Promise<Record<string, number>> {
+  return {
+    branch: await prisma.branch.count({ where: { id: branchId } }),
+    cashAccount: await prisma.cashAccount.count({ where: { branchId } }),
+    leadColumn: await prisma.leadColumn.count({ where: { branchId } }),
+    leadSection: await prisma.leadSection.count({ where: { column: { branchId } } }),
   };
 }
 
@@ -213,6 +300,7 @@ async function main() {
     await verifyBranchResetPlan(prisma, plan);
     await assertBranchIsFinanciallyEmpty(prisma, plan);
     await assertNoBlockingDependents(prisma, plan);
+    await assertNoInboundReferences(prisma, plan);
 
     section(`Filial: ${plan.branchName} (#${plan.branchId})`);
     printTable(
@@ -259,7 +347,8 @@ async function main() {
       return;
     }
 
-    const before = await otherBranchTotals(prisma, plan.branchId);
+    const before = await driftTotals(prisma, plan.branchId);
+    const preservedBefore = await preservedTotals(prisma, plan.branchId);
 
     section("O'chirilmoqda");
     const { deleted, fresh } = await prisma.$transaction(
@@ -270,6 +359,7 @@ async function main() {
         await verifyBranchResetPlan(tx, fresh);
         await assertBranchIsFinanciallyEmpty(tx, fresh);
         await assertNoBlockingDependents(tx, fresh);
+        await assertNoInboundReferences(tx, fresh);
         const deleted = await executeBranchReset(tx, fresh);
         return { deleted, fresh };
       },
@@ -319,10 +409,10 @@ async function main() {
       }
     }
 
-    const after = await otherBranchTotals(prisma, plan.branchId);
+    const after = await driftTotals(prisma, plan.branchId);
     section('Boshqa filiallar — oldin / keyin');
     const drift: string[] = [];
-    // Bu tekshiruv TENGLIK emas, YUQORI CHEGARA. `otherBranchTotals`dagi
+    // Bu tekshiruv TENGLIK emas, YUQORI CHEGARA. `companyWideTotals`dagi
     // `users` va `entityHistory` KOMPANIYA bo'yicha hisoblanadi (filial
     // bo'yicha emas), va reset $transaction'i 120 soniyagacha davom etishi
     // mumkin — shu oyna ichida boshqa admin amaliyoti (o'quvchi ro'yxatga
@@ -379,6 +469,30 @@ async function main() {
       process.exitCode = 1;
     } else {
       console.log("\n  Boshqa filiallardan kutilganidan ortiq hech narsa o'chirilmadi.");
+    }
+
+    const preservedAfter = await preservedTotals(prisma, plan.branchId);
+    section("SAQLANISHI SHART — filial, kassa hisoblari, lid ustuni/bo'limi");
+    const preservedDrift: string[] = [];
+    printTable(
+      ['Nima', 'Oldin', 'Keyin'],
+      Object.keys(preservedBefore).map((k) => {
+        if (preservedBefore[k] !== preservedAfter[k]) preservedDrift.push(k);
+        return [k, preservedBefore[k], preservedAfter[k]];
+      }),
+      ['l', 'r', 'r'],
+    );
+
+    if (preservedDrift.length) {
+      console.error(
+        `\n  KRITIK: saqlanishi SHART bo'lgan qator(lar) o'zgardi: ${preservedDrift.join(', ')}. ` +
+          "Filial pul qabul qila olmasligi yoki /leads sahifasi ishlamasligi mumkin.",
+      );
+      process.exitCode = 1;
+    } else {
+      console.log(
+        "\n  Saqlanishi SHART bo'lgan barcha qatorlar joyida: filial, kassa hisoblari, lid ustuni va bo'limi.",
+      );
     }
   } catch (e) {
     console.error(e instanceof Error ? `\n${e.name}: ${e.message}` : e);
