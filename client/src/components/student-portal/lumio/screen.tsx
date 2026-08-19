@@ -5,14 +5,31 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CaretLeft } from "@phosphor-icons/react";
 
+export interface ScreenProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * Caps the column at a comfortable reading width on desktop. The shell gives
+   * every screen up to 980px; text-and-rows screens (Settings, Profile) look
+   * stretched at that width, so they opt into a narrower column.
+   */
+  narrow?: boolean;
+}
+
 // Vertical page container — stacks sections with the Lumio gap.
 export function Screen({
   className,
+  narrow = false,
   children,
   ...rest
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: ScreenProps) {
   return (
-    <div className={cn("flex flex-col gap-4", className)} {...rest}>
+    <div
+      className={cn(
+        "flex flex-col gap-4",
+        narrow && "lg:max-w-[600px]",
+        className,
+      )}
+      {...rest}
+    >
       {children}
     </div>
   );
@@ -72,7 +89,10 @@ export function StackHeader({
           if (window.history.length > 1) router.back();
           else router.push(backHref);
         }}
-        className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface text-ink-900 shadow-lumio-sm transition-colors hover:bg-tint"
+        // Desktop navigates from the persistent side rail, and `/portal/more`
+        // is not even on it — a back chevron there would push the user to a
+        // screen they never came from. Mobile keeps it.
+        className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface text-ink-900 shadow-lumio-sm transition-colors hover:bg-tint lg:hidden"
       >
         <CaretLeft size={20} weight="bold" />
       </button>

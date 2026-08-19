@@ -15,8 +15,16 @@ export interface StudentNavItem {
   title: string;
   url: string;
   icon: Icon;
-  /** Where the item appears: bottom `tab`, `more` hub / desktop rail, or `both`. */
-  slot: "tab" | "more" | "both";
+  /**
+   * Where the item appears:
+   * - `tab` — bottom nav only
+   * - `more` — "Ko'proq" hub + desktop rail
+   * - `both` — bottom nav + desktop rail
+   * - `help` — "Ko'proq" hub on mobile, but under Settings on desktop rather
+   *   than as its own rail row (reference material, not a destination the
+   *   student navigates to often)
+   */
+  slot: "tab" | "more" | "both" | "help";
   /** Accent tone for the More-hub icon tile. */
   tone?: LumioTone;
 }
@@ -65,14 +73,14 @@ export const studentNavItems: StudentNavItem[] = [
     title: "FAQ",
     url: "/portal/faq",
     icon: Question,
-    slot: "more",
+    slot: "help",
     tone: "sky",
   },
   {
     title: "Biz haqimizda",
     url: "/portal/about",
     icon: Info,
-    slot: "more",
+    slot: "help",
     tone: "grape",
   },
 ];
@@ -82,13 +90,26 @@ export const bottomNavItems = studentNavItems.filter(
   (i) => i.slot === "tab" || i.slot === "both",
 );
 
-/** Desktop side rail: both + more (AI shown as a feature card, not a rail row). */
+/**
+ * Desktop side rail: both + more.
+ * `help` items are deliberately absent — on desktop they hang off Settings.
+ */
 export const railNavItems = studentNavItems.filter(
   (i) => i.slot === "both" || i.slot === "more",
 );
 
-/** More hub rows (attendance / settings / faq / about). */
-export const moreNavItems = studentNavItems.filter((i) => i.slot === "more");
+/** More hub rows on mobile (attendance / settings / faq / about). */
+export const moreNavItems = studentNavItems.filter(
+  (i) => i.slot === "more" || i.slot === "help",
+);
+
+/**
+ * Reference screens listed inside Settings on desktop, where the rail has no
+ * row for them. Hidden there on mobile — the "Ko'proq" hub already lists them.
+ */
+export const settingsHelpItems = studentNavItems.filter(
+  (i) => i.slot === "help",
+);
 
 /** Routes that live under the "Ko'proq" hub — used for bottom-nav active state. */
 export const moreRoutes = [

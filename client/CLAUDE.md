@@ -691,25 +691,33 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 Student-facing portal at `student.dafzentrum.uz` — students can view their profile, schedule, attendance, and make payments. The portal is skinned with the **Lumio** design system (ported from the student-app), a playful "clay" look with Baloo 2 / Nunito fonts, applied via a scoped `.lumio` class + tokens.
 
 **Lumio design system (`src/components/student-portal/lumio/`):**
-- Self-contained primitive library (barrel: `lumio/index.ts`) mirroring the student-app's design components: `Button`, `Card`, `FeatureCard`, `IconTile`, `ListRow`, `Badge`, `StatChip`, `Avatar`, `ProgressBar`, `ProgressRing`, `SegmentedControl`, `EmptyState`, `Screen`/`ScreenHeader`/`StackHeader`, `FadeIn`, `Skeleton`, `Input`/`Field`, `BottomSheet`.
+- Self-contained primitive library (barrel: `lumio/index.ts`) mirroring the student-app's design components: `Button`, `Card`, `FeatureCard`, `IconTile`, `ListRow`, `Badge`, `StatChip`, `Avatar`, `ProgressBar`, `ProgressRing`, `SegmentedControl`, `Section`, `ThemeSegmented`, `EmptyState`, `Screen`/`ScreenHeader`/`StackHeader`, `FadeIn`, `Skeleton`, `Input`/`Field`, `BottomSheet`.
+- **Theme control:** the portal uses `ThemeSegmented` in **both** places — labelled (`variant="full"`) on `/portal/settings`, icon-only (`variant="compact"`) in the desktop rail footer. Do not put the admin `components/theme-toggle.tsx` (lucide, cycle-through) inside `/portal/*`: one state driven by two interaction models is exactly what this replaced. `theme-toggle.tsx` itself stays — the admin sidebar, dashboard header, `/login`, `error.tsx` and `not-found.tsx` all use it.
+- `Screen` takes `narrow` (`lg:max-w-[600px]`) for text-and-rows screens; the shell's 980px column leaves them stretched. `StackHeader`'s back chevron is mobile-only — desktop navigates from the rail, and `/portal/more` is not on it.
 - **Always build portal screens from these primitives**, not raw shadcn — keeps the native-app look consistent. Accent tones live in `lumio/tones.ts` (`TILE_TONE`: coral / sky / teal / grape / amber / ink).
 - Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile/tablet) and `lumio/side-rail.tsx` (desktop left rail). Mobile has no top header — each screen renders its own `ScreenHeader`/`StackHeader` title. The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
 
 **Responsive shell (`student-portal-layout.tsx`):** mobile + tablet (`< lg`) get the native-app feel (centered column, floating bottom nav); desktop (`>= lg`) swaps to a persistent left side rail + wider column. Role-gates to Student (role id 6).
 
-**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) lists `more`.
+**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; desktop rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground.
+
+`help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; desktop drops it from the rail and lists it in a `lg`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
 
 **Key screen components:**
 - `student-home-page.tsx` — dashboard (greeting, stats, schedule)
 - `student-payment-summary.tsx` — balance, payment methods, history
 - `student-schedule-view.tsx` — weekly schedule
 - `student-attendance-history.tsx` — attendance records
-- `student-profile-page.tsx` / `student-settings-page.tsx` — profile + password settings
+- `student-profile-page.tsx` — identity: photo, name (editable in place), read-only contact rows
+- `student-settings-page.tsx` — app behaviour: theme + security, and a link across to Profile
+- `student-name-dialog.tsx` / `student-password-dialog.tsx` — controlled (`open` / `onOpenChange`) edit dialogs
 - `student-more-hub.tsx` — "Ko'proq" landing (secondary nav)
 - `student-faq-page.tsx` / `student-about-page.tsx` — FAQ + about screens
 - `student-logout-button.tsx` — logout action
 - Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
 - Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
+
+**Profile vs Settings:** Profile = *who the student is* (photo, name, phone, login, telegram, branch). Settings = *how the app behaves* (theme, password). Every field is editable in exactly one place — do not add a second entry point for the same field. Remaining portal UX findings and the phase order: `docs/student-portal-ux-audit.md`.
 
 #### Online Payment (Payme + Click Integration)
 

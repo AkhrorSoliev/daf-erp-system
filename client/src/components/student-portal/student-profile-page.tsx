@@ -6,8 +6,9 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
-import { Camera, CircleNotch, Trash } from "@phosphor-icons/react";
+import { Camera, CircleNotch, PencilSimple, Trash } from "@phosphor-icons/react";
 import { Screen, StackHeader, Card, Avatar, LoadingCards } from "./lumio";
+import { StudentNameDialog } from "./student-name-dialog";
 import { useStudentProfile } from "./lib/queries";
 import type { StudentProfile } from "./lib/types";
 
@@ -38,6 +39,7 @@ export function StudentProfilePage() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [nameOpen, setNameOpen] = useState(false);
 
   async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -80,7 +82,7 @@ export function StudentProfilePage() {
 
   if (isLoading) {
     return (
-      <Screen>
+      <Screen narrow>
         <StackHeader title="Profil" backHref="/portal/more" />
         <LoadingCards count={2} />
       </Screen>
@@ -93,7 +95,7 @@ export function StudentProfilePage() {
   const branchNames = profile?.branches.map((b) => b.name).join(", ") || null;
 
   return (
-    <Screen>
+    <Screen narrow>
       <StackHeader title="Profil" backHref="/portal/more" />
 
       <input
@@ -123,9 +125,19 @@ export function StudentProfilePage() {
             </span>
           </button>
 
-          <h2 className="font-display text-[22px] font-extrabold text-ink-900">
-            {name}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-[22px] font-extrabold text-ink-900">
+              {name}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setNameOpen(true)}
+              aria-label="Ism va familyani o'zgartirish"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-700 transition-colors hover:bg-tint"
+            >
+              <PencilSimple size={15} weight="bold" />
+            </button>
+          </div>
 
           {profile.photo ? (
             <button
@@ -147,6 +159,8 @@ export function StudentProfilePage() {
           </div>
         </Card>
       ) : null}
+
+      <StudentNameDialog open={nameOpen} onOpenChange={setNameOpen} />
     </Screen>
   );
 }
