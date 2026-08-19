@@ -196,7 +196,7 @@ Expo push'ga birga yuboradi, ya'ni brauzer va telefon bitta chaqiruvdan qamralad
 Interfeys: `notify(studentId, { title, body, url, appRoute })`.
 
 Telegram kodiga **tegilmaydi**. Push mavjud Telegram yuborish joylarining
-yonига qo'shiladi.
+yoniga qo'shiladi.
 
 ## Qamraladigan voqealar
 
