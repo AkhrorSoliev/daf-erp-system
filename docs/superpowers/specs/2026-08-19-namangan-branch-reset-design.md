@@ -1,7 +1,7 @@
 # Namangan filialini bo'shatish (branch #2 reset)
 
 **Sana:** 2026-08-19
-**Holat:** Dizayn tasdiqlangan, amalga oshirilmagan
+**Holat:** BAJARILDI — 2026-08-19, prod (`caring-courage`)
 **Filial:** Namangan = `Branch.id = 2`, `companyId = 1001`
 
 ---
@@ -226,3 +226,64 @@ shuningdek guruh nomlari `#001`–`#012` ham bo'shaydi (`@@unique([name, branchI
   yiqiladi), lekin uni tuzatish alohida ish.
 - Filialni UI'dan bo'shatish tugmasi. Bu bir martalik operatsiya; skript yetarli.
 - Farg'ona filialiga har qanday o'zgartirish.
+
+
+---
+
+## 10. Bajarilgan ish (2026-08-19)
+
+Prod'da `railway run npx ts-node scripts/reset-branch.ts --branch=2 --backup
+--confirm="Namangan filali"` bilan bajarildi. Dry-run sonlari ushbu hujjatning
+2-bo'limidagi o'lchovga aynan mos keldi, ya'ni 05.08 dan beri filialda ish
+boshlanmagan edi. Uchala qorovul ham (moliyaviy tarix, RESTRICT to'siqlar,
+ichkariga qaragan bog'lanishlar) jimgina o'tdi.
+
+### O'chirilgan qatorlar
+
+| Jadval | Soni | | Jadval | Soni |
+|---|---|---|---|---|
+| `smsMessage` | 87 | | `group` | 12 |
+| `enrollmentStateLog` | 90 | | `roomCapacitySnapshot` | 3 |
+| `enrollment` | 87 | | `room` | 3 |
+| `studentBranch` | 84 | | `coursePriceSnapshot` | 5 |
+| `student` | 84 | | `course` | 4 |
+| `notification` | 97 | | `userBranch` | 7 |
+| `userRole` | 93 | | `user` | 91 |
+| `groupScheduleSnapshot` | 17 | | `entityHistory` | 483 |
+| `groupHolidayExtension` | 8 | | `statusHistory` | 12 |
+| `groupTeacher(History)` | 0 | | `dailyFinancialSnapshot` | 14 |
+
+Jami 1281 qator. `user` 91 = 84 o'quvchi akkaunti + 7 xodim. Guruh 12 = 11
+tirik + 1 arxivdagi (`#010`, 05.08 da Sardorbek Maqsudaliyev tomonidan yumshoq
+o'chirilgan) — hard reset arxivni ham tozalaydi, aks holda qayta ochilgan
+filial arxivida hech qachon yo'qolmaydigan guruh qolib ketardi.
+
+### Tekshiruv
+
+Saqlanishi shart bo'lgan qatorlar — oldin/keyin qat'iy tenglik:
+`branch` 1→1, `cashAccount` 2→2, `leadColumn` 1→1, `leadSection` 1→1.
+Filial `Namangan filali`, ACTIVE, 08:00–22:00, telefon 883885550 saqlandi;
+kassa hisoblari (CASH + BANK, balans 0), `Yangi Lidlar [NEW]` ustuni va uning
+bo'limi joyida; CEO Sherali Yodgorov (#10562) va uning filial bog'lanishi
+tegilmadi.
+
+Farg'ona (#1) mustaqil ravishda qayta o'lchandi va bironta qatori
+o'zgarmagani tasdiqlandi: 788 o'quvchi, 60 guruh, 27 xodim, 6 xona, 4 kurs,
+1705 to'lov, 45 119 tranzaksiya, 19 190 davomat, 12 118 oylik hisoblanmasi.
+
+### Zaxira
+
+`server/scripts/backups/branch-2-reset-2026-08-19T11-30-26-727Z.json`, 597 KB,
+22 bo'lim, 1282 qator — o'chirilgan har bir qatorning aynan nusxasi (bir qator
+ortiq: `branch` qatorining o'zi, u o'chirilmagan). Katalog gitignore
+qilingan va fayl faqat operatorning mashinasida turadi: BU YAGONA NUSXA.
+
+Tiklash skripti YOZILMAGAN. Qaytarish kerak bo'lsa qo'lda ish talab qilinadi:
+`Student.id` va `User.id` avtoinkrement, shuning uchun aniq ID bilan qo'yish va
+keyin ketma-ketliklarni `setval` bilan tiklash, o'chirish tartibiga TESKARI
+yo'nalishda.
+
+### Qayta ochish
+
+Kod o'zgarishi shart emas. /branches da Namangan turibdi. Tartib: xodim qo'shish
+→ xona → kurs → guruh → o'quvchi.
