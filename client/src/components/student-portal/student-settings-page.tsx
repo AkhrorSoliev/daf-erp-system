@@ -7,13 +7,6 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Camera,
   CircleNotch,
   IdentificationCard,
@@ -30,9 +23,9 @@ import {
   Avatar,
   ListRow,
   SegmentedControl,
-  Input,
-  Field,
 } from "./lumio";
+import { StudentNameDialog } from "./student-name-dialog";
+import { StudentPasswordDialog } from "./student-password-dialog";
 import { useStudentProfile } from "./lib/queries";
 import type { StudentProfile } from "./lib/types";
 
@@ -45,13 +38,36 @@ const THEME_OPTIONS = [
 ];
 
 export function StudentSettingsPage() {
+  const { data: profile } = useStudentProfile();
+  const [nameOpen, setNameOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+
   return (
     <Screen>
       <StackHeader title="Sozlamalar" backHref="/portal/more" />
       <ThemeSection />
       <PhotoSection />
-      <NameSection />
-      <PasswordSection />
+
+      <ListRow
+        icon={<IdentificationCard weight="bold" />}
+        iconTone="sky"
+        label="Ism va familya"
+        subtitle={`${profile?.firstName ?? "—"} ${profile?.lastName ?? ""}`.trim()}
+        onClick={() => setNameOpen(true)}
+      />
+      <StudentNameDialog open={nameOpen} onOpenChange={setNameOpen} />
+
+      <ListRow
+        icon={<Key weight="bold" />}
+        iconTone="amber"
+        label="Parolni o'zgartirish"
+        subtitle="Login va parol sozlamalari"
+        onClick={() => setPasswordOpen(true)}
+      />
+      <StudentPasswordDialog
+        open={passwordOpen}
+        onOpenChange={setPasswordOpen}
+      />
     </Screen>
   );
 }
@@ -141,190 +157,5 @@ function PhotoSection() {
         onChange={handleFile}
       />
     </Card>
-  );
-}
-
-function NameSection() {
-  const { data: profile } = useStudentProfile();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-
-  function openDialog() {
-    setFirstName(profile?.firstName ?? "");
-    setLastName(profile?.lastName ?? "");
-    setOpen(true);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) return;
-    setLoading(true);
-    try {
-      const res = await api.patch("/student-portal/name", {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-      });
-      queryClient.setQueryData<StudentProfile>(
-        ["student-portal", "profile"],
-        (old) =>
-          old
-            ? { ...old, firstName: res.data.firstName, lastName: res.data.lastName }
-            : old,
-      );
-      toast.success("Ism va familya yangilandi");
-      setOpen(false);
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <>
-      <ListRow
-        icon={<IdentificationCard weight="bold" />}
-        iconTone="sky"
-        label="Ism va familya"
-        subtitle={`${profile?.firstName ?? "—"} ${profile?.lastName ?? ""}`.trim()}
-        onClick={openDialog}
-      />
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="lumio sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl font-extrabold">
-              Ism va familya
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Field label="Ism">
-              <Input
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Ismingiz"
-                minLength={2}
-                required
-              />
-            </Field>
-            <Field label="Familya">
-              <Input
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Familyangiz"
-                minLength={2}
-                required
-              />
-            </Field>
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setOpen(false)}
-                disabled={loading}
-              >
-                Bekor qilish
-              </Button>
-              <Button type="submit" loading={loading}>
-                Saqlash
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-function PasswordSection() {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-
-  function reset() {
-    setOldPassword("");
-    setNewPassword("");
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!oldPassword || !newPassword) return;
-    setLoading(true);
-    try {
-      await api.patch("/student-portal/password", { oldPassword, newPassword });
-      toast.success("Parol muvaffaqiyatli o'zgartirildi");
-      setOpen(false);
-      reset();
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Parolni o'zgartirishda xatolik"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <>
-      <ListRow
-        icon={<Key weight="bold" />}
-        iconTone="amber"
-        label="Parolni o'zgartirish"
-        subtitle="Login va parol sozlamalari"
-        onClick={() => setOpen(true)}
-      />
-
-      <Dialog
-        open={open}
-        onOpenChange={(v) => {
-          setOpen(v);
-          if (!v) reset();
-        }}
-      >
-        <DialogContent className="lumio sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl font-extrabold">
-              Parolni o&apos;zgartirish
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Field label="Joriy parol">
-              <Input
-                type="password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                placeholder="Joriy parolingiz"
-                required
-              />
-            </Field>
-            <Field label="Yangi parol">
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Kamida 6 ta belgi"
-                minLength={6}
-                required
-              />
-            </Field>
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setOpen(false)}
-                disabled={loading}
-              >
-                Bekor qilish
-              </Button>
-              <Button type="submit" loading={loading}>
-                Saqlash
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }
