@@ -199,8 +199,6 @@ async function cleanDb() {
   await prisma.comment.deleteMany().catch(() => {});
   await prisma.entityHistory.deleteMany().catch(() => {});
   await prisma.statusHistory.deleteMany().catch(() => {});
-  await prisma.aiChatMessage.deleteMany().catch(() => {});
-  await prisma.aiConversation.deleteMany().catch(() => {});
   // attendance must come before lessonCancellation (FK on attendance.cancellationId)
   await prisma.attendance.deleteMany().catch(() => {});
   await prisma.lessonCancellation.deleteMany().catch(() => {});

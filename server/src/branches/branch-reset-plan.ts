@@ -425,10 +425,6 @@ export async function assertNoBlockingDependents(
     ['Contract.courseId', () => countIf(courseClause, (where) => prisma.contract.count({ where }))],
     // staffUserIds ∪ studentUserIds bo'yicha kalitlangan
     [
-      'AiConversation.userId',
-      () => countIf(userClause('userId'), (where) => prisma.aiConversation.count({ where })),
-    ],
-    [
       'CallLog.calledById',
       () => countIf(userClause('calledById'), (where) => prisma.callLog.count({ where })),
     ],
@@ -498,7 +494,7 @@ export async function assertNoBlockingDependents(
  * o'chiradi), va bu mutatsiya na zaxirada, na `reset-branch.ts`ning
  * oldin/keyin sanoq jadvalida umuman ko'rinadi.
  *
- * Olti chekka — hammasi Task 2/3 qorovullari qamramaydigan, lekin
+ * Besh chekka — hammasi Task 2/3 qorovullari qamramaydigan, lekin
  * `executeBranchReset` tomonidan bevosita o'chirilmaydigan modellarga
  * ishora qiladi:
  *   - GroupTeacher.teacherId (CASCADE)
@@ -506,9 +502,8 @@ export async function assertNoBlockingDependents(
  *   - Contract.groupId (SET NULL)
  *   - EmployeeSalaryConfig.groupId (SET NULL)
  *   - MockExamParticipant.studentId (SET NULL)
- *   - AiConversation.studentId (SET NULL)
  *
- * Ishlab chiqarishda o'lchangan (2026-08-19): bu oltitasining har biri
+ * Ishlab chiqarishda o'lchangan (2026-08-19): bu beshtasining har biri
  * Namangan uchun HOZIR nol — shuning uchun bu qorovul haqiqiy ishga
  * to'sqinlik qilmaydi, lekin uni doimiy kodga aylantiradi.
  */
@@ -575,14 +570,6 @@ export async function assertNoInboundReferences(
       where: { studentId: { in: studentIds } },
     });
     if (count > 0) found.push(`MockExamParticipant.studentId: ${count}`);
-  }
-
-  // AiConversation.studentId (SET NULL)
-  if (studentIds.length) {
-    const count = await prisma.aiConversation.count({
-      where: { studentId: { in: studentIds } },
-    });
-    if (count > 0) found.push(`AiConversation.studentId: ${count}`);
   }
 
   if (found.length) {

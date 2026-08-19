@@ -1,7 +1,6 @@
 import {
   House,
   CalendarBlank,
-  Sparkle,
   Wallet,
   DotsThreeOutline,
   ChartLineUp,
@@ -18,8 +17,6 @@ export interface StudentNavItem {
   icon: Icon;
   /** Where the item appears: bottom `tab`, `more` hub / desktop rail, or `both`. */
   slot: "tab" | "more" | "both";
-  /** Renders as the raised center coral FAB in the bottom nav (AI). */
-  raised?: boolean;
   /** Accent tone for the More-hub icon tile. */
   tone?: LumioTone;
 }
@@ -35,14 +32,6 @@ export const studentNavItems: StudentNavItem[] = [
     icon: CalendarBlank,
     slot: "both",
     tone: "sky",
-  },
-  {
-    title: "AI",
-    url: "/portal/ai",
-    icon: Sparkle,
-    slot: "tab",
-    raised: true,
-    tone: "grape",
   },
   {
     title: "To'lovlar",

@@ -9,8 +9,6 @@ import { StudentPortalController } from './student-portal.controller';
 import { StudentPortalService } from './student-portal.service';
 import { StudentPortalReadService } from './student-portal-read.service';
 import { StudentPortalWriteService } from './student-portal-write.service';
-import { StudentAiChatController } from './student-ai-chat.controller';
-import { StudentAiChatService } from './student-ai-chat.service';
 import { UploadModule } from '../upload/upload.module';
 import { SmsModule } from '../sms/sms.module';
 import { AttendanceModule } from '../attendance/attendance.module';
@@ -30,7 +28,6 @@ import { BillingModule } from '../billing/billing.module';
   controllers: [
     StudentsController,
     StudentPortalController,
-    StudentAiChatController,
   ],
   providers: [
     StudentsService,
@@ -41,7 +38,6 @@ import { BillingModule } from '../billing/billing.module';
     StudentPortalService,
     StudentPortalReadService,
     StudentPortalWriteService,
-    StudentAiChatService,
   ],
   exports: [StudentsService, StudentEnrollmentService],
 })
