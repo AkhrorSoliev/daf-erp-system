@@ -154,7 +154,7 @@ export default function Home() {
                     label={g.name}
                     subtitle={[
                       g.course_name,
-                      g.exactDays.map(dayLabel).join(', ') + (g.lessonStartTime ? ` · ${g.lessonStartTime}` : ''),
+                      g.exactDays.map((d) => dayLabel(t, d)).join(', ') + (g.lessonStartTime ? ` · ${g.lessonStartTime}` : ''),
                     ]
                       .filter(Boolean)
                       .join('\n')}

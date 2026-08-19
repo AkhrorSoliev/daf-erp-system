@@ -119,7 +119,7 @@ export default function Payments() {
                   <View className="flex-1">
                     <Text variant="h3">{formatSom(p.amount)}</Text>
                     <Text variant="muted">
-                      {paymentMethodLabel(p.method)} · {formatDate(p.createdAt)}
+                      {paymentMethodLabel(t, p.method)} · {formatDate(p.createdAt)}
                     </Text>
                   </View>
                 </View>

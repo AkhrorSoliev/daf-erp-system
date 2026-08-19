@@ -130,6 +130,8 @@ export const uz = {
     afterPaymentNote: "To'lovdan keyin balans bir necha soniyada yangilanadi.",
     history: "To'lovlar tarixi",
     noPayments: "To'lovlar yo'q",
+    methodCash: 'Naqd',
+    methodTransfer: "O'tkazma",
   },
   profile: {
     changePhoto: "Rasmni o'zgartirish",

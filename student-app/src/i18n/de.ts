@@ -122,6 +122,8 @@ export const de: Dict = {
     afterPaymentNote: 'Nach der Zahlung wird das Guthaben in wenigen Sekunden aktualisiert.',
     history: 'Zahlungsverlauf',
     noPayments: 'Keine Zahlungen',
+    methodCash: 'Bar',
+    methodTransfer: 'Überweisung',
   },
   profile: {
     changePhoto: 'Foto ändern',
