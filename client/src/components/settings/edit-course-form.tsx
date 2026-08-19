@@ -39,8 +39,6 @@ export function EditCourseForm({
     defaultValues: {
       name: course?.name ?? "",
       description: course?.description ?? "",
-      courseDuration: course?.courseDuration ?? (3 as number),
-      lessonDuration: course?.lessonDuration ?? (36 as number),
       lessonPaymentCount: course?.lessonPaymentCount ?? (12 as number),
       lessonMinutes: course?.lessonMinutes ?? (90 as number),
       price: course ? String(course.price) : "",
@@ -51,8 +49,6 @@ export function EditCourseForm({
   const onSubmit = async (values: {
     name: string;
     description: string;
-    courseDuration: number;
-    lessonDuration: number;
     lessonPaymentCount: number;
     lessonMinutes: number;
     price: string;
@@ -69,8 +65,6 @@ export function EditCourseForm({
         const { data } = await api.post("/courses", {
           name: values.name,
           description: values.description || undefined,
-          courseDuration: values.courseDuration || undefined,
-          lessonDuration: values.lessonDuration || undefined,
           lessonPaymentCount: values.lessonPaymentCount || undefined,
           lessonMinutes: values.lessonMinutes || undefined,
           price: priceNum,
@@ -98,8 +92,6 @@ export function EditCourseForm({
         const { data } = await api.patch(`/courses/${course.id}`, {
           name: values.name,
           description: values.description || undefined,
-          courseDuration: values.courseDuration || undefined,
-          lessonDuration: values.lessonDuration || undefined,
           lessonPaymentCount: values.lessonPaymentCount || undefined,
           lessonMinutes: values.lessonMinutes || undefined,
           price: priceNum,
@@ -172,26 +164,6 @@ export function EditCourseForm({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="courseDuration">Davomiyligi (oy)</Label>
-            <Input
-              id="courseDuration"
-              type="number"
-              min={1}
-              placeholder="3"
-              {...form.register("courseDuration", { valueAsNumber: true })}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="lessonDuration">Darslar soni</Label>
-            <Input
-              id="lessonDuration"
-              type="number"
-              min={1}
-              placeholder="36"
-              {...form.register("lessonDuration", { valueAsNumber: true })}
-            />
-          </div>
           <div className="space-y-1.5">
             <Label
               htmlFor="lessonPaymentCount"
