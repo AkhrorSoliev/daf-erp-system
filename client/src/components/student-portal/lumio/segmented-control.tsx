@@ -15,6 +15,12 @@ export interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
   /** Icon-only: labels are dropped and become each button's aria-label. */
   compact?: boolean;
+  /**
+   * "vertical" stacks the segments. Only useful together with `compact` — it
+   * exists for the collapsed side rail, where 72px leaves no room for a row of
+   * three.
+   */
+  orientation?: "horizontal" | "vertical";
   className?: string;
 }
 
@@ -25,8 +31,10 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   compact = false,
+  orientation = "horizontal",
   className,
 }: SegmentedControlProps<T>) {
+  const vertical = orientation === "vertical";
   const n = options.length || 1;
   const idx = Math.max(
     0,
@@ -38,15 +46,31 @@ export function SegmentedControl<T extends string>({
         "inset-well relative grid rounded-pill bg-sunk p-1.5",
         className,
       )}
-      style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}
+      style={
+        vertical
+          ? { gridTemplateRows: `repeat(${n}, 1fr)` }
+          : { gridTemplateColumns: `repeat(${n}, 1fr)` }
+      }
     >
       <span
         aria-hidden
-        className="absolute bottom-1.5 top-1.5 rounded-pill bg-surface shadow-lumio-sm transition-[left] duration-200 ease-out"
-        style={{
-          left: `calc(${(idx * 100) / n}% + 6px)`,
-          width: `calc(${100 / n}% - 12px)`,
-        }}
+        className={cn(
+          "absolute rounded-pill bg-surface shadow-lumio-sm duration-200 ease-out",
+          vertical
+            ? "left-1.5 right-1.5 transition-[top]"
+            : "bottom-1.5 top-1.5 transition-[left]",
+        )}
+        style={
+          vertical
+            ? {
+                top: `calc(${(idx * 100) / n}% + 6px)`,
+                height: `calc(${100 / n}% - 12px)`,
+              }
+            : {
+                left: `calc(${(idx * 100) / n}% + 6px)`,
+                width: `calc(${100 / n}% - 12px)`,
+              }
+        }
       />
       {options.map((o) => {
         const active = o.value === value;

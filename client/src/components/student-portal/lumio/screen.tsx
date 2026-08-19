@@ -25,7 +25,7 @@ export function Screen({
     <div
       className={cn(
         "flex flex-col gap-4",
-        narrow && "lg:max-w-[600px]",
+        narrow && "md:max-w-[600px]",
         className,
       )}
       {...rest}
@@ -89,10 +89,10 @@ export function StackHeader({
           if (window.history.length > 1) router.back();
           else router.push(backHref);
         }}
-        // Desktop navigates from the persistent side rail, and `/portal/more`
-        // is not even on it — a back chevron there would push the user to a
-        // screen they never came from. Mobile keeps it.
-        className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface text-ink-900 shadow-lumio-sm transition-colors hover:bg-tint lg:hidden"
+        // From md up the student navigates from the persistent side rail, and
+        // `/portal/more` is not even on it — a back chevron there would push
+        // them to a screen they never came from. Mobile keeps it.
+        className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface text-ink-900 shadow-lumio-sm transition-colors hover:bg-tint md:hidden"
       >
         <CaretLeft size={20} weight="bold" />
       </button>

@@ -57,11 +57,11 @@ export function StudentSettingsPage() {
       </Section>
 
       {/*
-        Desktop only. The rail has no row for FAQ / Biz haqimizda, so they hang
-        off Settings there. On mobile the "Ko'proq" hub already lists them and a
-        second entry point would just be a duplicate.
+        Tablet + desktop only. The rail has no row for FAQ / Biz haqimizda, so
+        they hang off Settings there. On mobile the "Ko'proq" hub already lists
+        them and a second entry point would just be a duplicate.
       */}
-      <Section title="Yordam" className="hidden lg:flex">
+      <Section title="Yordam" className="hidden md:flex">
         {settingsHelpItems.map((item) => {
           const Icon = item.icon;
           return (
