@@ -49,8 +49,11 @@ export async function executeBranchReset(
   await wipe('studentBranch', studentIds, { studentId: { in: studentIds } });
   await wipe('student', studentIds, { id: { in: studentIds } });
 
-  // O'quvchilarning login akkauntlari. Student.userId User ga ishora qiladi,
-  // shuning uchun Student allaqachon ketgan bo'lishi kerak.
+  // O'quvchilarning login akkauntlari. `Student_userId_fkey` aslida ON DELETE
+  // SET NULL — User avval o'chsa, Student qatori o'chmaydi, faqat userId NULL
+  // bo'ladi. Shunday bo'lsa ham Student ATAYLAB avval ketadi: aks holda bu
+  // yerda User o'chgach orqasida userId=NULL, filialsiz "etim" Student qatori
+  // qolib ketardi — FK buni majburlamaydi, tartib shunchaki qasddan shunday.
   await wipe('notification', studentUserIds, { userId: { in: studentUserIds } });
   await wipe('userRole', studentUserIds, { userId: { in: studentUserIds } });
 
@@ -79,7 +82,11 @@ export async function executeBranchReset(
   // ── 4-qadam: audit izlari ───────────────────────────────────────────────
   // entityId — oddiy matn ustuni, FK emas: o'chirilgan yozuvga ishora qiluvchi
   // qatorlar o'zidan-o'zi ketmaydi va yangi filial ID lari bilan aralashadi.
+  // `companyId` qo'shimcha himoya sifatida qo'shilgan: Student va User ID lari
+  // bitta global ketma-ketlikdan kelgani uchun bugun to'qnashuv yo'q, lekin bu
+  // qat'iyat emas — `companyId` filtri buni kelajakda ham ushlab turadi.
   const historyWhere = {
+    companyId: plan.companyId,
     OR: [
       { entityType: 'Student', entityId: { in: studentIds.map(String) } },
       { entityType: 'Enrollment', entityId: { in: enrollmentIds } },

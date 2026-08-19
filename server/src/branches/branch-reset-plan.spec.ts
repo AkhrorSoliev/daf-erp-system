@@ -2,6 +2,7 @@ import {
   buildBranchResetPlan,
   verifyBranchResetPlan,
   assertBranchIsFinanciallyEmpty,
+  assertNoBlockingDependents,
   BranchResetUnsafeError,
   BranchResetPlan,
 } from './branch-reset-plan';
@@ -19,7 +20,7 @@ const inList = (v: unknown, w: any): boolean =>
  * chaqiradigan metodlar bor.
  */
 function fakePrisma(data: {
-  branch?: { id: number; name: string } | null;
+  branch?: { id: number; name: string; companyId: number } | null;
   studentBranches?: { studentId: number; branchId: number }[];
   students?: { id: number; userId: number | null }[];
   userBranches?: { userId: number; branchId: number }[];
@@ -30,7 +31,10 @@ function fakePrisma(data: {
   snapshots?: { id: number; branchId: number | null }[];
 }) {
   const d = {
-    branch: data.branch === undefined ? { id: 2, name: 'Namangan filali' } : data.branch,
+    branch:
+      data.branch === undefined
+        ? { id: 2, name: 'Namangan filali', companyId: 1 }
+        : data.branch,
     studentBranches: data.studentBranches ?? [],
     students: data.students ?? [],
     userBranches: data.userBranches ?? [],
@@ -93,7 +97,7 @@ function fakePrisma(data: {
 
 /** Namangan'ning haqiqiy shakli: 1 CEO ikkala filialda, 2 xodim faqat bunda. */
 const namanganish = {
-  branch: { id: 2, name: 'Namangan filali' },
+  branch: { id: 2, name: 'Namangan filali', companyId: 1 },
   studentBranches: [
     { studentId: 10795, branchId: 2 },
     { studentId: 10796, branchId: 2 },
@@ -210,7 +214,22 @@ type MoneyModel =
   | 'contract'
   | 'refund'
   | 'cashMovement'
-  | 'expense';
+  | 'expense'
+  // `assertNoBlockingDependents` bilan bog'liq — RESTRICT bog'langan, lekin
+  // `executeBranchReset` hech qachon o'chirmaydigan jadvallar.
+  | 'callLog'
+  | 'discount'
+  | 'paymentPromise'
+  | 'plannedAbsence'
+  | 'scholarship'
+  | 'lessonCancellation'
+  | 'lessonReschedule'
+  | 'lessonTeacherOverride'
+  | 'aiConversation'
+  | 'comment'
+  | 'commentAssignee'
+  | 'employeeSalaryConfig'
+  | 'salaryPayment';
 
 /**
  * `where` ni HAQIQATDA hisobga oladi: top-level `OR` massivi (har bir shart
@@ -247,6 +266,19 @@ function fakePrismaWithMoney(
     'refund',
     'cashMovement',
     'expense',
+    'callLog',
+    'discount',
+    'paymentPromise',
+    'plannedAbsence',
+    'scholarship',
+    'lessonCancellation',
+    'lessonReschedule',
+    'lessonTeacherOverride',
+    'aiConversation',
+    'comment',
+    'commentAssignee',
+    'employeeSalaryConfig',
+    'salaryPayment',
   ];
   for (const model of models) {
     const modelRows = rows[model] ?? [];
@@ -295,7 +327,7 @@ describe('assertBranchIsFinanciallyEmpty', () => {
   });
 
   it("o'quvchisi ham, guruhi ham yo'q filialdan o'tkazadi", async () => {
-    const prisma = fakePrismaWithMoney({ branch: { id: 3, name: 'Bo\'sh' } }, {});
+    const prisma = fakePrismaWithMoney({ branch: { id: 3, name: 'Bo\'sh', companyId: 1 } }, {});
     const plan = await buildBranchResetPlan(prisma, 3);
     await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).resolves.toBeUndefined();
   });
@@ -326,12 +358,51 @@ describe('assertBranchIsFinanciallyEmpty', () => {
     // qoldirmasligini isbotlaydi: studentIds/groupIds bo'sh bo'lsa-da,
     // CashMovement filial ID orqali topiladi va rad javobi beriladi.
     const prisma = fakePrismaWithMoney(
-      { branch: { id: 3, name: 'Bo\'sh' } },
+      { branch: { id: 3, name: 'Bo\'sh', companyId: 1 } },
       { cashMovement: [{ id: 'cm-1', branchId: 3 }] },
     );
     const plan = await buildBranchResetPlan(prisma, 3);
     expect(plan.studentIds).toEqual([]);
     expect(plan.groupIds).toEqual([]);
     await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/CashMovement/);
+  });
+});
+
+describe('assertNoBlockingDependents', () => {
+  it("bog'liq yozuvi yo'q toza rejadan o'tkazadi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {});
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoBlockingDependents(prisma, plan)).resolves.toBeUndefined();
+  });
+
+  it('xodim yozgan izohni (Comment.authorId) tutadi', async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      comment: [{ id: 'cm-1', authorId: 10768 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoBlockingDependents(prisma, plan)).rejects.toThrow(
+      /Comment\.authorId: 1/,
+    );
+  });
+
+  it('filial guruhidagi davomat yozuvini (Attendance.groupId) tutadi', async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      attendance: [{ id: 'a-1', groupId: 'g-1', studentId: 99999 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoBlockingDependents(prisma, plan)).rejects.toThrow(
+      /Attendance\.groupId: 1/,
+    );
+  });
+
+  it('topilgan har bir bloklovchi jadvalni bitta xabarda sanaydi, faqat birinchisini emas', async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      attendance: [{ id: 'a-1', groupId: 'g-1', studentId: 99999 }],
+      comment: [{ id: 'cm-1', authorId: 10768 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoBlockingDependents(prisma, plan)).rejects.toThrow(
+      /Attendance\.groupId: 1[\s\S]*Comment\.authorId: 1/,
+    );
   });
 });

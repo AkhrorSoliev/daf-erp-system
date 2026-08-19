@@ -4,6 +4,7 @@ import { BranchResetPlan } from './branch-reset-plan';
 const PLAN: BranchResetPlan = {
   branchId: 2,
   branchName: 'Namangan filali',
+  companyId: 1,
   studentIds: [10795, 10796],
   studentUserIds: [20795],
   staffUserIds: [10768, 10904],

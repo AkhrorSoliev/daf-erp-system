@@ -27,6 +27,7 @@ export class BranchResetUnsafeError extends Error {
 export interface BranchResetPlan {
   branchId: number;
   branchName: string;
+  companyId: number;
   /** Shu filialga biriktirilgan o'quvchilar. */
   studentIds: number[];
   /** Ularning login akkauntlari (`Student.userId`), null bo'lganlari tushadi. */
@@ -48,7 +49,7 @@ export async function buildBranchResetPlan(
 ): Promise<BranchResetPlan> {
   const branch = await prisma.branch.findUnique({
     where: { id: branchId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, companyId: true },
   });
   if (!branch) {
     throw new BranchResetUnsafeError(`Filial #${branchId} topilmadi`);
@@ -114,6 +115,7 @@ export async function buildBranchResetPlan(
   return {
     branchId,
     branchName: branch.name,
+    companyId: branch.companyId,
     studentIds,
     studentUserIds,
     staffUserIds,
@@ -303,6 +305,155 @@ export async function assertBranchIsFinanciallyEmpty(
   if (found.length) {
     throw new BranchResetUnsafeError(
       `Filial #${branchId} (${plan.branchName}) da moliyaviy tarix bor, ` +
+        `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
+    );
+  }
+}
+
+/**
+ * `executeBranchReset` O'CHIRMAYDIGAN har bir RESTRICT bog'liqlikni sanaydi.
+ *
+ * `assertBranchIsFinanciallyEmpty` pul tarixini (Payment, Transaction,
+ * Contract, Refund, CashMovement, Expense, Attendance, SalaryAccrual)
+ * tekshiradi — bu qorovul boshqa narsani tekshiradi: qo'ng'iroq jurnali,
+ * izohlar, chegirmalar, stipendiyalar, AI suhbatlari va oylik konfiguratsiyasi
+ * kabi RESTRICT bilan bog'langan, lekin `executeBranchReset` HECH QACHON
+ * o'chirmaydigan jadvallar. Ular bo'sh bo'lishi Task 2'ning moliyaviy qorovuli
+ * bilan KAFOLATLANMAYDI — masalan Comment yoki CallLog pul harakatlantirmaydi,
+ * shuning uchun moliyaviy tarix yo'q filialda ham bo'lishi mumkin.
+ *
+ * Bunday qator topilsa, transaksiya boshlanishidan OLDIN rad javobi beriladi.
+ * Aks holda `executeBranchReset` o'rtada FK xatosiga urilib to'xtaydi va nima
+ * uni to'xtatganini tashqi loglardan qidirish kerak bo'lardi.
+ */
+export async function assertNoBlockingDependents(
+  prisma: PrismaLike,
+  plan: BranchResetPlan,
+): Promise<void> {
+  const { branchId, groupIds, studentIds, courseIds, staffUserIds, studentUserIds } = plan;
+  const allUserIds = [...staffUserIds, ...studentUserIds];
+
+  const groupClause = groupIds.length ? { groupId: { in: groupIds } } : null;
+  const studentClause = studentIds.length ? { studentId: { in: studentIds } } : null;
+  const courseClause = courseIds.length ? { courseId: { in: courseIds } } : null;
+
+  /** `column` — bir xil `allUserIds` ro'yxatiga ishora qiluvchi ustun nomi turlicha. */
+  const userClause = (column: string): Record<string, unknown> | null =>
+    allUserIds.length ? { [column]: { in: allUserIds } } : null;
+
+  const countIf = (
+    where: Record<string, unknown> | null,
+    run: (where: Record<string, unknown>) => Promise<number>,
+  ): Promise<number> => (where ? run(where) : Promise.resolve(0));
+
+  const checks: [string, () => Promise<number>][] = [
+    // groupIds bo'yicha kalitlangan
+    ['Attendance.groupId', () => countIf(groupClause, (where) => prisma.attendance.count({ where }))],
+    [
+      'LessonCancellation.groupId',
+      () => countIf(groupClause, (where) => prisma.lessonCancellation.count({ where })),
+    ],
+    [
+      'LessonReschedule.groupId',
+      () => countIf(groupClause, (where) => prisma.lessonReschedule.count({ where })),
+    ],
+    [
+      'LessonTeacherOverride.groupId',
+      () => countIf(groupClause, (where) => prisma.lessonTeacherOverride.count({ where })),
+    ],
+    [
+      'PlannedAbsence.groupId',
+      () => countIf(groupClause, (where) => prisma.plannedAbsence.count({ where })),
+    ],
+    [
+      'SalaryAccrual.groupId',
+      () => countIf(groupClause, (where) => prisma.salaryAccrual.count({ where })),
+    ],
+    // studentIds bo'yicha kalitlangan
+    [
+      'Attendance.studentId',
+      () => countIf(studentClause, (where) => prisma.attendance.count({ where })),
+    ],
+    ['CallLog.studentId', () => countIf(studentClause, (where) => prisma.callLog.count({ where }))],
+    ['Contract.studentId', () => countIf(studentClause, (where) => prisma.contract.count({ where }))],
+    ['Discount.studentId', () => countIf(studentClause, (where) => prisma.discount.count({ where }))],
+    ['Payment.studentId', () => countIf(studentClause, (where) => prisma.payment.count({ where }))],
+    [
+      'PaymentPromise.studentId',
+      () => countIf(studentClause, (where) => prisma.paymentPromise.count({ where })),
+    ],
+    [
+      'PlannedAbsence.studentId',
+      () => countIf(studentClause, (where) => prisma.plannedAbsence.count({ where })),
+    ],
+    ['Refund.studentId', () => countIf(studentClause, (where) => prisma.refund.count({ where }))],
+    [
+      'SalaryAccrual.studentId',
+      () => countIf(studentClause, (where) => prisma.salaryAccrual.count({ where })),
+    ],
+    [
+      'Scholarship.studentId',
+      () => countIf(studentClause, (where) => prisma.scholarship.count({ where })),
+    ],
+    // courseIds bo'yicha kalitlangan
+    ['Contract.courseId', () => countIf(courseClause, (where) => prisma.contract.count({ where }))],
+    // staffUserIds ∪ studentUserIds bo'yicha kalitlangan
+    [
+      'AiConversation.userId',
+      () => countIf(userClause('userId'), (where) => prisma.aiConversation.count({ where })),
+    ],
+    [
+      'CallLog.calledById',
+      () => countIf(userClause('calledById'), (where) => prisma.callLog.count({ where })),
+    ],
+    ['Comment.authorId', () => countIf(userClause('authorId'), (where) => prisma.comment.count({ where }))],
+    [
+      'CommentAssignee.userId',
+      () => countIf(userClause('userId'), (where) => prisma.commentAssignee.count({ where })),
+    ],
+    [
+      'EmployeeSalaryConfig.userId',
+      () => countIf(userClause('userId'), (where) => prisma.employeeSalaryConfig.count({ where })),
+    ],
+    [
+      'Expense.createdById',
+      () => countIf(userClause('createdById'), (where) => prisma.expense.count({ where })),
+    ],
+    [
+      'LessonCancellation.cancelledById',
+      () => countIf(userClause('cancelledById'), (where) => prisma.lessonCancellation.count({ where })),
+    ],
+    [
+      'LessonReschedule.scheduledById',
+      () => countIf(userClause('scheduledById'), (where) => prisma.lessonReschedule.count({ where })),
+    ],
+    [
+      'LessonTeacherOverride.setById',
+      () => countIf(userClause('setById'), (where) => prisma.lessonTeacherOverride.count({ where })),
+    ],
+    [
+      'PaymentPromise.createdById',
+      () => countIf(userClause('createdById'), (where) => prisma.paymentPromise.count({ where })),
+    ],
+    [
+      'SalaryAccrual.userId',
+      () => countIf(userClause('userId'), (where) => prisma.salaryAccrual.count({ where })),
+    ],
+    [
+      'SalaryPayment.userId',
+      () => countIf(userClause('userId'), (where) => prisma.salaryPayment.count({ where })),
+    ],
+  ];
+
+  const found: string[] = [];
+  for (const [label, run] of checks) {
+    const count = await run();
+    if (count > 0) found.push(`${label}: ${count}`);
+  }
+
+  if (found.length) {
+    throw new BranchResetUnsafeError(
+      `Filial #${branchId} (${plan.branchName}) da o'chirilmaydigan bog'liq yozuvlar bor, ` +
         `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
     );
   }
