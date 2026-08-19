@@ -45,6 +45,7 @@ DaF ERP is a full-stack web application built for managing a multi-branch langua
 
 | Document | Description |
 |----------|-------------|
+| [Architecture Decisions (ADR)](adr/README.md) | Why the system is the way it is — the decision log |
 | [Getting Started](getting-started.md) | Setup guide to run the project locally |
 | [Deployment](deployment.md) | Deploy to Vercel + Railway |
 | [Data Conventions](data-conventions.md) | Phone, price, date formatting standards |

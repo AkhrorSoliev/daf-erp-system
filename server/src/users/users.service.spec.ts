@@ -38,13 +38,19 @@ describe('UsersService — updateUser status/isActive sync', () => {
         // Both the target lookup and the caller-scope lookup go through
         // findFirst; a CEO caller spans every branch, so the scope guard passes
         // and these tests stay about status/isActive sync.
-        findFirst: jest.fn().mockImplementation(({ select }: any) =>
-          Promise.resolve(
-            select?.roles && !select?.status
-              ? { mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] }
-              : mockUser,
+        findFirst: jest
+          .fn()
+          .mockImplementation(({ select }: any) =>
+            Promise.resolve(
+              select?.roles && !select?.status
+                ? {
+                    mainBranch: null,
+                    branches: [],
+                    roles: [{ role: { name: 'CEO' } }],
+                  }
+                : mockUser,
+            ),
           ),
-        ),
         findUnique: jest.fn().mockResolvedValue({
           roles: [{ role: { name: 'CEO' } }],
         }),
@@ -111,7 +117,11 @@ describe('UsersService — updateUser status/isActive sync', () => {
     prisma.user.findFirst.mockImplementation(({ select }: any) =>
       Promise.resolve(
         select?.roles && !select?.status
-          ? { mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] }
+          ? {
+              mainBranch: null,
+              branches: [],
+              roles: [{ role: { name: 'CEO' } }],
+            }
           : { ...mockUser, status: 'INACTIVE', isActive: false },
       ),
     );
@@ -214,7 +224,7 @@ describe('UsersService — role escalation and branch validation', () => {
           password: 'pass1',
           roleIds: [1],
         },
-        99,
+        { kind: 'user', id: 99 },
       ),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -233,7 +243,7 @@ describe('UsersService — role escalation and branch validation', () => {
           position: 'Administrator',
           roleIds: [1],
         },
-        99,
+        { kind: 'user', id: 99 },
       ),
     ).resolves.toBeDefined();
   });
@@ -252,7 +262,7 @@ describe('UsersService — role escalation and branch validation', () => {
           roleIds: [3],
           branchIds: [],
         },
-        99,
+        { kind: 'user', id: 99 },
       ),
     ).rejects.toThrow(/CEO bo'lmagan xodim uchun.*filial/);
   });
@@ -270,7 +280,7 @@ describe('UsersService — role escalation and branch validation', () => {
           position: 'Administrator',
           roleIds: [4],
         },
-        99,
+        { kind: 'user', id: 99 },
       ),
     ).rejects.toThrow(/O'qituvchi uchun.*filial/);
   });
@@ -290,7 +300,7 @@ describe('UsersService — role escalation and branch validation', () => {
           roleIds: [3],
           branchIds: [9999],
         },
-        99,
+        { kind: 'user', id: 99 },
       ),
     ).rejects.toThrow(/bu kompaniyaga tegishli emas/);
   });
@@ -311,7 +321,7 @@ describe('UsersService — role escalation and branch validation', () => {
           branchIds: [500],
           mainBranch: 999,
         },
-        99,
+        { kind: 'user', id: 99 },
       ),
     ).rejects.toThrow(/Asosiy filial.*orasida/);
   });
@@ -331,23 +341,28 @@ describe('UsersService — role escalation and branch validation', () => {
           roleIds: [1],
           branchIds: [],
         },
-        99,
+        { kind: 'user', id: 99 },
       ),
     ).resolves.toBeDefined();
   });
 
-  it('skips role escalation check when callerUserId is undefined (e.g. Telegram bot)', async () => {
+  it('skips the role escalation check for a self-registration (Telegram bot)', async () => {
+    // There is no caller to escalate FROM. The equivalent ceiling was applied
+    // when the invitation link was signed (`GRANTABLE_ROLE_IDS`).
     prisma.role.findMany.mockResolvedValue([{ id: 1 }]);
 
     await expect(
-      service.create({
-        firstName: 'A',
-        lastName: 'B',
-        companyId: 1001,
-        password: 'pass1',
-        position: 'Administrator',
-        roleIds: [1],
-      }),
+      service.create(
+        {
+          firstName: 'A',
+          lastName: 'B',
+          companyId: 1001,
+          password: 'pass1',
+          position: 'Administrator',
+          roleIds: [1],
+        },
+        { kind: 'self-registration' },
+      ),
     ).resolves.toBeDefined();
 
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
@@ -377,13 +392,19 @@ describe('UsersService — cross-company guards', () => {
       user: {
         // These tests are about the COMPANY guard; make the caller a CEO so the
         // separate branch-scope guard passes and does not mask what is asserted.
-        findFirst: jest.fn().mockImplementation(({ select }: any) =>
-          Promise.resolve(
-            select?.roles && !select?.status
-              ? { mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] }
-              : target,
+        findFirst: jest
+          .fn()
+          .mockImplementation(({ select }: any) =>
+            Promise.resolve(
+              select?.roles && !select?.status
+                ? {
+                    mainBranch: null,
+                    branches: [],
+                    roles: [{ role: { name: 'CEO' } }],
+                  }
+                : target,
+            ),
           ),
-        ),
         findUnique: jest.fn(),
         update: jest.fn().mockResolvedValue(target),
       },
@@ -548,9 +569,11 @@ describe('UsersService — updateUser branch confinement', () => {
   const makeService = async (caller: any) => {
     prisma = {
       user: {
-        findFirst: jest.fn().mockImplementation(({ select }: any) =>
-          Promise.resolve(select?.roles && !select?.status ? caller : target),
-        ),
+        findFirst: jest
+          .fn()
+          .mockImplementation(({ select }: any) =>
+            Promise.resolve(select?.roles && !select?.status ? caller : target),
+          ),
         findUnique: jest.fn(),
         update: jest.fn().mockResolvedValue(target),
       },
@@ -696,7 +719,7 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
   it('rolsiz, lavozimli va filialli xodimni yaratadi', async () => {
     await service.create(
       { ...base, position: 'Farrosh', roleIds: [] },
-      1, // CEO caller
+      { kind: 'user', id: 1 }, // CEO caller
     );
 
     expect(prisma.user.create).toHaveBeenCalled();
@@ -709,7 +732,13 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
 
   it('lavozimsiz xodimni rad etadi', async () => {
     await expect(
-      service.create({ ...base, position: '   ', roleIds: [] }, 1),
+      service.create(
+        { ...base, position: '   ', roleIds: [] },
+        {
+          kind: 'user',
+          id: 1,
+        },
+      ),
     ).rejects.toThrow("Lavozim ko'rsatilishi shart");
   });
 
@@ -717,19 +746,21 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
     await expect(
       service.create(
         { ...base, branchIds: [], position: 'Qorovul', roleIds: [] },
-        1,
+        { kind: 'user', id: 1 },
       ),
-    ).rejects.toThrow('Rolsiz xodim uchun kamida bitta filial tanlanishi shart');
+    ).rejects.toThrow(
+      'Rolsiz xodim uchun kamida bitta filial tanlanishi shart',
+    );
   });
 
   it('rolsiz xodimga parol berishni rad etadi', async () => {
     await expect(
       service.create(
         { ...base, position: 'Farrosh', roleIds: [], password: 'parol123' },
-        1,
+        { kind: 'user', id: 1 },
       ),
     ).rejects.toThrow(
-      'Tizim roli berilmagan xodimga login yoki parol berib bo\'lmaydi',
+      "Tizim roli berilmagan xodimga login yoki parol berib bo'lmaydi",
     );
   });
 
@@ -737,10 +768,10 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
     await expect(
       service.create(
         { ...base, position: 'Farrosh', roleIds: [], login: 'farrosh' },
-        1,
+        { kind: 'user', id: 1 },
       ),
     ).rejects.toThrow(
-      'Tizim roli berilmagan xodimga login yoki parol berib bo\'lmaydi',
+      "Tizim roli berilmagan xodimga login yoki parol berib bo'lmaydi",
     );
   });
 
@@ -754,7 +785,7 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
     await expect(
       service.create(
         { ...base, position: 'Administrator', roleIds: [3] },
-        1, // CEO caller
+        { kind: 'user', id: 1 }, // CEO caller
       ),
     ).rejects.toThrow('Tizim roli berilgan xodim uchun parol majburiy');
     expect(prisma.user.create).not.toHaveBeenCalled();
@@ -771,7 +802,7 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
           roleIds: [3],
           password: 'parol123',
         },
-        1,
+        { kind: 'user', id: 1 },
       ),
     ).resolves.toBeDefined();
   });
@@ -779,7 +810,7 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
   it('lavozimni saqlashdan oldin trim qiladi', async () => {
     await service.create(
       { ...base, position: '  Qorovul  ', roleIds: [] },
-      1,
+      { kind: 'user', id: 1 },
     );
     expect(prisma.user.create.mock.calls[0][0].data.position).toBe('Qorovul');
   });
@@ -818,25 +849,25 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
           roleIds: [],
           branchIds: [NAMANGAN],
         },
-        FARGONA_DIRECTOR,
+        { kind: 'user', id: FARGONA_DIRECTOR },
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.user.create).not.toHaveBeenCalled();
   });
 
-  it("boshqa kompaniyaga tegishli filial bilan rolsiz xodim yaratishni rad etadi", async () => {
+  it('boshqa kompaniyaga tegishli filial bilan rolsiz xodim yaratishni rad etadi', async () => {
     prisma.branch.count.mockResolvedValue(0); // no branch matches this company
 
     await expect(
       service.create(
         { ...base, position: 'Farrosh', roleIds: [], branchIds: [9999] },
-        1, // CEO caller
+        { kind: 'user', id: 1 }, // CEO caller
       ),
     ).rejects.toThrow(/bu kompaniyaga tegishli emas/);
   });
 });
 
-describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini saqlaydi', () => {
+describe("UsersService — updateUser: rolsiz ⇒ login/parol yo'q invariantini saqlaydi", () => {
   let service: UsersService;
   let prisma: any;
   let target: any;
@@ -862,11 +893,13 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
         // caller-scope lookup inside `assertCallerInBranch` asks only for
         // `mainBranch`/`branches`/`roles`. Split on that the same way the
         // status/isActive suite does.
-        findFirst: jest.fn().mockImplementation(({ select }: any) =>
-          Promise.resolve(
-            select?.roles && !select?.status ? CEO_CALLER : target,
+        findFirst: jest
+          .fn()
+          .mockImplementation(({ select }: any) =>
+            Promise.resolve(
+              select?.roles && !select?.status ? CEO_CALLER : target,
+            ),
           ),
-        ),
         findUnique: jest.fn().mockResolvedValue(CEO_CALLER),
         update: updateMock,
       },
@@ -899,7 +932,7 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
     service = module.get(UsersService);
   });
 
-  it('a) rolsiz akkauntga YOLG\'IZ parol berishni rad etadi (roleIds tegilmagan bo\'lsa ham)', async () => {
+  it("a) rolsiz akkauntga YOLG'IZ parol berishni rad etadi (roleIds tegilmagan bo'lsa ham)", async () => {
     // The account already has zero roles; the dto touches ONLY `password`.
     // Before the fix this never entered re-validation at all.
     target = {
@@ -922,7 +955,7 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
     expect(updateMock).not.toHaveBeenCalled();
   });
 
-  it('a) yolg\'iz login berishni ham xuddi shunday rad etadi', async () => {
+  it("a) yolg'iz login berishni ham xuddi shunday rad etadi", async () => {
     target = {
       id: 21,
       companyId: 1001,
@@ -943,7 +976,7 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
     expect(updateMock).not.toHaveBeenCalled();
   });
 
-  it('b) rolni bir vaqtning o\'zida bo\'shatib parol berishni ham rad etadi', async () => {
+  it("b) rolni bir vaqtning o'zida bo'shatib parol berishni ham rad etadi", async () => {
     // roleIds: [] AND an explicit password in the SAME request — refused,
     // never silently accepted nor silently nulled.
     target = {
@@ -1054,7 +1087,7 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
 
   // The regression this rule must NOT cause: an ordinary edit sends no
   // password, and an administrator who already has one must stay editable.
-  it("d) parolli rol egasini oddiy tahrirlash (parolsiz) ishlayveradi", async () => {
+  it('d) parolli rol egasini oddiy tahrirlash (parolsiz) ishlayveradi', async () => {
     target = {
       id: 27,
       companyId: 1001,
@@ -1095,12 +1128,7 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
       groupTeachers: [],
     };
 
-    await service.updateUser(
-      24,
-      { password: 'yangiParol1' } as any,
-      99,
-      1001,
-    );
+    await service.updateUser(24, { password: 'yangiParol1' } as any, 99, 1001);
 
     expect(updateMock).toHaveBeenCalled();
     const data = updateMock.mock.calls[0][0].data;
@@ -1108,4 +1136,3 @@ describe('UsersService — updateUser: rolsiz ⇒ login/parol yo\'q invariantini
     expect(typeof data.password).toBe('string');
   });
 });
-

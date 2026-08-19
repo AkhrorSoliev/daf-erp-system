@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { BotContext } from '../types/context';
 import {
@@ -24,6 +25,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { UsersService } from '../../users/users.service';
 import { message } from 'telegraf/filters';
+
+const logger = new Logger('EmployeeRegistrationScene');
 
 const ROLE_LABELS: Record<number, string> = {
   1: 'CEO',
@@ -360,21 +363,27 @@ export function createEmployeeRegistrationScene(
       // Login = telefon raqam (o'quvchilarda ham shunday). Parol tasodifiy.
       const password = generatePassword();
 
-      await usersService.create({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        photo: data.photo,
-        gender: data.gender,
-        login: data.phone,
-        password,
-        companyId: DEFAULT_COMPANY_ID,
-        mainBranch: data.branchId ?? undefined,
-        telegramChatId: chatId,
-        position: derivePositionForRoles(roleIds),
-        roleIds,
-        branchIds: data.branchId ? [data.branchId] : undefined,
-      });
+      await usersService.create(
+        {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          photo: data.photo,
+          gender: data.gender,
+          login: data.phone,
+          password,
+          companyId: DEFAULT_COMPANY_ID,
+          mainBranch: data.branchId ?? undefined,
+          telegramChatId: chatId,
+          position: derivePositionForRoles(roleIds),
+          roleIds,
+          branchIds: data.branchId ? [data.branchId] : undefined,
+        },
+        // Nobody is signed in here — the branch came from the signed link the
+        // bot verified in `/start`. Saying so is what keeps the branch guard on
+        // `POST /users` from refusing a registration it was never aimed at.
+        { kind: 'self-registration' },
+      );
 
       ctx.session.processing = false;
 
@@ -394,8 +403,15 @@ export function createEmployeeRegistrationScene(
       });
 
       await ctx.scene.leave();
-    } catch {
+    } catch (error) {
+      // Logged, not swallowed. A bare `catch` here is what hid a total
+      // registration outage: every attempt failed, the user saw a polite
+      // apology, and nothing reached the logs to say why.
       ctx.session.processing = false;
+      logger.error(
+        `Xodim ro'yxatdan o'tishi muvaffaqiyatsiz (chat ${chatId}, filial ${data.branchId}, rollar ${roleIds.join(',')})`,
+        error as Error,
+      );
       await ctx.reply(
         "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
       );

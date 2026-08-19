@@ -60,7 +60,10 @@ export class UsersController {
     this.logger.log(
       `Creating user: ${JSON.stringify({ ...dto, password: dto.password ? '***' : undefined, companyId })}`,
     );
-    return this.usersService.create({ ...dto, companyId }, callerId);
+    return this.usersService.create(
+      { ...dto, companyId },
+      { kind: 'user', id: callerId },
+    );
   }
 
   @Patch('profile')
