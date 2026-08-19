@@ -9,7 +9,7 @@ import { useProfile } from '@/api/queries/use-profile';
 import { deletePhoto, uploadPhoto } from '@/api/profile';
 import { formatPhone } from '@/lib/format';
 import { getErrorMessage } from '@/lib/get-error-message';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 function Row({ label, value, last }: { label: string; value?: string | null; last?: boolean }) {
   if (!value) return null;
@@ -22,6 +22,7 @@ function Row({ label, value, last }: { label: string; value?: string | null; las
 }
 
 export default function Profile() {
+  const t = useT();
   const q = useProfile();
   const [sheetOpen, setSheetOpen] = useState(false);
 

@@ -4,7 +4,7 @@ import { Badge, Card, EmptyState, LoadingCards, ProgressBar, Screen, StackHeader
 import { tokens } from '@/design/tokens';
 import { useAttendanceHistory, useAttendanceStats } from '@/api/queries/use-attendance';
 import { formatDate } from '@/lib/format';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 import type { AttendanceStatus } from '@/api/types';
 
 const STATUS: Record<AttendanceStatus, { label: string; tone: BadgeTone }> = {
@@ -37,6 +37,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 }
 
 export default function Attendance() {
+  const t = useT();
   const stats = useAttendanceStats();
   const history = useAttendanceHistory();
 

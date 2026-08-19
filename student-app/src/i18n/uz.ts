@@ -209,7 +209,3 @@ export const uz = {
 
 /** The canonical string shape every language file must satisfy. */
 export type Dict = typeof uz;
-
-/** TEMPORARY: keeps the 7 pre-existing `import { t } from '@/i18n/uz'` screens
- *  compiling until Task 2 converts them to `useT()`. Task 2 deletes this line. */
-export const t = uz;

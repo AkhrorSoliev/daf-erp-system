@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, View } from 'react-native';
 import { Badge, Card, EmptyState, LoadingCards, Screen, StackHeader, Text } from '@/design/components';
 import { useColors } from '@/design/colors';
 import { useSchedule } from '@/api/queries/use-schedule';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 const WEEKDAYS = [
   { key: 'monday', label: 'Dushanba' },
@@ -18,6 +18,7 @@ const WEEKDAYS = [
 const DAY_BY_INDEX = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export default function Schedule() {
+  const t = useT();
   const q = useSchedule();
   const colors = useColors();
 

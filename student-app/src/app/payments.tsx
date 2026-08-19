@@ -12,9 +12,10 @@ import { formatDate, formatSom } from '@/lib/format';
 import { paymentMethodLabel } from '@/lib/labels';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { cn } from '@/lib/cn';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 export default function Payments() {
+  const t = useT();
   const profile = useProfile();
   const pay = usePayments();
   const [amount, setAmount] = useState(0);

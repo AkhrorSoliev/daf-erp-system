@@ -9,11 +9,12 @@ import {
   resetPasswordWithToken,
 } from '@/api/auth';
 import { getErrorMessage } from '@/lib/get-error-message';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 const RESEND_SECONDS = 60;
 
 export default function ForgotPassword() {
+  const t = useT();
   const c = t.forgotPassword;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [phone, setPhone] = useState('');

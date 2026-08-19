@@ -11,7 +11,7 @@ import { useAttendanceStats } from '@/api/queries/use-attendance';
 import { useSchedule } from '@/api/queries/use-schedule';
 import { formatSom } from '@/lib/format';
 import { dayLabel } from '@/lib/labels';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 const DAY_BY_INDEX = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const SEG = { present: tokens.color.success, late: tokens.color.warning, absent: tokens.color.danger, excused: '#9DB0BC' };
@@ -23,6 +23,7 @@ function percentClass(p: number): string {
 }
 
 export default function Home() {
+  const t = useT();
   const q = useProfile();
   const att = useAttendanceStats();
   const sched = useSchedule();

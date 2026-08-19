@@ -13,7 +13,7 @@ import { login, pollLoginRequest } from '@/api/auth';
 import { useAuth } from '@/auth/auth-store';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { env } from '@/config/env';
-import { t } from '@/i18n/uz';
+import { useT } from '@/i18n';
 
 // SMS password reset for students. Eskiz account is active with approved
 // template 78093; per Eskiz support a brand nik is not required to deliver it,
@@ -35,6 +35,7 @@ function BrandMark() {
 }
 
 export default function Login() {
+  const t = useT();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [tgWaiting, setTgWaiting] = useState(false);
