@@ -19,6 +19,11 @@ export {
   type SegmentedControlProps,
   type SegmentOption,
 } from "./segmented-control";
+export {
+  ThemeSegmented,
+  type ThemeSegmentedProps,
+  type ThemeMode,
+} from "./theme-segmented";
 export { EmptyState, type EmptyStateProps } from "./empty-state";
 export { Screen, ScreenHeader, StackHeader } from "./screen";
 export { FadeIn, type FadeInProps } from "./fade-in";

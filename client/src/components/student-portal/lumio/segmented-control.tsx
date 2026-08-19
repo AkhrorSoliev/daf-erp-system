@@ -13,6 +13,8 @@ export interface SegmentedControlProps<T extends string> {
   options: SegmentOption<T>[];
   value: T;
   onChange: (value: T) => void;
+  /** Icon-only: labels are dropped and become each button's aria-label. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -22,6 +24,7 @@ export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
+  compact = false,
   className,
 }: SegmentedControlProps<T>) {
   const n = options.length || 1;
@@ -52,13 +55,16 @@ export function SegmentedControl<T extends string>({
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
+            aria-label={compact ? o.label : undefined}
+            aria-pressed={active}
             className={cn(
-              "relative z-10 flex h-10 items-center justify-center gap-1.5 font-display text-sm font-bold transition-colors",
+              "relative z-10 flex items-center justify-center font-display text-sm font-bold transition-colors",
+              compact ? "h-8" : "h-10 gap-1.5",
               active ? "text-coral-600" : "text-ink-500",
             )}
           >
             {o.icon}
-            {o.label}
+            {compact ? null : o.label}
           </button>
         );
       })}
