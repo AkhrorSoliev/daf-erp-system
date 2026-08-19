@@ -6,23 +6,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useColors } from '@/design/colors';
+import { useT } from '@/i18n';
 import { Text } from './text';
 
 const CIRCLE = 56;
 const PILL_H = 68;
 const EASE = Easing.bezier(0.22, 1, 0.36, 1); // Lumio --ease-out
 
-type Meta = { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap; label: string };
+type Meta = { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap };
 
 const META: Record<string, Meta> = {
-  index: { active: 'home', inactive: 'home-outline', label: 'Asosiy' },
-  darslar: { active: 'school', inactive: 'school-outline', label: 'Darslar' },
-  resurslar: { active: 'library', inactive: 'library-outline', label: 'Resurslar' },
-  more: { active: 'grid', inactive: 'grid-outline', label: "Ko'proq" },
+  index: { active: 'home', inactive: 'home-outline' },
+  darslar: { active: 'school', inactive: 'school-outline' },
+  resurslar: { active: 'library', inactive: 'library-outline' },
+  more: { active: 'grid', inactive: 'grid-outline' },
 };
 
 /** Floating glass nav pill: a coral circle slides between tabs; labels fade in/out. */
 export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const [rowW, setRowW] = useState(0);
@@ -67,6 +69,7 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
             const meta = META[route.name];
             if (!meta) return null;
             const focused = state.index === i;
+            const label = t.nav[route.name as keyof typeof t.nav] ?? route.name;
 
             const onPress = () => {
               const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -92,7 +95,7 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
                   style={{ overflow: 'hidden' }}
                 >
                   <Text className="font-bodymd text-[11px] text-fg-faint" style={{ marginTop: 2 }}>
-                    {meta.label}
+                    {label}
                   </Text>
                 </MotiView>
               </Pressable>

@@ -4,32 +4,31 @@ import Constants from 'expo-constants';
 
 import { Card, Screen, StackHeader, Text } from '@/design/components';
 import { clay } from '@/design/shadows';
+import { useT } from '@/i18n';
 
 export default function About() {
+  const t = useT();
   const version = Constants.expoConfig?.version ?? '1.0.0';
   return (
     <Screen>
-      <StackHeader title="Biz haqimizda" />
+      <StackHeader title={t.tabs.about} />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-4 p-5 pt-2">
           <View className="items-center gap-3 py-2">
             <View className="h-20 w-20 items-center justify-center rounded-3xl bg-coral-500" style={{ boxShadow: clay.coral }}>
               <Ionicons name="flash" size={40} color="#FFFFFF" />
             </View>
-            <Text variant="heading">DAF Sprachzentrum</Text>
-            <Text variant="muted" className="text-center">Nemis tili o&apos;quv markazi</Text>
+            <Text variant="heading">{t.about.centerName}</Text>
+            <Text variant="muted" className="text-center">{t.about.tagline}</Text>
           </View>
 
           <Card className="gap-2">
-            <Text variant="h3">Markaz haqida</Text>
-            <Text variant="body">
-              DAF Sprachzentrum — nemis tilini zamonaviy uslublarda o&apos;rgatuvchi markaz. Ushbu ilova orqali
-              jadvalingizni, davomatingizni va to&apos;lovlaringizni bir joyda kuzatib borasiz.
-            </Text>
+            <Text variant="h3">{t.about.aboutTitle}</Text>
+            <Text variant="body">{t.about.aboutBody}</Text>
           </Card>
 
           <Card className="gap-3">
-            <Text variant="h3">Aloqa</Text>
+            <Text variant="h3">{t.about.contact}</Text>
             <View className="flex-row items-center gap-3">
               <Ionicons name="call-outline" size={20} color="#0E9A90" />
               <Text variant="body">+998 90 000 00 00</Text>
@@ -44,7 +43,7 @@ export default function About() {
             </View>
           </Card>
 
-          <Text variant="muted" className="text-center">Ilova versiyasi {version}</Text>
+          <Text variant="muted" className="text-center">{t.about.version(version)}</Text>
         </View>
       </ScrollView>
     </Screen>
