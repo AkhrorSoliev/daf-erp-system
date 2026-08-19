@@ -262,7 +262,7 @@ async function main() {
     const before = await otherBranchTotals(prisma, plan.branchId);
 
     section("O'chirilmoqda");
-    const deleted = await prisma.$transaction(
+    const { deleted, fresh } = await prisma.$transaction(
       async (tx) => {
         // Reja tranzaksiya ICHIDA qayta yig'iladi va qayta tekshiriladi:
         // dry-run bilan tasdiqlash orasida ma'lumot o'zgargan bo'lishi mumkin.
@@ -270,7 +270,8 @@ async function main() {
         await verifyBranchResetPlan(tx, fresh);
         await assertBranchIsFinanciallyEmpty(tx, fresh);
         await assertNoBlockingDependents(tx, fresh);
-        return executeBranchReset(tx, fresh);
+        const deleted = await executeBranchReset(tx, fresh);
+        return { deleted, fresh };
       },
       { timeout: 120_000 },
     );
@@ -281,48 +282,103 @@ async function main() {
       ['l', 'r'],
     );
 
+    // Zaxira tranzaksiyadan OLDIN, `plan` asosida olingan edi; o'chirish esa
+    // tranzaksiya ICHIDA qayta yig'ilgan `fresh` reja asosida bajarildi. Ikkisi
+    // orasida ma'lumot siljigan bo'lishi mumkin (masalan, kimdir shu oraliqda
+    // o'quvchini shu filialga qo'shdi). Bunday holda zaxira o'chirilgan
+    // qatorlarning HAMMASINI qamrab olmagan bo'ladi — buni qayta zaxiralab
+    // "tuzatib" bo'lmaydi, chunki qatorlar allaqachon o'chgan; faqat operatorni
+    // ANIQ OGOHLANTIRISH mumkin.
+    if (args.backup) {
+      const idSetDiffers = (a: (string | number)[], b: (string | number)[]): boolean => {
+        if (a.length !== b.length) return true;
+        const sa = new Set(a.map(String));
+        return b.some((x) => !sa.has(String(x)));
+      };
+      const compareFields: (keyof BranchResetPlan)[] = [
+        'studentIds',
+        'studentUserIds',
+        'staffUserIds',
+        'enrollmentIds',
+        'groupIds',
+        'roomIds',
+        'courseIds',
+        'snapshotIds',
+      ];
+      const shifted = compareFields.filter((field) =>
+        idSetDiffers(plan[field] as (string | number)[], fresh[field] as (string | number)[]),
+      );
+      if (shifted.length) {
+        section('OGOHLANTIRISH — zaxira reja bilan mos kelmaydi');
+        console.error(
+          `\n  DIQQAT: tranzaksiya ichida qayta yig'ilgan reja zaxira olingan paytdagi rejadan farq qiladi: ${shifted.join(', ')}.\n` +
+            "  Zaxira BU FARQNI QAMRAB OLMAYDI — o'chirilgan, lekin zaxiralanmagan qatorlar bo'lishi mumkin.\n" +
+            "  Zaxira qayta olinmaydi (qatorlar allaqachon o'chgan) — yuqoridagi ro'yxatlarni qo'lda solishtiring.",
+        );
+        process.exitCode = 1;
+      }
+    }
+
     const after = await otherBranchTotals(prisma, plan.branchId);
     section('Boshqa filiallar — oldin / keyin');
     const drift: string[] = [];
-    // `users` va `entityHistory` kompaniya bo'yicha olinadi (filial bo'yicha
-    // emas), shuning uchun ular tushishi KUTILADI — bu shu filial xodimlari
-    // va ularning tarixi o'chgani degani. Lekin TUSHISH MIQDORI aniq shu
-    // ishga tushirish o'chirgan `user`/`entityHistory` qatorlari soniga TENG
-    // bo'lishi SHART: agar reja xatosi tufayli boshqa filialning
-    // foydalanuvchisi yoki tarix qatori o'chib ketgan bo'lsa, sanoq baribir
-    // tushadi — faqat tenglik tekshiruvi buni ushlaydi, oddiy "farq bor/yo'q"
-    // esa buni sezmaydi.
+    // Bu tekshiruv TENGLIK emas, YUQORI CHEGARA. `otherBranchTotals`dagi
+    // `users` va `entityHistory` KOMPANIYA bo'yicha hisoblanadi (filial
+    // bo'yicha emas), va reset $transaction'i 120 soniyagacha davom etishi
+    // mumkin — shu oyna ichida boshqa admin amaliyoti (o'quvchi ro'yxatga
+    // olish, guruh tahriri va h.k.) EntityHistory yozadi yoki User yaratadi.
+    // Bunday PARALLEL yozuv "tushish"ni kutilganidan kamroq (hatto manfiy)
+    // ko'rsatadi — bu signal EMAS. Signal faqat tushish KUTILGANIDAN KO'P
+    // bo'lganda: bu reja boshqa filialning qatorini o'chirib yuborgani
+    // degani. Shuning uchun tenglik emas, faqat yuqori chegara
+    // tekshiriladi — buni tenglikka "qattiqlashtirib" qo'ymang, aks holda har
+    // bir parallel yozuv soxta halokat signali beradi (haqiqiy o'chirishdan
+    // KEYIN, qaytarib bo'lmaydigan tarzda).
     const expectedDrop: Record<string, number> = {
+      // Filialga tegishli sanoqlar — reset boshqa filialdan HECH NARSANI
+      // olib tashlamasligi SHART, shuning uchun bo'sh joy 0.
+      students: 0,
+      groups: 0,
+      rooms: 0,
+      courses: 0,
+      staffLinks: 0,
+      enrollments: 0,
+      payments: 0,
+      transactions: 0,
+      attendances: 0,
+      salaryAccruals: 0,
+      cashAccounts: 0,
+      leadColumns: 0,
+      // Kompaniya bo'yicha sanoqlar — shu skript o'chirgan qatorlar soniga
+      // TENGDAN OSHMASLIGI kerak (kamroq bo'lishi parallel yozuv tufayli
+      // normal).
       users: deleted.user ?? 0,
       entityHistory: deleted.entityHistory ?? 0,
     };
     printTable(
       ['Nima', 'Oldin', 'Keyin', 'Farq'],
       Object.keys(before).map((k) => {
-        const diff = after[k] - before[k];
-        if (k in expectedDrop) {
-          const actualDrop = before[k] - after[k];
-          const expected = expectedDrop[k];
-          const ok = actualDrop === expected;
-          if (!ok) drift.push(k);
-          return [
-            k,
-            before[k],
-            after[k],
-            `${actualDrop} (kutilgan: ${expected})${ok ? '' : ' — MOS EMAS'}`,
-          ];
-        }
-        if (diff !== 0) drift.push(k);
-        return [k, before[k], after[k], diff === 0 ? '—' : diff];
+        const actualDrop = before[k] - after[k];
+        const expected = expectedDrop[k] ?? 0;
+        const ok = actualDrop <= expected;
+        if (!ok) drift.push(k);
+        return [
+          k,
+          before[k],
+          after[k],
+          `${actualDrop} (kutilgan: ≤${expected})${ok ? '' : ' — MOS EMAS'}`,
+        ];
       }),
       ['l', 'r', 'r', 'r'],
     );
 
     if (drift.length) {
-      console.error(`\n  DIQQAT: boshqa filial ma'lumoti o'zgardi: ${drift.join(', ')}`);
+      console.error(
+        `\n  DIQQAT: boshqa filialdan kutilganidan ORTIQ ma'lumot o'chgan bo'lishi mumkin: ${drift.join(', ')}`,
+      );
       process.exitCode = 1;
     } else {
-      console.log("\n  Boshqa filiallarning ma'lumoti o'zgarmadi.");
+      console.log("\n  Boshqa filiallardan kutilganidan ortiq hech narsa o'chirilmadi.");
     }
   } catch (e) {
     console.error(e instanceof Error ? `\n${e.name}: ${e.message}` : e);
