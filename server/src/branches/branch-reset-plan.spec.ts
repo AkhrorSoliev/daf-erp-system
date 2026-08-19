@@ -1,6 +1,7 @@
 import {
   buildBranchResetPlan,
   verifyBranchResetPlan,
+  assertBranchIsFinanciallyEmpty,
   BranchResetUnsafeError,
   BranchResetPlan,
 } from './branch-reset-plan';
@@ -192,5 +193,61 @@ describe('verifyBranchResetPlan', () => {
       snapshots: [...namanganish.snapshots, { id: 999, branchId: 1 }],
     });
     await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/999/);
+  });
+});
+
+/**
+ * fakePrisma ga qo'shimcha: moliyaviy jadval sanoqlari. Ko'rsatilmagan jadval
+ * 0 deb hisoblanadi.
+ */
+function fakePrismaWithMoney(
+  data: Parameters<typeof fakePrisma>[0],
+  counts: Record<string, number>,
+) {
+  const base = fakePrisma(data);
+  for (const model of [
+    'payment',
+    'transaction',
+    'attendance',
+    'salaryAccrual',
+    'contract',
+    'refund',
+    'cashMovement',
+    'expense',
+  ]) {
+    base[model] = { count: jest.fn(async () => counts[model] ?? 0) };
+  }
+  return base;
+}
+
+describe('assertBranchIsFinanciallyEmpty', () => {
+  it("moliyaviy tarixi yo'q filialdan o'tkazadi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {});
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).resolves.toBeUndefined();
+  });
+
+  it("bitta to'lov ham bo'lsa to'xtatadi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, { payment: 1 });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/Payment: 1/);
+  });
+
+  it('topilgan barcha jadvallarni bitta xabarda sanaydi', async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      payment: 20,
+      transaction: 4326,
+      attendance: 7,
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(
+      /Payment: 20[\s\S]*Transaction: 4326[\s\S]*Attendance: 7/,
+    );
+  });
+
+  it("o'quvchisi ham, guruhi ham yo'q filialdan o'tkazadi", async () => {
+    const prisma = fakePrismaWithMoney({ branch: { id: 3, name: 'Bo\'sh' } }, {});
+    const plan = await buildBranchResetPlan(prisma, 3);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).resolves.toBeUndefined();
   });
 });

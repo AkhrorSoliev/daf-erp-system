@@ -221,3 +221,48 @@ export async function verifyBranchResetPlan(
     );
   }
 }
+
+/**
+ * Filialda pul tarixi yo'qligini tekshiradi.
+ *
+ * Bu fayl repozitoriyadagi eng xavfli kod bo'ladi: u tiklab bo'lmaydigan
+ * o'chirishni bajaradi. Namangan hozir bo'sh, lekin skript qoladi va kimdir
+ * uni keyinroq boshqa filialga qaratishi mumkin. Qorovul buni imkonsiz qiladi:
+ * bironta to'lov, tranzaksiya, davomat, oylik hisoblanmasi, shartnoma,
+ * qaytarish, kassa harakati yoki xarajat topilsa — skript umuman ishlamaydi.
+ *
+ * Bunday filialni tozalash kerak bo'lsa, bu qorovulni chetlab o'tish emas,
+ * moliyaviy tarixni nima qilish kerakligi haqida alohida qaror kerak.
+ */
+export async function assertBranchIsFinanciallyEmpty(
+  prisma: PrismaLike,
+  plan: BranchResetPlan,
+): Promise<void> {
+  const { studentIds, groupIds, branchId } = plan;
+  const noStudents = studentIds.length === 0;
+  const noGroups = groupIds.length === 0;
+
+  const checks: [string, () => Promise<number>][] = [
+    ['Payment', async () => (noStudents ? 0 : prisma.payment.count({ where: { studentId: { in: studentIds } } }))],
+    ['Transaction', async () => (noStudents ? 0 : prisma.transaction.count({ where: { studentId: { in: studentIds } } }))],
+    ['Attendance', async () => (noGroups ? 0 : prisma.attendance.count({ where: { groupId: { in: groupIds } } }))],
+    ['SalaryAccrual', async () => (noGroups ? 0 : prisma.salaryAccrual.count({ where: { groupId: { in: groupIds } } }))],
+    ['Contract', async () => (noStudents ? 0 : prisma.contract.count({ where: { studentId: { in: studentIds } } }))],
+    ['Refund', async () => (noStudents ? 0 : prisma.refund.count({ where: { studentId: { in: studentIds } } }))],
+    ['CashMovement', () => prisma.cashMovement.count({ where: { branchId } })],
+    ['Expense', () => prisma.expense.count({ where: { branchId } })],
+  ];
+
+  const found: string[] = [];
+  for (const [label, run] of checks) {
+    const count = await run();
+    if (count > 0) found.push(`${label}: ${count}`);
+  }
+
+  if (found.length) {
+    throw new BranchResetUnsafeError(
+      `Filial #${branchId} (${plan.branchName}) da moliyaviy tarix bor, ` +
+        `bo'shatish rad etildi:\n  - ${found.join('\n  - ')}`,
+    );
+  }
+}
