@@ -43,22 +43,49 @@ interface Args {
   dryRun: boolean;
 }
 
+/** Qiymat TALAB qiladigan bayroqlar — `--branch=2`, `--confirm="..."`. */
+const VALUED_FLAGS = ['branch', 'confirm'];
+/** Qiymat QABUL QILMAYDIGAN (bare) bayroqlar — `--backup`, `--dry-run`. */
+const BOOLEAN_FLAGS = ['backup', 'dry-run'];
 /** `parse()` qabul qiladigan yagona bayroqlar ro'yxati — noma'lum bayroq shu ro'yxat bilan xabarda ko'rsatiladi. */
-const ACCEPTED_FLAGS = ['branch', 'backup', 'confirm', 'dry-run'];
+const ACCEPTED_FLAGS = [...VALUED_FLAGS, ...BOOLEAN_FLAGS];
 
 function parse(): Args {
   const argv = process.argv.slice(2);
 
   // Noma'lum bayroqni jimgina o'tkazib yubormaslik: bir harflik xato
   // (`--dryrun`, `--dry_run`) haqiqiy o'chirishga olib kelmasligi kerak.
+  //
+  // Qiymatli va bare shakllarni aralashtirib bo'lmaydi — boolean bayroqlar
+  // (`--backup`, `--dry-run`) qiymatga QARAB emas, faqat argv ICHIDA
+  // BORLIGIGA qarab o'qiladi (`argv.includes('--dry-run')`). Shuning uchun
+  // `--dry-run=true` yozilsa, u ACCEPTED_FLAGS ro'yxatida "tanish" ko'rinadi,
+  // lekin `includes('--dry-run')` uni hech qachon topmaydi va bayroq
+  // JIMGINA hech narsa qilmaydi — bu esa aynan `--backup=true` (zaxira
+  // olinmagan bo'lsa ham operator zaxira bor deb o'ylashi mumkin) va
+  // `--dry-run=true` (haqiqiy o'chirish ishga tushadi) kabi tuzoqlarni qayta
+  // ochadi. `--backup=false` o'zi ham ikki xil o'qilishi mumkin (ba'zilar uni
+  // "zaxira olinmasin" deb o'qiydi) — shuning uchun taxmin qilish o'rniga bu
+  // shakl BUTUNLAY rad etiladi. Kimdir keyinchalik "yordam" qilib boolean
+  // parslashni qo'shmasin: qiymatli forma har doim xato bo'lib qolishi kerak.
   for (const token of argv) {
     if (!token.startsWith('--')) continue;
-    const name = token.slice(2).split('=')[0];
+    const eq = token.indexOf('=');
+    const hasValue = eq !== -1;
+    const name = hasValue ? token.slice(2, eq) : token.slice(2);
     if (!ACCEPTED_FLAGS.includes(name)) {
       console.error(
         `Noma'lum bayroq: --${name}\n` +
           `Qabul qilinadigan bayroqlar: ${ACCEPTED_FLAGS.map((f) => `--${f}`).join(', ')}`,
       );
+      process.exit(1);
+    }
+    if (BOOLEAN_FLAGS.includes(name) && hasValue) {
+      console.error(`--${name} qiymat qabul qilmaydi. To'g'ri shakl: --${name} (qiymatsiz).`);
+      process.exit(1);
+    }
+    if (VALUED_FLAGS.includes(name) && !hasValue) {
+      console.error(`--${name} qiymat talab qiladi. To'g'ri shakl: --${name}=<qiymat>.`);
       process.exit(1);
     }
   }

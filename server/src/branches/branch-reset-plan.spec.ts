@@ -264,6 +264,49 @@ describe('assertNoInboundReferences', () => {
     );
   });
 
+  it("boshqa filial guruhidagi Group.roomId (reja xonasi) ni tutadi", async () => {
+    const prisma = fakePrismaWithMoney(
+      {
+        ...namanganish,
+        groups: [...namanganish.groups, { id: 'g-fargona-room', branchId: 1, roomId: 'r-1' }],
+      },
+      {},
+    );
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(/Group\.roomId: 1/);
+  });
+
+  it("reja guruhiga bog'langan, lekin reja o'quvchisiga tegishli bo'lmagan Contract.groupId ni tutadi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      contract: [{ id: 'c-stray', groupId: 'g-1', studentId: 99999 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    expect(plan.studentIds).not.toContain(99999);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(/Contract\.groupId: 1/);
+  });
+
+  it("reja guruhiga bog'langan, lekin reja foydalanuvchisiga tegishli bo'lmagan EmployeeSalaryConfig.groupId ni tutadi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      employeeSalaryConfig: [{ id: 'esc-stray', groupId: 'g-1', userId: 99999 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    expect(plan.staffUserIds).not.toContain(99999);
+    expect(plan.studentUserIds).not.toContain(99999);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
+      /EmployeeSalaryConfig\.groupId: 1/,
+    );
+  });
+
+  it('reja o\'quvchisiga bog\'langan AiConversation.studentId ni tutadi', async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      aiConversation: [{ id: 'ai-1', studentId: 10795, userId: 10768 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
+      /AiConversation\.studentId: 1/,
+    );
+  });
+
   it('reja o\'quvchisiga bog\'langan MockExamParticipant.studentId ni tutadi', async () => {
     const prisma = fakePrismaWithMoney(namanganish, {
       mockExamParticipant: [{ id: 'mep-1', studentId: 10795 }],
