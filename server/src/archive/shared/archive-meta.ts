@@ -118,8 +118,15 @@ export function getInclude(entityType: ArchiveEntityType) {
 
 export function getSearchFilter(entityType: ArchiveEntityType, search: string) {
   switch (entityType) {
+    // `User` has no `name` column — only firstName/lastName. Filtering on
+    // `name` threw a Prisma validation error on every staff archive search.
     case ArchiveEntityType.USERS:
-      return { name: { contains: search, mode: 'insensitive' } };
+      return {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+        ],
+      };
     case ArchiveEntityType.BRANCHES:
       return { name: { contains: search, mode: 'insensitive' } };
     case ArchiveEntityType.COURSES:
