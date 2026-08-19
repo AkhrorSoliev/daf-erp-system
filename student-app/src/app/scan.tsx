@@ -7,8 +7,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, EmptyState, Loading, Screen, Text } from '@/design/components';
 import { scanQr } from '@/api/attendance';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { useT } from '@/i18n';
 
 export default function Scan() {
+  const t = useT();
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
@@ -20,10 +22,10 @@ export default function Scan() {
     return (
       <Screen className="justify-center px-6">
         <View className="gap-5">
-          <EmptyState icon="camera-outline" title="Kamera ruxsati kerak" description="QR kodni skanerlash uchun kameraga ruxsat bering." />
+          <EmptyState icon="camera-outline" title={t.scan.permissionTitle} description={t.scan.permissionDesc} />
           <View className="gap-2.5">
-            <Button label="Ruxsat berish" iconBefore="checkmark" onPress={requestPermission} />
-            <Button label="Orqaga" variant="ghost" onPress={() => router.back()} />
+            <Button label={t.scan.allow} iconBefore="checkmark" onPress={requestPermission} />
+            <Button label={t.common.back} variant="ghost" onPress={() => router.back()} />
           </View>
         </View>
       </Screen>
@@ -39,13 +41,13 @@ export default function Scan() {
       if (!parsed?.t) throw new Error('Invalid QR');
       const res = await scanQr(parsed.t);
       if (res?.balanceInsufficient) {
-        Alert.alert('Balans yetarli emas', res.message ?? 'Dars uchun balansingiz yetmadi');
+        Alert.alert(t.scan.insufficientTitle, res.message ?? t.scan.insufficientMessage);
       } else {
         await queryClient.invalidateQueries({ queryKey: ['attendance'] });
-        Alert.alert('Belgilandi ✓', 'Davomat muvaffaqiyatli belgilandi');
+        Alert.alert(t.scan.markedTitle, t.scan.markedMessage);
       }
     } catch (error) {
-      Alert.alert('Xatolik', getErrorMessage(error, 'QR kod yaroqsiz yoki muddati tugagan'));
+      Alert.alert(t.common.errorTitle, getErrorMessage(error, t.scan.invalidQr));
     } finally {
       setBusy(false);
       router.back();
@@ -66,8 +68,8 @@ export default function Scan() {
       </View>
 
       <View className="absolute inset-x-0 bottom-14 items-center gap-3 px-6">
-        <Text className="text-center font-bodymd text-[15px] text-white">Dars QR kodiga qarating</Text>
-        <Button label="Bekor qilish" variant="secondary" onPress={() => router.back()} />
+        <Text className="text-center font-bodymd text-[15px] text-white">{t.scan.guide}</Text>
+        <Button label={t.common.cancel} variant="secondary" onPress={() => router.back()} />
       </View>
     </View>
   );

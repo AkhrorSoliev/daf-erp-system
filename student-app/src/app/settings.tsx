@@ -7,6 +7,7 @@ import { shadow } from '@/design/shadows';
 import { useThemeStore, type ThemeMode } from '@/design/theme';
 import { useThemeTransition } from '@/design/theme-transition';
 import { cn } from '@/lib/cn';
+import { useT } from '@/i18n';
 
 /** Background color the target mode resolves to — drives the reveal circle. */
 function revealBg(m: ThemeMode): string {
@@ -14,13 +15,14 @@ function revealBg(m: ThemeMode): string {
   return scheme === 'dark' ? themeColors.dark.bg : themeColors.light.bg;
 }
 
-const THEME_OPTS: { mode: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { mode: 'system', label: 'Tizim', icon: 'phone-portrait-outline' },
-  { mode: 'light', label: "Yorug'", icon: 'sunny-outline' },
-  { mode: 'dark', label: "Qorong'i", icon: 'moon-outline' },
+const THEME_OPTS: { mode: ThemeMode; labelKey: 'themeSystem' | 'themeLight' | 'themeDark'; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { mode: 'system', labelKey: 'themeSystem', icon: 'phone-portrait-outline' },
+  { mode: 'light', labelKey: 'themeLight', icon: 'sunny-outline' },
+  { mode: 'dark', labelKey: 'themeDark', icon: 'moon-outline' },
 ];
 
 export default function Settings() {
+  const t = useT();
   const colors = useColors();
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
@@ -28,12 +30,12 @@ export default function Settings() {
 
   return (
     <Screen>
-      <StackHeader title="Sozlamalar" />
+      <StackHeader title={t.tabs.settings} />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-6 p-5 pt-2">
           {/* Theme */}
           <View className="gap-2.5">
-            <Text variant="caps" className="px-1">Mavzu</Text>
+            <Text variant="caps" className="px-1">{t.settings.theme}</Text>
             <View className="flex-row gap-2 rounded-[20px] bg-sunk p-1.5">
               {THEME_OPTS.map((o) => {
                 const active = mode === o.mode;
@@ -49,7 +51,9 @@ export default function Settings() {
                     style={active ? { boxShadow: shadow.sm } : undefined}
                   >
                     <Ionicons name={o.icon} size={20} color={active ? colors.fg : colors.fgMuted} />
-                    <Text className={cn('font-bodymd text-[12px]', active ? 'text-fg' : 'text-fg-muted')}>{o.label}</Text>
+                    <Text className={cn('font-bodymd text-[12px]', active ? 'text-fg' : 'text-fg-muted')}>
+                      {t.settings[o.labelKey]}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -58,22 +62,22 @@ export default function Settings() {
 
           {/* Coming soon */}
           <View className="gap-2.5">
-            <Text variant="caps" className="px-1">Boshqa</Text>
+            <Text variant="caps" className="px-1">{t.settings.other}</Text>
             <ListRow
               icon="language"
               tone="sky"
-              label="Til"
+              label={t.settings.language}
               className="opacity-60"
               chevron={false}
-              trailing={<Badge label="Tez orada" tone="neutral" />}
+              trailing={<Badge label={t.common.comingSoon} tone="neutral" />}
             />
             <ListRow
               icon="chatbubbles"
               tone="grape"
-              label="Tarjimon"
+              label={t.settings.translator}
               className="opacity-60"
               chevron={false}
-              trailing={<Badge label="Tez orada" tone="neutral" />}
+              trailing={<Badge label={t.common.comingSoon} tone="neutral" />}
             />
           </View>
         </View>

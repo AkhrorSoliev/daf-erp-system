@@ -8,8 +8,10 @@ import { useColors } from '@/design/colors';
 import { shadow } from '@/design/shadows';
 import { useProfile } from '@/api/queries/use-profile';
 import { useAuth } from '@/auth/auth-store';
+import { useT } from '@/i18n';
 
 export default function More() {
+  const t = useT();
   const q = useProfile();
   const colors = useColors();
   const signOut = useAuth((s) => s.signOut);
@@ -20,10 +22,10 @@ export default function More() {
   const initials = p ? `${p.firstName?.[0] ?? ''}${p.lastName?.[0] ?? ''}`.toUpperCase() : '';
 
   function confirmLogout() {
-    Alert.alert('Chiqish', 'Hisobdan chiqishni tasdiqlaysizmi?', [
-      { text: 'Bekor qilish', style: 'cancel' },
+    Alert.alert(t.more.logoutConfirmTitle, t.more.logoutConfirmMessage, [
+      { text: t.common.cancel, style: 'cancel' },
       {
-        text: 'Chiqish',
+        text: t.more.logout,
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -34,18 +36,18 @@ export default function More() {
   }
 
   const menu = [
-    { icon: 'wallet' as const, tone: 'teal' as const, label: "To'lovlar", onPress: () => router.push('/payments') },
-    { icon: 'help-circle' as const, tone: 'sky' as const, label: 'FAQ', onPress: () => router.push('/faq') },
-    { icon: 'information-circle' as const, tone: 'grape' as const, label: 'Biz haqimizda', onPress: () => router.push('/about') },
-    { icon: 'settings' as const, tone: 'ink' as const, label: 'Sozlamalar', onPress: () => router.push('/settings') },
-    { icon: 'log-out' as const, tone: 'coral' as const, label: 'Chiqish', onPress: confirmLogout, chevron: false },
+    { icon: 'wallet' as const, tone: 'teal' as const, label: t.more.payments, onPress: () => router.push('/payments') },
+    { icon: 'help-circle' as const, tone: 'sky' as const, label: t.more.faq, onPress: () => router.push('/faq') },
+    { icon: 'information-circle' as const, tone: 'grape' as const, label: t.more.about, onPress: () => router.push('/about') },
+    { icon: 'settings' as const, tone: 'ink' as const, label: t.more.settings, onPress: () => router.push('/settings') },
+    { icon: 'log-out' as const, tone: 'coral' as const, label: t.more.logout, onPress: confirmLogout, chevron: false },
   ];
 
   return (
     <Screen>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-3 p-5 pb-32">
-          <ScreenHeader title="Ko'proq" />
+          <ScreenHeader title={t.tabs.more} />
 
           {/* Profile header → profile screen */}
           <FadeIn index={0}>
@@ -53,8 +55,8 @@ export default function More() {
               <Card className="flex-row items-center gap-3.5" style={{ boxShadow: shadow.card }}>
                 <Avatar uri={p?.photo} initials={initials} size={56} />
                 <View className="flex-1">
-                  <Text variant="title">{name || 'Profil'}</Text>
-                  <Text variant="muted">Profilni ko&apos;rish</Text>
+                  <Text variant="title">{name || t.more.profileFallback}</Text>
+                  <Text variant="muted">{t.more.viewProfile}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.fgFaint} />
               </Card>
