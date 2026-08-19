@@ -25,7 +25,7 @@ import {
   assertNoBlockingDependents,
   BranchResetPlan,
 } from '../src/branches/branch-reset-plan';
-import { executeBranchReset } from '../src/branches/branch-reset-execute';
+import { executeBranchReset, buildHistoryWhere } from '../src/branches/branch-reset-execute';
 import { makePrisma, printHeader, section, printTable, dbEnvLabel } from './lib/check-cli';
 
 interface Args {
@@ -101,6 +101,17 @@ async function writeBackup(prisma: PrismaClient, plan: BranchResetPlan): Promise
   const { studentIds, studentUserIds, staffUserIds, groupIds, roomIds, courseIds, enrollmentIds } =
     plan;
   const allUserIds = [...studentUserIds, ...staffUserIds];
+  // `executeBranchReset`'dagi `historyIds`ning AYNAN o'zi — entityHistory /
+  // statusHistory so'rovini o'chirish bilan bir xil holatda o'tkazib
+  // yuborish (yoki yubormaslik) uchun.
+  const historyIds = [
+    ...studentIds,
+    ...enrollmentIds,
+    ...groupIds,
+    ...roomIds,
+    ...courseIds,
+    ...allUserIds,
+  ];
 
   const payload = {
     takenAt: new Date().toISOString(),
@@ -135,6 +146,51 @@ async function writeBackup(prisma: PrismaClient, plan: BranchResetPlan): Promise
         : [],
       snapshots: plan.snapshotIds.length
         ? await prisma.dailyFinancialSnapshot.findMany({ where: { id: { in: plan.snapshotIds } } })
+        : [],
+      // Quyidagi 11 ta jadval `executeBranchReset`ning o'chirish ro'yxatiga
+      // kirgani uchun shu yerda ham bo'lishi SHART — aks holda zaxira
+      // haqiqatda o'chadigan ma'lumotning bir qismini tashlab ketgan bo'lardi.
+      // Har biri executor ishlatgan XUDDI SHU ID to'plamiga qarab so'raladi.
+      enrollmentStateLogs: enrollmentIds.length
+        ? await prisma.enrollmentStateLog.findMany({
+            where: { enrollmentId: { in: enrollmentIds } },
+          })
+        : [],
+      studentBranches: studentIds.length
+        ? await prisma.studentBranch.findMany({ where: { studentId: { in: studentIds } } })
+        : [],
+      notifications: allUserIds.length
+        ? await prisma.notification.findMany({ where: { userId: { in: allUserIds } } })
+        : [],
+      groupScheduleSnapshots: groupIds.length
+        ? await prisma.groupScheduleSnapshot.findMany({ where: { groupId: { in: groupIds } } })
+        : [],
+      groupHolidayExtensions: groupIds.length
+        ? await prisma.groupHolidayExtension.findMany({ where: { groupId: { in: groupIds } } })
+        : [],
+      groupTeacherHistories: groupIds.length
+        ? await prisma.groupTeacherHistory.findMany({ where: { groupId: { in: groupIds } } })
+        : [],
+      groupTeachers: groupIds.length
+        ? await prisma.groupTeacher.findMany({ where: { groupId: { in: groupIds } } })
+        : [],
+      roomCapacitySnapshots: roomIds.length
+        ? await prisma.roomCapacitySnapshot.findMany({ where: { roomId: { in: roomIds } } })
+        : [],
+      coursePriceSnapshots: courseIds.length
+        ? await prisma.coursePriceSnapshot.findMany({ where: { courseId: { in: courseIds } } })
+        : [],
+      // `entityHistory`/`statusHistory` ikkalasi ham `executor`niki bilan
+      // ayni bitta `where` shartidan o'qiladi (`buildHistoryWhere`, Task 3'dan
+      // eksport qilingan) — shart ikki joyda qo'lda nusxalanmasin, aks holda
+      // executor o'zgarganda zaxira sirli tarzda eskirib qoladi. Bo'sh
+      // bo'lishi mumkinligi ham executor bilan bir xil ID ro'yxati bilan
+      // tekshiriladi.
+      entityHistory: historyIds.length
+        ? await prisma.entityHistory.findMany({ where: buildHistoryWhere(plan) })
+        : [],
+      statusHistory: historyIds.length
+        ? await prisma.statusHistory.findMany({ where: buildHistoryWhere(plan) })
         : [],
     },
   };
@@ -228,13 +284,35 @@ async function main() {
     const after = await otherBranchTotals(prisma, plan.branchId);
     section('Boshqa filiallar — oldin / keyin');
     const drift: string[] = [];
+    // `users` va `entityHistory` kompaniya bo'yicha olinadi (filial bo'yicha
+    // emas), shuning uchun ular tushishi KUTILADI — bu shu filial xodimlari
+    // va ularning tarixi o'chgani degani. Lekin TUSHISH MIQDORI aniq shu
+    // ishga tushirish o'chirgan `user`/`entityHistory` qatorlari soniga TENG
+    // bo'lishi SHART: agar reja xatosi tufayli boshqa filialning
+    // foydalanuvchisi yoki tarix qatori o'chib ketgan bo'lsa, sanoq baribir
+    // tushadi — faqat tenglik tekshiruvi buni ushlaydi, oddiy "farq bor/yo'q"
+    // esa buni sezmaydi.
+    const expectedDrop: Record<string, number> = {
+      users: deleted.user ?? 0,
+      entityHistory: deleted.entityHistory ?? 0,
+    };
     printTable(
       ['Nima', 'Oldin', 'Keyin', 'Farq'],
       Object.keys(before).map((k) => {
         const diff = after[k] - before[k];
-        // Foydalanuvchi va audit sanoqlari kompaniya bo'yicha olinadi, shuning
-        // uchun ular tushishi KUTILADI — bu filial xodimlari o'chdi degani.
-        if (diff !== 0 && !['users', 'entityHistory'].includes(k)) drift.push(k);
+        if (k in expectedDrop) {
+          const actualDrop = before[k] - after[k];
+          const expected = expectedDrop[k];
+          const ok = actualDrop === expected;
+          if (!ok) drift.push(k);
+          return [
+            k,
+            before[k],
+            after[k],
+            `${actualDrop} (kutilgan: ${expected})${ok ? '' : ' — MOS EMAS'}`,
+          ];
+        }
+        if (diff !== 0) drift.push(k);
         return [k, before[k], after[k], diff === 0 ? '—' : diff];
       }),
       ['l', 'r', 'r', 'r'],

@@ -1,4 +1,4 @@
-import { executeBranchReset } from './branch-reset-execute';
+import { executeBranchReset, buildHistoryWhere } from './branch-reset-execute';
 import { BranchResetPlan } from './branch-reset-plan';
 
 const PLAN: BranchResetPlan = {
@@ -133,6 +133,19 @@ describe('executeBranchReset', () => {
     for (const call of calls) {
       expect(JSON.stringify(call.where)).not.toContain('10562');
     }
+  });
+
+  it("buildHistoryWhere executeBranchReset entityHistory'ni o'chirishda ishlatgan shartning AYNAN o'zini qaytaradi", async () => {
+    // Zaxira skripti (`reset-branch.ts`) xuddi shu funksiyani o'zi qayta
+    // yozmasdan chaqirib, o'chirishdan oldin shu qatorlarni saqlab qoladi.
+    // Bu test ikkalasi hech qachon bir-biridan uzilib qolmasligini
+    // kafolatlaydi: executor'ning `where`si o'zgarsa, shu joyda darhol
+    // qizarib qoladi.
+    const { tx, calls } = recordingTx();
+    await executeBranchReset(tx, PLAN);
+    const historyCall = calls.find((c) => c.model === 'entityHistory');
+    expect(historyCall).toBeDefined();
+    expect(buildHistoryWhere(PLAN)).toEqual(historyCall!.where);
   });
 
   it("bo'sh reja bilan hech nima o'chirmaydi (ikkinchi marta ishga tushirish xavfsiz)", async () => {
