@@ -7,7 +7,7 @@ import { shadow } from '@/design/shadows';
 import { useThemeStore, type ThemeMode } from '@/design/theme';
 import { useThemeTransition } from '@/design/theme-transition';
 import { cn } from '@/lib/cn';
-import { useT } from '@/i18n';
+import { useT, useLang, useSetLang, LANGUAGES } from '@/i18n';
 
 /** Background color the target mode resolves to — drives the reveal circle. */
 function revealBg(m: ThemeMode): string {
@@ -27,6 +27,8 @@ export default function Settings() {
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const { animateThemeChange } = useThemeTransition();
+  const lang = useLang();
+  const setLang = useSetLang();
 
   return (
     <Screen>
@@ -60,17 +62,32 @@ export default function Settings() {
             </View>
           </View>
 
+          {/* Til */}
+          <View className="gap-2.5">
+            <Text variant="caps" className="px-1">{t.settings.language}</Text>
+            <View className="flex-row gap-2 rounded-[20px] bg-sunk p-1.5">
+              {LANGUAGES.map((l) => {
+                const active = lang === l.code;
+                return (
+                  <Pressable
+                    key={l.code}
+                    onPress={() => setLang(l.code)}
+                    className={cn('flex-1 items-center gap-1 rounded-[14px] py-3', active && 'bg-surface')}
+                    style={active ? { boxShadow: shadow.sm } : undefined}
+                  >
+                    <Text className="text-[20px]">{l.flag}</Text>
+                    <Text className={cn('font-bodymd text-[12px]', active ? 'text-fg' : 'text-fg-muted')}>
+                      {l.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
           {/* Coming soon */}
           <View className="gap-2.5">
             <Text variant="caps" className="px-1">{t.settings.other}</Text>
-            <ListRow
-              icon="language"
-              tone="sky"
-              label={t.settings.language}
-              className="opacity-60"
-              chevron={false}
-              trailing={<Badge label={t.common.comingSoon} tone="neutral" />}
-            />
             <ListRow
               icon="chatbubbles"
               tone="grape"
