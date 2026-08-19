@@ -3,20 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Sparkle, CaretRight } from "@phosphor-icons/react";
+import { CaretRight } from "@phosphor-icons/react";
 import { railNavItems, moreRoutes } from "@/lib/student-nav-items";
 import { useStudentProfile } from "../lib/queries";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar } from "./avatar";
 import { LogoutButton } from "../student-logout-button";
 
-// Desktop side rail (>= lg). Full portal menu expanded: profile summary, the AI
-// Deutsch Tutor feature card, the nav list, and a footer with QR / theme /
-// logout. Replaces the mobile bottom nav on wide screens.
+// Desktop side rail (>= lg). Full portal menu expanded: profile summary, the
+// nav list, and a footer with QR / theme / logout. Replaces the mobile bottom
+// nav on wide screens.
 export function LumioSideRail({ className }: { className?: string }) {
   const pathname = usePathname();
   const { data: profile } = useStudentProfile();
-  const aiActive = pathname.startsWith("/portal/ai");
 
   function isActive(url: string) {
     if (url === "/portal") return pathname === "/portal";
@@ -60,29 +59,6 @@ export function LumioSideRail({ className }: { className?: string }) {
             </span>
           </span>
           <CaretRight size={16} weight="bold" className="text-ink-400" />
-        </Link>
-
-        {/* AI Deutsch Tutor feature card */}
-        <Link
-          href="/portal/ai"
-          className={cn(
-            "grad-grape clay-grape relative overflow-hidden rounded-card p-3.5 text-white transition-transform clay-btn",
-            aiActive && "ring-2 ring-grape-500/40",
-          )}
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-md bg-white/25">
-              <Sparkle size={20} weight="fill" />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-display text-sm font-extrabold leading-tight">
-                Deutsch Tutor
-              </span>
-              <span className="block text-[11px] font-semibold text-white/80">
-                AI yordamchi
-              </span>
-            </span>
-          </div>
         </Link>
 
         {/* Nav */}

@@ -151,13 +151,6 @@ enum TaskPriority {
   URGENT
 }
 
-enum AiUseCaseType {
-  STUDENT_CHAT
-  STATISTICS
-  VOCABULARY
-  TEST_GENERATION
-}
-
 // ===== FINANCIAL SYSTEM ENUMS =====
 
 enum PaymentMethod {
@@ -339,7 +332,6 @@ model User {
   sentSmsMessages                  SmsMessage[]               @relation("SmsSender")
   markedAttendances                Attendance[]               @relation("AttendanceMarkedBy")
   student                          Student?                   @relation("StudentUser")
-  aiConversations                  AiConversation[]           @relation("UserAiConversations")
 
   // Financial relations (employee salary — works for all roles)
   salaryConfigs       EmployeeSalaryConfig[] @relation("UserSalaryConfigs")
@@ -560,7 +552,6 @@ model Student {
   smsMessages     SmsMessage[]
   attendances     Attendance[]
   plannedAbsences PlannedAbsence[]
-  aiConversations AiConversation[] @relation("StudentAiConversations")
 
   mockExamParticipations MockExamParticipant[] @relation("StudentMockExamParticipations")
 
@@ -1526,7 +1517,6 @@ model TelegramGroup {
 
   /**
    * This group watches EVERY branch, deliberately.
-   *
    * `branchId = null` used to carry two different meanings at once: "nobody has
    * assigned this group yet" (a mistake to fix) and "this is the org-wide
    * monitoring group" (correct, and permanent). Once branch events stopped
@@ -1534,12 +1524,10 @@ model TelegramGroup {
    * and attendance leaked into another's chat — the two became
    * indistinguishable, and the org-wide groups went quiet with no way to say
    * they were meant to be loud.
-   *
    * So the intent is declared rather than inferred. `branchId` goes back to
    * meaning only "which branch", and stays fail-closed when unset. A group with
    * this flag receives every branch's operational events regardless of
    * `branchId`; it is additive, never a filter.
-   *
    * The distinction is the same one this schema draws elsewhere between what a
    * record is VISIBLE to and what it is ATTRIBUTED to.
    */
@@ -1874,40 +1862,6 @@ model CallLog {
   @@index([companyId, createdAt])
   @@index([companyId, followUpAt])
   @@index([branchId])
-}
-
-model AiConversation {
-  id          String          @id @default(uuid())
-  userId      Int
-  user        User            @relation("UserAiConversations", fields: [userId], references: [id])
-  studentId   Int?
-  student     Student?        @relation("StudentAiConversations", fields: [studentId], references: [id])
-  useCase     AiUseCaseType
-  chatMode    String?
-  title       String?
-  model       String          @default("gpt-4o-mini")
-  totalTokens Int             @default(0)
-  messages    AiChatMessage[]
-  companyId   Int
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  @@index([userId])
-  @@index([studentId])
-  @@index([useCase])
-}
-
-model AiChatMessage {
-  id               String         @id @default(uuid())
-  conversationId   String
-  conversation     AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role             String
-  content          String
-  promptTokens     Int?
-  completionTokens Int?
-  createdAt        DateTime       @default(now())
-
-  @@index([conversationId, createdAt])
 }
 
 // ===== FINANCIAL SYSTEM MODELS =====

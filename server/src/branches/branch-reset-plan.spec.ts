@@ -297,16 +297,6 @@ describe('assertNoInboundReferences', () => {
     );
   });
 
-  it('reja o\'quvchisiga bog\'langan AiConversation.studentId ni tutadi', async () => {
-    const prisma = fakePrismaWithMoney(namanganish, {
-      aiConversation: [{ id: 'ai-1', studentId: 10795, userId: 10768 }],
-    });
-    const plan = await buildBranchResetPlan(prisma, 2);
-    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
-      /AiConversation\.studentId: 1/,
-    );
-  });
-
   it('reja o\'quvchisiga bog\'langan MockExamParticipant.studentId ni tutadi', async () => {
     const prisma = fakePrismaWithMoney(namanganish, {
       mockExamParticipant: [{ id: 'mep-1', studentId: 10795 }],
@@ -352,7 +342,6 @@ type MoneyModel =
   | 'lessonCancellation'
   | 'lessonReschedule'
   | 'lessonTeacherOverride'
-  | 'aiConversation'
   | 'comment'
   | 'commentAssignee'
   | 'employeeSalaryConfig'
@@ -405,7 +394,6 @@ function fakePrismaWithMoney(
     'lessonCancellation',
     'lessonReschedule',
     'lessonTeacherOverride',
-    'aiConversation',
     'comment',
     'commentAssignee',
     'employeeSalaryConfig',
