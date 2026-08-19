@@ -44,7 +44,7 @@ export default function Schedule() {
       >
         <View className="gap-5 p-5 pt-2">
           {items.length === 0 ? (
-            <EmptyState icon="calendar-outline" title="Jadval bo'sh" description={t.placeholders.comingSoon} />
+            <EmptyState icon="calendar-outline" title="Jadval bo'sh" description={t.common.comingSoon} />
           ) : (
             WEEKDAYS.map((day) => {
               const lessons = items

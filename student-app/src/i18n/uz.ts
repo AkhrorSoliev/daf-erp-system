@@ -1,27 +1,72 @@
 /**
- * App copy — Latin Uzbek ONLY (never Cyrillic/Arabic letters).
+ * App copy — O'zbekcha (Latin ONLY, never Cyrillic/Arabic letters).
+ *
+ * This file is the SOURCE OF TRUTH for the string shape. Every other language
+ * file (de.ts, later en.ts) must satisfy `Dict` — if a key is missing there,
+ * TypeScript fails the build, so no translation can silently drop out.
+ *
  * Single source so copy is OTA-updatable via EAS Update.
  */
-export const t = {
+export const uz = {
   common: {
     loading: 'Yuklanmoqda...',
     retry: 'Qayta urinish',
     error: 'Xatolik yuz berdi',
+    errorTitle: 'Xatolik',
+    loadFailed: "Ma'lumotni yuklab bo'lmadi",
     save: 'Saqlash',
     cancel: 'Bekor qilish',
+    ok: 'OK',
+    back: 'Orqaga',
+    comingSoon: 'Tez orada',
+    showPassword: "Parolni ko'rsatish",
+    hidePassword: 'Parolni yashirish',
+  },
+  // Bottom tab-bar labels.
+  nav: {
+    index: 'Asosiy',
+    darslar: 'Darslar',
+    resurslar: 'Resurslar',
+    more: "Ko'proq",
+  },
+  // Stack / screen header titles.
+  tabs: {
+    home: 'Asosiy',
+    schedule: 'Jadval',
+    attendance: 'Davomat',
+    payments: "To'lovlar",
+    profile: 'Profil',
+    more: "Ko'proq",
+    settings: 'Sozlamalar',
+    faq: 'FAQ',
+    about: 'Biz haqimizda',
   },
   auth: {
     phoneLabel: 'Telefon raqami',
     phonePlaceholder: '90 123 45 67',
-    // Kirish ekrani istalgan formatdagi raqamni qabul qiladi, parolni
-    // tiklash esa faqat O'zbekiston raqamiga SMS yuboradi — shu sababli
-    // ikkalasi turli placeholder ishlatadi.
-    loginPhonePlaceholder: '998 90 123 45 67',
+    passwordLabel: 'Parol',
+    passwordPlaceholder: '••••••',
     continue: 'Davom etish',
     otpTitle: 'Tasdiqlash kodi',
     otpHint: 'Telegram bot yuborgan kodni kiriting',
     login: 'Kirish',
     forgot: 'Parolni unutdingizmi?',
+    // Kirish ekrani istalgan formatdagi raqamni qabul qiladi, parolni
+    // tiklash esa faqat O'zbekiston raqamiga SMS yuboradi — shu sababli
+    // ikkalasi turli placeholder ishlatadi.
+    loginPhonePlaceholder: '998 90 123 45 67',
+    brand: 'DAF Student',
+    tagline: "DAF Sprachzentrum — o'quvchi kabineti",
+    loginErrorTitle: 'Kirish xatosi',
+    orDivider: 'yoki',
+    telegramLogin: 'Telegram orqali kirish',
+    telegramConfirmTitle: "Telegram'da tasdiqlang",
+    telegramHintBefore: 'Botda ',
+    telegramHintWord: 'START',
+    telegramHintAfter: ' tugmasini bosing — tasdiqlangach avtomatik kirasiz.',
+    telegramReopen: 'Telegramni qayta ochish',
+    timeoutTitle: 'Vaqt tugadi',
+    timeoutMessage: "Qayta urinib ko'ring",
   },
   forgotPassword: {
     title: 'Parolni tiklash',
@@ -45,22 +90,126 @@ export const t = {
     errPassword: "Parol kamida 6 ta belgidan iborat bo'lishi kerak",
     errMismatch: 'Parollar mos kelmadi',
   },
-  tabs: {
-    home: 'Asosiy',
-    schedule: 'Jadval',
-    attendance: 'Davomat',
-    payments: "To'lovlar",
-    profile: 'Profil',
-  },
   home: {
     greeting: 'Assalomu alaykum',
     balance: 'Balans',
+    inDebt: 'Qarzdorlik',
+    current: 'Joriy',
+    todayLessons: 'Bugungi darslar',
+    fullSchedule: 'Butun jadval',
+    noLessonsToday: "Bugun dars yo'q",
+    myGroups: 'Guruhlarim',
+    noActiveGroups: "Faol guruh yo'q",
+    qrCheckIn: 'QR bilan davomatga belgilash',
   },
-  placeholders: {
-    schedule: 'Jadval bu yerda ko‘rsatiladi',
-    attendance: 'Davomat tarixi bu yerda ko‘rsatiladi',
-    payments: "To'lovlar va balans bu yerda ko‘rsatiladi",
-    profile: 'Profil ma‘lumotlari bu yerda ko‘rsatiladi',
-    comingSoon: 'Tez orada',
+  schedule: {
+    empty: "Jadval bo'sh",
+    noLesson: "Dars yo'q",
+    today: 'Bugun',
+    weekdays: {
+      monday: 'Dushanba',
+      tuesday: 'Seshanba',
+      wednesday: 'Chorshanba',
+      thursday: 'Payshanba',
+      friday: 'Juma',
+      saturday: 'Shanba',
+      sunday: 'Yakshanba',
+    },
   },
-} as const;
+  attendance: {
+    total: 'Umumiy davomat',
+    present: 'Keldi',
+    late: 'Kechikdi',
+    absent: 'Kelmadi',
+    excused: 'Sababli',
+    noRecords: "Yozuv yo'q",
+  },
+  payments: {
+    addBalance: "Balansni to'ldirish",
+    amountPlaceholder: "Summa (so'm)",
+    afterPaymentNote: "To'lovdan keyin balans bir necha soniyada yangilanadi.",
+    history: "To'lovlar tarixi",
+    noPayments: "To'lovlar yo'q",
+  },
+  profile: {
+    changePhoto: "Rasmni o'zgartirish",
+    uploading: 'Yuklanmoqda...',
+    phone: 'Telefon',
+    login: 'Login',
+    telegram: 'Telegram',
+    branch: 'Filial',
+    photoSheetTitle: 'Profil rasmi',
+    pickGallery: 'Galereyadan tanlash',
+    pickCamera: 'Kameradan olish',
+    deletePhoto: "Rasmni o'chirish",
+  },
+  more: {
+    profileFallback: 'Profil',
+    viewProfile: "Profilni ko'rish",
+    payments: "To'lovlar",
+    faq: 'FAQ',
+    about: 'Biz haqimizda',
+    settings: 'Sozlamalar',
+    logout: 'Chiqish',
+    logoutConfirmTitle: 'Chiqish',
+    logoutConfirmMessage: 'Hisobdan chiqishni tasdiqlaysizmi?',
+  },
+  settings: {
+    theme: 'Mavzu',
+    themeSystem: 'Tizim',
+    themeLight: "Yorug'",
+    themeDark: "Qorong'i",
+    other: 'Boshqa',
+    language: 'Til',
+    translator: 'Tarjimon',
+  },
+  scan: {
+    permissionTitle: 'Kamera ruxsati kerak',
+    permissionDesc: 'QR kodni skanerlash uchun kameraga ruxsat bering.',
+    allow: 'Ruxsat berish',
+    guide: 'Dars QR kodiga qarating',
+    insufficientTitle: 'Balans yetarli emas',
+    insufficientMessage: 'Dars uchun balansingiz yetmadi',
+    markedTitle: 'Belgilandi ✓',
+    markedMessage: 'Davomat muvaffaqiyatli belgilandi',
+    invalidQr: 'QR kod yaroqsiz yoki muddati tugagan',
+  },
+  about: {
+    centerName: 'DAF Sprachzentrum',
+    tagline: "Nemis tili o'quv markazi",
+    aboutTitle: 'Markaz haqida',
+    aboutBody:
+      "DAF Sprachzentrum — nemis tilini zamonaviy uslublarda o'rgatuvchi markaz. Ushbu ilova orqali jadvalingizni, davomatingizni va to'lovlaringizni bir joyda kuzatib borasiz.",
+    contact: 'Aloqa',
+    version: (v: string) => `Ilova versiyasi ${v}`,
+  },
+  faq: [
+    {
+      q: "Balansni qanday to'ldiraman?",
+      a: "Ko'proq → To'lovlar bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
+    },
+    {
+      q: 'Davomat qanday belgilanadi?',
+      a: "Darsga kelganingizda Asosiy sahifadagi «QR bilan belgilash» tugmasini bosib, dars QR kodini skanerlang.",
+    },
+    {
+      q: "Balansim manfiy bo'lsa nima bo'ladi?",
+      a: "Manfiy balans qarzdorlikni bildiradi. Darslarni davom ettirish uchun iltimos balansni to'ldiring.",
+    },
+    {
+      q: 'Jadvalim va davomatim qayerda?',
+      a: "Asosiy sahifada balans, bugungi darslar va davomat ko'rsatkichlari jamlangan.",
+    },
+    {
+      q: "Profil rasmini qanday o'zgartiraman?",
+      a: "Ko'proq → Profil bo'limiga kiring, rasm ustiga bosing va galereya yoki kameradan rasm tanlang.",
+    },
+  ],
+};
+
+/** The canonical string shape every language file must satisfy. */
+export type Dict = typeof uz;
+
+/** TEMPORARY: keeps the 7 pre-existing `import { t } from '@/i18n/uz'` screens
+ *  compiling until Task 2 converts them to `useT()`. Task 2 deletes this line. */
+export const t = uz;
