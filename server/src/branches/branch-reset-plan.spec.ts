@@ -7,6 +7,14 @@ import {
 } from './branch-reset-plan';
 
 /**
+ * `where` ichidagi bitta shartni tekshiradi: `{ in: [...] }` yoki oddiy
+ * tenglik. Barcha soxta mijozlar (fakePrisma va fakePrismaWithMoney) shu bitta
+ * funksiyani ishlatadi — ikkinchi mos keltiruvchi yozilmaydi.
+ */
+const inList = (v: unknown, w: any): boolean =>
+  w === undefined ? true : Array.isArray(w?.in) ? w.in.includes(v) : v === w;
+
+/**
  * Prisma o'rniga qo'yiladigan soxta mijoz. Faqat reja yig'uvchi va tekshiruvchi
  * chaqiradigan metodlar bor.
  */
@@ -32,8 +40,6 @@ function fakePrisma(data: {
     enrollments: data.enrollments ?? [],
     snapshots: data.snapshots ?? [],
   };
-  const inList = (v: unknown, w: any) =>
-    w === undefined ? true : Array.isArray(w?.in) ? w.in.includes(v) : v === w;
   return {
     branch: { findUnique: jest.fn(async () => d.branch) },
     studentBranch: {
@@ -196,16 +202,43 @@ describe('verifyBranchResetPlan', () => {
   });
 });
 
+type MoneyModel =
+  | 'payment'
+  | 'transaction'
+  | 'attendance'
+  | 'salaryAccrual'
+  | 'contract'
+  | 'refund'
+  | 'cashMovement'
+  | 'expense';
+
 /**
- * fakePrisma ga qo'shimcha: moliyaviy jadval sanoqlari. Ko'rsatilmagan jadval
- * 0 deb hisoblanadi.
+ * `where` ni HAQIQATDA hisobga oladi: top-level `OR` massivi (har bir shart
+ * mustaqil tekshiriladi, biri mos kelsa yetarli) va oddiy maydon shartlari
+ * (`inList` orqali — `{ in: [...] }` yoki tenglik). Eski versiya `where` ni
+ * butunlay e'tiborsiz qoldirib, faqat model nomi bo'yicha son qaytarardi —
+ * shu sababli qamrov regressiyasini (masalan CashMovement kompaniya bo'ylab
+ * sanalsa yoki Attendance studentId bo'yicha kalitlansa) sinov payqamas edi.
+ */
+function matchesWhere(row: Record<string, unknown>, where: any): boolean {
+  if (!where) return true;
+  if (Array.isArray(where.OR)) {
+    return where.OR.some((clause: any) => matchesWhere(row, clause));
+  }
+  return Object.entries(where).every(([field, w]) => inList(row[field], w));
+}
+
+/**
+ * fakePrisma ga qo'shimcha: moliyaviy jadval SATRLARI (sanoq emas). Har bir
+ * `count()` chaqiruvi haqiqiy `where` bilan filtrlaydi. Ko'rsatilmagan jadval
+ * bo'sh ro'yxatdan boshlanadi (0 ta satr).
  */
 function fakePrismaWithMoney(
   data: Parameters<typeof fakePrisma>[0],
-  counts: Record<string, number>,
+  rows: Partial<Record<MoneyModel, Record<string, unknown>[]>>,
 ) {
   const base = fakePrisma(data);
-  for (const model of [
+  const models: MoneyModel[] = [
     'payment',
     'transaction',
     'attendance',
@@ -214,8 +247,14 @@ function fakePrismaWithMoney(
     'refund',
     'cashMovement',
     'expense',
-  ]) {
-    base[model] = { count: jest.fn(async () => counts[model] ?? 0) };
+  ];
+  for (const model of models) {
+    const modelRows = rows[model] ?? [];
+    base[model] = {
+      count: jest.fn(async ({ where }: any = {}) =>
+        modelRows.filter((r) => matchesWhere(r, where)).length,
+      ),
+    };
   }
   return base;
 }
@@ -228,16 +267,26 @@ describe('assertBranchIsFinanciallyEmpty', () => {
   });
 
   it("bitta to'lov ham bo'lsa to'xtatadi", async () => {
-    const prisma = fakePrismaWithMoney(namanganish, { payment: 1 });
+    const prisma = fakePrismaWithMoney(namanganish, {
+      payment: [{ id: 'p-1', studentId: 10795, branchId: 2 }],
+    });
     const plan = await buildBranchResetPlan(prisma, 2);
     await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/Payment: 1/);
   });
 
   it('topilgan barcha jadvallarni bitta xabarda sanaydi', async () => {
     const prisma = fakePrismaWithMoney(namanganish, {
-      payment: 20,
-      transaction: 4326,
-      attendance: 7,
+      payment: Array.from({ length: 20 }, (_, i) => ({
+        id: `p-${i}`,
+        studentId: 10795,
+        branchId: 2,
+      })),
+      transaction: Array.from({ length: 4326 }, (_, i) => ({
+        id: `t-${i}`,
+        studentId: 10795,
+        branchId: 2,
+      })),
+      attendance: Array.from({ length: 7 }, (_, i) => ({ id: `a-${i}`, groupId: 'g-1' })),
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(
@@ -249,5 +298,40 @@ describe('assertBranchIsFinanciallyEmpty', () => {
     const prisma = fakePrismaWithMoney({ branch: { id: 3, name: 'Bo\'sh' } }, {});
     const plan = await buildBranchResetPlan(prisma, 3);
     await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).resolves.toBeUndefined();
+  });
+
+  it("o'quvchi filialdan chiqarilgan bo'lsa ham, to'lov branchId orqali topilib tutiladi", async () => {
+    // #99999 plan.studentIds ichida YO'Q (boshqa filialga o'tkazilgan deb
+    // tasavvur qilinadi), lekin to'lovning o'zi shu filial branchId'sini
+    // ko'taradi — pul hali ham shu filialga tegishli.
+    const prisma = fakePrismaWithMoney(namanganish, {
+      payment: [{ id: 'p-stray', studentId: 99999, branchId: 2 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    expect(plan.studentIds).not.toContain(99999);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/Payment/);
+  });
+
+  it("o'quvchi filialdan chiqarilgan bo'lsa ham, shartnoma branchId orqali topilib tutiladi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      contract: [{ id: 'c-stray', studentId: 99999, branchId: 2 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    expect(plan.studentIds).not.toContain(99999);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/Contract/);
+  });
+
+  it("o'quvchisi ham, guruhi ham yo'q filialda ham, kassa harakati branchId orqali tutiladi", async () => {
+    // Bu tekshiruv "bo'sh filial" yorlig'ini shart tekshiruvining o'zi
+    // qoldirmasligini isbotlaydi: studentIds/groupIds bo'sh bo'lsa-da,
+    // CashMovement filial ID orqali topiladi va rad javobi beriladi.
+    const prisma = fakePrismaWithMoney(
+      { branch: { id: 3, name: 'Bo\'sh' } },
+      { cashMovement: [{ id: 'cm-1', branchId: 3 }] },
+    );
+    const plan = await buildBranchResetPlan(prisma, 3);
+    expect(plan.studentIds).toEqual([]);
+    expect(plan.groupIds).toEqual([]);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/CashMovement/);
   });
 });

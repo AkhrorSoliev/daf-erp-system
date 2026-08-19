@@ -238,19 +238,60 @@ export async function assertBranchIsFinanciallyEmpty(
   prisma: PrismaLike,
   plan: BranchResetPlan,
 ): Promise<void> {
-  const { studentIds, groupIds, branchId } = plan;
-  const noStudents = studentIds.length === 0;
-  const noGroups = groupIds.length === 0;
+  const { studentIds, groupIds, enrollmentIds, branchId } = plan;
+
+  // Har bir yo'l — filialga qanday bog'langan bo'lsa, shu orqali topiladi.
+  // Faqat HOZIRGI StudentBranch ro'yxatiga (studentIds) tayanish yetarli
+  // emas: o'quvchi keyinroq boshqa filialga o'tkazilgan bo'lishi mumkin, va
+  // pul yozuvi baribir shu filialning branchId'sini ko'tarib qoladi (Contract
+  // uchun bu maydon MAJBURIY). Shuning uchun Payment/Transaction/Contract
+  // "studentId shu ro'yxatda BOR" YOKI "branchId shu filial" — ikkalasidan
+  // birortasi kifoya. Refund'da branchId ustuni yo'q, shuning uchun ikkinchi
+  // mustaqil yo'l sifatida enrollmentId ishlatiladi — guruhning filiali umr
+  // bo'yi o'zgarmaydi (docs/branch-decisions.md), shu sababli enrollmentIds
+  // orqali topish xuddi shunday ishonchli. Attendance va SalaryAccrual
+  // groupId bo'yicha kalitlangan holicha qoladi — bu ham xuddi shu sababdan
+  // to'g'ri. CashMovement va Expense har doim branchId bo'yicha, chunki
+  // ularda boshqa yo'l yo'q.
+  const studentClause = studentIds.length ? { studentId: { in: studentIds } } : null;
+  const groupClause = groupIds.length ? { groupId: { in: groupIds } } : null;
+  const enrollmentClause = enrollmentIds.length ? { enrollmentId: { in: enrollmentIds } } : null;
+  const branchClause = { branchId };
+
+  /**
+   * Faqat bo'sh bo'lmagan shartlardan OR yig'adi. Agar birorta ham shart
+   * bo'lmasa (masalan, o'quvchisi ham, enrollmenti ham yo'q Refund uchun) —
+   * `null` qaytadi va tekshiruv o'tkazib yuboriladi. Bu eskisidan farqli:
+   * eski kod "o'quvchi yo'q bo'lsa — tekshirmay 0" derdi HAR BIR shart uchun
+   * alohida, garchi boshqa (masalan branchId) yo'l orqali topilishi mumkin
+   * bo'lsa ham.
+   */
+  const buildOr = (
+    clauses: (Record<string, unknown> | null)[],
+  ): { OR: Record<string, unknown>[] } | null => {
+    const present = clauses.filter((c): c is Record<string, unknown> => c !== null);
+    return present.length ? { OR: present } : null;
+  };
+
+  const countIf = (
+    where: Record<string, unknown> | null,
+    run: (where: Record<string, unknown>) => Promise<number>,
+  ): Promise<number> => (where ? run(where) : Promise.resolve(0));
+
+  const paymentWhere = buildOr([studentClause, branchClause]);
+  const transactionWhere = buildOr([studentClause, branchClause]);
+  const contractWhere = buildOr([studentClause, branchClause]);
+  const refundWhere = buildOr([studentClause, enrollmentClause]);
 
   const checks: [string, () => Promise<number>][] = [
-    ['Payment', async () => (noStudents ? 0 : prisma.payment.count({ where: { studentId: { in: studentIds } } }))],
-    ['Transaction', async () => (noStudents ? 0 : prisma.transaction.count({ where: { studentId: { in: studentIds } } }))],
-    ['Attendance', async () => (noGroups ? 0 : prisma.attendance.count({ where: { groupId: { in: groupIds } } }))],
-    ['SalaryAccrual', async () => (noGroups ? 0 : prisma.salaryAccrual.count({ where: { groupId: { in: groupIds } } }))],
-    ['Contract', async () => (noStudents ? 0 : prisma.contract.count({ where: { studentId: { in: studentIds } } }))],
-    ['Refund', async () => (noStudents ? 0 : prisma.refund.count({ where: { studentId: { in: studentIds } } }))],
-    ['CashMovement', () => prisma.cashMovement.count({ where: { branchId } })],
-    ['Expense', () => prisma.expense.count({ where: { branchId } })],
+    ['Payment', () => countIf(paymentWhere, (where) => prisma.payment.count({ where }))],
+    ['Transaction', () => countIf(transactionWhere, (where) => prisma.transaction.count({ where }))],
+    ['Attendance', () => countIf(groupClause, (where) => prisma.attendance.count({ where }))],
+    ['SalaryAccrual', () => countIf(groupClause, (where) => prisma.salaryAccrual.count({ where }))],
+    ['Contract', () => countIf(contractWhere, (where) => prisma.contract.count({ where }))],
+    ['Refund', () => countIf(refundWhere, (where) => prisma.refund.count({ where }))],
+    ['CashMovement', () => prisma.cashMovement.count({ where: branchClause })],
+    ['Expense', () => prisma.expense.count({ where: branchClause })],
   ];
 
   const found: string[] = [];
