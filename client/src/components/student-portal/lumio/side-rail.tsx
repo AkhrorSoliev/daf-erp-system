@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Sparkle, CaretRight } from "@phosphor-icons/react";
 import { railNavItems, moreRoutes } from "@/lib/student-nav-items";
 import { useStudentProfile } from "../lib/queries";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeSegmented } from "./theme-segmented";
 import { Avatar } from "./avatar";
 import { LogoutButton } from "../student-logout-button";
 
@@ -117,8 +117,8 @@ export function LumioSideRail({ className }: { className?: string }) {
       </div>
 
       {/* Footer */}
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line p-3">
-        <ThemeToggle />
+      <div className="flex shrink-0 items-center gap-2 border-t border-line p-3">
+        <ThemeSegmented variant="compact" className="min-w-0 flex-1" />
         <LogoutButton variant="rail" />
       </div>
     </aside>
