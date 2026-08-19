@@ -93,8 +93,8 @@ export const uz = {
   home: {
     greeting: 'Assalomu alaykum',
     balance: 'Balans',
-    inDebt: 'Qarzdorlik',
-    current: 'Joriy',
+    inDebt: 'Qarzdorlik mavjud',
+    current: 'Joriy balans',
     todayLessons: 'Bugungi darslar',
     fullSchedule: 'Butun jadval',
     noLessonsToday: "Bugun dars yo'q",

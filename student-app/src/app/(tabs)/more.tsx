@@ -65,7 +65,7 @@ export default function More() {
 
           <View className="gap-2.5 pt-1">
             {menu.map((m, i) => (
-              <FadeIn key={m.label} index={i + 1}>
+              <FadeIn key={m.icon} index={i + 1}>
                 <ListRow icon={m.icon} tone={m.tone} label={m.label} onPress={m.onPress} chevron={m.chevron} />
               </FadeIn>
             ))}

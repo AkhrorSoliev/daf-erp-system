@@ -22,7 +22,7 @@ export const de: Dict = {
   nav: {
     index: 'Start',
     darslar: 'Kurse',
-    resurslar: 'Material',
+    resurslar: 'Materialien',
     more: 'Mehr',
   },
   tabs: {
@@ -86,9 +86,9 @@ export const de: Dict = {
     greeting: 'Guten Tag',
     balance: 'Guthaben',
     inDebt: 'Schulden',
-    current: 'Aktuell',
+    current: 'Aktuelles Guthaben',
     todayLessons: 'Heutige Kurse',
-    fullSchedule: 'Ganzer Plan',
+    fullSchedule: 'Zum Stundenplan',
     noLessonsToday: 'Heute kein Unterricht',
     myGroups: 'Meine Gruppen',
     noActiveGroups: 'Keine aktiven Gruppen',
@@ -170,7 +170,7 @@ export const de: Dict = {
   },
   about: {
     centerName: 'DAF Sprachzentrum',
-    tagline: 'Sprachzentrum für Deutsch',
+    tagline: 'Sprachschule für Deutsch',
     aboutTitle: 'Über das Zentrum',
     aboutBody:
       'DAF Sprachzentrum — ein Zentrum, das Deutsch mit modernen Methoden vermittelt. Mit dieser App verfolgen Sie Ihren Stundenplan, Ihre Anwesenheit und Ihre Zahlungen an einem Ort.',
