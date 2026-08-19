@@ -18,13 +18,27 @@ import {
   type CreditAllocation,
   type LessonSlice,
 } from '../common/finance/ledger-replay';
+import { projectLessonDates } from '../common/finance/project-lesson-dates';
+import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 
 /**
  * What the "To'lovlar" tab renders under a payment. `reconciled: false` means
  * the ledger chain did not add up — the UI must show the balance facts only
  * and suppress the allocation, never a patched-up number.
  */
-export type PaymentDestination = CreditAllocation & { reconciled: boolean };
+export type PaymentDestination = CreditAllocation & {
+  reconciled: boolean;
+  /**
+   * Oldindan to'langan (hali o'tilmagan) darslarning TAXMINIY oxirgi sanasi —
+   * guruh jadvalidan proyeksiya. `null` = ayta olmaymiz (jadval noma'lum,
+   * guruh tugagan, yoki kutilayotgan dars yo'q). Bu FAKT emas: bayram, bekor
+   * qilingan dars yoki jadval o'zgarishi uni keyinga suradi. UI uni "taxminan"
+   * deb belgilashi SHART.
+   */
+  projectedLastLessonDate: Date | null;
+};
 
 @Injectable()
 export class TransactionsReadService {
@@ -369,13 +383,123 @@ export class TransactionsReadService {
 
     const replay = replayStudentLedger(timeline, lessonSlices);
 
+    // Kutilayotgan darslarni sanaga aylantirish — faqat sahifadagi to'lovlar
+    // uchun, ya'ni odatda 0–1 ta guruh so'roviga tushadi.
+    const enrollmentByDeduction = new Map<string, string | null>(
+      timeline
+        .filter((t) => t.type === TransactionType.LESSON_DEDUCTION)
+        .map((t) => [t.id, t.enrollmentId]),
+    );
+
     for (const id of pageCreditIds) {
       const alloc = replay.byCredit.get(id);
       if (!alloc) continue;
-      result.set(id, { ...alloc, reconciled: replay.reconciled });
+      const projectedLastLessonDate = await this.projectPendingLessonEnd(
+        studentId,
+        alloc,
+        enrollmentByDeduction,
+      );
+      result.set(id, {
+        ...alloc,
+        reconciled: replay.reconciled,
+        projectedLastLessonDate,
+      });
     }
 
     return result;
+  }
+
+  /**
+   * "Oldindan to'langan darslar qachongacha yetadi?" — kutilayotgan darslarni
+   * guruh jadvali bo'yicha oldinga suradi va OXIRGISINING sanasini qaytaradi.
+   *
+   * FAIL-CLOSED, xuddi replay'ning o'zi kabi: bir nechta guruh aralashsa,
+   * jadval noma'lum bo'lsa yoki proyeksiya kutilgan sondan kam dars topsa —
+   * `null` qaytadi va UI oralikni umuman ko'rsatmaydi. Yarim javob bu yerda
+   * eng yomon variant: "04.09 gacha yetadi" degan yozuv, aslida oxiri
+   * noma'lum bo'lsa, aynan biz tuzatayotgan nuqsonning yangi ko'rinishi.
+   */
+  private async projectPendingLessonEnd(
+    studentId: number,
+    alloc: CreditAllocation,
+    enrollmentByDeduction: Map<string, string | null>,
+  ): Promise<Date | null> {
+    if (alloc.pendingLessonCount <= 0) return null;
+
+    // Bir necha guruhning kutilayotgan darslari bitta to'lovda aralashsa,
+    // ularni bitta sana bilan ifodalab bo'lmaydi.
+    const enrollmentIds = new Set(
+      alloc.pendingDeductionIds.map((d) => enrollmentByDeduction.get(d) ?? null),
+    );
+    if (enrollmentIds.size !== 1) return null;
+    const enrollmentId = [...enrollmentIds][0];
+    if (!enrollmentId) return null;
+
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { id: enrollmentId, deletedAt: null },
+      select: {
+        group: {
+          select: {
+            id: true,
+            branchId: true,
+            exactDays: true,
+            endDate: true,
+            scheduleSnapshots: {
+              select: { exactDays: true, validFrom: true, validTo: true },
+            },
+          },
+        },
+      },
+    });
+    const group = enrollment?.group;
+    if (!group || group.exactDays.length === 0) return null;
+
+    // Proyeksiya o'quvchining OXIRGI darsidan boshlanadi — bu to'lovning
+    // oxirgi darsidan emas. Aks holda keyinroq kelgan pul bilan to'langan
+    // darslar ustiga qayta proyeksiya qilinardi.
+    const lastAttendance = await this.prisma.attendance.findFirst({
+      where: { studentId, groupId: group.id },
+      select: { date: true },
+      orderBy: { date: 'desc' },
+    });
+    const anchor = lastAttendance?.date ?? alloc.lastLessonDate;
+    if (!anchor) return null;
+    const anchorStr = tashkentDateStr(anchor);
+
+    // Oldinga qancha qarash kerakligini bilmasdan bayram/bekor oynasini
+    // so'rab bo'lmaydi: haftada 3 dars deb hisoblasak ham, zaxira bilan
+    // olamiz. Ortiqcha kun so'rash arzon, kam so'rash — noto'g'ri sana.
+    const horizonDays = Math.min(730, alloc.pendingLessonCount * 14 + 30);
+    const horizonEnd = new Date(
+      anchor.getTime() + horizonDays * 24 * 60 * 60 * 1000,
+    );
+
+    const [holidayDates, cancellations] = await Promise.all([
+      buildHolidayDateSet(this.prisma, anchor, horizonEnd, group.branchId),
+      this.prisma.lessonCancellation.findMany({
+        where: { groupId: group.id, deletedAt: null, date: { gte: anchor } },
+        select: { date: true },
+      }),
+    ]);
+    const skipDates = new Set(holidayDates);
+    for (const c of cancellations) skipDates.add(tashkentDateStr(c.date));
+
+    const projected = projectLessonDates({
+      afterDateStr: anchorStr,
+      count: alloc.pendingLessonCount,
+      resolveScheduleDays: buildScheduleDayResolver(
+        group.scheduleSnapshots,
+        group.exactDays,
+      ),
+      skipDates,
+      lastPossibleDateStr: group.endDate
+        ? tashkentDateStr(group.endDate)
+        : null,
+    });
+
+    // Kutilgan sondan kam topildi — oxirini aytolmaymiz.
+    if (projected.length < alloc.pendingLessonCount) return null;
+    return new Date(`${projected[projected.length - 1]}T00:00:00.000Z`);
   }
 
   /**

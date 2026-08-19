@@ -30,6 +30,53 @@ function range(first: string | null, last: string | null): string | null {
   return !b || a === b ? a : `${a} — ${b}`;
 }
 
+/**
+ * "Bu pul qaysi sanalar oralig'ida yetadi" — dars qatorining ostki yozuvi.
+ *
+ * Nega alohida funksiya: `lessonCount` shu pul to'lagan HAMMA darsni sanaydi,
+ * `lastLessonDate` esa faqat O'TIB BO'LGANLARINING oxirgisi. Ikkisini bitta
+ * qatorga qo'yish #10601 dagi nuqson edi — "10 ta darsga yetdi · 12.08 —
+ * 19.08", holbuki o'sha oraliqda 3 ta dars bor. Uch holat, uchtasi ham ochiq:
+ *
+ *   1. Hammasi o'tilgan  → oraliq FAKT, o'zgarishsiz.
+ *   2. Oldinda dars bor va oxirini proyeksiya qila oldik → oxirgi sana
+ *      "taxminan" deb belgilanadi. Bayram, bekor qilingan dars yoki jadval
+ *      o'zgarishi uni suradi, shuning uchun uni fakt qiyofasida berish
+ *      o'sha nuqsonning yangi ko'rinishi bo'lardi.
+ *   3. Proyeksiya qila olmadik (jadval noma'lum, bir nechta guruh, guruh
+ *      tugagan) → oraliq UMUMAN ko'rsatilmaydi; o'rniga nechtasi o'tilgani
+ *      va nechtasi oldinda ekani aytiladi. Yarim rost oraliqdan ko'ra
+ *      to'liq rost sanoq afzal.
+ */
+function lessonSpan(dest: {
+  lessonCount: number;
+  heldLessonCount: number;
+  pendingLessonCount: number;
+  firstLessonDate: string | null;
+  lastLessonDate: string | null;
+  projectedLastLessonDate: string | null;
+}): string | null {
+  if (dest.pendingLessonCount <= 0) {
+    return range(dest.firstLessonDate, dest.lastLessonDate);
+  }
+
+  const projected = day(dest.projectedLastLessonDate);
+  if (projected) {
+    const start = day(dest.firstLessonDate);
+    return start
+      ? `${start} — taxminan ${projected}`
+      : `taxminan ${projected} gacha`;
+  }
+
+  const held = range(dest.firstLessonDate, dest.lastLessonDate);
+  return [
+    held && `${dest.heldLessonCount} dars o'tildi (${held})`,
+    `${dest.pendingLessonCount} dars oldinda`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function Line({
   icon,
   label,
@@ -142,7 +189,7 @@ export function PaymentEffectCard({
                   ? `${dest.lessonCount} ta darsga yetdi`
                   : "Darslarga yetdi"
               }
-              sub={range(dest.firstLessonDate, dest.lastLessonDate)}
+              sub={lessonSpan(dest)}
               amount={dest.toLessons}
             />
           )}

@@ -7,9 +7,11 @@ describe('TransactionsReadService', () => {
   let service: TransactionsReadService;
   let prisma: {
     transaction: { findMany: jest.Mock; count: jest.Mock };
-    attendance: { findMany: jest.Mock };
+    attendance: { findMany: jest.Mock; findFirst: jest.Mock };
     student: { findFirst: jest.Mock };
     enrollment: { findFirst: jest.Mock };
+    lessonCancellation: { findMany: jest.Mock };
+    holiday: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -18,9 +20,14 @@ describe('TransactionsReadService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
       },
-      attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      attendance: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       student: { findFirst: jest.fn().mockResolvedValue(null) },
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+      lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -170,12 +177,180 @@ describe('TransactionsReadService', () => {
         debtLastLessonDate: null,
         toLessons: 287500,
         lessonCount: 8,
+        heldLessonCount: 2,
+        pendingLessonCount: 6,
+        pendingDeductionIds: ['d1'],
         firstLessonDate: ts('2026-05-05'),
         lastLessonDate: ts('2026-05-13'),
         toOther: 0,
         unspent: 12500,
         reconciled: true,
+        // Enrollment topilmadi (mock `null`) — oxirini aytolmaymiz.
+        projectedLastLessonDate: null,
       });
+    });
+
+    it('projects when the prepaid lessons ahead will run out', async () => {
+      const ts = (v: string) => new Date(`${v}T00:00:00Z`);
+      // #10601: 440 000 so'm 10 darslik paketni to'ladi, 3 tasi o'tilgan.
+      // Karta "10 ta darsga yetdi · 12.08 — 19.08" deb yozardi — son 10 ta
+      // darsni, sana esa 3 tasini tasvirlardi. Endi qolgan 7 tasi guruh
+      // jadvaliga (du/chor/juma) proyeksiya qilinadi.
+      const pageRows = [
+        {
+          id: 'p1',
+          type: 'PAYMENT',
+          amount: 333330,
+          balanceBefore: 0,
+          balanceAfter: 333330,
+          enrollmentId: null,
+          metadata: null,
+        },
+      ];
+      const timeline = [
+        { ...pageRows[0] },
+        {
+          id: 'd1',
+          type: 'LESSON_DEDUCTION',
+          amount: -333330,
+          balanceBefore: 333330,
+          balanceAfter: 0,
+          enrollmentId: 'enr-1',
+          metadata: { lessonsCovered: 10, perLessonCost: 33333 },
+        },
+      ];
+      const enrollmentTxs = [
+        {
+          id: 'd1',
+          type: 'LESSON_DEDUCTION',
+          amount: -333330,
+          enrollmentId: 'enr-1',
+          attendanceId: null,
+          metadata: { lessonsCovered: 10, perLessonCost: 33333 },
+          createdAt: ts('2026-08-12'),
+        },
+        ...['a1', 'a2', 'a3'].map((attendanceId, i) => ({
+          id: `c${i + 1}`,
+          type: 'LESSON_CONSUMPTION',
+          amount: 0,
+          enrollmentId: 'enr-1',
+          attendanceId,
+          metadata: null,
+          createdAt: ts(['2026-08-12', '2026-08-17', '2026-08-19'][i]),
+        })),
+      ];
+
+      prisma.transaction.findMany.mockImplementation((args: any) => {
+        const where = args?.where ?? {};
+        if (where.enrollmentId) return Promise.resolve(enrollmentTxs);
+        if (where.amount) return Promise.resolve(timeline);
+        return Promise.resolve(pageRows);
+      });
+      prisma.transaction.count.mockResolvedValueOnce(1);
+      prisma.attendance.findMany.mockResolvedValueOnce([
+        { id: 'a1', date: ts('2026-08-12') },
+        { id: 'a2', date: ts('2026-08-17') },
+        { id: 'a3', date: ts('2026-08-19') },
+      ]);
+      prisma.enrollment.findFirst.mockResolvedValue({
+        group: {
+          id: 'g1',
+          branchId: 1,
+          exactDays: ['monday', 'wednesday', 'friday'],
+          endDate: null,
+          scheduleSnapshots: [],
+        },
+      });
+      // Proyeksiya o'quvchining OXIRGI darsidan boshlanadi.
+      prisma.attendance.findFirst.mockResolvedValue({ date: ts('2026-08-19') });
+
+      const res = await service.findByStudent(
+        10601,
+        {} as TransactionQueryDto,
+        1001,
+        null,
+      );
+
+      const dest = res.data[0].destination!;
+      expect(dest.lessonCount).toBe(10);
+      expect(dest.heldLessonCount).toBe(3);
+      expect(dest.pendingLessonCount).toBe(7);
+      expect(dest.lastLessonDate).toEqual(ts('2026-08-19'));
+      // 21, 24, 26, 28, 31 avgust + 2, 4 sentyabr = 7 ta dars.
+      expect(dest.projectedLastLessonDate).toEqual(ts('2026-09-04'));
+    });
+
+    it('refuses to project when a holiday pushes past what we can see', async () => {
+      const ts = (v: string) => new Date(`${v}T00:00:00Z`);
+      // Bayram sanani suradi — proyeksiya uni hisobga olishi SHART, aks holda
+      // karta darslar tugagan kunni erta ko'rsatadi.
+      const pageRows = [
+        {
+          id: 'p1',
+          type: 'PAYMENT',
+          amount: 66666,
+          balanceBefore: 0,
+          balanceAfter: 66666,
+          enrollmentId: null,
+          metadata: null,
+        },
+      ];
+      const timeline = [
+        { ...pageRows[0] },
+        {
+          id: 'd1',
+          type: 'LESSON_DEDUCTION',
+          amount: -66666,
+          balanceBefore: 66666,
+          balanceAfter: 0,
+          enrollmentId: 'enr-1',
+          metadata: { lessonsCovered: 2, perLessonCost: 33333 },
+        },
+      ];
+      prisma.transaction.findMany.mockImplementation((args: any) => {
+        const where = args?.where ?? {};
+        if (where.enrollmentId)
+          return Promise.resolve([
+            {
+              id: 'd1',
+              type: 'LESSON_DEDUCTION',
+              amount: -66666,
+              enrollmentId: 'enr-1',
+              attendanceId: null,
+              metadata: { lessonsCovered: 2, perLessonCost: 33333 },
+              createdAt: ts('2026-08-19'),
+            },
+          ]);
+        if (where.amount) return Promise.resolve(timeline);
+        return Promise.resolve(pageRows);
+      });
+      prisma.transaction.count.mockResolvedValueOnce(1);
+      prisma.enrollment.findFirst.mockResolvedValue({
+        group: {
+          id: 'g1',
+          branchId: 1,
+          exactDays: ['monday', 'wednesday', 'friday'],
+          endDate: null,
+          scheduleSnapshots: [],
+        },
+      });
+      prisma.attendance.findFirst.mockResolvedValue({ date: ts('2026-08-19') });
+      // 21.08 — bir kunlik bayram.
+      prisma.holiday.findMany.mockResolvedValue([
+        { date: ts('2026-08-21'), endDate: ts('2026-08-21') },
+      ]);
+
+      const res = await service.findByStudent(
+        10601,
+        {} as TransactionQueryDto,
+        1001,
+        null,
+      );
+
+      // 21.08 bayram → 24.08 va 26.08 ga suriladi.
+      expect(res.data[0].destination!.projectedLastLessonDate).toEqual(
+        ts('2026-08-26'),
+      );
     });
 
     it('walks the whole ledger, not just PAYMENT + LESSON_DEDUCTION', async () => {

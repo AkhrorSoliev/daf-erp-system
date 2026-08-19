@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { ChangeHolidayStatusDto } from './dto/change-holiday-status.dto';
+import { buildHolidayDateSet } from './holiday-date-set';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayQueryDto } from './dto/holiday-query.dto';
@@ -105,30 +106,12 @@ export class HolidaysService {
     rangeEnd: Date,
     branchId?: number,
   ): Promise<Set<string>> {
-    const paddedStart = new Date(rangeStart.getTime() - 24 * 60 * 60 * 1000);
-    const paddedEnd = new Date(rangeEnd.getTime() + 24 * 60 * 60 * 1000);
-
-    const holidays = await this.getActiveHolidaysInRange(
-      paddedStart,
-      paddedEnd,
-      branchId,
-    );
-
-    const rangeStartStr = tashkentDateStr(rangeStart);
-    const rangeEndStr = tashkentDateStr(rangeEnd);
-
-    const set = new Set<string>();
-    for (const h of holidays) {
-      let cursor = tashkentDateStr(h.date);
-      const end = tashkentDateStr(h.endDate);
-      while (cursor <= end) {
-        if (cursor >= rangeStartStr && cursor <= rangeEndStr) {
-          set.add(cursor);
-        }
-        cursor = addDaysToDateStr(cursor, 1);
-      }
-    }
-    return set;
+    // Implementatsiya `holiday-date-set.ts` da — bu servis
+    // `GroupHolidayCascadeService` va `common/status` ni tortadi, ular esa
+    // `billing → transactions` orqali qaytib keladi. Import halqasini
+    // yopmaslik uchun to'lov kartasi o'sha faylni to'g'ridan-to'g'ri
+    // chaqiradi; bu yerda nusxa emas, delegatsiya turadi.
+    return buildHolidayDateSet(this.prisma, rangeStart, rangeEnd, branchId);
   }
 
   // ---------------------------------------------------------------------------
