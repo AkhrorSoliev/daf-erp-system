@@ -85,15 +85,28 @@ export async function executeBranchReset(
   // `companyId` qo'shimcha himoya sifatida qo'shilgan: Student va User ID lari
   // bitta global ketma-ketlikdan kelgani uchun bugun to'qnashuv yo'q, lekin bu
   // qat'iyat emas — `companyId` filtri buni kelajakda ham ushlab turadi.
+  // Ishlab chiqarishda shu filialning o'quvchi/guruh yozuvlariga tegishli
+  // EntityHistory qatorlarining bir qismida `companyId` NULL — bunday qator
+  // hech qanday BOSHQA kompaniyaga tegishli bo'lolmaydi, shuning uchun uni
+  // ham o'chirish to'g'ri (moslik entity turi+ID orqali allaqachon tor).
+  // `companyId: plan.companyId` ustiga to'g'ridan-to'g'ri ikkinchi `OR` kalit
+  // qo'shib bo'lmaydi — JS obyektida bir xil kalit ikki marta yozilsa
+  // ikkinchisi birinchisini bosib, kompaniya shartini entity `OR`iga
+  // tekislab qo'yardi va natijada butun kompaniyaning HAR QANDAY satri mos
+  // kelib qolardi. Shuning uchun ikkala shart o'z alohida `AND` a'zosi.
   const historyWhere = {
-    companyId: plan.companyId,
-    OR: [
-      { entityType: 'Student', entityId: { in: studentIds.map(String) } },
-      { entityType: 'Enrollment', entityId: { in: enrollmentIds } },
-      { entityType: 'Group', entityId: { in: groupIds } },
-      { entityType: 'Room', entityId: { in: roomIds } },
-      { entityType: 'Course', entityId: { in: courseIds } },
-      { entityType: 'User', entityId: { in: allUserIds.map(String) } },
+    AND: [
+      {
+        OR: [
+          { entityType: 'Student', entityId: { in: studentIds.map(String) } },
+          { entityType: 'Enrollment', entityId: { in: enrollmentIds } },
+          { entityType: 'Group', entityId: { in: groupIds } },
+          { entityType: 'Room', entityId: { in: roomIds } },
+          { entityType: 'Course', entityId: { in: courseIds } },
+          { entityType: 'User', entityId: { in: allUserIds.map(String) } },
+        ],
+      },
+      { OR: [{ companyId: plan.companyId }, { companyId: null }] },
     ],
   };
   const historyIds = [

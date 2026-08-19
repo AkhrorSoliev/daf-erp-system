@@ -32,6 +32,22 @@ function recordingTx() {
   return { tx: new Proxy({}, handler) as any, calls };
 }
 
+/**
+ * `where` obyektini HAQIQATDA baholaydi — `AND`/`OR` ichma-ichligini hisobga
+ * oladi (oddiy `Object.entries` emas, aks holda `{ AND: [...] }` shaklidagi
+ * kompaniya shartini ko'rmay o'tib ketardi). `{ in: [...] }` yoki tenglik.
+ * Faqat shu spec faylida, entityHistory'ning kompaniya+null shartini sinash
+ * uchun ishlatiladi.
+ */
+function evalWhere(row: Record<string, unknown>, where: any): boolean {
+  if (!where) return true;
+  if (Array.isArray(where.AND)) return where.AND.every((c: any) => evalWhere(row, c));
+  if (Array.isArray(where.OR)) return where.OR.some((c: any) => evalWhere(row, c));
+  return Object.entries(where).every(([field, w]: [string, any]) =>
+    w && typeof w === 'object' && 'in' in w ? w.in.includes(row[field]) : row[field] === w,
+  );
+}
+
 describe('executeBranchReset', () => {
   it("RESTRICT bog'liqliklarni ota-jadvaldan oldin o'chiradi", async () => {
     const { tx, calls } = recordingTx();
@@ -68,6 +84,35 @@ describe('executeBranchReset', () => {
     for (const call of calls) {
       expect(JSON.stringify(call.where)).not.toContain('branchId');
     }
+  });
+
+  it("entityHistory'ning kompaniya sharti entity OR'iga tekislanib ketmaydi, NULL companyId'ni ham qabul qiladi", async () => {
+    const { tx, calls } = recordingTx();
+    await executeBranchReset(tx, PLAN);
+    const historyCall = calls.find((c) => c.model === 'entityHistory');
+    expect(historyCall).toBeDefined();
+    const where = historyCall!.where;
+
+    // Kompaniya sharti hali ham `where` ichida mavjud (JSON tekshiruvi
+    // tuzilma flattening bilan yo'qolib qolmaganini tasdiqlaydi).
+    expect(JSON.stringify(where)).toContain('companyId');
+
+    const inPlanEntity = { entityType: 'Student', entityId: String(PLAN.studentIds[0]) };
+
+    // To'g'ri kompaniya + rejadagi entity — o'tishi kerak.
+    expect(evalWhere({ ...inPlanEntity, companyId: PLAN.companyId }, where)).toBe(true);
+    // companyId NULL + rejadagi entity — ham o'tishi kerak (production'da
+    // 8 ta shunday qator bor edi, ular oldin tashlab ketilardi).
+    expect(evalWhere({ ...inPlanEntity, companyId: null }, where)).toBe(true);
+    // Boshqa kompaniya + rejadagi entity — o'tmasligi kerak.
+    expect(evalWhere({ ...inPlanEntity, companyId: PLAN.companyId + 1 }, where)).toBe(false);
+    // To'g'ri kompaniya, lekin rejaga kirmaydigan entity — o'tmasligi kerak.
+    // Agar kompaniya sharti entity OR'iga tekislanib qolgan bo'lsa (flattening
+    // xatosi), bu qator NOTO'G'RI o'tib ketgan bo'lardi — chunki OR'da faqat
+    // BITTA a'zo mos kelishi kifoya, va companyId mos kelardi.
+    expect(
+      evalWhere({ entityType: 'Payment', entityId: 'irrelevant', companyId: PLAN.companyId }, where),
+    ).toBe(false);
   });
 
   it("filial qatorini, kassani va lid ustunini umuman tegmaydi", async () => {
