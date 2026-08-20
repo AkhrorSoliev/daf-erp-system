@@ -8,7 +8,6 @@ export type PortalType =
 interface PortalConfig {
   title: string;
   subtitle: string;
-  footerText: string;
   icon: "shield" | "graduation-cap" | "book-open" | "file-text";
   allowedRoleIds: number[];
 }
@@ -17,23 +16,18 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
   admin: {
     title: "DaF Sprachzentrum",
     subtitle: "Hisobingizga kiring",
-    footerText: "DaF Sprachzentrum. Barcha huquqlar himoyalangan.",
     icon: "shield",
     allowedRoleIds: [1, 2, 3, 5], // CEO, Branch Director, Administrator, Cashier
   },
   lehrer: {
     title: "O'qituvchi portali",
     subtitle: "O'qituvchi hisobingizga kiring",
-    footerText:
-      "DaF Sprachzentrum — O'qituvchi portali. Barcha huquqlar himoyalangan.",
     icon: "graduation-cap",
     allowedRoleIds: [4], // Teacher
   },
   student: {
     title: "Talaba portali",
     subtitle: "Talaba hisobingizga kiring",
-    footerText:
-      "DaF Sprachzentrum — Talaba portali. Barcha huquqlar himoyalangan.",
     icon: "book-open",
     allowedRoleIds: [6], // Student
   },
@@ -43,7 +37,6 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
   invoice: {
     title: "DaF Sprachzentrum hujjatlari",
     subtitle: "Hujjatni tekshirish",
-    footerText: "DaF Sprachzentrum — Hujjatlarni tekshirish portali.",
     icon: "file-text",
     allowedRoleIds: [],
   },
@@ -52,7 +45,6 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
   form: {
     title: "DaF Sprachzentrum formalari",
     subtitle: "",
-    footerText: "DaF Sprachzentrum — Public formalar portali.",
     icon: "file-text",
     allowedRoleIds: [],
   },

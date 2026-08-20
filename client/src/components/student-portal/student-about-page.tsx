@@ -1,4 +1,4 @@
-import { Lightning, Phone, Globe, PaperPlaneTilt } from "@phosphor-icons/react/dist/ssr";
+import { Phone, Globe, PaperPlaneTilt } from "@phosphor-icons/react/dist/ssr";
 import { Screen, StackHeader, FadeIn, Card } from "./lumio";
 
 const APP_VERSION = "1.0.0";
@@ -9,10 +9,7 @@ export function StudentAboutPage() {
       <StackHeader title="Biz haqimizda" backHref="/portal/more" />
 
       <FadeIn index={0}>
-        <div className="flex flex-col items-center gap-3 py-2">
-          <span className="flex size-20 items-center justify-center rounded-3xl bg-coral-500 text-white clay-coral">
-            <Lightning size={40} weight="fill" />
-          </span>
+        <div className="flex flex-col items-center gap-2 py-2">
           <h2 className="font-display text-[27px] font-extrabold text-ink-900">
             DAF Sprachzentrum
           </h2>

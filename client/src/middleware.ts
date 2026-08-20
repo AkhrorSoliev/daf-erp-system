@@ -23,6 +23,7 @@ export function middleware(request: NextRequest) {
     if (
       pathname.startsWith("/_next") ||
       pathname.startsWith("/api") ||
+      pathname === "/privacy" ||
       pathname.startsWith(`${publicPrefix}/`) ||
       pathname === publicPrefix
     ) {
@@ -53,6 +54,13 @@ export function middleware(request: NextRequest) {
 
   // Public custom form pages — anyone with the slug can fill them out.
   if (pathname.startsWith("/f/")) {
+    return NextResponse.next();
+  }
+
+  // Privacy policy — linked from every login footer and from the app store
+  // listings, so it has to open with no session on every host. Exact match:
+  // nothing else is meant to become public by sitting under this path.
+  if (pathname === "/privacy") {
     return NextResponse.next();
   }
 

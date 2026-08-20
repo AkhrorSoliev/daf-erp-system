@@ -49,6 +49,13 @@ the bare path to the appropriate internal route:
 - `form.dafzentrum.uz/<slug>` → `/f/<slug>` (public custom form)
 - `form.dafzentrum.uz/` → `/f` (info page: "access via link only")
 
+`/privacy` is public on **every** host, including `student.`, `lehrer.` and
+`admin.`, and is not rewritten — it serves the privacy policy at the same path
+everywhere. It is excepted in `middleware.ts` in two places: inside the
+public-portal short-circuit (otherwise `invoice.`/`form.` would rewrite it to
+`/r/privacy`) and again before the unauthenticated redirect. The app store
+listings link to it, so it must resolve without a session.
+
 ## Backend — Railway
 
 ### Prerequisites
