@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lightning } from "@phosphor-icons/react";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhoneWithCodeInput } from "@/lib/format-utils";
@@ -59,19 +58,13 @@ export function StudentLoginForm() {
 
   return (
     <div className="w-full max-w-sm space-y-7">
-      {/* Brand mark */}
-      <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-16 items-center justify-center rounded-3xl bg-coral-500 text-white clay-coral">
-          <Lightning size={32} weight="fill" />
-        </span>
-        <div>
-          <h1 className="font-display text-[28px] font-extrabold tracking-tight text-ink-900">
-            Kirish
-          </h1>
-          <p className="mt-0.5 text-sm font-semibold text-ink-500">
-            DAF Sprachzentrum — o&apos;quvchi kabineti
-          </p>
-        </div>
+      <div className="text-center">
+        <h1 className="font-display text-[28px] font-extrabold tracking-tight text-ink-900">
+          Kirish
+        </h1>
+        <p className="mt-0.5 text-sm font-semibold text-ink-500">
+          DAF Sprachzentrum — o&apos;quvchi kabineti
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -120,7 +113,11 @@ export function StudentLoginForm() {
 
       <TelegramLoginButton variant="lumio" />
 
-      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
+      <ForgotPasswordDialog
+        open={forgotOpen}
+        onOpenChange={setForgotOpen}
+        variant="lumio"
+      />
     </div>
   );
 }

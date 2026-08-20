@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -10,24 +11,39 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone, formatPhoneInput } from "@/lib/format-utils";
+import {
+  type FpVariant,
+  FpField,
+  FpPhoneInput,
+  FpCodeInput,
+  FpPasswordInput,
+  FpSubmit,
+  FpError,
+} from "./forgot-password-fields";
 
 const RESEND_SECONDS = 60;
-const inputClass =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 interface ForgotPasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * `lumio` skins the dialog in the student portal's design system. The class
+   * goes on `DialogContent` rather than an ancestor because Radix portals the
+   * content to `document.body`, outside the page's `.lumio` wrapper.
+   */
+  variant?: FpVariant;
 }
 
 export function ForgotPasswordDialog({
   open,
   onOpenChange,
+  variant = "default",
 }: ForgotPasswordDialogProps) {
+  const lumio = variant === "lumio";
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -149,10 +165,14 @@ export function ForgotPasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className={cn(lumio && "lumio", "sm:max-w-sm")}>
         <DialogHeader>
-          <DialogTitle>Parolni tiklash</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className={cn(lumio && "font-display text-xl font-extrabold")}
+          >
+            Parolni tiklash
+          </DialogTitle>
+          <DialogDescription className={cn(lumio && "font-semibold")}>
             {step === 1 &&
               "Telefon raqamingizni kiriting — SMS orqali tasdiqlash kodi yuboramiz."}
             {step === 2 && "Tasdiqlash kodi telefon raqamingizga yuborildi."}
@@ -160,75 +180,52 @@ export function ForgotPasswordDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {error && (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+        {error && <FpError lumio={lumio}>{error}</FpError>}
 
         {step === 1 && (
           <form onSubmit={handleRequest} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="fp-phone" className="text-sm font-medium">
-                Telefon raqam
-              </label>
-              <div className="flex">
-                <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-                  +998
-                </span>
-                <input
-                  id="fp-phone"
-                  type="text"
-                  inputMode="numeric"
-                  autoFocus
-                  required
-                  value={formatPhoneInput(phone)}
-                  onChange={(e) =>
-                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 9))
-                  }
-                  placeholder="XX XXX XX XX"
-                  maxLength={12}
-                  className={`${inputClass} rounded-l-none`}
-                />
-              </div>
-            </div>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="size-4 animate-spin" />}
+            <FpField lumio={lumio} label="Telefon raqam" htmlFor="fp-phone">
+              <FpPhoneInput
+                lumio={lumio}
+                value={formatPhoneInput(phone)}
+                onChange={setPhone}
+              />
+            </FpField>
+            <FpSubmit lumio={lumio} loading={loading}>
               Kod yuborish
-            </Button>
+            </FpSubmit>
           </form>
         )}
 
         {step === 2 && (
           <form onSubmit={handleVerify} className="space-y-4">
             <div className="space-y-1 text-center">
-              <p className="text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
+              <p
+                className={cn(
+                  "text-2xl font-bold tracking-tight tabular-nums sm:text-3xl",
+                  lumio && "font-display font-extrabold text-ink-900",
+                )}
+              >
                 {formatPhone(phone)}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p
+                className={cn(
+                  "text-sm text-muted-foreground",
+                  lumio && "font-semibold",
+                )}
+              >
                 Ushbu raqamga yuborilgan 4 xonali kodni kiriting.
               </p>
             </div>
-            <div className="space-y-2">
-              <label htmlFor="fp-code" className="text-sm font-medium">
-                Tasdiqlash kodi
-              </label>
-              <input
-                id="fp-code"
-                type="text"
-                inputMode="numeric"
-                autoFocus
-                required
-                value={code}
-                onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 4))
-                }
-                placeholder="••••"
-                maxLength={4}
-                className={`${inputClass} text-center text-lg tracking-[0.5em]`}
-              />
-            </div>
-            <div className="flex items-center justify-between text-sm">
+            <FpField lumio={lumio} label="Tasdiqlash kodi" htmlFor="fp-code">
+              <FpCodeInput lumio={lumio} value={code} onChange={setCode} />
+            </FpField>
+            <div
+              className={cn(
+                "flex items-center justify-between text-sm",
+                lumio && "font-bold",
+              )}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -236,76 +233,67 @@ export function ForgotPasswordDialog({
                   setCode("");
                   setError("");
                 }}
-                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "inline-flex items-center gap-1",
+                  lumio
+                    ? "text-ink-500 hover:text-ink-800"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
               >
                 <ArrowLeft className="size-3.5" />
-                Raqamni o'zgartirish
+                Raqamni o&apos;zgartirish
               </button>
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={cooldown > 0 || loading}
-                className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                className={cn(
+                  "hover:underline disabled:no-underline",
+                  lumio
+                    ? "text-coral-600 disabled:text-ink-400"
+                    : "text-primary disabled:text-muted-foreground",
+                )}
               >
                 {cooldown > 0 ? `Qayta yuborish (${cooldown}s)` : "Qayta yuborish"}
               </button>
             </div>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="size-4 animate-spin" />}
+            <FpSubmit lumio={lumio} loading={loading}>
               Tasdiqlash
-            </Button>
+            </FpSubmit>
           </form>
         )}
 
         {step === 3 && (
           <form onSubmit={handleReset} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="fp-new" className="text-sm font-medium">
-                Yangi parol
-              </label>
-              <div className="relative">
-                <input
-                  id="fp-new"
-                  type={showPassword ? "text" : "password"}
-                  autoFocus
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Kamida 6 ta belgi"
-                  className={`${inputClass} pr-10`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((p) => !p)}
-                  aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="fp-confirm" className="text-sm font-medium">
-                Parolni takrorlang
-              </label>
-              <input
-                id="fp-confirm"
-                type={showPassword ? "text" : "password"}
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Yangi parolni qayta kiriting"
-                className={inputClass}
+            <FpField lumio={lumio} label="Yangi parol" htmlFor="fp-new">
+              <FpPasswordInput
+                lumio={lumio}
+                id="fp-new"
+                autoFocus
+                value={newPassword}
+                onChange={setNewPassword}
+                placeholder="Kamida 6 ta belgi"
+                show={showPassword}
+                onToggleShow={() => setShowPassword((p) => !p)}
               />
-            </div>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="size-4 animate-spin" />}
+            </FpField>
+            <FpField
+              lumio={lumio}
+              label="Parolni takrorlang"
+              htmlFor="fp-confirm"
+            >
+              <FpPasswordInput
+                lumio={lumio}
+                id="fp-confirm"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                placeholder="Yangi parolni qayta kiriting"
+                show={showPassword}
+              />
+            </FpField>
+            <FpSubmit lumio={lumio} loading={loading}>
               Saqlash
-            </Button>
+            </FpSubmit>
           </form>
         )}
       </DialogContent>
