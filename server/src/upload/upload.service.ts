@@ -6,7 +6,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
-import { extname } from 'path';
+import { assertUploadableImage } from './upload.constraints';
 
 @Injectable()
 export class UploadService {
@@ -28,11 +28,25 @@ export class UploadService {
     });
   }
 
+  /**
+   * Stores one uploaded image and returns its public URL.
+   *
+   * Validation happens HERE rather than only in the controller's multer
+   * options, because four callers reach this method without going through
+   * that controller (`student-portal-write`, two Telegram registration
+   * scenes, the student registration flow) and inherited neither the size
+   * limit nor the type check.
+   *
+   * The extension is derived from the validated mime type. It used to be
+   * `extname(file.originalname)` — taken verbatim from the client and
+   * appended to the key of a PUBLIC bucket, so an `.html` name became a page
+   * served from the centre's own domain regardless of the declared type.
+   */
   async uploadFile(
     file: Express.Multer.File,
     folder: string = 'photos',
   ): Promise<string> {
-    const ext = extname(file.originalname);
+    const ext = assertUploadableImage(file);
     const key = `${folder}/${randomUUID()}${ext}`;
 
     await this.s3.send(

@@ -13,6 +13,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ALLOWED_IMAGE_MIMES,
+  MAX_UPLOAD_BYTES,
+  UPLOAD_TYPE_MESSAGE,
+} from '../upload/upload.constraints';
 import { StudentPortalService } from './student-portal.service';
 import { QrAttendanceService } from '../attendance/qr-attendance.service';
 import { GatewayConfigService } from '../payment-gateways/gateway-config.service';
@@ -88,10 +93,25 @@ export class StudentPortalController {
     return this.studentPortalService.changePassword(userId, studentId, dto);
   }
 
+  // Same multer limits as `POST /upload`. This route had `FileInterceptor`
+  // with no options, so any size and any type reached the service — and the
+  // service is what writes into the public bucket. `UploadService` now
+  // rejects both regardless; these options just stop a large body from being
+  // buffered before that happens.
   @Post('photo')
   @UseGuards(RolesGuard)
   @Roles('Student')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_UPLOAD_BYTES },
+      fileFilter: (_req, file, cb) => {
+        if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
+          return cb(new BadRequestException(UPLOAD_TYPE_MESSAGE), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
   updatePhoto(
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('id') userId: number,
