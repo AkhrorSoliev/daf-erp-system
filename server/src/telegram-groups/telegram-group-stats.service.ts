@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  branchIdWhere,
+  studentBranchWhere,
+  userBranchWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
 import {
   firstOfThisMonthDate,
@@ -10,13 +16,21 @@ import {
   tashkentTodayDate,
 } from './utils/format.util';
 
-const TEACHER_ROLE_NAME = 'O\'qituvchi';
+const TEACHER_ROLE_NAME = "O'qituvchi";
 
 /**
  * Composes stats for the admin bot commands.
  *
- * All queries are scoped by companyId (and optionally branchId — currently
- * unused in the MVP but plumbed through for Phase 5+).
+ * Every query is scoped by companyId AND by the branches the asking group is
+ * allowed to see (`reportBranchIdsForGroup`). `null` means all of them — a
+ * CEO-declared org-wide group — and anything else is that group's own branch.
+ *
+ * The branch half used to be "plumbed through for Phase 5+", i.e. absent, so a
+ * group tied to one branch was answered with the whole company. Each model
+ * needs its own predicate: Student's branch lives on `StudentBranch`, a User's
+ * on `mainBranch`/`UserBranch`, and Payment/Expense/Group carry it directly.
+ * `common/finance/report-branch-scope` owns all four so these figures slice
+ * the same way the web reports do.
  *
  * Targeted queries instead of going through reports/*.service.ts because
  * those services return richer shapes than the bot needs and aren't currently
@@ -30,40 +44,57 @@ export class TelegramGroupStatsService {
   ) {}
 
   // -------------------- /oquvchilar --------------------
-  async buildStudentsBlock(companyId: number): Promise<string> {
+  async buildStudentsBlock(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string> {
     const today = tashkentDayRange();
     const firstOfMonth = firstOfThisMonthUtc();
 
-    const [active, todayNew, monthNew, frozen, expelledMonth] = await Promise.all([
-      this.prisma.student.count({
-        where: { companyId, deletedAt: null, status: 'ACTIVE' },
-      }),
-      this.prisma.student.count({
-        where: {
-          companyId,
-          deletedAt: null,
-          createdAt: { gte: today.start, lt: today.end },
-        },
-      }),
-      this.prisma.student.count({
-        where: {
-          companyId,
-          deletedAt: null,
-          createdAt: { gte: firstOfMonth },
-        },
-      }),
-      this.prisma.student.count({
-        where: { companyId, deletedAt: null, status: 'FROZEN' },
-      }),
-      this.prisma.student.count({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'EXPELLED',
-          statusChangedAt: { gte: firstOfMonth },
-        },
-      }),
-    ]);
+    const [active, todayNew, monthNew, frozen, expelledMonth] =
+      await Promise.all([
+        this.prisma.student.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            status: 'ACTIVE',
+            ...studentBranchWhere(branchIds),
+          },
+        }),
+        this.prisma.student.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            createdAt: { gte: today.start, lt: today.end },
+            ...studentBranchWhere(branchIds),
+          },
+        }),
+        this.prisma.student.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            createdAt: { gte: firstOfMonth },
+            ...studentBranchWhere(branchIds),
+          },
+        }),
+        this.prisma.student.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            status: 'FROZEN',
+            ...studentBranchWhere(branchIds),
+          },
+        }),
+        this.prisma.student.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            status: 'EXPELLED',
+            statusChangedAt: { gte: firstOfMonth },
+            ...studentBranchWhere(branchIds),
+          },
+        }),
+      ]);
 
     return [
       `👨‍🎓 <b>O'quvchilar</b>`,
@@ -77,7 +108,10 @@ export class TelegramGroupStatsService {
   }
 
   // -------------------- /oqituvchilar --------------------
-  async buildTeachersBlock(companyId: number): Promise<string> {
+  async buildTeachersBlock(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string> {
     const firstOfMonth = firstOfThisMonthUtc();
     const teacherRole = await this.prisma.role.findFirst({
       where: { name: { in: ['Teacher', TEACHER_ROLE_NAME] } },
@@ -94,6 +128,7 @@ export class TelegramGroupStatsService {
           deletedAt: null,
           status: 'ACTIVE',
           roles: { some: { roleId: teacherRole.id } },
+          ...userBranchWhere(branchIds),
         },
       }),
       this.prisma.user.count({
@@ -102,6 +137,7 @@ export class TelegramGroupStatsService {
           deletedAt: null,
           createdAt: { gte: firstOfMonth },
           roles: { some: { roleId: teacherRole.id } },
+          ...userBranchWhere(branchIds),
         },
       }),
     ]);
@@ -115,7 +151,10 @@ export class TelegramGroupStatsService {
   }
 
   // -------------------- /tolovlar --------------------
-  async buildPaymentsBlock(companyId: number): Promise<string> {
+  async buildPaymentsBlock(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string> {
     const firstOfMonth = firstOfThisMonthUtc();
 
     const [total, byMethod] = await Promise.all([
@@ -124,6 +163,7 @@ export class TelegramGroupStatsService {
           companyId,
           status: 'COMPLETED',
           createdAt: { gte: firstOfMonth },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
         _count: true,
@@ -134,6 +174,7 @@ export class TelegramGroupStatsService {
           companyId,
           status: 'COMPLETED',
           createdAt: { gte: firstOfMonth },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
         _count: true,
@@ -171,7 +212,10 @@ export class TelegramGroupStatsService {
   }
 
   // -------------------- /qarzdorlar --------------------
-  async buildDebtorsBlock(companyId: number): Promise<string> {
+  async buildDebtorsBlock(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string> {
     const [aggregate, top] = await Promise.all([
       this.prisma.student.aggregate({
         where: {
@@ -179,6 +223,7 @@ export class TelegramGroupStatsService {
           deletedAt: null,
           status: 'ACTIVE',
           balance: { lt: 0 },
+          ...studentBranchWhere(branchIds),
         },
         _sum: { balance: true },
         _count: true,
@@ -189,6 +234,7 @@ export class TelegramGroupStatsService {
           deletedAt: null,
           status: 'ACTIVE',
           balance: { lt: 0 },
+          ...studentBranchWhere(branchIds),
         },
         orderBy: { balance: 'asc' }, // most negative first
         take: 5,
@@ -218,18 +264,36 @@ export class TelegramGroupStatsService {
   }
 
   // -------------------- /guruhlar --------------------
-  async buildGroupsBlock(companyId: number): Promise<string> {
+  async buildGroupsBlock(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string> {
     const firstOfMonth = firstOfThisMonthUtc();
 
     const [active, forming, monthNew] = await Promise.all([
       this.prisma.group.count({
-        where: { companyId, deletedAt: null, statusEnum: 'ACTIVE' },
+        where: {
+          companyId,
+          deletedAt: null,
+          statusEnum: 'ACTIVE',
+          ...branchIdWhere(branchIds),
+        },
       }),
       this.prisma.group.count({
-        where: { companyId, deletedAt: null, statusEnum: 'FORMING' },
+        where: {
+          companyId,
+          deletedAt: null,
+          statusEnum: 'FORMING',
+          ...branchIdWhere(branchIds),
+        },
       }),
       this.prisma.group.count({
-        where: { companyId, deletedAt: null, createdAt: { gte: firstOfMonth } },
+        where: {
+          companyId,
+          deletedAt: null,
+          createdAt: { gte: firstOfMonth },
+          ...branchIdWhere(branchIds),
+        },
       }),
     ]);
 
@@ -243,7 +307,10 @@ export class TelegramGroupStatsService {
   }
 
   // -------------------- /stats --------------------
-  async buildOverallStats(companyId: number): Promise<string> {
+  async buildOverallStats(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string> {
     const today = tashkentDayRange();
     // `firstOfMonth` (a -5h-shifted timestamp) is correct for the income query
     // below (filters `Payment.createdAt`, a timestamp). `Expense.date` is a DATE
@@ -270,17 +337,28 @@ export class TelegramGroupStatsService {
       monthlyExpenses,
     ] = await Promise.all([
       this.prisma.student.count({
-        where: { companyId, deletedAt: null, status: 'ACTIVE' },
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'ACTIVE',
+          ...studentBranchWhere(branchIds),
+        },
       }),
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
           createdAt: { gte: today.start, lt: today.end },
+          ...studentBranchWhere(branchIds),
         },
       }),
       this.prisma.group.count({
-        where: { companyId, deletedAt: null, statusEnum: 'ACTIVE' },
+        where: {
+          companyId,
+          deletedAt: null,
+          statusEnum: 'ACTIVE',
+          ...branchIdWhere(branchIds),
+        },
       }),
       teacherRoleId
         ? this.prisma.user.count({
@@ -289,6 +367,7 @@ export class TelegramGroupStatsService {
               deletedAt: null,
               status: 'ACTIVE',
               roles: { some: { roleId: teacherRoleId } },
+              ...userBranchWhere(branchIds),
             },
           })
         : Promise.resolve(0),
@@ -298,6 +377,7 @@ export class TelegramGroupStatsService {
           deletedAt: null,
           status: 'ACTIVE',
           balance: { lt: 0 },
+          ...studentBranchWhere(branchIds),
         },
         _sum: { balance: true },
         _count: true,
@@ -307,6 +387,7 @@ export class TelegramGroupStatsService {
           companyId,
           status: 'COMPLETED',
           createdAt: { gte: firstOfMonth },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
@@ -315,6 +396,7 @@ export class TelegramGroupStatsService {
           companyId,
           deletedAt: null,
           date: { gte: firstOfMonthDate, lte: todayDate },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
@@ -343,8 +425,11 @@ export class TelegramGroupStatsService {
    * `/hisobot` intentionally does NOT persist a snapshot — only the cron
    * writes tonight's baseline after a confirmed send.
    */
-  async buildDailyReport(companyId: number): Promise<string> {
-    const { message } = await this.dailyReport.build(companyId);
+  async buildDailyReport(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string> {
+    const { message } = await this.dailyReport.build(companyId, branchIds);
     return message;
   }
 }

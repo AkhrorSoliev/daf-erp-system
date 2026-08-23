@@ -75,7 +75,11 @@ function defaultState(): State {
     yesterdaySnapshot: { totalDebt: 21_100_000, debtorCount: 46 },
     forecastEnrollments: [],
     ceo: { id: 1 },
-    salaryTotals: { fullDeserved: 40_000_000, covered: 32_000_000, centerFunded: 8_000_000 },
+    salaryTotals: {
+      fullDeserved: 40_000_000,
+      covered: 32_000_000,
+      centerFunded: 8_000_000,
+    },
   };
 }
 
@@ -106,11 +110,17 @@ function makePrisma(state: State) {
     payment: {
       aggregate: jest.fn(async ({ where }: any) =>
         where.createdAt?.lt
-          ? { _sum: { amount: state.todayPayments.amount }, _count: state.todayPayments.count }
+          ? {
+              _sum: { amount: state.todayPayments.amount },
+              _count: state.todayPayments.count,
+            }
           : { _sum: { amount: state.mtdIncome } },
       ),
       groupBy: jest.fn(async () =>
-        state.todayMethods.map((m) => ({ method: m.method, _sum: { amount: m.amount } })),
+        state.todayMethods.map((m) => ({
+          method: m.method,
+          _sum: { amount: m.amount },
+        })),
       ),
     },
     expense: {
@@ -132,7 +142,9 @@ function makePrisma(state: State) {
       groupBy: jest.fn(async ({ by }: any) =>
         by[0] === 'status'
           ? state.attendance
-          : Array.from({ length: state.lessonGroups }, (_, i) => ({ groupId: `g${i}` })),
+          : Array.from({ length: state.lessonGroups }, (_, i) => ({
+              groupId: `g${i}`,
+            })),
       ),
     },
     transaction: {
@@ -174,12 +186,11 @@ async function buildService(prisma: any, salary: any, reports?: any) {
         // The «Sof foyda» line now reads the canonical figure. Default mock
         // returns a fixed number; pass your own to assert the fallback.
         provide: ReportsService,
-        useValue:
-          reports ?? {
-            getMonthlyNetProfit: jest
-              .fn()
-              .mockResolvedValue({ netProfit: 12_345_678 }),
-          },
+        useValue: reports ?? {
+          getMonthlyNetProfit: jest
+            .fn()
+            .mockResolvedValue({ netProfit: 12_345_678 }),
+        },
       },
     ],
   }).compile();
@@ -197,7 +208,7 @@ describe('TelegramGroupDailyReportService', () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
@@ -205,21 +216,31 @@ describe('TelegramGroupDailyReportService', () => {
     // Header + company name (escaped) + weekday.
     expect(message).toContain('DaF Sprachzentrum');
     // 💰 Bugungi moliya
-    expect(message).toContain('• Kirim: <b>14 ta · 8 400 000 so\'m</b>');
-    expect(message).toContain('Naqd 3 200 000 · Payme 3 100 000 · Click 1 300 000 · O\'tkazma 800 000');
-    expect(message).toContain('• Chiqim: <b>1 850 000 so\'m</b>');
-    expect(message).toContain('• Sof (bugun): <b>+6 550 000 so\'m</b>');
+    expect(message).toContain("• Kirim: <b>14 ta · 8 400 000 so'm</b>");
+    expect(message).toContain(
+      "Naqd 3 200 000 · Payme 3 100 000 · Click 1 300 000 · O'tkazma 800 000",
+    );
+    expect(message).toContain("• Chiqim: <b>1 850 000 so'm</b>");
+    expect(message).toContain("• Sof (bugun): <b>+6 550 000 so'm</b>");
     // 👥 Movement: 3 new − 1 departed = +2 net; 5 leads (1 converted).
-    expect(message).toContain("Yangi o'quvchilar: <b>3</b> · Ketgan: <b>1</b> — sof <b>+2</b>");
-    expect(message).toContain("Yangi lidlar: <b>5</b> (1 tasi o'quvchiga aylandi)");
+    expect(message).toContain(
+      "Yangi o'quvchilar: <b>3</b> · Ketgan: <b>1</b> — sof <b>+2</b>",
+    );
+    expect(message).toContain(
+      "Yangi lidlar: <b>5</b> (1 tasi o'quvchiga aylandi)",
+    );
     // 🎓 Operations: 18 groups, attendance 204/(204+18)=92%.
     expect(message).toContain("Dars o'tilgan guruhlar: <b>18</b>");
-    expect(message).toContain('<b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>');
+    expect(message).toContain(
+      '<b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>',
+    );
     // 📌 Current state + debt delta (22.3M vs yesterday 21.1M = ▲ 1.2M, +2 debtors).
-    expect(message).toContain('Faol o\'quvchilar: <b>1 240</b>');
-    expect(message).toContain('Qarzdorlar: <b>48</b> ta — <b>22 300 000 so\'m</b>  (bugun ▲ 1 200 000 · +2)');
+    expect(message).toContain("Faol o'quvchilar: <b>1 240</b>");
+    expect(message).toContain(
+      "Qarzdorlar: <b>48</b> ta — <b>22 300 000 so'm</b>  (bugun ▲ 1 200 000 · +2)",
+    );
     // 📅 MTD: 280M − 95M = +185M net.
-    expect(message).toContain('Tushum (haqiqiy): <b>280 000 000 so\'m</b>');
+    expect(message).toContain("Tushum (haqiqiy): <b>280 000 000 so'm</b>");
     // Headline is the canonical figure from the mock; the cash reading moved to
     // its own honestly-named line.
     expect(message).toContain("• Sof foyda: <b>+12 345 678 so'm</b>");
@@ -229,10 +250,10 @@ describe('TelegramGroupDailyReportService', () => {
     // 💵 Salary top-up block.
     expect(message).toContain("To'liq ishlangan: <b>40 000 000 so'm</b>");
     expect(message).toContain("O'quvchilar to'lagan: <b>32 000 000 so'm</b>");
-    expect(message).toContain('🏛 Markaz qo\'shimchasi: <b>8 000 000 so\'m</b>');
+    expect(message).toContain("🏛 Markaz qo'shimchasi: <b>8 000 000 so'm</b>");
     // 🚩 Diqqat flags.
     expect(message).toContain("Qaytarilgan to'lov: <b>350 000 so'm</b> (1 ta)");
-    expect(message).toContain('Qarz kechirildi: <b>900 000 so\'m</b> (1 ta');
+    expect(message).toContain("Qarz kechirildi: <b>900 000 so'm</b> (1 ta");
   });
 
   it('prints the shared collection ratio and the month-end expectation', async () => {
@@ -251,10 +272,12 @@ describe('TelegramGroupDailyReportService', () => {
       getMonthlyExpectation,
     });
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     const message = raw.replace(/\u00A0/g, ' ');
 
-    expect(message).toContain("\u2022 Shu oyning darslari: <b>173 783 991 so'm</b>");
+    expect(message).toContain(
+      "\u2022 Shu oyning darslari: <b>173 783 991 so'm</b>",
+    );
     expect(message).toContain(
       "\u2022 Shundan yig'ildi: <b>142 000 000 so'm</b> (<b>82%</b>)",
     );
@@ -288,7 +311,7 @@ describe('TelegramGroupDailyReportService', () => {
       getMonthlyExpectation: jest.fn().mockRejectedValue(new Error('boom')),
     });
 
-    const { message } = await service.build(1001);
+    const { message } = await service.build(1001, null);
 
     expect(message).not.toContain("Shundan yig'ildi");
     expect(message).not.toContain('Oy oxiriga kutilyapti');
@@ -311,7 +334,7 @@ describe('TelegramGroupDailyReportService', () => {
         .mockResolvedValue({ expectedValue: 155_765_411 }),
     });
 
-    const { message } = await service.build(1001);
+    const { message } = await service.build(1001, null);
 
     expect(message).toContain('Oy oxiriga kutilyapti');
     expect(message).not.toContain("Oy rejasidan yig'ildi");
@@ -322,13 +345,16 @@ describe('TelegramGroupDailyReportService', () => {
     const prisma = makePrisma(state);
     const service = await buildService(prisma, makeSalary(state));
 
-    await service.build(1001);
+    await service.build(1001, null);
 
     for (const call of prisma.attendance.groupBy.mock.calls) {
       const where = call[0].where;
       expect(where.date).toBeInstanceOf(Date);
       expect(where.date).not.toEqual(
-        expect.objectContaining({ gte: expect.anything(), lt: expect.anything() }),
+        expect.objectContaining({
+          gte: expect.anything(),
+          lt: expect.anything(),
+        }),
       );
       expect(where.date.getUTCHours()).toBe(0);
     }
@@ -341,7 +367,7 @@ describe('TelegramGroupDailyReportService', () => {
     state.mtdAdvances = 12_150_000;
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     const message = raw.replace(/ /g, ' ');
 
     // Xarajat = pure operational spend (advance-free); Avans is a standalone
@@ -360,7 +386,7 @@ describe('TelegramGroupDailyReportService', () => {
     state.mtdAdvances = 0;
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     const message = raw.replace(/ /g, ' ');
     expect(message).not.toContain('Avans (ustozlarga)');
     // Cash reading unchanged: 280M − 95M − 0 = +185M.
@@ -374,7 +400,7 @@ describe('TelegramGroupDailyReportService', () => {
     const prisma = makePrisma(state);
     const service = await buildService(prisma, makeSalary(state));
 
-    await service.build(1001);
+    await service.build(1001, null);
 
     // The two MTD aggregates (operational + advance) filter `date` as a
     // {gte,lte} window; today's spend uses an exact Date. Inspect the windows.
@@ -403,7 +429,7 @@ describe('TelegramGroupDailyReportService', () => {
     state.yesterdaySnapshot = { totalDebt: 22_000_000, debtorCount: 48 };
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
@@ -415,11 +441,13 @@ describe('TelegramGroupDailyReportService', () => {
     state.yesterdaySnapshot = null;
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
-    expect(message).toContain('Qarzdorlar: <b>48</b> ta — <b>22 300 000 so\'m</b>');
+    expect(message).toContain(
+      "Qarzdorlar: <b>48</b> ta — <b>22 300 000 so'm</b>",
+    );
     expect(message).not.toContain('bugun ▲');
     expect(message).not.toContain('bugun ▼');
   });
@@ -429,12 +457,12 @@ describe('TelegramGroupDailyReportService', () => {
     state.salaryTotals = { fullDeserved: 0, covered: 0, centerFunded: 0 };
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
     expect(message).not.toContain('Ustozlar oyligi');
-    expect(message).not.toContain('Markaz qo\'shimchasi');
+    expect(message).not.toContain("Markaz qo'shimchasi");
   });
 
   it('hides the salary block when the company has no CEO/Admin caller', async () => {
@@ -442,7 +470,7 @@ describe('TelegramGroupDailyReportService', () => {
     state.ceo = null;
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
@@ -455,7 +483,7 @@ describe('TelegramGroupDailyReportService', () => {
     state.yesterdaySnapshot = { totalDebt: 22_300_000, debtorCount: 48 }; // no debt growth
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
@@ -471,12 +499,12 @@ describe('TelegramGroupDailyReportService', () => {
     state.flags = [];
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
     expect(message).toContain('🔴');
-    expect(message).toContain('• Sof (bugun): <b>-1 500 000 so\'m</b>');
+    expect(message).toContain("• Sof (bugun): <b>-1 500 000 so'm</b>");
   });
 
   it('drops sub-threshold adjustments but keeps refunds/write-offs', async () => {
@@ -487,7 +515,7 @@ describe('TelegramGroupDailyReportService', () => {
     ];
     const service = await buildService(makePrisma(state), makeSalary(state));
 
-    const { message: raw } = await service.build(1001);
+    const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
@@ -504,7 +532,7 @@ describe('TelegramGroupDailyReportService', () => {
     const prisma = makePrisma(state);
     const service = await buildService(prisma, makeSalary(state));
 
-    await service.build(1001);
+    await service.build(1001, null);
 
     expect(prisma.dailyFinancialSnapshot.upsert).not.toHaveBeenCalled();
     expect((service as any).persistSnapshot).toBeUndefined();
@@ -530,7 +558,7 @@ describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
       getMonthlyNetProfit: jest.fn().mockRejectedValue(new Error('db down')),
     });
 
-    const { message } = await svc.build(1);
+    const { message } = await svc.build(1, null);
 
     // No "Sof foyda" claim at all — a cash number must never wear that label.
     expect(message).not.toContain('• Sof foyda:');
@@ -546,7 +574,7 @@ describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
       getMonthlyNetProfit,
     });
 
-    await svc.build(1);
+    await svc.build(1, null);
 
     expect(getMonthlyNetProfit).toHaveBeenCalledWith(
       1,
@@ -554,4 +582,3 @@ describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
     );
   });
 });
-

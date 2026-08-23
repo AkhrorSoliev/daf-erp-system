@@ -9,6 +9,7 @@
  * (this is an explicit re-send). Persists tonight's snapshot like the cron does.
  */
 import { PrismaClient, TelegramGroupStatus } from '@prisma/client';
+import { reportBranchIdsForGroup } from '../src/telegram-groups/group-report-scope';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Telegraf, Markup } from 'telegraf';
 import { TelegramGroupDailyReportService } from '../src/telegram-groups/telegram-group-daily-report.service';
@@ -47,7 +48,10 @@ async function main() {
   for (const g of groups) {
     if (!g.companyId) continue;
     try {
-      const { message, snapshot } = await dailyReport.build(g.companyId);
+      const { message, snapshot } = await dailyReport.build(
+        g.companyId,
+        reportBranchIdsForGroup(g),
+      );
       await bot.telegram.sendMessage(g.chatId.toString(), message, {
         parse_mode: 'HTML',
         reply_markup: moreButton,

@@ -8,6 +8,7 @@ import {
   TelegramGroupDailyReportService,
 } from './telegram-group-daily-report.service';
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
+import { reportBranchIdsForGroup } from './group-report-scope';
 import { isTashkentSunday, tashkentDayRange } from './utils/format.util';
 import { HolidaysService } from '../holidays/holidays.service';
 
@@ -34,9 +35,7 @@ export class TelegramGroupDailyCronService {
   async sendDailyReports() {
     const bot = this.adminBot.getBot();
     if (!bot) {
-      this.logger.warn(
-        'Skipped daily report cron — admin bot not initialized',
-      );
+      this.logger.warn('Skipped daily report cron — admin bot not initialized');
       return;
     }
 
@@ -79,23 +78,32 @@ export class TelegramGroupDailyCronService {
 
     let sent = 0;
     // A company can own several approved groups — build the (identical) report
-    // once per company and reuse it for every group, so the prognoz walk and
-    // salary sweep run once, not per chat.
-    const builtByCompany = new Map<
-      number,
+    // once per company AND SCOPE, reused across every group that shares it, so
+    // the prognoz walk and salary sweep run once per distinct report rather
+    // than once per chat.
+    //
+    // The key gained the scope when the report stopped being company-wide:
+    // keyed on companyId alone, the first group to be served would have had
+    // its branch's report handed to every other group in the company — the
+    // very leak this scoping exists to close, reintroduced by a cache.
+    const builtByScope = new Map<
+      string,
       { message: string; snapshot: DailySnapshotData }
     >();
     for (const g of groups) {
       if (!g.companyId) continue;
       try {
-        let built = builtByCompany.get(g.companyId);
+        const branchIds = reportBranchIdsForGroup(g);
+        const cacheKey = `${g.companyId}::${branchIds ? branchIds.join(',') : 'all'}`;
+        let built = builtByScope.get(cacheKey);
         if (!built) {
-          built = await this.dailyReport.build(g.companyId);
-          builtByCompany.set(g.companyId, built);
+          built = await this.dailyReport.build(g.companyId, branchIds);
+          builtByScope.set(cacheKey, built);
         }
         await bot.telegram.sendMessage(g.chatId.toString(), built.message, {
           parse_mode: 'HTML',
-          reply_markup: TelegramGroupReportMenuService.moreButton().reply_markup,
+          reply_markup:
+            TelegramGroupReportMenuService.moreButton().reply_markup,
         });
         await this.prisma.telegramGroup.update({
           where: { id: g.id },
