@@ -19,6 +19,13 @@
  * Usage:
  *   cd server && railway run npx ts-node --transpile-only scripts/audit-teacher-salaries.ts [2026-07]
  */
+
+/**
+ * NOTE: `gap` was renamed `centerFunded` on the SalaryMonthly result. Every
+ * label here already read «markaz qo'shimchasi», and ADR-0006 defines
+ * `fullDeserved = covered + centerFunded`, so the column the script prints is
+ * the one it always meant. Until this rename the field read `undefined`.
+ */
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -306,7 +313,7 @@ async function main() {
       r.user.branch?.name?.slice(0, 12) ?? '—',
       som(r.fullDeserved),
       som(r.covered),
-      som(r.gap),
+      som(r.centerFunded),
       som(r.advances),
       som(r.netToPay),
       r.payment ? r.payment.status : '—',
@@ -330,7 +337,7 @@ async function main() {
   );
   const t = res.totals;
   console.log(
-    `\n  JAMI: to'liq ${som(t.fullDeserved)} | o'quvchi to'lagan ${som(t.covered)} | markaz ${som(t.gap)} | avans ${som(t.advances)} | to'lanishi kerak ${som(t.netToPay)}`,
+    `\n  JAMI: to'liq ${som(t.fullDeserved)} | o'quvchi to'lagan ${som(t.covered)} | markaz ${som(t.centerFunded)} | avans ${som(t.advances)} | to'lanishi kerak ${som(t.netToPay)}`,
   );
   console.log(
     `  oldingi oydan kirgan: ${som(t.carriedIn)} | keyingi oyga o'tgan: ${som(t.carriedOut)}`,

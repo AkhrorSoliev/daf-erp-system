@@ -8,7 +8,7 @@ on:
 
 jobs:
   server:
-    name: Server (build + test)
+    name: Server (typecheck + build + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,10 +28,18 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
       - run: npm run build
+      # Type-checks src/ INCLUDING *.spec.ts, which `npm run build` cannot:
+      # its tsconfig excludes specs, and `ts-jest` runs transpile-only, so a
+      # spec could drift from the signature it mocks and stay green.
+      #
+      # AFTER the build on purpose — `npm run build` is what runs
+      # `prisma generate`, and without it `@prisma/client` has no types for
+      # this step to check against. There is no postinstall hook.
+      - run: npm run typecheck
       - run: npm test
 
   client:
-    name: Client (build)
+    name: Client (typecheck + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -44,4 +52,5 @@ jobs:
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
       - run: npm ci
+      - run: npm run typecheck
       - run: npm run build

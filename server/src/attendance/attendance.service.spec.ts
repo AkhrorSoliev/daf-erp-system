@@ -9,6 +9,7 @@ import { AttendanceSaveService } from './attendance-save.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import type { SaveAttendanceDto } from './dto/save-attendance.dto';
 
 const mockGroup = {
   id: 'group-uuid-1',
@@ -697,8 +698,13 @@ describe('AttendanceService', () => {
       const s2 = result.activeStudents.find(
         (s: { studentId: number }) => s.studentId === 10002,
       );
-      expect(s2.plannedKind).toBeNull();
-      expect(s2.plannedId).toBeNull();
+      // Asserted before use: `find` can miss, and a missing student should
+      // read as "10002 is not in the roster" rather than a TypeError two
+      // lines later.
+      expect(s2).toBeDefined();
+      expect(s2).toEqual(
+        expect.objectContaining({ plannedKind: null, plannedId: null }),
+      );
       // Only unconsumed pre-marks are loaded.
       expect(prisma.plannedAbsence.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -763,7 +769,7 @@ describe('AttendanceService', () => {
         .mockResolvedValueOnce(mockResults[0])
         .mockResolvedValueOnce(mockResults[1]);
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [
           { studentId: 10001, status: 'PRESENT' },
           { studentId: 10002, status: 'ABSENT' },
@@ -833,7 +839,7 @@ describe('AttendanceService', () => {
           note: null,
         });
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [
           { studentId: 10001, status: 'EXCUSED' },
           { studentId: 10002, status: 'PRESENT' },
@@ -872,7 +878,7 @@ describe('AttendanceService', () => {
         { studentId: 10001, student: { balance: 500000 } },
       ]);
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [{ studentId: 99999, status: 'PRESENT' }],
       };
 
@@ -891,7 +897,7 @@ describe('AttendanceService', () => {
       prisma.attendance.findMany.mockResolvedValue([]);
 
       // Only 1 of 2 enrolled students has an entry
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [{ studentId: 10001, status: 'PRESENT' }],
       };
 
@@ -909,7 +915,7 @@ describe('AttendanceService', () => {
       ]);
       prisma.attendance.findMany.mockResolvedValue([]);
 
-      const dto = { entries: [] };
+      const dto: SaveAttendanceDto = { entries: [] };
 
       await expect(
         service.save('group-uuid-1', '2026-04-01', dto, 1, ['Teacher'], 1),
@@ -931,7 +937,7 @@ describe('AttendanceService', () => {
 
       // Submitting only the positive-balance student must fail — the
       // negative-balance one is now expected as well.
-      const partialDto = { entries: [{ studentId: 10001, status: 'PRESENT' }] };
+      const partialDto: SaveAttendanceDto = { entries: [{ studentId: 10001, status: 'PRESENT' }] };
       await expect(
         service.save('group-uuid-1', '2026-04-01', partialDto, 1, ['Teacher'], 1),
       ).rejects.toThrow(BadRequestException);
@@ -956,7 +962,7 @@ describe('AttendanceService', () => {
           note: null,
         });
 
-      const fullDto = {
+      const fullDto: SaveAttendanceDto = {
         entries: [
           { studentId: 10001, status: 'PRESENT' },
           { studentId: 10002, status: 'PRESENT' },
@@ -991,7 +997,7 @@ describe('AttendanceService', () => {
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert.mockResolvedValue(mockResult);
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [
           {
             studentId: 10001,
@@ -1030,7 +1036,7 @@ describe('AttendanceService', () => {
       prisma.attendance.findMany.mockResolvedValue(existingRecords);
       prisma.attendance.upsert.mockResolvedValue(mockResults[0]);
 
-      const dto = { entries: [{ studentId: 10001, status: 'LATE' }] };
+      const dto: SaveAttendanceDto = { entries: [{ studentId: 10001, status: 'LATE' }] };
       await service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1);
 
       expect(entityHistoryService.recordUpdate).toHaveBeenCalledTimes(1);
@@ -1057,7 +1063,7 @@ describe('AttendanceService', () => {
     it('should throw NotFoundException when group not found', async () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [{ studentId: 10001, status: 'PRESENT' }],
       };
 
@@ -1072,7 +1078,7 @@ describe('AttendanceService', () => {
         statusEnum: 'COMPLETED',
       });
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [{ studentId: 10001, status: 'PRESENT' }],
       };
 
@@ -1084,7 +1090,7 @@ describe('AttendanceService', () => {
     it('should throw BadRequestException when date is a holiday', async () => {
       prisma.holiday.findFirst.mockResolvedValue({ name: "Navro'z" });
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [{ studentId: 10001, status: 'PRESENT' }],
       };
 
@@ -1094,7 +1100,7 @@ describe('AttendanceService', () => {
     });
 
     it('should throw BadRequestException when date is not a lesson day', async () => {
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [{ studentId: 10001, status: 'PRESENT' }],
       };
 
@@ -1118,7 +1124,7 @@ describe('AttendanceService', () => {
         },
       ]);
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [{ studentId: 10001, status: 'ABSENT' }],
       };
 
@@ -1149,7 +1155,7 @@ describe('AttendanceService', () => {
         note: null,
       });
 
-      const dto = { entries: [{ studentId: 10001, status: 'LATE' }] };
+      const dto: SaveAttendanceDto = { entries: [{ studentId: 10001, status: 'LATE' }] };
       const result = await service.save(
         'group-uuid-1',
         '2026-04-01',
@@ -1197,7 +1203,7 @@ describe('AttendanceService', () => {
         teachers: [{ teacherId: 20001 }],
       });
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [
           { studentId: 10001, status: 'PRESENT' },
           { studentId: 10002, status: 'ABSENT' },
@@ -1263,7 +1269,7 @@ describe('AttendanceService', () => {
         course: { price: 800000, lessonPaymentCount: 12 },
       });
 
-      const dto = {
+      const dto: SaveAttendanceDto = {
         entries: [
           // unchanged: PRESENT → PRESENT
           { studentId: 10001, status: 'PRESENT' },

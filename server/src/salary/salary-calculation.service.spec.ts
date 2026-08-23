@@ -12,7 +12,9 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 describe('SalaryCalculationService', () => {
   let service: SalaryCalculationService;
-  let accrualService: SalaryAccrualService;
+  // A mock provider, so typed as one: `jest.Mocked` still checks the method
+  // names against the real service, but also exposes `.mock` for assertions.
+  let accrualService: jest.Mocked<SalaryAccrualService>;
   let prisma: any;
   let tx: any;
 
@@ -75,7 +77,7 @@ describe('SalaryCalculationService', () => {
     }).compile();
 
     service = module.get<SalaryCalculationService>(SalaryCalculationService);
-    accrualService = module.get<SalaryAccrualService>(SalaryAccrualService);
+    accrualService = module.get(SalaryAccrualService);
   });
 
   const now = new Date('2026-06-20T08:00:00.000Z');

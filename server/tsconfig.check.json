@@ -1,0 +1,17 @@
+{
+  // Type-checking scope for CI — WIDER than tsconfig.build.json.
+  //
+  // `tsconfig.build.json` excludes `**/*spec.ts`, which is correct for a build
+  // (tests do not ship) but meant nothing ever type-checked them: `ts-jest`
+  // runs transpile-only under `isolatedModules`, so a spec could drift from the
+  // signature it mocks and stay green. It had: a MonthlyScope fixture missing
+  // the two `@db.Date` bounds added after a real off-by-one bug, a mock passing
+  // an argument its method never accepted, and Click webhook fixtures typed as
+  // free-form literals.
+  //
+  // `scripts/` stays out for now — 28 errors there are mostly one-off
+  // operational scripts hunting for states the schema no longer permits.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "src/generated"]
+}

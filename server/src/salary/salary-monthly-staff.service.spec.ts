@@ -20,15 +20,28 @@ function juneScope(overrides: Partial<MonthlyScope> = {}): MonthlyScope {
     period: {
       periodStart: tsh(2026, 6, 1),
       periodEnd: new Date(tsh(2026, 7, 1).getTime() - 1),
+      // The `@db.Date` half of `PeriodBounds`. It was added when the shifted
+      // timestamp bound was found to pull 30 June into July — 1 819 343 so'm
+      // on the production July payroll — and this fixture never followed, so
+      // the service was under test with both fields undefined.
+      periodStartDate: monthStart,
+      periodEndDateExclusive: nextMonthStart,
       cycleStartDay: 1,
     },
     periodStart: tsh(2026, 6, 1),
     periodEnd: new Date(tsh(2026, 7, 1).getTime() - 1),
+    // `MonthlyScope` re-exposes the `@db.Date` bounds at the top level; the
+    // service reads them for `lessonDate`/`date` columns.
+    periodStartDate: monthStart,
+    periodEndDateExclusive: nextMonthStart,
     monthStart,
     nextMonthStart,
     periodStartLow: new Date(monthStart.getTime() - TASHKENT_OFFSET_MS),
     periodStartHigh: new Date(nextMonthStart.getTime() - TASHKENT_OFFSET_MS),
     branchId: undefined,
+    // `blocked` marks a scope that resolved to no branches at all — the
+    // fail-closed case. The fixture predates it; false is the normal path.
+    blocked: false,
     search: undefined,
     searchId: null,
     userId: undefined,

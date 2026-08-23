@@ -10,6 +10,13 @@
  *   railway run npx ts-node scripts/probe-june-salary-card.ts 2026-06    (explicit month)
  *   npx ts-node scripts/probe-june-salary-card.ts                        (dev/.env)
  */
+
+/**
+ * NOTE: `gap` was renamed `centerFunded` on the SalaryMonthly result. Every
+ * label here already read «markaz qo'shimchasi», and ADR-0006 defines
+ * `fullDeserved = covered + centerFunded`, so the column the script prints is
+ * the one it always meant. Until this rename the field read `undefined`.
+ */
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -54,7 +61,7 @@ async function main() {
   const hasLessonData =
     (t.fullDeserved ?? 0) !== 0 ||
     (t.covered ?? 0) !== 0 ||
-    (t.gap ?? 0) !== 0;
+    (t.centerFunded ?? 0) !== 0;
 
   console.log('═'.repeat(72));
   console.log(`  USTOZ OYLIKLARI KARTASI — ${res.month}   [${dbEnvLabel()} · ${dbHost()}]`);
@@ -68,7 +75,7 @@ async function main() {
   console.log(`  c) Jami (avans + oylik):        ${som(gross)} so'm   [netToPay + advances]`);
   console.log('  ───────────  EXCEL "OYLIKLAR" USTUNLARI  ──────────');
   console.log(`  O'quvchilar to'lagan (covered): ${som(t.covered)} so'm`);
-  console.log(`  Markaz qo'shimchasi (gap):      ${som(t.gap)} so'm`);
+  console.log(`  Markaz qo'shimchasi (gap):      ${som(t.centerFunded)} so'm`);
   console.log(`  Jami hisoblangan (fullDeserved):${som(t.fullDeserved)} so'm`);
   console.log('═'.repeat(72));
 
