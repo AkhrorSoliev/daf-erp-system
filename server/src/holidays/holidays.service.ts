@@ -145,9 +145,9 @@ export class HolidaysService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, companyId: number) {
     const holiday = await this.prisma.holiday.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, companyId, deletedAt: null },
     });
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
@@ -183,9 +183,14 @@ export class HolidaysService {
     return holiday;
   }
 
-  async update(id: string, dto: UpdateHolidayDto, userId: number) {
+  async update(
+    id: string,
+    dto: UpdateHolidayDto,
+    userId: number,
+    companyId: number,
+  ) {
     const holiday = await this.prisma.holiday.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, companyId, deletedAt: null },
     });
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
@@ -246,9 +251,9 @@ export class HolidaysService {
     return updated;
   }
 
-  async remove(id: string, userId: number) {
+  async remove(id: string, userId: number, companyId: number) {
     const holiday = await this.prisma.holiday.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, companyId, deletedAt: null },
     });
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
@@ -271,9 +276,14 @@ export class HolidaysService {
     return { message: "Bayram muvaffaqiyatli o'chirildi" };
   }
 
-  async changeStatus(id: string, dto: ChangeHolidayStatusDto, userId: number) {
+  async changeStatus(
+    id: string,
+    dto: ChangeHolidayStatusDto,
+    userId: number,
+    companyId: number,
+  ) {
     const holiday = await this.prisma.holiday.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, companyId, deletedAt: null },
     });
 
     if (!holiday) {
@@ -317,9 +327,9 @@ export class HolidaysService {
     return updated;
   }
 
-  async getStatusHistory(id: string) {
+  async getStatusHistory(id: string, companyId: number) {
     const holiday = await this.prisma.holiday.findFirst({
-      where: { id },
+      where: { id, companyId },
       select: { id: true },
     });
 
@@ -349,12 +359,33 @@ export class HolidaysService {
     }
   }
 
+  /**
+   * Pushes every affected group's end date out by the holiday's length.
+   *
+   * Scoped two ways, neither of which it had:
+   *
+   * - **`companyId`** — the query matched every company's groups.
+   * - **`branchId`** — `Holiday.branchId` is nullable ON PURPOSE: null is a
+   *   company-wide holiday (Navro'z), a value is one branch closing. The
+   *   cascade ignored the column entirely, so a holiday declared for Namangan
+   *   would have extended Fargona's groups too. Two branches are live and four
+   *   groups carry an `endDate` again after the 2026-07-20 reset, so this was
+   *   waiting on the next branch-specific holiday rather than being harmless.
+   */
   private async applyHolidayImpactOnGroups(
-    holiday: { id: string; date: Date; endDate: Date },
+    holiday: {
+      id: string;
+      date: Date;
+      endDate: Date;
+      companyId: number;
+      branchId: number | null;
+    },
     userId: number,
   ): Promise<void> {
     const groups = await this.prisma.group.findMany({
       where: {
+        companyId: holiday.companyId,
+        ...(holiday.branchId != null ? { branchId: holiday.branchId } : {}),
         deletedAt: null,
         statusEnum: { in: ['FORMING', 'ACTIVE'] },
         startDate: { lte: holiday.endDate },

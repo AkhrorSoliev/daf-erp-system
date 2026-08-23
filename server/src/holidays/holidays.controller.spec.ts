@@ -138,4 +138,31 @@ describe('HolidaysController — role guards', () => {
       expect(guard.canActivate(ctx)).toBe(true);
     });
   });
+
+  // `findAll` was given a role guard and a companyId; `findOne` was left with
+  // neither, so any valid token — a student-portal one included — could read
+  // any holiday in the database by id. The comment above `findAll` said both
+  // had been fixed.
+  describe('findOne() — staff only', () => {
+    it('has @Roles metadata excluding Student', () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.findOne);
+      expect(roles).toBeDefined();
+      expect(roles).not.toContain('Student');
+    });
+
+    it('denies a Student-portal token', () => {
+      const ctx = mockExecutionContext(controller.findOne, ['Student']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('allows staff', () => {
+      const ctx = mockExecutionContext(controller.findOne, ['Teacher']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('passes the caller company through to the service', () => {
+      controller.findOne('h-1', 1001);
+      expect(mockService.findOne).toHaveBeenCalledWith('h-1', 1001);
+    });
+  });
 });
