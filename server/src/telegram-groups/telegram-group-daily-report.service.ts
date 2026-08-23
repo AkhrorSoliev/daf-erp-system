@@ -3,6 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
 import { ReportsService } from '../reports/reports.service';
 import {
+  branchIdWhere,
+  groupBranchWhere,
+  singleBranchId,
+  studentBranchWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
+import { leadAttributionWhere } from '../leads/shared/lead-scope';
+import {
   escapeHtml,
   firstOfThisMonthDate,
   firstOfThisMonthUtc,
@@ -114,7 +122,10 @@ export class TelegramGroupDailyReportService {
    * ▲/▼ delta). Building does NOT write the snapshot — that is the cron's job
    * after a confirmed send.
    */
-  async build(companyId: number): Promise<{
+  async build(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<{
     message: string;
     snapshot: DailySnapshotData;
   }> {
@@ -153,13 +164,19 @@ export class TelegramGroupDailyReportService {
         select: { name: true },
       }),
       this.prisma.student.count({
-        where: { companyId, deletedAt: null, status: 'ACTIVE' },
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'ACTIVE',
+          ...studentBranchWhere(branchIds),
+        },
       }),
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
           createdAt: { gte: today.start, lt: today.end },
+          ...studentBranchWhere(branchIds),
         },
       }),
       // Distinct students dropped FROM A GROUP today (per the confirmed
@@ -171,18 +188,33 @@ export class TelegramGroupDailyReportService {
           deletedAt: null,
           statusChangedAt: { gte: today.start, lt: today.end },
           student: { companyId, deletedAt: null },
+          ...groupBranchWhere(branchIds),
         },
         distinct: ['studentId'],
         select: { studentId: true },
       }),
-      // Leads are single-tenant (no companyId) — a global "created today" count.
+      // `Lead` gained companyId AND branchId; the comment here still said it
+      // was single-tenant, and the queries counted every company's leads.
+      //
+      // `leadAttributionWhere` (not `leadBranchWhere`) because this is a COUNT:
+      // an unassigned lead is workable from either branch but must be added to
+      // neither total, or Sigma(branches) would exceed the company figure. The
+      // leads module documents that invariant.
       this.prisma.lead.count({
-        where: { createdAt: { gte: today.start, lt: today.end } },
+        where: {
+          companyId,
+          deletedAt: null,
+          createdAt: { gte: today.start, lt: today.end },
+          ...leadAttributionWhere(branchIds),
+        },
       }),
       this.prisma.lead.count({
         where: {
+          companyId,
+          deletedAt: null,
           statusEnum: 'CONVERTED',
           statusChangedAt: { gte: today.start, lt: today.end },
+          ...leadAttributionWhere(branchIds),
         },
       }),
       this.prisma.payment.aggregate({
@@ -190,6 +222,7 @@ export class TelegramGroupDailyReportService {
           companyId,
           status: 'COMPLETED',
           createdAt: { gte: today.start, lt: today.end },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
         _count: true,
@@ -200,6 +233,7 @@ export class TelegramGroupDailyReportService {
           companyId,
           status: 'COMPLETED',
           createdAt: { gte: today.start, lt: today.end },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
@@ -212,17 +246,18 @@ export class TelegramGroupDailyReportService {
           deletedAt: null,
           date: todayDate,
           category: { not: 'TEACHER_ADVANCE' },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
       this.prisma.attendance.groupBy({
         by: ['status'],
-        where: { companyId, date: todayDate },
+        where: { companyId, date: todayDate, ...groupBranchWhere(branchIds) },
         _count: true,
       }),
       this.prisma.attendance.groupBy({
         by: ['groupId'],
-        where: { companyId, date: todayDate },
+        where: { companyId, date: todayDate, ...groupBranchWhere(branchIds) },
       }),
       this.prisma.student.aggregate({
         where: {
@@ -230,6 +265,7 @@ export class TelegramGroupDailyReportService {
           deletedAt: null,
           status: 'ACTIVE',
           balance: { lt: 0 },
+          ...studentBranchWhere(branchIds),
         },
         _sum: { balance: true },
         _count: true,
@@ -239,6 +275,7 @@ export class TelegramGroupDailyReportService {
           companyId,
           status: 'COMPLETED',
           createdAt: { gte: firstOfMonth },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
@@ -252,6 +289,7 @@ export class TelegramGroupDailyReportService {
           deletedAt: null,
           date: { gte: firstOfMonthDate, lte: todayDate },
           category: { not: 'TEACHER_ADVANCE' },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
@@ -263,6 +301,7 @@ export class TelegramGroupDailyReportService {
           deletedAt: null,
           date: { gte: firstOfMonthDate, lte: todayDate },
           category: 'TEACHER_ADVANCE',
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
@@ -275,12 +314,21 @@ export class TelegramGroupDailyReportService {
           reversedAt: null,
           createdAt: { gte: today.start, lt: today.end },
           type: { in: ['REFUND', 'DEBT_WRITE_OFF', 'ADJUSTMENT'] },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
         _count: true,
       }),
+      // `DailyFinancialSnapshot` holds one row per company AND one per branch,
+      // so a query without a branch predicate could return either — the
+      // day-over-day arrow was comparing against whichever row sorted first.
+      // Pin it to the same scope the rest of this report is built from.
       this.prisma.dailyFinancialSnapshot.findFirst({
-        where: { companyId, date: { lt: todayDate } },
+        where: {
+          companyId,
+          date: { lt: todayDate },
+          branchId: singleBranchId(branchIds) ?? null,
+        },
         orderBy: { date: 'desc' },
       }),
     ]);
@@ -289,13 +337,14 @@ export class TelegramGroupDailyReportService {
     // wrapped so a failure degrades gracefully rather than killing the report).
     // Tashkent calendar month of "today" — the window the MTD block reports on.
     const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
-    const [expectedValue, salary, canonicalNet, collection] =
-      await Promise.all([
-        this.computeExpectation(companyId, monthKey),
-        this.computeSalaryTopUp(companyId),
-        this.computeCanonicalNetProfit(companyId, monthKey),
-        this.computeCollection(companyId),
-      ]);
+    const [expectedValue, salary, canonicalNet, collection] = await Promise.all(
+      [
+        this.computeExpectation(companyId, monthKey, branchIds),
+        this.computeSalaryTopUp(companyId, branchIds),
+        this.computeCanonicalNetProfit(companyId, monthKey, branchIds),
+        this.computeCollection(companyId, branchIds),
+      ],
+    );
 
     // ── Derive figures ────────────────────────────────────────────────────
     const todayIncome = todayPayments._sum.amount ?? 0;
@@ -351,9 +400,8 @@ export class TelegramGroupDailyReportService {
 
     // ── Compose message ───────────────────────────────────────────────────
     const dayNum = todayDate.getUTCDate();
-    const monthName = TelegramGroupDailyReportService.MONTHS_UZ[
-      todayDate.getUTCMonth()
-    ];
+    const monthName =
+      TelegramGroupDailyReportService.MONTHS_UZ[todayDate.getUTCMonth()];
     const weekday =
       TelegramGroupDailyReportService.WEEKDAYS_UZ[todayDate.getUTCDay()];
     const companyName = escapeHtml(company?.name ?? 'Hisobot');
@@ -362,6 +410,13 @@ export class TelegramGroupDailyReportService {
 
     // Header + traffic-light verdict.
     lines.push(`📊 <b>${today.label}, ${weekday} — ${companyName}</b>`);
+    // Name the scope. Two groups on different branches now receive different
+    // numbers under the same title, and a reader has to be able to tell which
+    // report they are holding.
+    if (branchIds !== null) {
+      const names = await this.branchNames(companyId, branchIds);
+      lines.push(`<i>${escapeHtml(names)}</i>`);
+    }
     lines.push(`${light.emoji} <i>${light.subtitle}</i>`);
     lines.push('');
 
@@ -390,7 +445,9 @@ export class TelegramGroupDailyReportService {
 
     // 🎓 Bugungi o'quv jarayoni
     lines.push(`🎓 <b>Bugungi o'quv jarayoni</b>`);
-    lines.push(`• Dars o'tilgan guruhlar: <b>${formatNumber(lessonsToday)}</b>`);
+    lines.push(
+      `• Dars o'tilgan guruhlar: <b>${formatNumber(lessonsToday)}</b>`,
+    );
     lines.push(
       `• Davomat: <b>${formatNumber(present)}</b> keldi · <b>${formatNumber(late)}</b> kech · <b>${formatNumber(absent)}</b> kelmadi · <b>${formatNumber(excused)}</b> uzrli — <b>${attendancePct}%</b>`,
     );
@@ -439,9 +496,7 @@ export class TelegramGroupDailyReportService {
       // Lesson value, from the ONE canonical source. The line it replaces was a
       // local `exactDays × 4` walk — a second implementation of a figure the web
       // page also computed, and both were wrong the same way.
-      lines.push(
-        `• Oy oxiriga kutilyapti: <b>${formatSum(expectedValue)}</b>`,
-      );
+      lines.push(`• Oy oxiriga kutilyapti: <b>${formatSum(expectedValue)}</b>`);
       // How far through the month we are. "Shundan yig'ildi" above measures
       // against the lessons already HELD, so it can read 50% on the 5th and say
       // nothing about the month; this divides the same collected figure by the
@@ -465,9 +520,13 @@ export class TelegramGroupDailyReportService {
     if (salary && salary.fullDeserved !== null) {
       lines.push('');
       lines.push(`💵 <b>Ustozlar oyligi (oy boshidan)</b>`);
-      lines.push(`• To'liq ishlangan: <b>${formatSum(salary.fullDeserved)}</b>`);
+      lines.push(
+        `• To'liq ishlangan: <b>${formatSum(salary.fullDeserved)}</b>`,
+      );
       lines.push(`• O'quvchilar to'lagan: <b>${formatSum(salary.covered)}</b>`);
-      lines.push(`• 🏛 Markaz qo'shimchasi: <b>${formatSum(salary.centerFunded)}</b>`);
+      lines.push(
+        `• 🏛 Markaz qo'shimchasi: <b>${formatSum(salary.centerFunded)}</b>`,
+      );
     }
 
     // 💼 Xodimlar oyligi — non-teaching fixed-salary staff (independent of the
@@ -620,6 +679,20 @@ export class TelegramGroupDailyReportService {
     return { emoji: '🟢', subtitle: 'Kun yakuni: yaxshi' };
   }
 
+  /** Branch names for the scope line, falling back to ids if a name is gone. */
+  private async branchNames(
+    companyId: number,
+    branchIds: number[],
+  ): Promise<string> {
+    if (branchIds.length === 0) return 'Filial tanlanmagan';
+    const rows = await this.prisma.branch.findMany({
+      where: { id: { in: branchIds }, companyId },
+      select: { id: true, name: true },
+    });
+    const byId = new Map(rows.map((b) => [b.id, b.name]));
+    return branchIds.map((id) => byId.get(id) ?? `Filial #${id}`).join(', ');
+  }
+
   /**
    * «Oy oxiriga kutilyapti» from the ONE canonical source.
    *
@@ -629,17 +702,18 @@ export class TelegramGroupDailyReportService {
    * and rebuilt from whoever was ACTIVE at request time, so June and July both
    * scored the same number.
    *
-   * Company-wide (the report covers the whole centre). Returns null on failure
+   * Scoped to the branches the asking group may see. Returns null on failure
    * so the line is dropped rather than breaking the report.
    */
   private async computeExpectation(
     companyId: number,
     month: string,
+    branchIds: ReportBranchIds,
   ): Promise<number | null> {
     try {
       const e = await this.reports.getMonthlyExpectation(companyId, {
         month,
-        branchIds: null,
+        branchIds,
       });
       return e.expectedValue;
     } catch (err: any) {
@@ -652,8 +726,10 @@ export class TelegramGroupDailyReportService {
 
   /**
    * Current-month salary top-up totals via `SalaryMonthlyService.getMonthly`
-   * (the same source as the CEO's `/payments/salary` page). Needs a CEO /
-   * Administrator caller so the figures are company-wide, not branch-scoped.
+   * (the same source as the CEO's `/payments/salary` page, per ADR-0006 — the
+   * figure is never recomputed here). The CEO / Administrator caller supplies
+   * only an identity the payroll resolver requires; the SCOPE comes from the
+   * group, exactly as `/salary/monthly` passes `singleBranchId(scope)`.
    * Returns null (block hidden) when no such user exists or the compute fails.
    */
   /**
@@ -668,11 +744,14 @@ export class TelegramGroupDailyReportService {
    * Calling the shared service is what makes a repeat of that impossible —
    * there is no second formula to drift.
    *
-   * Company-wide (the report covers the whole centre) and MTD (1st → today,
-   * Tashkent), matching the "Oy boshidan" block it sits in. Returns null on
-   * failure so the block is simply dropped.
+   * Scoped to the asking group's branches, and MTD (1st → today, Tashkent),
+   * matching the "Oy boshidan" block it sits in. Returns null on failure so the
+   * block is simply dropped.
    */
-  private async computeCollection(companyId: number): Promise<{
+  private async computeCollection(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<{
     lessonsValue: number;
     collected: number;
     pct: number;
@@ -681,7 +760,7 @@ export class TelegramGroupDailyReportService {
       const attribution = await this.reports.getIncomeMonthAttribution(
         companyId,
         {
-          branchIds: null,
+          branchIds,
           startDate: firstOfThisMonthDate().toISOString().slice(0, 10),
           endDate: tashkentTodayDate().toISOString().slice(0, 10),
         },
@@ -693,7 +772,9 @@ export class TelegramGroupDailyReportService {
         pct: attribution.collectionPct,
       };
     } catch (e) {
-      this.logger.warn(`Collection ratio failed for company ${companyId}: ${e}`);
+      this.logger.warn(
+        `Collection ratio failed for company ${companyId}: ${e}`,
+      );
       return null;
     }
   }
@@ -714,6 +795,7 @@ export class TelegramGroupDailyReportService {
   private async computeCanonicalNetProfit(
     companyId: number,
     month: string,
+    branchIds: ReportBranchIds,
   ): Promise<number | null> {
     try {
       const caller = await this.prisma.user.findFirst({
@@ -727,8 +809,9 @@ export class TelegramGroupDailyReportService {
       if (!caller) return null;
       const np = await this.reports.getMonthlyNetProfit(companyId, {
         month,
-        // Company-wide: the daily report covers the whole centre.
-        branchIds: null,
+        // The CEO id supplies only the identity the report layer requires; the
+        // scope belongs to the group that asked.
+        branchIds,
         performedById: caller.id,
       });
       return np.netProfit;
@@ -742,6 +825,7 @@ export class TelegramGroupDailyReportService {
 
   private async computeSalaryTopUp(
     companyId: number,
+    branchIds: ReportBranchIds,
   ): Promise<SalaryTopUp | null> {
     try {
       const caller =
@@ -764,7 +848,7 @@ export class TelegramGroupDailyReportService {
       if (!caller) return null;
 
       const { totals, staffTotals } = await this.salaryMonthly.getMonthly(
-        {},
+        { branchId: singleBranchId(branchIds) },
         companyId,
         caller.id,
       );

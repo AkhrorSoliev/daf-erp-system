@@ -79,18 +79,30 @@ describe('TelegramGroupDailyCronService', () => {
   it('runs normally on a non-holiday day', async () => {
     findActiveHolidayCovering.mockResolvedValue(null);
     prisma.telegramGroup.findMany.mockResolvedValue([
-      { id: 'g1', chatId: 111n, companyId: 1001 },
+      {
+        id: 'g1',
+        chatId: 111n,
+        companyId: 1001,
+        branchId: 1,
+        receivesAllBranches: false,
+      },
     ]);
-    build.mockResolvedValue({ message: 'daily report', snapshot: sampleSnapshot });
+    build.mockResolvedValue({
+      message: 'daily report',
+      snapshot: sampleSnapshot,
+    });
     prisma.telegramGroup.update.mockResolvedValue({});
 
     await service.sendDailyReports();
 
-    expect(build).toHaveBeenCalledWith(1001);
+    expect(build).toHaveBeenCalledWith(1001, [1]);
     expect(sendMessage).toHaveBeenCalledWith(
       '111',
       'daily report',
-      expect.objectContaining({ parse_mode: 'HTML', reply_markup: expect.anything() }),
+      expect.objectContaining({
+        parse_mode: 'HTML',
+        reply_markup: expect.anything(),
+      }),
     );
     expect(prisma.telegramGroup.update).toHaveBeenCalledWith({
       where: { id: 'g1' },
@@ -101,27 +113,88 @@ describe('TelegramGroupDailyCronService', () => {
     expect(persistSnapshot).not.toHaveBeenCalled();
   });
 
-  it('builds once per company and reuses it across that company’s groups', async () => {
+  it('builds once per SCOPE and reuses it across groups that share one', async () => {
     prisma.telegramGroup.findMany.mockResolvedValue([
-      { id: 'g1', chatId: 111n, companyId: 1001 },
-      { id: 'g2', chatId: 222n, companyId: 1001 },
+      {
+        id: 'g1',
+        chatId: 111n,
+        companyId: 1001,
+        branchId: 1,
+        receivesAllBranches: false,
+      },
+      {
+        id: 'g2',
+        chatId: 222n,
+        companyId: 1001,
+        branchId: 1,
+        receivesAllBranches: false,
+      },
     ]);
-    build.mockResolvedValue({ message: 'daily report', snapshot: sampleSnapshot });
+    build.mockResolvedValue({
+      message: 'daily report',
+      snapshot: sampleSnapshot,
+    });
     prisma.telegramGroup.update.mockResolvedValue({});
 
     await service.sendDailyReports();
 
-    // One build for the shared company, two sends, snapshot persisted per send.
+    // Same company AND same branch — one build, two sends.
     expect(build).toHaveBeenCalledTimes(1);
     expect(sendMessage).toHaveBeenCalledTimes(2);
     expect(persistSnapshot).not.toHaveBeenCalled();
+  });
+
+  // The cache key used to be the companyId alone. Once the report became
+  // branch-scoped that would have served the FIRST group's branch report to
+  // every other group in the company — reintroducing the cross-branch leak
+  // through the cache.
+  it('rebuilds for a group whose scope differs, never reusing another branch report', async () => {
+    prisma.telegramGroup.findMany.mockResolvedValue([
+      {
+        id: 'g1',
+        chatId: 111n,
+        companyId: 1001,
+        branchId: 1,
+        receivesAllBranches: false,
+      },
+      {
+        id: 'g2',
+        chatId: 222n,
+        companyId: 1001,
+        branchId: 2,
+        receivesAllBranches: false,
+      },
+      {
+        id: 'g3',
+        chatId: 333n,
+        companyId: 1001,
+        branchId: null,
+        receivesAllBranches: true,
+      },
+    ]);
+    build.mockResolvedValue({
+      message: 'daily report',
+      snapshot: sampleSnapshot,
+    });
+    prisma.telegramGroup.update.mockResolvedValue({});
+
+    await service.sendDailyReports();
+
+    expect(build).toHaveBeenCalledTimes(3);
+    expect(build).toHaveBeenCalledWith(1001, [1]);
+    expect(build).toHaveBeenCalledWith(1001, [2]);
+    expect(build).toHaveBeenCalledWith(1001, null);
+    expect(sendMessage).toHaveBeenCalledTimes(3);
   });
 
   it('does not persist a snapshot when the send fails', async () => {
     prisma.telegramGroup.findMany.mockResolvedValue([
       { id: 'g1', chatId: 111n, companyId: 1001 },
     ]);
-    build.mockResolvedValue({ message: 'daily report', snapshot: sampleSnapshot });
+    build.mockResolvedValue({
+      message: 'daily report',
+      snapshot: sampleSnapshot,
+    });
     sendMessage.mockRejectedValueOnce(new Error('network'));
 
     await service.sendDailyReports();

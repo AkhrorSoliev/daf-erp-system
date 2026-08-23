@@ -5,7 +5,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReportsExcelService } from '../reports/reports-excel.service';
 import { ReportsFinancialService } from '../reports/reports-financial.service';
 import { ReportsService } from '../reports/reports.service';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { formatSum } from './utils/format.util';
+import {
+  branchLabelForGroup,
+  isLegacyUnscopedGroup,
+  reportBranchIdsForGroup,
+} from './group-report-scope';
 
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
 const DEFAULT_FLOOR_MONTH = '2026-05';
@@ -15,6 +21,7 @@ type ResolvedGroup = {
   companyId: number;
   chatId: bigint;
   branchId: number | null;
+  receivesAllBranches: boolean;
 };
 
 /**
@@ -55,8 +62,18 @@ export class TelegramGroupReportMenuService {
   private readonly generating = new Set<string>();
 
   private static readonly MONTHS_UZ = [
-    'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
-    'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr',
+    'yanvar',
+    'fevral',
+    'mart',
+    'aprel',
+    'may',
+    'iyun',
+    'iyul',
+    'avgust',
+    'sentyabr',
+    'oktyabr',
+    'noyabr',
+    'dekabr',
   ];
 
   constructor(
@@ -136,7 +153,9 @@ export class TelegramGroupReportMenuService {
     if (!group) return;
     const months = await this.availableMonths(group.companyId, year);
     if (months.length === 0) {
-      await ctx.answerCbQuery("Bu yil uchun ma'lumot yo'q").catch(() => undefined);
+      await ctx
+        .answerCbQuery("Bu yil uchun ma'lumot yo'q")
+        .catch(() => undefined);
       return;
     }
     const rows = this.chunk(
@@ -180,10 +199,19 @@ export class TelegramGroupReportMenuService {
       [Markup.button.callback('Oxirgi 3 oy', 'rm:p3')],
       [Markup.button.callback('Oxirgi 6 oy', 'rm:p6')],
       [Markup.button.callback('Oxirgi 12 oy', 'rm:p12')],
-      [Markup.button.callback(`Yillik (${now.slice(0, 4)})`, `rm:py:${now.slice(0, 4)}`)],
+      [
+        Markup.button.callback(
+          `Yillik (${now.slice(0, 4)})`,
+          `rm:py:${now.slice(0, 4)}`,
+        ),
+      ],
       [Markup.button.callback('« Orqaga', 'rm:root')],
     ];
-    await this.edit(ctx, '⚡ <b>Tez hisobotlar:</b>', Markup.inlineKeyboard(rows));
+    await this.edit(
+      ctx,
+      '⚡ <b>Tez hisobotlar:</b>',
+      Markup.inlineKeyboard(rows),
+    );
   }
 
   /** rm:p3 | rm:p6 | rm:p12 — trailing-range Excel. */
@@ -239,12 +267,15 @@ export class TelegramGroupReportMenuService {
       await ctx.answerCbQuery().catch(() => undefined);
       const group = await this.resolveGroup(ctx);
       if (!group) return;
-      // Company-wide on purpose: the card goes to a group chat that already
-      // receives the whole centre's daily financials, and a group callback
-      // carries no per-user ERP identity to scope by.
+      // Scoped to what the GROUP is allowed to see. A group callback carries
+      // no per-user ERP identity — which is why this used to pass `null` — but
+      // the group row itself declares its branch, and `approve()` makes that
+      // declaration mandatory. Passing `null` handed a branch-confined group
+      // the other branch's figures.
+      const branchIds = reportBranchIdsForGroup(group);
       const o = await this.reportsFinancial.getFinancialOverview(
         group.companyId,
-        { branchIds: null },
+        { branchIds },
       );
       const monthKey = this.currentMonth();
       const month = this.monthLabel(monthKey);
@@ -252,9 +283,18 @@ export class TelegramGroupReportMenuService {
       // oylik). Payroll is paid the following cycle, so its paid leg is ~0 and
       // profit reads far too high — the "+78M June" bug the code names itself.
       // Read the canonical figure the Foyda card and Excel «Sof foyda» use.
-      const canonical = await this.canonicalNetProfit(group.companyId, monthKey);
+      const canonical = await this.canonicalNetProfit(
+        group.companyId,
+        monthKey,
+        branchIds,
+      );
+      const scopeLabel = branchLabelForGroup(
+        group,
+        await this.branchNames(group.companyId),
+      );
       const lines = [
         `💰 <b>Moliyaviy xulosa — ${month}</b>`,
+        `<i>${scopeLabel}</i>`,
         ``,
         `• Tushum (haqiqiy): <b>${formatSum(o.income.actual)}</b>`,
         `• Oy oxiriga kutilyapti: <b>${formatSum(o.income.expected)}</b>`,
@@ -268,7 +308,9 @@ export class TelegramGroupReportMenuService {
       await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
     } catch (err: any) {
       this.logger.warn(`Financial card failed: ${err?.message ?? err}`);
-      await ctx.reply("Ma'lumot yuklanmadi. Qayta urinib ko'ring.").catch(() => undefined);
+      await ctx
+        .reply("Ma'lumot yuklanmadi. Qayta urinib ko'ring.")
+        .catch(() => undefined);
     } finally {
       this.generating.delete(key);
     }
@@ -283,6 +325,7 @@ export class TelegramGroupReportMenuService {
   private async canonicalNetProfit(
     companyId: number,
     month: string,
+    branchIds: ReportBranchIds,
   ): Promise<number | null> {
     try {
       const ceo = await this.prisma.user.findFirst({
@@ -296,8 +339,9 @@ export class TelegramGroupReportMenuService {
       if (!ceo) return null;
       const np = await this.reports.getMonthlyNetProfit(companyId, {
         month,
-        // Company-wide: a group chat has no per-user ERP identity to scope by.
-        branchIds: null,
+        // The CEO id only supplies an identity the report layer requires; the
+        // SCOPE comes from the group, not from that borrowed identity.
+        branchIds,
         performedById: ceo.id,
       });
       return np.netProfit;
@@ -349,13 +393,17 @@ export class TelegramGroupReportMenuService {
       try {
         const { companyName, branchNames, performedById } =
           await this.excelContext(group.companyId);
+        // The workbook carries every payment and expense LINE ITEM, so it is
+        // the most detailed thing this bot can hand out — and it used to hand
+        // out the whole company to a group confined to one branch, under a
+        // header that said 'Barcha filiallar' either way. Scope and label now
+        // both come from the group, so the file cannot disagree with itself.
         const buffer = await this.reportsExcel.generate(group.companyId, {
-          // Company-wide, matching the 'Barcha filiallar' label below.
-          branchIds: null,
+          branchIds: reportBranchIdsForGroup(group),
           startDate: opts.startDate,
           endDate: opts.endDate,
           companyName,
-          branchLabel: 'Barcha filiallar',
+          branchLabel: branchLabelForGroup(group, branchNames),
           branchNames,
           performedById,
           // The ten default sheets only — the bot delivers one readable file,
@@ -383,7 +431,10 @@ export class TelegramGroupReportMenuService {
       const code = err?.response?.error_code ?? err?.code;
       if (code === 403) {
         await this.prisma.telegramGroup
-          .updateMany({ where: { chatId: BigInt(chatId) }, data: { isActive: false } })
+          .updateMany({
+            where: { chatId: BigInt(chatId) },
+            data: { isActive: false },
+          })
           .catch(() => undefined);
       } else {
         this.logger.error(
@@ -403,6 +454,17 @@ export class TelegramGroupReportMenuService {
 
   /** Company name + branch names + a CEO/Admin id (salary sheet needs a
    *  non-branch-scoped caller). */
+  /** `branchId → name`, for labelling which branches a report covers. */
+  private async branchNames(
+    companyId: number,
+  ): Promise<Record<number, string>> {
+    const branches = await this.prisma.branch.findMany({
+      where: { companyId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    return Object.fromEntries(branches.map((b) => [b.id, b.name]));
+  }
+
   private async excelContext(companyId: number): Promise<{
     companyName: string;
     branchNames: Record<number, string>;
@@ -448,6 +510,7 @@ export class TelegramGroupReportMenuService {
         companyId: true,
         chatId: true,
         branchId: true,
+        receivesAllBranches: true,
         status: true,
         isActive: true,
       },
@@ -463,11 +526,20 @@ export class TelegramGroupReportMenuService {
         .catch(() => undefined);
       return null;
     }
+    if (isLegacyUnscopedGroup(group)) {
+      // Approved before a branch became mandatory. Reports stay company-wide
+      // for it (see `reportBranchIdsForGroup`), but say so — the row wants a
+      // branch, and nothing else will ever surface that.
+      this.logger.warn(
+        `TelegramGroup ${group.id} has neither branchId nor receivesAllBranches — reports fall back to company-wide`,
+      );
+    }
     return {
       id: group.id,
       companyId: group.companyId,
       chatId: group.chatId,
       branchId: group.branchId,
+      receivesAllBranches: group.receivesAllBranches,
     };
   }
 

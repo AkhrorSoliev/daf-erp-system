@@ -3,6 +3,12 @@ node_modules
 .env*
 
 /generated/prisma
+# Prisma's generated client, wherever a `generator.output` puts it. `src/` is
+# listed because a client WAS once generated there and committed: 24k lines
+# that nothing imported (the app uses `@prisma/client`), carrying a schema
+# from a different era of this project, compiled by tsc and shipped in dist
+# on every build. Ignored so a stray `output` setting cannot commit one again.
+/src/generated
 
 # Generated financial-report Excel output (regenerated, not source). Anchored
 # with a leading slash so it matches ONLY server/reports/ and never the source

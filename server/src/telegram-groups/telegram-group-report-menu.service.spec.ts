@@ -13,14 +13,22 @@ function makeCtx(chatId = 111) {
   } as any;
 }
 
-function makeDeps(overrides: { groupStatus?: string; systemStartDate?: Date | null } = {}) {
+function makeDeps(
+  overrides: {
+    groupStatus?: string;
+    systemStartDate?: Date | null;
+    branchId?: number | null;
+    receivesAllBranches?: boolean;
+  } = {},
+) {
   const prisma: any = {
     telegramGroup: {
       findUnique: jest.fn().mockResolvedValue({
         id: 'g1',
         companyId: 1001,
         chatId: 111n,
-        branchId: null,
+        branchId: overrides.branchId ?? null,
+        receivesAllBranches: overrides.receivesAllBranches ?? false,
         status: overrides.groupStatus ?? 'APPROVED',
         isActive: true,
       }),
@@ -31,11 +39,16 @@ function makeDeps(overrides: { groupStatus?: string; systemStartDate?: Date | nu
       findUnique: jest.fn().mockResolvedValue({
         name: 'DaF Sprachzentrum',
         systemStartDate:
-          overrides.systemStartDate === undefined ? null : overrides.systemStartDate,
+          overrides.systemStartDate === undefined
+            ? null
+            : overrides.systemStartDate,
       }),
     },
     branch: {
-      findMany: jest.fn().mockResolvedValue([{ id: 1, name: 'Asosiy' }]),
+      findMany: jest.fn().mockResolvedValue([
+        { id: 1, name: "Farg'ona filiali" },
+        { id: 2, name: 'Namangan filiali' },
+      ]),
     },
     user: { findFirst: jest.fn().mockResolvedValue({ id: 7 }) },
   };
@@ -59,7 +72,7 @@ function makeDeps(overrides: { groupStatus?: string; systemStartDate?: Date | nu
     prisma,
     reportsExcel,
     reportsFinancial,
-        null
+    null,
   );
   return { service, prisma, reportsExcel, reportsFinancial };
 }
@@ -70,6 +83,55 @@ describe('TelegramGroupReportMenuService', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-07-08T16:00:00Z'));
   });
   afterEach(() => jest.useRealTimers());
+
+  // The workbook carries every payment and expense line item. It used to be
+  // built with `branchIds: null` and captioned 'Barcha filiallar' no matter
+  // what the group was, so a group confined to Fargona received Namangan's
+  // rows — and its own `receivesAllBranches: false` said it should not.
+  describe('branch scope comes from the group', () => {
+    it('confines the workbook to the group branch and labels it', async () => {
+      const { service, reportsExcel } = makeDeps({ branchId: 2 });
+
+      await service.sendMonthExcel(makeCtx(), '2026-06');
+
+      expect(reportsExcel.generate).toHaveBeenCalledWith(
+        1001,
+        expect.objectContaining({
+          branchIds: [2],
+          branchLabel: 'Namangan filiali',
+        }),
+      );
+    });
+
+    it('keeps the workbook company-wide for a declared org-wide group', async () => {
+      const { service, reportsExcel } = makeDeps({
+        branchId: null,
+        receivesAllBranches: true,
+      });
+
+      await service.sendMonthExcel(makeCtx(), '2026-06');
+
+      expect(reportsExcel.generate).toHaveBeenCalledWith(
+        1001,
+        expect.objectContaining({
+          branchIds: null,
+          branchLabel: 'Barcha filiallar',
+        }),
+      );
+    });
+
+    it('confines the financial card to the group branch and names the scope', async () => {
+      const { service, reportsFinancial } = makeDeps({ branchId: 1 });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      expect(reportsFinancial.getFinancialOverview).toHaveBeenCalledWith(1001, {
+        branchIds: [1],
+      });
+      expect(ctx.reply.mock.calls[0][0]).toContain("Farg'ona filiali");
+    });
+  });
 
   it('moreButton() carries the rm:open callback', () => {
     const kb = JSON.stringify(TelegramGroupReportMenuService.moreButton());
@@ -185,7 +247,9 @@ describe('TelegramGroupReportMenuService', () => {
   });
 
   it('respects Company.systemStartDate as the floor month', async () => {
-    const { service } = makeDeps({ systemStartDate: new Date('2026-06-01T00:00:00Z') });
+    const { service } = makeDeps({
+      systemStartDate: new Date('2026-06-01T00:00:00Z'),
+    });
     const ctx = makeCtx();
 
     await service.showFullMonths(ctx, 2026);
@@ -211,7 +275,9 @@ describe('TelegramGroupReportMenuService', () => {
     const { service, prisma, reportsExcel } = makeDeps();
     const ctx = makeCtx();
     reportsExcel.generate.mockResolvedValue(Buffer.from('x'));
-    ctx.replyWithDocument.mockRejectedValueOnce({ response: { error_code: 403 } });
+    ctx.replyWithDocument.mockRejectedValueOnce({
+      response: { error_code: 403 },
+    });
 
     await service.sendMonthExcel(ctx, '2026-06');
 

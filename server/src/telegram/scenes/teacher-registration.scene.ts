@@ -21,6 +21,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { UsersService } from '../../users/users.service';
 import { message } from 'telegraf/filters';
+import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
 
 const logger = new Logger('TeacherRegistrationScene');
 
@@ -314,8 +315,17 @@ export function createTeacherRegistrationScene(
     const doc = ctx.message.document;
     const mime = doc.mime_type || '';
 
-    if (!mime.startsWith('image/')) {
-      await ctx.reply('Iltimos, rasm formatidagi fayl yuboring (JPG, PNG).');
+    // The same allow-list `UploadService` enforces. `startsWith('image/')`
+    // used to let HEIC through — the format an iPhone sends when a photo goes
+    // as a FILE rather than a compressed photo — and the service now rejects
+    // it, which would have looped the user through "try again" with no way to
+    // succeed. Name the formats instead.
+    if (!ALLOWED_IMAGE_MIMES.includes(mime)) {
+      await ctx.reply(
+        'Iltimos, JPG, PNG yoki WebP formatdagi rasm yuboring. ' +
+          'iPhone’dan yuborayotgan bo‘lsangiz, fayl sifatida emas, ' +
+          'oddiy rasm sifatida yuboring.',
+      );
       return;
     }
 

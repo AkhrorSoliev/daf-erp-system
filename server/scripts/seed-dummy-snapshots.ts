@@ -10,9 +10,14 @@
  * `--i-know-this-is-not-prod` flag. Deleting real snapshot rows would destroy
  * the one record in this system that cannot be rebuilt.
  *
+ * The guard covers `--clean` TOO. It used to be skipped there, which put the
+ * weakest protection on the only destructive path — and `--clean`'s delete is
+ * scoped by date window alone (the snapshot table has no seed tag to filter
+ * on, unlike the sibling deletes), so on a real database it takes real rows.
+ *
  * Usage:
  *   cd server && npx ts-node scripts/seed-dummy-snapshots.ts --i-know-this-is-not-prod
- *   cd server && npx ts-node scripts/seed-dummy-snapshots.ts --clean   # o'chirish
+ *   cd server && npx ts-node scripts/seed-dummy-snapshots.ts --clean --i-know-this-is-not-prod
  */
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -48,8 +53,14 @@ function assertNotProduction() {
 }
 
 async function main() {
+  // Shartsiz — `--clean` uchun ham. Ilgari bu qator `if (!clean)` edi, ya'ni
+  // qorovul aynan O'CHIRADIGAN yo'lda o'chirilardi: `--clean` na `RAILWAY_*`
+  // tekshiruvini, na tasdiq bayrog'ini talab qilardi. Prod'da o'sha vaqtda
+  // 66 ta snapshot qatori bor edi va ularning HAMMASI o'chirish oynasiga
+  // (o'tgan oy + shu oy) tushardi — ya'ni butun tarix, qayta tiklab
+  // bo'lmaydigan yagona yozuv.
+  assertNotProduction();
   const clean = process.argv.includes('--clean');
-  if (!clean) assertNotProduction();
 
   const company = await prisma.company.findFirst({
     select: { id: true, name: true },

@@ -5,6 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TelegramGroupsService } from './telegram-groups.service';
 import { TelegramGroupStatsService } from './telegram-group-stats.service';
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
+import { reportBranchIdsForGroup } from './group-report-scope';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import {
   MSG_APPROVED_ANNOUNCE,
   MSG_HELP,
@@ -47,29 +49,41 @@ export class TelegramAdminBotRegistrar {
 
     // Stats commands — all gated by `resolveApprovedGroup`
     bot.command(['stats', 'statistika'], (ctx) =>
-      this.handleStats(ctx, (cid) => this.statsService.buildOverallStats(cid)),
+      this.handleStats(ctx, (cid, bids) =>
+        this.statsService.buildOverallStats(cid, bids),
+      ),
     );
     bot.command('oquvchilar', (ctx) =>
-      this.handleStats(ctx, (cid) => this.statsService.buildStudentsBlock(cid)),
+      this.handleStats(ctx, (cid, bids) =>
+        this.statsService.buildStudentsBlock(cid, bids),
+      ),
     );
     bot.command('oqituvchilar', (ctx) =>
-      this.handleStats(ctx, (cid) => this.statsService.buildTeachersBlock(cid)),
+      this.handleStats(ctx, (cid, bids) =>
+        this.statsService.buildTeachersBlock(cid, bids),
+      ),
     );
     bot.command('tolovlar', (ctx) =>
-      this.handleStats(ctx, (cid) => this.statsService.buildPaymentsBlock(cid)),
+      this.handleStats(ctx, (cid, bids) =>
+        this.statsService.buildPaymentsBlock(cid, bids),
+      ),
     );
     bot.command('qarzdorlar', (ctx) =>
-      this.handleStats(ctx, (cid) => this.statsService.buildDebtorsBlock(cid)),
+      this.handleStats(ctx, (cid, bids) =>
+        this.statsService.buildDebtorsBlock(cid, bids),
+      ),
     );
     bot.command('hisobot', (ctx) =>
       this.handleStats(
         ctx,
-        (cid) => this.statsService.buildDailyReport(cid),
+        (cid, bids) => this.statsService.buildDailyReport(cid, bids),
         TelegramGroupReportMenuService.moreButton().reply_markup,
       ),
     );
     bot.command('guruhlar', (ctx) =>
-      this.handleStats(ctx, (cid) => this.statsService.buildGroupsBlock(cid)),
+      this.handleStats(ctx, (cid, bids) =>
+        this.statsService.buildGroupsBlock(cid, bids),
+      ),
     );
 
     this.registerReportMenu(bot);
@@ -127,11 +141,15 @@ export class TelegramAdminBotRegistrar {
    */
   private async handleStats(
     ctx: Context,
-    builder: (companyId: number) => Promise<string>,
+    builder: (companyId: number, branchIds: ReportBranchIds) => Promise<string>,
     replyMarkup?: any,
   ): Promise<void> {
     const group = await this.resolveApprovedGroup(ctx);
     if (!group || !group.companyId) return;
+    // Every stats command answers for the branches THIS group declared, not
+    // for the whole company. The chat has no per-user identity to scope by —
+    // the group row is the authority, and `approve()` makes it say something.
+    const branchIds = reportBranchIdsForGroup(group);
 
     let typingInterval: NodeJS.Timeout | null = null;
     const emitTyping = () => {
@@ -143,7 +161,7 @@ export class TelegramAdminBotRegistrar {
     typingInterval = setInterval(emitTyping, 4000);
 
     try {
-      const message = await builder(group.companyId);
+      const message = await builder(group.companyId, branchIds);
       await ctx.reply(message, {
         parse_mode: 'HTML',
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
@@ -153,7 +171,7 @@ export class TelegramAdminBotRegistrar {
         `Stats command failed for chat ${ctx.chat?.id}: ${err?.message}`,
         err?.stack,
       );
-      await ctx.reply('Statistika yuklashda xatolik. Qaytadan urinib ko\'ring.');
+      await ctx.reply("Statistika yuklashda xatolik. Qaytadan urinib ko'ring.");
     } finally {
       if (typingInterval) clearInterval(typingInterval);
     }
@@ -277,7 +295,10 @@ export class TelegramAdminBotRegistrar {
    * The chat itself is the ACL — no ERP role check needed.
    */
   private async handleUnlink(ctx: Context): Promise<void> {
-    if (!ctx.chat || (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup')) {
+    if (
+      !ctx.chat ||
+      (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup')
+    ) {
       await ctx.reply(MSG_NOT_GROUP_CHAT);
       return;
     }
@@ -302,7 +323,9 @@ export class TelegramAdminBotRegistrar {
       return;
     }
     await this.groupsService.unlinkFromGroup(group.id);
-    await ctx.reply('✅ Bot guruhdan uzildi. Qayta ulash uchun botni guruhga qaytadan qo\'shing.');
+    await ctx.reply(
+      "✅ Bot guruhdan uzildi. Qayta ulash uchun botni guruhga qaytadan qo'shing.",
+    );
   }
 
   /**
@@ -311,12 +334,19 @@ export class TelegramAdminBotRegistrar {
    * with MSG_NOT_APPROVED if null.
    */
   async resolveApprovedGroup(ctx: Context) {
-    if (!ctx.chat || (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup')) {
+    if (
+      !ctx.chat ||
+      (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup')
+    ) {
       await ctx.reply(MSG_NOT_GROUP_CHAT);
       return null;
     }
     const group = await this.groupsService.findByChatId(BigInt(ctx.chat.id));
-    if (!group || group.status !== TelegramGroupStatus.APPROVED || !group.isActive) {
+    if (
+      !group ||
+      group.status !== TelegramGroupStatus.APPROVED ||
+      !group.isActive
+    ) {
       await ctx.reply(MSG_NOT_APPROVED);
       return null;
     }

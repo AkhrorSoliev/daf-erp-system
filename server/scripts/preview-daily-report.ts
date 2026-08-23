@@ -20,6 +20,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { ReportsModule } from '../src/reports/reports.module';
 import { SalaryModule } from '../src/salary/salary.module';
 import { TelegramGroupDailyReportService } from '../src/telegram-groups/telegram-group-daily-report.service';
+import { reportBranchIdsForGroup } from '../src/telegram-groups/group-report-scope';
 
 @Module({
   imports: [
@@ -46,10 +47,32 @@ class PreviewModule {}
   const prisma = app.get(PrismaService);
   const svc = app.get(TelegramGroupDailyReportService);
 
-  const companies = await prisma.company.findMany({ select: { id: true, name: true } });
-  for (const c of companies) {
-    const built = await svc.build(c.id);
-    console.log(`\n${'='.repeat(64)}\n${c.name} (companyId=${c.id})\n${'='.repeat(64)}\n`);
+  // Preview per APPROVED GROUP, not per company: the report is scoped to the
+  // branches each group declared, so "the company's report" is no longer a
+  // single thing. Printing one per group is what the cron actually sends.
+  const groups = await prisma.telegramGroup.findMany({
+    where: {
+      status: 'APPROVED',
+      isActive: true,
+      deletedAt: null,
+      companyId: { not: null },
+    },
+    select: {
+      id: true,
+      companyId: true,
+      branchId: true,
+      receivesAllBranches: true,
+      title: true,
+    },
+  });
+  for (const g of groups) {
+    if (!g.companyId) continue;
+    const branchIds = reportBranchIdsForGroup(g);
+    const built = await svc.build(g.companyId, branchIds);
+    const scope = branchIds ? `filial ${branchIds.join(',')}` : 'barcha filiallar';
+    console.log(
+      `\n${'='.repeat(64)}\n${g.title ?? g.id} (companyId=${g.companyId}, ${scope})\n${'='.repeat(64)}\n`,
+    );
     // Strip the HTML the bot sends so the terminal shows what a reader sees.
     console.log(
       built.message

@@ -9,9 +9,11 @@
  *   - drops some students within the 5-lesson window after those events
  *     so the retention metric shows non-zero numbers
  *
- * Idempotent: re-running only tops up what's missing. Seeded students are
- * tagged with `comment = 'SEED:departed-report'` and are the only ones this
- * script ever mutates.
+ * Idempotent: re-running only tops up what's missing. Everything this script
+ * writes carries the `SEED:departed-report` tag — students in `comment`,
+ * teacher-change events in `changeReason` — and tagged rows are the only ones
+ * it ever mutates. That is what makes `cleanup-seed-departed.ts` able to undo
+ * exactly this script's work and nothing else.
  *
  * Run:  npx ts-node scripts/seed-departed-students-report.ts
  */
@@ -180,9 +182,12 @@ async function ensureTransferReasons() {
 async function backfillTeacherChangeReasons(
   reasons: { id: string; name: string }[],
 ) {
-  // Fill changeReasonId on ~70% of existing GroupTeacherHistory rows with no reason.
+  // Fill changeReasonId on ~70% of the rows THIS SCRIPT created. Scoped to
+  // SEED_MARKER because the unscoped version mutated real teacher-change
+  // history — rows the cleanup script then had no way to tell apart, which is
+  // how it ended up deleting the whole table.
   const unset = await prisma.groupTeacherHistory.findMany({
-    where: { changeReasonId: null },
+    where: { changeReasonId: null, changeReason: SEED_MARKER },
     select: { id: true, triggeredByDismissal: true },
   });
   if (unset.length === 0 || reasons.length === 0) {
@@ -366,7 +371,12 @@ async function seedTeacherChangeHistory(
     branchId: number;
   }[],
 ) {
-  const existing = await prisma.groupTeacherHistory.count();
+  // Count only this script's own rows. Counting every row meant a database
+  // that already had 8+ real teacher changes made the seed a no-op — and the
+  // report it exists to populate stayed empty.
+  const existing = await prisma.groupTeacherHistory.count({
+    where: { changeReason: SEED_MARKER },
+  });
   const target = 8;
   if (existing >= target) {
     console.log(`✓ GroupTeacherHistory: ${existing} events already present — skipping`);
@@ -413,6 +423,11 @@ async function seedTeacherChangeHistory(
         newTeacherIds: [newTeacherId],
         changeType: 'REPLACED',
         triggeredByDismissal,
+        // The tag that makes this row removable. `GroupTeacherHistory` has no
+        // studentId, so it cannot be reached through the seeded students —
+        // without a marker of its own the cleanup could only delete
+        // everything, which is exactly what it used to do.
+        changeReason: SEED_MARKER,
         createdAt: changeDate,
       },
     });
