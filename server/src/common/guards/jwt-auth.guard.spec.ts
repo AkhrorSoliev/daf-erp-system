@@ -1,5 +1,8 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
+import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../redis/redis.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 /**
@@ -13,13 +16,25 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;
   let reflector: Reflector;
-  let redis: { get: jest.Mock };
+  let redis: { get: jest.Mock; del: jest.Mock };
+  let prisma: { user: { findUnique: jest.Mock } };
   let parentCanActivate: jest.SpyInstance;
 
   beforeEach(() => {
     reflector = new Reflector();
-    redis = { get: jest.fn().mockResolvedValue(null) };
-    guard = new JwtAuthGuard(reflector, redis as never);
+    redis = {
+      get: jest.fn().mockResolvedValue(null),
+      del: jest.fn().mockResolvedValue(1),
+    };
+    prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          status: 'TERMINATED',
+          deletedAt: null,
+        }),
+      },
+    };
+    guard = new JwtAuthGuard(reflector, redis as never, prisma as never);
 
     // `JwtAuthGuard extends AuthGuard('jwt')` — stub the passport half so these
     // tests are about the blocked-user branch and nothing else.
@@ -87,5 +102,99 @@ describe('JwtAuthGuard', () => {
       guard.canActivate(mockContext(false, undefined)),
     ).resolves.toBe(true);
     expect(redis.get).not.toHaveBeenCalled();
+  });
+
+  // Making a dead check live also made Redis load-bearing on every request.
+  // These two cover the failure modes that created.
+  describe('Redis is a cache, not the authority', () => {
+    it('lets the request through when Redis is unreachable', async () => {
+      // `RedisService extends Redis`, so an outage REJECTS rather than
+      // returning null. Denying here would 500 every request in the system.
+      redis.get.mockRejectedValue(
+        new Error('ENOTFOUND redis.railway.internal'),
+      );
+
+      await expect(
+        guard.canActivate(mockContext(false, jwtStrategyUser)),
+      ).resolves.toBe(true);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('does not lock out a user the database says is ACTIVE, and clears the stale key', async () => {
+      // Only TeachersService maintains these keys; re-activating the same
+      // person through UsersService leaves one behind. Before the database
+      // confirmation that key was a permanent lockout.
+      redis.get.mockResolvedValue('1');
+      prisma.user.findUnique.mockResolvedValue({
+        status: 'ACTIVE',
+        deletedAt: null,
+      });
+
+      await expect(
+        guard.canActivate(mockContext(false, jwtStrategyUser)),
+      ).resolves.toBe(true);
+      expect(redis.del).toHaveBeenCalledWith('user:blocked:10505');
+    });
+
+    it('still rejects when the database agrees the account is blocked', async () => {
+      redis.get.mockResolvedValue('1');
+      prisma.user.findUnique.mockResolvedValue({
+        status: 'TERMINATED',
+        deletedAt: null,
+      });
+
+      await expect(
+        guard.canActivate(mockContext(false, jwtStrategyUser)),
+      ).rejects.toThrow('Hisobingiz bloklangan');
+      expect(redis.del).not.toHaveBeenCalled();
+    });
+
+    it('rejects a soft-deleted account even if its status still reads ACTIVE', async () => {
+      redis.get.mockResolvedValue('1');
+      prisma.user.findUnique.mockResolvedValue({
+        status: 'ACTIVE',
+        deletedAt: new Date('2026-05-16'),
+      });
+
+      await expect(
+        guard.canActivate(mockContext(false, jwtStrategyUser)),
+      ).rejects.toThrow('Hisobingiz bloklangan');
+    });
+
+    it('rejects when the user row is gone entirely', async () => {
+      redis.get.mockResolvedValue('1');
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        guard.canActivate(mockContext(false, jwtStrategyUser)),
+      ).rejects.toThrow('Hisobingiz bloklangan');
+    });
+
+    it('costs no database query on the common path', async () => {
+      redis.get.mockResolvedValue(null);
+
+      await guard.canActivate(mockContext(false, jwtStrategyUser));
+
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
+  // The guard is registered as an APP_GUARD with `useClass`, so Nest — not a
+  // test — constructs it. Every unit test above passes its dependencies by
+  // hand and would keep passing if a constructor parameter became
+  // unresolvable, which would instead crash the app at boot.
+  it('is constructible through dependency injection', async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        JwtAuthGuard,
+        { provide: RedisService, useValue: { get: jest.fn(), del: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { user: { findUnique: jest.fn() } },
+        },
+      ],
+    }).compile();
+
+    expect(module.get(JwtAuthGuard)).toBeInstanceOf(JwtAuthGuard);
   });
 });
