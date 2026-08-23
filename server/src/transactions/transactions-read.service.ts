@@ -832,8 +832,13 @@ export class TransactionsReadService {
   async findDebtWriteOffs(
     companyId: number,
     options: {
-      branchId?: number;
-      branchIds?: number[];
+      /**
+       * The caller's resolved scope. `null` is a CEO — every branch; `[]` is a
+       * caller entitled to none, and must return nothing. It used to be
+       * `number[] | undefined` applied behind a `length > 0` check, so `[]`
+       * silently removed the predicate and showed every branch instead.
+       */
+      branchIds?: ReportBranchIds;
       from?: string;
       to?: string;
       performedById?: number;
@@ -849,11 +854,7 @@ export class TransactionsReadService {
       companyId,
       type: TransactionType.DEBT_WRITE_OFF,
       ...(options.includeReversed ? {} : { reversedAt: null }),
-      ...(options.branchId && { branchId: options.branchId }),
-      ...(options.branchIds &&
-        options.branchIds.length > 0 && {
-          branchId: { in: options.branchIds },
-        }),
+      ...branchIdWhere(options.branchIds),
       ...(options.performedById && { performedById: options.performedById }),
       ...(options.from &&
         options.to && {

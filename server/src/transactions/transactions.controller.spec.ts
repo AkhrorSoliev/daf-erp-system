@@ -16,9 +16,22 @@ describe('TransactionsController — debt write-off audit guards', () => {
     findDebtWriteOffs: jest.fn().mockResolvedValue({ data: [] }),
     createAdjustment: jest.fn(),
   } as any;
+  // `resolveCallerReportBranchIds` reads the caller row — roles, `mainBranch`
+  // and the `UserBranch` join — not `userBranch` directly. The local resolver
+  // this replaced queried `userBranch` alone, which is how `mainBranch` was
+  // being missed.
   const mockPrisma = {
-    userBranch: { findMany: jest.fn().mockResolvedValue([]) },
+    user: { findFirst: jest.fn() },
   } as any;
+  const caller = (
+    roles: string[],
+    branches: number[] = [],
+    mainBranch: number | null = null,
+  ) => ({
+    mainBranch,
+    branches: branches.map((branchId) => ({ branchId })),
+    roles: roles.map((name) => ({ role: { name } })),
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -98,30 +111,83 @@ describe('TransactionsController — debt write-off audit guards', () => {
     });
   });
 
-  describe('branch scope resolver (private)', () => {
-    it('CEO gets null (no branch filter)', async () => {
-      mockPrisma.userBranch.findMany.mockResolvedValue([
-        { branchId: 99 }, // ignored for CEO
-      ]);
-      const result = await (controller as any).resolveBranchScopeForUser({
+  // The scope resolution used to be a private helper reading `UserBranch`
+  // raw. Two things followed: `mainBranch` was invisible, and a caller with no
+  // branch resolved to `[]`, which met a `branchIds.length > 0` check in the
+  // read service and produced NO branch predicate — every branch, for someone
+  // entitled to none.
+  describe('branch scope', () => {
+    const user = { id: 2, companyId: 1001, roles: ['Branch Director'] };
+    const query = {} as never;
+
+    it('gives a CEO the whole company', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(caller(['CEO'], [99]));
+
+      await controller.findDebtWriteOffs(query, {
         id: 1,
+        companyId: 1001,
         roles: ['CEO'],
       });
-      expect(result).toBeNull();
-      expect(mockPrisma.userBranch.findMany).not.toHaveBeenCalled();
+
+      expect(mockTransactionsService.findDebtWriteOffs).toHaveBeenCalledWith(
+        1001,
+        expect.objectContaining({ branchIds: null }),
+      );
     });
 
-    it('Branch Director gets their UserBranch rows', async () => {
-      mockPrisma.userBranch.findMany.mockReset();
-      mockPrisma.userBranch.findMany.mockResolvedValue([
-        { branchId: 3 },
-        { branchId: 7 },
-      ]);
-      const result = await (controller as any).resolveBranchScopeForUser({
-        id: 2,
-        roles: ['Branch Director'],
-      });
-      expect(result).toEqual([3, 7]);
+    it('counts mainBranch, not just the UserBranch rows', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(
+        caller(['Branch Director'], [], 3),
+      );
+
+      await controller.findDebtWriteOffs(query, user);
+
+      expect(mockTransactionsService.findDebtWriteOffs).toHaveBeenCalledWith(
+        1001,
+        expect.objectContaining({ branchIds: [3] }),
+      );
+    });
+
+    it('merges mainBranch with the join rows without duplicating', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(
+        caller(['Branch Director'], [3, 7], 3),
+      );
+
+      await controller.findDebtWriteOffs(query, user);
+
+      const arg = mockTransactionsService.findDebtWriteOffs.mock.calls.at(-1)[1];
+      expect([...arg.branchIds].sort()).toEqual([3, 7]);
+    });
+
+    it('refuses a caller entitled to no branch instead of showing every one', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(caller(['Administrator']));
+
+      await expect(controller.findDebtWriteOffs(query, user)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('refuses a branch the caller does not hold', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(
+        caller(['Branch Director'], [1]),
+      );
+
+      await expect(
+        controller.findDebtWriteOffs({ branchId: 2 } as never, user),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('narrows to a branch the caller does hold', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(
+        caller(['Branch Director'], [1, 2]),
+      );
+
+      await controller.findDebtWriteOffs({ branchId: 2 } as never, user);
+
+      expect(mockTransactionsService.findDebtWriteOffs).toHaveBeenCalledWith(
+        1001,
+        expect.objectContaining({ branchIds: [2] }),
+      );
     });
   });
 });

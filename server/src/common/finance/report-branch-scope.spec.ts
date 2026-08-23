@@ -66,6 +66,17 @@ describe('where fragments', () => {
     expect(branchIdWhere([2])).toEqual({ branchId: { in: [2] } });
   });
 
+  it('emit a FALSE predicate for an empty scope, never an absent one', () => {
+    // `{ in: [] }` matches no row — which is the whole point. Callers used to
+    // guard with `branchIds.length > 0` and skip the fragment instead, so a
+    // caller entitled to no branch was served every branch. `/transactions/
+    // debt-write-offs` shipped that way.
+    expect(branchIdWhere([])).toEqual({ branchId: { in: [] } });
+    expect(studentBranchWhere([])).toEqual({
+      branches: { some: { branchId: { in: [] } } },
+    });
+  });
+
   it('filter students through the StudentBranch join, like every student list', () => {
     expect(studentBranchWhere([2])).toEqual({
       branches: { some: { branchId: { in: [2] } } },
