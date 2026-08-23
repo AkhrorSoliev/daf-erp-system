@@ -30,9 +30,16 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const result = await (super.canActivate(context) as Promise<boolean>);
     if (!result) return false;
 
-    // Redis da bloklangan userni tekshirish
+    // Redis da bloklangan userni tekshirish.
+    //
+    // `id`, `sub` EMAS. Token'da da'vo `sub` deb ataladi, lekin passport
+    // `request.user` ni `JwtStrategy.validate` QAYTARGAN qiymatga o'rnatadi,
+    // u esa `{ id, roles, companyId, studentId? }` beradi. `sub` o'qilganda
+    // qiymat doim `undefined` bo'lib, quyidagi tekshiruv umuman ishlamas edi:
+    // SUSPENDED/TERMINATED qilingan xodim mavjud access token'i bilan uning
+    // muddati tugagunicha (1 soat) ishlashda davom etardi.
     const request = context.switchToHttp().getRequest();
-    const userId = request.user?.sub;
+    const userId = request.user?.id;
 
     if (userId) {
       const isBlocked = await this.redis.get(`user:blocked:${userId}`);
