@@ -1,5 +1,19 @@
 import { Context } from 'telegraf';
+import type { UserFromGetMe } from 'telegraf/types';
 import { createTeacherRegistrationScene } from './teacher-registration.scene';
+
+// Telegraf's Context requires the bot's own identity. These tests never read
+// it, but `undefined` is not what the constructor accepts and the cast that
+// hid that also hid any real mismatch.
+const BOT_INFO = {
+  id: 1,
+  is_bot: true,
+  first_name: 'test-bot',
+  username: 'test_bot',
+  can_join_groups: true,
+  can_read_all_group_messages: false,
+  supports_inline_queries: false,
+} as UserFromGetMe;
 
 /**
  * `confirm_registration` is the ONE place a Telegram-registered teacher
@@ -30,7 +44,7 @@ function buildConfirmCtx(sessionData: Record<string, any>) {
       chat_instance: 'x',
     },
   };
-  const ctx = new Context(update as any, {} as any, undefined) as any;
+  const ctx = new Context(update as any, {} as any, BOT_INFO) as any;
   ctx.session = { step: 6, data: sessionData, processing: false };
   ctx.scene = { leave: jest.fn().mockResolvedValue(undefined) };
   ctx.answerCbQuery = jest.fn().mockResolvedValue(undefined);

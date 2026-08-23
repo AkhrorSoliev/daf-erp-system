@@ -1,4 +1,5 @@
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
+import type { ReportsService } from '../reports/reports.service';
 
 function makeCtx(chatId = 111) {
   return {
@@ -68,11 +69,14 @@ function makeDeps(
       netProfit: 185_000_000,
     }),
   };
+  // `ReportsService` is deliberately absent: the financial card must degrade
+  // to the honestly-labelled cash line when the canonical net profit cannot be
+  // computed, and one of the tests below asserts exactly that.
   const service = new TelegramGroupReportMenuService(
     prisma,
     reportsExcel,
     reportsFinancial,
-    null,
+    null as unknown as ReportsService,
   );
   return { service, prisma, reportsExcel, reportsFinancial };
 }

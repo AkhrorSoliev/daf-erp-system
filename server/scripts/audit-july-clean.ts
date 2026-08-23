@@ -17,6 +17,13 @@
  * gap (markaz qo'shimchasi) sweepi `SalaryMonthlyService.getMonthly` bilan
  * bir xil: BR-09 gate + nofaol o'quvchi kepkasi + FIXED_MONTHLY istisnosi.
  */
+
+/**
+ * NOTE: `gap` was renamed `centerFunded` on the SalaryMonthly result. Every
+ * label here already read «markaz qo'shimchasi», and ADR-0006 defines
+ * `fullDeserved = covered + centerFunded`, so the column the script prints is
+ * the one it always meant. Until this rename the field read `undefined`.
+ */
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -193,7 +200,7 @@ async function main() {
     const bc = boundaryCovered.get(r.user.id) ?? 0;
     const bg = boundaryGap.get(r.user.id) ?? 0;
     const cov = (r.covered ?? 0) - bc;
-    const gap = (r.gap ?? 0) - bg;
+    const gap = (r.centerFunded ?? 0) - bg;
     const des = cov + gap;
     const net = Math.max(0, des - r.advances);
     if (r.fullDeserved == null && bc === 0 && bg === 0 && r.advances === 0) continue;

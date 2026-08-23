@@ -10,6 +10,13 @@
  *     accruallarni IYUNga qaytarish (siz ularni iyunda to'lagansiz) → covered 66,7M.
  *  2) iyun payment.amount ni siz bergan net summaga (to'lanadigan) yangilash → netToPay 50,4M.
  */
+
+/**
+ * NOTE: `gap` was renamed `centerFunded` on the SalaryMonthly result. Every
+ * label here already read «markaz qo'shimchasi», and ADR-0006 defines
+ * `fullDeserved = covered + centerFunded`, so the column the script prints is
+ * the one it always meant. Until this rename the field read `undefined`.
+ */
 import { PrismaClient } from '@prisma/client';
 import { som, dbEnvLabel, printHeader, section, run } from './lib/check-cli';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -107,7 +114,7 @@ async function main(prismaClient: PrismaClient) {
   const sm = await salaryMonthly.getMonthly({ month: '2026-06' }, COMPANY_ID, ceo!.id);
   section('TEKSHIRUV — getMonthly iyun (endi card/Excel/sahifa shuni ko\'rsatadi)');
   console.log(`  covered (O'quvchilar to'lagan) : ${som(sm.totals.covered)}   (kutilgan ~66 704 430)`);
-  console.log(`  gap (markaz qo'shimchasi)      : ${som(sm.totals.gap)}   (kutilgan 0 — pre-iyul)`);
+  console.log(`  gap (markaz qo'shimchasi)      : ${som(sm.totals.centerFunded)}   (kutilgan 0 — pre-iyul)`);
   console.log(`  fullDeserved                   : ${som(sm.totals.fullDeserved)}`);
   console.log(`  netToPay (to'lanadigan)        : ${som(sm.totals.netToPay)}   (kutilgan ~50 387 430)`);
   console.log(`  advances (avans)               : ${som(sm.totals.advances)}   (kutilgan 16 317 000)`);

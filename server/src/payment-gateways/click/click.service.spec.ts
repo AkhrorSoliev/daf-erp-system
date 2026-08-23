@@ -6,6 +6,10 @@ import { ClickMethodsService } from './click-methods.service';
 import { GatewayEventService } from '../gateway-event.service';
 import { GatewayConfigService } from '../gateway-config.service';
 import { CLICK_SIGN_CHECK_FAILED } from './click-errors';
+import type {
+  ClickCompleteRequest,
+  ClickPrepareRequest,
+} from './click.types';
 
 describe('ClickService', () => {
   let service: ClickService;
@@ -25,8 +29,15 @@ describe('ClickService', () => {
     return createHash('md5').update(parts.join('')).digest('hex');
   };
 
-  const makePrepareBody = (overrides: Record<string, unknown> = {}) => {
-    const base = {
+  // Typed against the real webhook contract rather than an inline literal.
+  // Untyped, the fixture could drift from `ClickPrepareRequest` — a field
+  // renamed or removed in the type would leave these tests green while the
+  // service stopped receiving it.
+  const makePrepareBody = (
+    overrides: Partial<ClickPrepareRequest> = {},
+  ): ClickPrepareRequest => {
+    const base: ClickPrepareRequest = {
+      sign_string: '',
       click_trans_id: 12345,
       service_id: 100,
       click_paydoc_id: 67890,
@@ -50,8 +61,11 @@ describe('ClickService', () => {
     return base;
   };
 
-  const makeCompleteBody = (overrides: Record<string, unknown> = {}) => {
-    const base = {
+  const makeCompleteBody = (
+    overrides: Partial<ClickCompleteRequest> = {},
+  ): ClickCompleteRequest => {
+    const base: ClickCompleteRequest = {
+      sign_string: '',
       click_trans_id: 12345,
       service_id: 100,
       click_paydoc_id: 67890,
@@ -146,8 +160,10 @@ describe('ClickService', () => {
     });
 
     it('should reject invalid signature', async () => {
-      const body = makePrepareBody({ sign_string: 'invalid-hash' });
-      // Override sign_string after makePrepareBody calculates it
+      // The builder always recomputes `sign_string`, so it has to be
+      // corrupted after the fact — passing it as an override would be
+      // silently overwritten.
+      const body = makePrepareBody();
       body.sign_string = 'invalid-hash';
       const result = await service.handleWebhook(body, COMPANY_ID);
       expect(result.error).toBe(CLICK_SIGN_CHECK_FAILED);

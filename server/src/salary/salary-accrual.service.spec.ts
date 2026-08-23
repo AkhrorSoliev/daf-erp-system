@@ -271,7 +271,9 @@ describe('SalaryAccrualService', () => {
         studentId: baseParams.studentId,
         groupId: baseParams.groupId,
         lessonDate: baseParams.lessonDate,
-        attendanceId: 'att-1',
+        // No `attendanceId` — the method locates the accrual by
+        // teacher+student+group+lessonDate and never took one. Passing it was
+        // inert, and it read as though the reversal were keyed on it.
         reversalReason: 'test',
       });
 
