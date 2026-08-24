@@ -137,7 +137,8 @@ export class ReportsPaymentsService {
     return branches
       .map((b, i) => {
         const income = pick(incomeByBranch, b.id);
-        const expense = pick(expenseByBranch, b.id) - pick(advanceByBranch, b.id);
+        const expense =
+          pick(expenseByBranch, b.id) - pick(advanceByBranch, b.id);
         const debt = Math.abs(debtByBranch[i]._sum.balance ?? 0);
         return {
           branchId: b.id,

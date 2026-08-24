@@ -72,9 +72,11 @@ describe('OutreachService', () => {
       // ctx the client shaped. Default caller is a CEO.
       user: {
         findUnique: jest.fn(),
-        findFirst: jest.fn().mockResolvedValue(
-          { mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] },
-        ),
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
       },
       attendance: { findMany: jest.fn(), count: jest.fn() },
       enrollment: { findMany: jest.fn() },

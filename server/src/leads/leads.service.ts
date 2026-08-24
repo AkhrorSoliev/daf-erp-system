@@ -250,28 +250,26 @@ export class LeadsService {
     // them — they're separate funnels — but matching by phone lets the
     // sales team see at a glance that a lead has converted interest into a
     // concrete mock signup.
-    const mockParticipations = await this.prisma.mockExamParticipant.findMany(
-      {
-        where: { phone: lead.phone, deletedAt: null },
-        orderBy: { registeredAt: 'desc' },
-        select: {
-          id: true,
-          publicId: true,
-          paid: true,
-          registeredAt: true,
-          totalScore: true,
-          exam: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              examDate: true,
-              section: { select: { name: true, color: true } },
-            },
+    const mockParticipations = await this.prisma.mockExamParticipant.findMany({
+      where: { phone: lead.phone, deletedAt: null },
+      orderBy: { registeredAt: 'desc' },
+      select: {
+        id: true,
+        publicId: true,
+        paid: true,
+        registeredAt: true,
+        totalScore: true,
+        exam: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            examDate: true,
+            section: { select: { name: true, color: true } },
           },
         },
       },
-    );
+    });
 
     // Phone-based duplicate guard for the detail drawer: if a live student
     // already has this exact phone, surface them so the admin opens/links the
@@ -375,11 +373,7 @@ export class LeadsService {
 
   // `userId` is nullable because public-form submissions create leads with no
   // authenticated user — the audit row records `changedBy = NULL` (system).
-  async create(
-    dto: CreateLeadDto,
-    companyId: number,
-    userId: number | null,
-  ) {
+  async create(dto: CreateLeadDto, companyId: number, userId: number | null) {
     const firstName = dto.firstName.trim();
     const lastName = dto.lastName.trim();
     if (!firstName || !lastName) {
@@ -557,7 +551,12 @@ export class LeadsService {
     scope: ReportBranchIds,
   ) {
     const lead = await this.prisma.lead.findFirst({
-      where: { id: leadId, deletedAt: null, companyId, ...leadBranchWhere(scope) },
+      where: {
+        id: leadId,
+        deletedAt: null,
+        companyId,
+        ...leadBranchWhere(scope),
+      },
       select: { id: true, sectionId: true, statusEnum: true, branchId: true },
     });
     if (!lead) {
@@ -796,7 +795,12 @@ export class LeadsService {
     scope: ReportBranchIds,
   ) {
     const lead = await this.prisma.lead.findFirst({
-      where: { id: leadId, deletedAt: null, companyId, ...leadBranchWhere(scope) },
+      where: {
+        id: leadId,
+        deletedAt: null,
+        companyId,
+        ...leadBranchWhere(scope),
+      },
       select: {
         id: true,
         firstName: true,

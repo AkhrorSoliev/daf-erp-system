@@ -28,7 +28,12 @@ export async function approveLoginRequest(
   if (!student) return { ok: false, reason: 'not_found' };
   if (!student.userId) return { ok: false, reason: 'no_account' };
 
-  await redis.set(requestKey(requestId), String(student.userId), 'EX', REQUEST_TTL_SEC);
+  await redis.set(
+    requestKey(requestId),
+    String(student.userId),
+    'EX',
+    REQUEST_TTL_SEC,
+  );
   return { ok: true, firstName: student.firstName };
 }
 

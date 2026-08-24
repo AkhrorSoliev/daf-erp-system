@@ -74,10 +74,13 @@ describe('TelegramChannelReportController', () => {
     });
 
     // Administrator ATAYLAB rad etiladi — /reports bo'limi ham unga yopiq.
-    it.each(['Administrator', 'Teacher', 'Cashier'])('%s ni rad etadi', (role) => {
-      const ctx = mockExecutionContext(controller.summary, [role]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
+    it.each(['Administrator', 'Teacher', 'Cashier'])(
+      '%s ni rad etadi',
+      (role) => {
+        const ctx = mockExecutionContext(controller.summary, [role]);
+        expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+      },
+    );
   });
 
   describe('summary', () => {
@@ -118,7 +121,7 @@ describe('TelegramChannelReportController', () => {
       expect(gateStats.getSummary).toHaveBeenCalledWith(undefined);
     });
 
-    it("kanal soni olinmasa ham xato bermaydi", async () => {
+    it('kanal soni olinmasa ham xato bermaydi', async () => {
       telegram.getChannelMemberCount.mockResolvedValueOnce(null);
       const res = await controller.summary();
       expect(res.channelMembers).toBeNull();

@@ -72,7 +72,9 @@ describe('Mock exam fees never touch a lesson balance', () => {
           }
           if (!entry.endsWith('.ts') || entry.endsWith('.spec.ts')) continue;
           const code = stripComments(readFileSync(full, 'utf8'));
-          if (/tryDeductForStudent|mockExamBilling\s*\.\s*\w*[Dd]educt/.test(code)) {
+          if (
+            /tryDeductForStudent|mockExamBilling\s*\.\s*\w*[Dd]educt/.test(code)
+          ) {
             offenders.push(full);
           }
         }
@@ -97,7 +99,13 @@ describe('Mock exam fees never touch a lesson balance', () => {
       // The scene used to deduct BEFORE building the payment menu, so a student
       // with funds never saw the "Naqd (markazda)" button at all.
       const src = readFileSync(
-        join(__dirname, '..', 'telegram', 'scenes', 'mock-exam-registration.scene.ts'),
+        join(
+          __dirname,
+          '..',
+          'telegram',
+          'scenes',
+          'mock-exam-registration.scene.ts',
+        ),
         'utf8',
       );
       expect(src).not.toMatch(/mockExamBilling/);

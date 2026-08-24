@@ -46,7 +46,12 @@ export class OutreachController {
     @CurrentUser('roles') roles: string[],
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.outreach.getRemovalQueue({ userId, companyId, roles, branchScope });
+    return this.outreach.getRemovalQueue({
+      userId,
+      companyId,
+      roles,
+      branchScope,
+    });
   }
 
   @Get('promises')
@@ -56,6 +61,11 @@ export class OutreachController {
     @CurrentUser('roles') roles: string[],
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.outreach.getActivePromises({ userId, companyId, roles, branchScope });
+    return this.outreach.getActivePromises({
+      userId,
+      companyId,
+      roles,
+      branchScope,
+    });
   }
 }

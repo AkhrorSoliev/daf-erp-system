@@ -65,9 +65,9 @@ describe('MockExamSectionsService', () => {
 
   describe('create', () => {
     it('rejects an empty name', async () => {
-      await expect(
-        service.create({ name: '  ' }, 1001, 1),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create({ name: '  ' }, 1001, 1)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('appends to the end and records history', async () => {
@@ -110,9 +110,9 @@ describe('MockExamSectionsService', () => {
   describe('update', () => {
     it('throws NotFound for a missing section', async () => {
       prisma.mockExamSection.findFirst.mockResolvedValue(null);
-      await expect(
-        service.update('x', { name: 'Y' }, 1001, 1),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update('x', { name: 'Y' }, 1001, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('rejects when no fields provided', async () => {
@@ -183,9 +183,9 @@ describe('MockExamSectionsService', () => {
   describe('reorder', () => {
     it('rejects an unknown section id', async () => {
       prisma.mockExamSection.findMany.mockResolvedValue([{ id: 's1' }]);
-      await expect(
-        service.reorder({ sectionIds: ['other'] }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.reorder({ sectionIds: ['other'] })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('rejects when not all sections are provided', async () => {
@@ -193,9 +193,9 @@ describe('MockExamSectionsService', () => {
         { id: 's1' },
         { id: 's2' },
       ]);
-      await expect(
-        service.reorder({ sectionIds: ['s1'] }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.reorder({ sectionIds: ['s1'] })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('renumbers the sections inside a transaction', async () => {

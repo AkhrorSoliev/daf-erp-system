@@ -8,7 +8,7 @@ on:
 
 jobs:
   server:
-    name: Server (typecheck + build + test)
+    name: Server (typecheck + lint + build + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,10 +38,17 @@ jobs:
       # `prisma generate`, and without it `@prisma/client` has no types for
       # this step to check against. There is no postinstall hook.
       - run: npm run typecheck
+      # ESLint gates on ERRORS only; warnings are reported and do not fail the
+      # build. That split is deliberate: the `no-unsafe-*` family fires on
+      # every Prisma JSON field and raw query in this codebase — thousands of
+      # them, none a defect — so gating on warnings would mean turning the
+      # rules off, and turning them off is how you stop seeing the one that
+      # matters. Errors are the set that has been triaged to zero.
+      - run: npx eslint src
       - run: npm test
 
   client:
-    name: Client (typecheck + build)
+    name: Client (typecheck + lint + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -55,4 +62,5 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      - run: npx eslint src
       - run: npm run build

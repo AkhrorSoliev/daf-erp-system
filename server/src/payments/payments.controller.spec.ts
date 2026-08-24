@@ -61,9 +61,7 @@ describe('PaymentsController — role guards', () => {
     });
 
     it('should allow Branch Director to correct', () => {
-      const ctx = mockExecutionContext(controller.correct, [
-        'Branch Director',
-      ]);
+      const ctx = mockExecutionContext(controller.correct, ['Branch Director']);
       expect(guard.canActivate(ctx)).toBe(true);
     });
 
@@ -98,7 +96,13 @@ describe('PaymentsController — role guards', () => {
   describe('debtors list + summary', () => {
     it('delegates getDebtors with branch scope (userId + roles)', () => {
       controller.getDebtors(
-        { branchId: 5, page: 2, pageSize: 20, search: 'ali', sortBy: 'balance' } as any,
+        {
+          branchId: 5,
+          page: 2,
+          pageSize: 20,
+          search: 'ali',
+          sortBy: 'balance',
+        } as any,
         99,
         1001,
         ['Branch Director'],

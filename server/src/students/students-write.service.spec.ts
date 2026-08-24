@@ -35,7 +35,9 @@ describe('StudentsWriteService — branch validation', () => {
       // The caller is now checked against the student's branch
       // (`assertCallerMayTouchStudent`) — editing or expelling
       // another branch's student was open. A CEO spans all.
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
       user: {
         findFirst: jest.fn().mockResolvedValue({
           mainBranch: null,
@@ -57,7 +59,10 @@ describe('StudentsWriteService — branch validation', () => {
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: StatusHistoryService, useValue: {} },
         { provide: StatusCascadeService, useValue: {} },
-        { provide: EntityHistoryService, useValue: { recordCreate: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordCreate: jest.fn() },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: TransactionsService, useValue: {} },
       ],
@@ -103,12 +108,13 @@ describe('StudentsWriteService — branch validation', () => {
 
     // The write itself needs far more of Prisma than this unit test mocks;
     // what matters here is that validation passed and the write was reached.
-    await service.create({ ...baseDto, branchIds: [1] }, COMPANY).catch(() => undefined);
+    await service
+      .create({ ...baseDto, branchIds: [1] }, COMPANY)
+      .catch(() => undefined);
 
     expect(prisma.$transaction).toHaveBeenCalled();
   });
 });
-
 
 // F-01 regression: changing a student's discount writes a single signed
 // DISCOUNT_ADJUSTMENT for the delta. LESSON_DEDUCTION rows store `amount`

@@ -128,7 +128,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
-      'Keyed on `@CurrentUser(\'id\')`. There is no branch question: the caller is ' +
+      "Keyed on `@CurrentUser('id')`. There is no branch question: the caller is " +
       'the subject. `resolveMonthlyScope` additionally skips branch confinement ' +
       'for a self lookup, so an id-exact request for your own row cannot come ' +
       'back empty because your `UserBranch` rows disagree with `mainBranch`.',
@@ -171,14 +171,11 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'Telegram group administration. The group row carries the branch whose ' +
       'operational events it receives, so `assertCallerInBranch` is checked ' +
       'against that record — in BOTH directions on a change, because pointing a ' +
-      'group away from a branch redirects that branch\'s payment and attendance ' +
+      "group away from a branch redirects that branch's payment and attendance " +
       'traffic just as much as pointing one at it. The `receivesAllBranches` ' +
       'flag is CEO-only for the same reason: granting it hands a chat every ' +
-      'branch\'s money traffic.',
-    routes: [
-      'POST /telegram-groups/:id/approve',
-      'PATCH /telegram-groups/:id',
-    ],
+      "branch's money traffic.",
+    routes: ['POST /telegram-groups/:id/approve', 'PATCH /telegram-groups/:id'],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -190,7 +187,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'the new one, because moving an expense between branches changes whose ' +
       'P&L carries it. `POST /cash-accounts` was the one gap: it verified the ' +
       'branch belonged to the company but never that the CALLER could act on ' +
-      'it, so a director could open an account inside another branch\'s books.',
+      "it, so a director could open an account inside another branch's books.",
     routes: [
       'GET /cash-accounts/:id/movements',
       'POST /cash-accounts',
@@ -228,12 +225,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'Lessons — attendance and the three modules that manipulate the same ' +
       'lessons. All four resolve through `assertCallerMayTouchGroup`: a PURE ' +
       'teacher by group assignment (the stronger test — being in the branch ' +
-      'does not entitle you to another teacher\'s register), everyone else by ' +
-      'the group\'s branch. Attendance alone had this rule, privately, so ' +
+      "does not entitle you to another teacher's register), everyone else by " +
+      "the group's branch. Attendance alone had this rule, privately, so " +
       'cancellations, reschedules and planned absences each shipped checking ' +
       '`companyId` and stopping. Cancelling was the worst of them: it flips ' +
       'attendance to EXCUSED, reverses the LESSON_CONSUMPTION, restores prepaid ' +
-      'lessons and reverses the teacher\'s SalaryAccrual — real money in a ' +
+      "lessons and reverses the teacher's SalaryAccrual — real money in a " +
       'branch the caller cannot even view.',
     routes: [
       'GET /attendance/:groupId/calendar',
@@ -259,15 +256,15 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'Id-addressed student and group writes. Each resolves the record\'s own ' +
+      "Id-addressed student and group writes. Each resolves the record's own " +
       'branch and checks the caller against it — `assertCallerMayTouchStudent` ' +
       'and `assertCallerMayTouchGroup`. They were `companyId`-only, and two of ' +
       'them carry a branch in the BODY: `PATCH /students/:id` accepts ' +
-      '`branchIds`, so a director could edit another branch\'s student and move ' +
+      "`branchIds`, so a director could edit another branch's student and move " +
       'them into their own, and `POST /groups` names the branch a group is ' +
       'fixed to for life. The status changes cascade — a student going EXPELLED ' +
       'closes their enrolments, a group going CANCELLED closes every enrolment ' +
-      'in it — so they reach another branch\'s roster and payroll.',
+      "in it — so they reach another branch's roster and payroll.",
     routes: [
       'POST /students',
       'PATCH /students/:id',
@@ -282,21 +279,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'The rest of the student and group surface: the profile READS, the '
-      + 'enrollment operations, and the roster. The list endpoints were scoped '
-      + 'and everything they linked to was not, so a director who typed another '
-      + 'branch\'s student id into the URL read the balance, the ledger summary, '
-      + 'the lesson history and the SMS log in full. Three of the enrollment '
-      + 'routes are addressed by an ENROLLMENT id and have always ignored the '
-      + '`:id` in the path, so each guards the enrollment\'s OWN student — '
-      + 'guarding the path parameter would let a caller pair one of their own '
-      + 'student ids with another branch\'s enrollment and pass. '
-      + '`write-off-cycle-debt` writes a DEBT_WRITE_OFF ledger row: money the '
-      + 'earlier `/payments`-`/refunds`-`/transactions` sweep never reached, '
-      + 'because it lives under `/students`. `GET /groups/:id/students` returns '
-      + 'phone and balance for the whole roster and its @Roles includes Teacher, '
-      + 'so it goes through `assertCallerMayTouchGroup` — assignment for a pure '
-      + 'teacher, branch for everyone else.',
+      'The rest of the student and group surface: the profile READS, the ' +
+      'enrollment operations, and the roster. The list endpoints were scoped ' +
+      'and everything they linked to was not, so a director who typed another ' +
+      "branch's student id into the URL read the balance, the ledger summary, " +
+      'the lesson history and the SMS log in full. Three of the enrollment ' +
+      'routes are addressed by an ENROLLMENT id and have always ignored the ' +
+      "`:id` in the path, so each guards the enrollment's OWN student — " +
+      'guarding the path parameter would let a caller pair one of their own ' +
+      "student ids with another branch's enrollment and pass. " +
+      '`write-off-cycle-debt` writes a DEBT_WRITE_OFF ledger row: money the ' +
+      'earlier `/payments`-`/refunds`-`/transactions` sweep never reached, ' +
+      'because it lives under `/students`. `GET /groups/:id/students` returns ' +
+      'phone and balance for the whole roster and its @Roles includes Teacher, ' +
+      'so it goes through `assertCallerMayTouchGroup` — assignment for a pure ' +
+      'teacher, branch for everyone else.',
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',
@@ -318,33 +315,29 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'Comments, gated by the record they hang off. `entityType` was a free '
-      + 'string and NOTHING checked the entity — not that it existed, not the '
-      + 'company, not the branch — so `?entityType=Student&entityId=<any id>` '
-      + 'returned every note staff had written about that student. Production '
-      + 'carries 748: Student 487, Lead 232, Group 29. '
-      + '`assertCallerMayTouchCommentEntity` delegates to each record\'s own '
-      + 'guard rather than inventing a fifth branch rule, and the DTO now '
-      + 'validates against a closed four-type list so an unknown type fails '
-      + 'instead of creating a thread nobody can scope. Lead is the one '
-      + 'exception and it is deliberate: `branchId` null means the shared '
-      + 'unassigned pool, matching `leadBranchWhere`, because a new enquiry '
-      + 'must be commentable before anyone knows which branch will teach them.',
-    routes: [
-      'POST /comments',
-      'GET /comments',
-      'GET /comments/latest',
-    ],
+      'Comments, gated by the record they hang off. `entityType` was a free ' +
+      'string and NOTHING checked the entity — not that it existed, not the ' +
+      'company, not the branch — so `?entityType=Student&entityId=<any id>` ' +
+      'returned every note staff had written about that student. Production ' +
+      'carries 748: Student 487, Lead 232, Group 29. ' +
+      "`assertCallerMayTouchCommentEntity` delegates to each record's own " +
+      'guard rather than inventing a fifth branch rule, and the DTO now ' +
+      'validates against a closed four-type list so an unknown type fails ' +
+      'instead of creating a thread nobody can scope. Lead is the one ' +
+      'exception and it is deliberate: `branchId` null means the shared ' +
+      'unassigned pool, matching `leadBranchWhere`, because a new enquiry ' +
+      'must be commentable before anyone knows which branch will teach them.',
+    routes: ['POST /comments', 'GET /comments', 'GET /comments/latest'],
   },
   {
     policy: 'SELF',
     reason:
-      'Own tasks, own authorship. `my-tasks` and `assignee-status` are keyed '
-      + 'on the caller\'s own `CommentAssignee` row; `created-tasks` on '
-      + '`authorId`. `PATCH` and `DELETE /comments/:id` are author-or-CEO, '
-      + 'which is STRICTER than branch — a director cannot edit a colleague\'s '
-      + 'note even inside their own branch — so a branch check would add '
-      + 'nothing.',
+      'Own tasks, own authorship. `my-tasks` and `assignee-status` are keyed ' +
+      "on the caller's own `CommentAssignee` row; `created-tasks` on " +
+      '`authorId`. `PATCH` and `DELETE /comments/:id` are author-or-CEO, ' +
+      "which is STRICTER than branch — a director cannot edit a colleague's " +
+      'note even inside their own branch — so a branch check would add ' +
+      'nothing.',
     routes: [
       'GET /comments/my-tasks',
       'GET /comments/created-tasks',
@@ -356,19 +349,19 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'Teachers, and one call-log write. A teacher IS a `User`, and '
-      + '`PATCH /users/:id` has been branch-confined since the object-level '
-      + 'sweep — but `/teachers/:id` edits the SAME rows and was never touched. '
-      + 'It accepts `password` and `login`, so a Branch Director of one branch '
-      + 'could set the password of the other branch\'s teacher and sign in as '
-      + 'them. Production has 15 teachers, 10 in Fargona and 5 in Namangan: two '
-      + 'doors to one record, one of them locked. They share '
-      + '`assertCallerMayTouchUser` rather than a second copy of the rule, and '
-      + 'each guard sits AFTER its method\'s own existence check so a stale id '
-      + 'still answers 404. `POST /call-logs` attributed the row to the '
-      + 'student\'s branch but never asked whether the caller could act on that '
-      + 'student — and a WILL_PAY outcome opens a `PaymentPromise` that lands '
-      + 'in another branch\'s debtors workflow.',
+      'Teachers, and one call-log write. A teacher IS a `User`, and ' +
+      '`PATCH /users/:id` has been branch-confined since the object-level ' +
+      'sweep — but `/teachers/:id` edits the SAME rows and was never touched. ' +
+      'It accepts `password` and `login`, so a Branch Director of one branch ' +
+      "could set the password of the other branch's teacher and sign in as " +
+      'them. Production has 15 teachers, 10 in Fargona and 5 in Namangan: two ' +
+      'doors to one record, one of them locked. They share ' +
+      '`assertCallerMayTouchUser` rather than a second copy of the rule, and ' +
+      "each guard sits AFTER its method's own existence check so a stale id " +
+      'still answers 404. `POST /call-logs` attributed the row to the ' +
+      "student's branch but never asked whether the caller could act on that " +
+      'student — and a WILL_PAY outcome opens a `PaymentPromise` that lands ' +
+      "in another branch's debtors workflow.",
     routes: [
       'POST /teachers',
       'PATCH /teachers/:id',
@@ -383,21 +376,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'The audit log, employee writes, and the branch record itself. '
-      + '`GET /entity-history/:entityType/:entityId` took both parameters off '
-      + 'the URL and checked only `companyId` — 17 727 rows across 23 types in '
-      + 'production, each carrying the before-and-after of every changed field, '
-      + 'and `Student` alone is 9 031 of them. It is a VIEW of records, so it '
-      + 'delegates to each record\'s own guard; the five types with no branch '
-      + 'dimension are NAMED, because "I cannot scope this" and "this has no '
-      + 'branch" must not answer alike. `POST /users` already validated that '
-      + 'the branches were real, which is the `assertSingleValidBranch` trap '
-      + 'again — creating a user IS granting access, so a Fargona director '
-      + 'could mint a Branch Director OF NAMANGAN with a password of their '
-      + 'choosing. `DELETE /users/:id` archived across branches while '
-      + '`PATCH /users/:id` beside it was locked. Branches were already '
-      + 'confined by `assertCallerMayTouchBranch`; they are listed so the next '
-      + 'reader does not have to re-derive that.',
+      'The audit log, employee writes, and the branch record itself. ' +
+      '`GET /entity-history/:entityType/:entityId` took both parameters off ' +
+      'the URL and checked only `companyId` — 17 727 rows across 23 types in ' +
+      'production, each carrying the before-and-after of every changed field, ' +
+      'and `Student` alone is 9 031 of them. It is a VIEW of records, so it ' +
+      "delegates to each record's own guard; the five types with no branch " +
+      'dimension are NAMED, because "I cannot scope this" and "this has no ' +
+      'branch" must not answer alike. `POST /users` already validated that ' +
+      'the branches were real, which is the `assertSingleValidBranch` trap ' +
+      'again — creating a user IS granting access, so a Fargona director ' +
+      'could mint a Branch Director OF NAMANGAN with a password of their ' +
+      'choosing. `DELETE /users/:id` archived across branches while ' +
+      '`PATCH /users/:id` beside it was locked. Branches were already ' +
+      'confined by `assertCallerMayTouchBranch`; they are listed so the next ' +
+      'reader does not have to re-derive that.',
     routes: [
       'GET /entity-history/:entityType/:entityId',
       'POST /users',
@@ -412,19 +405,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
-      'The caller acting on their own account. Both take the id from '
-      + '`@CurrentUser(\'id\')` and never from the request, so there is no '
-      + 'other account they could reach and a branch check would gate nothing.',
-    routes: [
-      'PATCH /users/password',
-      'PATCH /users/profile',
-    ],
+      'The caller acting on their own account. Both take the id from ' +
+      "`@CurrentUser('id')` and never from the request, so there is no " +
+      'other account they could reach and a branch check would gate nothing.',
+    routes: ['PATCH /users/password', 'PATCH /users/profile'],
   },
   {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
-      'Confined by `resolvePayrollBranchScope(performedById)` — the payee\'s ' +
-      'branch, not the viewer\'s selection. Fails CLOSED: a caller who is branch- ' +
+      "Confined by `resolvePayrollBranchScope(performedById)` — the payee's " +
+      "branch, not the viewer's selection. Fails CLOSED: a caller who is branch- " +
       'confined but has no branch attached sees and pays NOTHING. Two production ' +
       'Administrators were in exactly that state, and the old code collapsed it ' +
       'to "no filter", which let them `batchPay` every branch.',

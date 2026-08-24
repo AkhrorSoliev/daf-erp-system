@@ -144,7 +144,9 @@ export class TelegramChannelGateStatsService {
         data: {
           joinedAt: existing.joinedAt ?? now,
           leftAt: null,
-          rejoinCount: isRejoin ? existing.rejoinCount + 1 : existing.rejoinCount,
+          rejoinCount: isRejoin
+            ? existing.rejoinCount + 1
+            : existing.rejoinCount,
           username: user.username ?? existing.username,
           firstName: user.first_name ?? existing.firstName,
         },
@@ -168,47 +170,56 @@ export class TelegramChannelGateStatsService {
    * bo'lib turganlar"), tarixiy davrga bog'lash mantiqsiz bo'lardi.
    */
   async getSummary(range?: { from?: Date; to?: Date }) {
-    const period = range?.from || range?.to ? {
-      ...(range.from ? { gte: range.from } : {}),
-      ...(range.to ? { lte: range.to } : {}),
-    } : undefined;
+    const period =
+      range?.from || range?.to
+        ? {
+            ...(range.from ? { gte: range.from } : {}),
+            ...(range.to ? { lte: range.to } : {}),
+          }
+        : undefined;
 
     const base = { companyId: DEFAULT_COMPANY_ID };
     const inPeriod = (field: 'blockedAt' | 'joinedAt' | 'leftAt') =>
       period ? { [field]: period } : { [field]: { not: null } };
 
-    const [blocked, joinedViaGate, leftAfterJoin, organicJoins, stillMemberViaGate, waiting] =
-      await Promise.all([
-        // Bot to'sgan odamlar
-        this.prisma.telegramChannelGateEvent.count({
-          where: { ...base, ...inPeriod('blockedAt') },
-        }),
-        // Bot tufayli a'zo bo'lganlar — ASOSIY METRIKA
-        this.prisma.telegramChannelGateEvent.count({
-          where: { ...base, blockedAt: { not: null }, ...inPeriod('joinedAt') },
-        }),
-        // Bot tufayli a'zo bo'lib, keyin chiqib ketganlar
-        this.prisma.telegramChannelGateEvent.count({
-          where: { ...base, blockedAt: { not: null }, ...inPeriod('leftAt') },
-        }),
-        // To'silmagan — o'z-o'zidan kelgan obunachilar
-        this.prisma.telegramChannelGateEvent.count({
-          where: { ...base, blockedAt: null, ...inPeriod('joinedAt') },
-        }),
-        // Joriy holat: bot tufayli kelgan va hozir ham a'zo (davrsiz)
-        this.prisma.telegramChannelGateEvent.count({
-          where: {
-            ...base,
-            blockedAt: { not: null },
-            joinedAt: { not: null },
-            leftAt: null,
-          },
-        }),
-        // To'silgan, lekin hali a'zo bo'lmagan (davrsiz — joriy holat)
-        this.prisma.telegramChannelGateEvent.count({
-          where: { ...base, blockedAt: { not: null }, joinedAt: null },
-        }),
-      ]);
+    const [
+      blocked,
+      joinedViaGate,
+      leftAfterJoin,
+      organicJoins,
+      stillMemberViaGate,
+      waiting,
+    ] = await Promise.all([
+      // Bot to'sgan odamlar
+      this.prisma.telegramChannelGateEvent.count({
+        where: { ...base, ...inPeriod('blockedAt') },
+      }),
+      // Bot tufayli a'zo bo'lganlar — ASOSIY METRIKA
+      this.prisma.telegramChannelGateEvent.count({
+        where: { ...base, blockedAt: { not: null }, ...inPeriod('joinedAt') },
+      }),
+      // Bot tufayli a'zo bo'lib, keyin chiqib ketganlar
+      this.prisma.telegramChannelGateEvent.count({
+        where: { ...base, blockedAt: { not: null }, ...inPeriod('leftAt') },
+      }),
+      // To'silmagan — o'z-o'zidan kelgan obunachilar
+      this.prisma.telegramChannelGateEvent.count({
+        where: { ...base, blockedAt: null, ...inPeriod('joinedAt') },
+      }),
+      // Joriy holat: bot tufayli kelgan va hozir ham a'zo (davrsiz)
+      this.prisma.telegramChannelGateEvent.count({
+        where: {
+          ...base,
+          blockedAt: { not: null },
+          joinedAt: { not: null },
+          leftAt: null,
+        },
+      }),
+      // To'silgan, lekin hali a'zo bo'lmagan (davrsiz — joriy holat)
+      this.prisma.telegramChannelGateEvent.count({
+        where: { ...base, blockedAt: { not: null }, joinedAt: null },
+      }),
+    ]);
 
     return {
       blocked,
@@ -219,7 +230,8 @@ export class TelegramChannelGateStatsService {
       waiting,
       // To'silganlarning necha foizi a'zo bo'ldi. Maxraj 0 bo'lsa 0 qaytadi
       // (bo'lishda cheksizlik chiqmasligi uchun).
-      conversionRate: blocked > 0 ? Math.round((joinedViaGate / blocked) * 100) : 0,
+      conversionRate:
+        blocked > 0 ? Math.round((joinedViaGate / blocked) * 100) : 0,
     };
   }
 

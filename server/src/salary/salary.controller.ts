@@ -463,9 +463,7 @@ export class SalaryController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.salaryService.calculateMonthlySalaries(companyId, {
-      asOfDate: dto.asOfDate
-        ? parseTashkentDateStart(dto.asOfDate)
-        : undefined,
+      asOfDate: dto.asOfDate ? parseTashkentDateStart(dto.asOfDate) : undefined,
     });
   }
 

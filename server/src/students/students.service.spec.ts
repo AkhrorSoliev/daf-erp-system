@@ -65,7 +65,9 @@ describe('StudentsService — status methods', () => {
       // The caller is now checked against the student's branch
       // (`assertCallerMayTouchStudent`): editing, expelling or
       // archiving another branch's student was open. A CEO spans all.
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
       student: {
         findFirst: jest.fn().mockResolvedValue(mockStudent),
         update: jest.fn().mockResolvedValue(mockStudentSelect),
@@ -154,7 +156,10 @@ describe('StudentsService — status methods', () => {
         {
           provide: require('../billing/enrollment-billing.service')
             .EnrollmentBillingService,
-          useValue: { refundPrepaidWithOverride: jest.fn(), refundPrepaidToBalance: jest.fn() },
+          useValue: {
+            refundPrepaidWithOverride: jest.fn(),
+            refundPrepaidToBalance: jest.fn(),
+          },
         },
         // Discount adjustment path — write tests directly exercise this in the
         // dedicated `update — discountPercent` describe block below.
@@ -308,9 +313,7 @@ describe('StudentsService — status methods', () => {
     it('throws NotFoundException when student not found', async () => {
       prisma.student.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.getStatusHistory(999, 1001, CEO_ID),
-      ).rejects.toThrow(
+      await expect(service.getStatusHistory(999, 1001, CEO_ID)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -386,7 +389,8 @@ describe('StudentsService — status methods', () => {
       await service.findAll(
         { page: 1, pageSize: 10, level: 'B1' } as any,
         1001,
-       null);
+        null,
+      );
 
       expect(prisma.student.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -472,22 +476,11 @@ describe('StudentsService — status methods', () => {
       prisma.$transaction = jest.fn((cb: any) => cb(prisma));
     }
 
-    function getTxService() {
-      return module.get(
-        require('../transactions/transactions.service').TransactionsService,
-      );
-    }
-
-    let module: TestingModule;
-    beforeEach(async () => {
-      // Re-import the module reference so each test can read its mocks.
-      // The outer beforeEach already built the module; we just grab a reference.
-      module = (service as any).constructor.testingModule ?? undefined;
-      // Walk back into the parent setup: pull the service's own deps.
-      // Simpler: rely on prisma + transactionsService mocks directly via
-      // `service` internals — but Nest mocks are scoped to the outer module,
-      // so we just need access to the TransactionsService mock.
-    });
+    // No local `beforeEach` here on purpose: an earlier attempt to reach the
+    // TransactionsService mock through the TestingModule was abandoned (Nest
+    // scopes those mocks to the outer module), and `txMock()` below reaches it
+    // through the service instead. The abandoned scaffolding assigned a
+    // variable nothing ever read.
 
     // Helper: pull TransactionsService mock from the StudentsWriteService.
     // It's injected as `transactionsService` private field; we access it via
@@ -499,23 +492,13 @@ describe('StudentsService — status methods', () => {
 
     it('does not write adjustment when discount is unchanged', async () => {
       setup({ oldDiscount: 10 });
-      await service.update(
-        1,
-        { discountPercent: 10 } as any,
-        2,
-        1001,
-      );
+      await service.update(1, { discountPercent: 10 } as any, 2, 1001);
       expect(txMock().recordDiscountAdjustment).not.toHaveBeenCalled();
     });
 
     it('does not write adjustment when student has no past LESSON_DEDUCTIONs', async () => {
       setup({ oldDiscount: 0, pastDeductions: [] });
-      await service.update(
-        1,
-        { discountPercent: 20 } as any,
-        2,
-        1001,
-      );
+      await service.update(1, { discountPercent: 20 } as any, 2, 1001);
       expect(txMock().recordDiscountAdjustment).not.toHaveBeenCalled();
     });
 
@@ -532,12 +515,7 @@ describe('StudentsService — status methods', () => {
           { amount: 100_000, metadata: { fullAmount: 100_000 } },
         ],
       });
-      await service.update(
-        1,
-        { discountPercent: 20 } as any,
-        2,
-        1001,
-      );
+      await service.update(1, { discountPercent: 20 } as any, 2, 1001);
       expect(txMock().recordDiscountAdjustment).toHaveBeenCalledWith(
         expect.objectContaining({
           studentId: 1,
@@ -567,12 +545,7 @@ describe('StudentsService — status methods', () => {
           { amount: 80_000, metadata: { fullAmount: 100_000 } },
         ],
       });
-      await service.update(
-        1,
-        { discountPercent: 0 } as any,
-        2,
-        1001,
-      );
+      await service.update(1, { discountPercent: 0 } as any, 2, 1001);
       expect(txMock().recordDiscountAdjustment).toHaveBeenCalledWith(
         expect.objectContaining({
           amount: -40_000,
@@ -596,12 +569,7 @@ describe('StudentsService — status methods', () => {
         oldDiscount: 0,
         pastDeductions: [{ amount: 50_000, metadata: {} }],
       });
-      await service.update(
-        1,
-        { discountPercent: 50 } as any,
-        2,
-        1001,
-      );
+      await service.update(1, { discountPercent: 50 } as any, 2, 1001);
       expect(txMock().recordDiscountAdjustment).toHaveBeenCalledWith(
         expect.objectContaining({
           amount: 25_000,
@@ -616,14 +584,11 @@ describe('StudentsService — status methods', () => {
     it('filters reversed transactions out via where clause', async () => {
       setup({
         oldDiscount: 0,
-        pastDeductions: [{ amount: 100_000, metadata: { fullAmount: 100_000 } }],
+        pastDeductions: [
+          { amount: 100_000, metadata: { fullAmount: 100_000 } },
+        ],
       });
-      await service.update(
-        1,
-        { discountPercent: 10 } as any,
-        2,
-        1001,
-      );
+      await service.update(1, { discountPercent: 10 } as any, 2, 1001);
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({

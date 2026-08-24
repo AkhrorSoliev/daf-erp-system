@@ -7,14 +7,18 @@ import {
 describe('secondsUntilTashkentMidnight', () => {
   it('expires at the next Tashkent midnight, not the next UTC one', () => {
     // 2026-07-30T19:30Z = 31.07 00:30 Tashkent → ~23.5h of the Tashkent day left.
-    const s = secondsUntilTashkentMidnight(new Date('2026-07-30T19:30:00.000Z'));
+    const s = secondsUntilTashkentMidnight(
+      new Date('2026-07-30T19:30:00.000Z'),
+    );
     expect(s).toBeGreaterThan(23 * 3600);
     expect(s).toBeLessThanOrEqual(24 * 3600);
   });
 
   it('never returns less than a minute', () => {
     // One second before Tashkent midnight.
-    const s = secondsUntilTashkentMidnight(new Date('2026-07-30T18:59:59.000Z'));
+    const s = secondsUntilTashkentMidnight(
+      new Date('2026-07-30T18:59:59.000Z'),
+    );
     expect(s).toBeGreaterThanOrEqual(60);
   });
 });

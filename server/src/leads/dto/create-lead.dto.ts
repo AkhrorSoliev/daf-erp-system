@@ -1,5 +1,10 @@
 import {
-  IsInt, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateLeadDto {

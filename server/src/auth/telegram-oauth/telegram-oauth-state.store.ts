@@ -50,7 +50,7 @@ export class TelegramOauthStateStore {
   async createAuthorizeUrl(portalOrigin: string): Promise<string> {
     if (!this.config.enabled) {
       throw new ServiceUnavailableException(
-        "Telegram orqali kirish hozircha yoqilmagan",
+        'Telegram orqali kirish hozircha yoqilmagan',
       );
     }
     if (!isKnownPortalOrigin(portalOrigin)) {

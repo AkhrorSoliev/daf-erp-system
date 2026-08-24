@@ -357,7 +357,10 @@ export class ReportsDebtHistoryService {
       }))
       .filter((h) => (h.mine?.get(monthKey) ?? 0) > 0);
     if (hits.length === 0) {
-      return { ...empty, writeOffs: await this.monthWriteOffs(companyId, monthKey, students) };
+      return {
+        ...empty,
+        writeOffs: await this.monthWriteOffs(companyId, monthKey, students),
+      };
     }
 
     const enriched = await this.prisma.student.findMany({
@@ -608,7 +611,6 @@ export class ReportsDebtHistoryService {
     const {
       flowByMonth,
       closingByMonth,
-      debtorsByMonth,
       closingPerStudent,
       paymentsPerStudent,
       agingPerStudent,
@@ -676,7 +678,8 @@ export class ReportsDebtHistoryService {
         const payments = paymentsPerStudent.get(student.id);
         let paidAfter = 0;
         if (payments) {
-          for (const later of laterMonths) paidAfter += payments.get(later) ?? 0;
+          for (const later of laterMonths)
+            paidAfter += payments.get(later) ?? 0;
         }
         const rec = Math.min(debt, Math.max(0, paidAfter));
         recovered += rec;
@@ -760,9 +763,7 @@ export class ReportsDebtHistoryService {
           monthsInDebt: wholeMonthsBetween(since, now),
         };
       })
-      .sort(
-        (a, b) => b.monthsInDebt - a.monthsInDebt || b.debt - a.debt,
-      )
+      .sort((a, b) => b.monthsInDebt - a.monthsInDebt || b.debt - a.debt)
       .slice(0, LONGEST_DEBTORS_LIMIT);
 
     if (candidates.length === 0) return [];

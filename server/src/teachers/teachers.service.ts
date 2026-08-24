@@ -175,14 +175,15 @@ export class TeachersService {
     };
   }
 
-  async findByIdScoped(
-    id: number,
-    companyId: number,
-    scope: ReportBranchIds,
-  ) {
+  async findByIdScoped(id: number, companyId: number, scope: ReportBranchIds) {
     if (scope != null) {
       const inScope = await this.prisma.user.findFirst({
-        where: { id, companyId, deletedAt: null, AND: [userBranchWhere(scope)] },
+        where: {
+          id,
+          companyId,
+          deletedAt: null,
+          AND: [userBranchWhere(scope)],
+        },
         select: { id: true },
       });
       if (!inScope) throw new NotFoundException("O'qituvchi topilmadi");
@@ -226,7 +227,6 @@ export class TeachersService {
     return formatTeacher(user, count);
   }
 
-
   /**
    * May this caller act on this teacher?
    *
@@ -252,11 +252,7 @@ export class TeachersService {
     );
   }
 
-  async create(
-    dto: CreateTeacherDto,
-    companyId: number,
-    callerId?: number,
-  ) {
+  async create(dto: CreateTeacherDto, companyId: number, callerId?: number) {
     // `dto.branchId` decides which branch the new teacher belongs to, which in
     // turn decides whose payroll carries them. A caller may only create into a
     // branch they hold; a branch-less teacher (onboarding) is left alone,
@@ -440,11 +436,7 @@ export class TeachersService {
     return formatTeacher(updated);
   }
 
-  async getStatusHistory(
-    id: number,
-    companyId: number,
-    callerId?: number,
-  ) {
+  async getStatusHistory(id: number, companyId: number, callerId?: number) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,

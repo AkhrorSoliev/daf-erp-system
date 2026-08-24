@@ -2,10 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
-import {
-  renderPdf,
-  getCompanyLogoDataUrl,
-} from '../receipts/pdf/render';
+import { renderPdf, getCompanyLogoDataUrl } from '../receipts/pdf/render';
 
 function formatDate(d: Date): string {
   const dd = String(d.getDate()).padStart(2, '0');
@@ -222,8 +219,8 @@ export class MockExamPdfService {
         {
           text:
             "📋 Quyidagi jadvalda ishtirokchilar identifikatorlari bo'yicha ko'rsatilgan. " +
-            'Ro\'yxatga olishda sizga berilgan raqamni toping va o\'zingizning ' +
-            'ballaringizni ko\'ring.',
+            "Ro'yxatga olishda sizga berilgan raqamni toping va o'zingizning " +
+            "ballaringizni ko'ring.",
           fontSize: 8,
           color: '#475569',
           italics: true,
@@ -240,7 +237,11 @@ export class MockExamPdfService {
           // callback only paints the header row + neutral background for
           // rows that have no explicit fill.
           layout: {
-            fillColor: (rowIndex: number, _node: unknown, columnIndex: number) => {
+            fillColor: (
+              rowIndex: number,
+              _node: unknown,
+              columnIndex: number,
+            ) => {
               if (rowIndex === 0) return '#f1f5f9';
               // Only paint zebra fill on the fixed left columns (Rank, ID)
               // so we don't overwrite per-cell green/red on subject columns.

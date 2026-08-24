@@ -10,7 +10,7 @@
  * only the two fills below (header row, total row) are new here.
  */
 import { Worksheet, Row } from 'exceljs';
-import { NAVY, SUBTLE, GREEN, RED, SOM, NUM, PCT } from './reports-excel.helpers';
+import { NAVY, SUBTLE, GREEN, RED, SOM, NUM } from './reports-excel.helpers';
 
 export const HEAD_FILL = 'FFE8EDF5';
 export const TOTAL_FILL = 'FFD5E0F0';
@@ -57,7 +57,10 @@ export function blockTitle(ws: Worksheet, label: string, span: number): void {
   const r = ws.addRow([label]);
   r.font = { bold: true, size: 12, color: { argb: NAVY } };
   ws.mergeCells(r.number, 1, r.number, span);
-  for (let c = 1; c <= span; c++) r.getCell(c).border = { bottom: { style: 'medium', color: { argb: NAVY } } };
+  for (let c = 1; c <= span; c++)
+    r.getCell(c).border = {
+      bottom: { style: 'medium', color: { argb: NAVY } },
+    };
 }
 
 /** Column header row — filled with HEAD_FILL, bold, wraps. */
@@ -92,7 +95,10 @@ export function compareRow(
   opts: { sub?: boolean; inverse?: boolean } = {},
 ): Row {
   const both = typeof cur === 'number' && typeof prev === 'number';
-  const d = both && prev !== 0 ? Math.round(((cur! - prev!) / Math.abs(prev!)) * 1000) / 10 : null;
+  const d =
+    both && prev !== 0
+      ? Math.round(((cur - prev) / Math.abs(prev)) * 1000) / 10
+      : null;
   const r = ws.addRow([label, cur ?? '—', prev ?? '—', d ?? '', izoh ?? '']);
   [2, 3].forEach((c) => {
     if (typeof r.getCell(c).value === 'number') r.getCell(c).numFmt = NUM;
@@ -100,12 +106,17 @@ export function compareRow(
   if (opts.sub) {
     r.getCell(1).font = { size: 10, color: { argb: SUBTLE } };
     r.getCell(1).alignment = { indent: 2 };
-    [2, 3].forEach((c) => (r.getCell(c).font = { size: 10, color: { argb: SUBTLE } }));
+    [2, 3].forEach(
+      (c) => (r.getCell(c).font = { size: 10, color: { argb: SUBTLE } }),
+    );
   }
   if (d != null) {
     const g = r.getCell(4);
     g.numFmt = DELTA;
-    g.font = { color: { argb: (opts.inverse ? d <= 0 : d >= 0) ? GREEN : RED }, size: 10 };
+    g.font = {
+      color: { argb: (opts.inverse ? d <= 0 : d >= 0) ? GREEN : RED },
+      size: 10,
+    };
   }
   izohCell(r, 5);
   return r;
@@ -135,8 +146,16 @@ export function countRow(
 }
 
 /** The bottom-line total of a block — bold, TOTAL_FILL, double top border, colour by sign. */
-export function headlineRow(ws: Worksheet, label: string, cur: number, prev: number | null, izoh: string): Row {
-  const g = prev ? Math.round(((cur - prev) / Math.abs(prev)) * 1000) / 10 : null;
+export function headlineRow(
+  ws: Worksheet,
+  label: string,
+  cur: number,
+  prev: number | null,
+  izoh: string,
+): Row {
+  const g = prev
+    ? Math.round(((cur - prev) / Math.abs(prev)) * 1000) / 10
+    : null;
   const r = ws.addRow([label, cur, prev ?? '—', g ?? '', izoh]);
   const colour = cur >= 0 ? GREEN : RED;
   r.height = 24;
@@ -156,32 +175,55 @@ export function headlineRow(ws: Worksheet, label: string, cur: number, prev: num
 }
 
 /** A plain totals row — bold, TOTAL_FILL, thin top border; moneyCols get SOM, everything else NUM. */
-export function totalsBar(ws: Worksheet, cells: (string | number)[], moneyCols: number[] = []): Row {
+export function totalsBar(
+  ws: Worksheet,
+  cells: (string | number)[],
+  moneyCols: number[] = [],
+): Row {
   const r = ws.addRow(cells);
   r.font = { bold: true };
   r.eachCell((c, col) => {
     paint(c, TOTAL_FILL);
     c.border = { top: { style: 'thin' } };
-    if (typeof c.value === 'number') c.numFmt = moneyCols.includes(col) ? SOM : NUM;
+    if (typeof c.value === 'number')
+      c.numFmt = moneyCols.includes(col) ? SOM : NUM;
   });
   return r;
 }
 
 /** "Bu varaq haqida" footer — a bullet list of interpretation notes at the bottom of a sheet. */
-export function sheetFooter(ws: Worksheet, lines: string[], span: number): void {
+export function sheetFooter(
+  ws: Worksheet,
+  lines: string[],
+  span: number,
+): void {
   ws.addRow([]);
   const h = ws.addRow(['Bu varaq haqida']);
   h.font = { bold: true, size: 10, color: { argb: NAVY } };
   ws.mergeCells(h.number, 1, h.number, span);
-  for (const l of lines) ws.addRow(['·  ' + l]).getCell(1).font = { size: 9, color: { argb: SUBTLE } };
+  for (const l of lines)
+    ws.addRow(['·  ' + l]).getCell(1).font = {
+      size: 9,
+      color: { argb: SUBTLE },
+    };
 }
 
 // ---- Uzbek month labels + the salary-reliability guard -------------------
 
 /** Uzbek month names — the report never prints an English or Cyrillic month. */
 const UZ_MONTHS = [
-  'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-  'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr',
+  'Yanvar',
+  'Fevral',
+  'Mart',
+  'Aprel',
+  'May',
+  'Iyun',
+  'Iyul',
+  'Avgust',
+  'Sentabr',
+  'Oktabr',
+  'Noyabr',
+  'Dekabr',
 ];
 
 export function uzMonthLabel(month: string): string {
@@ -200,7 +242,10 @@ export function uzMonthLabel(month: string): string {
  * Data-driven on purpose — hardcoding '2026-05' would go stale the moment a
  * second transition month appeared.
  */
-export function isSalaryDataReliable(revenue: number, teacherSalary: number): boolean {
+export function isSalaryDataReliable(
+  revenue: number,
+  teacherSalary: number,
+): boolean {
   if (revenue <= 0) return false;
   return teacherSalary / revenue >= 0.15;
 }

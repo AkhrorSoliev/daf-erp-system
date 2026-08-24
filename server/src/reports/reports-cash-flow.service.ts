@@ -78,7 +78,8 @@ export class ReportsCashFlowService {
     const operatingOutflows = sumOf(CashMovementType.OUTFLOW); // < 0
     const adjustments = sumOf(CashMovementType.ADJUSTMENT);
     const transfersNet =
-      sumOf(CashMovementType.TRANSFER_IN) + sumOf(CashMovementType.TRANSFER_OUT);
+      sumOf(CashMovementType.TRANSFER_IN) +
+      sumOf(CashMovementType.TRANSFER_OUT);
 
     return {
       period: { start: period.startStr, end: period.endStr },

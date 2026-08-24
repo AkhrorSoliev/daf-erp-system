@@ -30,7 +30,11 @@ describe('financial write scope', () => {
     } as any;
   }
 
-  const CEO = { mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] };
+  const CEO = {
+    mainBranch: null,
+    branches: [],
+    roles: [{ role: { name: 'CEO' } }],
+  };
   const namanganCashier = {
     mainBranch: 2,
     branches: [{ branchId: 2 }],
@@ -42,7 +46,7 @@ describe('financial write scope', () => {
     roles: [{ role: { name: 'Cashier' } }],
   };
 
-  it("REFUSES a Namangan caller writing for a Fargona student", async () => {
+  it('REFUSES a Namangan caller writing for a Fargona student', async () => {
     const prisma = prismaFor(namanganCashier, 1);
     await expect(
       assertCallerMayWriteForStudent(prisma, 99, FARGONA_STUDENT, COMPANY),
@@ -86,7 +90,12 @@ describe('financial write scope', () => {
   it('REFUSES when the caller cannot be identified', async () => {
     const prisma = prismaFor(CEO, 1);
     await expect(
-      assertCallerMayWriteForStudent(prisma, undefined, FARGONA_STUDENT, COMPANY),
+      assertCallerMayWriteForStudent(
+        prisma,
+        undefined,
+        FARGONA_STUDENT,
+        COMPANY,
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -96,7 +105,12 @@ describe('financial write scope', () => {
       // the snapshot the write happens in, and the window between the
       // pre-check and the write would stay open.
       const tx = prismaFor(fargonaCashier, 1);
-      await assertCallerMayWriteForStudentInTx(tx, 99, FARGONA_STUDENT, COMPANY);
+      await assertCallerMayWriteForStudentInTx(
+        tx,
+        99,
+        FARGONA_STUDENT,
+        COMPANY,
+      );
       expect(tx.studentBranch.findFirst).toHaveBeenCalled();
       expect(tx.user.findFirst).toHaveBeenCalled();
     });

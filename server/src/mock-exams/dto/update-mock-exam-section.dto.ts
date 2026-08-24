@@ -9,7 +9,7 @@ export class UpdateMockExamSectionDto {
   @IsOptional()
   @IsString()
   @Matches(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, {
-    message: 'Rang #RGB yoki #RRGGBB formatida bo\'lishi kerak',
+    message: "Rang #RGB yoki #RRGGBB formatida bo'lishi kerak",
   })
   color?: string | null;
 }

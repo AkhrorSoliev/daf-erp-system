@@ -70,9 +70,7 @@ export class TelegramIdTokenVerifier {
     // (faqat mavjudligini tekshiradi) — bu aynan shu klass taqiqlagan
     // yumshatish. Sozlanmagan holatda oldindan yopiq holatga o'tamiz.
     if (!this.config.clientId) {
-      throw new UnauthorizedException(
-        'Telegram orqali kirish sozlanmagan',
-      );
+      throw new UnauthorizedException('Telegram orqali kirish sozlanmagan');
     }
 
     let payload: JWTPayload;
@@ -95,7 +93,9 @@ export class TelegramIdTokenVerifier {
     }
 
     const phoneNumber =
-      typeof payload.phone_number === 'string' ? payload.phone_number.trim() : '';
+      typeof payload.phone_number === 'string'
+        ? payload.phone_number.trim()
+        : '';
     if (!phoneNumber || payload.phone_number_verified !== true) {
       throw new UnauthorizedException(
         "Telegram telefon raqamini bermadi. Ruxsat berib qayta urinib ko'ring.",

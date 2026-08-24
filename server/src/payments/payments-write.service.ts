@@ -24,7 +24,6 @@ import { formatSom } from './shared/format-som';
 // for the gateway webhooks. The manual path wants the FAIL-CLOSED one — a
 // student whose branch cannot be determined must not be able to take a payment
 // at all, because that row could never be attributed to a branch afterwards.
-import { resolveStudentBranchId as resolveStudentBranchIdStrict } from '../common/finance/resolve-branch';
 import {
   assertCallerMayWriteForStudent,
   assertCallerMayWriteForStudentInTx,
@@ -158,134 +157,135 @@ export class PaymentsWriteService {
       resolvedBranchId = contract.branchId;
     }
 
-    const { payment, studentBalance, carriedOver } = await this.prisma.$transaction(
-      async (tx) => {
-        // Re-resolve AND re-authorise with the transaction client, inside the
-        // same Serializable snapshot as the rows below. The pre-check above is
-        // the fast, well-worded refusal; this is the one that actually holds if
-        // the student's branch or the caller's access changed in between.
-        //
-        // A contract-derived branch (checked above to equal the student's) stays
-        // authoritative for the write.
-        const txBranchId = await assertCallerMayWriteForStudentInTx(
-          tx,
-          userId,
-          dto.studentId,
-          companyId,
-        );
-        if (!dto.contractId && txBranchId !== resolvedBranchId) {
-          throw new BadRequestException(
-            "O'quvchining filiali o'zgardi — to'lovni qaytadan kiriting",
-          );
-        }
-
-        const payment = await tx.payment.create({
-          data: {
-            studentId: dto.studentId,
-            contractId: dto.contractId,
-            amount: dto.amount,
-            method: dto.method,
-            status: PaymentStatus.COMPLETED,
-            receiptNumber: dto.receiptNumber,
-            note: dto.note,
-            receivedById: userId,
-            branchId: resolvedBranchId,
-            companyId,
-          },
-        });
-
-        await this.transactionsService.recordPayment(
-          {
-            studentId: dto.studentId,
-            amount: dto.amount,
-            paymentId: payment.id,
-            contractId: dto.contractId,
-            branchId: resolvedBranchId,
-            companyId,
-            performedById: userId,
-            method: dto.method,
-          },
-          tx,
-        );
-
-        if (dto.contractId) {
-          await tx.contract.update({
-            where: { id: dto.contractId },
-            data: { paidAmount: { increment: dto.amount } },
-          });
-        }
-
-        // Retroactive billing: now that the balance is topped up, settle any
-        // PRESENT/LATE/ABSENT attendance whose lesson was held while the
-        // student was a debtor (no LESSON_DEDUCTION/CONSUMPTION/SalaryAccrual
-        // got written at the time). Idempotent — re-running on a payment
-        // where everything is already settled is a no-op.
-        const retro =
-          await this.lessonBillingService.processRetroactiveBillingForStudent(
+    const { payment, studentBalance, carriedOver } =
+      await this.prisma.$transaction(
+        async (tx) => {
+          // Re-resolve AND re-authorise with the transaction client, inside the
+          // same Serializable snapshot as the rows below. The pre-check above is
+          // the fast, well-worded refusal; this is the one that actually holds if
+          // the student's branch or the caller's access changed in between.
+          //
+          // A contract-derived branch (checked above to equal the student's) stays
+          // authoritative for the write.
+          const txBranchId = await assertCallerMayWriteForStudentInTx(
             tx,
+            userId,
+            dto.studentId,
+            companyId,
+          );
+          if (!dto.contractId && txBranchId !== resolvedBranchId) {
+            throw new BadRequestException(
+              "O'quvchining filiali o'zgardi — to'lovni qaytadan kiriting",
+            );
+          }
+
+          const payment = await tx.payment.create({
+            data: {
+              studentId: dto.studentId,
+              contractId: dto.contractId,
+              amount: dto.amount,
+              method: dto.method,
+              status: PaymentStatus.COMPLETED,
+              receiptNumber: dto.receiptNumber,
+              note: dto.note,
+              receivedById: userId,
+              branchId: resolvedBranchId,
+              companyId,
+            },
+          });
+
+          await this.transactionsService.recordPayment(
             {
               studentId: dto.studentId,
+              amount: dto.amount,
+              paymentId: payment.id,
+              contractId: dto.contractId,
+              branchId: resolvedBranchId,
               companyId,
               performedById: userId,
+              method: dto.method,
             },
+            tx,
           );
 
-        // A lesson payment settles LESSONS. It used to also drain the fresh
-        // balance into any unpaid mock exam registration, which is how 15 of
-        // 21 students on the August 2026 exam lost 30 000 so'm each: they
-        // stood at the desk paying for lessons, having already handed over
-        // cash for the mock, and neither they nor the cashier could see the
-        // second charge leave. Mock fees are collected on their own — cash,
-        // Payme or Click — and never out of money left here for lessons.
+          if (dto.contractId) {
+            await tx.contract.update({
+              where: { id: dto.contractId },
+              data: { paidAmount: { increment: dto.amount } },
+            });
+          }
 
-        const updatedStudent = await tx.student.findUnique({
-          where: { id: dto.studentId },
-          select: { balance: true },
-        });
+          // Retroactive billing: now that the balance is topped up, settle any
+          // PRESENT/LATE/ABSENT attendance whose lesson was held while the
+          // student was a debtor (no LESSON_DEDUCTION/CONSUMPTION/SalaryAccrual
+          // got written at the time). Idempotent — re-running on a payment
+          // where everything is already settled is a no-op.
+          const retro =
+            await this.lessonBillingService.processRetroactiveBillingForStudent(
+              tx,
+              {
+                studentId: dto.studentId,
+                companyId,
+                performedById: userId,
+              },
+            );
 
-        // If this payment cleared the debt, any OPEN payment promise is KEPT.
-        await this.settleKeptPromises(tx, {
-          studentId: dto.studentId,
-          balance: updatedStudent?.balance,
-          performedById: userId,
-        });
+          // A lesson payment settles LESSONS. It used to also drain the fresh
+          // balance into any unpaid mock exam registration, which is how 15 of
+          // 21 students on the August 2026 exam lost 30 000 so'm each: they
+          // stood at the desk paying for lessons, having already handed over
+          // cash for the mock, and neither they nor the cashier could see the
+          // second charge leave. Mock fees are collected on their own — cash,
+          // Payme or Click — and never out of money left here for lessons.
 
-        await this.entityHistoryService.recordCreate({
-          entityType: 'Payment',
-          entityId: payment.id,
-          newValues: payment,
-          changedById: userId,
-          companyId,
-          tx,
-        });
+          const updatedStudent = await tx.student.findUnique({
+            where: { id: dto.studentId },
+            select: { balance: true },
+          });
 
-        await this.entityHistoryService.recordStatusChange({
-          entityType: 'Student',
-          entityId: dto.studentId,
-          oldValues: { balans: updatedStudent!.balance - dto.amount },
-          newValues: {
-            balans: updatedStudent!.balance,
-            summa: dto.amount,
-            usul: PAYMENT_METHOD_LABEL[dto.method] ?? dto.method,
-            status: "TO'LOV_QABUL_QILINDI",
-          },
-          changedById: userId,
-          companyId,
-          tx,
-        });
+          // If this payment cleared the debt, any OPEN payment promise is KEPT.
+          await this.settleKeptPromises(tx, {
+            studentId: dto.studentId,
+            balance: updatedStudent?.balance,
+            performedById: userId,
+          });
 
-        return {
-          payment,
-          studentBalance: updatedStudent?.balance,
-          carriedOver: retro.carriedOver ?? [],
-        };
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10000,
-        timeout: 15000,
-      },
-    );
+          await this.entityHistoryService.recordCreate({
+            entityType: 'Payment',
+            entityId: payment.id,
+            newValues: payment,
+            changedById: userId,
+            companyId,
+            tx,
+          });
+
+          await this.entityHistoryService.recordStatusChange({
+            entityType: 'Student',
+            entityId: dto.studentId,
+            oldValues: { balans: updatedStudent!.balance - dto.amount },
+            newValues: {
+              balans: updatedStudent!.balance,
+              summa: dto.amount,
+              usul: PAYMENT_METHOD_LABEL[dto.method] ?? dto.method,
+              status: "TO'LOV_QABUL_QILINDI",
+            },
+            changedById: userId,
+            companyId,
+            tx,
+          });
+
+          return {
+            payment,
+            studentBalance: updatedStudent?.balance,
+            carriedOver: retro.carriedOver ?? [],
+          };
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10000,
+          timeout: 15000,
+        },
+      );
 
     // Fire-and-forget Telegram receipt to the student. The listener uses
     // SmsService so the message also lands in the student profile "SMS"

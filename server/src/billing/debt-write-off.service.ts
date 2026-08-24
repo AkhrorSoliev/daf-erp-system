@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -83,8 +82,7 @@ export class DebtWriteOffService {
     }
 
     const balance = enrollment.student.balance;
-    const lessonPaymentCount =
-      enrollment.group.course.lessonPaymentCount || 12;
+    const lessonPaymentCount = enrollment.group.course.lessonPaymentCount || 12;
     const perLessonCost = await this.computePerLessonCost(
       client,
       enrollment.id,
@@ -182,9 +180,7 @@ export class DebtWriteOffService {
     tx?: Prisma.TransactionClient,
   ) {
     if (!params.reason || params.reason.trim().length < 5) {
-      throw new BadRequestException(
-        "Izoh majburiy (kamida 5 belgi)",
-      );
+      throw new BadRequestException('Izoh majburiy (kamida 5 belgi)');
     }
 
     const runner = async (client: Prisma.TransactionClient) => {
@@ -368,7 +364,11 @@ export class DebtWriteOffService {
       | { perLessonCost?: number }
       | null
       | undefined;
-    if (meta && typeof meta.perLessonCost === 'number' && meta.perLessonCost > 0) {
+    if (
+      meta &&
+      typeof meta.perLessonCost === 'number' &&
+      meta.perLessonCost > 0
+    ) {
       return meta.perLessonCost;
     }
     const lessonPaymentCount = course.lessonPaymentCount || 12;
@@ -379,14 +379,12 @@ export class DebtWriteOffService {
    * Reverse a previous DEBT_WRITE_OFF. CEO-only at the controller level.
    * Restores the original debt by writing the inverse transaction.
    */
-  async reverseWriteOff(
-    params: {
-      transactionId: string;
-      companyId: number;
-      performedById: number;
-      reason: string;
-    },
-  ) {
+  async reverseWriteOff(params: {
+    transactionId: string;
+    companyId: number;
+    performedById: number;
+    reason: string;
+  }) {
     return this.prisma.$transaction(
       async (client) => {
         const original = await client.transaction.findFirst({
@@ -398,7 +396,7 @@ export class DebtWriteOffService {
         });
         if (!original) {
           throw new NotFoundException(
-            "Hisobdan chiqarish topilmadi yoki boshqa kompaniyaga tegishli",
+            'Hisobdan chiqarish topilmadi yoki boshqa kompaniyaga tegishli',
           );
         }
         if (original.reversedAt !== null) {

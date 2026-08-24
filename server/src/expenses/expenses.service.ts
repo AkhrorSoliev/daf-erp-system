@@ -16,10 +16,7 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { renderPdf } from '../receipts/pdf/render';
-import {
-  buildExpensesDoc,
-  type ExpensesPdfRow,
-} from './pdf/expenses-template';
+import { buildExpensesDoc, type ExpensesPdfRow } from './pdf/expenses-template';
 import { formatDate } from './pdf/format.util';
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
@@ -325,7 +322,11 @@ export class ExpensesService {
         orderBy: { date: 'desc' },
         take: 10_001,
       }),
-      this.prisma.expense.aggregate({ where, _sum: { amount: true }, _count: true }),
+      this.prisma.expense.aggregate({
+        where,
+        _sum: { amount: true },
+        _count: true,
+      }),
     ]);
 
     const truncated = rows.length > 10_000;

@@ -37,7 +37,10 @@ export class MockExamPaidListener {
         `💰 Summa: <b>${payload.feeAmount.toLocaleString('uz-UZ')} so'm</b>`,
       );
     }
-    lines.push('', "Ro'yxatingiz tasdiqlandi. Imtihonda muvaffaqiyat tilaymiz!");
+    lines.push(
+      '',
+      "Ro'yxatingiz tasdiqlandi. Imtihonda muvaffaqiyat tilaymiz!",
+    );
 
     try {
       await this.telegramService
@@ -54,8 +57,5 @@ export class MockExamPaidListener {
 }
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

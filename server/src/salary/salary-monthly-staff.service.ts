@@ -122,21 +122,20 @@ export class SalaryStaffMonthlyService {
     const userIds = configs.map((c) => c.userId);
 
     // 2. FIXED_MONTHLY versions overlapping the period (bulk — no N queries).
-    const versionRows =
-      await this.prisma.employeeSalaryConfigVersion.findMany({
-        where: {
-          configId: { in: configIds },
-          salaryType: SalaryType.FIXED_MONTHLY,
-          effectiveFrom: { lte: periodEnd },
-          OR: [{ effectiveTo: null }, { effectiveTo: { gt: periodStart } }],
-        },
-        select: {
-          configId: true,
-          value: true,
-          effectiveFrom: true,
-          effectiveTo: true,
-        },
-      });
+    const versionRows = await this.prisma.employeeSalaryConfigVersion.findMany({
+      where: {
+        configId: { in: configIds },
+        salaryType: SalaryType.FIXED_MONTHLY,
+        effectiveFrom: { lte: periodEnd },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gt: periodStart } }],
+      },
+      select: {
+        configId: true,
+        value: true,
+        effectiveFrom: true,
+        effectiveTo: true,
+      },
+    });
     const versByConfig = new Map<string, FixedMonthlyVersion[]>();
     for (const r of versionRows) {
       const arr = versByConfig.get(r.configId) ?? [];

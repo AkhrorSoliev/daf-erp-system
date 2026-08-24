@@ -145,7 +145,10 @@ describe('AttendanceService', () => {
           provide: LessonBillingService,
           useValue: { processAttendanceBilling: jest.fn() },
         },
-        { provide: EventEmitter2, useValue: (eventEmitter = { emit: jest.fn() }) },
+        {
+          provide: EventEmitter2,
+          useValue: (eventEmitter = { emit: jest.fn() }),
+        },
         {
           provide: require('../holidays/holidays.service').HolidaysService,
           useValue: holidaysService,
@@ -530,9 +533,9 @@ describe('AttendanceService', () => {
         true,
       );
       // No phantom Mon/Wed/Fri "olinmagan" rows projected from the new schedule.
-      expect(result.every((r) => ['Seshanba', 'Shanba'].includes(r.dayName))).toBe(
-        true,
-      );
+      expect(
+        result.every((r) => ['Seshanba', 'Shanba'].includes(r.dayName)),
+      ).toBe(true);
     });
   });
 
@@ -762,7 +765,10 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue(
-        mockEnrollments.map((e) => ({ studentId: e.studentId, student: { balance: e.student.balance } })),
+        mockEnrollments.map((e) => ({
+          studentId: e.studentId,
+          student: { balance: e.student.balance },
+        })),
       );
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert
@@ -937,9 +943,18 @@ describe('AttendanceService', () => {
 
       // Submitting only the positive-balance student must fail — the
       // negative-balance one is now expected as well.
-      const partialDto: SaveAttendanceDto = { entries: [{ studentId: 10001, status: 'PRESENT' }] };
+      const partialDto: SaveAttendanceDto = {
+        entries: [{ studentId: 10001, status: 'PRESENT' }],
+      };
       await expect(
-        service.save('group-uuid-1', '2026-04-01', partialDto, 1, ['Teacher'], 1),
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          partialDto,
+          1,
+          ['Teacher'],
+          1,
+        ),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
 
@@ -1032,11 +1047,15 @@ describe('AttendanceService', () => {
         },
       ];
 
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001, student: { balance: 500000 } }]);
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
       prisma.attendance.findMany.mockResolvedValue(existingRecords);
       prisma.attendance.upsert.mockResolvedValue(mockResults[0]);
 
-      const dto: SaveAttendanceDto = { entries: [{ studentId: 10001, status: 'LATE' }] };
+      const dto: SaveAttendanceDto = {
+        entries: [{ studentId: 10001, status: 'LATE' }],
+      };
       await service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1);
 
       expect(entityHistoryService.recordUpdate).toHaveBeenCalledTimes(1);
@@ -1137,7 +1156,9 @@ describe('AttendanceService', () => {
     });
 
     it('should allow Admin to edit attendance even after it was taken', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 10001, student: { balance: 500000 } }]);
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
       prisma.attendance.findMany.mockResolvedValue([
         {
           id: 'att-existing',
@@ -1155,7 +1176,9 @@ describe('AttendanceService', () => {
         note: null,
       });
 
-      const dto: SaveAttendanceDto = { entries: [{ studentId: 10001, status: 'LATE' }] };
+      const dto: SaveAttendanceDto = {
+        entries: [{ studentId: 10001, status: 'LATE' }],
+      };
       const result = await service.save(
         'group-uuid-1',
         '2026-04-01',
@@ -1190,7 +1213,10 @@ describe('AttendanceService', () => {
       ];
 
       prisma.enrollment.findMany.mockResolvedValue(
-        mockEnrollments.map((e) => ({ studentId: e.studentId, student: { balance: e.student.balance } })),
+        mockEnrollments.map((e) => ({
+          studentId: e.studentId,
+          student: { balance: e.student.balance },
+        })),
       );
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert
@@ -1500,7 +1526,7 @@ describe('AttendanceService', () => {
       expect(ahmad!.attended).toBe(2);
     });
 
-    it('should mark dots before a mid-stream joiner\'s startDate as not enrolled', async () => {
+    it("should mark dots before a mid-stream joiner's startDate as not enrolled", async () => {
       prisma.group.findFirst.mockResolvedValue(groupWithCourse(12));
       prisma.attendance.findMany.mockResolvedValue([]);
       // Joined 2024-01-15 → lessons on 01-01..01-12 predate membership.

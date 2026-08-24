@@ -57,7 +57,10 @@ export function prorateFixedMonthly(
       : periodEndExclusiveDay;
 
     const overlapStart = Math.max(vStartDay, periodStartDay);
-    const overlapEndExclusive = Math.min(vEndExclusiveDay, periodEndExclusiveDay);
+    const overlapEndExclusive = Math.min(
+      vEndExclusiveDay,
+      periodEndExclusiveDay,
+    );
     const days = overlapEndExclusive - overlapStart;
     if (days <= 0) continue;
 

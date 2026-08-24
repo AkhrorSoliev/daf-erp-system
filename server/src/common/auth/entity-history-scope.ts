@@ -97,7 +97,8 @@ export async function assertCallerMayReadEntityHistory(
     return n;
   };
   const notFound = () => new NotFoundException('Yozuv topilmadi');
-  const msg = "Bu yozuv boshqa filialga tegishli — tarixini ko'rish huquqingiz yo'q";
+  const msg =
+    "Bu yozuv boshqa filialga tegishli — tarixini ko'rish huquqingiz yo'q";
 
   switch (entityType) {
     // ── delegate to the record's own guard ──────────────────────────────────
@@ -105,10 +106,11 @@ export async function assertCallerMayReadEntityHistory(
       await assertCallerMayTouchStudent(prisma, userId, numericId(), companyId);
       return;
 
+    // Deliberately grouped: `GroupAttendance` records the whole register for
+    // one lesson and its `entityId` IS the groupId
+    // (`attendance-save.service.ts`), so it is the same question as the
+    // group's own history.
     case 'Group':
-    // `GroupAttendance` records the whole register for one lesson and its
-    // `entityId` IS the groupId (`attendance-save.service.ts`), so it is the
-    // same question as the group's own history.
     case 'GroupAttendance':
       await assertCallerMayTouchGroup(
         prisma,

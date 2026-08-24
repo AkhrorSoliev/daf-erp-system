@@ -38,7 +38,12 @@ describe('PaymentPromisesController — role guards', () => {
 
   it('class is guarded for CEO / BD / Administrator / Cashier', () => {
     const roles = reflector.get<string[]>(ROLES_KEY, PaymentPromisesController);
-    expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator', 'Cashier']);
+    expect(roles).toEqual([
+      'CEO',
+      'Branch Director',
+      'Administrator',
+      'Cashier',
+    ]);
   });
 
   it.each(['CEO', 'Branch Director', 'Administrator', 'Cashier'])(
@@ -49,7 +54,9 @@ describe('PaymentPromisesController — role guards', () => {
   );
 
   it('denies Teacher', () => {
-    expect(() => guard.canActivate(ctx(['Teacher']))).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(ctx(['Teacher']))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('delegates create to the service with userId + companyId + branch scope', () => {

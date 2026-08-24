@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  forwardRef,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
 import { GroupHolidayExtension, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -272,9 +267,7 @@ export class GroupHolidayCascadeService {
 
     // If admin manually changed endDate in between, don't clobber it —
     // just drop the extension record and warn.
-    const currentEndDate = group.endDate
-      ? group.endDate.getTime()
-      : null;
+    const currentEndDate = group.endDate ? group.endDate.getTime() : null;
     const expectedEndDate = extension.newEndDate.getTime();
 
     if (currentEndDate !== expectedEndDate) {
@@ -352,5 +345,4 @@ export class GroupHolidayCascadeService {
       if (!extendedAny) break;
     }
   }
-
 }

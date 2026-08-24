@@ -41,7 +41,9 @@ describe('lead branch scope', () => {
       // lead to Fargona's total and to Namangan's, inflating both and breaking
       // the conversion rate on each.
       expect(leadAttributionWhere(NAMANGAN)).toEqual({ branchId: { in: [2] } });
-      expect(JSON.stringify(leadAttributionWhere(NAMANGAN))).not.toContain('null');
+      expect(JSON.stringify(leadAttributionWhere(NAMANGAN))).not.toContain(
+        'null',
+      );
     });
 
     it('reports the unassigned leads as their own bucket', () => {
@@ -69,10 +71,14 @@ describe('lead branch scope', () => {
       const leads = [{ branchId: 1 }, { branchId: 2 }, { branchId: null }];
       const visible = (ids: number[]) =>
         leads.filter(
-          (l) => l.branchId == null || (l.branchId != null && ids.includes(l.branchId)),
+          (l) =>
+            l.branchId == null ||
+            (l.branchId != null && ids.includes(l.branchId)),
         ).length;
       // 2 + 2 = 4 for a company of 3 — this is why counts use a different rule.
-      expect(visible(FARGONA) + visible(NAMANGAN)).toBeGreaterThan(leads.length);
+      expect(visible(FARGONA) + visible(NAMANGAN)).toBeGreaterThan(
+        leads.length,
+      );
     });
   });
 });
@@ -111,9 +117,7 @@ describe('lead board structure is per branch', () => {
   const boardFor = (ids: number[] | null) =>
     columns.filter((c) => ids == null || ids.includes(c.branchId));
   const sectionsFor = (ids: number[] | null) =>
-    sections.filter(
-      (s) => ids == null || ids.includes(branchOf(s.columnId)),
-    );
+    sections.filter((s) => ids == null || ids.includes(branchOf(s.columnId)));
 
   it('shows a branch only its own columns', () => {
     expect(boardFor(NAMANGAN).map((c) => c.id)).toEqual(['c3', 'c4']);
@@ -144,7 +148,9 @@ describe('lead board structure is per branch', () => {
     // be a dead end. Both the migration and `BranchesService.create` bootstrap
     // one; this asserts the invariant they maintain.
     for (const ids of [FARGONA, NAMANGAN]) {
-      expect(boardFor(ids).filter((c) => c.systemKey === 'NEW')).toHaveLength(1);
+      expect(boardFor(ids).filter((c) => c.systemKey === 'NEW')).toHaveLength(
+        1,
+      );
     }
   });
 
@@ -154,11 +160,11 @@ describe('lead board structure is per branch', () => {
     // rules above exist to prevent — and a CEO reaches both columns, so scope
     // alone does not stop it.
     const move = (sectionId: string, targetColumnId: string) => {
-      const from = branchOf(
-        sections.find((s) => s.id === sectionId)!.columnId,
-      );
+      const from = branchOf(sections.find((s) => s.id === sectionId)!.columnId);
       if (branchOf(targetColumnId) !== from) {
-        throw new Error("Bo'limni boshqa filialning ustuniga ko'chirib bo'lmaydi");
+        throw new Error(
+          "Bo'limni boshqa filialning ustuniga ko'chirib bo'lmaydi",
+        );
       }
     };
     expect(() => move('s1', 'c3')).toThrow();

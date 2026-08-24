@@ -658,8 +658,12 @@ export class TelegramGroupReportMenuService {
 
   /** Emit 'upload_document' now and every 4s; returns a stop() to clear it. */
   private uploadingIndicator(ctx: Context): () => void {
-    const emit = () =>
-      ctx.sendChatAction('upload_document').catch(() => undefined);
+    // `void`, not a returned promise: `setInterval` discards the return
+    // value, so a rejection here would be unhandled. The `.catch` already
+    // absorbs it — this just says so to the type system.
+    const emit = (): void => {
+      void ctx.sendChatAction('upload_document').catch(() => undefined);
+    };
     emit();
     const interval = setInterval(emit, 4000);
     return () => clearInterval(interval);

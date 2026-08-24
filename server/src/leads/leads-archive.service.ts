@@ -91,7 +91,8 @@ export class LeadsArchiveService {
       }),
     ]);
 
-    const leadCountBySection = await this.archivedLeadCountsForSections(sections);
+    const leadCountBySection =
+      await this.archivedLeadCountsForSections(sections);
 
     return {
       leads,
@@ -120,7 +121,9 @@ export class LeadsArchiveService {
     const batchIds = sections
       .map((s) => s.deletionBatchId)
       .filter((b): b is string => !!b);
-    const legacyIds = sections.filter((s) => !s.deletionBatchId).map((s) => s.id);
+    const legacyIds = sections
+      .filter((s) => !s.deletionBatchId)
+      .map((s) => s.id);
 
     const [byBatch, bySection] = await Promise.all([
       batchIds.length
@@ -132,14 +135,21 @@ export class LeadsArchiveService {
             },
             _count: { _all: true },
           })
-        : Promise.resolve([] as { deletionBatchId: string | null; _count: { _all: number } }[]),
+        : Promise.resolve(
+            [] as {
+              deletionBatchId: string | null;
+              _count: { _all: number };
+            }[],
+          ),
       legacyIds.length
         ? this.prisma.lead.groupBy({
             by: ['sectionId'],
             where: { deletedAt: { not: null }, sectionId: { in: legacyIds } },
             _count: { _all: true },
           })
-        : Promise.resolve([] as { sectionId: string | null; _count: { _all: number } }[]),
+        : Promise.resolve(
+            [] as { sectionId: string | null; _count: { _all: number } }[],
+          ),
     ]);
 
     const countByBatch = new Map(
@@ -153,8 +163,8 @@ export class LeadsArchiveService {
       result.set(
         s.id,
         s.deletionBatchId
-          ? countByBatch.get(s.deletionBatchId) ?? 0
-          : countBySectionId.get(s.id) ?? 0,
+          ? (countByBatch.get(s.deletionBatchId) ?? 0)
+          : (countBySectionId.get(s.id) ?? 0),
       );
     }
     return result;
@@ -334,7 +344,10 @@ export class LeadsArchiveService {
 
       const leads = await tx.lead.findMany({
         where: section.deletionBatchId
-          ? { deletionBatchId: section.deletionBatchId, deletedAt: { not: null } }
+          ? {
+              deletionBatchId: section.deletionBatchId,
+              deletedAt: { not: null },
+            }
           : { sectionId: id, deletedAt: { not: null } },
         select: { id: true, statusEnum: true, convertedStudentId: true },
       });
@@ -377,9 +390,7 @@ export class LeadsArchiveService {
     });
 
     return {
-      message: dto.withLeads
-        ? "Bo'lim va lidlari tiklandi"
-        : "Bo'lim tiklandi",
+      message: dto.withLeads ? "Bo'lim va lidlari tiklandi" : "Bo'lim tiklandi",
       id,
       columnId: dto.targetColumnId,
       restoredLeadCount,

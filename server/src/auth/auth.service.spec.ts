@@ -43,9 +43,9 @@ describe('AuthService', () => {
     });
 
     it('rejects a non-Student when X-Portal=student (native gate)', async () => {
-      await expect(service.login(teacher, undefined, 'student')).rejects.toBeInstanceOf(
-        ForbiddenException,
-      );
+      await expect(
+        service.login(teacher, undefined, 'student'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('rejects a Student on the admin web portal (Origin gate still works)', async () => {
@@ -71,15 +71,24 @@ describe('AuthService', () => {
         company: {},
       });
 
-      const res = await service.validateUser('972062922', 'pass123', [1, 2, 3, 5]);
+      const res = await service.validateUser(
+        '972062922',
+        'pass123',
+        [1, 2, 3, 5],
+      );
 
       expect(res).toBeTruthy();
       expect((res as any).password).toBeUndefined();
       const where = prisma.user.findFirst.mock.calls[0][0].where;
       expect(where.OR).toEqual(
-        expect.arrayContaining([{ phone: '972062922' }, { login: '972062922' }]),
+        expect.arrayContaining([
+          { phone: '972062922' },
+          { login: '972062922' },
+        ]),
       );
-      expect(where.roles).toEqual({ some: { role: { id: { in: [1, 2, 3, 5] } } } });
+      expect(where.roles).toEqual({
+        some: { role: { id: { in: [1, 2, 3, 5] } } },
+      });
       expect(where.status).toEqual({ in: ['ACTIVE', 'INACTIVE'] });
       expect(prisma.user.findFirst.mock.calls[0][0].orderBy).toEqual({
         updatedAt: 'desc',
@@ -164,7 +173,9 @@ describe('AuthService', () => {
 
       expect(res).toBeTruthy();
       const where = prisma.user.findFirst.mock.calls[0][0].where;
-      expect(where.OR).toEqual(expect.arrayContaining([{ phone: '901234567' }]));
+      expect(where.OR).toEqual(
+        expect.arrayContaining([{ phone: '901234567' }]),
+      );
     });
 
     it('keeps the OR clauses deduplicated', async () => {
@@ -232,14 +243,18 @@ describe('AuthService', () => {
   });
 
   describe('findAccountsByIdentifier', () => {
-    it('findAccountByIdentifier bilan AYNAN bir xil shartni ishlatadi (faqat take qo\'shiladi)', async () => {
+    it("findAccountByIdentifier bilan AYNAN bir xil shartni ishlatadi (faqat take qo'shiladi)", async () => {
       prisma.user.findFirst.mockResolvedValue(null);
       prisma.user.findMany.mockResolvedValue([]);
 
       await service.findAccountByIdentifier('+998 97 206 29 22', [1, 2, 3, 5]);
       const fromSingle = prisma.user.findFirst.mock.calls[0][0];
 
-      await service.findAccountsByIdentifier('+998 97 206 29 22', [1, 2, 3, 5], 2);
+      await service.findAccountsByIdentifier(
+        '+998 97 206 29 22',
+        [1, 2, 3, 5],
+        2,
+      );
       const fromMulti = prisma.user.findMany.mock.calls[0][0];
 
       const { take, ...rest } = fromMulti;
@@ -247,9 +262,12 @@ describe('AuthService', () => {
       expect(rest).toEqual(fromSingle);
     });
 
-    it('bir raqamdagi ikki akkauntni ikkitasi bilan qaytaradi (noaniqlik ko\'rinadi)', async () => {
+    it("bir raqamdagi ikki akkauntni ikkitasi bilan qaytaradi (noaniqlik ko'rinadi)", async () => {
       prisma.user.findMany.mockResolvedValue([{ id: 5 }, { id: 6 }]);
-      const rows = await service.findAccountsByIdentifier('972062922', [1, 2, 3, 5]);
+      const rows = await service.findAccountsByIdentifier(
+        '972062922',
+        [1, 2, 3, 5],
+      );
       expect(rows).toHaveLength(2);
     });
   });

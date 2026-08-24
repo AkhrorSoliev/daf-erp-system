@@ -67,7 +67,9 @@ export class EskizService {
 
   async sendSms(phone: string, message: string): Promise<EskizSendResult> {
     if (!this.isConfigured()) {
-      throw new EskizError('Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)');
+      throw new EskizError(
+        'Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)',
+      );
     }
     const mobile = this.normalizePhone(phone);
 
@@ -79,7 +81,7 @@ export class EskizService {
       res = await this.postSend(mobile, message, token);
     }
 
-    const json = (await res.json().catch(() => ({}))) as any;
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       this.logger.warn(
         `Eskiz send failed (${res.status}): ${JSON.stringify(json)}`,
@@ -111,7 +113,9 @@ export class EskizService {
 
   private async login(): Promise<string> {
     if (!this.email || !this.password) {
-      throw new EskizError('Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)');
+      throw new EskizError(
+        'Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)',
+      );
     }
     const form = new FormData();
     form.append('email', this.email);
@@ -124,7 +128,7 @@ export class EskizService {
     if (!res.ok) {
       throw new EskizError(`Eskiz login failed: ${res.status}`);
     }
-    const json = (await res.json().catch(() => ({}))) as any;
+    const json = await res.json().catch(() => ({}));
     const token: string | undefined = json?.data?.token;
     if (!token) {
       throw new EskizError('Eskiz login: token qaytmadi');

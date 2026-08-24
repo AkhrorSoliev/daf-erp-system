@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -38,19 +38,17 @@ describe('UsersService — updateUser status/isActive sync', () => {
         // Both the target lookup and the caller-scope lookup go through
         // findFirst; a CEO caller spans every branch, so the scope guard passes
         // and these tests stay about status/isActive sync.
-        findFirst: jest
-          .fn()
-          .mockImplementation(({ select }: any) =>
-            Promise.resolve(
-              select?.roles && !select?.status
-                ? {
-                    mainBranch: null,
-                    branches: [],
-                    roles: [{ role: { name: 'CEO' } }],
-                  }
-                : mockUser,
-            ),
+        findFirst: jest.fn().mockImplementation(({ select }: any) =>
+          Promise.resolve(
+            select?.roles && !select?.status
+              ? {
+                  mainBranch: null,
+                  branches: [],
+                  roles: [{ role: { name: 'CEO' } }],
+                }
+              : mockUser,
           ),
+        ),
         findUnique: jest.fn().mockResolvedValue({
           roles: [{ role: { name: 'CEO' } }],
         }),
@@ -392,19 +390,17 @@ describe('UsersService — cross-company guards', () => {
       user: {
         // These tests are about the COMPANY guard; make the caller a CEO so the
         // separate branch-scope guard passes and does not mask what is asserted.
-        findFirst: jest
-          .fn()
-          .mockImplementation(({ select }: any) =>
-            Promise.resolve(
-              select?.roles && !select?.status
-                ? {
-                    mainBranch: null,
-                    branches: [],
-                    roles: [{ role: { name: 'CEO' } }],
-                  }
-                : target,
-            ),
+        findFirst: jest.fn().mockImplementation(({ select }: any) =>
+          Promise.resolve(
+            select?.roles && !select?.status
+              ? {
+                  mainBranch: null,
+                  branches: [],
+                  roles: [{ role: { name: 'CEO' } }],
+                }
+              : target,
           ),
+        ),
         findUnique: jest.fn(),
         update: jest.fn().mockResolvedValue(target),
       },

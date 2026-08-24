@@ -93,9 +93,7 @@ export class StudentsWriteService {
     companyId: number,
   ): Promise<void> {
     if (!branchIds?.length) {
-      throw new BadRequestException(
-        "O'quvchi uchun filial tanlanishi shart",
-      );
+      throw new BadRequestException("O'quvchi uchun filial tanlanishi shart");
     }
     if (branchIds.length > 1) {
       throw new BadRequestException(

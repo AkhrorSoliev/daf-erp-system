@@ -65,7 +65,9 @@ describe('lesson-price', () => {
     // Lesson 12 of a 12-lesson course is lesson 0 of the next cycle. Callers
     // increment a single counter and never have to reset it themselves.
     const { price, count } = ROUNDS_DOWN;
-    expect(lessonPriceAt(price, count, 12)).toBe(lessonPriceAt(price, count, 0));
+    expect(lessonPriceAt(price, count, 12)).toBe(
+      lessonPriceAt(price, count, 0),
+    );
     expect(lessonPriceAt(price, count, 23)).toBe(
       lessonPriceAt(price, count, 11),
     );

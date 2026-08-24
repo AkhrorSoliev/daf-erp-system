@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -63,7 +62,7 @@ export class CashAccountsService {
     // negative (docs/branch-decisions.md D4).
     if (!dto.branchId) {
       throw new BadRequestException(
-        "Kassa hisobi uchun filial tanlanishi shart",
+        'Kassa hisobi uchun filial tanlanishi shart',
       );
     }
     const branch = await this.prisma.branch.findFirst({

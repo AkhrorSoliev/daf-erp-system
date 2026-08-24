@@ -87,7 +87,7 @@ describe('SalaryStaffConfigService', () => {
     expect(userWhere().branches).toEqual({ some: { branchId: 7 } });
   });
 
-  it("confines a Branch Director to their own branch", async () => {
+  it('confines a Branch Director to their own branch', async () => {
     prisma.user.findUnique.mockResolvedValue(DIRECTOR_B7);
     await service.listStaff({}, 1, 10500);
     expect(userWhere().branches).toEqual({ some: { branchId: 7 } });

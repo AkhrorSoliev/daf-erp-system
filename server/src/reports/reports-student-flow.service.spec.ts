@@ -16,7 +16,11 @@ describe('ReportsStudentFlowService', () => {
         count: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      attendance: { findMany: jest.fn().mockResolvedValue(new Array(444).fill({ studentId: 1 })) },
+      attendance: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue(new Array(444).fill({ studentId: 1 })),
+      },
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
       $queryRaw: jest.fn().mockResolvedValue([
         { s: 'FROZEN', n: BigInt(73) },
@@ -33,20 +37,32 @@ describe('ReportsStudentFlowService', () => {
   });
 
   it('returns the production July shape', async () => {
-    const out = await service.getStudentFlow(1, { month: '2026-07', branchIds: null });
+    const out = await service.getStudentFlow(1, {
+      month: '2026-07',
+      branchIds: null,
+    });
 
     expect(out.attended).toBe(444);
     expect(out.inGroup).toBe(427);
     expect(out.groupless).toBe(76);
     expect(out.totalStudents).toBe(824);
     expect(out.arrived).toBe(72);
-    expect(out.left).toEqual({ frozen: 73, expelled: 41, graduated: 20, archived: 0, total: 134 });
+    expect(out.left).toEqual({
+      frozen: 73,
+      expelled: 41,
+      graduated: 20,
+      archived: 0,
+      total: 134,
+    });
     expect(out.netChange).toBe(-62);
   });
 
   it('splits dropped students into still-studying and groupless', async () => {
     prisma.enrollment.findMany.mockResolvedValue([
-      { studentId: 1 }, { studentId: 1 }, { studentId: 2 }, { studentId: 3 },
+      { studentId: 1 },
+      { studentId: 1 },
+      { studentId: 2 },
+      { studentId: 3 },
     ]);
     prisma.student.findMany.mockResolvedValue([
       { id: 1, status: 'ACTIVE', enrollments: [{ id: 'e' }] },
@@ -54,7 +70,10 @@ describe('ReportsStudentFlowService', () => {
       { id: 3, status: 'ACTIVE', enrollments: [] },
     ]);
 
-    const out = await service.getStudentFlow(1, { month: '2026-07', branchIds: null });
+    const out = await service.getStudentFlow(1, {
+      month: '2026-07',
+      branchIds: null,
+    });
 
     expect(out.dropped.records).toBe(4);
     expect(out.dropped.students).toBe(3);
@@ -69,7 +88,10 @@ describe('ReportsStudentFlowService', () => {
   });
 
   it('an empty branch scope returns zeros without querying', async () => {
-    const out = await service.getStudentFlow(1, { month: '2026-07', branchIds: [] });
+    const out = await service.getStudentFlow(1, {
+      month: '2026-07',
+      branchIds: [],
+    });
     expect(out.attended).toBe(0);
     expect(out.totalStudents).toBe(0);
     expect(prisma.student.groupBy).not.toHaveBeenCalled();

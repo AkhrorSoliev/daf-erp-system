@@ -47,13 +47,21 @@ describe('CallLogsController — role guards', () => {
   });
 
   it('denies Teacher and Cashier', () => {
-    expect(() => guard.canActivate(ctx(['Teacher']))).toThrow(ForbiddenException);
-    expect(() => guard.canActivate(ctx(['Cashier']))).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(ctx(['Teacher']))).toThrow(
+      ForbiddenException,
+    );
+    expect(() => guard.canActivate(ctx(['Cashier']))).toThrow(
+      ForbiddenException,
+    );
   });
 
   describe('handler wiring', () => {
     it('create delegates with user context', async () => {
-      const dto = { studentId: 10264, reason: 'ABSENCE', outcome: 'ANSWERED' } as any;
+      const dto = {
+        studentId: 10264,
+        reason: 'ABSENCE',
+        outcome: 'ANSWERED',
+      } as any;
       await controller.create(dto, 10001, 1);
       expect(mockService.create).toHaveBeenCalledWith(dto, 10001, 1);
     });

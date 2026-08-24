@@ -52,8 +52,11 @@ export function pickActiveVersion(
 ): RateVersion | null {
   if (!versions || versions.length === 0) return null;
   const eligible = versions.filter(
-    (v) => v.effectiveFrom <= at && (v.effectiveTo == null || v.effectiveTo > at),
+    (v) =>
+      v.effectiveFrom <= at && (v.effectiveTo == null || v.effectiveTo > at),
   );
   if (eligible.length === 0) return null;
-  return eligible.reduce((a, b) => (a.effectiveFrom >= b.effectiveFrom ? a : b));
+  return eligible.reduce((a, b) =>
+    a.effectiveFrom >= b.effectiveFrom ? a : b,
+  );
 }

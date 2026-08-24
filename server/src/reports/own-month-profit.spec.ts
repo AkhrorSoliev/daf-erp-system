@@ -22,7 +22,11 @@ describe('computeOwnMonthProfit', () => {
   it('June 2026 production figures — the month did NOT cover itself', () => {
     const result = computeOwnMonthProfit(
       133_621_653,
-      np({ teacherSalary: 66_721_097, operatingExpenses: 92_744_000, refunds: 907_000 }),
+      np({
+        teacherSalary: 66_721_097,
+        operatingExpenses: 92_744_000,
+        refunds: 907_000,
+      }),
     );
     expect(result).toBe(-26_750_444);
   });
@@ -30,7 +34,11 @@ describe('computeOwnMonthProfit', () => {
   it('July 2026 production figures — the month just covered itself', () => {
     const result = computeOwnMonthProfit(
       142_064_938,
-      np({ teacherSalary: 95_834_547, operatingExpenses: 41_773_000, refunds: 200_000 }),
+      np({
+        teacherSalary: 95_834_547,
+        operatingExpenses: 41_773_000,
+        refunds: 200_000,
+      }),
     );
     expect(result).toBe(4_257_391);
   });
@@ -38,7 +46,11 @@ describe('computeOwnMonthProfit', () => {
   it('subtracts staff salary too', () => {
     const result = computeOwnMonthProfit(
       1_000_000,
-      np({ teacherSalary: 400_000, adminSalary: 100_000, operatingExpenses: 200_000 }),
+      np({
+        teacherSalary: 400_000,
+        adminSalary: 100_000,
+        operatingExpenses: 200_000,
+      }),
     );
     expect(result).toBe(300_000);
   });
@@ -46,7 +58,10 @@ describe('computeOwnMonthProfit', () => {
   it('does NOT subtract the center top-up separately (it is inside teacherSalary)', () => {
     // teacherSalary already equals covered + centerFunded; subtracting the gap
     // again would double-count it.
-    const result = computeOwnMonthProfit(1_000_000, np({ teacherSalary: 600_000 }));
+    const result = computeOwnMonthProfit(
+      1_000_000,
+      np({ teacherSalary: 600_000 }),
+    );
     expect(result).toBe(400_000);
   });
 });

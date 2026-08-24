@@ -22,7 +22,7 @@ export const INSTANT_PAYMENT_THRESHOLD_SUM = 5_000_000;
 
 // Reply messages (Uzbek)
 export const MSG_NOT_APPROVED =
-  "Bu guruh hali tasdiqlanmagan. CEO admin paneldan tasdiqlashi kerak.";
+  'Bu guruh hali tasdiqlanmagan. CEO admin paneldan tasdiqlashi kerak.';
 export const MSG_NOT_GROUP_CHAT =
   'Bu bot faqat tasdiqlangan Telegram guruhlarida ishlaydi.';
 export const MSG_PENDING_REGISTERED = (chatId: number) =>
@@ -30,11 +30,14 @@ export const MSG_PENDING_REGISTERED = (chatId: number) =>
   `<b>Guruh ID:</b> <code>${chatId}</code>\n\n` +
   `CEO admin paneldan "Telegram Guruhlar" bo'limiga o'tib, ushbu guruhni tasdiqlasin. ` +
   `Tasdiqlangach barcha komandalar shu yerda ishlay boshlaydi.`;
-export const MSG_APPROVED_ANNOUNCE = (companyName: string, approverName: string) =>
+export const MSG_APPROVED_ANNOUNCE = (
+  companyName: string,
+  approverName: string,
+) =>
   `✅ Bu guruh <b>${companyName}</b> uchun tasdiqlandi (${approverName} tomonidan).\n\n` +
   `Buyruqlar ro'yxati: /help`;
 export const MSG_HELP = [
-  "📘 <b>DaF admin bot</b> — guruh komandalari:",
+  '📘 <b>DaF admin bot</b> — guruh komandalari:',
   '',
   '/stats — Umumiy statistika',
   "/oquvchilar — O'quvchilar soni va bugun yangi",
@@ -60,6 +63,6 @@ export const ANNOUNCEMENT_TEMPLATES: Record<AnnouncementTemplateKey, string> = {
   NEW_REPORT:
     '📊 Yangi hisobot: "{{name}}"\n\n{{description}}\n\nKo\'rish: admin.dafzentrum.uz/reports',
   BUG_FIX:
-    '🛠 Tuzatildi: {{summary}}\n\nEndi tizim to\'g\'ri ishlamoqda. Foydalanish davom etishi mumkin.',
+    "🛠 Tuzatildi: {{summary}}\n\nEndi tizim to'g'ri ishlamoqda. Foydalanish davom etishi mumkin.",
   GENERAL: '✨ Yangilik: {{title}}\n\n{{body}}',
 };

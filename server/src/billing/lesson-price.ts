@@ -22,7 +22,10 @@
  */
 
 /** The familiar per-lesson figure — every lesson but the cycle's last. */
-export function baseLessonPrice(cycleCost: number, lessonCount: number): number {
+export function baseLessonPrice(
+  cycleCost: number,
+  lessonCount: number,
+): number {
   if (lessonCount <= 0 || cycleCost <= 0) return 0;
   return Math.round(cycleCost / lessonCount);
 }

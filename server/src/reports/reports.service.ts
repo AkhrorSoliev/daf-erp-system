@@ -118,7 +118,11 @@ export class ReportsService {
     performedById: number,
     branchId?: number,
   ) {
-    return this.salary.getMonthly({ month, branchId }, companyId, performedById);
+    return this.salary.getMonthly(
+      { month, branchId },
+      companyId,
+      performedById,
+    );
   }
   // "Dars tushumi" — recognized revenue for lessons HELD in the window (by
   // attendance date), the isolated basis the Foyda card + Excel "Sof foyda" use.
@@ -223,7 +227,11 @@ export class ReportsService {
     const startDate = `${month}-01`;
     const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
     const [attribution, netProfit] = await Promise.all([
-      this.getIncomeMonthAttribution(companyId, { branchIds, startDate, endDate }),
+      this.getIncomeMonthAttribution(companyId, {
+        branchIds,
+        startDate,
+        endDate,
+      }),
       this.getMonthlyNetProfit(companyId, { month, branchIds, performedById }),
     ]);
     return {
@@ -231,7 +239,10 @@ export class ReportsService {
       ownMoney: attribution.currentMonth,
       cashTotal: attribution.total,
       netProfit,
-      ownMonthProfit: computeOwnMonthProfit(attribution.currentMonth, netProfit),
+      ownMonthProfit: computeOwnMonthProfit(
+        attribution.currentMonth,
+        netProfit,
+      ),
     };
   }
 
@@ -495,9 +506,7 @@ export class ReportsService {
     companyId: number,
     // Required, not optional — the facade was the place the missing scope
     // could still slip through.
-    options: Parameters<
-      ReportsFinancialService['getDebtWriteOffsSummary']
-    >[1],
+    options: Parameters<ReportsFinancialService['getDebtWriteOffsSummary']>[1],
   ) {
     return this.financial.getDebtWriteOffsSummary(companyId, options);
   }
@@ -562,11 +571,11 @@ export class ReportsService {
   ) {
     return this.studentPayments.getStudentPaymentsReport(companyId, params);
   }
-  getStudentPaymentsFilterOptions(
-    companyId: number,
-    scope: ReportBranchIds,
-  ) {
-    return this.studentPayments.getStudentPaymentsFilterOptions(companyId, scope);
+  getStudentPaymentsFilterOptions(companyId: number, scope: ReportBranchIds) {
+    return this.studentPayments.getStudentPaymentsFilterOptions(
+      companyId,
+      scope,
+    );
   }
 
   // Departed students — core

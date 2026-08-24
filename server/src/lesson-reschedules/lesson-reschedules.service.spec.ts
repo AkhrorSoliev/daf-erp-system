@@ -15,7 +15,10 @@ describe('LessonReschedulesService', () => {
     tx = {
       group: { findFirst: jest.fn(), findMany: jest.fn() },
       room: { findFirst: jest.fn(), findMany: jest.fn() },
-      lessonCancellation: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      lessonCancellation: {
+        findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       lessonReschedule: {
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),

@@ -561,7 +561,11 @@ describe('PaymentsService', () => {
     });
 
     it('should allow filtering by REVERSED status explicitly', async () => {
-      await service.findAll({ status: PaymentStatus.REVERSED } as any, 1001, null);
+      await service.findAll(
+        { status: PaymentStatus.REVERSED } as any,
+        1001,
+        null,
+      );
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where).toEqual(
@@ -585,7 +589,8 @@ describe('PaymentsService', () => {
       const result = await service.findAll(
         { page: 1, pageSize: 10 } as any,
         1001,
-       null);
+        null,
+      );
 
       expect(result).toEqual({
         data: [mockPaymentWithRelations],
@@ -599,7 +604,8 @@ describe('PaymentsService', () => {
       await service.findAll(
         { startDate: '2026-01-01', endDate: '2026-01-31' } as any,
         1001,
-       null);
+        null,
+      );
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where.createdAt).toEqual({
@@ -651,7 +657,8 @@ describe('PaymentsService', () => {
         10001,
         { status: PaymentStatus.REVERSED } as any,
         1001,
-       null);
+        null,
+      );
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
       expect(findManyCall.where.status).toBe(PaymentStatus.REVERSED);
@@ -665,7 +672,8 @@ describe('PaymentsService', () => {
         10001,
         { page: 2, pageSize: 5 } as any,
         1001,
-       null);
+        null,
+      );
 
       expect(result).toEqual({
         data: [mockPaymentWithRelations],
@@ -707,7 +715,11 @@ describe('PaymentsService', () => {
       prisma.student.findMany.mockResolvedValue([]);
       prisma.student.count.mockResolvedValue(0);
 
-      await service.getDebtors(1001, { branchId: 5, userId: 1, roles: ['CEO'] });
+      await service.getDebtors(1001, {
+        branchId: 5,
+        userId: 1,
+        roles: ['CEO'],
+      });
 
       const findManyCall = prisma.student.findMany.mock.calls[0][0];
       expect(findManyCall.where.branches).toEqual({
@@ -800,7 +812,11 @@ describe('PaymentsService', () => {
     it('re-posts with the new method when method is changed', async () => {
       await service.correctAmount(
         'payment-uuid-1',
-        { correctAmount: 400000, method: 'TRANSFER' as any, reason: 'Usul xato' },
+        {
+          correctAmount: 400000,
+          method: 'TRANSFER' as any,
+          reason: 'Usul xato',
+        },
         99,
         1001,
         ['Administrator'],

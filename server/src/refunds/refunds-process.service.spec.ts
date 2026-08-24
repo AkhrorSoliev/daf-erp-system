@@ -34,7 +34,9 @@ describe('RefundsProcessService — completion bound', () => {
           roles: [{ role: { name: 'CEO' } }],
         }),
       },
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
       refund: {
         findFirst: jest.fn().mockResolvedValue({ ...baseRefund }),
@@ -118,7 +120,9 @@ describe('RefundsProcessService.reverse — cancelled lessons', () => {
           roles: [{ role: { name: 'CEO' } }],
         }),
       },
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
       refund: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'refund-1',
@@ -133,7 +137,9 @@ describe('RefundsProcessService.reverse — cancelled lessons', () => {
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn().mockImplementation((fn) => fn(txClient)),
     };
-    transactionsService = { reverseTransaction: jest.fn().mockResolvedValue({}) };
+    transactionsService = {
+      reverseTransaction: jest.fn().mockResolvedValue({}),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

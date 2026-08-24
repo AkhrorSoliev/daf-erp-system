@@ -25,10 +25,7 @@ import { BillingModule } from '../billing/billing.module';
     PaymentGatewaysModule,
     BillingModule,
   ],
-  controllers: [
-    StudentsController,
-    StudentPortalController,
-  ],
+  controllers: [StudentsController, StudentPortalController],
   providers: [
     StudentsService,
     StudentsReadService,

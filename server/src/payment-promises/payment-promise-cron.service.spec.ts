@@ -70,7 +70,11 @@ describe('PaymentPromiseCronService', () => {
     });
     expect(emitter.emit).toHaveBeenCalledWith(
       'payment-promise.overdue',
-      expect.objectContaining({ promiseId: 'p1', studentId: 10264, branchId: 3 }),
+      expect.objectContaining({
+        promiseId: 'p1',
+        studentId: 10264,
+        branchId: 3,
+      }),
     );
     expect(res).toEqual({ processed: 1 });
   });

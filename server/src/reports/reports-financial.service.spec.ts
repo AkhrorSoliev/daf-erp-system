@@ -116,7 +116,9 @@ describe('ReportsFinancialService', () => {
         { amount: 533328, metadata: { marker: 'overcharge-correction-10061' } },
         {
           amount: -99999,
-          metadata: { marker: 'overcharge-correction-10061-v2-absent-billable' },
+          metadata: {
+            marker: 'overcharge-correction-10061-v2-absent-billable',
+          },
         },
         { amount: 200000, metadata: { marker: 'manual-balance-gift' } },
         { amount: 50000, metadata: null },
@@ -162,7 +164,11 @@ describe('ReportsFinancialService', () => {
     it('excludes an UNSETTLED advance from Xarajatlar, salary AND Foyda (it is a prepayment, not a Chiqim yet)', async () => {
       // All expenses = 3,000,000 (of which 2,400,000 is advance cash paid this
       // period); none of it is settled yet, and no salary run was PAID.
-      mockExpenses({ all: 3_000_000, advancePaid: 2_400_000, advanceSettled: 0 });
+      mockExpenses({
+        all: 3_000_000,
+        advancePaid: 2_400_000,
+        advanceSettled: 0,
+      });
       prisma.salaryPayment.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
       prisma.salaryAccrual.aggregate.mockResolvedValue({
         _sum: { amount: 350_000 },
@@ -511,15 +517,15 @@ describe('ReportsFinancialService', () => {
       expect(payWhere).not.toHaveProperty('reversedAt');
 
       expect(res.recoveredPayments).toHaveLength(2);
-      expect(
-        res.recoveredPayments.reduce((s, p) => s + p.amount, 0),
-      ).toBe(res.totals.recovered);
+      expect(res.recoveredPayments.reduce((s, p) => s + p.amount, 0)).toBe(
+        res.totals.recovered,
+      );
       expect(res.recoveredPayments.find((p) => p.id === 'p1')?.isReversed).toBe(
         true,
       );
-      expect(res.recoveredPayments.find((p) => p.id === 'rev')?.isReversal).toBe(
-        true,
-      );
+      expect(
+        res.recoveredPayments.find((p) => p.id === 'rev')?.isReversal,
+      ).toBe(true);
     });
 
     it('claims a write-off BEFORE payment so forgiveness is never squeezed out', async () => {
@@ -827,11 +833,17 @@ describe('ReportsFinancialService', () => {
       expect(result.currentLabel).toBe('Yanvar 2026 – Iyun 2026');
     });
 
-    it('divides the period\'s OWN income by the value of lessons held in it', async () => {
+    it("divides the period's OWN income by the value of lessons held in it", async () => {
       // Two lessons held in June, billed 150 000 each -> denominator 300 000.
       prisma.attendance.findMany.mockResolvedValueOnce([
-        { id: 'a1', group: { course: { price: 1800000, lessonPaymentCount: 12 } } },
-        { id: 'a2', group: { course: { price: 1800000, lessonPaymentCount: 12 } } },
+        {
+          id: 'a1',
+          group: { course: { price: 1800000, lessonPaymentCount: 12 } },
+        },
+        {
+          id: 'a2',
+          group: { course: { price: 1800000, lessonPaymentCount: 12 } },
+        },
       ]);
       prisma.transaction.findMany.mockResolvedValueOnce([
         { attendanceId: 'a1', metadata: { perLessonCost: 150000 } },
@@ -857,7 +869,10 @@ describe('ReportsFinancialService', () => {
 
     it('excludes old-debt settlement from the ratio (that is the point of it)', async () => {
       prisma.attendance.findMany.mockResolvedValueOnce([
-        { id: 'a1', group: { course: { price: 1200000, lessonPaymentCount: 12 } } },
+        {
+          id: 'a1',
+          group: { course: { price: 1200000, lessonPaymentCount: 12 } },
+        },
       ]);
       prisma.transaction.findMany.mockResolvedValueOnce([
         { attendanceId: 'a1', metadata: { perLessonCost: 100000 } },

@@ -85,7 +85,10 @@ describe('ExpensesService — findAll filters + summary', () => {
 
   it('always scopes to companyId + deletedAt: null', async () => {
     await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
-    expect(whereArg()).toMatchObject({ companyId: COMPANY_ID, deletedAt: null });
+    expect(whereArg()).toMatchObject({
+      companyId: COMPANY_ID,
+      deletedAt: null,
+    });
   });
 
   it('filters by category and paymentMethod when provided', async () => {
@@ -95,7 +98,8 @@ describe('ExpensesService — findAll filters + summary', () => {
         paymentMethod: ExpensePaymentMethod.CARD,
       } as ExpenseQueryDto,
       COMPANY_ID,
-     null);
+      null,
+    );
     expect(whereArg()).toMatchObject({
       category: ExpenseCategory.RENT,
       paymentMethod: ExpensePaymentMethod.CARD,
@@ -103,7 +107,11 @@ describe('ExpensesService — findAll filters + summary', () => {
   });
 
   it('applies case-insensitive description search', async () => {
-    await service.findAll({ search: 'ijara' } as ExpenseQueryDto, COMPANY_ID, null);
+    await service.findAll(
+      { search: 'ijara' } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
     expect(whereArg().description).toEqual({
       contains: 'ijara',
       mode: 'insensitive',
@@ -114,7 +122,8 @@ describe('ExpensesService — findAll filters + summary', () => {
     await service.findAll(
       { startDate: '2026-06-01' } as ExpenseQueryDto,
       COMPANY_ID,
-     null);
+      null,
+    );
     const date = whereArg().date;
     expect(date.gte).toEqual(new Date('2026-06-01'));
     expect(date.lte).toBeUndefined();
@@ -124,7 +133,8 @@ describe('ExpensesService — findAll filters + summary', () => {
     await service.findAll(
       { endDate: '2026-06-30' } as ExpenseQueryDto,
       COMPANY_ID,
-     null);
+      null,
+    );
     const date = whereArg().date;
     expect(date.lte).toEqual(new Date('2026-06-30'));
     expect(date.gte).toBeUndefined();
@@ -134,7 +144,8 @@ describe('ExpensesService — findAll filters + summary', () => {
     await service.findAll(
       { startDate: '2026-06-01', endDate: '2026-06-30' } as ExpenseQueryDto,
       COMPANY_ID,
-     null);
+      null,
+    );
     expect(whereArg().date).toEqual({
       gte: new Date('2026-06-01'),
       lte: new Date('2026-06-30'),
@@ -188,7 +199,8 @@ describe('ExpensesService — findAll filters + summary', () => {
     await service.findAll(
       { category: ExpenseCategory.MARKETING } as ExpenseQueryDto,
       COMPANY_ID,
-     null);
+      null,
+    );
     expect(whereArg().category).toEqual(ExpenseCategory.MARKETING);
   });
 
@@ -212,7 +224,8 @@ describe('ExpensesService — findAll filters + summary', () => {
           pageSize: 10,
         } as ExpenseQueryDto,
         COMPANY_ID,
-       null);
+        null,
+      );
 
       const call = prisma.expense.findMany.mock.calls[0][0];
       expect(call.where).toMatchObject({

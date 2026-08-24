@@ -69,7 +69,9 @@ describe('ReportsProfitLossService', () => {
     expect(pl.operatingExpenses.adminSalaries).toBe(150_000);
     expect(pl.operatingExpenses.total).toBe(550_000);
     expect(
-      pl.operatingExpenses.byCategory.find((c) => c.category === 'TEACHER_ADVANCE'),
+      pl.operatingExpenses.byCategory.find(
+        (c) => c.category === 'TEACHER_ADVANCE',
+      ),
     ).toBeUndefined();
 
     expect(pl.netProfit).toBe(200_000);

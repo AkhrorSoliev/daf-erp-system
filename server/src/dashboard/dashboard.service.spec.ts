@@ -225,7 +225,7 @@ describe('DashboardService', () => {
       );
     });
 
-    it("regression: multi-day holiday is detected on its middle days (bug #2)", async () => {
+    it('regression: multi-day holiday is detected on its middle days (bug #2)', async () => {
       // Holiday Mar 21 — Mar 23. On Mar 22 the dashboard must still show
       // isHoliday=true. The previous implementation used `findFirst({ date: X })`
       // which only matched the holiday's start day.

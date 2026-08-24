@@ -1,5 +1,8 @@
 import { HolidayStatus, type PrismaClient } from '@prisma/client';
-import { addDaysToDateStr, tashkentDateStr } from '../attendance/shared/date-utils';
+import {
+  addDaysToDateStr,
+  tashkentDateStr,
+} from '../attendance/shared/date-utils';
 
 /**
  * "Bu oraliqda qaysi kunlar bayram?" — `HolidaysService` dan AJRATILGAN

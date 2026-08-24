@@ -2,17 +2,19 @@ import { buildScheduleDayResolver } from './schedule-resolver';
 
 describe('buildScheduleDayResolver', () => {
   it('returns current exactDays for every date when there are no snapshots', () => {
-    const resolve = buildScheduleDayResolver([], ['monday', 'wednesday', 'friday']);
+    const resolve = buildScheduleDayResolver(
+      [],
+      ['monday', 'wednesday', 'friday'],
+    );
     // Mon=1, Wed=3, Fri=5
     expect(resolve('2026-05-04')).toEqual([1, 3, 5]); // Monday in May
     expect(resolve('2026-01-01')).toEqual([1, 3, 5]); // far past
   });
 
   it('treats undefined snapshots as no snapshots (no crash)', () => {
-    const resolve = buildScheduleDayResolver(
-      undefined as unknown as [],
-      ['tuesday'],
-    );
+    const resolve = buildScheduleDayResolver(undefined as unknown as [], [
+      'tuesday',
+    ]);
     expect(resolve('2026-05-05')).toEqual([2]);
   });
 

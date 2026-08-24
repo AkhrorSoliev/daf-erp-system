@@ -55,11 +55,13 @@ describe('TeachersService — branch confinement', () => {
     prisma = {
       user: {
         // Answers by id: the caller and the target are both read through this.
-        findFirst: jest.fn().mockImplementation(({ where }: any) =>
-          Promise.resolve(
-            where?.id === FARGONA_DIRECTOR ? callerRow : teacherRow,
+        findFirst: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve(
+              where?.id === FARGONA_DIRECTOR ? callerRow : teacherRow,
+            ),
           ),
-        ),
         update: jest.fn().mockResolvedValue(teacherRow),
         create: jest.fn().mockResolvedValue(teacherRow),
         findMany: jest.fn().mockResolvedValue([]),
@@ -67,7 +69,10 @@ describe('TeachersService — branch confinement', () => {
       },
       branch: { findFirst: jest.fn().mockResolvedValue({ id: NAMANGAN }) },
       group: { findMany: jest.fn().mockResolvedValue([]) },
-      groupTeacher: { findMany: jest.fn().mockResolvedValue([]), deleteMany: jest.fn() },
+      groupTeacher: {
+        findMany: jest.fn().mockResolvedValue([]),
+        deleteMany: jest.fn(),
+      },
       statusHistory: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((fn: any) =>
         typeof fn === 'function' ? fn(prisma) : Promise.resolve([]),

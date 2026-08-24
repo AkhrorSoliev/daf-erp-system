@@ -217,7 +217,10 @@ export class ReportsExpectationService {
         });
 
       const discountByStudent = new Map(
-        g.enrollments.map((e) => [e.studentId, e.student?.discountPercent ?? 0]),
+        g.enrollments.map((e) => [
+          e.studentId,
+          e.student?.discountPercent ?? 0,
+        ]),
       );
 
       const covered: PricedAttendance[] = [];

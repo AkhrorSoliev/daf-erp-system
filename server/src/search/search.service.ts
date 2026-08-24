@@ -14,7 +14,8 @@ export interface QuickSearchResult {
   users: CategoryResult;
   teachers: CategoryResult;
   groups: CategoryResult;
-  courses: CategoryResult;}
+  courses: CategoryResult;
+}
 
 @Injectable()
 export class SearchService {
@@ -122,5 +123,4 @@ export class SearchService {
 
     return { data: result.items, total: result.total, page, pageSize };
   }
-
 }

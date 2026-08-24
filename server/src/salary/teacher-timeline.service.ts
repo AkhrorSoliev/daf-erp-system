@@ -31,7 +31,10 @@ export interface TimelineEvent {
 export class TeacherTimelineService {
   constructor(private prisma: PrismaService) {}
 
-  async getTimeline(teacherId: number, companyId: number): Promise<TimelineEvent[]> {
+  async getTimeline(
+    teacherId: number,
+    companyId: number,
+  ): Promise<TimelineEvent[]> {
     const [salaryVersions, groupHistory, entityHistory] = await Promise.all([
       this.prisma.employeeSalaryConfigVersion.findMany({
         where: { config: { userId: teacherId, companyId } },

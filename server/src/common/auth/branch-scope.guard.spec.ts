@@ -34,7 +34,9 @@ describe('BranchScopeGuard', () => {
 
   describe('CEO — no ceiling', () => {
     it('resolves to null (every branch) when no branch is picked', async () => {
-      expect(await scopeFor({ ...CEO, mainBranch: null, branches: [] }, {})).toBeNull();
+      expect(
+        await scopeFor({ ...CEO, mainBranch: null, branches: [] }, {}),
+      ).toBeNull();
     });
 
     it('narrows to the picked branch', async () => {
@@ -99,7 +101,11 @@ describe('BranchScopeGuard', () => {
 
     it('merges mainBranch and UserBranch', async () => {
       const scope = await scopeFor(
-        { ...staff('Administrator'), mainBranch: 1, branches: [{ branchId: 2 }] },
+        {
+          ...staff('Administrator'),
+          mainBranch: 1,
+          branches: [{ branchId: 2 }],
+        },
         {},
       );
       expect(new Set(scope as number[])).toEqual(new Set([1, 2]));
@@ -119,7 +125,11 @@ describe('BranchScopeGuard', () => {
       const { guard } = makeGuard({ ...CEO, mainBranch: null, branches: [] });
       await expect(
         guard.canActivate(
-          ctx({ user: { id: 1 }, headers: { 'x-branch-id': 'oops' }, query: {} }),
+          ctx({
+            user: { id: 1 },
+            headers: { 'x-branch-id': 'oops' },
+            query: {},
+          }),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });

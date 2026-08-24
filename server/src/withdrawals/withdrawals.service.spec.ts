@@ -60,7 +60,9 @@ describe('WithdrawalsService', () => {
         findFirst: jest.fn().mockResolvedValue({ groupId: 'grp-1' }),
       },
       // The withdrawal is recognised as the student's branch's revenue.
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
       transaction: {
         create: jest
           .fn()
@@ -255,7 +257,7 @@ describe('WithdrawalsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('forbids selecting a teacher not in the student\'s groups', async () => {
+    it("forbids selecting a teacher not in the student's groups", async () => {
       prisma.enrollment.findFirst.mockResolvedValueOnce(null);
       await expect(
         service.create(

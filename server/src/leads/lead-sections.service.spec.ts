@@ -26,9 +26,11 @@ describe('LeadSectionsService', () => {
       },
       // Supports both the array form (reorder) and the interactive callback
       // form (cascade remove), running the callback against the same mock.
-      $transaction: jest.fn().mockImplementation((arg: any) =>
-        typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
-      ),
+      $transaction: jest
+        .fn()
+        .mockImplementation((arg: any) =>
+          typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+        ),
     };
     history = {
       recordCreate: jest.fn(),
@@ -64,7 +66,10 @@ describe('LeadSectionsService', () => {
     });
 
     it('appends the section to the end of the column and records history', async () => {
-      prisma.leadColumn.findFirst.mockResolvedValue({ id: 'col-1', branchId: 1 });
+      prisma.leadColumn.findFirst.mockResolvedValue({
+        id: 'col-1',
+        branchId: 1,
+      });
       prisma.leadSection.aggregate.mockResolvedValue({ _max: { order: 2 } });
       prisma.leadSection.create.mockResolvedValue({
         id: 'sec-9',
@@ -81,7 +86,11 @@ describe('LeadSectionsService', () => {
       );
 
       expect(prisma.leadSection.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ name: 'Reklama', columnId: 'col-1', order: 3 }),
+        data: expect.objectContaining({
+          name: 'Reklama',
+          columnId: 'col-1',
+          order: 3,
+        }),
       });
       expect(result.leadCount).toBe(0);
       expect(history.recordCreate).toHaveBeenCalledWith(
@@ -114,7 +123,13 @@ describe('LeadSectionsService', () => {
         columnId: 'col-1',
       });
 
-      const result = await service.update('sec-1', { name: 'New' }, 1001, 1, null);
+      const result = await service.update(
+        'sec-1',
+        { name: 'New' },
+        1001,
+        1,
+        null,
+      );
 
       expect(result).toEqual({
         id: 'sec-1',
@@ -210,7 +225,10 @@ describe('LeadSectionsService', () => {
         order: 0,
         column: { id: 'col-1', branchId: 1 },
       });
-      prisma.leadColumn.findFirst.mockResolvedValue({ id: 'col-2', branchId: 1 });
+      prisma.leadColumn.findFirst.mockResolvedValue({
+        id: 'col-2',
+        branchId: 1,
+      });
       prisma.leadSection.aggregate.mockResolvedValue({ _max: { order: 1 } });
       prisma.leadSection.update.mockResolvedValue({
         id: 'sec-1',
@@ -242,7 +260,7 @@ describe('LeadSectionsService', () => {
       expect(history.recordUpdate).toHaveBeenCalled();
     });
 
-    it('refuses to move a section into another branch\'s column', async () => {
+    it("refuses to move a section into another branch's column", async () => {
       // The section carries its leads with it. Landing them on the other
       // branch's board while their own `branchId` stays put is what makes a
       // lead visible in one branch's funnel and counted in the other's — and a
@@ -254,7 +272,10 @@ describe('LeadSectionsService', () => {
         order: 0,
         column: { id: 'col-1', branchId: 1 },
       });
-      prisma.leadColumn.findFirst.mockResolvedValue({ id: 'col-9', branchId: 2 });
+      prisma.leadColumn.findFirst.mockResolvedValue({
+        id: 'col-9',
+        branchId: 2,
+      });
 
       await expect(
         service.move('sec-1', { targetColumnId: 'col-9' }, 1001, 1, null),
@@ -270,7 +291,10 @@ describe('LeadSectionsService', () => {
         order: 0,
         column: { id: 'col-1', branchId: 1 },
       });
-      prisma.leadColumn.findFirst.mockResolvedValue({ id: 'col-1', branchId: 1 });
+      prisma.leadColumn.findFirst.mockResolvedValue({
+        id: 'col-1',
+        branchId: 1,
+      });
 
       const result = await service.move(
         'sec-1',
@@ -297,7 +321,11 @@ describe('LeadSectionsService', () => {
     it('rejects a section that does not belong to the column', async () => {
       prisma.leadSection.findMany.mockResolvedValue([{ id: 'sec-1' }]);
       await expect(
-        service.reorder({ columnId: 'col-1', sectionIds: ['other'] }, 1001, null),
+        service.reorder(
+          { columnId: 'col-1', sectionIds: ['other'] },
+          1001,
+          null,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 

@@ -93,61 +93,68 @@ export class ReportsStudentFlowService {
     const groupScope = groupBranchWhere(branchIds);
     const groupBranchFilter = groupScope.group ?? {};
 
-    const [byStatusRows, inGroup, groupless, attendedRows, arrived, exitRows, droppedRows] =
-      await Promise.all([
-        this.prisma.student.groupBy({
-          by: ['status'],
-          where: { companyId, deletedAt: null, ...studentScope },
-          _count: true,
-        }),
-        this.prisma.student.count({
-          where: {
-            companyId,
-            deletedAt: null,
-            status: 'ACTIVE',
-            enrollments: { some: { status: 'ACTIVE' } },
-            ...studentScope,
-          },
-        }),
-        this.prisma.student.count({
-          where: {
-            companyId,
-            deletedAt: null,
-            status: 'ACTIVE',
-            NOT: { enrollments: { some: { status: 'ACTIVE' } } },
-            ...studentScope,
-          },
-        }),
-        this.prisma.attendance.findMany({
-          where: {
-            companyId,
-            date: { gte: dateStart, lt: dateEnd },
-            status: { in: ['PRESENT', 'LATE'] },
-            ...groupScope,
-          },
-          select: { studentId: true },
-          distinct: ['studentId'],
-        }),
-        this.prisma.student.count({
-          where: {
-            companyId,
-            deletedAt: null,
-            createdAt: { gte: tsStart, lt: tsEnd },
-            ...studentScope,
-          },
-        }),
-        // `EntityHistory` carries no branch column, so this leg is company-wide
-        // — it cannot be scoped by branch (see the coverage-guard exemption).
-        this.exitCounts(companyId, tsStart, tsEnd),
-        this.prisma.enrollment.findMany({
-          where: {
-            status: 'DROPPED',
-            statusChangedAt: { gte: tsStart, lt: tsEnd },
-            group: { companyId, ...groupBranchFilter },
-          },
-          select: { studentId: true },
-        }),
-      ]);
+    const [
+      byStatusRows,
+      inGroup,
+      groupless,
+      attendedRows,
+      arrived,
+      exitRows,
+      droppedRows,
+    ] = await Promise.all([
+      this.prisma.student.groupBy({
+        by: ['status'],
+        where: { companyId, deletedAt: null, ...studentScope },
+        _count: true,
+      }),
+      this.prisma.student.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'ACTIVE',
+          enrollments: { some: { status: 'ACTIVE' } },
+          ...studentScope,
+        },
+      }),
+      this.prisma.student.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'ACTIVE',
+          NOT: { enrollments: { some: { status: 'ACTIVE' } } },
+          ...studentScope,
+        },
+      }),
+      this.prisma.attendance.findMany({
+        where: {
+          companyId,
+          date: { gte: dateStart, lt: dateEnd },
+          status: { in: ['PRESENT', 'LATE'] },
+          ...groupScope,
+        },
+        select: { studentId: true },
+        distinct: ['studentId'],
+      }),
+      this.prisma.student.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          createdAt: { gte: tsStart, lt: tsEnd },
+          ...studentScope,
+        },
+      }),
+      // `EntityHistory` carries no branch column, so this leg is company-wide
+      // — it cannot be scoped by branch (see the coverage-guard exemption).
+      this.exitCounts(companyId, tsStart, tsEnd),
+      this.prisma.enrollment.findMany({
+        where: {
+          status: 'DROPPED',
+          statusChangedAt: { gte: tsStart, lt: tsEnd },
+          group: { companyId, ...groupBranchFilter },
+        },
+        select: { studentId: true },
+      }),
+    ]);
 
     const byStatus = byStatusRows.map((r: any) => ({
       status: String(r.status),
@@ -200,10 +207,12 @@ export class ReportsStudentFlowService {
         students: droppedStudents.length,
         stillInGroup,
         groupless: droppedStudents.length - stillInGroup,
-        grouplessByStatus: Object.entries(grouplessTally).map(([status, count]) => ({
-          status,
-          count,
-        })),
+        grouplessByStatus: Object.entries(grouplessTally).map(
+          ([status, count]) => ({
+            status,
+            count,
+          }),
+        ),
       },
     };
   }

@@ -46,7 +46,9 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(2, { message: "Lavozim kamida 2 ta belgidan iborat bo'lishi kerak" })
+  @MinLength(2, {
+    message: "Lavozim kamida 2 ta belgidan iborat bo'lishi kerak",
+  })
   @MaxLength(60, { message: 'Lavozim 60 ta belgidan oshmasligi kerak' })
   position?: string;
 

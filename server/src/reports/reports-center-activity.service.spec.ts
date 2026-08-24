@@ -60,7 +60,7 @@ describe('ReportsCenterActivityService', () => {
     };
   }
 
-  it("regression: queries the multi-day-aware holiday helper (bug #3)", async () => {
+  it('regression: queries the multi-day-aware holiday helper (bug #3)', async () => {
     // The previous implementation filtered `date: { gte, lte }` on Holiday
     // (single-day match), and built the Set from `h.date` only — so multi-day
     // holidays were truncated to their start. The fix delegates to
@@ -221,11 +221,7 @@ describe('ReportsCenterActivityService', () => {
         endDate: null,
         createdAt: new Date('2025-01-01'),
         course: { price: 0 },
-        enrollments: [
-          enrollment(100),
-          enrollment(101),
-          enrollment(102),
-        ],
+        enrollments: [enrollment(100), enrollment(101), enrollment(102)],
       },
       {
         id: 'g2',
@@ -240,10 +236,7 @@ describe('ReportsCenterActivityService', () => {
         createdAt: new Date('2025-01-01'),
         course: { price: 0 },
         // student 101 is in both groups → distinct count = 4
-        enrollments: [
-          enrollment(101),
-          enrollment(103),
-        ],
+        enrollments: [enrollment(101), enrollment(103)],
       },
     ]);
 
@@ -389,7 +382,15 @@ describe('ReportsCenterActivityService', () => {
         'g1',
         'r1',
         5,
-        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        [
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+          'sunday',
+        ],
         '09:00',
         '10:00',
         100_000,
@@ -546,9 +547,21 @@ describe('ReportsCenterActivityService', () => {
       },
     ]);
     prisma.enrollmentStateLog.findMany.mockResolvedValue([
-      { enrollmentId: 'e1', status: 'ACTIVE', transitionAt: new Date('2026-01-01') },
-      { enrollmentId: 'e1', status: 'FROZEN', transitionAt: new Date('2026-02-01') },
-      { enrollmentId: 'e1', status: 'ACTIVE', transitionAt: new Date('2026-04-15') },
+      {
+        enrollmentId: 'e1',
+        status: 'ACTIVE',
+        transitionAt: new Date('2026-01-01'),
+      },
+      {
+        enrollmentId: 'e1',
+        status: 'FROZEN',
+        transitionAt: new Date('2026-02-01'),
+      },
+      {
+        enrollmentId: 'e1',
+        status: 'ACTIVE',
+        transitionAt: new Date('2026-04-15'),
+      },
     ]);
 
     const result = await service.getCenterActivity(1, makeQuery());
@@ -590,7 +603,9 @@ function makeGroup(
     createdAt: new Date('2025-01-01'),
     course: { price },
     enrollments: Array.from({ length: enrolledCount }, (_, i) =>
-      enrollment(parseInt(`${id.replace(/\D/g, '')}${i.toString().padStart(3, '0')}`)),
+      enrollment(
+        parseInt(`${id.replace(/\D/g, '')}${i.toString().padStart(3, '0')}`),
+      ),
     ),
   };
 }

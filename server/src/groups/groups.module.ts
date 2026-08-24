@@ -21,10 +21,6 @@ import { HolidaysModule } from '../holidays/holidays.module';
     GroupStatusCronService,
     GroupHolidayCascadeService,
   ],
-  exports: [
-    GroupsService,
-    GroupScheduleService,
-    GroupHolidayCascadeService,
-  ],
+  exports: [GroupsService, GroupScheduleService, GroupHolidayCascadeService],
 })
 export class GroupsModule {}

@@ -403,7 +403,9 @@ describe('StatusCascadeService', () => {
     it('EXPELLED: refunds unused prepaid before dropping enrollments', async () => {
       await service.cascade('Student', '100', 'EXPELLED', 42);
 
-      expect(enrollmentBillingService.refundPrepaidToBalance).toHaveBeenCalledWith(
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalledWith(
         prisma, // tx from the mocked $transaction
         expect.objectContaining({ enrollmentId: 'enr-1', performedById: 42 }),
       );
@@ -411,18 +413,23 @@ describe('StatusCascadeService', () => {
       const refundOrder =
         enrollmentBillingService.refundPrepaidToBalance.mock
           .invocationCallOrder[0];
-      const updateOrder = prisma.enrollment.updateMany.mock.invocationCallOrder[0];
+      const updateOrder =
+        prisma.enrollment.updateMany.mock.invocationCallOrder[0];
       expect(refundOrder).toBeLessThan(updateOrder);
     });
 
     it('ARCHIVED (student): refunds unused prepaid', async () => {
       await service.cascade('Student', '100', 'ARCHIVED', 1);
-      expect(enrollmentBillingService.refundPrepaidToBalance).toHaveBeenCalled();
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalled();
     });
 
     it('Group CANCELLED: refunds unused prepaid', async () => {
       await service.cascade('Group', 'group-1', 'CANCELLED', 1);
-      expect(enrollmentBillingService.refundPrepaidToBalance).toHaveBeenCalledWith(
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalledWith(
         prisma,
         expect.objectContaining({ enrollmentId: 'enr-1' }),
       );
@@ -430,17 +437,23 @@ describe('StatusCascadeService', () => {
 
     it('Group COMPLETED: refunds unused prepaid', async () => {
       await service.cascade('Group', 'group-1', 'COMPLETED', 1);
-      expect(enrollmentBillingService.refundPrepaidToBalance).toHaveBeenCalled();
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalled();
     });
 
     it('Branch CLOSED: refunds unused prepaid', async () => {
       await service.cascade('Branch', '1', 'CLOSED', 1);
-      expect(enrollmentBillingService.refundPrepaidToBalance).toHaveBeenCalled();
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalled();
     });
 
     it('Course ARCHIVED: refunds unused prepaid', async () => {
       await service.cascade('Course', 'course-1', 'ARCHIVED', 1);
-      expect(enrollmentBillingService.refundPrepaidToBalance).toHaveBeenCalled();
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalled();
     });
 
     it('FROZEN: does NOT refund (freeze refund handled upstream with admin override)', async () => {

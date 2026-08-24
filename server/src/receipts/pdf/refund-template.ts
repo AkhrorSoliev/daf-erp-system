@@ -87,7 +87,9 @@ export async function buildRefundReceiptDoc(
     metaRow('Sana', formatDate(refund.processedAt ?? refund.createdAt)),
   ];
   if (refund.refundMethod) {
-    metaRows.push(metaRow('Qaytarish usuli', PAYMENT_METHOD_LABEL[refund.refundMethod]));
+    metaRows.push(
+      metaRow('Qaytarish usuli', PAYMENT_METHOD_LABEL[refund.refundMethod]),
+    );
   }
   metaRows.push([
     { text: 'Qaytarilgan summa', color: COLOR.text, bold: true, border: NB },
@@ -195,10 +197,7 @@ export async function buildRefundReceiptDoc(
 
 // ─── building blocks ─────────────────────────────────────────────────
 
-function headerRow(
-  logoDataUrl: string | null,
-  title: string,
-): ContentColumns {
+function headerRow(logoDataUrl: string | null, title: string): ContentColumns {
   return {
     columns: [
       logoDataUrl
@@ -238,7 +237,8 @@ function metaSection(
     { text: 'Mijoz:', bold: true, margin: [0, 0, 0, 4] },
     { text: `${student.firstName} ${student.lastName}` },
   ];
-  if (courseLabel) billTo.push({ text: `Kurs: ${courseLabel}`, color: COLOR.muted });
+  if (courseLabel)
+    billTo.push({ text: `Kurs: ${courseLabel}`, color: COLOR.muted });
   const groupDisplay = groupLevel ?? groupName;
   if (groupDisplay) {
     billTo.push({ text: `Guruh: ${groupDisplay}`, color: COLOR.muted });
@@ -266,7 +266,10 @@ function metaSection(
   if (contractNumber) {
     billTo.push({ text: `Shartnoma: ${contractNumber}`, color: COLOR.muted });
   }
-  billTo.push({ text: `O'quvchining ID'si: ${student.id}`, color: COLOR.muted });
+  billTo.push({
+    text: `O'quvchining ID'si: ${student.id}`,
+    color: COLOR.muted,
+  });
   if (student.phone) {
     billTo.push({ text: formatPhone(student.phone), color: COLOR.muted });
   }
@@ -297,10 +300,37 @@ function lineItemsHeader(): Content[] {
   return [
     {
       columns: [
-        { text: 'Tavsif', bold: true, fontSize: 10, color: COLOR.text, width: '*' },
-        { text: 'Miqdor', bold: true, fontSize: 10, color: COLOR.text, width: 60, alignment: 'right' },
-        { text: 'Narx', bold: true, fontSize: 10, color: COLOR.text, width: 70, alignment: 'right' },
-        { text: 'Summa', bold: true, fontSize: 10, color: COLOR.text, width: 90, alignment: 'right' },
+        {
+          text: 'Tavsif',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: '*',
+        },
+        {
+          text: 'Miqdor',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: 60,
+          alignment: 'right',
+        },
+        {
+          text: 'Narx',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: 70,
+          alignment: 'right',
+        },
+        {
+          text: 'Summa',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: 90,
+          alignment: 'right',
+        },
       ],
       columnGap: 0,
       margin: [0, 0, 0, 6],
@@ -422,7 +452,11 @@ function memoQrBlock(
 
 // ─── small helpers ───────────────────────────────────────────────────
 
-function td(text: string, alignment: 'left' | 'right', bold = false): TableCell {
+function td(
+  text: string,
+  alignment: 'left' | 'right',
+  bold = false,
+): TableCell {
   return { text, alignment, bold, border: NB };
 }
 

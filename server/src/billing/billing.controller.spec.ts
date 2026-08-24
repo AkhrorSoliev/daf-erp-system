@@ -49,9 +49,7 @@ describe('BillingController — role guards', () => {
 
   describe('reverseDebtWriteOff() guard — CEO only', () => {
     it('allows CEO', () => {
-      const ctx = mockExecutionContext(controller.reverseDebtWriteOff, [
-        'CEO',
-      ]);
+      const ctx = mockExecutionContext(controller.reverseDebtWriteOff, ['CEO']);
       expect(guard.canActivate(ctx)).toBe(true);
     });
     it('denies Branch Director', () => {

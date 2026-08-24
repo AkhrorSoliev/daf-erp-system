@@ -292,13 +292,13 @@ export class BranchesService {
         key: 'bankAccount',
         label: 'Bank hisobi',
         ok: types.has(CashAccountType.BANK),
-        hint: "Bank/karta tushumi uchun BANK hisobi kerak",
+        hint: 'Bank/karta tushumi uchun BANK hisobi kerak',
       },
       {
         key: 'workingHours',
         label: 'Ish vaqti',
         ok: !!branch.startOfWorkingDay && !!branch.endOfWorkingDay,
-        hint: "Ish vaqti belgilanmasa jadval 08:00–20:00 ga tushadi",
+        hint: 'Ish vaqti belgilanmasa jadval 08:00–20:00 ga tushadi',
       },
       {
         key: 'course',
@@ -316,7 +316,7 @@ export class BranchesService {
         key: 'administrator',
         label: 'Administrator',
         ok: adminCount > 0,
-        hint: "Administratorsiz davomat ogohlantirishlari hech kimga bormaydi",
+        hint: 'Administratorsiz davomat ogohlantirishlari hech kimga bormaydi',
       },
       {
         key: 'teacherRates',
@@ -349,7 +349,7 @@ export class BranchesService {
   ): Promise<void> {
     if (userId == null) {
       // No identifiable caller means no way to verify scope; fail closed.
-      throw new ForbiddenException("Foydalanuvchi aniqlanmadi");
+      throw new ForbiddenException('Foydalanuvchi aniqlanmadi');
     }
     const caller = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -359,7 +359,7 @@ export class BranchesService {
         roles: { select: { role: { select: { name: true } } } },
       },
     });
-    if (!caller) throw new ForbiddenException("Foydalanuvchi topilmadi");
+    if (!caller) throw new ForbiddenException('Foydalanuvchi topilmadi');
     if (caller.roles.some((r) => r.role.name === 'CEO')) return;
 
     const allowed = new Set<number>([

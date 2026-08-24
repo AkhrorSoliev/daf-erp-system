@@ -18,9 +18,27 @@ function fields(...overrides: Partial<FormFieldDto>[]): FormFieldDto[] {
 }
 function baseFields(): FormFieldDto[] {
   return fields(
-    { id: 'fn', type: 'text', label: 'Ism', required: true, mapsTo: 'firstName' },
-    { id: 'ln', type: 'text', label: 'Familya', required: true, mapsTo: 'lastName' },
-    { id: 'ph', type: 'phone', label: 'Telefon', required: true, mapsTo: 'phone' },
+    {
+      id: 'fn',
+      type: 'text',
+      label: 'Ism',
+      required: true,
+      mapsTo: 'firstName',
+    },
+    {
+      id: 'ln',
+      type: 'text',
+      label: 'Familya',
+      required: true,
+      mapsTo: 'lastName',
+    },
+    {
+      id: 'ph',
+      type: 'phone',
+      label: 'Telefon',
+      required: true,
+      mapsTo: 'phone',
+    },
   );
 }
 describe('CustomFormsService', () => {
@@ -37,7 +55,9 @@ describe('CustomFormsService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
-      customFormSubmission: { create: jest.fn().mockResolvedValue({ id: 'sub-1' }) },
+      customFormSubmission: {
+        create: jest.fn().mockResolvedValue({ id: 'sub-1' }),
+      },
       leadSection: { findFirst: jest.fn().mockResolvedValue({ id: 'sec-1' }) },
       leadSource: {
         findFirst: jest.fn().mockResolvedValue({ id: 'src-1' }),
@@ -69,8 +89,20 @@ describe('CustomFormsService', () => {
             title: 'F1',
             sectionId: 'sec-1',
             fields: fields(
-              { id: 'ln', type: 'text', label: 'Familya', required: true, mapsTo: 'lastName' },
-              { id: 'ph', type: 'phone', label: 'Telefon', required: true, mapsTo: 'phone' },
+              {
+                id: 'ln',
+                type: 'text',
+                label: 'Familya',
+                required: true,
+                mapsTo: 'lastName',
+              },
+              {
+                id: 'ph',
+                type: 'phone',
+                label: 'Telefon',
+                required: true,
+                mapsTo: 'phone',
+              },
             ),
           },
           1,
@@ -86,9 +118,27 @@ describe('CustomFormsService', () => {
             title: 'F1',
             sectionId: 'sec-1',
             fields: fields(
-              { id: 'fn', type: 'text', label: 'Ism', required: false, mapsTo: 'firstName' },
-              { id: 'ln', type: 'text', label: 'Familya', required: true, mapsTo: 'lastName' },
-              { id: 'ph', type: 'phone', label: 'Telefon', required: true, mapsTo: 'phone' },
+              {
+                id: 'fn',
+                type: 'text',
+                label: 'Ism',
+                required: false,
+                mapsTo: 'firstName',
+              },
+              {
+                id: 'ln',
+                type: 'text',
+                label: 'Familya',
+                required: true,
+                mapsTo: 'lastName',
+              },
+              {
+                id: 'ph',
+                type: 'phone',
+                label: 'Telefon',
+                required: true,
+                mapsTo: 'phone',
+              },
             ),
           },
           1,
@@ -104,9 +154,27 @@ describe('CustomFormsService', () => {
             title: 'F1',
             sectionId: 'sec-1',
             fields: fields(
-              { id: 'fn', type: 'text', label: 'Ism', required: true, mapsTo: 'firstName' },
-              { id: 'ln', type: 'text', label: 'Familya', required: true, mapsTo: 'lastName' },
-              { id: 'ph', type: 'text', label: 'Telefon', required: true, mapsTo: 'phone' },
+              {
+                id: 'fn',
+                type: 'text',
+                label: 'Ism',
+                required: true,
+                mapsTo: 'firstName',
+              },
+              {
+                id: 'ln',
+                type: 'text',
+                label: 'Familya',
+                required: true,
+                mapsTo: 'lastName',
+              },
+              {
+                id: 'ph',
+                type: 'text',
+                label: 'Telefon',
+                required: true,
+                mapsTo: 'phone',
+              },
             ),
           },
           1,
@@ -122,10 +190,34 @@ describe('CustomFormsService', () => {
             title: 'F1',
             sectionId: 'sec-1',
             fields: fields(
-              { id: 'fn', type: 'text', label: 'Ism', required: true, mapsTo: 'firstName' },
-              { id: 'fn2', type: 'text', label: 'Ism (yana)', required: true, mapsTo: 'firstName' },
-              { id: 'ln', type: 'text', label: 'Familya', required: true, mapsTo: 'lastName' },
-              { id: 'ph', type: 'phone', label: 'Telefon', required: true, mapsTo: 'phone' },
+              {
+                id: 'fn',
+                type: 'text',
+                label: 'Ism',
+                required: true,
+                mapsTo: 'firstName',
+              },
+              {
+                id: 'fn2',
+                type: 'text',
+                label: 'Ism (yana)',
+                required: true,
+                mapsTo: 'firstName',
+              },
+              {
+                id: 'ln',
+                type: 'text',
+                label: 'Familya',
+                required: true,
+                mapsTo: 'lastName',
+              },
+              {
+                id: 'ph',
+                type: 'phone',
+                label: 'Telefon',
+                required: true,
+                mapsTo: 'phone',
+              },
             ),
           },
           1,
@@ -221,6 +313,37 @@ describe('CustomFormsService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
     });
+    // This endpoint is public and its body is whatever the caller posted.
+    // Non-primitive answers used to pass straight through and be stringified
+    // downstream, so a lead could be created with the literal name
+    // "[object Object]" — a wrong row that no error ever mentioned.
+    it.each([
+      ['obyekt', { a: 1 }],
+      ['massiv', ['Aziz']],
+      ['ichma-ich obyekt', { toString: 'ha' }],
+    ])(
+      'rejects a %s answer instead of stringifying it',
+      async (_label, bad) => {
+        await expect(
+          service.submit(
+            'abc1234567',
+            { data: { fn: bad, ln: 'Karimov', ph: '901234567' } },
+            {},
+          ),
+        ).rejects.toThrow(BadRequestException);
+        expect(leads.create).not.toHaveBeenCalled();
+      },
+    );
+
+    it('still accepts the primitives a real form sends', async () => {
+      await service.submit(
+        'abc1234567',
+        { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' } },
+        {},
+      );
+      expect(leads.create).toHaveBeenCalled();
+    });
+
     it('normalises 9-digit phone and strips +998 prefix', async () => {
       await service.submit(
         'abc1234567',
@@ -258,7 +381,10 @@ describe('CustomFormsService', () => {
       prisma.leadSource.findFirst.mockResolvedValue({ id: 'src-insta' });
       await service.submit(
         'abc1234567',
-        { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' }, source: 'Instagram' },
+        {
+          data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' },
+          source: 'Instagram',
+        },
         {},
       );
       expect(prisma.leadSource.findFirst).toHaveBeenCalledWith(
@@ -281,7 +407,10 @@ describe('CustomFormsService', () => {
       prisma.leadSource.findFirst.mockResolvedValue(null);
       await service.submit(
         'abc1234567',
-        { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' }, source: 'reklama' },
+        {
+          data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' },
+          source: 'reklama',
+        },
         {},
       );
       expect(prisma.leadSource.create).toHaveBeenCalledWith(

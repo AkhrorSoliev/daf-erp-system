@@ -388,7 +388,9 @@ describe('SalarySettleMonthService', () => {
 
       // And every payment is fully funded — no shortfall, no overdraw.
       for (const [id, slices] of out) {
-        const row = rows(500_000, 400_000, 100_000).find((r) => r.paymentId === id)!;
+        const row = rows(500_000, 400_000, 100_000).find(
+          (r) => r.paymentId === id,
+        )!;
         expect(slices.reduce((s, x) => s + x.amount, 0)).toBe(row.amount);
       }
     });

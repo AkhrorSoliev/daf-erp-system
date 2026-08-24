@@ -112,9 +112,9 @@ describe('LeadSourcesService', () => {
   describe('update', () => {
     it('throws NotFound for a missing source', async () => {
       prisma.leadSource.findFirst.mockResolvedValue(null);
-      await expect(
-        service.update('x', { name: 'Y' }, 1001, 1),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update('x', { name: 'Y' }, 1001, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('rejects a duplicate name', async () => {

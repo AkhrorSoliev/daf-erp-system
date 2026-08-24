@@ -57,7 +57,7 @@ export class QrAttendanceScanService {
     // to scan into earlier lessons. NULL startDate (legacy data) is permissive.
     if (enrollment.startDate && enrollment.startDate > parsedLessonDate) {
       throw new BadRequestException(
-        "Sizning darslaringiz bu sanadan keyin boshlanadi",
+        'Sizning darslaringiz bu sanadan keyin boshlanadi',
       );
     }
 

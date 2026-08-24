@@ -1,0 +1,15 @@
+# Commits that changed formatting only, never behaviour.
+#
+# `git blame` skips these with:
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub applies the file automatically, no setup needed.)
+#
+# Only add a commit here if it is PURELY mechanical — a formatter run, a
+# rename, a re-indent. A commit that changes one character of logic does not
+# belong in this file, because blame would then hide a real change.
+
+# Format server/src with Prettier (282 files, no behaviour change)
+9dc46e034ea94fb08f9a9239923ce7b793a628b2
+
+# Format the five files the first pass skipped
+f4e2477014be9128d0addf5cc1e73d9d90fe492e

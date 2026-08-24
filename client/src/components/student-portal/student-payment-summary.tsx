@@ -84,7 +84,11 @@ export function StudentPaymentSummary() {
         method,
         returnUrl: `${window.location.origin}/portal/payments/result`,
       });
-      window.location.href = data.checkoutUrl;
+      // `assign`, not `location.href = …`: the React Compiler's immutability
+      // rule reads the assignment as mutating a value defined outside the
+      // component. It is the same navigation either way, and this form says
+      // "go here" rather than "change this property".
+      window.location.assign(data.checkoutUrl);
     } catch (err) {
       toast.error(getErrorMessage(err, "To'lov tizimida xatolik yuz berdi"));
       setRedirecting(false);

@@ -219,11 +219,7 @@ export class StudentsReadService {
     };
   }
 
-  async findById(
-    id: number,
-    companyId: number,
-    branchScope: ReportBranchIds,
-  ) {
+  async findById(id: number, companyId: number, branchScope: ReportBranchIds) {
     // Confined by branch as well as company: `@Roles` proves the caller is
     // staff, not that this student is theirs. A bare id let one branch's admin
     // open any student in the company — full PII plus balance. Out of scope

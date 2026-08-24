@@ -8,7 +8,7 @@ import { TelegramService } from './telegram.service';
  */
 describe('TelegramService — webhook secret (F-2)', () => {
   const makeInstance = (env: Record<string, string | undefined>) => {
-    const inst = Object.create(TelegramService.prototype) as any;
+    const inst = Object.create(TelegramService.prototype);
     inst.configService = { get: (k: string) => env[k] };
     inst.logger = { warn: jest.fn(), log: jest.fn() };
     return inst;

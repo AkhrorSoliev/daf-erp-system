@@ -350,7 +350,8 @@ export class ReportsFinancialService {
     // yet salary) is in neither bucket and is not counted as a Chiqim/Foyda hit
     // this month; it lands in salary the month it settles. This keeps lifetime
     // cost correct without ever double-counting or losing the advance.
-    const totalExpenseAmount = (expenses._sum.amount ?? 0) - advancesPaidInPeriod;
+    const totalExpenseAmount =
+      (expenses._sum.amount ?? 0) - advancesPaidInPeriod;
     const totalSalaryPaid =
       (salaryPaid._sum.amount ?? 0) + advancesSettledInPeriod;
     const totalExpenses = totalExpenseAmount + totalSalaryPaid;
@@ -443,7 +444,9 @@ export class ReportsFinancialService {
       select: {
         id: true,
         group: {
-          select: { course: { select: { price: true, lessonPaymentCount: true } } },
+          select: {
+            course: { select: { price: true, lessonPaymentCount: true } },
+          },
         },
       },
     });
@@ -724,7 +727,9 @@ export class ReportsFinancialService {
       // real signal (prepayment), not the old artefact where the denominator
       // was simply 11% too small every month.
       collectionPct:
-        lessonsValue > 0 ? Math.round((currentMonth / lessonsValue) * 100) : null,
+        lessonsValue > 0
+          ? Math.round((currentMonth / lessonsValue) * 100)
+          : null,
     };
   }
 
@@ -1137,9 +1142,7 @@ export class ReportsFinancialService {
       // month with debt) — a debtor who has since fully paid drops out here.
       const remainingDebtorCount = cohort.filter((c) => c.remaining > 0).length;
       const recoveryRate =
-        closingDebt > 0
-          ? Math.round((recovered / closingDebt) * 1000) / 10
-          : 0;
+        closingDebt > 0 ? Math.round((recovered / closingDebt) * 1000) / 10 : 0;
 
       months.push({
         monthKey,
@@ -1505,8 +1508,7 @@ export class ReportsFinancialService {
       })
       .sort((a, b) => b.monthEndDebt - a.monthEndDebt);
 
-    const truncated =
-      payRows.length > LIST_CAP || woRows.length > LIST_CAP;
+    const truncated = payRows.length > LIST_CAP || woRows.length > LIST_CAP;
 
     const recoveredPayments = payRows.slice(0, LIST_CAP).map((t) => ({
       id: t.id,

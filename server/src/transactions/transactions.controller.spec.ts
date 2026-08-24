@@ -155,7 +155,8 @@ describe('TransactionsController — debt write-off audit guards', () => {
 
       await controller.findDebtWriteOffs(query, user);
 
-      const arg = mockTransactionsService.findDebtWriteOffs.mock.calls.at(-1)[1];
+      const arg =
+        mockTransactionsService.findDebtWriteOffs.mock.calls.at(-1)[1];
       expect([...arg.branchIds].sort()).toEqual([3, 7]);
     });
 

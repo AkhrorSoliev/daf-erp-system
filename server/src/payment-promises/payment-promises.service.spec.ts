@@ -34,7 +34,9 @@ describe('PaymentPromisesService', () => {
       },
       studentBranch: { findFirst: jest.fn().mockResolvedValue(null) },
       paymentPromise: {
-        create: jest.fn().mockImplementation(({ data }) => ({ id: 'p1', ...data })),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }) => ({ id: 'p1', ...data })),
         findFirst: jest.fn(),
         update: jest.fn().mockResolvedValue({ id: 'p1', status: 'CANCELLED' }),
         findMany: jest.fn().mockResolvedValue([]),
@@ -60,10 +62,15 @@ describe('PaymentPromisesService', () => {
   describe('create', () => {
     it('snapshots balance, resolves branch from active enrollment, records history', async () => {
       const res = await service.create(
-        { studentId: 10264, promiseDate: '2026-06-12', comment: 'Maoshdan keyin' },
+        {
+          studentId: 10264,
+          promiseDate: '2026-06-12',
+          comment: 'Maoshdan keyin',
+        },
         99,
         1001,
-       null);
+        null,
+      );
       expect(prisma.paymentPromise.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           studentId: 10264,
@@ -88,7 +95,8 @@ describe('PaymentPromisesService', () => {
           { studentId: 1, promiseDate: '2026-06-12', comment: 'x' },
           99,
           1001,
-         null),
+          null,
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -104,7 +112,8 @@ describe('PaymentPromisesService', () => {
           { studentId: 10264, promiseDate: '2026-06-12', comment: 'x' },
           99,
           1001,
-         null),
+          null,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -119,7 +128,10 @@ describe('PaymentPromisesService', () => {
       const res = await service.cancel('p1', 99, 1001, null);
       expect(prisma.paymentPromise.update).toHaveBeenCalledWith({
         where: { id: 'p1' },
-        data: expect.objectContaining({ status: 'CANCELLED', resolvedById: 99 }),
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          resolvedById: 99,
+        }),
       });
       expect(history.recordStatusChange).toHaveBeenCalled();
       expect(res.status).toBe('CANCELLED');
@@ -127,9 +139,9 @@ describe('PaymentPromisesService', () => {
 
     it('throws NotFound when there is no open promise', async () => {
       prisma.paymentPromise.findFirst.mockResolvedValueOnce(null);
-      await expect(service.cancel('nope', 99, 1001, null)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.cancel('nope', 99, 1001, null),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -203,7 +215,7 @@ describe('PaymentPromisesService', () => {
       prisma.student.findFirst.mockResolvedValue(null);
     }
 
-    it('refuses to read another branch student\'s promises', async () => {
+    it("refuses to read another branch student's promises", async () => {
       studentOutOfScope();
       await expect(
         service.findByStudent(10264, 1001, NAMANGAN),

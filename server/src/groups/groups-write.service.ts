@@ -268,7 +268,12 @@ export class GroupsWriteService {
     // Renaming, re-rooming or re-teachering another branch's group changes
     // that branch's timetable and, through `assertTeachersHaveRate`, who gets
     // paid for it.
-    await assertCallerMayTouchGroup(this.prisma, userId as number, NO_TEACHER_PATH, id);
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      userId as number,
+      NO_TEACHER_PATH,
+      id,
+    );
 
     if (dto.teacherIds) {
       const teacherCount = await this.prisma.user.count({
@@ -326,7 +331,12 @@ export class GroupsWriteService {
     // creation. The client used to send the header switcher's branch on EVERY
     // save, which silently moved a group (and its future lesson deductions and
     // salary accruals) into whichever branch the admin happened to be viewing.
-    const { teacherIds, changeReasonId, branchId: _ignored, ...updateData } = dto;
+    const {
+      teacherIds,
+      changeReasonId,
+      branchId: _ignored,
+      ...updateData
+    } = dto;
 
     // Validate changeReasonId if provided — must belong to the same company.
     if (changeReasonId) {

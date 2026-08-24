@@ -47,7 +47,7 @@ describe('TelegramGroupDigestBufferService', () => {
       });
       const key = `${TG_GROUP_BATCH_KEY_PREFIX}1001`;
       expect(chain.rpush).toHaveBeenCalledWith(key, expect.any(String));
-      const stored = JSON.parse((chain.rpush.mock.calls[0][1]) as string);
+      const stored = JSON.parse(chain.rpush.mock.calls[0][1] as string);
       expect(stored).toMatchObject({ kind: 'student', name: 'Ali Valiyev' });
       expect(stored.at).toEqual(expect.any(String)); // timestamp stamped
       expect(chain.expire).toHaveBeenCalledWith(key, expect.any(Number));
@@ -82,7 +82,9 @@ describe('TelegramGroupDigestBufferService', () => {
       const result = await service.drain(1001);
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ kind: 'payment', amount: 500_000 });
-      expect(chain.del).toHaveBeenCalledWith(`${TG_GROUP_BATCH_KEY_PREFIX}1001`);
+      expect(chain.del).toHaveBeenCalledWith(
+        `${TG_GROUP_BATCH_KEY_PREFIX}1001`,
+      );
     });
 
     it('returns an empty array when the buffer is empty', async () => {

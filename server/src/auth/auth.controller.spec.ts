@@ -42,15 +42,26 @@ describe('AuthController — forgot-password endpoints', () => {
   });
 
   it('request → passes phone + client IP (x-forwarded-for) + null roles (no origin)', async () => {
-    const req = { headers: { 'x-forwarded-for': '5.5.5.5, 1.1.1.1' }, ip: '9.9.9.9' };
+    const req = {
+      headers: { 'x-forwarded-for': '5.5.5.5, 1.1.1.1' },
+      ip: '9.9.9.9',
+    };
     await controller.forgotPasswordRequest({ phone: '901234567' } as any, req);
-    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '5.5.5.5', null);
+    expect(forgot.requestCode).toHaveBeenCalledWith(
+      '901234567',
+      '5.5.5.5',
+      null,
+    );
   });
 
   it('request → falls back to req.ip when no forwarded header', async () => {
     const req = { headers: {}, ip: '9.9.9.9' };
     await controller.forgotPasswordRequest({ phone: '901234567' } as any, req);
-    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '9.9.9.9', null);
+    expect(forgot.requestCode).toHaveBeenCalledWith(
+      '901234567',
+      '9.9.9.9',
+      null,
+    );
   });
 
   it('request → scopes to the portal roles from the Origin header', async () => {
@@ -59,9 +70,11 @@ describe('AuthController — forgot-password endpoints', () => {
       ip: '9.9.9.9',
     };
     await controller.forgotPasswordRequest({ phone: '901234567' } as any, req);
-    expect(forgot.requestCode).toHaveBeenCalledWith('901234567', '9.9.9.9', [
-      1, 2, 3, 5,
-    ]);
+    expect(forgot.requestCode).toHaveBeenCalledWith(
+      '901234567',
+      '9.9.9.9',
+      [1, 2, 3, 5],
+    );
   });
 
   it('verify → delegates phone + code with no portal scope off a bare request', async () => {
@@ -157,7 +170,9 @@ describe('AuthController — rate limiting (F-3)', () => {
 
 describe('AuthController — otp/poll delegatsiyasi', () => {
   it('requestId ni AuthService.pollLoginRequest ga uzatadi', async () => {
-    const auth = { pollLoginRequest: jest.fn().mockResolvedValue({ status: 'pending' }) };
+    const auth = {
+      pollLoginRequest: jest.fn().mockResolvedValue({ status: 'pending' }),
+    };
     const controller = new AuthController(
       auth as any,
       {} as any,
@@ -175,17 +190,22 @@ describe('AuthController — otp/poll delegatsiyasi', () => {
 describe('IpThrottlerGuard.getTracker', () => {
   // getTracker doesn't use `this`, so we can exercise it off a bare prototype
   // instance without constructing the full ThrottlerGuard dependency graph.
-  const guard = Object.create(IpThrottlerGuard.prototype) as any;
+  const guard = Object.create(IpThrottlerGuard.prototype);
   const track = (req: unknown): Promise<string> => guard.getTracker(req);
 
   it('uses the first x-forwarded-for hop (real client behind the proxy)', async () => {
     await expect(
-      track({ headers: { 'x-forwarded-for': '5.5.5.5, 1.1.1.1' }, ip: '9.9.9.9' }),
+      track({
+        headers: { 'x-forwarded-for': '5.5.5.5, 1.1.1.1' },
+        ip: '9.9.9.9',
+      }),
     ).resolves.toBe('5.5.5.5');
   });
 
   it('falls back to req.ip when there is no forwarded header', async () => {
-    await expect(track({ headers: {}, ip: '9.9.9.9' })).resolves.toBe('9.9.9.9');
+    await expect(track({ headers: {}, ip: '9.9.9.9' })).resolves.toBe(
+      '9.9.9.9',
+    );
   });
 });
 
@@ -226,13 +246,13 @@ describe('AuthController — telegram/status', () => {
     ).toEqual({ enabled: false });
   });
 
-  it('Origin sarlavhasi umuman bo\'lmasa false qaytaradi', () => {
+  it("Origin sarlavhasi umuman bo'lmasa false qaytaradi", () => {
     expect(controllerWith(true).telegramStatus(reqFrom() as any)).toEqual({
       enabled: false,
     });
   });
 
-  it("lokal dev (localhost) uchun true qaytaradi", () => {
+  it('lokal dev (localhost) uchun true qaytaradi', () => {
     expect(
       controllerWith(true).telegramStatus(
         reqFrom('http://localhost:3000') as any,
@@ -260,7 +280,11 @@ describe('telegram/start', () => {
     );
 
   it('Origin sarlavhasidan authorize URL yasaydi', async () => {
-    const store = { createAuthorizeUrl: jest.fn().mockResolvedValue('https://oauth.telegram.org/auth?x=1') };
+    const store = {
+      createAuthorizeUrl: jest
+        .fn()
+        .mockResolvedValue('https://oauth.telegram.org/auth?x=1'),
+    };
 
     const res = await controllerWithStore(store).telegramStart({
       headers: { origin: 'https://admin.dafzentrum.uz' },
@@ -272,12 +296,16 @@ describe('telegram/start', () => {
     expect(res).toEqual({ url: 'https://oauth.telegram.org/auth?x=1' });
   });
 
-  it("query dagi origin qabul QILINMAYDI — faqat Origin sarlavhasi", async () => {
+  it('query dagi origin qabul QILINMAYDI — faqat Origin sarlavhasi', async () => {
     // `?origin=` parametri olib tashlandi: klient uni hech qachon yubormagan,
     // lekin u prodda `?origin=http://localhost:3000` bilan portal cheklovini
     // chetlab o'tishning yagona yo'li edi. Handler endi bitta argument
     // (`req`) oladi, ya'ni query'da nima kelsa ham e'tiborsiz qoladi.
-    const store = { createAuthorizeUrl: jest.fn().mockResolvedValue('https://oauth.telegram.org/auth?x=1') };
+    const store = {
+      createAuthorizeUrl: jest
+        .fn()
+        .mockResolvedValue('https://oauth.telegram.org/auth?x=1'),
+    };
 
     await controllerWithStore(store).telegramStart({
       headers: { origin: 'https://lehrer.dafzentrum.uz' },
@@ -294,9 +322,10 @@ describe('telegram/start', () => {
 describe('telegram/callback', () => {
   it('portal manziliga 302 qiladi', async () => {
     const oauth = {
-      handleCallback: jest
-        .fn()
-        .mockResolvedValue({ redirectUrl: 'https://admin.dafzentrum.uz/auth/telegram/callback?handoff=abc' }),
+      handleCallback: jest.fn().mockResolvedValue({
+        redirectUrl:
+          'https://admin.dafzentrum.uz/auth/telegram/callback?handoff=abc',
+      }),
     };
     const local = new AuthController(
       {} as any,
@@ -316,11 +345,11 @@ describe('telegram/callback', () => {
     );
   });
 
-  it("xato holatida ham 302 qiladi (API domenida xom JSON qolmasin)", async () => {
+  it('xato holatida ham 302 qiladi (API domenida xom JSON qolmasin)', async () => {
     const oauth = {
       handleCallback: jest.fn().mockResolvedValue({
         redirectUrl:
-          "https://admin.dafzentrum.uz/auth/telegram/callback?error=Bu+Telegram+raqami+tizimda+yo%27q.",
+          'https://admin.dafzentrum.uz/auth/telegram/callback?error=Bu+Telegram+raqami+tizimda+yo%27q.',
       }),
     };
     const local = new AuthController(
@@ -351,7 +380,9 @@ describe('telegram/callback', () => {
     );
 
     await expect(
-      local.telegramCallback({ error: 'access_denied' }, { redirect: jest.fn() } as any),
+      local.telegramCallback({ error: 'access_denied' }, {
+        redirect: jest.fn(),
+      } as any),
     ).rejects.toThrow();
     expect(oauth.handleCallback).not.toHaveBeenCalled();
   });

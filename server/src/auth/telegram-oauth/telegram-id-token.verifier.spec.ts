@@ -73,7 +73,10 @@ describe('TelegramIdTokenVerifier', () => {
 
   it("noto'g'ri issuer ni rad etadi", async () => {
     const { verifier, sign } = await harness();
-    const token = await sign({ ...validPayload, iss: 'https://evil.example.com' });
+    const token = await sign({
+      ...validPayload,
+      iss: 'https://evil.example.com',
+    });
     await expect(verifier.verify(token)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
@@ -102,7 +105,7 @@ describe('TelegramIdTokenVerifier', () => {
     );
   });
 
-  it('phone_number yo\'q bo\'lsa rad etadi', async () => {
+  it("phone_number yo'q bo'lsa rad etadi", async () => {
     const { verifier, sign } = await harness();
     const { phone_number: _omit, ...withoutPhone } = validPayload;
     await expect(
@@ -110,7 +113,7 @@ describe('TelegramIdTokenVerifier', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('phone_number_verified false bo\'lsa rad etadi', async () => {
+  it("phone_number_verified false bo'lsa rad etadi", async () => {
     const { verifier, sign } = await harness();
     const token = await sign({ ...validPayload, phone_number_verified: false });
     await expect(verifier.verify(token)).rejects.toBeInstanceOf(
@@ -118,7 +121,7 @@ describe('TelegramIdTokenVerifier', () => {
     );
   });
 
-  it('umuman token bo\'lmasa rad etadi', async () => {
+  it("umuman token bo'lmasa rad etadi", async () => {
     const { verifier } = await harness();
     await expect(verifier.verify('')).rejects.toBeInstanceOf(
       UnauthorizedException,
@@ -136,7 +139,7 @@ describe('TelegramIdTokenVerifier', () => {
     );
   });
 
-  it('phone_number_verified 1 (raqam) bo\'lsa rad etadi (qat\'iy boolean tekshiruvi)', async () => {
+  it("phone_number_verified 1 (raqam) bo'lsa rad etadi (qat'iy boolean tekshiruvi)", async () => {
     const { verifier, sign } = await harness();
     const token = await sign({
       ...validPayload,
@@ -174,7 +177,7 @@ describe('TelegramIdTokenVerifier', () => {
     ['boolean', true],
     ['null', null],
   ])(
-    'id claim g\'alati (%s) bo\'lsa ham to\'sib qo\'ymaydi — u ishlatilmaydi',
+    "id claim g'alati (%s) bo'lsa ham to'sib qo'ymaydi — u ishlatilmaydi",
     async (_label, oddId) => {
       const { verifier, sign } = await harness();
       const token = await sign({ ...validPayload, id: oddId as unknown });
@@ -248,8 +251,8 @@ describe('TelegramIdTokenVerifier', () => {
       ],
     }).compile();
 
-    expect(
-      moduleRef.get(TelegramIdTokenVerifier),
-    ).toBeInstanceOf(TelegramIdTokenVerifier);
+    expect(moduleRef.get(TelegramIdTokenVerifier)).toBeInstanceOf(
+      TelegramIdTokenVerifier,
+    );
   });
 });

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ExpenseCategory } from '@prisma/client';
+import { ExpenseCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod, pct } from '../common/finance/period-helpers';
 import {
@@ -76,7 +76,9 @@ export class ReportsProfitLossService {
           companyId,
           status: 'PAID',
           paidAt: tsFilter,
-          ...(branchScopeIds && { user: { mainBranch: { in: branchScopeIds } } }),
+          ...(branchScopeIds && {
+            user: { mainBranch: { in: branchScopeIds } },
+          }),
         },
         select: { amount: true, _count: { select: { accruals: true } } },
       }),

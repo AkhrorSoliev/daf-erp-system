@@ -80,7 +80,9 @@ describe('LessonCancellationsService', () => {
 
     it('throws when group not found', async () => {
       tx.group.findFirst.mockResolvedValue(null);
-      await expect(service.create(dto, 1, 99)).rejects.toThrow(NotFoundException);
+      await expect(service.create(dto, 1, 99)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws when an active cancellation already exists', async () => {
@@ -92,7 +94,9 @@ describe('LessonCancellationsService', () => {
       });
       tx.lessonCancellation.findFirst.mockResolvedValue({ id: 'existing' });
 
-      await expect(service.create(dto, 1, 99)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto, 1, 99)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('creates cancellation when no attendance was recorded (Misol 5)', async () => {

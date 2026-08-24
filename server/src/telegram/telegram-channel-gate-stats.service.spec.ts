@@ -84,7 +84,10 @@ describe('TelegramChannelGateStatsService', () => {
 
     it("a'zo bo'lgan odam qayta to'silsa — chiqib ketgan deb yoziladi", async () => {
       prisma.telegramChannelGateEvent.findUnique.mockResolvedValue(
-        row({ blockedAt: new Date('2026-07-01'), joinedAt: new Date('2026-07-02') }),
+        row({
+          blockedAt: new Date('2026-07-01'),
+          joinedAt: new Date('2026-07-02'),
+        }),
       );
 
       await service.recordBlocked(USER);
@@ -132,7 +135,7 @@ describe('TelegramChannelGateStatsService', () => {
       expect(arg.data.blockedAt).toBeUndefined();
     });
 
-    it("qayta kirganda leftAt tozalanadi va rejoinCount oshadi", async () => {
+    it('qayta kirganda leftAt tozalanadi va rejoinCount oshadi', async () => {
       prisma.telegramChannelGateEvent.findUnique.mockResolvedValue(
         row({
           blockedAt: new Date('2026-07-01'),
@@ -153,7 +156,10 @@ describe('TelegramChannelGateStatsService', () => {
 
     it("barqaror a'zoda keraksiz yozuv qilmaydi", async () => {
       prisma.telegramChannelGateEvent.findUnique.mockResolvedValue(
-        row({ blockedAt: new Date('2026-07-01'), joinedAt: new Date('2026-07-02') }),
+        row({
+          blockedAt: new Date('2026-07-01'),
+          joinedAt: new Date('2026-07-02'),
+        }),
       );
 
       await service.recordJoined(USER);
@@ -164,7 +170,9 @@ describe('TelegramChannelGateStatsService', () => {
 
   describe('recordLeft', () => {
     it('faqat hali chiqib ketmagan qatorni belgilaydi', async () => {
-      prisma.telegramChannelGateEvent.updateMany.mockResolvedValue({ count: 1 });
+      prisma.telegramChannelGateEvent.updateMany.mockResolvedValue({
+        count: 1,
+      });
 
       await service.recordLeft(555);
 
@@ -180,7 +188,7 @@ describe('TelegramChannelGateStatsService', () => {
   });
 
   describe('xatolarga chidamlilik', () => {
-    it('baza xatosida ham otmaydi (bot to\'xtamasligi kerak)', async () => {
+    it("baza xatosida ham otmaydi (bot to'xtamasligi kerak)", async () => {
       prisma.telegramChannelGateEvent.findUnique.mockRejectedValue(
         new Error('DB down'),
       );

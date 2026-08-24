@@ -212,7 +212,8 @@ describe('computePeriodBounds — @db.Date bounds do not overlap', () => {
     const a = computePeriodBounds(new Date('2026-06-20T00:00:00.000Z'), 8);
     const b = computePeriodBounds(new Date('2026-07-20T00:00:00.000Z'), 8);
     expect(a.periodStartDate.toISOString()).toBe('2026-06-08T00:00:00.000Z');
-    expect(a.periodEndDateExclusive.getTime()).toBe(b.periodStartDate.getTime());
+    expect(a.periodEndDateExclusive.getTime()).toBe(
+      b.periodStartDate.getTime(),
+    );
   });
 });
-

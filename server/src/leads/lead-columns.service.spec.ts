@@ -47,9 +47,9 @@ describe('LeadColumnsService', () => {
   describe('create', () => {
     it('rejects a duplicate name', async () => {
       prisma.leadColumn.findFirst.mockResolvedValue({ id: 'existing' });
-      await expect(service.create({ name: 'Sotuv' }, 1001, 1, [1])).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.create({ name: 'Sotuv' }, 1001, 1, [1]),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('creates a non-system column at the end of the board', async () => {
@@ -88,9 +88,9 @@ describe('LeadColumnsService', () => {
       // sensible default: picking the lowest branch would put the column on a
       // board they were not looking at, and leaving `branchId` unset is not
       // even representable (the column is NOT NULL).
-      await expect(service.create({ name: 'Sotuv' }, 1001, 1, null)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create({ name: 'Sotuv' }, 1001, 1, null),
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.leadColumn.create).not.toHaveBeenCalled();
     });
 
@@ -145,7 +145,13 @@ describe('LeadColumnsService', () => {
         .mockResolvedValueOnce(null);
       prisma.leadColumn.update.mockResolvedValue({ id: 'col-1', name: 'New' });
 
-      const result = await service.update('col-1', { name: 'New' }, 1001, 1, null);
+      const result = await service.update(
+        'col-1',
+        { name: 'New' },
+        1001,
+        1,
+        null,
+      );
 
       expect(result).toEqual({ id: 'col-1', name: 'New' });
       expect(history.recordUpdate).toHaveBeenCalled();

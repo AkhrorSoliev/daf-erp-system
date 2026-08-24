@@ -31,7 +31,9 @@ describe('tryResolveStudentBranchId', () => {
       studentBranch: { branchId: 2 },
       enrollment: { group: { branchId: 1 } },
     });
-    await expect(tryResolveStudentBranchId(prisma, 10500, COMPANY)).resolves.toBe(2);
+    await expect(
+      tryResolveStudentBranchId(prisma, 10500, COMPANY),
+    ).resolves.toBe(2);
     expect(prisma.enrollment.findFirst).not.toHaveBeenCalled();
   });
 
@@ -40,12 +42,16 @@ describe('tryResolveStudentBranchId', () => {
       studentBranch: null,
       enrollment: { group: { branchId: 1 } },
     });
-    await expect(tryResolveStudentBranchId(prisma, 10500, COMPANY)).resolves.toBe(1);
+    await expect(
+      tryResolveStudentBranchId(prisma, 10500, COMPANY),
+    ).resolves.toBe(1);
   });
 
   it('returns null when neither source knows the branch', async () => {
     const prisma = prismaMock({ studentBranch: null, enrollment: null });
-    await expect(tryResolveStudentBranchId(prisma, 10500, COMPANY)).resolves.toBeNull();
+    await expect(
+      tryResolveStudentBranchId(prisma, 10500, COMPANY),
+    ).resolves.toBeNull();
   });
 
   it('scopes both lookups to the company', async () => {
@@ -70,14 +76,16 @@ describe('tryResolveStudentBranchId', () => {
 describe('resolveStudentBranchId (fail-closed)', () => {
   it('returns the resolved branch', async () => {
     const prisma = prismaMock({ studentBranch: { branchId: 2 } });
-    await expect(resolveStudentBranchId(prisma, 10500, COMPANY)).resolves.toBe(2);
+    await expect(resolveStudentBranchId(prisma, 10500, COMPANY)).resolves.toBe(
+      2,
+    );
   });
 
   it('throws rather than writing a branch-less financial row', async () => {
     const prisma = prismaMock({ studentBranch: null, enrollment: null });
-    await expect(resolveStudentBranchId(prisma, 10500, COMPANY)).rejects.toThrow(
-      /filial aniqlanmadi/,
-    );
+    await expect(
+      resolveStudentBranchId(prisma, 10500, COMPANY),
+    ).rejects.toThrow(/filial aniqlanmadi/);
   });
 });
 

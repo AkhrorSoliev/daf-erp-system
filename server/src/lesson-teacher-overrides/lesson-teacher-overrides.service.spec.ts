@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { LessonTeacherOverridesService } from './lesson-teacher-overrides.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
@@ -22,13 +22,18 @@ describe('LessonTeacherOverridesService', () => {
         update: jest.fn(),
       },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
-      transaction: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn() },
+      transaction: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn(),
+      },
       enrollment: { findFirst: jest.fn() },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
     };
     prisma = {
       ...tx,
-      user: { findMany: jest.fn().mockResolvedValue([{ id: 10042 }, { id: 10043 }]) },
+      user: {
+        findMany: jest.fn().mockResolvedValue([{ id: 10042 }, { id: 10043 }]),
+      },
       $transaction: jest.fn((cb) => cb(tx)),
     };
     history = {

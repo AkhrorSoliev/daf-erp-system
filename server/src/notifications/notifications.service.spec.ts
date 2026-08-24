@@ -183,7 +183,12 @@ describe('NotificationsService', () => {
 
   describe('registerDevice', () => {
     it('upserts the device token keyed by token', async () => {
-      await service.registerDevice(10001, 'ExponentPushToken[abc]', 'android', '1.0.0');
+      await service.registerDevice(
+        10001,
+        'ExponentPushToken[abc]',
+        'android',
+        '1.0.0',
+      );
       expect(prisma.deviceToken.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { token: 'ExponentPushToken[abc]' },
@@ -198,7 +203,10 @@ describe('NotificationsService', () => {
 
   describe('unregisterDevice', () => {
     it('deletes the device token for the user', async () => {
-      const result = await service.unregisterDevice(10001, 'ExponentPushToken[abc]');
+      const result = await service.unregisterDevice(
+        10001,
+        'ExponentPushToken[abc]',
+      );
       expect(prisma.deviceToken.deleteMany).toHaveBeenCalledWith({
         where: { userId: 10001, token: 'ExponentPushToken[abc]' },
       });

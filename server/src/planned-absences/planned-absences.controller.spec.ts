@@ -42,12 +42,9 @@ describe('PlannedAbsencesController — role guards', () => {
     expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
   });
 
-  it.each(['CEO', 'Branch Director', 'Administrator'])(
-    'allows %s',
-    (role) => {
-      expect(guard.canActivate(mockExecutionContext([role]))).toBe(true);
-    },
-  );
+  it.each(['CEO', 'Branch Director', 'Administrator'])('allows %s', (role) => {
+    expect(guard.canActivate(mockExecutionContext([role]))).toBe(true);
+  });
 
   it.each(['Teacher', 'Cashier'])('denies %s', (role) => {
     expect(() => guard.canActivate(mockExecutionContext([role]))).toThrow(
@@ -58,7 +55,9 @@ describe('PlannedAbsencesController — role guards', () => {
   describe('handler wiring', () => {
     it('upsert delegates to the service with params + user context', async () => {
       const dto = { studentId: 10001, kind: 'SABABSIZ' } as any;
-      await controller.upsert('g1', '2026-06-10', dto, 99, 1, ['Administrator']);
+      await controller.upsert('g1', '2026-06-10', dto, 99, 1, [
+        'Administrator',
+      ]);
       expect(mockService.upsert).toHaveBeenCalledWith(
         'g1',
         '2026-06-10',

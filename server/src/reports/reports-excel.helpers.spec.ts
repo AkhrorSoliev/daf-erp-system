@@ -4,9 +4,14 @@ describe('buildNetProfit — top-up gating', () => {
   const pl = {
     revenue: { total: 100_000 },
     costOfServices: { teacherSalaries: 5_000, teacherAdvances: 1_000 },
-    operatingExpenses: { adminSalaries: 2_000, byCategory: [{ amount: 10_000 }] },
+    operatingExpenses: {
+      adminSalaries: 2_000,
+      byCategory: [{ amount: 10_000 }],
+    },
   };
-  const salaries = { totals: { covered: 40_000, gap: 14_000, fullDeserved: 54_000 } };
+  const salaries = {
+    totals: { covered: 40_000, gap: 14_000, fullDeserved: 54_000 },
+  };
   const outflows = { refunds: 3_000, writeOffs: 500, providerFees: 0 };
 
   it('pre-top-up month (2026-06) subtracts COVERED only, not covered+gap', () => {
@@ -91,7 +96,10 @@ describe('buildNetProfit — staff salary basis', () => {
     };
     const paid = {
       ...pl,
-      operatingExpenses: { adminSalaries: 7_000, byCategory: [{ amount: 10_000 }] },
+      operatingExpenses: {
+        adminSalaries: 7_000,
+        byCategory: [{ amount: 10_000 }],
+      },
     };
     const np = buildNetProfit(paid, salaries, outflows, '2026-07');
 
@@ -100,10 +108,15 @@ describe('buildNetProfit — staff salary basis', () => {
   });
 
   it('falls back when staffTotals is absent entirely (older callers)', () => {
-    const salaries = { totals: { covered: 40_000, gap: 0, fullDeserved: 40_000 } };
+    const salaries = {
+      totals: { covered: 40_000, gap: 0, fullDeserved: 40_000 },
+    };
     const paid = {
       ...pl,
-      operatingExpenses: { adminSalaries: 2_000, byCategory: [{ amount: 10_000 }] },
+      operatingExpenses: {
+        adminSalaries: 2_000,
+        byCategory: [{ amount: 10_000 }],
+      },
     };
     const np = buildNetProfit(paid, salaries, outflows, '2026-07');
 
@@ -111,4 +124,3 @@ describe('buildNetProfit — staff salary basis', () => {
     expect(np.adminSalaryBasis).toBe('naqd');
   });
 });
-

@@ -37,11 +37,26 @@ export function paymentsSheet(
 ) {
   const ws = wb.addWorksheet("To'lovlar");
   ws.columns = [
-    { width: 12 }, { width: 8 }, { width: 26 }, { width: 16 },
-    { width: 16 }, { width: 12 }, { width: 16 }, { width: 22 },
+    { width: 12 },
+    { width: 8 },
+    { width: 26 },
+    { width: 16 },
+    { width: 16 },
+    { width: 12 },
+    { width: 16 },
+    { width: 22 },
   ];
-  sheetTitle(ws, "To‘lovlar (davr bo‘yicha)", period, 8);
-  const header = tableHeader(ws, ['Sana', 'ID', 'O‘quvchi', 'Filial', 'Summa', 'Usul', 'Daromad turi', 'Qabul qildi']);
+  sheetTitle(ws, 'To‘lovlar (davr bo‘yicha)', period, 8);
+  const header = tableHeader(ws, [
+    'Sana',
+    'ID',
+    'O‘quvchi',
+    'Filial',
+    'Summa',
+    'Usul',
+    'Daromad turi',
+    'Qabul qildi',
+  ]);
   const firstDataRow = header.number + 1;
   (payments?.rows ?? []).forEach((p: any) => {
     const r = ws.addRow([
@@ -52,23 +67,32 @@ export function paymentsSheet(
       p.amount,
       METHOD_LABELS[p.method] ?? p.method,
       REVENUE_LABELS[p.revenueType] ?? p.revenueType ?? '',
-      p.receivedBy ? `${p.receivedBy.firstName ?? ''} ${p.receivedBy.lastName ?? ''}`.trim() : '',
+      p.receivedBy
+        ? `${p.receivedBy.firstName ?? ''} ${p.receivedBy.lastName ?? ''}`.trim()
+        : '',
     ]);
     r.getCell(5).numFmt = NUM;
   });
   const lastDataRow = ws.rowCount;
   totalsRow(ws, ['Jami', '', '', '', payments?.total ?? 0, '', '', ''], [5]);
-  if (lastDataRow >= firstDataRow) dataBar(ws, `E${firstDataRow}:E${lastDataRow}`);
+  if (lastDataRow >= firstDataRow)
+    dataBar(ws, `E${firstDataRow}:E${lastDataRow}`);
   if (payments?.truncated) {
-    ws.addRow(["Ko‘p yozuv — faqat birinchi 10 000 tasi ko‘rsatildi. Davrni qisqartiring."]);
+    ws.addRow([
+      'Ko‘p yozuv — faqat birinchi 10 000 tasi ko‘rsatildi. Davrni qisqartiring.',
+    ]);
   }
   freezeAndFilter(ws, header.number, 8);
-  sheetNotes(ws, [
-    'Bu davrda kassaga real tushgan har bir to‘lov (bittalab).',
-    'Summa — to‘langan pul; Usul — naqd/Payme/Click/o‘tkazma; Daromad turi — nima uchun to‘langani.',
-    '"Summa" ustunidagi rangli chiziq — to‘lov kattaligini ko‘rsatadi.',
-    'Jami summa — "Foyda va zarar" bo‘limidagi daromadga aynan teng (Tekshiruv bo‘limida tasdiqlangan).',
-  ], 8);
+  sheetNotes(
+    ws,
+    [
+      'Bu davrda kassaga real tushgan har bir to‘lov (bittalab).',
+      'Summa — to‘langan pul; Usul — naqd/Payme/Click/o‘tkazma; Daromad turi — nima uchun to‘langani.',
+      '"Summa" ustunidagi rangli chiziq — to‘lov kattaligini ko‘rsatadi.',
+      'Jami summa — "Foyda va zarar" bo‘limidagi daromadga aynan teng (Tekshiruv bo‘limida tasdiqlangan).',
+    ],
+    8,
+  );
 }
 
 // ---- Sheet 7: Xarajatlar ----
@@ -80,11 +104,26 @@ export function expensesSheet(
 ) {
   const ws = wb.addWorksheet('Xarajatlar');
   ws.columns = [
-    { width: 12 }, { width: 16 }, { width: 16 }, { width: 10 },
-    { width: 30 }, { width: 16 }, { width: 20 }, { width: 20 },
+    { width: 12 },
+    { width: 16 },
+    { width: 16 },
+    { width: 10 },
+    { width: 30 },
+    { width: 16 },
+    { width: 20 },
+    { width: 20 },
   ];
   sheetTitle(ws, 'Xarajatlar (davr bo‘yicha)', period, 8);
-  const header = tableHeader(ws, ['Sana', 'Kategoriya', 'Summa', 'Usul', 'Izoh', 'Filial', 'Ustoz', 'Kim kiritdi']);
+  const header = tableHeader(ws, [
+    'Sana',
+    'Kategoriya',
+    'Summa',
+    'Usul',
+    'Izoh',
+    'Filial',
+    'Ustoz',
+    'Kim kiritdi',
+  ]);
   const firstDataRow = header.number + 1;
   (expenses?.rows ?? []).forEach((e: any) => {
     const r = ws.addRow([
@@ -94,16 +133,23 @@ export function expensesSheet(
       EXPENSE_METHOD_LABELS[e.paymentMethod] ?? e.paymentMethod,
       e.description ?? '',
       e.branchId != null ? (branchNames[e.branchId] ?? `#${e.branchId}`) : '',
-      e.relatedUser ? `${e.relatedUser.firstName ?? ''} ${e.relatedUser.lastName ?? ''}`.trim() : '',
-      e.createdBy ? `${e.createdBy.firstName ?? ''} ${e.createdBy.lastName ?? ''}`.trim() : '',
+      e.relatedUser
+        ? `${e.relatedUser.firstName ?? ''} ${e.relatedUser.lastName ?? ''}`.trim()
+        : '',
+      e.createdBy
+        ? `${e.createdBy.firstName ?? ''} ${e.createdBy.lastName ?? ''}`.trim()
+        : '',
     ]);
     r.getCell(3).numFmt = NUM;
   });
   const lastDataRow = ws.rowCount;
   totalsRow(ws, ['Jami', '', expenses?.total ?? 0, '', '', '', '', ''], [3]);
-  if (lastDataRow >= firstDataRow) dataBar(ws, `C${firstDataRow}:C${lastDataRow}`);
+  if (lastDataRow >= firstDataRow)
+    dataBar(ws, `C${firstDataRow}:C${lastDataRow}`);
   if (expenses?.truncated) {
-    ws.addRow(["Ko‘p yozuv — faqat birinchi 10 000 tasi ko‘rsatildi. Davrni qisqartiring."]);
+    ws.addRow([
+      'Ko‘p yozuv — faqat birinchi 10 000 tasi ko‘rsatildi. Davrni qisqartiring.',
+    ]);
   }
   // An oversized "Boshqa" bucket means the month's spending cannot be read at
   // all — June 2026 hid 65 515 000 so'm (71% of operating spend) in it. The
@@ -120,12 +166,16 @@ export function expensesSheet(
     w.getCell(1).font = { bold: true, color: { argb: 'FFB06A00' } };
   }
   freezeAndFilter(ws, header.number, 8);
-  sheetNotes(ws, [
-    'Bu davrda qilingan har bir xarajat (ijara, kommunal, marketing va h.k.).',
-    'Ustozga berilgan avans ham shu yerda — "Ustoz" ustunida ismi bilan.',
-    'Jami — "Foyda va zarar" bo‘limidagi operatsion xarajat + avansga teng (Tekshiruvda tasdiqlangan).',
-    'Diqqat: ustozlar oyligi bu yerda EMAS — u alohida "Oyliklar" bo‘limida.',
-  ], 8);
+  sheetNotes(
+    ws,
+    [
+      'Bu davrda qilingan har bir xarajat (ijara, kommunal, marketing va h.k.).',
+      'Ustozga berilgan avans ham shu yerda — "Ustoz" ustunida ismi bilan.',
+      'Jami — "Foyda va zarar" bo‘limidagi operatsion xarajat + avansga teng (Tekshiruvda tasdiqlangan).',
+      'Diqqat: ustozlar oyligi bu yerda EMAS — u alohida "Oyliklar" bo‘limida.',
+    ],
+    8,
+  );
 }
 
 // ---- Sheet 8: Oyliklar (computed monthly — the /payments/salary view) ----
@@ -137,13 +187,25 @@ export function salariesSheet(
 ) {
   const ws = wb.addWorksheet('Oyliklar');
   ws.columns = [
-    { width: 26 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 },
-    { width: 14 }, { width: 16 }, { width: 16 }, { width: 14 },
+    { width: 26 },
+    { width: 16 },
+    { width: 16 },
+    { width: 16 },
+    { width: 16 },
+    { width: 14 },
+    { width: 16 },
+    { width: 16 },
+    { width: 14 },
   ];
   // The sheet is a per-month view by design (`salaries` is fetched for a single
   // month, even inside a multi-month export) — the header names THAT month, so
   // a 3-month export no longer prints the whole period above one month's payroll.
-  sheetTitle(ws, 'Ustozlar oyligi — hisoblangan', `${monthLabel} darslari uchun`, 9);
+  sheetTitle(
+    ws,
+    'Ustozlar oyligi — hisoblangan',
+    `${monthLabel} darslari uchun`,
+    9,
+  );
   const rows = salaries?.data ?? [];
   const header = tableHeader(ws, [
     'Ustoz',
@@ -180,10 +242,21 @@ export function salariesSheet(
   const t = salaries?.totals ?? {};
   totalsRow(
     ws,
-    ['Jami', t.covered ?? 0, t.carriedIn ?? 0, t.centerFunded ?? 0, t.fullDeserved ?? 0, t.advances ?? 0, t.netToPay ?? 0, t.carriedOut ?? 0, ''],
+    [
+      'Jami',
+      t.covered ?? 0,
+      t.carriedIn ?? 0,
+      t.centerFunded ?? 0,
+      t.fullDeserved ?? 0,
+      t.advances ?? 0,
+      t.netToPay ?? 0,
+      t.carriedOut ?? 0,
+      '',
+    ],
     [2, 3, 4, 5, 6, 7, 8],
   );
-  if (lastDataRow >= firstDataRow) dataBar(ws, `G${firstDataRow}:G${lastDataRow}`);
+  if (lastDataRow >= firstDataRow)
+    dataBar(ws, `G${firstDataRow}:G${lastDataRow}`);
   freezeAndFilter(ws, header.number, 9);
 
   // Markaz qo'shimchasi lifecycle (company-level, this month) — mirrors the
@@ -191,9 +264,24 @@ export function salariesSheet(
   // money (past settled top-up months; 0 for the in-progress month).
   if ((t.centerAdvanced ?? 0) > 0) {
     sectionHeader(ws, 'Markaz qo‘shimchasi — undirish holati (shu oy)', 9);
-    kvRow(ws, 'Jami qo‘shdi', t.centerAdvanced ?? 0, 'Markaz o‘z hisobidan ustozlarga qo‘shib bergan jami summa (X).');
-    kvRow(ws, 'Undirildi', t.centerRecovered ?? 0, 'O‘quvchilar keyin to‘lab, markazga qaytgan qism — ustozga qayta yozilmaydi (Y).');
-    kvRow(ws, 'Qolgan (markaz)', t.centerStillFronted ?? 0, 'Hali qoplanmagan — markazning joriy xarajati (Z = X − Y).');
+    kvRow(
+      ws,
+      'Jami qo‘shdi',
+      t.centerAdvanced ?? 0,
+      'Markaz o‘z hisobidan ustozlarga qo‘shib bergan jami summa (X).',
+    );
+    kvRow(
+      ws,
+      'Undirildi',
+      t.centerRecovered ?? 0,
+      'O‘quvchilar keyin to‘lab, markazga qaytgan qism — ustozga qayta yozilmaydi (Y).',
+    );
+    kvRow(
+      ws,
+      'Qolgan (markaz)',
+      t.centerStillFronted ?? 0,
+      'Hali qoplanmagan — markazning joriy xarajati (Z = X − Y).',
+    );
   }
 
   // Xodimlar oyligi — non-teaching FIXED_MONTHLY staff (admin/cashier/director).
@@ -225,7 +313,8 @@ export function salariesSheet(
         statusLabel,
       ]);
       [3, 4, 5].forEach((c) => {
-        if (typeof row.getCell(c).value === 'number') row.getCell(c).numFmt = NUM;
+        if (typeof row.getCell(c).value === 'number')
+          row.getCell(c).numFmt = NUM;
       });
     });
     const sLast = ws.rowCount;
@@ -238,17 +327,21 @@ export function salariesSheet(
     if (sLast >= sFirst) dataBar(ws, `E${sFirst}:E${sLast}`);
   }
 
-  sheetNotes(ws, [
-    'Shu oy uchun HISOBLANGAN ustoz oyligi — oylik sahifasidagi kabi (to‘lov qilinmagan bo‘lsa ham to‘la ko‘rinadi).',
-    'O‘quvchilar to‘lagan = o‘quvchilar pulidan tushgan qism; Markaz qo‘shimchasi = markaz o‘z hisobidan qoplagan qism.',
-    'Jami hisoblangan = O‘quvchilar to‘lagan + Markaz qo‘shimchasi. Sof to‘lanadigan = avans ayirilgach ustozga beriladigan summa.',
-    '"shundan oldingi oydan" — "O‘quvchilar to‘lagan" ichida OLDINGI oy darslaridan kechikib kelib qo‘shilgan qism (uning bir bo‘lagi).',
-    '"Keyingi oyga o‘tgan" — bu oy darslarining kech to‘langani KEYINGI oyga o‘tdi (bu oy summasida YO‘Q; keyingi oy oyligiga qo‘shiladi).',
-    '"Sof to‘lanadigan" ustunidagi rangli chiziq — oylik kattaligini ko‘rsatadi. Diqqat: oylik odatda keyingi oy boshida to‘lanadi. Bu bo‘lim faqat USTOZLAR.',
-    '"Markaz qo‘shimchasi — undirish holati" bloki (agar bo‘lsa): markaz shu oy qo‘shgan pulning qanchasi o‘quvchilar tomonidan keyin qoplangani (undirildi) va qanchasi hali markaz zimmasida qolgani.',
-    '"Xodimlar oyligi" bloki (agar bo‘lsa) — dars o‘tmaydigan qat‘iy oylik xodimlar (administrator, kassir, direktor). Oy o‘rtasida ishga kirgan yoki ketgan bo‘lsa, ishlagan kunlariga mutanosib (proratsiya) hisoblanadi.',
-    '"—" belgisi — o‘sha oyda dars ma‘lumoti yo‘q (masalan o‘tish oyi).',
-  ], 9);
+  sheetNotes(
+    ws,
+    [
+      'Shu oy uchun HISOBLANGAN ustoz oyligi — oylik sahifasidagi kabi (to‘lov qilinmagan bo‘lsa ham to‘la ko‘rinadi).',
+      'O‘quvchilar to‘lagan = o‘quvchilar pulidan tushgan qism; Markaz qo‘shimchasi = markaz o‘z hisobidan qoplagan qism.',
+      'Jami hisoblangan = O‘quvchilar to‘lagan + Markaz qo‘shimchasi. Sof to‘lanadigan = avans ayirilgach ustozga beriladigan summa.',
+      '"shundan oldingi oydan" — "O‘quvchilar to‘lagan" ichida OLDINGI oy darslaridan kechikib kelib qo‘shilgan qism (uning bir bo‘lagi).',
+      '"Keyingi oyga o‘tgan" — bu oy darslarining kech to‘langani KEYINGI oyga o‘tdi (bu oy summasida YO‘Q; keyingi oy oyligiga qo‘shiladi).',
+      '"Sof to‘lanadigan" ustunidagi rangli chiziq — oylik kattaligini ko‘rsatadi. Diqqat: oylik odatda keyingi oy boshida to‘lanadi. Bu bo‘lim faqat USTOZLAR.',
+      '"Markaz qo‘shimchasi — undirish holati" bloki (agar bo‘lsa): markaz shu oy qo‘shgan pulning qanchasi o‘quvchilar tomonidan keyin qoplangani (undirildi) va qanchasi hali markaz zimmasida qolgani.',
+      '"Xodimlar oyligi" bloki (agar bo‘lsa) — dars o‘tmaydigan qat‘iy oylik xodimlar (administrator, kassir, direktor). Oy o‘rtasida ishga kirgan yoki ketgan bo‘lsa, ishlagan kunlariga mutanosib (proratsiya) hisoblanadi.',
+      '"—" belgisi — o‘sha oyda dars ma‘lumoti yo‘q (masalan o‘tish oyi).',
+    ],
+    9,
+  );
 }
 
 // ---- Sheet 9: Qarzdorlar ----
@@ -259,10 +352,27 @@ export function debtorsSheet(
 ) {
   const ws = wb.addWorksheet('Qarzdorlar');
   ws.columns = [
-    { width: 8 }, { width: 26 }, { width: 16 }, { width: 16 }, { width: 34 }, { width: 16 },
+    { width: 8 },
+    { width: 26 },
+    { width: 16 },
+    { width: 16 },
+    { width: 34 },
+    { width: 16 },
   ];
-  sheetTitle(ws, 'Qarzdorlar', `Holat sanasi: ${tashkentTodayStr()} (davr oxiri emas)`, 6);
-  const header = tableHeader(ws, ['ID', 'O‘quvchi', 'Filial', 'Telefon', 'Guruhlar', 'Qarz']);
+  sheetTitle(
+    ws,
+    'Qarzdorlar',
+    `Holat sanasi: ${tashkentTodayStr()} (davr oxiri emas)`,
+    6,
+  );
+  const header = tableHeader(ws, [
+    'ID',
+    'O‘quvchi',
+    'Filial',
+    'Telefon',
+    'Guruhlar',
+    'Qarz',
+  ]);
   const firstDataRow = header.number + 1;
   (debtors?.rows ?? []).forEach((d: any) => {
     const branch =
@@ -281,26 +391,48 @@ export function debtorsSheet(
   });
   const lastDataRow = ws.rowCount;
   totalsRow(ws, ['Jami qarz', '', '', '', '', debtors?.total ?? 0], [6]);
-  if (lastDataRow >= firstDataRow) dataBar(ws, `F${firstDataRow}:F${lastDataRow}`);
+  if (lastDataRow >= firstDataRow)
+    dataBar(ws, `F${firstDataRow}:F${lastDataRow}`);
   if (debtors?.truncated) {
-    ws.addRow(["Ko‘p yozuv — faqat birinchi 10 000 tasi ko‘rsatildi."]);
+    ws.addRow(['Ko‘p yozuv — faqat birinchi 10 000 tasi ko‘rsatildi.']);
   }
   freezeAndFilter(ws, header.number, 6);
-  sheetNotes(ws, [
-    'Hozir markazga qarzdor bo‘lgan FAOL o‘quvchilar (eng katta qarz yuqorida).',
-    '"Qarz" ustunidagi rangli chiziq — qarz kattaligini ko‘rsatadi.',
-    'Jami qarz — "Balans" bo‘limidagi "Debitorlik" bilan bir xil (Tekshiruvda tasdiqlangan).',
-    'Bu joriy kundagi holat (davr oxiri emas). Ketib qolgan o‘quvchilar qarzi bu yerda yo‘q — u alohida "hisobdan chiqarish" oqimida.',
-  ], 6);
+  sheetNotes(
+    ws,
+    [
+      'Hozir markazga qarzdor bo‘lgan FAOL o‘quvchilar (eng katta qarz yuqorida).',
+      '"Qarz" ustunidagi rangli chiziq — qarz kattaligini ko‘rsatadi.',
+      'Jami qarz — "Balans" bo‘limidagi "Debitorlik" bilan bir xil (Tekshiruvda tasdiqlangan).',
+      'Bu joriy kundagi holat (davr oxiri emas). Ketib qolgan o‘quvchilar qarzi bu yerda yo‘q — u alohida "hisobdan chiqarish" oqimida.',
+    ],
+    6,
+  );
 }
 
 // ---- Sheet 10: Oylik dinamika ----
 export function trendSheet(wb: Workbook, trend: any) {
   const ws = wb.addWorksheet('Oylik dinamika');
-  ws.columns = [{ width: 12 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 20 }];
-  sheetTitle(ws, 'Oylik dinamika (so‘nggi 6 oy)', 'Tanlangan davrdan qat‘i nazar', 5);
+  ws.columns = [
+    { width: 12 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 20 },
+  ];
+  sheetTitle(
+    ws,
+    'Oylik dinamika (so‘nggi 6 oy)',
+    'Tanlangan davrdan qat‘i nazar',
+    5,
+  );
   const rows = Array.isArray(trend) ? trend : [];
-  const header = tableHeader(ws, ['Oy', 'Tushum', 'Chiqim', 'Foyda', 'Foyda o‘zgarishi %']);
+  const header = tableHeader(ws, [
+    'Oy',
+    'Tushum',
+    'Chiqim',
+    'Foyda',
+    'Foyda o‘zgarishi %',
+  ]);
   const firstDataRow = header.number + 1;
   rows.forEach((m: any, i: number) => {
     const prev = i > 0 ? rows[i - 1].profit : null;
@@ -308,7 +440,13 @@ export function trendSheet(wb: Workbook, trend: any) {
       prev != null && prev !== 0
         ? Math.round(((m.profit - prev) / Math.abs(prev)) * 1000) / 10
         : null;
-    const r = ws.addRow([m.month, m.income, m.expenses, m.profit, growth ?? '']);
+    const r = ws.addRow([
+      m.month,
+      m.income,
+      m.expenses,
+      m.profit,
+      growth ?? '',
+    ]);
     [2, 3, 4].forEach((c) => (r.getCell(c).numFmt = NUM));
     if (growth != null) r.getCell(5).numFmt = '#,##0.0"%"';
   });
@@ -317,12 +455,16 @@ export function trendSheet(wb: Workbook, trend: any) {
     colorScale(ws, `D${firstDataRow}:D${lastDataRow}`);
     dataBar(ws, `B${firstDataRow}:B${lastDataRow}`);
   }
-  sheetNotes(ws, [
-    'So‘nggi 6 oyning tushum / chiqim / foyda dinamikasi.',
-    '"Foyda" ustunidagi rang: qizil = past, yashil = yuqori (oylar orasida taqqoslash).',
-    '"Tushum" ustunidagi rangli chiziq — oy tushumining kattaligi.',
-    'Bu jadval har doim oxirgi 6 oyni ko‘rsatadi — tanlangan davrdan qat‘i nazar.',
-  ], 5);
+  sheetNotes(
+    ws,
+    [
+      'So‘nggi 6 oyning tushum / chiqim / foyda dinamikasi.',
+      '"Foyda" ustunidagi rang: qizil = past, yashil = yuqori (oylar orasida taqqoslash).',
+      '"Tushum" ustunidagi rangli chiziq — oy tushumining kattaligi.',
+      'Bu jadval har doim oxirgi 6 oyni ko‘rsatadi — tanlangan davrdan qat‘i nazar.',
+    ],
+    5,
+  );
 }
 
 // ---- Sheet: Qarz harakati (roll-forward) ----
@@ -361,7 +503,6 @@ export function debtFlowSheet(wb: Workbook, history: any) {
     'O‘zgarish',
     'Izoh',
   ]);
-  const firstDataRow = header.number + 1;
   months.forEach((m: any) => {
     const notes: string[] = [];
     if (m.isCurrent) notes.push('Oy hali tugamagan — raqamlar o‘zgaradi');
@@ -452,7 +593,7 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
   const firstDataRow = header.number + 1;
   months.forEach((m: any) => {
     const izoh =
-      m.monthKey === '2026-05' ? "Pul oqimi to‘liq emas (o‘tish davri)" : '';
+      m.monthKey === '2026-05' ? 'Pul oqimi to‘liq emas (o‘tish davri)' : '';
     const r = ws.addRow([
       m.label,
       m.closingDebt,
@@ -670,10 +811,22 @@ export function writeOffsSheet(wb: Workbook, rows: any[]) {
 // ---- Sheet 11: Filial kesimida ----
 export function perBranchSheet(wb: Workbook, perBranch: any, period: string) {
   const ws = wb.addWorksheet('Filial kesimida');
-  ws.columns = [{ width: 26 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
+  ws.columns = [
+    { width: 26 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+  ];
   sheetTitle(ws, 'Filial kesimida', period, 5);
   const rows = Array.isArray(perBranch) ? perBranch : [];
-  const header = tableHeader(ws, ['Filial', 'Tushum', 'Chiqim', 'Foyda', 'Qarz']);
+  const header = tableHeader(ws, [
+    'Filial',
+    'Tushum',
+    'Chiqim',
+    'Foyda',
+    'Qarz',
+  ]);
   const firstDataRow = header.number + 1;
   let ti = 0;
   let te = 0;
@@ -689,13 +842,18 @@ export function perBranchSheet(wb: Workbook, perBranch: any, period: string) {
   });
   const lastDataRow = ws.rowCount;
   totalsRow(ws, ['Jami', ti, te, tp, td], [2, 3, 4, 5]);
-  if (lastDataRow >= firstDataRow) dataBar(ws, `B${firstDataRow}:B${lastDataRow}`);
+  if (lastDataRow >= firstDataRow)
+    dataBar(ws, `B${firstDataRow}:B${lastDataRow}`);
   freezeAndFilter(ws, header.number, 5);
-  sheetNotes(ws, [
-    'Har bir filial bo‘yicha tushum / chiqim / foyda / qarz.',
-    '"Tushum" ustunidagi rangli chiziq — filiallarni tez taqqoslash uchun.',
-    'Diqqat: ustoz oyligi filialga taqsimlanmaydi — shu sababli "Chiqim" va "Foyda" oyliksiz (faqat operatsion xarajat, avanssiz).',
-  ], 5);
+  sheetNotes(
+    ws,
+    [
+      'Har bir filial bo‘yicha tushum / chiqim / foyda / qarz.',
+      '"Tushum" ustunidagi rangli chiziq — filiallarni tez taqqoslash uchun.',
+      'Diqqat: ustoz oyligi filialga taqsimlanmaydi — shu sababli "Chiqim" va "Foyda" oyliksiz (faqat operatsion xarajat, avanssiz).',
+    ],
+    5,
+  );
 }
 
 // ---- Sheet 13: Tekshiruv (reconciliation) ----
@@ -718,7 +876,12 @@ export function reconciliationSheet(
 ) {
   const ws = wb.addWorksheet('Tekshiruv');
   ws.columns = [
-    { width: 44 }, { width: 18 }, { width: 18 }, { width: 16 }, { width: 10 }, { width: 40 },
+    { width: 44 },
+    { width: 18 },
+    { width: 18 },
+    { width: 16 },
+    { width: 10 },
+    { width: 40 },
   ];
   sheetTitle(ws, 'Tekshiruv (reconciliation)', period, 6);
 
@@ -728,28 +891,80 @@ export function reconciliationSheet(
   );
 
   sectionHeader(ws, 'Ties (mos kelishi)', 6);
-  tableHeader(ws, ['Tekshiruv', 'Kutilgan', 'Haqiqiy', 'Farq', 'Holat', 'Izoh']);
-  checkRow(ws, 'To‘lovlar = Foyda-zarar daromad', pl?.revenue?.total ?? 0, payments?.total ?? 0, 'Cash tie-out.');
+  tableHeader(ws, [
+    'Tekshiruv',
+    'Kutilgan',
+    'Haqiqiy',
+    'Farq',
+    'Holat',
+    'Izoh',
+  ]);
+  checkRow(
+    ws,
+    'To‘lovlar = Foyda-zarar daromad',
+    pl?.revenue?.total ?? 0,
+    payments?.total ?? 0,
+    'Cash tie-out.',
+  );
   if (includePointInTime)
-    checkRow(ws, 'Qarzdorlar = Balans debitorlik', bs?.assets?.accountsReceivable ?? 0, debtors?.total ?? 0);
-  checkRow(ws, 'Xarajatlar = P&L (operatsion + avans)', opByCat + (pl?.costOfServices?.teacherAdvances ?? 0), expenses?.total ?? 0);
-  checkRow(ws, 'O‘quvchi balansi footing', (recon?.student?.opening ?? 0) + (recon?.student?.activityTotal ?? 0), recon?.student?.closing ?? 0);
-  checkRow(ws, 'GL recon: Σ balans = Σ ledger (kompaniya)', recon?.gl?.storedBalanceSum ?? 0, recon?.gl?.ledgerSum ?? 0);
+    checkRow(
+      ws,
+      'Qarzdorlar = Balans debitorlik',
+      bs?.assets?.accountsReceivable ?? 0,
+      debtors?.total ?? 0,
+    );
+  checkRow(
+    ws,
+    'Xarajatlar = P&L (operatsion + avans)',
+    opByCat + (pl?.costOfServices?.teacherAdvances ?? 0),
+    expenses?.total ?? 0,
+  );
+  checkRow(
+    ws,
+    'O‘quvchi balansi footing',
+    (recon?.student?.opening ?? 0) + (recon?.student?.activityTotal ?? 0),
+    recon?.student?.closing ?? 0,
+  );
+  checkRow(
+    ws,
+    'GL recon: Σ balans = Σ ledger (kompaniya)',
+    recon?.gl?.storedBalanceSum ?? 0,
+    recon?.gl?.ledgerSum ?? 0,
+  );
 
   // Balanslashuv farqi (bir yozuvli tizim) — moved here from Balans, informational.
   if (includePointInTime) {
-    const balGap = (bs?.assets?.total ?? 0) - ((bs?.liabilities?.total ?? 0) + (bs?.equity?.total ?? 0));
+    const balGap =
+      (bs?.assets?.total ?? 0) -
+      ((bs?.liabilities?.total ?? 0) + (bs?.equity?.total ?? 0));
     sectionHeader(ws, 'Balanslashuv (bir yozuvli tizim — ma‘lumot)', 6);
-    kvRow(ws, 'Aktiv − (Passiv + Kapital) farqi', balGap, 'Tizim ikki yozuvli GL emas — 0 ga yaqin bo‘lsa hammasi joyida.');
+    kvRow(
+      ws,
+      'Aktiv − (Passiv + Kapital) farqi',
+      balGap,
+      'Tizim ikki yozuvli GL emas — 0 ga yaqin bo‘lsa hammasi joyida.',
+    );
   }
 
   // Oylik — computed vs cash-paid (informational, NOT a MOS/XATO tie: they are
   // offset by the payroll cycle — this month's salary is paid next month).
   const computedNet = salaries?.totals?.netToPay ?? 0;
-  const cashPaid = (pl?.costOfServices?.teacherSalaries ?? 0) + (pl?.operatingExpenses?.adminSalaries ?? 0);
+  const cashPaid =
+    (pl?.costOfServices?.teacherSalaries ?? 0) +
+    (pl?.operatingExpenses?.adminSalaries ?? 0);
   sectionHeader(ws, 'Oylik: hisoblangan vs naqd to‘langan (ma‘lumot)', 6);
-  kvRow(ws, 'Hisoblangan oylik (sof, shu oy)', computedNet, '"Oyliklar" bo‘limi — shu oy uchun ustozlarga hisoblangan.');
-  kvRow(ws, 'Naqd to‘langan oylik (P&L)', cashPaid, 'Shu davrda haqiqatan pul chiqarilgan oylik.');
+  kvRow(
+    ws,
+    'Hisoblangan oylik (sof, shu oy)',
+    computedNet,
+    '"Oyliklar" bo‘limi — shu oy uchun ustozlarga hisoblangan.',
+  );
+  kvRow(
+    ws,
+    'Naqd to‘langan oylik (P&L)',
+    cashPaid,
+    'Shu davrda haqiqatan pul chiqarilgan oylik.',
+  );
 
   // Sof foyda (aniq) — footing so the «Sof foyda» sheet's arithmetic is auditable.
   if (np) {
@@ -765,7 +980,13 @@ export function reconciliationSheet(
     kvRow(ws, '− Admin oyligi', np.adminSalary);
     kvRow(ws, '− Operatsion xarajat (avanssiz)', np.operatingExpenses);
     kvRow(ws, '− Qaytarishlar (refund)', np.refunds);
-    checkRow(ws, '= Sof foyda (footing)', footed, np.netProfit, 'Komponentlar yig‘indisi «Sof foyda» bo‘limidagi raqamga teng bo‘lishi kerak.');
+    checkRow(
+      ws,
+      '= Sof foyda (footing)',
+      footed,
+      np.netProfit,
+      'Komponentlar yig‘indisi «Sof foyda» bo‘limidagi raqamga teng bo‘lishi kerak.',
+    );
   }
 
   // O'quvchi balansi roll-forward
@@ -780,13 +1001,21 @@ export function reconciliationSheet(
   kvRow(ws, '+ Boshlang‘ich balans', a.initialBalance ?? 0);
   kvRow(ws, '− Balans yechish', a.withdrawal ?? 0);
   kvRow(ws, '± Boshqa', a.other ?? 0);
-  totalsRow(ws, ['= Davr oxiri Σ balans', recon?.student?.closing ?? 0, ''], [2]);
+  totalsRow(
+    ws,
+    ['= Davr oxiri Σ balans', recon?.student?.closing ?? 0, ''],
+    [2],
+  );
 
-  sheetNotes(ws, [
-    'Bu bo‘lim hisobotning har bir raqami bir-biriga MOS kelishini isbotlaydi (audit).',
-    'MOS = to‘g‘ri; XATO = nomuvofiqlik (farq ko‘rsatiladi va tuzatilishi kerak).',
-    'Aylanma (roll-forward): oy boshidagi qoldiq + davr harakatlari = oy oxiridagi qoldiq — to‘g‘ri qo‘shilib chiqishi ("footing") kerak.',
-    'O‘quvchi balansi aylanmasidagi satrlar: Hisoblangan darslar = darslar uchun yechilgan pul; Hisobdan chiqarish = kechirilgan qarz; Boshlang‘ich balans = tizimga o‘tishda kiritilgan; Balans yechish = ortiqcha balansni daromadga o‘tkazish; Boshqa = mayda tuzatishlar.',
-    'Oylik "hisoblangan" va "naqd to‘langan" farq qiladi — chunki oylik keyingi oy boshida to‘lanadi (bu XATO emas).',
-  ], 6);
+  sheetNotes(
+    ws,
+    [
+      'Bu bo‘lim hisobotning har bir raqami bir-biriga MOS kelishini isbotlaydi (audit).',
+      'MOS = to‘g‘ri; XATO = nomuvofiqlik (farq ko‘rsatiladi va tuzatilishi kerak).',
+      'Aylanma (roll-forward): oy boshidagi qoldiq + davr harakatlari = oy oxiridagi qoldiq — to‘g‘ri qo‘shilib chiqishi ("footing") kerak.',
+      'O‘quvchi balansi aylanmasidagi satrlar: Hisoblangan darslar = darslar uchun yechilgan pul; Hisobdan chiqarish = kechirilgan qarz; Boshlang‘ich balans = tizimga o‘tishda kiritilgan; Balans yechish = ortiqcha balansni daromadga o‘tkazish; Boshqa = mayda tuzatishlar.',
+      'Oylik "hisoblangan" va "naqd to‘langan" farq qiladi — chunki oylik keyingi oy boshida to‘lanadi (bu XATO emas).',
+    ],
+    6,
+  );
 }

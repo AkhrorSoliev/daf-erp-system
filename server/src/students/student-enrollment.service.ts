@@ -197,7 +197,8 @@ export class StudentEnrollmentService {
           await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
             enrollmentId: currentEnrollment.id,
             performedById: userId,
-            reason: "Guruh o'zgartirilganda qoldiq darslar uchun balans tiklash",
+            reason:
+              "Guruh o'zgartirilganda qoldiq darslar uchun balans tiklash",
           });
           await tx.enrollment.update({
             where: { id: currentEnrollment.id },
@@ -419,15 +420,11 @@ export class StudentEnrollmentService {
         },
       });
       if (configured > 0) {
-        throw new BadRequestException(
-          "Ketish sababini tanlash majburiy",
-        );
+        throw new BadRequestException('Ketish sababini tanlash majburiy');
       }
       const trimmed = input.reason?.trim();
       if (!trimmed) {
-        throw new BadRequestException(
-          "Ketish sababini kiritish majburiy",
-        );
+        throw new BadRequestException('Ketish sababini kiritish majburiy');
       }
       reasonText = trimmed;
     }
@@ -437,16 +434,14 @@ export class StudentEnrollmentService {
     if (input.writeOffCycleDebt) {
       if (!input.writeOffReason || input.writeOffReason.trim().length < 5) {
         throw new BadRequestException(
-          "Hisobdan chiqarish izohi majburiy (kamida 5 belgi)",
+          'Hisobdan chiqarish izohi majburiy (kamida 5 belgi)',
         );
       }
       if (
         input.writeOffConfirmAmount === undefined ||
         input.writeOffConfirmAmount <= 0
       ) {
-        throw new BadRequestException(
-          "Hisobdan chiqarish summasi noto'g'ri",
-        );
+        throw new BadRequestException("Hisobdan chiqarish summasi noto'g'ri");
       }
     }
 
@@ -664,7 +659,7 @@ export class StudentEnrollmentService {
     });
 
     return {
-      message: "Joriy sikl qarzi hisobdan chiqarildi",
+      message: 'Joriy sikl qarzi hisobdan chiqarildi',
       transactionId: result.transaction.id,
       balanceBefore: result.balanceBefore,
       balanceAfter: result.balanceAfter,

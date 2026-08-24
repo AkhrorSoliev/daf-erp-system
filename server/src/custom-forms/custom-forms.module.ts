@@ -8,9 +8,7 @@ import { CustomFormsService } from './custom-forms.service';
 @Module({
   imports: [
     LeadsModule,
-    ThrottlerModule.forRoot([
-      { name: 'default', ttl: 600_000, limit: 30 },
-    ]),
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 600_000, limit: 30 }]),
   ],
   controllers: [CustomFormsController, CustomFormsPublicController],
   providers: [CustomFormsService],

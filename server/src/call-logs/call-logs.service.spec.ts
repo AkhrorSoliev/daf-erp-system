@@ -26,12 +26,16 @@ describe('CallLogsService', () => {
       studentBranch: { findFirst: jest.fn().mockResolvedValue(null) },
       user: {
         findUnique: jest.fn().mockResolvedValue({ mainBranch: 3 }),
-        findFirst: jest.fn().mockResolvedValue(
-          { mainBranch: 3, branches: [{ branchId: 3 }], roles: [{ role: { name: 'Branch Director' } }] },
-        ),
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: 3,
+          branches: [{ branchId: 3 }],
+          roles: [{ role: { name: 'Branch Director' } }],
+        }),
       },
       callLog: {
-        create: jest.fn().mockImplementation(({ data }) => ({ id: 'c1', ...data })),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }) => ({ id: 'c1', ...data })),
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
       },
@@ -54,7 +58,12 @@ describe('CallLogsService', () => {
   describe('create', () => {
     it('resolves branch from active enrollment, trims note, records history', async () => {
       const res = await service.create(
-        { studentId: 10264, reason: 'ABSENCE', outcome: 'NO_ANSWER', note: '  uydagilar  ' },
+        {
+          studentId: 10264,
+          reason: 'ABSENCE',
+          outcome: 'NO_ANSWER',
+          note: '  uydagilar  ',
+        },
         99,
         1001,
       );

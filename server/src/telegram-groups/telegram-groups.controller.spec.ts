@@ -48,10 +48,16 @@ describe('TelegramGroupsController — role guards', () => {
     } as any;
   }
 
-  function expectAllowed(handler: (...a: unknown[]) => unknown, roles: string[]) {
+  function expectAllowed(
+    handler: (...a: unknown[]) => unknown,
+    roles: string[],
+  ) {
     expect(guard.canActivate(mockCtx(handler, roles))).toBe(true);
   }
-  function expectDenied(handler: (...a: unknown[]) => unknown, roles: string[]) {
+  function expectDenied(
+    handler: (...a: unknown[]) => unknown,
+    roles: string[],
+  ) {
     expect(() => guard.canActivate(mockCtx(handler, roles))).toThrow(
       ForbiddenException,
     );

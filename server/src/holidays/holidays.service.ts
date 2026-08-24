@@ -17,7 +17,6 @@ import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayQueryDto } from './dto/holiday-query.dto';
 import { GroupHolidayCascadeService } from '../groups/group-holiday-cascade.service';
 import {
-  addDaysToDateStr,
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';
@@ -214,7 +213,7 @@ export class HolidaysService {
         throw new BadRequestException(
           "Bu bayram allaqachon guruh jadvallariga ta'sir qilgan. " +
             "Sanalarini o'zgartirish uchun avval bayramni o'chiring, " +
-            'so\'ng qayta yarating',
+            "so'ng qayta yarating",
         );
       }
 

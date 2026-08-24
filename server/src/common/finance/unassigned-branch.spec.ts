@@ -61,7 +61,9 @@ describe('unassigned (branchId = null) financial rows', () => {
 
     const sumFor = (ids: number[] | null) =>
       rows
-        .filter((r) => (ids == null ? true : r.branchId != null && ids.includes(r.branchId)))
+        .filter((r) =>
+          ids == null ? true : r.branchId != null && ids.includes(r.branchId),
+        )
         .reduce((s, r) => s + r.amount, 0);
 
     const unassigned = rows

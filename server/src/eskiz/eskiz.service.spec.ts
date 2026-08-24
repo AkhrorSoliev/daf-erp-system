@@ -85,15 +85,17 @@ describe('EskizService', () => {
       redis.store.set('eskiz:token', 'OLD'); // start with a cached (stale) token
       const svc = new EskizService(makeConfig() as any, redis as any);
       let sendCalls = 0;
-      jest.spyOn(global, 'fetch' as any).mockImplementation(async (url: any) => {
-        if (String(url).endsWith('/auth/login')) {
-          return jsonRes(200, { data: { token: 'NEW' } }) as any;
-        }
-        sendCalls += 1;
-        return sendCalls === 1
-          ? (jsonRes(401, {}) as any)
-          : (jsonRes(200, { id: 'req-2', status: 'waiting' }) as any);
-      });
+      jest
+        .spyOn(global, 'fetch' as any)
+        .mockImplementation(async (url: any) => {
+          if (String(url).endsWith('/auth/login')) {
+            return jsonRes(200, { data: { token: 'NEW' } }) as any;
+          }
+          sendCalls += 1;
+          return sendCalls === 1
+            ? (jsonRes(401, {}) as any)
+            : (jsonRes(200, { id: 'req-2', status: 'waiting' }) as any);
+        });
 
       const res = await svc.sendSms('901234567', 'salom');
 

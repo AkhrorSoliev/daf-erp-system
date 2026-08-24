@@ -12,6 +12,7 @@ import { getAllowedRoleIds } from '../portal-roles.config';
 import { TelegramOauthConfig } from './telegram-oauth.config';
 import { TelegramIdTokenVerifier } from './telegram-id-token.verifier';
 import { TelegramOauthStateStore } from './telegram-oauth-state.store';
+import { describeValue } from '../../common/utils/describe-value';
 
 /** Hujjatdan verbatim. */
 const TOKEN_URL = 'https://oauth.telegram.org/token';
@@ -186,14 +187,14 @@ export class TelegramOauthService {
     const raw = handoff ? await this.redis.getdel(handoffKey(handoff)) : null;
     if (!raw) {
       throw new BadRequestException(
-        "Sessiya muddati tugadi. Iltimos, qaytadan kiring.",
+        'Sessiya muddati tugadi. Iltimos, qaytadan kiring.',
       );
     }
     try {
       return JSON.parse(raw) as TelegramOauthSession;
     } catch {
       throw new BadRequestException(
-        "Sessiya muddati tugadi. Iltimos, qaytadan kiring.",
+        'Sessiya muddati tugadi. Iltimos, qaytadan kiring.',
       );
     }
   }
@@ -247,9 +248,11 @@ export class TelegramOauthService {
       );
     }
 
-    const payload = (await res.json().catch(() => null)) as
-      | { id_token?: string; error?: unknown; error_description?: unknown }
-      | null;
+    const payload = (await res.json().catch(() => null)) as {
+      id_token?: string;
+      error?: unknown;
+      error_description?: unknown;
+    } | null;
 
     // TELEGRAM XATONI HTTP 200 BILAN QAYTARADI. RFC 6749 §5.2 bo'yicha bu 400
     // bo'lishi kerak, shuning uchun yuqoridagi `!res.ok` tekshiruvi bunga
@@ -261,11 +264,11 @@ export class TelegramOauthService {
       // `error` va `error_description` — OAuth xato KODLARI, maxfiy emas
       // (masalan `invalid_grant`, `invalid_client`). Token yoki secret emas.
       this.logger.warn(
-        `Telegram token almashtirishni rad etdi: error=${String(
+        `Telegram token almashtirishni rad etdi: error=${describeValue(
           payload.error,
         )}${
           payload.error_description
-            ? ` description=${String(payload.error_description)}`
+            ? ` description=${describeValue(payload.error_description)}`
             : ''
         }`,
       );
@@ -282,7 +285,9 @@ export class TelegramOauthService {
       // logga tushmasligi kerak.
       this.logger.warn(
         `Telegram token javobida id_token yo'q. Kelgan kalitlar: ${
-          payload ? Object.keys(payload).join(', ') || '(bo\'sh obyekt)' : '(JSON emas)'
+          payload
+            ? Object.keys(payload).join(', ') || "(bo'sh obyekt)"
+            : '(JSON emas)'
         }`,
       );
       throw new UnauthorizedException('Telegram javobi tekshirilmadi');

@@ -107,9 +107,7 @@ describe('branch scope coverage', () => {
     const unscoped = everyWhereClause().filter(
       (c) => !hasBranchPredicate(c.where),
     );
-    expect(
-      unscoped.map((c) => `${c.model}.${c.method}`),
-    ).toEqual([]);
+    expect(unscoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
   });
 
   it('getFinancialOverview leaves every query UNfiltered for a company-wide caller', async () => {
@@ -117,7 +115,9 @@ describe('branch scope coverage', () => {
     // predicate that would quietly drop branch-less legacy rows.
     await service.getFinancialOverview(1, { ...period, branchIds: null });
 
-    const scoped = everyWhereClause().filter((c) => hasBranchPredicate(c.where));
+    const scoped = everyWhereClause().filter((c) =>
+      hasBranchPredicate(c.where),
+    );
     expect(scoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
   });
 
@@ -220,7 +220,10 @@ describe('branch scope coverage — expectation service', () => {
         },
         {
           provide: RedisService,
-          useValue: { get: jest.fn().mockResolvedValue(null), setex: jest.fn() },
+          useValue: {
+            get: jest.fn().mockResolvedValue(null),
+            setex: jest.fn(),
+          },
         },
       ],
     }).compile();

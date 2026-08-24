@@ -24,11 +24,15 @@ describe('TransactionsWriteService — branch stamping', () => {
       // runInTx opens its own transaction when the caller passes none; hand the
       // callback the same mock client so assertions see every write.
       $transaction: jest.fn((cb: any) => cb(prisma)),
-      $queryRaw: jest.fn().mockResolvedValue([{ id: STUDENT, balance: 100_000 }]),
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValue([{ id: STUDENT, balance: 100_000 }]),
       transaction: { create: jest.fn().mockResolvedValue({ id: 'tx-1' }) },
       student: { update: jest.fn() },
       user: { update: jest.fn(), findUnique: jest.fn() },
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 2 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 2 }),
+      },
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     cash = { recordInflow: jest.fn(), recordOutflow: jest.fn() };
@@ -138,7 +142,10 @@ describe('TransactionsWriteService — branch stamping', () => {
     });
 
     it('still pays a branch-less CEO instead of throwing', async () => {
-      prisma.user.findUnique.mockResolvedValue({ mainBranch: null, branches: [] });
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+      });
 
       await service.recordSalaryPayment({
         userId: 10000,
@@ -147,7 +154,9 @@ describe('TransactionsWriteService — branch stamping', () => {
         companyId: COMPANY,
       });
 
-      expect(createdData()).toEqual(expect.objectContaining({ branchId: null }));
+      expect(createdData()).toEqual(
+        expect.objectContaining({ branchId: null }),
+      );
     });
   });
 });
@@ -172,7 +181,9 @@ describe('TransactionsWriteService.recordSalaryPayment — cash account + descri
       transaction: { create: jest.fn().mockResolvedValue({ id: 'tx-1' }) },
       user: {
         update: jest.fn().mockResolvedValue({}),
-        findUnique: jest.fn().mockResolvedValue({ mainBranch: 1, branches: [] }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ mainBranch: 1, branches: [] }),
       },
     };
     cashMovements = { recordOutflow: jest.fn().mockResolvedValue(null) };
@@ -307,7 +318,9 @@ describe('TransactionsWriteService.createAdjustment', () => {
         update: jest.fn(),
         findFirst: jest.fn().mockResolvedValue({ id: STUDENT }),
       },
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 2 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 2 }),
+      },
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
     };
 
@@ -315,7 +328,10 @@ describe('TransactionsWriteService.createAdjustment', () => {
       providers: [
         TransactionsWriteService,
         { provide: PrismaService, useValue: prisma },
-        { provide: CashMovementsService, useValue: { recordInflow: jest.fn(), recordOutflow: jest.fn() } },
+        {
+          provide: CashMovementsService,
+          useValue: { recordInflow: jest.fn(), recordOutflow: jest.fn() },
+        },
       ],
     }).compile();
 

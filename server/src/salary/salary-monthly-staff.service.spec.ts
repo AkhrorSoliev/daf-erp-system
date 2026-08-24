@@ -67,7 +67,9 @@ describe('SalaryStaffMonthlyService', () => {
   beforeEach(async () => {
     prisma = {
       employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
-      employeeSalaryConfigVersion: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfigVersion: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       expense: { groupBy: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };

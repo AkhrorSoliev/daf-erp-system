@@ -2,11 +2,13 @@ import { Test } from '@nestjs/testing';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-const baseEnrollment = (overrides: Partial<{
-  prepaid: number;
-  price: number;
-  lpc: number;
-}> = {}) => ({
+const baseEnrollment = (
+  overrides: Partial<{
+    prepaid: number;
+    price: number;
+    lpc: number;
+  }> = {},
+) => ({
   id: 'enr-1',
   prepaidLessonsRemaining: overrides.prepaid ?? 0,
   group: {
@@ -69,7 +71,9 @@ describe('PaymentsPreviewService', () => {
       balance: -253000,
       discountPercent: 0,
     });
-    prisma.enrollment.findMany.mockResolvedValue([baseEnrollment({ price: 414000, lpc: 12 })]);
+    prisma.enrollment.findMany.mockResolvedValue([
+      baseEnrollment({ price: 414000, lpc: 12 }),
+    ]);
     prisma.transaction.count.mockResolvedValue(3);
 
     const res = await service.preview(10001, 300000, 1001, null);
@@ -78,7 +82,10 @@ describe('PaymentsPreviewService', () => {
     expect(res.scenario).toBe('SINGLE_ENROLLMENT');
     expect(res.currentBalance).toBe(-253000);
     expect(res.newBalance).toBe(47000);
-    expect(res.breakdown[0]).toMatchObject({ kind: 'DEBT_REPAY', amount: 253000 });
+    expect(res.breakdown[0]).toMatchObject({
+      kind: 'DEBT_REPAY',
+      amount: 253000,
+    });
     // 47000 / 34500 = 1 lesson partial; 47000 - 34500 = 12500 remainder
     expect(res.breakdown).toEqual([
       expect.objectContaining({ kind: 'DEBT_REPAY', amount: 253000 }),
@@ -97,7 +104,9 @@ describe('PaymentsPreviewService', () => {
       discountPercent: 0,
     });
     // 414_000 / 12 = 34_500 per lesson
-    prisma.enrollment.findMany.mockResolvedValue([baseEnrollment({ price: 414000, lpc: 12 })]);
+    prisma.enrollment.findMany.mockResolvedValue([
+      baseEnrollment({ price: 414000, lpc: 12 }),
+    ]);
     prisma.transaction.count.mockResolvedValue(0);
 
     const res = await service.preview(10001, 500000, 1001, null);
@@ -198,7 +207,9 @@ describe('PaymentsPreviewService', () => {
       balance: 0,
       discountPercent: 50, // half-price
     });
-    prisma.enrollment.findMany.mockResolvedValue([baseEnrollment({ price: 414000, lpc: 12 })]);
+    prisma.enrollment.findMany.mockResolvedValue([
+      baseEnrollment({ price: 414000, lpc: 12 }),
+    ]);
 
     const res = await service.preview(10001, 207000, 1001, null);
 

@@ -69,7 +69,9 @@ describe('telegram branch routing', () => {
     const oldRule = (eventBranchId: number | null) =>
       eventBranchId == null
         ? all
-        : all.filter((g) => g.branchId === eventBranchId || g.branchId === null);
+        : all.filter(
+            (g) => g.branchId === eventBranchId || g.branchId === null,
+          );
 
     // Under the old rule a Fargona-only event reached the unmapped group too.
     expect(oldRule(1)).toContain(unmapped);
@@ -87,8 +89,12 @@ describe('telegram branch routing', () => {
     const withOrg = [fargonaGroup, namanganGroup, unmapped, orgWide];
 
     it('receives EVERY branch event, not just one', () => {
-      expect(recipients(1, withOrg).map((g) => g.title)).toContain(orgWide.title);
-      expect(recipients(2, withOrg).map((g) => g.title)).toContain(orgWide.title);
+      expect(recipients(1, withOrg).map((g) => g.title)).toContain(
+        orgWide.title,
+      );
+      expect(recipients(2, withOrg).map((g) => g.title)).toContain(
+        orgWide.title,
+      );
     });
 
     it('does not stop the branch group from receiving its own event', () => {

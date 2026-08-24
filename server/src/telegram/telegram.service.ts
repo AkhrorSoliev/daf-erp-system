@@ -426,7 +426,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         if (!exam) {
           ctx.session.processing = false;
           await ctx.reply(
-            'Imtihon topilmadi yoki havola eskirgan. Administrator bilan bog\'laning.',
+            "Imtihon topilmadi yoki havola eskirgan. Administrator bilan bog'laning.",
           );
           return;
         }
@@ -679,14 +679,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         allowed_updates: [...ALLOWED_UPDATES],
       });
       this.logger.log(
-        `Bot webhook o'rnatildi: ${webhookUrl}${secret ? ' (secret_token bilan)' : ' (secret_token YO\'Q — TELEGRAM_BOT_TOKEN ham yo\'q)'}`,
+        `Bot webhook o'rnatildi: ${webhookUrl}${secret ? ' (secret_token bilan)' : " (secret_token YO'Q — TELEGRAM_BOT_TOKEN ham yo'q)"}`,
       );
     } else {
-      this.bot
-        .launch({ allowedUpdates: [...ALLOWED_UPDATES] })
-        .catch((err) => {
-          this.logger.error('Bot ishga tushirishda xatolik:', err.message);
-        });
+      this.bot.launch({ allowedUpdates: [...ALLOWED_UPDATES] }).catch((err) => {
+        this.logger.error('Bot ishga tushirishda xatolik:', err.message);
+      });
       this.logger.log('Bot polling rejimida ishga tushdi');
     }
   }
@@ -775,7 +773,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
    * uchun), shuning uchun begona chatdagi a'zolik o'zgarishini gate
    * statistikasiga yozib yubormaslik kerak.
    */
-  private isRequiredChannelChat(chat: { id: number; username?: string }): boolean {
+  private isRequiredChannelChat(chat: {
+    id: number;
+    username?: string;
+  }): boolean {
     const channel = this.requiredChannel;
     if (!channel) return false;
     if (channel.startsWith('@')) {
@@ -810,7 +811,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         );
       }
     }
-    await ctx.reply("Davom etish uchun /start yuboring.");
+    await ctx.reply('Davom etish uchun /start yuboring.');
   }
 
   /** Asks the user to join the required channel, with a recheck button. */
@@ -954,16 +955,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
 
     const buttons = participations.map((p) => {
-      const date = p.exam.examDate
-        ? this.formatDdMmYyyy(p.exam.examDate)
-        : '—';
+      const date = p.exam.examDate ? this.formatDdMmYyyy(p.exam.examDate) : '—';
       const label = `📅 ${date} · ${p.exam.title}`;
       return [Markup.button.callback(label, `mock_result:${p.exam.id}`)];
     });
 
     await ctx.reply(
       "Qaysi imtihon natijasini ko'rmoqchisiz?\n\n" +
-        "Tanlangan imtihon uchun PDF fayl yuboriladi. PDFda sizning " +
+        'Tanlangan imtihon uchun PDF fayl yuboriladi. PDFda sizning ' +
         "identifikatoringizni toping va shu raqam yonidagi ballarni ko'ring.",
       Markup.inlineKeyboard(buttons),
     );
@@ -997,9 +996,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     });
 
     if (!participant) {
-      await ctx.reply(
-        "Bu imtihonda sizning ishtirokingiz topilmadi.",
-      );
+      await ctx.reply('Bu imtihonda sizning ishtirokingiz topilmadi.');
       return;
     }
 
@@ -1053,10 +1050,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private escapeHtml(s: string): string {
-    return s
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   /**

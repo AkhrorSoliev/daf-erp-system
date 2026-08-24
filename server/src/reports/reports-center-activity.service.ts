@@ -233,9 +233,7 @@ export class ReportsCenterActivityService {
     );
     const kpis = this.aggregateKpis(allRoomEntries, activeStudents);
 
-    const roomsResponse = allRoomEntries.filter(
-      (r) => r.totals.groupCount > 0,
-    );
+    const roomsResponse = allRoomEntries.filter((r) => r.totals.groupCount > 0);
     const potentialBreakdown = this.buildPotentialBreakdown(roomsResponse);
     const trend = this.buildTrend(
       rooms,
@@ -633,10 +631,7 @@ export class ReportsCenterActivityService {
           }
           // Yana o'qishi mumkin = Σ (capacity - enrolled) per group
           if (capacityOnDate != null) {
-            totalExtraStudents += Math.max(
-              0,
-              capacityOnDate - enrolledOnDate,
-            );
+            totalExtraStudents += Math.max(0, capacityOnDate - enrolledOnDate);
           }
         }
 
@@ -763,9 +758,7 @@ export class ReportsCenterActivityService {
     const courseIds = Array.from(
       new Set(groups.map((g) => g.courseId).filter(Boolean)),
     );
-    const enrollmentIds = groups.flatMap((g) =>
-      g.enrollments.map((e) => e.id),
-    );
+    const enrollmentIds = groups.flatMap((g) => g.enrollments.map((e) => e.id));
 
     // Fetch any snapshot whose validity window overlaps the period:
     // (validFrom <= range.end) AND (validTo IS NULL OR validTo > range.start)

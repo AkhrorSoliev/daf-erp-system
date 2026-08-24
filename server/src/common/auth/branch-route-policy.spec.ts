@@ -122,7 +122,9 @@ describe('branch route policy manifest', () => {
   });
 
   it('has no route in UNREVIEWED that is already evidenced as scoped', () => {
-    const wrongly = UNREVIEWED_ROUTES.filter((k) => byKey.get(k)?.hasBranchScope);
+    const wrongly = UNREVIEWED_ROUTES.filter(
+      (k) => byKey.get(k)?.hasBranchScope,
+    );
     expect(wrongly).toEqual([]);
   });
 });

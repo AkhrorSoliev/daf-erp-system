@@ -1,9 +1,4 @@
-import {
-  IsInt,
-  IsString,
-  IsNotEmpty,
-  IsDateString,
-} from 'class-validator';
+import { IsInt, IsString, IsNotEmpty, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreatePaymentPromiseDto {

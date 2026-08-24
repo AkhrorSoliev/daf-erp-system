@@ -160,5 +160,4 @@ describe('SalaryPaymentService.getMatrix', () => {
       expect(prisma.salaryPayment.findMany).not.toHaveBeenCalled();
     });
   });
-
 });

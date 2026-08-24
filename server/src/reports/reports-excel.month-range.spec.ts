@@ -107,7 +107,12 @@ describe('sumMonthlySalaries', () => {
 
   it('treats a manual/config-gap month (null split) as zero, not fabricated', () => {
     const agg = sumMonthlySalaries([
-      { month: '2026-05', salaries: { totals: { covered: null, centerFunded: null, fullDeserved: null } } },
+      {
+        month: '2026-05',
+        salaries: {
+          totals: { covered: null, centerFunded: null, fullDeserved: null },
+        },
+      },
       month('2026-07', 60_000, 9_000),
     ]);
     expect(agg.totals.fullDeserved).toBe(69_000);
@@ -116,7 +121,11 @@ describe('sumMonthlySalaries', () => {
 
   it('returns zeros for an empty month list', () => {
     const agg = sumMonthlySalaries([]);
-    expect(agg.totals).toEqual({ fullDeserved: 0, covered: 0, centerFunded: 0 });
+    expect(agg.totals).toEqual({
+      fullDeserved: 0,
+      covered: 0,
+      centerFunded: 0,
+    });
     expect(agg.staffTotals.monthly).toBe(0);
   });
 });

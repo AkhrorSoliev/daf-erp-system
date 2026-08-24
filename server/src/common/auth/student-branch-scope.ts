@@ -65,7 +65,11 @@ export async function assertCallerMayTouchStudent(
     throw new NotFoundException("O'quvchi topilmadi");
   }
 
-  const branchId = await tryResolveStudentBranchId(prisma, studentId, companyId);
+  const branchId = await tryResolveStudentBranchId(
+    prisma,
+    studentId,
+    companyId,
+  );
   if (branchId == null) {
     throw new ForbiddenException(
       `O'quvchi #${studentId} uchun filial aniqlanmadi — unga filial biriktirilmaguncha bu amal bajarilmaydi`,

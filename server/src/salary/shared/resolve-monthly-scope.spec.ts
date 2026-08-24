@@ -127,7 +127,7 @@ describe('resolveMonthlyScope — branchId narrowing', () => {
     expect(scope.branchId).toBeUndefined();
   });
 
-  it("keeps a director pinned to their own branch when they ask for it", async () => {
+  it('keeps a director pinned to their own branch when they ask for it', async () => {
     const scope = await resolveMonthlyScope(
       makePrisma(bdOfSeven),
       { month: '2026-07', branchId: 7 },
@@ -162,4 +162,3 @@ describe('resolveMonthlyScope — branchId narrowing', () => {
     expect(scope.branchId).toBeUndefined();
   });
 });
-

@@ -129,7 +129,11 @@ export class SalaryStaffConfigService {
     if (staff.length === 0) return { data: [] };
 
     const configs = await this.prisma.employeeSalaryConfig.findMany({
-      where: { userId: { in: staff.map((s) => s.id) }, isActive: true, companyId },
+      where: {
+        userId: { in: staff.map((s) => s.id) },
+        isActive: true,
+        companyId,
+      },
       select: {
         id: true,
         userId: true,

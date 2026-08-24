@@ -75,9 +75,7 @@ export function createMockExamRegistrationScene(
   _bot: Telegraf<BotContext>,
 ): Scenes.BaseScene<BotContext> {
   const logger = new Logger('MockExamRegistrationScene');
-  const scene = new Scenes.BaseScene<BotContext>(
-    SCENES.MOCK_EXAM_REGISTRATION,
-  );
+  const scene = new Scenes.BaseScene<BotContext>(SCENES.MOCK_EXAM_REGISTRATION);
 
   scene.enter(async (ctx) => {
     const examId = ctx.session.data?.examId;
@@ -103,7 +101,7 @@ export function createMockExamRegistrationScene(
     });
 
     if (!exam) {
-      await ctx.reply('Imtihon topilmadi yoki o\'chirilgan.');
+      await ctx.reply("Imtihon topilmadi yoki o'chirilgan.");
       await ctx.scene.leave();
       return;
     }
@@ -152,18 +150,16 @@ export function createMockExamRegistrationScene(
     if (fields.length === 0) {
       logger.warn(`Mock exam ${examId} has no form fields configured`);
       await ctx.reply(
-        'Imtihon formasi sozlanmagan. Administrator bilan bog\'laning.',
+        "Imtihon formasi sozlanmagan. Administrator bilan bog'laning.",
       );
       await ctx.scene.leave();
       return;
     }
 
     const offeredLevels = Array.isArray(exam.offeredLevels)
-      ? (exam.offeredLevels as string[])
+      ? exam.offeredLevels
       : [];
-    const examTimes = Array.isArray(exam.examTimes)
-      ? (exam.examTimes as string[])
-      : [];
+    const examTimes = Array.isArray(exam.examTimes) ? exam.examTimes : [];
 
     ctx.session.data = {
       examId: exam.id,
@@ -207,9 +203,7 @@ export function createMockExamRegistrationScene(
     const value = ctx.match[1];
     const offered = (ctx.session.data.offeredLevels as string[]) ?? [];
     if (!offered.includes(value)) {
-      await ctx.reply(
-        "Iltimos, ko'rsatilgan darajalardan birini tanlang.",
-      );
+      await ctx.reply("Iltimos, ko'rsatilgan darajalardan birini tanlang.");
       return;
     }
     ctx.session.data.level = value;
@@ -419,7 +413,7 @@ async function askField(ctx: BotContext, field: FormField) {
     await ctx.reply(
       prompt,
       Markup.keyboard([
-        [Markup.button.contactRequest("📱 Telefon raqamni yuborish")],
+        [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
       ])
         .resize()
         .oneTime(),
@@ -462,7 +456,10 @@ async function askField(ctx: BotContext, field: FormField) {
   }
 
   if (field.type === 'textarea') {
-    await ctx.reply(`${prompt}\n(uzun matn yozishingiz mumkin)`, Markup.removeKeyboard());
+    await ctx.reply(
+      `${prompt}\n(uzun matn yozishingiz mumkin)`,
+      Markup.removeKeyboard(),
+    );
     return;
   }
 
@@ -710,7 +707,10 @@ async function finalizeRegistration(
     // Cash option — only when we know which participant to mark.
     if (participantId) {
       keyboardRows.push([
-        Markup.button.callback('💵 Naqd (markazda)', `me_cash:${participantId}`),
+        Markup.button.callback(
+          '💵 Naqd (markazda)',
+          `me_cash:${participantId}`,
+        ),
       ]);
     }
   }
@@ -720,7 +720,7 @@ async function finalizeRegistration(
     if (hasPayLinks) {
       lines.push(
         "Payme yoki Click tugmasi orqali to'lang (telefoningizda app ochiladi), " +
-          'yoki naqd pul bilan to\'lamoqchi bo\'lsangiz «💵 Naqd (markazda)» tugmasini bosing.',
+          "yoki naqd pul bilan to'lamoqchi bo'lsangiz «💵 Naqd (markazda)» tugmasini bosing.",
       );
     } else {
       lines.push(
@@ -768,14 +768,17 @@ function buildIntroMessage(exam: {
 }): string {
   const lines: string[] = [
     `📋 "${exam.title}"`,
-    "",
+    '',
     "Ro'yxatga olish boshlandi. Quyidagi savollarga javob bering.",
   ];
   if (exam.description) {
     lines.unshift(exam.description, '');
   }
   if (exam.examDate) {
-    lines.push('', `🗓️ Imtihon sanasi: ${exam.examDate.toLocaleDateString('uz-UZ')}`);
+    lines.push(
+      '',
+      `🗓️ Imtihon sanasi: ${exam.examDate.toLocaleDateString('uz-UZ')}`,
+    );
   }
   lines.push('', 'Bekor qilish uchun /cancel.');
   return lines.join('\n');

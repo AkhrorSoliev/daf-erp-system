@@ -4,9 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  assertCallerMayWriteForStudent,
-} from '../common/auth/financial-write-scope';
+import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
@@ -89,7 +87,7 @@ export class RefundsCreateService {
     });
     if (recentDuplicate) {
       throw new BadRequestException(
-        "Shu summadagi qaytarish hozirgina yozildi — takror yuborilmadi",
+        'Shu summadagi qaytarish hozirgina yozildi — takror yuborilmadi',
       );
     }
 
@@ -205,8 +203,7 @@ export class RefundsCreateService {
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
-    const balanceAfter =
-      student.balance + refund.releasedAmount - dto.amount;
+    const balanceAfter = student.balance + refund.releasedAmount - dto.amount;
     await this.entityHistoryService.recordStatusChange({
       entityType: 'Student',
       entityId: dto.studentId,
@@ -265,9 +262,7 @@ export class RefundsCreateService {
       throw new NotFoundException("Bu o'quvchining bunday guruhi topilmadi");
     }
     if (enrollment.status !== EnrollmentStatus.ACTIVE) {
-      throw new BadRequestException(
-        'Faqat faol guruhdan pul qaytarish mumkin',
-      );
+      throw new BadRequestException('Faqat faol guruhdan pul qaytarish mumkin');
     }
     return enrollment;
   }

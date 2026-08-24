@@ -61,7 +61,12 @@ export class LeadSectionsService {
     scope: ReportBranchIds,
   ) {
     const column = await this.prisma.leadColumn.findFirst({
-      where: { id: columnId, deletedAt: null, companyId, ...branchIdWhere(scope) },
+      where: {
+        id: columnId,
+        deletedAt: null,
+        companyId,
+        ...branchIdWhere(scope),
+      },
       select: { id: true, branchId: true, systemKey: true },
     });
     if (!column) {

@@ -312,8 +312,7 @@ export class AttendanceSaveService {
               stats: {
                 present: dto.entries.filter((e) => e.status === 'PRESENT')
                   .length,
-                absent: dto.entries.filter((e) => e.status === 'ABSENT')
-                  .length,
+                absent: dto.entries.filter((e) => e.status === 'ABSENT').length,
                 late: dto.entries.filter((e) => e.status === 'LATE').length,
                 excused: dto.entries.filter((e) => e.status === 'EXCUSED')
                   .length,

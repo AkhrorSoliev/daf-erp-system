@@ -639,11 +639,7 @@ export class LessonBillingService {
             perLessonCost,
             lessonsCovered: 1,
             discountPercent,
-            fullAmount: lessonPriceAt(
-              fullCycleCost,
-              lessonPaymentCount,
-              index,
-            ),
+            fullAmount: lessonPriceAt(fullCycleCost, lessonPaymentCount, index),
             salaryDeferred: true,
             uncoveredAmount: thisLessonPrice,
           },

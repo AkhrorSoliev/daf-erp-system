@@ -368,7 +368,7 @@ describe('TelegramGroupDailyReportService', () => {
     const service = await buildService(makePrisma(state), makeSalary(state));
 
     const { message: raw } = await service.build(1001, null);
-    const message = raw.replace(/ /g, ' ');
+    const message = raw.replace(/\u00a0/g, ' ');
 
     // Xarajat = pure operational spend (advance-free); Avans is a standalone
     // line, not a "shundan" sub-line of Xarajat.
@@ -387,7 +387,7 @@ describe('TelegramGroupDailyReportService', () => {
     const service = await buildService(makePrisma(state), makeSalary(state));
 
     const { message: raw } = await service.build(1001, null);
-    const message = raw.replace(/ /g, ' ');
+    const message = raw.replace(/\u00a0/g, ' ');
     expect(message).not.toContain('Avans (ustozlarga)');
     // Cash reading unchanged: 280M − 95M − 0 = +185M.
     expect(message).toContain(

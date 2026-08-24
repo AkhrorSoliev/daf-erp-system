@@ -322,9 +322,7 @@ export class SalaryPaymentService {
       },
     });
     const isCeo = caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
-    const effectiveBranchId = isCeo
-      ? params.branchId
-      : caller?.mainBranch;
+    const effectiveBranchId = isCeo ? params.branchId : caller?.mainBranch;
     // Fail CLOSED: a non-CEO caller whose mainBranch is unknown used to fall
     // through to "no filter" and could batch-pay EVERY branch's salaries.
     if (!isCeo && effectiveBranchId == null) {

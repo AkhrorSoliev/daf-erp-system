@@ -1,4 +1,7 @@
-import { addDaysToDateStr, dayOfWeekForDateStr } from '../../attendance/shared/date-utils';
+import {
+  addDaysToDateStr,
+  dayOfWeekForDateStr,
+} from '../../attendance/shared/date-utils';
 
 /**
  * "Bu pul qachongacha yetadi?" — oldindan to'langan, hali O'TILMAGAN darslarni
@@ -58,14 +61,22 @@ export function projectLessonDates(input: ProjectionInput): string[] {
   const out: string[] = [];
   let cursor = addDaysToDateStr(afterDateStr, 1);
 
-  for (let step = 0; step < MAX_LOOKAHEAD_DAYS && out.length < count; step += 1) {
+  for (
+    let step = 0;
+    step < MAX_LOOKAHEAD_DAYS && out.length < count;
+    step += 1
+  ) {
     if (input.lastPossibleDateStr && cursor > input.lastPossibleDateStr) break;
 
     const days = resolveScheduleDays(cursor);
     // `null` — jadval noma'lum bo'lgan davr. Bu yerda u faqat KELAJAK uchun
     // chaqiriladi, ya'ni amalda uchramaydi; uchrasa ham dars deb o'ylab
     // proyeksiya qilishdan ko'ra o'tkazib yuborgan ma'qul.
-    if (days && days.includes(dayOfWeekForDateStr(cursor)) && !skipDates.has(cursor)) {
+    if (
+      days &&
+      days.includes(dayOfWeekForDateStr(cursor)) &&
+      !skipDates.has(cursor)
+    ) {
       out.push(cursor);
     }
     cursor = addDaysToDateStr(cursor, 1);

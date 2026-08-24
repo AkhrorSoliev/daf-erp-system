@@ -41,7 +41,10 @@ describe('DebtAgeService', () => {
 
   it('serves the cached map without touching the database', async () => {
     const cached = JSON.stringify({
-      10001: { since: '2026-05-10T09:00:00.000Z', months: { '2026-05': 100_000 } },
+      10001: {
+        since: '2026-05-10T09:00:00.000Z',
+        months: { '2026-05': 100_000 },
+      },
     });
     const { service, prisma } = await build({
       get: jest.fn().mockResolvedValue(cached),

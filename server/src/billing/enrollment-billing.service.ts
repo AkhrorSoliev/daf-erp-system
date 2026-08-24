@@ -77,8 +77,7 @@ export class EnrollmentBillingService {
     }
 
     return (
-      remaining *
-      (await this.resolvePerLessonCost(tx, enrollmentId, course))
+      remaining * (await this.resolvePerLessonCost(tx, enrollmentId, course))
     );
   }
 
@@ -161,7 +160,7 @@ export class EnrollmentBillingService {
       lessons,
       reason:
         params.reason ??
-        "Yozilishdan chiqishda qaytarilmagan dars uchun balans tiklash",
+        'Yozilishdan chiqishda qaytarilmagan dars uchun balans tiklash',
       performedById: params.performedById,
     });
   }
@@ -354,7 +353,8 @@ export class EnrollmentBillingService {
           {
             performedById: params.performedById,
             reason:
-              params.reason ?? "FROZEN: admin tahriri bilan qo'shimcha qaytarish",
+              params.reason ??
+              "FROZEN: admin tahriri bilan qo'shimcha qaytarish",
           },
           tx,
         );

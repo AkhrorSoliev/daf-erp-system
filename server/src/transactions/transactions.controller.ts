@@ -155,5 +155,4 @@ export class TransactionsController {
       includeReversed: query.includeReversed === 'true',
     });
   }
-
 }

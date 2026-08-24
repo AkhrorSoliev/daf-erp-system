@@ -201,9 +201,10 @@ export class SalaryAccrualService {
       // the full value per lesson, which silently multiplied teacher pay
       // by lessonPaymentCount — fixed in Faza 2.
       const lessonCount = await this.getCourseLessonCount(db, params.groupId);
-      amount = lessonCount > 0
-        ? Math.round(version.value / lessonCount)
-        : version.value;
+      amount =
+        lessonCount > 0
+          ? Math.round(version.value / lessonCount)
+          : version.value;
     }
 
     // Carry-over notification must fire only for a genuinely NEW accrual. When
@@ -483,7 +484,8 @@ export class SalaryAccrualService {
         companyId: original.companyId,
         reversedTransactionId: original.id,
         performedById: params.reversedById,
-        description: params.reversalReason ?? 'Dars uchun yig\'ilgan oylik bekor qilindi',
+        description:
+          params.reversalReason ?? "Dars uchun yig'ilgan oylik bekor qilindi",
       },
     });
     await db.transaction.update({
@@ -533,10 +535,7 @@ export class SalaryAccrualService {
   ) {
     const dateFilter = {
       effectiveFrom: { lte: params.lessonDate },
-      OR: [
-        { effectiveTo: null },
-        { effectiveTo: { gt: params.lessonDate } },
-      ],
+      OR: [{ effectiveTo: null }, { effectiveTo: { gt: params.lessonDate } }],
     };
 
     // 1) Per-group config has priority on overlapping ranges.

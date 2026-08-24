@@ -4,8 +4,43 @@
  * low-level exceljs row/cell styling helpers. Kept separate from
  * reports-excel.service.ts so the service stays a thin sheet-composer.
  */
-import { Worksheet, Row } from 'exceljs';
+import { Cell, CellValue, Worksheet, Row } from 'exceljs';
 import { isTopUpMonth } from '../salary/shared/topup';
+
+/**
+ * Read a cell as the text a person would see in Excel.
+ *
+ * `Cell.value` is a UNION: a string, a number, a Date, `{ formula, result }`
+ * for a computed cell, `{ richText: [...] }` for mixed formatting, `{ error }`
+ * for `#DIV/0!`, or null. `String(value)` collapses the last three to
+ * `[object Object]` — and an assertion comparing against that string passes or
+ * fails for reasons that have nothing to do with the number in the cell.
+ *
+ * Every rich-text cell in a report is a cell someone deliberately styled, so
+ * this is not a hypothetical branch.
+ */
+export function cellText(cell: Cell | CellValue): string {
+  const value: CellValue =
+    cell !== null && typeof cell === 'object' && 'value' in cell
+      ? cell.value
+      : (cell as CellValue);
+
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'object') {
+    if ('richText' in value) {
+      return value.richText.map((part) => part.text).join('');
+    }
+    if ('formula' in value || 'sharedFormula' in value) {
+      const result = (value as { result?: CellValue }).result;
+      return result === undefined || result === null ? '' : cellText(result);
+    }
+    if ('error' in value) return String(value.error);
+    if ('text' in value) return String(value.text);
+    return '';
+  }
+  return String(value);
+}
 
 // ---- Palette (ARGB) — minimal blue + grey, per the 3-statement-model rule. ----
 export const NAVY = 'FF1F4E79'; // section headers (white bold on navy)
@@ -132,14 +167,18 @@ export interface NetProfit {
 export function buildNetProfit(
   pl: any,
   salaries: any,
-  outflows: { refunds?: number; writeOffs?: number; providerFees?: number } | null,
+  outflows: {
+    refunds?: number;
+    writeOffs?: number;
+    providerFees?: number;
+  } | null,
   month?: string,
   recognizedRevenue?: number,
 ): NetProfit {
   // Revenue basis: prefer the "dars tushumi" (recognized — lessons held this
   // month) figure when supplied; fall back to cash COMPLETED payments (pl).
   const useRecognized = typeof recognizedRevenue === 'number';
-  const revenue = useRecognized ? recognizedRevenue! : pl?.revenue?.total ?? 0;
+  const revenue = useRecognized ? recognizedRevenue : (pl?.revenue?.total ?? 0);
   const totals = salaries?.totals ?? {};
   // Include the center top-up (gap) only from the top-up month on.
   const hasTopup = month ? isTopUpMonth(month) : true;
@@ -318,7 +357,14 @@ export function checkRow(
 ): Row {
   const diff = expected - actual;
   const ok = diff === 0;
-  const r = ws.addRow([label, expected, actual, diff, ok ? 'MOS' : 'XATO', note ?? '']);
+  const r = ws.addRow([
+    label,
+    expected,
+    actual,
+    diff,
+    ok ? 'MOS' : 'XATO',
+    note ?? '',
+  ]);
   [2, 3, 4].forEach((c) => (r.getCell(c).numFmt = SOM));
   const verdict = r.getCell(5);
   verdict.font = { bold: true, color: { argb: 'FFFFFFFF' } };

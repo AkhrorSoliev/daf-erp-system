@@ -3,10 +3,7 @@ import { TelegramGroupStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramAdminBotService } from './telegram-admin-bot.service';
 import { EntityHistoryService } from '../common/entity-history';
-import {
-  ANNOUNCEMENT_TEMPLATES,
-  AnnouncementTemplateKey,
-} from './constants';
+import { ANNOUNCEMENT_TEMPLATES, AnnouncementTemplateKey } from './constants';
 import { AnnounceFeatureDto } from './dto/announce-feature.dto';
 
 export interface BroadcastResult {
@@ -32,12 +29,12 @@ export class TelegramGroupAnnouncementService {
   ): Promise<BroadcastResult> {
     if (!dto.templateKey && !dto.customMessage) {
       throw new BadRequestException(
-        "Shablon yoki maxsus matn kiritilishi shart",
+        'Shablon yoki maxsus matn kiritilishi shart',
       );
     }
     if (dto.templateKey && dto.customMessage) {
       throw new BadRequestException(
-        "Faqat shablon yoki maxsus matn — ikkalasi emas",
+        'Faqat shablon yoki maxsus matn — ikkalasi emas',
       );
     }
 
@@ -67,7 +64,7 @@ export class TelegramGroupAnnouncementService {
     const bot = this.adminBot.getBot();
     if (!bot) {
       throw new BadRequestException(
-        "Admin bot ishga tushmagan — TELEGRAM_ADMIN_BOT_TOKEN tekshirilsin",
+        'Admin bot ishga tushmagan — TELEGRAM_ADMIN_BOT_TOKEN tekshirilsin',
       );
     }
 

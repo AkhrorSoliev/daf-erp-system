@@ -35,7 +35,9 @@ describe('MockExamsService', () => {
       recordRestore: jest.fn(),
     };
 
-    const pdfService = { generate: jest.fn().mockResolvedValue({ url: 'http://x/pdf' }) };
+    const pdfService = {
+      generate: jest.fn().mockResolvedValue({ url: 'http://x/pdf' }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -328,7 +330,13 @@ describe('MockExamsService', () => {
         _count: { participants: 0 },
       });
 
-      await service.update('e1', { description: 'Yangi tavsif' }, 1001, 1, null);
+      await service.update(
+        'e1',
+        { description: 'Yangi tavsif' },
+        1001,
+        1,
+        null,
+      );
 
       expect(prisma.mockExam.update).toHaveBeenCalledWith(
         expect.objectContaining({

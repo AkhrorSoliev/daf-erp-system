@@ -21,11 +21,7 @@ export class GroupsService {
   ) {}
 
   // Reads
-  findAll(
-    query: GroupQueryDto,
-    companyId: number,
-    scope: ReportBranchIds,
-  ) {
+  findAll(query: GroupQueryDto, companyId: number, scope: ReportBranchIds) {
     return this.read.findAll(query, companyId, scope);
   }
   getNextName(branchId: number, companyId: number) {

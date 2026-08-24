@@ -68,7 +68,13 @@ export class LeadSectionsController {
     @CurrentUser('id') userId: number,
     @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.archiveService.restoreSection(id, dto, companyId, userId, scope);
+    return this.archiveService.restoreSection(
+      id,
+      dto,
+      companyId,
+      userId,
+      scope,
+    );
   }
 
   @Patch(':id')

@@ -15,7 +15,8 @@ export type CefrLevel = (typeof CEFR_LEVELS)[number];
 
 export function isCefrLevel(value: unknown): value is CefrLevel {
   return (
-    typeof value === 'string' && (CEFR_LEVELS as readonly string[]).includes(value)
+    typeof value === 'string' &&
+    (CEFR_LEVELS as readonly string[]).includes(value)
   );
 }
 

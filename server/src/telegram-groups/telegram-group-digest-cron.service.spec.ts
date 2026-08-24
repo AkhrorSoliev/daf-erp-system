@@ -34,8 +34,7 @@ describe('TelegramGroupDigestCronService', () => {
         { provide: TelegramGroupDigestBufferService, useValue: { drain } },
         { provide: TelegramGroupDigestService, useValue: { build } },
         {
-          provide:
-            require('../holidays/holidays.service').HolidaysService,
+          provide: require('../holidays/holidays.service').HolidaysService,
           useValue: { findActiveHolidayCovering },
         },
       ],
@@ -65,7 +64,7 @@ describe('TelegramGroupDigestCronService', () => {
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
-  it("skips the entire flush on a holiday — no DB query, no digest sent", async () => {
+  it('skips the entire flush on a holiday — no DB query, no digest sent', async () => {
     findActiveHolidayCovering.mockResolvedValue({
       id: 'h-1',
       name: "Navro'z",
@@ -125,7 +124,9 @@ describe('TelegramGroupDigestCronService', () => {
     await service.flushDigests();
 
     // Company-wide group: both entries.
-    const wideCall = build.mock.calls.find((c) => (c[1] as DigestEntry[]).length === 2);
+    const wideCall = build.mock.calls.find(
+      (c) => (c[1] as DigestEntry[]).length === 2,
+    );
     expect(wideCall).toBeDefined();
     // Branch-5 group: only the branch-5 entry.
     const branchCall = build.mock.calls.find(

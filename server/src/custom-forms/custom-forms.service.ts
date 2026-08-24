@@ -37,6 +37,11 @@ type PublicFieldShape = Pick<
   'id' | 'type' | 'label' | 'required' | 'placeholder' | 'options'
 >;
 
+/**
+ * One answer to one form field. Deliberately NOT `unknown`: see `coerceValue`.
+ */
+type FormFieldValue = string | number | boolean;
+
 @Injectable()
 export class CustomFormsService {
   constructor(
@@ -326,7 +331,9 @@ export class CustomFormsService {
     if (!mapped.firstName || !mapped.lastName || !mapped.phone) {
       // Schema-time validation should have prevented this, but guard
       // against tampered or legacy form schemas.
-      throw new BadRequestException("Ism, familya va telefon maydonlari to'liq emas");
+      throw new BadRequestException(
+        "Ism, familya va telefon maydonlari to'liq emas",
+      );
     }
 
     const sourceId = await this.resolveSubmissionSourceId(
@@ -487,12 +494,16 @@ export class CustomFormsService {
     const ids = new Set<string>();
     for (const f of fields) {
       if (ids.has(f.id)) {
-        throw new BadRequestException("Maydon identifikatorlari takrorlanmasligi kerak");
+        throw new BadRequestException(
+          'Maydon identifikatorlari takrorlanmasligi kerak',
+        );
       }
       ids.add(f.id);
 
       if (!f.label) {
-        throw new BadRequestException("Har bir maydon nomi to'ldirilishi kerak");
+        throw new BadRequestException(
+          "Har bir maydon nomi to'ldirilishi kerak",
+        );
       }
       if (TYPES_WITH_OPTIONS.includes(f.type)) {
         if (!f.options?.length) {
@@ -536,7 +547,11 @@ export class CustomFormsService {
   }
 
   private slotLabel(slot: MapsToValue): string {
-    return slot === 'firstName' ? 'Ism' : slot === 'lastName' ? 'Familya' : 'Telefon';
+    return slot === 'firstName'
+      ? 'Ism'
+      : slot === 'lastName'
+        ? 'Familya'
+        : 'Telefon';
   }
 
   private parseFields(raw: Prisma.JsonValue): FormFieldDto[] {
@@ -548,18 +563,19 @@ export class CustomFormsService {
   private validateSubmissionPayload(
     fields: FormFieldDto[],
     data: Record<string, unknown>,
-  ): Record<string, unknown> {
+  ): Record<string, FormFieldValue> {
     const knownIds = new Set(fields.map((f) => f.id));
-    const cleaned: Record<string, unknown> = {};
+    const cleaned: Record<string, FormFieldValue> = {};
 
     for (const field of fields) {
       const raw = data[field.id];
       const value = this.coerceValue(field, raw);
-      const provided =
-        value !== undefined && value !== null && value !== '';
+      const provided = value !== undefined && value !== null && value !== '';
 
       if (field.required && !provided) {
-        throw new BadRequestException(`"${field.label}" maydoni to'ldirilishi shart`);
+        throw new BadRequestException(
+          `"${field.label}" maydoni to'ldirilishi shart`,
+        );
       }
 
       if (!provided) continue;
@@ -596,9 +612,7 @@ export class CustomFormsService {
       if (field.type === 'number') {
         const n = Number(value);
         if (Number.isNaN(n)) {
-          throw new BadRequestException(
-            `"${field.label}" — son kiriting`,
-          );
+          throw new BadRequestException(`"${field.label}" — son kiriting`);
         }
         cleaned[field.id] = n;
         continue;
@@ -615,16 +629,36 @@ export class CustomFormsService {
     return cleaned;
   }
 
-  private coerceValue(field: FormFieldDto, raw: unknown): unknown {
+  /**
+   * Narrow one submitted answer to a primitive, or refuse it.
+   *
+   * This is a PUBLIC endpoint: the body is whatever the caller posted, and it
+   * used to return objects and arrays untouched. Downstream everything does
+   * `String(value)`, which turns `{"a":1}` into the literal text
+   * `[object Object]` — and for a field with `mapsTo`, that text was written
+   * into the lead's ism / familya / telefon. A crafted POST could therefore
+   * plant unreadable rows in the leads board, and nothing in the pipeline
+   * would call it an error.
+   *
+   * The return TYPE is the fix, not a check somewhere downstream: once this
+   * cannot hand back an object, no later `String()` can produce that string.
+   */
+  private coerceValue(
+    field: FormFieldDto,
+    raw: unknown,
+  ): FormFieldValue | null | undefined {
     if (raw === undefined || raw === null) return raw;
     if (field.type === 'checkbox') return Boolean(raw);
     if (typeof raw === 'string') return raw.trim();
-    return raw;
+    if (typeof raw === 'number' || typeof raw === 'boolean') return raw;
+    throw new BadRequestException(
+      `"${field.label}" — qiymat noto'g'ri formatda yuborildi`,
+    );
   }
 
   private extractMappedValues(
     fields: FormFieldDto[],
-    cleaned: Record<string, unknown>,
+    cleaned: Record<string, FormFieldValue>,
   ): { firstName?: string; lastName?: string; phone?: string } {
     const out: { firstName?: string; lastName?: string; phone?: string } = {};
     for (const field of fields) {
@@ -647,7 +681,9 @@ export class CustomFormsService {
       });
       if (!exists) return slug;
     }
-    throw new BadRequestException("Forma havolasini yaratib bo'lmadi, qaytadan urinib ko'ring");
+    throw new BadRequestException(
+      "Forma havolasini yaratib bo'lmadi, qaytadan urinib ko'ring",
+    );
   }
 
   // Exposed for tests

@@ -115,17 +115,16 @@ describe('CashMovementsService', () => {
 
     it('is a no-op when no account is configured', async () => {
       const tx = makeTxClient({ resolve: null });
-      const mv = await service.recordInflow(
-        { companyId: 1, amount: 500 },
-        tx,
-      );
+      const mv = await service.recordInflow({ companyId: 1, amount: 500 }, tx);
       expect(mv).toBeNull();
       expect(tx.cashMovement.create).not.toHaveBeenCalled();
     });
 
     it('ignores non-positive amounts', async () => {
       const tx = makeTxClient({});
-      expect(await service.recordInflow({ companyId: 1, amount: 0 }, tx)).toBeNull();
+      expect(
+        await service.recordInflow({ companyId: 1, amount: 0 }, tx),
+      ).toBeNull();
       expect(tx.cashAccount.findFirst).not.toHaveBeenCalled();
     });
   });
@@ -159,10 +158,7 @@ describe('CashMovementsService', () => {
       const tx = makeTxClient({ account: null, resolve: null });
 
       await expect(
-        service.recordOutflow(
-          { companyId: 1, branchId: 2, amount: 300 },
-          tx,
-        ),
+        service.recordOutflow({ companyId: 1, branchId: 2, amount: 300 }, tx),
       ).rejects.toThrow(/Filial #2 uchun .* kassa hisobi topilmadi/);
       expect(tx.cashMovement.create).not.toHaveBeenCalled();
     });

@@ -52,7 +52,7 @@ export function createPasswordResetScene(
     ctx.session.step = 2;
     await ctx.reply(
       "Sizning Telegram hisobingiz hali tizimga bog'lanmagan.\n\n" +
-        "Davom etish uchun telefon raqamingizni quyidagi tugma orqali yuboring:",
+        'Davom etish uchun telefon raqamingizni quyidagi tugma orqali yuboring:',
       Markup.keyboard([
         [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
       ])
@@ -65,7 +65,7 @@ export function createPasswordResetScene(
     if (ctx.session.step !== 2) return;
     if (ctx.session.processing) return;
 
-    const chatId = String(ctx.chat!.id);
+    const chatId = String(ctx.chat.id);
     const contact = ctx.message.contact;
 
     // Telegram only lets a user share their OWN contact through this button —
@@ -117,7 +117,7 @@ export function createPasswordResetScene(
 
     ctx.session.data.studentId = student.id;
     ctx.session.step = 1;
-    await ctx.reply("✅ Hisobingiz topildi.", Markup.removeKeyboard());
+    await ctx.reply('✅ Hisobingiz topildi.', Markup.removeKeyboard());
     await promptConfirm(ctx, student.firstName);
   });
 
@@ -130,7 +130,7 @@ export function createPasswordResetScene(
     const studentId = ctx.session.data?.studentId as number | undefined;
     if (!studentId) {
       ctx.session.processing = false;
-      await ctx.reply("Sessiya muddati tugadi. Qayta /start bosing.");
+      await ctx.reply('Sessiya muddati tugadi. Qayta /start bosing.');
       await ctx.scene.leave();
       return;
     }
@@ -162,7 +162,9 @@ export function createPasswordResetScene(
     });
     if (!student) {
       ctx.session.processing = false;
-      await ctx.editMessageText("O'quvchi topilmadi. Administrator bilan bog'laning.");
+      await ctx.editMessageText(
+        "O'quvchi topilmadi. Administrator bilan bog'laning.",
+      );
       await ctx.scene.leave();
       return;
     }
@@ -178,10 +180,10 @@ export function createPasswordResetScene(
       await ctx.editMessageText('✅ Parolingiz yangilandi.');
 
       const sent = await ctx.reply(
-        '🔐 Yangi kirish ma\'lumotlari:\n\n' +
+        "🔐 Yangi kirish ma'lumotlari:\n\n" +
           `📱 Telefon: +998 ${student.phone}\n` +
           `🔑 Yangi parol: <code>${plainPassword}</code>\n\n` +
-          "student.dafzentrum.uz saytiga shu parol bilan kiring va " +
+          'student.dafzentrum.uz saytiga shu parol bilan kiring va ' +
           "xohlasangiz Sozlamalar bo'limidan o'zgartiring.\n\n" +
           "⚠️ Bu xabar 5 daqiqadan keyin avtomatik o'chiriladi.",
         { parse_mode: 'HTML', protect_content: true },
@@ -255,7 +257,7 @@ export function createPasswordResetScene(
 async function promptConfirm(ctx: BotContext, firstName: string) {
   await ctx.reply(
     `Salom, ${firstName}!\n\nYangi parol yaratamizmi? ` +
-      "Eski parol ishlamay qoladi.",
+      'Eski parol ishlamay qoladi.',
     Markup.inlineKeyboard([
       [
         Markup.button.callback('✅ Ha, parolni tiklash', 'pwd_reset_confirm'),

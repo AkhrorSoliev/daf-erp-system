@@ -192,7 +192,8 @@ export class ReportsExpectationHistoryService {
       }
     }
     for (const g of groupChanges) {
-      const status = (g.newValues as { statusEnum?: string } | null)?.statusEnum;
+      const status = (g.newValues as { statusEnum?: string } | null)
+        ?.statusEnum;
       // Only a move AWAY from ACTIVE removes future lessons.
       if (status && status !== 'ACTIVE') bump(g.createdAt, 'groupStopped');
     }

@@ -38,7 +38,10 @@ describe('SalaryCenterTopUpService', () => {
     ...over,
   });
 
-  const student = (id: number, over: Partial<Record<string, unknown>> = {}) => ({
+  const student = (
+    id: number,
+    over: Partial<Record<string, unknown>> = {},
+  ) => ({
     id,
     firstName: 'O',
     lastName: `Q${id}`,
@@ -76,16 +79,19 @@ describe('SalaryCenterTopUpService', () => {
       },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
-      employeeSalaryConfigVersion: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfigVersion: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       student: { findMany: jest.fn().mockResolvedValue([]) },
       // How much of each fronted lesson is still unpaid. Empty by default: no
       // deduction row means nothing has been paid against the lesson, so the
       // centre's whole advance is still out — the state these tests describe.
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
       group: {
-        findMany: jest
-          .fn()
-          .mockResolvedValue([{ id: 'g1', name: '#001' }, { id: 'g2', name: '#002' }]),
+        findMany: jest.fn().mockResolvedValue([
+          { id: 'g1', name: '#001' },
+          { id: 'g2', name: '#002' },
+        ]),
       },
     };
 
@@ -257,7 +263,9 @@ describe('SalaryCenterTopUpService', () => {
       student: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
-      employeeSalaryConfigVersion: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfigVersion: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       expense: { groupBy: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
