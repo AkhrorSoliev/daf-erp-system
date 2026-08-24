@@ -47,4 +47,17 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 4000);
 }
-bootstrap();
+
+// A failed bootstrap must read as a sentence, not as a stack trace. The most
+// likely cause by far is a missing environment variable (`ConfigModule`'s
+// `validate` throws before anything else runs), and that message is written to
+// be actionable — an unhandled rejection would bury it under an
+// UnhandledPromiseRejection frame in the Railway deploy log.
+bootstrap().catch((error) => {
+  console.error(
+    `\nServer ishga tushmadi:\n${
+      error instanceof Error ? error.message : String(error)
+    }\n`,
+  );
+  process.exit(1);
+});

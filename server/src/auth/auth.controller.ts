@@ -142,13 +142,10 @@ export class AuthController {
   @UseGuards(IpThrottlerGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get('telegram/callback')
-  async telegramCallback(
-    @Query() query: TelegramOauthCallbackDto,
-    @Res() res,
-  ) {
+  async telegramCallback(@Query() query: TelegramOauthCallbackDto, @Res() res) {
     if (query.error) {
       // Foydalanuvchi Telegram ekranida rad etdi — bu xato emas.
-      throw new BadRequestException("Kirish bekor qilindi");
+      throw new BadRequestException('Kirish bekor qilindi');
     }
     const { redirectUrl } = await this.telegramOauthService.handleCallback(
       query.code ?? '',
@@ -196,17 +193,11 @@ export class AuthController {
   @Public()
   @HttpCode(200)
   @Post('forgot-password/verify')
-  async forgotPasswordVerify(
-    @Body() dto: ForgotPasswordVerifyDto,
-    @Req() req,
-  ) {
+  async forgotPasswordVerify(@Body() dto: ForgotPasswordVerifyDto, @Req() req) {
     return this.forgotPasswordService.verifyCode(
       dto.phone,
       dto.code,
-      // `ip` stays unset: this controller has never passed one, so the verify
-      // IP guard has never run. Switching it on is a real change to how users
-      // are throttled and does not belong in a portal-scoping fix.
-      undefined,
+      clientIp(req),
       resolveAllowedRoleIds(
         req.headers['origin'] as string | undefined,
         req.headers['x-portal'] as string | undefined,
@@ -218,10 +209,7 @@ export class AuthController {
   @Public()
   @HttpCode(200)
   @Post('forgot-password/reset')
-  async forgotPasswordReset(
-    @Body() dto: ForgotPasswordResetDto,
-    @Req() req,
-  ) {
+  async forgotPasswordReset(@Body() dto: ForgotPasswordResetDto, @Req() req) {
     return this.forgotPasswordService.resetPassword(
       dto.resetToken,
       dto.newPassword,
@@ -233,7 +221,20 @@ export class AuthController {
   }
 }
 
-/** Best-effort client IP for rate-limiting (honours x-forwarded-for behind a proxy). */
+/**
+ * Best-effort client IP for rate-limiting.
+ *
+ * BEST-EFFORT IS LITERAL: `x-forwarded-for` is a request header, so any client
+ * can send one and pick its own bucket. Nothing here distinguishes the value a
+ * proxy appended from the value the caller invented, and taking the rightmost
+ * entry instead would only move the problem — it collapses to the proxy's own
+ * address whenever another hop is added in front of the API.
+ *
+ * So every limit keyed on this value is a speed bump, not a boundary. The
+ * limits that hold are the ones keyed on the phone: the 3-attempts-per-code
+ * cap, the daily send cap, and `VERIFY_PHONE_LIMIT`. Do not add a guard here
+ * and consider a brute-force path closed.
+ */
 function clientIp(req: any): string | undefined {
   const fwd = req?.headers?.['x-forwarded-for'];
   if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
