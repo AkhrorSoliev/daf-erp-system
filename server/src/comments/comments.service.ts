@@ -167,8 +167,14 @@ export class CommentsService {
       companyId,
     });
 
-    this.eventEmitter.emit('comment.created', { comment });
-
+    // NOTE: no `comment.created` event. One used to be emitted here and
+    // nothing has ever listened for it — wildcards are off
+    // (`EventEmitterModule.forRoot()` takes no options), so not even a
+    // `comment.*` handler would have caught it. It read like "a notification
+    // goes out on every comment" and did nothing at all. The notification that
+    // does exist is the one below, for task assignment.
+    //
+    // `event-wiring.spec.ts` now fails on an emit with no listener.
     if (dto.isTask && dto.assigneeIds) {
       this.eventEmitter.emit('task.assigned', {
         comment,

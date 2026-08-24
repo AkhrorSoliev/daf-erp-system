@@ -136,10 +136,12 @@ describe('CommentsService', () => {
         }),
       );
       expect(entityHistoryService.recordCreate).toHaveBeenCalled();
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        'comment.created',
-        expect.any(Object),
-      );
+      // A plain comment emits NOTHING. This used to assert a
+      // `comment.created` event, which was emitted and never listened for —
+      // the test pinned a line that did nothing, and passing proved only that
+      // the line was still there. The event a comment can actually trigger is
+      // `task.assigned`, and only when it is a task with assignees.
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
       expect(result).toEqual(mockComment);
     });
 
