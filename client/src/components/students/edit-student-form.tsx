@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { DiscountChangePreview } from "./discount-change-preview";
 
 function stripPhonePrefix(phone: string): string {
   return phone.replace(/^\+998/, "").replace(/\s/g, "");
@@ -37,12 +38,19 @@ function mapStudentToForm(student: Student): EditStudentFormValues {
     lastName: student.lastName,
     phone: stripPhonePrefix(student.phone),
     telegram: student.telegram ?? "",
-    gender: student.gender === "MALE" ? "male" : student.gender === "FEMALE" ? "female" : "",
+    gender:
+      student.gender === "MALE"
+        ? "male"
+        : student.gender === "FEMALE"
+          ? "female"
+          : "",
     photo: student.photo ?? "",
     dateOfBirth: student.date_of_birth ?? "",
     comment: student.comment ?? "",
     extraPhone: student.extraPhone ? stripPhonePrefix(student.extraPhone) : "",
-    parentPhone: student.parentPhone ? stripPhonePrefix(student.parentPhone) : "",
+    parentPhone: student.parentPhone
+      ? stripPhonePrefix(student.parentPhone)
+      : "",
     parentName: student.parentName ?? "",
     placeOfStudy: student.placeOfStudy ?? "",
     address: student.address ?? "",
@@ -110,7 +118,12 @@ export function EditStudentForm({
         lastName: values.lastName,
         phone: values.phone,
         telegram: values.telegram || null,
-        gender: values.gender === "male" ? "MALE" : values.gender === "female" ? "FEMALE" : null,
+        gender:
+          values.gender === "male"
+            ? "MALE"
+            : values.gender === "female"
+              ? "FEMALE"
+              : null,
         dateOfBirth: values.dateOfBirth || null,
         comment: values.comment || null,
         extraPhone: values.extraPhone || null,
@@ -157,7 +170,10 @@ export function EditStudentForm({
         <div className="flex items-center gap-4">
           <div className="relative">
             <Avatar className="size-16">
-              <AvatarImage src={avatarPreview ?? undefined} alt={student.firstName} />
+              <AvatarImage
+                src={avatarPreview ?? undefined}
+                alt={student.firstName}
+              />
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <Tooltip>
@@ -273,7 +289,7 @@ export function EditStudentForm({
                 "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
                 selectedGender === "male"
                   ? "border-primary bg-primary/5 text-primary"
-                  : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground",
               )}
             >
               <User className="size-4" />
@@ -286,7 +302,7 @@ export function EditStudentForm({
                 "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
                 selectedGender === "female"
                   ? "border-primary bg-primary/5 text-primary"
-                  : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground",
               )}
             >
               <UserRound className="size-4" />
@@ -322,9 +338,11 @@ export function EditStudentForm({
                 %
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Chegirma har bir darsda balansdan ushlanadigan summaga qo&apos;llanadi. O&apos;zgarish keyingi darslarga ta&apos;sir qiladi — eski darslar qayta hisoblanmaydi.
-            </p>
+            <DiscountChangePreview
+              studentId={student.id}
+              value={form.watch("discountPercent")}
+              currentDiscount={student.discountPercent ?? 0}
+            />
             {form.formState.errors.discountPercent && (
               <p className="text-xs text-destructive">
                 {form.formState.errors.discountPercent.message}
@@ -378,7 +396,8 @@ export function EditStudentForm({
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            O&apos;quvchi student.dafzentrum.uz tizimiga telefon raqami va parol bilan kiradi.
+            O&apos;quvchi student.dafzentrum.uz tizimiga telefon raqami va parol
+            bilan kiradi.
           </p>
         </div>
       </section>
