@@ -81,7 +81,7 @@ describe('TelegramGroupDigestService', () => {
     )!;
     expect(msg).toContain("To'lovlar (2)");
     // formatNumber joins thousands with a non-breaking space — normalise it.
-    expect(msg.replace(/ /g, ' ')).toContain('jami <b>800 000 so');
+    expect(msg.replace(/\u00a0/g, ' ')).toContain('jami <b>800 000 so');
     expect(msg).toContain('Payme');
   });
 

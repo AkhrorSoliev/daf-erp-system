@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Workbook, Worksheet } from 'exceljs';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsService } from './reports.service';
+import { cellText } from './reports-excel.helpers';
 
 describe('ReportsExcelService', () => {
   let service: ReportsExcelService;
@@ -400,7 +401,7 @@ describe('ReportsExcelService', () => {
     let found: any = null;
     ws.eachRow((row) => {
       if (found) return;
-      if (String(row.getCell(1).value ?? '') === col1) found = row;
+      if (cellText(row.getCell(1).value) === col1) found = row;
     });
     return found;
   };
@@ -653,7 +654,7 @@ describe('ReportsExcelService', () => {
     const ws = wb.getWorksheet('Tekshiruv')!;
     const verdicts: string[] = [];
     ws.eachRow((row) => {
-      const v = String(row.getCell(5).value ?? '');
+      const v = cellText(row.getCell(5).value);
       if (v === 'MOS' || v === 'XATO') verdicts.push(v);
     });
     expect(verdicts.length).toBeGreaterThanOrEqual(5);
@@ -705,8 +706,7 @@ describe('ReportsExcelService', () => {
     const balans = wb.getWorksheet('Balans')!;
     let hasGap = false;
     balans.eachRow((r) => {
-      if (String(r.getCell(1).value ?? '').includes('Balanslashuv'))
-        hasGap = true;
+      if (cellText(r.getCell(1).value).includes('Balanslashuv')) hasGap = true;
     });
     expect(hasGap).toBe(false);
   });
@@ -735,9 +735,7 @@ describe('ReportsExcelService', () => {
     let hasNote = false;
     ws.eachRow((r) => {
       if (
-        String(r.getCell(1).value ?? '').includes(
-          "Ma'lumot hozircha mavjud emas",
-        )
+        cellText(r.getCell(1).value).includes("Ma'lumot hozircha mavjud emas")
       )
         hasNote = true;
     });
@@ -755,7 +753,7 @@ describe('ReportsExcelService', () => {
     );
     // `period` is the subtitle of every period-scoped sheet.
     expect(
-      String(wb.getWorksheet('Xarajatlar')!.getRow(2).getCell(1).value),
+      cellText(wb.getWorksheet('Xarajatlar')!.getRow(2).getCell(1).value),
     ).toContain('bugungi kungacha');
   });
 
@@ -911,7 +909,7 @@ describe('ReportsExcelService', () => {
         { startDate: '2026-05-01', endDate: '2026-07-31' },
       );
       const ws = wb.getWorksheet('Oyliklar')!;
-      const subtitle = String(ws.getRow(2).getCell(1).value);
+      const subtitle = cellText(ws.getRow(2).getCell(1).value);
       expect(subtitle).toContain('Iyun 2026');
       expect(subtitle).not.toContain('May 2026');
     });
@@ -928,7 +926,7 @@ describe('ReportsExcelService', () => {
       });
       const ws = wb.getWorksheet('Xarajatlar')!;
       const text: string[] = [];
-      ws.eachRow((r) => text.push(String(r.getCell(1).value ?? '')));
+      ws.eachRow((r) => text.push(cellText(r.getCell(1).value)));
       expect(text.join('\n')).toContain('«Boshqa» ulushi');
     });
 
@@ -936,7 +934,7 @@ describe('ReportsExcelService', () => {
       const wb = await buildWorkbook({});
       const ws = wb.getWorksheet('Izoh')!;
       const text: string[] = [];
-      ws.eachRow((r) => text.push(String(r.getCell(1).value ?? '')));
+      ws.eachRow((r) => text.push(cellText(r.getCell(1).value)));
       const joined = text.join('\n');
       expect(joined).toContain("O'tilgan darslar qiymati");
       expect(joined).toContain("Oyning o'z foydasi");
@@ -948,7 +946,9 @@ describe('ReportsExcelService', () => {
     it('«Xonalar bandligi» states its window as a dated "Bugungi holat"', async () => {
       const wb = await buildWorkbook({});
       const ws = wb.getWorksheet('Xonalar bandligi')!;
-      expect(String(ws.getRow(2).getCell(1).value)).toContain('Bugungi holat:');
+      expect(cellText(ws.getRow(2).getCell(1).value)).toContain(
+        'Bugungi holat:',
+      );
     });
   });
 });

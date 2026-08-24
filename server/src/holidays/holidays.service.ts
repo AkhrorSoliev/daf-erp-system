@@ -17,7 +17,6 @@ import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayQueryDto } from './dto/holiday-query.dto';
 import { GroupHolidayCascadeService } from '../groups/group-holiday-cascade.service';
 import {
-  addDaysToDateStr,
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';

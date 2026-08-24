@@ -1,12 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  perLessonAccrual,
-  pickActiveVersion,
-  RateVersion,
-} from './shared/deserved-math';
-import { isTopUpMonth, NEW_STUDENT_TOPUP_MIN_LESSONS } from './shared/topup';
+import { pickActiveVersion, RateVersion } from './shared/deserved-math';
+import { isTopUpMonth } from './shared/topup';
 import {
   resolveMonthlyScope,
   type SalaryMonthlyQuery,
@@ -158,8 +154,6 @@ export class SalaryMonthlyService {
         staffTotals,
       };
     }
-    const idSet = new Set(ids);
-
     // ─── Step 3: bulk fetches (one query each, no per-lesson DB) ──────────
     const [
       accruals,
@@ -307,7 +301,7 @@ export class SalaryMonthlyService {
       }),
     ]);
     const carriedOutMap = new Map(
-      carriedOutAgg.map((a) => [a.userId as number, a._sum.amount ?? 0]),
+      carriedOutAgg.map((a) => [a.userId, a._sum.amount ?? 0]),
     );
     // (studentId::groupId) -> attended-lesson count (BR-09 new-student gate).
     const heldByStudentGroup = new Map<string, number>();
@@ -327,13 +321,10 @@ export class SalaryMonthlyService {
         );
       }
     }
-    const cappedByInactivity = (
-      studentId: number,
-      lessonDate: Date,
-    ): boolean => {
-      const day = inactiveSince.get(studentId);
-      return day !== undefined && dateStr(lessonDate) > day;
-    };
+    // NOTE: no local inactivity predicate here on purpose. `inactiveSince` is
+    // handed to `sweepGapLessons` below and the cap is applied inside it — the
+    // single place this rule lives since the gap sweep was consolidated. A copy
+    // here would be a second definition of the same rule, free to drift.
 
     // ─── Build in-memory maps ─────────────────────────────────────────────
     const groupMap = new Map(groups.map((g) => [g.id, g]));

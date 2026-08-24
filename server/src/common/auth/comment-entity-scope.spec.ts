@@ -113,7 +113,7 @@ describe('assertCallerMayTouchCommentEntity', () => {
         lead: { findFirst: jest.fn().mockResolvedValue({ branchId: FARGONA }) },
       });
       await call(prisma, 'Lead', 'lead-lost');
-      const where = (prisma as never as { lead: { findFirst: jest.Mock } }).lead
+      const where = (prisma as { lead: { findFirst: jest.Mock } }).lead
         .findFirst.mock.calls[0][0].where;
       expect(where).not.toHaveProperty('deletedAt');
     });

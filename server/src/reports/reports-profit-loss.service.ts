@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ExpenseCategory } from '@prisma/client';
+import { ExpenseCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod, pct } from '../common/finance/period-helpers';
 import {

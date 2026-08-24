@@ -79,8 +79,7 @@ describe('assertCallerMayTouchGroup', () => {
       const prisma = prismaFor({ assigned: true });
       await assertCallerMayTouchGroup(prisma, 42, ['Teacher'], GROUP);
       expect(
-        (prisma as never as { group: { findFirst: jest.Mock } }).group
-          .findFirst,
+        (prisma as { group: { findFirst: jest.Mock } }).group.findFirst,
       ).not.toHaveBeenCalled();
     });
   });

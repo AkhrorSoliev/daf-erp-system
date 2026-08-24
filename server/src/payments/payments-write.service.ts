@@ -24,7 +24,6 @@ import { formatSom } from './shared/format-som';
 // for the gateway webhooks. The manual path wants the FAIL-CLOSED one — a
 // student whose branch cannot be determined must not be able to take a payment
 // at all, because that row could never be attributed to a branch afterwards.
-import { resolveStudentBranchId as resolveStudentBranchIdStrict } from '../common/finance/resolve-branch';
 import {
   assertCallerMayWriteForStudent,
   assertCallerMayWriteForStudentInTx,

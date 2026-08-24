@@ -503,7 +503,6 @@ export function debtFlowSheet(wb: Workbook, history: any) {
     'O‘zgarish',
     'Izoh',
   ]);
-  const firstDataRow = header.number + 1;
   months.forEach((m: any) => {
     const notes: string[] = [];
     if (m.isCurrent) notes.push('Oy hali tugamagan — raqamlar o‘zgaradi');

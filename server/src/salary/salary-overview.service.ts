@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
+import { Prisma, SalaryPaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
 import {

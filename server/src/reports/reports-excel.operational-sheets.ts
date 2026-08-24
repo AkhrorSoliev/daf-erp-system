@@ -286,7 +286,10 @@ export function studentFlowSheet(
 }
 
 // ---- Op-4: Xonalar bandligi ----
-export function roomUtilizationSheet(wb: Workbook, util: any, period: string) {
+// `period` is unused and stays in the signature on purpose: every sheet
+// function in this file takes the same three arguments and the caller passes
+// them positionally. This sheet shows "Bugungi holat" instead of a range.
+export function roomUtilizationSheet(wb: Workbook, util: any, _period: string) {
   const ws = wb.addWorksheet('Xonalar bandligi');
   ws.columns = [
     { width: 26 },
@@ -349,7 +352,8 @@ export function roomUtilizationSheet(wb: Workbook, util: any, period: string) {
 }
 
 // ---- Op-5: Guruhlar to'ldirilishi ----
-export function groupFillSheet(wb: Workbook, groups: any, period: string) {
+// Same as above: live-state sheet, uniform signature, `period` unused.
+export function groupFillSheet(wb: Workbook, groups: any, _period: string) {
   const ws = wb.addWorksheet("Guruhlar to'ldirilishi");
   ws.columns = [{ width: 32 }, { width: 14 }, { width: 12 }, { width: 16 }];
   // Same fixed "Bugungi holat: DD.MM.YYYY" shape as every other live-state sheet.

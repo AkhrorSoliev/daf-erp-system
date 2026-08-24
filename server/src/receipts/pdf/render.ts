@@ -6,6 +6,7 @@ import * as fs from 'fs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PdfPrinter = require('pdfmake');
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
+import { describeValue } from '../../common/utils/describe-value';
 
 // Resolve `assets/fonts` relative to BOTH dev (src/...) and prod (dist/src/...).
 // Walk up from __dirname until we find an `assets/fonts` directory.
@@ -86,7 +87,10 @@ export async function renderPdf(
       pdfDoc.on('error', reject);
       pdfDoc.end();
     } catch (err) {
-      reject(err);
+      // `createPdfKitDocument` throws plain values on a malformed definition.
+      // A non-Error rejection reaches the caller with no stack and no message,
+      // which is how a broken receipt template becomes an unexplained 500.
+      reject(err instanceof Error ? err : new Error(describeValue(err)));
     }
   });
 }

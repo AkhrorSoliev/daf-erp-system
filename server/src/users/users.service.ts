@@ -179,8 +179,8 @@ export class UsersService {
         );
       }
     } else {
-      const hasCeoRole = roleIds!.includes(CEO_ROLE_ID);
-      const hasTeacherRole = roleIds!.includes(TEACHER_ROLE_ID);
+      const hasCeoRole = roleIds.includes(CEO_ROLE_ID);
+      const hasTeacherRole = roleIds.includes(TEACHER_ROLE_ID);
 
       // Teacher must have at least one branch (more specific error first)
       if (hasTeacherRole && !hasCeoRole && !hasBranches) {
@@ -201,12 +201,12 @@ export class UsersService {
     if (hasBranches) {
       const validCount = await this.prisma.branch.count({
         where: {
-          id: { in: branchIds! },
+          id: { in: branchIds },
           companyId,
           deletedAt: null,
         },
       });
-      if (validCount !== branchIds!.length) {
+      if (validCount !== branchIds.length) {
         throw new BadRequestException(
           'Tanlangan filiallar bu kompaniyaga tegishli emas',
         );
@@ -214,7 +214,7 @@ export class UsersService {
     }
 
     // mainBranch must be one of the selected branches
-    if (mainBranch && hasBranches && !branchIds!.includes(mainBranch)) {
+    if (mainBranch && hasBranches && !branchIds.includes(mainBranch)) {
       throw new BadRequestException(
         "Asosiy filial tanlangan filiallar orasida bo'lishi kerak",
       );

@@ -1,6 +1,7 @@
 import { Workbook, Worksheet } from 'exceljs';
 import { studentsSheet } from './reports-excel.students-sheet';
 import { StudentFlow } from './reports-student-flow.service';
+import { cellText } from './reports-excel.helpers';
 
 const flow: StudentFlow = {
   month: '2026-07',
@@ -33,13 +34,13 @@ const flow: StudentFlow = {
 
 const textOf = (ws: Worksheet): string => {
   const out: string[] = [];
-  ws.eachRow((r) => out.push(String(r.getCell(1).value ?? '')));
+  ws.eachRow((r) => out.push(cellText(r.getCell(1).value)));
   return out.join('\n');
 };
 const valueFor = (ws: Worksheet, label: string): any => {
   let v: any;
   ws.eachRow((r) => {
-    if (v === undefined && String(r.getCell(1).value ?? '') === label)
+    if (v === undefined && cellText(r.getCell(1).value) === label)
       v = r.getCell(2).value;
   });
   return v;
@@ -86,7 +87,7 @@ describe('studentsSheet', () => {
   it('carries no share column', () => {
     let header: any[] = [];
     ws.eachRow((r) => {
-      if (String(r.getCell(1).value ?? '') === "Ko'rsatkich") {
+      if (cellText(r.getCell(1).value) === "Ko'rsatkich") {
         header = [r.getCell(2).value, r.getCell(3).value];
       }
     });

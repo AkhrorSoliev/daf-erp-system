@@ -190,7 +190,7 @@ describe('AuthController — otp/poll delegatsiyasi', () => {
 describe('IpThrottlerGuard.getTracker', () => {
   // getTracker doesn't use `this`, so we can exercise it off a bare prototype
   // instance without constructing the full ThrottlerGuard dependency graph.
-  const guard = Object.create(IpThrottlerGuard.prototype) as any;
+  const guard = Object.create(IpThrottlerGuard.prototype);
   const track = (req: unknown): Promise<string> => guard.getTracker(req);
 
   it('uses the first x-forwarded-for hop (real client behind the proxy)', async () => {

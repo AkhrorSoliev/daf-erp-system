@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { LessonTeacherOverridesService } from './lesson-teacher-overrides.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';

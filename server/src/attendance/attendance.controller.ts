@@ -6,8 +6,6 @@ import {
   Param,
   Query,
   UseGuards,
-  ForbiddenException,
-  NotFoundException,
 } from '@nestjs/common';
 import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { AttendanceService } from './attendance.service';

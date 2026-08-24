@@ -13,7 +13,7 @@ import { TelegramService } from './telegram.service';
  */
 describe("TelegramService — a'zolikdan keyin oqimni davom ettirish", () => {
   const makeInstance = () => {
-    const inst = Object.create(TelegramService.prototype) as any;
+    const inst = Object.create(TelegramService.prototype);
     inst.logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
     return inst;
   };
@@ -73,7 +73,7 @@ describe("TelegramService — a'zolikdan keyin oqimni davom ettirish", () => {
 
 describe('TelegramService — isRequiredChannelChat', () => {
   const withChannel = (channel?: string) => {
-    const inst = Object.create(TelegramService.prototype) as any;
+    const inst = Object.create(TelegramService.prototype);
     inst.requiredChannel = channel;
     return inst;
   };

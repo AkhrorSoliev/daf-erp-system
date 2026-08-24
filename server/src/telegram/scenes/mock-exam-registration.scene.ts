@@ -157,11 +157,9 @@ export function createMockExamRegistrationScene(
     }
 
     const offeredLevels = Array.isArray(exam.offeredLevels)
-      ? (exam.offeredLevels as string[])
+      ? exam.offeredLevels
       : [];
-    const examTimes = Array.isArray(exam.examTimes)
-      ? (exam.examTimes as string[])
-      : [];
+    const examTimes = Array.isArray(exam.examTimes) ? exam.examTimes : [];
 
     ctx.session.data = {
       examId: exam.id,

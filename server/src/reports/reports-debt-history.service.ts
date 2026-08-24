@@ -611,7 +611,6 @@ export class ReportsDebtHistoryService {
     const {
       flowByMonth,
       closingByMonth,
-      debtorsByMonth,
       closingPerStudent,
       paymentsPerStudent,
       agingPerStudent,

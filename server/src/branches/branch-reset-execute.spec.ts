@@ -29,7 +29,7 @@ function recordingTx() {
       };
     },
   };
-  return { tx: new Proxy({}, handler) as any, calls };
+  return { tx: new Proxy({}, handler), calls };
 }
 
 /**

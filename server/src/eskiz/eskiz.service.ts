@@ -81,7 +81,7 @@ export class EskizService {
       res = await this.postSend(mobile, message, token);
     }
 
-    const json = (await res.json().catch(() => ({}))) as any;
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       this.logger.warn(
         `Eskiz send failed (${res.status}): ${JSON.stringify(json)}`,
@@ -128,7 +128,7 @@ export class EskizService {
     if (!res.ok) {
       throw new EskizError(`Eskiz login failed: ${res.status}`);
     }
-    const json = (await res.json().catch(() => ({}))) as any;
+    const json = await res.json().catch(() => ({}));
     const token: string | undefined = json?.data?.token;
     if (!token) {
       throw new EskizError('Eskiz login: token qaytmadi');

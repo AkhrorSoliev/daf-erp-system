@@ -65,7 +65,7 @@ export function createPasswordResetScene(
     if (ctx.session.step !== 2) return;
     if (ctx.session.processing) return;
 
-    const chatId = String(ctx.chat!.id);
+    const chatId = String(ctx.chat.id);
     const contact = ctx.message.contact;
 
     // Telegram only lets a user share their OWN contact through this button —

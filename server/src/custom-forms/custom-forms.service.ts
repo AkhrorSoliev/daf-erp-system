@@ -37,6 +37,11 @@ type PublicFieldShape = Pick<
   'id' | 'type' | 'label' | 'required' | 'placeholder' | 'options'
 >;
 
+/**
+ * One answer to one form field. Deliberately NOT `unknown`: see `coerceValue`.
+ */
+type FormFieldValue = string | number | boolean;
+
 @Injectable()
 export class CustomFormsService {
   constructor(
@@ -558,9 +563,9 @@ export class CustomFormsService {
   private validateSubmissionPayload(
     fields: FormFieldDto[],
     data: Record<string, unknown>,
-  ): Record<string, unknown> {
+  ): Record<string, FormFieldValue> {
     const knownIds = new Set(fields.map((f) => f.id));
-    const cleaned: Record<string, unknown> = {};
+    const cleaned: Record<string, FormFieldValue> = {};
 
     for (const field of fields) {
       const raw = data[field.id];
@@ -624,16 +629,36 @@ export class CustomFormsService {
     return cleaned;
   }
 
-  private coerceValue(field: FormFieldDto, raw: unknown): unknown {
+  /**
+   * Narrow one submitted answer to a primitive, or refuse it.
+   *
+   * This is a PUBLIC endpoint: the body is whatever the caller posted, and it
+   * used to return objects and arrays untouched. Downstream everything does
+   * `String(value)`, which turns `{"a":1}` into the literal text
+   * `[object Object]` — and for a field with `mapsTo`, that text was written
+   * into the lead's ism / familya / telefon. A crafted POST could therefore
+   * plant unreadable rows in the leads board, and nothing in the pipeline
+   * would call it an error.
+   *
+   * The return TYPE is the fix, not a check somewhere downstream: once this
+   * cannot hand back an object, no later `String()` can produce that string.
+   */
+  private coerceValue(
+    field: FormFieldDto,
+    raw: unknown,
+  ): FormFieldValue | null | undefined {
     if (raw === undefined || raw === null) return raw;
     if (field.type === 'checkbox') return Boolean(raw);
     if (typeof raw === 'string') return raw.trim();
-    return raw;
+    if (typeof raw === 'number' || typeof raw === 'boolean') return raw;
+    throw new BadRequestException(
+      `"${field.label}" — qiymat noto'g'ri formatda yuborildi`,
+    );
   }
 
   private extractMappedValues(
     fields: FormFieldDto[],
-    cleaned: Record<string, unknown>,
+    cleaned: Record<string, FormFieldValue>,
   ): { firstName?: string; lastName?: string; phone?: string } {
     const out: { firstName?: string; lastName?: string; phone?: string } = {};
     for (const field of fields) {

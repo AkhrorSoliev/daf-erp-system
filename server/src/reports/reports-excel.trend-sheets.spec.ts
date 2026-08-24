@@ -1,4 +1,5 @@
 import { Workbook, Worksheet } from 'exceljs';
+import { cellText } from './reports-excel.helpers';
 import {
   monthsSheet,
   branchesSheet,
@@ -48,7 +49,7 @@ const months: MonthRow[] = [
 const headerOf = (ws: Worksheet, first: string): any[] => {
   let cells: any[] = [];
   ws.eachRow((r) => {
-    if (!cells.length && String(r.getCell(1).value ?? '') === first) {
+    if (!cells.length && cellText(r.getCell(1).value) === first) {
       cells = (r.values as any[]).slice(1);
     }
   });
@@ -57,7 +58,7 @@ const headerOf = (ws: Worksheet, first: string): any[] => {
 const rowFor = (ws: Worksheet, label: string): any[] => {
   let cells: any[] = [];
   ws.eachRow((r) => {
-    if (!cells.length && String(r.getCell(1).value ?? '') === label) {
+    if (!cells.length && cellText(r.getCell(1).value) === label) {
       cells = (r.values as any[]).slice(1);
     }
   });

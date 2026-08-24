@@ -155,9 +155,9 @@ describe('branch isolation — end-to-end scenarios', () => {
       ['director picks a foreign one', fargonaDirector, NAMANGAN, []],
       ['director picks nothing', fargonaDirector, undefined, [FARGONA]],
     ])('%s', (_label, ceiling, requested, expected) => {
-      expect(
-        resolveReportBranchIds(ceiling as number[] | null, requested as number),
-      ).toEqual(expected);
+      expect(resolveReportBranchIds(ceiling, requested as number)).toEqual(
+        expected,
+      );
     });
 
     it('the result is never wider than the ceiling', () => {

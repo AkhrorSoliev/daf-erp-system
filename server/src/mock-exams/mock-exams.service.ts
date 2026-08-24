@@ -384,11 +384,7 @@ export class MockExamsService {
     userId: number,
     scope: ReportBranchIds,
   ) {
-    const existing = (await this.ensureExamInScope(
-      id,
-      companyId,
-      scope,
-    )) as Prisma.MockExamGetPayload<Record<string, never>>;
+    const existing = await this.ensureExamInScope(id, companyId, scope);
 
     // Per product decision (2026-05-26): editing is always open — admins can
     // change the form fields, title, section, etc. at any time. The trade-off
@@ -531,11 +527,7 @@ export class MockExamsService {
     userId: number,
     scope: ReportBranchIds,
   ) {
-    const existing = (await this.ensureExamInScope(
-      id,
-      companyId,
-      scope,
-    )) as Prisma.MockExamGetPayload<Record<string, never>>;
+    const existing = await this.ensureExamInScope(id, companyId, scope);
     if (!isValidMockExamStatusTransition(existing.status, nextStatus)) {
       throw new BadRequestException(
         `${existing.status} → ${nextStatus} o'tish ruxsat etilmagan`,
@@ -659,11 +651,7 @@ export class MockExamsService {
     userId: number,
     scope: ReportBranchIds,
   ) {
-    const existing = (await this.ensureExamInScope(
-      id,
-      companyId,
-      scope,
-    )) as Prisma.MockExamGetPayload<Record<string, never>>;
+    const existing = await this.ensureExamInScope(id, companyId, scope);
 
     await this.entityHistoryService.recordDelete({
       entityType: 'MockExam',

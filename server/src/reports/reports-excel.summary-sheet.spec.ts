@@ -1,5 +1,6 @@
 import { Workbook, Worksheet } from 'exceljs';
 import { summarySheetV2, SummaryInput } from './reports-excel.summary-sheet';
+import { cellText } from './reports-excel.helpers';
 
 const np = (over: any = {}) => ({
   revenue: 173_783_991,
@@ -92,7 +93,7 @@ const input = (over: Partial<SummaryInput> = {}): SummaryInput =>
 
 const textOf = (ws: Worksheet): string[] => {
   const out: string[] = [];
-  ws.eachRow((r) => out.push(String(r.getCell(1).value ?? '')));
+  ws.eachRow((r) => out.push(cellText(r.getCell(1).value)));
   return out;
 };
 // `col` defaults to the amount cell; column 3 is the «Jamidan %» cell that
@@ -100,7 +101,7 @@ const textOf = (ws: Worksheet): string[] => {
 const valueFor = (ws: Worksheet, label: string, col = 2): any => {
   let v: any;
   ws.eachRow((r) => {
-    if (v === undefined && String(r.getCell(1).value ?? '') === label)
+    if (v === undefined && cellText(r.getCell(1).value) === label)
       v = r.getCell(col).value;
   });
   return v;
@@ -120,10 +121,10 @@ const headerCells = (
   let cells: any[] = [];
   ws.eachRow((r) => {
     if (cells.length) return;
-    if (String(r.getCell(1).value ?? '') !== firstCellLabel) return;
+    if (cellText(r.getCell(1).value) !== firstCellLabel) return;
     if (
       secondCellLabel !== undefined &&
-      String(r.getCell(2).value ?? '') !== secondCellLabel
+      cellText(r.getCell(2).value) !== secondCellLabel
     )
       return;
     cells = [2, 3, 4].map((c) => r.getCell(c).value);
@@ -261,7 +262,7 @@ describe('summarySheetV2', () => {
   it('reports the net student change as a count, not money', () => {
     let cell: any;
     ws.eachRow((r) => {
-      if (String(r.getCell(1).value ?? '').startsWith("Sof o'zgarish"))
+      if (cellText(r.getCell(1).value).startsWith("Sof o'zgarish"))
         cell = r.getCell(2);
     });
     expect(cell.value).toBe(-62);

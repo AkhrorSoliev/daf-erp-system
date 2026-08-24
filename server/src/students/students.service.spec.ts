@@ -472,22 +472,11 @@ describe('StudentsService — status methods', () => {
       prisma.$transaction = jest.fn((cb: any) => cb(prisma));
     }
 
-    function getTxService() {
-      return module.get(
-        require('../transactions/transactions.service').TransactionsService,
-      );
-    }
-
-    let module: TestingModule;
-    beforeEach(async () => {
-      // Re-import the module reference so each test can read its mocks.
-      // The outer beforeEach already built the module; we just grab a reference.
-      module = (service as any).constructor.testingModule ?? undefined;
-      // Walk back into the parent setup: pull the service's own deps.
-      // Simpler: rely on prisma + transactionsService mocks directly via
-      // `service` internals — but Nest mocks are scoped to the outer module,
-      // so we just need access to the TransactionsService mock.
-    });
+    // No local `beforeEach` here on purpose: an earlier attempt to reach the
+    // TransactionsService mock through the TestingModule was abandoned (Nest
+    // scopes those mocks to the outer module), and `txMock()` below reaches it
+    // through the service instead. The abandoned scaffolding assigned a
+    // variable nothing ever read.
 
     // Helper: pull TransactionsService mock from the StudentsWriteService.
     // It's injected as `transactionsService` private field; we access it via

@@ -88,8 +88,8 @@ describe('assertCallerMayTouchStudent', () => {
     // The guard adds the branch question and leaves that one alone.
     const prisma = prismaFor({ studentBranch: 1, caller: FARGONA_DIRECTOR });
     await assertCallerMayTouchStudent(prisma, 7, 10264, 1001);
-    const where = (prisma as never as { student: { findFirst: jest.Mock } })
-      .student.findFirst.mock.calls[0][0].where;
+    const where = (prisma as { student: { findFirst: jest.Mock } }).student
+      .findFirst.mock.calls[0][0].where;
     expect(where).not.toHaveProperty('deletedAt');
     expect(where).toMatchObject({ id: 10264, companyId: 1001 });
   });
@@ -108,8 +108,8 @@ describe('assertCallerMayTouchStudent', () => {
       assertCallerMayTouchStudent(prisma, 7, 10264, 1001),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(
-      (prisma as never as { studentBranch: { findFirst: jest.Mock } })
-        .studentBranch.findFirst,
+      (prisma as { studentBranch: { findFirst: jest.Mock } }).studentBranch
+        .findFirst,
     ).not.toHaveBeenCalled();
   });
 

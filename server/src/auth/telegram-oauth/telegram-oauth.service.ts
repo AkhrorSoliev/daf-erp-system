@@ -12,6 +12,7 @@ import { getAllowedRoleIds } from '../portal-roles.config';
 import { TelegramOauthConfig } from './telegram-oauth.config';
 import { TelegramIdTokenVerifier } from './telegram-id-token.verifier';
 import { TelegramOauthStateStore } from './telegram-oauth-state.store';
+import { describeValue } from '../../common/utils/describe-value';
 
 /** Hujjatdan verbatim. */
 const TOKEN_URL = 'https://oauth.telegram.org/token';
@@ -263,11 +264,11 @@ export class TelegramOauthService {
       // `error` va `error_description` — OAuth xato KODLARI, maxfiy emas
       // (masalan `invalid_grant`, `invalid_client`). Token yoki secret emas.
       this.logger.warn(
-        `Telegram token almashtirishni rad etdi: error=${String(
+        `Telegram token almashtirishni rad etdi: error=${describeValue(
           payload.error,
         )}${
           payload.error_description
-            ? ` description=${String(payload.error_description)}`
+            ? ` description=${describeValue(payload.error_description)}`
             : ''
         }`,
       );

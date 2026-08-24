@@ -14,7 +14,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(req: Request, login: string, password: string) {
-    const origin = req.headers['origin'] as string | undefined;
+    const origin = req.headers['origin'];
     const portal = req.headers['x-portal'] as string | undefined;
     const allowedRoleIds = resolveAllowedRoleIds(origin, portal);
 

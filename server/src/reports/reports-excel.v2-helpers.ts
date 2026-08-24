@@ -10,15 +10,7 @@
  * only the two fills below (header row, total row) are new here.
  */
 import { Worksheet, Row } from 'exceljs';
-import {
-  NAVY,
-  SUBTLE,
-  GREEN,
-  RED,
-  SOM,
-  NUM,
-  PCT,
-} from './reports-excel.helpers';
+import { NAVY, SUBTLE, GREEN, RED, SOM, NUM } from './reports-excel.helpers';
 
 export const HEAD_FILL = 'FFE8EDF5';
 export const TOTAL_FILL = 'FFD5E0F0';
@@ -105,7 +97,7 @@ export function compareRow(
   const both = typeof cur === 'number' && typeof prev === 'number';
   const d =
     both && prev !== 0
-      ? Math.round(((cur! - prev!) / Math.abs(prev!)) * 1000) / 10
+      ? Math.round(((cur - prev) / Math.abs(prev)) * 1000) / 10
       : null;
   const r = ws.addRow([label, cur ?? '—', prev ?? '—', d ?? '', izoh ?? '']);
   [2, 3].forEach((c) => {
