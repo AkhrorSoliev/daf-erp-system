@@ -22,6 +22,12 @@ const eslintConfig = defineConfig([
       // The React Compiler-era `set-state-in-effect` rule fires on
       // legitimate "derive state from prop" patterns. Demote to warn.
       "react-hooks/set-state-in-effect": "warn",
+      // This product's copy is in Uzbek, where the apostrophe is a LETTER —
+      // o', g', ko'p, ro'yxat. The rule's default forbids it in JSX text, so
+      // enforcing it would mean escaping ordinary spelling on nearly every
+      // line of user-facing copy. `>` and `}` are the characters that
+      // actually break JSX, and those stay forbidden.
+      "react/no-unescaped-entities": ["error", { forbid: [">", "}"] }],
     },
   },
 ]);
