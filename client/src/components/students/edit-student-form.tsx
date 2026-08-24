@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
-import { DiscountChangePreview } from "./discount-change-preview";
 
 function stripPhonePrefix(phone: string): string {
   return phone.replace(/^\+998/, "").replace(/\s/g, "");
@@ -338,11 +337,11 @@ export function EditStudentForm({
                 %
               </span>
             </div>
-            <DiscountChangePreview
-              studentId={student.id}
-              value={form.watch("discountPercent")}
-              currentDiscount={student.discountPercent ?? 0}
-            />
+            <p className="text-xs text-muted-foreground">
+              Chegirma har bir darsda balansdan ushlanadigan summaga
+              qo&apos;llanadi. O&apos;zgarish faqat keyingi darslarga ta&apos;sir
+              qiladi — o&apos;tgan darslar qayta hisoblanmaydi.
+            </p>
             {form.formState.errors.discountPercent && (
               <p className="text-xs text-destructive">
                 {form.formState.errors.discountPercent.message}

@@ -34,7 +34,7 @@ import { RolesGuard } from '../common/guards';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
-import { DiscountRoleGuard, DISCOUNT_ROLES } from './discount-role.guard';
+import { DiscountRoleGuard } from './discount-role.guard';
 
 @Controller('students')
 export class StudentsController {
@@ -95,28 +95,6 @@ export class StudentsController {
     @CurrentUser('id') userId: number,
   ) {
     return this.studentsService.create(dto, companyId, userId);
-  }
-
-  /**
-   * What a discount change WOULD cost, before anyone commits to it. Read-only.
-   * Same guard as the write it previews — a number that reveals a student's
-   * whole billing history is not a wider audience than the change itself.
-   */
-  @Get(':id/discount-preview')
-  @UseGuards(RolesGuard)
-  @Roles(...DISCOUNT_ROLES)
-  previewDiscountChange(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('discountPercent', ParseIntPipe) discountPercent: number,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() branchScope: ReportBranchIds,
-  ) {
-    return this.studentsService.previewDiscountChange(
-      id,
-      companyId,
-      branchScope,
-      Math.max(0, Math.min(100, discountPercent)),
-    );
   }
 
   @Patch(':id')

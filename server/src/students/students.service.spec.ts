@@ -450,7 +450,20 @@ describe('StudentsService — status methods', () => {
     });
   });
 
-  describe('update — discountPercent retroactive adjustment', () => {
+  /**
+   * A discount applies from the moment it is set, and never backwards.
+   *
+   * It used to reach back: changing `discountPercent` recomputed every past
+   * lesson charge at the new rate and booked the difference. In production that
+   * credited 1 473 807 so'm across 7 students — one of them 449 995 reaching
+   * back 41 lessons — while the edit form said "eski darslar qayta
+   * hisoblanmaydi", the exact opposite of what was happening.
+   *
+   * CEO decision, 2026-08-24: forward only. These tests exist so the ledger
+   * write cannot come back by accident. They assert an ABSENCE, which is the
+   * hardest kind of behaviour to keep — nothing fails when it quietly returns.
+   */
+  describe('update — discountPercent never touches the past', () => {
     const studentWithDiscount = (oldDiscount: number) => ({
       ...mockStudent,
       photo: null,
@@ -476,126 +489,74 @@ describe('StudentsService — status methods', () => {
       prisma.$transaction = jest.fn((cb: any) => cb(prisma));
     }
 
-    // No local `beforeEach` here on purpose: an earlier attempt to reach the
-    // TransactionsService mock through the TestingModule was abandoned (Nest
-    // scopes those mocks to the outer module), and `txMock()` below reaches it
-    // through the service instead. The abandoned scaffolding assigned a
-    // variable nothing ever read.
-
-    // Helper: pull TransactionsService mock from the StudentsWriteService.
-    // It's injected as `transactionsService` private field; we access it via
-    // bracket notation to avoid type gymnastics.
-    function txMock(): { recordDiscountAdjustment: jest.Mock } {
+    /** The TransactionsService mock, reached through the write service. */
+    function txMock(): Record<string, jest.Mock> {
       const writeService = (service as any).write;
       return writeService.transactionsService;
     }
 
-    it('does not write adjustment when discount is unchanged', async () => {
-      setup({ oldDiscount: 10 });
-      await service.update(1, { discountPercent: 10 } as any, 2, 1001);
-      expect(txMock().recordDiscountAdjustment).not.toHaveBeenCalled();
-    });
+    const HISTORY = [
+      { amount: 100_000, metadata: { fullAmount: 100_000 } },
+      { amount: 100_000, metadata: { fullAmount: 100_000 } },
+    ];
 
-    it('does not write adjustment when student has no past LESSON_DEDUCTIONs', async () => {
-      setup({ oldDiscount: 0, pastDeductions: [] });
+    it('writes no ledger row when the discount goes up', async () => {
+      // The old behaviour credited +40 000 here.
+      setup({ oldDiscount: 0, pastDeductions: HISTORY });
       await service.update(1, { discountPercent: 20 } as any, 2, 1001);
-      expect(txMock().recordDiscountAdjustment).not.toHaveBeenCalled();
+
+      for (const fn of Object.values(txMock())) {
+        expect(fn).not.toHaveBeenCalled();
+      }
     });
 
-    it('writes positive adjustment (refund) when discount increases from 0 to 20', async () => {
-      // Past: 2 batches each fullAmount 100_000 charged in full (no discount)
-      // previousNetDeducted = 200_000
-      // totalFullAmount     = 200_000
-      // targetCharge (20%)  = 160_000
-      // adjustment          = +40_000  (refund)
-      setup({
-        oldDiscount: 0,
-        pastDeductions: [
-          { amount: 100_000, metadata: { fullAmount: 100_000 } },
-          { amount: 100_000, metadata: { fullAmount: 100_000 } },
-        ],
-      });
-      await service.update(1, { discountPercent: 20 } as any, 2, 1001);
-      expect(txMock().recordDiscountAdjustment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          studentId: 1,
-          amount: 40_000,
-          oldDiscountPercent: 0,
-          newDiscountPercent: 20,
-          totalFullAmount: 200_000,
-          targetCharge: 160_000,
-          previousNetDeducted: 200_000,
-          companyId: 1001,
-          performedById: 2,
-        }),
-        expect.anything(),
-      );
-    });
-
-    it('writes negative adjustment (debit) when discount decreases from 20 to 0', async () => {
-      // Past: 2 batches, fullAmount 100_000 each, charged at 20% discount = 80_000
-      // previousNetDeducted = 160_000
-      // totalFullAmount     = 200_000
-      // targetCharge (0%)   = 200_000
-      // adjustment          = -40_000  (debit)
-      setup({
-        oldDiscount: 20,
-        pastDeductions: [
-          { amount: 80_000, metadata: { fullAmount: 100_000 } },
-          { amount: 80_000, metadata: { fullAmount: 100_000 } },
-        ],
-      });
+    it('writes no ledger row when the discount goes down', async () => {
+      // The old behaviour DEBITED the student -40 000 here — a bill for
+      // lessons they had already paid for in full at the agreed rate.
+      setup({ oldDiscount: 20, pastDeductions: HISTORY });
       await service.update(1, { discountPercent: 0 } as any, 2, 1001);
-      expect(txMock().recordDiscountAdjustment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          amount: -40_000,
-          oldDiscountPercent: 20,
-          newDiscountPercent: 0,
-          previousNetDeducted: 160_000,
-          totalFullAmount: 200_000,
-          targetCharge: 200_000,
-        }),
-        expect.anything(),
-      );
+
+      for (const fn of Object.values(txMock())) {
+        expect(fn).not.toHaveBeenCalled();
+      }
     });
 
-    it('falls back to transaction.amount when metadata.fullAmount is missing (legacy rows)', async () => {
-      // Pre-discount rows: discount was always 0, so amount = full.
-      // previousNetDeducted = 50_000
-      // totalFullAmount     = 50_000  (fallback to amount)
-      // targetCharge (50%)  = 25_000
-      // adjustment          = +25_000
+    it('writes no ledger row for a student with a long history', async () => {
+      // #10080's shape: 41 past lessons, 0% -> 50%. That one moved 449 995.
       setup({
         oldDiscount: 0,
-        pastDeductions: [{ amount: 50_000, metadata: {} }],
+        pastDeductions: Array.from({ length: 41 }, () => ({
+          amount: 22_000,
+          metadata: { fullAmount: 22_000 },
+        })),
       });
       await service.update(1, { discountPercent: 50 } as any, 2, 1001);
-      expect(txMock().recordDiscountAdjustment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          amount: 25_000,
-          totalFullAmount: 50_000,
-          previousNetDeducted: 50_000,
-          targetCharge: 25_000,
-        }),
-        expect.anything(),
-      );
+
+      for (const fn of Object.values(txMock())) {
+        expect(fn).not.toHaveBeenCalled();
+      }
     });
 
-    it('filters reversed transactions out via where clause', async () => {
-      setup({
-        oldDiscount: 0,
-        pastDeductions: [
-          { amount: 100_000, metadata: { fullAmount: 100_000 } },
-        ],
-      });
-      await service.update(1, { discountPercent: 10 } as any, 2, 1001);
-      expect(prisma.transaction.findMany).toHaveBeenCalledWith(
+    it('does not even READ the past charges any more', async () => {
+      // The scan itself is gone. If a future change reintroduces the query,
+      // that is the first step back toward the old behaviour and this catches
+      // it before the write does.
+      setup({ oldDiscount: 0, pastDeductions: HISTORY });
+      await service.update(1, { discountPercent: 20 } as any, 2, 1001);
+
+      const scannedDeductions = prisma.transaction.findMany.mock.calls.some(
+        (call: any[]) => call[0]?.where?.type === 'LESSON_DEDUCTION',
+      );
+      expect(scannedDeductions).toBe(false);
+    });
+
+    it('still stores the new percentage — future lessons are billed at it', async () => {
+      setup({ oldDiscount: 0, pastDeductions: HISTORY });
+      await service.update(1, { discountPercent: 20 } as any, 2, 1001);
+
+      expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            studentId: 1,
-            type: 'LESSON_DEDUCTION',
-            reversedAt: null,
-          }),
+          data: expect.objectContaining({ discountPercent: 20 }),
         }),
       );
     });
