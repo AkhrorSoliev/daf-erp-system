@@ -21,6 +21,8 @@ describe('assertCallerMayTouchGroup', () => {
 
   function prismaFor(opts: {
     assigned?: boolean;
+    /** An active LessonTeacherOverride the query would return, if any. */
+    override?: boolean;
     groupBranch?: number | null;
     caller?: {
       mainBranch: number | null;
@@ -33,6 +35,11 @@ describe('assertCallerMayTouchGroup', () => {
         findUnique: jest
           .fn()
           .mockResolvedValue(opts.assigned ? { groupId: GROUP } : null),
+      },
+      lessonTeacherOverride: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue(opts.override ? { id: 'ovr-1' } : null),
       },
       group: {
         findFirst: jest
@@ -186,6 +193,118 @@ describe('assertCallerMayTouchGroup', () => {
       await expect(
         assertCallerMayTouchGroup(prisma, 7, [], GROUP),
       ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  /**
+   * A substitute is not a `GroupTeacher` — that row is the PERMANENT
+   * assignment. Before this, a teacher covering someone else's lesson was told
+   * "Siz bu guruhga biriktirilmagansiz" and could not mark a register for a
+   * lesson they had just taught. All five substitutions in production during
+   * August were entered by an administrator afterwards.
+   */
+  describe('a substitute is admitted for the day they were assigned', () => {
+    const TEACHER = 42;
+    const LESSON = new Date('2026-08-21T00:00:00.000Z');
+
+    it('allows a substitute on their lesson date', async () => {
+      const prisma = prismaFor({ assigned: false, override: true });
+      await expect(
+        assertCallerMayTouchGroup(
+          prisma,
+          TEACHER,
+          ['Teacher'],
+          GROUP,
+          undefined,
+          {
+            lessonDate: LESSON,
+          },
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    it('narrows the check to that exact date', async () => {
+      const prisma = prismaFor({ assigned: false, override: true });
+      await assertCallerMayTouchGroup(
+        prisma,
+        TEACHER,
+        ['Teacher'],
+        GROUP,
+        undefined,
+        {
+          lessonDate: LESSON,
+        },
+      );
+
+      const where = (prisma as any).lessonTeacherOverride.findFirst.mock
+        .calls[0][0].where;
+      expect(where.date).toEqual(LESSON);
+      expect(where.groupId).toBe(GROUP);
+      expect(where.deletedAt).toBeNull();
+      // The teacher must be IN the override, not merely near it.
+      expect(where.teacherIds).toEqual({ has: TEACHER });
+    });
+
+    it('refuses a substitute on a date they were not assigned', async () => {
+      // No matching override row for that date.
+      const prisma = prismaFor({ assigned: false, override: false });
+      await expect(
+        assertCallerMayTouchGroup(
+          prisma,
+          TEACHER,
+          ['Teacher'],
+          GROUP,
+          undefined,
+          {
+            lessonDate: new Date('2026-08-22T00:00:00.000Z'),
+          },
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('accepts any active override when the caller names no date', async () => {
+      // The calendar and date-list routes have no single date; a teacher needs
+      // them to find their day.
+      const prisma = prismaFor({ assigned: false, override: true });
+      await assertCallerMayTouchGroup(prisma, TEACHER, ['Teacher'], GROUP);
+
+      const where = (prisma as any).lessonTeacherOverride.findFirst.mock
+        .calls[0][0].where;
+      expect(where.date).toBeUndefined();
+    });
+
+    it('does not consult overrides at all for an assigned teacher', async () => {
+      const prisma = prismaFor({ assigned: true, override: false });
+      await assertCallerMayTouchGroup(prisma, TEACHER, ['Teacher'], GROUP);
+      expect(
+        (prisma as any).lessonTeacherOverride.findFirst,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still refuses a teacher with neither assignment nor override', async () => {
+      const prisma = prismaFor({ assigned: false, override: false });
+      await expect(
+        assertCallerMayTouchGroup(prisma, TEACHER, ['Teacher'], GROUP),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('changes nothing for an admin — they are still checked by branch', async () => {
+      const prisma = prismaFor({
+        assigned: false,
+        override: true,
+        groupBranch: 2,
+        caller: {
+          mainBranch: 1,
+          branches: [{ branchId: 1 }],
+          role: 'Administrator',
+        },
+      });
+      await expect(
+        assertCallerMayTouchGroup(prisma, 7, ['Administrator'], GROUP),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(
+        (prisma as any).lessonTeacherOverride.findFirst,
+      ).not.toHaveBeenCalled();
     });
   });
 });

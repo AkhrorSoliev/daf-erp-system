@@ -40,13 +40,21 @@ export class AttendanceController {
    * manipulate the SAME lessons (cancellations, reschedules, planned absences)
    * each shipped without it.
    */
-  private verifyGroupAccess(groupId: string, roles: string[], userId: number) {
+  private verifyGroupAccess(
+    groupId: string,
+    roles: string[],
+    userId: number,
+    // Supplied by the two routes that name a lesson: a substitute is admitted
+    // for the day they were assigned, not for the group in general.
+    date?: string,
+  ) {
     return assertCallerMayTouchGroup(
       this.prisma,
       userId,
       roles,
       groupId,
       "Bu guruh boshqa filialga tegishli — davomat bilan ishlash huquqingiz yo'q",
+      { lessonDate: parseLessonDate(date) },
     );
   }
 
@@ -98,7 +106,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyGroupAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId, date);
     return this.attendanceService.getByDate(groupId, date, companyId, roles);
   }
 
@@ -113,7 +121,7 @@ export class AttendanceController {
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
   ) {
-    await this.verifyGroupAccess(groupId, roles, userId);
+    await this.verifyGroupAccess(groupId, roles, userId, date);
     return this.attendanceService.save(
       groupId,
       date,
@@ -213,4 +221,17 @@ export class AttendanceController {
       userId,
     );
   }
+}
+
+/**
+ * `YYYY-MM-DD` as the UTC midnight instant the schema stores lesson dates at.
+ * Anything else returns undefined, which widens the check to "any active
+ * override" rather than silently matching nothing — a malformed date must not
+ * be the thing that grants or denies access. The routes validate the format
+ * properly downstream.
+ */
+function parseLessonDate(date?: string): Date | undefined {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }

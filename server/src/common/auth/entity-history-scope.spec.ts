@@ -34,6 +34,10 @@ describe('assertCallerMayReadEntityHistory', () => {
       },
       group: { findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }) },
       groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
+      // The group guard now also asks whether the caller is a SUBSTITUTE on
+      // this group (`LessonTeacherOverride`). Null here keeps these cases
+      // about the assignment rule they were written for.
+      lessonTeacherOverride: { findFirst: jest.fn().mockResolvedValue(null) },
       attendance: {
         findFirst: jest.fn().mockResolvedValue({ groupId: 'group-nam' }),
       },
