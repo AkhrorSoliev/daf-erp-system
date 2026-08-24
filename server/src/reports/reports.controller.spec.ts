@@ -397,55 +397,59 @@ describe('ReportsController — role guards', () => {
   // `forbidNonWhitelisted` that is a 400, and since the download is fetched as
   // a blob the CEO gets a bare red toast and no file. The DTO therefore still
   // ACCEPTS the three retired params — and nothing may read them.
-  describe('exportFinancialExcel() — retired compare params are accepted and ignored', () => {
-    const pipe = new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
+  /**
+   * The retired `compare` / `compareStartDate` / `compareEndDate` params were
+   * kept as accepted-and-ignored for one release, because
+   * `forbidNonWhitelisted` 400s an unknown query param and a browser tab
+   * opened before the 2026-08-10 frontend release would still have sent them —
+   * losing the download entirely.
+   *
+   * They were removed on 2026-08-24. This case is what is left of that block:
+   * the DTO must not grow them back, and it must not grow a silent
+   * accepted-and-ignored field in general. A parameter the server takes and
+   * ignores is a promise it does not keep.
+   */
+  describe('exportFinancialExcel() — the query DTO takes nothing it ignores', () => {
+    it('rejects the retired compare params instead of pretending', async () => {
+      const pipe = new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      });
+      const meta: ArgumentMetadata = {
+        type: 'query',
+        metatype: ReportsQueryDto,
+      };
+
+      await expect(
+        pipe.transform(
+          { startDate: '2026-06-01', compareStartDate: '2026-05-01' },
+          meta,
+        ),
+      ).rejects.toBeDefined();
     });
-    const meta: ArgumentMetadata = {
-      type: 'query',
-      metatype: ReportsQueryDto,
-    };
-    const staleQuery = {
-      startDate: '2026-06-01',
-      endDate: '2026-06-30',
-      compare: 'prev,yoy',
-      compareStartDate: '2026-05-01',
-      compareEndDate: '2026-05-31',
-    };
 
-    it('validates instead of 400-ing', async () => {
-      await expect(pipe.transform(staleQuery, meta)).resolves.toEqual(
-        expect.objectContaining({ compare: 'prev,yoy' }),
-      );
-    });
+    it('still accepts the params it does read', async () => {
+      const pipe = new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      });
+      const meta: ArgumentMetadata = {
+        type: 'query',
+        metatype: ReportsQueryDto,
+      };
 
-    it('still builds the ten-sheet default — nothing reads the shim', async () => {
-      const dto = (await pipe.transform(staleQuery, meta)) as ReportsQueryDto;
-      const res = {
-        setHeader: jest.fn(),
-        end: jest.fn(),
-      } as unknown as Response;
-
-      await controller.exportFinancialExcel(
-        dto,
-        { id: 10001, companyId: 1, roles: ['CEO'] },
-        res,
-      );
-
-      // `include: []` IS the ten-sheet default (asserted sheet by sheet in
-      // reports-excel.service.spec.ts). No compare* value reaches the builder.
-      expect(mockExcel.generate).toHaveBeenCalledTimes(1);
-      const passed = mockExcel.generate.mock.calls[0][1] as Record<
-        string,
-        unknown
-      >;
-      expect(passed.include).toEqual([]);
-      expect(
-        Object.keys(passed).filter((k) => k.startsWith('compare')),
-      ).toEqual([]);
-      expect(res.end).toHaveBeenCalled();
+      await expect(
+        pipe.transform(
+          {
+            startDate: '2026-06-01',
+            endDate: '2026-06-30',
+            include: 'marketing',
+          },
+          meta,
+        ),
+      ).resolves.toEqual(expect.objectContaining({ include: 'marketing' }));
     });
   });
 
