@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { assertCallerInBranch } from './branch-scope';
+import { currentCoverWhere, isCoverCurrent } from '../lesson-cover';
 
 type PrismaLike = PrismaService | Prisma.TransactionClient;
 
@@ -59,16 +60,23 @@ export async function assertCallerMayTouchGroup(
     // have no date (the calendar, the date list) accept ANY active override:
     // they need it to find their day, and someone who taught the group has no
     // less business reading its register than the regular teacher does.
+    //
+    // A cover expires the day after the lesson — `currentCoverWhere` owns that
+    // rule, and the group list uses the same one. If they disagreed the list
+    // would offer a group this guard then refuses.
+    const cover = currentCoverWhere(userId);
     const override = await prisma.lessonTeacherOverride.findFirst({
       where: {
         groupId,
-        deletedAt: null,
-        teacherIds: { has: userId },
+        ...cover,
+        // A named date has to BE the covered date, and still be in force: the
+        // `gte` floor from `cover` is what expires it.
         ...(options.lessonDate ? { date: options.lessonDate } : {}),
       },
       select: { id: true },
     });
-    if (override) return;
+    if (override && (!options.lessonDate || isCoverCurrent(options.lessonDate)))
+      return;
 
     throw new ForbiddenException('Siz bu guruhga biriktirilmagansiz');
   }

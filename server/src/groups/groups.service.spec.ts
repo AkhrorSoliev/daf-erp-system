@@ -722,18 +722,11 @@ describe('GroupsService — status methods', () => {
       it('includes groups they are assigned to AND groups they are covering', async () => {
         await service.findAll({} as any, 1001, null, ME);
 
-        expect(whereOf().AND).toEqual([
-          {
-            OR: [
-              { teachers: { some: { teacherId: ME } } },
-              {
-                lessonTeacherOverrides: {
-                  some: { teacherIds: { has: ME }, deletedAt: null },
-                },
-              },
-            ],
-          },
-        ]);
+        const or = whereOf().AND[0].OR as any[];
+        expect(or[0]).toEqual({ teachers: { some: { teacherId: ME } } });
+        expect(or[1].lessonTeacherOverrides.some.teacherIds).toEqual({
+          has: ME,
+        });
       });
 
       it('counts only ACTIVE overrides — a deleted one is not a cover', async () => {
@@ -741,6 +734,18 @@ describe('GroupsService — status methods', () => {
 
         const covering = (whereOf().AND[0].OR as any[])[1];
         expect(covering.lessonTeacherOverrides.some.deletedAt).toBeNull();
+      });
+
+      it('drops a cover once its day is over', async () => {
+        // The row survives — it is payroll history — but the group leaves the
+        // teacher's list the next morning. Same floor the guard uses.
+        await service.findAll({} as any, 1001, null, ME);
+
+        const covering = (whereOf().AND[0].OR as any[])[1];
+        const floor = covering.lessonTeacherOverrides.some.date.gte as Date;
+        const todayUtcMidnight = new Date();
+        todayUtcMidnight.setUTCHours(0, 0, 0, 0);
+        expect(floor.getTime()).toBe(todayUtcMidnight.getTime());
       });
 
       it('narrows nothing when the caller is not a teacher', async () => {
