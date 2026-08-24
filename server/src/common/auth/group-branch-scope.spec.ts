@@ -202,12 +202,24 @@ describe('assertCallerMayTouchGroup', () => {
    * "Siz bu guruhga biriktirilmagansiz" and could not mark a register for a
    * lesson they had just taught. All five substitutions in production during
    * August were entered by an administrator afterwards.
+   *
+   * The cover expires the day after the lesson (CEO, 2026-08-24), so these
+   * dates are built RELATIVE TO TODAY. A fixed calendar date would pass on the
+   * day it was written and start failing the next morning — which is exactly
+   * what happened to the first version of this block.
    */
   describe('a substitute is admitted for the day they were assigned', () => {
     const TEACHER = 42;
-    const LESSON = new Date('2026-08-21T00:00:00.000Z');
+    const dayOffset = (days: number) => {
+      const d = new Date();
+      d.setUTCHours(0, 0, 0, 0);
+      return new Date(d.getTime() + days * 86400000);
+    };
+    const TODAY = dayOffset(0);
+    const TOMORROW = dayOffset(1);
+    const YESTERDAY = dayOffset(-1);
 
-    it('allows a substitute on their lesson date', async () => {
+    it("allows a substitute on today's lesson", async () => {
       const prisma = prismaFor({ assigned: false, override: true });
       await expect(
         assertCallerMayTouchGroup(
@@ -217,13 +229,47 @@ describe('assertCallerMayTouchGroup', () => {
           GROUP,
           undefined,
           {
-            lessonDate: LESSON,
+            lessonDate: TODAY,
           },
         ),
       ).resolves.toBeUndefined();
     });
 
-    it('narrows the check to that exact date', async () => {
+    it('allows a cover booked for a future date', async () => {
+      const prisma = prismaFor({ assigned: false, override: true });
+      await expect(
+        assertCallerMayTouchGroup(
+          prisma,
+          TEACHER,
+          ['Teacher'],
+          GROUP,
+          undefined,
+          {
+            lessonDate: TOMORROW,
+          },
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    it('REFUSES yesterday, even if the override row is still there', async () => {
+      // The row is not deleted — a cover is payroll history. It simply stops
+      // granting access once its day is over.
+      const prisma = prismaFor({ assigned: false, override: true });
+      await expect(
+        assertCallerMayTouchGroup(
+          prisma,
+          TEACHER,
+          ['Teacher'],
+          GROUP,
+          undefined,
+          {
+            lessonDate: YESTERDAY,
+          },
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('narrows the query to that date AND to covers still in force', async () => {
       const prisma = prismaFor({ assigned: false, override: true });
       await assertCallerMayTouchGroup(
         prisma,
@@ -232,45 +278,28 @@ describe('assertCallerMayTouchGroup', () => {
         GROUP,
         undefined,
         {
-          lessonDate: LESSON,
+          lessonDate: TODAY,
         },
       );
 
       const where = (prisma as any).lessonTeacherOverride.findFirst.mock
         .calls[0][0].where;
-      expect(where.date).toEqual(LESSON);
       expect(where.groupId).toBe(GROUP);
       expect(where.deletedAt).toBeNull();
       // The teacher must be IN the override, not merely near it.
       expect(where.teacherIds).toEqual({ has: TEACHER });
+      expect(where.date).toEqual(TODAY);
     });
 
-    it('refuses a substitute on a date they were not assigned', async () => {
-      // No matching override row for that date.
-      const prisma = prismaFor({ assigned: false, override: false });
-      await expect(
-        assertCallerMayTouchGroup(
-          prisma,
-          TEACHER,
-          ['Teacher'],
-          GROUP,
-          undefined,
-          {
-            lessonDate: new Date('2026-08-22T00:00:00.000Z'),
-          },
-        ),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-    });
-
-    it('accepts any active override when the caller names no date', async () => {
+    it('accepts a current cover when the caller names no date', async () => {
       // The calendar and date-list routes have no single date; a teacher needs
-      // them to find their day.
+      // them to find their day. The `gte` floor still applies.
       const prisma = prismaFor({ assigned: false, override: true });
       await assertCallerMayTouchGroup(prisma, TEACHER, ['Teacher'], GROUP);
 
       const where = (prisma as any).lessonTeacherOverride.findFirst.mock
         .calls[0][0].where;
-      expect(where.date).toBeUndefined();
+      expect(where.date).toEqual({ gte: TODAY });
     });
 
     it('does not consult overrides at all for an assigned teacher', async () => {
@@ -281,7 +310,7 @@ describe('assertCallerMayTouchGroup', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('still refuses a teacher with neither assignment nor override', async () => {
+    it('still refuses a teacher with neither assignment nor cover', async () => {
       const prisma = prismaFor({ assigned: false, override: false });
       await expect(
         assertCallerMayTouchGroup(prisma, TEACHER, ['Teacher'], GROUP),

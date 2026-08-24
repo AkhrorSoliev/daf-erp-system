@@ -7,6 +7,7 @@ import { groupInclude, formatGroup } from './shared/group-include';
 import { computeNextGroupNumber } from './shared/next-group-number';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { currentCoverWhere } from '../common/lesson-cover';
 import {
   ReportBranchIds,
   branchIdWhere,
@@ -84,10 +85,7 @@ export class GroupsReadService {
       const mine = { teachers: { some: { teacherId: selfScopedTeacherId } } };
       const covering = {
         lessonTeacherOverrides: {
-          some: {
-            teacherIds: { has: selfScopedTeacherId },
-            deletedAt: null,
-          },
+          some: currentCoverWhere(selfScopedTeacherId),
         },
       };
       where.AND = [
@@ -219,8 +217,7 @@ export class GroupsReadService {
       const covers = await this.prisma.lessonTeacherOverride.findMany({
         where: {
           groupId: { in: data.map((g) => g.id) },
-          deletedAt: null,
-          teacherIds: { has: selfScopedTeacherId },
+          ...currentCoverWhere(selfScopedTeacherId),
         },
         select: { groupId: true, date: true },
         orderBy: { date: 'asc' },
