@@ -75,6 +75,11 @@ interface FinancialOverview {
   };
   expenses: number;
   netProfit: number;
+  // 'cash' = the canonical figure could not be computed and this is the
+  // legacy kassa number instead. The card must say so rather than label it
+  // «Foyda» — the two answer different questions and the cash one runs high,
+  // because teacher salary is paid the following cycle.
+  netProfitBasis?: "recognized" | "cash";
   ownMonthProfit?: number | null;
   debtorCount: number;
   activeBalance: number;
@@ -200,6 +205,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     salary: { paid: 0, pending: 0, advances: 0, computed: null },
     expenses: 0,
     netProfit: 0,
+    netProfitBasis: "recognized" as const,
     ownMonthProfit: null,
     debtorCount: 0,
     activeBalance: 0,
@@ -245,18 +251,26 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               tooltip="Ijara, marketing, jihoz va shunga o'xshash xarajatlar. Ustoz oyliklari va avanslar bu yerga kirmaydi — ular alohida 'Ustoz oyliklari' kartasida."
               onClick={() => setChartKey("expenses")}
             />
-            {/* 3. Foyda */}
+            {/* 3. Foyda — yoki hisoblab bo'lmasa, halol nomlangan kassa raqami */}
             <KpiCard
               icon={TrendingUp}
-              label="Foyda"
+              label={
+                d.netProfitBasis === "cash" ? "Kassa harakati" : "Foyda"
+              }
               value={`${fmt(d.netProfit)} so'm`}
               color={d.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
               subtitle={
-                d.ownMonthProfit == null
-                  ? undefined
-                  : `Oyning o'z foydasi: ${fmt(d.ownMonthProfit)} so'm`
+                d.netProfitBasis === "cash"
+                  ? "Sof foyda hisoblanmadi — bu kassa raqami"
+                  : d.ownMonthProfit == null
+                    ? undefined
+                    : `Oyning o'z foydasi: ${fmt(d.ownMonthProfit)} so'm`
               }
-              tooltip="Shu oy o'tilgan darslarning pulidan ustoz oyligi, xarajatlar va qaytarilgan pullar ayirilgan — qolgani markazga foyda. «Oyning o'z foydasi» esa boshqa savolga javob beradi: shu oyning O'Z puli shu oyning xarajatini qopladimi. Manfiy bo'lsa — oy eski qarz undirish yoki oldingi oylar puli hisobiga yopilgan."
+              tooltip={
+                d.netProfitBasis === "cash"
+                  ? "Sof foydani hisoblab bo'lmadi, shuning uchun bu yerda kassa harakati ko'rsatilyapti: tushum minus NAQD to'langan oylik. Bu foyda EMAS va odatda undan yuqori chiqadi — ustoz oyligi keyingi tsiklda to'lanadi, ya'ni bu oyning raqamida deyarli aks etmaydi. Sahifani qayta yuklang; takrorlansa, texnik yordamga ayting."
+                  : "Shu oy o'tilgan darslarning pulidan ustoz oyligi, xarajatlar va qaytarilgan pullar ayirilgan — qolgani markazga foyda. «Oyning o'z foydasi» esa boshqa savolga javob beradi: shu oyning O'Z puli shu oyning xarajatini qopladimi. Manfiy bo'lsa — oy eski qarz undirish yoki oldingi oylar puli hisobiga yopilgan."
+              }
               onClick={() => setChartKey("profit")}
             />
           </>
