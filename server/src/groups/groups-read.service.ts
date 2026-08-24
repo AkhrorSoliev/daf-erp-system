@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import { groupInclude, formatGroup } from './shared/group-include';
 import { computeNextGroupNumber } from './shared/next-group-number';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
 import {
   ReportBranchIds,
   branchIdWhere,
@@ -208,8 +209,35 @@ export class GroupsReadService {
     const levelCounts: Record<string, number> = {};
     for (const lvl of GROUP_LEVELS) levelCounts[lvl] = levelCountMap[lvl] ?? 0;
 
+    // Which of these groups is this teacher only COVERING, and on which days.
+    // Without it the substituted group sits in their list looking exactly like
+    // one of their own, with no answer to "why is this here?" or "which day is
+    // mine?". Only computed for a teacher's own list — nobody else's view has
+    // a "you" to be covering.
+    const coveringByGroup = new Map<string, string[]>();
+    if (selfScopedTeacherId && data.length > 0) {
+      const covers = await this.prisma.lessonTeacherOverride.findMany({
+        where: {
+          groupId: { in: data.map((g) => g.id) },
+          deletedAt: null,
+          teacherIds: { has: selfScopedTeacherId },
+        },
+        select: { groupId: true, date: true },
+        orderBy: { date: 'asc' },
+      });
+      for (const c of covers) {
+        const list = coveringByGroup.get(c.groupId) ?? [];
+        list.push(tashkentDateStr(c.date));
+        coveringByGroup.set(c.groupId, list);
+      }
+    }
+
     return {
-      data: data.map(formatGroup),
+      data: data.map((g) => ({
+        ...formatGroup(g),
+        /** Lesson dates this teacher is covering. Empty for their own groups. */
+        coveringDates: coveringByGroup.get(g.id) ?? [],
+      })),
       total,
       page,
       pageSize,
