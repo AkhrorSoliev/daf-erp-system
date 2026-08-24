@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   AttendanceStatus,
   EnrollmentStatus,
   Prisma,
   StudentStatus,
+  TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
@@ -11,7 +16,9 @@ import { StudentQueryDto } from './dto/student-query.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { getSystemStartDate } from '../common/finance/system-start-date';
+import { computeDiscountAdjustment } from './students-write.service';
 import {
+  isEmptyScope,
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
@@ -606,5 +613,76 @@ export class StudentsReadService {
     });
 
     return { studentId: id, groups };
+  }
+
+  /**
+   * What changing this student's discount to `newDiscountPercent` WOULD do —
+   * without doing it.
+   *
+   * The write path (`applyRetroactiveDiscountAdjustment`) rewrites every past
+   * lesson charge on the student and books a single signed
+   * `DISCOUNT_ADJUSTMENT`. Until this endpoint existed the person pulling that
+   * lever could not see the number in advance, and the form told them the
+   * opposite was happening — "eski darslar qayta hisoblanmaydi".
+   *
+   * Same inputs, same pure function, no write: `computeDiscountAdjustment` is
+   * the one the transaction calls, so the preview cannot disagree with the
+   * outcome. `lessonCount` and `oldestLessonDate` are here because the amount
+   * alone does not say how far back the rewrite reaches, and that is usually
+   * the part that surprises people.
+   */
+  async previewDiscountChange(
+    id: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+    newDiscountPercent: number,
+  ): Promise<{
+    currentDiscountPercent: number;
+    newDiscountPercent: number;
+    adjustmentAmount: number;
+    previousNetDeducted: number;
+    totalFullAmount: number;
+    targetCharge: number;
+    lessonCount: number;
+    oldestLessonDate: Date | null;
+  }> {
+    if (isEmptyScope(branchIds)) {
+      throw new ForbiddenException('Filial qamrovi aniqlanmadi');
+    }
+
+    const student = await this.prisma.student.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        companyId,
+        ...studentBranchWhere(branchIds),
+      },
+      select: { discountPercent: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+
+    const deductions = await this.prisma.transaction.findMany({
+      where: {
+        studentId: id,
+        type: TransactionType.LESSON_DEDUCTION,
+        reversedAt: null,
+      },
+      select: { amount: true, metadata: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const { adjustmentAmount, netCharged, totalFullAmount, targetCharge } =
+      computeDiscountAdjustment(deductions, newDiscountPercent);
+
+    return {
+      currentDiscountPercent: student.discountPercent ?? 0,
+      newDiscountPercent,
+      adjustmentAmount,
+      previousNetDeducted: netCharged,
+      totalFullAmount,
+      targetCharge,
+      lessonCount: deductions.length,
+      oldestLessonDate: deductions[0]?.createdAt ?? null,
+    };
   }
 }
