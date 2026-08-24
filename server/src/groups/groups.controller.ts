@@ -40,13 +40,17 @@ export class GroupsController {
       !roles.some((r) =>
         ['CEO', 'Branch Director', 'Administrator'].includes(r),
       );
-    if (isTeacherOnly) {
-      query.teacher_id = currentUser.id;
-    }
     return this.groupsService.findAll(
       query,
       currentUser.companyId,
       branchScope,
+      // Passed beside the DTO, not inside it: this is the server's own
+      // decision about who is asking, and a field on the query object would
+      // be one `whitelist` slip away from being client-settable.
+      //
+      // Not `teacher_id` either — that one means "permanently assigned", and a
+      // substitute is not. This also matches the days they were asked to cover.
+      isTeacherOnly ? currentUser.id : undefined,
     );
   }
 

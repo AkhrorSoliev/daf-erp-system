@@ -22,6 +22,11 @@ export class GroupsReadService {
     query: GroupQueryDto,
     companyId: number,
     scope: ReportBranchIds,
+    /**
+     * The caller's own id when they are a teacher looking at their own list.
+     * Server-decided — see `groups.controller.ts`.
+     */
+    selfScopedTeacherId?: number,
   ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
@@ -68,6 +73,26 @@ export class GroupsReadService {
 
     if (query.teacher_id) {
       where.teachers = { some: { teacherId: query.teacher_id } };
+    }
+
+    // A teacher looking at their OWN list: groups they are assigned to, plus
+    // groups they were asked to cover. The second half is why a substitute can
+    // find the lesson they taught; without it the guard admits them to a group
+    // they have no way to navigate to.
+    if (selfScopedTeacherId) {
+      const mine = { teachers: { some: { teacherId: selfScopedTeacherId } } };
+      const covering = {
+        lessonTeacherOverrides: {
+          some: {
+            teacherIds: { has: selfScopedTeacherId },
+            deletedAt: null,
+          },
+        },
+      };
+      where.AND = [
+        ...((where.AND as object[]) ?? []),
+        { OR: [mine, covering] },
+      ];
     }
 
     if (query.room_id) {

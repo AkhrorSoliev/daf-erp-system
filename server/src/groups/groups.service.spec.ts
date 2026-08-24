@@ -710,6 +710,56 @@ describe('GroupsService — status methods', () => {
       return prisma.group.findMany.mock.calls[0][0].where;
     }
 
+    /**
+     * A teacher's own list used to be `teachers: { some: { teacherId } }` —
+     * the PERMANENT assignment. A substitute is not assigned, so the group
+     * they were covering never appeared and they could not reach the lesson,
+     * even once the guard was willing to let them open it.
+     */
+    describe('a teacher looking at their own list', () => {
+      const ME = 10411;
+
+      it('includes groups they are assigned to AND groups they are covering', async () => {
+        await service.findAll({} as any, 1001, null, ME);
+
+        expect(whereOf().AND).toEqual([
+          {
+            OR: [
+              { teachers: { some: { teacherId: ME } } },
+              {
+                lessonTeacherOverrides: {
+                  some: { teacherIds: { has: ME }, deletedAt: null },
+                },
+              },
+            ],
+          },
+        ]);
+      });
+
+      it('counts only ACTIVE overrides — a deleted one is not a cover', async () => {
+        await service.findAll({} as any, 1001, null, ME);
+
+        const covering = (whereOf().AND[0].OR as any[])[1];
+        expect(covering.lessonTeacherOverrides.some.deletedAt).toBeNull();
+      });
+
+      it('narrows nothing when the caller is not a teacher', async () => {
+        // An admin passes no self-scope; their list is branch-scoped instead.
+        await service.findAll({} as any, 1001, null);
+        expect(whereOf().AND ?? []).toEqual([]);
+      });
+
+      it('keeps `teacher_id` meaning ASSIGNED — an admin filter is not a cover list', async () => {
+        // Two different questions: "whose group is this" vs "what am I working
+        // on". Merging them would put substituted groups into an admin's
+        // per-teacher filter.
+        await service.findAll({ teacher_id: 777 } as any, 1001, null);
+
+        expect(whereOf().teachers).toEqual({ some: { teacherId: 777 } });
+        expect(whereOf().AND ?? []).toEqual([]);
+      });
+    });
+
     it('matches a single term against the group name OR a teacher name', async () => {
       await service.findAll({ search: 'Valiyev' } as any, 1001, null);
 
