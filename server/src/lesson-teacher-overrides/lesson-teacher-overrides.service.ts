@@ -9,6 +9,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { UpsertLessonTeacherOverrideDto } from './dto/upsert-lesson-teacher-override.dto';
+import {
+  resolveBilledEnrollmentId,
+  resolveFundingDeductionId,
+} from '../billing/resolve-billed-enrollment';
 
 const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   0: 'sunday',
@@ -300,25 +304,24 @@ export class LessonTeacherOverridesService {
       select: {
         attendanceId: true,
         metadata: true,
+        // The moment the lesson was consumed — the anchor for "which payment
+        // was funding it". See `resolveFundingDeductionId`.
+        createdAt: true,
       },
     });
     const consumptionByAttendance = new Map<
       string,
-      { perLessonCost: number }
+      { perLessonCost: number; consumedAt: Date }
     >();
     for (const c of consumptions) {
       const meta = (c.metadata as { perLessonCost?: number } | null) ?? null;
       if (c.attendanceId && meta?.perLessonCost) {
         consumptionByAttendance.set(c.attendanceId, {
           perLessonCost: meta.perLessonCost,
+          consumedAt: c.createdAt,
         });
       }
     }
-
-    // We need the deduction tx that funded each lesson — find the most
-    // recent unreversed LESSON_DEDUCTION on the enrollment up to (and
-    // including) this date.
-    const deductionByEnrollment = new Map<string, string>();
 
     for (const att of attendances) {
       // Reverse accruals for teachers no longer on the lesson.
@@ -338,28 +341,24 @@ export class LessonTeacherOverridesService {
       const cons = consumptionByAttendance.get(att.id);
       if (!cons) continue; // attendance with no consumption — student had no balance, no accrual to write
 
-      // Look up the funding deduction once per enrollment.
-      const enrollment = await tx.enrollment.findFirst({
-        where: { studentId: att.studentId, groupId: p.groupId },
-        select: { id: true },
+      // The enrollment the lesson was CHARGED to, not a (student, group)
+      // guess — a student can hold two live enrollments in one group.
+      const enrollmentId = await resolveBilledEnrollmentId(tx, {
+        attendanceId: att.id,
+        studentId: att.studentId,
+        groupId: p.groupId,
       });
-      if (!enrollment) continue;
-      let deductionTransactionId = deductionByEnrollment.get(enrollment.id);
-      if (!deductionTransactionId) {
-        const deduction = await tx.transaction.findFirst({
-          where: {
-            enrollmentId: enrollment.id,
-            type: TransactionType.LESSON_DEDUCTION,
-            reversedAt: null,
-            createdAt: { lte: p.date },
-          },
-          orderBy: { createdAt: 'desc' },
-          select: { id: true },
-        });
-        if (!deduction) continue;
-        deductionTransactionId = deduction.id;
-        deductionByEnrollment.set(enrollment.id, deductionTransactionId);
-      }
+      if (!enrollmentId) continue;
+
+      // The payment that funded THIS lesson. Resolved per attendance, not
+      // cached per enrollment: a cycle can roll over mid-day, and the cache
+      // would then hand the second half of the lesson the first half's batch.
+      const deductionTransactionId = await resolveFundingDeductionId(tx, {
+        attendanceId: att.id,
+        enrollmentId,
+        consumedAt: cons.consumedAt,
+      });
+      if (!deductionTransactionId) continue;
 
       for (const teacherId of added) {
         await this.salaryAccrualService.createAccrual({

@@ -1,5 +1,8 @@
 import { EnrollmentStatus, TransactionType } from '@prisma/client';
-import { resolveBilledEnrollmentId } from './resolve-billed-enrollment';
+import {
+  resolveBilledEnrollmentId,
+  resolveFundingDeductionId,
+} from './resolve-billed-enrollment';
 
 function makeTx(opts: {
   billed?: { enrollmentId: string | null } | null;
@@ -109,5 +112,84 @@ describe('resolveBilledEnrollmentId', () => {
       expect(where.status).toBeUndefined();
       expect(where.deletedAt).toBeNull();
     });
+  });
+});
+
+describe('resolveFundingDeductionId', () => {
+  const CONSUMED_AT = new Date('2026-08-20T10:05:00.000Z');
+  const PARAMS = {
+    attendanceId: 'att-1',
+    enrollmentId: 'enr-1',
+    consumedAt: CONSUMED_AT,
+  };
+
+  function makeTx(opts: {
+    priorAccrual?: { deductionTransactionId: string | null } | null;
+    deduction?: { id: string } | null;
+  }) {
+    return {
+      salaryAccrual: {
+        findFirst: jest.fn().mockResolvedValue(opts.priorAccrual ?? null),
+      },
+      transaction: {
+        findFirst: jest.fn().mockResolvedValue(opts.deduction ?? null),
+      },
+    } as any;
+  }
+
+  it('reuses the funding an existing accrual on this lesson already points at', async () => {
+    const tx = makeTx({ priorAccrual: { deductionTransactionId: 'ded-real' } });
+
+    expect(await resolveFundingDeductionId(tx, PARAMS)).toBe('ded-real');
+    expect(tx.transaction.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('counts a REVERSED accrual — reversal clears the pay, not the link', async () => {
+    // A substitute replacing a teacher inherits the same funding; the outgoing
+    // teacher's accrual is reversed moments earlier in the same transaction.
+    const tx = makeTx({ priorAccrual: { deductionTransactionId: 'ded-real' } });
+    await resolveFundingDeductionId(tx, PARAMS);
+
+    expect(
+      tx.salaryAccrual.findFirst.mock.calls[0][0].where.reversedAt,
+    ).toBeUndefined();
+  });
+
+  it('anchors the fallback to the CONSUMPTION moment, not the calendar day', async () => {
+    // The old code bounded by UTC midnight of the lesson date, which excluded
+    // every deduction written during the lesson day — i.e. all of them.
+    const tx = makeTx({ priorAccrual: null, deduction: { id: 'ded-2' } });
+
+    expect(await resolveFundingDeductionId(tx, PARAMS)).toBe('ded-2');
+    const where = tx.transaction.findFirst.mock.calls[0][0].where;
+    expect(where.createdAt).toEqual({ lte: CONSUMED_AT });
+    expect(where.reversedAt).toBeNull();
+    expect(where.enrollmentId).toBe('enr-1');
+  });
+
+  it('takes the newest batch when several are live', async () => {
+    const tx = makeTx({ priorAccrual: null, deduction: { id: 'ded-newest' } });
+    await resolveFundingDeductionId(tx, PARAMS);
+
+    expect(tx.transaction.findFirst.mock.calls[0][0].orderBy).toEqual({
+      createdAt: 'desc',
+    });
+  });
+
+  it('returns null when the lesson was never funded — no accrual is written', async () => {
+    // Teachers do not earn for unpaid lessons; the caller skips on null.
+    const tx = makeTx({ priorAccrual: null, deduction: null });
+    expect(await resolveFundingDeductionId(tx, PARAMS)).toBeNull();
+  });
+
+  it('ignores an accrual that carries no funding link', async () => {
+    const tx = makeTx({
+      priorAccrual: null, // the query already excludes null links
+      deduction: { id: 'ded-fallback' },
+    });
+    expect(await resolveFundingDeductionId(tx, PARAMS)).toBe('ded-fallback');
+    expect(
+      tx.salaryAccrual.findFirst.mock.calls[0][0].where.deductionTransactionId,
+    ).toEqual({ not: null });
   });
 });
