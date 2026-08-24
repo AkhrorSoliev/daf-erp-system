@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { validateEnv } from './env.validation';
@@ -198,6 +199,57 @@ describe('validateEnv', () => {
         R2_BUCKET_NAME: 'bucket',
       } as NodeJS.ProcessEnv;
       await expect(boot()).rejects.toThrow('R2_ACCESS_KEY_ID');
+    });
+  });
+
+  /**
+   * A variable that is set and read by nothing is the quietest configuration
+   * mistake there is: the dashboard says one thing, the system does another,
+   * and nothing disagrees out loud. `JWT_EXPIRATION=7d` sat in production
+   * while every access token expired in an hour.
+   */
+  describe('variables nothing reads', () => {
+    function warningsFor(config: Record<string, unknown>): string {
+      const lines: string[] = [];
+      const warn = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation((message) => {
+          lines.push(String(message));
+        });
+      validateEnv(config);
+      warn.mockRestore();
+      return lines.join('\n');
+    }
+
+    it('names JWT_EXPIRATION, and says the lifetimes are constants', () => {
+      const text = warningsFor({ ...minimal, JWT_EXPIRATION: '7d' });
+      expect(text).toContain('JWT_EXPIRATION');
+      expect(text).toContain('auth.service.ts');
+    });
+
+    it('says nothing when none of them is set', () => {
+      const text = warningsFor({ ...minimal });
+      expect(text).not.toContain('JWT_EXPIRATION');
+    });
+
+    it('warns rather than refusing — a stale variable is not a bad deploy', () => {
+      expect(() =>
+        validateEnv({
+          ...minimal,
+          JWT_EXPIRATION: '7d',
+          OPENAI_API_KEY: 'sk-x',
+        }),
+      ).not.toThrow();
+    });
+
+    it('lists every one that is set, not just the first', () => {
+      const text = warningsFor({
+        ...minimal,
+        JWT_EXPIRATION: '7d',
+        R2_ACCOUNT_ID: 'acct',
+      });
+      expect(text).toContain('JWT_EXPIRATION');
+      expect(text).toContain('R2_ACCOUNT_ID');
     });
   });
 });

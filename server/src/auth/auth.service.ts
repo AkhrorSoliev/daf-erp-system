@@ -13,6 +13,24 @@ import { RedisService } from '../redis/redis.service';
 import { consumeLoginRequest } from '../telegram/flows/app-login-otp-flow';
 import { normalizeSharedPhone } from '../common/utils/phone.util';
 
+/**
+ * Token lifetimes. CONSTANTS, not configuration, and deliberately so.
+ *
+ * A short access token plus a refresh endpoint is the whole design: the
+ * account's real state lives in Postgres and `refresh` re-checks it, so the
+ * longest anyone can act on a revoked account is one hour. `JwtAuthGuard`'s
+ * blocked-user cache is written against exactly that window — it exists to
+ * shorten an hour, not a week.
+ *
+ * `JWT_EXPIRATION` is set to "7d" in production and NOTHING READS IT. Someone
+ * configured week-long sessions and got hour-long ones, with no error and no
+ * way to notice. Wiring it up would not fix that — it would grant the week.
+ * `env.validation.ts` now says so at startup; the variable should be removed
+ * from Railway rather than honoured.
+ */
+const ACCESS_TOKEN_TTL = '1h';
+const REFRESH_TOKEN_TTL = '24h';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -190,12 +208,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret,
-      expiresIn: '1h',
+      expiresIn: ACCESS_TOKEN_TTL,
     });
 
     const refreshToken = this.jwtService.sign(
       { sub: userId, type: 'refresh' },
-      { secret, expiresIn: '24h' },
+      { secret, expiresIn: REFRESH_TOKEN_TTL },
     );
 
     return { accessToken, refreshToken };
