@@ -37,16 +37,17 @@ export function resolveBranchSwitch(
  * stay mounted on purpose, because the branch switcher lives there and must not
  * unmount itself mid-selection.
  *
- * The callback is read through a ref, so an inline arrow does not re-arm the
- * effect on every render.
+ * `onSwitch` sits in the dependency array rather than behind a ref. A ref would
+ * have to be written during render, which the React Compiler forbids — and it
+ * buys nothing here: an inline arrow does re-arm the effect every render, but
+ * the effect's first act is to ask whether the branch changed, and on a plain
+ * re-render the answer is no. Re-running a no-op costs a comparison.
  */
 export function useBranchChange(onSwitch: () => void): void {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const loaded = useBranchSwitcher((s) => s.loaded);
 
   const previous = useRef<BranchState>(undefined);
-  const handler = useRef(onSwitch);
-  handler.current = onSwitch;
 
   useEffect(() => {
     if (!loaded) return;
@@ -55,6 +56,6 @@ export function useBranchChange(onSwitch: () => void): void {
       selectedBranch?.id ?? null,
     );
     previous.current = next;
-    if (switched) handler.current();
-  }, [selectedBranch, loaded]);
+    if (switched) onSwitch();
+  }, [selectedBranch, loaded, onSwitch]);
 }

@@ -48,7 +48,7 @@ jobs:
       - run: npm test
 
   client:
-    name: Client (typecheck + lint + build)
+    name: Client (typecheck + lint + test + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -63,4 +63,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx eslint src
+      # The client has had a vitest suite for a while and CI never ran it —
+      # `branch-header`, `branch-cache` and `branch-scoped-stores` all encode
+      # branch-isolation rules, and a break in any of them would have reached
+      # main unnoticed.
+      - run: npm test
       - run: npm run build
