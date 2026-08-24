@@ -7,6 +7,9 @@ import { EntityHistoryService } from '../common/entity-history';
 import { GroupHolidayCascadeService } from '../groups/group-holiday-cascade.service';
 
 describe('HolidaysService', () => {
+  // Every id-addressed method is company-scoped; the fixtures below belong
+  // to this company.
+  const COMPANY_ID = 1001;
   let service: HolidaysService;
   let prisma: any;
   let entityHistoryService: any;
@@ -25,6 +28,10 @@ describe('HolidaysService', () => {
     statusChangedAt: null,
     statusChangedById: null,
     statusChangeReason: null,
+    companyId: 1001,
+    // null = company-wide (Navro'z, Mustaqillik kuni) — what nearly every row
+    // is. A non-null value is a single branch closing.
+    branchId: null as number | null,
   };
 
   beforeEach(async () => {
@@ -123,13 +130,13 @@ describe('HolidaysService', () => {
 
   describe('findOne', () => {
     it('returns the holiday when found', async () => {
-      const result = await service.findOne('h-1');
+      const result = await service.findOne('h-1', COMPANY_ID);
       expect(result).toEqual(mockHoliday);
     });
 
     it('throws NotFoundException when missing', async () => {
       prisma.holiday.findFirst.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(
+      await expect(service.findOne('missing', COMPANY_ID)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -199,20 +206,20 @@ describe('HolidaysService', () => {
   describe('update', () => {
     it('updates name even when extensions exist', async () => {
       prisma.groupHolidayExtension.count.mockResolvedValue(3);
-      await service.update('h-1', { name: 'New name' }, 7);
+      await service.update('h-1', { name: 'New name' }, 7, COMPANY_ID);
       expect(prisma.holiday.update).toHaveBeenCalled();
     });
 
     it('rejects date change when extensions exist', async () => {
       prisma.groupHolidayExtension.count.mockResolvedValue(1);
       await expect(
-        service.update('h-1', { date: '2026-10-01' }, 7),
+        service.update('h-1', { date: '2026-10-01' }, 7, COMPANY_ID),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('allows date change when no extensions exist', async () => {
       prisma.groupHolidayExtension.count.mockResolvedValue(0);
-      await service.update('h-1', { date: '2026-10-01' }, 7);
+      await service.update('h-1', { date: '2026-10-01' }, 7, COMPANY_ID);
       expect(prisma.holiday.update).toHaveBeenCalledWith({
         where: { id: 'h-1' },
         data: {
@@ -233,6 +240,7 @@ describe('HolidaysService', () => {
         'h-1',
         { name: 'Renamed', date: '2026-09-01', endDate: '2026-09-01' },
         7,
+        COMPANY_ID,
       );
       expect(prisma.holiday.update).toHaveBeenCalledWith({
         where: { id: 'h-1' },
@@ -243,7 +251,7 @@ describe('HolidaysService', () => {
     it('throws NotFoundException when holiday is missing', async () => {
       prisma.holiday.findFirst.mockResolvedValue(null);
       await expect(
-        service.update('missing', { name: 'x' }, 1),
+        service.update('missing', { name: 'x' }, 1, COMPANY_ID),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -253,7 +261,7 @@ describe('HolidaysService', () => {
       prisma.groupHolidayExtension.findMany.mockResolvedValue([
         { id: 'ext-1', groupId: 'g-1', holidayId: 'h-1' },
       ]);
-      const result = await service.remove('h-1', 5);
+      const result = await service.remove('h-1', 5, COMPANY_ID);
 
       expect(cascadeService.revertGroupEndDateForHoliday).toHaveBeenCalled();
       expect(prisma.holiday.update).toHaveBeenCalledWith({
@@ -269,7 +277,7 @@ describe('HolidaysService', () => {
 
     it('throws NotFoundException when holiday is missing', async () => {
       prisma.holiday.findFirst.mockResolvedValue(null);
-      await expect(service.remove('missing', 1)).rejects.toThrow(
+      await expect(service.remove('missing', 1, COMPANY_ID)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -285,6 +293,7 @@ describe('HolidaysService', () => {
         'h-1',
         { status: 'CANCELLED' as any },
         1,
+        COMPANY_ID,
       );
       expect(cascadeService.revertGroupEndDateForHoliday).toHaveBeenCalledTimes(
         0, // none in this test's findMany mock
@@ -297,10 +306,92 @@ describe('HolidaysService', () => {
         status: 'CANCELLED',
       });
       prisma.group.findMany.mockResolvedValue([{ id: 'g-1' }]);
-      await service.changeStatus('h-1', { status: 'ACTIVE' as any }, 1);
+      await service.changeStatus(
+        'h-1',
+        { status: 'ACTIVE' as any },
+        1,
+        COMPANY_ID,
+      );
       expect(
         cascadeService.extendGroupEndDateForHoliday,
       ).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // The cascade moves real group end dates. It used to select groups with
+  // neither a company nor a branch predicate, so a holiday declared for one
+  // branch pushed every branch's groups — and every other company's.
+  describe('cascade scope', () => {
+    beforeEach(() => {
+      prisma.group.findMany.mockResolvedValue([]);
+    });
+
+    it('confines a company-wide holiday to its own company, all branches', async () => {
+      prisma.holiday.create.mockResolvedValue({ ...mockHoliday });
+
+      await service.create(
+        { name: 'Navro\'z', date: '2026-09-01' } as any,
+        7,
+        COMPANY_ID,
+      );
+
+      const where = prisma.group.findMany.mock.calls[0][0].where;
+      expect(where.companyId).toBe(COMPANY_ID);
+      // No branch predicate at all — a null branchId means every branch.
+      expect(where.branchId).toBeUndefined();
+    });
+
+    it('confines a branch holiday to that branch', async () => {
+      prisma.holiday.create.mockResolvedValue({ ...mockHoliday, branchId: 2 });
+
+      await service.create(
+        { name: 'Namangan yopiq', date: '2026-09-01' } as any,
+        7,
+        COMPANY_ID,
+      );
+
+      const where = prisma.group.findMany.mock.calls[0][0].where;
+      expect(where.companyId).toBe(COMPANY_ID);
+      expect(where.branchId).toBe(2);
+    });
+
+    it('keeps the overlap window while adding the scope', async () => {
+      prisma.holiday.create.mockResolvedValue({ ...mockHoliday });
+
+      await service.create(
+        { name: 'X', date: '2026-09-01' } as any,
+        7,
+        COMPANY_ID,
+      );
+
+      const where = prisma.group.findMany.mock.calls[0][0].where;
+      expect(where.statusEnum).toEqual({ in: ['FORMING', 'ACTIVE'] });
+      expect(where.startDate).toBeDefined();
+      expect(where.endDate).toBeDefined();
+    });
+  });
+
+  describe('company scope on id-addressed reads', () => {
+    it('looks a holiday up within the caller\'s company', async () => {
+      prisma.holiday.findFirst.mockResolvedValue(mockHoliday);
+
+      await service.findOne('h-1', COMPANY_ID);
+
+      expect(prisma.holiday.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'h-1', companyId: COMPANY_ID }),
+        }),
+      );
+    });
+
+    it('reports another company\'s holiday as not found', async () => {
+      // The scoped `where` is what makes this miss; the service turns a miss
+      // into 404 rather than leaking that the row exists elsewhere.
+      prisma.holiday.findFirst.mockResolvedValue(null);
+
+      await expect(service.findOne('h-1', 2002)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

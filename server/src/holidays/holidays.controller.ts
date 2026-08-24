@@ -33,9 +33,18 @@ export class HolidaysController {
     return this.holidaysService.findAll(query, companyId);
   }
 
+  // Staff only + company-scoped — the same two things `findAll` above was
+  // given. This route kept neither: with only the global `JwtAuthGuard` in
+  // front of it, any valid token including a student-portal one could read any
+  // holiday in the database by id.
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.holidaysService.findOne(id);
+  @UseGuards(RolesGuard)
+  @Roles(...STAFF_ROLES)
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.holidaysService.findOne(id, companyId);
   }
 
   @Post()
@@ -56,8 +65,9 @@ export class HolidaysController {
     @Param('id') id: string,
     @Body() dto: UpdateHolidayDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.holidaysService.update(id, dto, userId);
+    return this.holidaysService.update(id, dto, userId, companyId);
   }
 
   @Delete(':id')
@@ -66,8 +76,9 @@ export class HolidaysController {
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.holidaysService.remove(id, userId);
+    return this.holidaysService.remove(id, userId, companyId);
   }
 
   @Patch(':id/status')
@@ -77,14 +88,18 @@ export class HolidaysController {
     @Param('id') id: string,
     @Body() dto: ChangeHolidayStatusDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
   ) {
-    return this.holidaysService.changeStatus(id, dto, userId);
+    return this.holidaysService.changeStatus(id, dto, userId, companyId);
   }
 
   @Get(':id/status-history')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
-  getStatusHistory(@Param('id') id: string) {
-    return this.holidaysService.getStatusHistory(id);
+  getStatusHistory(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.holidaysService.getStatusHistory(id, companyId);
   }
 }
