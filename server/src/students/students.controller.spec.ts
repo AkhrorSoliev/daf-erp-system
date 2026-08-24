@@ -212,37 +212,11 @@ describe('StudentsController — debt write-off role guards', () => {
   });
 
   /**
-   * The discount is the one field on this controller that rewrites money
-   * ALREADY charged. Two separate guards protect it and both are asserted
-   * here, because they answer different questions: `@Roles` decides who may
-   * call the route at all, `DiscountRoleGuard` decides who may send that field.
+   * The discount no longer rewrites past charges (CEO decision 2026-08-24 —
+   * a discount applies from the moment it is set). It still decides what every
+   * FUTURE lesson costs, and who may set it is a CEO / Branch Director call
+   * that used to live only in the browser.
    */
-  describe('previewDiscountChange() guard (GET /:id/discount-preview)', () => {
-    it.each(['CEO', 'Branch Director'])('allows %s', (role) => {
-      const ctx = mockExecutionContext(controller.previewDiscountChange, [
-        role,
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it.each(['Administrator', 'Cashier', 'Teacher'])('denies %s', (role) => {
-      const ctx = mockExecutionContext(controller.previewDiscountChange, [
-        role,
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow();
-    });
-
-    it('is no wider than the change it previews', () => {
-      // The preview exposes the student's whole billing history in one number.
-      // If this list ever grows past the write's, the read becomes the leak.
-      const previewRoles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.previewDiscountChange,
-      );
-      expect([...previewRoles].sort()).toEqual(['Branch Director', 'CEO']);
-    });
-  });
-
   describe('update() carries DiscountRoleGuard (PATCH /:id)', () => {
     it('is declared on the route, not only in the form', () => {
       // The web form hides the input from Administrators; before this guard

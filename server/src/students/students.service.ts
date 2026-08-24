@@ -116,20 +116,6 @@ export class StudentsService {
   ) {
     return this.write.update(id, dto, userId, companyId);
   }
-
-  previewDiscountChange(
-    id: number,
-    companyId: number,
-    branchScope: ReportBranchIds,
-    newDiscountPercent: number,
-  ) {
-    return this.read.previewDiscountChange(
-      id,
-      companyId,
-      branchScope,
-      newDiscountPercent,
-    );
-  }
   delete(id: number, deletedById: number, reason: string, companyId: number) {
     return this.write.delete(id, deletedById, reason, companyId);
   }

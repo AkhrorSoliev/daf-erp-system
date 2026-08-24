@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma, StudentStatus, TransactionType } from '@prisma/client';
+import { StudentStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -21,50 +21,6 @@ import {
   formatStudent,
 } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
-
-/**
- * Pure recompute of the retroactive discount adjustment.
- *
- * `deductions` are the student's still-active LESSON_DEDUCTION rows; their
- * `amount` is stored NEGATIVE, so `netCharged` (its magnitude) is what was
- * actually charged. `targetCharge` is what the NEW discount should have charged
- * against the un-discounted total. A POSITIVE result credits the student
- * (discount went up), a negative result debits (discount went down).
- *
- * Exported for unit testing — this math is where a sign bug previously summed
- * the negative `amount`s and compared them against the positive `targetCharge`,
- * inverting the sign and inflating the magnitude of every adjustment (F-01).
- */
-export function computeDiscountAdjustment(
-  deductions: { amount: number; metadata: Prisma.JsonValue | null }[],
-  newDiscountPercent: number,
-): {
-  adjustmentAmount: number;
-  netCharged: number;
-  totalFullAmount: number;
-  targetCharge: number;
-} {
-  let signedNetDeducted = 0;
-  let totalFullAmount = 0;
-  for (const t of deductions) {
-    signedNetDeducted += t.amount;
-    const md = (t.metadata ?? {}) as { fullAmount?: number };
-    // Legacy LESSON_DEDUCTION rows (pre-discount feature) have no
-    // `metadata.fullAmount`; their full price is the magnitude of `amount`
-    // (stored negative). Falling back to the raw negative `amount` here would
-    // corrupt `totalFullAmount` for those rows — use the magnitude.
-    totalFullAmount += Number(md.fullAmount ?? Math.abs(t.amount));
-  }
-
-  const targetCharge = Math.round(
-    (totalFullAmount * (100 - newDiscountPercent)) / 100,
-  );
-  // Amount actually charged = magnitude of the (negative) signed sum.
-  const netCharged = Math.abs(signedNetDeducted);
-  const adjustmentAmount = netCharged - targetCharge;
-
-  return { adjustmentAmount, netCharged, totalFullAmount, targetCharge };
-}
 
 @Injectable()
 export class StudentsWriteService {
@@ -267,10 +223,24 @@ export class StudentsWriteService {
         ? await bcrypt.hash(dto.password, 10)
         : undefined;
 
-    const oldDiscount = student.discountPercent ?? 0;
-    const newDiscount = dto.discountPercent;
-    const isDiscountChanging =
-      newDiscount !== undefined && newDiscount !== oldDiscount;
+    // NOTE: changing `discountPercent` writes NOTHING to the ledger.
+    //
+    // It used to. `applyRetroactiveDiscountAdjustment` recomputed every past
+    // lesson charge at the new rate and booked the difference — in production
+    // that credited 1 473 807 so'm across 7 students, one of them 449 995
+    // reaching back 41 lessons. The form meanwhile said "eski darslar qayta
+    // hisoblanmaydi", so the operator was told the opposite of what happened.
+    //
+    // CEO decision (2026-08-24): a discount applies from the moment it is set,
+    // never backwards. `perLessonPrice` reads `Student.discountPercent` at
+    // billing time, so future lessons pick it up automatically and there is
+    // nothing else to do here.
+    //
+    // The "we forgot to record the discount they were promised" case has not
+    // disappeared — it moved to `POST /transactions/adjustment` (CEO / Branch
+    // Director, requires a description, lands in the audit log). That is the
+    // right shape for it: a correction someone deliberately makes and explains,
+    // rather than a side effect of editing a percentage.
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
@@ -326,16 +296,6 @@ export class StudentsWriteService {
           });
         }
 
-        if (isDiscountChanging) {
-          await this.applyRetroactiveDiscountAdjustment(tx, {
-            studentId: id,
-            oldDiscount,
-            newDiscount,
-            companyId: student.companyId,
-            performedById: userId,
-          });
-        }
-
         if (dto.branchIds !== undefined) {
           return tx.student.findUniqueOrThrow({
             where: { id },
@@ -345,13 +305,10 @@ export class StudentsWriteService {
 
         return result;
       },
-      isDiscountChanging
-        ? {
-            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-            maxWait: 10_000,
-            timeout: 15_000,
-          }
-        : undefined,
+      // Plain transaction: the Serializable level here existed only to make the
+      // read-then-write of the retroactive adjustment atomic. Nothing in this
+      // update touches the balance any more.
+      undefined,
     );
 
     await this.entityHistoryService.recordUpdate({
@@ -421,63 +378,6 @@ export class StudentsWriteService {
     );
 
     return { message: "O'quvchi muvaffaqiyatli o'chirildi" };
-  }
-
-  /**
-   * Walks every active LESSON_DEDUCTION on this student, sums what was actually
-   * charged (`previousNetDeducted`) vs. the un-discounted total
-   * (`totalFullAmount`), recomputes what the new discount would have charged
-   * (`targetCharge`), and writes a single signed `DISCOUNT_ADJUSTMENT`
-   * transaction for the delta. Positive credits the student, negative debits.
-   *
-   * Legacy LESSON_DEDUCTION rows that pre-date the discount feature won't have
-   * `metadata.fullAmount` — we fall back to `transaction.amount` (which is the
-   * un-discounted full price for those rows, since no discount existed yet).
-   *
-   * Caller must invoke from inside a Serializable tx. `recordDiscountAdjustment`
-   * does its own `SELECT FOR UPDATE` on the student row — the surrounding tx
-   * keeps the read-then-write atomic.
-   */
-  private async applyRetroactiveDiscountAdjustment(
-    tx: Prisma.TransactionClient,
-    params: {
-      studentId: number;
-      oldDiscount: number;
-      newDiscount: number;
-      companyId: number;
-      performedById?: number;
-    },
-  ): Promise<void> {
-    const pastDeductions = await tx.transaction.findMany({
-      where: {
-        studentId: params.studentId,
-        type: TransactionType.LESSON_DEDUCTION,
-        reversedAt: null,
-      },
-      select: { amount: true, metadata: true },
-    });
-
-    if (pastDeductions.length === 0) return;
-
-    const { adjustmentAmount, netCharged, totalFullAmount, targetCharge } =
-      computeDiscountAdjustment(pastDeductions, params.newDiscount);
-
-    if (adjustmentAmount === 0) return;
-
-    await this.transactionsService.recordDiscountAdjustment(
-      {
-        studentId: params.studentId,
-        amount: adjustmentAmount,
-        oldDiscountPercent: params.oldDiscount,
-        newDiscountPercent: params.newDiscount,
-        totalFullAmount,
-        targetCharge,
-        previousNetDeducted: netCharged,
-        companyId: params.companyId,
-        performedById: params.performedById,
-      },
-      tx,
-    );
   }
 
   /**
